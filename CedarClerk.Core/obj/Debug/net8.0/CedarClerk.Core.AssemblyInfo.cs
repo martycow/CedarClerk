@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CedarClerk.Core")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1fcfb79efd5d0750d86b98cc4373d54d3eaf7040")]
 [assembly: System.Reflection.AssemblyProductAttribute("CedarClerk.Core")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CedarClerk.Core")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

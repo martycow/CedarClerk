@@ -1,0 +1,12 @@
+D:\Cedar_Clerk\CedarClerk.Core\bin\Debug\net8.0\CedarClerk.Core.deps.json
+D:\Cedar_Clerk\CedarClerk.Core\bin\Debug\net8.0\CedarClerk.Core.dll
+D:\Cedar_Clerk\CedarClerk.Core\bin\Debug\net8.0\CedarClerk.Core.pdb
+D:\Cedar_Clerk\CedarClerk.Core\obj\Debug\net8.0\CedarClerk.Core.GeneratedMSBuildEditorConfig.editorconfig
+D:\Cedar_Clerk\CedarClerk.Core\obj\Debug\net8.0\CedarClerk.Core.AssemblyInfoInputs.cache
+D:\Cedar_Clerk\CedarClerk.Core\obj\Debug\net8.0\CedarClerk.Core.AssemblyInfo.cs
+D:\Cedar_Clerk\CedarClerk.Core\obj\Debug\net8.0\CedarClerk.Core.csproj.CoreCompileInputs.cache
+D:\Cedar_Clerk\CedarClerk.Core\obj\Debug\net8.0\CedarClerk.Core.sourcelink.json
+D:\Cedar_Clerk\CedarClerk.Core\obj\Debug\net8.0\CedarClerk.Core.dll
+D:\Cedar_Clerk\CedarClerk.Core\obj\Debug\net8.0\refint\CedarClerk.Core.dll
+D:\Cedar_Clerk\CedarClerk.Core\obj\Debug\net8.0\CedarClerk.Core.pdb
+D:\Cedar_Clerk\CedarClerk.Core\obj\Debug\net8.0\ref\CedarClerk.Core.dll
