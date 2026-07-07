@@ -16,7 +16,7 @@ public class PublishDueScheduledPostsJob(CedarDbContext db, TelegramBotService b
 
         foreach (var post in due)
         {
-            var result = await PostEndpoints.PublishAsync(post.DraftId, post.ChatId, post.OwnerId, db, bot, cfg);
+            var result = await PostEndpoints.PublishAsync(post.DraftId, post.ChatId, post.OwnerId, db, bot, cfg, post.Format);
             if (result.Success)
             {
                 post.Status = "Sent";

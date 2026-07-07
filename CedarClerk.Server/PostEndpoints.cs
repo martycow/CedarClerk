@@ -10,7 +10,7 @@ namespace CedarClerk.Server;
 
 public static class PostEndpoints
 { 
-    public record ExportRequest(Guid DraftId, string ChatId);
+    public record ExportRequest(Guid DraftId, string ChatId, string Format = "Html");
 
     public record PublishResult(int? MessageId, string? Error, int StatusCode = StatusCodes.Status400BadRequest)
     {
@@ -18,12 +18,13 @@ public static class PostEndpoints
     }
 
     public static async Task<PublishResult> PublishAsync(
-        Guid draftId, 
+        Guid draftId,
         string chatId,
         string ownerId,
         CedarDbContext db,
         TelegramBotService bot,
-        IConfiguration cfg)
+        IConfiguration cfg,
+        string format = "Html")
     {
         var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == draftId && d.OwnerId == ownerId);
         if (draft is null)
@@ -33,11 +34,17 @@ public static class PostEndpoints
             return new PublishResult(null, "Telegram bot is not running (no token configured)", StatusCodes.Status503ServiceUnavailable);
 
         var baseUrl = cfg["Cedar:PublicBaseUrl"] ?? Consts.Url;
-        var html = CedarToTelegramHtmlRenderer.Render(draft.CedarJson, baseUrl);
-        if (string.IsNullOrWhiteSpace(html))
+        var isMarkdown = format == "Markdown";
+        var rendered = isMarkdown
+            ? CedarToTelegramMarkdownRenderer.Render(draft.CedarJson, baseUrl)
+            : CedarToTelegramHtmlRenderer.Render(draft.CedarJson, baseUrl);
+        if (string.IsNullOrWhiteSpace(rendered))
             return new PublishResult(null, "Draft is empty");
 
-        var msg = await bot.Client.SendRichMessage(new ChatId(chatId), new InputRichMessage { Html = html });
+        var content = isMarkdown
+            ? new InputRichMessage { Markdown = rendered }
+            : new InputRichMessage { Html = rendered };
+        var msg = await bot.Client.SendRichMessage(new ChatId(chatId), content);
         return new PublishResult(msg.MessageId, null);
     }
 
@@ -46,7 +53,7 @@ public static class PostEndpoints
         app.MapPost("/api/posts/export", async (ExportRequest req, ClaimsPrincipal user, CedarDbContext db, TelegramBotService bot, IConfiguration cfg) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var result = await PublishAsync(req.DraftId, req.ChatId, uid, db, bot, cfg);
+            var result = await PublishAsync(req.DraftId, req.ChatId, uid, db, bot, cfg, req.Format);
             if (!result.Success)
                 return Results.Json(new { error = result.Error }, statusCode: result.StatusCode);
 

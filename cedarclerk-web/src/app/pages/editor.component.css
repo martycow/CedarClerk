@@ -278,13 +278,10 @@
     padding: 24px 32px;
 }
 
-.panel.right {
-    border-right: none;
-    border-left: 1px solid #e2e2e2;
-    width: 280px;
-}
-
 .export-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     border: 1px solid #b5d4f4;
     background: #e4ecf7;
     border-radius: 8px;
@@ -295,6 +292,64 @@
 
 .export-btn:disabled {
     opacity: 0.6;
+}
+
+.export-btn.full {
+    width: 100%;
+    box-sizing: border-box;
+    justify-content: center;
+}
+
+.export-popover {
+    width: 320px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.chip {
+    border: 1px solid #ddd;
+    background: #fafafa;
+    border-radius: 999px;
+    padding: 3px 10px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.chip:hover {
+    background: #f0f0f0;
+}
+
+.format-toggle {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.format-toggle button {
+    flex: 1;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    padding: 5px 0;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.format-toggle button.on {
+    background: #e4ecf7;
+    border-color: #b5d4f4;
+}
+
+.popover-divider {
+    border-top: 1px solid #eee;
+    margin: 14px 0;
 }
 
 .chat-input {

@@ -9,7 +9,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { AuthService } from '../core/auth.service';
 import { DraftsService, DraftMeta } from '../core/drafts.service';
 import { DatePipe } from '@angular/common';
-import { PostsService, ScheduledPost } from '../core/posts.service';
+import { PostsService, PostFormat, ScheduledPost } from '../core/posts.service';
 import { ChannelsService, Channel } from '../core/channels.service';
 import { Image } from '@tiptap/extension-image';
 import { Table } from '@tiptap/extension-table';
@@ -80,15 +80,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     currentId = signal<string | null>(null);
     saveState = signal<SaveState>('saved');
     title = '';
-    nowTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
     private saveTimer?: ReturnType<typeof setTimeout>;
 
     private posts = inject(PostsService); // + import сверху
     private channelsApi = inject(ChannelsService);
 
-    previewHtml = signal('');
     chatId = '@testingandfun';
+    format: PostFormat = 'Html';
     exporting = signal(false);
     exportResult = signal('');
     exportLink = signal<string | null>(null);
@@ -132,10 +131,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             ],
             content: '',
             onTransaction: () => this.tick.update(v => v + 1),
-            onUpdate: () => {
-                this.markDirty();
-                this.refreshPreview();
-            },
+            onUpdate: () => this.markDirty(),
         });
 
         const list = await this.draftsApi.list();
@@ -189,7 +185,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.title = draft.title;
         this.editor?.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC));
         this.saveState.set('saved');
-        this.refreshPreview();
     }
 
     async newDraft() {
@@ -206,7 +201,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.title = meta.title;
         this.editor?.commands.setContent(JSON.parse(EMPTY_DOC));
         this.saveState.set('saved');
-        this.refreshPreview();
         this.editor?.commands.focus();
     }
 
@@ -230,10 +224,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return this.editor?.can().redo() ?? false;
     }
 
-    private refreshPreview() {
-        this.previewHtml.set(this.editor?.getHTML() ?? '');
-    }
-
     async exportDraft() {
         const id = this.currentId();
         if (!id) return;
@@ -243,7 +233,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.exportResult.set('');
         this.exportLink.set(null);
         try {
-            const res = await this.posts.export(id, this.chatId.trim());
+            const res = await this.posts.export(id, this.chatId.trim(), this.format);
             this.exportResult.set(`✓ Published, message ${res.messageId}`);
             this.exportLink.set(this.buildTelegramLink(res.chatId, res.messageId));
         } catch {
@@ -251,6 +241,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         } finally {
             this.exporting.set(false);
         }
+    }
+
+    setFormat(format: PostFormat) {
+        this.format = format;
     }
 
     private buildTelegramLink(chatId: string, messageId: number): string | null {
@@ -288,7 +282,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.scheduleResult.set('');
         try {
             const scheduledAtUtc = new Date(this.scheduledAt).toISOString();
-            await this.posts.schedule(id, this.chatId.trim(), scheduledAtUtc);
+            await this.posts.schedule(id, this.chatId.trim(), scheduledAtUtc, this.format);
             this.scheduleResult.set('✓ Scheduled');
             this.scheduledAt = '';
             await this.refreshScheduledPosts();

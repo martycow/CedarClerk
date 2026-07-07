@@ -6,7 +6,7 @@ namespace CedarClerk.Server;
 
 public static class ScheduledPostEndpoints
 {
-    public record ScheduleRequest(Guid DraftId, string ChatId, DateTime ScheduledAtUtc);
+    public record ScheduleRequest(Guid DraftId, string ChatId, DateTime ScheduledAtUtc, string Format = "Html");
 
     public static void MapScheduledPostEndpoints(this WebApplication app)
     {
@@ -20,7 +20,7 @@ public static class ScheduledPostEndpoints
                 .Join(db.Drafts, p => p.DraftId, d => d.Id, (p, d) => new
                 {
                     p.Id, p.DraftId, DraftTitle = d.Title, p.ChatId, p.ScheduledAtUtc,
-                    p.Status, p.Error, p.MessageId,
+                    p.Status, p.Error, p.MessageId, p.Format,
                 })
                 .ToListAsync();
         });
@@ -38,6 +38,7 @@ public static class ScheduledPostEndpoints
                 ChatId = req.ChatId,
                 ScheduledAtUtc = req.ScheduledAtUtc,
                 OwnerId = uid,
+                Format = req.Format,
             };
             db.ScheduledPosts.Add(post);
             await db.SaveChangesAsync();

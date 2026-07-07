@@ -10,10 +10,71 @@
 
         <!--Center-->
         <span class="spacer"></span>
-        <button class="export-btn" (click)="exportDraft()" [disabled]="exporting()">
-            <svg lucideSend class="icon"></svg>
-            {{ exporting() ? 'Publishing…' : 'Export' }}
-        </button>
+        <app-popover align="right">
+            <button trigger class="export-btn" title="Export">
+                <svg lucideSend class="icon"></svg>
+                Export
+            </button>
+            <div panel class="export-popover">
+                <div class="panel-title">Publish to</div>
+                <input class="chat-input" [(ngModel)]="chatId" placeholder="@channel or chat id">
+                @if (channels().length) {
+                <div class="chip-row">
+                    @for (c of channels(); track c.id) {
+                    <button class="chip" (click)="selectChannel(c)">{{ c.title }}</button>
+                    }
+                </div>
+                }
+
+                <div class="panel-title" style="margin-top:12px">Format</div>
+                <div class="format-toggle">
+                    <button [class.on]="format === 'Html'" (click)="setFormat('Html')">HTML</button>
+                    <button [class.on]="format === 'Markdown'" (click)="setFormat('Markdown')">Markdown</button>
+                </div>
+
+                <button class="export-btn full" (click)="exportDraft()" [disabled]="exporting()" style="margin-top:12px">
+                    <svg lucideSend class="icon-sm"></svg>
+                    {{ exporting() ? 'Publishing…' : 'Publish now' }}
+                </button>
+                @if (exportResult()) {
+                <p class="export-result">
+                    {{ exportResult() }}
+                    @if (exportLink()) { <a [href]="exportLink()" target="_blank" rel="noopener">Open →</a> }
+                </p>
+                }
+
+                <div class="popover-divider"></div>
+
+                <div class="panel-title">Scheduled publishing</div>
+                <div class="schedule-row">
+                    <input type="datetime-local" [(ngModel)]="scheduledAt">
+                    <button (click)="schedulePost()" [disabled]="scheduling() || !scheduledAt">
+                        {{ scheduling() ? '...' : 'Schedule' }}
+                    </button>
+                </div>
+                @if (pickerZonesHint()) { <p class="tz-hint">{{ pickerZonesHint() }}</p> }
+                @if (scheduleResult()) { <p class="export-result">{{ scheduleResult() }}</p> }
+
+                @if (scheduledPosts().length) {
+                <div class="panel-title" style="margin-top:12px">Scheduled posts</div>
+                @for (p of scheduledPosts(); track p.id) {
+                <div class="scheduled-item">
+                    <div class="scheduled-info">
+                        <div class="draft-title">{{ p.draftTitle || 'Untitled' }}</div>
+                        <div class="draft-date">{{ utcDate(p.scheduledAtUtc) | date:'d MMM, HH:mm' }} · {{ p.chatId }} · {{ p.format }}</div>
+                        <div class="tz-hint">{{ zonesHint(utcDate(p.scheduledAtUtc)) }}</div>
+                        @if (p.status === 'Failed') { <div class="channel-error">{{ p.error }}</div> }
+                    </div>
+                    @if (p.status === 'Pending') {
+                    <button class="mini-remove" (click)="cancelScheduled(p.id)" title="Cancel">
+                        <svg lucideX class="icon-sm"></svg>
+                    </button>
+                    }
+                </div>
+                }
+                }
+            </div>
+        </app-popover>
 
         <!--Right side-->
         <span class="spacer"></span>
@@ -151,52 +212,5 @@
         <section class="canvas">
             <div class="sheet" #editorHost></div>
         </section>
-
-        <!--Right panel-->
-        <aside class="panel right">
-            <div class="panel-title">Telegram preview</div>
-            <div class="tg-bubble">
-                <div class="tg-channel">Dev Dairy Diary</div>
-                <div class="tg-content" [innerHTML]="previewHtml()"></div>
-                <div class="tg-time">{{ nowTime }}</div>
-            </div>
-            <div class="panel-title" style="margin-top:16px">Publish to</div>
-            <input class="chat-input" [(ngModel)]="chatId" placeholder="@channel or chat id">
-            @if (exportResult()) {
-            <p class="export-result">
-                {{ exportResult() }}
-                @if (exportLink()) { <a [href]="exportLink()" target="_blank" rel="noopener">Open →</a> }
-            </p>
-            }
-
-            <div class="panel-title" style="margin-top:16px">Scheduled publishing</div>
-            <div class="schedule-row">
-                <input type="datetime-local" [(ngModel)]="scheduledAt">
-                <button (click)="schedulePost()" [disabled]="scheduling() || !scheduledAt">
-                    {{ scheduling() ? '...' : 'Schedule' }}
-                </button>
-            </div>
-            @if (pickerZonesHint()) { <p class="tz-hint">{{ pickerZonesHint() }}</p> }
-            @if (scheduleResult()) { <p class="export-result">{{ scheduleResult() }}</p> }
-
-            @if (scheduledPosts().length) {
-            <div class="panel-title" style="margin-top:16px">Scheduled posts</div>
-            @for (p of scheduledPosts(); track p.id) {
-            <div class="scheduled-item">
-                <div class="scheduled-info">
-                    <div class="draft-title">{{ p.draftTitle || 'Untitled' }}</div>
-                    <div class="draft-date">{{ utcDate(p.scheduledAtUtc) | date:'d MMM, HH:mm' }} · {{ p.chatId }}</div>
-                    <div class="tz-hint">{{ zonesHint(utcDate(p.scheduledAtUtc)) }}</div>
-                    @if (p.status === 'Failed') { <div class="channel-error">{{ p.error }}</div> }
-                </div>
-                @if (p.status === 'Pending') {
-                <button class="mini-remove" (click)="cancelScheduled(p.id)" title="Cancel">
-                    <svg lucideX class="icon-sm"></svg>
-                </button>
-                }
-            </div>
-            }
-            }
-        </aside>
     </div>
 </div>
