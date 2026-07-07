@@ -3,6 +3,7 @@ using CedarClerk.Server.Bot;
 using CedarClerk.Server.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 
 const string currentVersion = "0.4.0";
 const string dataDirectoryKey = "CEDAR_DATA_DIR";
@@ -51,6 +52,7 @@ builder.Services.ConfigureApplicationCookie(o =>
 });
 
 builder.Services.AddSingleton<TelegramBotService>();
+builder.Services.AddSingleton(new MediaPaths(mediaDir));
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramBotService>());
 #endregion
 
@@ -59,6 +61,11 @@ var app = builder.Build();
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(mediaDir),
+    RequestPath = "/media"
+});
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -66,6 +73,7 @@ app.UseAuthorization();
 app.MapAuthEndpoints();
 app.MapDraftEndpoints();
 app.MapPostEndpoints();
+app.MapAssetEndpoints();
 #endregion
 
 // MUST be here, after all endpoints

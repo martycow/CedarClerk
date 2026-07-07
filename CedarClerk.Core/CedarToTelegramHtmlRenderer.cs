@@ -5,22 +5,25 @@ namespace CedarClerk.Core;
 
 public static class CedarToTelegramHtmlRenderer
 {
-    public static string Render(string cedarJson)
+    public static string Render(string cedarJson, string? mediaBaseUrl = null)
     {
         var root = JsonNode.Parse(cedarJson) ?? throw new ArgumentException("Invalid cedar JSON");
         var doc = root["doc"] ?? root;
         var sb = new StringBuilder();
-        RenderNodes(doc["content"]?.AsArray(), sb);
+        RenderNodes(doc["content"]?.AsArray(), sb, mediaBaseUrl);
         return sb.ToString();
     }
 
-    private static void RenderNodes(JsonArray? nodes, StringBuilder sb)
+    private static void RenderNodes(JsonArray? nodes, StringBuilder sb, string? mediaBaseUrl = null)
     {
-        if (nodes is null) return;
-        foreach (var n in nodes) RenderNode(n!, sb);
+        if (nodes is null) 
+            return;
+        
+        foreach (var n in nodes) 
+            RenderNode(n!, sb, mediaBaseUrl);
     }
 
-    private static void RenderNode(JsonNode node, StringBuilder sb)
+    private static void RenderNode(JsonNode node, StringBuilder sb, string? mediaBaseUrl)
     {
         switch ((string?)node["type"])
         {
@@ -79,6 +82,13 @@ public static class CedarToTelegramHtmlRenderer
 
             case "text":
                 RenderText(node, sb);
+                break;
+            
+            case "image":
+                var src = (string?)node["attrs"]?["src"] ?? "";
+                if (src.StartsWith('/') && mediaBaseUrl is not null)
+                    src = mediaBaseUrl.TrimEnd('/') + src;
+                sb.Append($"<img src=\"{Escape(src)}\">");
                 break;
 
             default:

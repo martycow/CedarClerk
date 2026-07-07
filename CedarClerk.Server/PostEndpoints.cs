@@ -14,7 +14,7 @@ public static class PostEndpoints
 
     public static void MapPostEndpoints(this WebApplication app)
     {
-        app.MapPost("/api/posts/export", async (ExportRequest req, ClaimsPrincipal user, CedarDbContext db, TelegramBotService bot) =>
+        app.MapPost("/api/posts/export", async (ExportRequest req, ClaimsPrincipal user, CedarDbContext db, TelegramBotService bot, IConfiguration cfg) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == req.DraftId && d.OwnerId == uid);
@@ -24,7 +24,8 @@ public static class PostEndpoints
             if (!bot.IsRunning)
                 return Results.Problem("Telegram bot is not running (no token configured)", statusCode: StatusCodes.Status503ServiceUnavailable);
             
-            var html = CedarToTelegramHtmlRenderer.Render(draft.CedarJson);
+            var baseUrl = cfg["Cedar:PublicBaseUrl"] ?? "https://cedarclerk.mooexe.dev";
+            var html = CedarToTelegramHtmlRenderer.Render(draft.CedarJson, baseUrl);
             if (string.IsNullOrWhiteSpace(html))
                 return Results.BadRequest(new { error = "Draft is empty" });
 
