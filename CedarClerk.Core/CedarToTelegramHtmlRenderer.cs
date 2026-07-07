@@ -102,11 +102,13 @@ public static class CedarToTelegramHtmlRenderer
             case "carousel":
                 sb.Append("<tg-slideshow>");
                 if (node["attrs"]?["images"]?.AsArray() is { } images)
+                {
                     foreach (var img in images)
                     {
                         var imgSrc = ResolveUrl((string?)img, mediaBaseUrl);
                         sb.Append($"<img src=\"{Escape(imgSrc)}\">");
                     }
+                }
                 sb.Append("</tg-slideshow>");
                 break;
 

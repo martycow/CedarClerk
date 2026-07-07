@@ -4,24 +4,20 @@ using CedarClerk.Server.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
-
-const string currentVersion = "0.4.0";
-const string dataDirectoryKey = "CEDAR_DATA_DIR";
-const string dbFileName = "cedar.db";
-const int passwordMinLength = 10;
+using Quartz;
 
 var builder = WebApplication.CreateBuilder(args);
 
 #region Paths
-var dataDir = Environment.GetEnvironmentVariable(dataDirectoryKey);
+var dataDir = Environment.GetEnvironmentVariable(Consts.DataDirectoryKey);
 if (dataDir == null)
 {
     dataDir = Path.Combine(builder.Environment.ContentRootPath, "data");
-    Environment.SetEnvironmentVariable(dataDirectoryKey, dataDir);
+    Environment.SetEnvironmentVariable(Consts.DataDirectoryKey, dataDir);
 }
 
 var mediaDir = Path.Combine(dataDir, "media");
-var dbPath = Path.Combine(dataDir, dbFileName);
+var dbPath = Path.Combine(dataDir, Consts.DbFileName);
 
 Directory.CreateDirectory(dataDir);
 Directory.CreateDirectory(mediaDir);
@@ -36,7 +32,7 @@ builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
 builder.Services.AddAuthorization();
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
-        options.Password.RequiredLength = passwordMinLength;
+        options.Password.RequiredLength = Consts.PasswordMinLength;
         options.User.RequireUniqueEmail = true;
     })
     .AddEntityFrameworkStores<CedarDbContext>()
@@ -54,6 +50,14 @@ builder.Services.ConfigureApplicationCookie(o =>
 builder.Services.AddSingleton<TelegramBotService>();
 builder.Services.AddSingleton(new MediaPaths(mediaDir));
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramBotService>());
+
+builder.Services.AddQuartz(q =>
+{
+    var jobKey = new JobKey("PublishDueScheduledPosts");
+    q.AddJob<PublishDueScheduledPostsJob>(opts => opts.WithIdentity(jobKey));
+    q.AddTrigger(t => t.ForJob(jobKey).WithSimpleSchedule(s => s.WithIntervalInMinutes(1).RepeatForever()));
+});
+builder.Services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
 #endregion
 
 #region Application
@@ -74,6 +78,8 @@ app.MapAuthEndpoints();
 app.MapDraftEndpoints();
 app.MapPostEndpoints();
 app.MapAssetEndpoints();
+app.MapChannelEndpoints();
+app.MapScheduledPostEndpoints();
 #endregion
 
 // MUST be here, after all endpoints
@@ -93,10 +99,10 @@ app.MapGet("/api/health", () => Results.Ok(new
 {
     name = app.Environment.ApplicationName,
     env = app.Environment.EnvironmentName,
-    version = currentVersion,
+    version = Consts.CurrentVersion,
     timeUtc = DateTime.UtcNow,
     status = "I'm fine, thanks."
 }));
 #endregion
 
-app.Run("http://localhost:8080");
+app.Run(Consts.Localhost);

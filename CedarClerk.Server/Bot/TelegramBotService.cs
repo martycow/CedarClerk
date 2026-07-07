@@ -10,7 +10,9 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
     public TelegramBotClient Client => _client ?? throw new InvalidOperationException("Bot is not started");
 
     public bool IsRunning => _client is not null;
-    
+
+    public User Me { get; private set; } = default!;
+
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         var token = cfg["Cedar:BotToken"];
@@ -21,8 +23,8 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
         }
 
         _client = new TelegramBotClient(token, cancellationToken: ct);
-        var me = await _client.GetMe(ct);
-        logger.LogInformation("Bot @{Username} (id {Id}) is running", me.Username, me.Id);
+        Me = await _client.GetMe(ct);
+        logger.LogInformation("Bot @{Username} (id {Id}) is running", Me.Username, Me.Id);
 
         _client.OnError += (ex, source) =>
         {
