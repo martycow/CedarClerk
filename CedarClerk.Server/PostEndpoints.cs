@@ -21,6 +21,9 @@ public static class PostEndpoints
             if (draft is null) 
                 return Results.NotFound(new { error = "Draft not found" });
 
+            if (!bot.IsRunning)
+                return Results.Problem("Telegram bot is not running (no token configured)", statusCode: StatusCodes.Status503ServiceUnavailable);
+            
             var html = CedarToTelegramHtmlRenderer.Render(draft.CedarJson);
             if (string.IsNullOrWhiteSpace(html))
                 return Results.BadRequest(new { error = "Draft is empty" });

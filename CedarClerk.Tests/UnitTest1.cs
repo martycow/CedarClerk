@@ -13,7 +13,7 @@ public class RendererTests
                        {"type":"text","text":"мир","marks":[{"type":"bold"}]}
                    ]}]}
                    """;
-        Assert.Equal("Привет, <b>мир</b>", CedarToTelegramHtmlRenderer.Render(json));
+        Assert.Equal("<p>Привет, <b>мир</b></p>", CedarToTelegramHtmlRenderer.Render(json));
     }
 
     [Fact]
@@ -24,7 +24,7 @@ public class RendererTests
                        {"type":"text","text":"a < b & <script>"}
                    ]}]}
                    """;
-        Assert.Equal("a &lt; b &amp; &lt;script&gt;", CedarToTelegramHtmlRenderer.Render(json));
+        Assert.Equal("<p>a &lt; b &amp; &lt;script&gt;</p>", CedarToTelegramHtmlRenderer.Render(json));
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public class RendererTests
                        {"type":"text","text":"x","marks":[{"type":"bold"},{"type":"italic"}]}
                    ]}]}
                    """;
-        Assert.Equal("<b><i>x</i></b>", CedarToTelegramHtmlRenderer.Render(json));
+        Assert.Equal("<p><b><i>x</i></b></p>", CedarToTelegramHtmlRenderer.Render(json));
     }
 
     [Fact]
@@ -47,6 +47,30 @@ public class RendererTests
                    ]}]}
                    """;
         Assert.Equal("<pre><code class=\"language-csharp\">var x = 1;</code></pre>",
+            CedarToTelegramHtmlRenderer.Render(json));
+    }
+
+    [Fact]
+    public void Renders_heading_as_native_tag()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"heading","attrs":{"level":2},"content":[
+                       {"type":"text","text":"Заголовок"}
+                   ]}]}
+                   """;
+        Assert.Equal("<h2>Заголовок</h2>", CedarToTelegramHtmlRenderer.Render(json));
+    }
+
+    [Fact]
+    public void Renders_bullet_list()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"bulletList","content":[
+                       {"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"раз"}]}]},
+                       {"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"два"}]}]}
+                   ]}]}
+                   """;
+        Assert.Equal("<ul><li><p>раз</p></li><li><p>два</p></li></ul>",
             CedarToTelegramHtmlRenderer.Render(json));
     }
 }
