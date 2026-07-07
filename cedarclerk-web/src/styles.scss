@@ -1,0 +1,121 @@
+.tiptap {
+    outline: none;
+    font-size: 16px;
+    line-height: 1.6;
+
+    h1 {
+        font-size: 26px;
+        margin: 18px 0 8px;
+    }
+
+    h2 {
+        font-size: 21px;
+        margin: 16px 0 6px;
+    }
+
+    blockquote {
+        border-left: 3px solid #ccc;
+        margin: 8px 0;
+        padding-left: 12px;
+        color: #666;
+    }
+
+    code {
+        background: #f2f2f2;
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-family: Consolas, monospace;
+        font-size: 14px;
+    }
+
+    pre {
+        background: #f6f6f6;
+        border-radius: 8px;
+        padding: 10px 14px;
+
+        code {
+            background: none;
+            padding: 0;
+        }
+    }
+
+    ul,
+    ol {
+        padding-left: 24px;
+    }
+}
+
+.tg-bubble {
+    background: #fff;
+    border: 1px solid #e2e2e2;
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-size: 13px;
+
+    .tg-channel {
+        font-size: 12px;
+        font-weight: 600;
+        color: #3a6d99;
+        margin-bottom: 4px;
+    }
+
+    .tg-time {
+        font-size: 11px;
+        color: #aaa;
+        text-align: right;
+    }
+
+    .tg-content {
+        line-height: 1.45;
+
+        h1,
+        h2,
+        h3 {
+            font-size: 14px;
+            font-weight: 700;
+            margin: 8px 0 4px;
+        }
+
+        p {
+            margin: 0 0 8px;
+        }
+
+        code {
+            background: #f2f2f2;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        pre {
+            background: #f6f6f6;
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+
+        blockquote {
+            border-left: 3px solid #b5d4f4;
+            margin: 6px 0;
+            padding-left: 8px;
+            color: #555;
+        }
+
+        ul,
+        ol {
+            padding-left: 20px;
+            margin: 4px 0;
+        }
+    }
+}
+
+.tiptap img {
+    max-width: 100%;
+    border-radius: 8px;
+}
+
+.tg-bubble .tg-content img {
+    max-width: 100%;
+    border-radius: 6px;
+}

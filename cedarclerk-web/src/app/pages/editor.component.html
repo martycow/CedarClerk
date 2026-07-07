@@ -1,0 +1,68 @@
+<div class="app">
+    <header class="topbar">
+        <strong>Cedar Clerk</strong>
+        <input class="title" [(ngModel)]="title" (ngModelChange)="markDirty()" placeholder="Название черновика">
+        <span class="save-state" [class.saving]="saveState() === 'saving'">
+            {{ saveLabel() }}
+        </span>
+        <button class="export-btn" (click)="exportDraft()" [disabled]="exporting()">
+            {{ exporting() ? 'Публикую…' : '📤 Экспорт' }}
+        </button>
+        <span class="spacer"></span>
+        <span class="user">{{ auth.userEmail() }}</span>
+        <button (click)="auth.logout()">Выйти</button>
+    </header>
+
+    <div class="toolbar">
+        <button (click)="cmd(c => c.toggleHeading({ level: 1 }))"
+            [class.on]="isActive('heading', { level: 1 })">H1</button>
+        <button (click)="cmd(c => c.toggleHeading({ level: 2 }))"
+            [class.on]="isActive('heading', { level: 2 })">H2</button>
+        <span class="sep"></span>
+        <button (click)="cmd(c => c.toggleBold())" [class.on]="isActive('bold')"><b>B</b></button>
+        <button (click)="cmd(c => c.toggleItalic())" [class.on]="isActive('italic')"><i>I</i></button>
+        <button (click)="cmd(c => c.toggleStrike())" [class.on]="isActive('strike')"><s>S</s></button>
+        <button (click)="cmd(c => c.toggleCode())" [class.on]="isActive('code')">&lt;/&gt;</button>
+        <span class="sep"></span>
+        <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')">• список</button>
+        <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')">1. список</button>
+        <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')">"цитата"</button>
+        <button (click)="cmd(c => c.toggleCodeBlock())" [class.on]="isActive('codeBlock')">код-блок</button>
+        <span class="sep"></span>
+        <button (click)="fileInput.click()" title="Вставить изображение">🖼️</button>
+        <input #fileInput type="file" accept="image/jpeg,image/png,image/gif,image/webp" hidden (change)="onFileChosen($event)">
+    </div>
+
+    <div class="main">
+        <aside class="panel left">
+            <div class="panel-head">
+                <span class="panel-title">Черновики</span>
+                <button class="mini" (click)="newDraft()" title="Новый черновик">+</button>
+            </div>
+            @for (d of drafts(); track d.id) {
+            <div class="draft-item" [class.active]="d.id === currentId()" (click)="openDraft(d.id)">
+                <div class="draft-title">{{ d.title || 'Без названия' }}</div>
+                <div class="draft-date">{{ d.updatedAtUtc | date:'d MMM, HH:mm' }}</div>
+            </div>
+            } @empty {
+            <p class="hint">Пусто. Нажми +</p>
+            }
+        </aside>
+
+        <section class="canvas">
+            <div class="sheet" #editorHost></div>
+        </section>
+
+        <aside class="panel right">
+            <div class="panel-title">Превью Telegram</div>
+            <div class="tg-bubble">
+                <div class="tg-channel">Dev Dairy Diary</div>
+                <div class="tg-content" [innerHTML]="previewHtml()"></div>
+                <div class="tg-time">{{ nowTime }}</div>
+            </div>
+            <div class="panel-title" style="margin-top:16px">Куда публикуем</div>
+            <input class="chat-input" [(ngModel)]="chatId" placeholder="@channel или chat id">
+            @if (exportResult()) { <p class="export-result">{{ exportResult() }}</p> }
+        </aside>
+    </div>
+</div>
