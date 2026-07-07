@@ -24,8 +24,8 @@ appsettings.*.local.json
 .env*
 test.ps1
  
-# Local SQLite
-CedarClerk.Server/data/
+# Local SQLite (path is case-sensitive on purpose — CedarClerk.Server/Data/ holds source files)
+CedarClerk.Server/Data/media/
 *.db
 *.db-wal
 *.db-shm
