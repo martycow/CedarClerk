@@ -40,9 +40,34 @@ public static class ChannelEndpoints
             }
 
             var member = await bot.Client.GetChatMember(chat.Id, bot.Me.Id);
-            var canPost = member is ChatMemberAdministrator { CanPostMessages: true } || member.Status == ChatMemberStatus.Creator;
-            if (!canPost)
-                return Results.BadRequest(new { error = "Bot must be an Admin with the right to send messages." });
+
+            // Rights checking
+            switch (chat.Type)
+            {
+                case ChatType.Channel:
+                {
+                    var canPost = member is ChatMemberAdministrator { CanPostMessages: true } || 
+                                  member.Status == ChatMemberStatus.Creator;
+                    
+                    if (!canPost)
+                        return Results.BadRequest(new { error = "Bot must have an Admin with the right to send messages OR Creator." });
+                    break;
+                }
+                case ChatType.Group:
+                case ChatType.Supergroup:
+                {
+                    var canPost = member is ChatMemberAdministrator || member.Status == ChatMemberStatus.Creator;
+                    if (!canPost)
+                        return Results.BadRequest(new { error = "Bot must be an Admin or Creator of the Group/Supergroup." });
+                    break;
+                }
+                case ChatType.Private:
+                    return Results.BadRequest(new { error = "Private chats are not supported" });
+                case ChatType.Sender:
+                    return Results.BadRequest(new { error = "Sender chats are not supported" });
+                default:
+                    return Results.BadRequest(new { error = "Unsupported chat type" });
+            }
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var channel = new Channel
