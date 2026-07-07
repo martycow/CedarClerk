@@ -91,12 +91,14 @@ public static class CedarToTelegramHtmlRenderer
 
             case "video":
                 var videoSrc = ResolveUrl((string?)node["attrs"]?["src"], mediaBaseUrl);
-                sb.Append($"<video src=\"{Escape(videoSrc)}\">");
+                // video/audio — не void-теги: без закрытия парсер вложит в них весь дальнейший контент,
+                // и Telegram перенесёт медиа в конец сообщения
+                sb.Append($"<video src=\"{Escape(videoSrc)}\"></video>");
                 break;
 
             case "audio":
                 var audioSrc = ResolveUrl((string?)node["attrs"]?["src"], mediaBaseUrl);
-                sb.Append($"<audio src=\"{Escape(audioSrc)}\">");
+                sb.Append($"<audio src=\"{Escape(audioSrc)}\"></audio>");
                 break;
 
             case "carousel":

@@ -9,7 +9,8 @@ import StarterKit from '@tiptap/starter-kit';
 import { AuthService } from '../core/auth.service';
 import { DraftsService, DraftMeta } from '../core/drafts.service';
 import { DatePipe } from '@angular/common';
-import { PostsService } from '../core/posts.service';
+import { PostsService, ScheduledPost } from '../core/posts.service';
+import { ChannelsService, Channel } from '../core/channels.service';
 import { Image } from '@tiptap/extension-image';
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
@@ -25,6 +26,12 @@ import { CarouselNode } from '../tiptap-extensions/carousel-node';
 
 type SaveState = 'saved' | 'saving' | 'dirty';
 const EMPTY_DOC = '{"type":"doc","content":[{"type":"paragraph"}]}';
+
+// Дополнительные пояса для времени публикации; позже вынесем в настройки пользователя
+const EXTRA_TIMEZONES: { label: string; zone: string }[] = [
+    { label: 'МСК', zone: 'Europe/Moscow' },
+    { label: 'PT', zone: 'America/Los_Angeles' },
+];
 
 interface UploadItem {
     id: number;
@@ -57,6 +64,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private saveTimer?: ReturnType<typeof setTimeout>;
 
     private posts = inject(PostsService); // + import сверху
+    private channelsApi = inject(ChannelsService);
 
     previewHtml = signal('');
     chatId = '@testingandfun';
@@ -66,6 +74,15 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     uploads = signal<UploadItem[]>([]);
     private uploadSeq = 0;
+
+    channels = signal<Channel[]>([]);
+    newChannelChatId = '';
+    channelError = signal('');
+
+    scheduledAt = '';
+    scheduling = signal(false);
+    scheduleResult = signal('');
+    scheduledPosts = signal<ScheduledPost[]>([]);
 
     saveLabel(): string {
         switch (this.saveState()) {
@@ -104,6 +121,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.drafts.set(list);
         if (list.length > 0) await this.openDraft(list[0].id);
         else await this.newDraft();
+
+        this.channels.set(await this.channelsApi.list());
+        await this.refreshScheduledPosts();
     }
 
     ngOnDestroy() {
@@ -214,6 +234,77 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     private buildTelegramLink(chatId: string, messageId: number): string | null {
         return chatId.startsWith('@') ? `https://t.me/${chatId.slice(1)}/${messageId}` : null;
+    }
+
+    async connectChannel() {
+        const chatId = this.newChannelChatId.trim();
+        if (!chatId) return;
+        this.channelError.set('');
+        try {
+            const channel = await this.channelsApi.connect(chatId);
+            this.channels.update(list => [...list, channel]);
+            this.newChannelChatId = '';
+        } catch (e: any) {
+            this.channelError.set(e?.error?.error ?? 'Не удалось подключить канал');
+        }
+    }
+
+    selectChannel(c: Channel) {
+        this.chatId = String(c.telegramChatId);
+    }
+
+    async removeChannel(id: string) {
+        await this.channelsApi.remove(id);
+        this.channels.update(list => list.filter(c => c.id !== id));
+    }
+
+    async schedulePost() {
+        const id = this.currentId();
+        if (!id || !this.scheduledAt) return;
+        clearTimeout(this.saveTimer);
+        if (this.saveState() !== 'saved') await this.save();
+        this.scheduling.set(true);
+        this.scheduleResult.set('');
+        try {
+            const scheduledAtUtc = new Date(this.scheduledAt).toISOString();
+            await this.posts.schedule(id, this.chatId.trim(), scheduledAtUtc);
+            this.scheduleResult.set('✓ Запланировано');
+            this.scheduledAt = '';
+            await this.refreshScheduledPosts();
+        } catch {
+            this.scheduleResult.set('✗ Ошибка планирования');
+        } finally {
+            this.scheduling.set(false);
+        }
+    }
+
+    utcDate(iso: string): Date {
+        // SQLite не хранит DateTimeKind, сервер отдаёт UTC без 'Z' — без него браузер счёл бы время местным
+        return new Date(/Z|[+-]\d{2}:\d{2}$/.test(iso) ? iso : iso + 'Z');
+    }
+
+    zonesHint(date: Date): string {
+        if (isNaN(date.getTime())) return '';
+        return EXTRA_TIMEZONES
+            .map(tz => `${tz.label} ${date.toLocaleString('ru', {
+                timeZone: tz.zone,
+                day: 'numeric', month: 'short',
+                hour: '2-digit', minute: '2-digit',
+            })}`)
+            .join(' · ');
+    }
+
+    pickerZonesHint(): string {
+        return this.scheduledAt ? this.zonesHint(new Date(this.scheduledAt)) : '';
+    }
+
+    async cancelScheduled(id: string) {
+        await this.posts.cancelScheduled(id);
+        this.scheduledPosts.update(list => list.filter(p => p.id !== id));
+    }
+
+    private async refreshScheduledPosts() {
+        this.scheduledPosts.set(await this.posts.listScheduled());
     }
 
     onFileChosen(ev: Event) {

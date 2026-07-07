@@ -119,7 +119,7 @@ public class RendererTests
         var json = """
                    {"type":"doc","content":[{"type":"video","attrs":{"src":"/media/clip.mp4"}}]}
                    """;
-        Assert.Equal("<video src=\"https://cedarclerk.mooexe.dev/media/clip.mp4\">",
+        Assert.Equal("<video src=\"https://cedarclerk.mooexe.dev/media/clip.mp4\"></video>",
             CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
     }
 
@@ -129,7 +129,7 @@ public class RendererTests
         var json = """
                    {"type":"doc","content":[{"type":"audio","attrs":{"src":"/media/sound.mp3"}}]}
                    """;
-        Assert.Equal("<audio src=\"https://cedarclerk.mooexe.dev/media/sound.mp3\">",
+        Assert.Equal("<audio src=\"https://cedarclerk.mooexe.dev/media/sound.mp3\"></audio>",
             CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
     }
 
