@@ -1,0 +1,11 @@
+<div class="popover-host">
+    <div class="popover-trigger" (click)="toggle()">
+        <ng-content select="[trigger]"></ng-content>
+    </div>
+    @if (isOpen()) {
+    <div class="popover-backdrop" (click)="close()"></div>
+    <div class="popover-panel" [class.right]="align() === 'right'">
+        <ng-content select="[panel]"></ng-content>
+    </div>
+    }
+</div>

@@ -23,13 +23,27 @@ import { AssetsService } from '../core/assets.service';
 import { VideoNode } from '../tiptap-extensions/video-node';
 import { AudioNode } from '../tiptap-extensions/audio-node';
 import { CarouselNode } from '../tiptap-extensions/carousel-node';
+import { PopoverComponent } from '../shared/popover.component';
+import {
+    LucideHeading1 as Heading1, LucideHeading2 as Heading2, LucideHeading3 as Heading3,
+    LucideHeading4 as Heading4, LucideHeading5 as Heading5, LucideHeading6 as Heading6,
+    LucideUndo2 as Undo2, LucideRedo2 as Redo2,
+    LucideBold as Bold, LucideItalic as Italic, LucideStrikethrough as Strikethrough, LucideCode as Code,
+    LucideList as List, LucideListOrdered as ListOrdered, LucideListTodo as ListTodo,
+    LucideQuote as Quote, LucideSquareCode as SquareCode,
+    LucideOutdent as Outdent, LucideIndent as Indent,
+    LucideTable as TableIcon, LucideSigma as Sigma, LucideSigmaSquare as SigmaSquare,
+    LucideImage as ImageIcon, LucideVideo as VideoIcon, LucideAudioLines as AudioLines, LucideImages as Images,
+    LucideSend as Send, LucideRadioTower as RadioTower, LucidePlus as Plus, LucideX as X,
+    LucideUserCircle as UserCircle, LucideLogOut as LogOut,
+} from '@lucide/angular';
 
 type SaveState = 'saved' | 'saving' | 'dirty';
 const EMPTY_DOC = '{"type":"doc","content":[{"type":"paragraph"}]}';
 
-// Дополнительные пояса для времени публикации; позже вынесем в настройки пользователя
+// Extra timezones shown alongside the local time when scheduling a post; will move to user settings later
 const EXTRA_TIMEZONES: { label: string; zone: string }[] = [
-    { label: 'МСК', zone: 'Europe/Moscow' },
+    { label: 'MSK', zone: 'Europe/Moscow' },
     { label: 'PT', zone: 'America/Los_Angeles' },
 ];
 
@@ -42,7 +56,14 @@ interface UploadItem {
 
 @Component({
     selector: 'app-editor',
-    imports: [FormsModule, DatePipe],
+    imports: [
+        FormsModule, DatePipe, PopoverComponent,
+        Heading1, Heading2, Heading3, Heading4, Heading5, Heading6,
+        Undo2, Redo2, Bold, Italic, Strikethrough, Code,
+        List, ListOrdered, ListTodo, Quote, SquareCode, Outdent, Indent,
+        TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
+        Send, RadioTower, Plus, X, UserCircle, LogOut,
+    ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
 })
@@ -59,7 +80,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     currentId = signal<string | null>(null);
     saveState = signal<SaveState>('saved');
     title = '';
-    nowTime = new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
+    nowTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
     private saveTimer?: ReturnType<typeof setTimeout>;
 
@@ -86,9 +107,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     saveLabel(): string {
         switch (this.saveState()) {
-            case 'saved': return '✓ сохранено';
-            case 'saving': return 'сохраняю…';
-            case 'dirty': return '● есть изменения';
+            case 'saved': return '✓ Saved';
+            case 'saving': return 'Saving…';
+            case 'dirty': return '● Unsaved changes';
         }
     }
 
@@ -175,9 +196,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         clearTimeout(this.saveTimer);
         if (this.saveState() !== 'saved') await this.save();
 
-        const created = await this.draftsApi.create('Без названия', EMPTY_DOC);
+        const created = await this.draftsApi.create('Untitled', EMPTY_DOC);
         const meta: DraftMeta = {
-            id: created.id, title: 'Без названия',
+            id: created.id, title: 'Untitled',
             createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
         };
         this.drafts.update(l => [meta, ...l]);
@@ -223,10 +244,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.exportLink.set(null);
         try {
             const res = await this.posts.export(id, this.chatId.trim());
-            this.exportResult.set(`✓ Опубликовано, message ${res.messageId}`);
+            this.exportResult.set(`✓ Published, message ${res.messageId}`);
             this.exportLink.set(this.buildTelegramLink(res.chatId, res.messageId));
         } catch {
-            this.exportResult.set('✗ Ошибка — смотри консоль/логи сервера');
+            this.exportResult.set('✗ Error — check the browser console / server logs');
         } finally {
             this.exporting.set(false);
         }
@@ -245,7 +266,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.channels.update(list => [...list, channel]);
             this.newChannelChatId = '';
         } catch (e: any) {
-            this.channelError.set(e?.error?.error ?? 'Не удалось подключить канал');
+            this.channelError.set(e?.error?.error ?? 'Failed to connect channel');
         }
     }
 
@@ -268,11 +289,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         try {
             const scheduledAtUtc = new Date(this.scheduledAt).toISOString();
             await this.posts.schedule(id, this.chatId.trim(), scheduledAtUtc);
-            this.scheduleResult.set('✓ Запланировано');
+            this.scheduleResult.set('✓ Scheduled');
             this.scheduledAt = '';
             await this.refreshScheduledPosts();
         } catch {
-            this.scheduleResult.set('✗ Ошибка планирования');
+            this.scheduleResult.set('✗ Scheduling failed');
         } finally {
             this.scheduling.set(false);
         }
@@ -286,7 +307,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     zonesHint(date: Date): string {
         if (isNaN(date.getTime())) return '';
         return EXTRA_TIMEZONES
-            .map(tz => `${tz.label} ${date.toLocaleString('ru', {
+            .map(tz => `${tz.label} ${date.toLocaleString('en-GB', {
                 timeZone: tz.zone,
                 day: 'numeric', month: 'short',
                 hour: '2-digit', minute: '2-digit',
@@ -355,12 +376,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     insertInlineMath() {
-        const latex = window.prompt('Формула (LaTeX), например: E = mc^2');
+        const latex = window.prompt('Formula (LaTeX), e.g.: E = mc^2');
         if (latex) this.cmd(c => c.insertInlineMath({ latex }));
     }
 
     insertBlockMath() {
-        const latex = window.prompt('Формула (LaTeX), блок, например: \\int_0^1 x^2\\,dx');
+        const latex = window.prompt('Formula (LaTeX), block, e.g.: \\int_0^1 x^2\\,dx');
         if (latex) this.cmd(c => c.insertBlockMath({ latex }));
     }
 
@@ -395,7 +416,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                     }
                 },
                 error: () => {
-                    this.uploads.update(list => list.map(u => u.id === id ? { ...u, error: 'Ошибка загрузки (тип/размер?)' } : u));
+                    this.uploads.update(list => list.map(u => u.id === id ? { ...u, error: 'Upload failed (type/size?)' } : u));
                     setTimeout(() => this.uploads.update(list => list.filter(u => u.id !== id)), 3000);
                     resolve(null);
                 },

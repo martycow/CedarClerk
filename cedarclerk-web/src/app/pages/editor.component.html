@@ -3,7 +3,7 @@
     <header class="topbar">
         <!--Left side-->
         <strong>Cedar Clerk</strong>
-        <input class="title" [(ngModel)]="title" (ngModelChange)="markDirty()" placeholder="Название черновика">
+        <input class="title" [(ngModel)]="title" (ngModelChange)="markDirty()" placeholder="Draft title">
         <span class="save-state" [class.saving]="saveState() === 'saving'">
             {{ saveLabel() }}
         </span>
@@ -11,65 +11,105 @@
         <!--Center-->
         <span class="spacer"></span>
         <button class="export-btn" (click)="exportDraft()" [disabled]="exporting()">
-            {{ exporting() ? 'Публикую…' : '📤 Экспорт' }}
+            <svg lucideSend class="icon"></svg>
+            {{ exporting() ? 'Publishing…' : 'Export' }}
         </button>
 
         <!--Right side-->
         <span class="spacer"></span>
-        <span class="user">{{ auth.userEmail() }}</span>
-        <button (click)="auth.logout()">Выйти</button>
+
+        <app-popover align="right">
+            <button trigger class="icon-btn" title="Channels">
+                <svg lucideRadioTower class="icon"></svg>
+            </button>
+            <div panel>
+                <div class="panel-head">
+                    <span class="panel-title">Channels</span>
+                </div>
+                <div class="channel-add">
+                    <input [(ngModel)]="newChannelChatId" placeholder="@channel or id" (keyup.enter)="connectChannel()">
+                    <button class="mini" (click)="connectChannel()" title="Connect"><svg lucidePlus class="icon-sm"></svg></button>
+                </div>
+                @if (channelError()) { <p class="channel-error">{{ channelError() }}</p> }
+                @for (c of channels(); track c.id) {
+                <div class="draft-item channel-item" (click)="selectChannel(c)">
+                    <div class="draft-title">{{ c.title }}</div>
+                    <button class="mini-remove" (click)="removeChannel(c.id); $event.stopPropagation()" title="Disconnect">
+                        <svg lucideX class="icon-sm"></svg>
+                    </button>
+                </div>
+                } @empty {
+                <p class="hint">No channels yet</p>
+                }
+            </div>
+        </app-popover>
+
+        <app-popover align="right">
+            <button trigger class="icon-btn user-btn" title="Account">
+                <svg lucideUserCircle class="icon"></svg>
+                <span class="user">{{ auth.userEmail() }}</span>
+            </button>
+            <div panel>
+                <div class="panel-title">Account</div>
+                <p class="profile-email">{{ auth.userEmail() }}</p>
+                <button class="logout-btn" (click)="auth.logout()">
+                    <svg lucideLogOut class="icon-sm"></svg>
+                    Log out
+                </button>
+            </div>
+        </app-popover>
     </header>
 
     <!--Toolbar-->
     <div class="toolbar">
         <!--Headers-->
-        <button (click)="cmd(c => c.toggleHeading({ level: 1 }))" [class.on]="isActive('heading', { level: 1 })">H1</button>
-        <button (click)="cmd(c => c.toggleHeading({ level: 2 }))" [class.on]="isActive('heading', { level: 2 })">H2</button>
-        <button (click)="cmd(c => c.toggleHeading({ level: 3 }))" [class.on]="isActive('heading', { level: 3 })">H3</button>
-        <button (click)="cmd(c => c.toggleHeading({ level: 4 }))" [class.on]="isActive('heading', { level: 4 })">H4</button>
-        <button (click)="cmd(c => c.toggleHeading({ level: 5 }))" [class.on]="isActive('heading', { level: 5 })">H5</button>
-        <button (click)="cmd(c => c.toggleHeading({ level: 6 }))" [class.on]="isActive('heading', { level: 6 })">H6</button>
+        <button (click)="cmd(c => c.toggleHeading({ level: 1 }))" [class.on]="isActive('heading', { level: 1 })" title="Heading 1"><svg lucideHeading1 class="icon"></svg></button>
+        <button (click)="cmd(c => c.toggleHeading({ level: 2 }))" [class.on]="isActive('heading', { level: 2 })" title="Heading 2"><svg lucideHeading2 class="icon"></svg></button>
+        <button (click)="cmd(c => c.toggleHeading({ level: 3 }))" [class.on]="isActive('heading', { level: 3 })" title="Heading 3"><svg lucideHeading3 class="icon"></svg></button>
+        <button (click)="cmd(c => c.toggleHeading({ level: 4 }))" [class.on]="isActive('heading', { level: 4 })" title="Heading 4"><svg lucideHeading4 class="icon"></svg></button>
+        <button (click)="cmd(c => c.toggleHeading({ level: 5 }))" [class.on]="isActive('heading', { level: 5 })" title="Heading 5"><svg lucideHeading5 class="icon"></svg></button>
+        <button (click)="cmd(c => c.toggleHeading({ level: 6 }))" [class.on]="isActive('heading', { level: 6 })" title="Heading 6"><svg lucideHeading6 class="icon"></svg></button>
 
         <!--Undo/Redo-->
         <span class="sep"></span>
-        <button (click)="cmd(c => c.undo())" [disabled]="!canUndo()" title="Undo (Ctrl+Z)">↶</button>
-        <button (click)="cmd(c => c.redo())" [disabled]="!canRedo()" title="Redo (Ctrl+Y)">↷</button>
+        <button (click)="cmd(c => c.undo())" [disabled]="!canUndo()" title="Undo (Ctrl+Z)"><svg lucideUndo2 class="icon"></svg></button>
+        <button (click)="cmd(c => c.redo())" [disabled]="!canRedo()" title="Redo (Ctrl+Y)"><svg lucideRedo2 class="icon"></svg></button>
 
         <!--Text formatting-->
         <span class="sep"></span>
-        <button (click)="cmd(c => c.toggleBold())" [class.on]="isActive('bold')"><b>B</b></button>
-        <button (click)="cmd(c => c.toggleItalic())" [class.on]="isActive('italic')"><i>I</i></button>
-        <button (click)="cmd(c => c.toggleStrike())" [class.on]="isActive('strike')"><s>S</s></button>
-        <button (click)="cmd(c => c.toggleCode())" [class.on]="isActive('code')">&lt;/&gt;</button>
+        <button (click)="cmd(c => c.toggleBold())" [class.on]="isActive('bold')" title="Bold"><svg lucideBold class="icon"></svg></button>
+        <button (click)="cmd(c => c.toggleItalic())" [class.on]="isActive('italic')" title="Italic"><svg lucideItalic class="icon"></svg></button>
+        <button (click)="cmd(c => c.toggleStrike())" [class.on]="isActive('strike')" title="Strikethrough"><svg lucideStrikethrough class="icon"></svg></button>
+        <button (click)="cmd(c => c.toggleCode())" [class.on]="isActive('code')" title="Inline code"><svg lucideCode class="icon"></svg></button>
 
         <!--Lists and blockquotes-->
         <span class="sep"></span>
-        <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')">• список</button>
-        <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')">1. список</button>
-        <button (click)="cmd(c => c.toggleTaskList())" [class.on]="isActive('taskList')">☑ чек-лист</button>
-        <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')">"цитата"</button>
-        <button (click)="cmd(c => c.toggleCodeBlock())" [class.on]="isActive('codeBlock')">код-блок</button>
-        <button (click)="outdent()" title="Уменьшить отступ">⇤</button>
-        <button (click)="indent()" title="Увеличить отступ">⇥</button>
+        <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')" title="Bullet list"><svg lucideList class="icon"></svg></button>
+        <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')" title="Numbered list"><svg lucideListOrdered class="icon"></svg></button>
+        <button (click)="cmd(c => c.toggleTaskList())" [class.on]="isActive('taskList')" title="Task list"><svg lucideListTodo class="icon"></svg></button>
+        <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" title="Blockquote"><svg lucideQuote class="icon"></svg></button>
+        <button (click)="cmd(c => c.toggleCodeBlock())" [class.on]="isActive('codeBlock')" title="Code block"><svg lucideSquareCode class="icon"></svg></button>
+        <button (click)="outdent()" title="Decrease indent"><svg lucideOutdent class="icon"></svg></button>
+        <button (click)="indent()" title="Increase indent"><svg lucideIndent class="icon"></svg></button>
 
         <!--Tables and math-->
         <span class="sep"></span>
-        <button (click)="insertTable()" title="Вставить таблицу">▦ таблица</button>
-        <button (click)="insertInlineMath()" title="Формула в строке">∑ₓ</button>
-        <button (click)="insertBlockMath()" title="Формула блоком">∑</button>
+        <button (click)="insertTable()" title="Insert table"><svg lucideTable class="icon"></svg></button>
+        <button (click)="insertInlineMath()" title="Inline formula"><svg lucideSigma class="icon"></svg></button>
+        <button (click)="insertBlockMath()" title="Block formula"><svg lucideSigmaSquare class="icon"></svg></button>
 
         <!--Media-->
         <span class="sep"></span>
-        <button (click)="fileInput.click()" title="Вставить изображение">🖼️</button>
+        <button (click)="fileInput.click()" title="Insert image"><svg lucideImage class="icon"></svg></button>
         <input #fileInput type="file" accept="image/jpeg,image/png,image/gif,image/webp" multiple hidden (change)="onFileChosen($event)">
 
-        <button (click)="videoInput.click()" title="Вставить видео">🎬</button>
+        <button (click)="videoInput.click()" title="Insert video"><svg lucideVideo class="icon"></svg></button>
         <input #videoInput type="file" accept="video/mp4" multiple hidden (change)="onVideoChosen($event)">
 
-        <button (click)="audioInput.click()" title="Вставить аудио">🎵</button>
+        <button (click)="audioInput.click()" title="Insert audio"><svg lucideAudioLines class="icon"></svg></button>
         <input #audioInput type="file" accept="audio/mpeg,audio/ogg" multiple hidden (change)="onAudioChosen($event)">
 
-        <button (click)="carouselInput.click()" title="Вставить карусель из картинок">🎠</button>
+        <button (click)="carouselInput.click()" title="Insert image carousel"><svg lucideImages class="icon"></svg></button>
         <input #carouselInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCarouselChosen($event)">
     </div>
 
@@ -95,33 +135,16 @@
         <!--Left panel-->
         <aside class="panel left">
             <div class="panel-head">
-                <span class="panel-title">Черновики</span>
-                <button class="mini" (click)="newDraft()" title="Новый черновик">+</button>
+                <span class="panel-title">Drafts</span>
+                <button class="mini" (click)="newDraft()" title="New draft"><svg lucidePlus class="icon-sm"></svg></button>
             </div>
             @for (d of drafts(); track d.id) {
             <div class="draft-item" [class.active]="d.id === currentId()" (click)="openDraft(d.id)">
-                <div class="draft-title">{{ d.title || 'Без названия' }}</div>
+                <div class="draft-title">{{ d.title || 'Untitled' }}</div>
                 <div class="draft-date">{{ d.updatedAt | date:'d MMM, HH:mm' }}</div>
             </div>
             } @empty {
-            <p class="hint">Пусто. Нажми +</p>
-            }
-
-            <div class="panel-head" style="margin-top:16px">
-                <span class="panel-title">Каналы</span>
-            </div>
-            <div class="channel-add">
-                <input [(ngModel)]="newChannelChatId" placeholder="@channel или id" (keyup.enter)="connectChannel()">
-                <button class="mini" (click)="connectChannel()" title="Подключить">+</button>
-            </div>
-            @if (channelError()) { <p class="channel-error">{{ channelError() }}</p> }
-            @for (c of channels(); track c.id) {
-            <div class="draft-item channel-item" (click)="selectChannel(c)">
-                <div class="draft-title">{{ c.title }}</div>
-                <button class="mini-remove" (click)="removeChannel(c.id); $event.stopPropagation()" title="Отключить">×</button>
-            </div>
-            } @empty {
-            <p class="hint">Пока нет каналов</p>
+            <p class="hint">Empty. Click +</p>
             }
         </aside>
 
@@ -131,43 +154,45 @@
 
         <!--Right panel-->
         <aside class="panel right">
-            <div class="panel-title">Превью Telegram</div>
+            <div class="panel-title">Telegram preview</div>
             <div class="tg-bubble">
                 <div class="tg-channel">Dev Dairy Diary</div>
                 <div class="tg-content" [innerHTML]="previewHtml()"></div>
                 <div class="tg-time">{{ nowTime }}</div>
             </div>
-            <div class="panel-title" style="margin-top:16px">Куда публикуем</div>
-            <input class="chat-input" [(ngModel)]="chatId" placeholder="@channel или chat id">
+            <div class="panel-title" style="margin-top:16px">Publish to</div>
+            <input class="chat-input" [(ngModel)]="chatId" placeholder="@channel or chat id">
             @if (exportResult()) {
             <p class="export-result">
                 {{ exportResult() }}
-                @if (exportLink()) { <a [href]="exportLink()" target="_blank" rel="noopener">Открыть →</a> }
+                @if (exportLink()) { <a [href]="exportLink()" target="_blank" rel="noopener">Open →</a> }
             </p>
             }
 
-            <div class="panel-title" style="margin-top:16px">Отложенная публикация</div>
+            <div class="panel-title" style="margin-top:16px">Scheduled publishing</div>
             <div class="schedule-row">
                 <input type="datetime-local" [(ngModel)]="scheduledAt">
                 <button (click)="schedulePost()" [disabled]="scheduling() || !scheduledAt">
-                    {{ scheduling() ? '...' : 'Запланировать' }}
+                    {{ scheduling() ? '...' : 'Schedule' }}
                 </button>
             </div>
             @if (pickerZonesHint()) { <p class="tz-hint">{{ pickerZonesHint() }}</p> }
             @if (scheduleResult()) { <p class="export-result">{{ scheduleResult() }}</p> }
 
             @if (scheduledPosts().length) {
-            <div class="panel-title" style="margin-top:16px">Запланированные посты</div>
+            <div class="panel-title" style="margin-top:16px">Scheduled posts</div>
             @for (p of scheduledPosts(); track p.id) {
             <div class="scheduled-item">
                 <div class="scheduled-info">
-                    <div class="draft-title">{{ p.draftTitle || 'Без названия' }}</div>
+                    <div class="draft-title">{{ p.draftTitle || 'Untitled' }}</div>
                     <div class="draft-date">{{ utcDate(p.scheduledAtUtc) | date:'d MMM, HH:mm' }} · {{ p.chatId }}</div>
                     <div class="tz-hint">{{ zonesHint(utcDate(p.scheduledAtUtc)) }}</div>
                     @if (p.status === 'Failed') { <div class="channel-error">{{ p.error }}</div> }
                 </div>
                 @if (p.status === 'Pending') {
-                <button class="mini-remove" (click)="cancelScheduled(p.id)" title="Отменить">×</button>
+                <button class="mini-remove" (click)="cancelScheduled(p.id)" title="Cancel">
+                    <svg lucideX class="icon-sm"></svg>
+                </button>
                 }
             </div>
             }
