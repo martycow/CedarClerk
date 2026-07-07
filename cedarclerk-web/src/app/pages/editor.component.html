@@ -28,11 +28,24 @@
         <span class="sep"></span>
         <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')">• список</button>
         <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')">1. список</button>
+        <button (click)="cmd(c => c.toggleTaskList())" [class.on]="isActive('taskList')">☑ чек-лист</button>
         <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')">"цитата"</button>
         <button (click)="cmd(c => c.toggleCodeBlock())" [class.on]="isActive('codeBlock')">код-блок</button>
+        <button (click)="outdent()" title="Уменьшить отступ">⇤</button>
+        <button (click)="indent()" title="Увеличить отступ">⇥</button>
+        <span class="sep"></span>
+        <button (click)="insertTable()" title="Вставить таблицу">▦ таблица</button>
+        <button (click)="insertInlineMath()" title="Формула в строке">∑ₓ</button>
+        <button (click)="insertBlockMath()" title="Формула блоком">∑</button>
         <span class="sep"></span>
         <button (click)="fileInput.click()" title="Вставить изображение">🖼️</button>
         <input #fileInput type="file" accept="image/jpeg,image/png,image/gif,image/webp" multiple hidden (change)="onFileChosen($event)">
+        <button (click)="videoInput.click()" title="Вставить видео">🎬</button>
+        <input #videoInput type="file" accept="video/mp4" multiple hidden (change)="onVideoChosen($event)">
+        <button (click)="audioInput.click()" title="Вставить аудио">🎵</button>
+        <input #audioInput type="file" accept="audio/mpeg,audio/ogg" multiple hidden (change)="onAudioChosen($event)">
+        <button (click)="carouselInput.click()" title="Вставить карусель из картинок">🎠</button>
+        <input #carouselInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCarouselChosen($event)">
     </div>
 
     @if (uploads().length) {

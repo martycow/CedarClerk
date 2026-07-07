@@ -7,26 +7,30 @@ public record MediaPaths(string Dir);
 
 public static class AssetEndpoints
 {
-    // 5 MBytes at max for a file
-    private const long MaxBytes = 5 * 1024 * 1024;
+    private const long ImageMaxBytes = 5 * 1024 * 1024;
+    private const long MediaMaxBytes = 20 * 1024 * 1024;
 
-    private static readonly Dictionary<string, string> Allowed = new()
+    private static readonly Dictionary<string, (string Ext, long MaxBytes)> Allowed = new()
     {
-        ["image/jpeg"] = ".jpg",
-        ["image/png"]  = ".png",
-        ["image/gif"]  = ".gif",
-        ["image/webp"] = ".webp",
+        ["image/jpeg"] = (".jpg", ImageMaxBytes),
+        ["image/png"]  = (".png", ImageMaxBytes),
+        ["image/gif"]  = (".gif", ImageMaxBytes),
+        ["image/webp"] = (".webp", ImageMaxBytes),
+        ["video/mp4"]  = (".mp4", MediaMaxBytes),
+        ["audio/mpeg"] = (".mp3", MediaMaxBytes),
+        ["audio/ogg"]  = (".ogg", MediaMaxBytes),
     };
 
     public static void MapAssetEndpoints(this WebApplication app)
     {
         app.MapPost("/api/assets", async (IFormFile file, ClaimsPrincipal user, CedarDbContext db, MediaPaths media) =>
             {
-                if (!Allowed.TryGetValue(file.ContentType, out var ext))
+                if (!Allowed.TryGetValue(file.ContentType, out var allowed))
                     return Results.BadRequest(new { error = $"Unsupported type: {file.ContentType}" });
-                
-                if (file.Length is 0 or > MaxBytes)
-                    return Results.BadRequest(new { error = "File is too large (5MB Maximum)" });
+
+                var (ext, maxBytes) = allowed;
+                if (file.Length == 0 || file.Length > maxBytes)
+                    return Results.BadRequest(new { error = $"File is too large ({maxBytes / (1024 * 1024)}MB Maximum)" });
 
                 var asset = new Asset
                 {

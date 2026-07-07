@@ -29,7 +29,7 @@ public static class CedarToTelegramHtmlRenderer
         {
             case "paragraph":
                 sb.Append("<p>");
-                RenderNodes(node["content"]?.AsArray(), sb);
+                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
                 sb.Append("</p>");
                 break;
 
@@ -37,38 +37,38 @@ public static class CedarToTelegramHtmlRenderer
                 var level = (int?)node["attrs"]?["level"] ?? 1;
                 level = Math.Clamp(level, 1, 6);
                 sb.Append($"<h{level}>");
-                RenderNodes(node["content"]?.AsArray(), sb);
+                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
                 sb.Append($"</h{level}>");
                 break;
 
             case "bulletList":
                 sb.Append("<ul>");
-                RenderNodes(node["content"]?.AsArray(), sb);
+                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
                 sb.Append("</ul>");
                 break;
 
             case "orderedList":
                 sb.Append("<ol>");
-                RenderNodes(node["content"]?.AsArray(), sb);
+                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
                 sb.Append("</ol>");
                 break;
 
             case "listItem":
                 sb.Append("<li>");
-                RenderNodes(node["content"]?.AsArray(), sb);
+                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
                 sb.Append("</li>");
                 break;
 
             case "codeBlock":
                 var lang = (string?)node["attrs"]?["language"];
                 sb.Append(lang is null ? "<pre>" : $"<pre><code class=\"language-{lang}\">");
-                RenderNodes(node["content"]?.AsArray(), sb);
+                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
                 sb.Append(lang is null ? "</pre>" : "</code></pre>");
                 break;
 
             case "blockquote":
                 sb.Append("<blockquote>");
-                RenderNodes(node["content"]?.AsArray(), sb);
+                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
                 sb.Append("</blockquote>");
                 break;
 
@@ -85,15 +85,106 @@ public static class CedarToTelegramHtmlRenderer
                 break;
             
             case "image":
-                var src = (string?)node["attrs"]?["src"] ?? "";
-                if (src.StartsWith('/') && mediaBaseUrl is not null)
-                    src = mediaBaseUrl.TrimEnd('/') + src;
+                var src = ResolveUrl((string?)node["attrs"]?["src"], mediaBaseUrl);
                 sb.Append($"<img src=\"{Escape(src)}\">");
                 break;
 
-            default:
-                RenderNodes(node["content"]?.AsArray(), sb);
+            case "video":
+                var videoSrc = ResolveUrl((string?)node["attrs"]?["src"], mediaBaseUrl);
+                sb.Append($"<video src=\"{Escape(videoSrc)}\">");
                 break;
+
+            case "audio":
+                var audioSrc = ResolveUrl((string?)node["attrs"]?["src"], mediaBaseUrl);
+                sb.Append($"<audio src=\"{Escape(audioSrc)}\">");
+                break;
+
+            case "carousel":
+                sb.Append("<tg-slideshow>");
+                if (node["attrs"]?["images"]?.AsArray() is { } images)
+                    foreach (var img in images)
+                    {
+                        var imgSrc = ResolveUrl((string?)img, mediaBaseUrl);
+                        sb.Append($"<img src=\"{Escape(imgSrc)}\">");
+                    }
+                sb.Append("</tg-slideshow>");
+                break;
+
+            case "table":
+                sb.Append("<table>");
+                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                sb.Append("</table>");
+                break;
+
+            case "tableRow":
+                sb.Append("<tr>");
+                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                sb.Append("</tr>");
+                break;
+
+            case "tableHeader":
+            case "tableCell":
+                var tag = (string?)node["type"] == "tableHeader" ? "th" : "td";
+                var span = "";
+                if ((int?)node["attrs"]?["colspan"] is { } colspan && colspan > 1)
+                    span += $" colspan=\"{colspan}\"";
+                if ((int?)node["attrs"]?["rowspan"] is { } rowspan && rowspan > 1)
+                    span += $" rowspan=\"{rowspan}\"";
+                sb.Append($"<{tag}{span}>");
+                RenderCellContent(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                sb.Append($"</{tag}>");
+                break;
+
+            case "taskList":
+                sb.Append("<ul>");
+                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                sb.Append("</ul>");
+                break;
+
+            case "taskItem":
+                var isChecked = (bool?)node["attrs"]?["checked"] ?? false;
+                sb.Append(isChecked ? "<li><input type=\"checkbox\" checked>" : "<li><input type=\"checkbox\">");
+                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                sb.Append("</li>");
+                break;
+
+            case "blockMath":
+                var blockLatex = Escape((string?)node["attrs"]?["latex"] ?? "");
+                sb.Append($"<tg-math-block>{blockLatex}</tg-math-block>");
+                break;
+
+            case "inlineMath":
+                var inlineLatex = Escape((string?)node["attrs"]?["latex"] ?? "");
+                sb.Append($"<tg-math>{inlineLatex}</tg-math>");
+                break;
+
+            default:
+                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                break;
+        }
+    }
+
+    private static string ResolveUrl(string? src, string? mediaBaseUrl)
+    {
+        src ??= "";
+        if (src.StartsWith('/') && mediaBaseUrl is not null)
+            src = mediaBaseUrl.TrimEnd('/') + src;
+        return src;
+    }
+
+    // Telegram table cells hold plain formatted text, not block content - a single
+    // wrapping <p> is unwrapped rather than nested inside <td>/<th>.
+    private static void RenderCellContent(JsonArray? nodes, StringBuilder sb, string? mediaBaseUrl)
+    {
+        if (nodes is null)
+            return;
+
+        foreach (var n in nodes)
+        {
+            if ((string?)n!["type"] == "paragraph")
+                RenderNodes(n["content"]?.AsArray(), sb, mediaBaseUrl);
+            else
+                RenderNode(n, sb, mediaBaseUrl);
         }
     }
 

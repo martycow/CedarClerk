@@ -43,6 +43,78 @@
     ol {
         padding-left: 24px;
     }
+
+    video,
+    audio {
+        max-width: 100%;
+    }
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 8px 0;
+
+        td,
+        th {
+            border: 1px solid #ddd;
+            padding: 4px 8px;
+        }
+
+        th {
+            background: #f6f6f6;
+        }
+    }
+
+    ul[data-type="taskList"] {
+        list-style: none;
+        padding-left: 4px;
+
+        li {
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+
+            > label {
+                margin-top: 3px;
+            }
+
+            > div {
+                flex: 1;
+            }
+        }
+    }
+}
+
+.carousel-editor {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 6px 0;
+
+    .carousel-editor-item {
+        position: relative;
+        flex: 0 0 auto;
+
+        img {
+            height: 90px;
+            border-radius: 6px;
+            display: block;
+        }
+
+        .carousel-editor-remove {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            border: none;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            line-height: 1;
+            cursor: pointer;
+        }
+    }
 }
 
 .tg-bubble {
@@ -106,6 +178,35 @@
         ol {
             padding-left: 20px;
             margin: 4px 0;
+        }
+
+        video,
+        audio {
+            max-width: 100%;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 6px 0;
+            font-size: 12px;
+
+            td,
+            th {
+                border: 1px solid #ddd;
+                padding: 3px 6px;
+            }
+        }
+
+        .carousel-preview {
+            display: flex;
+            gap: 4px;
+            overflow-x: auto;
+
+            img {
+                height: 70px;
+                border-radius: 6px;
+            }
         }
     }
 }
