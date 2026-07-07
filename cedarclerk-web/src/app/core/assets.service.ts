@@ -1,14 +1,17 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpEvent } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AssetsService {
     private http = inject(HttpClient);
 
-    upload(file: File) {
+    uploadWithProgress(file: File): Observable<HttpEvent<{ id: string; url: string }>> {
         const fd = new FormData();
         fd.append('file', file);
-        return firstValueFrom(this.http.post<{ id: string; url: string }>('/api/assets', fd));
+        return this.http.post<{ id: string; url: string }>('/api/assets', fd, {
+            reportProgress: true,
+            observe: 'events',
+        });
     }
 }

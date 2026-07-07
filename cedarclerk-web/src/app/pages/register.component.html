@@ -1,0 +1,14 @@
+<div class="login-wrap">
+    <h1>Cedar Clerk 🐮</h1>
+    <input [(ngModel)]="email" placeholder="Email" type="email" autocomplete="username">
+    <input [(ngModel)]="inviteCode" placeholder="Invite Code" type="text" autocomplete="off">
+    <input [(ngModel)]="password" placeholder="Password" type="password" autocomplete="new-password" (keyup.enter)="submit()">
+
+    <button (click)="submit()" [disabled]="busy()">
+        {{ busy() ? '...' : 'Register' }}
+    </button>
+
+    @if (error()) { <p class="error">{{ error() }}</p> }
+
+    <a class="register-link" routerLink="/login">Уже есть аккаунт? Войти</a>
+</div>

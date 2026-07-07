@@ -5,8 +5,8 @@ import { firstValueFrom } from 'rxjs';
 export interface DraftMeta {
     id: string;
     title: string;
-    createdAtUtc: string;
-    updatedAtUtc: string;
+    createdAt: string;
+    updatedAt: string;
 }
 export interface DraftFull extends DraftMeta { cedarJson: string; }
 

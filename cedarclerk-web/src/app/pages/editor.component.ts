@@ -2,6 +2,7 @@ import {
     AfterViewInit, Component, ElementRef, OnDestroy,
     ViewChild, inject, signal
 } from '@angular/core';
+import { HttpEventType } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
@@ -14,6 +15,13 @@ import { AssetsService } from '../core/assets.service';
 
 type SaveState = 'saved' | 'saving' | 'dirty';
 const EMPTY_DOC = '{"type":"doc","content":[{"type":"paragraph"}]}';
+
+interface UploadItem {
+    id: number;
+    name: string;
+    progress: number;
+    error?: string;
+}
 
 @Component({
     selector: 'app-editor',
@@ -44,6 +52,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     chatId = '@testingandfun';
     exporting = signal(false);
     exportResult = signal('');
+    exportLink = signal<string | null>(null);
+
+    uploads = signal<UploadItem[]>([]);
+    private uploadSeq = 0;
 
     saveLabel(): string {
         switch (this.saveState()) {
@@ -59,7 +71,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             extensions: [StarterKit, Image],
             content: '',
             onTransaction: () => this.tick.update(v => v + 1),
-            onUpdate: () => this.markDirty(),
+            onUpdate: () => {
+                this.markDirty();
+                this.refreshPreview();
+            },
         });
 
         const list = await this.draftsApi.list();
@@ -95,9 +110,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private refreshMeta(id: string) {
         this.drafts.update(list => list
             .map(d => d.id === id
-                ? { ...d, title: this.title, updatedAtUtc: new Date().toISOString() }
+                ? { ...d, title: this.title, updatedAt: new Date().toISOString() }
                 : d)
-            .sort((a, b) => b.updatedAtUtc.localeCompare(a.updatedAtUtc)));
+            .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
     }
 
     async openDraft(id: string) {
@@ -110,29 +125,45 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.title = draft.title;
         this.editor?.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC));
         this.saveState.set('saved');
+        this.refreshPreview();
     }
 
     async newDraft() {
+        clearTimeout(this.saveTimer);
+        if (this.saveState() !== 'saved') await this.save();
+
         const created = await this.draftsApi.create('Без названия', EMPTY_DOC);
         const meta: DraftMeta = {
             id: created.id, title: 'Без названия',
-            createdAtUtc: new Date().toISOString(), updatedAtUtc: new Date().toISOString()
+            createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
         };
         this.drafts.update(l => [meta, ...l]);
         this.currentId.set(created.id);
         this.title = meta.title;
         this.editor?.commands.setContent(JSON.parse(EMPTY_DOC));
         this.saveState.set('saved');
+        this.refreshPreview();
         this.editor?.commands.focus();
     }
 
     cmd(fn: (chain: any) => any) {
-        if (this.editor) fn(this.editor.chain().focus()).run();
+        if (this.editor) 
+            fn(this.editor.chain().focus()).run();
     }
 
     isActive(name: string, attrs?: Record<string, any>): boolean {
         this.tick();
         return this.editor?.isActive(name, attrs) ?? false;
+    }
+
+    canUndo(): boolean {
+        this.tick();
+        return this.editor?.can().undo() ?? false;
+    }
+
+    canRedo(): boolean {
+        this.tick();
+        return this.editor?.can().redo() ?? false;
     }
 
     private refreshPreview() {
@@ -146,9 +177,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (this.saveState() !== 'saved') await this.save();
         this.exporting.set(true);
         this.exportResult.set('');
+        this.exportLink.set(null);
         try {
             const res = await this.posts.export(id, this.chatId.trim());
             this.exportResult.set(`✓ Опубликовано, message ${res.messageId}`);
+            this.exportLink.set(this.buildTelegramLink(res.chatId, res.messageId));
         } catch {
             this.exportResult.set('✗ Ошибка — смотри консоль/логи сервера');
         } finally {
@@ -156,16 +189,34 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
-    async onFileChosen(ev: Event) {
+    private buildTelegramLink(chatId: string, messageId: number): string | null {
+        return chatId.startsWith('@') ? `https://t.me/${chatId.slice(1)}/${messageId}` : null;
+    }
+
+    onFileChosen(ev: Event) {
         const input = ev.target as HTMLInputElement;
-        const file = input.files?.[0];
+        const files = Array.from(input.files ?? []);
         input.value = '';
-        if (!file) return;
-        try {
-            const res = await this.assets.upload(file);
-            this.editor?.chain().focus().setImage({ src: res.url }).run();
-        } catch {
-            alert('Не удалось загрузить файл (тип/размер?)');
-        }
-      }
+        for (const file of files) this.uploadFile(file);
+    }
+
+    private uploadFile(file: File) {
+        const id = ++this.uploadSeq;
+        this.uploads.update(list => [...list, { id, name: file.name, progress: 0 }]);
+        this.assets.uploadWithProgress(file).subscribe({
+            next: event => {
+                if (event.type === HttpEventType.UploadProgress && event.total) {
+                    const progress = Math.round((event.loaded / event.total) * 100);
+                    this.uploads.update(list => list.map(u => u.id === id ? { ...u, progress } : u));
+                } else if (event.type === HttpEventType.Response && event.body) {
+                    this.editor?.chain().focus().setImage({ src: event.body.url }).run();
+                    this.uploads.update(list => list.filter(u => u.id !== id));
+                }
+            },
+            error: () => {
+                this.uploads.update(list => list.map(u => u.id === id ? { ...u, error: 'Ошибка загрузки (тип/размер?)' } : u));
+                setTimeout(() => this.uploads.update(list => list.filter(u => u.id !== id)), 3000);
+            },
+        });
+    }
 }

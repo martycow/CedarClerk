@@ -4,26 +4,27 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 
 @Component({
-    selector: 'app-login',
+    selector: 'app-register',
     imports: [FormsModule, RouterLink],
-    templateUrl: 'login.component.html',
-    styleUrls: ['login.component.css']
+    templateUrl: 'register.component.html',
+    styleUrls: ['register.component.css']
 })
-export class LoginComponent {
+export class RegisterComponent {
     private auth = inject(AuthService);
     private router = inject(Router);
 
     email = '';
     password = '';
+    inviteCode = '';
     busy = signal(false);
     error = signal('');
 
     async submit() {
         this.busy.set(true);
         this.error.set('');
-        const ok = await this.auth.login(this.email, this.password);
+        const ok = await this.auth.register(this.email, this.password, this.inviteCode);
         this.busy.set(false);
         ok ? this.router.navigateByUrl('/editor')
-            : this.error.set('Invalid email or password');
+            : this.error.set('Registration failed');
     }
 }
