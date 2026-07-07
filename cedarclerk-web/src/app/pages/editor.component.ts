@@ -23,6 +23,10 @@ import { AssetsService } from '../core/assets.service';
 import { VideoNode } from '../tiptap-extensions/video-node';
 import { AudioNode } from '../tiptap-extensions/audio-node';
 import { CarouselNode } from '../tiptap-extensions/carousel-node';
+import { CollageNode } from '../tiptap-extensions/collage-node';
+import { SpoilerMark } from '../tiptap-extensions/spoiler-mark';
+import { DateTimeNode } from '../tiptap-extensions/datetime-node';
+import { ToggleNode } from '../tiptap-extensions/toggle-node';
 import { PopoverComponent } from '../shared/popover.component';
 import {
     LucideHeading1 as Heading1, LucideHeading2 as Heading2, LucideHeading3 as Heading3,
@@ -36,6 +40,8 @@ import {
     LucideImage as ImageIcon, LucideVideo as VideoIcon, LucideAudioLines as AudioLines, LucideImages as Images,
     LucideSend as Send, LucideRadioTower as RadioTower, LucidePlus as Plus, LucideX as X,
     LucideUserCircle as UserCircle, LucideLogOut as LogOut,
+    LucideEyeOff as EyeOff, LucideLink as LinkIcon, LucideSmile as Smile,
+    LucideClock as Clock, LucideListCollapse as ListCollapse, LucideLayoutGrid as LayoutGrid,
 } from '@lucide/angular';
 
 type SaveState = 'saved' | 'saving' | 'dirty';
@@ -45,6 +51,13 @@ const EMPTY_DOC = '{"type":"doc","content":[{"type":"paragraph"}]}';
 const EXTRA_TIMEZONES: { label: string; zone: string }[] = [
     { label: 'MSK', zone: 'Europe/Moscow' },
     { label: 'PT', zone: 'America/Los_Angeles' },
+];
+
+const COMMON_EMOJI = [
+    '😀', '😂', '😅', '😉', '😊', '😍', '🤔', '😎', '😢', '😡',
+    '👍', '👎', '👏', '🙏', '💪', '🤝', '👋', '✌️', '🤞', '🫡',
+    '❤️', '🔥', '✨', '🎉', '🚀', '⭐', '💯', '⚡', '🌟', '💡',
+    '✅', '❌', '⚠️', '❓', '❗', '📌', '📎', '🔗', '📷', '🎬',
 ];
 
 interface UploadItem {
@@ -63,6 +76,7 @@ interface UploadItem {
         List, ListOrdered, ListTodo, Quote, SquareCode, Outdent, Indent,
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
         Send, RadioTower, Plus, X, UserCircle, LogOut,
+        EyeOff, LinkIcon, Smile, Clock, ListCollapse, LayoutGrid,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -104,6 +118,16 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     scheduleResult = signal('');
     scheduledPosts = signal<ScheduledPost[]>([]);
 
+    linkType: 'url' | 'email' | 'phone' | 'mention' = 'url';
+    linkValue = '';
+
+    readonly commonEmoji = COMMON_EMOJI;
+
+    dtValue = '';
+    dtWeekday = true;
+    dtDate = true;
+    dtTime = true;
+
     saveLabel(): string {
         switch (this.saveState()) {
             case 'saved': return '✓ Saved';
@@ -121,6 +145,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 VideoNode,
                 AudioNode,
                 CarouselNode,
+                CollageNode,
+                SpoilerMark,
+                DateTimeNode,
+                ToggleNode,
                 Table.configure({ resizable: false }),
                 TableRow,
                 TableHeader,
@@ -363,6 +391,61 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             const images = urls.filter((u): u is string => !!u);
             if (images.length) this.insertNode('carousel', { images });
         });
+    }
+
+    onCollageChosen(ev: Event) {
+        const input = ev.target as HTMLInputElement;
+        const files = Array.from(input.files ?? []);
+        input.value = '';
+        if (!files.length) return;
+        Promise.all(files.map(f => this.uploadFilePromise(f))).then(urls => {
+            const images = urls.filter((u): u is string => !!u);
+            if (images.length) this.insertNode('collage', { images });
+        });
+    }
+
+    setLinkType(type: 'url' | 'email' | 'phone' | 'mention') {
+        this.linkType = type;
+    }
+
+    applyLink() {
+        const value = this.linkValue.trim();
+        if (!value) return;
+        const href = this.linkType === 'email' ? `mailto:${value}`
+            : this.linkType === 'phone' ? `tel:${value}`
+            : this.linkType === 'mention' ? `tg://user?id=${value}`
+            : value;
+
+        if (this.editor?.state.selection.empty) {
+            this.cmd(c => c.insertContent({ type: 'text', text: value, marks: [{ type: 'link', attrs: { href } }] }));
+        } else {
+            this.cmd(c => c.setLink({ href }));
+        }
+        this.linkValue = '';
+    }
+
+    removeLink() {
+        this.cmd(c => c.unsetLink());
+    }
+
+    insertEmoji(emoji: string) {
+        this.cmd(c => c.insertContent(emoji));
+    }
+
+    insertDateTime() {
+        if (!this.dtValue) return;
+        const unix = Math.floor(new Date(this.dtValue).getTime() / 1000);
+        const format = (this.dtWeekday ? 'w' : '') + (this.dtDate ? 'D' : '') + (this.dtTime ? 'T' : '');
+        this.cmd(c => c.insertContent({ type: 'datetime', attrs: { unix, format: format || 'wDT' } }));
+        this.dtValue = '';
+    }
+
+    insertToggle() {
+        this.cmd(c => c.insertContent({
+            type: 'toggle',
+            attrs: { summary: 'Details' },
+            content: [{ type: 'paragraph' }],
+        }));
     }
 
     insertTable() {

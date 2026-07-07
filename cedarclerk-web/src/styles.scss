@@ -83,6 +83,48 @@
             }
         }
     }
+
+    tg-spoiler {
+        background: #444;
+        color: transparent;
+        border-radius: 3px;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease;
+
+        &:hover {
+            background: #ececec;
+            color: inherit;
+        }
+    }
+
+    .datetime-pill {
+        display: inline-block;
+        background: #e4ecf7;
+        border: 1px solid #b5d4f4;
+        border-radius: 999px;
+        padding: 1px 8px;
+        font-size: 13px;
+    }
+
+    .toggle-block {
+        border: 1px solid #e2e2e2;
+        border-radius: 8px;
+        padding: 8px 12px;
+        margin: 8px 0;
+
+        .toggle-summary-input {
+            border: none;
+            outline: none;
+            font-weight: 600;
+            font-size: 15px;
+            width: 100%;
+            background: transparent;
+        }
+
+        .toggle-content {
+            margin-top: 6px;
+        }
+    }
 }
 
 .carousel-editor {

@@ -253,4 +253,49 @@ public class MarkdownRendererTests
                    """;
         Assert.Equal("> line one\n> \n> line two", CedarToTelegramMarkdownRenderer.Render(json));
     }
+
+    [Fact]
+    public void Renders_spoiler_mark()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"paragraph","content":[
+                       {"type":"text","text":"secret","marks":[{"type":"spoiler"}]}
+                   ]}]}
+                   """;
+        Assert.Equal("||secret||", CedarToTelegramMarkdownRenderer.Render(json));
+    }
+
+    [Fact]
+    public void Renders_collage_as_tg_collage()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"collage","attrs":{"images":["/media/a.jpg","/media/b.jpg"]}}]}
+                   """;
+        Assert.Equal(
+            "<tg-collage>\n\n![](https://cedarclerk.mooexe.dev/media/a.jpg)\n" +
+            "![](https://cedarclerk.mooexe.dev/media/b.jpg)\n\n</tg-collage>",
+            CedarToTelegramMarkdownRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
+    }
+
+    [Fact]
+    public void Renders_toggle_block_as_details()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"toggle","attrs":{"summary":"More"},"content":[
+                       {"type":"paragraph","content":[{"type":"text","text":"hidden"}]}
+                   ]}]}
+                   """;
+        Assert.Equal("<details open><summary>More</summary>\n\nhidden\n\n</details>", CedarToTelegramMarkdownRenderer.Render(json));
+    }
+
+    [Fact]
+    public void Renders_datetime_reference()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"paragraph","content":[
+                       {"type":"datetime","attrs":{"unix":1700000000,"format":"wDT"}}
+                   ]}]}
+                   """;
+        Assert.Equal("![](tg://time?unix=1700000000&format=wDT)", CedarToTelegramMarkdownRenderer.Render(json));
+    }
 }

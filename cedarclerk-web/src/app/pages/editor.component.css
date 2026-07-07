@@ -457,3 +457,40 @@
     color: #a6a6b0;
     margin: 2px 0 0;
 }
+
+.link-popover {
+    width: 260px;
+}
+
+.emoji-popover {
+    width: 260px;
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 2px;
+}
+
+.emoji-btn {
+    border: none;
+    background: none;
+    border-radius: 6px;
+    padding: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.emoji-btn:hover {
+    background: #f0f0f0;
+}
+
+.dt-flags {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    font-size: 12px;
+}
+
+.dt-flags label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}

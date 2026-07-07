@@ -142,6 +142,53 @@
         <button (click)="cmd(c => c.toggleItalic())" [class.on]="isActive('italic')" title="Italic"><svg lucideItalic class="icon"></svg></button>
         <button (click)="cmd(c => c.toggleStrike())" [class.on]="isActive('strike')" title="Strikethrough"><svg lucideStrikethrough class="icon"></svg></button>
         <button (click)="cmd(c => c.toggleCode())" [class.on]="isActive('code')" title="Inline code"><svg lucideCode class="icon"></svg></button>
+        <button (click)="cmd(c => c.toggleMark('spoiler'))" [class.on]="isActive('spoiler')" title="Spoiler"><svg lucideEyeOff class="icon"></svg></button>
+
+        <!--Insert: links, emoji, date/time, toggle block-->
+        <span class="sep"></span>
+        <app-popover>
+            <button trigger [class.on]="isActive('link')" title="Link"><svg lucideLink class="icon"></svg></button>
+            <div panel class="link-popover">
+                <div class="format-toggle">
+                    <button [class.on]="linkType === 'url'" (click)="setLinkType('url')">URL</button>
+                    <button [class.on]="linkType === 'email'" (click)="setLinkType('email')">Email</button>
+                    <button [class.on]="linkType === 'phone'" (click)="setLinkType('phone')">Phone</button>
+                    <button [class.on]="linkType === 'mention'" (click)="setLinkType('mention')">Mention</button>
+                </div>
+                <input class="chat-input" style="margin-top:8px"
+                    [(ngModel)]="linkValue"
+                    [placeholder]="linkType === 'url' ? 'https://…' : linkType === 'email' ? 'name@example.com' : linkType === 'phone' ? '+1234567890' : 'numeric user id'"
+                    (keyup.enter)="applyLink()">
+                <button class="export-btn full" style="margin-top:8px" (click)="applyLink()">Apply</button>
+                @if (isActive('link')) {
+                <button class="export-btn full" style="margin-top:6px" (click)="removeLink()">Remove link</button>
+                }
+            </div>
+        </app-popover>
+
+        <app-popover>
+            <button trigger title="Emoji"><svg lucideSmile class="icon"></svg></button>
+            <div panel class="emoji-popover">
+                @for (e of commonEmoji; track e) {
+                <button class="emoji-btn" (click)="insertEmoji(e)">{{ e }}</button>
+                }
+            </div>
+        </app-popover>
+
+        <app-popover>
+            <button trigger title="Date/time"><svg lucideClock class="icon"></svg></button>
+            <div panel>
+                <input type="datetime-local" [(ngModel)]="dtValue">
+                <div class="dt-flags">
+                    <label><input type="checkbox" [(ngModel)]="dtWeekday"> Weekday</label>
+                    <label><input type="checkbox" [(ngModel)]="dtDate"> Date</label>
+                    <label><input type="checkbox" [(ngModel)]="dtTime"> Time</label>
+                </div>
+                <button class="export-btn full" style="margin-top:8px" (click)="insertDateTime()" [disabled]="!dtValue">Insert</button>
+            </div>
+        </app-popover>
+
+        <button (click)="insertToggle()" title="Expandable block"><svg lucideListCollapse class="icon"></svg></button>
 
         <!--Lists and blockquotes-->
         <span class="sep"></span>
@@ -172,6 +219,9 @@
 
         <button (click)="carouselInput.click()" title="Insert image carousel"><svg lucideImages class="icon"></svg></button>
         <input #carouselInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCarouselChosen($event)">
+
+        <button (click)="collageInput.click()" title="Insert image collage"><svg lucideLayoutGrid class="icon"></svg></button>
+        <input #collageInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCollageChosen($event)">
     </div>
 
     <!--Upload progress-->

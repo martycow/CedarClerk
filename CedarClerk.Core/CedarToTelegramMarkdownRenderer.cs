@@ -73,11 +73,21 @@ public static class CedarToTelegramMarkdownRenderer
                     ?.Select(img => $"![]({ResolveUrl((string?)img, mediaBaseUrl)})") ?? [];
                 return "<tg-slideshow>\n\n" + string.Join("\n", images) + "\n\n</tg-slideshow>";
 
+            case "collage":
+                var collageImages = node["attrs"]?["images"]?.AsArray()
+                    ?.Select(img => $"![]({ResolveUrl((string?)img, mediaBaseUrl)})") ?? [];
+                return "<tg-collage>\n\n" + string.Join("\n", collageImages) + "\n\n</tg-collage>";
+
             case "table":
                 return RenderTable(node["content"]?.AsArray(), mediaBaseUrl);
 
             case "blockMath":
                 return $"```math\n{(string?)node["attrs"]?["latex"] ?? ""}\n```";
+
+            case "toggle":
+                var summary = (string?)node["attrs"]?["summary"] ?? "";
+                var body = RenderBlocks(node["content"]?.AsArray(), mediaBaseUrl);
+                return $"<details open><summary>{summary}</summary>\n\n{body}\n\n</details>";
 
             default:
                 return RenderBlocks(node["content"]?.AsArray(), mediaBaseUrl);
@@ -192,6 +202,11 @@ public static class CedarToTelegramMarkdownRenderer
                 case "inlineMath":
                     sb.Append('$').Append((string?)n["attrs"]?["latex"] ?? "").Append('$');
                     break;
+                case "datetime":
+                    var unix = (long?)n["attrs"]?["unix"] ?? 0;
+                    var format = (string?)n["attrs"]?["format"] ?? "wDT";
+                    sb.Append($"![](tg://time?unix={unix}&format={format})");
+                    break;
             }
         }
         return sb.ToString();
@@ -233,6 +248,10 @@ public static class CedarToTelegramMarkdownRenderer
                         var href = (string?)m["attrs"]?["href"] ?? "";
                         open.Append('[');
                         close.Insert(0, $"]({href})");
+                        break;
+                    case "spoiler":
+                        open.Append("||");
+                        close.Insert(0, "||");
                         break;
                 }
             }

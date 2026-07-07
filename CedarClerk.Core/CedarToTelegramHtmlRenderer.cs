@@ -114,6 +114,19 @@ public static class CedarToTelegramHtmlRenderer
                 sb.Append("</tg-slideshow>");
                 break;
 
+            case "collage":
+                sb.Append("<tg-collage>");
+                if (node["attrs"]?["images"]?.AsArray() is { } collageImages)
+                {
+                    foreach (var img in collageImages)
+                    {
+                        var imgSrc = ResolveUrl((string?)img, mediaBaseUrl);
+                        sb.Append($"<img src=\"{Escape(imgSrc)}\">");
+                    }
+                }
+                sb.Append("</tg-collage>");
+                break;
+
             case "table":
                 sb.Append("<table>");
                 RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
@@ -160,6 +173,19 @@ public static class CedarToTelegramHtmlRenderer
             case "inlineMath":
                 var inlineLatex = Escape((string?)node["attrs"]?["latex"] ?? "");
                 sb.Append($"<tg-math>{inlineLatex}</tg-math>");
+                break;
+
+            case "toggle":
+                var summary = Escape((string?)node["attrs"]?["summary"] ?? "");
+                sb.Append($"<details open><summary>{summary}</summary>");
+                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                sb.Append("</details>");
+                break;
+
+            case "datetime":
+                var unix = (long?)node["attrs"]?["unix"] ?? 0;
+                var format = Escape((string?)node["attrs"]?["format"] ?? "wDT");
+                sb.Append($"<img src=\"tg://time?unix={unix}&amp;format={format}\">");
                 break;
 
             default:
@@ -228,6 +254,10 @@ public static class CedarToTelegramHtmlRenderer
                         var href = Escape((string?)m["attrs"]?["href"] ?? "");
                         open.Append($"<a href=\"{href}\">");
                         close.Insert(0, "</a>");
+                        break;
+                    case "spoiler":
+                        open.Append("<tg-spoiler>");
+                        close.Insert(0, "</tg-spoiler>");
                         break;
                 }
             }

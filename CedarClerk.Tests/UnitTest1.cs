@@ -199,4 +199,49 @@ public class RendererTests
                    """;
         Assert.Equal("<p>формула: <tg-math>a &lt; b</tg-math></p>", CedarToTelegramHtmlRenderer.Render(json));
     }
+
+    [Fact]
+    public void Renders_spoiler_mark()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"paragraph","content":[
+                       {"type":"text","text":"secret","marks":[{"type":"spoiler"}]}
+                   ]}]}
+                   """;
+        Assert.Equal("<p><tg-spoiler>secret</tg-spoiler></p>", CedarToTelegramHtmlRenderer.Render(json));
+    }
+
+    [Fact]
+    public void Renders_collage_as_tg_collage()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"collage","attrs":{"images":["/media/a.jpg","/media/b.jpg"]}}]}
+                   """;
+        Assert.Equal(
+            "<tg-collage><img src=\"https://cedarclerk.mooexe.dev/media/a.jpg\">" +
+            "<img src=\"https://cedarclerk.mooexe.dev/media/b.jpg\"></tg-collage>",
+            CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
+    }
+
+    [Fact]
+    public void Renders_toggle_block_as_details()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"toggle","attrs":{"summary":"More"},"content":[
+                       {"type":"paragraph","content":[{"type":"text","text":"hidden"}]}
+                   ]}]}
+                   """;
+        Assert.Equal("<details open><summary>More</summary><p>hidden</p></details>", CedarToTelegramHtmlRenderer.Render(json));
+    }
+
+    [Fact]
+    public void Renders_datetime_reference()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"paragraph","content":[
+                       {"type":"datetime","attrs":{"unix":1700000000,"format":"wDT"}}
+                   ]}]}
+                   """;
+        Assert.Equal("<p><img src=\"tg://time?unix=1700000000&amp;format=wDT\"></p>", CedarToTelegramHtmlRenderer.Render(json));
+    }
 }
