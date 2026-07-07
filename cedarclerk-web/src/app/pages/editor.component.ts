@@ -42,6 +42,7 @@ import {
     LucideUserCircle as UserCircle, LucideLogOut as LogOut,
     LucideEyeOff as EyeOff, LucideLink as LinkIcon, LucideSmile as Smile,
     LucideClock as Clock, LucideListCollapse as ListCollapse, LucideLayoutGrid as LayoutGrid,
+    LucideMenu as Menu,
 } from '@lucide/angular';
 
 type SaveState = 'saved' | 'saving' | 'dirty';
@@ -76,7 +77,7 @@ interface UploadItem {
         List, ListOrdered, ListTodo, Quote, SquareCode, Outdent, Indent,
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
         Send, RadioTower, Plus, X, UserCircle, LogOut,
-        EyeOff, LinkIcon, Smile, Clock, ListCollapse, LayoutGrid,
+        EyeOff, LinkIcon, Smile, Clock, ListCollapse, LayoutGrid, Menu,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -94,6 +95,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     currentId = signal<string | null>(null);
     saveState = signal<SaveState>('saved');
     title = '';
+    draftsOpen = signal(false);
 
     private saveTimer?: ReturnType<typeof setTimeout>;
 
@@ -204,6 +206,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     async openDraft(id: string) {
+        this.draftsOpen.set(false);
         if (id === this.currentId()) return;
         clearTimeout(this.saveTimer);
         if (this.saveState() !== 'saved') await this.save();
@@ -216,6 +219,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     async newDraft() {
+        this.draftsOpen.set(false);
         clearTimeout(this.saveTimer);
         if (this.saveState() !== 'saved') await this.save();
 

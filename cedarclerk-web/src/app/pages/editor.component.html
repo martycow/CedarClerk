@@ -2,6 +2,9 @@
     <!--Top bar-->
     <header class="topbar">
         <!--Left side-->
+        <button class="icon-btn hamburger" title="Drafts" (click)="draftsOpen.set(true)">
+            <svg lucideMenu class="icon"></svg>
+        </button>
         <strong>Cedar Clerk</strong>
         <input class="title" [(ngModel)]="title" (ngModelChange)="markDirty()" placeholder="Draft title">
         <span class="save-state" [class.saving]="saveState() === 'saving'">
@@ -243,8 +246,10 @@
 
     <!--Main content-->
     <div class="main">
+        <div class="drawer-backdrop" [class.open]="draftsOpen()" (click)="draftsOpen.set(false)"></div>
+
         <!--Left panel-->
-        <aside class="panel left">
+        <aside class="panel left" [class.open]="draftsOpen()">
             <div class="panel-head">
                 <span class="panel-title">Drafts</span>
                 <button class="mini" (click)="newDraft()" title="New draft"><svg lucidePlus class="icon-sm"></svg></button>

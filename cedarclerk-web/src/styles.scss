@@ -1,3 +1,41 @@
+:root {
+    --color-bg: #f5f5f7;
+    --color-surface: #ffffff;
+    --color-surface-alt: #fafafa;
+    --color-border: #e5e5ea;
+    --color-text: #1d1d1f;
+    --color-text-secondary: #6e6e73;
+    --color-text-tertiary: #a1a1a6;
+    --color-accent: #0071e3;
+    --color-accent-soft: #e8f0fe;
+    --color-accent-border: #a8c7fa;
+    --color-danger: #d93025;
+    --color-danger-soft: #fdecea;
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-sans);
+    background: var(--color-bg);
+    color: var(--color-text);
+}
+
 .tiptap {
     outline: none;
     font-size: 16px;
