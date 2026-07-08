@@ -7,7 +7,7 @@ public record MediaPaths(string Dir);
 
 public static class AssetEndpoints
 {
-    private const long ImageMaxBytes = 5 * 1024 * 1024;
+    internal const long ImageMaxBytes = 5 * 1024 * 1024;
     private const long MediaMaxBytes = 20 * 1024 * 1024;
 
     private static readonly Dictionary<string, (string Ext, long MaxBytes)> Allowed = new()

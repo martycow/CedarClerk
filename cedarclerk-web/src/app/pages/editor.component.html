@@ -117,6 +117,13 @@
                     </button>
                 </div>
 
+                @if (currentId(); as id) {
+                <a class="export-btn" style="margin-top:8px" [href]="'/api/drafts/' + id + '/cedar'" download>
+                    <svg lucideDownload class="icon-sm"></svg>
+                    Download .cedar
+                </a>
+                }
+
                 @if (exportResult()) {
                 <p class="export-result">
                     {{ exportResult() }}
@@ -348,8 +355,15 @@
         <aside class="panel left" [class.open]="draftsOpen()">
             <div class="panel-head">
                 <span class="panel-label">Drafts</span>
+                <button class="mini" (click)="cedarInput.click()" [disabled]="importingCedar()" title="Import .cedar">
+                    <svg lucideUpload class="icon-sm"></svg>
+                </button>
                 <button class="mini" (click)="newDraft()" title="New draft"><svg lucidePlus class="icon-sm"></svg></button>
             </div>
+            <input #cedarInput type="file" accept=".cedar" hidden (change)="onImportCedarChosen($event)">
+            @if (importCedarError()) {
+            <p class="channel-error">{{ importCedarError() }}</p>
+            }
             @for (d of drafts(); track d.id) {
             <div class="draft-item" [class.active]="d.id === currentId()" (click)="openDraft(d.id)">
                 <div class="draft-info">

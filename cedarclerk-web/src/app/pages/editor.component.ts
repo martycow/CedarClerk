@@ -46,6 +46,7 @@ import {
     LucideMenu as Menu, LucideSuperscript as Superscript,
     LucideChevronDown as ChevronDown,
     LucideCheck as Check,
+    LucideDownload as Download, LucideUpload as Upload,
 } from '@lucide/angular';
 
 const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
@@ -94,7 +95,7 @@ interface UploadItem {
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
         Send, Plus, X, LogOut, RadioTower, Trash2,
         EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, Menu, Superscript,
-        ChevronDown, Check,
+        ChevronDown, Check, Download, Upload,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -126,6 +127,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     exportResult = signal('');
     exportLink = signal<string | null>(null);
     exportError = signal<{ code?: number; message: string } | null>(null);
+
+    importingCedar = signal(false);
+    importCedarError = signal<string | null>(null);
 
     zoom = signal(100);
 
@@ -355,6 +359,29 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.currentId.set(null);
             if (remaining.length) await this.openDraft(remaining[0].id);
             else await this.newDraft();
+        }
+    }
+
+    async onImportCedarChosen(ev: Event) {
+        const input = ev.target as HTMLInputElement;
+        const file = input.files?.[0];
+        input.value = '';
+        if (!file) return;
+
+        this.draftsOpen.set(false);
+        this.importingCedar.set(true);
+        this.importCedarError.set(null);
+        try {
+            const created = await this.draftsApi.importCedar(file);
+            this.drafts.set(await this.draftsApi.list());
+            this.currentId.set(null);
+            await this.openDraft(created.id);
+        } catch (e) {
+            this.importCedarError.set(e instanceof HttpErrorResponse && e.error?.error
+                ? e.error.error
+                : 'Import failed — check the file and try again');
+        } finally {
+            this.importingCedar.set(false);
         }
     }
 

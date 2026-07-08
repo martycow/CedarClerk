@@ -31,6 +31,12 @@ export class DraftsService {
     }
 
     remove(id: string) {
-         return firstValueFrom(this.http.delete(`/api/drafts/${id}`)); 
+         return firstValueFrom(this.http.delete(`/api/drafts/${id}`));
+    }
+
+    importCedar(file: File) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return firstValueFrom(this.http.post<{ id: string }>('/api/drafts/import', formData));
     }
 }
