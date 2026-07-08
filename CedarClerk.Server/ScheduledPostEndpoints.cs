@@ -47,9 +47,11 @@ public static class ScheduledPostEndpoints
 
         group.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
         {
+            // Deletes regardless of status: for "Pending" this cancels the job, for "Sent"/"Failed"
+            // it just clears the completed entry from the list — nothing left to cancel there.
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var deleted = await db.ScheduledPosts
-                .Where(p => p.Id == id && p.OwnerId == uid && p.Status == "Pending")
+                .Where(p => p.Id == id && p.OwnerId == uid)
                 .ExecuteDeleteAsync();
             return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });

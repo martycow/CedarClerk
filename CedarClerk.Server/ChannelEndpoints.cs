@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CedarClerk.Core;
 using CedarClerk.Server.Bot;
 using CedarClerk.Server.Data;
 using Microsoft.EntityFrameworkCore;
@@ -20,11 +21,11 @@ public static class ChannelEndpoints
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             return await db.Channels.Where(c => c.OwnerId == uid)
-                .Select(c => new { c.Id, c.Title, c.TelegramChatId })
+                .Select(c => new { c.Id, c.Title, c.TelegramChatId, c.Username })
                 .ToListAsync();
         });
 
-        group.MapPost("/", async (ConnectChannelRequest req, ClaimsPrincipal user, CedarDbContext db, TelegramBotService bot) =>
+        group.MapPost("/", async (ConnectChannelRequest req, ClaimsPrincipal user, CedarDbContext db, TelegramBotService bot, ILogger<Channel> logger) =>
         {
             if (!bot.IsRunning)
                 return Results.Json(new { error = "Telegram bot is not running (no token configured)" }, statusCode: StatusCodes.Status503ServiceUnavailable);
@@ -74,11 +75,24 @@ public static class ChannelEndpoints
             {
                 Title = chat.Title ?? chat.Username ?? req.ChatId,
                 TelegramChatId = chat.Id,
+                Username = chat.Username,
                 OwnerId = uid,
             };
             db.Channels.Add(channel);
+
+            // Take the first snapshot right away so the stats UI isn't empty until the next 4 AM job run.
+            try
+            {
+                var count = await bot.Client.GetChatMemberCount(new ChatId(channel.TelegramChatId));
+                db.ChannelStatSnapshots.Add(new ChannelStatSnapshot { ChannelId = channel.Id, MemberCount = count });
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to take initial member-count snapshot for channel {ChannelId}", channel.Id);
+            }
+
             await db.SaveChangesAsync();
-            return Results.Ok(new { channel.Id, channel.Title, channel.TelegramChatId });
+            return Results.Ok(new { channel.Id, channel.Title, channel.TelegramChatId, channel.Username });
         });
 
         group.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
@@ -86,6 +100,27 @@ public static class ChannelEndpoints
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var deleted = await db.Channels.Where(c => c.Id == id && c.OwnerId == uid).ExecuteDeleteAsync();
             return deleted > 0 ? Results.NoContent() : Results.NotFound();
+        });
+
+        group.MapGet("/{id:guid}/stats", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var owns = await db.Channels.AnyAsync(c => c.Id == id && c.OwnerId == uid);
+            if (!owns) return Results.NotFound();
+
+            var snapshots = await db.ChannelStatSnapshots
+                .Where(s => s.ChannelId == id)
+                .OrderByDescending(s => s.TakenAt)
+                .Take(30)
+                .OrderBy(s => s.TakenAt)
+                .Select(s => new { s.TakenAt, s.MemberCount })
+                .ToListAsync();
+
+            var current = snapshots.Count > 0 ? snapshots[^1].MemberCount : (int?)null;
+            var points = snapshots.Select(s => new ChannelStatPoint(s.TakenAt, s.MemberCount)).ToList();
+            var deltaWeek = ChannelStatsCalculator.DeltaOverDays(points, 7, DateTime.UtcNow);
+
+            return Results.Ok(new { current, deltaWeek, snapshots });
         });
     }
 }

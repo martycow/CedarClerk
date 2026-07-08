@@ -23,8 +23,18 @@ public class Channel
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Title { get; set; } = "";
     public long TelegramChatId { get; set; }
+    public string? Username { get; set; }
     public string OwnerId { get; set; } = default!;
     public ApplicationUser? Owner { get; set; }
+}
+
+public class ChannelStatSnapshot
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid ChannelId { get; set; }
+    public Channel? Channel { get; set; }
+    public int MemberCount { get; set; }
+    public DateTime TakenAt { get; set; } = DateTime.UtcNow;
 }
 
 public class Asset

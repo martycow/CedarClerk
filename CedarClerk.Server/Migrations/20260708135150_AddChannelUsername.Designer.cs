@@ -3,6 +3,7 @@ using System;
 using CedarClerk.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CedarClerk.Server.Migrations
 {
     [DbContext(typeof(CedarDbContext))]
-    partial class CedarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260708135150_AddChannelUsername")]
+    partial class AddChannelUsername
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.28");
@@ -145,28 +148,6 @@ namespace CedarClerk.Server.Migrations
                     b.HasIndex("OwnerId");
 
                     b.ToTable("Channels");
-                });
-
-            modelBuilder.Entity("CedarClerk.Server.Data.ChannelStatSnapshot", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("ChannelId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("MemberCount")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("TakenAt")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ChannelId");
-
-                    b.ToTable("ChannelStatSnapshots");
                 });
 
             modelBuilder.Entity("CedarClerk.Server.Data.Draft", b =>
@@ -376,17 +357,6 @@ namespace CedarClerk.Server.Migrations
                         .IsRequired();
 
                     b.Navigation("Owner");
-                });
-
-            modelBuilder.Entity("CedarClerk.Server.Data.ChannelStatSnapshot", b =>
-                {
-                    b.HasOne("CedarClerk.Server.Data.Channel", "Channel")
-                        .WithMany()
-                        .HasForeignKey("ChannelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Channel");
                 });
 
             modelBuilder.Entity("CedarClerk.Server.Data.Draft", b =>

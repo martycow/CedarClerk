@@ -56,6 +56,11 @@ builder.Services.AddQuartz(q =>
     var jobKey = new JobKey("PublishDueScheduledPosts");
     q.AddJob<PublishDueScheduledPostsJob>(opts => opts.WithIdentity(jobKey));
     q.AddTrigger(t => t.ForJob(jobKey).WithSimpleSchedule(s => s.WithIntervalInMinutes(1).RepeatForever()));
+
+    // Daily channel member-count snapshot, timed after the 3:30 AM backup cron on the Pi
+    var statsJobKey = new JobKey("SnapshotChannelStats");
+    q.AddJob<SnapshotChannelStatsJob>(opts => opts.WithIdentity(statsJobKey));
+    q.AddTrigger(t => t.ForJob(statsJobKey).WithCronSchedule("0 0 4 * * ?"));
 });
 builder.Services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
 #endregion
