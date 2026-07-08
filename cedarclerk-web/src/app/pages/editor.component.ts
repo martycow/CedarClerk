@@ -11,7 +11,6 @@ import { DraftsService, DraftMeta } from '../core/drafts.service';
 import { DatePipe } from '@angular/common';
 import { PostsService, PostFormat, ScheduledPost } from '../core/posts.service';
 import { ChannelsService, Channel } from '../core/channels.service';
-import { Image } from '@tiptap/extension-image';
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableHeader } from '@tiptap/extension-table-header';
@@ -27,6 +26,8 @@ import { CollageNode } from '../tiptap-extensions/collage-node';
 import { SpoilerMark } from '../tiptap-extensions/spoiler-mark';
 import { DateTimeNode } from '../tiptap-extensions/datetime-node';
 import { ToggleNode } from '../tiptap-extensions/toggle-node';
+import { ImageNode } from '../tiptap-extensions/image-node';
+import { FootnoteNode } from '../tiptap-extensions/footnote-node';
 import { PopoverComponent } from '../shared/popover.component';
 import {
     LucideHeading1 as Heading1, LucideHeading2 as Heading2, LucideHeading3 as Heading3,
@@ -42,7 +43,7 @@ import {
     LucideUserCircle as UserCircle, LucideLogOut as LogOut,
     LucideEyeOff as EyeOff, LucideLink as LinkIcon, LucideSmile as Smile,
     LucideClock as Clock, LucideListCollapse as ListCollapse, LucideLayoutGrid as LayoutGrid,
-    LucideMenu as Menu,
+    LucideMenu as Menu, LucideSuperscript as Superscript,
 } from '@lucide/angular';
 
 type SaveState = 'saved' | 'saving' | 'dirty';
@@ -77,7 +78,7 @@ interface UploadItem {
         List, ListOrdered, ListTodo, Quote, SquareCode, Outdent, Indent,
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
         Send, RadioTower, Plus, X, UserCircle, LogOut,
-        EyeOff, LinkIcon, Smile, Clock, ListCollapse, LayoutGrid, Menu,
+        EyeOff, LinkIcon, Smile, Clock, ListCollapse, LayoutGrid, Menu, Superscript,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -130,6 +131,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     dtDate = true;
     dtTime = true;
 
+    footnoteText = '';
+
     saveLabel(): string {
         switch (this.saveState()) {
             case 'saved': return '✓ Saved';
@@ -143,12 +146,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             element: this.editorHost.nativeElement,
             extensions: [
                 StarterKit,
-                Image,
+                ImageNode,
                 VideoNode,
                 AudioNode,
                 CarouselNode,
                 CollageNode,
                 SpoilerMark,
+                FootnoteNode,
                 DateTimeNode,
                 ToggleNode,
                 Table.configure({ resizable: false }),
@@ -450,6 +454,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             attrs: { summary: 'Details' },
             content: [{ type: 'paragraph' }],
         }));
+    }
+
+    insertFootnote() {
+        const text = this.footnoteText.trim();
+        if (!text) return;
+        this.cmd(c => c.insertContent({ type: 'footnote', attrs: { text } }));
+        this.footnoteText = '';
     }
 
     insertTable() {

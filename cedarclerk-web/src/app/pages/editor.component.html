@@ -193,6 +193,14 @@
 
         <button (click)="insertToggle()" title="Expandable block"><svg lucideListCollapse class="icon"></svg></button>
 
+        <app-popover>
+            <button trigger title="Footnote"><svg lucideSuperscript class="icon"></svg></button>
+            <div panel class="link-popover">
+                <textarea class="chat-input" rows="3" placeholder="Footnote text…" [(ngModel)]="footnoteText"></textarea>
+                <button class="export-btn full" style="margin-top:8px" (click)="insertFootnote()" [disabled]="!footnoteText.trim()">Insert</button>
+            </div>
+        </app-popover>
+
         <!--Lists and blockquotes-->
         <span class="sep"></span>
         <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')" title="Bullet list"><svg lucideList class="icon"></svg></button>

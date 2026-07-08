@@ -1,24 +1,11 @@
-import { Node, mergeAttributes } from '@tiptap/core';
+import { Image } from '@tiptap/extension-image';
 
-export const VideoNode = Node.create({
-    name: 'video',
-    group: 'block',
-    atom: true,
-    draggable: true,
-
+export const ImageNode = Image.extend({
     addAttributes() {
         return {
-            src: { default: null },
+            ...this.parent?.(),
             caption: { default: null },
         };
-    },
-
-    parseHTML() {
-        return [{ tag: 'video[src]' }];
-    },
-
-    renderHTML({ HTMLAttributes }) {
-        return ['video', mergeAttributes(HTMLAttributes, { controls: 'true' })];
     },
 
     addNodeView() {
@@ -26,10 +13,10 @@ export const VideoNode = Node.create({
             const wrapper = document.createElement('div');
             wrapper.className = 'media-with-caption';
 
-            const video = document.createElement('video');
-            video.src = (node.attrs['src'] as string) ?? '';
-            video.controls = true;
-            wrapper.appendChild(video);
+            const img = document.createElement('img');
+            img.src = (node.attrs['src'] as string) ?? '';
+            if (node.attrs['alt']) img.alt = node.attrs['alt'] as string;
+            wrapper.appendChild(img);
 
             const captionInput = document.createElement('input');
             captionInput.type = 'text';
@@ -49,9 +36,9 @@ export const VideoNode = Node.create({
             return {
                 dom: wrapper,
                 update: updatedNode => {
-                    if (updatedNode.type.name !== 'video') return false;
+                    if (updatedNode.type.name !== 'image') return false;
                     node = updatedNode;
-                    video.src = (node.attrs['src'] as string) ?? '';
+                    img.src = (node.attrs['src'] as string) ?? '';
                     if (document.activeElement !== captionInput) {
                         captionInput.value = (node.attrs['caption'] as string) ?? '';
                     }

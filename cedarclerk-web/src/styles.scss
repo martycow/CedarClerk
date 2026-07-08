@@ -163,6 +163,36 @@ body {
             margin-top: 6px;
         }
     }
+
+    .media-with-caption {
+        margin: 8px 0;
+
+        img,
+        video,
+        audio {
+            display: block;
+            max-width: 100%;
+        }
+
+        .media-caption-input {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            border: none;
+            outline: none;
+            background: transparent;
+            font-size: 13px;
+            color: var(--color-text-secondary, #6e6e73);
+            text-align: center;
+            margin-top: 4px;
+        }
+    }
+
+    .footnote-badge {
+        color: var(--color-accent, #0071e3);
+        cursor: help;
+        font-size: 0.75em;
+    }
 }
 
 .carousel-editor {
