@@ -1,23 +1,25 @@
 :root {
-    --color-bg: #f5f5f7;
-    --color-surface: #ffffff;
-    --color-surface-alt: #fafafa;
-    --color-border: #e5e5ea;
-    --color-text: #1d1d1f;
-    --color-text-secondary: #6e6e73;
-    --color-text-tertiary: #a1a1a6;
-    --color-accent: #0071e3;
-    --color-accent-soft: #e8f0fe;
-    --color-accent-border: #a8c7fa;
-    --color-danger: #d93025;
-    --color-danger-soft: #fdecea;
+    --bg: #ECE9E2;
+    --canvas: #E2DED4;
+    --surface: #F7F5EF;
+    --sheet: #FCFBF8;
+    --alt: #EFECE4;
+    --border: #DBD5C8;
+    --text: #26231D;
+    --t2: #6B655A;
+    --t3: #9F988A;
+    --accent: #5B6E46;
+    --danger: #B4452C;
+    --ok: #3E7A4E;
+    --shadow: 0 1px 3px rgba(40, 35, 25, .10);
+    --shadow-md: 0 8px 24px rgba(40, 35, 25, .12);
+
+    --asoft: color-mix(in srgb, var(--accent) 13%, var(--surface));
+    --abord: color-mix(in srgb, var(--accent) 38%, var(--border));
 
     --radius-sm: 6px;
     --radius-md: 10px;
     --radius-lg: 14px;
-
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.12);
 
     --space-1: 4px;
     --space-2: 8px;
@@ -27,53 +29,72 @@
     --space-6: 32px;
 
     --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, Menlo, Consolas, monospace;
+}
+
+:root[data-theme="dark"] {
+    --bg: #1D1B17;
+    --canvas: #171511;
+    --surface: #25221B;
+    --sheet: #2B2820;
+    --alt: #2F2C23;
+    --border: #3C382D;
+    --text: #EAE6DB;
+    --t2: #A69F8F;
+    --t3: #776F5F;
+    --accent: color-mix(in srgb, #5B6E46 55%, #E8F0E8 45%);
+    --danger: #E2745C;
+    --ok: #82BB8C;
+    --shadow: 0 1px 3px rgba(0, 0, 0, .45);
 }
 
 body {
     margin: 0;
     font-family: var(--font-sans);
-    background: var(--color-bg);
-    color: var(--color-text);
+    background: var(--bg);
+    color: var(--text);
 }
 
 .tiptap {
     outline: none;
-    font-size: 16px;
+    font-size: inherit;
     line-height: 1.6;
 
     h1 {
-        font-size: 26px;
+        font-size: 1.625em;
         margin: 18px 0 8px;
     }
 
     h2 {
-        font-size: 21px;
+        font-size: 1.3125em;
         margin: 16px 0 6px;
     }
 
     blockquote {
-        border-left: 3px solid #ccc;
+        border-left: 3px solid var(--abord);
         margin: 8px 0;
         padding-left: 12px;
-        color: #666;
+        color: var(--t2);
     }
 
     code {
-        background: #f2f2f2;
+        background: var(--alt);
         padding: 1px 5px;
         border-radius: 4px;
-        font-family: Consolas, monospace;
+        font-family: var(--font-mono);
         font-size: 14px;
     }
 
     pre {
-        background: #f6f6f6;
+        background: #22201A;
+        color: #C9C08C;
         border-radius: 8px;
         padding: 10px 14px;
 
         code {
             background: none;
             padding: 0;
+            color: inherit;
         }
     }
 
@@ -94,12 +115,12 @@ body {
 
         td,
         th {
-            border: 1px solid #ddd;
+            border: 1px solid var(--border);
             padding: 4px 8px;
         }
 
         th {
-            background: #f6f6f6;
+            background: var(--alt);
         }
     }
 
@@ -123,29 +144,29 @@ body {
     }
 
     tg-spoiler {
-        background: #444;
+        background: var(--t3);
         color: transparent;
         border-radius: 3px;
         cursor: pointer;
         transition: background 0.15s ease, color 0.15s ease;
 
         &:hover {
-            background: #ececec;
+            background: var(--alt);
             color: inherit;
         }
     }
 
     .datetime-pill {
         display: inline-block;
-        background: #e4ecf7;
-        border: 1px solid #b5d4f4;
+        background: var(--asoft);
+        border: 1px solid var(--abord);
         border-radius: 999px;
         padding: 1px 8px;
         font-size: 13px;
     }
 
     .toggle-block {
-        border: 1px solid #e2e2e2;
+        border: 1px solid var(--border);
         border-radius: 8px;
         padding: 8px 12px;
         margin: 8px 0;
@@ -157,6 +178,7 @@ body {
             font-size: 15px;
             width: 100%;
             background: transparent;
+            color: var(--text);
         }
 
         .toggle-content {
@@ -182,14 +204,14 @@ body {
             outline: none;
             background: transparent;
             font-size: 13px;
-            color: var(--color-text-secondary, #6e6e73);
+            color: var(--t2);
             text-align: center;
             margin-top: 4px;
         }
     }
 
     .footnote-badge {
-        color: var(--color-accent, #0071e3);
+        color: var(--accent);
         cursor: help;
         font-size: 0.75em;
     }

@@ -6,6 +6,18 @@ export interface Channel {
     id: string;
     title: string;
     telegramChatId: number;
+    username: string | null;
+}
+
+export interface ChannelStatSnapshotDto {
+    takenAt: string;
+    memberCount: number;
+}
+
+export interface ChannelStats {
+    current: number | null;
+    deltaWeek: number | null;
+    snapshots: ChannelStatSnapshotDto[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -22,5 +34,9 @@ export class ChannelsService {
 
     remove(id: string) {
         return firstValueFrom(this.http.delete(`/api/channels/${id}`));
+    }
+
+    getStats(id: string) {
+        return firstValueFrom(this.http.get<ChannelStats>(`/api/channels/${id}/stats`));
     }
 }

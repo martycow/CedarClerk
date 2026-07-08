@@ -1,13 +1,30 @@
-<div class="login-wrap">
-    <h1>Cedar Clerk 🐮</h1>
-    <input [(ngModel)]="email" placeholder="Email" type="email" autocomplete="username">
-    <input [(ngModel)]="password" placeholder="Password" type="password" autocomplete="current-password" (keyup.enter)="submit()">
-
-    <button (click)="submit()" [disabled]="busy()">
-        {{ busy() ? '...' : 'Login' }}
+<div class="auth-page">
+    <button class="theme-toggle" (click)="theme.toggle()" title="Toggle theme">
+        {{ theme.theme() === 'dark' ? '☀' : '☾' }}
     </button>
 
-    @if (error()) { <p class="error">{{ error() }}</p> }
+    <div class="auth-card">
+        <div class="auth-header">
+            <app-cedar-logo [size]="34"></app-cedar-logo>
+            <div class="auth-title">Cedar Clerk</div>
+            <div class="auth-tagline">Write here. Publish there. Moo.</div>
+        </div>
 
-    <a class="register-link" routerLink="/register">No account? Register (Requires Invite Code)</a>
+        <div class="field">
+            <label for="cc-login-email">Email</label>
+            <input id="cc-login-email" [(ngModel)]="email" placeholder="you@example.com" type="email" autocomplete="username">
+        </div>
+        <div class="field">
+            <label for="cc-login-pass">Password</label>
+            <input id="cc-login-pass" [(ngModel)]="password" placeholder="••••••••" type="password" autocomplete="current-password" (keyup.enter)="submit()">
+        </div>
+
+        <button class="primary-btn" (click)="submit()" [disabled]="busy()">
+            {{ busy() ? '…' : 'Log in' }}
+        </button>
+
+        @if (error()) { <p class="error">{{ error() }}</p> }
+
+        <div class="auth-footer">No account? <a routerLink="/register">Register</a> <span class="muted">· invite required</span></div>
+    </div>
 </div>

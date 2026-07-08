@@ -2,7 +2,7 @@ import {
     AfterViewInit, Component, ElementRef, OnDestroy,
     ViewChild, inject, signal
 } from '@angular/core';
-import { HttpEventType } from '@angular/common/http';
+import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
@@ -10,7 +10,7 @@ import { AuthService } from '../core/auth.service';
 import { DraftsService, DraftMeta } from '../core/drafts.service';
 import { DatePipe } from '@angular/common';
 import { PostsService, PostFormat, ScheduledPost } from '../core/posts.service';
-import { ChannelsService, Channel } from '../core/channels.service';
+import { ChannelsService, Channel, ChannelStats } from '../core/channels.service';
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableHeader } from '@tiptap/extension-table-header';
@@ -29,9 +29,9 @@ import { ToggleNode } from '../tiptap-extensions/toggle-node';
 import { ImageNode } from '../tiptap-extensions/image-node';
 import { FootnoteNode } from '../tiptap-extensions/footnote-node';
 import { PopoverComponent } from '../shared/popover.component';
+import { CedarLogoComponent } from '../shared/cedar-logo.component';
+import { ThemeService } from '../core/theme.service';
 import {
-    LucideHeading1 as Heading1, LucideHeading2 as Heading2, LucideHeading3 as Heading3,
-    LucideHeading4 as Heading4, LucideHeading5 as Heading5, LucideHeading6 as Heading6,
     LucideUndo2 as Undo2, LucideRedo2 as Redo2,
     LucideBold as Bold, LucideItalic as Italic, LucideStrikethrough as Strikethrough, LucideCode as Code,
     LucideList as List, LucideListOrdered as ListOrdered, LucideListTodo as ListTodo,
@@ -39,14 +39,30 @@ import {
     LucideOutdent as Outdent, LucideIndent as Indent,
     LucideTable as TableIcon, LucideSigma as Sigma, LucideSigmaSquare as SigmaSquare,
     LucideImage as ImageIcon, LucideVideo as VideoIcon, LucideAudioLines as AudioLines, LucideImages as Images,
-    LucideSend as Send, LucideRadioTower as RadioTower, LucidePlus as Plus, LucideX as X,
-    LucideUserCircle as UserCircle, LucideLogOut as LogOut,
-    LucideEyeOff as EyeOff, LucideLink as LinkIcon, LucideSmile as Smile,
+    LucideSend as Send, LucidePlus as Plus, LucideX as X,
+    LucideLogOut as LogOut, LucideRadioTower as RadioTower, LucideTrash2 as Trash2,
+    LucideEyeOff as EyeOff, LucideLink as LinkIcon, LucideSmile as Smile, LucideUnderline as Underline,
     LucideClock as Clock, LucideListCollapse as ListCollapse, LucideLayoutGrid as LayoutGrid,
     LucideMenu as Menu, LucideSuperscript as Superscript,
+    LucideChevronDown as ChevronDown,
+    LucideCheck as Check,
 } from '@lucide/angular';
 
-type SaveState = 'saved' | 'saving' | 'dirty';
+const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
+
+// Rounds a date up to the next boundary of `minutes` (e.g. 05:27 + 5min -> 05:30)
+function ceilToMinutes(date: Date, minutes: number): Date {
+    const ms = minutes * 60_000;
+    return new Date(Math.ceil((date.getTime() + 1) / ms) * ms);
+}
+
+// Formats a Date as the local "YYYY-MM-DDTHH:mm" string <input type="datetime-local"> expects
+function toDatetimeLocalValue(date: Date): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
 const EMPTY_DOC = '{"type":"doc","content":[{"type":"paragraph"}]}';
 
 // Extra timezones shown alongside the local time when scheduling a post; will move to user settings later
@@ -72,19 +88,20 @@ interface UploadItem {
 @Component({
     selector: 'app-editor',
     imports: [
-        FormsModule, DatePipe, PopoverComponent,
-        Heading1, Heading2, Heading3, Heading4, Heading5, Heading6,
+        FormsModule, DatePipe, PopoverComponent, CedarLogoComponent,
         Undo2, Redo2, Bold, Italic, Strikethrough, Code,
         List, ListOrdered, ListTodo, Quote, SquareCode, Outdent, Indent,
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
-        Send, RadioTower, Plus, X, UserCircle, LogOut,
-        EyeOff, LinkIcon, Smile, Clock, ListCollapse, LayoutGrid, Menu, Superscript,
+        Send, Plus, X, LogOut, RadioTower, Trash2,
+        EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, Menu, Superscript,
+        ChevronDown, Check,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
 })
 export class EditorComponent implements AfterViewInit, OnDestroy {
     auth = inject(AuthService);
+    theme = inject(ThemeService);
     private draftsApi = inject(DraftsService);
     private assets = inject(AssetsService);
 
@@ -108,11 +125,15 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     exporting = signal(false);
     exportResult = signal('');
     exportLink = signal<string | null>(null);
+    exportError = signal<{ code?: number; message: string } | null>(null);
+
+    zoom = signal(100);
 
     uploads = signal<UploadItem[]>([]);
     private uploadSeq = 0;
 
     channels = signal<Channel[]>([]);
+    channelStats = signal<Record<string, ChannelStats>>({});
     newChannelChatId = '';
     channelError = signal('');
 
@@ -135,10 +156,70 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     saveLabel(): string {
         switch (this.saveState()) {
-            case 'saved': return '✓ Saved';
+            case 'saved': return 'Saved';
             case 'saving': return 'Saving…';
-            case 'dirty': return '● Unsaved changes';
+            case 'dirty': return 'Unsaved changes';
+            case 'error': return 'Sync failed';
         }
+    }
+
+    zoomFactor(): number {
+        return this.zoom() / 100;
+    }
+
+    zoomIn() {
+        this.zoom.update(z => Math.min(200, z + 10));
+    }
+
+    zoomOut() {
+        this.zoom.update(z => Math.max(50, z - 10));
+    }
+
+    wordCount(): number {
+        this.tick();
+        const text = this.editor?.getText() ?? '';
+        return text.trim() ? text.trim().split(/\s+/).length : 0;
+    }
+
+    charCount(): number {
+        this.tick();
+        return this.editor?.getText().length ?? 0;
+    }
+
+    avatarInitial(): string {
+        const email = this.auth.userEmail();
+        return email ? email[0].toUpperCase() : '?';
+    }
+
+    channelColor(id: string): string {
+        let hash = 0;
+        for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+        return CHANNEL_COLORS[hash % CHANNEL_COLORS.length];
+    }
+
+    channelInitial(title: string): string {
+        return (title?.[0] ?? '?').toUpperCase();
+    }
+
+    isSelectedChannel(c: Channel): boolean {
+        return this.chatId.trim() === String(c.telegramChatId);
+    }
+
+    currentBlockLabel(): string {
+        this.tick();
+        for (let level = 1; level <= 6; level++) {
+            if (this.editor?.isActive('heading', { level })) return `Heading ${level}`;
+        }
+        return 'Paragraph';
+    }
+
+    setBlockType(level: number) {
+        if (level === 0) this.cmd(c => c.setParagraph());
+        else this.cmd(c => c.toggleHeading({ level: level as 1 | 2 | 3 | 4 | 5 | 6 }));
+    }
+
+    retrySave() {
+        this.save();
     }
 
     async ngAfterViewInit() {
@@ -175,6 +256,30 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
         this.channels.set(await this.channelsApi.list());
         await this.refreshScheduledPosts();
+        await this.refreshChannelStats();
+    }
+
+    private async refreshChannelStats() {
+        const entries = await Promise.all(this.channels().map(async c => {
+            try {
+                return [c.id, await this.channelsApi.getStats(c.id)] as const;
+            } catch {
+                return [c.id, null] as const;
+            }
+        }));
+        this.channelStats.set(Object.fromEntries(entries.filter((e): e is [string, ChannelStats] => e[1] !== null)));
+    }
+
+    sparklinePoints(snapshots: { takenAt: string; memberCount: number }[]): string {
+        if (snapshots.length < 2) return '';
+        const values = snapshots.map(s => s.memberCount);
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const range = max - min || 1;
+        const w = 60, h = 20;
+        return values
+            .map((v, i) => `${(i / (values.length - 1) * w).toFixed(1)},${(h - (v - min) / range * h).toFixed(1)}`)
+            .join(' ');
     }
 
     ngOnDestroy() {
@@ -197,7 +302,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.saveState.set('saved');
             this.refreshMeta(id);
         } catch {
-            this.saveState.set('dirty');
+            this.saveState.set('error');
         }
     }
 
@@ -240,6 +345,19 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.editor?.commands.focus();
     }
 
+    async deleteDraft(id: string) {
+        if (!window.confirm('Delete this draft? This cannot be undone.')) return;
+        await this.draftsApi.remove(id);
+        this.drafts.update(list => list.filter(d => d.id !== id));
+        if (this.currentId() === id) {
+            const remaining = this.drafts();
+            clearTimeout(this.saveTimer);
+            this.currentId.set(null);
+            if (remaining.length) await this.openDraft(remaining[0].id);
+            else await this.newDraft();
+        }
+    }
+
     cmd(fn: (chain: any) => any) {
         if (this.editor) 
             fn(this.editor.chain().focus()).run();
@@ -268,12 +386,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.exporting.set(true);
         this.exportResult.set('');
         this.exportLink.set(null);
+        this.exportError.set(null);
         try {
             const res = await this.posts.export(id, this.chatId.trim(), this.format);
-            this.exportResult.set(`✓ Published, message ${res.messageId}`);
+            this.exportResult.set(`✓ Published (message #${res.messageId})`);
             this.exportLink.set(this.buildTelegramLink(res.chatId, res.messageId));
-        } catch {
-            this.exportResult.set('✗ Error — check the browser console / server logs');
+        } catch (e) {
+            const status = e instanceof HttpErrorResponse ? e.status : undefined;
+            const message = status === 503
+                ? "The barn door seems closed — Telegram Bot API didn't respond. Your draft is safe; nothing was published."
+                : 'Error — check the browser console / server logs';
+            this.exportError.set({ code: status, message });
         } finally {
             this.exporting.set(false);
         }
@@ -284,7 +407,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     private buildTelegramLink(chatId: string, messageId: number): string | null {
-        return chatId.startsWith('@') ? `https://t.me/${chatId.slice(1)}/${messageId}` : null;
+        const trimmed = chatId.trim();
+        if (trimmed.startsWith('@')) return `https://t.me/${trimmed.slice(1)}/${messageId}`;
+        const username = this.channels().find(c => String(c.telegramChatId) === trimmed)?.username;
+        return username ? `https://t.me/${username}/${messageId}` : null;
     }
 
     async connectChannel() {
@@ -295,6 +421,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             const channel = await this.channelsApi.connect(chatId);
             this.channels.update(list => [...list, channel]);
             this.newChannelChatId = '';
+            await this.refreshChannelStats();
         } catch (e: any) {
             this.channelError.set(e?.error?.error ?? 'Failed to connect channel');
         }
@@ -307,6 +434,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     async removeChannel(id: string) {
         await this.channelsApi.remove(id);
         this.channels.update(list => list.filter(c => c.id !== id));
+        this.channelStats.update(map => {
+            const { [id]: _removed, ...rest } = map;
+            return rest;
+        });
     }
 
     async schedulePost() {
@@ -327,6 +458,28 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         } finally {
             this.scheduling.set(false);
         }
+    }
+
+    scheduleOpen = signal(false);
+
+    quickSchedule(preset: '1m' | '5m' | '1h' | '6h' | '12h' | 'tomorrow') {
+        const now = new Date();
+        let target: Date;
+        switch (preset) {
+            case '1m': target = ceilToMinutes(now, 1); break;
+            case '5m': target = ceilToMinutes(now, 5); break;
+            case '1h': target = ceilToMinutes(now, 60); break;
+            case '6h': target = ceilToMinutes(new Date(now.getTime() + 6 * 3600_000), 60); break;
+            case '12h': target = ceilToMinutes(new Date(now.getTime() + 12 * 3600_000), 60); break;
+            case 'tomorrow':
+                target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 9, 0, 0, 0);
+                break;
+        }
+        this.scheduledAt = toDatetimeLocalValue(target);
+    }
+
+    selectedChannel(): Channel | undefined {
+        return this.channels().find(c => String(c.telegramChatId) === this.chatId.trim());
     }
 
     utcDate(iso: string): Date {
