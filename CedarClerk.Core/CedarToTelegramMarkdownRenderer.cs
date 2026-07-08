@@ -9,14 +9,27 @@ namespace CedarClerk.Core;
 // this Markdown, per the fixture's "Nested Syntax" example.
 public static class CedarToTelegramMarkdownRenderer
 {
+    private sealed class RenderContext
+    {
+        public string? MediaBaseUrl;
+        public List<string> Footnotes { get; } = [];
+    }
+
     public static string Render(string cedarJson, string? mediaBaseUrl = null)
     {
         var root = JsonNode.Parse(cedarJson) ?? throw new ArgumentException("Invalid cedar JSON");
         var doc = root["doc"] ?? root;
-        return RenderBlocks(doc["content"]?.AsArray(), mediaBaseUrl).Trim();
+        var ctx = new RenderContext { MediaBaseUrl = mediaBaseUrl };
+        var body = RenderBlocks(doc["content"]?.AsArray(), ctx).Trim();
+
+        if (ctx.Footnotes.Count == 0)
+            return body;
+
+        var footer = string.Join("\n", ctx.Footnotes.Select((text, i) => $"[^{i + 1}]: {text}"));
+        return body + "\n\n" + footer;
     }
 
-    private static string RenderBlocks(JsonArray? nodes, string? mediaBaseUrl)
+    private static string RenderBlocks(JsonArray? nodes, RenderContext ctx)
     {
         if (nodes is null)
             return "";
@@ -24,32 +37,32 @@ public static class CedarToTelegramMarkdownRenderer
         var blocks = new List<string>();
         foreach (var n in nodes)
         {
-            var block = RenderBlock(n!, mediaBaseUrl);
+            var block = RenderBlock(n!, ctx);
             if (block.Length > 0)
                 blocks.Add(block);
         }
         return string.Join("\n\n", blocks);
     }
 
-    private static string RenderBlock(JsonNode node, string? mediaBaseUrl)
+    private static string RenderBlock(JsonNode node, RenderContext ctx)
     {
         switch ((string?)node["type"])
         {
             case "paragraph":
-                return RenderInline(node["content"]?.AsArray());
+                return RenderInline(node["content"]?.AsArray(), ctx);
 
             case "heading":
                 var level = Math.Clamp((int?)node["attrs"]?["level"] ?? 1, 1, 6);
-                return new string('#', level) + " " + RenderInline(node["content"]?.AsArray());
+                return new string('#', level) + " " + RenderInline(node["content"]?.AsArray(), ctx);
 
             case "bulletList":
-                return RenderList(node["content"]?.AsArray(), ordered: false, mediaBaseUrl);
+                return RenderList(node["content"]?.AsArray(), ordered: false, ctx);
 
             case "orderedList":
-                return RenderList(node["content"]?.AsArray(), ordered: true, mediaBaseUrl);
+                return RenderList(node["content"]?.AsArray(), ordered: true, ctx);
 
             case "taskList":
-                return RenderTaskList(node["content"]?.AsArray(), mediaBaseUrl);
+                return RenderTaskList(node["content"]?.AsArray(), ctx);
 
             case "codeBlock":
                 var lang = (string?)node["attrs"]?["language"];
@@ -57,7 +70,7 @@ public static class CedarToTelegramMarkdownRenderer
                 return lang is null ? $"```\n{code}\n```" : $"```{lang}\n{code}\n```";
 
             case "blockquote":
-                var quoted = RenderBlocks(node["content"]?.AsArray(), mediaBaseUrl);
+                var quoted = RenderBlocks(node["content"]?.AsArray(), ctx);
                 return string.Join("\n", quoted.Split('\n').Select(l => "> " + l));
 
             case "horizontalRule":
@@ -66,37 +79,39 @@ public static class CedarToTelegramMarkdownRenderer
             case "image":
             case "video":
             case "audio":
-                return $"![]({ResolveUrl((string?)node["attrs"]?["src"], mediaBaseUrl)})";
+                var url = ResolveUrl((string?)node["attrs"]?["src"], ctx.MediaBaseUrl);
+                var caption = (string?)node["attrs"]?["caption"];
+                return string.IsNullOrEmpty(caption) ? $"![]({url})" : $"![]({url} \"{EscapeCaption(caption)}\")";
 
             case "carousel":
                 var images = node["attrs"]?["images"]?.AsArray()
-                    ?.Select(img => $"![]({ResolveUrl((string?)img, mediaBaseUrl)})") ?? [];
+                    ?.Select(img => $"![]({ResolveUrl((string?)img, ctx.MediaBaseUrl)})") ?? [];
                 return "<tg-slideshow>\n\n" + string.Join("\n", images) + "\n\n</tg-slideshow>";
 
             case "collage":
                 var collageImages = node["attrs"]?["images"]?.AsArray()
-                    ?.Select(img => $"![]({ResolveUrl((string?)img, mediaBaseUrl)})") ?? [];
+                    ?.Select(img => $"![]({ResolveUrl((string?)img, ctx.MediaBaseUrl)})") ?? [];
                 return "<tg-collage>\n\n" + string.Join("\n", collageImages) + "\n\n</tg-collage>";
 
             case "table":
-                return RenderTable(node["content"]?.AsArray(), mediaBaseUrl);
+                return RenderTable(node["content"]?.AsArray(), ctx);
 
             case "blockMath":
                 return $"```math\n{(string?)node["attrs"]?["latex"] ?? ""}\n```";
 
             case "toggle":
                 var summary = (string?)node["attrs"]?["summary"] ?? "";
-                var body = RenderBlocks(node["content"]?.AsArray(), mediaBaseUrl);
+                var body = RenderBlocks(node["content"]?.AsArray(), ctx);
                 return $"<details open><summary>{summary}</summary>\n\n{body}\n\n</details>";
 
             default:
-                return RenderBlocks(node["content"]?.AsArray(), mediaBaseUrl);
+                return RenderBlocks(node["content"]?.AsArray(), ctx);
         }
     }
 
     // Markdown list markers give block-level structure for free, so lists/tasks are rendered
     // directly rather than dispatched through RenderBlock like the HTML renderer does.
-    private static string RenderList(JsonArray? items, bool ordered, string? mediaBaseUrl)
+    private static string RenderList(JsonArray? items, bool ordered, RenderContext ctx)
     {
         if (items is null)
             return "";
@@ -106,13 +121,13 @@ public static class CedarToTelegramMarkdownRenderer
         foreach (var item in items)
         {
             var marker = ordered ? $"{index}. " : "- ";
-            lines.Add(RenderListItem(item!, marker, mediaBaseUrl));
+            lines.Add(RenderListItem(item!, marker, ctx));
             index++;
         }
         return string.Join("\n", lines);
     }
 
-    private static string RenderTaskList(JsonArray? items, string? mediaBaseUrl)
+    private static string RenderTaskList(JsonArray? items, RenderContext ctx)
     {
         if (items is null)
             return "";
@@ -122,12 +137,12 @@ public static class CedarToTelegramMarkdownRenderer
         {
             var isChecked = (bool?)item!["attrs"]?["checked"] ?? false;
             var marker = isChecked ? "- [x] " : "- [ ] ";
-            lines.Add(RenderListItem(item, marker, mediaBaseUrl));
+            lines.Add(RenderListItem(item, marker, ctx));
         }
         return string.Join("\n", lines);
     }
 
-    private static string RenderListItem(JsonNode item, string marker, string? mediaBaseUrl)
+    private static string RenderListItem(JsonNode item, string marker, RenderContext ctx)
     {
         var content = item["content"]?.AsArray();
         if (content is null || content.Count == 0)
@@ -135,13 +150,13 @@ public static class CedarToTelegramMarkdownRenderer
 
         var first = content[0]!;
         var firstText = (string?)first["type"] == "paragraph"
-            ? RenderInline(first["content"]?.AsArray())
-            : RenderBlock(first, mediaBaseUrl);
+            ? RenderInline(first["content"]?.AsArray(), ctx)
+            : RenderBlock(first, ctx);
 
         var sb = new StringBuilder(marker).Append(firstText);
         for (var i = 1; i < content.Count; i++)
         {
-            var rendered = RenderBlock(content[i]!, mediaBaseUrl);
+            var rendered = RenderBlock(content[i]!, ctx);
             var indented = string.Join("\n", rendered.Split('\n').Select(l => "  " + l));
             sb.Append('\n').Append(indented);
         }
@@ -150,14 +165,14 @@ public static class CedarToTelegramMarkdownRenderer
 
     // Markdown tables have no colspan/rowspan concept, unlike the HTML renderer's <th>/<td> —
     // spans are dropped and every cell is rendered plainly.
-    private static string RenderTable(JsonArray? rows, string? mediaBaseUrl)
+    private static string RenderTable(JsonArray? rows, RenderContext ctx)
     {
         if (rows is null || rows.Count == 0)
             return "";
 
         var rendered = rows
             .Select(row => (row!["content"]?.AsArray() ?? [])
-                .Select(cell => RenderCellInline(cell!["content"]?.AsArray(), mediaBaseUrl))
+                .Select(cell => RenderCellInline(cell!["content"]?.AsArray(), ctx))
                 .ToList())
             .ToList();
 
@@ -172,18 +187,18 @@ public static class CedarToTelegramMarkdownRenderer
 
     // Telegram table cells hold plain formatted text; a single wrapping paragraph is unwrapped,
     // multiple paragraphs are joined with a space since Markdown table cells can't span lines.
-    private static string RenderCellInline(JsonArray? nodes, string? mediaBaseUrl)
+    private static string RenderCellInline(JsonArray? nodes, RenderContext ctx)
     {
         if (nodes is null)
             return "";
 
         var parts = nodes.Select(n => (string?)n!["type"] == "paragraph"
-            ? RenderInline(n["content"]?.AsArray())
-            : RenderBlock(n, mediaBaseUrl));
+            ? RenderInline(n["content"]?.AsArray(), ctx)
+            : RenderBlock(n, ctx));
         return string.Join(" ", parts);
     }
 
-    private static string RenderInline(JsonArray? nodes)
+    private static string RenderInline(JsonArray? nodes, RenderContext ctx)
     {
         if (nodes is null)
             return "";
@@ -206,6 +221,10 @@ public static class CedarToTelegramMarkdownRenderer
                     var unix = (long?)n["attrs"]?["unix"] ?? 0;
                     var format = (string?)n["attrs"]?["format"] ?? "wDT";
                     sb.Append($"![](tg://time?unix={unix}&format={format})");
+                    break;
+                case "footnote":
+                    ctx.Footnotes.Add((string?)n["attrs"]?["text"] ?? "");
+                    sb.Append($"[^{ctx.Footnotes.Count}]");
                     break;
             }
         }
@@ -293,4 +312,9 @@ public static class CedarToTelegramMarkdownRenderer
          .Replace("`", "\\`")
          .Replace("[", "\\[")
          .Replace("]", "\\]");
+
+    // Same as EscapeMarkdown plus escaping the double quote that would otherwise terminate the
+    // enclosing ![](url "caption") title early.
+    private static string EscapeCaption(string s) =>
+        EscapeMarkdown(s).Replace("\"", "\\\"");
 }

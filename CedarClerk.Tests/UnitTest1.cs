@@ -244,4 +244,42 @@ public class RendererTests
                    """;
         Assert.Equal("<p><img src=\"tg://time?unix=1700000000&amp;format=wDT\"></p>", CedarToTelegramHtmlRenderer.Render(json));
     }
+
+    [Fact]
+    public void Renders_image_with_caption_as_figure()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"image","attrs":{"src":"/media/pic.jpg","caption":"A caption"}}]}
+                   """;
+        Assert.Equal(
+            "<figure><img src=\"https://cedarclerk.mooexe.dev/media/pic.jpg\"><figcaption>A caption</figcaption></figure>",
+            CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
+    }
+
+    [Fact]
+    public void Renders_video_with_caption_as_figure()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"video","attrs":{"src":"/media/clip.mp4","caption":"Video caption"}}]}
+                   """;
+        Assert.Equal(
+            "<figure><video src=\"https://cedarclerk.mooexe.dev/media/clip.mp4\"></video><figcaption>Video caption</figcaption></figure>",
+            CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
+    }
+
+    [Fact]
+    public void Renders_footnote_references_and_collected_footer()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"paragraph","content":[
+                       {"type":"text","text":"One"},
+                       {"type":"footnote","attrs":{"text":"First"}},
+                       {"type":"text","text":" Two"},
+                       {"type":"footnote","attrs":{"text":"Second"}}
+                   ]}]}
+                   """;
+        Assert.Equal(
+            "<p>One<sup>[1]</sup> Two<sup>[2]</sup></p><hr><ol><li>First</li><li>Second</li></ol>",
+            CedarToTelegramHtmlRenderer.Render(json));
+    }
 }

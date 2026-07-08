@@ -1,35 +1,56 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Nodes;
 
 namespace CedarClerk.Core;
 
 public static class CedarToTelegramHtmlRenderer
 {
+    private sealed class RenderContext
+    {
+        public string? MediaBaseUrl;
+        public List<string> Footnotes { get; } = [];
+    }
+
     public static string Render(string cedarJson, string? mediaBaseUrl = null)
     {
         var root = JsonNode.Parse(cedarJson) ?? throw new ArgumentException("Invalid cedar JSON");
         var doc = root["doc"] ?? root;
         var sb = new StringBuilder();
-        RenderNodes(doc["content"]?.AsArray(), sb, mediaBaseUrl);
+        var ctx = new RenderContext { MediaBaseUrl = mediaBaseUrl };
+        RenderNodes(doc["content"]?.AsArray(), sb, ctx);
+        AppendFootnotes(sb, ctx);
         return sb.ToString();
     }
 
-    private static void RenderNodes(JsonArray? nodes, StringBuilder sb, string? mediaBaseUrl = null)
+    // Best-effort fallback (no confirmed dedicated Telegram tag for footnotes in HTML mode):
+    // a plain numbered list degrades reasonably even without special footnote semantics.
+    private static void AppendFootnotes(StringBuilder sb, RenderContext ctx)
     {
-        if (nodes is null) 
+        if (ctx.Footnotes.Count == 0)
             return;
-        
-        foreach (var n in nodes) 
-            RenderNode(n!, sb, mediaBaseUrl);
+
+        sb.Append("<hr><ol>");
+        foreach (var text in ctx.Footnotes)
+            sb.Append("<li>").Append(Escape(text)).Append("</li>");
+        sb.Append("</ol>");
     }
 
-    private static void RenderNode(JsonNode node, StringBuilder sb, string? mediaBaseUrl)
+    private static void RenderNodes(JsonArray? nodes, StringBuilder sb, RenderContext ctx)
+    {
+        if (nodes is null)
+            return;
+
+        foreach (var n in nodes)
+            RenderNode(n!, sb, ctx);
+    }
+
+    private static void RenderNode(JsonNode node, StringBuilder sb, RenderContext ctx)
     {
         switch ((string?)node["type"])
         {
             case "paragraph":
                 sb.Append("<p>");
-                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                RenderNodes(node["content"]?.AsArray(), sb, ctx);
                 sb.Append("</p>");
                 break;
 
@@ -37,38 +58,38 @@ public static class CedarToTelegramHtmlRenderer
                 var level = (int?)node["attrs"]?["level"] ?? 1;
                 level = Math.Clamp(level, 1, 6);
                 sb.Append($"<h{level}>");
-                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                RenderNodes(node["content"]?.AsArray(), sb, ctx);
                 sb.Append($"</h{level}>");
                 break;
 
             case "bulletList":
                 sb.Append("<ul>");
-                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                RenderNodes(node["content"]?.AsArray(), sb, ctx);
                 sb.Append("</ul>");
                 break;
 
             case "orderedList":
                 sb.Append("<ol>");
-                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                RenderNodes(node["content"]?.AsArray(), sb, ctx);
                 sb.Append("</ol>");
                 break;
 
             case "listItem":
                 sb.Append("<li>");
-                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                RenderNodes(node["content"]?.AsArray(), sb, ctx);
                 sb.Append("</li>");
                 break;
 
             case "codeBlock":
                 var lang = (string?)node["attrs"]?["language"];
                 sb.Append(lang is null ? "<pre>" : $"<pre><code class=\"language-{lang}\">");
-                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                RenderNodes(node["content"]?.AsArray(), sb, ctx);
                 sb.Append(lang is null ? "</pre>" : "</code></pre>");
                 break;
 
             case "blockquote":
                 sb.Append("<blockquote>");
-                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                RenderNodes(node["content"]?.AsArray(), sb, ctx);
                 sb.Append("</blockquote>");
                 break;
 
@@ -83,22 +104,22 @@ public static class CedarToTelegramHtmlRenderer
             case "text":
                 RenderText(node, sb);
                 break;
-            
+
             case "image":
-                var src = ResolveUrl((string?)node["attrs"]?["src"], mediaBaseUrl);
-                sb.Append($"<img src=\"{Escape(src)}\">");
+                var src = ResolveUrl((string?)node["attrs"]?["src"], ctx.MediaBaseUrl);
+                AppendMedia(sb, "img", src, (string?)node["attrs"]?["caption"], isVoid: true);
                 break;
 
             case "video":
-                var videoSrc = ResolveUrl((string?)node["attrs"]?["src"], mediaBaseUrl);
+                var videoSrc = ResolveUrl((string?)node["attrs"]?["src"], ctx.MediaBaseUrl);
                 // video/audio — не void-теги: без закрытия парсер вложит в них весь дальнейший контент,
                 // и Telegram перенесёт медиа в конец сообщения
-                sb.Append($"<video src=\"{Escape(videoSrc)}\"></video>");
+                AppendMedia(sb, "video", videoSrc, (string?)node["attrs"]?["caption"], isVoid: false);
                 break;
 
             case "audio":
-                var audioSrc = ResolveUrl((string?)node["attrs"]?["src"], mediaBaseUrl);
-                sb.Append($"<audio src=\"{Escape(audioSrc)}\"></audio>");
+                var audioSrc = ResolveUrl((string?)node["attrs"]?["src"], ctx.MediaBaseUrl);
+                AppendMedia(sb, "audio", audioSrc, (string?)node["attrs"]?["caption"], isVoid: false);
                 break;
 
             case "carousel":
@@ -107,7 +128,7 @@ public static class CedarToTelegramHtmlRenderer
                 {
                     foreach (var img in images)
                     {
-                        var imgSrc = ResolveUrl((string?)img, mediaBaseUrl);
+                        var imgSrc = ResolveUrl((string?)img, ctx.MediaBaseUrl);
                         sb.Append($"<img src=\"{Escape(imgSrc)}\">");
                     }
                 }
@@ -120,7 +141,7 @@ public static class CedarToTelegramHtmlRenderer
                 {
                     foreach (var img in collageImages)
                     {
-                        var imgSrc = ResolveUrl((string?)img, mediaBaseUrl);
+                        var imgSrc = ResolveUrl((string?)img, ctx.MediaBaseUrl);
                         sb.Append($"<img src=\"{Escape(imgSrc)}\">");
                     }
                 }
@@ -129,13 +150,13 @@ public static class CedarToTelegramHtmlRenderer
 
             case "table":
                 sb.Append("<table>");
-                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                RenderNodes(node["content"]?.AsArray(), sb, ctx);
                 sb.Append("</table>");
                 break;
 
             case "tableRow":
                 sb.Append("<tr>");
-                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                RenderNodes(node["content"]?.AsArray(), sb, ctx);
                 sb.Append("</tr>");
                 break;
 
@@ -148,20 +169,20 @@ public static class CedarToTelegramHtmlRenderer
                 if ((int?)node["attrs"]?["rowspan"] is { } rowspan && rowspan > 1)
                     span += $" rowspan=\"{rowspan}\"";
                 sb.Append($"<{tag}{span}>");
-                RenderCellContent(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                RenderCellContent(node["content"]?.AsArray(), sb, ctx);
                 sb.Append($"</{tag}>");
                 break;
 
             case "taskList":
                 sb.Append("<ul>");
-                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                RenderNodes(node["content"]?.AsArray(), sb, ctx);
                 sb.Append("</ul>");
                 break;
 
             case "taskItem":
                 var isChecked = (bool?)node["attrs"]?["checked"] ?? false;
                 sb.Append(isChecked ? "<li><input type=\"checkbox\" checked>" : "<li><input type=\"checkbox\">");
-                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                RenderNodes(node["content"]?.AsArray(), sb, ctx);
                 sb.Append("</li>");
                 break;
 
@@ -178,7 +199,7 @@ public static class CedarToTelegramHtmlRenderer
             case "toggle":
                 var summary = Escape((string?)node["attrs"]?["summary"] ?? "");
                 sb.Append($"<details open><summary>{summary}</summary>");
-                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+                RenderNodes(node["content"]?.AsArray(), sb, ctx);
                 sb.Append("</details>");
                 break;
 
@@ -188,9 +209,30 @@ public static class CedarToTelegramHtmlRenderer
                 sb.Append($"<img src=\"tg://time?unix={unix}&amp;format={format}\">");
                 break;
 
-            default:
-                RenderNodes(node["content"]?.AsArray(), sb, mediaBaseUrl);
+            case "footnote":
+                ctx.Footnotes.Add((string?)node["attrs"]?["text"] ?? "");
+                sb.Append($"<sup>[{ctx.Footnotes.Count}]</sup>");
                 break;
+
+            default:
+                RenderNodes(node["content"]?.AsArray(), sb, ctx);
+                break;
+        }
+    }
+
+    // Wraps void (<img>) and non-void (<video>/<audio>) media tags in <figure>/<figcaption>
+    // when a caption is set — best-effort guess, no confirmed dedicated Telegram tag.
+    private static void AppendMedia(StringBuilder sb, string tag, string src, string? caption, bool isVoid)
+    {
+        var mediaHtml = isVoid ? $"<{tag} src=\"{Escape(src)}\">" : $"<{tag} src=\"{Escape(src)}\"></{tag}>";
+        if (string.IsNullOrEmpty(caption))
+        {
+            sb.Append(mediaHtml);
+        }
+        else
+        {
+            sb.Append("<figure>").Append(mediaHtml)
+              .Append("<figcaption>").Append(Escape(caption)).Append("</figcaption></figure>");
         }
     }
 
@@ -204,7 +246,7 @@ public static class CedarToTelegramHtmlRenderer
 
     // Telegram table cells hold plain formatted text, not block content - a single
     // wrapping <p> is unwrapped rather than nested inside <td>/<th>.
-    private static void RenderCellContent(JsonArray? nodes, StringBuilder sb, string? mediaBaseUrl)
+    private static void RenderCellContent(JsonArray? nodes, StringBuilder sb, RenderContext ctx)
     {
         if (nodes is null)
             return;
@@ -212,9 +254,9 @@ public static class CedarToTelegramHtmlRenderer
         foreach (var n in nodes)
         {
             if ((string?)n!["type"] == "paragraph")
-                RenderNodes(n["content"]?.AsArray(), sb, mediaBaseUrl);
+                RenderNodes(n["content"]?.AsArray(), sb, ctx);
             else
-                RenderNode(n, sb, mediaBaseUrl);
+                RenderNode(n, sb, ctx);
         }
     }
 

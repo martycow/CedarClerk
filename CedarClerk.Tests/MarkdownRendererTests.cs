@@ -298,4 +298,42 @@ public class MarkdownRendererTests
                    """;
         Assert.Equal("![](tg://time?unix=1700000000&format=wDT)", CedarToTelegramMarkdownRenderer.Render(json));
     }
+
+    [Fact]
+    public void Renders_image_with_caption_as_title()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"image","attrs":{"src":"/media/pic.jpg","caption":"A caption"}}]}
+                   """;
+        Assert.Equal(
+            "![](https://cedarclerk.mooexe.dev/media/pic.jpg \"A caption\")",
+            CedarToTelegramMarkdownRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
+    }
+
+    [Fact]
+    public void Renders_video_with_caption_as_title()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"video","attrs":{"src":"/media/clip.mp4","caption":"Video caption"}}]}
+                   """;
+        Assert.Equal(
+            "![](https://cedarclerk.mooexe.dev/media/clip.mp4 \"Video caption\")",
+            CedarToTelegramMarkdownRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
+    }
+
+    [Fact]
+    public void Renders_footnote_references_and_collected_footer()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"paragraph","content":[
+                       {"type":"text","text":"One"},
+                       {"type":"footnote","attrs":{"text":"First"}},
+                       {"type":"text","text":" Two"},
+                       {"type":"footnote","attrs":{"text":"Second"}}
+                   ]}]}
+                   """;
+        Assert.Equal(
+            "One[^1] Two[^2]\n\n[^1]: First\n[^2]: Second",
+            CedarToTelegramMarkdownRenderer.Render(json));
+    }
 }
