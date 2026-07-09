@@ -16,6 +16,17 @@ public class Draft
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string OwnerId { get; set; } = default!;
     public ApplicationUser? Owner { get; set; }
+
+    public string? BlogSlug { get; set; }
+    public bool IsBlogPublished { get; set; }
+    public DateTime? BlogPublishedAt { get; set; }
+
+    // Most recent successful Telegram send for this draft — used to cross-link the blog post
+    // back to Telegram. LastTelegramUsername is null when the channel has no public @username
+    // (private channel), in which case no link can be built.
+    public string? LastTelegramChatId { get; set; }
+    public int? LastTelegramMessageId { get; set; }
+    public string? LastTelegramUsername { get; set; }
 }
 
 public class Channel
@@ -47,6 +58,26 @@ public class Asset
     public string? TelegramFileId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string OwnerId { get; set; } = default!;
+}
+
+public class Reaction
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid DraftId { get; set; }
+    public string? AnnotationId { get; set; } // null = whole-article
+    public string Kind { get; set; } = ""; // "like" | "dislike" today; a string so more kinds can be added later
+    public string VisitorHash { get; set; } = "";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public class Comment
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid DraftId { get; set; }
+    public string? AnnotationId { get; set; } // null = whole-article
+    public string? AuthorName { get; set; }
+    public string Text { get; set; } = "";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 public class ScheduledPost

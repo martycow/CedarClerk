@@ -3,6 +3,7 @@ using System;
 using CedarClerk.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CedarClerk.Server.Migrations
 {
     [DbContext(typeof(CedarDbContext))]
-    partial class CedarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260708221941_AddCommentsAndReactions")]
+    partial class AddCommentsAndReactions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.28");
@@ -217,15 +220,6 @@ namespace CedarClerk.Server.Migrations
 
                     b.Property<bool>("IsBlogPublished")
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("LastTelegramChatId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("LastTelegramMessageId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("LastTelegramUsername")
-                        .HasColumnType("TEXT");
 
                     b.Property<string>("OwnerId")
                         .IsRequired()

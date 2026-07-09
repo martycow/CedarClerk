@@ -3,6 +3,7 @@ using System;
 using CedarClerk.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CedarClerk.Server.Migrations
 {
     [DbContext(typeof(CedarDbContext))]
-    partial class CedarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260708195726_AddDraftBlogFields")]
+    partial class AddDraftBlogFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.28");
@@ -169,33 +172,6 @@ namespace CedarClerk.Server.Migrations
                     b.ToTable("ChannelStatSnapshots");
                 });
 
-            modelBuilder.Entity("CedarClerk.Server.Data.Comment", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AnnotationId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AuthorName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("DraftId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Text")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Comments");
-                });
-
             modelBuilder.Entity("CedarClerk.Server.Data.Draft", b =>
                 {
                     b.Property<Guid>("Id")
@@ -218,15 +194,6 @@ namespace CedarClerk.Server.Migrations
                     b.Property<bool>("IsBlogPublished")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("LastTelegramChatId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("LastTelegramMessageId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("LastTelegramUsername")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("OwnerId")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -243,34 +210,6 @@ namespace CedarClerk.Server.Migrations
                     b.HasIndex("OwnerId");
 
                     b.ToTable("Drafts");
-                });
-
-            modelBuilder.Entity("CedarClerk.Server.Data.Reaction", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AnnotationId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("DraftId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("VisitorHash")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Reactions");
                 });
 
             modelBuilder.Entity("CedarClerk.Server.Data.ScheduledPost", b =>

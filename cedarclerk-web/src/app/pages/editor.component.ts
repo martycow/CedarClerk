@@ -28,9 +28,11 @@ import { DateTimeNode } from '../tiptap-extensions/datetime-node';
 import { ToggleNode } from '../tiptap-extensions/toggle-node';
 import { ImageNode } from '../tiptap-extensions/image-node';
 import { FootnoteNode } from '../tiptap-extensions/footnote-node';
+import { AnnotationNode } from '../tiptap-extensions/annotation-node';
 import { PopoverComponent } from '../shared/popover.component';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { ThemeService } from '../core/theme.service';
+import { CommentsService, DraftComment } from '../core/comments.service';
 import {
     LucideUndo2 as Undo2, LucideRedo2 as Redo2,
     LucideBold as Bold, LucideItalic as Italic, LucideStrikethrough as Strikethrough, LucideCode as Code,
@@ -47,6 +49,7 @@ import {
     LucideChevronDown as ChevronDown,
     LucideCheck as Check,
     LucideDownload as Download, LucideUpload as Upload,
+    LucideMessageSquare as MessageSquare,
 } from '@lucide/angular';
 
 const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
@@ -65,6 +68,7 @@ function toDatetimeLocalValue(date: Date): string {
 
 type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
 const EMPTY_DOC = '{"type":"doc","content":[{"type":"paragraph"}]}';
+const BLOG_HOST = 'blog.mooexe.dev';
 
 // Extra timezones shown alongside the local time when scheduling a post; will move to user settings later
 const EXTRA_TIMEZONES: { label: string; zone: string }[] = [
@@ -95,7 +99,7 @@ interface UploadItem {
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
         Send, Plus, X, LogOut, RadioTower, Trash2,
         EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, Menu, Superscript,
-        ChevronDown, Check, Download, Upload,
+        ChevronDown, Check, Download, Upload, MessageSquare,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -120,6 +124,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     private posts = inject(PostsService); // + import сверху
     private channelsApi = inject(ChannelsService);
+    private commentsApi = inject(CommentsService);
 
     chatId = '@testingandfun';
     format: PostFormat = 'Html';
@@ -130,6 +135,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     importingCedar = signal(false);
     importCedarError = signal<string | null>(null);
+
+    currentBlog = signal<{ slug: string; isPublished: boolean } | null>(null);
+    blogBusy = signal(false);
+    blogError = signal<string | null>(null);
+
+    annotationsOpen = signal(false);
+    draftComments = signal<DraftComment[]>([]);
+    commentsLoading = signal(false);
 
     zoom = signal(100);
 
@@ -240,6 +253,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 FootnoteNode,
                 DateTimeNode,
                 ToggleNode,
+                AnnotationNode,
                 Table.configure({ resizable: false }),
                 TableRow,
                 TableHeader,
@@ -329,6 +343,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.title = draft.title;
         this.editor?.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC));
         this.saveState.set('saved');
+        this.currentBlog.set(draft.blogSlug ? { slug: draft.blogSlug, isPublished: draft.isBlogPublished } : null);
+        this.blogError.set(null);
+        this.draftComments.set([]);
+        if (this.annotationsOpen()) await this.loadComments();
     }
 
     async newDraft() {
@@ -339,13 +357,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const created = await this.draftsApi.create('Untitled', EMPTY_DOC);
         const meta: DraftMeta = {
             id: created.id, title: 'Untitled',
-            createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+            createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+            blogSlug: null, isBlogPublished: false, blogPublishedAt: null,
         };
         this.drafts.update(l => [meta, ...l]);
         this.currentId.set(created.id);
         this.title = meta.title;
         this.editor?.commands.setContent(JSON.parse(EMPTY_DOC));
         this.saveState.set('saved');
+        this.currentBlog.set(null);
+        this.blogError.set(null);
+        this.draftComments.set([]);
         this.editor?.commands.focus();
     }
 
@@ -383,6 +405,63 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         } finally {
             this.importingCedar.set(false);
         }
+    }
+
+    blogUrl(): string | null {
+        const b = this.currentBlog();
+        return b ? `https://${BLOG_HOST}/${b.slug}` : null;
+    }
+
+    async publishToBlog() {
+        const id = this.currentId();
+        if (!id) return;
+        this.blogBusy.set(true);
+        this.blogError.set(null);
+        try {
+            const res = await this.draftsApi.publishToBlog(id);
+            this.currentBlog.set({ slug: res.slug, isPublished: true });
+        } catch {
+            this.blogError.set('Publish failed — check server logs');
+        } finally {
+            this.blogBusy.set(false);
+        }
+    }
+
+    async unpublishFromBlog() {
+        const id = this.currentId();
+        if (!id) return;
+        this.blogBusy.set(true);
+        this.blogError.set(null);
+        try {
+            await this.draftsApi.unpublishFromBlog(id);
+            this.currentBlog.update(b => b ? { ...b, isPublished: false } : b);
+        } catch {
+            this.blogError.set('Unpublish failed — check server logs');
+        } finally {
+            this.blogBusy.set(false);
+        }
+    }
+
+    async toggleAnnotationsPanel() {
+        const opening = !this.annotationsOpen();
+        this.annotationsOpen.set(opening);
+        if (opening) await this.loadComments();
+    }
+
+    async loadComments() {
+        const id = this.currentId();
+        if (!id) return;
+        this.commentsLoading.set(true);
+        try {
+            this.draftComments.set(await this.commentsApi.list(id));
+        } finally {
+            this.commentsLoading.set(false);
+        }
+    }
+
+    async deleteComment(commentId: string) {
+        await this.commentsApi.remove(commentId);
+        this.draftComments.update(list => list.filter(c => c.id !== commentId));
     }
 
     cmd(fn: (chain: any) => any) {
@@ -645,6 +724,15 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     insertTable() {
         this.cmd(c => c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }));
+    }
+
+    canAnnotate(): boolean {
+        this.tick();
+        return !!this.editor && !this.editor.state.selection.empty;
+    }
+
+    insertAnnotation() {
+        if (this.canAnnotate()) this.cmd(c => c.wrapIn('annotation', { id: crypto.randomUUID() }));
     }
 
     insertInlineMath() {

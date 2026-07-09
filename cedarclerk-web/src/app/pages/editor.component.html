@@ -124,6 +124,32 @@
                 </a>
                 }
 
+                <div class="popover-divider"></div>
+                <div class="panel-label">Blog</div>
+                @if (currentBlog(); as blog) {
+                    @if (blog.isPublished) {
+                    <p class="export-result">
+                        ✓ Published — <a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a>
+                    </p>
+                    <button class="export-btn" (click)="unpublishFromBlog()" [disabled]="blogBusy()">
+                        {{ blogBusy() ? '…' : 'Unpublish' }}
+                    </button>
+                    } @else {
+                    <p class="export-result">Unpublished — link stays <a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
+                    <button class="export-btn" (click)="publishToBlog()" [disabled]="blogBusy()">
+                        {{ blogBusy() ? '…' : 'Republish to blog' }}
+                    </button>
+                    }
+                } @else {
+                <button class="export-btn" (click)="publishToBlog()" [disabled]="blogBusy()">
+                    <svg lucideSend class="icon-sm"></svg>
+                    {{ blogBusy() ? 'Publishing…' : 'Publish to blog' }}
+                </button>
+                }
+                @if (blogError()) {
+                <p class="channel-error">{{ blogError() }}</p>
+                }
+
                 @if (exportResult()) {
                 <p class="export-result">
                     {{ exportResult() }}
@@ -174,6 +200,10 @@
                 }
             </div>
         </app-popover>
+
+        <button class="icon-btn" [class.on]="annotationsOpen()" title="Comments &amp; likes" (click)="toggleAnnotationsPanel()">
+            <svg lucideMessageSquare class="icon"></svg>
+        </button>
 
         <button class="icon-btn theme-toggle" (click)="theme.toggle()" title="Toggle theme">
             {{ theme.theme() === 'dark' ? '☀' : '☾' }}
@@ -324,6 +354,9 @@
                 <button (click)="insertInlineMath()"><svg lucideSigma class="icon"></svg> Inline formula</button>
                 <button (click)="insertBlockMath()"><svg lucideSigmaSquare class="icon"></svg> Block formula</button>
                 <button (click)="insertToggle()"><svg lucideListCollapse class="icon"></svg> Expandable block</button>
+                <button (click)="insertAnnotation()" [disabled]="!canAnnotate()" title="Wrap the current selection so it can carry likes/comments on the blog">
+                    <svg lucideMessageSquare class="icon"></svg> Mark for comments
+                </button>
                 <button (click)="outdent()"><svg lucideOutdent class="icon"></svg> Decrease indent</button>
                 <button (click)="indent()"><svg lucideIndent class="icon"></svg> Increase indent</button>
             </div>
@@ -350,6 +383,7 @@
     <!--Main content-->
     <div class="main">
         <div class="drawer-backdrop" [class.open]="draftsOpen()" (click)="draftsOpen.set(false)"></div>
+        <div class="drawer-backdrop" [class.open]="annotationsOpen()" (click)="annotationsOpen.set(false)"></div>
 
         <!--Left panel-->
         <aside class="panel left" [class.open]="draftsOpen()">
@@ -382,6 +416,32 @@
         <section class="canvas">
             <div class="sheet" #editorHost [style.--zoom]="zoomFactor()"></div>
         </section>
+
+        <!--Right panel: comments & likes moderation-->
+        <aside class="panel right" [class.open]="annotationsOpen()">
+            <div class="panel-head">
+                <span class="panel-label">Comments &amp; likes</span>
+                <button class="mini" (click)="annotationsOpen.set(false)" title="Close"><svg lucideX class="icon-sm"></svg></button>
+            </div>
+            @if (commentsLoading()) {
+            <p class="hint">Loading…</p>
+            } @else {
+                @for (c of draftComments(); track c.id) {
+                <div class="comment-row">
+                    <div class="comment-row-top">
+                        <span class="comment-tag">{{ c.annotationId ? 'In text' : 'Whole article' }}</span>
+                        <button class="mini-remove" (click)="deleteComment(c.id)" title="Delete comment">
+                            <svg lucideTrash2 class="icon-sm"></svg>
+                        </button>
+                    </div>
+                    <div class="comment-row-meta">{{ c.authorName || 'Anonymous' }} · {{ c.createdAt | date:'d MMM, HH:mm' }}</div>
+                    <div class="comment-row-text">{{ c.text }}</div>
+                </div>
+                } @empty {
+                <p class="hint">No comments yet.</p>
+                }
+            }
+        </aside>
     </div>
 
     <!--Status bar-->

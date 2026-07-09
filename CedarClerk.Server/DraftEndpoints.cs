@@ -31,7 +31,7 @@ public static class DraftEndpoints
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             return await db.Drafts.Where(d => d.OwnerId == uid)
                 .OrderByDescending(d => d.UpdatedAt)
-                .Select(d => new { d.Id, d.Title, d.CreatedAt, d.UpdatedAt })
+                .Select(d => new { d.Id, d.Title, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt })
                 .ToListAsync();
         });
 
@@ -40,7 +40,7 @@ public static class DraftEndpoints
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
-            return draft is null ? Results.NotFound() : Results.Ok(new { draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt });
+            return draft is null ? Results.NotFound() : Results.Ok(new { draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug, draft.IsBlogPublished, draft.BlogPublishedAt });
         });
 
         // Create new draft

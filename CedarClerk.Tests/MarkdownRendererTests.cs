@@ -336,4 +336,18 @@ public class MarkdownRendererTests
             "One[^1] Two[^2]\n\n[^1]: First\n[^2]: Second",
             CedarToTelegramMarkdownRenderer.Render(json));
     }
+
+    [Fact]
+    public void Ignores_annotation_wrapper_and_renders_children()
+    {
+        // Telegram has no concept of anchored reactions/comments — an "annotation" node (used to
+        // mark a region for likes/comments on the blog) has no case here and falls through to the
+        // default "unknown type" handling, rendering its children as if unwrapped.
+        var json = """
+                   {"type":"doc","content":[{"type":"annotation","attrs":{"id":"abc"},"content":[
+                       {"type":"paragraph","content":[{"type":"text","text":"marked text"}]}
+                   ]}]}
+                   """;
+        Assert.Equal("marked text", CedarToTelegramMarkdownRenderer.Render(json));
+    }
 }

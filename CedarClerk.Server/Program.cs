@@ -79,8 +79,13 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseAuthentication();
 app.UseAuthorization();
 
+var blogHost = builder.Configuration["Cedar:BlogHost"] ?? BlogEndpoints.DefaultBlogHost;
+app.MapWhen(ctx => string.Equals(ctx.Request.Host.Host, blogHost, StringComparison.OrdinalIgnoreCase),
+    blogApp => blogApp.Run(BlogEndpoints.HandleRequest));
+
 app.MapAuthEndpoints();
 app.MapDraftEndpoints();
+app.MapBlogEndpoints();
 app.MapPostEndpoints();
 app.MapAssetEndpoints();
 app.MapChannelEndpoints();

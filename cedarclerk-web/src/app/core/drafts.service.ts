@@ -7,6 +7,9 @@ export interface DraftMeta {
     title: string;
     createdAt: string;
     updatedAt: string;
+    blogSlug: string | null;
+    isBlogPublished: boolean;
+    blogPublishedAt: string | null;
 }
 export interface DraftFull extends DraftMeta { cedarJson: string; }
 
@@ -38,5 +41,13 @@ export class DraftsService {
         const formData = new FormData();
         formData.append('file', file);
         return firstValueFrom(this.http.post<{ id: string }>('/api/drafts/import', formData));
+    }
+
+    publishToBlog(id: string) {
+        return firstValueFrom(this.http.post<{ slug: string; url: string }>(`/api/drafts/${id}/publish-blog`, {}));
+    }
+
+    unpublishFromBlog(id: string) {
+        return firstValueFrom(this.http.post(`/api/drafts/${id}/unpublish-blog`, {}));
     }
 }

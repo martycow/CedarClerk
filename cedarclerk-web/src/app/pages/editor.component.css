@@ -472,6 +472,62 @@
     border-right: 1px solid var(--border);
 }
 
+/* Right panel is always a slide-in drawer (unlike .panel.left, which is a permanent
+   sidebar on desktop) — comments/likes moderation is secondary, occasional work that
+   shouldn't permanently shrink the writing canvas. */
+.panel.right {
+    border-left: 1px solid var(--border);
+    position: fixed;
+    inset: 0 0 0 auto;
+    width: 320px;
+    max-width: 88vw;
+    z-index: 60;
+    transform: translateX(100%);
+    transition: transform 0.2s ease;
+    box-shadow: var(--shadow-md);
+}
+
+.panel.right.open {
+    transform: translateX(0);
+}
+
+.icon-btn.on {
+    background: var(--asoft);
+    color: var(--accent);
+}
+
+.comment-row {
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+}
+
+.comment-row-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.comment-tag {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--t3);
+}
+
+.comment-row-meta {
+    color: var(--t3);
+    font-size: 11px;
+    margin: 2px 0;
+}
+
+.comment-row-text {
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+
 .panel-head {
     display: flex;
     align-items: center;
@@ -555,6 +611,17 @@
 
 .drawer-backdrop {
     display: none;
+}
+
+/* Unlike the left drawer's backdrop (only relevant on mobile — see the media query below,
+   .panel.left is a permanent sidebar on desktop and draftsOpen() never becomes true there),
+   the right panel is always a drawer, so its backdrop needs to work at every breakpoint. */
+.drawer-backdrop.open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 55;
 }
 
 .channel-item {
@@ -1039,14 +1106,6 @@ input[type="datetime-local"]:focus-visible {
 
     .panel.left.open {
         transform: translateX(0);
-    }
-
-    .drawer-backdrop.open {
-        display: block;
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.3);
-        z-index: 55;
     }
 
     .canvas {

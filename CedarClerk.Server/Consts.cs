@@ -10,4 +10,7 @@ public static class Consts
     public const string DbFileName = "cedar.db";
     
     public const int PasswordMinLength = 10;
+
+    // Not a secret — just enough to avoid storing raw visitor IPs directly.
+    public const string VisitorHashSalt = "cedar-clerk-visitor-v1";
 }
