@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using CedarClerk.Core;
+using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -16,7 +17,7 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
-        var token = cfg[Consts.BotTokenCfg];
+        var token = cfg[Consts.Telegram.BotTokenCfg];
         if (string.IsNullOrEmpty(token))
         {
             logger.LogWarning("Cedar:BotToken not set — bot is disabled");

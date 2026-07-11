@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using CedarClerk.Core;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 

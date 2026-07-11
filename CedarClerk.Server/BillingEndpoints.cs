@@ -21,13 +21,13 @@ public static class BillingEndpoints
             var user = await users.GetUserAsync(principal);
             if (user is null) return Results.Unauthorized();
 
-            var starsAmount = cfg.GetValue<int>(Consts.StarsAmountCfg);
+            var starsAmount = cfg.GetValue<int>(Consts.Telegram.ProStarsPriceCfg);
             return Results.Ok(new
             {
                 planTier = user.PlanTier.ToString(),
                 providers = new
                 {
-                    stripe = !string.IsNullOrEmpty(cfg[Consts.StripeSecretKeyCfg]) && !string.IsNullOrEmpty(cfg[Consts.StripePriceIdCfg]),
+                    stripe = !string.IsNullOrEmpty(cfg[Consts.Stripe.SecretKeyCfg]) && !string.IsNullOrEmpty(cfg[Consts.Stripe.ProPriceIdCfg]),
                     telegramStars = bot.IsRunning && starsAmount > 0,
                     paypal = false, // stub — see docs/integrations-setup.md
                 },
@@ -37,8 +37,8 @@ public static class BillingEndpoints
         
         group.MapPost("/stripe/checkout", async (ClaimsPrincipal principal, UserManager<ApplicationUser> users, IConfiguration cfg, IHttpClientFactory httpFactory) =>
         {
-            var secretKey = cfg[Consts.StripeSecretKeyCfg];
-            var priceId = cfg[Consts.StripePriceIdCfg];
+            var secretKey = cfg[Consts.Stripe.SecretKeyCfg];
+            var priceId = cfg[Consts.Stripe.ProPriceIdCfg];
             if (string.IsNullOrEmpty(secretKey) || string.IsNullOrEmpty(priceId))
                 return Results.Json(new { error = "Stripe is not configured — see docs/integrations-setup.md" }, statusCode: StatusCodes.Status501NotImplemented);
 
@@ -75,7 +75,7 @@ public static class BillingEndpoints
         
         group.MapPost("/stripe/webhook", async (HttpRequest request, CedarDbContext db, IConfiguration cfg, ILogger<Payment> logger) =>
         {
-            var webhookSecret = cfg[Consts.StripeWebhookSecretCfg];
+            var webhookSecret = cfg[Consts.Stripe.WebhookSecretCfg];
             if (string.IsNullOrEmpty(webhookSecret))
                 return Results.StatusCode(StatusCodes.Status501NotImplemented);
 
@@ -145,7 +145,7 @@ public static class BillingEndpoints
         
         group.MapPost("/telegram-stars/invoice", async (ClaimsPrincipal principal, UserManager<ApplicationUser> users, IConfiguration cfg, TelegramBotService bot) =>
         {
-            var starsAmount = cfg.GetValue<int>(Consts.StarsAmountCfg);
+            var starsAmount = cfg.GetValue<int>(Consts.Telegram.ProStarsPriceCfg);
             if (starsAmount <= 0)
                 return Results.Json(new { error = ErrorMessages.TelegramBillingNotConfigured }, statusCode: StatusCodes.Status501NotImplemented);
             

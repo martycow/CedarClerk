@@ -1,3 +1,4 @@
+using CedarClerk.Core;
 using CedarClerk.Server;
 using CedarClerk.Server.Bot;
 using Microsoft.AspNetCore.Identity;

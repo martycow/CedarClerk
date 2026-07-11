@@ -39,3 +39,4 @@ Thumbs.db
 *.log
 TestResults/
 coverage/
+docs/**/*

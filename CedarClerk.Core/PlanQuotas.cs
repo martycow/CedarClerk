@@ -1,7 +1,5 @@
 namespace CedarClerk.Core;
 
-public enum PlanTiers { Free, Pro }
-
 public static class PlanQuotas
 {
     public const int FreeMaxChannels = 1;

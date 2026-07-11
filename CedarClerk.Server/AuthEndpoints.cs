@@ -93,7 +93,7 @@ public static class AuthEndpoints
 
         groupBuilder.MapPost("/telegram/link", async (TelegramLinkRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users, CedarDbContext db, IConfiguration cfg) =>
         {
-            var botToken = cfg[Consts.BotTokenCfg];
+            var botToken = cfg[Consts.Telegram.BotTokenCfg];
             if (string.IsNullOrEmpty(botToken))
                 return Results.Json(new { error = "Telegram bot is not running (no token configured)" }, statusCode: StatusCodes.Status503ServiceUnavailable);
 

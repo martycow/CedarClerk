@@ -1,3 +1,5 @@
+using CedarClerk.Core;
+
 namespace CedarClerk.Server.Translation;
 
 public static class TranslationProviderFactory
@@ -11,27 +13,27 @@ public static class TranslationProviderFactory
         {
             case "anthropic":
             {
-                var key = cfg[Consts.AnthropicApiKeyCfg];
+                var key = cfg[Consts.Anthropic.ApiKeyCfg];
                 if (string.IsNullOrEmpty(key))
-                    throw new TranslationException($"{Consts.AnthropicApiKeyCfg} is not set");
+                    throw new TranslationException($"{Consts.Anthropic.ApiKeyCfg} is not set");
                 
-                var model = cfg[Consts.AnthropicModelCfg] ?? Consts.DefaultClaudeModel;
+                var model = cfg[Consts.Anthropic.ModelCfg] ?? Consts.Anthropic.DefaultModel;
                 return new AnthropicTranslationProvider(key, model);
             }
             case "openai":
             {
-                var key = cfg[Consts.OpenAiApiKeyCfg];
+                var key = cfg[Consts.OpenAi.ApiKeyCfg];
                 if (string.IsNullOrEmpty(key))
-                    throw new TranslationException($"{Consts.OpenAiApiKeyCfg} is not set");
+                    throw new TranslationException($"{Consts.OpenAi.ApiKeyCfg} is not set");
                 
-                var model = cfg[Consts.OpenAiModelCfg] ?? Consts.DefaultOpenAiModel;
+                var model = cfg[Consts.OpenAi.ApiKeyCfg] ?? Consts.OpenAi.DefaultModel;
                 return new OpenAiTranslationProvider(httpFactory, key, model);
             }
             case "deepl":
             {
-                var key = cfg[Consts.DeepLApiKeyCfg];
+                var key = cfg[Consts.DeepL.ApiKeyCfg];
                 if (string.IsNullOrEmpty(key))
-                    throw new TranslationException($"{Consts.DeepLApiKeyCfg} is not set");
+                    throw new TranslationException($"{Consts.DeepL.ApiKeyCfg} is not set");
                 
                 return new DeepLTranslationProvider(httpFactory, key);
             }
