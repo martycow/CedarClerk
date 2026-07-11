@@ -8,18 +8,15 @@ public record MediaPaths(string Dir);
 
 public static class AssetEndpoints
 {
-    internal const long ImageMaxBytes = 5 * 1024 * 1024;
-    private const long MediaMaxBytes = 20 * 1024 * 1024;
-
     private static readonly Dictionary<string, (string Ext, long MaxBytes)> Allowed = new()
     {
-        ["image/jpeg"] = (".jpg", ImageMaxBytes),
-        ["image/png"]  = (".png", ImageMaxBytes),
-        ["image/gif"]  = (".gif", ImageMaxBytes),
-        ["image/webp"] = (".webp", ImageMaxBytes),
-        ["video/mp4"]  = (".mp4", MediaMaxBytes),
-        ["audio/mpeg"] = (".mp3", MediaMaxBytes),
-        ["audio/ogg"]  = (".ogg", MediaMaxBytes),
+        ["image/jpeg"] = (".jpg", Consts.FileSizes.ImageMaxBytes),
+        ["image/png"]  = (".png", Consts.FileSizes.ImageMaxBytes),
+        ["image/gif"]  = (".gif", Consts.FileSizes.ImageMaxBytes),
+        ["image/webp"] = (".webp", Consts.FileSizes.ImageMaxBytes),
+        ["video/mp4"]  = (".mp4", Consts.FileSizes.MediaMaxBytes),
+        ["audio/mpeg"] = (".mp3", Consts.FileSizes.MediaMaxBytes),
+        ["audio/ogg"]  = (".ogg", Consts.FileSizes.MediaMaxBytes),
     };
 
     public static void MapAssetEndpoints(this WebApplication app)
@@ -34,10 +31,17 @@ public static class AssetEndpoints
                     return Results.BadRequest(new { error = $"File is too large ({maxBytes / (1024 * 1024)}MB Maximum)" });
 
                 var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-                var tier = await db.Users.Where(u => u.Id == uid).Select(u => u.PlanTier).FirstAsync();
+                var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
                 var usedBytes = await db.Assets.Where(a => a.OwnerId == uid).SumAsync(a => a.SizeBytes);
-                if (!PlanQuotas.HasStorageRoom(tier, usedBytes, file.Length))
-                    return Results.Json(new { error = $"Free plan storage limit ({PlanQuotas.FreeStorageBytes / (1024 * 1024)}MB) exceeded. Upgrade to Pro for more." }, statusCode: StatusCodes.Status403Forbidden);
+                
+                if (!PlanLimitations.HasStorageRoom(tier, usedBytes, file.Length))
+                {
+                    var planLimitMb = PlanLimitations.StorageLimitBytes(tier) / (1024 * 1024);
+                    
+                    return Results.Json(
+                        new { error = $"Storage limit of your plan ({planLimitMb}MB) exceeded. Upgrade for more." },
+                        statusCode: StatusCodes.Status403Forbidden);
+                }
 
                 var asset = new Asset
                 {

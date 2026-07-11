@@ -5,6 +5,7 @@ import {
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Editor } from '@tiptap/core';
+import { TextSelection } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
 import { AuthService } from '../core/auth.service';
 import { DraftsService, DraftMeta, TranslationMeta } from '../core/drafts.service';
@@ -34,7 +35,7 @@ import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { ThemeService } from '../core/theme.service';
 import { CommentsService, DraftComment } from '../core/comments.service';
 import { TelegramLinkService } from '../core/telegram-link.service';
-import { BillingService, BillingStatus } from '../core/billing.service';
+import { BillingService, BillingStatus, PlanId } from '../core/billing.service';
 import {
     LucideUndo2 as Undo2, LucideRedo2 as Redo2,
     LucideBold as Bold, LucideItalic as Italic, LucideStrikethrough as Strikethrough, LucideCode as Code,
@@ -159,6 +160,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     billing = signal<BillingStatus | null>(null);
     billingBusy = signal(false);
     billingMessage = signal<string | null>(null);
+    selectedPlan: PlanId = 'pro';
+
+    draftReactions = signal<{ likes: number; dislikes: number }>({ likes: 0, dislikes: 0 });
 
     autoTranslating = signal(false);
     autoTranslateError = signal<string | null>(null);
@@ -305,8 +309,27 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     async ngAfterViewInit() {
+        const mediaNodeTypes = new Set(['image', 'video', 'audio', 'carousel', 'collage']);
         this.editor = new Editor({
             element: this.editorHost.nativeElement,
+            editorProps: {
+                // Bug fix: with a media node selected (click on an image/video), typing a character
+                // used to REPLACE the node (default ProseMirror behavior). Instead, put the caret
+                // into a paragraph right below the node and let the character land there.
+                handleKeyDown: (view, event) => {
+                    const sel: any = view.state.selection;
+                    if (!sel?.node || !mediaNodeTypes.has(sel.node.type?.name)) return false;
+                    if (event.key.length !== 1 || event.ctrlKey || event.metaKey || event.altKey) return false;
+
+                    const insertPos = sel.$to.pos;
+                    const paragraph = view.state.schema.nodes['paragraph'].createAndFill();
+                    if (!paragraph) return false;
+                    let tr = view.state.tr.insert(insertPos, paragraph);
+                    tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 1));
+                    view.dispatch(tr);
+                    return false; // let the typed character be inserted into the new paragraph
+                },
+            },
             extensions: [
                 StarterKit,
                 ImageNode,
@@ -508,10 +531,22 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.billingBusy.set(true);
         this.billingMessage.set(null);
         try {
-            const res = await this.billingApi.stripeCheckout();
+            const res = await this.billingApi.stripeCheckout(this.selectedPlan);
             window.location.href = res.url; // Stripe hosted checkout page
         } catch (e) {
             this.billingMessage.set(this.httpError(e, 'Stripe checkout failed'));
+            this.billingBusy.set(false);
+        }
+    }
+
+    async upgradePaypal() {
+        this.billingBusy.set(true);
+        this.billingMessage.set(null);
+        try {
+            const res = await this.billingApi.paypalCheckout(this.selectedPlan);
+            window.location.href = res.url; // PayPal approval page
+        } catch (e) {
+            this.billingMessage.set(this.httpError(e, 'PayPal checkout failed'));
             this.billingBusy.set(false);
         }
     }
@@ -520,13 +555,19 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.billingBusy.set(true);
         this.billingMessage.set(null);
         try {
-            await this.billingApi.starsInvoice();
-            this.billingMessage.set('✓ Invoice sent — check your Telegram and confirm the payment there.');
+            await this.billingApi.starsInvoice(this.selectedPlan);
+            this.billingMessage.set('✓ Invoice sent to your Telegram — open the bot chat and confirm the payment there.');
         } catch (e) {
             this.billingMessage.set(this.httpError(e, 'Failed to send the invoice'));
         } finally {
             this.billingBusy.set(false);
         }
+    }
+
+    starsPriceFor(plan: PlanId): number {
+        const b = this.billing();
+        if (!b) return 0;
+        return plan === 'pro' ? b.prices.proStars : plan === 'proplus' ? b.prices.proPlusStars : b.prices.trialStars;
     }
 
     private httpError(e: unknown, fallback: string): string {
@@ -719,7 +760,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (!id) return;
         this.commentsLoading.set(true);
         try {
-            this.draftComments.set(await this.commentsApi.list(id));
+            const feedback = await this.commentsApi.list(id);
+            this.draftComments.set(feedback.comments);
+            this.draftReactions.set(feedback.reactions);
         } finally {
             this.commentsLoading.set(false);
         }

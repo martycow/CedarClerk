@@ -1,10 +1,12 @@
-using CedarClerk.Core;
+﻿using CedarClerk.Core;
 using CedarClerk.Server;
 using CedarClerk.Server.Bot;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Quartz;
+
+const int passwordRequiredLength = 8;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,7 +34,7 @@ builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
 builder.Services.AddAuthorization();
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
-        options.Password.RequiredLength = Consts.PasswordMinLength;
+        options.Password.RequiredLength = passwordRequiredLength;
         options.User.RequireUniqueEmail = true;
     })
     .AddEntityFrameworkStores<CedarDbContext>()
@@ -58,10 +60,15 @@ builder.Services.AddQuartz(q =>
     q.AddJob<PublishDueScheduledPostsJob>(opts => opts.WithIdentity(jobKey));
     q.AddTrigger(t => t.ForJob(jobKey).WithSimpleSchedule(s => s.WithIntervalInMinutes(1).RepeatForever()));
 
-    // Daily channel member-count snapshot, timed after the 3:30 AM backup cron on the Pi
+    // Daily channel members count snapshot
     var statsJobKey = new JobKey("SnapshotChannelStats");
     q.AddJob<SnapshotChannelStatsJob>(opts => opts.WithIdentity(statsJobKey));
     q.AddTrigger(t => t.ForJob(statsJobKey).WithCronSchedule("0 0 4 * * ?"));
+
+    // Hourly check if the paid plan is lapsed
+    var downgradeJobKey = new JobKey("DowngradeExpiredPlans");
+    q.AddJob<DowngradeExpiredPlansJob>(opts => opts.WithIdentity(downgradeJobKey));
+    q.AddTrigger(t => t.ForJob(downgradeJobKey).WithSimpleSchedule(s => s.WithIntervalInHours(1).RepeatForever()));
 });
 builder.Services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
 #endregion
@@ -80,7 +87,7 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseAuthentication();
 app.UseAuthorization();
 
-var blogHost = builder.Configuration[Consts.BlogHostCfg] ?? Consts.DefaultBlogHost;
+var blogHost = builder.Configuration[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost;
 app.MapWhen(ctx => string.Equals(ctx.Request.Host.Host, blogHost, StringComparison.OrdinalIgnoreCase),
     blogApp => blogApp.Run(BlogEndpoints.HandleRequest));
 
@@ -117,4 +124,4 @@ app.MapGet("/api/health", () => Results.Ok(new
 }));
 #endregion
 
-app.Run(Consts.Localhost);
+app.Run(Consts.URLs.Localhost);

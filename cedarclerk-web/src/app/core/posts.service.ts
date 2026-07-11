@@ -16,6 +16,7 @@ export interface ScheduledPost {
     messageId: number | null;
     format: PostFormat;
     language: PostLanguage;
+    channelTitle: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

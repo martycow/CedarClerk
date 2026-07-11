@@ -10,7 +10,7 @@ namespace CedarClerk.Server;
 
 public static class PostEndpoints
 { 
-    public record ExportRequest(Guid DraftId, string ChatId, string Format = Consts.Html, string Language = Languages.Primary);
+    public record ExportRequest(Guid DraftId, string ChatId, string Format = Consts.ContentTypes.Html, string Language = Languages.Primary);
 
     public record PublishResult(int? MessageId, string? Error, int StatusCode = StatusCodes.Status400BadRequest)
     {
@@ -24,12 +24,16 @@ public static class PostEndpoints
         CedarDbContext db,
         TelegramBotService bot,
         IConfiguration cfg,
-        string format = Consts.Html,
+        string format = Consts.ContentTypes.Html,
         string language = Languages.Primary)
     {
         var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == draftId && d.OwnerId == ownerId);
         if (draft is null)
             return new PublishResult(null, ErrorMessages.DraftNotFound, StatusCodes.Status404NotFound);
+
+        var targetChannel = await SubscriptionPlan.ResolveOwnedChannelAsync(db, ownerId, chatId);
+        if (targetChannel is null)
+            return new PublishResult(null, "You can only publish to your connected channels — connect this channel first (Channels popup)", StatusCodes.Status403Forbidden);
 
         var cedarJson = draft.CedarJson;
         if (language != Languages.Primary)
@@ -37,23 +41,33 @@ public static class PostEndpoints
             var translation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == draftId && t.Language == language);
             if (translation is null)
                 return new PublishResult(null, $"No {language.ToUpperInvariant()} version of this draft", StatusCodes.Status404NotFound);
+            
             cedarJson = translation.CedarJson;
         }
 
         if (!bot.IsRunning)
             return new PublishResult(null, ErrorMessages.BotNotRunning, StatusCodes.Status503ServiceUnavailable);
 
-        var baseUrl = cfg[Consts.PublicBaseUrlCfg] ?? Consts.Url;
-        var isMarkdown = format == Consts.Markdown;
+        var mainHost = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
+        var isMarkdown = format == Consts.ContentTypes.Markdown;
+        
         var rendered = isMarkdown
-            ? CedarToTelegramMarkdownRenderer.Render(cedarJson, baseUrl)
-            : CedarToTelegramHtmlRenderer.Render(cedarJson, baseUrl);
+            ? CedarToTelegramMarkdownRenderer.Render(cedarJson, mainHost)
+            : CedarToTelegramHtmlRenderer.Render(cedarJson, mainHost);
+        
         if (string.IsNullOrWhiteSpace(rendered))
             return new PublishResult(null, "Draft is empty");
 
-        // The user's standard signature goes at the very end of the post content itself,
-        // before the "Read on the blog" cross-link (which is navigation, not content).
-        var signature = await db.Users.Where(u => u.Id == ownerId).Select(u => u.PostSignature).FirstOrDefaultAsync();
+        var owner = await db.Users.Where(u => u.Id == ownerId)
+            .Select(u => new { u.PostSignature, u.PlanTier, u.PlanExpiresAt })
+            .FirstAsync();
+
+        // Adding Signature (Custom of Default)
+        var currentPlan = SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow);
+        var signature = PlanLimitations.HasCustomSignature(currentPlan)
+            ? owner.PostSignature
+            : null;
+        
         if (!string.IsNullOrWhiteSpace(signature))
         {
             rendered += isMarkdown
@@ -64,16 +78,21 @@ public static class PostEndpoints
                     .Select(l => $"<p>{System.Net.WebUtility.HtmlEncode(l)}</p>"));
         }
 
+        // Adding Cross-link to Blog site in the end of Telegram post
         if (draft.IsBlogPublished && draft.BlogSlug is not null)
         {
             var langSuffix = language == Languages.Primary ? "" : $"?lang={language}";
-            var blogUrl = $"https://{cfg[Consts.BlogHostCfg] ?? Consts.DefaultBlogHost}/{draft.BlogSlug}{langSuffix}";
-            rendered += isMarkdown ? $"\n\n[Read on the blog]({blogUrl})" : $"<p><a href=\"{blogUrl}\">Read on the blog &#8594;</a></p>";
+            var blogUrl = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}/{draft.BlogSlug}{langSuffix}";
+            
+            rendered += isMarkdown ? 
+                $"\n\n[Read on the blog]({blogUrl})" : 
+                $"<p><a href=\"{blogUrl}\">Read on the blog &#8594;</a></p>";
         }
 
         var content = isMarkdown
             ? new InputRichMessage { Markdown = rendered }
             : new InputRichMessage { Html = rendered };
+        
         var msg = await bot.Client.SendRichMessage(new ChatId(chatId), content);
 
         draft.LastTelegramChatId = chatId;
@@ -83,10 +102,20 @@ public static class PostEndpoints
 
         return new PublishResult(msg.MessageId, null);
     }
+    
+    public static void MapPostEndpoints(this WebApplication app)
+    {
+        app.MapPost("/api/posts/export", async (ExportRequest req, ClaimsPrincipal user, CedarDbContext db, TelegramBotService bot, IConfiguration cfg) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var result = await PublishAsync(req.DraftId, req.ChatId, uid, db, bot, cfg, req.Format, req.Language);
+            
+            return result.Success ? 
+                Results.Ok(new { messageId = result.MessageId, chatId = req.ChatId }) : 
+                Results.Json(new { error = result.Error }, statusCode: result.StatusCode);
+        }).RequireAuthorization();
+    }
 
-    // Resolves a @username for building a t.me link — either directly from the chatId (if it's
-    // already an @handle) or by looking up a connected Channel with a matching numeric chat id.
-    // Returns null for private channels with no public username (no link can be built there).
     private static async Task<string?> ResolveChannelUsernameAsync(CedarDbContext db, string chatId)
     {
         var trimmed = chatId.Trim();
@@ -96,18 +125,5 @@ public static class PostEndpoints
         return long.TryParse(trimmed, out var numericId)
             ? (await db.Channels.FirstOrDefaultAsync(c => c.TelegramChatId == numericId))?.Username
             : null;
-    }
-
-    public static void MapPostEndpoints(this WebApplication app)
-    {
-        app.MapPost("/api/posts/export", async (ExportRequest req, ClaimsPrincipal user, CedarDbContext db, TelegramBotService bot, IConfiguration cfg) =>
-        {
-            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var result = await PublishAsync(req.DraftId, req.ChatId, uid, db, bot, cfg, req.Format, req.Language);
-            if (!result.Success)
-                return Results.Json(new { error = result.Error }, statusCode: result.StatusCode);
-
-            return Results.Ok(new { messageId = result.MessageId, chatId = req.ChatId });
-        }).RequireAuthorization();
     }
 }

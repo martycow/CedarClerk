@@ -16,6 +16,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<BotKnownChatAdmin> BotKnownChatAdmins => Set<BotKnownChatAdmin>();
     public DbSet<DraftTranslation> DraftTranslations => Set<DraftTranslation>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<AiUsage> AiUsages => Set<AiUsage>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -32,6 +33,9 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
             .IsUnique();
         builder.Entity<DraftTranslation>()
             .HasIndex(t => new { t.DraftId, t.Language })
+            .IsUnique();
+        builder.Entity<AiUsage>()
+            .HasIndex(a => new { a.OwnerId, a.Day })
             .IsUnique();
     }
 }

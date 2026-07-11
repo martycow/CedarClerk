@@ -12,7 +12,6 @@ public record CedarAsset(string Name, byte[] Bytes);
 
 public record CedarPackageContents(string DocumentJson, string Title, DateTime CreatedAt, IReadOnlyDictionary<string, byte[]> Assets);
 
-// .cedar is a zip container: document.json ({formatVersion, meta, doc: <TipTap JSON>}) + assets/<original-filename>.
 public static class CedarPackage
 {
     public const int CurrentFormatVersion = 1;
@@ -117,8 +116,6 @@ public static class CedarPackage
         }
     }
 
-    // Finds distinct /media/<name> filenames referenced anywhere in the TipTap JSON tree
-    // (image/video/audio src, carousel/collage image arrays, etc).
     public static IReadOnlyList<string> FindReferencedMediaPaths(string tiptapJson)
     {
         var node = JsonNode.Parse(tiptapJson);
@@ -127,8 +124,6 @@ public static class CedarPackage
         return found.Distinct().ToList();
     }
 
-    // Rewrites every /media/<oldName> reference in the TipTap JSON tree to /media/<newName>
-    // using oldToNewNames; references with no matching entry are left untouched.
     public static string RewriteMediaPaths(string tiptapJson, IReadOnlyDictionary<string, string> oldToNewNames)
     {
         var node = JsonNode.Parse(tiptapJson) ?? throw new CedarPackageException("Document JSON is empty.");

@@ -40,3 +40,4 @@ Thumbs.db
 TestResults/
 coverage/
 docs/**/*
+MISC_FILES/**/*

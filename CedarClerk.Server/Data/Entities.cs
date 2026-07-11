@@ -10,6 +10,24 @@ public class ApplicationUser : IdentityUser
     public PlanTiers PlanTier { get; set; } = PlanTiers.Free;
 
     /// <summary>
+    /// When the paid tier lapses (UTC). Null on a paid tier = manual grant, never expires.
+    /// Effective tier is always Plans.Effective(PlanTier, PlanExpiresAt, now).
+    /// </summary>
+    public DateTime? PlanExpiresAt { get; set; }
+
+    /// <summary>
+    /// The $1/7-day Pro Plus trial can be used exactly once per account.
+    /// </summary>
+    public DateTime? TrialUsedAt { get; set; }
+
+    /// <summary>
+    /// Anti channel-cycling on Free: set when a Free user deletes a channel; connecting a
+    /// DIFFERENT channel is blocked until this passes (same channel may reconnect freely).
+    /// </summary>
+    public DateTime? FreeChannelCooldownUntil { get; set; }
+    public long? LastDeletedTelegramChatId { get; set; }
+
+    /// <summary>
     /// Nullable means most accounts sign in with email/password and never link their Telegram account
     /// </summary>
     public long? TelegramUserId { get; set; }
@@ -33,6 +51,11 @@ public class Payment
     /// stripe, telegram-stars, paypal
     /// </summary>
     public string Provider { get; set; } = "";
+
+    /// <summary>
+    /// pro, proplus, trial — see CedarClerk.Core.Plans
+    /// </summary>
+    public string Plan { get; set; } = "";
     
     /// <summary>
     /// Stripe session id, Telegram charge id, PayPal order id, etc. Is used to prevent duplicates
@@ -43,6 +66,17 @@ public class Payment
     public string Currency { get; set; } = "";
     public string Status { get; set; } = "Completed";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// Per-user, per-UTC-day counter of AI calls (auto-translate etc.) enforcing PlanQuotas.AiDailyLimit.
+/// </summary>
+public class AiUsage
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public DateTime Day { get; set; } // UTC date (midnight)
+    public int Count { get; set; }
 }
 
 public class Draft
@@ -180,6 +214,6 @@ public class ScheduledPost
     public string? Error { get; set; }
     public int? MessageId { get; set; }
     public string OwnerId { get; set; } = default!;
-    public string Format { get; set; } = Consts.Html;
+    public string Format { get; set; } = Consts.ContentTypes.Html;
     public string Language { get; set; } = Languages.Primary;
 }

@@ -6,7 +6,7 @@ public static class TranslationProviderFactory
 {
     public static ITranslationProvider? Create(IConfiguration cfg, IHttpClientFactory httpFactory)
     {
-        var provider = cfg[Consts.ProviderKeyCfg]?.Trim().ToLowerInvariant();
+        var provider = cfg[Consts.General.ProviderKeyCfg]?.Trim().ToLowerInvariant();
         if (string.IsNullOrEmpty(provider)) return null;
 
         switch (provider)

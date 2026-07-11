@@ -223,7 +223,7 @@
                 <div class="scheduled-item">
                     <div class="scheduled-info">
                         <div class="draft-title">{{ p.draftTitle || 'Untitled' }}</div>
-                        <div class="draft-date">{{ utcDate(p.scheduledAtUtc) | date:'d MMM, HH:mm' }} · {{ p.chatId }} · {{ p.format }} · {{ p.language.toUpperCase() }} · {{ p.status }}</div>
+                        <div class="draft-date">{{ utcDate(p.scheduledAtUtc) | date:'d MMM, HH:mm' }} · {{ p.channelTitle || p.chatId }} · {{ p.format }} · {{ p.language.toUpperCase() }} · {{ p.status }}</div>
                         <div class="tz-hint">{{ zonesHint(utcDate(p.scheduledAtUtc)) }}</div>
                         @if (p.status === 'Failed') { <div class="channel-error">{{ p.error }}</div> }
                     </div>
@@ -256,19 +256,35 @@
                 @if (auth.planTier(); as tier) {
                 <p class="plan-badge">{{ tier }} plan</p>
                 }
+                @if (auth.planExpiresAt(); as until) {
+                <p class="plan-expiry">until {{ until | date:'d MMM yyyy' }} (UTC)</p>
+                }
                 @if (billing(); as b) {
-                    @if (b.planTier === 'Free') {
+                    @if (b.planTier === 'Free' || b.planTier === 'Pro') {
+                    <div class="panel-label">Upgrade</div>
+                    <div class="plan-picker">
+                        <button [class.on]="selectedPlan === 'pro'" (click)="selectedPlan = 'pro'">Pro · ${{ b.prices.proUsd }}/mo</button>
+                        <button [class.on]="selectedPlan === 'proplus'" (click)="selectedPlan = 'proplus'">Pro Plus · ${{ b.prices.proPlusUsd }}/mo</button>
+                        @if (!b.trialUsed) {
+                        <button [class.on]="selectedPlan === 'trial'" (click)="selectedPlan = 'trial'">Trial · ${{ b.prices.trialUsd }}/7d</button>
+                        }
+                    </div>
                     <div class="upgrade-actions">
                         <button class="account-action-btn" (click)="upgradeStripe()"
                                 [disabled]="billingBusy() || !b.providers.stripe"
                                 [title]="b.providers.stripe ? '' : 'Stripe is not configured yet'">
-                            {{ billingBusy() ? '…' : 'Upgrade to Pro — card (Stripe)' }}
+                            {{ billingBusy() ? '…' : '💳 Pay by card (Stripe)' }}
+                        </button>
+                        <button class="account-action-btn" (click)="upgradePaypal()"
+                                [disabled]="billingBusy() || !b.providers.paypal"
+                                [title]="b.providers.paypal ? '' : 'PayPal is not configured yet'">
+                            {{ billingBusy() ? '…' : 'PayPal' }}
                         </button>
                         <button class="account-action-btn" (click)="upgradeStars()"
                                 [disabled]="billingBusy() || !b.providers.telegramStars || !auth.telegramLinked()"
-                                [title]="!b.providers.telegramStars ? 'Telegram Stars is not configured yet'
+                                [title]="!b.providers.telegramStars ? 'Telegram Stars is not available yet'
                                     : (!auth.telegramLinked() ? 'Link your Telegram account first' : '')">
-                            {{ billingBusy() ? '…' : 'Upgrade to Pro — ' + b.starsAmount + ' Telegram Stars' }}
+                            {{ billingBusy() ? '…' : '⭐ Telegram Stars · ' + starsPriceFor(selectedPlan) }}
                         </button>
                     </div>
                     @if (billingMessage()) { <p class="export-result">{{ billingMessage() }}</p> }
@@ -548,6 +564,7 @@
             @if (commentsLoading()) {
             <p class="hint">Loading…</p>
             } @else {
+                <p class="reactions-summary">👍 {{ draftReactions().likes }} · 👎 {{ draftReactions().dislikes }}</p>
                 @for (c of draftComments(); track c.id) {
                 <div class="comment-row">
                     <div class="comment-row-top">

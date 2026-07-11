@@ -28,11 +28,16 @@ public static class AuthEndpoints
 
         groupBuilder.MapPost("/register", async (RegisterRequest req, UserManager<ApplicationUser> users, IConfiguration cfg) =>
         {
-            var invite = cfg[Consts.InviteCodeCfg];
+            var invite = cfg[Consts.General.InviteCodeCfg];
             if (string.IsNullOrEmpty(invite) || req.InviteCode != invite)
                 return Results.BadRequest(new { error = "Invalid invite code" });
 
-            var user = new ApplicationUser { UserName = req.Email, Email = req.Email };
+            var user = new ApplicationUser
+            {
+                UserName = req.Email, 
+                Email = req.Email
+            };
+            
             var result = await users.CreateAsync(user, req.Password);
             return result.Succeeded
                 ? Results.Ok(new { message = "Registered" })
@@ -63,7 +68,9 @@ public static class AuthEndpoints
             return Results.Ok(new
             {
                 email = user.FindFirstValue(ClaimTypes.Email) ?? user.Identity!.Name,
-                planTier = appUser?.PlanTier.ToString(),
+                planTier = appUser is null ? null : SubscriptionPlanHelper.CheckPlanExpiration(appUser.PlanTier, appUser.PlanExpiresAt, DateTime.UtcNow).ToString(),
+                planExpiresAt = appUser?.PlanExpiresAt,
+                trialUsed = appUser?.TrialUsedAt is not null,
                 telegramLinked = appUser?.TelegramUserId is not null,
                 telegramUsername = appUser?.TelegramUsername,
                 postSignature = appUser?.PostSignature,
@@ -74,21 +81,35 @@ public static class AuthEndpoints
         groupBuilder.MapPost("/signature", async (SignatureRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users) =>
         {
             var user = await users.GetUserAsync(principal);
-            if (user is null) return Results.Unauthorized();
+            if (user is null) 
+                return Results.Unauthorized();
+
+            var currentPlan = SubscriptionPlanHelper.CheckPlanExpiration(user.PlanTier, user.PlanExpiresAt, DateTime.UtcNow);
+            
+            if (!string.IsNullOrWhiteSpace(req.Signature) && !PlanLimitations.HasCustomSignature(currentPlan))
+            {
+                return Results.Json(new { error = "Post signature is a Pro feature. Upgrade to use it." },
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
 
             user.PostSignature = string.IsNullOrWhiteSpace(req.Signature) ? null : req.Signature.Trim();
             await users.UpdateAsync(user);
+            
             return Results.Ok(new { postSignature = user.PostSignature });
         })
         .RequireAuthorization();
         
-        groupBuilder.MapGet("/telegram/config", (TelegramBotService bot) =>
-            {
+        groupBuilder.MapGet("/telegram/config", (TelegramBotService bot) => 
+        {
                 return bot.IsRunning
-                    ? Results.Ok(new { botUsername = bot.Me.Username, botId = bot.Me.Id })
+                    ? Results.Ok(new
+                    {
+                        botUsername = bot.Me.Username, 
+                        botId = bot.Me.Id
+                    })
                     : Results.Json(new { error = "Telegram bot is not running (no token configured)" },
                         statusCode: StatusCodes.Status503ServiceUnavailable);
-            })
+        })
         .RequireAuthorization();
 
         groupBuilder.MapPost("/telegram/link", async (TelegramLinkRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users, CedarDbContext db, IConfiguration cfg) =>
@@ -121,7 +142,8 @@ public static class AuthEndpoints
         groupBuilder.MapPost("/telegram/unlink", async (ClaimsPrincipal principal, UserManager<ApplicationUser> users) =>
         {
             var user = await users.GetUserAsync(principal);
-            if (user is null) return Results.Unauthorized();
+            if (user is null) 
+                return Results.Unauthorized();
 
             user.TelegramUserId = null;
             user.TelegramUsername = null;

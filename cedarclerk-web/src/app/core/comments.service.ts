@@ -10,12 +10,17 @@ export interface DraftComment {
     createdAt: string;
 }
 
+export interface DraftFeedback {
+    reactions: { likes: number; dislikes: number };
+    comments: DraftComment[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class CommentsService {
     private http = inject(HttpClient);
 
     list(draftId: string) {
-        return firstValueFrom(this.http.get<DraftComment[]>(`/api/drafts/${draftId}/comments`));
+        return firstValueFrom(this.http.get<DraftFeedback>(`/api/drafts/${draftId}/comments`));
     }
 
     remove(commentId: string) {

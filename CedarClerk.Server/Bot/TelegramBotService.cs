@@ -87,31 +87,47 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
 
     private async Task ProcessMessage(Message message)
     {
-        // For Telegram Stars related invoices
         if (message.SuccessfulPayment is { } payment)
         {
+            var payloadParts = payment.InvoicePayload.Split(':', 2);
+            var (plan, userId) = payloadParts.Length == 2
+                ? (payloadParts[0], payloadParts[1])
+                : (Consts.Plans.Pro, payment.InvoicePayload); // legacy payload without plan
+
             using var scope = scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
-            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == payment.InvoicePayload);
+
+            if (await db.Payments.AnyAsync(p => p.ExternalId == payment.TelegramPaymentChargeId))
+                return; // duplicate update delivery
+
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId);
             if (user is null)
             {
                 logger.LogWarning("SuccessfulPayment with unknown payload {Payload}", payment.InvoicePayload);
                 return;
             }
-            
-            user.PlanTier = Core.PlanTiers.Pro;
+
+            var error = SubscriptionPlan.ApplyPurchase(user, plan, DateTime.UtcNow);
+            if (error is not null)
+            {
+                logger.LogWarning("Stars payment for user {UserId} not applied: {Error}", user.Id, error);
+                await Client.SendMessage(message.Chat, $"Payment received, but: {error}. Please contact support.");
+                return;
+            }
+
             db.Payments.Add(new Payment
             {
                 OwnerId = user.Id,
                 Provider = "telegram-stars",
+                Plan = plan,
                 ExternalId = payment.TelegramPaymentChargeId,
                 Amount = payment.TotalAmount,
                 Currency = payment.Currency, // "XTR"
             });
             
             await db.SaveChangesAsync();
-            logger.LogInformation("Telegram Stars payment received — user {UserId} upgraded to Pro", user.Id);
-            await Client.SendMessage(message.Chat, "Payment received — you're on Cedar Clerk Pro now. I hope you will be happy using it!");
+            logger.LogInformation("Telegram Stars payment — user {UserId} on plan {Plan} until {ExpiresAt}", user.Id, plan, user.PlanExpiresAt);
+            await Client.SendMessage(message.Chat, $"Payment received — your plan is active until {user.PlanExpiresAt:d MMM yyyy} (auto-renews for subscriptions). Enjoy Cedar Clerk!");
             return;
         }
 

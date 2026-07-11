@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using CedarClerk.Core;
 using CedarClerk.Server.Bot;
 using Microsoft.EntityFrameworkCore;
@@ -51,10 +51,18 @@ public static class ChannelEndpoints
                     : "Bot must be an Admin or Creator of the Group/Supergroup." });
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var tier = await db.Users.Where(u => u.Id == uid).Select(u => u.PlanTier).FirstAsync();
+            var account = await db.Users.FirstAsync(u => u.Id == uid);
+            var tier = SubscriptionPlanHelper.CheckPlanExpiration(account.PlanTier, account.PlanExpiresAt, DateTime.UtcNow);
             var channelCount = await db.Channels.CountAsync(c => c.OwnerId == uid);
-            if (!PlanQuotas.CanConnectAnotherChannel(tier, channelCount))
-                return Results.Json(new { error = $"Free plan allows only {PlanQuotas.FreeMaxChannels} connected channel. Upgrade to Pro for more." }, statusCode: StatusCodes.Status403Forbidden);
+            if (!PlanLimitations.CanConnectAnotherChannel(tier, channelCount))
+                return Results.Json(new { error = $"Your plan allows {PlanLimitations.MaxChannels(tier)} connected channel(s). Upgrade for more." }, statusCode: StatusCodes.Status403Forbidden);
+
+            // Anti channel-cycling on Free: after deleting a channel, a DIFFERENT one can only be
+            // connected after the cooldown (reconnecting the same channel is always fine).
+            if (tier == PlanTiers.Free
+                && account.FreeChannelCooldownUntil is { } cooldown && cooldown > DateTime.UtcNow
+                && account.LastDeletedTelegramChatId != chat.Id)
+                return Results.Json(new { error = $"On the Free plan you can switch to a different channel after {cooldown:d MMM yyyy}. Upgrade to Pro to connect more channels." }, statusCode: StatusCodes.Status403Forbidden);
 
             var channel = new Channel
             {
@@ -83,8 +91,21 @@ public static class ChannelEndpoints
         group.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var deleted = await db.Channels.Where(c => c.Id == id && c.OwnerId == uid).ExecuteDeleteAsync();
-            return deleted > 0 ? Results.NoContent() : Results.NotFound();
+            var channel = await db.Channels.FirstOrDefaultAsync(c => c.Id == id && c.OwnerId == uid);
+            if (channel is null) return Results.NotFound();
+
+            // Free tier: deleting starts the switch-cooldown so the 1-channel limit can't be
+            // bypassed by delete→connect cycling. Reconnecting this same channel stays allowed.
+            var account = await db.Users.FirstAsync(u => u.Id == uid);
+            if (SubscriptionPlanHelper.CheckPlanExpiration(account.PlanTier, account.PlanExpiresAt, DateTime.UtcNow) == PlanTiers.Free)
+            {
+                account.FreeChannelCooldownUntil = DateTime.UtcNow + PlanLimitations.FreeChannelSwitchCooldown;
+                account.LastDeletedTelegramChatId = channel.TelegramChatId;
+            }
+
+            db.Channels.Remove(channel);
+            await db.SaveChangesAsync();
+            return Results.NoContent();
         });
 
         group.MapGet("/{id:guid}/stats", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>

@@ -12,6 +12,20 @@ namespace CedarClerk.Server.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "AiUsages",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    OwnerId = table.Column<string>(type: "TEXT", nullable: false),
+                    Day = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    Count = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AiUsages", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetRoles",
                 columns: table => new
                 {
@@ -30,7 +44,17 @@ namespace CedarClerk.Server.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "TEXT", nullable: false),
-                    CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    PlanTier = table.Column<int>(type: "INTEGER", nullable: false),
+                    PlanExpiresAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    TrialUsedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    FreeChannelCooldownUntil = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    LastDeletedTelegramChatId = table.Column<long>(type: "INTEGER", nullable: true),
+                    TelegramUserId = table.Column<long>(type: "INTEGER", nullable: true),
+                    TelegramUsername = table.Column<string>(type: "TEXT", nullable: true),
+                    TelegramFirstName = table.Column<string>(type: "TEXT", nullable: true),
+                    PostSignature = table.Column<string>(type: "TEXT", nullable: true),
+                    StripeCustomerId = table.Column<string>(type: "TEXT", nullable: true),
                     UserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
@@ -67,6 +91,94 @@ namespace CedarClerk.Server.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Assets", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "BotKnownChats",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    TelegramChatId = table.Column<long>(type: "INTEGER", nullable: false),
+                    Title = table.Column<string>(type: "TEXT", nullable: false),
+                    Username = table.Column<string>(type: "TEXT", nullable: true),
+                    Type = table.Column<string>(type: "TEXT", nullable: false),
+                    BotCanPost = table.Column<bool>(type: "INTEGER", nullable: false),
+                    LastSeenAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BotKnownChats", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Comments",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    DraftId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    AnnotationId = table.Column<string>(type: "TEXT", nullable: true),
+                    AuthorName = table.Column<string>(type: "TEXT", nullable: true),
+                    Text = table.Column<string>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Comments", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Payments",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    OwnerId = table.Column<string>(type: "TEXT", nullable: false),
+                    Provider = table.Column<string>(type: "TEXT", nullable: false),
+                    Plan = table.Column<string>(type: "TEXT", nullable: false),
+                    ExternalId = table.Column<string>(type: "TEXT", nullable: true),
+                    Amount = table.Column<long>(type: "INTEGER", nullable: false),
+                    Currency = table.Column<string>(type: "TEXT", nullable: false),
+                    Status = table.Column<string>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Payments", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Reactions",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    DraftId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    AnnotationId = table.Column<string>(type: "TEXT", nullable: true),
+                    Kind = table.Column<string>(type: "TEXT", nullable: false),
+                    VisitorHash = table.Column<string>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Reactions", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ScheduledPosts",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    DraftId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ChatId = table.Column<string>(type: "TEXT", nullable: false),
+                    ScheduledAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    Status = table.Column<string>(type: "TEXT", nullable: false),
+                    Error = table.Column<string>(type: "TEXT", nullable: true),
+                    MessageId = table.Column<int>(type: "INTEGER", nullable: true),
+                    OwnerId = table.Column<string>(type: "TEXT", nullable: false),
+                    Format = table.Column<string>(type: "TEXT", nullable: false),
+                    Language = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ScheduledPosts", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -182,6 +294,7 @@ namespace CedarClerk.Server.Migrations
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Title = table.Column<string>(type: "TEXT", nullable: false),
                     TelegramChatId = table.Column<long>(type: "INTEGER", nullable: false),
+                    Username = table.Column<string>(type: "TEXT", nullable: true),
                     OwnerId = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
@@ -204,7 +317,14 @@ namespace CedarClerk.Server.Migrations
                     CedarJson = table.Column<string>(type: "TEXT", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    OwnerId = table.Column<string>(type: "TEXT", nullable: false)
+                    OwnerId = table.Column<string>(type: "TEXT", nullable: false),
+                    BlogSlug = table.Column<string>(type: "TEXT", nullable: true),
+                    IsBlogPublished = table.Column<bool>(type: "INTEGER", nullable: false),
+                    BlogPublishedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    Tags = table.Column<string>(type: "TEXT", nullable: false),
+                    LastTelegramChatId = table.Column<string>(type: "TEXT", nullable: true),
+                    LastTelegramMessageId = table.Column<int>(type: "INTEGER", nullable: true),
+                    LastTelegramUsername = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -216,6 +336,73 @@ namespace CedarClerk.Server.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateTable(
+                name: "BotKnownChatAdmins",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    BotKnownChatId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    TelegramUserId = table.Column<long>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BotKnownChatAdmins", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BotKnownChatAdmins_BotKnownChats_BotKnownChatId",
+                        column: x => x.BotKnownChatId,
+                        principalTable: "BotKnownChats",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ChannelStatSnapshots",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ChannelId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    MemberCount = table.Column<int>(type: "INTEGER", nullable: false),
+                    TakenAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ChannelStatSnapshots", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ChannelStatSnapshots_Channels_ChannelId",
+                        column: x => x.ChannelId,
+                        principalTable: "Channels",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "DraftTranslations",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    DraftId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Language = table.Column<string>(type: "TEXT", nullable: false),
+                    Title = table.Column<string>(type: "TEXT", nullable: false),
+                    CedarJson = table.Column<string>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DraftTranslations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DraftTranslations_Drafts_DraftId",
+                        column: x => x.DraftId,
+                        principalTable: "Drafts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AiUsages_OwnerId_Day",
+                table: "AiUsages",
+                columns: new[] { "OwnerId", "Day" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -249,9 +436,28 @@ namespace CedarClerk.Server.Migrations
                 column: "NormalizedEmail");
 
             migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_TelegramUserId",
+                table: "AspNetUsers",
+                column: "TelegramUserId",
+                unique: true,
+                filter: "\"TelegramUserId\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
                 table: "AspNetUsers",
                 column: "NormalizedUserName",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BotKnownChatAdmins_BotKnownChatId_TelegramUserId",
+                table: "BotKnownChatAdmins",
+                columns: new[] { "BotKnownChatId", "TelegramUserId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BotKnownChats_TelegramChatId",
+                table: "BotKnownChats",
+                column: "TelegramChatId",
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -260,14 +466,28 @@ namespace CedarClerk.Server.Migrations
                 column: "OwnerId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ChannelStatSnapshots_ChannelId",
+                table: "ChannelStatSnapshots",
+                column: "ChannelId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Drafts_OwnerId",
                 table: "Drafts",
                 column: "OwnerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DraftTranslations_DraftId_Language",
+                table: "DraftTranslations",
+                columns: new[] { "DraftId", "Language" },
+                unique: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "AiUsages");
+
             migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
 
@@ -287,13 +507,37 @@ namespace CedarClerk.Server.Migrations
                 name: "Assets");
 
             migrationBuilder.DropTable(
+                name: "BotKnownChatAdmins");
+
+            migrationBuilder.DropTable(
+                name: "ChannelStatSnapshots");
+
+            migrationBuilder.DropTable(
+                name: "Comments");
+
+            migrationBuilder.DropTable(
+                name: "DraftTranslations");
+
+            migrationBuilder.DropTable(
+                name: "Payments");
+
+            migrationBuilder.DropTable(
+                name: "Reactions");
+
+            migrationBuilder.DropTable(
+                name: "ScheduledPosts");
+
+            migrationBuilder.DropTable(
+                name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
+                name: "BotKnownChats");
+
+            migrationBuilder.DropTable(
                 name: "Channels");
 
             migrationBuilder.DropTable(
                 name: "Drafts");
-
-            migrationBuilder.DropTable(
-                name: "AspNetRoles");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");

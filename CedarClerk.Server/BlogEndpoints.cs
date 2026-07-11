@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -29,15 +29,14 @@ public static class BlogEndpoints
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
             if (draft is null) return Results.NotFound();
 
-            if (draft.BlogSlug is null)
-            {
+            if (!draft.IsBlogPublished || draft.BlogSlug is null)
                 draft.BlogSlug = await GenerateUniqueSlugAsync(db, draft.Id, draft.Title);
-                draft.BlogPublishedAt = DateTime.UtcNow;
-            }
+            
+            draft.BlogPublishedAt ??= DateTime.UtcNow;
             draft.IsBlogPublished = true;
             await db.SaveChangesAsync();
 
-            var blogHost = cfg[Consts.BlogHostCfg] ?? Consts.DefaultBlogHost;
+            var blogHost = cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost;
             return Results.Ok(new { slug = draft.BlogSlug, url = $"https://{blogHost}/{draft.BlogSlug}" });
         });
 
@@ -51,8 +50,7 @@ public static class BlogEndpoints
             await db.SaveChangesAsync();
             return Results.NoContent();
         });
-
-        // Moderation: list/delete comments left on this draft's blog post (any anchor, or whole-article).
+        
         group.MapGet("/{id:guid}/comments", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -63,7 +61,21 @@ public static class BlogEndpoints
                 .OrderByDescending(c => c.CreatedAt)
                 .Select(c => new { c.Id, c.AnnotationId, c.AuthorName, c.Text, c.CreatedAt })
                 .ToListAsync();
-            return Results.Ok(comments);
+            
+            var reactionCounts = await db.Reactions.Where(r => r.DraftId == id)
+                .GroupBy(r => r.Kind)
+                .Select(g => new { Kind = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            return Results.Ok(new
+            {
+                reactions = new
+                {
+                    likes = reactionCounts.FirstOrDefault(r => r.Kind == "like")?.Count ?? 0,
+                    dislikes = reactionCounts.FirstOrDefault(r => r.Kind == "dislike")?.Count ?? 0,
+                },
+                comments,
+            });
         });
 
         var commentsGroup = app.MapGroup("/api/comments").RequireAuthorization();
@@ -95,16 +107,12 @@ public static class BlogEndpoints
         return candidate;
     }
 
-    // Entry point for the blog.mooexe.dev host-branch (see Program.cs) — a raw middleware
-    // terminal, not minimal-API routing, so services (and JSON bodies) are handled by hand.
     public static async Task HandleRequest(HttpContext ctx)
     {
         var db = ctx.RequestServices.GetRequiredService<CedarDbContext>();
         var path = ctx.Request.Path.Value?.Trim('/') ?? "";
         var segments = path.Length == 0 ? [] : path.Split('/');
 
-        // Public read/write API for anchored reactions/comments — same-origin fetches from the
-        // blog page itself (no CORS setup anywhere in this app, so it must live on this host).
         if (segments is ["api", "posts", var slug, var action])
         {
             if (action == "annotations" && ctx.Request.Method == HttpMethods.Get)
@@ -145,7 +153,8 @@ public static class BlogEndpoints
             ?? ctx.Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',')[0].Trim()
             ?? ctx.Connection.RemoteIpAddress?.ToString()
             ?? "unknown";
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(ip + ":" + Consts.VisitorHashSalt)));
+        
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(ip + ":" + Consts.General.VisitorHashSalt)));
     }
 
     private static async Task GetAnnotationsAsync(HttpContext ctx, CedarDbContext db, string slug)
@@ -307,8 +316,6 @@ public static class BlogEndpoints
             })
             .ToListAsync();
 
-        // ?tags=a,b narrows the list to posts carrying ALL selected tags; each chip in the tag
-        // bar is a plain link that toggles itself in/out of the selection — no JS involved.
         var allTags = posts.SelectMany(p => SplitTags(p.Tags)).Distinct().OrderBy(t => t).ToList();
         var selectedTags = (ctx.Request.Query["tags"].FirstOrDefault() ?? "")
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -345,7 +352,6 @@ public static class BlogEndpoints
         }
         else
         {
-            // Timeline: posts grouped under month/year headings, newest first
             static DateTime MonthOf(DateTime? dt) => new((dt ?? DateTime.MinValue).Year, (dt ?? DateTime.MinValue).Month, 1);
             foreach (var monthGroup in filtered.GroupBy(p => MonthOf(p.BlogPublishedAt)).OrderByDescending(g => g.Key))
             {
@@ -397,8 +403,6 @@ public static class BlogEndpoints
             .Select(t => t.Language)
             .ToListAsync();
 
-        // ?lang=en switches to a translated version; unknown/missing translations fall back to
-        // the primary version rather than 404 — the post exists, just not in that language.
         var requestedLang = ctx.Request.Query["lang"].FirstOrDefault();
         var lang = Languages.Primary;
         var title = draft.Title;
@@ -436,7 +440,7 @@ public static class BlogEndpoints
         var signatureBlock = string.IsNullOrWhiteSpace(signature) ? "" :
             $"<p class=\"post-signature\">{System.Net.WebUtility.HtmlEncode(signature)}</p>";
 
-        var body = CedarToBlogHtmlRenderer.Render(cedarJson, Consts.Url);
+        var body = CedarToBlogHtmlRenderer.Render(cedarJson, Consts.URLs.BlogHost);
         var dateLine = draft.BlogPublishedAt is { } published
             ? $"<p class=\"post-date\">{published:d MMM yyyy}</p>"
             : "";

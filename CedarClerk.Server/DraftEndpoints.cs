@@ -28,7 +28,6 @@ public static class DraftEndpoints
     {
         var groupBuilder = app.MapGroup("/api/drafts").RequireAuthorization();
         
-        // List of drafts
         groupBuilder.MapGet("/", async (ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -41,25 +40,20 @@ public static class DraftEndpoints
                 })
                 .ToListAsync();
         });
-
-        // Specific draft
+        
         groupBuilder.MapGet("/{id:guid}", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
             if (draft is null) return Results.NotFound();
 
-            // Translation summaries only (no content) — the editor loads a translation's content
-            // lazily when its tab is opened. UpdatedAt lets the UI flag a stale translation.
+
             var translations = await db.DraftTranslations.Where(t => t.DraftId == id)
                 .Select(t => new { t.Language, t.Title, t.UpdatedAt })
                 .ToListAsync();
             return Results.Ok(new { draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug, draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, Translations = translations });
         });
 
-        // Tags have their own endpoint (not part of SaveDraftRequest) so the chip editor can save
-        // them from either language tab — the content autosave routes to the draft OR a
-        // translation depending on the active tab, and must not drag draft fields along with it.
         groupBuilder.MapPut("/{id:guid}/tags", async (Guid id, UpdateTagsRequest req, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -70,11 +64,11 @@ public static class DraftEndpoints
                 .Select(t => t.Trim().TrimStart('#').ToLowerInvariant())
                 .Where(t => t.Length > 0)
                 .Distinct());
+            
             await db.SaveChangesAsync();
             return Results.Ok(new { draft.Tags });
         });
-
-        // Full translation content for one language
+        
         groupBuilder.MapGet("/{id:guid}/translations/{lang}", async (Guid id, string lang, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -86,8 +80,7 @@ public static class DraftEndpoints
                 ? Results.NotFound()
                 : Results.Ok(new { translation.Language, translation.Title, translation.CedarJson, translation.UpdatedAt });
         });
-
-        // Create or update a translation (upsert — the editor autosaves through this)
+        
         groupBuilder.MapPut("/{id:guid}/translations/{lang}", async (Guid id, string lang, SaveTranslationRequest req, ClaimsPrincipal user, CedarDbContext db) =>
         {
             if (!Languages.IsTranslationLanguage(lang))
@@ -109,9 +102,7 @@ public static class DraftEndpoints
             await db.SaveChangesAsync();
             return Results.Ok(new { translation.Language, translation.UpdatedAt });
         });
-
-        // Machine-translate the primary (RU) version into {lang} and upsert it as the translation.
-        // Provider is config-driven (Anthropic/OpenAI/DeepL) — 501 with instructions when none is set.
+        
         groupBuilder.MapPost("/{id:guid}/translations/{lang}/auto", async (Guid id, string lang, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg, IHttpClientFactory httpFactory, CancellationToken ct) =>
         {
             if (!Languages.IsTranslationLanguage(lang))
@@ -120,6 +111,14 @@ public static class DraftEndpoints
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid, ct);
             if (draft is null) return Results.NotFound();
+
+            // AI features are Pro Plus; each call counts against the per-day AI quota
+            var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
+            if (!PlanLimitations.HasAiFeatures(tier))
+                return Results.Json(new { error = "Auto-translate is a Pro Plus feature. Upgrade to use it." }, statusCode: StatusCodes.Status403Forbidden);
+            
+            if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
+                return Results.Json(new { error = $"Daily AI limit ({PlanLimitations.AiDailyLimit} calls) reached — resets at midnight UTC." }, statusCode: StatusCodes.Status429TooManyRequests);
 
             ITranslationProvider? provider;
             try
@@ -131,9 +130,7 @@ public static class DraftEndpoints
                 return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status501NotImplemented);
             }
             if (provider is null)
-                return Results.Json(
-                    new { error = "Auto-translate is not configured — set Cedar:Translate:Provider (see docs/integrations-setup.md)" },
-                    statusCode: StatusCodes.Status501NotImplemented);
+                return Results.Json(new { error = "Auto-translate is not configured" }, statusCode: StatusCodes.Status501NotImplemented);
 
             TranslationResult result;
             try
@@ -144,15 +141,18 @@ public static class DraftEndpoints
             {
                 return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status502BadGateway);
             }
-
-            // Sanity check the returned document before persisting — a broken doc would wedge the editor
+            
             try
             {
                 using var docCheck = JsonDocument.Parse(result.CedarJson);
                 var root = docCheck.RootElement;
-                if (root.ValueKind != JsonValueKind.Object
-                    || !root.TryGetProperty("type", out var typeProp) || typeProp.GetString() != "doc")
-                    return Results.Json(new { error = "Translator returned an invalid document — try again" }, statusCode: StatusCodes.Status502BadGateway);
+                if (root.ValueKind != JsonValueKind.Object || 
+                    !root.TryGetProperty("type", out var typeProp) || 
+                    typeProp.GetString() != "doc")
+                {
+                    return Results.Json(new { error = "Translator returned an invalid document — try again" },
+                        statusCode: StatusCodes.Status502BadGateway);
+                }
             }
             catch (JsonException)
             {
@@ -184,8 +184,7 @@ public static class DraftEndpoints
                 .ExecuteDeleteAsync();
             return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });
-
-        // Create new draft
+        
         groupBuilder.MapPost("/", async (SaveDraftRequest req, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -194,8 +193,7 @@ public static class DraftEndpoints
             await db.SaveChangesAsync();
             return Results.Created($"/api/drafts/{draft.Id}", new { draft.Id });
         });
-
-        // Update specific draft
+        
         groupBuilder.MapPut("/{id:guid}", async (Guid id, SaveDraftRequest req, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -207,8 +205,7 @@ public static class DraftEndpoints
             await db.SaveChangesAsync();
             return Results.Ok(new { draft.Id, draft.UpdatedAt });
         });
-
-        // Delete specific draft
+        
         groupBuilder.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -217,8 +214,7 @@ public static class DraftEndpoints
                 .ExecuteDeleteAsync();
             return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });
-
-        // Export as .cedar (zip: document.json + assets/)
+        
         groupBuilder.MapGet("/{id:guid}/cedar", async (Guid id, ClaimsPrincipal user, CedarDbContext db, MediaPaths media) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -240,8 +236,7 @@ public static class DraftEndpoints
             var fileName = SanitizeFileName(draft.Title) + ".cedar";
             return Results.File(ms.ToArray(), "application/zip", fileName);
         });
-
-        // Import from .cedar (creates a new draft owned by the current user)
+        
         groupBuilder.MapPost("/import", async (IFormFile file, ClaimsPrincipal user, CedarDbContext db, MediaPaths media) =>
         {
             if (file.Length == 0 || file.Length > CedarZipMaxBytes)
@@ -275,11 +270,11 @@ public static class DraftEndpoints
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-            var tier = await db.Users.Where(u => u.Id == uid).Select(u => u.PlanTier).FirstAsync();
+            var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
             var usedBytes = await db.Assets.Where(a => a.OwnerId == uid).SumAsync(a => a.SizeBytes);
             var incomingBytes = pkg.Assets.Sum(kv => (long)kv.Value.Length);
-            if (!PlanQuotas.HasStorageRoom(tier, usedBytes, incomingBytes))
-                return Results.Json(new { error = $"Free plan storage limit ({PlanQuotas.FreeStorageBytes / (1024 * 1024)}MB) exceeded. Upgrade to Pro for more." }, statusCode: StatusCodes.Status403Forbidden);
+            if (!PlanLimitations.HasStorageRoom(tier, usedBytes, incomingBytes))
+                return Results.Json(new { error = $"Storage limit of your plan ({PlanLimitations.StorageLimitBytes(tier) / (1024 * 1024)}MB) exceeded. Upgrade for more." }, statusCode: StatusCodes.Status403Forbidden);
 
             var pathRewrites = new Dictionary<string, string>();
 
@@ -288,7 +283,7 @@ public static class DraftEndpoints
                 var contentType = ImageContentSniffer.DetectContentType(bytes);
                 if (contentType is null || !ImportImageExtensions.TryGetValue(contentType, out var ext))
                     return Results.BadRequest(new { error = $"Unsupported or invalid asset: {originalName}" });
-                if (bytes.Length > AssetEndpoints.ImageMaxBytes)
+                if (bytes.Length > Consts.FileSizes.ImageMaxBytes)
                     return Results.BadRequest(new { error = $"Asset too large: {originalName}" });
 
                 var newName = $"asset_{Guid.NewGuid()}{ext}";
