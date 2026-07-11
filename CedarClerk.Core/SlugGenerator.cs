@@ -13,6 +13,9 @@ public static class SlugGenerator
         ['ы'] = "y", ['ь'] = "", ['э'] = "e", ['ю'] = "yu", ['я'] = "ya",
     };
 
+    /// <summary>
+    /// Generates a URL-friendly slug
+    /// </summary>
     public static string Slugify(string title)
     {
         var lower = title.Trim().ToLowerInvariant();

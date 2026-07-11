@@ -2,9 +2,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CedarClerk.Core\CedarClerk.Core.csproj" />
+    <ProjectReference Include="..\CedarClerk.Localization\CedarClerk.Localization.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Anthropic" Version="12.35.1" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.*" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.*">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

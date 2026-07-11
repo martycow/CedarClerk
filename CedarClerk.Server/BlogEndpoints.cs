@@ -1,17 +1,16 @@
+using System.Globalization;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CedarClerk.Core;
-using CedarClerk.Server.Data;
+using CedarClerk.Localization;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
 
 public static class BlogEndpoints
 {
-    public const string DefaultBlogHost = "blog.mooexe.dev";
-
     private const int CommentMaxLength = 2000;
     private const int AuthorNameMaxLength = 60;
 
@@ -38,7 +37,7 @@ public static class BlogEndpoints
             draft.IsBlogPublished = true;
             await db.SaveChangesAsync();
 
-            var blogHost = cfg["Cedar:BlogHost"] ?? DefaultBlogHost;
+            var blogHost = cfg[Consts.BlogHostCfg] ?? Consts.DefaultBlogHost;
             return Results.Ok(new { slug = draft.BlogSlug, url = $"https://{blogHost}/{draft.BlogSlug}" });
         });
 
@@ -288,32 +287,99 @@ public static class BlogEndpoints
     private static string DisplayName(string? authorName) =>
         string.IsNullOrWhiteSpace(authorName) ? "Anonymous" : authorName;
 
+    private static List<string> SplitTags(string tags) =>
+        tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+
+    private static string TagFilterUrl(IEnumerable<string> tags)
+    {
+        var list = tags.Distinct().ToList();
+        return list.Count == 0 ? "/" : "/?tags=" + string.Join(",", list.Select(Uri.EscapeDataString));
+    }
+
     private static async Task RenderIndexAsync(HttpContext ctx, CedarDbContext db)
     {
         var posts = await db.Drafts.Where(d => d.IsBlogPublished)
             .OrderByDescending(d => d.BlogPublishedAt)
-            .Select(d => new { d.Title, d.BlogSlug, d.BlogPublishedAt })
+            .Select(d => new
+            {
+                d.Title, d.BlogSlug, d.BlogPublishedAt, d.Tags,
+                TranslationLanguages = db.DraftTranslations.Where(t => t.DraftId == d.Id).Select(t => t.Language).ToList(),
+            })
             .ToListAsync();
 
+        // ?tags=a,b narrows the list to posts carrying ALL selected tags; each chip in the tag
+        // bar is a plain link that toggles itself in/out of the selection — no JS involved.
+        var allTags = posts.SelectMany(p => SplitTags(p.Tags)).Distinct().OrderBy(t => t).ToList();
+        var selectedTags = (ctx.Request.Query["tags"].FirstOrDefault() ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(t => t.ToLowerInvariant())
+            .Where(allTags.Contains)
+            .Distinct()
+            .ToList();
+
+        var filtered = selectedTags.Count == 0
+            ? posts
+            : posts.Where(p => { var pt = SplitTags(p.Tags); return selectedTags.All(pt.Contains); }).ToList();
+
         var sb = new StringBuilder();
-        if (posts.Count == 0)
+
+        if (allTags.Count > 0)
         {
-            sb.Append("<p class=\"empty\">Nothing published yet.</p>");
+            sb.Append("<div class=\"tag-bar\">");
+            foreach (var tag in allTags)
+            {
+                var isSelected = selectedTags.Contains(tag);
+                var toggled = isSelected ? selectedTags.Where(t => t != tag) : selectedTags.Append(tag);
+                sb.Append("<a class=\"tag-chip").Append(isSelected ? " selected" : "").Append("\" href=\"")
+                  .Append(TagFilterUrl(toggled)).Append("\">#")
+                  .Append(System.Net.WebUtility.HtmlEncode(tag)).Append(isSelected ? " &times;" : "").Append("</a>");
+            }
+            sb.Append("</div>");
+        }
+
+        if (filtered.Count == 0)
+        {
+            sb.Append(posts.Count == 0
+                ? "<p class=\"empty\">Nothing published yet.</p>"
+                : "<p class=\"empty\">No posts match the selected tags.</p>");
         }
         else
         {
-            sb.Append("<ul class=\"post-list\">");
-            foreach (var p in posts)
+            // Timeline: posts grouped under month/year headings, newest first
+            static DateTime MonthOf(DateTime? dt) => new((dt ?? DateTime.MinValue).Year, (dt ?? DateTime.MinValue).Month, 1);
+            foreach (var monthGroup in filtered.GroupBy(p => MonthOf(p.BlogPublishedAt)).OrderByDescending(g => g.Key))
             {
-                sb.Append("<li><a href=\"/").Append(p.BlogSlug).Append("\">")
-                  .Append(System.Net.WebUtility.HtmlEncode(p.Title)).Append("</a> <time>")
-                  .Append(p.BlogPublishedAt?.ToString("d MMM yyyy") ?? "").Append("</time></li>");
+                sb.Append("<h2 class=\"timeline-month\">")
+                  .Append(monthGroup.Key.ToString("MMMM yyyy", CultureInfo.InvariantCulture))
+                  .Append("</h2><ul class=\"post-list\">");
+
+                foreach (var p in monthGroup)
+                {
+                    sb.Append("<li><a href=\"/").Append(p.BlogSlug).Append("\">")
+                      .Append(System.Net.WebUtility.HtmlEncode(p.Title)).Append("</a> <time>")
+                      .Append(p.BlogPublishedAt?.ToString("d MMM", CultureInfo.InvariantCulture) ?? "").Append("</time>");
+
+                    sb.Append(" <span class=\"lang-badges\"><a class=\"lang-badge\" href=\"/").Append(p.BlogSlug).Append("\">RU</a>");
+                    foreach (var lang in p.TranslationLanguages.OrderBy(l => l))
+                    {
+                        sb.Append("<a class=\"lang-badge\" href=\"/").Append(p.BlogSlug).Append("?lang=").Append(lang).Append("\">")
+                          .Append(lang.ToUpperInvariant()).Append("</a>");
+                    }
+                    sb.Append("</span>");
+
+                    foreach (var tag in SplitTags(p.Tags))
+                    {
+                        sb.Append(" <a class=\"tag-chip small\" href=\"").Append(TagFilterUrl(selectedTags.Append(tag)))
+                          .Append("\">#").Append(System.Net.WebUtility.HtmlEncode(tag)).Append("</a>");
+                    }
+                    sb.Append("</li>");
+                }
+                sb.Append("</ul>");
             }
-            sb.Append("</ul>");
         }
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString()));
+        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), Languages.Primary));
     }
 
     private static async Task RenderPostAsync(HttpContext ctx, CedarDbContext db, string slug)
@@ -323,11 +389,54 @@ public static class BlogEndpoints
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             ctx.Response.ContentType = "text/html; charset=utf-8";
-            await ctx.Response.WriteAsync(PageShell("Not found", "<p>Post not found.</p>"));
+            await ctx.Response.WriteAsync(PageShell("Not found", "<p>Post not found.</p>", Languages.Primary));
             return;
         }
 
-        var body = CedarToBlogHtmlRenderer.Render(draft.CedarJson, Consts.Url);
+        var availableLanguages = await db.DraftTranslations.Where(t => t.DraftId == draft.Id)
+            .Select(t => t.Language)
+            .ToListAsync();
+
+        // ?lang=en switches to a translated version; unknown/missing translations fall back to
+        // the primary version rather than 404 — the post exists, just not in that language.
+        var requestedLang = ctx.Request.Query["lang"].FirstOrDefault();
+        var lang = Languages.Primary;
+        var title = draft.Title;
+        var cedarJson = draft.CedarJson;
+        if (requestedLang is not null && requestedLang != Languages.Primary && availableLanguages.Contains(requestedLang))
+        {
+            var translation = await db.DraftTranslations.FirstAsync(t => t.DraftId == draft.Id && t.Language == requestedLang);
+            lang = translation.Language;
+            title = translation.Title;
+            cedarJson = translation.CedarJson;
+        }
+
+        var langSwitch = "";
+        if (availableLanguages.Count > 0)
+        {
+            var items = new List<string>();
+            items.Add(lang == Languages.Primary
+                ? "<span class=\"lang-badge current\">RU</span>"
+                : $"<a class=\"lang-badge\" href=\"/{draft.BlogSlug}\">RU</a>");
+            foreach (var l in availableLanguages.OrderBy(l => l))
+            {
+                items.Add(lang == l
+                    ? $"<span class=\"lang-badge current\">{l.ToUpperInvariant()}</span>"
+                    : $"<a class=\"lang-badge\" href=\"/{draft.BlogSlug}?lang={l}\">{l.ToUpperInvariant()}</a>");
+            }
+            langSwitch = $"<p class=\"lang-badges lang-switch\">{string.Join("", items)}</p>";
+        }
+
+        var tags = SplitTags(draft.Tags);
+        var tagsLine = tags.Count == 0 ? "" :
+            "<p class=\"post-tags\">" + string.Join(" ", tags.Select(t =>
+                $"<a class=\"tag-chip small\" href=\"{TagFilterUrl([t])}\">#{System.Net.WebUtility.HtmlEncode(t)}</a>")) + "</p>";
+
+        var signature = await db.Users.Where(u => u.Id == draft.OwnerId).Select(u => u.PostSignature).FirstOrDefaultAsync();
+        var signatureBlock = string.IsNullOrWhiteSpace(signature) ? "" :
+            $"<p class=\"post-signature\">{System.Net.WebUtility.HtmlEncode(signature)}</p>";
+
+        var body = CedarToBlogHtmlRenderer.Render(cedarJson, Consts.Url);
         var dateLine = draft.BlogPublishedAt is { } published
             ? $"<p class=\"post-date\">{published:d MMM yyyy}</p>"
             : "";
@@ -336,17 +445,17 @@ public static class BlogEndpoints
             : "";
         var articleBlock = "<div class=\"annotation article-annotation\" data-annotation-id=\"\">"
             + CedarToBlogHtmlRenderer.AnnotationControlsHtml() + "</div>";
-        var html = $"<article><h1>{System.Net.WebUtility.HtmlEncode(draft.Title)}</h1>{dateLine}{body}{telegramLink}{articleBlock}</article>";
+        var html = $"<article><h1>{System.Net.WebUtility.HtmlEncode(title)}</h1>{dateLine}{langSwitch}{tagsLine}{body}{signatureBlock}{telegramLink}{articleBlock}</article>";
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(draft.Title, html));
+        await ctx.Response.WriteAsync(PageShell(title, html, lang));
     }
 
     // Plain (non-interpolated) raw string — title/body are substituted via Replace so the
     // CSS's braces don't need interpolation-escaping.
     private const string ShellTemplate = """
         <!doctype html>
-        <html lang="ru">
+        <html lang="{{LANG}}">
         <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -402,6 +511,19 @@ public static class BlogEndpoints
         .comment-form textarea { min-height: 60px; resize: vertical; }
         .comment-form button { align-self: flex-start; padding: 5px 14px; border-radius: 6px; border: 1px solid currentColor; background: none; color: inherit; cursor: pointer; }
         .theme-toggle-btn { position: fixed; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(128,128,128,0.3); background: var(--bg); color: var(--fg); cursor: pointer; font-size: 15px; z-index: 100; }
+        .lang-badges { display: inline-flex; gap: 4px; vertical-align: middle; }
+        .lang-badge { display: inline-block; font-size: 0.7em; letter-spacing: .05em; padding: 1px 7px; border: 1px solid rgba(128,128,128,0.35); border-radius: 999px; text-decoration: none; opacity: 0.75; }
+        a.lang-badge:hover { opacity: 1; border-color: currentColor; }
+        .lang-badge.current { border-color: currentColor; opacity: 1; font-weight: 600; }
+        .lang-switch { margin: -6px 0 18px; }
+        .timeline-month { font-size: 0.85em; text-transform: uppercase; letter-spacing: .08em; opacity: 0.55; margin: 32px 0 10px; border-bottom: 1px solid rgba(128,128,128,0.2); padding-bottom: 4px; }
+        .tag-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+        .tag-chip { display: inline-block; font-size: 0.8em; padding: 2px 10px; border: 1px solid rgba(128,128,128,0.35); border-radius: 999px; text-decoration: none; opacity: 0.8; }
+        .tag-chip:hover { opacity: 1; border-color: currentColor; }
+        .tag-chip.selected { border-color: currentColor; background: rgba(128,128,128,0.15); opacity: 1; font-weight: 600; }
+        .tag-chip.small { font-size: 0.7em; padding: 1px 7px; }
+        .post-tags { margin: -6px 0 18px; }
+        .post-signature { white-space: pre-line; opacity: 0.7; margin-top: 32px; font-size: 0.95em; }
         </style>
         {{MATH_ASSETS}}
         </head>
@@ -559,10 +681,11 @@ public static class BlogEndpoints
         <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" onload="document.querySelectorAll('.math-tex').forEach(function (el) { try { katex.render(el.textContent, el, { displayMode: el.dataset.display === 'true', throwOnError: false }); } catch (e) {} });"></script>
         """;
 
-    private static string PageShell(string title, string bodyHtml)
+    private static string PageShell(string title, string bodyHtml, string lang)
     {
         var mathAssets = bodyHtml.Contains("math-tex") ? MathAssets : "";
         return ShellTemplate
+            .Replace("{{LANG}}", lang)
             .Replace("{{TITLE}}", System.Net.WebUtility.HtmlEncode(title))
             .Replace("{{MATH_ASSETS}}", mathAssets)
             .Replace("{{BODY}}", bodyHtml);

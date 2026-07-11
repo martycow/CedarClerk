@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CedarClerk.Core\CedarClerk.Core.csproj" />
+    <ProjectReference Include="..\CedarClerk.Server\CedarClerk.Server.csproj" />
   </ItemGroup>
 
 </Project>

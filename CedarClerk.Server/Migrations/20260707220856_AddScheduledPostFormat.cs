@@ -15,7 +15,7 @@ namespace CedarClerk.Server.Migrations
                 table: "ScheduledPosts",
                 type: "TEXT",
                 nullable: false,
-                defaultValue: "Html");
+                defaultValue: Consts.Html);
         }
 
         /// <inheritdoc />

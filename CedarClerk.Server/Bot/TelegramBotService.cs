@@ -1,59 +1,132 @@
-﻿using Telegram.Bot;
+﻿using Microsoft.EntityFrameworkCore;
+using Telegram.Bot;
+using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
 namespace CedarClerk.Server.Bot;
 
-public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> logger) : BackgroundService
+public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> logger, IServiceScopeFactory scopeFactory) : BackgroundService
 {
-    private TelegramBotClient? _client;
     public TelegramBotClient Client => _client ?? throw new InvalidOperationException("Bot is not started");
-
     public bool IsRunning => _client is not null;
-
     public User Me { get; private set; } = default!;
+    
+    private TelegramBotClient? _client;
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
-        var token = cfg["Cedar:BotToken"];
+        var token = cfg[Consts.BotTokenCfg];
         if (string.IsNullOrEmpty(token))
         {
             logger.LogWarning("Cedar:BotToken not set — bot is disabled");
             return;
         }
 
-        _client = new TelegramBotClient(token, cancellationToken: ct);
-        Me = await _client.GetMe(ct);
+        var client = new TelegramBotClient(token, cancellationToken: ct);
+        try
+        {
+            Me = await client.GetMe(ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // To prevent the whole server crash
+            logger.LogError(ex, "Failed to connect to Telegram — bot is disabled for this run");
+            return;
+        }
+
         logger.LogInformation("Bot @{Username} (id {Id}) is running", Me.Username, Me.Id);
 
-        _client.OnError += (ex, source) =>
-        {
-            logger.LogError(ex, "Bot error from {Source}", source);
-            return Task.CompletedTask;
-        };
-        _client.OnMessage += (msg, type) => SafeHandle(() => OnMessage(msg), "message");
-        
+        client.OnError += OnError;
+        client.OnMessage += OnMessageReceived;
+        client.OnUpdate += OnUpdate;
+        _client = client;
+
         await Task.Delay(Timeout.Infinite, ct);
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken)
+    {
+        if (_client == null)
+            return base.StopAsync(cancellationToken);
+        
+        _client.OnError -= OnError;
+        _client.OnMessage -= OnMessageReceived;
+        _client.OnUpdate -= OnUpdate;
+        return base.StopAsync(cancellationToken);
+    }
+
+    private Task OnError(Exception exception, HandleErrorSource source)
+    {
+        logger.LogError(exception, "Bot error from {Source}", source);
+        return Task.CompletedTask;
+    }
+    
+    private Task OnMessageReceived(Message message, UpdateType type)
+    {
+        return SafeHandle(() => ProcessMessage(message), "message");
+    }
+    
+    private Task OnUpdate(Update update)
+    {
+        return SafeHandle(() => OnUpdateReceived(update), "update");
     }
 
     private async Task SafeHandle(Func<Task> handler, string kind)
     {
-        try { await handler(); }
-        catch (Exception ex) { logger.LogError(ex, "Unhandled error in {Kind} handler", kind); }
+        try
+        {
+            await handler();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Unhandled error in {Kind} handler", kind);
+        }
     }
 
-    private async Task OnMessage(Message message)
+    private async Task ProcessMessage(Message message)
     {
-        if (message.Text is not { } text) return;
+        // For Telegram Stars related invoices
+        if (message.SuccessfulPayment is { } payment)
+        {
+            using var scope = scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == payment.InvoicePayload);
+            if (user is null)
+            {
+                logger.LogWarning("SuccessfulPayment with unknown payload {Payload}", payment.InvoicePayload);
+                return;
+            }
+            
+            user.PlanTier = Core.PlanTiers.Pro;
+            db.Payments.Add(new Payment
+            {
+                OwnerId = user.Id,
+                Provider = "telegram-stars",
+                ExternalId = payment.TelegramPaymentChargeId,
+                Amount = payment.TotalAmount,
+                Currency = payment.Currency, // "XTR"
+            });
+            
+            await db.SaveChangesAsync();
+            logger.LogInformation("Telegram Stars payment received — user {UserId} upgraded to Pro", user.Id);
+            await Client.SendMessage(message.Chat, "Payment received — you're on Cedar Clerk Pro now. I hope you will be happy using it!");
+            return;
+        }
 
+        if (message.Text is not { } text) 
+            return;
+
+        // Processing pre-defined Bot commands sent by User via message, like "/start"
         var parts = text.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 0) return;
+        if (parts.Length == 0) 
+            return;
+        
         var (command, arg) = (parts[0], parts.Length > 1 ? parts[1] : "");
 
         Func<Chat, string, Task>? handler = command switch
         {
-            "/start" => HandleStart,
-            "/richtest" => HandleRichTest,
+            Consts.PreDefinedCommands.Start => HandleStartCommand,
             _ => null
         };
 
@@ -65,16 +138,58 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
         await handler(message.Chat, arg);
     }
 
-    private async Task HandleStart(Chat chat, string arg)
+    private async Task HandleStartCommand(Chat chat, string arg)
     {
-        await Client.SendMessage(chat, $"Cedar Clerk Bot. Current time (UTC): {DateTime.UtcNow})");
+        var startMsg = $"Cedar Clerk Bot v{Consts.CurrentVersion}" +
+                       $"Current Server UTC Time: {DateTime.UtcNow}" +
+                       $"Add me to Channels, Groups and Supergroups, " +
+                       $"and assign me as an Administrator with the right to post messages (Only for Channels)";
+        
+        await Client.SendMessage(chat, startMsg);
     }
-
-    private async Task HandleRichTest(Chat chat, string arg)
+    
+    private async Task OnUpdateReceived(Update update)
     {
-        await Client.SendRichMessage(chat.Id, new InputRichMessage
+        // Telegram asks to confirm before charging the user with Stars. Nothing to validate on our side, so we approve.
+        if (update.PreCheckoutQuery is { } pcq)
         {
-            Markdown = RickTextFixture.Text
-        });
+            await Client.AnswerPreCheckoutQuery(pcq.Id);
+            return;
+        }
+
+        // On Bot Update (after added/removed, rights changed etc) we put in he DB the info about the chat and the bot's rights
+        if (update.MyChatMember is not { } cm) 
+            return;
+
+        using var scope = scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
+
+        var known = await db.BotKnownChats.FirstOrDefaultAsync(k => k.TelegramChatId == cm.Chat.Id);
+        if (known is null)
+        {
+            known = new BotKnownChat { TelegramChatId = cm.Chat.Id };
+            db.BotKnownChats.Add(known);
+        }
+
+        known.Title = cm.Chat.Title ?? cm.Chat.Username ?? known.Title;
+        known.Username = cm.Chat.Username;
+        known.Type = cm.Chat.Type.ToString();
+        known.BotCanPost = BotChatAccess.CanPost(cm.Chat.Type, cm.NewChatMember);
+        known.LastSeenAt = DateTime.UtcNow;
+
+        await db.SaveChangesAsync();
+
+        if (known.BotCanPost)
+        {
+            try
+            {
+                await BotKnownChatSync.SyncAdminsAsync(db, Client, known);
+                await db.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to sync admin list for newly known chat {ChatId}", known.TelegramChatId);
+            }
+        }
     }
 }

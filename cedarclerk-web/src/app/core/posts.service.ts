@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 export type PostFormat = 'Html' | 'Markdown';
+export type PostLanguage = 'ru' | 'en';
 
 export interface ScheduledPost {
     id: string;
@@ -14,20 +15,21 @@ export interface ScheduledPost {
     error: string | null;
     messageId: number | null;
     format: PostFormat;
+    language: PostLanguage;
 }
 
 @Injectable({ providedIn: 'root' })
 export class PostsService {
     private http = inject(HttpClient);
 
-    export(draftId: string, chatId: string, format: PostFormat) {
+    export(draftId: string, chatId: string, format: PostFormat, language: PostLanguage = 'ru') {
         return firstValueFrom(this.http.post<{ messageId: number; chatId: string }>(
-            '/api/posts/export', { draftId, chatId, format }));
+            '/api/posts/export', { draftId, chatId, format, language }));
     }
 
-    schedule(draftId: string, chatId: string, scheduledAtUtc: string, format: PostFormat) {
+    schedule(draftId: string, chatId: string, scheduledAtUtc: string, format: PostFormat, language: PostLanguage = 'ru') {
         return firstValueFrom(this.http.post<{ id: string }>(
-            '/api/posts/schedule', { draftId, chatId, scheduledAtUtc, format }));
+            '/api/posts/schedule', { draftId, chatId, scheduledAtUtc, format, language }));
     }
 
     listScheduled() {

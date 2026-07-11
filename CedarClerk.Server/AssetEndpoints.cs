@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
-using CedarClerk.Server.Data;
+using CedarClerk.Core;
+using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
 
@@ -32,12 +33,18 @@ public static class AssetEndpoints
                 if (file.Length == 0 || file.Length > maxBytes)
                     return Results.BadRequest(new { error = $"File is too large ({maxBytes / (1024 * 1024)}MB Maximum)" });
 
+                var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+                var tier = await db.Users.Where(u => u.Id == uid).Select(u => u.PlanTier).FirstAsync();
+                var usedBytes = await db.Assets.Where(a => a.OwnerId == uid).SumAsync(a => a.SizeBytes);
+                if (!PlanQuotas.HasStorageRoom(tier, usedBytes, file.Length))
+                    return Results.Json(new { error = $"Free plan storage limit ({PlanQuotas.FreeStorageBytes / (1024 * 1024)}MB) exceeded. Upgrade to Pro for more." }, statusCode: StatusCodes.Status403Forbidden);
+
                 var asset = new Asset
                 {
                     FileName = file.FileName,
                     ContentType = file.ContentType,
                     SizeBytes = file.Length,
-                    OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier)!,
+                    OwnerId = uid,
                 };
                 asset.LocalPath = $"asset_{asset.Id}{ext}";
 

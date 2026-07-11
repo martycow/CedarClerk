@@ -7,10 +7,10 @@ import { FormsModule } from '@angular/forms';
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import { AuthService } from '../core/auth.service';
-import { DraftsService, DraftMeta } from '../core/drafts.service';
+import { DraftsService, DraftMeta, TranslationMeta } from '../core/drafts.service';
 import { DatePipe } from '@angular/common';
-import { PostsService, PostFormat, ScheduledPost } from '../core/posts.service';
-import { ChannelsService, Channel, ChannelStats } from '../core/channels.service';
+import { PostsService, PostFormat, PostLanguage, ScheduledPost } from '../core/posts.service';
+import { ChannelsService, Channel, ChannelStats, KnownChat } from '../core/channels.service';
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableHeader } from '@tiptap/extension-table-header';
@@ -33,6 +33,8 @@ import { PopoverComponent } from '../shared/popover.component';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { ThemeService } from '../core/theme.service';
 import { CommentsService, DraftComment } from '../core/comments.service';
+import { TelegramLinkService } from '../core/telegram-link.service';
+import { BillingService, BillingStatus } from '../core/billing.service';
 import {
     LucideUndo2 as Undo2, LucideRedo2 as Redo2,
     LucideBold as Bold, LucideItalic as Italic, LucideStrikethrough as Strikethrough, LucideCode as Code,
@@ -50,6 +52,7 @@ import {
     LucideCheck as Check,
     LucideDownload as Download, LucideUpload as Upload,
     LucideMessageSquare as MessageSquare,
+    LucideRefreshCw as RefreshCw,
 } from '@lucide/angular';
 
 const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
@@ -99,7 +102,7 @@ interface UploadItem {
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
         Send, Plus, X, LogOut, RadioTower, Trash2,
         EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, Menu, Superscript,
-        ChevronDown, Check, Download, Upload, MessageSquare,
+        ChevronDown, Check, Download, Upload, MessageSquare, RefreshCw,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -125,9 +128,40 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private posts = inject(PostsService); // + import сверху
     private channelsApi = inject(ChannelsService);
     private commentsApi = inject(CommentsService);
+    private telegramLink = inject(TelegramLinkService);
+    private billingApi = inject(BillingService);
+
+    telegramBusy = signal(false);
+    telegramError = signal<string | null>(null);
 
     chatId = '@testingandfun';
     format: PostFormat = 'Html';
+    exportLang: PostLanguage = 'ru';
+
+    // Active content language in the editor. 'ru' edits the draft itself (primary version),
+    // 'en' edits the DraftTranslation row. Only one editor instance — switching tabs flushes
+    // the autosave for the language being left, then loads the other version's content.
+    lang = signal<PostLanguage>('ru');
+    enMeta = signal<TranslationMeta | null>(null);
+    private ruUpdatedAt = signal<string>('');
+    // RU title+content captured when entering the EN tab — source for "Copy from Russian"
+    private ruSnapshot: { title: string; json: string } | null = null;
+
+    // Tags are per-draft (shared across language versions) and saved through their own endpoint
+    // immediately on add/remove — not through the content autosave, which routes per-language.
+    tagList = signal<string[]>([]);
+    tagInput = '';
+
+    signatureText = '';
+    signatureBusy = signal(false);
+    signatureSaved = signal(false);
+
+    billing = signal<BillingStatus | null>(null);
+    billingBusy = signal(false);
+    billingMessage = signal<string | null>(null);
+
+    autoTranslating = signal(false);
+    autoTranslateError = signal<string | null>(null);
     exporting = signal(false);
     exportResult = signal('');
     exportLink = signal<string | null>(null);
@@ -153,6 +187,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     channelStats = signal<Record<string, ChannelStats>>({});
     newChannelChatId = '';
     channelError = signal('');
+
+    knownChats = signal<KnownChat[]>([]);
+    knownChatsRefreshing = signal(false);
 
     scheduledAt = '';
     scheduling = signal(false);
@@ -206,6 +243,34 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     avatarInitial(): string {
         const email = this.auth.userEmail();
         return email ? email[0].toUpperCase() : '?';
+    }
+
+    async linkTelegram() {
+        this.telegramBusy.set(true);
+        this.telegramError.set(null);
+        try {
+            await this.telegramLink.link();
+            await this.auth.refresh();
+        } catch (e: any) {
+            this.telegramError.set(e instanceof HttpErrorResponse && e.error?.error
+                ? e.error.error
+                : e?.message ?? 'Failed to link Telegram account');
+        } finally {
+            this.telegramBusy.set(false);
+        }
+    }
+
+    async unlinkTelegram() {
+        this.telegramBusy.set(true);
+        this.telegramError.set(null);
+        try {
+            await this.telegramLink.unlink();
+            await this.auth.refresh();
+        } catch {
+            this.telegramError.set('Failed to unlink Telegram account');
+        } finally {
+            this.telegramBusy.set(false);
+        }
     }
 
     channelColor(id: string): string {
@@ -272,9 +337,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (list.length > 0) await this.openDraft(list[0].id);
         else await this.newDraft();
 
+        this.signatureText = this.auth.postSignature() ?? '';
+        try { this.billing.set(await this.billingApi.status()); } catch { /* non-critical */ }
+
         this.channels.set(await this.channelsApi.list());
         await this.refreshScheduledPosts();
         await this.refreshChannelStats();
+        this.knownChats.set(await this.channelsApi.listKnown());
     }
 
     private async refreshChannelStats() {
@@ -314,14 +383,194 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private async save() {
         const id = this.currentId();
         if (!id || !this.editor) return;
+        // EN tab with no version created yet — nothing to save (editor is read-only there anyway)
+        if (this.lang() === 'en' && !this.enMeta()) {
+            this.saveState.set('saved');
+            return;
+        }
         this.saveState.set('saving');
         try {
-            await this.draftsApi.update(id, this.title, JSON.stringify(this.editor.getJSON()));
+            const json = JSON.stringify(this.editor.getJSON());
+            if (this.lang() === 'ru') {
+                await this.draftsApi.update(id, this.title, json);
+                this.ruUpdatedAt.set(new Date().toISOString());
+                this.refreshMeta(id);
+            } else {
+                const res = await this.draftsApi.saveTranslation(id, 'en', this.title, json);
+                this.enMeta.set({ language: 'en', title: this.title, updatedAt: res.updatedAt });
+            }
             this.saveState.set('saved');
-            this.refreshMeta(id);
         } catch {
             this.saveState.set('error');
         }
+    }
+
+    showEnEmptyState(): boolean {
+        return this.lang() === 'en' && !this.enMeta();
+    }
+
+    // The RU version was edited after the EN translation was last touched — probably needs re-translating
+    enStale(): boolean {
+        const en = this.enMeta();
+        return !!en && this.ruUpdatedAt() > en.updatedAt;
+    }
+
+    async switchLang(target: PostLanguage) {
+        const id = this.currentId();
+        if (target === this.lang() || !id || !this.editor) return;
+        clearTimeout(this.saveTimer);
+        if (this.saveState() !== 'saved') await this.save();
+
+        if (target === 'ru') {
+            const draft = await this.draftsApi.get(id);
+            this.lang.set('ru');
+            this.title = draft.title;
+            this.ruUpdatedAt.set(draft.updatedAt);
+            this.editor.setEditable(true);
+            this.editor.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC));
+        } else {
+            this.ruSnapshot = { title: this.title, json: JSON.stringify(this.editor.getJSON()) };
+            if (this.enMeta()) {
+                const tr = await this.draftsApi.getTranslation(id, 'en');
+                this.lang.set('en');
+                this.title = tr.title;
+                this.enMeta.set({ language: 'en', title: tr.title, updatedAt: tr.updatedAt });
+                this.editor.setEditable(true);
+                this.editor.commands.setContent(JSON.parse(tr.cedarJson || EMPTY_DOC));
+            } else {
+                // No EN version yet — show the empty state (Copy from Russian / Start empty)
+                this.lang.set('en');
+                this.title = this.ruSnapshot.title;
+                this.editor.setEditable(false);
+                this.editor.commands.setContent(JSON.parse(EMPTY_DOC));
+            }
+        }
+        this.saveState.set('saved');
+    }
+
+    async startEnVersion(copyFromRu: boolean) {
+        const id = this.currentId();
+        if (!id || !this.editor) return;
+        const title = this.ruSnapshot?.title ?? this.title;
+        const json = copyFromRu ? (this.ruSnapshot?.json ?? EMPTY_DOC) : EMPTY_DOC;
+        try {
+            const res = await this.draftsApi.saveTranslation(id, 'en', title, json);
+            this.enMeta.set({ language: 'en', title, updatedAt: res.updatedAt });
+            this.title = title;
+            this.editor.setEditable(true);
+            this.editor.commands.setContent(JSON.parse(json));
+            this.editor.commands.focus();
+            this.saveState.set('saved');
+            this.drafts.update(list => list.map(d => d.id === id ? { ...d, languages: ['en'] } : d));
+        } catch {
+            this.saveState.set('error');
+        }
+    }
+
+    async addTag() {
+        const t = this.tagInput.trim().replace(/^#/, '').replace(/,/g, '').toLowerCase();
+        this.tagInput = '';
+        if (!t || this.tagList().includes(t)) return;
+        this.tagList.update(l => [...l, t]);
+        await this.persistTags();
+    }
+
+    async removeTag(tag: string) {
+        this.tagList.update(l => l.filter(t => t !== tag));
+        await this.persistTags();
+    }
+
+    private async persistTags() {
+        const id = this.currentId();
+        if (!id) return;
+        try {
+            const res = await this.draftsApi.updateTags(id, this.tagList().join(','));
+            this.drafts.update(list => list.map(d => d.id === id ? { ...d, tags: res.tags } : d));
+        } catch {
+            this.saveState.set('error');
+        }
+    }
+
+    async saveSignature() {
+        this.signatureBusy.set(true);
+        this.signatureSaved.set(false);
+        try {
+            await this.auth.saveSignature(this.signatureText);
+            this.signatureText = this.auth.postSignature() ?? '';
+            this.signatureSaved.set(true);
+            setTimeout(() => this.signatureSaved.set(false), 2500);
+        } finally {
+            this.signatureBusy.set(false);
+        }
+    }
+
+    async upgradeStripe() {
+        this.billingBusy.set(true);
+        this.billingMessage.set(null);
+        try {
+            const res = await this.billingApi.stripeCheckout();
+            window.location.href = res.url; // Stripe hosted checkout page
+        } catch (e) {
+            this.billingMessage.set(this.httpError(e, 'Stripe checkout failed'));
+            this.billingBusy.set(false);
+        }
+    }
+
+    async upgradeStars() {
+        this.billingBusy.set(true);
+        this.billingMessage.set(null);
+        try {
+            await this.billingApi.starsInvoice();
+            this.billingMessage.set('✓ Invoice sent — check your Telegram and confirm the payment there.');
+        } catch (e) {
+            this.billingMessage.set(this.httpError(e, 'Failed to send the invoice'));
+        } finally {
+            this.billingBusy.set(false);
+        }
+    }
+
+    private httpError(e: unknown, fallback: string): string {
+        return e instanceof HttpErrorResponse && e.error?.error ? e.error.error : fallback;
+    }
+
+    // Machine-translates the RU version into EN and loads the result into the editor for review.
+    async autoTranslateEn() {
+        const id = this.currentId();
+        if (!id || !this.editor) return;
+        if (this.enMeta() && !window.confirm('Replace the current English version with a fresh machine translation?')) return;
+
+        this.autoTranslating.set(true);
+        this.autoTranslateError.set(null);
+        try {
+            const tr = await this.draftsApi.autoTranslate(id, 'en');
+            this.enMeta.set({ language: 'en', title: tr.title, updatedAt: tr.updatedAt });
+            this.drafts.update(list => list.map(d => d.id === id ? { ...d, languages: ['en'] } : d));
+            if (this.lang() !== 'en') {
+                this.ruSnapshot = { title: this.title, json: JSON.stringify(this.editor.getJSON()) };
+                this.lang.set('en');
+            }
+            this.title = tr.title;
+            this.editor.setEditable(true);
+            this.editor.commands.setContent(JSON.parse(tr.cedarJson || EMPTY_DOC));
+            this.saveState.set('saved');
+        } catch (e) {
+            this.autoTranslateError.set(this.httpError(e, 'Auto-translate failed — check server logs'));
+        } finally {
+            this.autoTranslating.set(false);
+        }
+    }
+
+    async deleteEnVersion() {
+        const id = this.currentId();
+        if (!id || !this.enMeta()) return;
+        if (!window.confirm('Delete the English version? This cannot be undone.')) return;
+        clearTimeout(this.saveTimer);
+        this.saveState.set('saved'); // discard pending EN edits so nothing re-creates the row
+        await this.draftsApi.removeTranslation(id, 'en');
+        this.enMeta.set(null);
+        if (this.exportLang === 'en') this.exportLang = 'ru';
+        this.drafts.update(list => list.map(d => d.id === id ? { ...d, languages: [] } : d));
+        if (this.lang() === 'en') await this.switchLang('ru');
     }
 
     private refreshMeta(id: string) {
@@ -341,6 +590,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const draft = await this.draftsApi.get(id);
         this.currentId.set(id);
         this.title = draft.title;
+        this.lang.set('ru');
+        this.exportLang = 'ru';
+        this.ruUpdatedAt.set(draft.updatedAt);
+        this.enMeta.set(draft.translations?.find(t => t.language === 'en') ?? null);
+        this.ruSnapshot = null;
+        this.tagList.set(draft.tags ? draft.tags.split(',').filter(t => t.length > 0) : []);
+        this.tagInput = '';
+        this.editor?.setEditable(true);
         this.editor?.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC));
         this.saveState.set('saved');
         this.currentBlog.set(draft.blogSlug ? { slug: draft.blogSlug, isPublished: draft.isBlogPublished } : null);
@@ -359,10 +616,19 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             id: created.id, title: 'Untitled',
             createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
             blogSlug: null, isBlogPublished: false, blogPublishedAt: null,
+            languages: [], tags: '',
         };
         this.drafts.update(l => [meta, ...l]);
         this.currentId.set(created.id);
         this.title = meta.title;
+        this.lang.set('ru');
+        this.exportLang = 'ru';
+        this.ruUpdatedAt.set(meta.updatedAt);
+        this.enMeta.set(null);
+        this.ruSnapshot = null;
+        this.tagList.set([]);
+        this.tagInput = '';
+        this.editor?.setEditable(true);
         this.editor?.commands.setContent(JSON.parse(EMPTY_DOC));
         this.saveState.set('saved');
         this.currentBlog.set(null);
@@ -494,7 +760,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.exportLink.set(null);
         this.exportError.set(null);
         try {
-            const res = await this.posts.export(id, this.chatId.trim(), this.format);
+            const res = await this.posts.export(id, this.chatId.trim(), this.format, this.exportLang);
             this.exportResult.set(`✓ Published (message #${res.messageId})`);
             this.exportLink.set(this.buildTelegramLink(res.chatId, res.messageId));
         } catch (e) {
@@ -519,17 +785,30 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return username ? `https://t.me/${username}/${messageId}` : null;
     }
 
-    async connectChannel() {
-        const chatId = this.newChannelChatId.trim();
+    async connectChannel(chatId = this.newChannelChatId.trim()) {
         if (!chatId) return;
         this.channelError.set('');
         try {
             const channel = await this.channelsApi.connect(chatId);
             this.channels.update(list => [...list, channel]);
             this.newChannelChatId = '';
+            this.knownChats.update(list => list.filter(k => String(k.telegramChatId) !== chatId));
             await this.refreshChannelStats();
         } catch (e: any) {
             this.channelError.set(e?.error?.error ?? 'Failed to connect channel');
+        }
+    }
+
+    async refreshKnownChats() {
+        this.knownChatsRefreshing.set(true);
+        this.channelError.set('');
+        try {
+            await this.channelsApi.refreshKnown();
+            this.knownChats.set(await this.channelsApi.listKnown());
+        } catch {
+            this.channelError.set('Failed to refresh known chats');
+        } finally {
+            this.knownChatsRefreshing.set(false);
         }
     }
 
@@ -555,7 +834,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.scheduleResult.set('');
         try {
             const scheduledAtUtc = new Date(this.scheduledAt).toISOString();
-            await this.posts.schedule(id, this.chatId.trim(), scheduledAtUtc, this.format);
+            await this.posts.schedule(id, this.chatId.trim(), scheduledAtUtc, this.format, this.exportLang);
             this.scheduleResult.set('✓ Scheduled');
             this.scheduledAt = '';
             await this.refreshScheduledPosts();

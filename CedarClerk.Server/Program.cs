@@ -1,6 +1,5 @@
 using CedarClerk.Server;
 using CedarClerk.Server.Bot;
-using CedarClerk.Server.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
@@ -50,6 +49,7 @@ builder.Services.ConfigureApplicationCookie(o =>
 builder.Services.AddSingleton<TelegramBotService>();
 builder.Services.AddSingleton(new MediaPaths(mediaDir));
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramBotService>());
+builder.Services.AddHttpClient(); // named clients used by billing (Stripe) and translation providers
 
 builder.Services.AddQuartz(q =>
 {
@@ -79,7 +79,7 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseAuthentication();
 app.UseAuthorization();
 
-var blogHost = builder.Configuration["Cedar:BlogHost"] ?? BlogEndpoints.DefaultBlogHost;
+var blogHost = builder.Configuration[Consts.BlogHostCfg] ?? Consts.DefaultBlogHost;
 app.MapWhen(ctx => string.Equals(ctx.Request.Host.Host, blogHost, StringComparison.OrdinalIgnoreCase),
     blogApp => blogApp.Run(BlogEndpoints.HandleRequest));
 
@@ -90,6 +90,7 @@ app.MapPostEndpoints();
 app.MapAssetEndpoints();
 app.MapChannelEndpoints();
 app.MapScheduledPostEndpoints();
+app.MapBillingEndpoints();
 #endregion
 
 // MUST be here, after all endpoints

@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using CedarClerk.Core;
 using CedarClerk.Server.Bot;
-using CedarClerk.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -12,6 +11,7 @@ namespace CedarClerk.Server;
 public static class ChannelEndpoints
 {
     public record ConnectChannelRequest(string ChatId);
+    public record KnownChatDto(long TelegramChatId, string Title, string? Username, string Type);
 
     public static void MapChannelEndpoints(this WebApplication app)
     {
@@ -42,35 +42,20 @@ public static class ChannelEndpoints
 
             var member = await bot.Client.GetChatMember(chat.Id, bot.Me.Id);
 
-            // Rights checking
-            switch (chat.Type)
-            {
-                case ChatType.Channel:
-                {
-                    var canPost = member is ChatMemberAdministrator { CanPostMessages: true } || 
-                                  member.Status == ChatMemberStatus.Creator;
-                    
-                    if (!canPost)
-                        return Results.BadRequest(new { error = "Bot must have an Admin with the right to send messages OR Creator." });
-                    break;
-                }
-                case ChatType.Group:
-                case ChatType.Supergroup:
-                {
-                    var canPost = member is ChatMemberAdministrator || member.Status == ChatMemberStatus.Creator;
-                    if (!canPost)
-                        return Results.BadRequest(new { error = "Bot must be an Admin or Creator of the Group/Supergroup." });
-                    break;
-                }
-                case ChatType.Private:
-                    return Results.BadRequest(new { error = "Private chats are not supported" });
-                case ChatType.Sender:
-                    return Results.BadRequest(new { error = "Sender chats are not supported" });
-                default:
-                    return Results.BadRequest(new { error = "Unsupported chat type" });
-            }
+            if (chat.Type is not (ChatType.Channel or ChatType.Group or ChatType.Supergroup))
+                return Results.BadRequest(new { error = "Unsupported chat type" });
+
+            if (!BotChatAccess.CanPost(chat.Type, member))
+                return Results.BadRequest(new { error = chat.Type == ChatType.Channel
+                    ? "Bot must have an Admin with the right to send messages OR Creator."
+                    : "Bot must be an Admin or Creator of the Group/Supergroup." });
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var tier = await db.Users.Where(u => u.Id == uid).Select(u => u.PlanTier).FirstAsync();
+            var channelCount = await db.Channels.CountAsync(c => c.OwnerId == uid);
+            if (!PlanQuotas.CanConnectAnotherChannel(tier, channelCount))
+                return Results.Json(new { error = $"Free plan allows only {PlanQuotas.FreeMaxChannels} connected channel. Upgrade to Pro for more." }, statusCode: StatusCodes.Status403Forbidden);
+
             var channel = new Channel
             {
                 Title = chat.Title ?? chat.Username ?? req.ChatId,
@@ -121,6 +106,68 @@ public static class ChannelEndpoints
             var deltaWeek = ChannelStatsCalculator.DeltaOverDays(points, 7, DateTime.UtcNow);
 
             return Results.Ok(new { current, deltaWeek, snapshots });
+        });
+
+        // Chats the bot is known to be in (tracked live from Telegram's my_chat_member updates —
+        // see TelegramBotService) that aren't already connected by anyone. Scoped to chats where
+        // the REQUESTING user's linked Telegram identity is actually an admin (via the
+        // BotKnownChatAdmin cache) — the bot is shared across every Cedar Clerk account, so without
+        // this filter everyone would see every chat the bot is in, including other users' channels.
+        // Users who haven't linked a Telegram account (Settings > Account) get an empty list, since
+        // there's no identity to scope against — they can still connect by typing @username/id.
+        group.MapGet("/known", async (ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var telegramUserId = await db.Users.Where(u => u.Id == uid).Select(u => u.TelegramUserId).FirstAsync();
+            if (telegramUserId is null) return new List<KnownChatDto>();
+
+            var connectedIds = db.Channels.Select(c => c.TelegramChatId);
+            return await db.BotKnownChats
+                .Where(k => k.BotCanPost && !connectedIds.Contains(k.TelegramChatId)
+                    && db.BotKnownChatAdmins.Any(a => a.BotKnownChatId == k.Id && a.TelegramUserId == telegramUserId))
+                .OrderByDescending(k => k.LastSeenAt)
+                .Select(k => new KnownChatDto(k.TelegramChatId, k.Title, k.Username, k.Type))
+                .ToListAsync();
+        });
+
+        // Re-checks the bot's current status and admin list in every known chat (title/username/
+        // posting rights/admins may have changed since we last saw an update for it). Does NOT
+        // discover chats the bot was already in before this feature started tracking
+        // my_chat_member updates — for those, connecting still works the old way (type
+        // @username/chat id manually).
+        group.MapPost("/refresh-known-chats", async (CedarDbContext db, TelegramBotService bot, ILogger<Channel> logger) =>
+        {
+            if (!bot.IsRunning)
+                return Results.Json(new { error = "Telegram bot is not running (no token configured)" }, statusCode: StatusCodes.Status503ServiceUnavailable);
+
+            var known = await db.BotKnownChats.ToListAsync();
+            foreach (var chat in known)
+            {
+                try
+                {
+                    var fullChat = await bot.Client.GetChat(new ChatId(chat.TelegramChatId));
+                    var member = await bot.Client.GetChatMember(chat.TelegramChatId, bot.Me.Id);
+
+                    chat.Title = fullChat.Title ?? fullChat.Username ?? chat.Title;
+                    chat.Username = fullChat.Username;
+                    chat.Type = fullChat.Type.ToString();
+                    chat.BotCanPost = BotChatAccess.CanPost(fullChat.Type, member);
+                    chat.LastSeenAt = DateTime.UtcNow;
+
+                    if (chat.BotCanPost)
+                        await BotKnownChatSync.SyncAdminsAsync(db, bot.Client, chat);
+                }
+                catch (Exception ex)
+                {
+                    // Bot was removed from the chat, chat was deleted, etc. — leave the stale row
+                    // as not-postable rather than deleting the discovery history.
+                    chat.BotCanPost = false;
+                    logger.LogWarning(ex, "Failed to refresh known chat {ChatId}", chat.TelegramChatId);
+                }
+            }
+
+            await db.SaveChangesAsync();
+            return Results.Ok(new { refreshed = known.Count });
         });
     }
 }

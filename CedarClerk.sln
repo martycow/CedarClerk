@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CedarClerk.Core", "CedarCle
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CedarClerk.Tests", "CedarClerk.Tests\CedarClerk.Tests.csproj", "{25F32E89-B627-43CC-B31D-A3CC7A1530CA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CedarClerk.Localization", "CedarClerk.Localization\CedarClerk.Localization.csproj", "{376DE55B-6EC1-45C0-BAA0-FCF0C751A126}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{25F32E89-B627-43CC-B31D-A3CC7A1530CA}.Release|x64.Build.0 = Release|Any CPU
 		{25F32E89-B627-43CC-B31D-A3CC7A1530CA}.Release|x86.ActiveCfg = Release|Any CPU
 		{25F32E89-B627-43CC-B31D-A3CC7A1530CA}.Release|x86.Build.0 = Release|Any CPU
+		{376DE55B-6EC1-45C0-BAA0-FCF0C751A126}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{376DE55B-6EC1-45C0-BAA0-FCF0C751A126}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{376DE55B-6EC1-45C0-BAA0-FCF0C751A126}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{376DE55B-6EC1-45C0-BAA0-FCF0C751A126}.Debug|x64.Build.0 = Debug|Any CPU
+		{376DE55B-6EC1-45C0-BAA0-FCF0C751A126}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{376DE55B-6EC1-45C0-BAA0-FCF0C751A126}.Debug|x86.Build.0 = Debug|Any CPU
+		{376DE55B-6EC1-45C0-BAA0-FCF0C751A126}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{376DE55B-6EC1-45C0-BAA0-FCF0C751A126}.Release|Any CPU.Build.0 = Release|Any CPU
+		{376DE55B-6EC1-45C0-BAA0-FCF0C751A126}.Release|x64.ActiveCfg = Release|Any CPU
+		{376DE55B-6EC1-45C0-BAA0-FCF0C751A126}.Release|x64.Build.0 = Release|Any CPU
+		{376DE55B-6EC1-45C0-BAA0-FCF0C751A126}.Release|x86.ActiveCfg = Release|Any CPU
+		{376DE55B-6EC1-45C0-BAA0-FCF0C751A126}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

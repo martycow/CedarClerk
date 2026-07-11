@@ -1,12 +1,12 @@
 using System.Security.Claims;
-using CedarClerk.Server.Data;
+using CedarClerk.Localization;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
 
 public static class ScheduledPostEndpoints
 {
-    public record ScheduleRequest(Guid DraftId, string ChatId, DateTime ScheduledAtUtc, string Format = "Html");
+    public record ScheduleRequest(Guid DraftId, string ChatId, DateTime ScheduledAtUtc, string Format = Consts.Html, string Language = Languages.Primary);
 
     public static void MapScheduledPostEndpoints(this WebApplication app)
     {
@@ -20,7 +20,7 @@ public static class ScheduledPostEndpoints
                 .Join(db.Drafts, p => p.DraftId, d => d.Id, (p, d) => new
                 {
                     p.Id, p.DraftId, DraftTitle = d.Title, p.ChatId, p.ScheduledAtUtc,
-                    p.Status, p.Error, p.MessageId, p.Format,
+                    p.Status, p.Error, p.MessageId, p.Format, p.Language,
                 })
                 .ToListAsync();
         });
@@ -32,6 +32,15 @@ public static class ScheduledPostEndpoints
             if (!draftExists)
                 return Results.NotFound(new { error = "Draft not found" });
 
+            // Fail at scheduling time, not at fire time, if the requested language version
+            // doesn't exist yet — the user is right there to see the error.
+            if (req.Language != Languages.Primary)
+            {
+                var hasTranslation = await db.DraftTranslations.AnyAsync(t => t.DraftId == req.DraftId && t.Language == req.Language);
+                if (!hasTranslation)
+                    return Results.BadRequest(new { error = $"No {req.Language.ToUpperInvariant()} version of this draft" });
+            }
+
             var post = new ScheduledPost
             {
                 DraftId = req.DraftId,
@@ -39,6 +48,7 @@ public static class ScheduledPostEndpoints
                 ScheduledAtUtc = req.ScheduledAtUtc,
                 OwnerId = uid,
                 Format = req.Format,
+                Language = req.Language,
             };
             db.ScheduledPosts.Add(post);
             await db.SaveChangesAsync();

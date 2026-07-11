@@ -20,6 +20,13 @@ export interface ChannelStats {
     snapshots: ChannelStatSnapshotDto[];
 }
 
+export interface KnownChat {
+    telegramChatId: number;
+    title: string;
+    username: string | null;
+    type: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ChannelsService {
     private http = inject(HttpClient);
@@ -38,5 +45,13 @@ export class ChannelsService {
 
     getStats(id: string) {
         return firstValueFrom(this.http.get<ChannelStats>(`/api/channels/${id}/stats`));
+    }
+
+    listKnown() {
+        return firstValueFrom(this.http.get<KnownChat[]>('/api/channels/known'));
+    }
+
+    refreshKnown() {
+        return firstValueFrom(this.http.post<{ refreshed: number }>('/api/channels/refresh-known-chats', {}));
     }
 }

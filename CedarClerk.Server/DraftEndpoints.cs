@@ -1,7 +1,8 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
 using CedarClerk.Core;
-using CedarClerk.Server.Data;
+using CedarClerk.Localization;
+using CedarClerk.Server.Translation;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
@@ -9,6 +10,8 @@ namespace CedarClerk.Server;
 public static class DraftEndpoints
 {
     public record SaveDraftRequest(string Title, string CedarJson);
+    public record SaveTranslationRequest(string Title, string CedarJson);
+    public record UpdateTagsRequest(string Tags);
 
     private const long CedarZipMaxBytes = 50 * 1024 * 1024;
     private const int CedarMaxAssetCount = 50;
@@ -31,7 +34,11 @@ public static class DraftEndpoints
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             return await db.Drafts.Where(d => d.OwnerId == uid)
                 .OrderByDescending(d => d.UpdatedAt)
-                .Select(d => new { d.Id, d.Title, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt })
+                .Select(d => new
+                {
+                    d.Id, d.Title, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
+                    Languages = db.DraftTranslations.Where(t => t.DraftId == d.Id).Select(t => t.Language).ToList(),
+                })
                 .ToListAsync();
         });
 
@@ -40,7 +47,142 @@ public static class DraftEndpoints
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
-            return draft is null ? Results.NotFound() : Results.Ok(new { draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug, draft.IsBlogPublished, draft.BlogPublishedAt });
+            if (draft is null) return Results.NotFound();
+
+            // Translation summaries only (no content) — the editor loads a translation's content
+            // lazily when its tab is opened. UpdatedAt lets the UI flag a stale translation.
+            var translations = await db.DraftTranslations.Where(t => t.DraftId == id)
+                .Select(t => new { t.Language, t.Title, t.UpdatedAt })
+                .ToListAsync();
+            return Results.Ok(new { draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug, draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, Translations = translations });
+        });
+
+        // Tags have their own endpoint (not part of SaveDraftRequest) so the chip editor can save
+        // them from either language tab — the content autosave routes to the draft OR a
+        // translation depending on the active tab, and must not drag draft fields along with it.
+        groupBuilder.MapPut("/{id:guid}/tags", async (Guid id, UpdateTagsRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            draft.Tags = string.Join(",", req.Tags.Split(',')
+                .Select(t => t.Trim().TrimStart('#').ToLowerInvariant())
+                .Where(t => t.Length > 0)
+                .Distinct());
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.Tags });
+        });
+
+        // Full translation content for one language
+        groupBuilder.MapGet("/{id:guid}/translations/{lang}", async (Guid id, string lang, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var owns = await db.Drafts.AnyAsync(d => d.Id == id && d.OwnerId == uid);
+            if (!owns) return Results.NotFound();
+
+            var translation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang);
+            return translation is null
+                ? Results.NotFound()
+                : Results.Ok(new { translation.Language, translation.Title, translation.CedarJson, translation.UpdatedAt });
+        });
+
+        // Create or update a translation (upsert — the editor autosaves through this)
+        groupBuilder.MapPut("/{id:guid}/translations/{lang}", async (Guid id, string lang, SaveTranslationRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            if (!Languages.IsTranslationLanguage(lang))
+                return Results.BadRequest(new { error = $"Unsupported translation language: {lang}" });
+
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var owns = await db.Drafts.AnyAsync(d => d.Id == id && d.OwnerId == uid);
+            if (!owns) return Results.NotFound();
+
+            var translation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang);
+            if (translation is null)
+            {
+                translation = new DraftTranslation { DraftId = id, Language = lang };
+                db.DraftTranslations.Add(translation);
+            }
+            translation.Title = req.Title;
+            translation.CedarJson = req.CedarJson;
+            translation.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { translation.Language, translation.UpdatedAt });
+        });
+
+        // Machine-translate the primary (RU) version into {lang} and upsert it as the translation.
+        // Provider is config-driven (Anthropic/OpenAI/DeepL) — 501 with instructions when none is set.
+        groupBuilder.MapPost("/{id:guid}/translations/{lang}/auto", async (Guid id, string lang, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg, IHttpClientFactory httpFactory, CancellationToken ct) =>
+        {
+            if (!Languages.IsTranslationLanguage(lang))
+                return Results.BadRequest(new { error = $"Unsupported translation language: {lang}" });
+
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid, ct);
+            if (draft is null) return Results.NotFound();
+
+            ITranslationProvider? provider;
+            try
+            {
+                provider = TranslationProviderFactory.Create(cfg, httpFactory);
+            }
+            catch (TranslationException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status501NotImplemented);
+            }
+            if (provider is null)
+                return Results.Json(
+                    new { error = "Auto-translate is not configured — set Cedar:Translate:Provider (see docs/integrations-setup.md)" },
+                    statusCode: StatusCodes.Status501NotImplemented);
+
+            TranslationResult result;
+            try
+            {
+                result = await provider.TranslateAsync(draft.Title, draft.CedarJson, lang, ct);
+            }
+            catch (TranslationException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            // Sanity check the returned document before persisting — a broken doc would wedge the editor
+            try
+            {
+                using var docCheck = JsonDocument.Parse(result.CedarJson);
+                var root = docCheck.RootElement;
+                if (root.ValueKind != JsonValueKind.Object
+                    || !root.TryGetProperty("type", out var typeProp) || typeProp.GetString() != "doc")
+                    return Results.Json(new { error = "Translator returned an invalid document — try again" }, statusCode: StatusCodes.Status502BadGateway);
+            }
+            catch (JsonException)
+            {
+                return Results.Json(new { error = "Translator returned invalid JSON — try again" }, statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            var translation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang, ct);
+            if (translation is null)
+            {
+                translation = new DraftTranslation { DraftId = id, Language = lang };
+                db.DraftTranslations.Add(translation);
+            }
+            translation.Title = result.Title;
+            translation.CedarJson = result.CedarJson;
+            translation.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+
+            return Results.Ok(new { translation.Language, translation.Title, translation.CedarJson, translation.UpdatedAt });
+        });
+
+        groupBuilder.MapDelete("/{id:guid}/translations/{lang}", async (Guid id, string lang, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var owns = await db.Drafts.AnyAsync(d => d.Id == id && d.OwnerId == uid);
+            if (!owns) return Results.NotFound();
+
+            var deleted = await db.DraftTranslations
+                .Where(t => t.DraftId == id && t.Language == lang)
+                .ExecuteDeleteAsync();
+            return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });
 
         // Create new draft
@@ -132,6 +274,13 @@ public static class DraftEndpoints
             }
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            var tier = await db.Users.Where(u => u.Id == uid).Select(u => u.PlanTier).FirstAsync();
+            var usedBytes = await db.Assets.Where(a => a.OwnerId == uid).SumAsync(a => a.SizeBytes);
+            var incomingBytes = pkg.Assets.Sum(kv => (long)kv.Value.Length);
+            if (!PlanQuotas.HasStorageRoom(tier, usedBytes, incomingBytes))
+                return Results.Json(new { error = $"Free plan storage limit ({PlanQuotas.FreeStorageBytes / (1024 * 1024)}MB) exceeded. Upgrade to Pro for more." }, statusCode: StatusCodes.Status403Forbidden);
+
             var pathRewrites = new Dictionary<string, string>();
 
             foreach (var (originalName, bytes) in pkg.Assets)

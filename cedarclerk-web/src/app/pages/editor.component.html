@@ -37,6 +37,35 @@
                     <button class="mini" (click)="connectChannel()" title="Connect"><svg lucidePlus class="icon-sm"></svg></button>
                 </div>
                 @if (channelError()) { <p class="channel-error">{{ channelError() }}</p> }
+
+                <div class="popover-divider"></div>
+                <div class="panel-head">
+                    <span class="panel-label">Bot is already in</span>
+                    <button class="mini" (click)="refreshKnownChats(); $event.stopPropagation()" [disabled]="knownChatsRefreshing()" title="Refresh">
+                        <svg lucideRefreshCw class="icon-sm" [class.spin]="knownChatsRefreshing()"></svg>
+                    </button>
+                </div>
+                @if (knownChats().length) {
+                    @for (k of knownChats(); track k.telegramChatId) {
+                    <div class="channel-item">
+                        <span class="channel-avatar" [style.background]="channelColor(k.title)">{{ channelInitial(k.title) }}</span>
+                        <div class="channel-body">
+                            <div class="channel-row-top">
+                                <div class="channel-title">{{ k.title }}</div>
+                                <button class="mini" (click)="connectChannel(k.telegramChatId + ''); $event.stopPropagation()" title="Connect">
+                                    <svg lucidePlus class="icon-sm"></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    }
+                } @else if (auth.telegramLinked()) {
+                    <p class="channel-error" style="color:var(--t3)">Nothing new — try Refresh after adding the bot somewhere.</p>
+                } @else {
+                    <p class="channel-error" style="color:var(--t3)">Link your Telegram account (avatar menu) to see chats you administer here.</p>
+                }
+
+                <div class="popover-divider"></div>
                 @if (channels().length) {
                     @for (c of channels(); track c.id) {
                     <div class="channel-item" [class.active]="isSelectedChannel(c)" (click)="selectChannel(c)">
@@ -104,6 +133,13 @@
                 <div class="format-toggle">
                     <button [class.on]="format === 'Html'" (click)="setFormat('Html')">HTML</button>
                     <button [class.on]="format === 'Markdown'" (click)="setFormat('Markdown')">Markdown</button>
+                </div>
+
+                <div class="panel-label" style="margin-top:12px">Language</div>
+                <div class="format-toggle">
+                    <button [class.on]="exportLang === 'ru'" (click)="exportLang = 'ru'">RU</button>
+                    <button [class.on]="exportLang === 'en'" (click)="exportLang = 'en'"
+                            [disabled]="!enMeta()" [title]="enMeta() ? '' : 'No English version yet'">EN</button>
                 </div>
 
                 <div class="publish-actions">
@@ -187,7 +223,7 @@
                 <div class="scheduled-item">
                     <div class="scheduled-info">
                         <div class="draft-title">{{ p.draftTitle || 'Untitled' }}</div>
-                        <div class="draft-date">{{ utcDate(p.scheduledAtUtc) | date:'d MMM, HH:mm' }} · {{ p.chatId }} · {{ p.format }} · {{ p.status }}</div>
+                        <div class="draft-date">{{ utcDate(p.scheduledAtUtc) | date:'d MMM, HH:mm' }} · {{ p.chatId }} · {{ p.format }} · {{ p.language.toUpperCase() }} · {{ p.status }}</div>
                         <div class="tz-hint">{{ zonesHint(utcDate(p.scheduledAtUtc)) }}</div>
                         @if (p.status === 'Failed') { <div class="channel-error">{{ p.error }}</div> }
                     </div>
@@ -214,9 +250,55 @@
                 <span class="avatar">{{ avatarInitial() }}</span>
                 <span class="user">{{ auth.userEmail() }}</span>
             </button>
-            <div panel>
+            <div panel class="account-popover">
                 <div class="panel-label">Account</div>
                 <p class="profile-email">{{ auth.userEmail() }}</p>
+                @if (auth.planTier(); as tier) {
+                <p class="plan-badge">{{ tier }} plan</p>
+                }
+                @if (billing(); as b) {
+                    @if (b.planTier === 'Free') {
+                    <div class="upgrade-actions">
+                        <button class="account-action-btn" (click)="upgradeStripe()"
+                                [disabled]="billingBusy() || !b.providers.stripe"
+                                [title]="b.providers.stripe ? '' : 'Stripe is not configured yet'">
+                            {{ billingBusy() ? '…' : 'Upgrade to Pro — card (Stripe)' }}
+                        </button>
+                        <button class="account-action-btn" (click)="upgradeStars()"
+                                [disabled]="billingBusy() || !b.providers.telegramStars || !auth.telegramLinked()"
+                                [title]="!b.providers.telegramStars ? 'Telegram Stars is not configured yet'
+                                    : (!auth.telegramLinked() ? 'Link your Telegram account first' : '')">
+                            {{ billingBusy() ? '…' : 'Upgrade to Pro — ' + b.starsAmount + ' Telegram Stars' }}
+                        </button>
+                    </div>
+                    @if (billingMessage()) { <p class="export-result">{{ billingMessage() }}</p> }
+                    }
+                }
+
+                <div class="popover-divider"></div>
+                <div class="panel-label">Telegram</div>
+                @if (auth.telegramLinked()) {
+                    <p class="telegram-status">✓ Linked as <span class="mono-accent">{{ '@' + auth.telegramUsername() }}</span></p>
+                    <button class="account-action-btn" (click)="unlinkTelegram()" [disabled]="telegramBusy()">
+                        {{ telegramBusy() ? '…' : 'Unlink' }}
+                    </button>
+                } @else {
+                    <button class="account-action-btn" (click)="linkTelegram()" [disabled]="telegramBusy()">
+                        {{ telegramBusy() ? 'Waiting for Telegram…' : 'Link Telegram account' }}
+                    </button>
+                }
+                @if (telegramError()) { <p class="channel-error">{{ telegramError() }}</p> }
+
+                <div class="popover-divider"></div>
+                <div class="panel-label">Post signature</div>
+                <textarea class="signature-input" [(ngModel)]="signatureText" rows="3"
+                          placeholder="e.g. — M.C. © 2026"></textarea>
+                <button class="account-action-btn" (click)="saveSignature()" [disabled]="signatureBusy()">
+                    {{ signatureBusy() ? '…' : (signatureSaved() ? '✓ Saved' : 'Save signature') }}
+                </button>
+                <p class="hint signature-hint">Appended to the end of every published post (Telegram &amp; blog). Leave empty to remove.</p>
+
+                <div class="popover-divider"></div>
                 <button class="logout-btn" (click)="auth.logout()">
                     <svg lucideLogOut class="icon-sm"></svg>
                     Log out
@@ -401,7 +483,10 @@
             @for (d of drafts(); track d.id) {
             <div class="draft-item" [class.active]="d.id === currentId()" (click)="openDraft(d.id)">
                 <div class="draft-info">
-                    <div class="draft-title">{{ d.title || 'Untitled' }}</div>
+                    <div class="draft-title">
+                        {{ d.title || 'Untitled' }}
+                        @if (d.languages.includes('en')) { <span class="draft-lang-badge">EN</span> }
+                    </div>
                     <div class="draft-date">{{ d.updatedAt | date:'d MMM, HH:mm' }}</div>
                 </div>
                 <button class="mini-remove" (click)="deleteDraft(d.id); $event.stopPropagation()" title="Delete draft">
@@ -414,7 +499,44 @@
         </aside>
 
         <section class="canvas">
-            <div class="sheet" #editorHost [style.--zoom]="zoomFactor()"></div>
+            <div class="lang-tabs">
+                <button [class.on]="lang() === 'ru'" (click)="switchLang('ru')">RU</button>
+                <button [class.on]="lang() === 'en'" (click)="switchLang('en')">
+                    EN
+                    @if (enStale()) { <span class="stale-dot" title="Russian version was edited after this translation"></span> }
+                </button>
+                @if (lang() === 'en' && enMeta()) {
+                    @if (enStale()) {
+                    <button class="retranslate-btn" (click)="autoTranslateEn()" [disabled]="autoTranslating()"
+                            title="Russian version changed — re-translate">
+                        {{ autoTranslating() ? '…' : '↻ Re-translate' }}
+                    </button>
+                    }
+                <button class="lang-delete" (click)="deleteEnVersion()" title="Delete English version">
+                    <svg lucideTrash2 class="icon-sm"></svg>
+                </button>
+                }
+                <div class="tag-row">
+                    @for (t of tagList(); track t) {
+                    <span class="tag-chip">#{{ t }}<button class="tag-x" (click)="removeTag(t)" title="Remove tag">×</button></span>
+                    }
+                    <input class="tag-input" [(ngModel)]="tagInput" (keydown.enter)="addTag()" placeholder="+ tag" maxlength="30">
+                </div>
+            </div>
+            @if (showEnEmptyState()) {
+            <div class="sheet en-empty">
+                <p class="en-empty-title">No English version yet</p>
+                <div class="en-empty-actions">
+                    <button class="export-btn" (click)="autoTranslateEn()" [disabled]="autoTranslating()">
+                        {{ autoTranslating() ? 'Translating…' : '✦ Auto-translate' }}
+                    </button>
+                    <button class="export-btn" (click)="startEnVersion(true)" [disabled]="autoTranslating()">Copy from Russian</button>
+                    <button class="export-btn" (click)="startEnVersion(false)" [disabled]="autoTranslating()">Start empty</button>
+                </div>
+                @if (autoTranslateError()) { <p class="channel-error">{{ autoTranslateError() }}</p> }
+            </div>
+            }
+            <div class="sheet" #editorHost [style.--zoom]="zoomFactor()" [style.display]="showEnEmptyState() ? 'none' : ''"></div>
         </section>
 
         <!--Right panel: comments & likes moderation-->

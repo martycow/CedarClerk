@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using CedarClerk.Core;
+using CedarClerk.Localization;
 using CedarClerk.Server.Bot;
-using CedarClerk.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -10,7 +10,7 @@ namespace CedarClerk.Server;
 
 public static class PostEndpoints
 { 
-    public record ExportRequest(Guid DraftId, string ChatId, string Format = "Html");
+    public record ExportRequest(Guid DraftId, string ChatId, string Format = Consts.Html, string Language = Languages.Primary);
 
     public record PublishResult(int? MessageId, string? Error, int StatusCode = StatusCodes.Status400BadRequest)
     {
@@ -24,26 +24,50 @@ public static class PostEndpoints
         CedarDbContext db,
         TelegramBotService bot,
         IConfiguration cfg,
-        string format = "Html")
+        string format = Consts.Html,
+        string language = Languages.Primary)
     {
         var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == draftId && d.OwnerId == ownerId);
         if (draft is null)
-            return new PublishResult(null, "Draft not found", StatusCodes.Status404NotFound);
+            return new PublishResult(null, ErrorMessages.DraftNotFound, StatusCodes.Status404NotFound);
+
+        var cedarJson = draft.CedarJson;
+        if (language != Languages.Primary)
+        {
+            var translation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == draftId && t.Language == language);
+            if (translation is null)
+                return new PublishResult(null, $"No {language.ToUpperInvariant()} version of this draft", StatusCodes.Status404NotFound);
+            cedarJson = translation.CedarJson;
+        }
 
         if (!bot.IsRunning)
-            return new PublishResult(null, "Telegram bot is not running (no token configured)", StatusCodes.Status503ServiceUnavailable);
+            return new PublishResult(null, ErrorMessages.BotNotRunning, StatusCodes.Status503ServiceUnavailable);
 
-        var baseUrl = cfg["Cedar:PublicBaseUrl"] ?? Consts.Url;
-        var isMarkdown = format == "Markdown";
+        var baseUrl = cfg[Consts.PublicBaseUrlCfg] ?? Consts.Url;
+        var isMarkdown = format == Consts.Markdown;
         var rendered = isMarkdown
-            ? CedarToTelegramMarkdownRenderer.Render(draft.CedarJson, baseUrl)
-            : CedarToTelegramHtmlRenderer.Render(draft.CedarJson, baseUrl);
+            ? CedarToTelegramMarkdownRenderer.Render(cedarJson, baseUrl)
+            : CedarToTelegramHtmlRenderer.Render(cedarJson, baseUrl);
         if (string.IsNullOrWhiteSpace(rendered))
             return new PublishResult(null, "Draft is empty");
 
+        // The user's standard signature goes at the very end of the post content itself,
+        // before the "Read on the blog" cross-link (which is navigation, not content).
+        var signature = await db.Users.Where(u => u.Id == ownerId).Select(u => u.PostSignature).FirstOrDefaultAsync();
+        if (!string.IsNullOrWhiteSpace(signature))
+        {
+            rendered += isMarkdown
+                ? "\n\n" + signature
+                : string.Concat(signature.Split('\n')
+                    .Select(l => l.Trim())
+                    .Where(l => l.Length > 0)
+                    .Select(l => $"<p>{System.Net.WebUtility.HtmlEncode(l)}</p>"));
+        }
+
         if (draft.IsBlogPublished && draft.BlogSlug is not null)
         {
-            var blogUrl = $"https://{cfg["Cedar:BlogHost"] ?? BlogEndpoints.DefaultBlogHost}/{draft.BlogSlug}";
+            var langSuffix = language == Languages.Primary ? "" : $"?lang={language}";
+            var blogUrl = $"https://{cfg[Consts.BlogHostCfg] ?? Consts.DefaultBlogHost}/{draft.BlogSlug}{langSuffix}";
             rendered += isMarkdown ? $"\n\n[Read on the blog]({blogUrl})" : $"<p><a href=\"{blogUrl}\">Read on the blog &#8594;</a></p>";
         }
 
@@ -79,7 +103,7 @@ public static class PostEndpoints
         app.MapPost("/api/posts/export", async (ExportRequest req, ClaimsPrincipal user, CedarDbContext db, TelegramBotService bot, IConfiguration cfg) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var result = await PublishAsync(req.DraftId, req.ChatId, uid, db, bot, cfg, req.Format);
+            var result = await PublishAsync(req.DraftId, req.ChatId, uid, db, bot, cfg, req.Format, req.Language);
             if (!result.Success)
                 return Results.Json(new { error = result.Error }, statusCode: result.StatusCode);
 
