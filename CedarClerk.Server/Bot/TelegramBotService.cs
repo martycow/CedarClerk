@@ -157,10 +157,10 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
 
     private async Task HandleStartCommand(Chat chat, string arg)
     {
-        var startMsg = $"Cedar Clerk Bot v{Consts.CurrentVersion}" +
-                       $"Current Server UTC Time: {DateTime.UtcNow}" +
-                       $"Add me to Channels, Groups and Supergroups, " +
-                       $"and assign me as an Administrator with the right to post messages (Only for Channels)";
+        var startMsg = $"Cedar Clerk Bot v{Consts.CurrentVersion}\n" +
+                       $"Current Server UTC Time: {DateTime.UtcNow}\n\n" +
+                       $"Add me to Channels, Groups and Supergroups.\n\n\n" +
+                       $"Only for Channels: and assign me as an Administrator with the right to post messages)";
         
         await Client.SendMessage(chat, startMsg);
     }

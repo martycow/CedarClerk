@@ -440,7 +440,7 @@ public static class BlogEndpoints
         var signatureBlock = string.IsNullOrWhiteSpace(signature) ? "" :
             $"<p class=\"post-signature\">{System.Net.WebUtility.HtmlEncode(signature)}</p>";
 
-        var body = CedarToBlogHtmlRenderer.Render(cedarJson, Consts.URLs.BlogHost);
+        var body = CedarToBlogHtmlRenderer.Render(cedarJson, $"https://{Consts.URLs.BlogHost}");
         var dateLine = draft.BlogPublishedAt is { } published
             ? $"<p class=\"post-date\">{published:d MMM yyyy}</p>"
             : "";

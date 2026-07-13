@@ -26,6 +26,7 @@ public static class AuthEndpoints
     {
         var groupBuilder = app.MapGroup("/api/auth");
 
+        #region Register
         groupBuilder.MapPost("/register", async (RegisterRequest req, UserManager<ApplicationUser> users, IConfiguration cfg) =>
         {
             var invite = cfg[Consts.General.InviteCodeCfg];
@@ -43,6 +44,7 @@ public static class AuthEndpoints
                 ? Results.Ok(new { message = "Registered" })
                 : Results.BadRequest(new { errors = result.Errors.Select(e => e.Description) });
         });
+        #endregion
 
         groupBuilder.MapPost("/login", async (LoginRequest req, SignInManager<ApplicationUser> signIn, UserManager<ApplicationUser> users) =>
         {

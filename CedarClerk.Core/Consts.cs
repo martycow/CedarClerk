@@ -2,7 +2,7 @@
 
 public static class Consts
 {
-    public const string CurrentVersion = "0.7.0";
+    public const string CurrentVersion = "0.7.1";
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
     
@@ -30,7 +30,7 @@ public static class Consts
     public static class URLs
     {
         public const string MainHost = "https://cedarclerk.mooexe.dev";
-        public const string BlogHost = "https://blog.mooexe.dev";
+        public const string BlogHost = "blog.mooexe.dev";
         public const string Localhost = "http://localhost:8080";
     }
 
@@ -62,7 +62,6 @@ public static class Consts
         public const string WebhookSecretCfg = "Cedar:Stripe:WebhookSecret";
         public const string ProPriceIdCfg = "Cedar:Stripe:ProPriceId";
         public const string ProPlusPriceIdCfg = "Cedar:Stripe:ProPlusPriceId";
-        public const string ProPlusTrialPriceIdCfg = "Cedar:Stripe:ProPlusTrialPriceId";
     }
 
     public static class PayPal

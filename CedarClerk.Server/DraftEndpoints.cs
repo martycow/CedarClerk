@@ -2,6 +2,7 @@
 using System.Text.Json;
 using CedarClerk.Core;
 using CedarClerk.Localization;
+using CedarClerk.Server.Ai;
 using CedarClerk.Server.Translation;
 using Microsoft.EntityFrameworkCore;
 
@@ -171,6 +172,102 @@ public static class DraftEndpoints
             await db.SaveChangesAsync(ct);
 
             return Results.Ok(new { translation.Language, translation.Title, translation.CedarJson, translation.UpdatedAt });
+        });
+
+        groupBuilder.MapPost("/{id:guid}/ai-edit/{lang}/{kind}", async (Guid id, string lang, string kind, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg, IHttpClientFactory httpFactory, CancellationToken ct) =>
+        {
+            if (lang != Languages.Primary && !Languages.IsTranslationLanguage(lang))
+                return Results.BadRequest(new { error = $"Unsupported language: {lang}" });
+
+            AiEditKind editKind;
+            switch (kind)
+            {
+                case "fix-errors": editKind = AiEditKind.FixErrors; break;
+                case "schizo": editKind = AiEditKind.Schizo; break;
+                default: return Results.BadRequest(new { error = $"Unknown AI edit kind: {kind}" });
+            }
+
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid, ct);
+            if (draft is null) return Results.NotFound();
+
+            // AI features are Pro Plus; each call counts against the per-day AI quota
+            var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
+            if (!PlanLimitations.HasAiFeatures(tier))
+                return Results.Json(new { error = "AI editing is a Pro Plus feature. Upgrade to use it." }, statusCode: StatusCodes.Status403Forbidden);
+
+            if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
+                return Results.Json(new { error = $"Daily AI limit ({PlanLimitations.AiDailyLimit} calls) reached — resets at midnight UTC." }, statusCode: StatusCodes.Status429TooManyRequests);
+
+            DraftTranslation? translation = null;
+            string sourceTitle, sourceCedarJson;
+            if (lang == Languages.Primary)
+            {
+                sourceTitle = draft.Title;
+                sourceCedarJson = draft.CedarJson;
+            }
+            else
+            {
+                translation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang, ct);
+                if (translation is null) return Results.NotFound(new { error = $"No {lang} version to edit yet" });
+                sourceTitle = translation.Title;
+                sourceCedarJson = translation.CedarJson;
+            }
+
+            IAiEditProvider? provider;
+            try
+            {
+                provider = AiEditProviderFactory.Create(cfg, httpFactory);
+            }
+            catch (AiEditException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status501NotImplemented);
+            }
+            if (provider is null)
+                return Results.Json(new { error = "AI editing is not configured" }, statusCode: StatusCodes.Status501NotImplemented);
+
+            AiEditResult result;
+            try
+            {
+                result = await provider.EditAsync(sourceTitle, sourceCedarJson, editKind, ct);
+            }
+            catch (AiEditException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            try
+            {
+                using var docCheck = JsonDocument.Parse(result.CedarJson);
+                var root = docCheck.RootElement;
+                if (root.ValueKind != JsonValueKind.Object ||
+                    !root.TryGetProperty("type", out var typeProp) ||
+                    typeProp.GetString() != "doc")
+                {
+                    return Results.Json(new { error = "AI returned an invalid document — try again" },
+                        statusCode: StatusCodes.Status502BadGateway);
+                }
+            }
+            catch (JsonException)
+            {
+                return Results.Json(new { error = "AI returned invalid JSON — try again" }, statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            if (translation is null)
+            {
+                draft.Title = result.Title;
+                draft.CedarJson = result.CedarJson;
+                draft.UpdatedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                translation.Title = result.Title;
+                translation.CedarJson = result.CedarJson;
+                translation.UpdatedAt = DateTime.UtcNow;
+            }
+            await db.SaveChangesAsync(ct);
+
+            return Results.Ok(new { title = result.Title, cedarJson = result.CedarJson, updatedAt = DateTime.UtcNow });
         });
 
         groupBuilder.MapDelete("/{id:guid}/translations/{lang}", async (Guid id, string lang, ClaimsPrincipal user, CedarDbContext db) =>

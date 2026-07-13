@@ -287,8 +287,13 @@
                             {{ billingBusy() ? '…' : '⭐ Telegram Stars · ' + starsPriceFor(selectedPlan) }}
                         </button>
                     </div>
-                    @if (billingMessage()) { <p class="export-result">{{ billingMessage() }}</p> }
                     }
+                    @if (b.stripeCustomerLinked) {
+                    <button class="account-action-btn" (click)="manageStripeBilling()" [disabled]="billingBusy()">
+                        {{ billingBusy() ? '…' : 'Manage billing (Stripe)' }}
+                    </button>
+                    }
+                    @if (billingMessage()) { <p class="export-result">{{ billingMessage() }}</p> }
                 }
 
                 <div class="popover-divider"></div>
@@ -457,6 +462,14 @@
                 </button>
                 <button (click)="outdent()"><svg lucideOutdent class="icon"></svg> Decrease indent</button>
                 <button (click)="indent()"><svg lucideIndent class="icon"></svg> Increase indent</button>
+                <div class="overflow-divider"></div>
+                <button (click)="aiEdit('fix-errors')" [disabled]="aiEditBusy()" title="Pro Plus feature — fixes spelling/grammar/punctuation only">
+                    <svg lucideSpellCheck class="icon"></svg> {{ aiEditBusy() ? 'Working…' : 'Fix errors' }}
+                </button>
+                <button (click)="aiEdit('schizo')" [disabled]="aiEditBusy()" title="Pro Plus feature — rewrites in an unhinged schizoposting style">
+                    <svg lucideFlame class="icon"></svg> {{ aiEditBusy() ? 'Working…' : 'Schizo-izer' }}
+                </button>
+                @if (aiEditError()) { <p class="channel-error">{{ aiEditError() }}</p> }
             </div>
         </app-popover>
     </div>

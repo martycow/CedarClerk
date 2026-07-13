@@ -16,6 +16,8 @@ export interface DraftMeta {
 export interface TranslationMeta { language: string; title: string; updatedAt: string; }
 export interface TranslationFull extends TranslationMeta { cedarJson: string; }
 export interface DraftFull extends DraftMeta { cedarJson: string; translations: TranslationMeta[]; }
+export type AiEditKind = 'fix-errors' | 'schizo';
+export interface AiEditResult { title: string; cedarJson: string; updatedAt: string; }
 
 @Injectable({ providedIn: 'root' })
 export class DraftsService {
@@ -60,6 +62,10 @@ export class DraftsService {
 
     autoTranslate(id: string, lang: string) {
         return firstValueFrom(this.http.post<TranslationFull>(`/api/drafts/${id}/translations/${lang}/auto`, {}));
+    }
+
+    aiEdit(id: string, lang: string, kind: AiEditKind) {
+        return firstValueFrom(this.http.post<AiEditResult>(`/api/drafts/${id}/ai-edit/${lang}/${kind}`, {}));
     }
 
     importCedar(file: File) {

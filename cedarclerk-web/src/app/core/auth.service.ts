@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -26,14 +26,25 @@ export class AuthService {
         }
     }
 
-    async register(email: string, password: string, inviteCode: string): Promise<boolean> {
+    async register(email: string, password: string, inviteCode: string): Promise<{ ok: true } | { ok: false; error: string }> {
         try {
             await firstValueFrom(this.http.post('/api/auth/register', { email, password, inviteCode }));
             await this.refresh();
-            return this.userEmail() !== null;
-        } catch {
-            return false;
+            return this.userEmail() !== null ? { ok: true } : { ok: false, error: 'Registration failed' };
+        } catch (e) {
+            return { ok: false, error: this.extractRegisterError(e) };
         }
+    }
+
+    // /api/auth/register returns either {error: string} (e.g. bad invite code) or
+    // {errors: string[]} (ASP.NET Identity password/email validation) — surface whichever fired.
+    private extractRegisterError(e: unknown): string {
+        if (e instanceof HttpErrorResponse) {
+            const body = e.error;
+            if (typeof body?.error === 'string') return body.error;
+            if (Array.isArray(body?.errors)) return body.errors.join(' ');
+        }
+        return 'Registration failed';
     }
 
     async refresh(): Promise<void> {

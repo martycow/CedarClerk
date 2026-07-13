@@ -26,7 +26,7 @@ public static class TranslationProviderFactory
                 if (string.IsNullOrEmpty(key))
                     throw new TranslationException($"{Consts.OpenAi.ApiKeyCfg} is not set");
                 
-                var model = cfg[Consts.OpenAi.ApiKeyCfg] ?? Consts.OpenAi.DefaultModel;
+                var model = cfg[Consts.OpenAi.ModelCfg] ?? Consts.OpenAi.DefaultModel;
                 return new OpenAiTranslationProvider(httpFactory, key, model);
             }
             case "deepl":

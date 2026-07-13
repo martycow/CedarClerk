@@ -36,6 +36,7 @@ public static class BillingEndpoints
                 planTier = SubscriptionPlanHelper.CheckPlanExpiration(user.PlanTier, user.PlanExpiresAt, now).ToString(),
                 planExpiresAt = user.PlanExpiresAt,
                 trialUsed = user.TrialUsedAt is not null,
+                stripeCustomerLinked = !string.IsNullOrEmpty(user.StripeCustomerId),
                 providers = new
                 {
                     stripe = !string.IsNullOrEmpty(cfg[Consts.Stripe.SecretKeyCfg]) && !string.IsNullOrEmpty(cfg[Consts.Stripe.ProPriceIdCfg]),
@@ -224,10 +225,52 @@ public static class BillingEndpoints
                     }
                     break;
                 }
+                case "invoice.payment_failed":
+                {
+                    // Stripe retries automatically per its Smart Retries schedule; if all retries
+                    // fail the subscription is cancelled, which raises customer.subscription.deleted
+                    // (handled above). Nothing to do here but log — the 2-day grace period in
+                    // SubscriptionPlanHelper already covers the retry window without a UI flicker.
+                    var customerId = obj.TryGetProperty("customer", out var cust) && cust.ValueKind == JsonValueKind.String ? cust.GetString() : null;
+                    var user = customerId is null ? null : await db.Users.FirstOrDefaultAsync(u => u.StripeCustomerId == customerId);
+                    logger.LogWarning("Stripe invoice payment failed for user {UserId} (customer {CustomerId})", user?.Id, customerId);
+                    break;
+                }
             }
 
             return Results.Ok();
         });
+
+        group.MapPost("/stripe/portal", async (ClaimsPrincipal principal, UserManager<ApplicationUser> users, IConfiguration cfg, IHttpClientFactory httpFactory) =>
+        {
+            var secretKey = cfg[Consts.Stripe.SecretKeyCfg];
+            if (string.IsNullOrEmpty(secretKey))
+                return Results.Json(new { error = "Stripe is not configured — see docs/integrations-setup.md" }, statusCode: StatusCodes.Status501NotImplemented);
+
+            var user = await users.GetUserAsync(principal);
+            if (user is null) return Results.Unauthorized();
+            if (string.IsNullOrEmpty(user.StripeCustomerId))
+                return Results.BadRequest(new { error = "No Stripe subscription on this account" });
+
+            var mainHost = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
+
+            var http = httpFactory.CreateClient("billing");
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.stripe.com/v1/billing_portal/sessions");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {secretKey}");
+            request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["customer"] = user.StripeCustomerId,
+                ["return_url"] = $"{mainHost}/",
+            });
+
+            var response = await http.SendAsync(request);
+            var json = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+                return Results.Json(new { error = $"Stripe API error ({(int)response.StatusCode}) — check server logs" }, statusCode: StatusCodes.Status502BadGateway);
+
+            using var doc = JsonDocument.Parse(json);
+            return Results.Ok(new { url = doc.RootElement.GetProperty("url").GetString() });
+        }).RequireAuthorization();
 
         #endregion
 

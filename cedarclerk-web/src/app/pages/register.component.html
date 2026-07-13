@@ -20,11 +20,12 @@
         </div>
         <div class="field">
             <label for="cc-reg-invite">Invite code</label>
-            <input id="cc-reg-invite" class="mono" [class.invalid]="error()" [(ngModel)]="inviteCode" placeholder="CEDAR-MOO-0" type="text" autocomplete="off" (keyup.enter)="submit()">
-            @if (error()) {
-            <div class="field-error">{{ error() }}</div>
-            }
+            <input id="cc-reg-invite" class="mono" [(ngModel)]="inviteCode" placeholder="CEDAR-MOO-0" type="text" autocomplete="off" (keyup.enter)="submit()">
         </div>
+
+        @if (error()) {
+        <div class="field-error">{{ error() }}</div>
+        }
 
         <button class="primary-btn" (click)="submit()" [disabled]="busy()">
             {{ busy() ? '…' : 'Create account' }}

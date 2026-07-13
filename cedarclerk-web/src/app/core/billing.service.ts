@@ -8,6 +8,7 @@ export interface BillingStatus {
     planTier: string;
     planExpiresAt: string | null;
     trialUsed: boolean;
+    stripeCustomerLinked: boolean;
     providers: { stripe: boolean; telegramStars: boolean; paypal: boolean };
     prices: {
         proUsd: number; proPlusUsd: number; trialUsd: number;
@@ -35,5 +36,10 @@ export class BillingService {
     // Sends a Stars invoice link to the user's linked Telegram account
     starsInvoice(plan: PlanId) {
         return firstValueFrom(this.http.post<{ sent: boolean }>('/api/billing/telegram-stars/invoice', { plan }));
+    }
+
+    // URL to redirect the browser to (Stripe-hosted subscription management)
+    stripePortal() {
+        return firstValueFrom(this.http.post<{ url: string }>('/api/billing/stripe/portal', {}));
     }
 }

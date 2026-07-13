@@ -8,7 +8,7 @@ import { Editor } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
 import { AuthService } from '../core/auth.service';
-import { DraftsService, DraftMeta, TranslationMeta } from '../core/drafts.service';
+import { DraftsService, DraftMeta, TranslationMeta, AiEditKind } from '../core/drafts.service';
 import { DatePipe } from '@angular/common';
 import { PostsService, PostFormat, PostLanguage, ScheduledPost } from '../core/posts.service';
 import { ChannelsService, Channel, ChannelStats, KnownChat } from '../core/channels.service';
@@ -54,6 +54,7 @@ import {
     LucideDownload as Download, LucideUpload as Upload,
     LucideMessageSquare as MessageSquare,
     LucideRefreshCw as RefreshCw,
+    LucideSpellCheck as SpellCheck, LucideFlame as Flame,
 } from '@lucide/angular';
 
 const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
@@ -104,6 +105,7 @@ interface UploadItem {
         Send, Plus, X, LogOut, RadioTower, Trash2,
         EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, Menu, Superscript,
         ChevronDown, Check, Download, Upload, MessageSquare, RefreshCw,
+        SpellCheck, Flame,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -161,6 +163,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     billingBusy = signal(false);
     billingMessage = signal<string | null>(null);
     selectedPlan: PlanId = 'pro';
+
+    aiEditBusy = signal(false);
+    aiEditError = signal<string | null>(null);
 
     draftReactions = signal<{ likes: number; dislikes: number }>({ likes: 0, dislikes: 0 });
 
@@ -564,6 +569,18 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
+    async manageStripeBilling() {
+        this.billingBusy.set(true);
+        this.billingMessage.set(null);
+        try {
+            const res = await this.billingApi.stripePortal();
+            window.location.href = res.url; // Stripe-hosted subscription management page
+        } catch (e) {
+            this.billingMessage.set(this.httpError(e, 'Could not open the billing portal'));
+            this.billingBusy.set(false);
+        }
+    }
+
     starsPriceFor(plan: PlanId): number {
         const b = this.billing();
         if (!b) return 0;
@@ -598,6 +615,33 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.autoTranslateError.set(this.httpError(e, 'Auto-translate failed — check server logs'));
         } finally {
             this.autoTranslating.set(false);
+        }
+    }
+
+    // Rewrites the current language version in place via an LLM (Pro Plus, daily quota) — grammar
+    // fix or "schizoposting" style rewrite. Same persist-then-load pattern as auto-translate, so
+    // Ctrl+Z in the editor can still undo the content swap if the user doesn't like the result.
+    async aiEdit(kind: AiEditKind) {
+        const id = this.currentId();
+        if (!id || !this.editor) return;
+        const label = kind === 'fix-errors' ? 'Fix errors' : 'Schizo-izer';
+        if (!window.confirm(`${label} will rewrite the current ${this.lang().toUpperCase()} version in place. Continue?`)) return;
+
+        this.aiEditBusy.set(true);
+        this.aiEditError.set(null);
+        try {
+            const res = await this.draftsApi.aiEdit(id, this.lang(), kind);
+            this.title = res.title;
+            this.editor.commands.setContent(JSON.parse(res.cedarJson || EMPTY_DOC));
+            this.saveState.set('saved');
+            if (this.lang() === 'en') {
+                this.enMeta.set({ language: 'en', title: res.title, updatedAt: res.updatedAt });
+            }
+            this.refreshMeta(id);
+        } catch (e) {
+            this.aiEditError.set(this.httpError(e, `${label} failed`));
+        } finally {
+            this.aiEditBusy.set(false);
         }
     }
 

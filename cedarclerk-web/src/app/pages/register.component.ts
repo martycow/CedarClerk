@@ -25,9 +25,12 @@ export class RegisterComponent {
     async submit() {
         this.busy.set(true);
         this.error.set('');
-        const ok = await this.auth.register(this.email, this.password, this.inviteCode);
+        const result = await this.auth.register(this.email, this.password, this.inviteCode);
         this.busy.set(false);
-        ok ? this.router.navigateByUrl('/editor')
-            : this.error.set('Registration failed');
+        if (result.ok) {
+            this.router.navigateByUrl('/editor');
+        } else {
+            this.error.set(result.error);
+        }
     }
 }
