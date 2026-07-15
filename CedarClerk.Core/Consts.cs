@@ -2,7 +2,7 @@
 
 public static class Consts
 {
-    public const string CurrentVersion = "0.7.1";
+    public const string CurrentVersion = "0.7.3.2";
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
     
@@ -92,6 +92,11 @@ public static class Consts
         public const string ApiKeyCfg = "Cedar:Anthropic:ApiKey";
         public const string ModelCfg = "Cedar:Anthropic:Model";
         public const string DefaultModel = "claude-opus-4-8";
+
+        // The SDK's own per-call default (10 min, 2 retries) can leave a request hanging for
+        // ~30 minutes with zero feedback before it ever surfaces an error. Bound it much tighter
+        // so a stuck call fails fast with a clear message instead of looking frozen.
+        public static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(60);
     }
 
     public static class OpenAi

@@ -7,7 +7,7 @@ namespace CedarClerk.Server;
 
 public static class ScheduledPostEndpoints
 {
-    public record ScheduleRequest(Guid DraftId, string ChatId, DateTime ScheduledAtUtc, string Format = Consts.ContentTypes.Html, string Language = Languages.Primary);
+    public record ScheduleRequest(Guid DraftId, string ChatId, DateTime ScheduledAtUtc, string Format = Consts.ContentTypes.Markdown, string Language = Languages.Primary);
 
     public static void MapScheduledPostEndpoints(this WebApplication app)
     {

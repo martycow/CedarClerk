@@ -15,9 +15,10 @@
 }
 
 .popover-panel {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
+    /* Fixed (not absolute) so the panel's containing block is the viewport, letting it escape
+       ancestors that clip overflow — e.g. the toolbar, which scrolls horizontally. Position is
+       computed in the component from the trigger's bounding rect. */
+    position: fixed;
     z-index: 50;
     min-width: 240px;
     max-width: calc(100vw - 24px);
@@ -27,9 +28,4 @@
     box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.12));
     padding: 12px;
     color: var(--text, #222);
-}
-
-.popover-panel.right {
-    left: auto;
-    right: 0;
 }

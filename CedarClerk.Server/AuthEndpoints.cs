@@ -70,11 +70,13 @@ public static class AuthEndpoints
             return Results.Ok(new
             {
                 email = user.FindFirstValue(ClaimTypes.Email) ?? user.Identity!.Name,
+                createdAt = appUser?.CreatedAt,
                 planTier = appUser is null ? null : SubscriptionPlanHelper.CheckPlanExpiration(appUser.PlanTier, appUser.PlanExpiresAt, DateTime.UtcNow).ToString(),
                 planExpiresAt = appUser?.PlanExpiresAt,
                 trialUsed = appUser?.TrialUsedAt is not null,
                 telegramLinked = appUser?.TelegramUserId is not null,
                 telegramUsername = appUser?.TelegramUsername,
+                telegramLinkedAt = appUser?.TelegramLinkedAt,
                 postSignature = appUser?.PostSignature,
             });
         })
@@ -135,6 +137,7 @@ public static class AuthEndpoints
             user.TelegramUserId = req.Id;
             user.TelegramUsername = req.Username;
             user.TelegramFirstName = req.FirstName;
+            user.TelegramLinkedAt = DateTime.UtcNow;
             await users.UpdateAsync(user);
 
             return Results.Ok(new { telegramUsername = user.TelegramUsername });
@@ -144,16 +147,21 @@ public static class AuthEndpoints
         groupBuilder.MapPost("/telegram/unlink", async (ClaimsPrincipal principal, UserManager<ApplicationUser> users) =>
         {
             var user = await users.GetUserAsync(principal);
-            if (user is null) 
+            if (user is null)
                 return Results.Unauthorized();
 
             user.TelegramUserId = null;
             user.TelegramUsername = null;
             user.TelegramFirstName = null;
+            user.TelegramLinkedAt = null;
             await users.UpdateAsync(user);
 
             return Results.NoContent();
         })
+        .RequireAuthorization();
+
+        groupBuilder.MapGet("/telegram/status", (TelegramBotService bot) =>
+            Results.Ok(new { reachable = bot.IsRunning, botUsername = bot.IsRunning ? bot.Me.Username : null }))
         .RequireAuthorization();
     }
 }

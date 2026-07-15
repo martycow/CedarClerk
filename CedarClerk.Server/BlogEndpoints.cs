@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -13,11 +13,13 @@ public static class BlogEndpoints
 {
     private const int CommentMaxLength = 2000;
     private const int AuthorNameMaxLength = 60;
+    private const int ExcerptMaxLength = 140;
 
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
 
     private record ReactRequest(string? AnnotationId, string Kind);
     private record CommentRequest(string? AnnotationId, string? AuthorName, string Text);
+    private record BlogChannelInfo(string Title, string? Username, int? MemberCount);
 
     public static void MapBlogEndpoints(this WebApplication app)
     {
@@ -31,7 +33,7 @@ public static class BlogEndpoints
 
             if (!draft.IsBlogPublished || draft.BlogSlug is null)
                 draft.BlogSlug = await GenerateUniqueSlugAsync(db, draft.Id, draft.Title);
-            
+
             draft.BlogPublishedAt ??= DateTime.UtcNow;
             draft.IsBlogPublished = true;
             await db.SaveChangesAsync();
@@ -50,7 +52,7 @@ public static class BlogEndpoints
             await db.SaveChangesAsync();
             return Results.NoContent();
         });
-        
+
         group.MapGet("/{id:guid}/comments", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -61,7 +63,7 @@ public static class BlogEndpoints
                 .OrderByDescending(c => c.CreatedAt)
                 .Select(c => new { c.Id, c.AnnotationId, c.AuthorName, c.Text, c.CreatedAt })
                 .ToListAsync();
-            
+
             var reactionCounts = await db.Reactions.Where(r => r.DraftId == id)
                 .GroupBy(r => r.Kind)
                 .Select(g => new { Kind = g.Key, Count = g.Count() })
@@ -79,6 +81,47 @@ public static class BlogEndpoints
         });
 
         var commentsGroup = app.MapGroup("/api/comments").RequireAuthorization();
+
+        // All comments + reaction totals across every draft the user owns — backs the /comments
+        // page, which replaced the editor's per-draft right-hand "Comments & likes" panel.
+        commentsGroup.MapGet("/", async (ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draftTitleById = await db.Drafts.Where(d => d.OwnerId == uid)
+                .Select(d => new { d.Id, d.Title })
+                .ToDictionaryAsync(d => d.Id, d => d.Title);
+            var draftIds = draftTitleById.Keys.ToList();
+
+            var comments = await db.Comments.Where(c => draftIds.Contains(c.DraftId))
+                .OrderByDescending(c => c.CreatedAt)
+                .Select(c => new { c.Id, c.DraftId, c.AnnotationId, c.AuthorName, c.Text, c.CreatedAt })
+                .ToListAsync();
+
+            var reactionCounts = await db.Reactions.Where(r => draftIds.Contains(r.DraftId))
+                .GroupBy(r => r.Kind)
+                .Select(g => new { Kind = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            return Results.Ok(new
+            {
+                reactions = new
+                {
+                    likes = reactionCounts.FirstOrDefault(r => r.Kind == "like")?.Count ?? 0,
+                    dislikes = reactionCounts.FirstOrDefault(r => r.Kind == "dislike")?.Count ?? 0,
+                },
+                comments = comments.Select(c => new
+                {
+                    c.Id,
+                    c.DraftId,
+                    DraftTitle = draftTitleById.GetValueOrDefault(c.DraftId, "Untitled"),
+                    c.AnnotationId,
+                    c.AuthorName,
+                    c.Text,
+                    c.CreatedAt,
+                }),
+            });
+        });
+
         commentsGroup.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -153,7 +196,7 @@ public static class BlogEndpoints
             ?? ctx.Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',')[0].Trim()
             ?? ctx.Connection.RemoteIpAddress?.ToString()
             ?? "unknown";
-        
+
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(ip + ":" + Consts.General.VisitorHashSalt)));
     }
 
@@ -305,16 +348,117 @@ public static class BlogEndpoints
         return list.Count == 0 ? "/" : "/?tags=" + string.Join(",", list.Select(Uri.EscapeDataString));
     }
 
+    private static string Excerpt(string cedarJson)
+    {
+        string text;
+        try
+        {
+            text = string.Join(" ", TipTapTextNodes.ExtractTexts(cedarJson)).Trim();
+        }
+        catch (Exception)
+        {
+            return "";
+        }
+
+        if (text.Length <= ExcerptMaxLength)
+            return text;
+
+        var cut = text[..ExcerptMaxLength];
+        var lastSpace = cut.LastIndexOf(' ');
+        if (lastSpace > 0)
+            cut = cut[..lastSpace];
+        return cut + "…";
+    }
+
+    // The blog is single-channel per self-hosted instance: whichever channel belongs to an
+    // owner with at least one published post represents the header identity.
+    private static async Task<BlogChannelInfo?> GetBlogChannelInfoAsync(CedarDbContext db)
+    {
+        var ownerIds = await db.Drafts.Where(d => d.IsBlogPublished).Select(d => d.OwnerId).Distinct().ToListAsync();
+        if (ownerIds.Count == 0)
+            return null;
+
+        var channel = await db.Channels.FirstOrDefaultAsync(c => ownerIds.Contains(c.OwnerId));
+        if (channel is null)
+            return null;
+
+        var memberCount = await db.ChannelStatSnapshots
+            .Where(s => s.ChannelId == channel.Id)
+            .OrderByDescending(s => s.TakenAt)
+            .Select(s => (int?)s.MemberCount)
+            .FirstOrDefaultAsync();
+
+        return new BlogChannelInfo(channel.Title, channel.Username, memberCount);
+    }
+
+    private static string RenderHeader(BlogChannelInfo? channel)
+    {
+        string identity;
+        string openInTelegram = "";
+
+        if (channel is null)
+        {
+            identity = """
+                <div class="channel-avatar brand">
+                <svg width="16" height="16" viewBox="0 0 24 24"><polygon points="12,2 19,11 5,11" fill="currentColor"></polygon><polygon points="12,7 21,18 3,18" fill="currentColor" opacity=".75"></polygon><rect x="10.6" y="18" width="2.8" height="4" rx="1" fill="currentColor" opacity=".9"></rect></svg>
+                </div>
+                <div class="channel-id"><div class="channel-name">Cedar Clerk Blog</div></div>
+                """;
+        }
+        else
+        {
+            var initial = channel.Title.Length > 0 ? channel.Title[..1].ToUpperInvariant() : "?";
+            var meta = channel.Username is null
+                ? ""
+                : channel.MemberCount is { } mc
+                    ? $"@{System.Net.WebUtility.HtmlEncode(channel.Username)} · {mc} subscribers"
+                    : $"@{System.Net.WebUtility.HtmlEncode(channel.Username)}";
+            identity = $"""
+                <div class="channel-avatar">{System.Net.WebUtility.HtmlEncode(initial)}</div>
+                <div class="channel-id">
+                <div class="channel-name">{System.Net.WebUtility.HtmlEncode(channel.Title)}</div>
+                {(meta.Length == 0 ? "" : $"<div class=\"channel-meta\">{meta}</div>")}
+                </div>
+                """;
+
+            if (channel.Username is not null)
+            {
+                openInTelegram = $"""
+                    <a class="tg-open-btn" href="https://t.me/{System.Net.WebUtility.HtmlEncode(channel.Username)}" target="_blank" rel="noopener">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg>
+                    <span class="tg-open-label">Open in Telegram</span>
+                    </a>
+                    """;
+            }
+        }
+
+        return $"""
+            <div class="site-header"><div class="site-header-inner">
+            {identity}
+            <div class="spacer"></div>
+            {openInTelegram}
+            <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Toggle theme">&#9789;</button>
+            </div></div>
+            """;
+    }
+
     private static async Task RenderIndexAsync(HttpContext ctx, CedarDbContext db)
     {
         var posts = await db.Drafts.Where(d => d.IsBlogPublished)
             .OrderByDescending(d => d.BlogPublishedAt)
             .Select(d => new
             {
-                d.Title, d.BlogSlug, d.BlogPublishedAt, d.Tags,
+                d.Id, d.Title, d.BlogSlug, d.BlogPublishedAt, d.Tags, d.CedarJson,
                 TranslationLanguages = db.DraftTranslations.Where(t => t.DraftId == d.Id).Select(t => t.Language).ToList(),
             })
             .ToListAsync();
+
+        var likeCounts = await db.Reactions.Where(r => r.Kind == "like")
+            .GroupBy(r => r.DraftId)
+            .ToDictionaryAsync(g => g.Key, g => g.Count());
+        var commentCounts = await db.Comments
+            .GroupBy(c => c.DraftId)
+            .ToDictionaryAsync(g => g.Key, g => g.Count());
 
         var allTags = posts.SelectMany(p => SplitTags(p.Tags)).Distinct().OrderBy(t => t).ToList();
         var selectedTags = (ctx.Request.Query["tags"].FirstOrDefault() ?? "")
@@ -352,50 +496,52 @@ public static class BlogEndpoints
         }
         else
         {
-            static DateTime MonthOf(DateTime? dt) => new((dt ?? DateTime.MinValue).Year, (dt ?? DateTime.MinValue).Month, 1);
-            foreach (var monthGroup in filtered.GroupBy(p => MonthOf(p.BlogPublishedAt)).OrderByDescending(g => g.Key))
+            sb.Append("<div class=\"post-list\">");
+            foreach (var p in filtered)
             {
-                sb.Append("<h2 class=\"timeline-month\">")
-                  .Append(monthGroup.Key.ToString("MMMM yyyy", CultureInfo.InvariantCulture))
-                  .Append("</h2><ul class=\"post-list\">");
+                var tags = SplitTags(p.Tags);
+                var likes = likeCounts.GetValueOrDefault(p.Id);
+                var comments = commentCounts.GetValueOrDefault(p.Id);
+                var excerpt = Excerpt(p.CedarJson);
 
-                foreach (var p in monthGroup)
-                {
-                    sb.Append("<li><a href=\"/").Append(p.BlogSlug).Append("\">")
-                      .Append(System.Net.WebUtility.HtmlEncode(p.Title)).Append("</a> <time>")
-                      .Append(p.BlogPublishedAt?.ToString("d MMM", CultureInfo.InvariantCulture) ?? "").Append("</time>");
+                sb.Append("<a class=\"post-card\" href=\"/").Append(p.BlogSlug).Append("\">");
+                sb.Append("<div class=\"post-card-meta\">");
+                sb.Append("<span class=\"post-card-date\">")
+                  .Append(p.BlogPublishedAt?.ToString("d MMM yyyy", CultureInfo.InvariantCulture) ?? "")
+                  .Append("</span>");
 
-                    sb.Append(" <span class=\"lang-badges\"><a class=\"lang-badge\" href=\"/").Append(p.BlogSlug).Append("\">RU</a>");
-                    foreach (var lang in p.TranslationLanguages.OrderBy(l => l))
-                    {
-                        sb.Append("<a class=\"lang-badge\" href=\"/").Append(p.BlogSlug).Append("?lang=").Append(lang).Append("\">")
-                          .Append(lang.ToUpperInvariant()).Append("</a>");
-                    }
-                    sb.Append("</span>");
+                sb.Append("<span class=\"post-card-langs\">RU");
+                foreach (var lang in p.TranslationLanguages.OrderBy(l => l))
+                    sb.Append(" · ").Append(lang.ToUpperInvariant());
+                sb.Append("</span>");
 
-                    foreach (var tag in SplitTags(p.Tags))
-                    {
-                        sb.Append(" <a class=\"tag-chip small\" href=\"").Append(TagFilterUrl(selectedTags.Append(tag)))
-                          .Append("\">#").Append(System.Net.WebUtility.HtmlEncode(tag)).Append("</a>");
-                    }
-                    sb.Append("</li>");
-                }
-                sb.Append("</ul>");
+                if (tags.Count > 0)
+                    sb.Append("<span class=\"post-card-tag\">· ").Append(System.Net.WebUtility.HtmlEncode(tags[0])).Append("</span>");
+
+                sb.Append("</div>");
+                sb.Append("<div class=\"post-card-title\">").Append(System.Net.WebUtility.HtmlEncode(p.Title)).Append("</div>");
+                if (excerpt.Length > 0)
+                    sb.Append("<div class=\"post-card-excerpt\">").Append(System.Net.WebUtility.HtmlEncode(excerpt)).Append("</div>");
+                sb.Append("<div class=\"post-card-stats\">&#128077; ").Append(likes).Append(" &middot; &#128172; ").Append(comments).Append("</div>");
+                sb.Append("</a>");
             }
+            sb.Append("</div>");
         }
 
+        var channel = await GetBlogChannelInfoAsync(db);
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), Languages.Primary));
+        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), Languages.Primary, RenderHeader(channel)));
     }
 
     private static async Task RenderPostAsync(HttpContext ctx, CedarDbContext db, string slug)
     {
+        var channel = await GetBlogChannelInfoAsync(db);
         var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.IsBlogPublished);
         if (draft is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             ctx.Response.ContentType = "text/html; charset=utf-8";
-            await ctx.Response.WriteAsync(PageShell("Not found", "<p>Post not found.</p>", Languages.Primary));
+            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Primary, RenderHeader(channel)));
             return;
         }
 
@@ -420,39 +566,58 @@ public static class BlogEndpoints
         {
             var items = new List<string>();
             items.Add(lang == Languages.Primary
-                ? "<span class=\"lang-badge current\">RU</span>"
-                : $"<a class=\"lang-badge\" href=\"/{draft.BlogSlug}\">RU</a>");
+                ? "<span class=\"lang-switch-btn current\">RU</span>"
+                : $"<a class=\"lang-switch-btn\" href=\"/{draft.BlogSlug}\">RU</a>");
             foreach (var l in availableLanguages.OrderBy(l => l))
             {
                 items.Add(lang == l
-                    ? $"<span class=\"lang-badge current\">{l.ToUpperInvariant()}</span>"
-                    : $"<a class=\"lang-badge\" href=\"/{draft.BlogSlug}?lang={l}\">{l.ToUpperInvariant()}</a>");
+                    ? $"<span class=\"lang-switch-btn current\">{l.ToUpperInvariant()}</span>"
+                    : $"<a class=\"lang-switch-btn\" href=\"/{draft.BlogSlug}?lang={l}\">{l.ToUpperInvariant()}</a>");
             }
-            langSwitch = $"<p class=\"lang-badges lang-switch\">{string.Join("", items)}</p>";
+            langSwitch = $"<div class=\"lang-switch-track\">{string.Join("", items)}</div>";
         }
 
         var tags = SplitTags(draft.Tags);
         var tagsLine = tags.Count == 0 ? "" :
-            "<p class=\"post-tags\">" + string.Join(" ", tags.Select(t =>
-                $"<a class=\"tag-chip small\" href=\"{TagFilterUrl([t])}\">#{System.Net.WebUtility.HtmlEncode(t)}</a>")) + "</p>";
+            "<span class=\"post-tag-caps\">" + string.Join(" &middot; ", tags.Select(System.Net.WebUtility.HtmlEncode)) + "</span>";
 
         var signature = await db.Users.Where(u => u.Id == draft.OwnerId).Select(u => u.PostSignature).FirstOrDefaultAsync();
         var signatureBlock = string.IsNullOrWhiteSpace(signature) ? "" :
-            $"<p class=\"post-signature\">{System.Net.WebUtility.HtmlEncode(signature)}</p>";
+            $"<span class=\"post-signature\">{System.Net.WebUtility.HtmlEncode(signature)}</span>";
 
         var body = CedarToBlogHtmlRenderer.Render(cedarJson, $"https://{Consts.URLs.BlogHost}");
         var dateLine = draft.BlogPublishedAt is { } published
-            ? $"<p class=\"post-date\">{published:d MMM yyyy}</p>"
+            ? $"<span class=\"post-card-date\">{published:d MMM yyyy}</span>"
             : "";
         var telegramLink = draft is { LastTelegramUsername: not null, LastTelegramMessageId: not null }
-            ? $"<p class=\"telegram-link\"><a href=\"https://t.me/{draft.LastTelegramUsername}/{draft.LastTelegramMessageId}\" target=\"_blank\" rel=\"noopener\">View this post on Telegram &#8594;</a></p>"
+            ? $"<a class=\"telegram-link\" href=\"https://t.me/{draft.LastTelegramUsername}/{draft.LastTelegramMessageId}\" target=\"_blank\" rel=\"noopener\">View in Telegram &#8594;</a>"
             : "";
+
+        var metaRow = $"<div class=\"post-meta-row\">{dateLine}{langSwitch}{tagsLine}</div>";
+        var footerRow = (signatureBlock.Length > 0 || telegramLink.Length > 0)
+            ? $"<div class=\"post-footer-row\">{signatureBlock}<div class=\"spacer\"></div>{telegramLink}</div>"
+            : "";
+
+        var postSheet = $"""
+            <div class="post-sheet">
+            {metaRow}
+            <h1>{System.Net.WebUtility.HtmlEncode(title)}</h1>
+            {body}
+            {footerRow}
+            </div>
+            """;
+
         var articleBlock = "<div class=\"annotation article-annotation\" data-annotation-id=\"\">"
             + CedarToBlogHtmlRenderer.AnnotationControlsHtml() + "</div>";
-        var html = $"<article><h1>{System.Net.WebUtility.HtmlEncode(title)}</h1>{dateLine}{langSwitch}{tagsLine}{body}{signatureBlock}{telegramLink}{articleBlock}</article>";
+
+        var html = $"""
+            <a class="back-link" href="/">&larr; All posts</a>
+            {postSheet}
+            {articleBlock}
+            """;
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(title, html, lang));
+        await ctx.Response.WriteAsync(PageShell(title, html, lang, RenderHeader(channel)));
     }
 
     // Plain (non-interpolated) raw string — title/body are substituted via Replace so the
@@ -471,20 +636,100 @@ public static class BlogEndpoints
         })();
         </script>
         <style>
-        :root { color-scheme: light dark; --bg: #fdfcfa; --fg: #1c1a16; }
-        @media (prefers-color-scheme: dark) { :root { --bg: #17140f; --fg: #eae6db; } }
-        :root[data-theme="light"] { color-scheme: light; --bg: #fdfcfa; --fg: #1c1a16; }
-        :root[data-theme="dark"] { color-scheme: dark; --bg: #17140f; --fg: #eae6db; }
-        body { max-width: 680px; margin: 40px auto; padding: 0 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; background: var(--bg); color: var(--fg); }
+        :root {
+            color-scheme: light dark;
+            --bg: #ECE9E2; --canvas: #E2DED4; --surface: #F7F5EF; --sheet: #FCFBF8; --alt: #EFECE4;
+            --border: #DBD5C8; --text: #26231D; --t2: #6B655A; --t3: #9F988A;
+            --accent: #5B6E46; --danger: #B4452C; --ok: #3E7A4E;
+            --shadow: 0 1px 3px rgba(40,35,25,.10);
+            --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-mono: ui-monospace, Menlo, Consolas, monospace;
+            --asoft: color-mix(in srgb, var(--accent) 13%, var(--surface));
+            --abord: color-mix(in srgb, var(--accent) 38%, var(--border));
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #1D1B17; --canvas: #171511; --surface: #25221B; --sheet: #211E18; --alt: #2F2C23;
+                --border: #3C382D; --text: #EAE6DB; --t2: #A69F8F; --t3: #776F5F;
+                --accent: color-mix(in srgb, #5B6E46 55%, #E8F0E8 45%); --danger: #E2745C; --ok: #82BB8C;
+                --shadow: 0 1px 3px rgba(0,0,0,.45);
+            }
+        }
+        :root[data-theme="light"] {
+            --bg: #ECE9E2; --canvas: #E2DED4; --surface: #F7F5EF; --sheet: #FCFBF8; --alt: #EFECE4;
+            --border: #DBD5C8; --text: #26231D; --t2: #6B655A; --t3: #9F988A;
+            --accent: #5B6E46; --danger: #B4452C; --ok: #3E7A4E;
+            --shadow: 0 1px 3px rgba(40,35,25,.10);
+        }
+        :root[data-theme="dark"] {
+            --bg: #1D1B17; --canvas: #171511; --surface: #25221B; --sheet: #211E18; --alt: #2F2C23;
+            --border: #3C382D; --text: #EAE6DB; --t2: #A69F8F; --t3: #776F5F;
+            --accent: color-mix(in srgb, #5B6E46 55%, #E8F0E8 45%); --danger: #E2745C; --ok: #82BB8C;
+            --shadow: 0 1px 3px rgba(0,0,0,.45);
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: var(--canvas); color: var(--text); font-family: var(--font-sans); line-height: 1.6; }
+        a { color: var(--accent); text-decoration: none; }
         img, video { max-width: 100%; height: auto; }
-        a { color: inherit; }
-        .spoiler { background: currentColor; color: transparent; border-radius: 3px; cursor: pointer; }
-        .spoiler:hover, .spoiler:focus { background: transparent; }
-        .post-date, time { opacity: 0.6; font-size: 0.9em; }
-        .post-list { list-style: none; padding: 0; }
-        .post-list li { margin-bottom: 12px; }
-        blockquote { border-left: 3px solid currentColor; opacity: 0.85; margin: 0; padding-left: 16px; }
-        pre { overflow-x: auto; padding: 12px; background: rgba(128,128,128,0.15); border-radius: 6px; }
+        .spacer { flex: 1; }
+
+        .site-header { position: sticky; top: 0; z-index: 10; background: var(--surface); border-bottom: 1px solid var(--border); }
+        .site-header-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 20px; }
+        .channel-avatar { width: 30px; height: 30px; border-radius: 50%; background: #C98A3B; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex: none; }
+        .channel-avatar.brand { background: var(--asoft); color: var(--accent); }
+        .channel-id { min-width: 0; }
+        .channel-name { font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .channel-meta { font-size: 11px; color: var(--t3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tg-open-btn { display: flex; align-items: center; gap: 6px; border: 1px solid var(--abord); background: var(--asoft); border-radius: 8px; padding: 5px 12px; font-size: 12.5px; font-weight: 500; color: var(--text); white-space: nowrap; flex: none; }
+        .tg-open-btn:hover { filter: brightness(.97); }
+        .theme-toggle-btn { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: none; background: none; border-radius: 8px; color: var(--t2); cursor: pointer; font-size: 15px; }
+        .theme-toggle-btn:hover { background: rgba(128,120,100,.14); }
+
+        .site-main { max-width: 760px; margin: 0 auto; padding: 26px 20px 60px; }
+        .empty { color: var(--t2); }
+
+        .tag-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; }
+        .tag-chip { display: inline-block; border: 1px solid var(--border); background: var(--sheet); color: var(--t2); border-radius: 999px; padding: 4px 13px; font-size: 12px; font-weight: 500; }
+        .tag-chip:hover { border-color: var(--t3); }
+        .tag-chip.selected { border-color: var(--abord); background: var(--asoft); color: var(--accent); }
+
+        .post-list { display: flex; flex-direction: column; gap: 14px; }
+        .post-card { display: block; background: var(--sheet); border-radius: 12px; box-shadow: var(--shadow); padding: 20px 24px; border: 1px solid transparent; color: var(--text); }
+        .post-card:hover { border-color: var(--abord); }
+        .post-card-meta { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 11.5px; color: var(--t3); }
+        .post-card-langs { font-size: 10px; font-weight: 600; letter-spacing: .04em; color: var(--accent); background: var(--asoft); border-radius: 4px; padding: 2px 6px; }
+        .post-card-title { font-size: 19px; font-weight: 700; letter-spacing: -.01em; line-height: 1.3; margin: 0 0 6px; }
+        .post-card-excerpt { font-size: 14px; color: var(--t2); line-height: 1.55; margin: 0 0 10px; }
+        .post-card-stats { font-size: 12px; color: var(--t3); }
+
+        .back-link { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; padding: 4px 0; margin: 0 0 12px; }
+        .back-link:hover { text-decoration: underline; }
+        .post-sheet { background: var(--sheet); border-radius: 12px; box-shadow: var(--shadow); padding: 32px 40px 28px; }
+        .post-sheet h1 { font-size: 27px; font-weight: 700; letter-spacing: -.015em; line-height: 1.22; margin: 0 0 16px; }
+        .post-sheet h2 { font-size: 20px; font-weight: 600; letter-spacing: -.01em; margin: 24px 0 8px; }
+        .post-sheet p { font-size: 16px; line-height: 1.65; margin: 0 0 14px; }
+        .post-meta-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; font-size: 12px; color: var(--t3); }
+        .lang-switch-track { display: flex; gap: 2px; background: var(--alt); border-radius: 7px; padding: 2px; }
+        .lang-switch-btn { border: none; background: none; border-radius: 5px; padding: 3px 11px; font-size: 11.5px; font-weight: 600; color: var(--t2); }
+        .lang-switch-btn.current { background: var(--sheet); box-shadow: var(--shadow); color: var(--text); }
+        .post-tag-caps { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--accent); }
+        .post-footer-row { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--border); padding: 14px 0 0; margin-top: 14px; }
+        .post-signature { font-size: 13.5px; font-style: italic; color: var(--t2); white-space: pre-line; }
+        .telegram-link { font-size: 12.5px; font-weight: 500; color: var(--accent); }
+
+        .spoiler { background: var(--t3); color: transparent; border-radius: 4px; padding: 0 5px; cursor: pointer; transition: background .2s; }
+        .spoiler:hover, .spoiler:focus { background: var(--alt); color: inherit; }
+        .post-sheet code { font-family: var(--font-mono); font-size: .85em; background: var(--alt); border-radius: 4px; padding: 1px 6px; }
+        .post-sheet pre { background: #22201A; color: #C9C08C; border-radius: 8px; padding: 12px 14px; overflow-x: auto; }
+        .post-sheet pre code { background: none; padding: 0; font-size: 13.5px; line-height: 1.55; }
+        .post-sheet blockquote { border-left: 3px solid var(--abord); padding: 2px 0 2px 14px; color: var(--t2); margin: 0 0 16px; }
+        .post-sheet ul, .post-sheet ol { font-size: 16px; line-height: 1.7; padding-left: 20px; margin: 0 0 16px; }
+        .post-sheet figure { margin: 0 0 16px; }
+        .post-sheet figcaption { text-align: center; font-size: 13px; color: var(--t2); margin-top: 6px; }
+        .post-sheet table { width: 100%; border-collapse: collapse; font-size: 14.5px; margin: 0 0 16px; overflow-x: auto; display: block; }
+        .post-sheet th, .post-sheet td { border: 1px solid var(--border); padding: 7px 11px; text-align: left; vertical-align: top; }
+        .post-sheet th { background: var(--alt); font-weight: 600; }
+        .post-sheet tr:nth-child(even) td { background: color-mix(in srgb, var(--alt) 40%, transparent); }
         .math-tex { margin: 16px 0; overflow-x: auto; }
         div.math-tex { text-align: center; }
         .collage { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px; }
@@ -496,44 +741,62 @@ public static class BlogEndpoints
         .carousel-next { right: 8px; }
         .carousel-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
         .carousel-dot { width: 8px; height: 8px; border-radius: 50%; border: none; background: rgba(128,128,128,0.4); cursor: pointer; padding: 0; }
-        .carousel-dot.active { background: currentColor; }
-        .telegram-link { margin-top: 24px; font-size: 0.9em; opacity: 0.8; }
-        .telegram-link a { text-decoration: underline; }
-        .annotation { border-left: 3px solid rgba(91,110,70,0.5); background: rgba(91,110,70,0.08); padding: 10px 14px; margin: 16px 0; border-radius: 4px; }
-        .article-annotation { border-left: none; margin-top: 48px; padding: 20px; border-top: 2px solid rgba(128,128,128,0.3); background: rgba(128,128,128,0.06); border-radius: 0 0 8px 8px; }
-        .article-annotation::before { content: "Reactions & comments"; display: block; font-size: 0.75em; text-transform: uppercase; letter-spacing: .06em; opacity: 0.55; margin-bottom: 12px; }
-        .annotation-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; font-size: 0.9em; }
-        .react-btn { background: none; border: 1px solid rgba(128,128,128,0.3); border-radius: 999px; padding: 3px 10px; cursor: pointer; color: inherit; font: inherit; }
-        .react-btn.active { border-color: currentColor; background: rgba(128,128,128,0.15); }
-        .comment-count-label { font-size: 0.9em; opacity: 0.8; }
-        .comment-box { margin-top: 10px; }
-        .comment-item { padding: 8px 0; border-top: 1px solid rgba(128,128,128,0.15); }
-        .comment-meta { font-size: 0.8em; opacity: 0.6; margin-bottom: 2px; }
-        .comment-load-more { display: block; margin: 8px 0; background: none; border: 1px solid rgba(128,128,128,0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: inherit; font: inherit; font-size: 0.85em; }
-        .comment-form { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; max-width: 360px; }
-        .comment-form input, .comment-form textarea { font: inherit; padding: 6px 8px; border: 1px solid rgba(128,128,128,0.3); border-radius: 6px; background: transparent; color: inherit; }
-        .comment-form textarea { min-height: 60px; resize: vertical; }
-        .comment-form button { align-self: flex-start; padding: 5px 14px; border-radius: 6px; border: 1px solid currentColor; background: none; color: inherit; cursor: pointer; }
-        .theme-toggle-btn { position: fixed; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(128,128,128,0.3); background: var(--bg); color: var(--fg); cursor: pointer; font-size: 15px; z-index: 100; }
-        .lang-badges { display: inline-flex; gap: 4px; vertical-align: middle; }
-        .lang-badge { display: inline-block; font-size: 0.7em; letter-spacing: .05em; padding: 1px 7px; border: 1px solid rgba(128,128,128,0.35); border-radius: 999px; text-decoration: none; opacity: 0.75; }
-        a.lang-badge:hover { opacity: 1; border-color: currentColor; }
-        .lang-badge.current { border-color: currentColor; opacity: 1; font-weight: 600; }
-        .lang-switch { margin: -6px 0 18px; }
-        .timeline-month { font-size: 0.85em; text-transform: uppercase; letter-spacing: .08em; opacity: 0.55; margin: 32px 0 10px; border-bottom: 1px solid rgba(128,128,128,0.2); padding-bottom: 4px; }
-        .tag-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
-        .tag-chip { display: inline-block; font-size: 0.8em; padding: 2px 10px; border: 1px solid rgba(128,128,128,0.35); border-radius: 999px; text-decoration: none; opacity: 0.8; }
-        .tag-chip:hover { opacity: 1; border-color: currentColor; }
-        .tag-chip.selected { border-color: currentColor; background: rgba(128,128,128,0.15); opacity: 1; font-weight: 600; }
-        .tag-chip.small { font-size: 0.7em; padding: 1px 7px; }
-        .post-tags { margin: -6px 0 18px; }
-        .post-signature { white-space: pre-line; opacity: 0.7; margin-top: 32px; font-size: 0.95em; }
+        .carousel-dot.active { background: var(--accent); }
+        .footnotes { font-size: 12.5px; color: var(--t2); border-top: 1px solid var(--border); padding: 10px 0 0; margin: 0 0 4px; }
+        .footnotes sup, .post-sheet sup { color: var(--accent); font-weight: 600; }
+
+        .annotation { border-left: 3px solid var(--abord); background: var(--asoft); padding: 10px 14px; margin: 16px 0; border-radius: 4px; }
+        .article-annotation { border-left: none; background: none; padding: 0; margin: 16px 0 0; }
+        .annotation-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .article-annotation > .annotation-controls { margin-bottom: 14px; }
+        .react-btn { display: flex; align-items: center; gap: 7px; border: 1px solid var(--border); background: var(--sheet); border-radius: 999px; padding: 7px 16px; font-size: 14px; cursor: pointer; color: var(--text); font-family: inherit; }
+        .react-btn:hover { border-color: var(--abord); }
+        .react-btn.active { border-color: var(--abord); background: var(--asoft); }
+        .react-btn .count { font-weight: 600; font-variant-numeric: tabular-nums; }
+        .comment-count-label { font-size: 13px; color: var(--t3); }
+        .comment-box { background: var(--sheet); border-radius: 12px; box-shadow: var(--shadow); padding: 20px 24px; }
+        .comment-box-label { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; font-weight: 600; color: var(--t3); margin: 0 0 12px; }
+        .comment-list { display: flex; flex-direction: column; gap: 4px; margin: 0 0 14px; }
+        .comment-item { display: flex; gap: 10px; padding: 8px 10px; border-radius: 9px; transition: background .25s; }
+        .comment-item.glow { background: var(--asoft); }
+        .comment-avatar { width: 28px; height: 28px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex: none; }
+        .comment-meta { display: flex; align-items: baseline; gap: 7px; font-size: 13px; font-weight: 600; }
+        .comment-meta time { font-size: 11px; font-weight: 400; color: var(--t3); }
+        .comment-anchor { font-size: 11px; color: var(--accent); background: var(--asoft); border-radius: 5px; padding: 2px 7px; display: inline-block; margin: 3px 0 1px; }
+        .comment-text { font-size: 14px; line-height: 1.5; }
+        .comment-load-more { display: block; margin: 0 0 10px; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: var(--text); font: inherit; font-size: 12.5px; }
+        .comment-form { display: flex; gap: 8px; }
+        .comment-form input, .comment-form textarea { flex: 1; border: 1px solid var(--border); background: var(--sheet); color: var(--text); border-radius: 8px; padding: 9px 12px; font-size: 13.5px; font-family: inherit; outline: none; resize: vertical; }
+        .comment-form input:focus, .comment-form textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--asoft); }
+        .comment-form .comment-author { flex: none; width: 140px; }
+        .comment-form button { align-self: flex-start; border: none; background: var(--accent); color: #F4F2EA; border-radius: 8px; padding: 9px 18px; font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: inherit; }
+        .comment-form button:hover { filter: brightness(1.08); }
+
+        .site-footer { border-top: 1px solid var(--border); background: var(--surface); }
+        .site-footer-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 16px 20px; font-size: 12px; color: var(--t3); }
+
+        /* .post-sheet's fixed 40px side padding left barely any room for the 3-wide comment
+           form (name input + textarea + button) on phone-width screens — stack it instead. */
+        @media (max-width: 480px) {
+            .post-sheet { padding: 22px 16px 20px; }
+            .comment-box { padding: 16px; }
+            .tg-open-btn span.tg-open-label { display: none; }
+            .comment-form { flex-direction: column; }
+            .comment-form .comment-author { width: 100%; }
+            .comment-form button { align-self: stretch; }
+        }
         </style>
         {{MATH_ASSETS}}
         </head>
         <body>
-        <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Toggle theme">&#9789;</button>
+        {{HEADER}}
+        <main class="site-main">
         {{BODY}}
+        </main>
+        <div class="site-footer"><div class="site-footer-inner">
+        <svg width="14" height="14" viewBox="0 0 24 24"><polygon points="12,2 19,11 5,11" fill="var(--accent)"></polygon><polygon points="12,7 21,18 3,18" fill="var(--accent)" opacity="0.75"></polygon><rect x="10.6" y="18" width="2.8" height="4" rx="1" fill="var(--accent)" opacity="0.9"></rect></svg>
+        <span>Made with <a href="https://cedarclerk.mooexe.dev" style="font-weight:500">Cedar Clerk</a> — write here, publish there. Moo.</span>
+        </div></div>
         <script>
         document.querySelectorAll('.carousel').forEach(function (car) {
             var imgs = car.querySelectorAll('.carousel-viewport img');
@@ -577,20 +840,39 @@ public static class BlogEndpoints
             if (!slug) return;
 
             var PAGE_SIZE = 20;
+            var AVATAR_COLORS = ['#7A5A3A', '#375D74', '#3E7A4E', '#8A4A6B', '#5B6E46'];
+            function avatarColor(name) {
+                var hash = 0;
+                for (var i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+                return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+            }
 
             function renderCommentsPage(listEl, moreBtn, comments, shownCount) {
                 listEl.innerHTML = '';
                 comments.slice(0, shownCount).forEach(function (c) {
+                    var name = c.authorName || 'Anonymous';
                     var item = document.createElement('div');
                     item.className = 'comment-item';
+                    var avatar = document.createElement('div');
+                    avatar.className = 'comment-avatar';
+                    avatar.style.background = avatarColor(name);
+                    avatar.textContent = name.charAt(0).toUpperCase();
+                    var body = document.createElement('div');
                     var meta = document.createElement('div');
                     meta.className = 'comment-meta';
-                    meta.textContent = (c.authorName || 'Anonymous') + ' — ' + new Date(c.createdAt).toLocaleDateString();
+                    var nameEl = document.createElement('span');
+                    nameEl.textContent = name;
+                    var timeEl = document.createElement('time');
+                    timeEl.textContent = new Date(c.createdAt).toLocaleDateString();
+                    meta.appendChild(nameEl);
+                    meta.appendChild(timeEl);
                     var text = document.createElement('div');
                     text.className = 'comment-text';
                     text.textContent = c.text;
-                    item.appendChild(meta);
-                    item.appendChild(text);
+                    body.appendChild(meta);
+                    body.appendChild(text);
+                    item.appendChild(avatar);
+                    item.appendChild(body);
                     listEl.appendChild(item);
                 });
                 if (moreBtn) moreBtn.hidden = shownCount >= comments.length;
@@ -642,7 +924,7 @@ public static class BlogEndpoints
                     form.addEventListener('submit', function (e) {
                         e.preventDefault();
                         var authorInput = form.querySelector('.comment-author');
-                        var textInput = form.querySelector('.comment-text');
+                        var textInput = form.querySelector('textarea.comment-text');
                         var text = textInput.value.trim();
                         if (!text) return;
                         fetch('/api/posts/' + encodeURIComponent(slug) + '/comments', {
@@ -685,13 +967,14 @@ public static class BlogEndpoints
         <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" onload="document.querySelectorAll('.math-tex').forEach(function (el) { try { katex.render(el.textContent, el, { displayMode: el.dataset.display === 'true', throwOnError: false }); } catch (e) {} });"></script>
         """;
 
-    private static string PageShell(string title, string bodyHtml, string lang)
+    private static string PageShell(string title, string bodyHtml, string lang, string headerHtml)
     {
         var mathAssets = bodyHtml.Contains("math-tex") ? MathAssets : "";
         return ShellTemplate
             .Replace("{{LANG}}", lang)
             .Replace("{{TITLE}}", System.Net.WebUtility.HtmlEncode(title))
             .Replace("{{MATH_ASSETS}}", mathAssets)
+            .Replace("{{HEADER}}", headerHtml)
             .Replace("{{BODY}}", bodyHtml);
     }
 }

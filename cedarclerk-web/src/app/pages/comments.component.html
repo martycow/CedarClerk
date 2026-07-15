@@ -1,0 +1,44 @@
+<div class="comments-page">
+    <header class="comments-header">
+        <a class="icon-btn" routerLink="/editor" title="Back to editor">
+            <svg lucideArrowLeft class="icon"></svg>
+        </a>
+        <app-cedar-logo [size]="19"></app-cedar-logo>
+        <span class="brand-name">Cedar Clerk</span>
+        <span class="crumb-sep">/</span>
+        <span class="crumb-current">Comments &amp; likes</span>
+        <span class="spacer"></span>
+        <button class="icon-btn" (click)="theme.toggle()" title="Toggle theme">
+            {{ theme.theme() === 'dark' ? '☀' : '☾' }}
+        </button>
+        <span class="avatar">{{ avatarInitial() }}</span>
+    </header>
+
+    <div class="comments-body">
+        <div class="reactions-card">
+            <span class="reactions-summary">👍 {{ reactions().likes }} · 👎 {{ reactions().dislikes }}</span>
+            <span class="reactions-hint">across all your drafts</span>
+        </div>
+
+        @if (loading()) {
+        <p class="hint">Loading…</p>
+        } @else {
+            @for (c of comments(); track c.id) {
+            <div class="comment-card">
+                <div class="comment-row-top">
+                    <span class="comment-draft-title">{{ c.draftTitle }}</span>
+                    <span class="comment-tag">{{ c.annotationId ? 'In text' : 'Whole article' }}</span>
+                    <span class="spacer"></span>
+                    <button class="mini-remove" (click)="deleteComment(c.id)" title="Delete comment">
+                        <svg lucideTrash2 class="icon-sm"></svg>
+                    </button>
+                </div>
+                <div class="comment-row-meta">{{ c.authorName || 'Anonymous' }} · {{ c.createdAt | date:'d MMM, HH:mm' }}</div>
+                <div class="comment-row-text">{{ c.text }}</div>
+            </div>
+            } @empty {
+            <p class="hint">No comments yet.</p>
+            }
+        }
+    </div>
+</div>

@@ -106,8 +106,9 @@ public static class CedarToTelegramHtmlRenderer
                 break;
 
             case "image":
+                // Rich Message HTML has no <img> tag — RichBlockType.Photo corresponds to <photo>.
                 var src = ResolveUrl((string?)node["attrs"]?["src"], ctx.MediaBaseUrl);
-                AppendMedia(sb, "img", src, (string?)node["attrs"]?["caption"], isVoid: true);
+                AppendMedia(sb, "photo", src, (string?)node["attrs"]?["caption"], isVoid: true);
                 break;
 
             case "video":
@@ -129,7 +130,7 @@ public static class CedarToTelegramHtmlRenderer
                     foreach (var img in images)
                     {
                         var imgSrc = ResolveUrl((string?)img, ctx.MediaBaseUrl);
-                        sb.Append($"<img src=\"{Escape(imgSrc)}\">");
+                        sb.Append($"<photo src=\"{Escape(imgSrc)}\">");
                     }
                 }
                 sb.Append("</tg-slideshow>");
@@ -142,7 +143,7 @@ public static class CedarToTelegramHtmlRenderer
                     foreach (var img in collageImages)
                     {
                         var imgSrc = ResolveUrl((string?)img, ctx.MediaBaseUrl);
-                        sb.Append($"<img src=\"{Escape(imgSrc)}\">");
+                        sb.Append($"<photo src=\"{Escape(imgSrc)}\">");
                     }
                 }
                 sb.Append("</tg-collage>");

@@ -44,6 +44,11 @@ export const ImageNode = Image.extend({
                     }
                     return true;
                 },
+                // Without this, ProseMirror treats clicks/keydowns inside the caption input as
+                // events on the (atom) image node itself: clicking it turned into a NodeSelection
+                // instead of placing a caret, and Backspace while editing the caption deleted the
+                // whole image because the node — not the input's text — was "selected".
+                stopEvent: event => captionInput.contains(event.target as Node),
             };
         };
     },

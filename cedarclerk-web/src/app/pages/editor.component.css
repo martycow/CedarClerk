@@ -117,9 +117,6 @@
     background: rgba(128, 120, 100, .14);
 }
 
-.hamburger {
-    display: none;
-}
 
 .theme-toggle {
     width: 30px;
@@ -258,24 +255,6 @@
     background: color-mix(in srgb, var(--danger) 8%, var(--sheet));
 }
 
-.plan-badge {
-    display: inline-block;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    color: var(--t3);
-    background: var(--alt);
-    border-radius: 999px;
-    padding: 2px 8px;
-    margin: 0 0 10px;
-}
-
-.telegram-status {
-    font-size: 13px;
-    color: var(--text);
-    margin: 6px 0 10px;
-}
-
 .account-action-btn {
     display: flex;
     align-items: center;
@@ -290,6 +269,7 @@
     cursor: pointer;
     font-size: 13px;
     color: var(--text);
+    text-decoration: none;
 }
 
 .account-action-btn:hover {
@@ -301,16 +281,51 @@
     cursor: default;
 }
 
-/* ---------- Toolbar ---------- */
+/* ---------- Toolbar (ribbon) ---------- */
 .toolbar {
     display: flex;
-    align-items: center;
-    gap: 2px;
-    height: 38px;
+    align-items: stretch;
+    gap: 10px;
+    height: 58px;
     flex: none;
-    padding: 0 12px;
+    padding: 5px 14px 0;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: visible;
+}
+
+.tb-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    flex: none;
+}
+
+.tb-row {
+    display: flex;
+    gap: 1px;
+}
+
+.tb-caption {
+    font-size: 9px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--t3);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.tb-caption.accent {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.tb-flex-spacer {
+    flex: 1;
 }
 
 .toolbar .block-dropdown {
@@ -341,11 +356,13 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    min-width: 160px;
+    min-width: 180px;
 }
 
 .toolbar .block-menu button {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     width: 100%;
     text-align: left;
     border: none;
@@ -393,51 +410,152 @@
     color: var(--text);
 }
 
-.overflow-btn {
-    font-size: 14px;
+.toolbar button:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.toolbar .gif-btn {
+    font-size: 9.5px;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: -.02em;
 }
 
-.overflow-menu {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 200px;
-}
-
-.toolbar .overflow-menu button {
+.toolbar .ai-chip {
     display: flex;
     align-items: center;
-    gap: 8px;
-    width: 100%;
-    box-sizing: border-box;
-    text-align: left;
-    border: none;
-    background: none;
-    padding: 7px 8px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-size: 13px;
-    color: var(--text);
-    font-family: inherit;
+    width: auto;
     height: auto;
+    gap: 5px;
+    border: 1px solid var(--abord);
+    background: var(--asoft);
+    border-radius: 7px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
 }
 
-.toolbar .overflow-menu button:hover {
-    background: rgba(128, 120, 100, .12);
+.toolbar .ai-chip:hover {
+    filter: brightness(.97);
 }
 
-.overflow-divider {
-    border-top: 1px solid var(--border);
-    margin: 4px 0;
+.ai-chip .icon-xs {
+    color: var(--accent);
 }
 
 .sep {
     width: 1px;
-    height: 18px;
+    align-self: stretch;
     background: var(--border);
-    margin: 0 6px;
+    margin: 4px 0;
+}
+
+/* ---------- AI confirm dialog & toast ---------- */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(24, 21, 16, .45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.modal-card {
+    width: 380px;
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, .3);
+    padding: 22px 24px;
+    color: var(--text);
+}
+
+.modal-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 8px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+
+.modal-head .icon {
+    color: var(--accent);
+}
+
+.modal-body {
+    font-size: 13px;
+    color: var(--t2);
+    line-height: 1.55;
+    margin: 0 0 16px;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.btn-accent {
+    border: none;
+    background: var(--accent);
+    color: #F4F2EA;
+    border-radius: var(--radius-sm);
+    padding: 7px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.btn-accent:hover {
+    filter: brightness(1.08);
+}
+
+.btn-ghost {
+    width: auto;
+    height: auto;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--t2);
+    border-radius: var(--radius-sm);
+    padding: 7px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.btn-ghost:hover {
+    color: var(--text);
+    border-color: var(--t3);
+}
+
+.ai-toast {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--sheet);
+    border: 1px solid color-mix(in srgb, var(--ok) 35%, var(--border));
+    border-radius: var(--radius-md);
+    box-shadow: 0 12px 32px rgba(40, 35, 25, .2);
+    padding: 11px 15px;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.ai-toast .icon-xs {
+    color: var(--ok);
 }
 
 /* ---------- Uploads ---------- */
@@ -500,76 +618,23 @@
     min-height: 0;
 }
 
-.panel {
-    width: 230px;
-    flex: none;
-    padding: 12px 10px;
+/* The drafts list used to be a permanent left sidebar, then a slide-in drawer; it's now a
+   dropdown off the hamburger button (like the Channels/Export popovers) — one less standalone
+   panel pattern to maintain, and it never fights the toolbar for stacking the way a flex-item
+   sidebar did. */
+.drafts-popover {
+    width: 260px;
+    max-height: 70vh;
     overflow-y: auto;
-    background: var(--surface);
     display: flex;
     flex-direction: column;
     gap: 4px;
-}
-
-.panel.left {
-    border-right: 1px solid var(--border);
-}
-
-/* Right panel is always a slide-in drawer (unlike .panel.left, which is a permanent
-   sidebar on desktop) — comments/likes moderation is secondary, occasional work that
-   shouldn't permanently shrink the writing canvas. */
-.panel.right {
-    border-left: 1px solid var(--border);
-    position: fixed;
-    inset: 0 0 0 auto;
-    width: 320px;
-    max-width: 88vw;
-    z-index: 60;
-    transform: translateX(100%);
-    transition: transform 0.2s ease;
-    box-shadow: var(--shadow-md);
-}
-
-.panel.right.open {
-    transform: translateX(0);
 }
 
 .icon-btn.on {
     background: var(--asoft);
     color: var(--accent);
 }
-
-.comment-row {
-    padding: 8px 6px;
-    border-bottom: 1px solid var(--border);
-    font-size: 12.5px;
-}
-
-.comment-row-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.comment-tag {
-    font-size: 10.5px;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    color: var(--t3);
-}
-
-.comment-row-meta {
-    color: var(--t3);
-    font-size: 11px;
-    margin: 2px 0;
-}
-
-.comment-row-text {
-    color: var(--text);
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
 
 .panel-head {
     display: flex;
@@ -664,21 +729,6 @@
 .draft-date {
     font-size: 11px;
     color: var(--t3);
-}
-
-.drawer-backdrop {
-    display: none;
-}
-
-/* Unlike the left drawer's backdrop (only relevant on mobile — see the media query below,
-   .panel.left is a permanent sidebar on desktop and draftsOpen() never becomes true there),
-   the right panel is always a drawer, so its backdrop needs to work at every breakpoint. */
-.drawer-backdrop.open {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.3);
-    z-index: 55;
 }
 
 .channel-item {
@@ -864,13 +914,6 @@
     border-color: var(--accent);
 }
 
-.upgrade-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 8px;
-}
-
 .lang-tabs .lang-delete:hover {
     color: var(--danger);
 }
@@ -912,40 +955,30 @@
 
 .tag-row .tag-input {
     width: 64px;
-    border: none;
+    border: 1px dashed var(--t3);
+    border-radius: 999px;
     background: none;
     color: var(--text);
     font-size: 11px;
-    padding: 2px 4px;
+    padding: 2px 8px;
     outline: none;
+    transition: border-color .15s ease, background .15s ease;
 }
 
-.tag-row .tag-input::placeholder {
-    color: var(--t3);
-}
-
-.signature-input {
-    width: 100%;
-    box-sizing: border-box;
-    border: 1px solid var(--border);
-    background: var(--sheet);
-    color: var(--text);
-    border-radius: var(--radius-md);
-    padding: 7px 10px;
-    font: inherit;
-    font-size: 13px;
-    resize: vertical;
-    margin-bottom: 8px;
-}
-
-.signature-input:focus {
-    outline: none;
+.tag-row .tag-input:hover {
     border-color: var(--accent);
 }
 
-.signature-hint {
-    font-size: 11px;
-    margin-top: 6px;
+.tag-row .tag-input:focus {
+    border-style: solid;
+    border-color: var(--accent);
+    background: var(--asoft);
+    width: 90px;
+}
+
+.tag-row .tag-input::placeholder {
+    color: var(--t2);
+    font-weight: 500;
 }
 
 .sheet.en-empty {
@@ -968,6 +1001,42 @@
     display: flex;
     gap: 10px;
     margin-top: 8px;
+}
+
+.translate-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.indeterminate-bar {
+    width: 220px;
+    max-width: 100%;
+    height: 4px;
+    background: var(--alt);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.indeterminate-fill {
+    height: 100%;
+    width: 40%;
+    background: var(--accent);
+    border-radius: 3px;
+    animation: indeterminate-slide 1.4s ease-in-out infinite;
+}
+
+@keyframes indeterminate-slide {
+    0%   { transform: translateX(-150%); }
+    100% { transform: translateX(350%); }
+}
+
+.translate-status {
+    font-size: 12.5px;
+    color: var(--t2);
+    margin: 0;
 }
 
 .draft-lang-badge {
@@ -1312,16 +1381,11 @@ input[type="datetime-local"]:focus-visible {
 }
 
 @media (max-width: 768px) {
-    .hamburger {
-        display: flex;
-    }
-
     .status-bar {
         display: none;
     }
 
     .toolbar {
-        overflow-x: auto;
         flex-wrap: nowrap;
         -webkit-overflow-scrolling: touch;
     }
@@ -1330,21 +1394,6 @@ input[type="datetime-local"]:focus-visible {
     .icon-btn {
         min-width: 40px;
         min-height: 40px;
-    }
-
-    .panel.left {
-        position: fixed;
-        inset: 0 auto 0 0;
-        width: 78vw;
-        max-width: 300px;
-        z-index: 60;
-        transform: translateX(-100%);
-        transition: transform 0.2s ease;
-        box-shadow: var(--shadow-md);
-    }
-
-    .panel.left.open {
-        transform: translateX(0);
     }
 
     .canvas {
@@ -1359,39 +1408,4 @@ input[type="datetime-local"]:focus-visible {
         min-width: 0;
         flex: 1;
     }
-}
-
-.plan-expiry {
-    font-size: 11px;
-    color: var(--t3);
-    margin: -6px 0 10px;
-}
-
-.plan-picker {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 8px;
-}
-
-.plan-picker button {
-    flex: 1;
-    border: 1px solid var(--border);
-    background: var(--sheet);
-    color: var(--t2);
-    border-radius: var(--radius-md);
-    padding: 5px 4px;
-    font-size: 11px;
-    cursor: pointer;
-}
-
-.plan-picker button.on {
-    border-color: var(--accent);
-    color: var(--text);
-    background: color-mix(in srgb, var(--accent) 8%, var(--sheet));
-}
-
-.reactions-summary {
-    font-size: 13px;
-    color: var(--t2);
-    margin: 0 0 10px;
 }

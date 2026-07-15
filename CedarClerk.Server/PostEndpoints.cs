@@ -10,7 +10,7 @@ namespace CedarClerk.Server;
 
 public static class PostEndpoints
 { 
-    public record ExportRequest(Guid DraftId, string ChatId, string Format = Consts.ContentTypes.Html, string Language = Languages.Primary);
+    public record ExportRequest(Guid DraftId, string ChatId, string Format = Consts.ContentTypes.Markdown, string Language = Languages.Primary);
 
     public record PublishResult(int? MessageId, string? Error, int StatusCode = StatusCodes.Status400BadRequest)
     {
@@ -24,7 +24,7 @@ public static class PostEndpoints
         CedarDbContext db,
         TelegramBotService bot,
         IConfiguration cfg,
-        string format = Consts.ContentTypes.Html,
+        string format = Consts.ContentTypes.Markdown,
         string language = Languages.Primary)
     {
         var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == draftId && d.OwnerId == ownerId);
@@ -92,8 +92,18 @@ public static class PostEndpoints
         var content = isMarkdown
             ? new InputRichMessage { Markdown = rendered }
             : new InputRichMessage { Html = rendered };
-        
-        var msg = await bot.Client.SendRichMessage(new ChatId(chatId), content);
+
+        Message msg;
+        try
+        {
+            msg = await bot.Client.SendRichMessage(new ChatId(chatId), content);
+        }
+        catch (Telegram.Bot.Exceptions.ApiRequestException ex)
+        {
+            // Telegram rejected the rendered content (bad markup, unsupported tag, etc.) — surface
+            // its actual reason instead of letting this bubble up into a bare unhandled-exception 500.
+            return new PublishResult(null, $"Telegram rejected the post: {ex.Message}", StatusCodes.Status502BadGateway);
+        }
 
         draft.LastTelegramChatId = chatId;
         draft.LastTelegramMessageId = msg.MessageId;

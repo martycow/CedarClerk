@@ -1,5 +1,6 @@
 using Anthropic;
 using Anthropic.Models.Messages;
+using CedarClerk.Core;
 
 namespace CedarClerk.Server.Translation;
 
@@ -11,7 +12,11 @@ public class AnthropicTranslationProvider(string apiKey, string model) : ITransl
     {
         var client = new AnthropicClient
         {
-            ApiKey = apiKey
+            ApiKey = apiKey,
+            // The SDK default (10 min, 2 retries) can leave the request looking hung for ~30
+            // minutes; fail fast instead so the caller gets a clear error, not a frozen spinner.
+            Timeout = Consts.Anthropic.RequestTimeout,
+            MaxRetries = 0,
         };
 
         var prompt = TranslationPromptGenerator.Build(title, cedarJson, targetLanguage);
@@ -26,6 +31,14 @@ public class AnthropicTranslationProvider(string apiKey, string model) : ITransl
                 Thinking = new ThinkingConfigAdaptive(),
                 Messages = [new() { Role = Role.User, Content = prompt }],
             }, cancellationToken: ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw; // caller (e.g. disconnected client) cancelled — not our timeout, let it propagate as-is
+        }
+        catch (OperationCanceledException)
+        {
+            throw new TranslationException($"Anthropic didn't respond within {Consts.Anthropic.RequestTimeout.TotalSeconds:0}s — try again");
         }
         catch (Exception ex)
         {

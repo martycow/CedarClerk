@@ -33,6 +33,7 @@ public class ApplicationUser : IdentityUser
     public long? TelegramUserId { get; set; }
     public string? TelegramUsername { get; set; }
     public string? TelegramFirstName { get; set; }
+    public DateTime? TelegramLinkedAt { get; set; }
     
     /// <summary>
     /// User-defined signature in the end of each post
@@ -214,6 +215,6 @@ public class ScheduledPost
     public string? Error { get; set; }
     public int? MessageId { get; set; }
     public string OwnerId { get; set; } = default!;
-    public string Format { get; set; } = Consts.ContentTypes.Html;
+    public string Format { get; set; } = Consts.ContentTypes.Markdown;
     public string Language { get; set; } = Languages.Primary;
 }

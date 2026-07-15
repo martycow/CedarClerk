@@ -158,6 +158,17 @@ public class BlogHtmlRendererTests
     }
 
     [Fact]
+    public void Renders_gif_video_node_as_img()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"video","attrs":{"src":"/media/clip.gif"}}]}
+                   """;
+        Assert.Equal(
+            "<img loading=\"lazy\" src=\"https://cedarclerk.mooexe.dev/media/clip.gif\">",
+            CedarToBlogHtmlRenderer.Render(json, Base));
+    }
+
+    [Fact]
     public void Renders_audio_with_controls()
     {
         var json = """

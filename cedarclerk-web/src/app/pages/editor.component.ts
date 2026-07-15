@@ -4,8 +4,10 @@ import {
 } from '@angular/core';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Editor } from '@tiptap/core';
-import { TextSelection } from '@tiptap/pm/state';
+import { EditorState, TextSelection } from '@tiptap/pm/state';
+import { Node as PMNode, Slice } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import { AuthService } from '../core/auth.service';
 import { DraftsService, DraftMeta, TranslationMeta, AiEditKind } from '../core/drafts.service';
@@ -33,9 +35,7 @@ import { AnnotationNode } from '../tiptap-extensions/annotation-node';
 import { PopoverComponent } from '../shared/popover.component';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { ThemeService } from '../core/theme.service';
-import { CommentsService, DraftComment } from '../core/comments.service';
-import { TelegramLinkService } from '../core/telegram-link.service';
-import { BillingService, BillingStatus, PlanId } from '../core/billing.service';
+import { httpErrorMessage } from '../core/http-error.util';
 import {
     LucideUndo2 as Undo2, LucideRedo2 as Redo2,
     LucideBold as Bold, LucideItalic as Italic, LucideStrikethrough as Strikethrough, LucideCode as Code,
@@ -54,7 +54,7 @@ import {
     LucideDownload as Download, LucideUpload as Upload,
     LucideMessageSquare as MessageSquare,
     LucideRefreshCw as RefreshCw,
-    LucideSpellCheck as SpellCheck, LucideFlame as Flame,
+    LucideSettings as Settings, LucideSparkle as Sparkle,
 } from '@lucide/angular';
 
 const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
@@ -81,6 +81,17 @@ const EXTRA_TIMEZONES: { label: string; zone: string }[] = [
     { label: 'PT', zone: 'America/Los_Angeles' },
 ];
 
+// Cycled (by elapsed seconds, not a separate timer) while auto-translate is running, so the
+// empty-EN-state screen shows visible progress instead of a static "Translating…" label.
+const TRANSLATE_STATUS_MESSAGES = [
+    'Reading your draft…',
+    'Translating…',
+    'Adapting tone and idioms…',
+    'Double-checking terminology…',
+    'Polishing the phrasing…',
+    'Almost there…',
+];
+
 const COMMON_EMOJI = [
     '😀', '😂', '😅', '😉', '😊', '😍', '🤔', '😎', '😢', '😡',
     '👍', '👎', '👏', '🙏', '💪', '🤝', '👋', '✌️', '🤞', '🫡',
@@ -98,14 +109,14 @@ interface UploadItem {
 @Component({
     selector: 'app-editor',
     imports: [
-        FormsModule, DatePipe, PopoverComponent, CedarLogoComponent,
+        FormsModule, DatePipe, RouterLink, PopoverComponent, CedarLogoComponent,
         Undo2, Redo2, Bold, Italic, Strikethrough, Code,
         List, ListOrdered, ListTodo, Quote, SquareCode, Outdent, Indent,
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
         Send, Plus, X, LogOut, RadioTower, Trash2,
         EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, Menu, Superscript,
         ChevronDown, Check, Download, Upload, MessageSquare, RefreshCw,
-        SpellCheck, Flame,
+        Settings, Sparkle,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -117,6 +128,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private assets = inject(AssetsService);
 
     @ViewChild('editorHost') editorHost!: ElementRef<HTMLElement>;
+    @ViewChild('draftsPopover') draftsPopover!: PopoverComponent;
     private editor?: Editor;
     private tick = signal(0);
 
@@ -124,21 +136,18 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     currentId = signal<string | null>(null);
     saveState = signal<SaveState>('saved');
     title = '';
-    draftsOpen = signal(false);
 
     private saveTimer?: ReturnType<typeof setTimeout>;
 
     private posts = inject(PostsService); // + import сверху
     private channelsApi = inject(ChannelsService);
-    private commentsApi = inject(CommentsService);
-    private telegramLink = inject(TelegramLinkService);
-    private billingApi = inject(BillingService);
-
-    telegramBusy = signal(false);
-    telegramError = signal<string | null>(null);
 
     chatId = '@testingandfun';
-    format: PostFormat = 'Html';
+    // Telegram export is Markdown-only — the Rich Message HTML mode needs exact custom tag
+    // names (<photo>, <tg-slideshow>, ...) and has repeatedly broken in practice; Markdown uses
+    // plain, well-tested syntax for the same underlying rich-block output. HTML stays in use for
+    // the blog (CedarToBlogHtmlRenderer, a separate/unrelated renderer).
+    readonly format: PostFormat = 'Markdown';
     exportLang: PostLanguage = 'ru';
 
     // Active content language in the editor. 'ru' edits the draft itself (primary version),
@@ -155,21 +164,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     tagList = signal<string[]>([]);
     tagInput = '';
 
-    signatureText = '';
-    signatureBusy = signal(false);
-    signatureSaved = signal(false);
-
-    billing = signal<BillingStatus | null>(null);
-    billingBusy = signal(false);
-    billingMessage = signal<string | null>(null);
-    selectedPlan: PlanId = 'pro';
-
     aiEditBusy = signal(false);
+    aiEditElapsed = signal(0);
+    private aiEditTicker?: ReturnType<typeof setInterval>;
     aiEditError = signal<string | null>(null);
-
-    draftReactions = signal<{ likes: number; dislikes: number }>({ likes: 0, dislikes: 0 });
+    aiConfirmKind = signal<AiEditKind | null>(null);
+    aiToast = signal<string | null>(null);
+    private aiToastTimer?: ReturnType<typeof setTimeout>;
 
     autoTranslating = signal(false);
+    autoTranslateElapsed = signal(0);
+    private autoTranslateTicker?: ReturnType<typeof setInterval>;
     autoTranslateError = signal<string | null>(null);
     exporting = signal(false);
     exportResult = signal('');
@@ -182,10 +187,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     currentBlog = signal<{ slug: string; isPublished: boolean } | null>(null);
     blogBusy = signal(false);
     blogError = signal<string | null>(null);
-
-    annotationsOpen = signal(false);
-    draftComments = signal<DraftComment[]>([]);
-    commentsLoading = signal(false);
 
     zoom = signal(100);
 
@@ -254,34 +255,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return email ? email[0].toUpperCase() : '?';
     }
 
-    async linkTelegram() {
-        this.telegramBusy.set(true);
-        this.telegramError.set(null);
-        try {
-            await this.telegramLink.link();
-            await this.auth.refresh();
-        } catch (e: any) {
-            this.telegramError.set(e instanceof HttpErrorResponse && e.error?.error
-                ? e.error.error
-                : e?.message ?? 'Failed to link Telegram account');
-        } finally {
-            this.telegramBusy.set(false);
-        }
-    }
-
-    async unlinkTelegram() {
-        this.telegramBusy.set(true);
-        this.telegramError.set(null);
-        try {
-            await this.telegramLink.unlink();
-            await this.auth.refresh();
-        } catch {
-            this.telegramError.set('Failed to unlink Telegram account');
-        } finally {
-            this.telegramBusy.set(false);
-        }
-    }
-
     channelColor(id: string): string {
         let hash = 0;
         for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
@@ -334,6 +307,24 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                     view.dispatch(tr);
                     return false; // let the typed character be inserted into the new paragraph
                 },
+                // Copying a whole line (e.g. triple-click, or Home/Shift+Down/End) hands the
+                // browser a selection that includes the paragraph boundary on either side, so the
+                // pasted slice arrives with an extra empty paragraph above and/or below the real
+                // content — pasting then visibly adds blank lines around it. Only trim when the
+                // slice's cut edges land on whole nodes (openStart/openEnd 0); a partial slice
+                // (e.g. pasting mid-sentence) legitimately may start/end with an "empty" node.
+                transformPasted: slice => {
+                    if (slice.openStart !== 0 || slice.openEnd !== 0) return slice;
+                    const isEmptyParagraph = (n: PMNode | null) => !!n && n.type.name === 'paragraph' && n.content.size === 0;
+                    let content = slice.content;
+                    while (content.childCount > 1 && isEmptyParagraph(content.firstChild)) {
+                        content = content.cut(content.firstChild!.nodeSize);
+                    }
+                    while (content.childCount > 1 && isEmptyParagraph(content.lastChild)) {
+                        content = content.cut(0, content.size - content.lastChild!.nodeSize);
+                    }
+                    return content === slice.content ? slice : new Slice(content, 0, 0);
+                },
             },
             extensions: [
                 StarterKit,
@@ -364,9 +355,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.drafts.set(list);
         if (list.length > 0) await this.openDraft(list[0].id);
         else await this.newDraft();
-
-        this.signatureText = this.auth.postSignature() ?? '';
-        try { this.billing.set(await this.billingApi.status()); } catch { /* non-critical */ }
 
         this.channels.set(await this.channelsApi.list());
         await this.refreshScheduledPosts();
@@ -399,6 +387,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     ngOnDestroy() {
         clearTimeout(this.saveTimer);
+        clearTimeout(this.aiToastTimer);
+        clearInterval(this.aiEditTicker);
+        clearInterval(this.autoTranslateTicker);
         this.editor?.destroy();
     }
 
@@ -437,6 +428,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return this.lang() === 'en' && !this.enMeta();
     }
 
+    translateStatusMessage(): string {
+        const i = Math.floor(this.autoTranslateElapsed() / 4) % TRANSLATE_STATUS_MESSAGES.length;
+        return TRANSLATE_STATUS_MESSAGES[i];
+    }
+
     // The RU version was edited after the EN translation was last touched — probably needs re-translating
     enStale(): boolean {
         const en = this.enMeta();
@@ -456,6 +452,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.ruUpdatedAt.set(draft.updatedAt);
             this.editor.setEditable(true);
             this.editor.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC));
+            this.resetHistory();
         } else {
             this.ruSnapshot = { title: this.title, json: JSON.stringify(this.editor.getJSON()) };
             if (this.enMeta()) {
@@ -465,12 +462,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 this.enMeta.set({ language: 'en', title: tr.title, updatedAt: tr.updatedAt });
                 this.editor.setEditable(true);
                 this.editor.commands.setContent(JSON.parse(tr.cedarJson || EMPTY_DOC));
+                this.resetHistory();
             } else {
                 // No EN version yet — show the empty state (Copy from Russian / Start empty)
                 this.lang.set('en');
                 this.title = this.ruSnapshot.title;
                 this.editor.setEditable(false);
                 this.editor.commands.setContent(JSON.parse(EMPTY_DOC));
+                this.resetHistory();
             }
         }
         this.saveState.set('saved');
@@ -479,7 +478,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     async startEnVersion(copyFromRu: boolean) {
         const id = this.currentId();
         if (!id || !this.editor) return;
-        const title = this.ruSnapshot?.title ?? this.title;
+        // Use the title as currently shown/edited, not the RU snapshot — the title field stays
+        // live in the "no EN version yet" empty state, so the user may already have renamed it
+        // for the English version before clicking either button here.
+        const title = this.title;
         const json = copyFromRu ? (this.ruSnapshot?.json ?? EMPTY_DOC) : EMPTY_DOC;
         try {
             const res = await this.draftsApi.saveTranslation(id, 'en', title, json);
@@ -487,6 +489,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.title = title;
             this.editor.setEditable(true);
             this.editor.commands.setContent(JSON.parse(json));
+            this.resetHistory();
             this.editor.commands.focus();
             this.saveState.set('saved');
             this.drafts.update(list => list.map(d => d.id === id ? { ...d, languages: ['en'] } : d));
@@ -519,78 +522,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
-    async saveSignature() {
-        this.signatureBusy.set(true);
-        this.signatureSaved.set(false);
-        try {
-            await this.auth.saveSignature(this.signatureText);
-            this.signatureText = this.auth.postSignature() ?? '';
-            this.signatureSaved.set(true);
-            setTimeout(() => this.signatureSaved.set(false), 2500);
-        } finally {
-            this.signatureBusy.set(false);
-        }
-    }
-
-    async upgradeStripe() {
-        this.billingBusy.set(true);
-        this.billingMessage.set(null);
-        try {
-            const res = await this.billingApi.stripeCheckout(this.selectedPlan);
-            window.location.href = res.url; // Stripe hosted checkout page
-        } catch (e) {
-            this.billingMessage.set(this.httpError(e, 'Stripe checkout failed'));
-            this.billingBusy.set(false);
-        }
-    }
-
-    async upgradePaypal() {
-        this.billingBusy.set(true);
-        this.billingMessage.set(null);
-        try {
-            const res = await this.billingApi.paypalCheckout(this.selectedPlan);
-            window.location.href = res.url; // PayPal approval page
-        } catch (e) {
-            this.billingMessage.set(this.httpError(e, 'PayPal checkout failed'));
-            this.billingBusy.set(false);
-        }
-    }
-
-    async upgradeStars() {
-        this.billingBusy.set(true);
-        this.billingMessage.set(null);
-        try {
-            await this.billingApi.starsInvoice(this.selectedPlan);
-            this.billingMessage.set('✓ Invoice sent to your Telegram — open the bot chat and confirm the payment there.');
-        } catch (e) {
-            this.billingMessage.set(this.httpError(e, 'Failed to send the invoice'));
-        } finally {
-            this.billingBusy.set(false);
-        }
-    }
-
-    async manageStripeBilling() {
-        this.billingBusy.set(true);
-        this.billingMessage.set(null);
-        try {
-            const res = await this.billingApi.stripePortal();
-            window.location.href = res.url; // Stripe-hosted subscription management page
-        } catch (e) {
-            this.billingMessage.set(this.httpError(e, 'Could not open the billing portal'));
-            this.billingBusy.set(false);
-        }
-    }
-
-    starsPriceFor(plan: PlanId): number {
-        const b = this.billing();
-        if (!b) return 0;
-        return plan === 'pro' ? b.prices.proStars : plan === 'proplus' ? b.prices.proPlusStars : b.prices.trialStars;
-    }
-
-    private httpError(e: unknown, fallback: string): string {
-        return e instanceof HttpErrorResponse && e.error?.error ? e.error.error : fallback;
-    }
-
     // Machine-translates the RU version into EN and loads the result into the editor for review.
     async autoTranslateEn() {
         const id = this.currentId();
@@ -598,6 +529,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (this.enMeta() && !window.confirm('Replace the current English version with a fresh machine translation?')) return;
 
         this.autoTranslating.set(true);
+        this.autoTranslateElapsed.set(0);
+        clearInterval(this.autoTranslateTicker);
+        this.autoTranslateTicker = setInterval(() => this.autoTranslateElapsed.update(s => s + 1), 1000);
         this.autoTranslateError.set(null);
         try {
             const tr = await this.draftsApi.autoTranslate(id, 'en');
@@ -612,22 +546,53 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.editor.commands.setContent(JSON.parse(tr.cedarJson || EMPTY_DOC));
             this.saveState.set('saved');
         } catch (e) {
-            this.autoTranslateError.set(this.httpError(e, 'Auto-translate failed — check server logs'));
+            this.autoTranslateError.set(httpErrorMessage(e, 'Auto-translate failed — check server logs'));
         } finally {
             this.autoTranslating.set(false);
+            clearInterval(this.autoTranslateTicker);
         }
+    }
+
+    // Opens the AI confirm dialog (replaces window.confirm — the only native browser dialog
+    // in the app otherwise); confirmAiEdit() below actually runs aiEdit() once accepted.
+    askAiEdit(kind: AiEditKind) {
+        this.aiConfirmKind.set(kind);
+    }
+
+    cancelAiConfirm() {
+        this.aiConfirmKind.set(null);
+    }
+
+    async confirmAiEdit() {
+        const kind = this.aiConfirmKind();
+        this.aiConfirmKind.set(null);
+        if (kind) await this.aiEdit(kind);
+    }
+
+    aiConfirmTitle(): string {
+        return this.aiConfirmKind() === 'fix-errors' ? 'Fix errors with AI?' : 'Run the Schizo-izer?';
+    }
+
+    aiConfirmBody(): string {
+        const words = this.wordCount();
+        const lang = this.lang().toUpperCase();
+        return this.aiConfirmKind() === 'fix-errors'
+            ? `Claude will proofread the current ${lang} version (${words} words). The original stays in history.`
+            : `Claude will rewrite the current ${lang} version (${words} words) into unhinged schizoposting. The original stays in history.`;
     }
 
     // Rewrites the current language version in place via an LLM (Pro Plus, daily quota) — grammar
     // fix or "schizoposting" style rewrite. Same persist-then-load pattern as auto-translate, so
     // Ctrl+Z in the editor can still undo the content swap if the user doesn't like the result.
-    async aiEdit(kind: AiEditKind) {
+    private async aiEdit(kind: AiEditKind) {
         const id = this.currentId();
         if (!id || !this.editor) return;
         const label = kind === 'fix-errors' ? 'Fix errors' : 'Schizo-izer';
-        if (!window.confirm(`${label} will rewrite the current ${this.lang().toUpperCase()} version in place. Continue?`)) return;
 
         this.aiEditBusy.set(true);
+        this.aiEditElapsed.set(0);
+        clearInterval(this.aiEditTicker);
+        this.aiEditTicker = setInterval(() => this.aiEditElapsed.update(s => s + 1), 1000);
         this.aiEditError.set(null);
         try {
             const res = await this.draftsApi.aiEdit(id, this.lang(), kind);
@@ -638,11 +603,19 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 this.enMeta.set({ language: 'en', title: res.title, updatedAt: res.updatedAt });
             }
             this.refreshMeta(id);
+            this.showAiToast(kind === 'fix-errors' ? 'Fixed your typos. Your voice survived. Moo.' : 'Schizo-izer done. Reality is now optional.');
         } catch (e) {
-            this.aiEditError.set(this.httpError(e, `${label} failed`));
+            this.aiEditError.set(httpErrorMessage(e, `${label} failed`));
         } finally {
             this.aiEditBusy.set(false);
+            clearInterval(this.aiEditTicker);
         }
+    }
+
+    private showAiToast(text: string) {
+        clearTimeout(this.aiToastTimer);
+        this.aiToast.set(text);
+        this.aiToastTimer = setTimeout(() => this.aiToast.set(null), 3000);
     }
 
     async deleteEnVersion() {
@@ -667,7 +640,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     async openDraft(id: string) {
-        this.draftsOpen.set(false);
+        this.draftsPopover?.close();
         if (id === this.currentId()) return;
         clearTimeout(this.saveTimer);
         if (this.saveState() !== 'saved') await this.save();
@@ -684,15 +657,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.tagInput = '';
         this.editor?.setEditable(true);
         this.editor?.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC));
+        this.resetHistory();
         this.saveState.set('saved');
         this.currentBlog.set(draft.blogSlug ? { slug: draft.blogSlug, isPublished: draft.isBlogPublished } : null);
         this.blogError.set(null);
-        this.draftComments.set([]);
-        if (this.annotationsOpen()) await this.loadComments();
     }
 
     async newDraft() {
-        this.draftsOpen.set(false);
+        this.draftsPopover?.close();
         clearTimeout(this.saveTimer);
         if (this.saveState() !== 'saved') await this.save();
 
@@ -715,10 +687,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.tagInput = '';
         this.editor?.setEditable(true);
         this.editor?.commands.setContent(JSON.parse(EMPTY_DOC));
+        this.resetHistory();
         this.saveState.set('saved');
         this.currentBlog.set(null);
         this.blogError.set(null);
-        this.draftComments.set([]);
         this.editor?.commands.focus();
     }
 
@@ -741,7 +713,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         input.value = '';
         if (!file) return;
 
-        this.draftsOpen.set(false);
+        this.draftsPopover?.close();
         this.importingCedar.set(true);
         this.importCedarError.set(null);
         try {
@@ -793,30 +765,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
-    async toggleAnnotationsPanel() {
-        const opening = !this.annotationsOpen();
-        this.annotationsOpen.set(opening);
-        if (opening) await this.loadComments();
-    }
-
-    async loadComments() {
-        const id = this.currentId();
-        if (!id) return;
-        this.commentsLoading.set(true);
-        try {
-            const feedback = await this.commentsApi.list(id);
-            this.draftComments.set(feedback.comments);
-            this.draftReactions.set(feedback.reactions);
-        } finally {
-            this.commentsLoading.set(false);
-        }
-    }
-
-    async deleteComment(commentId: string) {
-        await this.commentsApi.remove(commentId);
-        this.draftComments.update(list => list.filter(c => c.id !== commentId));
-    }
-
     cmd(fn: (chain: any) => any) {
         if (this.editor) 
             fn(this.editor.chain().focus()).run();
@@ -837,6 +785,21 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return this.editor?.can().redo() ?? false;
     }
 
+    // setContent() alone doesn't touch the undo/redo stack, so switching drafts or language
+    // tabs used to leave the previous document's history sitting there — Ctrl+Z right after
+    // opening a draft could undo edits from whatever was open before. Reinitializing the
+    // ProseMirror state (same doc/selection/plugins) resets every plugin's state, history
+    // included, without recreating the whole Editor instance.
+    private resetHistory() {
+        if (!this.editor) return;
+        const { state } = this.editor;
+        this.editor.view.updateState(EditorState.create({
+            doc: state.doc,
+            selection: state.selection,
+            plugins: state.plugins,
+        }));
+    }
+
     async exportDraft() {
         const id = this.currentId();
         if (!id) return;
@@ -854,15 +817,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             const status = e instanceof HttpErrorResponse ? e.status : undefined;
             const message = status === 503
                 ? "The barn door seems closed — Telegram Bot API didn't respond. Your draft is safe; nothing was published."
-                : 'Error — check the browser console / server logs';
+                : httpErrorMessage(e, 'Error — check the browser console / server logs');
             this.exportError.set({ code: status, message });
         } finally {
             this.exporting.set(false);
         }
-    }
-
-    setFormat(format: PostFormat) {
-        this.format = format;
     }
 
     private buildTelegramLink(chatId: string, messageId: number): string | null {
@@ -988,16 +947,21 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const files = Array.from(input.files ?? []);
         input.value = '';
         for (const file of files) {
-            this.uploadFilePromise(file).then(url => {
-                if (!url) return;
-                // .gif needs a <video> tag so Telegram treats it as an animation, not a static photo
-                if (file.type === 'image/gif') this.insertNode('video', { src: url });
-                else this.editor?.chain().focus().setImage({ src: url }).run();
-            });
+            this.uploadFilePromise(file).then(url => { if (url) this.editor?.chain().focus().setImage({ src: url }).run(); });
         }
     }
 
     onVideoChosen(ev: Event) {
+        const input = ev.target as HTMLInputElement;
+        const files = Array.from(input.files ?? []);
+        input.value = '';
+        for (const file of files) {
+            this.uploadFilePromise(file).then(url => { if (url) this.insertNode('video', { src: url }); });
+        }
+    }
+
+    // .gif needs a <video> tag so Telegram treats it as an animation, not a static photo
+    onGifChosen(ev: Event) {
         const input = ev.target as HTMLInputElement;
         const files = Array.from(input.files ?? []);
         input.value = '';

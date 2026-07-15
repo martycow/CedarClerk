@@ -97,7 +97,7 @@ public class RendererTests
         var json = """
                    {"type":"doc","content":[{"type":"image","attrs":{"src":"/media/pic.jpg"}}]}
                    """;
-        Assert.Equal("<img src=\"https://cedarclerk.mooexe.dev/media/pic.jpg\">",
+        Assert.Equal("<photo src=\"https://cedarclerk.mooexe.dev/media/pic.jpg\">",
             CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
     }
 
@@ -109,7 +109,7 @@ public class RendererTests
                        {"type":"listItem","content":[{"type":"image","attrs":{"src":"/media/pic.jpg"}}]}
                    ]}]}
                    """;
-        Assert.Equal("<ul><li><img src=\"https://cedarclerk.mooexe.dev/media/pic.jpg\"></li></ul>",
+        Assert.Equal("<ul><li><photo src=\"https://cedarclerk.mooexe.dev/media/pic.jpg\"></li></ul>",
             CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
     }
 
@@ -140,8 +140,8 @@ public class RendererTests
                    {"type":"doc","content":[{"type":"carousel","attrs":{"images":["/media/a.jpg","/media/b.jpg"]}}]}
                    """;
         Assert.Equal(
-            "<tg-slideshow><img src=\"https://cedarclerk.mooexe.dev/media/a.jpg\">" +
-            "<img src=\"https://cedarclerk.mooexe.dev/media/b.jpg\"></tg-slideshow>",
+            "<tg-slideshow><photo src=\"https://cedarclerk.mooexe.dev/media/a.jpg\">" +
+            "<photo src=\"https://cedarclerk.mooexe.dev/media/b.jpg\"></tg-slideshow>",
             CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
     }
 
@@ -218,8 +218,8 @@ public class RendererTests
                    {"type":"doc","content":[{"type":"collage","attrs":{"images":["/media/a.jpg","/media/b.jpg"]}}]}
                    """;
         Assert.Equal(
-            "<tg-collage><img src=\"https://cedarclerk.mooexe.dev/media/a.jpg\">" +
-            "<img src=\"https://cedarclerk.mooexe.dev/media/b.jpg\"></tg-collage>",
+            "<tg-collage><photo src=\"https://cedarclerk.mooexe.dev/media/a.jpg\">" +
+            "<photo src=\"https://cedarclerk.mooexe.dev/media/b.jpg\"></tg-collage>",
             CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
     }
 
@@ -252,7 +252,7 @@ public class RendererTests
                    {"type":"doc","content":[{"type":"image","attrs":{"src":"/media/pic.jpg","caption":"A caption"}}]}
                    """;
         Assert.Equal(
-            "<figure><img src=\"https://cedarclerk.mooexe.dev/media/pic.jpg\"><figcaption>A caption</figcaption></figure>",
+            "<figure><photo src=\"https://cedarclerk.mooexe.dev/media/pic.jpg\"><figcaption>A caption</figcaption></figure>",
             CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
     }
 

@@ -44,6 +44,10 @@ export class TelegramLinkService {
         return firstValueFrom(this.http.get<{ botUsername: string; botId: number }>('/api/auth/telegram/config'));
     }
 
+    botStatus() {
+        return firstValueFrom(this.http.get<{ reachable: boolean; botUsername: string | null }>('/api/auth/telegram/status'));
+    }
+
     // Opens Telegram's own login popup; resolves once the user confirms or cancels. Requires the
     // bot's domain to be registered via @BotFather /setdomain, matching the page's origin exactly —
     // will not work on localhost, only on the deployed domain.

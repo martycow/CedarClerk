@@ -1,0 +1,227 @@
+<div class="settings-page">
+    <header class="settings-header">
+        <a class="icon-btn" routerLink="/editor" title="Back to editor">
+            <svg lucideArrowLeft class="icon"></svg>
+        </a>
+        <app-cedar-logo [size]="19"></app-cedar-logo>
+        <span class="brand-name">Cedar Clerk</span>
+        <span class="crumb-sep">/</span>
+        <span class="crumb-current">Settings</span>
+        <span class="spacer"></span>
+        <button class="icon-btn" (click)="theme.toggle()" title="Toggle theme">
+            {{ theme.theme() === 'dark' ? '☀' : '☾' }}
+        </button>
+        <span class="avatar">{{ avatarInitial() }}</span>
+    </header>
+
+    <div class="settings-body">
+        <nav class="anchor-chips">
+            <button (click)="jump('sec-profile')">Profile</button>
+            <button (click)="jump('sec-subscription')">Subscription</button>
+            <button (click)="jump('sec-integrations')">Integrations</button>
+        </nav>
+
+        <!-- ============ PROFILE ============ -->
+        <section id="sec-profile" class="settings-card">
+            <h2>Profile</h2>
+            <div class="profile-row">
+                <span class="avatar lg">{{ avatarInitial() }}</span>
+                <div>
+                    <div class="profile-email">{{ auth.userEmail() }}</div>
+                    @if (auth.createdAt(); as since) {
+                    <div class="profile-meta">Member since {{ since | date:'MMMM yyyy' }}</div>
+                    }
+                </div>
+            </div>
+
+            <div class="field-group">
+                <label for="cc-sig">Post signature</label>
+                <p class="field-hint">Appended to the end of every published post (Telegram &amp; blog).</p>
+                <textarea id="cc-sig" [(ngModel)]="signatureText" rows="2" placeholder="e.g. — M.C. © 2026"></textarea>
+                <div class="field-actions">
+                    <button class="btn-primary" (click)="saveSignature()" [disabled]="signatureBusy()">
+                        {{ signatureBusy() ? '…' : 'Save signature' }}
+                    </button>
+                    @if (signatureSaved()) {
+                    <span class="saved-check"><svg lucideCheck class="icon-xs"></svg>Saved</span>
+                    }
+                </div>
+            </div>
+
+            <div class="card-footer-row">
+                <span class="field-hint">Done for the day?</span>
+                <button class="btn-danger-ghost" (click)="logout()">Log out</button>
+            </div>
+        </section>
+
+        <!-- ============ SUBSCRIPTION ============ -->
+        <section id="sec-subscription" class="settings-card">
+            <h2>Subscription</h2>
+
+            @if (billing(); as b) {
+            <div class="plan-banner">
+                <span class="status-dot"></span>
+                <div>
+                    <div class="plan-banner-title">{{ b.planTier }} plan</div>
+                    @if (auth.planExpiresAt(); as until) {
+                    <div class="plan-banner-meta">Renews {{ until | date:'d MMM yyyy' }}</div>
+                    }
+                </div>
+                <span class="spacer"></span>
+                @if (b.stripeCustomerLinked) {
+                <button class="link-btn" (click)="manageStripeBilling()" [disabled]="billingBusy()">
+                    Manage billing (Stripe) ↗
+                </button>
+                }
+            </div>
+
+            @if (billingMessage()) {
+            <div class="success-banner">
+                <svg lucideCheck class="icon-xs"></svg>
+                {{ billingMessage() }}
+            </div>
+            }
+
+            <div class="plan-grid">
+                <div class="plan-card" [class.current]="b.planTier === 'Free'">
+                    <div class="plan-card-name">Free</div>
+                    <div class="plan-card-price">$0</div>
+                    <p class="plan-card-desc">1 channel · manual publishing · blog with badge</p>
+                    @if (b.planTier === 'Free') {
+                    <button class="plan-card-btn" disabled>Current plan</button>
+                    }
+                </div>
+                <div class="plan-card" [class.current]="b.planTier === 'Pro'">
+                    <div class="plan-card-name">Pro</div>
+                    <div class="plan-card-price">${{ b.prices.proUsd }}<span>/mo</span></div>
+                    <p class="plan-card-desc">Unlimited channels · scheduling · translations · blog</p>
+                    @if (b.planTier === 'Pro') {
+                    <button class="plan-card-btn" disabled>Current plan</button>
+                    } @else if (b.planTier === 'Free') {
+                    <button class="plan-card-btn" (click)="pickPlan('pro')">Choose Pro</button>
+                    }
+                </div>
+                <div class="plan-card" [class.current]="b.planTier === 'ProPlus' || b.planTier === 'Forever'">
+                    <div class="plan-card-name">Pro Plus <span class="ai-badge">AI</span></div>
+                    <div class="plan-card-price">${{ b.prices.proPlusUsd }}<span>/mo</span></div>
+                    <p class="plan-card-desc">Everything in Pro · AI Fix errors · AI Schizo-izer</p>
+                    @if (b.planTier === 'ProPlus' || b.planTier === 'Forever') {
+                    <button class="plan-card-btn" disabled>Current plan</button>
+                    } @else {
+                    <button class="plan-card-btn accent" (click)="pickPlan('proplus')">Choose Pro Plus</button>
+                    }
+                </div>
+            </div>
+
+            @if (!b.trialUsed && (b.planTier === 'Free' || b.planTier === 'Pro')) {
+            <button class="trial-link" (click)="pickPlan('trial')">Try Pro Plus for ${{ b.prices.trialUsd }}/7 days →</button>
+            }
+
+            @if (selectedPlan) {
+            <div class="payment-step">
+                <div class="field-hint">Pay for {{ selectedPlan === 'proplus' ? 'Pro Plus' : selectedPlan === 'pro' ? 'Pro' : 'the trial' }} with</div>
+                <div class="pay-methods">
+                    <button class="pay-method" [class.selected]="payMethod === 'stripe'" [disabled]="!b.providers.stripe"
+                            [title]="b.providers.stripe ? '' : 'Stripe is not configured yet'" (click)="payMethod = 'stripe'">
+                        <span class="radio-dot"></span>
+                        <span>
+                            <span class="pay-method-label">Card (Stripe)</span>
+                            <span class="pay-method-desc">Visa, Mastercard, Apple Pay</span>
+                        </span>
+                    </button>
+                    <button class="pay-method" [class.selected]="payMethod === 'paypal'" [disabled]="!b.providers.paypal"
+                            [title]="b.providers.paypal ? '' : 'PayPal is not configured yet'" (click)="payMethod = 'paypal'">
+                        <span class="radio-dot"></span>
+                        <span>
+                            <span class="pay-method-label">PayPal</span>
+                            <span class="pay-method-desc">Pay with your PayPal balance</span>
+                        </span>
+                    </button>
+                    <button class="pay-method" [class.selected]="payMethod === 'stars'"
+                            [disabled]="!b.providers.telegramStars || !auth.telegramLinked()"
+                            [title]="!b.providers.telegramStars ? 'Telegram Stars is not available yet' : (!auth.telegramLinked() ? 'Link your Telegram account first' : '')"
+                            (click)="payMethod = 'stars'">
+                        <span class="radio-dot"></span>
+                        <span>
+                            <span class="pay-method-label">Telegram Stars</span>
+                            <span class="pay-method-desc">Pay right inside Telegram ★</span>
+                        </span>
+                    </button>
+                </div>
+                <button class="btn-primary" (click)="confirmUpgrade()" [disabled]="billingBusy()">
+                    <svg lucideSend class="icon-xs"></svg>
+                    {{ billingBusy() ? '…' : (selectedPlan === 'trial' ? 'Start trial · $' + priceFor(selectedPlan) + '/7 days' : 'Upgrade · $' + priceFor(selectedPlan) + '/mo') }}
+                </button>
+            </div>
+            }
+            }
+        </section>
+
+        <!-- ============ INTEGRATIONS ============ -->
+        <section id="sec-integrations" class="settings-card">
+            <h2>Integrations</h2>
+
+            <div class="integration-row">
+                <span class="integration-icon telegram">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg>
+                </span>
+                @if (auth.telegramLinked()) {
+                <div class="integration-body">
+                    <div class="integration-title">Telegram account</div>
+                    <div class="integration-meta">
+                        Linked to <span class="strong">&#64;{{ auth.telegramUsername() }}</span>
+                        @if (auth.telegramLinkedAt(); as since) { · since {{ since | date:'d MMM yyyy' }} }
+                    </div>
+                </div>
+                @if (askUnlinkTelegram()) {
+                <div class="inline-confirm">
+                    <span>Sure?</span>
+                    <button class="btn-danger" (click)="unlinkTelegram()" [disabled]="telegramBusy()">Unlink</button>
+                    <button class="btn-ghost" (click)="askUnlinkTelegram.set(false)">Cancel</button>
+                </div>
+                } @else {
+                <button class="btn-ghost" (click)="askUnlinkTelegram.set(true)">Unlink</button>
+                }
+                } @else {
+                <div class="integration-body">
+                    <div class="integration-title">Telegram account</div>
+                    <div class="integration-meta muted">Not linked. The cow can't reach you.</div>
+                </div>
+                <button class="btn-primary sm" (click)="linkTelegram()" [disabled]="telegramBusy()">
+                    {{ telegramBusy() ? 'Waiting for Telegram…' : 'Link Telegram' }}
+                </button>
+                }
+            </div>
+            @if (telegramError()) { <p class="field-error">{{ telegramError() }}</p> }
+
+            <div class="integration-row">
+                <span class="integration-icon bot">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"></rect><path d="M12 8V4"></path><circle cx="12" cy="3" r="1"></circle><line x1="9" y1="13" x2="9" y2="15"></line><line x1="15" y1="13" x2="15" y2="15"></line></svg>
+                </span>
+                <div class="integration-body">
+                    <div class="integration-title">&#64;CedarClerkBot</div>
+                    @if (botStatus(); as bs) {
+                    <div class="integration-meta">
+                        <span class="status-dot" [class.down]="!bs.reachable"></span>
+                        {{ bs.reachable ? 'Reachable' : 'Unreachable' }} · publishes on your behalf
+                    </div>
+                    }
+                </div>
+                <a class="link-btn" href="https://t.me/CedarClerkBot" target="_blank" rel="noopener">Open bot ↗</a>
+            </div>
+
+            <div class="integration-row dashed">
+                <span class="integration-icon alt">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"></circle><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"></path><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"></path><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"></path><path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"></path></svg>
+                </span>
+                <div class="integration-body">
+                    <div class="integration-title">Channels</div>
+                    <div class="integration-meta">
+                        @if (channels().length) { {{ channels().length }} connected — {{ channelsSummary() }} } @else { None connected yet }
+                    </div>
+                </div>
+                <a class="link-btn" routerLink="/editor">Manage in editor →</a>
+            </div>
+        </section>
+    </div>
+</div>

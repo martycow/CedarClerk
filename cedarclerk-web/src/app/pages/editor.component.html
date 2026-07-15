@@ -1,9 +1,40 @@
 <div class="app">
     <!--Top bar-->
     <header class="topbar">
-        <button class="icon-btn hamburger" title="Drafts" (click)="draftsOpen.set(true)">
-            <svg lucideMenu class="icon"></svg>
-        </button>
+        <app-popover #draftsPopover>
+            <button trigger class="icon-btn hamburger" title="Drafts">
+                <svg lucideMenu class="icon"></svg>
+            </button>
+            <div panel class="drafts-popover">
+                <div class="panel-head">
+                    <span class="panel-label">Drafts</span>
+                    <button class="mini" (click)="cedarInput.click()" [disabled]="importingCedar()" title="Import .cedar">
+                        <svg lucideUpload class="icon-sm"></svg>
+                    </button>
+                    <button class="mini" (click)="newDraft()" title="New draft"><svg lucidePlus class="icon-sm"></svg></button>
+                </div>
+                <input #cedarInput type="file" accept=".cedar" hidden (change)="onImportCedarChosen($event)">
+                @if (importCedarError()) {
+                <p class="channel-error">{{ importCedarError() }}</p>
+                }
+                @for (d of drafts(); track d.id) {
+                <div class="draft-item" [class.active]="d.id === currentId()" (click)="openDraft(d.id)">
+                    <div class="draft-info">
+                        <div class="draft-title">
+                            {{ d.title || 'Untitled' }}
+                            @if (d.languages.includes('en')) { <span class="draft-lang-badge">EN</span> }
+                        </div>
+                        <div class="draft-date">{{ d.updatedAt | date:'d MMM, HH:mm' }}</div>
+                    </div>
+                    <button class="mini-remove" (click)="deleteDraft(d.id); $event.stopPropagation()" title="Delete draft">
+                        <svg lucideTrash2 class="icon-sm"></svg>
+                    </button>
+                </div>
+                } @empty {
+                <p class="hint">Empty. Click +</p>
+                }
+            </div>
+        </app-popover>
 
         <div class="brand">
             <app-cedar-logo [size]="20"></app-cedar-logo>
@@ -40,7 +71,7 @@
 
                 <div class="popover-divider"></div>
                 <div class="panel-head">
-                    <span class="panel-label">Bot is already in</span>
+                    <span class="panel-label">Available</span>
                     <button class="mini" (click)="refreshKnownChats(); $event.stopPropagation()" [disabled]="knownChatsRefreshing()" title="Refresh">
                         <svg lucideRefreshCw class="icon-sm" [class.spin]="knownChatsRefreshing()"></svg>
                     </button>
@@ -66,6 +97,9 @@
                 }
 
                 <div class="popover-divider"></div>
+                <div class="panel-head">
+                    <span class="panel-label">Connected</span>
+                </div>
                 @if (channels().length) {
                     @for (c of channels(); track c.id) {
                     <div class="channel-item" [class.active]="isSelectedChannel(c)" (click)="selectChannel(c)">
@@ -128,12 +162,6 @@
                     }
                 </div>
                 }
-
-                <div class="panel-label" style="margin-top:12px">Format</div>
-                <div class="format-toggle">
-                    <button [class.on]="format === 'Html'" (click)="setFormat('Html')">HTML</button>
-                    <button [class.on]="format === 'Markdown'" (click)="setFormat('Markdown')">Markdown</button>
-                </div>
 
                 <div class="panel-label" style="margin-top:12px">Language</div>
                 <div class="format-toggle">
@@ -237,9 +265,9 @@
             </div>
         </app-popover>
 
-        <button class="icon-btn" [class.on]="annotationsOpen()" title="Comments &amp; likes" (click)="toggleAnnotationsPanel()">
+        <a class="icon-btn" routerLink="/comments" title="Comments &amp; likes">
             <svg lucideMessageSquare class="icon"></svg>
-        </button>
+        </a>
 
         <button class="icon-btn theme-toggle" (click)="theme.toggle()" title="Toggle theme">
             {{ theme.theme() === 'dark' ? '☀' : '☾' }}
@@ -251,75 +279,12 @@
                 <span class="user">{{ auth.userEmail() }}</span>
             </button>
             <div panel class="account-popover">
-                <div class="panel-label">Account</div>
                 <p class="profile-email">{{ auth.userEmail() }}</p>
-                @if (auth.planTier(); as tier) {
-                <p class="plan-badge">{{ tier }} plan</p>
-                }
-                @if (auth.planExpiresAt(); as until) {
-                <p class="plan-expiry">until {{ until | date:'d MMM yyyy' }} (UTC)</p>
-                }
-                @if (billing(); as b) {
-                    @if (b.planTier === 'Free' || b.planTier === 'Pro') {
-                    <div class="panel-label">Upgrade</div>
-                    <div class="plan-picker">
-                        <button [class.on]="selectedPlan === 'pro'" (click)="selectedPlan = 'pro'">Pro · ${{ b.prices.proUsd }}/mo</button>
-                        <button [class.on]="selectedPlan === 'proplus'" (click)="selectedPlan = 'proplus'">Pro Plus · ${{ b.prices.proPlusUsd }}/mo</button>
-                        @if (!b.trialUsed) {
-                        <button [class.on]="selectedPlan === 'trial'" (click)="selectedPlan = 'trial'">Trial · ${{ b.prices.trialUsd }}/7d</button>
-                        }
-                    </div>
-                    <div class="upgrade-actions">
-                        <button class="account-action-btn" (click)="upgradeStripe()"
-                                [disabled]="billingBusy() || !b.providers.stripe"
-                                [title]="b.providers.stripe ? '' : 'Stripe is not configured yet'">
-                            {{ billingBusy() ? '…' : '💳 Pay by card (Stripe)' }}
-                        </button>
-                        <button class="account-action-btn" (click)="upgradePaypal()"
-                                [disabled]="billingBusy() || !b.providers.paypal"
-                                [title]="b.providers.paypal ? '' : 'PayPal is not configured yet'">
-                            {{ billingBusy() ? '…' : 'PayPal' }}
-                        </button>
-                        <button class="account-action-btn" (click)="upgradeStars()"
-                                [disabled]="billingBusy() || !b.providers.telegramStars || !auth.telegramLinked()"
-                                [title]="!b.providers.telegramStars ? 'Telegram Stars is not available yet'
-                                    : (!auth.telegramLinked() ? 'Link your Telegram account first' : '')">
-                            {{ billingBusy() ? '…' : '⭐ Telegram Stars · ' + starsPriceFor(selectedPlan) }}
-                        </button>
-                    </div>
-                    }
-                    @if (b.stripeCustomerLinked) {
-                    <button class="account-action-btn" (click)="manageStripeBilling()" [disabled]="billingBusy()">
-                        {{ billingBusy() ? '…' : 'Manage billing (Stripe)' }}
-                    </button>
-                    }
-                    @if (billingMessage()) { <p class="export-result">{{ billingMessage() }}</p> }
-                }
-
                 <div class="popover-divider"></div>
-                <div class="panel-label">Telegram</div>
-                @if (auth.telegramLinked()) {
-                    <p class="telegram-status">✓ Linked as <span class="mono-accent">{{ '@' + auth.telegramUsername() }}</span></p>
-                    <button class="account-action-btn" (click)="unlinkTelegram()" [disabled]="telegramBusy()">
-                        {{ telegramBusy() ? '…' : 'Unlink' }}
-                    </button>
-                } @else {
-                    <button class="account-action-btn" (click)="linkTelegram()" [disabled]="telegramBusy()">
-                        {{ telegramBusy() ? 'Waiting for Telegram…' : 'Link Telegram account' }}
-                    </button>
-                }
-                @if (telegramError()) { <p class="channel-error">{{ telegramError() }}</p> }
-
-                <div class="popover-divider"></div>
-                <div class="panel-label">Post signature</div>
-                <textarea class="signature-input" [(ngModel)]="signatureText" rows="3"
-                          placeholder="e.g. — M.C. © 2026"></textarea>
-                <button class="account-action-btn" (click)="saveSignature()" [disabled]="signatureBusy()">
-                    {{ signatureBusy() ? '…' : (signatureSaved() ? '✓ Saved' : 'Save signature') }}
-                </button>
-                <p class="hint signature-hint">Appended to the end of every published post (Telegram &amp; blog). Leave empty to remove.</p>
-
-                <div class="popover-divider"></div>
+                <a class="account-action-btn" routerLink="/settings">
+                    <svg lucideSettings class="icon-sm"></svg>
+                    Settings
+                </a>
                 <button class="logout-btn" (click)="auth.logout()">
                     <svg lucideLogOut class="icon-sm"></svg>
                     Log out
@@ -328,151 +293,228 @@
         </app-popover>
     </header>
 
-    <!--Toolbar-->
+    <!--Toolbar (ribbon: labeled groups, no overflow menu)-->
     <div class="toolbar">
         <!--Block type dropdown-->
-        <app-popover>
-            <button trigger class="block-dropdown">
-                {{ currentBlockLabel() }}
-                <svg lucideChevronDown class="icon-xs"></svg>
-            </button>
-            <div panel class="block-menu">
-                <button [class.on]="currentBlockLabel() === 'Paragraph'" (click)="setBlockType(0)">Paragraph</button>
-                <button [class.on]="currentBlockLabel() === 'Heading 1'" (click)="setBlockType(1)">Heading 1</button>
-                <button [class.on]="currentBlockLabel() === 'Heading 2'" (click)="setBlockType(2)">Heading 2</button>
-                <button [class.on]="currentBlockLabel() === 'Heading 3'" (click)="setBlockType(3)">Heading 3</button>
-                <button [class.on]="currentBlockLabel() === 'Heading 4'" (click)="setBlockType(4)">Heading 4</button>
-                <button [class.on]="currentBlockLabel() === 'Heading 5'" (click)="setBlockType(5)">Heading 5</button>
-                <button [class.on]="currentBlockLabel() === 'Heading 6'" (click)="setBlockType(6)">Heading 6</button>
-            </div>
-        </app-popover>
-
-        <!--Undo/Redo-->
+        <div class="tb-group">
+            <app-popover>
+                <button trigger class="block-dropdown">
+                    {{ currentBlockLabel() }}
+                    <svg lucideChevronDown class="icon-xs"></svg>
+                </button>
+                <div panel class="block-menu">
+                    <button [class.on]="currentBlockLabel() === 'Paragraph'" (click)="setBlockType(0)">Paragraph</button>
+                    <button [class.on]="currentBlockLabel() === 'Heading 1'" (click)="setBlockType(1)">Heading 1</button>
+                    <button [class.on]="currentBlockLabel() === 'Heading 2'" (click)="setBlockType(2)">Heading 2</button>
+                    <button [class.on]="currentBlockLabel() === 'Heading 3'" (click)="setBlockType(3)">Heading 3</button>
+                    <button [class.on]="currentBlockLabel() === 'Heading 4'" (click)="setBlockType(4)">Heading 4</button>
+                    <button [class.on]="currentBlockLabel() === 'Heading 5'" (click)="setBlockType(5)">Heading 5</button>
+                    <button [class.on]="currentBlockLabel() === 'Heading 6'" (click)="setBlockType(6)">Heading 6</button>
+                </div>
+            </app-popover>
+            <span class="tb-caption">Block</span>
+        </div>
         <span class="sep"></span>
         <button (click)="cmd(c => c.undo())" [disabled]="!canUndo()" title="Undo (Ctrl+Z)"><svg lucideUndo2 class="icon"></svg></button>
         <button (click)="cmd(c => c.redo())" [disabled]="!canRedo()" title="Redo (Ctrl+Y)"><svg lucideRedo2 class="icon"></svg></button>
 
         <!--Text formatting-->
         <span class="sep"></span>
-        <button (click)="cmd(c => c.toggleBold())" [class.on]="isActive('bold')" title="Bold"><svg lucideBold class="icon"></svg></button>
-        <button (click)="cmd(c => c.toggleItalic())" [class.on]="isActive('italic')" title="Italic"><svg lucideItalic class="icon"></svg></button>
-        <button (click)="cmd(c => c.toggleUnderline())" [class.on]="isActive('underline')" title="Underline"><svg lucideUnderline class="icon"></svg></button>
-        <button (click)="cmd(c => c.toggleStrike())" [class.on]="isActive('strike')" title="Strikethrough"><svg lucideStrikethrough class="icon"></svg></button>
-        <button (click)="cmd(c => c.toggleCode())" [class.on]="isActive('code')" title="Inline code"><svg lucideCode class="icon"></svg></button>
-        <button (click)="cmd(c => c.toggleMark('spoiler'))" [class.on]="isActive('spoiler')" title="Spoiler"><svg lucideEyeOff class="icon"></svg></button>
+        <div class="tb-group">
+            <div class="tb-row">
+                <button (click)="cmd(c => c.toggleBold())" [class.on]="isActive('bold')" title="Bold"><svg lucideBold class="icon"></svg></button>
+                <button (click)="cmd(c => c.toggleItalic())" [class.on]="isActive('italic')" title="Italic"><svg lucideItalic class="icon"></svg></button>
+                <button (click)="cmd(c => c.toggleUnderline())" [class.on]="isActive('underline')" title="Underline"><svg lucideUnderline class="icon"></svg></button>
+                <button (click)="cmd(c => c.toggleStrike())" [class.on]="isActive('strike')" title="Strikethrough"><svg lucideStrikethrough class="icon"></svg></button>
+                <button (click)="cmd(c => c.toggleMark('spoiler'))" [class.on]="isActive('spoiler')" title="Spoiler"><svg lucideEyeOff class="icon"></svg></button>
+            </div>
+            <span class="tb-caption">Text</span>
+        </div>
+
+        <!--Code: inline code and code block-->
+        <span class="sep"></span>
+        <div class="tb-group">
+            <div class="tb-row">
+                <button (click)="cmd(c => c.toggleCode())" [class.on]="isActive('code')" title="Inline code"><svg lucideCode class="icon"></svg></button>
+                <button (click)="cmd(c => c.toggleCodeBlock())" [class.on]="isActive('codeBlock')" title="Code block"><svg lucideSquareCode class="icon"></svg></button>
+            </div>
+            <span class="tb-caption">Code</span>
+        </div>
 
         <!--Insert: links, emoji, date/time, footnote-->
         <span class="sep"></span>
-        <app-popover>
-            <button trigger [class.on]="isActive('link')" title="Link"><svg lucideLink class="icon"></svg></button>
-            <div panel class="link-popover">
-                <div class="format-toggle">
-                    <button [class.on]="linkType === 'url'" (click)="setLinkType('url')">URL</button>
-                    <button [class.on]="linkType === 'email'" (click)="setLinkType('email')">Email</button>
-                    <button [class.on]="linkType === 'phone'" (click)="setLinkType('phone')">Phone</button>
-                    <button [class.on]="linkType === 'mention'" (click)="setLinkType('mention')">Mention</button>
-                </div>
-                <input class="chat-input" style="margin-top:8px"
-                    [(ngModel)]="linkValue"
-                    [placeholder]="linkType === 'url' ? 'https://…' : linkType === 'email' ? 'name@example.com' : linkType === 'phone' ? '+1234567890' : 'numeric user id'"
-                    (keyup.enter)="applyLink()">
-                <button class="export-btn full" style="margin-top:8px" (click)="applyLink()">Apply</button>
-                @if (isActive('link')) {
-                <button class="export-btn full" style="margin-top:6px" (click)="removeLink()">Remove link</button>
-                }
-            </div>
-        </app-popover>
+        <div class="tb-group">
+            <div class="tb-row">
+                <app-popover>
+                    <button trigger [class.on]="isActive('link')" title="Link"><svg lucideLink class="icon"></svg></button>
+                    <div panel class="link-popover">
+                        <div class="format-toggle">
+                            <button [class.on]="linkType === 'url'" (click)="setLinkType('url')">URL</button>
+                            <button [class.on]="linkType === 'email'" (click)="setLinkType('email')">Email</button>
+                            <button [class.on]="linkType === 'phone'" (click)="setLinkType('phone')">Phone</button>
+                            <button [class.on]="linkType === 'mention'" (click)="setLinkType('mention')">Mention</button>
+                        </div>
+                        <input class="chat-input" style="margin-top:8px"
+                            [(ngModel)]="linkValue"
+                            [placeholder]="linkType === 'url' ? 'https://…' : linkType === 'email' ? 'name@example.com' : linkType === 'phone' ? '+1234567890' : 'numeric user id'"
+                            (keyup.enter)="applyLink()">
+                        <button class="export-btn full" style="margin-top:8px" (click)="applyLink()">Apply</button>
+                        @if (isActive('link')) {
+                        <button class="export-btn full" style="margin-top:6px" (click)="removeLink()">Remove link</button>
+                        }
+                    </div>
+                </app-popover>
 
-        <app-popover>
-            <button trigger title="Emoji"><svg lucideSmile class="icon"></svg></button>
-            <div panel class="emoji-popover">
-                @for (e of commonEmoji; track e) {
-                <button class="emoji-btn" (click)="insertEmoji(e)">{{ e }}</button>
-                }
-            </div>
-        </app-popover>
+                <app-popover>
+                    <button trigger title="Emoji"><svg lucideSmile class="icon"></svg></button>
+                    <div panel class="emoji-popover">
+                        @for (e of commonEmoji; track e) {
+                        <button class="emoji-btn" (click)="insertEmoji(e)">{{ e }}</button>
+                        }
+                    </div>
+                </app-popover>
 
-        <app-popover>
-            <button trigger title="Date/time"><svg lucideClock class="icon"></svg></button>
-            <div panel>
-                <input type="datetime-local" [(ngModel)]="dtValue">
-                <div class="dt-flags">
-                    <label><input type="checkbox" [(ngModel)]="dtWeekday"> Weekday</label>
-                    <label><input type="checkbox" [(ngModel)]="dtDate"> Date</label>
-                    <label><input type="checkbox" [(ngModel)]="dtTime"> Time</label>
-                </div>
-                <button class="export-btn full" style="margin-top:8px" (click)="insertDateTime()" [disabled]="!dtValue">Insert</button>
-            </div>
-        </app-popover>
+                <app-popover>
+                    <button trigger title="Date/time"><svg lucideClock class="icon"></svg></button>
+                    <div panel>
+                        <input type="datetime-local" [(ngModel)]="dtValue">
+                        <div class="dt-flags">
+                            <label><input type="checkbox" [(ngModel)]="dtWeekday"> Weekday</label>
+                            <label><input type="checkbox" [(ngModel)]="dtDate"> Date</label>
+                            <label><input type="checkbox" [(ngModel)]="dtTime"> Time</label>
+                        </div>
+                        <button class="export-btn full" style="margin-top:8px" (click)="insertDateTime()" [disabled]="!dtValue">Insert</button>
+                    </div>
+                </app-popover>
 
-        <app-popover>
-            <button trigger title="Footnote"><svg lucideSuperscript class="icon"></svg></button>
-            <div panel class="link-popover">
-                <textarea class="chat-input" rows="3" placeholder="Footnote text…" [(ngModel)]="footnoteText"></textarea>
-                <button class="export-btn full" style="margin-top:8px" (click)="insertFootnote()" [disabled]="!footnoteText.trim()">Insert</button>
+                <app-popover>
+                    <button trigger title="Footnote"><svg lucideSuperscript class="icon"></svg></button>
+                    <div panel class="link-popover">
+                        <textarea class="chat-input" rows="3" placeholder="Footnote text…" [(ngModel)]="footnoteText"></textarea>
+                        <button class="export-btn full" style="margin-top:8px" (click)="insertFootnote()" [disabled]="!footnoteText.trim()">Insert</button>
+                    </div>
+                </app-popover>
             </div>
-        </app-popover>
+            <span class="tb-caption">Insert</span>
+        </div>
 
-        <!--Lists and blockquotes-->
+        <!--Lists and indent-->
         <span class="sep"></span>
-        <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')" title="Bullet list"><svg lucideList class="icon"></svg></button>
-        <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')" title="Numbered list"><svg lucideListOrdered class="icon"></svg></button>
-        <button (click)="cmd(c => c.toggleTaskList())" [class.on]="isActive('taskList')" title="Task list"><svg lucideListTodo class="icon"></svg></button>
-        <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" title="Blockquote"><svg lucideQuote class="icon"></svg></button>
-        <button (click)="cmd(c => c.toggleCodeBlock())" [class.on]="isActive('codeBlock')" title="Code block"><svg lucideSquareCode class="icon"></svg></button>
+        <div class="tb-group">
+            <div class="tb-row">
+                <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')" title="Bullet list"><svg lucideList class="icon"></svg></button>
+                <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')" title="Numbered list"><svg lucideListOrdered class="icon"></svg></button>
+                <button (click)="cmd(c => c.toggleTaskList())" [class.on]="isActive('taskList')" title="Task list"><svg lucideListTodo class="icon"></svg></button>
+                <button (click)="indent()" title="Increase indent"><svg lucideIndent class="icon"></svg></button>
+                <button (click)="outdent()" title="Decrease indent"><svg lucideOutdent class="icon"></svg></button>
+            </div>
+            <span class="tb-caption">Lists</span>
+        </div>
 
         <!--Media-->
         <span class="sep"></span>
-        <button (click)="fileInput.click()" title="Insert image"><svg lucideImage class="icon"></svg></button>
-        <input #fileInput type="file" accept="image/jpeg,image/png,image/gif,image/webp" multiple hidden (change)="onFileChosen($event)">
+        <div class="tb-group">
+            <div class="tb-row">
+                <button (click)="fileInput.click()" title="Insert image"><svg lucideImage class="icon"></svg></button>
+                <input #fileInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onFileChosen($event)">
 
-        <button (click)="videoInput.click()" title="Insert video"><svg lucideVideo class="icon"></svg></button>
-        <input #videoInput type="file" accept="video/mp4" multiple hidden (change)="onVideoChosen($event)">
+                <button (click)="videoInput.click()" title="Insert video"><svg lucideVideo class="icon"></svg></button>
+                <input #videoInput type="file" accept="video/mp4" multiple hidden (change)="onVideoChosen($event)">
 
-        <button (click)="audioInput.click()" title="Insert audio"><svg lucideAudioLines class="icon"></svg></button>
-        <input #audioInput type="file" accept="audio/mpeg,audio/ogg" multiple hidden (change)="onAudioChosen($event)">
+                <button class="gif-btn" (click)="gifInput.click()" title="Insert GIF">GIF</button>
+                <input #gifInput type="file" accept="image/gif" multiple hidden (change)="onGifChosen($event)">
 
-        <button (click)="carouselInput.click()" title="Insert image carousel"><svg lucideImages class="icon"></svg></button>
-        <input #carouselInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCarouselChosen($event)">
+                <button (click)="audioInput.click()" title="Insert audio"><svg lucideAudioLines class="icon"></svg></button>
+                <input #audioInput type="file" accept="audio/mpeg,audio/ogg" multiple hidden (change)="onAudioChosen($event)">
 
-        <button (click)="collageInput.click()" title="Insert image collage"><svg lucideLayoutGrid class="icon"></svg></button>
-        <input #collageInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCollageChosen($event)">
+                <button (click)="carouselInput.click()" title="Insert image carousel"><svg lucideImages class="icon"></svg></button>
+                <input #carouselInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCarouselChosen($event)">
 
-        <!--Overflow: table, formulas, toggle block, indent-->
-        <span class="sep"></span>
-        <app-popover align="right">
-            <button trigger class="overflow-btn" title="More: table, formulas, toggle block, indent">⋯</button>
-            <div panel class="overflow-menu">
-                <button (click)="insertTable()"><svg lucideTable class="icon"></svg> Insert table</button>
-                @if (isActive('table')) {
-                <button (click)="cmd(c => c.addRowBefore())"><svg lucidePlus class="icon"></svg> Add row above</button>
-                <button (click)="cmd(c => c.addRowAfter())"><svg lucidePlus class="icon"></svg> Add row below</button>
-                <button (click)="cmd(c => c.deleteRow())"><svg lucideX class="icon"></svg> Delete row</button>
-                <button (click)="cmd(c => c.addColumnBefore())"><svg lucidePlus class="icon"></svg> Add column left</button>
-                <button (click)="cmd(c => c.addColumnAfter())"><svg lucidePlus class="icon"></svg> Add column right</button>
-                <button (click)="cmd(c => c.deleteColumn())"><svg lucideX class="icon"></svg> Delete column</button>
-                <button (click)="cmd(c => c.deleteTable())"><svg lucideTrash2 class="icon"></svg> Delete table</button>
-                }
-                <div class="overflow-divider"></div>
-                <button (click)="insertInlineMath()"><svg lucideSigma class="icon"></svg> Inline formula</button>
-                <button (click)="insertBlockMath()"><svg lucideSigmaSquare class="icon"></svg> Block formula</button>
-                <button (click)="insertToggle()"><svg lucideListCollapse class="icon"></svg> Expandable block</button>
-                <button (click)="insertAnnotation()" [disabled]="!canAnnotate()" title="Wrap the current selection so it can carry likes/comments on the blog">
-                    <svg lucideMessageSquare class="icon"></svg> Mark for comments
-                </button>
-                <button (click)="outdent()"><svg lucideOutdent class="icon"></svg> Decrease indent</button>
-                <button (click)="indent()"><svg lucideIndent class="icon"></svg> Increase indent</button>
-                <div class="overflow-divider"></div>
-                <button (click)="aiEdit('fix-errors')" [disabled]="aiEditBusy()" title="Pro Plus feature — fixes spelling/grammar/punctuation only">
-                    <svg lucideSpellCheck class="icon"></svg> {{ aiEditBusy() ? 'Working…' : 'Fix errors' }}
-                </button>
-                <button (click)="aiEdit('schizo')" [disabled]="aiEditBusy()" title="Pro Plus feature — rewrites in an unhinged schizoposting style">
-                    <svg lucideFlame class="icon"></svg> {{ aiEditBusy() ? 'Working…' : 'Schizo-izer' }}
-                </button>
-                @if (aiEditError()) { <p class="channel-error">{{ aiEditError() }}</p> }
+                <button (click)="collageInput.click()" title="Insert image collage"><svg lucideLayoutGrid class="icon"></svg></button>
+                <input #collageInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCollageChosen($event)">
             </div>
-        </app-popover>
+            <span class="tb-caption">Media</span>
+        </div>
+
+        <!--Blocks: table (contextual), formulas, toggle block, mark-for-comments, indent-->
+        <span class="sep"></span>
+        <div class="tb-group">
+            <div class="tb-row">
+                <app-popover>
+                    <button trigger title="Table"><svg lucideTable class="icon"></svg></button>
+                    <div panel class="block-menu">
+                        @if (isActive('table')) {
+                        <button (click)="cmd(c => c.addRowBefore())"><svg lucidePlus class="icon-xs"></svg> Add row above</button>
+                        <button (click)="cmd(c => c.addRowAfter())"><svg lucidePlus class="icon-xs"></svg> Add row below</button>
+                        <button (click)="cmd(c => c.deleteRow())"><svg lucideX class="icon-xs"></svg> Delete row</button>
+                        <button (click)="cmd(c => c.addColumnBefore())"><svg lucidePlus class="icon-xs"></svg> Add column left</button>
+                        <button (click)="cmd(c => c.addColumnAfter())"><svg lucidePlus class="icon-xs"></svg> Add column right</button>
+                        <button (click)="cmd(c => c.deleteColumn())"><svg lucideX class="icon-xs"></svg> Delete column</button>
+                        <button (click)="cmd(c => c.deleteTable())"><svg lucideTrash2 class="icon-xs"></svg> Delete table</button>
+                        } @else {
+                        <button (click)="insertTable()"><svg lucideTable class="icon-xs"></svg> Insert table</button>
+                        }
+                    </div>
+                </app-popover>
+
+                <app-popover>
+                    <button trigger title="Formula"><svg lucideSigma class="icon"></svg></button>
+                    <div panel class="block-menu">
+                        <button (click)="insertInlineMath()"><svg lucideSigma class="icon-xs"></svg> Inline formula</button>
+                        <button (click)="insertBlockMath()"><svg lucideSigmaSquare class="icon-xs"></svg> Block formula</button>
+                    </div>
+                </app-popover>
+
+                <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" title="Blockquote"><svg lucideQuote class="icon"></svg></button>
+                <button (click)="insertToggle()" title="Toggle block"><svg lucideListCollapse class="icon"></svg></button>
+                <button (click)="insertAnnotation()" [disabled]="!canAnnotate()" title="Mark for comments — wraps the selection so it can carry likes/comments on the blog">
+                    <svg lucideMessageSquare class="icon"></svg>
+                </button>
+            </div>
+            <span class="tb-caption">Blocks</span>
+        </div>
+
+        <span class="tb-flex-spacer"></span>
+
+        <!--AI (Pro Plus) — surfaced instead of buried in an overflow menu-->
+        <div class="tb-group">
+            <div class="tb-row">
+                <button class="ai-chip" (click)="askAiEdit('fix-errors')" [disabled]="aiEditBusy()">
+                    <svg lucideSparkle class="icon-xs"></svg> {{ aiEditBusy() ? 'Working… ' + aiEditElapsed() + 's' : 'Fix errors' }}
+                </button>
+                <button class="ai-chip" (click)="askAiEdit('schizo')" [disabled]="aiEditBusy()">
+                    <svg lucideSparkle class="icon-xs"></svg> {{ aiEditBusy() ? 'Working… ' + aiEditElapsed() + 's' : 'Schizo-izer' }}
+                </button>
+            </div>
+            <span class="tb-caption accent">AI · Pro Plus</span>
+        </div>
     </div>
+    @if (aiEditError()) { <p class="channel-error" style="margin:4px 14px">{{ aiEditError() }}</p> }
+
+    <!--AI confirm dialog (replaces window.confirm)-->
+    @if (aiConfirmKind(); as kind) {
+    <div class="modal-overlay" (click)="cancelAiConfirm()">
+        <div class="modal-card" (click)="$event.stopPropagation()">
+            <div class="modal-head">
+                <svg lucideSparkle class="icon"></svg>
+                <span>{{ aiConfirmTitle() }}</span>
+            </div>
+            <p class="modal-body">{{ aiConfirmBody() }}</p>
+            <div class="modal-actions">
+                <button class="btn-ghost" (click)="cancelAiConfirm()">Cancel</button>
+                <button class="btn-accent" (click)="confirmAiEdit()">{{ kind === 'fix-errors' ? 'Fix errors' : 'Run it' }}</button>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!--AI success toast-->
+    @if (aiToast(); as toast) {
+    <div class="ai-toast">
+        <svg lucideCheck class="icon-xs"></svg>
+        <span>{{ toast }}</span>
+    </div>
+    }
 
     <!--Upload progress-->
     @if (uploads().length) {
@@ -493,40 +535,6 @@
 
     <!--Main content-->
     <div class="main">
-        <div class="drawer-backdrop" [class.open]="draftsOpen()" (click)="draftsOpen.set(false)"></div>
-        <div class="drawer-backdrop" [class.open]="annotationsOpen()" (click)="annotationsOpen.set(false)"></div>
-
-        <!--Left panel-->
-        <aside class="panel left" [class.open]="draftsOpen()">
-            <div class="panel-head">
-                <span class="panel-label">Drafts</span>
-                <button class="mini" (click)="cedarInput.click()" [disabled]="importingCedar()" title="Import .cedar">
-                    <svg lucideUpload class="icon-sm"></svg>
-                </button>
-                <button class="mini" (click)="newDraft()" title="New draft"><svg lucidePlus class="icon-sm"></svg></button>
-            </div>
-            <input #cedarInput type="file" accept=".cedar" hidden (change)="onImportCedarChosen($event)">
-            @if (importCedarError()) {
-            <p class="channel-error">{{ importCedarError() }}</p>
-            }
-            @for (d of drafts(); track d.id) {
-            <div class="draft-item" [class.active]="d.id === currentId()" (click)="openDraft(d.id)">
-                <div class="draft-info">
-                    <div class="draft-title">
-                        {{ d.title || 'Untitled' }}
-                        @if (d.languages.includes('en')) { <span class="draft-lang-badge">EN</span> }
-                    </div>
-                    <div class="draft-date">{{ d.updatedAt | date:'d MMM, HH:mm' }}</div>
-                </div>
-                <button class="mini-remove" (click)="deleteDraft(d.id); $event.stopPropagation()" title="Delete draft">
-                    <svg lucideTrash2 class="icon-sm"></svg>
-                </button>
-            </div>
-            } @empty {
-            <p class="hint">Empty. Click +</p>
-            }
-        </aside>
-
         <section class="canvas">
             <div class="lang-tabs">
                 <button [class.on]="lang() === 'ru'" (click)="switchLang('ru')">RU</button>
@@ -538,7 +546,7 @@
                     @if (enStale()) {
                     <button class="retranslate-btn" (click)="autoTranslateEn()" [disabled]="autoTranslating()"
                             title="Russian version changed — re-translate">
-                        {{ autoTranslating() ? '…' : '↻ Re-translate' }}
+                        {{ autoTranslating() ? autoTranslateElapsed() + 's…' : '↻ Re-translate' }}
                     </button>
                     }
                 <button class="lang-delete" (click)="deleteEnVersion()" title="Delete English version">
@@ -549,7 +557,7 @@
                     @for (t of tagList(); track t) {
                     <span class="tag-chip">#{{ t }}<button class="tag-x" (click)="removeTag(t)" title="Remove tag">×</button></span>
                     }
-                    <input class="tag-input" [(ngModel)]="tagInput" (keydown.enter)="addTag()" placeholder="+ tag" maxlength="30">
+                    <input class="tag-input" [(ngModel)]="tagInput" (keydown.enter)="addTag()" placeholder="+ Add tag" maxlength="30">
                 </div>
             </div>
             @if (showEnEmptyState()) {
@@ -562,38 +570,17 @@
                     <button class="export-btn" (click)="startEnVersion(true)" [disabled]="autoTranslating()">Copy from Russian</button>
                     <button class="export-btn" (click)="startEnVersion(false)" [disabled]="autoTranslating()">Start empty</button>
                 </div>
+                @if (autoTranslating()) {
+                <div class="translate-progress">
+                    <div class="indeterminate-bar"><div class="indeterminate-fill"></div></div>
+                    <p class="translate-status">{{ translateStatusMessage() }} ({{ autoTranslateElapsed() }}s)</p>
+                </div>
+                }
                 @if (autoTranslateError()) { <p class="channel-error">{{ autoTranslateError() }}</p> }
             </div>
             }
             <div class="sheet" #editorHost [style.--zoom]="zoomFactor()" [style.display]="showEnEmptyState() ? 'none' : ''"></div>
         </section>
-
-        <!--Right panel: comments & likes moderation-->
-        <aside class="panel right" [class.open]="annotationsOpen()">
-            <div class="panel-head">
-                <span class="panel-label">Comments &amp; likes</span>
-                <button class="mini" (click)="annotationsOpen.set(false)" title="Close"><svg lucideX class="icon-sm"></svg></button>
-            </div>
-            @if (commentsLoading()) {
-            <p class="hint">Loading…</p>
-            } @else {
-                <p class="reactions-summary">👍 {{ draftReactions().likes }} · 👎 {{ draftReactions().dislikes }}</p>
-                @for (c of draftComments(); track c.id) {
-                <div class="comment-row">
-                    <div class="comment-row-top">
-                        <span class="comment-tag">{{ c.annotationId ? 'In text' : 'Whole article' }}</span>
-                        <button class="mini-remove" (click)="deleteComment(c.id)" title="Delete comment">
-                            <svg lucideTrash2 class="icon-sm"></svg>
-                        </button>
-                    </div>
-                    <div class="comment-row-meta">{{ c.authorName || 'Anonymous' }} · {{ c.createdAt | date:'d MMM, HH:mm' }}</div>
-                    <div class="comment-row-text">{{ c.text }}</div>
-                </div>
-                } @empty {
-                <p class="hint">No comments yet.</p>
-                }
-            }
-        </aside>
     </div>
 
     <!--Status bar-->

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 namespace CedarClerk.Core;
 
@@ -113,7 +114,13 @@ public static class CedarToBlogHtmlRenderer
 
             case "video":
                 var videoSrc = ResolveUrl((string?)node["attrs"]?["src"], ctx.MediaBaseUrl);
-                AppendMedia(sb, "video", videoSrc, (string?)node["attrs"]?["caption"], isVoid: false);
+                // GIFs are stored as "video" nodes (Telegram sends them as an animation, not a
+                // static photo), but no browser can decode a GIF inside a <video> tag — render
+                // those as <img> instead so they actually play on the blog.
+                if (IsGifSrc(videoSrc))
+                    AppendMedia(sb, "img", videoSrc, (string?)node["attrs"]?["caption"], isVoid: true);
+                else
+                    AppendMedia(sb, "video", videoSrc, (string?)node["attrs"]?["caption"], isVoid: false);
                 break;
 
             case "audio":
@@ -226,12 +233,13 @@ public static class CedarToBlogHtmlRenderer
         <span class="comment-count-label">&#128172; <span class="comment-count">0</span></span>
         </div>
         <div class="comment-box">
+        <div class="comment-box-label">Comments</div>
         <div class="comment-list"></div>
         <button type="button" class="comment-load-more" hidden>Show more comments</button>
         <form class="comment-form">
         <input type="text" class="comment-author" placeholder="Name (optional)" maxlength="60">
-        <textarea class="comment-text" placeholder="Write a comment..." maxlength="2000" required></textarea>
-        <button type="submit">Post</button>
+        <textarea class="comment-text" placeholder="Add a comment…" maxlength="2000" required></textarea>
+        <button type="submit">Send</button>
         </form>
         </div>
         """;
@@ -244,6 +252,9 @@ public static class CedarToBlogHtmlRenderer
         if (format.Contains('T')) parts.Add(dt.ToString("HH:mm", CultureInfo.InvariantCulture));
         return parts.Count > 0 ? string.Join(' ', parts) : dt.ToString("g", CultureInfo.InvariantCulture);
     }
+
+    private static bool IsGifSrc(string src) =>
+        Regex.IsMatch(src, @"\.gif(?:[?#]|$)", RegexOptions.IgnoreCase);
 
     private static void AppendMedia(StringBuilder sb, string tag, string src, string? caption, bool isVoid)
     {

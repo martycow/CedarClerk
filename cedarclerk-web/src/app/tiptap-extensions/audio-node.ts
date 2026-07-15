@@ -57,6 +57,9 @@ export const AudioNode = Node.create({
                     }
                     return true;
                 },
+                // See image-node.ts: without this, clicking/typing/backspacing in the caption
+                // input gets intercepted as node selection/deletion instead of text editing.
+                stopEvent: event => captionInput.contains(event.target as globalThis.Node),
             };
         };
     },
