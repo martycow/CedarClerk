@@ -1,4 +1,5 @@
-﻿using CedarClerk.Core;
+﻿using System.Diagnostics;
+using CedarClerk.Core;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
@@ -14,6 +15,7 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
     public User Me { get; private set; } = default!;
     
     private TelegramBotClient? _client;
+    private Stopwatch _sw = new();
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
@@ -37,6 +39,8 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
         }
 
         logger.LogInformation("Bot @{Username} (id {Id}) is running", Me.Username, Me.Id);
+        
+        _sw.Start();
 
         client.OnError += OnError;
         client.OnMessage += OnMessageReceived;
@@ -50,6 +54,8 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
     {
         if (_client == null)
             return base.StopAsync(cancellationToken);
+        
+        _sw.Stop();
         
         _client.OnError -= OnError;
         _client.OnMessage -= OnMessageReceived;
@@ -158,7 +164,8 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
     private async Task HandleStartCommand(Chat chat, string arg)
     {
         var startMsg = $"Cedar Clerk Bot v{Consts.CurrentVersion}\n" +
-                       $"Current Server UTC Time: {DateTime.UtcNow}\n\n" +
+                       $"Current Server UTC Time: {DateTime.UtcNow}\n" +
+                       $"Time elapsed since start: {_sw.Elapsed}\n\n" +
                        $"Add me to Channels, Groups and Supergroups.\n\n\n" +
                        $"Only for Channels: and assign me as an Administrator with the right to post messages)";
         

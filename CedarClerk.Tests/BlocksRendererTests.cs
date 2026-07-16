@@ -218,6 +218,26 @@ public class BlocksRendererTests
     }
 
     [Fact]
+    public void Drops_empty_carousel_and_collage_blocks_entirely()
+    {
+        // Editor artifact (repeated insert/delete) can leave a carousel/collage with zero images —
+        // Telegram rejects an empty slideshow/collage with RICH_MESSAGE_CONTENT_REQUIRED (verified
+        // 16.07.2026 against @testingandfun), so these must not reach InputRichMessage.Blocks at all.
+        var json = """
+                   {"type":"doc","content":[
+                       {"type":"paragraph","content":[{"type":"text","text":"before"}]},
+                       {"type":"carousel","attrs":{"images":[]}},
+                       {"type":"collage","attrs":{"images":[]}},
+                       {"type":"paragraph","content":[{"type":"text","text":"after"}]}
+                   ]}
+                   """;
+        var blocks = CedarToTelegramBlocksRenderer.Render(json);
+        Assert.Equal(2, blocks.Count);
+        Assert.Equal(new RichParagraphBlock(new RichRunText("before")), blocks[0]);
+        Assert.Equal(new RichParagraphBlock(new RichRunText("after")), blocks[1]);
+    }
+
+    [Fact]
     public void Renders_table_as_rows_of_cells_with_header_and_colspan()
     {
         var json = """

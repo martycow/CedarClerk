@@ -85,14 +85,18 @@ public static class CedarToTelegramBlocksRenderer
                 return new RichAudioBlock(audioUrl, CaptionRun((string?)node["attrs"]?["caption"]));
 
             case "carousel":
+                // An empty slideshow/collage (editor artifact — e.g. repeated insert/delete leaving
+                // a carousel with no images) gets rejected by Telegram (RICH_MESSAGE_CONTENT_REQUIRED,
+                // verified 16.07.2026 against @testingandfun) — drop the block entirely rather than
+                // send something guaranteed to fail.
                 var slideUrls = node["attrs"]?["images"]?.AsArray()
                     ?.Select(img => ResolveUrl((string?)img, ctx.MediaBaseUrl)).ToList() ?? [];
-                return new RichSlideshowBlock(slideUrls);
+                return slideUrls.Count == 0 ? null : new RichSlideshowBlock(slideUrls);
 
             case "collage":
                 var collageUrls = node["attrs"]?["images"]?.AsArray()
                     ?.Select(img => ResolveUrl((string?)img, ctx.MediaBaseUrl)).ToList() ?? [];
-                return new RichCollageBlock(collageUrls);
+                return collageUrls.Count == 0 ? null : new RichCollageBlock(collageUrls);
 
             case "table":
                 return RenderTable(node["content"]?.AsArray(), ctx);
