@@ -4,7 +4,7 @@ $HealthUrl = "https://cedarclerk.mooexe.dev/api/health"
 
 $ErrorActionPreference = "Stop"
 
-$CedarClerkDir = Join-Path (Split-Path $PSScriptRoot -Parent) "CedarClerk"
+$CedarClerkDir = Split-Path $PSScriptRoot -Parent
 $WebDir = Join-Path $CedarClerkDir "cedarclerk-web"
 $PublishDir = Join-Path $CedarClerkDir "publish"
 

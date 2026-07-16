@@ -508,6 +508,23 @@
     </div>
     }
 
+    <!--Re-translate confirm dialog (replaces window.confirm)-->
+    @if (translateConfirmOpen()) {
+    <div class="modal-overlay" (click)="cancelTranslateConfirm()">
+        <div class="modal-card" (click)="$event.stopPropagation()">
+            <div class="modal-head">
+                <svg lucideRefreshCw class="icon"></svg>
+                <span>Replace the English version?</span>
+            </div>
+            <p class="modal-body">A fresh machine translation will overwrite the current English version. The original stays in history.</p>
+            <div class="modal-actions">
+                <button class="btn-ghost" (click)="cancelTranslateConfirm()">Cancel</button>
+                <button class="btn-accent" (click)="confirmTranslate()">Replace</button>
+            </div>
+        </div>
+    </div>
+    }
+
     <!--AI success toast-->
     @if (aiToast(); as toast) {
     <div class="ai-toast">

@@ -176,6 +176,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     autoTranslateElapsed = signal(0);
     private autoTranslateTicker?: ReturnType<typeof setInterval>;
     autoTranslateError = signal<string | null>(null);
+    translateConfirmOpen = signal(false);
     exporting = signal(false);
     exportResult = signal('');
     exportLink = signal<string | null>(null);
@@ -523,10 +524,28 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     // Machine-translates the RU version into EN and loads the result into the editor for review.
-    async autoTranslateEn() {
+    // Replacing an existing translation goes through a confirm modal first (see confirmTranslate()).
+    autoTranslateEn() {
+        if (!this.currentId() || !this.editor) return;
+        if (this.enMeta()) {
+            this.translateConfirmOpen.set(true);
+            return;
+        }
+        this.runAutoTranslate();
+    }
+
+    cancelTranslateConfirm() {
+        this.translateConfirmOpen.set(false);
+    }
+
+    async confirmTranslate() {
+        this.translateConfirmOpen.set(false);
+        await this.runAutoTranslate();
+    }
+
+    private async runAutoTranslate() {
         const id = this.currentId();
         if (!id || !this.editor) return;
-        if (this.enMeta() && !window.confirm('Replace the current English version with a fresh machine translation?')) return;
 
         this.autoTranslating.set(true);
         this.autoTranslateElapsed.set(0);
