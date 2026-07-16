@@ -13,7 +13,7 @@ public class RendererTests
                        {"type":"text","text":"мир","marks":[{"type":"bold"}]}
                    ]}]}
                    """;
-        Assert.Equal("<p>Привет, <b>мир</b></p>", CedarToTelegramHtmlRenderer.Render(json));
+        Assert.Equal("<p>Привет, <b>мир</b></p>", CedarToTelegramHtmlRenderer.Render(json).Text);
     }
 
     [Fact]
@@ -24,7 +24,7 @@ public class RendererTests
                        {"type":"text","text":"a < b & <script>"}
                    ]}]}
                    """;
-        Assert.Equal("<p>a &lt; b &amp; &lt;script&gt;</p>", CedarToTelegramHtmlRenderer.Render(json));
+        Assert.Equal("<p>a &lt; b &amp; &lt;script&gt;</p>", CedarToTelegramHtmlRenderer.Render(json).Text);
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public class RendererTests
                        {"type":"text","text":"x","marks":[{"type":"bold"},{"type":"italic"}]}
                    ]}]}
                    """;
-        Assert.Equal("<p><b><i>x</i></b></p>", CedarToTelegramHtmlRenderer.Render(json));
+        Assert.Equal("<p><b><i>x</i></b></p>", CedarToTelegramHtmlRenderer.Render(json).Text);
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public class RendererTests
                    ]}]}
                    """;
         Assert.Equal("<pre><code class=\"language-csharp\">var x = 1;</code></pre>",
-            CedarToTelegramHtmlRenderer.Render(json));
+            CedarToTelegramHtmlRenderer.Render(json).Text);
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class RendererTests
                        {"type":"text","text":"Заголовок"}
                    ]}]}
                    """;
-        Assert.Equal("<h2>Заголовок</h2>", CedarToTelegramHtmlRenderer.Render(json));
+        Assert.Equal("<h2>Заголовок</h2>", CedarToTelegramHtmlRenderer.Render(json).Text);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class RendererTests
                    ]}]}
                    """;
         Assert.Equal("<ul><li><p>раз</p></li><li><p>два</p></li></ul>",
-            CedarToTelegramHtmlRenderer.Render(json));
+            CedarToTelegramHtmlRenderer.Render(json).Text);
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public class RendererTests
                    ]}]}
                    """;
         Assert.Equal("<ul><li><p>раз</p><ul><li><p>раз.один</p></li></ul></li></ul>",
-            CedarToTelegramHtmlRenderer.Render(json));
+            CedarToTelegramHtmlRenderer.Render(json).Text);
     }
 
     [Fact]
@@ -97,8 +97,12 @@ public class RendererTests
         var json = """
                    {"type":"doc","content":[{"type":"image","attrs":{"src":"/media/pic.jpg"}}]}
                    """;
-        Assert.Equal("<photo src=\"https://cedarclerk.mooexe.dev/media/pic.jpg\">",
-            CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
+        var result = CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev");
+        Assert.Equal("<img src=\"tg://photo?id=m1\">", result.Text);
+        var media = Assert.Single(result.Media);
+        Assert.Equal("m1", media.Id);
+        Assert.Equal(RichMediaKind.Photo, media.Kind);
+        Assert.Equal("https://cedarclerk.mooexe.dev/media/pic.jpg", media.Url);
     }
 
     [Fact]
@@ -109,8 +113,9 @@ public class RendererTests
                        {"type":"listItem","content":[{"type":"image","attrs":{"src":"/media/pic.jpg"}}]}
                    ]}]}
                    """;
-        Assert.Equal("<ul><li><photo src=\"https://cedarclerk.mooexe.dev/media/pic.jpg\"></li></ul>",
-            CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
+        var result = CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev");
+        Assert.Equal("<ul><li><img src=\"tg://photo?id=m1\"></li></ul>", result.Text);
+        Assert.Equal("https://cedarclerk.mooexe.dev/media/pic.jpg", Assert.Single(result.Media).Url);
     }
 
     [Fact]
@@ -119,8 +124,9 @@ public class RendererTests
         var json = """
                    {"type":"doc","content":[{"type":"video","attrs":{"src":"/media/clip.mp4"}}]}
                    """;
-        Assert.Equal("<video src=\"https://cedarclerk.mooexe.dev/media/clip.mp4\"></video>",
-            CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
+        var result = CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev");
+        Assert.Equal("<video src=\"tg://video?id=m1\"></video>", result.Text);
+        Assert.Equal(RichMediaKind.Video, Assert.Single(result.Media).Kind);
     }
 
     [Fact]
@@ -129,8 +135,9 @@ public class RendererTests
         var json = """
                    {"type":"doc","content":[{"type":"audio","attrs":{"src":"/media/sound.mp3"}}]}
                    """;
-        Assert.Equal("<audio src=\"https://cedarclerk.mooexe.dev/media/sound.mp3\"></audio>",
-            CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
+        var result = CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev");
+        Assert.Equal("<audio src=\"tg://audio?id=m1\"></audio>", result.Text);
+        Assert.Equal(RichMediaKind.Audio, Assert.Single(result.Media).Kind);
     }
 
     [Fact]
@@ -139,10 +146,11 @@ public class RendererTests
         var json = """
                    {"type":"doc","content":[{"type":"carousel","attrs":{"images":["/media/a.jpg","/media/b.jpg"]}}]}
                    """;
+        var result = CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev");
         Assert.Equal(
-            "<tg-slideshow><photo src=\"https://cedarclerk.mooexe.dev/media/a.jpg\">" +
-            "<photo src=\"https://cedarclerk.mooexe.dev/media/b.jpg\"></tg-slideshow>",
-            CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
+            "<tg-slideshow><img src=\"tg://photo?id=m1\"><img src=\"tg://photo?id=m2\"></tg-slideshow>",
+            result.Text);
+        Assert.Equal(2, result.Media.Count);
     }
 
     [Fact]
@@ -161,7 +169,7 @@ public class RendererTests
                    """;
         Assert.Equal(
             "<table><tr><th colspan=\"2\">Заголовок</th></tr><tr><td>a</td><td>b</td></tr></table>",
-            CedarToTelegramHtmlRenderer.Render(json));
+            CedarToTelegramHtmlRenderer.Render(json).Text);
     }
 
     [Fact]
@@ -176,7 +184,7 @@ public class RendererTests
         Assert.Equal(
             "<ul><li><input type=\"checkbox\" checked><p>сделано</p></li>" +
             "<li><input type=\"checkbox\"><p>не сделано</p></li></ul>",
-            CedarToTelegramHtmlRenderer.Render(json));
+            CedarToTelegramHtmlRenderer.Render(json).Text);
     }
 
     [Fact]
@@ -185,7 +193,7 @@ public class RendererTests
         var json = """
                    {"type":"doc","content":[{"type":"blockMath","attrs":{"latex":"E = mc^2"}}]}
                    """;
-        Assert.Equal("<tg-math-block>E = mc^2</tg-math-block>", CedarToTelegramHtmlRenderer.Render(json));
+        Assert.Equal("<tg-math-block>E = mc^2</tg-math-block>", CedarToTelegramHtmlRenderer.Render(json).Text);
     }
 
     [Fact]
@@ -197,7 +205,7 @@ public class RendererTests
                        {"type":"inlineMath","attrs":{"latex":"a < b"}}
                    ]}]}
                    """;
-        Assert.Equal("<p>формула: <tg-math>a &lt; b</tg-math></p>", CedarToTelegramHtmlRenderer.Render(json));
+        Assert.Equal("<p>формула: <tg-math>a &lt; b</tg-math></p>", CedarToTelegramHtmlRenderer.Render(json).Text);
     }
 
     [Fact]
@@ -208,7 +216,7 @@ public class RendererTests
                        {"type":"text","text":"secret","marks":[{"type":"spoiler"}]}
                    ]}]}
                    """;
-        Assert.Equal("<p><tg-spoiler>secret</tg-spoiler></p>", CedarToTelegramHtmlRenderer.Render(json));
+        Assert.Equal("<p><tg-spoiler>secret</tg-spoiler></p>", CedarToTelegramHtmlRenderer.Render(json).Text);
     }
 
     [Fact]
@@ -217,10 +225,11 @@ public class RendererTests
         var json = """
                    {"type":"doc","content":[{"type":"collage","attrs":{"images":["/media/a.jpg","/media/b.jpg"]}}]}
                    """;
+        var result = CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev");
         Assert.Equal(
-            "<tg-collage><photo src=\"https://cedarclerk.mooexe.dev/media/a.jpg\">" +
-            "<photo src=\"https://cedarclerk.mooexe.dev/media/b.jpg\"></tg-collage>",
-            CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
+            "<tg-collage><img src=\"tg://photo?id=m1\"><img src=\"tg://photo?id=m2\"></tg-collage>",
+            result.Text);
+        Assert.Equal(2, result.Media.Count);
     }
 
     [Fact]
@@ -231,7 +240,7 @@ public class RendererTests
                        {"type":"paragraph","content":[{"type":"text","text":"hidden"}]}
                    ]}]}
                    """;
-        Assert.Equal("<details open><summary>More</summary><p>hidden</p></details>", CedarToTelegramHtmlRenderer.Render(json));
+        Assert.Equal("<details open><summary>More</summary><p>hidden</p></details>", CedarToTelegramHtmlRenderer.Render(json).Text);
     }
 
     [Fact]
@@ -242,29 +251,29 @@ public class RendererTests
                        {"type":"datetime","attrs":{"unix":1700000000,"format":"wDT"}}
                    ]}]}
                    """;
-        Assert.Equal("<p><img src=\"tg://time?unix=1700000000&amp;format=wDT\"></p>", CedarToTelegramHtmlRenderer.Render(json));
+        Assert.Equal("<p><img src=\"tg://time?unix=1700000000&amp;format=wDT\"></p>", CedarToTelegramHtmlRenderer.Render(json).Text);
     }
 
     [Fact]
-    public void Renders_image_with_caption_as_figure()
+    public void Renders_image_caption_as_plain_paragraph_after_the_tag()
     {
+        // Verified 16.07.2026 against @testingandfun: InputMediaPhoto.Caption is ignored for
+        // inline (non-Blocks) media — the caption must be a plain paragraph instead.
         var json = """
                    {"type":"doc","content":[{"type":"image","attrs":{"src":"/media/pic.jpg","caption":"A caption"}}]}
                    """;
-        Assert.Equal(
-            "<figure><photo src=\"https://cedarclerk.mooexe.dev/media/pic.jpg\"><figcaption>A caption</figcaption></figure>",
-            CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
+        var result = CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev");
+        Assert.Equal("<img src=\"tg://photo?id=m1\"><p>A caption</p>", result.Text);
     }
 
     [Fact]
-    public void Renders_video_with_caption_as_figure()
+    public void Renders_video_caption_as_plain_paragraph_after_the_tag()
     {
         var json = """
                    {"type":"doc","content":[{"type":"video","attrs":{"src":"/media/clip.mp4","caption":"Video caption"}}]}
                    """;
-        Assert.Equal(
-            "<figure><video src=\"https://cedarclerk.mooexe.dev/media/clip.mp4\"></video><figcaption>Video caption</figcaption></figure>",
-            CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev"));
+        var result = CedarToTelegramHtmlRenderer.Render(json, "https://cedarclerk.mooexe.dev");
+        Assert.Equal("<video src=\"tg://video?id=m1\"></video><p>Video caption</p>", result.Text);
     }
 
     [Fact]
@@ -280,6 +289,6 @@ public class RendererTests
                    """;
         Assert.Equal(
             "<p>One<sup>[1]</sup> Two<sup>[2]</sup></p><hr><ol><li>First</li><li>Second</li></ol>",
-            CedarToTelegramHtmlRenderer.Render(json));
+            CedarToTelegramHtmlRenderer.Render(json).Text);
     }
 }

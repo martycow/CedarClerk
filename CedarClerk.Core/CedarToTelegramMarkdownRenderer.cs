@@ -4,29 +4,47 @@ using System.Text.Json.Nodes;
 namespace CedarClerk.Core;
 
 // Telegram Bot API 10.1 "Rich Message" Markdown mode (InputRichMessage.Markdown) — NOT classic
-// Markdown or MarkdownV2. Syntax mirrors Bot/RickTextFixture.cs, which was already sent successfully
-// to a real channel via /richtest. Raw HTML tags (e.g. <u>, <tg-slideshow>) are valid mixed into
-// this Markdown, per the fixture's "Nested Syntax" example.
+// Markdown or MarkdownV2. Raw HTML tags (e.g. <u>, <tg-slideshow>) are valid mixed into this
+// Markdown.
+//
+// NOT USED for sending to Telegram as of 16.07.2026 — PostEndpoints.PublishAsync sends via
+// CedarToTelegramBlocksRenderer instead (see docs/DECISIONS.md). The tg://{kind}?id={Id} +
+// InputRichMessage.Media approach this renderer implements DOES get accepted by Telegram (no
+// error) but was verified live against @testingandfun to silently drop the media entirely — it
+// does not actually render. Kept as-is (not deleted) in case it's useful again; do not wire it
+// back into the send path without re-verifying against a real channel first.
 public static class CedarToTelegramMarkdownRenderer
 {
     private sealed class RenderContext
     {
         public string? MediaBaseUrl;
         public List<string> Footnotes { get; } = [];
+        public List<RichMediaRef> Media { get; } = [];
     }
 
-    public static string Render(string cedarJson, string? mediaBaseUrl = null)
+    public static RichRenderResult Render(string cedarJson, string? mediaBaseUrl = null)
     {
         var root = JsonNode.Parse(cedarJson) ?? throw new ArgumentException("Invalid cedar JSON");
         var doc = root["doc"] ?? root;
         var ctx = new RenderContext { MediaBaseUrl = mediaBaseUrl };
         var body = RenderBlocks(doc["content"]?.AsArray(), ctx).Trim();
 
-        if (ctx.Footnotes.Count == 0)
-            return body;
+        var text = ctx.Footnotes.Count == 0
+            ? body
+            : body + "\n\n" + string.Join("\n", ctx.Footnotes.Select((t, i) => $"[^{i + 1}]: {t}"));
 
-        var footer = string.Join("\n", ctx.Footnotes.Select((text, i) => $"[^{i + 1}]: {text}"));
-        return body + "\n\n" + footer;
+        return new RichRenderResult(text, ctx.Media);
+    }
+
+    // Bot API 10.2: media is declared out-of-band (InputRichMessage.Media) and referenced from
+    // text by id, not by direct URL — see InputRichMessageMedia.Id docs ("...used in a
+    // tg://photo?id=, tg://video?id=, or tg://audio?id= link").
+    private static string RegisterMedia(RenderContext ctx, RichMediaKind kind, string url)
+    {
+        var id = $"m{ctx.Media.Count + 1}";
+        ctx.Media.Add(new RichMediaRef(id, kind, url));
+        var scheme = kind switch { RichMediaKind.Video => "video", RichMediaKind.Audio => "audio", _ => "photo" };
+        return $"![](tg://{scheme}?id={id})";
     }
 
     private static string RenderBlocks(JsonArray? nodes, RenderContext ctx)
@@ -81,16 +99,26 @@ public static class CedarToTelegramMarkdownRenderer
             case "audio":
                 var url = ResolveUrl((string?)node["attrs"]?["src"], ctx.MediaBaseUrl);
                 var caption = (string?)node["attrs"]?["caption"];
-                return string.IsNullOrEmpty(caption) ? $"![]({url})" : $"![]({url} \"{EscapeCaption(caption)}\")";
+                var kind = (string?)node["type"] switch
+                {
+                    "video" => RichMediaKind.Video,
+                    "audio" => RichMediaKind.Audio,
+                    _ => RichMediaKind.Photo
+                };
+                var mediaRef = RegisterMedia(ctx, kind, url);
+                // Caption on the Media entry itself is silently ignored for inline (non-Blocks)
+                // media — verified 16.07.2026 against @testingandfun. Render it as a plain text
+                // line right after the reference instead.
+                return string.IsNullOrEmpty(caption) ? mediaRef : mediaRef + "\n" + EscapeMarkdown(caption);
 
             case "carousel":
                 var images = node["attrs"]?["images"]?.AsArray()
-                    ?.Select(img => $"![]({ResolveUrl((string?)img, ctx.MediaBaseUrl)})") ?? [];
+                    ?.Select(img => RegisterMedia(ctx, RichMediaKind.Photo, ResolveUrl((string?)img, ctx.MediaBaseUrl))) ?? [];
                 return "<tg-slideshow>\n\n" + string.Join("\n", images) + "\n\n</tg-slideshow>";
 
             case "collage":
                 var collageImages = node["attrs"]?["images"]?.AsArray()
-                    ?.Select(img => $"![]({ResolveUrl((string?)img, ctx.MediaBaseUrl)})") ?? [];
+                    ?.Select(img => RegisterMedia(ctx, RichMediaKind.Photo, ResolveUrl((string?)img, ctx.MediaBaseUrl))) ?? [];
                 return "<tg-collage>\n\n" + string.Join("\n", collageImages) + "\n\n</tg-collage>";
 
             case "table":
@@ -312,9 +340,4 @@ public static class CedarToTelegramMarkdownRenderer
          .Replace("`", "\\`")
          .Replace("[", "\\[")
          .Replace("]", "\\]");
-
-    // Same as EscapeMarkdown plus escaping the double quote that would otherwise terminate the
-    // enclosing ![](url "caption") title early.
-    private static string EscapeCaption(string s) =>
-        EscapeMarkdown(s).Replace("\"", "\\\"");
 }

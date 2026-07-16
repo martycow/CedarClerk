@@ -3,15 +3,22 @@ using System.Text.Json.Nodes;
 
 namespace CedarClerk.Core;
 
+// NOT USED for sending to Telegram as of 16.07.2026 — PostEndpoints.PublishAsync sends via
+// CedarToTelegramBlocksRenderer instead (see docs/DECISIONS.md). Like the Markdown renderer, the
+// tg://{kind}?id={Id} + InputRichMessage.Media approach here is accepted by Telegram without error
+// but was verified live against @testingandfun to silently drop the media — it does not actually
+// render. Kept as-is (not deleted) in case it's useful again; do not wire it back into the send
+// path without re-verifying against a real channel first.
 public static class CedarToTelegramHtmlRenderer
 {
     private sealed class RenderContext
     {
         public string? MediaBaseUrl;
         public List<string> Footnotes { get; } = [];
+        public List<RichMediaRef> Media { get; } = [];
     }
 
-    public static string Render(string cedarJson, string? mediaBaseUrl = null)
+    public static RichRenderResult Render(string cedarJson, string? mediaBaseUrl = null)
     {
         var root = JsonNode.Parse(cedarJson) ?? throw new ArgumentException("Invalid cedar JSON");
         var doc = root["doc"] ?? root;
@@ -19,7 +26,15 @@ public static class CedarToTelegramHtmlRenderer
         var ctx = new RenderContext { MediaBaseUrl = mediaBaseUrl };
         RenderNodes(doc["content"]?.AsArray(), sb, ctx);
         AppendFootnotes(sb, ctx);
-        return sb.ToString();
+        return new RichRenderResult(sb.ToString(), ctx.Media);
+    }
+
+    private static string RegisterMedia(RenderContext ctx, RichMediaKind kind, string url)
+    {
+        var id = $"m{ctx.Media.Count + 1}";
+        ctx.Media.Add(new RichMediaRef(id, kind, url));
+        var scheme = kind switch { RichMediaKind.Video => "video", RichMediaKind.Audio => "audio", _ => "photo" };
+        return $"tg://{scheme}?id={id}";
     }
 
     // Best-effort fallback (no confirmed dedicated Telegram tag for footnotes in HTML mode):
@@ -106,21 +121,30 @@ public static class CedarToTelegramHtmlRenderer
                 break;
 
             case "image":
-                // Rich Message HTML has no <img> tag — RichBlockType.Photo corresponds to <photo>.
+                // Verified 16.07.2026 against @testingandfun on Bot API 10.2: <photo> is NOT a
+                // recognized tag (silently drops the media, no error) — plain <img> is what actually
+                // resolves a tg://photo?id= reference. A prior commit's <img>-> <photo> rename was
+                // backwards; do not repeat that mistake.
                 var src = ResolveUrl((string?)node["attrs"]?["src"], ctx.MediaBaseUrl);
-                AppendMedia(sb, "photo", src, (string?)node["attrs"]?["caption"], isVoid: true);
+                var photoRef = RegisterMedia(ctx, RichMediaKind.Photo, src);
+                AppendMedia(sb, "img", photoRef, isVoid: true);
+                AppendCaption(sb, (string?)node["attrs"]?["caption"]);
                 break;
 
             case "video":
                 var videoSrc = ResolveUrl((string?)node["attrs"]?["src"], ctx.MediaBaseUrl);
+                var videoRef = RegisterMedia(ctx, RichMediaKind.Video, videoSrc);
                 // video/audio — не void-теги: без закрытия парсер вложит в них весь дальнейший контент,
                 // и Telegram перенесёт медиа в конец сообщения
-                AppendMedia(sb, "video", videoSrc, (string?)node["attrs"]?["caption"], isVoid: false);
+                AppendMedia(sb, "video", videoRef, isVoid: false);
+                AppendCaption(sb, (string?)node["attrs"]?["caption"]);
                 break;
 
             case "audio":
                 var audioSrc = ResolveUrl((string?)node["attrs"]?["src"], ctx.MediaBaseUrl);
-                AppendMedia(sb, "audio", audioSrc, (string?)node["attrs"]?["caption"], isVoid: false);
+                var audioRef = RegisterMedia(ctx, RichMediaKind.Audio, audioSrc);
+                AppendMedia(sb, "audio", audioRef, isVoid: false);
+                AppendCaption(sb, (string?)node["attrs"]?["caption"]);
                 break;
 
             case "carousel":
@@ -130,7 +154,8 @@ public static class CedarToTelegramHtmlRenderer
                     foreach (var img in images)
                     {
                         var imgSrc = ResolveUrl((string?)img, ctx.MediaBaseUrl);
-                        sb.Append($"<photo src=\"{Escape(imgSrc)}\">");
+                        var imgRef = RegisterMedia(ctx, RichMediaKind.Photo, imgSrc);
+                        sb.Append($"<img src=\"{Escape(imgRef)}\">");
                     }
                 }
                 sb.Append("</tg-slideshow>");
@@ -143,7 +168,8 @@ public static class CedarToTelegramHtmlRenderer
                     foreach (var img in collageImages)
                     {
                         var imgSrc = ResolveUrl((string?)img, ctx.MediaBaseUrl);
-                        sb.Append($"<photo src=\"{Escape(imgSrc)}\">");
+                        var imgRef = RegisterMedia(ctx, RichMediaKind.Photo, imgSrc);
+                        sb.Append($"<img src=\"{Escape(imgRef)}\">");
                     }
                 }
                 sb.Append("</tg-collage>");
@@ -221,20 +247,18 @@ public static class CedarToTelegramHtmlRenderer
         }
     }
 
-    // Wraps void (<img>) and non-void (<video>/<audio>) media tags in <figure>/<figcaption>
-    // when a caption is set — best-effort guess, no confirmed dedicated Telegram tag.
-    private static void AppendMedia(StringBuilder sb, string tag, string src, string? caption, bool isVoid)
+    private static void AppendMedia(StringBuilder sb, string tag, string src, bool isVoid)
     {
-        var mediaHtml = isVoid ? $"<{tag} src=\"{Escape(src)}\">" : $"<{tag} src=\"{Escape(src)}\"></{tag}>";
-        if (string.IsNullOrEmpty(caption))
-        {
-            sb.Append(mediaHtml);
-        }
-        else
-        {
-            sb.Append("<figure>").Append(mediaHtml)
-              .Append("<figcaption>").Append(Escape(caption)).Append("</figcaption></figure>");
-        }
+        sb.Append(isVoid ? $"<{tag} src=\"{Escape(src)}\">" : $"<{tag} src=\"{Escape(src)}\"></{tag}>");
+    }
+
+    // Caption on the Media entry itself (InputMediaPhoto/Video/Audio.Caption) is silently ignored
+    // for inline (non-Blocks) media — verified 16.07.2026 against @testingandfun. Emit it as a
+    // plain paragraph right after the media tag instead.
+    private static void AppendCaption(StringBuilder sb, string? caption)
+    {
+        if (!string.IsNullOrEmpty(caption))
+            sb.Append("<p>").Append(Escape(caption)).Append("</p>");
     }
 
     private static string ResolveUrl(string? src, string? mediaBaseUrl)

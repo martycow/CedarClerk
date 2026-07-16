@@ -49,13 +49,13 @@ public static class PostEndpoints
             return new PublishResult(null, ErrorMessages.BotNotRunning, StatusCodes.Status503ServiceUnavailable);
 
         var mainHost = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
-        var isMarkdown = format == Consts.ContentTypes.Markdown;
-        
-        var rendered = isMarkdown
-            ? CedarToTelegramMarkdownRenderer.Render(cedarJson, mainHost)
-            : CedarToTelegramHtmlRenderer.Render(cedarJson, mainHost);
-        
-        if (string.IsNullOrWhiteSpace(rendered))
+
+        // Bot API 10.2: Blocks is the only mode that reliably embeds media with a real, natively
+        // styled caption (verified 16.07.2026 against @testingandfun) — see docs/DECISIONS.md.
+        // `format` is still accepted (API/ScheduledPost compat) but no longer changes what's sent.
+        var blocks = CedarToTelegramBlocksRenderer.Render(cedarJson, mainHost).ToList();
+
+        if (blocks.Count == 0)
             return new PublishResult(null, "Draft is empty");
 
         var owner = await db.Users.Where(u => u.Id == ownerId)
@@ -67,15 +67,13 @@ public static class PostEndpoints
         var signature = PlanLimitations.HasCustomSignature(currentPlan)
             ? owner.PostSignature
             : null;
-        
+
         if (!string.IsNullOrWhiteSpace(signature))
         {
-            rendered += isMarkdown
-                ? "\n\n" + signature
-                : string.Concat(signature.Split('\n')
-                    .Select(l => l.Trim())
-                    .Where(l => l.Length > 0)
-                    .Select(l => $"<p>{System.Net.WebUtility.HtmlEncode(l)}</p>"));
+            blocks.AddRange(signature.Split('\n')
+                .Select(l => l.Trim())
+                .Where(l => l.Length > 0)
+                .Select(l => (CedarRichBlock)new RichParagraphBlock(new RichRunText(l))));
         }
 
         // Adding Cross-link to Blog site in the end of Telegram post
@@ -83,15 +81,11 @@ public static class PostEndpoints
         {
             var langSuffix = language == Languages.Primary ? "" : $"?lang={language}";
             var blogUrl = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}/{draft.BlogSlug}{langSuffix}";
-            
-            rendered += isMarkdown ? 
-                $"\n\n[Read on the blog]({blogUrl})" : 
-                $"<p><a href=\"{blogUrl}\">Read on the blog &#8594;</a></p>";
+
+            blocks.Add(new RichParagraphBlock(new RichRunLink(new RichRunText("Read on the blog →"), blogUrl)));
         }
 
-        var content = isMarkdown
-            ? new InputRichMessage { Markdown = rendered }
-            : new InputRichMessage { Html = rendered };
+        var content = new InputRichMessage { Blocks = blocks.Select(ToInputRichBlock).ToList() };
 
         Message msg;
         try
@@ -136,4 +130,67 @@ public static class PostEndpoints
             ? (await db.Channels.FirstOrDefaultAsync(c => c.TelegramChatId == numericId))?.Username
             : null;
     }
+
+    // Maps CedarClerk.Core's framework-agnostic RichBlock/RichRun tree (see
+    // CedarToTelegramBlocksRenderer) onto the real Telegram.Bot wire types. Core stays free of a
+    // Telegram.Bot dependency on purpose — this is the one place that knows about it.
+    private static InputRichBlock ToInputRichBlock(CedarRichBlock block) => block switch
+    {
+        RichParagraphBlock p => new InputRichBlockParagraph { Text = ToRichText(p.Text) },
+        RichHeadingBlock h => new InputRichBlockSectionHeading { Text = ToRichText(h.Text), Size = h.Level },
+        RichListBlock l => new InputRichBlockList { Items = l.Items.Select(ToListItem).ToList() },
+        RichCodeBlock c => new InputRichBlockPreformatted { Text = new RichTextText { Text = c.Code }, Language = c.Language },
+        RichQuoteBlock q => new InputRichBlockBlockQuotation { Blocks = q.Blocks.Select(ToInputRichBlock).ToList() },
+        RichDividerBlock => new InputRichBlockDivider(),
+        RichPhotoBlock ph => new InputRichBlockPhoto { Photo = new InputMediaPhoto(ph.Url), Caption = ToCaption(ph.Caption) },
+        RichVideoBlock v => new InputRichBlockVideo { Video = new InputMediaVideo(v.Url), Caption = ToCaption(v.Caption) },
+        RichAudioBlock a => new InputRichBlockAudio { Audio = new InputMediaAudio(a.Url), Caption = ToCaption(a.Caption) },
+        RichSlideshowBlock s => new InputRichBlockSlideshow { Blocks = s.Urls.Select(u => (InputRichBlock)new InputRichBlockPhoto { Photo = new InputMediaPhoto(u) }).ToList() },
+        RichCollageBlock co => new InputRichBlockCollage { Blocks = co.Urls.Select(u => (InputRichBlock)new InputRichBlockPhoto { Photo = new InputMediaPhoto(u) }).ToList() },
+        RichTableBlock t => new InputRichBlockTable { Cells = t.Rows.Select(row => row.Select(ToTableCell).ToList()).ToList(), IsBordered = true },
+        RichMathBlock m => new InputRichBlockMathematicalExpression { Expression = m.Latex },
+        RichDetailsBlock d => new InputRichBlockDetails { Summary = ToRichText(d.Summary), Blocks = d.Blocks.Select(ToInputRichBlock).ToList(), IsOpen = d.IsOpen },
+        RichFooterBlock f => new InputRichBlockFooter { Text = ToRichText(f.Text) },
+        _ => throw new NotSupportedException($"Unmapped RichBlock: {block.GetType().Name}")
+    };
+
+    private static RichBlockCaption? ToCaption(RichRun? caption) =>
+        caption is null ? null : new RichBlockCaption { Text = ToRichText(caption) };
+
+    private static RichBlockTableCell ToTableCell(RichTableCell cell) => new()
+    {
+        Text = ToRichText(cell.Text),
+        IsHeader = cell.IsHeader,
+        Colspan = cell.Colspan,
+        Rowspan = cell.Rowspan
+    };
+
+    private static InputRichBlockListItem ToListItem(RichListItem item) => new()
+    {
+        Blocks = item.Blocks.Select(ToInputRichBlock).ToList(),
+        HasCheckbox = item.HasCheckbox,
+        IsChecked = item.IsChecked,
+        Value = item.OrderValue
+    };
+
+    private static RichText ToRichText(RichRun run) => run switch
+    {
+        RichRunText t => new RichTextText { Text = t.Text },
+        RichRunBold b => new RichTextBold { Text = ToRichText(b.Inner) },
+        RichRunItalic i => new RichTextItalic { Text = ToRichText(i.Inner) },
+        RichRunUnderline u => new RichTextUnderline { Text = ToRichText(u.Inner) },
+        RichRunStrike s => new RichTextStrikethrough { Text = ToRichText(s.Inner) },
+        RichRunCode c => new RichTextCode { Text = ToRichText(c.Inner) },
+        RichRunSpoiler sp => new RichTextSpoiler { Text = ToRichText(sp.Inner) },
+        RichRunLink l => new RichTextUrl { Text = ToRichText(l.Inner), Url = l.Url },
+        RichRunDateTime dt => new RichTextDateTime
+        {
+            Text = new RichTextText { Text = dt.FallbackText },
+            UnixTime = DateTimeOffset.FromUnixTimeSeconds(dt.UnixSeconds).UtcDateTime,
+            DateTimeFormat = dt.Format
+        },
+        RichRunMath m => new RichTextMathematicalExpression { Expression = m.Latex },
+        RichRunSequence seq => new RichTextArray { Array = seq.Runs.Select(ToRichText).ToArray() },
+        _ => throw new NotSupportedException($"Unmapped RichRun: {run.GetType().Name}")
+    };
 }
