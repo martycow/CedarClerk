@@ -143,7 +143,27 @@ public class ChannelStatSnapshot
     public Guid ChannelId { get; set; }
     public Channel? Channel { get; set; }
     public int MemberCount { get; set; }
+
+    // Aggregated across every draft ever published to this channel (see ChannelPost) —
+    // an approximation, not a true per-channel split: a draft sent to multiple channels
+    // contributes its full totals to each. See ADR-025, docs/DECISIONS.md.
+    public int ViewCount { get; set; }
+    public int LikeCount { get; set; }
+    public int CommentCount { get; set; }
+
     public DateTime TakenAt { get; set; } = DateTime.UtcNow;
+}
+
+// Append-only log of every successful send, written by PostEndpoints.PublishAsync. Lets the
+// stats snapshot job know which drafts (and therefore which views/likes/comments) belong to
+// which channel — Draft only tracks its single *most recent* Telegram send otherwise.
+public class ChannelPost
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid ChannelId { get; set; }
+    public Guid DraftId { get; set; }
+    public int TelegramMessageId { get; set; }
+    public DateTime PublishedAt { get; set; } = DateTime.UtcNow;
 }
 
 public class Asset

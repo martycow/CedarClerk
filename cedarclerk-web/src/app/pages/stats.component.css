@@ -1,0 +1,283 @@
+:host {
+    display: block;
+    min-height: 100vh;
+    background: var(--canvas);
+}
+
+.spacer {
+    flex: 1;
+}
+
+.hint {
+    color: var(--t3);
+    font-size: 13px;
+}
+
+/* ---------- Header (matches comments.component.css) ---------- */
+.stats-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 52px;
+    padding: 0 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+
+.brand-name {
+    font-weight: 700;
+    font-size: 13.5px;
+    letter-spacing: -.01em;
+}
+
+.crumb-sep {
+    color: var(--t3);
+    font-size: 13px;
+}
+
+.crumb-current {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--t2);
+}
+
+.icon {
+    width: 15px;
+    height: 15px;
+}
+
+.icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: none;
+    border-radius: var(--radius-sm);
+    color: var(--t2);
+    cursor: pointer;
+    font-size: 15px;
+    text-decoration: none;
+}
+
+.icon-btn:hover {
+    background: rgba(128, 120, 100, .14);
+}
+
+.avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #F4F2EA;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    flex: none;
+}
+
+/* ---------- Body ---------- */
+.stats-body {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 26px 20px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 60px 0;
+}
+
+.empty-cow {
+    font-size: 32px;
+}
+
+/* ---------- Filter row ---------- */
+.filter-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.channel-tabs, .range-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.channel-tab, .range-tab {
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    color: var(--t2);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    font-size: 12.5px;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.channel-tab:hover, .range-tab:hover {
+    color: var(--text);
+    border-color: var(--t3);
+}
+
+.channel-tab.active, .range-tab.active {
+    background: var(--asoft);
+    border-color: var(--abord);
+    color: var(--text);
+    font-weight: 600;
+}
+
+/* ---------- Stat cards ---------- */
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+}
+
+@media (max-width: 720px) {
+    .stat-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.stat-card {
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    padding: 16px 18px;
+}
+
+.stat-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.stat-label {
+    font-size: 12.5px;
+    color: var(--t2);
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+
+.stat-delta {
+    font-size: 11.5px;
+    color: var(--t3);
+    font-variant-numeric: tabular-nums;
+}
+
+.stat-delta.up {
+    color: var(--ok);
+}
+
+.stat-delta.down {
+    color: var(--danger);
+}
+
+.chart-empty {
+    color: var(--t3);
+    font-size: 12px;
+    padding: 40px 0;
+    text-align: center;
+}
+
+/* ---------- Chart ---------- */
+.chart-wrap {
+    position: relative;
+}
+
+.chart-svg {
+    width: 100%;
+    height: 140px;
+    display: block;
+    cursor: crosshair;
+}
+
+.gridline {
+    stroke: var(--border);
+    stroke-width: 1;
+}
+
+.tick-label {
+    font-size: 9px;
+    fill: var(--t3);
+}
+
+.area-fill {
+    fill: var(--asoft);
+}
+
+.line-path {
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.crosshair {
+    stroke: var(--t3);
+    stroke-width: 1;
+    opacity: .6;
+}
+
+.hover-dot {
+    fill: var(--accent);
+    stroke: var(--sheet);
+    stroke-width: 2;
+}
+
+.chart-axis-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10.5px;
+    color: var(--t3);
+    margin-top: 2px;
+}
+
+.chart-tooltip {
+    position: absolute;
+    top: 2px;
+    transform: translateX(-50%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+    padding: 4px 8px;
+    pointer-events: none;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.tooltip-value {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+
+.tooltip-date {
+    font-size: 10px;
+    color: var(--t3);
+}

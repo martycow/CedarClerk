@@ -12,11 +12,20 @@ export interface Channel {
 export interface ChannelStatSnapshotDto {
     takenAt: string;
     memberCount: number;
+    viewCount: number;
+    likeCount: number;
+    commentCount: number;
 }
 
 export interface ChannelStats {
     current: number | null;
     deltaWeek: number | null;
+    currentViews: number | null;
+    deltaWeekViews: number | null;
+    currentLikes: number | null;
+    deltaWeekLikes: number | null;
+    currentComments: number | null;
+    deltaWeekComments: number | null;
     snapshots: ChannelStatSnapshotDto[];
 }
 
@@ -43,8 +52,9 @@ export class ChannelsService {
         return firstValueFrom(this.http.delete(`/api/channels/${id}`));
     }
 
-    getStats(id: string) {
-        return firstValueFrom(this.http.get<ChannelStats>(`/api/channels/${id}/stats`));
+    getStats(id: string, days?: number) {
+        const query = days ? `?days=${days}` : '';
+        return firstValueFrom(this.http.get<ChannelStats>(`/api/channels/${id}/stats${query}`));
     }
 
     listKnown() {

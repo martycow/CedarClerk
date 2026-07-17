@@ -25,11 +25,20 @@ public class SnapshotChannelStatsJob(CedarDbContext db, TelegramBotService bot, 
             try
             {
                 var count = await bot.Client.GetChatMemberCount(new ChatId(channel.TelegramChatId));
-                
+
+                var draftIds = await db.ChannelPosts.Where(p => p.ChannelId == channel.Id)
+                    .Select(p => p.DraftId).Distinct().ToListAsync();
+                var viewCount = draftIds.Count == 0 ? 0 : await db.Drafts.Where(d => draftIds.Contains(d.Id)).SumAsync(d => d.ViewCount);
+                var likeCount = draftIds.Count == 0 ? 0 : await db.Reactions.CountAsync(r => draftIds.Contains(r.DraftId) && r.Kind == "like");
+                var commentCount = draftIds.Count == 0 ? 0 : await db.Comments.CountAsync(c => draftIds.Contains(c.DraftId));
+
                 db.ChannelStatSnapshots.Add(new ChannelStatSnapshot
                 {
                     ChannelId = channel.Id,
                     MemberCount = count,
+                    ViewCount = viewCount,
+                    LikeCount = likeCount,
+                    CommentCount = commentCount,
                     TakenAt = now,
                 });
             }

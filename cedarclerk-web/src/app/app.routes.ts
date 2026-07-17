@@ -5,6 +5,7 @@ import { RegisterComponent } from './pages/register.component';
 import { EditorComponent } from './pages/editor.component';
 import { SettingsComponent } from './pages/settings.component';
 import { CommentsComponent } from './pages/comments.component';
+import { StatsComponent } from './pages/stats.component';
 import { TermsComponent } from './pages/terms.component';
 import { PrivacyComponent } from './pages/privacy.component';
 
@@ -16,6 +17,7 @@ export const routes: Routes = [
     { path: 'editor', component: EditorComponent, canActivate: [authGuard] },
     { path: 'settings', component: SettingsComponent, canActivate: [authGuard] },
     { path: 'comments', component: CommentsComponent, canActivate: [authGuard] },
+    { path: 'stats', component: StatsComponent, canActivate: [authGuard] },
     { path: '', pathMatch: 'full', redirectTo: 'editor' },
     { path: '**', redirectTo: 'editor' },
 ];

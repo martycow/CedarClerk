@@ -102,6 +102,7 @@ public static class PostEndpoints
         draft.LastTelegramChatId = chatId;
         draft.LastTelegramMessageId = msg.MessageId;
         draft.LastTelegramUsername = await ResolveChannelUsernameAsync(db, chatId);
+        db.ChannelPosts.Add(new ChannelPost { ChannelId = targetChannel.Id, DraftId = draftId, TelegramMessageId = msg.MessageId });
         await db.SaveChangesAsync();
 
         return new PublishResult(msg.MessageId, null);

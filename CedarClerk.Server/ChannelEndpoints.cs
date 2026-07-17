@@ -108,7 +108,7 @@ public static class ChannelEndpoints
             return Results.NoContent();
         });
 
-        group.MapGet("/{id:guid}/stats", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
+        group.MapGet("/{id:guid}/stats", async (Guid id, ClaimsPrincipal user, CedarDbContext db, int days = 30) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var owns = await db.Channels.AnyAsync(c => c.Id == id && c.OwnerId == uid);
@@ -117,16 +117,32 @@ public static class ChannelEndpoints
             var snapshots = await db.ChannelStatSnapshots
                 .Where(s => s.ChannelId == id)
                 .OrderByDescending(s => s.TakenAt)
-                .Take(30)
+                .Take(days)
                 .OrderBy(s => s.TakenAt)
-                .Select(s => new { s.TakenAt, s.MemberCount })
+                .Select(s => new { s.TakenAt, s.MemberCount, s.ViewCount, s.LikeCount, s.CommentCount })
                 .ToListAsync();
+
+            var now = DateTime.UtcNow;
 
             var current = snapshots.Count > 0 ? snapshots[^1].MemberCount : (int?)null;
             var points = snapshots.Select(s => new ChannelStatPoint(s.TakenAt, s.MemberCount)).ToList();
-            var deltaWeek = ChannelStatsCalculator.DeltaOverDays(points, 7, DateTime.UtcNow);
+            var deltaWeek = ChannelStatsCalculator.DeltaOverDays(points, 7, now);
 
-            return Results.Ok(new { current, deltaWeek, snapshots });
+            var currentViews = snapshots.Count > 0 ? snapshots[^1].ViewCount : (int?)null;
+            var currentLikes = snapshots.Count > 0 ? snapshots[^1].LikeCount : (int?)null;
+            var currentComments = snapshots.Count > 0 ? snapshots[^1].CommentCount : (int?)null;
+            var deltaWeekViews = ChannelStatsCalculator.DeltaOverDays(snapshots.Select(s => new ChannelStatPoint(s.TakenAt, s.ViewCount)).ToList(), 7, now);
+            var deltaWeekLikes = ChannelStatsCalculator.DeltaOverDays(snapshots.Select(s => new ChannelStatPoint(s.TakenAt, s.LikeCount)).ToList(), 7, now);
+            var deltaWeekComments = ChannelStatsCalculator.DeltaOverDays(snapshots.Select(s => new ChannelStatPoint(s.TakenAt, s.CommentCount)).ToList(), 7, now);
+
+            return Results.Ok(new
+            {
+                current, deltaWeek,
+                currentViews, deltaWeekViews,
+                currentLikes, deltaWeekLikes,
+                currentComments, deltaWeekComments,
+                snapshots,
+            });
         });
 
         // Chats the bot is known to be in (tracked live from Telegram's my_chat_member updates —

@@ -1,0 +1,90 @@
+<div class="stats-page">
+    <header class="stats-header">
+        <a class="icon-btn" routerLink="/editor" title="Back to editor">
+            <svg lucideArrowLeft class="icon"></svg>
+        </a>
+        <app-cedar-logo [size]="19"></app-cedar-logo>
+        <span class="brand-name">Cedar Clerk</span>
+        <span class="crumb-sep">/</span>
+        <span class="crumb-current">Stats</span>
+        <span class="spacer"></span>
+        <button class="icon-btn" (click)="theme.toggle()" title="Toggle theme">
+            {{ theme.theme() === 'dark' ? '☀' : '☾' }}
+        </button>
+        <span class="avatar">{{ avatarInitial() }}</span>
+    </header>
+
+    <div class="stats-body">
+        @if (loading()) {
+        <p class="hint">Loading…</p>
+        } @else if (!channels().length) {
+        <div class="empty-state">
+            <div class="empty-cow">🐮</div>
+            <p class="hint">Connect a channel first to see its stats.</p>
+        </div>
+        } @else {
+            <div class="filter-row">
+                <div class="channel-tabs">
+                    @for (c of channels(); track c.id) {
+                    <button class="channel-tab" [class.active]="selectedChannelId() === c.id" (click)="selectChannel(c.id)">
+                        {{ c.title }}
+                    </button>
+                    }
+                </div>
+                <span class="spacer"></span>
+                <div class="range-tabs">
+                    @for (d of [30, 90, 180]; track d) {
+                    <button class="range-tab" [class.active]="rangeDays() === d" (click)="selectRange(d)">{{ d }}d</button>
+                    }
+                </div>
+            </div>
+
+            <div class="stat-grid">
+                @for (card of metricCards(); track card.key) {
+                <div class="stat-card">
+                    <div class="stat-head">
+                        <span class="stat-label">{{ card.label }}</span>
+                        <span class="stat-value">{{ card.current ?? '—' }}</span>
+                        @if (card.delta !== null) {
+                        <span class="stat-delta" [class.up]="card.delta! > 0" [class.down]="card.delta! < 0">
+                            {{ card.delta! > 0 ? '▲' : card.delta! < 0 ? '▼' : '·' }}{{ card.delta! > 0 ? '+' : '' }}{{ card.delta }} / 7d
+                        </span>
+                        }
+                    </div>
+
+                    @if (card.chart.hasData) {
+                    <div class="chart-wrap">
+                        <svg class="chart-svg" viewBox="0 0 600 160" preserveAspectRatio="none"
+                             (pointermove)="onHover($event, card.key, card.chart.points.length)"
+                             (pointerleave)="onLeave(card.key)">
+                            @for (t of card.chart.ticks; track t.y) {
+                            <line class="gridline" x1="4" x2="596" [attr.y1]="t.y" [attr.y2]="t.y"></line>
+                            <text class="tick-label" x="6" [attr.y]="t.y - 3">{{ t.label }}</text>
+                            }
+                            <path class="area-fill" [attr.d]="card.chart.areaPath"></path>
+                            <path class="line-path" fill="none" [attr.d]="card.chart.linePath"></path>
+                            @if (hoveredPoint(card); as hp) {
+                            <line class="crosshair" [attr.x1]="hp.x" [attr.x2]="hp.x" y1="12" y2="156"></line>
+                            <circle class="hover-dot" [attr.cx]="hp.x" [attr.cy]="hp.y" r="4"></circle>
+                            }
+                        </svg>
+                        @if (hoveredPoint(card); as hp) {
+                        <div class="chart-tooltip" [style.left.%]="(hp.x / 600) * 100">
+                            <div class="tooltip-value">{{ hp.value }}</div>
+                            <div class="tooltip-date">{{ hp.date | date:'d MMM' }}</div>
+                        </div>
+                        }
+                        <div class="chart-axis-labels">
+                            <span>{{ card.chart.points[0].date | date:'d MMM' }}</span>
+                            <span>{{ card.chart.points[card.chart.points.length - 1].date | date:'d MMM' }}</span>
+                        </div>
+                    </div>
+                    } @else {
+                    <p class="chart-empty">Not enough history yet — check back in a few days.</p>
+                    }
+                </div>
+                }
+            </div>
+        }
+    </div>
+</div>
