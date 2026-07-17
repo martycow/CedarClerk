@@ -448,7 +448,7 @@ public static class BlogEndpoints
             .OrderByDescending(d => d.BlogPublishedAt)
             .Select(d => new
             {
-                d.Id, d.Title, d.BlogSlug, d.BlogPublishedAt, d.Tags, d.CedarJson,
+                d.Id, d.Title, d.BlogSlug, d.BlogPublishedAt, d.Tags, d.CedarJson, d.ViewCount,
                 TranslationLanguages = db.DraftTranslations.Where(t => t.DraftId == d.Id).Select(t => t.Language).ToList(),
             })
             .ToListAsync();
@@ -522,7 +522,8 @@ public static class BlogEndpoints
                 sb.Append("<div class=\"post-card-title\">").Append(System.Net.WebUtility.HtmlEncode(p.Title)).Append("</div>");
                 if (excerpt.Length > 0)
                     sb.Append("<div class=\"post-card-excerpt\">").Append(System.Net.WebUtility.HtmlEncode(excerpt)).Append("</div>");
-                sb.Append("<div class=\"post-card-stats\">&#128077; ").Append(likes).Append(" &middot; &#128172; ").Append(comments).Append("</div>");
+                sb.Append("<div class=\"post-card-stats\">&#128065; ").Append(p.ViewCount)
+                  .Append(" &middot; &#128077; ").Append(likes).Append(" &middot; &#128172; ").Append(comments).Append("</div>");
                 sb.Append("</a>");
             }
             sb.Append("</div>");
@@ -544,6 +545,12 @@ public static class BlogEndpoints
             await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Primary, RenderHeader(channel)));
             return;
         }
+
+        // Atomic UPDATE (not draft.ViewCount++ + SaveChanges) so concurrent page views don't lose
+        // updates to each other. Shared across RU/EN — see ADR-023, docs/DECISIONS.md.
+        var viewCount = draft.ViewCount + 1;
+        await db.Drafts.Where(d => d.Id == draft.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.ViewCount, d => d.ViewCount + 1));
 
         var availableLanguages = await db.DraftTranslations.Where(t => t.DraftId == draft.Id)
             .Select(t => t.Language)
@@ -592,8 +599,9 @@ public static class BlogEndpoints
         var telegramLink = draft is { LastTelegramUsername: not null, LastTelegramMessageId: not null }
             ? $"<a class=\"telegram-link\" href=\"https://t.me/{draft.LastTelegramUsername}/{draft.LastTelegramMessageId}\" target=\"_blank\" rel=\"noopener\">View in Telegram &#8594;</a>"
             : "";
+        var viewsLine = $"<span class=\"post-card-views\">&#128065; {viewCount}</span>";
 
-        var metaRow = $"<div class=\"post-meta-row\">{dateLine}{langSwitch}{tagsLine}</div>";
+        var metaRow = $"<div class=\"post-meta-row\">{dateLine}{viewsLine}{langSwitch}{tagsLine}</div>";
         var footerRow = (signatureBlock.Length > 0 || telegramLink.Length > 0)
             ? $"<div class=\"post-footer-row\">{signatureBlock}<div class=\"spacer\"></div>{telegramLink}</div>"
             : "";

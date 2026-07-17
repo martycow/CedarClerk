@@ -94,6 +94,10 @@ public class Draft
     public bool IsBlogPublished { get; set; }
     public DateTime? BlogPublishedAt { get; set; }
 
+    // Raw hit count on the blog post page, shared across RU/EN language versions (see ADR-023).
+    // Not visitor-deduped, unlike Reaction — a plain running total.
+    public int ViewCount { get; set; }
+
     public string Tags { get; set; } = "";
 
     // Most recent successful Telegram send for this draft. Is used to cross-link the blog post
