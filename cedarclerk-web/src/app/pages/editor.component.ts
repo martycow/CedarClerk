@@ -32,6 +32,7 @@ import { ToggleNode } from '../tiptap-extensions/toggle-node';
 import { ImageNode } from '../tiptap-extensions/image-node';
 import { FootnoteNode } from '../tiptap-extensions/footnote-node';
 import { AnnotationNode } from '../tiptap-extensions/annotation-node';
+import { TableOfContentsNode } from '../tiptap-extensions/table-of-contents-node';
 import { PopoverComponent } from '../shared/popover.component';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { ThemeService } from '../core/theme.service';
@@ -55,6 +56,8 @@ import {
     LucideMessageSquare as MessageSquare,
     LucideRefreshCw as RefreshCw,
     LucideSettings as Settings, LucideSparkle as Sparkle,
+    LucideTableOfContents as TableOfContentsIcon,
+    LucideSeparatorHorizontal as DividerIcon,
 } from '@lucide/angular';
 
 const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
@@ -116,7 +119,7 @@ interface UploadItem {
         Send, Plus, X, LogOut, RadioTower, Trash2,
         EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, Menu, Superscript,
         ChevronDown, Check, Download, Upload, MessageSquare, RefreshCw,
-        Settings, Sparkle,
+        Settings, Sparkle, TableOfContentsIcon, DividerIcon,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -339,6 +342,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 DateTimeNode,
                 ToggleNode,
                 AnnotationNode,
+                TableOfContentsNode,
                 Table.configure({ resizable: false }),
                 TableRow,
                 TableHeader,
@@ -1062,6 +1066,16 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             attrs: { summary: 'Details' },
             content: [{ type: 'paragraph' }],
         }));
+    }
+
+    // Content is auto-generated from the document's headings at render/export time (Core's
+    // HeadingOutline) — this just drops a marker at the chosen spot, nothing to author here.
+    insertTableOfContents() {
+        this.cmd(c => c.insertContent({ type: 'tableOfContents' }));
+    }
+
+    insertDivider() {
+        this.cmd(c => c.setHorizontalRule());
     }
 
     insertFootnote() {

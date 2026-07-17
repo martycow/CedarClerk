@@ -37,6 +37,8 @@ public static class PlanLimitations
         return tier >= PlanTiers.Pro;
     }
 
+    public static int MaxHeaderSlots(PlanTiers tier) => tier >= PlanTiers.Pro ? 3 : 2;
+
     public static bool HasAiFeatures(PlanTiers tier)
     {
         return tier >= PlanTiers.ProPlus;

@@ -14,8 +14,15 @@ public static class BlogEndpoints
     private const int CommentMaxLength = 2000;
     private const int AuthorNameMaxLength = 60;
     private const int ExcerptMaxLength = 140;
+    private const int RssItemLimit = 30;
 
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
+
+    // Hardcoded rather than CultureInfo("ru-RU") — the Pi's runtime install is bare (no SDK,
+    // see .claude/rules/production-environment.md) and the rest of the codebase never reaches
+    // for a non-invariant CultureInfo, so avoid depending on ICU data being present for this.
+    private static readonly string[] RuMonthNames =
+        ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
 
     private record ReactRequest(string? AnnotationId, string Kind);
     private record CommentRequest(string? AnnotationId, string? AuthorName, string Text);
@@ -178,6 +185,12 @@ public static class BlogEndpoints
         if (segments.Length == 0)
         {
             await RenderIndexAsync(ctx, db);
+            return;
+        }
+
+        if (segments is ["rss.xml"])
+        {
+            await RenderRssAsync(ctx, db);
             return;
         }
 
@@ -496,14 +509,28 @@ public static class BlogEndpoints
         }
         else
         {
-            sb.Append("<div class=\"post-list\">");
+            sb.Append("<div class=\"post-list timeline\">");
+            string? lastMonthKey = null;
             foreach (var p in filtered)
             {
+                var monthKey = p.BlogPublishedAt?.ToString("yyyy-MM") ?? "";
+                if (monthKey != lastMonthKey)
+                {
+                    lastMonthKey = monthKey;
+                    if (p.BlogPublishedAt is { } monthDate)
+                    {
+                        var monthLabel = $"{RuMonthNames[monthDate.Month - 1]} {monthDate.Year}";
+                        sb.Append("<div class=\"timeline-month-sep\"><span class=\"sep-line\"></span><span class=\"sep-label\">")
+                          .Append(monthLabel).Append("</span><span class=\"sep-line\"></span></div>");
+                    }
+                }
+
                 var tags = SplitTags(p.Tags);
                 var likes = likeCounts.GetValueOrDefault(p.Id);
                 var comments = commentCounts.GetValueOrDefault(p.Id);
                 var excerpt = Excerpt(p.CedarJson);
 
+                sb.Append("<div class=\"timeline-item\"><span class=\"timeline-dot\"></span>");
                 sb.Append("<a class=\"post-card\" href=\"/").Append(p.BlogSlug).Append("\">");
                 sb.Append("<div class=\"post-card-meta\">");
                 sb.Append("<span class=\"post-card-date\">")
@@ -524,7 +551,7 @@ public static class BlogEndpoints
                     sb.Append("<div class=\"post-card-excerpt\">").Append(System.Net.WebUtility.HtmlEncode(excerpt)).Append("</div>");
                 sb.Append("<div class=\"post-card-stats\">&#128065; ").Append(p.ViewCount)
                   .Append(" &middot; &#128077; ").Append(likes).Append(" &middot; &#128172; ").Append(comments).Append("</div>");
-                sb.Append("</a>");
+                sb.Append("</a></div>");
             }
             sb.Append("</div>");
         }
@@ -532,6 +559,49 @@ public static class BlogEndpoints
         var channel = await GetBlogChannelInfoAsync(db);
         ctx.Response.ContentType = "text/html; charset=utf-8";
         await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), Languages.Primary, RenderHeader(channel)));
+    }
+
+    private static async Task RenderRssAsync(HttpContext ctx, CedarDbContext db)
+    {
+        var posts = await db.Drafts.Where(d => d.IsBlogPublished)
+            .OrderByDescending(d => d.BlogPublishedAt)
+            .Take(RssItemLimit)
+            .Select(d => new { d.Title, d.BlogSlug, d.BlogPublishedAt, d.CedarJson })
+            .ToListAsync();
+
+        var channel = await GetBlogChannelInfoAsync(db);
+        var siteTitle = System.Net.WebUtility.HtmlEncode(channel?.Title ?? "Cedar Clerk Blog");
+        var siteUrl = $"https://{Consts.URLs.BlogHost}/";
+
+        var sb = new StringBuilder();
+        sb.Append("""<?xml version="1.0" encoding="UTF-8"?>""").Append('\n');
+        sb.Append("<rss version=\"2.0\"><channel>");
+        sb.Append("<title>").Append(siteTitle).Append("</title>");
+        sb.Append("<link>").Append(siteUrl).Append("</link>");
+        sb.Append("<description>").Append(siteTitle).Append("</description>");
+        sb.Append("<language>ru</language>");
+        sb.Append("<atom:link xmlns:atom=\"http://www.w3.org/2005/Atom\" href=\"").Append(siteUrl)
+          .Append("rss.xml\" rel=\"self\" type=\"application/rss+xml\" />");
+
+        foreach (var p in posts)
+        {
+            var url = $"{siteUrl}{p.BlogSlug}";
+            var excerpt = Excerpt(p.CedarJson);
+            sb.Append("<item>");
+            sb.Append("<title>").Append(System.Net.WebUtility.HtmlEncode(p.Title)).Append("</title>");
+            sb.Append("<link>").Append(url).Append("</link>");
+            sb.Append("<guid isPermaLink=\"true\">").Append(url).Append("</guid>");
+            if (p.BlogPublishedAt is { } published)
+                sb.Append("<pubDate>").Append(published.ToString("R", CultureInfo.InvariantCulture)).Append("</pubDate>");
+            if (excerpt.Length > 0)
+                sb.Append("<description>").Append(System.Net.WebUtility.HtmlEncode(excerpt)).Append("</description>");
+            sb.Append("</item>");
+        }
+
+        sb.Append("</channel></rss>");
+
+        ctx.Response.ContentType = "application/rss+xml; charset=utf-8";
+        await ctx.Response.WriteAsync(sb.ToString());
     }
 
     private static async Task RenderPostAsync(HttpContext ctx, CedarDbContext db, string slug)
@@ -560,12 +630,22 @@ public static class BlogEndpoints
         var lang = Languages.Primary;
         var title = draft.Title;
         var cedarJson = draft.CedarJson;
-        if (requestedLang is not null && requestedLang != Languages.Primary && availableLanguages.Contains(requestedLang))
+        var notTranslatedNotice = "";
+        if (requestedLang is not null && requestedLang != Languages.Primary && Languages.IsTranslationLanguage(requestedLang))
         {
-            var translation = await db.DraftTranslations.FirstAsync(t => t.DraftId == draft.Id && t.Language == requestedLang);
-            lang = translation.Language;
-            title = translation.Title;
-            cedarJson = translation.CedarJson;
+            if (availableLanguages.Contains(requestedLang))
+            {
+                var translation = await db.DraftTranslations.FirstAsync(t => t.DraftId == draft.Id && t.Language == requestedLang);
+                lang = translation.Language;
+                title = translation.Title;
+                cedarJson = translation.CedarJson;
+            }
+            else
+            {
+                // Requested a translation that doesn't exist (stale link, or removed after
+                // sharing) — fall back to showing the original rather than a blank/broken page.
+                notTranslatedNotice = "<div class=\"not-translated-notice\">Not translated yet — showing the original.</div>";
+            }
         }
 
         var langSwitch = "";
@@ -585,47 +665,110 @@ public static class BlogEndpoints
         }
 
         var tags = SplitTags(draft.Tags);
-        var tagsLine = tags.Count == 0 ? "" :
-            "<span class=\"post-tag-caps\">" + string.Join(" &middot; ", tags.Select(System.Net.WebUtility.HtmlEncode)) + "</span>";
+        var tagsRow = tags.Count == 0 ? "" :
+            "<div class=\"post-tags-row\">" + string.Join("", tags.Select(t =>
+                $"<a class=\"post-tag-chip\" href=\"{TagFilterUrl([t])}\">#{System.Net.WebUtility.HtmlEncode(t)}</a>")) + "</div>";
 
-        var signature = await db.Users.Where(u => u.Id == draft.OwnerId).Select(u => u.PostSignature).FirstOrDefaultAsync();
-        var signatureBlock = string.IsNullOrWhiteSpace(signature) ? "" :
-            $"<span class=\"post-signature\">{System.Net.WebUtility.HtmlEncode(signature)}</span>";
+        var owner = await db.Users.Where(u => u.Id == draft.OwnerId)
+            .Select(u => new
+            {
+                u.PostSignature, u.AuthorDisplayName, u.ProfileUrl, u.ProfileLocation,
+                u.HeaderSlot1Type, u.HeaderSlot2Type, u.HeaderSlot3Type, u.PlanTier, u.PlanExpiresAt,
+            })
+            .FirstAsync();
+        var signatureBlock = string.IsNullOrWhiteSpace(owner.PostSignature) ? "" :
+            $"<span class=\"post-signature\">{System.Net.WebUtility.HtmlEncode(owner.PostSignature)}</span>";
 
-        var body = CedarToBlogHtmlRenderer.Render(cedarJson, $"https://{Consts.URLs.BlogHost}");
+        var headerSlotsLine = RenderHeaderSlotsLine(owner.HeaderSlot1Type, owner.HeaderSlot2Type, owner.HeaderSlot3Type,
+            owner.AuthorDisplayName, owner.ProfileUrl, owner.ProfileLocation,
+            SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow),
+            draft.BlogPublishedAt, cedarJson);
+
+        var body = CedarToBlogHtmlRenderer.Render(cedarJson, $"https://{Consts.URLs.BlogHost}", lang);
         var dateLine = draft.BlogPublishedAt is { } published
-            ? $"<span class=\"post-card-date\">{published:d MMM yyyy}</span>"
+            ? $"<span class=\"post-card-date\">{published.ToString("d MMM yyyy, HH:mm", CultureInfo.InvariantCulture)}</span>"
             : "";
+        var viewInTelegramLabel = lang == Languages.English ? "View in Telegram &#8594;" : "Смотреть в Telegram &#8594;";
         var telegramLink = draft is { LastTelegramUsername: not null, LastTelegramMessageId: not null }
-            ? $"<a class=\"telegram-link\" href=\"https://t.me/{draft.LastTelegramUsername}/{draft.LastTelegramMessageId}\" target=\"_blank\" rel=\"noopener\">View in Telegram &#8594;</a>"
+            ? $"<a class=\"telegram-link\" href=\"https://t.me/{draft.LastTelegramUsername}/{draft.LastTelegramMessageId}\" target=\"_blank\" rel=\"noopener\">{viewInTelegramLabel}</a>"
             : "";
         var viewsLine = $"<span class=\"post-card-views\">&#128065; {viewCount}</span>";
 
-        var metaRow = $"<div class=\"post-meta-row\">{dateLine}{viewsLine}{langSwitch}{tagsLine}</div>";
+        var metaRow = $"<div class=\"post-meta-row\">{dateLine}{viewsLine}{langSwitch}</div>";
         var footerRow = (signatureBlock.Length > 0 || telegramLink.Length > 0)
             ? $"<div class=\"post-footer-row\">{signatureBlock}<div class=\"spacer\"></div>{telegramLink}</div>"
             : "";
 
+        var titleHeading = HeadingOutline.StartsWithHeading(cedarJson)
+            ? ""
+            : $"<h1>{System.Net.WebUtility.HtmlEncode(title)}</h1>";
+
+        // Only draw the book-style divider when there's an actual title block above it to
+        // separate from the body — the doc's-own-first-heading case (titleHeading == "") with
+        // no header slots either has nothing here worth underlining.
+        var titleBlock = titleHeading.Length == 0 && headerSlotsLine.Length == 0
+            ? ""
+            : $"{titleHeading}{headerSlotsLine}<div class=\"post-title-divider\"><span class=\"tdl\"></span><i></i><span class=\"tdl\"></span></div>";
+
         var postSheet = $"""
             <div class="post-sheet">
             {metaRow}
-            <h1>{System.Net.WebUtility.HtmlEncode(title)}</h1>
+            {tagsRow}
+            {notTranslatedNotice}
+            {titleBlock}
             {body}
             {footerRow}
             </div>
             """;
 
         var articleBlock = "<div class=\"annotation article-annotation\" data-annotation-id=\"\">"
-            + CedarToBlogHtmlRenderer.AnnotationControlsHtml() + "</div>";
+            + CedarToBlogHtmlRenderer.AnnotationControlsHtml(lang) + "</div>";
 
+        var backLinkLabel = lang == Languages.English ? "All posts" : "Все посты";
+        var backToTopLabel = lang == Languages.English ? "Back to top" : "Наверх";
+        var floatingNav = $"""
+            <div class="floating-nav">
+            <a class="floating-nav-btn" href="/" title="{backLinkLabel}">&#9776;</a>
+            <button type="button" class="floating-nav-btn back-to-top-btn" title="{backToTopLabel}">&#8593;</button>
+            </div>
+            """;
         var html = $"""
-            <a class="back-link" href="/">&larr; All posts</a>
+            <a class="back-link" href="/">&larr; {backLinkLabel}</a>
             {postSheet}
             {articleBlock}
+            {floatingNav}
             """;
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
         await ctx.Response.WriteAsync(PageShell(title, html, lang, RenderHeader(channel)));
+    }
+
+    // Blog-only (see docs/ROADMAP.md Phase 8 Step 4 / ADR in docs/DECISIONS.md) — a subtitle line
+    // under the title, distinct from post-meta-row's date/views/tags. Slot 3 is clamped away for
+    // any tier below Pro, even if the column still holds a value from before a downgrade.
+    private static string RenderHeaderSlotsLine(
+        HeaderSlotType? slot1, HeaderSlotType? slot2, HeaderSlotType? slot3,
+        string? authorDisplayName, string? profileUrl, string? profileLocation,
+        PlanTiers currentPlan, DateTime? publishedAt, string cedarJson)
+    {
+        var configured = new[] { slot1, slot2, slot3 }.Take(PlanLimitations.MaxHeaderSlots(currentPlan));
+
+        string text;
+        try { text = string.Join(" ", TipTapTextNodes.ExtractTexts(cedarJson)).Trim(); }
+        catch (Exception) { text = ""; }
+        var wordCount = text.Length == 0 ? 0 : text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+        var ctx = new HeaderSlotContext(authorDisplayName, profileUrl, profileLocation, publishedAt, text.Length, wordCount);
+
+        var parts = configured
+            .Where(s => s is not null)
+            .Select(s => HeaderSlotRenderer.Render(s!.Value, ctx))
+            .Where(v => v is not null)
+            .Select(v => v!.LinkUrl is { } url
+                ? $"<a href=\"{System.Net.WebUtility.HtmlEncode(url)}\" target=\"_blank\" rel=\"noopener\">{System.Net.WebUtility.HtmlEncode(v.Text)}</a>"
+                : System.Net.WebUtility.HtmlEncode(v.Text))
+            .ToList();
+
+        return parts.Count == 0 ? "" : $"<div class=\"post-header-slots\">{string.Join(" &bull; ", parts)}</div>";
     }
 
     // Plain (non-interpolated) raw string — title/body are substituted via Replace so the
@@ -637,6 +780,7 @@ public static class BlogEndpoints
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{{TITLE}}</title>
+        <link rel="alternate" type="application/rss+xml" title="Blog RSS feed" href="/rss.xml">
         <script>
         (function () {
             var saved = localStorage.getItem('cedar-blog-theme');
@@ -702,6 +846,14 @@ public static class BlogEndpoints
         .tag-chip.selected { border-color: var(--abord); background: var(--asoft); color: var(--accent); }
 
         .post-list { display: flex; flex-direction: column; gap: 14px; }
+        .post-list.timeline { position: relative; padding-left: 24px; }
+        .post-list.timeline::before { content: ""; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 2px; background: var(--border); }
+        .timeline-month-sep { display: flex; align-items: center; gap: 10px; margin: 4px 0 -2px -24px; }
+        .timeline-month-sep:first-child { margin-top: 0; }
+        .timeline-month-sep .sep-line { flex: 1; height: 1px; background: var(--border); }
+        .timeline-month-sep .sep-label { flex: none; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--t2); background: var(--asoft); border: 1px solid var(--abord); border-radius: 999px; padding: 3px 12px; white-space: nowrap; }
+        .timeline-item { position: relative; }
+        .timeline-dot { position: absolute; left: -24px; top: 24px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--abord); z-index: 1; }
         .post-card { display: block; background: var(--sheet); border-radius: 12px; box-shadow: var(--shadow); padding: 20px 24px; border: 1px solid transparent; color: var(--text); }
         .post-card:hover { border-color: var(--abord); }
         .post-card-meta { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 11.5px; color: var(--t3); }
@@ -713,14 +865,37 @@ public static class BlogEndpoints
         .back-link { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; padding: 4px 0; margin: 0 0 12px; }
         .back-link:hover { text-decoration: underline; }
         .post-sheet { background: var(--sheet); border-radius: 12px; box-shadow: var(--shadow); padding: 32px 40px 28px; }
-        .post-sheet h1 { font-size: 27px; font-weight: 700; letter-spacing: -.015em; line-height: 1.22; margin: 0 0 16px; }
+        .post-sheet h1 { font-size: 27px; font-weight: 700; letter-spacing: -.015em; line-height: 1.22; margin: 0 0 12px; text-align: center; }
+        .post-header-slots { font-size: 13px; color: var(--t3); margin: 0 0 18px; text-align: center; }
+        .post-header-slots a { color: var(--accent); text-decoration: none; }
+        .post-header-slots a:hover { text-decoration: underline; }
+        .post-title-divider { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 0 28px; }
+        .post-title-divider .tdl { height: 1px; width: 70px; background: var(--border); }
+        .post-title-divider i { width: 6px; height: 6px; flex: none; display: block; background: var(--accent); opacity: .55; transform: rotate(45deg); }
+        .post-tags-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; padding: 10px 12px; background: var(--alt); border-radius: 9px; }
+        .post-tag-chip { display: inline-block; font-size: 12px; font-weight: 500; color: var(--accent); background: var(--asoft); border: 1px solid var(--abord); border-radius: 999px; padding: 3px 12px; }
+        .post-tag-chip:hover { filter: brightness(1.05); }
         .post-sheet h2 { font-size: 20px; font-weight: 600; letter-spacing: -.01em; margin: 24px 0 8px; }
         .post-sheet p { font-size: 16px; line-height: 1.65; margin: 0 0 14px; }
+        .toc { background: var(--asoft); border: 1px solid var(--abord); border-radius: 10px; padding: 14px 18px; margin: 0 0 18px; }
+        .toc-title { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+        .toc ul { list-style: none; margin: 0; padding: 0; font-size: 14px; line-height: 1.8; }
+        .toc li a { color: var(--text); }
+        .toc li a:hover { color: var(--accent); text-decoration: underline; }
+        .toc .toc-lvl-2 { padding-left: 14px; }
+        .toc .toc-lvl-3 { padding-left: 28px; }
+        .toc .toc-lvl-4 { padding-left: 42px; }
+        .toc .toc-lvl-5 { padding-left: 56px; }
+        .toc .toc-lvl-6 { padding-left: 70px; }
+        .not-translated-notice { background: var(--asoft); border: 1px solid var(--abord); border-radius: 10px; padding: 10px 14px; margin: 0 0 14px; font-size: 13px; color: var(--t2); font-style: italic; }
+        .floating-nav { position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 50; opacity: 0; pointer-events: none; transition: opacity .15s ease; }
+        .floating-nav.visible { opacity: 1; pointer-events: auto; }
+        .floating-nav-btn { width: 38px; height: 38px; border-radius: 50%; background: var(--sheet); border: 1px solid var(--border); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; color: var(--text); text-decoration: none; cursor: pointer; font-size: 16px; }
+        .floating-nav-btn:hover { background: var(--alt); }
         .post-meta-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; font-size: 12px; color: var(--t3); }
         .lang-switch-track { display: flex; gap: 2px; background: var(--alt); border-radius: 7px; padding: 2px; }
         .lang-switch-btn { border: none; background: none; border-radius: 5px; padding: 3px 11px; font-size: 11.5px; font-weight: 600; color: var(--t2); }
         .lang-switch-btn.current { background: var(--sheet); box-shadow: var(--shadow); color: var(--text); }
-        .post-tag-caps { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--accent); }
         .post-footer-row { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--border); padding: 14px 0 0; margin-top: 14px; }
         .post-signature { font-size: 13.5px; font-style: italic; color: var(--t2); white-space: pre-line; }
         .telegram-link { font-size: 12.5px; font-weight: 500; color: var(--accent); }
@@ -731,6 +906,7 @@ public static class BlogEndpoints
         .post-sheet pre { background: #22201A; color: #C9C08C; border-radius: 8px; padding: 12px 14px; overflow-x: auto; }
         .post-sheet pre code { background: none; padding: 0; font-size: 13.5px; line-height: 1.55; }
         .post-sheet blockquote { border-left: 3px solid var(--abord); padding: 2px 0 2px 14px; color: var(--t2); margin: 0 0 16px; }
+        .post-sheet hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
         .post-sheet ul, .post-sheet ol { font-size: 16px; line-height: 1.7; padding-left: 20px; margin: 0 0 16px; }
         .post-sheet figure { margin: 0 0 16px; }
         .post-sheet figcaption { text-align: center; font-size: 13px; color: var(--t2); margin-top: 6px; }
@@ -842,6 +1018,16 @@ public static class BlogEndpoints
         })();
 
         (function () {
+            var nav = document.querySelector('.floating-nav');
+            if (!nav) return;
+            var topBtn = nav.querySelector('.back-to-top-btn');
+            function onScroll() { nav.classList.toggle('visible', window.scrollY > 400); }
+            window.addEventListener('scroll', onScroll, { passive: true });
+            onScroll();
+            if (topBtn) topBtn.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+        })();
+
+        (function () {
             var annEls = document.querySelectorAll('.annotation');
             if (!annEls.length) return;
             var slug = location.pathname.replace(/^\/|\/$/g, '');
@@ -871,7 +1057,8 @@ public static class BlogEndpoints
                     var nameEl = document.createElement('span');
                     nameEl.textContent = name;
                     var timeEl = document.createElement('time');
-                    timeEl.textContent = new Date(c.createdAt).toLocaleDateString();
+                    var cDate = new Date(c.createdAt);
+                    timeEl.textContent = cDate.toLocaleDateString() + ' ' + cDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     meta.appendChild(nameEl);
                     meta.appendChild(timeEl);
                     var text = document.createElement('div');

@@ -77,7 +77,44 @@ public class BlocksRendererTests
                    ]}]}
                    """;
         var blocks = CedarToTelegramBlocksRenderer.Render(json);
-        Assert.Equal(new RichHeadingBlock(2, new RichRunText("Заголовок")), Assert.Single(blocks));
+        Assert.Equal(2, blocks.Count);
+        Assert.Equal(new RichAnchorBlock("zagolovok"), blocks[0]);
+        Assert.Equal(new RichHeadingBlock(2, new RichRunText("Заголовок")), blocks[1]);
+    }
+
+    [Fact]
+    public void Renders_table_of_contents_as_a_list_of_anchor_links_matching_heading_anchors()
+    {
+        var json = """
+                   {"type":"doc","content":[
+                       {"type":"tableOfContents"},
+                       {"type":"heading","attrs":{"level":1},"content":[{"type":"text","text":"Intro"}]},
+                       {"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Details"}]}
+                   ]}
+                   """;
+        var blocks = CedarToTelegramBlocksRenderer.Render(json);
+
+        // toc, anchor+heading, anchor+heading = 5 top-level blocks
+        Assert.Equal(5, blocks.Count);
+        var toc = Assert.IsType<RichListBlock>(blocks[0]);
+        Assert.Equal(2, toc.Items.Count);
+        var introLink = Assert.IsType<RichParagraphBlock>(Assert.Single(toc.Items[0].Blocks));
+        Assert.Equal(new RichRunAnchorLink(new RichRunText("Intro"), "intro"), introLink.Text);
+        var detailsLink = Assert.IsType<RichParagraphBlock>(Assert.Single(toc.Items[1].Blocks));
+        Assert.Equal(new RichRunAnchorLink(new RichRunText("Details"), "details"), detailsLink.Text);
+
+        Assert.Equal(new RichAnchorBlock("intro"), blocks[1]);
+        Assert.Equal(new RichHeadingBlock(1, new RichRunText("Intro")), blocks[2]);
+        Assert.Equal(new RichAnchorBlock("details"), blocks[3]);
+        Assert.Equal(new RichHeadingBlock(2, new RichRunText("Details")), blocks[4]);
+    }
+
+    [Fact]
+    public void Empty_table_of_contents_produces_no_block()
+    {
+        var json = """{"type":"doc","content":[{"type":"tableOfContents"},{"type":"paragraph","content":[{"type":"text","text":"No headings here"}]}]}""";
+        var blocks = CedarToTelegramBlocksRenderer.Render(json);
+        Assert.Equal(new RichParagraphBlock(new RichRunText("No headings here")), Assert.Single(blocks));
     }
 
     [Fact]

@@ -151,6 +151,7 @@ public static class PostEndpoints
         RichMathBlock m => new InputRichBlockMathematicalExpression { Expression = m.Latex },
         RichDetailsBlock d => new InputRichBlockDetails { Summary = ToRichText(d.Summary), Blocks = d.Blocks.Select(ToInputRichBlock).ToList(), IsOpen = d.IsOpen },
         RichFooterBlock f => new InputRichBlockFooter { Text = ToRichText(f.Text) },
+        RichAnchorBlock an => new InputRichBlockAnchor { Name = an.Name },
         _ => throw new NotSupportedException($"Unmapped RichBlock: {block.GetType().Name}")
     };
 
@@ -191,6 +192,7 @@ public static class PostEndpoints
         },
         RichRunMath m => new RichTextMathematicalExpression { Expression = m.Latex },
         RichRunSequence seq => new RichTextArray { Array = seq.Runs.Select(ToRichText).ToArray() },
+        RichRunAnchorLink al => new RichTextAnchorLink { Text = ToRichText(al.Inner), AnchorName = al.AnchorName },
         _ => throw new NotSupportedException($"Unmapped RichRun: {run.GetType().Name}")
     };
 }

@@ -87,7 +87,60 @@ public class BlogHtmlRendererTests
                        {"type":"text","text":"Title"}
                    ]}]}
                    """;
-        Assert.Equal("<h2>Title</h2>", CedarToBlogHtmlRenderer.Render(json, Base));
+        Assert.Equal("<h2 id=\"title\">Title</h2>", CedarToBlogHtmlRenderer.Render(json, Base));
+    }
+
+    [Fact]
+    public void Renders_table_of_contents_as_nav_linking_to_heading_ids()
+    {
+        var json = """
+                   {"type":"doc","content":[
+                       {"type":"tableOfContents"},
+                       {"type":"heading","attrs":{"level":1},"content":[{"type":"text","text":"Intro"}]},
+                       {"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Details"}]}
+                   ]}
+                   """;
+        var html = CedarToBlogHtmlRenderer.Render(json, Base, "en");
+        Assert.Equal(
+            "<nav class=\"toc\"><div class=\"toc-title\">Contents</div><ul>"
+            + "<li class=\"toc-lvl-1\"><a href=\"#intro\">Intro</a></li>"
+            + "<li class=\"toc-lvl-2\"><a href=\"#details\">Details</a></li>"
+            + "</ul></nav>"
+            + "<h1 id=\"intro\">Intro</h1><h2 id=\"details\">Details</h2>",
+            html);
+    }
+
+    [Fact]
+    public void Table_of_contents_title_localizes_to_russian_by_default()
+    {
+        var json = """
+                   {"type":"doc","content":[
+                       {"type":"tableOfContents"},
+                       {"type":"heading","attrs":{"level":1},"content":[{"type":"text","text":"Intro"}]}
+                   ]}
+                   """;
+        var html = CedarToBlogHtmlRenderer.Render(json, Base);
+        Assert.Contains("<div class=\"toc-title\">Оглавление</div>", html);
+    }
+
+    [Fact]
+    public void Duplicate_heading_text_gets_disambiguated_slugs()
+    {
+        var json = """
+                   {"type":"doc","content":[
+                       {"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Overview"}]},
+                       {"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"Overview"}]}
+                   ]}
+                   """;
+        var html = CedarToBlogHtmlRenderer.Render(json, Base);
+        Assert.Equal("<h2 id=\"overview\">Overview</h2><h2 id=\"overview-2\">Overview</h2>", html);
+    }
+
+    [Fact]
+    public void Empty_table_of_contents_renders_nothing()
+    {
+        var json = """{"type":"doc","content":[{"type":"tableOfContents"},{"type":"paragraph","content":[{"type":"text","text":"No headings here"}]}]}""";
+        Assert.Equal("<p>No headings here</p>", CedarToBlogHtmlRenderer.Render(json, Base));
     }
 
     [Fact]

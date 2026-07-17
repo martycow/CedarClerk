@@ -17,6 +17,12 @@ export class AuthService {
     readonly telegramUsername = signal<string | null>(null);
     readonly telegramLinkedAt = signal<string | null>(null);
     readonly postSignature = signal<string | null>(null);
+    readonly authorDisplayName = signal<string | null>(null);
+    readonly profileUrl = signal<string | null>(null);
+    readonly profileLocation = signal<string | null>(null);
+    readonly headerSlot1Type = signal<string | null>(null);
+    readonly headerSlot2Type = signal<string | null>(null);
+    readonly headerSlot3Type = signal<string | null>(null);
 
     async login(email: string, password: string): Promise<boolean> {
         try {
@@ -55,6 +61,8 @@ export class AuthService {
                 email: string; createdAt: string | null; planTier: string | null; planExpiresAt: string | null; trialUsed: boolean;
                 telegramLinked: boolean; telegramUsername: string | null; telegramLinkedAt: string | null;
                 postSignature: string | null;
+                authorDisplayName: string | null; profileUrl: string | null; profileLocation: string | null;
+                headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
             }>('/api/auth/me'));
             this.userEmail.set(me.email);
             this.createdAt.set(me.createdAt);
@@ -65,6 +73,12 @@ export class AuthService {
             this.telegramUsername.set(me.telegramUsername);
             this.telegramLinkedAt.set(me.telegramLinkedAt);
             this.postSignature.set(me.postSignature);
+            this.authorDisplayName.set(me.authorDisplayName);
+            this.profileUrl.set(me.profileUrl);
+            this.profileLocation.set(me.profileLocation);
+            this.headerSlot1Type.set(me.headerSlot1Type);
+            this.headerSlot2Type.set(me.headerSlot2Type);
+            this.headerSlot3Type.set(me.headerSlot3Type);
         } catch {
             this.userEmail.set(null);
             this.createdAt.set(null);
@@ -75,6 +89,12 @@ export class AuthService {
             this.telegramUsername.set(null);
             this.telegramLinkedAt.set(null);
             this.postSignature.set(null);
+            this.authorDisplayName.set(null);
+            this.profileUrl.set(null);
+            this.profileLocation.set(null);
+            this.headerSlot1Type.set(null);
+            this.headerSlot2Type.set(null);
+            this.headerSlot3Type.set(null);
         }
     }
 
@@ -82,6 +102,22 @@ export class AuthService {
         const res = await firstValueFrom(this.http.post<{ postSignature: string | null }>(
             '/api/auth/signature', { signature }));
         this.postSignature.set(res.postSignature);
+    }
+
+    async saveProfile(profile: {
+        authorDisplayName: string; profileUrl: string; profileLocation: string;
+        headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
+    }): Promise<void> {
+        const res = await firstValueFrom(this.http.post<{
+            authorDisplayName: string | null; profileUrl: string | null; profileLocation: string | null;
+            headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
+        }>('/api/auth/profile', profile));
+        this.authorDisplayName.set(res.authorDisplayName);
+        this.profileUrl.set(res.profileUrl);
+        this.profileLocation.set(res.profileLocation);
+        this.headerSlot1Type.set(res.headerSlot1Type);
+        this.headerSlot2Type.set(res.headerSlot2Type);
+        this.headerSlot3Type.set(res.headerSlot3Type);
     }
 
     async logout(): Promise<void> {

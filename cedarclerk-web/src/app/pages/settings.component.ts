@@ -31,6 +31,17 @@ export class SettingsComponent implements OnInit {
     signatureText = '';
     signatureBusy = signal(false);
     signatureSaved = signal(false);
+    signatureError = signal<string | null>(null);
+
+    authorDisplayNameText = '';
+    profileUrlText = '';
+    profileLocationText = '';
+    headerSlot1: string | null = null;
+    headerSlot2: string | null = null;
+    headerSlot3: string | null = null;
+    profileBusy = signal(false);
+    profileSaved = signal(false);
+    profileError = signal<string | null>(null);
 
     billing = signal<BillingStatus | null>(null);
     billingBusy = signal(false);
@@ -47,9 +58,20 @@ export class SettingsComponent implements OnInit {
 
     async ngOnInit() {
         this.signatureText = this.auth.postSignature() ?? '';
+        this.authorDisplayNameText = this.auth.authorDisplayName() ?? '';
+        this.profileUrlText = this.auth.profileUrl() ?? '';
+        this.profileLocationText = this.auth.profileLocation() ?? '';
+        this.headerSlot1 = this.auth.headerSlot1Type();
+        this.headerSlot2 = this.auth.headerSlot2Type();
+        this.headerSlot3 = this.auth.headerSlot3Type();
         try { this.billing.set(await this.billingApi.status()); } catch { /* non-critical */ }
         try { this.botStatus.set(await this.telegramLink.botStatus()); } catch { /* non-critical */ }
         try { this.channels.set(await this.channelsApi.list()); } catch { /* non-critical */ }
+    }
+
+    hasProHeaderSlot(): boolean {
+        const t = this.auth.planTier();
+        return t === 'Pro' || t === 'ProPlus' || t === 'Forever';
     }
 
     avatarInitial(): string {
@@ -68,13 +90,44 @@ export class SettingsComponent implements OnInit {
     async saveSignature() {
         this.signatureBusy.set(true);
         this.signatureSaved.set(false);
+        this.signatureError.set(null);
         try {
             await this.auth.saveSignature(this.signatureText);
             this.signatureText = this.auth.postSignature() ?? '';
             this.signatureSaved.set(true);
             setTimeout(() => this.signatureSaved.set(false), 2500);
+        } catch (e) {
+            this.signatureError.set(httpErrorMessage(e, 'Failed to save signature'));
         } finally {
             this.signatureBusy.set(false);
+        }
+    }
+
+    async saveProfile() {
+        this.profileBusy.set(true);
+        this.profileSaved.set(false);
+        this.profileError.set(null);
+        try {
+            await this.auth.saveProfile({
+                authorDisplayName: this.authorDisplayNameText,
+                profileUrl: this.profileUrlText,
+                profileLocation: this.profileLocationText,
+                headerSlot1Type: this.headerSlot1,
+                headerSlot2Type: this.headerSlot2,
+                headerSlot3Type: this.headerSlot3,
+            });
+            this.authorDisplayNameText = this.auth.authorDisplayName() ?? '';
+            this.profileUrlText = this.auth.profileUrl() ?? '';
+            this.profileLocationText = this.auth.profileLocation() ?? '';
+            this.headerSlot1 = this.auth.headerSlot1Type();
+            this.headerSlot2 = this.auth.headerSlot2Type();
+            this.headerSlot3 = this.auth.headerSlot3Type();
+            this.profileSaved.set(true);
+            setTimeout(() => this.profileSaved.set(false), 2500);
+        } catch (e) {
+            this.profileError.set(httpErrorMessage(e, 'Failed to save header slots'));
+        } finally {
+            this.profileBusy.set(false);
         }
     }
 

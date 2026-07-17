@@ -1,0 +1,62 @@
+<app-legal-page title="Privacy Policy" updated="[DATE]">
+    <div class="draft-notice">
+        Draft template — every <span class="placeholder">[bracketed]</span> value needs to be filled in
+        (and the whole thing reviewed by someone who isn't an AI) before this is a real Privacy Policy.
+    </div>
+
+    <h2>1. Who this is about</h2>
+    <p>
+        This Privacy Policy explains what Cedar Clerk (<span class="placeholder">[OPERATOR NAME / LEGAL ENTITY]</span>,
+        "we", "us") collects when you use the Service, and why. Contact for privacy questions:
+        <span class="placeholder">[CONTACT EMAIL]</span>.
+    </p>
+
+    <h2>2. What we collect</h2>
+    <ul>
+        <li><strong>Account data:</strong> your email address and password (stored as a salted hash, never in plain text).</li>
+        <li><strong>Telegram identity:</strong> if you link a Telegram account, we store your Telegram user ID, username, and first name, so we can associate your channels and confirm bot access.</li>
+        <li><strong>Your content:</strong> drafts, published posts, and uploaded media, so the Service can render and publish them where you ask it to.</li>
+        <li><strong>Billing metadata:</strong> your plan tier and a customer reference ID with our payment processor(s). We never see or store full card numbers — that's handled entirely by
+            <span class="placeholder">[Stripe / PayPal / Telegram Stars — list active processors]</span>.
+        </li>
+        <li><strong>Blog visitor data:</strong> for reactions on public blog posts, we store a one-way salted hash of your IP address (not the IP itself) so the same visitor can't react twice to the same post — we can't reverse this back to an IP.</li>
+        <li><strong>Local preferences:</strong> your light/dark theme choice, stored in your browser's local storage, never sent to us.</li>
+    </ul>
+
+    <h2>3. Third parties we share data with</h2>
+    <p>We use the following processors to run the Service, each bound by their own privacy policy:</p>
+    <ul>
+        <li><strong>Telegram</strong> — to publish posts to the channel(s) you connect, via the Telegram Bot API.</li>
+        <li><strong>Payment processors</strong> (<span class="placeholder">[Stripe / PayPal / Telegram Stars]</span>) — to handle paid plan billing.</li>
+        <li><strong>AI translation provider</strong> (<span class="placeholder">[Anthropic / OpenAI / DeepL — whichever is configured]</span>) — only when you use the "Auto-translate" feature; the post text you're translating is sent to this provider for that request only.</li>
+    </ul>
+    <p>We don't sell your data, and we don't share it with anyone else beyond what's listed above.</p>
+
+    <h2>4. Data retention &amp; deletion</h2>
+    <p>
+        We keep your data for as long as your account exists. Deleting your account removes your
+        drafts and media from our storage. <span class="placeholder">[BACKUP RETENTION WINDOW, if any]</span>
+    </p>
+
+    <h2>5. Your rights</h2>
+    <p>
+        You can access, export (via <span class="placeholder">[.cedar export / other mechanism]</span>),
+        or delete your data at any time from Settings.
+        <span class="placeholder">[ADD GDPR/CCPA-STYLE RIGHTS LANGUAGE IF APPLICABLE TO YOUR JURISDICTION/USERS]</span>
+    </p>
+
+    <h2>6. Children's privacy</h2>
+    <p>The Service is not directed at children under <span class="placeholder">[AGE]</span>, and we don't knowingly collect their data.</p>
+
+    <h2>7. Governing law</h2>
+    <p>This Policy is governed by the laws of <span class="placeholder">[JURISDICTION]</span>.</p>
+
+    <h2>8. Changes to this Policy</h2>
+    <p>
+        We may update this Policy from time to time. Material changes will be announced
+        <span class="placeholder">[HOW — e.g. email, in-app notice]</span> before they take effect.
+    </p>
+
+    <h2>9. Contact</h2>
+    <p>Questions about this Policy: <span class="placeholder">[CONTACT EMAIL]</span></p>
+</app-legal-page>

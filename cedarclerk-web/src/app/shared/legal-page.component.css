@@ -1,0 +1,140 @@
+:host {
+    display: block;
+    min-height: 100vh;
+    background: var(--bg);
+    font-family: var(--font-sans);
+}
+
+.legal-page {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+.theme-toggle {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: none;
+    border-radius: 8px;
+    color: var(--t2);
+    cursor: pointer;
+    font-size: 15px;
+}
+
+.theme-toggle:hover {
+    background: rgba(128, 120, 100, .14);
+}
+
+.legal-card {
+    width: 100%;
+    max-width: 720px;
+    box-sizing: border-box;
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: 34px 40px 28px;
+    margin-top: 20px;
+}
+
+.legal-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.legal-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    color: var(--text);
+}
+
+.legal-updated {
+    font-size: 12px;
+    color: var(--t3);
+}
+
+.legal-body {
+    color: var(--text);
+    font-size: 14.5px;
+    line-height: 1.65;
+}
+
+.legal-body ::ng-deep h2 {
+    font-size: 16.5px;
+    font-weight: 700;
+    margin: 26px 0 8px;
+}
+
+.legal-body ::ng-deep h2:first-child {
+    margin-top: 0;
+}
+
+.legal-body ::ng-deep p {
+    margin: 0 0 12px;
+}
+
+.legal-body ::ng-deep ul {
+    margin: 0 0 12px;
+    padding-left: 22px;
+}
+
+.legal-body ::ng-deep li {
+    margin: 0 0 4px;
+}
+
+.legal-body ::ng-deep .placeholder {
+    background: var(--asoft);
+    border: 1px dashed var(--abord);
+    border-radius: 4px;
+    padding: 0 4px;
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.legal-body ::ng-deep .draft-notice {
+    background: var(--asoft);
+    border: 1px solid var(--abord);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin: 0 0 20px;
+    font-size: 13px;
+    color: var(--t2);
+}
+
+.legal-footer {
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--t2);
+    margin-top: 24px;
+}
+
+.legal-footer a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.legal-footer a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+    .legal-card {
+        padding: 26px 20px;
+    }
+}

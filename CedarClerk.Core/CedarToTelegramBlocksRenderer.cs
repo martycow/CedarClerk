@@ -14,13 +14,18 @@ public static class CedarToTelegramBlocksRenderer
     {
         public string? MediaBaseUrl;
         public List<string> Footnotes { get; } = [];
+        // Pre-computed once per Render() call (see HeadingOutline) so a "tableOfContents" node
+        // can link to headings anywhere in the document, including ones after it. HeadingIndex
+        // tracks which entry corresponds to the heading node currently being rendered.
+        public IReadOnlyList<HeadingEntry> Outline = [];
+        public int HeadingIndex;
     }
 
     public static IReadOnlyList<CedarRichBlock> Render(string cedarJson, string? mediaBaseUrl = null)
     {
         var root = JsonNode.Parse(cedarJson) ?? throw new ArgumentException("Invalid cedar JSON");
         var doc = root["doc"] ?? root;
-        var ctx = new RenderContext { MediaBaseUrl = mediaBaseUrl };
+        var ctx = new RenderContext { MediaBaseUrl = mediaBaseUrl, Outline = HeadingOutline.Extract(doc) };
         var blocks = RenderBlocks(doc["content"]?.AsArray(), ctx).ToList();
 
         if (ctx.Footnotes.Count > 0)
@@ -35,54 +40,75 @@ public static class CedarToTelegramBlocksRenderer
             yield break;
 
         foreach (var n in nodes)
-        {
-            var block = RenderBlock(n!, ctx);
-            if (block is not null)
+            foreach (var block in RenderBlock(n!, ctx))
                 yield return block;
-        }
     }
 
-    private static CedarRichBlock? RenderBlock(JsonNode node, RenderContext ctx)
+    private static IEnumerable<CedarRichBlock> RenderBlock(JsonNode node, RenderContext ctx)
     {
         switch ((string?)node["type"])
         {
             case "paragraph":
-                return new RichParagraphBlock(RenderInline(node["content"]?.AsArray(), ctx));
+                yield return new RichParagraphBlock(RenderInline(node["content"]?.AsArray(), ctx));
+                break;
 
             case "heading":
-                var level = Math.Clamp((int?)node["attrs"]?["level"] ?? 1, 1, 6);
-                return new RichHeadingBlock(level, RenderInline(node["content"]?.AsArray(), ctx));
+                // An anchor block right before the heading is what a table-of-contents'
+                // RichRunAnchorLink entries jump to (verified 16.07.2026 against @testingandfun).
+                var entry = ctx.Outline[ctx.HeadingIndex++];
+                yield return new RichAnchorBlock(entry.Slug);
+                yield return new RichHeadingBlock(entry.Level, RenderInline(node["content"]?.AsArray(), ctx));
+                break;
+
+            case "tableOfContents":
+                var tocItems = ctx.Outline.Where(h => h.Text.Length > 0)
+                    .Select(h => new RichListItem(
+                        [new RichParagraphBlock(new RichRunAnchorLink(new RichRunText(h.Text), h.Slug))],
+                        HasCheckbox: false, IsChecked: false, OrderValue: null))
+                    .ToList();
+                if (tocItems.Count > 0)
+                    yield return new RichListBlock(tocItems);
+                break;
 
             case "bulletList":
-                return new RichListBlock(RenderListItems(node["content"]?.AsArray(), ctx, ordered: false));
+                yield return new RichListBlock(RenderListItems(node["content"]?.AsArray(), ctx, ordered: false));
+                break;
 
             case "orderedList":
-                return new RichListBlock(RenderListItems(node["content"]?.AsArray(), ctx, ordered: true));
+                yield return new RichListBlock(RenderListItems(node["content"]?.AsArray(), ctx, ordered: true));
+                break;
 
             case "taskList":
-                return new RichListBlock(RenderTaskItems(node["content"]?.AsArray(), ctx));
+                yield return new RichListBlock(RenderTaskItems(node["content"]?.AsArray(), ctx));
+                break;
 
             case "codeBlock":
                 var lang = (string?)node["attrs"]?["language"];
-                return new RichCodeBlock(lang, RenderRawText(node["content"]?.AsArray()));
+                yield return new RichCodeBlock(lang, RenderRawText(node["content"]?.AsArray()));
+                break;
 
             case "blockquote":
-                return new RichQuoteBlock(RenderBlocks(node["content"]?.AsArray(), ctx).ToList());
+                yield return new RichQuoteBlock(RenderBlocks(node["content"]?.AsArray(), ctx).ToList());
+                break;
 
             case "horizontalRule":
-                return new RichDividerBlock();
+                yield return new RichDividerBlock();
+                break;
 
             case "image":
                 var imgUrl = ResolveUrl((string?)node["attrs"]?["src"], ctx.MediaBaseUrl);
-                return new RichPhotoBlock(imgUrl, CaptionRun((string?)node["attrs"]?["caption"]));
+                yield return new RichPhotoBlock(imgUrl, CaptionRun((string?)node["attrs"]?["caption"]));
+                break;
 
             case "video":
                 var videoUrl = ResolveUrl((string?)node["attrs"]?["src"], ctx.MediaBaseUrl);
-                return new RichVideoBlock(videoUrl, CaptionRun((string?)node["attrs"]?["caption"]));
+                yield return new RichVideoBlock(videoUrl, CaptionRun((string?)node["attrs"]?["caption"]));
+                break;
 
             case "audio":
                 var audioUrl = ResolveUrl((string?)node["attrs"]?["src"], ctx.MediaBaseUrl);
-                return new RichAudioBlock(audioUrl, CaptionRun((string?)node["attrs"]?["caption"]));
+                yield return new RichAudioBlock(audioUrl, CaptionRun((string?)node["attrs"]?["caption"]));
+                break;
 
             case "carousel":
                 // An empty slideshow/collage (editor artifact — e.g. repeated insert/delete leaving
@@ -91,33 +117,36 @@ public static class CedarToTelegramBlocksRenderer
                 // send something guaranteed to fail.
                 var slideUrls = node["attrs"]?["images"]?.AsArray()
                     ?.Select(img => ResolveUrl((string?)img, ctx.MediaBaseUrl)).ToList() ?? [];
-                return slideUrls.Count == 0 ? null : new RichSlideshowBlock(slideUrls);
+                if (slideUrls.Count > 0)
+                    yield return new RichSlideshowBlock(slideUrls);
+                break;
 
             case "collage":
                 var collageUrls = node["attrs"]?["images"]?.AsArray()
                     ?.Select(img => ResolveUrl((string?)img, ctx.MediaBaseUrl)).ToList() ?? [];
-                return collageUrls.Count == 0 ? null : new RichCollageBlock(collageUrls);
+                if (collageUrls.Count > 0)
+                    yield return new RichCollageBlock(collageUrls);
+                break;
 
             case "table":
-                return RenderTable(node["content"]?.AsArray(), ctx);
+                yield return RenderTable(node["content"]?.AsArray(), ctx);
+                break;
 
             case "blockMath":
-                return new RichMathBlock((string?)node["attrs"]?["latex"] ?? "");
+                yield return new RichMathBlock((string?)node["attrs"]?["latex"] ?? "");
+                break;
 
             case "toggle":
                 var summary = (string?)node["attrs"]?["summary"] ?? "";
-                return new RichDetailsBlock(new RichRunText(summary), RenderBlocks(node["content"]?.AsArray(), ctx).ToList(), IsOpen: true);
+                yield return new RichDetailsBlock(new RichRunText(summary), RenderBlocks(node["content"]?.AsArray(), ctx).ToList(), IsOpen: true);
+                break;
 
             default:
                 // Unknown block type (e.g. blog-only "annotation") — render children unwrapped,
                 // matching the string renderers' fallback behavior.
-                var children = RenderBlocks(node["content"]?.AsArray(), ctx).ToList();
-                return children.Count switch
-                {
-                    0 => null,
-                    1 => children[0],
-                    _ => new RichQuoteBlock(children) // best-effort: no "fragment" block exists
-                };
+                foreach (var child in RenderBlocks(node["content"]?.AsArray(), ctx))
+                    yield return child;
+                break;
         }
     }
 

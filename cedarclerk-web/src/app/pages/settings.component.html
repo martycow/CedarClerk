@@ -17,6 +17,7 @@
     <div class="settings-body">
         <nav class="anchor-chips">
             <button (click)="jump('sec-profile')">Profile</button>
+            <button (click)="jump('sec-header-slots')">Header slots</button>
             <button (click)="jump('sec-subscription')">Subscription</button>
             <button (click)="jump('sec-integrations')">Integrations</button>
         </nav>
@@ -46,12 +47,80 @@
                     <span class="saved-check"><svg lucideCheck class="icon-xs"></svg>Saved</span>
                     }
                 </div>
+                @if (signatureError()) { <p class="field-error">{{ signatureError() }}</p> }
             </div>
 
             <div class="card-footer-row">
                 <span class="field-hint">Done for the day?</span>
                 <button class="btn-danger-ghost" (click)="logout()">Log out</button>
             </div>
+        </section>
+
+        <!-- ============ HEADER SLOTS ============ -->
+        <section id="sec-header-slots" class="settings-card">
+            <h2>Header slots</h2>
+            <p class="field-hint">Shown as a subtitle under the title on every blog post: up to three auto-filled values, separated by &bull;.</p>
+
+            <div class="field-group">
+                <label for="cc-author-name">Author display name</label>
+                <input id="cc-author-name" [(ngModel)]="authorDisplayNameText" placeholder="e.g. Marty">
+            </div>
+            <div class="field-group">
+                <label for="cc-profile-url">Profile URL</label>
+                <input id="cc-profile-url" [(ngModel)]="profileUrlText" placeholder="https://example.com">
+            </div>
+            <div class="field-group">
+                <label for="cc-profile-location">Location</label>
+                <input id="cc-profile-location" [(ngModel)]="profileLocationText" placeholder="e.g. Tbilisi, Georgia">
+            </div>
+
+            <div class="field-group">
+                <label for="cc-slot-1">Slot 1</label>
+                <select id="cc-slot-1" [(ngModel)]="headerSlot1">
+                    <option [ngValue]="null">None</option>
+                    <option value="AuthorSignature">Author Signature</option>
+                    <option value="Url">URL</option>
+                    <option value="MapLocation">Map Location</option>
+                    <option value="PublishedDate">Published Date</option>
+                    <option value="Length">Length</option>
+                    <option value="TimeToRead">Time to Read</option>
+                </select>
+            </div>
+            <div class="field-group">
+                <label for="cc-slot-2">Slot 2</label>
+                <select id="cc-slot-2" [(ngModel)]="headerSlot2">
+                    <option [ngValue]="null">None</option>
+                    <option value="AuthorSignature">Author Signature</option>
+                    <option value="Url">URL</option>
+                    <option value="MapLocation">Map Location</option>
+                    <option value="PublishedDate">Published Date</option>
+                    <option value="Length">Length</option>
+                    <option value="TimeToRead">Time to Read</option>
+                </select>
+            </div>
+            <div class="field-group">
+                <label for="cc-slot-3">Slot 3 @if (!hasProHeaderSlot()) { <span class="ai-badge">PRO</span> }</label>
+                <select id="cc-slot-3" [(ngModel)]="headerSlot3" [disabled]="!hasProHeaderSlot()"
+                        [title]="hasProHeaderSlot() ? '' : 'Upgrade to Pro to use a third header slot'">
+                    <option [ngValue]="null">None</option>
+                    <option value="AuthorSignature">Author Signature</option>
+                    <option value="Url">URL</option>
+                    <option value="MapLocation">Map Location</option>
+                    <option value="PublishedDate">Published Date</option>
+                    <option value="Length">Length</option>
+                    <option value="TimeToRead">Time to Read</option>
+                </select>
+            </div>
+
+            <div class="field-actions">
+                <button class="btn-primary" (click)="saveProfile()" [disabled]="profileBusy()">
+                    {{ profileBusy() ? '…' : 'Save header slots' }}
+                </button>
+                @if (profileSaved()) {
+                <span class="saved-check"><svg lucideCheck class="icon-xs"></svg>Saved</span>
+                }
+            </div>
+            @if (profileError()) { <p class="field-error">{{ profileError() }}</p> }
         </section>
 
         <!-- ============ SUBSCRIPTION ============ -->

@@ -16,6 +16,9 @@ public sealed record RichRunLink(RichRun Inner, string Url) : RichRun;
 public sealed record RichRunDateTime(string FallbackText, long UnixSeconds, string Format) : RichRun;
 public sealed record RichRunMath(string Latex) : RichRun;
 public sealed record RichRunSequence(IReadOnlyList<RichRun> Runs) : RichRun;
+// A link to an in-message anchor (Bot API 10.2 RichTextAnchorLink) — used for table-of-contents
+// entries. AnchorName must match a RichAnchorBlock's Name placed right before the target heading.
+public sealed record RichRunAnchorLink(RichRun Inner, string AnchorName) : RichRun;
 
 public abstract record CedarRichBlock;
 public sealed record RichParagraphBlock(RichRun Text) : CedarRichBlock;
@@ -35,3 +38,6 @@ public sealed record RichTableCell(RichRun Text, bool IsHeader, int? Colspan, in
 public sealed record RichMathBlock(string Latex) : CedarRichBlock;
 public sealed record RichDetailsBlock(RichRun Summary, IReadOnlyList<CedarRichBlock> Blocks, bool IsOpen) : CedarRichBlock;
 public sealed record RichFooterBlock(RichRun Text) : CedarRichBlock;
+// An invisible in-message jump target (Bot API 10.2 InputRichBlockAnchor) emitted right before
+// each heading so a table-of-contents' RichRunAnchorLink entries can jump to it.
+public sealed record RichAnchorBlock(string Name) : CedarRichBlock;

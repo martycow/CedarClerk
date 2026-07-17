@@ -467,6 +467,8 @@
 
                 <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" title="Blockquote"><svg lucideQuote class="icon"></svg></button>
                 <button (click)="insertToggle()" title="Toggle block"><svg lucideListCollapse class="icon"></svg></button>
+                <button (click)="insertTableOfContents()" title="Table of contents — auto-generated from headings, works on the blog and (as jump links) in Telegram"><svg lucideTableOfContents class="icon"></svg></button>
+                <button (click)="insertDivider()" title="Divider — horizontal rule"><svg lucideSeparatorHorizontal class="icon"></svg></button>
                 <button (click)="insertAnnotation()" [disabled]="!canAnnotate()" title="Mark for comments — wraps the selection so it can carry likes/comments on the blog">
                     <svg lucideMessageSquare class="icon"></svg>
                 </button>

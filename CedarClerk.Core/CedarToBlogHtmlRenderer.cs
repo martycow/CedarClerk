@@ -13,18 +13,39 @@ public static class CedarToBlogHtmlRenderer
     private sealed class RenderContext
     {
         public required string MediaBaseUrl;
+        public required string Lang;
         public List<string> Footnotes { get; } = [];
+        // Pre-computed once per Render() call (see HeadingOutline) — see the comment on
+        // CedarToTelegramBlocksRenderer.RenderContext for why this needs to happen up front.
+        public IReadOnlyList<HeadingEntry> Outline { get; init; } = [];
+        public int HeadingIndex;
     }
 
-    public static string Render(string cedarJson, string mediaBaseUrl)
+    // "en"/"ru" only, matching CedarClerk.Localization.Languages — Core stays free of a project
+    // reference to Localization, so the caller (BlogEndpoints) passes the plain language code.
+    public static string Render(string cedarJson, string mediaBaseUrl, string lang = "ru")
     {
         var root = JsonNode.Parse(cedarJson) ?? throw new ArgumentException("Invalid cedar JSON");
         var doc = root["doc"] ?? root;
         var sb = new StringBuilder();
-        var ctx = new RenderContext { MediaBaseUrl = mediaBaseUrl };
+        var ctx = new RenderContext { MediaBaseUrl = mediaBaseUrl, Lang = lang, Outline = HeadingOutline.Extract(doc) };
         RenderNodes(doc["content"]?.AsArray(), sb, ctx);
         AppendFootnotes(sb, ctx);
         return sb.ToString();
+    }
+
+    private static void RenderTableOfContents(StringBuilder sb, RenderContext ctx)
+    {
+        var entries = ctx.Outline.Where(h => h.Text.Length > 0).ToList();
+        if (entries.Count == 0)
+            return;
+
+        var contentsLabel = ctx.Lang == "en" ? "Contents" : "Оглавление";
+        sb.Append($"<nav class=\"toc\"><div class=\"toc-title\">{contentsLabel}</div><ul>");
+        foreach (var h in entries)
+            sb.Append($"<li class=\"toc-lvl-{h.Level}\"><a href=\"#{EscapeAttr(h.Slug)}\">")
+              .Append(Escape(h.Text)).Append("</a></li>");
+        sb.Append("</ul></nav>");
     }
 
     private static void AppendFootnotes(StringBuilder sb, RenderContext ctx)
@@ -59,9 +80,14 @@ public static class CedarToBlogHtmlRenderer
 
             case "heading":
                 var level = Math.Clamp((int?)node["attrs"]?["level"] ?? 1, 1, 6);
-                sb.Append($"<h{level}>");
+                var headingSlug = ctx.Outline[ctx.HeadingIndex++].Slug;
+                sb.Append($"<h{level} id=\"{EscapeAttr(headingSlug)}\">");
                 RenderNodes(node["content"]?.AsArray(), sb, ctx);
                 sb.Append($"</h{level}>");
+                break;
+
+            case "tableOfContents":
+                RenderTableOfContents(sb, ctx);
                 break;
 
             case "bulletList":
@@ -212,7 +238,7 @@ public static class CedarToBlogHtmlRenderer
                 var aid = (string?)node["attrs"]?["id"] ?? "";
                 sb.Append($"<div class=\"annotation\" data-annotation-id=\"{EscapeAttr(aid)}\">");
                 RenderNodes(node["content"]?.AsArray(), sb, ctx);
-                sb.Append(AnnotationControlsHtml());
+                sb.Append(AnnotationControlsHtml(ctx.Lang));
                 sb.Append("</div>");
                 break;
 
@@ -226,23 +252,31 @@ public static class CedarToBlogHtmlRenderer
     // hydrated client-side (see BlogEndpoints' page script). Also reused as-is by BlogEndpoints for
     // the whole-article reaction/comment block, wrapped in the same ".annotation" div with an empty id.
     // Comments are shown by default (no expand/collapse) — client script paginates the list.
-    public static string AnnotationControlsHtml() => """
-        <div class="annotation-controls">
-        <button type="button" class="react-btn" data-kind="like">&#128077; <span class="count" data-kind-count="like">0</span></button>
-        <button type="button" class="react-btn" data-kind="dislike">&#128078; <span class="count" data-kind-count="dislike">0</span></button>
-        <span class="comment-count-label">&#128172; <span class="comment-count">0</span></span>
-        </div>
-        <div class="comment-box">
-        <div class="comment-box-label">Comments</div>
-        <div class="comment-list"></div>
-        <button type="button" class="comment-load-more" hidden>Show more comments</button>
-        <form class="comment-form">
-        <input type="text" class="comment-author" placeholder="Name (optional)" maxlength="60">
-        <textarea class="comment-text" placeholder="Add a comment…" maxlength="2000" required></textarea>
-        <button type="submit">Send</button>
-        </form>
-        </div>
-        """;
+    public static string AnnotationControlsHtml(string lang = "ru")
+    {
+        var comments = lang == "en" ? "Comments" : "Комментарии";
+        var showMore = lang == "en" ? "Show more comments" : "Показать больше комментариев";
+        var namePlaceholder = lang == "en" ? "Name (optional)" : "Имя (необязательно)";
+        var commentPlaceholder = lang == "en" ? "Add a comment…" : "Добавить комментарий…";
+        var send = lang == "en" ? "Send" : "Отправить";
+        return $"""
+            <div class="annotation-controls">
+            <button type="button" class="react-btn" data-kind="like">&#128077; <span class="count" data-kind-count="like">0</span></button>
+            <button type="button" class="react-btn" data-kind="dislike">&#128078; <span class="count" data-kind-count="dislike">0</span></button>
+            <span class="comment-count-label">&#128172; <span class="comment-count">0</span></span>
+            </div>
+            <div class="comment-box">
+            <div class="comment-box-label">{comments}</div>
+            <div class="comment-list"></div>
+            <button type="button" class="comment-load-more" hidden>{showMore}</button>
+            <form class="comment-form">
+            <input type="text" class="comment-author" placeholder="{namePlaceholder}" maxlength="60">
+            <textarea class="comment-text" placeholder="{commentPlaceholder}" maxlength="2000" required></textarea>
+            <button type="submit">{send}</button>
+            </form>
+            </div>
+            """;
+    }
 
     private static string FormatDateTime(DateTime dt, string format)
     {

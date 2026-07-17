@@ -12,6 +12,9 @@ public static class AuthEndpoints
     public record RegisterRequest(string Email, string Password, string InviteCode);
     public record LoginRequest(string Email, string Password);
     public record SignatureRequest(string? Signature);
+    public record ProfileRequest(
+        string? AuthorDisplayName, string? ProfileUrl, string? ProfileLocation,
+        string? HeaderSlot1Type, string? HeaderSlot2Type, string? HeaderSlot3Type);
     
     public record TelegramLinkRequest(
         long Id,
@@ -78,6 +81,12 @@ public static class AuthEndpoints
                 telegramUsername = appUser?.TelegramUsername,
                 telegramLinkedAt = appUser?.TelegramLinkedAt,
                 postSignature = appUser?.PostSignature,
+                authorDisplayName = appUser?.AuthorDisplayName,
+                profileUrl = appUser?.ProfileUrl,
+                profileLocation = appUser?.ProfileLocation,
+                headerSlot1Type = appUser?.HeaderSlot1Type?.ToString(),
+                headerSlot2Type = appUser?.HeaderSlot2Type?.ToString(),
+                headerSlot3Type = appUser?.HeaderSlot3Type?.ToString(),
             });
         })
         .RequireAuthorization();
@@ -102,8 +111,43 @@ public static class AuthEndpoints
             return Results.Ok(new { postSignature = user.PostSignature });
         })
         .RequireAuthorization();
-        
-        groupBuilder.MapGet("/telegram/config", (TelegramBotService bot) => 
+
+        groupBuilder.MapPost("/profile", async (ProfileRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users) =>
+        {
+            var user = await users.GetUserAsync(principal);
+            if (user is null)
+                return Results.Unauthorized();
+
+            var currentPlan = SubscriptionPlanHelper.CheckPlanExpiration(user.PlanTier, user.PlanExpiresAt, DateTime.UtcNow);
+            var slot3 = ParseSlotType(req.HeaderSlot3Type);
+
+            if (slot3 is not null && PlanLimitations.MaxHeaderSlots(currentPlan) < 3)
+            {
+                return Results.Json(new { error = "The third header slot is a Pro feature. Upgrade to use it." },
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            user.AuthorDisplayName = string.IsNullOrWhiteSpace(req.AuthorDisplayName) ? null : req.AuthorDisplayName.Trim();
+            user.ProfileUrl = string.IsNullOrWhiteSpace(req.ProfileUrl) ? null : req.ProfileUrl.Trim();
+            user.ProfileLocation = string.IsNullOrWhiteSpace(req.ProfileLocation) ? null : req.ProfileLocation.Trim();
+            user.HeaderSlot1Type = ParseSlotType(req.HeaderSlot1Type);
+            user.HeaderSlot2Type = ParseSlotType(req.HeaderSlot2Type);
+            user.HeaderSlot3Type = slot3;
+            await users.UpdateAsync(user);
+
+            return Results.Ok(new
+            {
+                authorDisplayName = user.AuthorDisplayName,
+                profileUrl = user.ProfileUrl,
+                profileLocation = user.ProfileLocation,
+                headerSlot1Type = user.HeaderSlot1Type?.ToString(),
+                headerSlot2Type = user.HeaderSlot2Type?.ToString(),
+                headerSlot3Type = user.HeaderSlot3Type?.ToString(),
+            });
+        })
+        .RequireAuthorization();
+
+        groupBuilder.MapGet("/telegram/config", (TelegramBotService bot) =>
         {
                 return bot.IsRunning
                     ? Results.Ok(new
@@ -164,4 +208,7 @@ public static class AuthEndpoints
             Results.Ok(new { reachable = bot.IsRunning, botUsername = bot.IsRunning ? bot.Me.Username : null }))
         .RequireAuthorization();
     }
+
+    private static HeaderSlotType? ParseSlotType(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && Enum.TryParse<HeaderSlotType>(value, out var t) ? t : null;
 }

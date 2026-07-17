@@ -39,8 +39,17 @@ public class ApplicationUser : IdentityUser
     /// User-defined signature in the end of each post
     /// </summary>
     public string? PostSignature { get; set; }
-    
+
     public string? StripeCustomerId { get; set; }
+
+    // Header Slot System (blog-only, see docs/ROADMAP.md Phase 8 Step 4) — fixed profile values
+    // shown by the AuthorSignature/Url/MapLocation slot types, distinct from PostSignature above.
+    public string? AuthorDisplayName { get; set; }
+    public string? ProfileUrl { get; set; }
+    public string? ProfileLocation { get; set; }
+    public HeaderSlotType? HeaderSlot1Type { get; set; }
+    public HeaderSlotType? HeaderSlot2Type { get; set; }
+    public HeaderSlotType? HeaderSlot3Type { get; set; }
 }
 
 public class Payment

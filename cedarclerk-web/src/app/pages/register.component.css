@@ -156,6 +156,11 @@
     text-decoration: underline;
 }
 
+.auth-footer.muted {
+    color: var(--t3);
+    font-size: 11.5px;
+}
+
 @media (max-width: 480px) {
     .auth-card {
         padding: 24px 20px;

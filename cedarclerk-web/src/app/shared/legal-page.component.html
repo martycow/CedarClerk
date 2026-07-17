@@ -1,0 +1,19 @@
+<div class="legal-page">
+    <button class="theme-toggle" (click)="theme.toggle()" title="Toggle theme">
+        {{ theme.theme() === 'dark' ? '☀' : '☾' }}
+    </button>
+
+    <div class="legal-card">
+        <div class="legal-header">
+            <app-cedar-logo [size]="28"></app-cedar-logo>
+            <div class="legal-title">{{ title }}</div>
+            @if (updated) { <div class="legal-updated">Last updated: {{ updated }}</div> }
+        </div>
+
+        <div class="legal-body">
+            <ng-content></ng-content>
+        </div>
+
+        <div class="legal-footer"><a routerLink="/login">&larr; Back</a></div>
+    </div>
+</div>

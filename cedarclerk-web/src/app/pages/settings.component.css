@@ -182,7 +182,9 @@
     margin: 6px 0 0;
 }
 
-.field-group textarea {
+.field-group textarea,
+.field-group input,
+.field-group select {
     border: 1px solid var(--border);
     background: var(--sheet);
     color: var(--text);
@@ -192,12 +194,23 @@
     font-size: 13.5px;
     line-height: 1.5;
     outline: none;
+    box-sizing: border-box;
+}
+
+.field-group textarea {
     resize: vertical;
 }
 
-.field-group textarea:focus {
+.field-group textarea:focus,
+.field-group input:focus,
+.field-group select:focus {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--asoft);
+}
+
+.field-group select:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 
 .field-actions {
