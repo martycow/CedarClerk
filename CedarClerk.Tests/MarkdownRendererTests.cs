@@ -337,6 +337,26 @@ public class MarkdownRendererTests
     }
 
     [Fact]
+    public void Renders_youtube_as_thumbnail_reference_plus_clickable_link()
+    {
+        // NOT USED for sending (kept for parity/tests only) — same thumbnail+link shape as
+        // CedarToTelegramBlocksRenderer since no native webpage-preview mechanism exists here
+        // either. See ADR-033.
+        var json = """{"type":"doc","content":[{"type":"youtube","attrs":{"videoId":"dQw4w9WgXcQ"}}]}""";
+        var result = CedarToTelegramMarkdownRenderer.Render(json);
+        Assert.Equal("![](tg://photo?id=m1)\n[▶ Watch on YouTube](https://www.youtube.com/watch?v=dQw4w9WgXcQ)", result.Text);
+        Assert.Equal("https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg", Assert.Single(result.Media).Url);
+    }
+
+    [Fact]
+    public void Renders_youtube_caption_as_the_clickable_link_text_when_provided()
+    {
+        var json = """{"type":"doc","content":[{"type":"youtube","attrs":{"videoId":"dQw4w9WgXcQ","caption":"Never Gonna Give You Up"}}]}""";
+        var result = CedarToTelegramMarkdownRenderer.Render(json);
+        Assert.Equal("![](tg://photo?id=m1)\n[Never Gonna Give You Up](https://www.youtube.com/watch?v=dQw4w9WgXcQ)", result.Text);
+    }
+
+    [Fact]
     public void Renders_footnote_references_and_collected_footer()
     {
         var json = """

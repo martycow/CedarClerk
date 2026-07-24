@@ -1,6 +1,7 @@
 ﻿using CedarClerk.Core;
 using CedarClerk.Server;
 using CedarClerk.Server.Bot;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
@@ -9,6 +10,12 @@ using Quartz;
 const int passwordRequiredLength = 8;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Kestrel's default (~28.6MB) is below even the .cedar import cap (50MB) — a bulk Markdown
+// import (Notion-shaped .zip, see ADR-026) can run to ~200MB. Raised globally rather than
+// per-endpoint since this is a small self-hosted server, not a shared multi-tenant Kestrel
+// instance with a reason to keep the default low.
+builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 210 * 1024 * 1024);
 
 #region Paths
 var dataDir = Environment.GetEnvironmentVariable(Consts.DataDirectoryKey);
@@ -75,6 +82,22 @@ builder.Services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
 
 #region Application
 var app = builder.Build();
+
+// Any unhandled exception on any endpoint used to fall through to ASP.NET Core's default
+// behavior — a bare 500 with no body at all — which left the frontend's httpErrorMessage()
+// with nothing to show but a generic fallback string. Now every failure gets a real `{error}`
+// body (and a full server-side log with stack trace) instead of silently going dark. See ADR
+// in docs/DECISIONS.md.
+app.UseExceptionHandler(errorApp => errorApp.Run(async ctx =>
+{
+    var ex = ctx.Features.Get<IExceptionHandlerFeature>()?.Error;
+    if (ex is not null)
+        ctx.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("UnhandledException")
+            .LogError(ex, "Unhandled exception on {Method} {Path}", ctx.Request.Method, ctx.Request.Path);
+
+    ctx.Response.StatusCode = StatusCodes.Status500InternalServerError;
+    await ctx.Response.WriteAsJsonAsync(new { error = ex is null ? "Unexpected server error" : $"{ex.GetType().Name}: {ex.Message}" });
+}));
 
 app.UseDefaultFiles();
 app.UseStaticFiles();

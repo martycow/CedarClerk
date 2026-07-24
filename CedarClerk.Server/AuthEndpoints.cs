@@ -14,7 +14,9 @@ public static class AuthEndpoints
     public record SignatureRequest(string? Signature);
     public record ProfileRequest(
         string? AuthorDisplayName, string? ProfileUrl, string? ProfileLocation,
-        string? HeaderSlot1Type, string? HeaderSlot2Type, string? HeaderSlot3Type);
+        string? HeaderSlot1Type, string? HeaderSlot2Type, string? HeaderSlot3Type,
+        string? SocialTwitterUrl = null, string? SocialInstagramUrl = null, string? SocialFacebookUrl = null,
+        string? SocialYoutubeUrl = null, string? SocialGithubUrl = null);
     
     public record TelegramLinkRequest(
         long Id,
@@ -87,6 +89,11 @@ public static class AuthEndpoints
                 headerSlot1Type = appUser?.HeaderSlot1Type?.ToString(),
                 headerSlot2Type = appUser?.HeaderSlot2Type?.ToString(),
                 headerSlot3Type = appUser?.HeaderSlot3Type?.ToString(),
+                socialTwitterUrl = appUser?.SocialTwitterUrl,
+                socialInstagramUrl = appUser?.SocialInstagramUrl,
+                socialFacebookUrl = appUser?.SocialFacebookUrl,
+                socialYoutubeUrl = appUser?.SocialYoutubeUrl,
+                socialGithubUrl = appUser?.SocialGithubUrl,
             });
         })
         .RequireAuthorization();
@@ -133,6 +140,11 @@ public static class AuthEndpoints
             user.HeaderSlot1Type = ParseSlotType(req.HeaderSlot1Type);
             user.HeaderSlot2Type = ParseSlotType(req.HeaderSlot2Type);
             user.HeaderSlot3Type = slot3;
+            user.SocialTwitterUrl = string.IsNullOrWhiteSpace(req.SocialTwitterUrl) ? null : req.SocialTwitterUrl.Trim();
+            user.SocialInstagramUrl = string.IsNullOrWhiteSpace(req.SocialInstagramUrl) ? null : req.SocialInstagramUrl.Trim();
+            user.SocialFacebookUrl = string.IsNullOrWhiteSpace(req.SocialFacebookUrl) ? null : req.SocialFacebookUrl.Trim();
+            user.SocialYoutubeUrl = string.IsNullOrWhiteSpace(req.SocialYoutubeUrl) ? null : req.SocialYoutubeUrl.Trim();
+            user.SocialGithubUrl = string.IsNullOrWhiteSpace(req.SocialGithubUrl) ? null : req.SocialGithubUrl.Trim();
             await users.UpdateAsync(user);
 
             return Results.Ok(new
@@ -143,6 +155,11 @@ public static class AuthEndpoints
                 headerSlot1Type = user.HeaderSlot1Type?.ToString(),
                 headerSlot2Type = user.HeaderSlot2Type?.ToString(),
                 headerSlot3Type = user.HeaderSlot3Type?.ToString(),
+                socialTwitterUrl = user.SocialTwitterUrl,
+                socialInstagramUrl = user.SocialInstagramUrl,
+                socialFacebookUrl = user.SocialFacebookUrl,
+                socialYoutubeUrl = user.SocialYoutubeUrl,
+                socialGithubUrl = user.SocialGithubUrl,
             });
         })
         .RequireAuthorization();

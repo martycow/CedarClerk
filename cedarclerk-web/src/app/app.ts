@@ -1,10 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ThemeService } from './core/theme.service';
+import { DebugConsoleComponent } from './shared/debug-console.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, DebugConsoleComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })

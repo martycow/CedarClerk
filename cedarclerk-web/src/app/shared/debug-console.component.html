@@ -1,0 +1,55 @@
+<div class="debug-console" [class.open]="open()">
+    <button class="debug-tab" (click)="toggleOpen()">
+        <svg lucideTerminal class="icon-sm"></svg>
+        <span>Console</span>
+        @if (inFlightCount() > 0) {
+        <span class="debug-badge busy"><svg lucideRefreshCw class="icon-xs spin"></svg>{{ inFlightCount() }}</span>
+        }
+        @if (errorCount() > 0) {
+        <span class="debug-badge error">{{ errorCount() }}</span>
+        }
+    </button>
+
+    @if (open()) {
+    <div class="debug-panel">
+        <div class="debug-panel-head">
+            <span>{{ entries().length }} request(s)</span>
+            <div class="spacer"></div>
+            <button class="mini" (click)="clear()" title="Clear"><svg lucideTrash2 class="icon-sm"></svg></button>
+            <button class="mini" (click)="toggleOpen()" title="Close"><svg lucideX class="icon-sm"></svg></button>
+        </div>
+        <div class="debug-panel-list">
+            @for (e of entries(); track e.id) {
+            <div class="debug-row" [class.expanded]="expandedId() === e.id" (click)="toggleExpand(e.id)">
+                <div class="debug-row-summary">
+                    <span class="debug-method">{{ e.method }}</span>
+                    <span class="debug-url">{{ e.url }}</span>
+                    <span class="spacer"></span>
+                    @if (e.inFlight) {
+                    <span class="debug-status pending"><svg lucideRefreshCw class="icon-xs spin"></svg></span>
+                    } @else {
+                    <span class="debug-status" [class.error]="e.isError">{{ e.status }}</span>
+                    }
+                    @if (e.durationMs !== undefined) {
+                    <span class="debug-duration">{{ e.durationMs }}ms</span>
+                    }
+                </div>
+                @if (expandedId() === e.id) {
+                <div class="debug-row-detail" (click)="$event.stopPropagation()">
+                    @if (e.requestBody !== undefined) {
+                    <div class="debug-detail-label">Request</div>
+                    <pre>{{ formatBody(e.requestBody) }}</pre>
+                    }
+                    <div class="debug-detail-label">Response</div>
+                    <pre>{{ formatBody(e.responseBody) }}</pre>
+                </div>
+                }
+            </div>
+            }
+            @if (entries().length === 0) {
+            <p class="debug-empty">No requests yet.</p>
+            }
+        </div>
+    </div>
+    }
+</div>

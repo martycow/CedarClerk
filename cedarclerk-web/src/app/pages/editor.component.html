@@ -11,11 +11,21 @@
                     <button class="mini" (click)="cedarInput.click()" [disabled]="importingCedar()" title="Import .cedar">
                         <svg lucideUpload class="icon-sm"></svg>
                     </button>
+                    <button class="mini" (click)="markdownInput.click()" [disabled]="importingMarkdown()" title="Import Markdown (.zip)">
+                        <svg lucideFileUp class="icon-sm"></svg>
+                    </button>
                     <button class="mini" (click)="newDraft()" title="New draft"><svg lucidePlus class="icon-sm"></svg></button>
                 </div>
                 <input #cedarInput type="file" accept=".cedar" hidden (change)="onImportCedarChosen($event)">
+                <input #markdownInput type="file" accept=".zip" hidden (change)="onImportMarkdownChosen($event)">
                 @if (importCedarError()) {
                 <p class="channel-error">{{ importCedarError() }}</p>
+                }
+                @if (importMarkdownError()) {
+                <p class="channel-error">{{ importMarkdownError() }}</p>
+                }
+                @if (importMarkdownWarning()) {
+                <p class="channel-error">{{ importMarkdownWarning() }}</p>
                 }
                 @for (d of drafts(); track d.id) {
                 <div class="draft-item" [class.active]="d.id === currentId()" (click)="openDraft(d.id)">
@@ -46,10 +56,10 @@
 
         <span class="save-state" [class.saving]="saveState() === 'saving' || saveState() === 'dirty'" [class.error]="saveState() === 'error'">
             @switch (saveState()) {
-                @case ('saved') { <svg lucideCheck class="icon-xs"></svg> Saved }
-                @case ('saving') { <span class="dot"></span> Saving… }
-                @case ('dirty') { <span class="dot"></span> Unsaved changes }
-                @case ('error') { <span class="dot"></span> Sync failed }
+                @case ('saved') { <svg lucideCheck class="icon-xs"></svg> <span class="save-label">Saved</span> }
+                @case ('saving') { <span class="dot"></span> <span class="save-label">Saving…</span> }
+                @case ('dirty') { <span class="dot"></span> <span class="save-label">Unsaved changes</span> }
+                @case ('error') { <span class="dot"></span> <span class="save-label">Sync failed</span> }
             }
         </span>
 
@@ -139,13 +149,55 @@
             </div>
         </app-popover>
 
-        <app-popover align="right">
-            <button trigger class="export-btn" title="Export">
-                <svg lucideSend class="icon-sm"></svg>
-                Export
-            </button>
-            <div panel class="export-popover">
-                <div class="panel-label">Publish to</div>
+        <button class="export-btn export-trigger" (click)="openExportModal()" title="Export">
+            <svg lucideSend class="icon-sm"></svg>
+            <span class="btn-label">Export</span>
+        </button>
+
+        @if (exportModalOpen()) {
+        <app-modal [width]="640" (closed)="exportModalOpen.set(false)">
+            <svg modal-icon lucideSend class="icon"></svg>
+            <span modal-title>Export</span>
+
+            @if (currentId(); as id) {
+            <div class="export-section">
+                <div class="export-section-title">Сайт / Блог</div>
+                @if (currentBlog(); as blog) {
+                    @if (blog.isPublished) {
+                    <p class="export-result">✓ Published</p>
+                    <div class="blog-lang-badges">
+                        <a class="blog-lang-badge" [href]="blogUrl()" target="_blank" rel="noopener">RU</a>
+                        <a class="blog-lang-badge" [class.disabled]="!enMeta()" [href]="enMeta() ? blogUrl() + '?lang=en' : null" target="_blank" rel="noopener">EN</a>
+                    </div>
+                    <p class="export-result"><a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
+                    <button class="export-btn" (click)="unpublishFromBlog()" [disabled]="blogBusy()">
+                        @if (blogBusy()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+                        {{ blogBusy() ? 'Working… ' + blogElapsed() + 's' : 'Unpublish' }}
+                    </button>
+                    } @else {
+                    <p class="export-result">Unpublished — link stays <a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
+                    <button class="export-btn" (click)="publishToBlog()" [disabled]="blogBusy()">
+                        @if (blogBusy()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+                        {{ blogBusy() ? 'Working… ' + blogElapsed() + 's' : 'Republish to blog' }}
+                    </button>
+                    }
+                } @else {
+                <button class="export-btn" (click)="publishToBlog()" [disabled]="blogBusy()">
+                    @if (blogBusy()) { <svg lucideRefreshCw class="icon-sm spin"></svg> } @else { <svg lucideSend class="icon-sm"></svg> }
+                    {{ blogBusy() ? 'Publishing… ' + blogElapsed() + 's' : 'Publish to blog' }}
+                </button>
+                }
+                @if (blogBusy()) {
+                <div class="inline-progress">
+                    <div class="indeterminate-bar"><div class="indeterminate-fill"></div></div>
+                    <p class="translate-status">{{ blogStatusMessage() }}</p>
+                </div>
+                }
+                @if (blogError()) { <p class="channel-error">{{ blogError() }}</p> }
+            </div>
+
+            <div class="export-section">
+                <div class="export-section-title">Telegram</div>
                 @if (selectedChannel(); as sc) {
                 <div class="channel-chosen">
                     <span class="channel-avatar" [style.background]="channelColor(sc.id)">{{ channelInitial(sc.title) }}</span>
@@ -170,48 +222,32 @@
                             [disabled]="!enMeta()" [title]="enMeta() ? '' : 'No English version yet'">EN</button>
                 </div>
 
+                <div class="panel-label" style="margin-top:12px">Photo compression <span class="field-hint-inline">(for large images only)</span></div>
+                <div class="format-toggle">
+                    <button [class.on]="compressionLevel === 'small'" (click)="compressionLevel = 'small'" title="Smaller files, faster to load (~2MB)">Smaller</button>
+                    <button [class.on]="compressionLevel === 'standard'" (click)="compressionLevel = 'standard'" title="Default (~4MB)">Standard</button>
+                    <button [class.on]="compressionLevel === 'high'" (click)="compressionLevel = 'high'" title="Best quality Telegram will still accept (~6MB)">Higher quality</button>
+                </div>
+
                 <div class="publish-actions">
                     <button class="export-btn" (click)="exportDraft()" [disabled]="exporting()">
+                        @if (exporting()) {
+                        <svg lucideRefreshCw class="icon-sm spin"></svg>
+                        } @else {
                         <svg lucideSend class="icon-sm"></svg>
-                        {{ exporting() ? 'Publishing…' : 'Publish now' }}
+                        }
+                        {{ exporting() ? 'Publishing… ' + exportElapsed() + 's' : 'Publish now' }}
                     </button>
                     <button class="export-btn" [class.on]="scheduleOpen()" (click)="scheduleOpen.set(!scheduleOpen())">
                         <svg lucideClock class="icon-sm"></svg>
                         Schedule
                     </button>
                 </div>
-
-                @if (currentId(); as id) {
-                <a class="export-btn" style="margin-top:8px" [href]="'/api/drafts/' + id + '/cedar'" download>
-                    <svg lucideDownload class="icon-sm"></svg>
-                    Download .cedar
-                </a>
-                }
-
-                <div class="popover-divider"></div>
-                <div class="panel-label">Blog</div>
-                @if (currentBlog(); as blog) {
-                    @if (blog.isPublished) {
-                    <p class="export-result">
-                        ✓ Published — <a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a>
-                    </p>
-                    <button class="export-btn" (click)="unpublishFromBlog()" [disabled]="blogBusy()">
-                        {{ blogBusy() ? '…' : 'Unpublish' }}
-                    </button>
-                    } @else {
-                    <p class="export-result">Unpublished — link stays <a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
-                    <button class="export-btn" (click)="publishToBlog()" [disabled]="blogBusy()">
-                        {{ blogBusy() ? '…' : 'Republish to blog' }}
-                    </button>
-                    }
-                } @else {
-                <button class="export-btn" (click)="publishToBlog()" [disabled]="blogBusy()">
-                    <svg lucideSend class="icon-sm"></svg>
-                    {{ blogBusy() ? 'Publishing…' : 'Publish to blog' }}
-                </button>
-                }
-                @if (blogError()) {
-                <p class="channel-error">{{ blogError() }}</p>
+                @if (exporting()) {
+                <div class="inline-progress">
+                    <div class="indeterminate-bar"><div class="indeterminate-fill"></div></div>
+                    <p class="translate-status">{{ exportStatusMessage() }}</p>
+                </div>
                 }
 
                 @if (exportResult()) {
@@ -239,7 +275,8 @@
                 <div class="schedule-row">
                     <input type="datetime-local" [(ngModel)]="scheduledAt">
                     <button (click)="schedulePost()" [disabled]="scheduling() || !scheduledAt">
-                        {{ scheduling() ? '...' : 'Schedule' }}
+                        @if (scheduling()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+                        {{ scheduling() ? 'Scheduling…' : 'Schedule' }}
                     </button>
                 </div>
                 @if (pickerZonesHint()) { <p class="tz-hint">{{ pickerZonesHint() }}</p> }
@@ -263,7 +300,64 @@
                 }
                 }
             </div>
-        </app-popover>
+
+            <div class="export-section">
+                <div class="export-section-title">Другие площадки <span class="soon-badge">Coming soon</span></div>
+                <div class="export-mock-list">
+                    <div class="export-mock-row"><svg lucideAtSign class="icon-sm"></svg><span>Twitter / X</span></div>
+                    <div class="export-mock-row"><svg lucideThumbsUp class="icon-sm"></svg><span>Facebook</span></div>
+                    <div class="export-mock-row"><svg lucideCloud class="icon-sm"></svg><span>Bluesky</span></div>
+                    <div class="export-mock-row"><svg lucideMessageSquareShare class="icon-sm"></svg><span>Threads</span></div>
+                    <div class="export-mock-row"><svg lucideFileText class="icon-sm"></svg><span>Medium</span></div>
+                    <div class="export-mock-row"><svg lucideHeart class="icon-sm"></svg><span>Patreon</span></div>
+                    <div class="export-mock-row"><svg lucideNotebook class="icon-sm"></svg><span>Notion</span></div>
+                    <div class="export-mock-row"><svg lucideFile class="icon-sm"></svg><span>Google Docs</span></div>
+                </div>
+            </div>
+
+            <div class="export-section">
+                <div class="export-section-title">Экспорт файлов</div>
+                <a class="export-btn" [href]="'/api/drafts/' + id + '/cedar'" download>
+                    <svg lucideDownload class="icon-sm"></svg>
+                    Download .cedar
+                </a>
+                <div class="html-export-row">
+                    <span class="panel-label" style="margin:0">Статическая HTML-страница</span>
+                    <a class="blog-lang-badge" [href]="'/api/drafts/' + id + '/export-html?lang=ru'" download>RU</a>
+                    @if (enMeta()) {
+                    <a class="blog-lang-badge" [href]="'/api/drafts/' + id + '/export-html?lang=en'" download>EN</a>
+                    } @else {
+                    <span class="blog-lang-badge disabled" title="No English version yet">EN</span>
+                    }
+                </div>
+            </div>
+
+            <div class="export-section">
+                <div class="export-section-title">Файлы в черновике</div>
+                @if (draftAssetsLoading()) {
+                <p class="field-hint-inline">Загрузка…</p>
+                } @else if (!draftAssets().length) {
+                <p class="field-hint-inline">Медиафайлов не найдено.</p>
+                } @else {
+                <div class="asset-list">
+                    @for (a of draftAssets(); track a.id) {
+                    <div class="asset-row">
+                        <a class="asset-name" [href]="'/media/' + a.localPath" target="_blank" rel="noopener" [title]="a.fileName">{{ a.fileName }}</a>
+                        <span class="asset-size">{{ formatFileSize(a.sizeBytes) }}</span>
+                        @if (a.hasTelegramDerivative && a.telegramSizeBytes) {
+                        <span class="asset-tg-badge" title="Сжатая версия для Telegram">TG {{ formatFileSize(a.telegramSizeBytes) }}</span>
+                        }
+                        <button class="mini-remove" (click)="removeAssetFromDraft(a)" title="Убрать из черновика">
+                            <svg lucideX class="icon-sm"></svg>
+                        </button>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+            }
+        </app-modal>
+        }
 
         <a class="icon-btn" routerLink="/comments" title="Comments &amp; likes">
             <svg lucideMessageSquare class="icon"></svg>
@@ -436,6 +530,22 @@
 
                 <button (click)="collageInput.click()" title="Insert image collage"><svg lucideLayoutGrid class="icon"></svg></button>
                 <input #collageInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCollageChosen($event)">
+
+                <app-popover>
+                    <button trigger title="Insert YouTube video">
+                        <svg viewBox="0 0 24 24" class="icon"><path fill="#f00" d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33Z"/><path fill="#fff" d="M9.75 15.02 15.5 11.75 9.75 8.48v6.54Z"/></svg>
+                    </button>
+                    <div panel class="link-popover">
+                        <input class="chat-input"
+                            [(ngModel)]="youtubeUrl"
+                            placeholder="https://www.youtube.com/watch?v=…"
+                            (keyup.enter)="insertYoutube()">
+                        <button class="export-btn full" style="margin-top:8px" (click)="insertYoutube()">Apply</button>
+                        @if (youtubeError()) {
+                        <p class="channel-error" style="color:var(--t3)">{{ youtubeError() }}</p>
+                        }
+                    </div>
+                </app-popover>
             </div>
             <span class="tb-caption">Media</span>
         </div>
@@ -499,36 +609,24 @@
 
     <!--AI confirm dialog (replaces window.confirm)-->
     @if (aiConfirmKind(); as kind) {
-    <div class="modal-overlay" (click)="cancelAiConfirm()">
-        <div class="modal-card" (click)="$event.stopPropagation()">
-            <div class="modal-head">
-                <svg lucideSparkle class="icon"></svg>
-                <span>{{ aiConfirmTitle() }}</span>
-            </div>
-            <p class="modal-body">{{ aiConfirmBody() }}</p>
-            <div class="modal-actions">
-                <button class="btn-ghost" (click)="cancelAiConfirm()">Cancel</button>
-                <button class="btn-accent" (click)="confirmAiEdit()">{{ kind === 'fix-errors' ? 'Fix errors' : 'Run it' }}</button>
-            </div>
-        </div>
-    </div>
+    <app-modal (closed)="cancelAiConfirm()">
+        <svg modal-icon lucideSparkle class="icon"></svg>
+        <span modal-title>{{ aiConfirmTitle() }}</span>
+        <p>{{ aiConfirmBody() }}</p>
+        <button modal-actions class="btn-ghost" (click)="cancelAiConfirm()">Cancel</button>
+        <button modal-actions class="btn-accent" (click)="confirmAiEdit()">{{ kind === 'fix-errors' ? 'Fix errors' : 'Run it' }}</button>
+    </app-modal>
     }
 
     <!--Re-translate confirm dialog (replaces window.confirm)-->
     @if (translateConfirmOpen()) {
-    <div class="modal-overlay" (click)="cancelTranslateConfirm()">
-        <div class="modal-card" (click)="$event.stopPropagation()">
-            <div class="modal-head">
-                <svg lucideRefreshCw class="icon"></svg>
-                <span>Replace the English version?</span>
-            </div>
-            <p class="modal-body">A fresh machine translation will overwrite the current English version. The original stays in history.</p>
-            <div class="modal-actions">
-                <button class="btn-ghost" (click)="cancelTranslateConfirm()">Cancel</button>
-                <button class="btn-accent" (click)="confirmTranslate()">Replace</button>
-            </div>
-        </div>
-    </div>
+    <app-modal (closed)="cancelTranslateConfirm()">
+        <svg modal-icon lucideRefreshCw class="icon"></svg>
+        <span modal-title>Replace the English version?</span>
+        <p>A fresh machine translation will overwrite the current English version. The original stays in history.</p>
+        <button modal-actions class="btn-ghost" (click)="cancelTranslateConfirm()">Cancel</button>
+        <button modal-actions class="btn-accent" (click)="confirmTranslate()">Replace</button>
+    </app-modal>
     }
 
     <!--AI success toast-->
@@ -602,7 +700,16 @@
                 @if (autoTranslateError()) { <p class="channel-error">{{ autoTranslateError() }}</p> }
             </div>
             }
-            <div class="sheet" #editorHost [style.--zoom]="zoomFactor()" [style.display]="showEnEmptyState() ? 'none' : ''"></div>
+            <div class="sheet-wrap" [style.display]="showEnEmptyState() ? 'none' : ''">
+                <div class="sheet" #editorHost [style.--zoom]="zoomFactor()"></div>
+                @if (lang() === 'ru' && ruDiffMarkers().length) {
+                <div class="ru-diff-gutter" title="Changed since the English translation was last synced">
+                    @for (m of ruDiffMarkers(); track $index) {
+                    <div class="diff-marker" [class]="m.kind" [style.top.px]="m.top" [style.height.px]="m.height"></div>
+                    }
+                </div>
+                }
+            </div>
         </section>
     </div>
 

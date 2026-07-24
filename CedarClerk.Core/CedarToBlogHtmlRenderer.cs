@@ -154,6 +154,20 @@ public static class CedarToBlogHtmlRenderer
                 AppendMedia(sb, "audio", audioSrc, (string?)node["attrs"]?["caption"], isVoid: false);
                 break;
 
+            case "youtube":
+                var videoId = (string?)node["attrs"]?["videoId"];
+                if (string.IsNullOrEmpty(videoId))
+                    break;
+                var embedSrc = $"https://www.youtube-nocookie.com/embed/{Uri.EscapeDataString(videoId)}";
+                var embedHtml = $"<div class=\"youtube-embed\"><iframe src=\"{EscapeAttr(embedSrc)}\" loading=\"lazy\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" allowfullscreen></iframe></div>";
+                var youtubeCaption = (string?)node["attrs"]?["caption"];
+                if (string.IsNullOrEmpty(youtubeCaption))
+                    sb.Append(embedHtml);
+                else
+                    sb.Append("<figure>").Append(embedHtml)
+                      .Append("<figcaption>").Append(Escape(youtubeCaption)).Append("</figcaption></figure>");
+                break;
+
             case "carousel":
                 RenderCarousel(node["attrs"]?["images"]?.AsArray(), sb, ctx);
                 break;

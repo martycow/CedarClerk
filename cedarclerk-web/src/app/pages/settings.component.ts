@@ -11,13 +11,15 @@ import { httpErrorMessage } from '../core/http-error.util';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import {
     LucideArrowLeft as ArrowLeft, LucideCheck as Check, LucideSend as Send,
+    LucideAtSign as AtSign, LucideCamera as Camera, LucideThumbsUp as ThumbsUp,
+    LucidePlaySquare as PlaySquare, LucideCode2 as Code2,
 } from '@lucide/angular';
 
 type PayMethod = 'stripe' | 'paypal' | 'stars';
 
 @Component({
     selector: 'app-settings',
-    imports: [FormsModule, DatePipe, RouterLink, CedarLogoComponent, ArrowLeft, Check, Send],
+    imports: [FormsModule, DatePipe, RouterLink, CedarLogoComponent, ArrowLeft, Check, Send, AtSign, Camera, ThumbsUp, PlaySquare, Code2],
     templateUrl: 'settings.component.html',
     styleUrls: ['settings.component.css']
 })
@@ -43,6 +45,15 @@ export class SettingsComponent implements OnInit {
     profileSaved = signal(false);
     profileError = signal<string | null>(null);
 
+    socialTwitterUrlText = '';
+    socialInstagramUrlText = '';
+    socialFacebookUrlText = '';
+    socialYoutubeUrlText = '';
+    socialGithubUrlText = '';
+    socialBusy = signal(false);
+    socialSaved = signal(false);
+    socialError = signal<string | null>(null);
+
     billing = signal<BillingStatus | null>(null);
     billingBusy = signal(false);
     billingMessage = signal<string | null>(null);
@@ -64,6 +75,11 @@ export class SettingsComponent implements OnInit {
         this.headerSlot1 = this.auth.headerSlot1Type();
         this.headerSlot2 = this.auth.headerSlot2Type();
         this.headerSlot3 = this.auth.headerSlot3Type();
+        this.socialTwitterUrlText = this.auth.socialTwitterUrl() ?? '';
+        this.socialInstagramUrlText = this.auth.socialInstagramUrl() ?? '';
+        this.socialFacebookUrlText = this.auth.socialFacebookUrl() ?? '';
+        this.socialYoutubeUrlText = this.auth.socialYoutubeUrl() ?? '';
+        this.socialGithubUrlText = this.auth.socialGithubUrl() ?? '';
         try { this.billing.set(await this.billingApi.status()); } catch { /* non-critical */ }
         try { this.botStatus.set(await this.telegramLink.botStatus()); } catch { /* non-critical */ }
         try { this.channels.set(await this.channelsApi.list()); } catch { /* non-critical */ }
@@ -128,6 +144,38 @@ export class SettingsComponent implements OnInit {
             this.profileError.set(httpErrorMessage(e, 'Failed to save header slots'));
         } finally {
             this.profileBusy.set(false);
+        }
+    }
+
+    async saveSocialLinks() {
+        this.socialBusy.set(true);
+        this.socialSaved.set(false);
+        this.socialError.set(null);
+        try {
+            await this.auth.saveProfile({
+                authorDisplayName: this.authorDisplayNameText,
+                profileUrl: this.profileUrlText,
+                profileLocation: this.profileLocationText,
+                headerSlot1Type: this.headerSlot1,
+                headerSlot2Type: this.headerSlot2,
+                headerSlot3Type: this.headerSlot3,
+                socialTwitterUrl: this.socialTwitterUrlText,
+                socialInstagramUrl: this.socialInstagramUrlText,
+                socialFacebookUrl: this.socialFacebookUrlText,
+                socialYoutubeUrl: this.socialYoutubeUrlText,
+                socialGithubUrl: this.socialGithubUrlText,
+            });
+            this.socialTwitterUrlText = this.auth.socialTwitterUrl() ?? '';
+            this.socialInstagramUrlText = this.auth.socialInstagramUrl() ?? '';
+            this.socialFacebookUrlText = this.auth.socialFacebookUrl() ?? '';
+            this.socialYoutubeUrlText = this.auth.socialYoutubeUrl() ?? '';
+            this.socialGithubUrlText = this.auth.socialGithubUrl() ?? '';
+            this.socialSaved.set(true);
+            setTimeout(() => this.socialSaved.set(false), 2500);
+        } catch (e) {
+            this.socialError.set(httpErrorMessage(e, 'Failed to save social links'));
+        } finally {
+            this.socialBusy.set(false);
         }
     }
 

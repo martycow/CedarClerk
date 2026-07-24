@@ -18,6 +18,7 @@
         <nav class="anchor-chips">
             <button (click)="jump('sec-profile')">Profile</button>
             <button (click)="jump('sec-header-slots')">Header slots</button>
+            <button (click)="jump('sec-social-links')">Social links</button>
             <button (click)="jump('sec-subscription')">Subscription</button>
             <button (click)="jump('sec-integrations')">Integrations</button>
         </nav>
@@ -121,6 +122,43 @@
                 }
             </div>
             @if (profileError()) { <p class="field-error">{{ profileError() }}</p> }
+        </section>
+
+        <!-- ============ SOCIAL LINKS ============ -->
+        <section id="sec-social-links" class="settings-card">
+            <h2>Social links</h2>
+            <p class="field-hint">Where else people can find you — kept for your own reference for now.</p>
+
+            <div class="field-group">
+                <label for="cc-social-twitter"><svg lucideAtSign class="icon-xs"></svg> Twitter / X</label>
+                <input id="cc-social-twitter" [(ngModel)]="socialTwitterUrlText" placeholder="https://x.com/yourhandle">
+            </div>
+            <div class="field-group">
+                <label for="cc-social-instagram"><svg lucideCamera class="icon-xs"></svg> Instagram</label>
+                <input id="cc-social-instagram" [(ngModel)]="socialInstagramUrlText" placeholder="https://instagram.com/yourhandle">
+            </div>
+            <div class="field-group">
+                <label for="cc-social-facebook"><svg lucideThumbsUp class="icon-xs"></svg> Facebook</label>
+                <input id="cc-social-facebook" [(ngModel)]="socialFacebookUrlText" placeholder="https://facebook.com/yourpage">
+            </div>
+            <div class="field-group">
+                <label for="cc-social-youtube"><svg lucidePlaySquare class="icon-xs"></svg> YouTube</label>
+                <input id="cc-social-youtube" [(ngModel)]="socialYoutubeUrlText" placeholder="https://youtube.com/@yourchannel">
+            </div>
+            <div class="field-group">
+                <label for="cc-social-github"><svg lucideCode2 class="icon-xs"></svg> GitHub</label>
+                <input id="cc-social-github" [(ngModel)]="socialGithubUrlText" placeholder="https://github.com/yourname">
+            </div>
+
+            <div class="field-actions">
+                <button class="btn-primary" (click)="saveSocialLinks()" [disabled]="socialBusy()">
+                    {{ socialBusy() ? '…' : 'Save social links' }}
+                </button>
+                @if (socialSaved()) {
+                <span class="saved-check"><svg lucideCheck class="icon-xs"></svg>Saved</span>
+                }
+            </div>
+            @if (socialError()) { <p class="field-error">{{ socialError() }}</p> }
         </section>
 
         <!-- ============ SUBSCRIPTION ============ -->

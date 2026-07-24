@@ -87,6 +87,59 @@ public static class BlogEndpoints
             });
         });
 
+        var blogStatsGroup = app.MapGroup("/api/blog").RequireAuthorization();
+
+        // Channel-agnostic blog growth — the counterpart to GET /api/channels/{id}/stats (see
+        // ADR-025/ADR in docs/DECISIONS.md), backing the "Blog" tab on /stats. Scoped by OwnerId
+        // rather than ChannelId since blog views aren't tied to any one Telegram channel.
+        blogStatsGroup.MapGet("/stats", async (ClaimsPrincipal user, CedarDbContext db, int days = 30) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            // Unlike a Telegram channel (which gets its first snapshot the moment it's connected,
+            // ChannelEndpoints.cs), there's no "connect" moment for the blog — take today's snapshot
+            // on demand here if the nightly job (SnapshotChannelStatsJob) hasn't run yet today, so
+            // opening this tab for the first time doesn't just show "—" until tomorrow.
+            var today = DateTime.UtcNow.Date;
+            var hasToday = await db.BlogStatSnapshots.AnyAsync(s => s.OwnerId == uid && s.TakenAt.Date == today);
+            if (!hasToday)
+            {
+                var ownDraftIds = await db.Drafts.Where(d => d.OwnerId == uid).Select(d => d.Id).ToListAsync();
+                if (ownDraftIds.Count > 0)
+                {
+                    var viewCount = await db.Drafts.Where(d => d.OwnerId == uid).SumAsync(d => d.ViewCount);
+                    var likeCount = await db.Reactions.CountAsync(r => ownDraftIds.Contains(r.DraftId) && r.Kind == "like");
+                    var commentCount = await db.Comments.CountAsync(c => ownDraftIds.Contains(c.DraftId));
+                    db.BlogStatSnapshots.Add(new BlogStatSnapshot { OwnerId = uid, ViewCount = viewCount, LikeCount = likeCount, CommentCount = commentCount });
+                    await db.SaveChangesAsync();
+                }
+            }
+
+            var snapshots = await db.BlogStatSnapshots
+                .Where(s => s.OwnerId == uid)
+                .OrderByDescending(s => s.TakenAt)
+                .Take(days)
+                .OrderBy(s => s.TakenAt)
+                .Select(s => new { s.TakenAt, s.ViewCount, s.LikeCount, s.CommentCount })
+                .ToListAsync();
+
+            var now = DateTime.UtcNow;
+            var currentViews = snapshots.Count > 0 ? snapshots[^1].ViewCount : (int?)null;
+            var currentLikes = snapshots.Count > 0 ? snapshots[^1].LikeCount : (int?)null;
+            var currentComments = snapshots.Count > 0 ? snapshots[^1].CommentCount : (int?)null;
+            var deltaWeekViews = ChannelStatsCalculator.DeltaOverDays(snapshots.Select(s => new ChannelStatPoint(s.TakenAt, s.ViewCount)).ToList(), 7, now);
+            var deltaWeekLikes = ChannelStatsCalculator.DeltaOverDays(snapshots.Select(s => new ChannelStatPoint(s.TakenAt, s.LikeCount)).ToList(), 7, now);
+            var deltaWeekComments = ChannelStatsCalculator.DeltaOverDays(snapshots.Select(s => new ChannelStatPoint(s.TakenAt, s.CommentCount)).ToList(), 7, now);
+
+            return Results.Ok(new
+            {
+                currentViews, deltaWeekViews,
+                currentLikes, deltaWeekLikes,
+                currentComments, deltaWeekComments,
+                snapshots,
+            });
+        });
+
         var commentsGroup = app.MapGroup("/api/comments").RequireAuthorization();
 
         // All comments + reaction totals across every draft the user owns — backs the /comments
@@ -926,6 +979,8 @@ public static class BlogEndpoints
         .carousel-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
         .carousel-dot { width: 8px; height: 8px; border-radius: 50%; border: none; background: rgba(128,128,128,0.4); cursor: pointer; padding: 0; }
         .carousel-dot.active { background: var(--accent); }
+        .youtube-embed { position: relative; width: 100%; aspect-ratio: 16 / 9; margin: 0 0 16px; border-radius: 6px; overflow: hidden; }
+        .youtube-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
         .footnotes { font-size: 12.5px; color: var(--t2); border-top: 1px solid var(--border); padding: 10px 0 0; margin: 0 0 4px; }
         .footnotes sup, .post-sheet sup { color: var(--accent); font-weight: 600; }
 
@@ -949,25 +1004,20 @@ public static class BlogEndpoints
         .comment-anchor { font-size: 11px; color: var(--accent); background: var(--asoft); border-radius: 5px; padding: 2px 7px; display: inline-block; margin: 3px 0 1px; }
         .comment-text { font-size: 14px; line-height: 1.5; }
         .comment-load-more { display: block; margin: 0 0 10px; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: var(--text); font: inherit; font-size: 12.5px; }
-        .comment-form { display: flex; gap: 8px; }
+        .comment-form { display: flex; flex-direction: column; gap: 8px; }
         .comment-form input, .comment-form textarea { flex: 1; border: 1px solid var(--border); background: var(--sheet); color: var(--text); border-radius: 8px; padding: 9px 12px; font-size: 13.5px; font-family: inherit; outline: none; resize: vertical; }
         .comment-form input:focus, .comment-form textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--asoft); }
-        .comment-form .comment-author { flex: none; width: 140px; }
-        .comment-form button { align-self: flex-start; border: none; background: var(--accent); color: #F4F2EA; border-radius: 8px; padding: 9px 18px; font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: inherit; }
+        .comment-form .comment-author { width: 100%; }
+        .comment-form button { align-self: stretch; border: none; background: var(--accent); color: #F4F2EA; border-radius: 8px; padding: 9px 18px; font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: inherit; }
         .comment-form button:hover { filter: brightness(1.08); }
 
         .site-footer { border-top: 1px solid var(--border); background: var(--surface); }
         .site-footer-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 16px 20px; font-size: 12px; color: var(--t3); }
 
-        /* .post-sheet's fixed 40px side padding left barely any room for the 3-wide comment
-           form (name input + textarea + button) on phone-width screens — stack it instead. */
         @media (max-width: 480px) {
             .post-sheet { padding: 22px 16px 20px; }
             .comment-box { padding: 16px; }
             .tg-open-btn span.tg-open-label { display: none; }
-            .comment-form { flex-direction: column; }
-            .comment-form .comment-author { width: 100%; }
-            .comment-form button { align-self: stretch; }
         }
         </style>
         {{MATH_ASSETS}}

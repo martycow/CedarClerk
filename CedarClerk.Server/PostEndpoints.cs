@@ -10,7 +10,16 @@ namespace CedarClerk.Server;
 
 public static class PostEndpoints
 { 
-    public record ExportRequest(Guid DraftId, string ChatId, string Format = Consts.ContentTypes.Markdown, string Language = Languages.Primary);
+    public record ExportRequest(Guid DraftId, string ChatId, string Format = Consts.ContentTypes.Markdown, string Language = Languages.Primary, string CompressionLevel = "standard");
+
+    // "small"/"standard"/"high" — see the export modal's compression-level control and the ADR
+    // following ADR-031 in docs/DECISIONS.md. Unknown/missing values fall back to "standard".
+    public static long ResolveCompressionTargetBytes(string? level) => level switch
+    {
+        "small" => Consts.FileSizes.TelegramCompressSmallBytes,
+        "high" => Consts.FileSizes.TelegramCompressHighBytes,
+        _ => Consts.FileSizes.TelegramSafeImageBytes,
+    };
 
     public record PublishResult(int? MessageId, string? Error, int StatusCode = StatusCodes.Status400BadRequest)
     {
@@ -24,8 +33,11 @@ public static class PostEndpoints
         CedarDbContext db,
         TelegramBotService bot,
         IConfiguration cfg,
+        MediaPaths media,
         string format = Consts.ContentTypes.Markdown,
-        string language = Languages.Primary)
+        string language = Languages.Primary,
+        ILogger? logger = null,
+        string compressionLevel = "standard")
     {
         var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == draftId && d.OwnerId == ownerId);
         if (draft is null)
@@ -49,6 +61,25 @@ public static class PostEndpoints
             return new PublishResult(null, ErrorMessages.BotNotRunning, StatusCodes.Status503ServiceUnavailable);
 
         var mainHost = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
+
+        // Telegram rejects a photo fetched by URL above ~TelegramSafeImageBytes (confirmed
+        // empirically 19.07.2026 — see ADR in docs/DECISIONS.md), so swap in a Telegram-safe
+        // derivative for this render only — the stored draft/blog/.cedar export always keep the
+        // original, untouched. Generated lazily here (not just at upload time) so assets uploaded
+        // before this feature existed still get a derivative instead of failing forever.
+        var compressionTargetBytes = ResolveCompressionTargetBytes(compressionLevel);
+        var referencedNames = CedarPackage.FindReferencedMediaPaths(cedarJson);
+        if (referencedNames.Count > 0)
+        {
+            var referencedAssets = await db.Assets.Where(a => referencedNames.Contains(a.LocalPath)).ToListAsync();
+            foreach (var asset in referencedAssets)
+                await AssetEndpoints.EnsureTelegramSafeAsync(asset, media, db, logger, compressionTargetBytes);
+
+            var rewrites = referencedAssets.Where(a => a.TelegramLocalPath is not null)
+                .ToDictionary(a => a.LocalPath, a => a.TelegramLocalPath!);
+            if (rewrites.Count > 0)
+                cedarJson = CedarPackage.RewriteMediaPaths(cedarJson, rewrites);
+        }
 
         // Bot API 10.2: Blocks is the only mode that reliably embeds media with a real, natively
         // styled caption (verified 16.07.2026 against @testingandfun) — see docs/DECISIONS.md.
@@ -94,9 +125,21 @@ public static class PostEndpoints
         }
         catch (Telegram.Bot.Exceptions.ApiRequestException ex)
         {
-            // Telegram rejected the rendered content (bad markup, unsupported tag, etc.) — surface
-            // its actual reason instead of letting this bubble up into a bare unhandled-exception 500.
-            return new PublishResult(null, $"Telegram rejected the post: {ex.Message}", StatusCodes.Status502BadGateway);
+            // Telegram rejected the rendered content (bad markup, unsupported tag, empty media
+            // group, etc.) — surface its actual reason (plus code/retry-after when present)
+            // instead of letting this bubble up into a bare unhandled-exception 500. See ADR in
+            // docs/DECISIONS.md.
+            logger?.LogError(ex, "Telegram rejected publish of draft {DraftId} to {ChatId} (code {ErrorCode})", draftId, chatId, ex.ErrorCode);
+            var retryHint = ex.Parameters?.RetryAfter is { } retryAfter ? $" — retry after {retryAfter}s" : "";
+            return new PublishResult(null, $"Telegram rejected the post: {ex.Message} (code {ex.ErrorCode}){retryHint}", StatusCodes.Status502BadGateway);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Anything else — a mapping bug (NotSupportedException from ToInputRichBlock/ToRichText),
+            // a network-level RequestException, a JSON parse failure in the renderer — gets the same
+            // readable-error treatment rather than an opaque 500/unhandled crash of a Quartz job.
+            logger?.LogError(ex, "Unexpected failure publishing draft {DraftId} to {ChatId}", draftId, chatId);
+            return new PublishResult(null, $"Publish failed: {ex.GetType().Name}: {ex.Message}", StatusCodes.Status500InternalServerError);
         }
 
         draft.LastTelegramChatId = chatId;
@@ -110,10 +153,10 @@ public static class PostEndpoints
     
     public static void MapPostEndpoints(this WebApplication app)
     {
-        app.MapPost("/api/posts/export", async (ExportRequest req, ClaimsPrincipal user, CedarDbContext db, TelegramBotService bot, IConfiguration cfg) =>
+        app.MapPost("/api/posts/export", async (ExportRequest req, ClaimsPrincipal user, CedarDbContext db, TelegramBotService bot, IConfiguration cfg, MediaPaths media, ILogger<Program> logger) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var result = await PublishAsync(req.DraftId, req.ChatId, uid, db, bot, cfg, req.Format, req.Language);
+            var result = await PublishAsync(req.DraftId, req.ChatId, uid, db, bot, cfg, media, req.Format, req.Language, logger, req.CompressionLevel);
             
             return result.Success ? 
                 Results.Ok(new { messageId = result.MessageId, chatId = req.ChatId }) : 

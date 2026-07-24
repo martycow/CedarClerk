@@ -8,7 +8,7 @@ namespace CedarClerk.Server;
 /// A job that checks if schedule posts should be posted
 /// </summary>
 [DisallowConcurrentExecution]
-public class PublishDueScheduledPostsJob(CedarDbContext db, TelegramBotService bot, IConfiguration cfg, ILogger<PublishDueScheduledPostsJob> logger) : IJob
+public class PublishDueScheduledPostsJob(CedarDbContext db, TelegramBotService bot, IConfiguration cfg, MediaPaths media, ILogger<PublishDueScheduledPostsJob> logger) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -19,7 +19,7 @@ public class PublishDueScheduledPostsJob(CedarDbContext db, TelegramBotService b
 
         foreach (var post in due)
         {
-            var result = await PostEndpoints.PublishAsync(post.DraftId, post.ChatId, post.OwnerId, db, bot, cfg, post.Format, post.Language);
+            var result = await PostEndpoints.PublishAsync(post.DraftId, post.ChatId, post.OwnerId, db, bot, cfg, media, post.Format, post.Language, logger);
             if (result.Success)
             {
                 post.Status = "Sent";

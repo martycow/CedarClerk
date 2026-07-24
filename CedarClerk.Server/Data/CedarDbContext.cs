@@ -10,6 +10,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<Asset> Assets => Set<Asset>();
     public DbSet<ScheduledPost> ScheduledPosts => Set<ScheduledPost>();
     public DbSet<ChannelStatSnapshot> ChannelStatSnapshots => Set<ChannelStatSnapshot>();
+    public DbSet<BlogStatSnapshot> BlogStatSnapshots => Set<BlogStatSnapshot>();
     public DbSet<ChannelPost> ChannelPosts => Set<ChannelPost>();
     public DbSet<Reaction> Reactions => Set<Reaction>();
     public DbSet<Comment> Comments => Set<Comment>();

@@ -29,6 +29,23 @@ export interface ChannelStats {
     snapshots: ChannelStatSnapshotDto[];
 }
 
+export interface BlogStatSnapshotDto {
+    takenAt: string;
+    viewCount: number;
+    likeCount: number;
+    commentCount: number;
+}
+
+export interface BlogStats {
+    currentViews: number | null;
+    deltaWeekViews: number | null;
+    currentLikes: number | null;
+    deltaWeekLikes: number | null;
+    currentComments: number | null;
+    deltaWeekComments: number | null;
+    snapshots: BlogStatSnapshotDto[];
+}
+
 export interface KnownChat {
     telegramChatId: number;
     title: string;
@@ -55,6 +72,11 @@ export class ChannelsService {
     getStats(id: string, days?: number) {
         const query = days ? `?days=${days}` : '';
         return firstValueFrom(this.http.get<ChannelStats>(`/api/channels/${id}/stats${query}`));
+    }
+
+    getBlogStats(days?: number) {
+        const query = days ? `?days=${days}` : '';
+        return firstValueFrom(this.http.get<BlogStats>(`/api/blog/stats${query}`));
     }
 
     listKnown() {

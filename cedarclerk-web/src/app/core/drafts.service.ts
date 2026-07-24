@@ -14,7 +14,7 @@ export interface DraftMeta {
     tags: string; // comma-separated lowercase tags, shared across language versions
 }
 export interface TranslationMeta { language: string; title: string; updatedAt: string; }
-export interface TranslationFull extends TranslationMeta { cedarJson: string; }
+export interface TranslationFull extends TranslationMeta { cedarJson: string; sourceSnapshotJson: string | null; }
 export interface DraftFull extends DraftMeta { cedarJson: string; translations: TranslationMeta[]; }
 export type AiEditKind = 'fix-errors' | 'schizo';
 export interface AiEditResult { title: string; cedarJson: string; updatedAt: string; }
@@ -52,7 +52,7 @@ export class DraftsService {
     }
 
     saveTranslation(id: string, lang: string, title: string, cedarJson: string) {
-        return firstValueFrom(this.http.put<{ language: string; updatedAt: string }>(
+        return firstValueFrom(this.http.put<{ language: string; updatedAt: string; sourceSnapshotJson: string | null }>(
             `/api/drafts/${id}/translations/${lang}`, { title, cedarJson }));
     }
 
@@ -72,6 +72,12 @@ export class DraftsService {
         const formData = new FormData();
         formData.append('file', file);
         return firstValueFrom(this.http.post<{ id: string }>('/api/drafts/import', formData));
+    }
+
+    importMarkdown(file: File) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return firstValueFrom(this.http.post<{ id: string; unmatchedImages: string[] }>('/api/drafts/import-markdown', formData));
     }
 
     publishToBlog(id: string) {

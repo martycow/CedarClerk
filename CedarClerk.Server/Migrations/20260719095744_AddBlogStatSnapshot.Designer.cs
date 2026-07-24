@@ -3,6 +3,7 @@ using System;
 using CedarClerk.Server;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CedarClerk.Server.Migrations
 {
     [DbContext(typeof(CedarDbContext))]
-    partial class CedarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260719095744_AddBlogStatSnapshot")]
+    partial class AddBlogStatSnapshot
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.29");
@@ -122,21 +125,6 @@ namespace CedarClerk.Server.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("SocialFacebookUrl")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SocialGithubUrl")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SocialInstagramUrl")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SocialTwitterUrl")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SocialYoutubeUrl")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("StripeCustomerId")
                         .HasColumnType("TEXT");
 
@@ -207,9 +195,6 @@ namespace CedarClerk.Server.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("TelegramFileId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("TelegramLocalPath")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

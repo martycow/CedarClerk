@@ -3,7 +3,7 @@ import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
-import { ChannelsService, Channel, ChannelStats, ChannelStatSnapshotDto } from '../core/channels.service';
+import { ChannelsService, Channel, ChannelStats, ChannelStatSnapshotDto, BlogStats, BlogStatSnapshotDto } from '../core/channels.service';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { LucideArrowLeft as ArrowLeft } from '@lucide/angular';
 
@@ -56,13 +56,26 @@ export class StatsComponent implements OnInit {
 
     loading = signal(true);
     channels = signal<Channel[]>([]);
+    selectedView = signal<'blog' | 'channel'>('blog');
     selectedChannelId = signal<string | null>(null);
     stats = signal<ChannelStats | null>(null);
+    blogStats = signal<BlogStats | null>(null);
     rangeDays = signal(90);
 
     hover = signal<{ key: MetricKey; index: number } | null>(null);
 
     metricCards = computed<MetricCard[]>(() => {
+        if (this.selectedView() === 'blog') {
+            const s = this.blogStats();
+            if (!s) return [];
+            const base: { key: MetricKey; label: string; current: number | null; delta: number | null }[] = [
+                { key: 'viewCount', label: 'Views', current: s.currentViews, delta: s.deltaWeekViews },
+                { key: 'likeCount', label: 'Likes', current: s.currentLikes, delta: s.deltaWeekLikes },
+                { key: 'commentCount', label: 'Comments', current: s.currentComments, delta: s.deltaWeekComments },
+            ];
+            return base.map(m => ({ ...m, chart: this.buildChart(s.snapshots, m.key) }));
+        }
+
         const s = this.stats();
         if (!s) return [];
         const base: { key: MetricKey; label: string; current: number | null; delta: number | null }[] = [
@@ -79,15 +92,20 @@ export class StatsComponent implements OnInit {
         try {
             const channels = await this.channelsApi.list();
             this.channels.set(channels);
-            if (channels.length > 0) {
-                await this.selectChannel(channels[0].id);
-            }
+            await this.selectBlog();
         } finally {
             this.loading.set(false);
         }
     }
 
+    async selectBlog() {
+        this.selectedView.set('blog');
+        this.hover.set(null);
+        this.blogStats.set(await this.channelsApi.getBlogStats(this.rangeDays()));
+    }
+
     async selectChannel(id: string) {
+        this.selectedView.set('channel');
         this.selectedChannelId.set(id);
         this.hover.set(null);
         this.stats.set(await this.channelsApi.getStats(id, this.rangeDays()));
@@ -95,10 +113,12 @@ export class StatsComponent implements OnInit {
 
     async selectRange(days: number) {
         this.rangeDays.set(days);
-        const id = this.selectedChannelId();
-        if (!id) return;
         this.hover.set(null);
-        this.stats.set(await this.channelsApi.getStats(id, days));
+        if (this.selectedView() === 'blog') {
+            this.blogStats.set(await this.channelsApi.getBlogStats(days));
+        } else if (this.selectedChannelId()) {
+            this.stats.set(await this.channelsApi.getStats(this.selectedChannelId()!, days));
+        }
     }
 
     avatarInitial(): string {
@@ -139,20 +159,20 @@ export class StatsComponent implements OnInit {
         return `${Math.round(value)}`;
     }
 
-    private buildChart(snapshots: ChannelStatSnapshotDto[], key: MetricKey): ChartLayout {
+    private buildChart(snapshots: (ChannelStatSnapshotDto | BlogStatSnapshotDto)[], key: MetricKey): ChartLayout {
         if (snapshots.length < 2) {
             return { hasData: false, linePath: '', areaPath: '', points: [], ticks: [] };
         }
 
         const innerW = CHART_WIDTH - PAD_X * 2;
         const innerH = CHART_HEIGHT - PAD_TOP - PAD_BOTTOM;
-        const values = snapshots.map(s => s[key]);
+        const values = snapshots.map(s => (s as unknown as Record<string, number>)[key]);
         const top = this.niceMax(Math.max(...values, 1));
 
         const points: ChartPoint[] = snapshots.map((s, i) => ({
             x: PAD_X + (i / (snapshots.length - 1)) * innerW,
-            y: PAD_TOP + innerH - (s[key] / top) * innerH,
-            value: s[key],
+            y: PAD_TOP + innerH - ((s as unknown as Record<string, number>)[key] / top) * innerH,
+            value: (s as unknown as Record<string, number>)[key],
             date: s.takenAt,
         }));
 

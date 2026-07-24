@@ -48,7 +48,35 @@ public class SnapshotChannelStatsJob(CedarDbContext db, TelegramBotService bot, 
             }
         }
 
-        if (channels.Count > 0)
+        // Blog totals are channel-agnostic (a view on the blog isn't tied to any one Telegram
+        // channel) — one snapshot row per owner who has at least one blog-published draft,
+        // summing across ALL of that owner's drafts rather than joining through ChannelPost.
+        var blogOwnerIds = await db.Drafts.Where(d => d.IsBlogPublished).Select(d => d.OwnerId).Distinct().ToListAsync();
+        foreach (var ownerId in blogOwnerIds)
+        {
+            try
+            {
+                var draftIds = await db.Drafts.Where(d => d.OwnerId == ownerId).Select(d => d.Id).ToListAsync();
+                var viewCount = await db.Drafts.Where(d => d.OwnerId == ownerId).SumAsync(d => d.ViewCount);
+                var likeCount = await db.Reactions.CountAsync(r => draftIds.Contains(r.DraftId) && r.Kind == "like");
+                var commentCount = await db.Comments.CountAsync(c => draftIds.Contains(c.DraftId));
+
+                db.BlogStatSnapshots.Add(new BlogStatSnapshot
+                {
+                    OwnerId = ownerId,
+                    ViewCount = viewCount,
+                    LikeCount = likeCount,
+                    CommentCount = commentCount,
+                    TakenAt = now,
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to snapshot blog stats for owner {OwnerId}", ownerId);
+            }
+        }
+
+        if (channels.Count > 0 || blogOwnerIds.Count > 0)
             await db.SaveChangesAsync();
     }
 }

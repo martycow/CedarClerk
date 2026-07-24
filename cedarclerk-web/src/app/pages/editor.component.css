@@ -455,52 +455,7 @@
 }
 
 /* ---------- AI confirm dialog & toast ---------- */
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(24, 21, 16, .45);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-}
-
-.modal-card {
-    width: 380px;
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: 0 24px 64px rgba(0, 0, 0, .3);
-    padding: 22px 24px;
-    color: var(--text);
-}
-
-.modal-head {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    margin: 0 0 8px;
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: -.01em;
-}
-
-.modal-head .icon {
-    color: var(--accent);
-}
-
-.modal-body {
-    font-size: 13px;
-    color: var(--t2);
-    line-height: 1.55;
-    margin: 0 0 16px;
-}
-
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-}
+/* .modal-overlay/.modal-card/etc moved to shared/modal.component.css (ModalComponent) */
 
 .btn-accent {
     border: none;
@@ -651,6 +606,13 @@
     color: var(--t3);
 }
 
+.field-hint-inline {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    opacity: .75;
+}
+
 .mini {
     display: flex;
     align-items: center;
@@ -658,14 +620,21 @@
     border: 1px solid var(--border);
     background: var(--sheet);
     border-radius: var(--radius-sm);
-    width: 20px;
-    height: 20px;
+    width: 28px;
+    height: 28px;
     cursor: pointer;
     color: var(--t2);
 }
 
+.mini svg {
+    width: 16px;
+    height: 16px;
+}
+
 .mini:hover {
-    border-color: var(--t3);
+    border-color: var(--abord);
+    background: var(--asoft);
+    color: var(--accent);
 }
 
 .mini:disabled {
@@ -1011,6 +980,21 @@
     margin-top: 14px;
 }
 
+.inline-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+.inline-progress .indeterminate-bar {
+    width: 100%;
+}
+
+.inline-progress .translate-status {
+    font-size: 11.5px;
+}
+
 .indeterminate-bar {
     width: 220px;
     max-width: 100%;
@@ -1062,6 +1046,43 @@
     padding: 28px 36px 36px;
     font-size: calc(16px * var(--zoom, 1));
 }
+
+/* ---------- RU/EN structural diff gutter ---------- */
+.sheet-wrap {
+    position: relative;
+    max-width: 680px;
+    margin: 0 auto;
+}
+
+.sheet-wrap .sheet {
+    max-width: none;
+    margin: 0;
+}
+
+.ru-diff-gutter {
+    position: absolute;
+    top: 0;
+    left: 100%;
+    margin-left: 10px;
+    width: 5px;
+    height: 100%;
+}
+
+@media (max-width: 1200px) {
+    .ru-diff-gutter { display: none; }
+}
+
+.diff-marker {
+    position: absolute;
+    left: 0;
+    width: 5px;
+    border-radius: 3px;
+    min-height: 3px;
+}
+
+.diff-marker.added { background: var(--ok); }
+.diff-marker.changed { background: color-mix(in srgb, var(--accent) 55%, #C9A227 45%); }
+.diff-marker.removed { background: var(--danger); }
 
 /* ---------- Status bar ---------- */
 .status-bar {
@@ -1142,13 +1163,134 @@
     font-family: inherit;
 }
 
-/* ---------- Popover content shared ---------- */
-.export-popover {
-    width: 320px;
-    max-height: 70vh;
+/* ---------- Export modal ---------- */
+.export-section {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+}
+
+.export-section:last-child {
+    margin-bottom: 0;
+}
+
+.export-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--t2);
+    margin-bottom: 10px;
+}
+
+.soon-badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--t3);
+    background: var(--alt);
+    border-radius: 999px;
+    padding: 2px 8px;
+}
+
+.export-mock-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.export-mock-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 6px 4px;
+    font-size: 13px;
+    color: var(--t3);
+    opacity: .7;
+}
+
+.blog-lang-badges {
+    display: flex;
+    gap: 6px;
+    margin: 4px 0;
+}
+
+.blog-lang-badge {
+    border: 1px solid var(--abord);
+    background: var(--asoft);
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 3px 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.blog-lang-badge.disabled {
+    pointer-events: none;
+    opacity: .4;
+    border-color: var(--border);
+    background: none;
+    color: var(--t3);
+}
+
+.html-export-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.asset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 220px;
     overflow-y: auto;
 }
 
+.asset-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 2px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+}
+
+.asset-row:last-child {
+    border-bottom: none;
+}
+
+.asset-name {
+    flex: 1;
+    min-width: 0;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.asset-size {
+    flex: none;
+    color: var(--t3);
+}
+
+.asset-tg-badge {
+    flex: none;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--asoft);
+    border-radius: 999px;
+    padding: 2px 8px;
+}
+
+/* ---------- Popover content shared ---------- */
 .channels-popover {
     width: 260px;
     max-height: 70vh;
@@ -1301,6 +1443,9 @@
 }
 
 .schedule-row button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     border: 1px solid var(--abord);
     background: var(--asoft);
     border-radius: var(--radius-sm);
@@ -1407,5 +1552,27 @@ input[type="datetime-local"]:focus-visible {
     .title {
         min-width: 0;
         flex: 1;
+    }
+
+    /* The topbar's icon-btns just got bigger (rule above) and there's no room left for text
+       labels/decoration too — without this, reaching Settings (behind the account avatar, the
+       last item in the row) needed scrolling the whole page sideways. Drop everything that's
+       purely decorative or duplicated elsewhere, keep every icon (so every action stays reachable
+       with a tap, nothing is actually removed). */
+    .topbar {
+        gap: 2px;
+        padding: 0 6px;
+    }
+
+    .brand-name,
+    .divider,
+    .save-label,
+    .export-trigger .btn-label,
+    .user {
+        display: none;
+    }
+
+    .export-trigger {
+        padding: 5px 8px;
     }
 }

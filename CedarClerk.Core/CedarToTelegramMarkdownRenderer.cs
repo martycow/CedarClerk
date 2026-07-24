@@ -111,6 +111,18 @@ public static class CedarToTelegramMarkdownRenderer
                 // line right after the reference instead.
                 return string.IsNullOrEmpty(caption) ? mediaRef : mediaRef + "\n" + EscapeMarkdown(caption);
 
+            // NOT USED for sending (see the file-level note) — kept for parity/tests only. No
+            // native webpage-preview mechanism exists here either; same thumbnail+link shape as
+            // CedarToTelegramBlocksRenderer. See ADR-033, docs/DECISIONS.md.
+            case "youtube":
+                var videoId = (string?)node["attrs"]?["videoId"];
+                if (string.IsNullOrEmpty(videoId))
+                    return "";
+                var thumbRef = RegisterMedia(ctx, RichMediaKind.Photo, $"https://img.youtube.com/vi/{videoId}/hqdefault.jpg");
+                var watchUrl = $"https://www.youtube.com/watch?v={videoId}";
+                var linkText = (string?)node["attrs"]?["caption"] is { Length: > 0 } cap ? cap : "▶ Watch on YouTube";
+                return thumbRef + "\n" + $"[{EscapeMarkdown(linkText)}]({watchUrl})";
+
             case "carousel":
                 var images = node["attrs"]?["images"]?.AsArray()
                     ?.Select(img => RegisterMedia(ctx, RichMediaKind.Photo, ResolveUrl((string?)img, ctx.MediaBaseUrl))) ?? [];

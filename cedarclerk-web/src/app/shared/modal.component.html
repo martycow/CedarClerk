@@ -1,0 +1,12 @@
+<div class="modal-overlay" (click)="closed.emit()">
+    <div class="modal-card" [style.width.px]="width" (click)="$event.stopPropagation()">
+        <div class="modal-head">
+            <ng-content select="[modal-icon]"></ng-content>
+            <span class="modal-title"><ng-content select="[modal-title]"></ng-content></span>
+            <span class="spacer"></span>
+            <button class="modal-close" (click)="closed.emit()" title="Close"><svg lucideX class="icon-sm"></svg></button>
+        </div>
+        <div class="modal-body"><ng-content></ng-content></div>
+        <div class="modal-actions"><ng-content select="[modal-actions]"></ng-content></div>
+    </div>
+</div>

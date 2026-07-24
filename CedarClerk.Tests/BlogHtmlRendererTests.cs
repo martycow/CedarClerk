@@ -233,6 +233,28 @@ public class BlogHtmlRendererTests
     }
 
     [Fact]
+    public void Renders_youtube_as_a_responsive_iframe_embed()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"youtube","attrs":{"videoId":"dQw4w9WgXcQ"}}]}
+                   """;
+        Assert.Equal(
+            "<div class=\"youtube-embed\"><iframe src=\"https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ\" loading=\"lazy\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" allowfullscreen></iframe></div>",
+            CedarToBlogHtmlRenderer.Render(json, Base));
+    }
+
+    [Fact]
+    public void Renders_youtube_with_caption_as_figure()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"youtube","attrs":{"videoId":"dQw4w9WgXcQ","caption":"Never Gonna Give You Up"}}]}
+                   """;
+        var result = CedarToBlogHtmlRenderer.Render(json, Base);
+        Assert.StartsWith("<figure><div class=\"youtube-embed\">", result);
+        Assert.EndsWith("<figcaption>Never Gonna Give You Up</figcaption></figure>", result);
+    }
+
+    [Fact]
     public void Renders_carousel_as_slideshow_with_controls_for_multiple_images()
     {
         var json = """

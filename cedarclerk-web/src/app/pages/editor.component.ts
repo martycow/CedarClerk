@@ -12,7 +12,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { AuthService } from '../core/auth.service';
 import { DraftsService, DraftMeta, TranslationMeta, AiEditKind } from '../core/drafts.service';
 import { DatePipe } from '@angular/common';
-import { PostsService, PostFormat, PostLanguage, ScheduledPost } from '../core/posts.service';
+import { PostsService, PostFormat, PostLanguage, CompressionLevel, ScheduledPost } from '../core/posts.service';
 import { ChannelsService, Channel, ChannelStats, KnownChat } from '../core/channels.service';
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
@@ -21,7 +21,7 @@ import { TableCell } from '@tiptap/extension-table-cell';
 import { TaskList } from '@tiptap/extension-task-list';
 import { TaskItem } from '@tiptap/extension-task-item';
 import { Mathematics } from '@tiptap/extension-mathematics';
-import { AssetsService } from '../core/assets.service';
+import { AssetsService, DraftAsset } from '../core/assets.service';
 import { VideoNode } from '../tiptap-extensions/video-node';
 import { AudioNode } from '../tiptap-extensions/audio-node';
 import { CarouselNode } from '../tiptap-extensions/carousel-node';
@@ -33,8 +33,10 @@ import { ImageNode } from '../tiptap-extensions/image-node';
 import { FootnoteNode } from '../tiptap-extensions/footnote-node';
 import { AnnotationNode } from '../tiptap-extensions/annotation-node';
 import { TableOfContentsNode } from '../tiptap-extensions/table-of-contents-node';
+import { YoutubeNode, extractYouTubeId } from '../tiptap-extensions/youtube-node';
 import { PopoverComponent } from '../shared/popover.component';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
+import { ModalComponent } from '../shared/modal.component';
 import { ThemeService } from '../core/theme.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import {
@@ -55,10 +57,14 @@ import {
     LucideDownload as Download, LucideUpload as Upload,
     LucideMessageSquare as MessageSquare,
     LucideLineChart as LineChart,
+    LucideFileUp as FileUp,
     LucideRefreshCw as RefreshCw,
     LucideSettings as Settings, LucideSparkle as Sparkle,
     LucideTableOfContents as TableOfContentsIcon,
     LucideSeparatorHorizontal as DividerIcon,
+    LucideAtSign as AtSign, LucideCloud as Cloud, LucideMessageSquareShare as MessageSquareShare,
+    LucideFileText as FileText, LucideHeart as Heart, LucideNotebook as Notebook, LucideFile as FileIcon,
+    LucideThumbsUp as ThumbsUp,
 } from '@lucide/angular';
 
 const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
@@ -96,6 +102,22 @@ const TRANSLATE_STATUS_MESSAGES = [
     'Almost there…',
 ];
 
+// Same cycling-caption idea as TRANSLATE_STATUS_MESSAGES, applied to the two other genuinely
+// multi-step "long" async actions in the export flow — a bare spinner doesn't tell you whether
+// a slow publish (compressing large camera photos, then talking to Telegram) is stuck or working.
+const EXPORT_STATUS_MESSAGES = [
+    'Preparing post…',
+    'Compressing large photos…',
+    'Sending to Telegram…',
+    'Almost done…',
+];
+
+const BLOG_STATUS_MESSAGES = [
+    'Rendering page…',
+    'Publishing…',
+    'Almost done…',
+];
+
 const COMMON_EMOJI = [
     '😀', '😂', '😅', '😉', '😊', '😍', '🤔', '😎', '😢', '😡',
     '👍', '👎', '👏', '🙏', '💪', '🤝', '👋', '✌️', '🤞', '🫡',
@@ -113,14 +135,15 @@ interface UploadItem {
 @Component({
     selector: 'app-editor',
     imports: [
-        FormsModule, DatePipe, RouterLink, PopoverComponent, CedarLogoComponent,
+        FormsModule, DatePipe, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent,
         Undo2, Redo2, Bold, Italic, Strikethrough, Code,
         List, ListOrdered, ListTodo, Quote, SquareCode, Outdent, Indent,
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
         Send, Plus, X, LogOut, RadioTower, Trash2,
         EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, Menu, Superscript,
-        ChevronDown, Check, Download, Upload, MessageSquare, LineChart, RefreshCw,
+        ChevronDown, Check, Download, Upload, FileUp, MessageSquare, LineChart, RefreshCw,
         Settings, Sparkle, TableOfContentsIcon, DividerIcon,
+        AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -153,6 +176,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // the blog (CedarToBlogHtmlRenderer, a separate/unrelated renderer).
     readonly format: PostFormat = 'Markdown';
     exportLang: PostLanguage = 'ru';
+    compressionLevel: CompressionLevel = 'standard';
 
     // Active content language in the editor. 'ru' edits the draft itself (primary version),
     // 'en' edits the DraftTranslation row. Only one editor instance — switching tabs flushes
@@ -162,6 +186,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private ruUpdatedAt = signal<string>('');
     // RU title+content captured when entering the EN tab — source for "Copy from Russian"
     private ruSnapshot: { title: string; json: string } | null = null;
+
+    // RU CedarJson as it was the last time the EN translation was synced (created/saved/
+    // auto-translated) — lets the RU tab show a gutter of what's changed structurally since,
+    // instead of just the boolean enStale() flag. Null when there's no EN version, or an older
+    // translation predating the SourceSnapshotJson column that hasn't been resynced since.
+    private enSourceSnapshot = signal<string | null>(null);
+    ruDiffMarkers = signal<{ top: number; height: number; kind: 'added' | 'changed' | 'removed' }[]>([]);
+    private ruDiffTimer?: ReturnType<typeof setTimeout>;
 
     // Tags are per-draft (shared across language versions) and saved through their own endpoint
     // immediately on add/remove — not through the content autosave, which routes per-language.
@@ -181,7 +213,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private autoTranslateTicker?: ReturnType<typeof setInterval>;
     autoTranslateError = signal<string | null>(null);
     translateConfirmOpen = signal(false);
+    exportModalOpen = signal(false);
+    draftAssets = signal<DraftAsset[]>([]);
+    draftAssetsLoading = signal(false);
     exporting = signal(false);
+    exportElapsed = signal(0);
+    private exportTicker?: ReturnType<typeof setInterval>;
     exportResult = signal('');
     exportLink = signal<string | null>(null);
     exportError = signal<{ code?: number; message: string } | null>(null);
@@ -189,8 +226,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     importingCedar = signal(false);
     importCedarError = signal<string | null>(null);
 
+    importingMarkdown = signal(false);
+    importMarkdownError = signal<string | null>(null);
+    importMarkdownWarning = signal<string | null>(null);
+
     currentBlog = signal<{ slug: string; isPublished: boolean } | null>(null);
     blogBusy = signal(false);
+    blogElapsed = signal(0);
+    private blogTicker?: ReturnType<typeof setInterval>;
     blogError = signal<string | null>(null);
 
     zoom = signal(100);
@@ -222,6 +265,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     dtTime = true;
 
     footnoteText = '';
+
+    youtubeUrl = '';
+    youtubeError = signal('');
 
     saveLabel(): string {
         switch (this.saveState()) {
@@ -344,6 +390,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 ToggleNode,
                 AnnotationNode,
                 TableOfContentsNode,
+                YoutubeNode,
                 Table.configure({ resizable: false }),
                 TableRow,
                 TableHeader,
@@ -353,7 +400,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 Mathematics,
             ],
             content: '',
-            onTransaction: () => this.tick.update(v => v + 1),
+            onTransaction: () => {
+                this.tick.update(v => v + 1);
+                this.scheduleRuDiffRecompute();
+            },
             onUpdate: () => this.markDirty(),
         });
 
@@ -396,6 +446,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         clearTimeout(this.aiToastTimer);
         clearInterval(this.aiEditTicker);
         clearInterval(this.autoTranslateTicker);
+        clearInterval(this.exportTicker);
+        clearInterval(this.blogTicker);
+        clearTimeout(this.ruDiffTimer);
         this.editor?.destroy();
     }
 
@@ -423,6 +476,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             } else {
                 const res = await this.draftsApi.saveTranslation(id, 'en', this.title, json);
                 this.enMeta.set({ language: 'en', title: this.title, updatedAt: res.updatedAt });
+                this.enSourceSnapshot.set(res.sourceSnapshotJson);
             }
             this.saveState.set('saved');
         } catch {
@@ -437,6 +491,16 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     translateStatusMessage(): string {
         const i = Math.floor(this.autoTranslateElapsed() / 4) % TRANSLATE_STATUS_MESSAGES.length;
         return TRANSLATE_STATUS_MESSAGES[i];
+    }
+
+    exportStatusMessage(): string {
+        const i = Math.floor(this.exportElapsed() / 2) % EXPORT_STATUS_MESSAGES.length;
+        return EXPORT_STATUS_MESSAGES[i];
+    }
+
+    blogStatusMessage(): string {
+        const i = Math.floor(this.blogElapsed() / 2) % BLOG_STATUS_MESSAGES.length;
+        return BLOG_STATUS_MESSAGES[i];
     }
 
     // The RU version was edited after the EN translation was last touched — probably needs re-translating
@@ -466,6 +530,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 this.lang.set('en');
                 this.title = tr.title;
                 this.enMeta.set({ language: 'en', title: tr.title, updatedAt: tr.updatedAt });
+                this.enSourceSnapshot.set(tr.sourceSnapshotJson);
                 this.editor.setEditable(true);
                 this.editor.commands.setContent(JSON.parse(tr.cedarJson || EMPTY_DOC));
                 this.resetHistory();
@@ -479,6 +544,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             }
         }
         this.saveState.set('saved');
+        this.scheduleRuDiffRecompute();
     }
 
     async startEnVersion(copyFromRu: boolean) {
@@ -492,6 +558,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         try {
             const res = await this.draftsApi.saveTranslation(id, 'en', title, json);
             this.enMeta.set({ language: 'en', title, updatedAt: res.updatedAt });
+            this.enSourceSnapshot.set(res.sourceSnapshotJson);
             this.title = title;
             this.editor.setEditable(true);
             this.editor.commands.setContent(JSON.parse(json));
@@ -560,6 +627,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         try {
             const tr = await this.draftsApi.autoTranslate(id, 'en');
             this.enMeta.set({ language: 'en', title: tr.title, updatedAt: tr.updatedAt });
+            this.enSourceSnapshot.set(tr.sourceSnapshotJson);
             this.drafts.update(list => list.map(d => d.id === id ? { ...d, languages: ['en'] } : d));
             if (this.lang() !== 'en') {
                 this.ruSnapshot = { title: this.title, json: JSON.stringify(this.editor.getJSON()) };
@@ -650,6 +718,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.saveState.set('saved'); // discard pending EN edits so nothing re-creates the row
         await this.draftsApi.removeTranslation(id, 'en');
         this.enMeta.set(null);
+        this.enSourceSnapshot.set(null);
+        this.ruDiffMarkers.set([]);
         if (this.exportLang === 'en') this.exportLang = 'ru';
         this.drafts.update(list => list.map(d => d.id === id ? { ...d, languages: [] } : d));
         if (this.lang() === 'en') await this.switchLang('ru');
@@ -676,6 +746,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.exportLang = 'ru';
         this.ruUpdatedAt.set(draft.updatedAt);
         this.enMeta.set(draft.translations?.find(t => t.language === 'en') ?? null);
+        this.enSourceSnapshot.set(null);
         this.ruSnapshot = null;
         this.tagList.set(draft.tags ? draft.tags.split(',').filter(t => t.length > 0) : []);
         this.tagInput = '';
@@ -685,6 +756,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.saveState.set('saved');
         this.currentBlog.set(draft.blogSlug ? { slug: draft.blogSlug, isPublished: draft.isBlogPublished } : null);
         this.blogError.set(null);
+
+        // Fetch the EN translation's source snapshot in the background (not blocking open) just
+        // to populate the RU-tab diff gutter — the draft list endpoint only returns TranslationMeta.
+        if (this.enMeta()) {
+            this.draftsApi.getTranslation(id, 'en')
+                .then(tr => { this.enSourceSnapshot.set(tr.sourceSnapshotJson); this.scheduleRuDiffRecompute(); })
+                .catch(() => {});
+        }
     }
 
     async newDraft() {
@@ -706,6 +785,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.exportLang = 'ru';
         this.ruUpdatedAt.set(meta.updatedAt);
         this.enMeta.set(null);
+        this.enSourceSnapshot.set(null);
+        this.ruDiffMarkers.set([]);
         this.ruSnapshot = null;
         this.tagList.set([]);
         this.tagInput = '';
@@ -754,6 +835,33 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
+    async onImportMarkdownChosen(ev: Event) {
+        const input = ev.target as HTMLInputElement;
+        const file = input.files?.[0];
+        input.value = '';
+        if (!file) return;
+
+        this.draftsPopover?.close();
+        this.importingMarkdown.set(true);
+        this.importMarkdownError.set(null);
+        this.importMarkdownWarning.set(null);
+        try {
+            const created = await this.draftsApi.importMarkdown(file);
+            this.drafts.set(await this.draftsApi.list());
+            this.currentId.set(null);
+            await this.openDraft(created.id);
+            if (created.unmatchedImages.length > 0) {
+                this.importMarkdownWarning.set(`Imported, but ${created.unmatchedImages.length} image(s) could not be matched: ${created.unmatchedImages.join(', ')}`);
+            }
+        } catch (e) {
+            this.importMarkdownError.set(e instanceof HttpErrorResponse && e.error?.error
+                ? e.error.error
+                : 'Import failed — check the file and try again');
+        } finally {
+            this.importingMarkdown.set(false);
+        }
+    }
+
     blogUrl(): string | null {
         const b = this.currentBlog();
         return b ? `https://${BLOG_HOST}/${b.slug}` : null;
@@ -763,14 +871,18 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const id = this.currentId();
         if (!id) return;
         this.blogBusy.set(true);
+        this.blogElapsed.set(0);
+        clearInterval(this.blogTicker);
+        this.blogTicker = setInterval(() => this.blogElapsed.update(s => s + 1), 1000);
         this.blogError.set(null);
         try {
             const res = await this.draftsApi.publishToBlog(id);
             this.currentBlog.set({ slug: res.slug, isPublished: true });
-        } catch {
-            this.blogError.set('Publish failed — check server logs');
+        } catch (e) {
+            this.blogError.set(httpErrorMessage(e, 'Publish failed — check server logs'));
         } finally {
             this.blogBusy.set(false);
+            clearInterval(this.blogTicker);
         }
     }
 
@@ -778,14 +890,18 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const id = this.currentId();
         if (!id) return;
         this.blogBusy.set(true);
+        this.blogElapsed.set(0);
+        clearInterval(this.blogTicker);
+        this.blogTicker = setInterval(() => this.blogElapsed.update(s => s + 1), 1000);
         this.blogError.set(null);
         try {
             await this.draftsApi.unpublishFromBlog(id);
             this.currentBlog.update(b => b ? { ...b, isPublished: false } : b);
-        } catch {
-            this.blogError.set('Unpublish failed — check server logs');
+        } catch (e) {
+            this.blogError.set(httpErrorMessage(e, 'Unpublish failed — check server logs'));
         } finally {
             this.blogBusy.set(false);
+            clearInterval(this.blogTicker);
         }
     }
 
@@ -824,27 +940,84 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }));
     }
 
+    async openExportModal() {
+        this.exportModalOpen.set(true);
+        const id = this.currentId();
+        if (!id) return;
+        this.draftAssetsLoading.set(true);
+        try {
+            this.draftAssets.set(await this.assets.listForDraft(id));
+        } catch {
+            this.draftAssets.set([]);
+        } finally {
+            this.draftAssetsLoading.set(false);
+        }
+    }
+
+    formatFileSize(bytes: number): string {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    // "Remove from draft" only detaches the media node(s) from the current document — it does not
+    // delete the underlying Asset/file (no delete-asset endpoint exists; the same upload could in
+    // principle be referenced elsewhere), so this is a safe, reversible-via-undo edit rather than
+    // a destructive storage operation.
+    removeAssetFromDraft(asset: DraftAsset) {
+        if (!this.editor) return;
+        const targetSrc = '/media/' + asset.localPath;
+        const mediaNodeTypes = new Set(['image', 'video', 'audio']);
+        const { state } = this.editor;
+        const positions: number[] = [];
+        state.doc.descendants((node, pos) => {
+            if (mediaNodeTypes.has(node.type.name) && node.attrs['src'] === targetSrc)
+                positions.push(pos);
+            return true;
+        });
+        if (positions.length === 0) {
+            this.draftAssets.update(list => list.filter(a => a.id !== asset.id));
+            return;
+        }
+
+        // Delete highest position first — ProseMirror positions below an edited range are
+        // unaffected by edits above it, so working in reverse keeps every collected position valid.
+        let tr = state.tr;
+        for (const pos of positions.slice().reverse()) {
+            const node = tr.doc.nodeAt(pos);
+            if (node) tr = tr.delete(pos, pos + node.nodeSize);
+        }
+        this.editor.view.dispatch(tr);
+        this.markDirty();
+        this.draftAssets.update(list => list.filter(a => a.id !== asset.id));
+    }
+
     async exportDraft() {
         const id = this.currentId();
         if (!id) return;
         clearTimeout(this.saveTimer);
         if (this.saveState() !== 'saved') await this.save();
         this.exporting.set(true);
+        this.exportElapsed.set(0);
+        clearInterval(this.exportTicker);
+        this.exportTicker = setInterval(() => this.exportElapsed.update(s => s + 1), 1000);
         this.exportResult.set('');
         this.exportLink.set(null);
         this.exportError.set(null);
         try {
-            const res = await this.posts.export(id, this.chatId.trim(), this.format, this.exportLang);
+            const res = await this.posts.export(id, this.chatId.trim(), this.format, this.exportLang, this.compressionLevel);
             this.exportResult.set(`✓ Published (message #${res.messageId})`);
             this.exportLink.set(this.buildTelegramLink(res.chatId, res.messageId));
         } catch (e) {
             const status = e instanceof HttpErrorResponse ? e.status : undefined;
+            const serverMessage = httpErrorMessage(e, '');
             const message = status === 503
-                ? "The barn door seems closed — Telegram Bot API didn't respond. Your draft is safe; nothing was published."
-                : httpErrorMessage(e, 'Error — check the browser console / server logs');
+                ? `The barn door seems closed — Telegram Bot API didn't respond. Your draft is safe; nothing was published.${serverMessage ? ` (${serverMessage})` : ''}`
+                : serverMessage || 'Error — check the browser console / server logs';
             this.exportError.set({ code: status, message });
         } finally {
             this.exporting.set(false);
+            clearInterval(this.exportTicker);
         }
     }
 
@@ -1086,6 +1259,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.footnoteText = '';
     }
 
+    insertYoutube() {
+        const videoId = extractYouTubeId(this.youtubeUrl);
+        if (!videoId) {
+            this.youtubeError.set('Not a recognized YouTube link');
+            return;
+        }
+        this.insertNode('youtube', { videoId });
+        this.youtubeUrl = '';
+        this.youtubeError.set('');
+    }
+
     insertTable() {
         this.cmd(c => c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }));
     }
@@ -1147,4 +1331,104 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             });
         });
     }
+
+    // Debounced from onTransaction (every keystroke) — measuring the DOM on every single
+    // transaction would be wasteful, and diffing only matters once typing settles for a moment.
+    private scheduleRuDiffRecompute() {
+        clearTimeout(this.ruDiffTimer);
+        this.ruDiffTimer = setTimeout(() => this.recomputeRuDiff(), 200);
+    }
+
+    private recomputeRuDiff() {
+        const snapshot = this.enSourceSnapshot();
+        if (!this.editor || this.lang() !== 'ru' || !snapshot) {
+            this.ruDiffMarkers.set([]);
+            return;
+        }
+
+        let oldBlocks: any[];
+        try {
+            oldBlocks = JSON.parse(snapshot)?.content ?? [];
+        } catch {
+            this.ruDiffMarkers.set([]);
+            return;
+        }
+        const newBlocks: any[] = this.editor.getJSON()?.content ?? [];
+        const ops = diffTopLevelBlocks(oldBlocks, newBlocks);
+
+        const pmRoot = this.editorHost?.nativeElement?.querySelector('.ProseMirror') as HTMLElement | null;
+        if (!pmRoot) {
+            this.ruDiffMarkers.set([]);
+            return;
+        }
+        const containerTop = pmRoot.getBoundingClientRect().top;
+        const markers: { top: number; height: number; kind: 'added' | 'changed' | 'removed' }[] = [];
+        for (const op of ops) {
+            const child = pmRoot.children[op.newIndex] as HTMLElement | undefined;
+            if (op.kind === 'removed') {
+                const top = child ? child.getBoundingClientRect().top - containerTop : pmRoot.getBoundingClientRect().height;
+                markers.push({ top, height: 3, kind: 'removed' });
+                continue;
+            }
+            if (!child) continue;
+            const rect = child.getBoundingClientRect();
+            markers.push({ top: rect.top - containerTop, height: rect.height, kind: op.kind });
+        }
+        this.ruDiffMarkers.set(markers);
+    }
+}
+
+interface BlockDiffOp {
+    kind: 'added' | 'changed' | 'removed';
+    newIndex: number;
+}
+
+// Classic LCS-based diff over top-level TipTap document blocks (paragraphs, headings, images,
+// etc.), keyed by exact JSON equality — treats a run of consecutive deletions immediately
+// alongside a run of insertions as pairwise "changed" blocks (matching how a text diff usually
+// reads: a modified line is a delete+insert pair), leftover deletions become a thin "removed
+// here" marker at the boundary since there's no surviving block position to attach them to.
+function diffTopLevelBlocks(oldBlocks: any[], newBlocks: any[]): BlockDiffOp[] {
+    const oldKeys = oldBlocks.map(b => JSON.stringify(b));
+    const newKeys = newBlocks.map(b => JSON.stringify(b));
+    const n = oldKeys.length, m = newKeys.length;
+
+    const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+    for (let i = n - 1; i >= 0; i--) {
+        for (let j = m - 1; j >= 0; j--) {
+            dp[i][j] = oldKeys[i] === newKeys[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+        }
+    }
+
+    type RawOp = 'equal' | 'delete' | 'insert';
+    const rawOps: RawOp[] = [];
+    let i = 0, j = 0;
+    while (i < n && j < m) {
+        if (oldKeys[i] === newKeys[j]) { rawOps.push('equal'); i++; j++; }
+        else if (dp[i + 1][j] >= dp[i][j + 1]) { rawOps.push('delete'); i++; }
+        else { rawOps.push('insert'); j++; }
+    }
+    while (i < n) { rawOps.push('delete'); i++; }
+    while (j < m) { rawOps.push('insert'); j++; }
+
+    const result: BlockDiffOp[] = [];
+    let newIndex = 0;
+    let k = 0;
+    while (k < rawOps.length) {
+        if (rawOps[k] === 'equal') {
+            newIndex++;
+            k++;
+            continue;
+        }
+        let deletes = 0, inserts = 0;
+        while (k < rawOps.length && rawOps[k] !== 'equal') {
+            if (rawOps[k] === 'delete') deletes++; else inserts++;
+            k++;
+        }
+        const paired = Math.min(deletes, inserts);
+        for (let p = 0; p < paired; p++) { result.push({ kind: 'changed', newIndex }); newIndex++; }
+        for (let p = 0; p < inserts - paired; p++) { result.push({ kind: 'added', newIndex }); newIndex++; }
+        if (deletes > paired) result.push({ kind: 'removed', newIndex });
+    }
+    return result;
 }

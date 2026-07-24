@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 
 export type PostFormat = 'Html' | 'Markdown';
 export type PostLanguage = 'ru' | 'en';
+export type CompressionLevel = 'small' | 'standard' | 'high';
 
 export interface ScheduledPost {
     id: string;
@@ -23,9 +24,9 @@ export interface ScheduledPost {
 export class PostsService {
     private http = inject(HttpClient);
 
-    export(draftId: string, chatId: string, format: PostFormat, language: PostLanguage = 'ru') {
+    export(draftId: string, chatId: string, format: PostFormat, language: PostLanguage = 'ru', compressionLevel: CompressionLevel = 'standard') {
         return firstValueFrom(this.http.post<{ messageId: number; chatId: string }>(
-            '/api/posts/export', { draftId, chatId, format, language }));
+            '/api/posts/export', { draftId, chatId, format, language, compressionLevel }));
     }
 
     schedule(draftId: string, chatId: string, scheduledAtUtc: string, format: PostFormat, language: PostLanguage = 'ru') {

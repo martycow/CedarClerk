@@ -50,6 +50,16 @@ public class ApplicationUser : IdentityUser
     public HeaderSlotType? HeaderSlot1Type { get; set; }
     public HeaderSlotType? HeaderSlot2Type { get; set; }
     public HeaderSlotType? HeaderSlot3Type { get; set; }
+
+    // Social profile links — purely informational/reference for now (Settings > Profile), not
+    // yet wired into any blog/header display. Kept as individual named columns rather than a
+    // JSON blob to match the existing flat-column convention for profile fields (AuthorDisplayName
+    // etc. above).
+    public string? SocialTwitterUrl { get; set; }
+    public string? SocialInstagramUrl { get; set; }
+    public string? SocialFacebookUrl { get; set; }
+    public string? SocialYoutubeUrl { get; set; }
+    public string? SocialGithubUrl { get; set; }
 }
 
 public class Payment
@@ -125,6 +135,13 @@ public class DraftTranslation
     public string Title { get; set; } = "";
     public string CedarJson { get; set; } = "{}";
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    // Snapshot of the RU draft's CedarJson at the moment this translation was last synced
+    // (manual save or auto-translate) — lets the editor diff "what changed in RU since" at the
+    // block level instead of just a stale/not-stale boolean. Null for translations that predate
+    // this column (existing rows) or were never resynced since — falls back to the boolean
+    // staleness indicator in that case. See ADR in docs/DECISIONS.md.
+    public string? SourceSnapshotJson { get; set; }
 }
 
 public class Channel
@@ -154,6 +171,20 @@ public class ChannelStatSnapshot
     public DateTime TakenAt { get; set; } = DateTime.UtcNow;
 }
 
+// Daily per-owner blog totals (views/likes/comments across ALL of that owner's blog-published
+// drafts) — the channel-agnostic counterpart to ChannelStatSnapshot, since blog views aren't
+// intrinsically tied to any one Telegram channel. No MemberCount equivalent (a blog has no
+// "subscriber" concept). Written by the same SnapshotChannelStatsJob. See ADR in docs/DECISIONS.md.
+public class BlogStatSnapshot
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = "";
+    public int ViewCount { get; set; }
+    public int LikeCount { get; set; }
+    public int CommentCount { get; set; }
+    public DateTime TakenAt { get; set; } = DateTime.UtcNow;
+}
+
 // Append-only log of every successful send, written by PostEndpoints.PublishAsync. Lets the
 // stats snapshot job know which drafts (and therefore which views/likes/comments) belong to
 // which channel — Draft only tracks its single *most recent* Telegram send otherwise.
@@ -174,6 +205,14 @@ public class Asset
     public long SizeBytes { get; set; }
     public string LocalPath { get; set; } = "";
     public string? TelegramFileId { get; set; }
+
+    // Filename (bare, same MediaPaths.Dir as LocalPath) of a resized/recompressed JPEG derivative
+    // generated at upload time when the original exceeds Consts.FileSizes.TelegramSafeImageBytes —
+    // Telegram rejects large photos fetched by URL (see ADR in docs/DECISIONS.md). Null means the
+    // original is already small enough to send to Telegram as-is. Blog/.cedar export always use
+    // LocalPath (the untouched original); only PostEndpoints.PublishAsync substitutes this one in.
+    public string? TelegramLocalPath { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string OwnerId { get; set; } = default!;
 }

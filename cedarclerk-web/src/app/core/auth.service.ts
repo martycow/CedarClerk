@@ -23,6 +23,11 @@ export class AuthService {
     readonly headerSlot1Type = signal<string | null>(null);
     readonly headerSlot2Type = signal<string | null>(null);
     readonly headerSlot3Type = signal<string | null>(null);
+    readonly socialTwitterUrl = signal<string | null>(null);
+    readonly socialInstagramUrl = signal<string | null>(null);
+    readonly socialFacebookUrl = signal<string | null>(null);
+    readonly socialYoutubeUrl = signal<string | null>(null);
+    readonly socialGithubUrl = signal<string | null>(null);
 
     async login(email: string, password: string): Promise<boolean> {
         try {
@@ -63,6 +68,8 @@ export class AuthService {
                 postSignature: string | null;
                 authorDisplayName: string | null; profileUrl: string | null; profileLocation: string | null;
                 headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
+                socialTwitterUrl: string | null; socialInstagramUrl: string | null; socialFacebookUrl: string | null;
+                socialYoutubeUrl: string | null; socialGithubUrl: string | null;
             }>('/api/auth/me'));
             this.userEmail.set(me.email);
             this.createdAt.set(me.createdAt);
@@ -79,6 +86,11 @@ export class AuthService {
             this.headerSlot1Type.set(me.headerSlot1Type);
             this.headerSlot2Type.set(me.headerSlot2Type);
             this.headerSlot3Type.set(me.headerSlot3Type);
+            this.socialTwitterUrl.set(me.socialTwitterUrl);
+            this.socialInstagramUrl.set(me.socialInstagramUrl);
+            this.socialFacebookUrl.set(me.socialFacebookUrl);
+            this.socialYoutubeUrl.set(me.socialYoutubeUrl);
+            this.socialGithubUrl.set(me.socialGithubUrl);
         } catch {
             this.userEmail.set(null);
             this.createdAt.set(null);
@@ -95,6 +107,11 @@ export class AuthService {
             this.headerSlot1Type.set(null);
             this.headerSlot2Type.set(null);
             this.headerSlot3Type.set(null);
+            this.socialTwitterUrl.set(null);
+            this.socialInstagramUrl.set(null);
+            this.socialFacebookUrl.set(null);
+            this.socialYoutubeUrl.set(null);
+            this.socialGithubUrl.set(null);
         }
     }
 
@@ -107,10 +124,14 @@ export class AuthService {
     async saveProfile(profile: {
         authorDisplayName: string; profileUrl: string; profileLocation: string;
         headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
+        socialTwitterUrl?: string; socialInstagramUrl?: string; socialFacebookUrl?: string;
+        socialYoutubeUrl?: string; socialGithubUrl?: string;
     }): Promise<void> {
         const res = await firstValueFrom(this.http.post<{
             authorDisplayName: string | null; profileUrl: string | null; profileLocation: string | null;
             headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
+            socialTwitterUrl: string | null; socialInstagramUrl: string | null; socialFacebookUrl: string | null;
+            socialYoutubeUrl: string | null; socialGithubUrl: string | null;
         }>('/api/auth/profile', profile));
         this.authorDisplayName.set(res.authorDisplayName);
         this.profileUrl.set(res.profileUrl);
@@ -118,6 +139,11 @@ export class AuthService {
         this.headerSlot1Type.set(res.headerSlot1Type);
         this.headerSlot2Type.set(res.headerSlot2Type);
         this.headerSlot3Type.set(res.headerSlot3Type);
+        this.socialTwitterUrl.set(res.socialTwitterUrl);
+        this.socialInstagramUrl.set(res.socialInstagramUrl);
+        this.socialFacebookUrl.set(res.socialFacebookUrl);
+        this.socialYoutubeUrl.set(res.socialYoutubeUrl);
+        this.socialGithubUrl.set(res.socialGithubUrl);
     }
 
     async logout(): Promise<void> {

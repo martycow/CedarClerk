@@ -71,15 +71,21 @@ public static class CedarToTelegramBlocksRenderer
                 break;
 
             case "bulletList":
-                yield return new RichListBlock(RenderListItems(node["content"]?.AsArray(), ctx, ordered: false));
+                var bulletItems = RenderListItems(node["content"]?.AsArray(), ctx, ordered: false);
+                if (bulletItems.Count > 0)
+                    yield return new RichListBlock(bulletItems);
                 break;
 
             case "orderedList":
-                yield return new RichListBlock(RenderListItems(node["content"]?.AsArray(), ctx, ordered: true));
+                var orderedItems = RenderListItems(node["content"]?.AsArray(), ctx, ordered: true);
+                if (orderedItems.Count > 0)
+                    yield return new RichListBlock(orderedItems);
                 break;
 
             case "taskList":
-                yield return new RichListBlock(RenderTaskItems(node["content"]?.AsArray(), ctx));
+                var taskItems = RenderTaskItems(node["content"]?.AsArray(), ctx);
+                if (taskItems.Count > 0)
+                    yield return new RichListBlock(taskItems);
                 break;
 
             case "codeBlock":
@@ -88,7 +94,9 @@ public static class CedarToTelegramBlocksRenderer
                 break;
 
             case "blockquote":
-                yield return new RichQuoteBlock(RenderBlocks(node["content"]?.AsArray(), ctx).ToList());
+                var quoteBlocks = RenderBlocks(node["content"]?.AsArray(), ctx).ToList();
+                if (quoteBlocks.Count > 0)
+                    yield return new RichQuoteBlock(quoteBlocks);
                 break;
 
             case "horizontalRule":
@@ -110,6 +118,20 @@ public static class CedarToTelegramBlocksRenderer
                 yield return new RichAudioBlock(audioUrl, CaptionRun((string?)node["attrs"]?["caption"]));
                 break;
 
+            case "youtube":
+                // No native webpage-preview block exists for InputRichMessage.Blocks (LinkPreviewOptions
+                // only applies to the classic SendMessage path) — a thumbnail photo with a clickable
+                // caption link is the closest Blocks equivalent. See ADR-033, docs/DECISIONS.md.
+                var videoId = (string?)node["attrs"]?["videoId"];
+                if (string.IsNullOrEmpty(videoId))
+                    break;
+                var thumbUrl = $"https://img.youtube.com/vi/{videoId}/hqdefault.jpg";
+                var watchUrl = $"https://www.youtube.com/watch?v={videoId}";
+                var youtubeCaption = (string?)node["attrs"]?["caption"];
+                var linkText = string.IsNullOrEmpty(youtubeCaption) ? "▶ Watch on YouTube" : youtubeCaption;
+                yield return new RichPhotoBlock(thumbUrl, new RichRunLink(new RichRunText(linkText), watchUrl));
+                break;
+
             case "carousel":
                 // An empty slideshow/collage (editor artifact — e.g. repeated insert/delete leaving
                 // a carousel with no images) gets rejected by Telegram (RICH_MESSAGE_CONTENT_REQUIRED,
@@ -129,7 +151,9 @@ public static class CedarToTelegramBlocksRenderer
                 break;
 
             case "table":
-                yield return RenderTable(node["content"]?.AsArray(), ctx);
+                var table = RenderTable(node["content"]?.AsArray(), ctx);
+                if (table.Rows.Count > 0)
+                    yield return table;
                 break;
 
             case "blockMath":
@@ -138,7 +162,9 @@ public static class CedarToTelegramBlocksRenderer
 
             case "toggle":
                 var summary = (string?)node["attrs"]?["summary"] ?? "";
-                yield return new RichDetailsBlock(new RichRunText(summary), RenderBlocks(node["content"]?.AsArray(), ctx).ToList(), IsOpen: true);
+                var toggleBlocks = RenderBlocks(node["content"]?.AsArray(), ctx).ToList();
+                if (toggleBlocks.Count > 0)
+                    yield return new RichDetailsBlock(new RichRunText(summary), toggleBlocks, IsOpen: true);
                 break;
 
             default:
@@ -183,7 +209,7 @@ public static class CedarToTelegramBlocksRenderer
     private static RichListItem RenderListItem(JsonNode item, RenderContext ctx, bool hasCheckbox, bool isChecked, int? orderValue) =>
         new(RenderBlocks(item["content"]?.AsArray(), ctx).ToList(), hasCheckbox, isChecked, orderValue);
 
-    private static CedarRichBlock RenderTable(JsonArray? rows, RenderContext ctx)
+    private static RichTableBlock RenderTable(JsonArray? rows, RenderContext ctx)
     {
         var tableRows = new List<IReadOnlyList<RichTableCell>>();
         if (rows is not null)

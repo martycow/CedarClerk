@@ -147,6 +147,20 @@ public static class CedarToTelegramHtmlRenderer
                 AppendCaption(sb, (string?)node["attrs"]?["caption"]);
                 break;
 
+            // NOT USED for sending (see the file-level note) — kept for parity/tests only. No
+            // native webpage-preview mechanism exists here either; same thumbnail+link shape as
+            // CedarToTelegramBlocksRenderer. See ADR-033, docs/DECISIONS.md.
+            case "youtube":
+                var videoId = (string?)node["attrs"]?["videoId"];
+                if (string.IsNullOrEmpty(videoId))
+                    break;
+                var thumbRef = RegisterMedia(ctx, RichMediaKind.Photo, $"https://img.youtube.com/vi/{videoId}/hqdefault.jpg");
+                AppendMedia(sb, "img", thumbRef, isVoid: true);
+                var watchUrl = Escape($"https://www.youtube.com/watch?v={videoId}");
+                var linkText = Escape((string?)node["attrs"]?["caption"] is { Length: > 0 } cap ? cap : "▶ Watch on YouTube");
+                sb.Append($"<p><a href=\"{watchUrl}\">{linkText}</a></p>");
+                break;
+
             case "carousel":
                 sb.Append("<tg-slideshow>");
                 if (node["attrs"]?["images"]?.AsArray() is { } images)

@@ -1,9 +1,11 @@
-﻿using System.Security.Claims;
+﻿using System.IO.Compression;
+using System.Security.Claims;
 using System.Text.Json;
 using CedarClerk.Core;
 using CedarClerk.Localization;
 using CedarClerk.Server.Ai;
 using CedarClerk.Server.Translation;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
@@ -17,12 +19,24 @@ public static class DraftEndpoints
     private const long CedarZipMaxBytes = 50 * 1024 * 1024;
     private const int CedarMaxAssetCount = 50;
 
+    // A bulk Notion-shaped export routinely carries far more images than a personal .cedar
+    // draft — a single large page can easily have 100+ (verified against a real 216-image
+    // export, 17.07.2026) — so markdown import gets its own, more generous caps rather than
+    // sharing the .cedar ones. See ADR-026, docs/DECISIONS.md.
+    private const long MarkdownZipMaxBytes = 200 * 1024 * 1024;
+    private const int MarkdownMaxImageCount = 300;
+
     private static readonly Dictionary<string, string> ImportImageExtensions = new()
     {
         ["image/jpeg"] = ".jpg",
         ["image/png"] = ".png",
         ["image/gif"] = ".gif",
         ["image/webp"] = ".webp",
+    };
+
+    private static readonly HashSet<string> ImageFileExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".png", ".gif", ".webp",
     };
 
     public static void MapDraftEndpoints(this WebApplication app)
@@ -55,6 +69,38 @@ public static class DraftEndpoints
             return Results.Ok(new { draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug, draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, Translations = translations });
         });
 
+        // Backs the export modal's "Files" list — every media asset referenced by this draft
+        // (RU and, if it exists, its EN translation), with size and Telegram-compression status,
+        // so Marty can see what's actually embedded before publishing large photos.
+        groupBuilder.MapGet("/{id:guid}/assets", async (Guid id, ClaimsPrincipal user, CedarDbContext db, MediaPaths media) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            var names = CedarPackage.FindReferencedMediaPaths(draft.CedarJson).ToList();
+            var translationJson = await db.DraftTranslations.Where(t => t.DraftId == id).Select(t => t.CedarJson).FirstOrDefaultAsync();
+            if (translationJson is not null)
+                names = names.Union(CedarPackage.FindReferencedMediaPaths(translationJson)).ToList();
+
+            if (names.Count == 0)
+                return Results.Ok(Array.Empty<object>());
+
+            var assets = await db.Assets.Where(a => a.OwnerId == uid && names.Contains(a.LocalPath)).ToListAsync();
+            return Results.Ok(assets.Select(a => new
+            {
+                a.Id,
+                a.FileName,
+                a.LocalPath,
+                a.ContentType,
+                a.SizeBytes,
+                HasTelegramDerivative = a.TelegramLocalPath is not null,
+                TelegramSizeBytes = a.TelegramLocalPath is not null && File.Exists(Path.Combine(media.Dir, a.TelegramLocalPath))
+                    ? new FileInfo(Path.Combine(media.Dir, a.TelegramLocalPath)).Length
+                    : (long?)null,
+            }));
+        });
+
         groupBuilder.MapPut("/{id:guid}/tags", async (Guid id, UpdateTagsRequest req, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -79,7 +125,7 @@ public static class DraftEndpoints
             var translation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang);
             return translation is null
                 ? Results.NotFound()
-                : Results.Ok(new { translation.Language, translation.Title, translation.CedarJson, translation.UpdatedAt });
+                : Results.Ok(new { translation.Language, translation.Title, translation.CedarJson, translation.UpdatedAt, translation.SourceSnapshotJson });
         });
         
         groupBuilder.MapPut("/{id:guid}/translations/{lang}", async (Guid id, string lang, SaveTranslationRequest req, ClaimsPrincipal user, CedarDbContext db) =>
@@ -88,8 +134,8 @@ public static class DraftEndpoints
                 return Results.BadRequest(new { error = $"Unsupported translation language: {lang}" });
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var owns = await db.Drafts.AnyAsync(d => d.Id == id && d.OwnerId == uid);
-            if (!owns) return Results.NotFound();
+            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
 
             var translation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang);
             if (translation is null)
@@ -100,8 +146,9 @@ public static class DraftEndpoints
             translation.Title = req.Title;
             translation.CedarJson = req.CedarJson;
             translation.UpdatedAt = DateTime.UtcNow;
+            translation.SourceSnapshotJson = draft.CedarJson;
             await db.SaveChangesAsync();
-            return Results.Ok(new { translation.Language, translation.UpdatedAt });
+            return Results.Ok(new { translation.Language, translation.UpdatedAt, translation.SourceSnapshotJson });
         });
         
         groupBuilder.MapPost("/{id:guid}/translations/{lang}/auto", async (Guid id, string lang, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg, IHttpClientFactory httpFactory, CancellationToken ct) =>
@@ -169,9 +216,10 @@ public static class DraftEndpoints
             translation.Title = result.Title;
             translation.CedarJson = result.CedarJson;
             translation.UpdatedAt = DateTime.UtcNow;
+            translation.SourceSnapshotJson = draft.CedarJson;
             await db.SaveChangesAsync(ct);
 
-            return Results.Ok(new { translation.Language, translation.Title, translation.CedarJson, translation.UpdatedAt });
+            return Results.Ok(new { translation.Language, translation.Title, translation.CedarJson, translation.UpdatedAt, translation.SourceSnapshotJson });
         });
 
         groupBuilder.MapPost("/{id:guid}/ai-edit/{lang}/{kind}", async (Guid id, string lang, string kind, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg, IHttpClientFactory httpFactory, CancellationToken ct) =>
@@ -333,7 +381,40 @@ public static class DraftEndpoints
             var fileName = SanitizeFileName(draft.Title) + ".cedar";
             return Results.File(ms.ToArray(), "application/zip", fileName);
         });
-        
+
+        // A standalone, self-contained HTML page — the article body via the same
+        // CedarToBlogHtmlRenderer the live blog uses, plus a minimal title/date header and the
+        // author's signature. Deliberately doesn't reuse BlogEndpoints.PageShell/ShellTemplate:
+        // those wire up comment/reaction fetch() calls against a live slug and a theme-toggle
+        // button, none of which make sense for a file opened locally with no server behind it.
+        groupBuilder.MapGet("/{id:guid}/export-html", async (Guid id, string? lang, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            var language = lang is not null && Languages.IsTranslationLanguage(lang) ? lang : Languages.Primary;
+            var title = draft.Title;
+            var cedarJson = draft.CedarJson;
+            if (language != Languages.Primary)
+            {
+                var translation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == language);
+                if (translation is null)
+                    return Results.BadRequest(new { error = $"No {language.ToUpperInvariant()} version of this draft" });
+                title = translation.Title;
+                cedarJson = translation.CedarJson;
+            }
+
+            var blogHost = cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost;
+            var body = CedarToBlogHtmlRenderer.Render(cedarJson, $"https://{blogHost}", language);
+            var owner = await db.Users.Where(u => u.Id == uid).Select(u => u.PostSignature).FirstAsync();
+            var publishedAt = draft.BlogPublishedAt ?? draft.CreatedAt;
+
+            var html = StaticExportHtml(title, body, language, owner, publishedAt, cedarJson);
+            var fileName = SanitizeFileName(title) + ".html";
+            return Results.File(System.Text.Encoding.UTF8.GetBytes(html), "text/html", fileName);
+        });
+
         groupBuilder.MapPost("/import", async (IFormFile file, ClaimsPrincipal user, CedarDbContext db, MediaPaths media) =>
         {
             if (file.Length == 0 || file.Length > CedarZipMaxBytes)
@@ -405,6 +486,131 @@ public static class DraftEndpoints
 
             return Results.Created($"/api/drafts/{draft.Id}", new { draft.Id });
         }).DisableAntiforgery();
+
+        groupBuilder.MapPost("/import-markdown", async (IFormFile file, ClaimsPrincipal user, CedarDbContext db, MediaPaths media) =>
+        {
+            if (file.Length == 0 || file.Length > MarkdownZipMaxBytes)
+                return Results.BadRequest(new { error = $"File is too large ({MarkdownZipMaxBytes / (1024 * 1024)}MB maximum)" });
+
+            // ZipArchive needs a seekable stream; IFormFile's underlying stream may not be.
+            using var uploadCopy = new MemoryStream();
+            await using (var uploadStream = file.OpenReadStream())
+                await uploadStream.CopyToAsync(uploadCopy);
+            uploadCopy.Position = 0;
+
+            ZipArchive archive;
+            try
+            {
+                archive = new ZipArchive(uploadCopy, ZipArchiveMode.Read, leaveOpen: true);
+            }
+            catch (InvalidDataException)
+            {
+                return Results.BadRequest(new { error = "The file is not a valid .zip archive." });
+            }
+
+            using (archive)
+            {
+                var mdEntry = archive.Entries.FirstOrDefault(e => e.FullName.EndsWith(".md", StringComparison.OrdinalIgnoreCase));
+                if (mdEntry is null)
+                    return Results.BadRequest(new { error = "No .md file found inside the zip." });
+
+                string markdownText;
+                using (var mdStream = mdEntry.Open())
+                using (var reader = new StreamReader(mdStream))
+                    markdownText = await reader.ReadToEndAsync();
+
+                var imageEntries = archive.Entries
+                    .Where(e => e != mdEntry
+                        && !e.FullName.EndsWith('/')
+                        && ImageFileExtensions.Contains(Path.GetExtension(e.FullName))
+                        && !e.FullName.Contains("..")
+                        && !Path.IsPathRooted(e.FullName))
+                    .ToList();
+
+                if (imageEntries.Count > MarkdownMaxImageCount)
+                    return Results.BadRequest(new { error = $"Too many images in the zip ({MarkdownMaxImageCount} maximum)" });
+
+                var docJson = MarkdownToCedarConverter.Convert(markdownText, out var titleFromHeading);
+                var referencedNames = CedarPackage.FindReferencedMediaPaths(docJson);
+
+                // Matched by basename only — Notion's exact subfolder layout isn't preserved. If the
+                // same filename appears under more than one subfolder (rare, but possible in a large
+                // multi-page export), the first match wins rather than throwing on a duplicate key.
+                var byBasename = new Dictionary<string, ZipArchiveEntry>(StringComparer.Ordinal);
+                var byBasenameCi = new Dictionary<string, ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
+                foreach (var entry in imageEntries)
+                {
+                    var name = Path.GetFileName(entry.FullName);
+                    byBasename.TryAdd(name, entry);
+                    byBasenameCi.TryAdd(name, entry);
+                }
+
+                var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+                var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
+                var usedBytes = await db.Assets.Where(a => a.OwnerId == uid).SumAsync(a => a.SizeBytes);
+
+                var unmatched = new List<string>();
+                var pending = new List<(string OriginalName, byte[] Bytes, string ContentType, string Ext)>();
+                long incomingBytes = 0;
+
+                foreach (var refName in referencedNames)
+                {
+                    if (!byBasename.TryGetValue(refName, out var entry) && !byBasenameCi.TryGetValue(refName, out entry))
+                    {
+                        unmatched.Add(refName);
+                        continue;
+                    }
+
+                    byte[] bytes;
+                    using (var entryStream = entry.Open())
+                    using (var ms = new MemoryStream())
+                    {
+                        await entryStream.CopyToAsync(ms);
+                        bytes = ms.ToArray();
+                    }
+
+                    var contentType = ImageContentSniffer.DetectContentType(bytes);
+                    if (contentType is null || !ImportImageExtensions.TryGetValue(contentType, out var ext) || bytes.Length > Consts.FileSizes.ImageMaxBytes)
+                    {
+                        unmatched.Add(refName);
+                        continue;
+                    }
+
+                    incomingBytes += bytes.Length;
+                    pending.Add((refName, bytes, contentType, ext));
+                }
+
+                if (!PlanLimitations.HasStorageRoom(tier, usedBytes, incomingBytes))
+                    return Results.Json(new { error = $"Storage limit of your plan ({PlanLimitations.StorageLimitBytes(tier) / (1024 * 1024)}MB) exceeded. Upgrade for more." }, statusCode: StatusCodes.Status403Forbidden);
+
+                var pathRewrites = new Dictionary<string, string>();
+                foreach (var (originalName, bytes, contentType, ext) in pending)
+                {
+                    var newName = $"asset_{Guid.NewGuid()}{ext}";
+                    await File.WriteAllBytesAsync(Path.Combine(media.Dir, newName), bytes);
+
+                    db.Assets.Add(new Asset
+                    {
+                        FileName = originalName,
+                        ContentType = contentType,
+                        SizeBytes = bytes.Length,
+                        LocalPath = newName,
+                        OwnerId = uid,
+                    });
+
+                    pathRewrites[originalName] = newName;
+                }
+
+                var rewrittenJson = CedarPackage.RewriteMediaPaths(docJson, pathRewrites);
+                var title = titleFromHeading ?? Path.GetFileNameWithoutExtension(mdEntry.Name);
+                var draft = new Draft { Title = title, CedarJson = rewrittenJson, OwnerId = uid };
+                db.Drafts.Add(draft);
+                await db.SaveChangesAsync();
+
+                return Results.Created($"/api/drafts/{draft.Id}", new { draft.Id, unmatchedImages = unmatched });
+            }
+        }).DisableAntiforgery()
+          .WithMetadata(new RequestFormLimitsAttribute { MultipartBodyLengthLimit = MarkdownZipMaxBytes });
     }
 
     private static string SanitizeFileName(string title)
@@ -412,5 +618,128 @@ public static class DraftEndpoints
         var invalid = Path.GetInvalidFileNameChars();
         var sanitized = new string(title.Select(c => invalid.Contains(c) ? '_' : c).ToArray()).Trim();
         return string.IsNullOrWhiteSpace(sanitized) ? "draft" : sanitized;
+    }
+
+    // Trimmed CSS subset of BlogEndpoints.ShellTemplate — just enough to render every block type
+    // CedarToBlogHtmlRenderer can emit (headings, lists, tables, blockquote, code, collage,
+    // carousel, spoiler, math, footnotes, TOC) plus a minimal title/date/signature header.
+    // Duplicated rather than shared (docs/DESIGN.md already notes CSS is duplicated per-component
+    // in this codebase, not centralized) because this needs to be fully self-contained in one
+    // file with no external <link>/fetch of any kind.
+    private static string StaticExportHtml(string title, string bodyHtml, string lang, string? signature, DateTime publishedAt, string cedarJson)
+    {
+        var mathAssets = bodyHtml.Contains("math-tex")
+            ? """<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"><script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" onload="document.querySelectorAll('.math-tex').forEach(function (el) { try { katex.render(el.textContent, el, { displayMode: el.dataset.display === 'true', throwOnError: false }); } catch (e) {} });"></script>"""
+            : "";
+        var signatureBlock = string.IsNullOrWhiteSpace(signature) ? "" :
+            $"<div class=\"post-signature\">{System.Net.WebUtility.HtmlEncode(signature)}</div>";
+        // Same rule as BlogEndpoints.RenderPostAsync: skip the separate <h1> if the document's
+        // own first block is already a heading, to avoid showing the title twice.
+        var titleHeading = HeadingOutline.StartsWithHeading(cedarJson)
+            ? ""
+            : $"<h1>{System.Net.WebUtility.HtmlEncode(title)}</h1>";
+
+        return $$"""
+            <!doctype html>
+            <html lang="{{lang}}">
+            <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>{{System.Net.WebUtility.HtmlEncode(title)}}</title>
+            <style>
+            :root {
+                color-scheme: light dark;
+                --bg: #ECE9E2; --sheet: #FCFBF8; --alt: #EFECE4; --border: #DBD5C8;
+                --text: #26231D; --t2: #6B655A; --t3: #9F988A; --accent: #5B6E46;
+                --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                --font-mono: ui-monospace, Menlo, Consolas, monospace;
+                --asoft: color-mix(in srgb, var(--accent) 13%, var(--sheet));
+                --abord: color-mix(in srgb, var(--accent) 38%, var(--border));
+            }
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --bg: #171511; --sheet: #211E18; --alt: #2F2C23; --border: #3C382D;
+                    --text: #EAE6DB; --t2: #A69F8F; --t3: #776F5F;
+                    --accent: color-mix(in srgb, #5B6E46 55%, #E8F0E8 45%);
+                }
+            }
+            * { box-sizing: border-box; }
+            body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-sans); line-height: 1.6; }
+            a { color: var(--accent); }
+            img, video { max-width: 100%; height: auto; }
+            .page { max-width: 720px; margin: 0 auto; padding: 40px 20px 60px; }
+            .post-sheet { background: var(--sheet); border-radius: 12px; box-shadow: 0 1px 3px rgba(40,35,25,.10); padding: 32px 40px 28px; }
+            .post-sheet h1 { font-size: 27px; font-weight: 700; letter-spacing: -.015em; line-height: 1.22; margin: 0 0 6px; text-align: center; }
+            .post-meta { font-size: 12px; color: var(--t3); text-align: center; margin: 0 0 22px; }
+            .post-sheet h2 { font-size: 20px; font-weight: 600; letter-spacing: -.01em; margin: 24px 0 8px; }
+            .post-sheet p { font-size: 16px; line-height: 1.65; margin: 0 0 14px; }
+            .toc { background: var(--asoft); border: 1px solid var(--abord); border-radius: 10px; padding: 14px 18px; margin: 0 0 18px; }
+            .toc-title { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+            .toc ul { list-style: none; margin: 0; padding: 0; font-size: 14px; line-height: 1.8; }
+            .toc li a { color: var(--text); }
+            .toc .toc-lvl-2 { padding-left: 14px; } .toc .toc-lvl-3 { padding-left: 28px; }
+            .toc .toc-lvl-4 { padding-left: 42px; } .toc .toc-lvl-5 { padding-left: 56px; } .toc .toc-lvl-6 { padding-left: 70px; }
+            .spoiler { background: var(--t3); color: transparent; border-radius: 4px; padding: 0 5px; cursor: pointer; }
+            .spoiler:hover, .spoiler:focus { background: var(--alt); color: inherit; }
+            .post-sheet code { font-family: var(--font-mono); font-size: .85em; background: var(--alt); border-radius: 4px; padding: 1px 6px; }
+            .post-sheet pre { background: #22201A; color: #C9C08C; border-radius: 8px; padding: 12px 14px; overflow-x: auto; }
+            .post-sheet pre code { background: none; padding: 0; font-size: 13.5px; line-height: 1.55; }
+            .post-sheet blockquote { border-left: 3px solid var(--abord); padding: 2px 0 2px 14px; color: var(--t2); margin: 0 0 16px; }
+            .post-sheet hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+            .post-sheet ul, .post-sheet ol { font-size: 16px; line-height: 1.7; padding-left: 20px; margin: 0 0 16px; }
+            .post-sheet figure { margin: 0 0 16px; }
+            .post-sheet figcaption { text-align: center; font-size: 13px; color: var(--t2); margin-top: 6px; }
+            .post-sheet table { width: 100%; border-collapse: collapse; font-size: 14.5px; margin: 0 0 16px; overflow-x: auto; display: block; }
+            .post-sheet th, .post-sheet td { border: 1px solid var(--border); padding: 7px 11px; text-align: left; vertical-align: top; }
+            .post-sheet th { background: var(--alt); font-weight: 600; }
+            .math-tex { margin: 16px 0; overflow-x: auto; }
+            div.math-tex { text-align: center; }
+            .collage { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px; }
+            .collage img { width: 100%; height: 160px; object-fit: cover; border-radius: 6px; }
+            .carousel { position: relative; margin: 16px 0; }
+            .carousel-viewport img { width: 100%; display: block; border-radius: 6px; }
+            .carousel-prev, .carousel-next { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 18px; }
+            .carousel-prev { left: 8px; } .carousel-next { right: 8px; }
+            .carousel-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
+            .carousel-dot { width: 8px; height: 8px; border-radius: 50%; border: none; background: rgba(128,128,128,0.4); cursor: pointer; padding: 0; }
+            .carousel-dot.active { background: var(--accent); }
+            .footnotes { font-size: 12.5px; color: var(--t2); border-top: 1px solid var(--border); padding: 10px 0 0; margin: 0 0 4px; }
+            .footnotes sup, .post-sheet sup { color: var(--accent); font-weight: 600; }
+            .post-signature { font-size: 13.5px; font-style: italic; color: var(--t2); white-space: pre-line; border-top: 1px solid var(--border); padding-top: 14px; margin-top: 18px; }
+            .made-with { text-align: center; font-size: 11.5px; color: var(--t3); margin-top: 18px; }
+            {{mathAssets}}
+            </style>
+            </head>
+            <body>
+            <div class="page">
+            <div class="post-sheet">
+            {{titleHeading}}
+            <div class="post-meta">{{publishedAt.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)}}</div>
+            {{bodyHtml}}
+            {{signatureBlock}}
+            </div>
+            <div class="made-with">Made with Cedar Clerk</div>
+            </div>
+            <script>
+            document.querySelectorAll('.carousel').forEach(function (car) {
+                var imgs = car.querySelectorAll('.carousel-viewport img');
+                var dots = car.querySelectorAll('.carousel-dot');
+                var i = 0;
+                function show(n) {
+                    i = (n + imgs.length) % imgs.length;
+                    imgs.forEach(function (img, idx) { img.style.display = idx === i ? '' : 'none'; });
+                    dots.forEach(function (d, idx) { d.classList.toggle('active', idx === i); });
+                }
+                var prev = car.querySelector('.carousel-prev');
+                var next = car.querySelector('.carousel-next');
+                if (prev) prev.addEventListener('click', function () { show(i - 1); });
+                if (next) next.addEventListener('click', function () { show(i + 1); });
+                dots.forEach(function (d, idx) { d.addEventListener('click', function () { show(idx); }); });
+                if (imgs.length) show(0);
+            });
+            </script>
+            </body>
+            </html>
+            """;
     }
 }

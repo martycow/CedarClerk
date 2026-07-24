@@ -3,6 +3,7 @@ using System;
 using CedarClerk.Server;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CedarClerk.Server.Migrations
 {
     [DbContext(typeof(CedarDbContext))]
-    partial class CedarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260719090729_AddDraftTranslationSourceSnapshot")]
+    partial class AddDraftTranslationSourceSnapshot
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.29");
@@ -122,21 +125,6 @@ namespace CedarClerk.Server.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("SocialFacebookUrl")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SocialGithubUrl")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SocialInstagramUrl")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SocialTwitterUrl")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SocialYoutubeUrl")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("StripeCustomerId")
                         .HasColumnType("TEXT");
 
@@ -209,39 +197,9 @@ namespace CedarClerk.Server.Migrations
                     b.Property<string>("TelegramFileId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("TelegramLocalPath")
-                        .HasColumnType("TEXT");
-
                     b.HasKey("Id");
 
                     b.ToTable("Assets");
-                });
-
-            modelBuilder.Entity("CedarClerk.Server.BlogStatSnapshot", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("CommentCount")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("LikeCount")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("OwnerId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("TakenAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("ViewCount")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("BlogStatSnapshots");
                 });
 
             modelBuilder.Entity("CedarClerk.Server.BotKnownChat", b =>

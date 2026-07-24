@@ -237,6 +237,30 @@ public class BlocksRendererTests
     }
 
     [Fact]
+    public void Renders_youtube_as_thumbnail_photo_with_clickable_caption_link()
+    {
+        // No native webpage-preview block exists for InputRichMessage.Blocks, so a thumbnail
+        // photo + a RichRunLink caption is the closest equivalent — see ADR-033.
+        var json = """{"type":"doc","content":[{"type":"youtube","attrs":{"videoId":"dQw4w9WgXcQ"}}]}""";
+        var blocks = CedarToTelegramBlocksRenderer.Render(json);
+        var photo = Assert.IsType<RichPhotoBlock>(Assert.Single(blocks));
+        Assert.Equal("https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg", photo.Url);
+        var link = Assert.IsType<RichRunLink>(photo.Caption);
+        Assert.Equal("https://www.youtube.com/watch?v=dQw4w9WgXcQ", link.Url);
+        Assert.Equal(new RichRunText("▶ Watch on YouTube"), link.Inner);
+    }
+
+    [Fact]
+    public void Renders_youtube_caption_as_the_clickable_link_text_when_provided()
+    {
+        var json = """{"type":"doc","content":[{"type":"youtube","attrs":{"videoId":"dQw4w9WgXcQ","caption":"Never Gonna Give You Up"}}]}""";
+        var blocks = CedarToTelegramBlocksRenderer.Render(json);
+        var photo = Assert.IsType<RichPhotoBlock>(Assert.Single(blocks));
+        var link = Assert.IsType<RichRunLink>(photo.Caption);
+        Assert.Equal(new RichRunText("Never Gonna Give You Up"), link.Inner);
+    }
+
+    [Fact]
     public void Renders_carousel_as_slideshow_with_resolved_urls()
     {
         var json = """{"type":"doc","content":[{"type":"carousel","attrs":{"images":["/media/a.jpg","/media/b.jpg"]}}]}""";
@@ -265,6 +289,31 @@ public class BlocksRendererTests
                        {"type":"paragraph","content":[{"type":"text","text":"before"}]},
                        {"type":"carousel","attrs":{"images":[]}},
                        {"type":"collage","attrs":{"images":[]}},
+                       {"type":"paragraph","content":[{"type":"text","text":"after"}]}
+                   ]}
+                   """;
+        var blocks = CedarToTelegramBlocksRenderer.Render(json);
+        Assert.Equal(2, blocks.Count);
+        Assert.Equal(new RichParagraphBlock(new RichRunText("before")), blocks[0]);
+        Assert.Equal(new RichParagraphBlock(new RichRunText("after")), blocks[1]);
+    }
+
+    [Fact]
+    public void Drops_empty_list_blockquote_toggle_and_table_blocks_entirely()
+    {
+        // Same class of bug as the empty carousel/collage (ADR-019): an editor artifact can leave
+        // a list/blockquote/toggle with no children, or a table with no rows — sending an empty
+        // InputRichBlockList/BlockQuotation/Details/Table risks the same RICH_MESSAGE_CONTENT_REQUIRED
+        // rejection, so these must be dropped rather than sent as empty containers.
+        var json = """
+                   {"type":"doc","content":[
+                       {"type":"paragraph","content":[{"type":"text","text":"before"}]},
+                       {"type":"bulletList","content":[]},
+                       {"type":"orderedList","content":[]},
+                       {"type":"taskList","content":[]},
+                       {"type":"blockquote","content":[]},
+                       {"type":"toggle","attrs":{"summary":"Details"},"content":[]},
+                       {"type":"table","content":[]},
                        {"type":"paragraph","content":[{"type":"text","text":"after"}]}
                    ]}
                    """;

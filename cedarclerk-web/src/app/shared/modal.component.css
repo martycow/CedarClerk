@@ -1,0 +1,82 @@
+:host {
+    display: contents;
+}
+
+.spacer { flex: 1; }
+
+.icon-sm { width: 14px; height: 14px; }
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(24, 21, 16, .45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.modal-card {
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 64px);
+    display: flex;
+    flex-direction: column;
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, .3);
+    color: var(--text);
+}
+
+.modal-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 18px 20px 14px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    border-bottom: 1px solid var(--border);
+    flex: none;
+}
+
+.modal-head ::ng-deep svg {
+    color: var(--accent);
+}
+
+.modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    color: var(--t2);
+    border-radius: var(--radius-md);
+    padding: 5px;
+    cursor: pointer;
+}
+
+.modal-close:hover {
+    background: var(--alt);
+    color: var(--text);
+}
+
+.modal-body {
+    padding: 18px 20px;
+    overflow-y: auto;
+    font-size: 13px;
+    color: var(--t2);
+    line-height: 1.55;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 14px 20px;
+    flex: none;
+}
+
+.modal-actions:empty {
+    display: none;
+}

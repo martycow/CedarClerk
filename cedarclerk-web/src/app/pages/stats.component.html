@@ -17,16 +17,14 @@
     <div class="stats-body">
         @if (loading()) {
         <p class="hint">Loading…</p>
-        } @else if (!channels().length) {
-        <div class="empty-state">
-            <div class="empty-cow">🐮</div>
-            <p class="hint">Connect a channel first to see its stats.</p>
-        </div>
         } @else {
             <div class="filter-row">
                 <div class="channel-tabs">
+                    <button class="channel-tab" [class.active]="selectedView() === 'blog'" (click)="selectBlog()">
+                        📄 Blog
+                    </button>
                     @for (c of channels(); track c.id) {
-                    <button class="channel-tab" [class.active]="selectedChannelId() === c.id" (click)="selectChannel(c.id)">
+                    <button class="channel-tab" [class.active]="selectedView() === 'channel' && selectedChannelId() === c.id" (click)="selectChannel(c.id)">
                         {{ c.title }}
                     </button>
                     }

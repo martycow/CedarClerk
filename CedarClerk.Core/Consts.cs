@@ -2,7 +2,7 @@
 
 public static class Consts
 {
-    public const string CurrentVersion = "0.8.0";
+    public const string CurrentVersion = "0.8.1";
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
     
@@ -52,8 +52,22 @@ public static class Consts
 
     public static class FileSizes
     {
-        public const long ImageMaxBytes = 5 * 1024 * 1024;
-        public const long MediaMaxBytes = 20 * 1024 * 1024;
+        public const long ImageMaxBytes = 50L * 1024 * 1024;
+        public const long MediaMaxBytes = 1000L * 1024 * 1024;
+
+        // Telegram rejects a photo fetched by URL above this size with a misleading "wrong type
+        // of the web page content" error — confirmed empirically (19.07.2026) against
+        // @testingandfun: a 9.88MB JPEG already failed, a 0.94MB one succeeded. Kept well under
+        // the ~10MB ballpark documented for Telegram's own remote-fetch photo limit as a safety
+        // margin. See the ADR in docs/DECISIONS.md.
+        public const long TelegramSafeImageBytes = 4L * 1024 * 1024;
+
+        // User-selectable compression degree for the export modal (see the ADR following
+        // ADR-031) — "standard" is TelegramSafeImageBytes above; these are the other two presets.
+        // "high" (6MB) trades some of the safety margin for quality — still comfortably under the
+        // ~9.88MB point our empirical test showed Telegram already rejecting, but closer to it.
+        public const long TelegramCompressSmallBytes = 2L * 1024 * 1024;
+        public const long TelegramCompressHighBytes = 6L * 1024 * 1024;
     }
 
     public static class Stripe
