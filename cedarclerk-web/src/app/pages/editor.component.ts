@@ -58,7 +58,7 @@ import {
     LucideMenu as Menu, LucideSuperscript as Superscript,
     LucideChevronDown as ChevronDown,
     LucideCheck as Check,
-    LucideDownload as Download, LucideUpload as Upload,
+    LucideDownload as Download,
     LucideMessageSquare as MessageSquare,
     LucideLineChart as LineChart,
     LucideRefreshCw as RefreshCw,
@@ -172,7 +172,7 @@ interface UploadItem {
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
         Send, Plus, X, LogOut, RadioTower, Trash2,
         EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, Menu, Superscript,
-        ChevronDown, Check, Download, Upload, MessageSquare, LineChart, RefreshCw,
+        ChevronDown, Check, Download, MessageSquare, LineChart, RefreshCw,
         Settings, Sparkle, TableOfContentsIcon, DividerIcon,
         AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
         SlidersHorizontal, Folder,
@@ -272,8 +272,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     exportLink = signal<string | null>(null);
     exportError = signal<{ code?: number; message: string } | null>(null);
 
-    importingCedar = signal(false);
-    importCedarError = signal<string | null>(null);
 
 
     currentBlog = signal<{ slug: string; isPublished: boolean } | null>(null);
@@ -1070,27 +1068,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         await this.newDraft({ title, cedarJson: NEW_DRAFT_TEMPLATES[template], tags, languages, isPrivate, folderId });
     }
 
-    async onImportCedarChosen(ev: Event) {
-        const input = ev.target as HTMLInputElement;
-        const file = input.files?.[0];
-        input.value = '';
-        if (!file) return;
-
-        this.importingCedar.set(true);
-        this.importCedarError.set(null);
-        try {
-            const created = await this.draftsApi.importCedar(file);
-            this.drafts.set(await this.draftsApi.list());
-            this.currentId.set(null);
-            await this.openDraft(created.id);
-        } catch (e) {
-            this.importCedarError.set(e instanceof HttpErrorResponse && e.error?.error
-                ? e.error.error
-                : 'Import failed — check the file and try again');
-        } finally {
-            this.importingCedar.set(false);
-        }
-    }
 
     blogUrl(): string | null {
         const b = this.currentBlog();

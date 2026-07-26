@@ -26,7 +26,7 @@ export class LoginComponent {
         this.error.set('');
         const ok = await this.auth.login(this.email, this.password);
         this.busy.set(false);
-        ok ? this.router.navigateByUrl('/editor')
+        ok ? this.router.navigateByUrl('/drafts')
             : this.error.set('Invalid email or password');
     }
 }

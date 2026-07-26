@@ -1,26 +1,17 @@
 <div class="app">
     <!--Top bar-->
     <header class="topbar">
-        <!--Drafts live on their own page now (the old in-topbar popover was removed); .cedar
-        import/export moved here from it. Markdown import moved to /drafts.-->
-        <a class="icon-btn" routerLink="/drafts" title="Drafts">
-            <svg lucideMenu class="icon"></svg>
-        </a>
-        <button class="icon-btn" (click)="cedarInput.click()" [disabled]="importingCedar() || draftsBusy()" title="Import .cedar">
-            <svg lucideUpload class="icon" [class.spin]="importingCedar()"></svg>
-        </button>
-        @if (currentId(); as draftId) {
-        <a class="icon-btn cedar-download" [href]="'/api/drafts/' + draftId + '/cedar'" download title="Download .cedar">
-            <svg lucideDownload class="icon"></svg>
-        </a>
-        }
-        <input #cedarInput type="file" accept=".cedar" hidden (change)="onImportCedarChosen($event)">
-
+        <!--Order per brainstorm B22: brand, divider, drafts, title, save-state | Export, theme,
+        account. .cedar download lives in the Export modal; .cedar import lives on /drafts.-->
         <div class="brand">
             <app-cedar-logo [size]="20"></app-cedar-logo>
             <span class="brand-name">Cedar Clerk</span>
         </div>
         <span class="divider"></span>
+
+        <a class="icon-btn" routerLink="/drafts" title="Drafts">
+            <svg lucideMenu class="icon"></svg>
+        </a>
 
         <input class="title" [(ngModel)]="title" (ngModelChange)="markDirty()" placeholder="Draft title">
 
@@ -126,14 +117,6 @@
             <span class="btn-label">Export</span>
         </button>
 
-        <a class="icon-btn" routerLink="/comments" title="Comments &amp; likes">
-            <svg lucideMessageSquare class="icon"></svg>
-        </a>
-
-        <a class="icon-btn" routerLink="/stats" title="Channel stats">
-            <svg lucideLineChart class="icon"></svg>
-        </a>
-
         <button class="icon-btn theme-toggle" (click)="theme.toggle()" title="Toggle theme">
             {{ theme.theme() === 'dark' ? '☀' : '☾' }}
         </button>
@@ -146,6 +129,16 @@
             <div panel class="account-popover">
                 <p class="profile-email">{{ auth.userEmail() }}</p>
                 <div class="popover-divider"></div>
+                <!--Stats/comments sit next to Settings per B22 rather than as separate topbar
+                icons — the topbar's right side is Export + theme + profile only now.-->
+                <a class="account-action-btn" routerLink="/comments">
+                    <svg lucideMessageSquare class="icon-sm"></svg>
+                    Comments &amp; likes
+                </a>
+                <a class="account-action-btn" routerLink="/stats">
+                    <svg lucideLineChart class="icon-sm"></svg>
+                    Stats
+                </a>
                 <a class="account-action-btn" routerLink="/settings">
                     <svg lucideSettings class="icon-sm"></svg>
                     Settings
@@ -803,17 +796,6 @@
     </div>
     }
 
-    <!--.cedar import error — the topbar button that triggers it has nowhere to show text,
-    so it surfaces as a dismissible toast (same placement as the AI one).-->
-    @if (importCedarError(); as err) {
-    <div class="ai-toast error">
-        <svg lucideX class="icon-xs"></svg>
-        <span>{{ err }}</span>
-        <button class="mini-remove" (click)="importCedarError.set(null)" title="Dismiss">
-            <svg lucideX class="icon-sm"></svg>
-        </button>
-    </div>
-    }
 
     <!--Upload progress-->
     @if (uploads().length) {

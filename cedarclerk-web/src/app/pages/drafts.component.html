@@ -1,8 +1,7 @@
 <div class="drafts-page">
+    <!--No back button: this is the post-login landing screen, so there's nothing to go back to.
+    The editor is reached by opening a draft (or "New draft").-->
     <header class="drafts-header">
-        <a class="icon-btn" routerLink="/editor" title="Back to editor">
-            <svg lucideArrowLeft class="icon"></svg>
-        </a>
         <app-cedar-logo [size]="19"></app-cedar-logo>
         <span class="brand-name">Cedar Clerk</span>
         <span class="crumb-sep">/</span>
@@ -71,8 +70,12 @@
                     <svg lucideLayoutGrid class="icon-sm"></svg>
                 </button>
             </div>
-            <!--Markdown import lives here (moved off the editor's removed drafts popover) —
-            .cedar import/export sit in the editor topbar instead.-->
+            <!--Both imports live here (B22) — the editor topbar keeps only Export/theme/profile.-->
+            <button class="btn-ghost" (click)="cedarInput.click()" [disabled]="importingCedar()" title="Import .cedar">
+                <svg lucideUpload class="icon-sm" [class.spin]="importingCedar()"></svg>
+                Import .cedar
+            </button>
+            <input #cedarInput type="file" accept=".cedar" hidden (change)="onImportCedarChosen($event)">
             <button class="btn-ghost" (click)="markdownInput.click()" [disabled]="importingMarkdown()" title="Import Markdown (.zip)">
                 <svg lucideFileUp class="icon-sm" [class.spin]="importingMarkdown()"></svg>
                 Import .zip
@@ -80,6 +83,7 @@
             <input #markdownInput type="file" accept=".zip" hidden (change)="onImportMarkdownChosen($event)">
             <button class="btn-accent" (click)="newDraft()"><svg lucidePlus class="icon-sm"></svg> New draft</button>
         </div>
+        @if (importCedarError()) { <p class="channel-error">{{ importCedarError() }}</p> }
         @if (importMarkdownError()) { <p class="channel-error">{{ importMarkdownError() }}</p> }
         @if (importMarkdownWarning()) { <p class="channel-error">{{ importMarkdownWarning() }}</p> }
 

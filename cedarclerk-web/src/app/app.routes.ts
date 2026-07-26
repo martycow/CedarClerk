@@ -20,6 +20,7 @@ export const routes: Routes = [
     { path: 'settings', component: SettingsComponent, canActivate: [authGuard] },
     { path: 'comments', component: CommentsComponent, canActivate: [authGuard] },
     { path: 'stats', component: StatsComponent, canActivate: [authGuard] },
-    { path: '', pathMatch: 'full', redirectTo: 'editor' },
-    { path: '**', redirectTo: 'editor' },
+    // Drafts, not the editor, is the landing screen — you pick what to work on first.
+    { path: '', pathMatch: 'full', redirectTo: 'drafts' },
+    { path: '**', redirectTo: 'drafts' },
 ];

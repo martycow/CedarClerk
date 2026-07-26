@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
 import { DraftsService, DraftMeta, FolderMeta } from '../core/drafts.service';
@@ -10,11 +10,11 @@ import { ModalComponent } from '../shared/modal.component';
 import { PopoverComponent } from '../shared/popover.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import {
-    LucideArrowLeft as ArrowLeft, LucidePlus as Plus,
+    LucidePlus as Plus,
     LucideArchive as Archive, LucideArchiveRestore as ArchiveRestore, LucideTrash2 as Trash2,
     LucideRefreshCw as RefreshCw, LucideLayoutGrid as LayoutGrid, LucideList as List,
     LucideFolder as Folder, LucideX as X, LucidePencil as Pencil,
-    LucideLock as Lock, LucideFileUp as FileUp,
+    LucideLock as Lock, LucideFileUp as FileUp, LucideUpload as Upload,
 } from '@lucide/angular';
 
 type FilterKey = 'all' | 'draft' | 'scheduled' | 'published' | 'attention' | 'archived';
@@ -57,9 +57,9 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
 @Component({
     selector: 'app-drafts',
     imports: [
-        DatePipe, FormsModule, RouterLink, CedarLogoComponent, ModalComponent, PopoverComponent,
-        ArrowLeft, Plus, Archive, ArchiveRestore, Trash2, RefreshCw, LayoutGrid, List,
-        Folder, X, Pencil, Lock, FileUp,
+        DatePipe, FormsModule, CedarLogoComponent, ModalComponent, PopoverComponent,
+        Plus, Archive, ArchiveRestore, Trash2, RefreshCw, LayoutGrid, List,
+        Folder, X, Pencil, Lock, FileUp, Upload,
     ],
     templateUrl: 'drafts.component.html',
     styleUrls: ['drafts.component.css'],
@@ -90,7 +90,9 @@ export class DraftsPageComponent implements OnInit {
     editingFolderName = '';
     deleteFolderConfirmId = signal<string | null>(null);
 
-    // Markdown (.zip) import moved here from the editor's removed drafts popover.
+    // Both imports live here now (B22) — the editor topbar is Export/theme/profile only.
+    importingCedar = signal(false);
+    importCedarError = signal<string | null>(null);
     importingMarkdown = signal(false);
     importMarkdownError = signal<string | null>(null);
     importMarkdownWarning = signal<string | null>(null);
@@ -233,6 +235,24 @@ export class DraftsPageComponent implements OnInit {
 
     newDraft() {
         this.router.navigate(['/editor'], { queryParams: { new: 1 } });
+    }
+
+    async onImportCedarChosen(ev: Event) {
+        const input = ev.target as HTMLInputElement;
+        const file = input.files?.[0];
+        input.value = '';
+        if (!file || this.importingCedar()) return;
+
+        this.importingCedar.set(true);
+        this.importCedarError.set(null);
+        try {
+            const created = await this.draftsApi.importCedar(file);
+            this.router.navigate(['/editor'], { queryParams: { draft: created.id } });
+        } catch (e) {
+            this.importCedarError.set(httpErrorMessage(e, 'Import failed — check the file and try again'));
+        } finally {
+            this.importingCedar.set(false);
+        }
     }
 
     async onImportMarkdownChosen(ev: Event) {
