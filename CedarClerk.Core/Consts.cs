@@ -27,6 +27,14 @@ public static class Consts
         public const int TrialPrice = 1;
     }
 
+    public static class Signatures
+    {
+        // Free tier always gets this fixed, non-removable attribution instead of a custom
+        // PostSignature — the "upgrade to customize/remove it" hook for Pro. See Phase 8 Step 5,
+        // docs/ROADMAP.md.
+        public const string FreeAttributionText = "Published with Cedar Clerk";
+    }
+
     public static class URLs
     {
         public const string MainHost = "https://cedarclerk.mooexe.dev";
@@ -48,6 +56,8 @@ public static class Consts
         public const string BlogHostCfg = "Cedar:BlogHost";
         public const string InviteCodeCfg = "Cedar:InviteCode";
         public const string ProviderKeyCfg = "Cedar:Translate:Provider";
+
+        public const string ViewedCookiePrefix = "cedar_viewed_";
     }
 
     public static class FileSizes

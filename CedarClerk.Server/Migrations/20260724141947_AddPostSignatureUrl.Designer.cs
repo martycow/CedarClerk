@@ -3,6 +3,7 @@ using System;
 using CedarClerk.Server;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CedarClerk.Server.Migrations
 {
     [DbContext(typeof(CedarDbContext))]
-    partial class CedarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260724141947_AddPostSignatureUrl")]
+    partial class AddPostSignatureUrl
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.29");
@@ -48,9 +51,6 @@ namespace CedarClerk.Server.Migrations
 
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("AppearancePrefsJson")
-                        .HasColumnType("TEXT");
 
                     b.Property<string>("AuthorDisplayName")
                         .HasColumnType("TEXT");
@@ -88,9 +88,6 @@ namespace CedarClerk.Server.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("NewDraftDefaultsJson")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("NormalizedEmail")
@@ -159,9 +156,6 @@ namespace CedarClerk.Server.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("TelegramUsername")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ToolbarLayoutJson")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("TrialUsedAt")
@@ -436,9 +430,6 @@ namespace CedarClerk.Server.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsArchived")
-                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsBlogPublished")
                         .HasColumnType("INTEGER");

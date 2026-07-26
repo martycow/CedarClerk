@@ -4,14 +4,14 @@ import {
 } from '@angular/core';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Editor } from '@tiptap/core';
 import { EditorState, TextSelection } from '@tiptap/pm/state';
 import { Node as PMNode, Slice } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import { AuthService } from '../core/auth.service';
 import { DraftsService, DraftMeta, TranslationMeta, AiEditKind } from '../core/drafts.service';
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, PostLanguage, CompressionLevel, ScheduledPost } from '../core/posts.service';
 import { ChannelsService, Channel, ChannelStats, KnownChat } from '../core/channels.service';
 import { Table } from '@tiptap/extension-table';
@@ -38,6 +38,8 @@ import { PopoverComponent } from '../shared/popover.component';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { ModalComponent } from '../shared/modal.component';
 import { ThemeService } from '../core/theme.service';
+import { AppearanceService, SHEET_WIDTH_PX, TYPEFACE_STACK } from '../core/appearance.service';
+import { ToolbarLayoutService } from '../core/toolbar-layout.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import {
     LucideUndo2 as Undo2, LucideRedo2 as Redo2,
@@ -65,6 +67,7 @@ import {
     LucideAtSign as AtSign, LucideCloud as Cloud, LucideMessageSquareShare as MessageSquareShare,
     LucideFileText as FileText, LucideHeart as Heart, LucideNotebook as Notebook, LucideFile as FileIcon,
     LucideThumbsUp as ThumbsUp,
+    LucideSlidersHorizontal as SlidersHorizontal,
 } from '@lucide/angular';
 
 const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
@@ -84,6 +87,32 @@ function toDatetimeLocalValue(date: Date): string {
 type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
 const EMPTY_DOC = '{"type":"doc","content":[{"type":"paragraph"}]}';
 const BLOG_HOST = 'blog.mooexe.dev';
+
+type NewDraftTemplate = 'blank' | 'devlog' | 'photodump';
+const NEW_DRAFT_TEMPLATES: Record<NewDraftTemplate, string> = {
+    blank: EMPTY_DOC,
+    devlog: JSON.stringify({
+        type: 'doc',
+        content: [
+            { type: 'paragraph', content: [{ type: 'text', text: 'What happened this week…' }] },
+            {
+                type: 'bulletList',
+                content: [
+                    { type: 'listItem', content: [{ type: 'paragraph' }] },
+                    { type: 'listItem', content: [{ type: 'paragraph' }] },
+                ],
+            },
+            { type: 'paragraph', content: [{ type: 'text', text: "What's next." }] },
+        ],
+    }),
+    photodump: JSON.stringify({
+        type: 'doc',
+        content: [
+            { type: 'paragraph', content: [{ type: 'text', text: 'A few photos from…' }] },
+            { type: 'paragraph' },
+        ],
+    }),
+};
 
 // Extra timezones shown alongside the local time when scheduling a post; will move to user settings later
 const EXTRA_TIMEZONES: { label: string; zone: string }[] = [
@@ -135,7 +164,7 @@ interface UploadItem {
 @Component({
     selector: 'app-editor',
     imports: [
-        FormsModule, DatePipe, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent,
+        FormsModule, DatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent,
         Undo2, Redo2, Bold, Italic, Strikethrough, Code,
         List, ListOrdered, ListTodo, Quote, SquareCode, Outdent, Indent,
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
@@ -144,6 +173,7 @@ interface UploadItem {
         ChevronDown, Check, Download, Upload, FileUp, MessageSquare, LineChart, RefreshCw,
         Settings, Sparkle, TableOfContentsIcon, DividerIcon,
         AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
+        SlidersHorizontal,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -151,7 +181,10 @@ interface UploadItem {
 export class EditorComponent implements AfterViewInit, OnDestroy {
     auth = inject(AuthService);
     theme = inject(ThemeService);
+    appearance = inject(AppearanceService);
+    toolbarLayout = inject(ToolbarLayoutService);
     private draftsApi = inject(DraftsService);
+    private route = inject(ActivatedRoute);
     private assets = inject(AssetsService);
 
     @ViewChild('editorHost') editorHost!: ElementRef<HTMLElement>;
@@ -198,6 +231,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // Tags are per-draft (shared across language versions) and saved through their own endpoint
     // immediately on add/remove — not through the content autosave, which routes per-language.
     tagList = signal<string[]>([]);
+    // "Cloud" tag picker (ADR-035) — usage counts across every draft, loaded once on first open.
+    tagUsage = signal<{ tag: string; count: number }[]>([]);
+    private tagUsageLoaded = false;
     tagInput = '';
 
     aiEditBusy = signal(false);
@@ -249,13 +285,26 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     knownChats = signal<KnownChat[]>([]);
     knownChatsRefreshing = signal(false);
 
+    // Guards openDraft/newDraft/deleteDraft — all three mutate `currentId`/`drafts` and must not
+    // race each other (e.g. a double-click while a draft is still loading).
+    draftsBusy = signal(false);
+    deleteConfirmId = signal<string | null>(null);
+    channelBusy = signal(false);
+
+    // New Draft dialog (ADR-035) — minimal title+Enter, expandable to languages/tags/template.
+    // Channels/schedule-at-creation from the mockup were deliberately dropped: Cedar Clerk has no
+    // draft-to-channel relationship at creation time, only at export (see ADR-035).
+    newDraftOpen = signal(false);
+    newDraftExpanded = signal(false);
+    newDraftTitle = '';
+    newDraftLanguages: 'ru' | 'en' | 'both' = 'ru';
+    newDraftTags = '';
+    newDraftTemplate: NewDraftTemplate = 'blank';
+
     scheduledAt = '';
     scheduling = signal(false);
     scheduleResult = signal('');
     scheduledPosts = signal<ScheduledPost[]>([]);
-
-    linkType: 'url' | 'email' | 'phone' | 'mention' = 'url';
-    linkValue = '';
 
     readonly commonEmoji = COMMON_EMOJI;
 
@@ -266,8 +315,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     footnoteText = '';
 
-    youtubeUrl = '';
-    youtubeError = signal('');
+    // Unified Insert modal — replaces the separate Link and YouTube popovers (ADR-035): "Auto"
+    // detects YouTube vs a generic link from the pasted value, the rail lets you override it.
+    insertOpen = signal(false);
+    insertType: 'auto' | 'url' | 'email' | 'phone' | 'mention' | 'youtube' = 'auto';
+    insertValue = '';
+    insertCaption = '';
+    insertError = signal('');
 
     saveLabel(): string {
         switch (this.saveState()) {
@@ -280,6 +334,21 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     zoomFactor(): number {
         return this.zoom() / 100;
+    }
+
+    // Writing-sheet preferences (ADR-035, Settings → Appearance) — blog-unaffected, editor-only.
+    editorFocused = signal(false);
+
+    sheetMaxWidthPx(): number {
+        return SHEET_WIDTH_PX[this.appearance.prefs().sheetWidth];
+    }
+
+    sheetTypefaceStack(): string {
+        return TYPEFACE_STACK[this.appearance.prefs().typeface];
+    }
+
+    focusModeActive(): boolean {
+        return this.appearance.prefs().focusModeHideToolbar && this.editorFocused();
     }
 
     zoomIn() {
@@ -405,12 +474,21 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 this.scheduleRuDiffRecompute();
             },
             onUpdate: () => this.markDirty(),
+            onFocus: () => this.editorFocused.set(true),
+            onBlur: () => this.editorFocused.set(false),
         });
 
         const list = await this.draftsApi.list();
         this.drafts.set(list);
-        if (list.length > 0) await this.openDraft(list[0].id);
+        // /drafts links here as /editor?draft=<id> — fall back to the most recent draft (previous
+        // behavior) if the id is missing/stale (e.g. deleted from another tab).
+        const requestedId = this.route.snapshot.queryParamMap.get('draft');
+        const targetId = requestedId && list.some(d => d.id === requestedId) ? requestedId : list[0]?.id;
+        if (targetId) await this.openDraft(targetId);
         else await this.newDraft();
+
+        // /drafts' "New draft" button links here as /editor?new=1
+        if (this.route.snapshot.queryParamMap.has('new')) this.openNewDraftDialog();
 
         this.channels.set(await this.channelsApi.list());
         await this.refreshScheduledPosts();
@@ -584,6 +662,25 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         await this.persistTags();
     }
 
+    async toggleTag(tag: string) {
+        if (this.tagList().includes(tag)) {
+            await this.removeTag(tag);
+        } else {
+            this.tagList.update(l => [...l, tag]);
+            await this.persistTags();
+        }
+    }
+
+    async ensureTagUsageLoaded() {
+        if (this.tagUsageLoaded) return;
+        this.tagUsageLoaded = true;
+        try {
+            this.tagUsage.set(await this.draftsApi.listTagUsage());
+        } catch {
+            this.tagUsageLoaded = false; // allow a retry next time the popover opens
+        }
+    }
+
     private async persistTags() {
         const id = this.currentId();
         if (!id) return;
@@ -734,75 +831,120 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     async openDraft(id: string) {
+        if (this.draftsBusy() || id === this.currentId()) return;
         this.draftsPopover?.close();
-        if (id === this.currentId()) return;
-        clearTimeout(this.saveTimer);
-        if (this.saveState() !== 'saved') await this.save();
+        this.draftsBusy.set(true);
+        try {
+            clearTimeout(this.saveTimer);
+            if (this.saveState() !== 'saved') await this.save();
 
-        const draft = await this.draftsApi.get(id);
-        this.currentId.set(id);
-        this.title = draft.title;
-        this.lang.set('ru');
-        this.exportLang = 'ru';
-        this.ruUpdatedAt.set(draft.updatedAt);
-        this.enMeta.set(draft.translations?.find(t => t.language === 'en') ?? null);
-        this.enSourceSnapshot.set(null);
-        this.ruSnapshot = null;
-        this.tagList.set(draft.tags ? draft.tags.split(',').filter(t => t.length > 0) : []);
-        this.tagInput = '';
-        this.editor?.setEditable(true);
-        this.editor?.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC));
-        this.resetHistory();
-        this.saveState.set('saved');
-        this.currentBlog.set(draft.blogSlug ? { slug: draft.blogSlug, isPublished: draft.isBlogPublished } : null);
-        this.blogError.set(null);
+            const draft = await this.draftsApi.get(id);
+            this.currentId.set(id);
+            this.title = draft.title;
+            this.lang.set('ru');
+            this.exportLang = 'ru';
+            this.ruUpdatedAt.set(draft.updatedAt);
+            this.enMeta.set(draft.translations?.find(t => t.language === 'en') ?? null);
+            this.enSourceSnapshot.set(null);
+            this.ruSnapshot = null;
+            this.tagList.set(draft.tags ? draft.tags.split(',').filter(t => t.length > 0) : []);
+            this.tagInput = '';
+            this.editor?.setEditable(true);
+            this.editor?.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC));
+            this.resetHistory();
+            this.saveState.set('saved');
+            this.currentBlog.set(draft.blogSlug ? { slug: draft.blogSlug, isPublished: draft.isBlogPublished } : null);
+            this.blogError.set(null);
 
-        // Fetch the EN translation's source snapshot in the background (not blocking open) just
-        // to populate the RU-tab diff gutter — the draft list endpoint only returns TranslationMeta.
-        if (this.enMeta()) {
-            this.draftsApi.getTranslation(id, 'en')
-                .then(tr => { this.enSourceSnapshot.set(tr.sourceSnapshotJson); this.scheduleRuDiffRecompute(); })
-                .catch(() => {});
+            // Fetch the EN translation's source snapshot in the background (not blocking open)
+            // just to populate the RU-tab diff gutter — the list endpoint only returns TranslationMeta.
+            if (this.enMeta()) {
+                this.draftsApi.getTranslation(id, 'en')
+                    .then(tr => { this.enSourceSnapshot.set(tr.sourceSnapshotJson); this.scheduleRuDiffRecompute(); })
+                    .catch(() => {});
+            }
+        } finally {
+            this.draftsBusy.set(false);
         }
     }
 
-    async newDraft() {
+    // opts is used by the New Draft dialog (openNewDraftDialog/confirmNewDraft below); the two
+    // silent fallback call sites (empty draft list on load, deleting the last remaining draft)
+    // call this with no args and get exactly the old blank-"Untitled" behavior.
+    async newDraft(opts?: { title?: string; cedarJson?: string; tags?: string; languages?: 'ru' | 'en' | 'both' }) {
+        if (this.draftsBusy()) return;
         this.draftsPopover?.close();
-        clearTimeout(this.saveTimer);
-        if (this.saveState() !== 'saved') await this.save();
+        this.draftsBusy.set(true);
+        try {
+            clearTimeout(this.saveTimer);
+            if (this.saveState() !== 'saved') await this.save();
 
-        const created = await this.draftsApi.create('Untitled', EMPTY_DOC);
-        const meta: DraftMeta = {
-            id: created.id, title: 'Untitled',
-            createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-            blogSlug: null, isBlogPublished: false, blogPublishedAt: null,
-            languages: [], tags: '',
-        };
-        this.drafts.update(l => [meta, ...l]);
-        this.currentId.set(created.id);
-        this.title = meta.title;
-        this.lang.set('ru');
-        this.exportLang = 'ru';
-        this.ruUpdatedAt.set(meta.updatedAt);
-        this.enMeta.set(null);
-        this.enSourceSnapshot.set(null);
-        this.ruDiffMarkers.set([]);
-        this.ruSnapshot = null;
-        this.tagList.set([]);
-        this.tagInput = '';
-        this.editor?.setEditable(true);
-        this.editor?.commands.setContent(JSON.parse(EMPTY_DOC));
-        this.resetHistory();
-        this.saveState.set('saved');
-        this.currentBlog.set(null);
-        this.blogError.set(null);
-        this.editor?.commands.focus();
+            const title = opts?.title?.trim() || 'Untitled';
+            const cedarJson = opts?.cedarJson ?? EMPTY_DOC;
+            const tags = (opts?.tags ?? '').split(',').map(t => t.trim().toLowerCase()).filter(t => t.length > 0);
+
+            const created = await this.draftsApi.create(title, cedarJson);
+            if (tags.length) await this.draftsApi.updateTags(created.id, tags.join(','));
+
+            let languages: string[] = [];
+            if (opts?.languages === 'both') {
+                await this.draftsApi.saveTranslation(created.id, 'en', title, EMPTY_DOC);
+                languages = ['en'];
+            }
+
+            const meta: DraftMeta = {
+                id: created.id, title,
+                createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+                blogSlug: null, isBlogPublished: false, blogPublishedAt: null,
+                languages, tags: tags.join(','),
+                isArchived: false, lastTelegramMessageId: null, lastTelegramUsername: null,
+                staleLanguages: [], scheduled: null,
+            };
+            this.drafts.update(l => [meta, ...l]);
+            this.currentId.set(created.id);
+            this.title = title;
+            this.lang.set('ru');
+            this.exportLang = 'ru';
+            this.ruUpdatedAt.set(meta.updatedAt);
+            this.enMeta.set(languages.includes('en') ? { language: 'en', title, updatedAt: meta.updatedAt } : null);
+            this.enSourceSnapshot.set(null);
+            this.ruDiffMarkers.set([]);
+            this.ruSnapshot = null;
+            this.tagList.set(tags);
+            this.tagInput = '';
+            this.editor?.setEditable(true);
+            this.editor?.commands.setContent(JSON.parse(cedarJson));
+            this.resetHistory();
+            this.saveState.set('saved');
+            this.currentBlog.set(null);
+            this.blogError.set(null);
+            this.editor?.commands.focus();
+        } finally {
+            this.draftsBusy.set(false);
+        }
     }
 
-    async deleteDraft(id: string) {
-        if (!window.confirm('Delete this draft? This cannot be undone.')) return;
-        await this.draftsApi.remove(id);
-        this.drafts.update(list => list.filter(d => d.id !== id));
+    // Replaces a window.confirm() — matches the styled-modal pattern already used for AI-edit and
+    // re-translate confirmations elsewhere in this component.
+    askDeleteDraft(id: string) {
+        this.deleteConfirmId.set(id);
+    }
+
+    cancelDeleteDraft() {
+        this.deleteConfirmId.set(null);
+    }
+
+    async confirmDeleteDraft() {
+        const id = this.deleteConfirmId();
+        if (!id || this.draftsBusy()) return;
+        this.draftsBusy.set(true);
+        this.deleteConfirmId.set(null);
+        try {
+            await this.draftsApi.remove(id);
+            this.drafts.update(list => list.filter(d => d.id !== id));
+        } finally {
+            this.draftsBusy.set(false);
+        }
         if (this.currentId() === id) {
             const remaining = this.drafts();
             clearTimeout(this.saveTimer);
@@ -810,6 +952,42 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             if (remaining.length) await this.openDraft(remaining[0].id);
             else await this.newDraft();
         }
+    }
+
+    openNewDraftDialog() {
+        this.draftsPopover?.close();
+        let defaults: { languages?: 'ru' | 'en' | 'both'; tags?: string[]; template?: NewDraftTemplate } = {};
+        try {
+            defaults = JSON.parse(this.auth.newDraftDefaultsJson() ?? '{}');
+        } catch { /* ignore a corrupt/foreign blob, fall back to built-in defaults */ }
+
+        this.newDraftTitle = '';
+        this.newDraftLanguages = defaults.languages ?? 'ru';
+        this.newDraftTags = (defaults.tags ?? []).join(', ');
+        this.newDraftTemplate = defaults.template ?? 'blank';
+        this.newDraftExpanded.set(false);
+        this.newDraftOpen.set(true);
+    }
+
+    closeNewDraftDialog() {
+        this.newDraftOpen.set(false);
+    }
+
+    async confirmNewDraft() {
+        if (this.draftsBusy()) return;
+        const title = this.newDraftTitle.trim();
+        const tags = this.newDraftTags;
+        const languages = this.newDraftLanguages;
+        const template = this.newDraftTemplate;
+
+        this.closeNewDraftDialog();
+        this.auth.saveNewDraftDefaults(JSON.stringify({
+            languages,
+            tags: tags.split(',').map(t => t.trim().toLowerCase()).filter(t => t.length > 0),
+            template,
+        })).catch(() => { /* best-effort — not worth blocking draft creation over */ });
+
+        await this.newDraft({ title, cedarJson: NEW_DRAFT_TEMPLATES[template], tags, languages });
     }
 
     async onImportCedarChosen(ev: Event) {
@@ -1029,8 +1207,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     async connectChannel(chatId = this.newChannelChatId.trim()) {
-        if (!chatId) return;
+        if (!chatId || this.channelBusy()) return;
         this.channelError.set('');
+        this.channelBusy.set(true);
         try {
             const channel = await this.channelsApi.connect(chatId);
             this.channels.update(list => [...list, channel]);
@@ -1039,6 +1218,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             await this.refreshChannelStats();
         } catch (e: any) {
             this.channelError.set(e?.error?.error ?? 'Failed to connect channel');
+        } finally {
+            this.channelBusy.set(false);
         }
     }
 
@@ -1060,12 +1241,18 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     async removeChannel(id: string) {
-        await this.channelsApi.remove(id);
-        this.channels.update(list => list.filter(c => c.id !== id));
-        this.channelStats.update(map => {
-            const { [id]: _removed, ...rest } = map;
-            return rest;
-        });
+        if (this.channelBusy()) return;
+        this.channelBusy.set(true);
+        try {
+            await this.channelsApi.remove(id);
+            this.channels.update(list => list.filter(c => c.id !== id));
+            this.channelStats.update(map => {
+                const { [id]: _removed, ...rest } = map;
+                return rest;
+            });
+        } finally {
+            this.channelBusy.set(false);
+        }
     }
 
     async schedulePost() {
@@ -1198,16 +1385,50 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         });
     }
 
-    setLinkType(type: 'url' | 'email' | 'phone' | 'mention') {
-        this.linkType = type;
+    // "Auto" resolves to youtube when the pasted value parses as a YouTube URL, otherwise a
+    // plain link — explicit rail choices (url/email/phone/mention/youtube) always win.
+    effectiveInsertType(): 'url' | 'email' | 'phone' | 'mention' | 'youtube' {
+        if (this.insertType !== 'auto') return this.insertType;
+        return extractYouTubeId(this.insertValue) ? 'youtube' : 'url';
     }
 
-    applyLink() {
-        const value = this.linkValue.trim();
+    async openInsertModal(presetType: 'auto' | 'youtube' = 'auto') {
+        this.insertOpen.set(true);
+        this.insertType = presetType;
+        this.insertValue = '';
+        this.insertCaption = '';
+        this.insertError.set('');
+        try {
+            const text = (await navigator.clipboard.readText()).trim();
+            if (/^https?:\/\//i.test(text)) this.insertValue = text;
+        } catch {
+            // Clipboard read denied/unsupported — the user can still paste manually.
+        }
+    }
+
+    closeInsertModal() {
+        this.insertOpen.set(false);
+    }
+
+    applyInsert() {
+        const value = this.insertValue.trim();
         if (!value) return;
-        const href = this.linkType === 'email' ? `mailto:${value}`
-            : this.linkType === 'phone' ? `tel:${value}`
-            : this.linkType === 'mention' ? `tg://user?id=${value}`
+        const type = this.effectiveInsertType();
+
+        if (type === 'youtube') {
+            const videoId = extractYouTubeId(value);
+            if (!videoId) {
+                this.insertError.set('Not a recognized YouTube link');
+                return;
+            }
+            this.insertNode('youtube', { videoId, caption: this.insertCaption.trim() || null });
+            this.closeInsertModal();
+            return;
+        }
+
+        const href = type === 'email' ? `mailto:${value}`
+            : type === 'phone' ? `tel:${value}`
+            : type === 'mention' ? `tg://user?id=${value}`
             : value;
 
         if (this.editor?.state.selection.empty) {
@@ -1215,11 +1436,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         } else {
             this.cmd(c => c.setLink({ href }));
         }
-        this.linkValue = '';
+        this.closeInsertModal();
     }
 
     removeLink() {
         this.cmd(c => c.unsetLink());
+        this.closeInsertModal();
     }
 
     insertEmoji(emoji: string) {
@@ -1257,17 +1479,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (!text) return;
         this.cmd(c => c.insertContent({ type: 'footnote', attrs: { text } }));
         this.footnoteText = '';
-    }
-
-    insertYoutube() {
-        const videoId = extractYouTubeId(this.youtubeUrl);
-        if (!videoId) {
-            this.youtubeError.set('Not a recognized YouTube link');
-            return;
-        }
-        this.insertNode('youtube', { videoId });
-        this.youtubeUrl = '';
-        this.youtubeError.set('');
     }
 
     insertTable() {

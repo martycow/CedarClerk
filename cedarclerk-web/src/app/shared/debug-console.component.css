@@ -25,10 +25,15 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
+    /* Clears the editor's status bar (word/char count, sync indicator) — its right-aligned
+       content sits directly under this closed tab otherwise, since both are pinned to the
+       bottom-right corner. Matches .status-bar's height (editor.component.css). */
+    margin-bottom: 27px;
 }
 
 .debug-console.open {
     align-items: stretch;
+    margin-bottom: 0;
 }
 
 .debug-tab {

@@ -30,6 +30,15 @@
 
     --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --font-mono: ui-monospace, Menlo, Consolas, monospace;
+
+    /* "Cedar Aero" chrome materials (ADR-035, editor redesign) — applied to toolbars/popovers/
+       modals only; content sheets (the writing surface, cards) stay solid for readability. */
+    --blur: saturate(1.6) blur(14px);
+    --glass: color-mix(in srgb, var(--surface) 80%, transparent);
+    --glass-strong: color-mix(in srgb, var(--surface) 90%, transparent);
+    --glass-border: color-mix(in srgb, #ffffff 55%, var(--border));
+    --gloss-top: inset 0 1px 0 color-mix(in srgb, #ffffff 65%, transparent);
+    --glow-accent: 0 1px 10px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 :root[data-theme="dark"] {
@@ -46,6 +55,19 @@
     --danger: #E2745C;
     --ok: #82BB8C;
     --shadow: 0 1px 3px rgba(0, 0, 0, .45);
+
+    --blur: saturate(1.7) blur(20px);
+    --glass: color-mix(in srgb, var(--surface) 58%, transparent);
+    --glass-strong: color-mix(in srgb, var(--surface) 78%, transparent);
+    --glass-border: color-mix(in srgb, #ffffff 12%, var(--border));
+    --gloss-top: inset 0 1px 0 color-mix(in srgb, #ffffff 12%, transparent);
+    --glow-accent: 0 0 24px color-mix(in srgb, var(--accent) 32%, transparent);
+}
+
+html, body {
+    /* Defense-in-depth against page-level horizontal scroll on narrow/tablet widths (iPad,
+       iPhone) if any component's content ever exceeds the viewport width again. */
+    overflow-x: hidden;
 }
 
 body {

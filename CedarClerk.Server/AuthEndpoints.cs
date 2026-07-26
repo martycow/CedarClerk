@@ -11,12 +11,19 @@ public static class AuthEndpoints
 {
     public record RegisterRequest(string Email, string Password, string InviteCode);
     public record LoginRequest(string Email, string Password);
-    public record SignatureRequest(string? Signature);
+    public record SignatureRequest(string? Signature, string? SignatureUrl = null);
     public record ProfileRequest(
         string? AuthorDisplayName, string? ProfileUrl, string? ProfileLocation,
         string? HeaderSlot1Type, string? HeaderSlot2Type, string? HeaderSlot3Type,
         string? SocialTwitterUrl = null, string? SocialInstagramUrl = null, string? SocialFacebookUrl = null,
         string? SocialYoutubeUrl = null, string? SocialGithubUrl = null);
+    public record ToolbarLayoutRequest(string? LayoutJson);
+    public record AppearanceRequest(string? PrefsJson);
+    public record NewDraftDefaultsRequest(string? DefaultsJson);
+
+    // Arbitrary client-authored JSON blobs (ADR-035) — generous but bounded so a misbehaving
+    // client can't grow AspNetUsers rows unbounded.
+    private const int PreferenceJsonMaxChars = 16_000;
     
     public record TelegramLinkRequest(
         long Id,
@@ -83,6 +90,7 @@ public static class AuthEndpoints
                 telegramUsername = appUser?.TelegramUsername,
                 telegramLinkedAt = appUser?.TelegramLinkedAt,
                 postSignature = appUser?.PostSignature,
+                postSignatureUrl = appUser?.PostSignatureUrl,
                 authorDisplayName = appUser?.AuthorDisplayName,
                 profileUrl = appUser?.ProfileUrl,
                 profileLocation = appUser?.ProfileLocation,
@@ -94,10 +102,55 @@ public static class AuthEndpoints
                 socialFacebookUrl = appUser?.SocialFacebookUrl,
                 socialYoutubeUrl = appUser?.SocialYoutubeUrl,
                 socialGithubUrl = appUser?.SocialGithubUrl,
+                toolbarLayoutJson = appUser?.ToolbarLayoutJson,
+                appearancePrefsJson = appUser?.AppearancePrefsJson,
+                newDraftDefaultsJson = appUser?.NewDraftDefaultsJson,
             });
         })
         .RequireAuthorization();
-        
+
+        groupBuilder.MapPost("/toolbar-layout", async (ToolbarLayoutRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users) =>
+        {
+            if (req.LayoutJson is { Length: > PreferenceJsonMaxChars })
+                return Results.BadRequest(new { error = "Toolbar layout is too large" });
+
+            var user = await users.GetUserAsync(principal);
+            if (user is null) return Results.Unauthorized();
+
+            user.ToolbarLayoutJson = req.LayoutJson;
+            await users.UpdateAsync(user);
+            return Results.Ok(new { toolbarLayoutJson = user.ToolbarLayoutJson });
+        })
+        .RequireAuthorization();
+
+        groupBuilder.MapPost("/appearance", async (AppearanceRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users) =>
+        {
+            if (req.PrefsJson is { Length: > PreferenceJsonMaxChars })
+                return Results.BadRequest(new { error = "Appearance preferences are too large" });
+
+            var user = await users.GetUserAsync(principal);
+            if (user is null) return Results.Unauthorized();
+
+            user.AppearancePrefsJson = req.PrefsJson;
+            await users.UpdateAsync(user);
+            return Results.Ok(new { appearancePrefsJson = user.AppearancePrefsJson });
+        })
+        .RequireAuthorization();
+
+        groupBuilder.MapPost("/new-draft-defaults", async (NewDraftDefaultsRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users) =>
+        {
+            if (req.DefaultsJson is { Length: > PreferenceJsonMaxChars })
+                return Results.BadRequest(new { error = "New-draft defaults are too large" });
+
+            var user = await users.GetUserAsync(principal);
+            if (user is null) return Results.Unauthorized();
+
+            user.NewDraftDefaultsJson = req.DefaultsJson;
+            await users.UpdateAsync(user);
+            return Results.Ok(new { newDraftDefaultsJson = user.NewDraftDefaultsJson });
+        })
+        .RequireAuthorization();
+
         groupBuilder.MapPost("/signature", async (SignatureRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users) =>
         {
             var user = await users.GetUserAsync(principal);
@@ -105,17 +158,19 @@ public static class AuthEndpoints
                 return Results.Unauthorized();
 
             var currentPlan = SubscriptionPlanHelper.CheckPlanExpiration(user.PlanTier, user.PlanExpiresAt, DateTime.UtcNow);
-            
-            if (!string.IsNullOrWhiteSpace(req.Signature) && !PlanLimitations.HasCustomSignature(currentPlan))
+
+            if ((!string.IsNullOrWhiteSpace(req.Signature) || !string.IsNullOrWhiteSpace(req.SignatureUrl))
+                && !PlanLimitations.HasCustomSignature(currentPlan))
             {
                 return Results.Json(new { error = "Post signature is a Pro feature. Upgrade to use it." },
                     statusCode: StatusCodes.Status403Forbidden);
             }
 
             user.PostSignature = string.IsNullOrWhiteSpace(req.Signature) ? null : req.Signature.Trim();
+            user.PostSignatureUrl = string.IsNullOrWhiteSpace(req.SignatureUrl) ? null : req.SignatureUrl.Trim();
             await users.UpdateAsync(user);
-            
-            return Results.Ok(new { postSignature = user.PostSignature });
+
+            return Results.Ok(new { postSignature = user.PostSignature, postSignatureUrl = user.PostSignatureUrl });
         })
         .RequireAuthorization();
 

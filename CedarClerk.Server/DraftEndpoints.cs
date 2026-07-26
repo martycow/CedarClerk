@@ -46,14 +46,58 @@ public static class DraftEndpoints
         groupBuilder.MapGet("/", async (ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            return await db.Drafts.Where(d => d.OwnerId == uid)
+            var drafts = await db.Drafts.Where(d => d.OwnerId == uid)
                 .OrderByDescending(d => d.UpdatedAt)
                 .Select(d => new
                 {
                     d.Id, d.Title, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
-                    Languages = db.DraftTranslations.Where(t => t.DraftId == d.Id).Select(t => t.Language).ToList(),
+                    d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername,
+                    Translations = db.DraftTranslations.Where(t => t.DraftId == d.Id)
+                        .Select(t => new { t.Language, t.UpdatedAt }).ToList(),
                 })
                 .ToListAsync();
+
+            // Most recent Pending-or-Failed schedule per draft — a /drafts screen "Scheduled"/
+            // "Failed" badge only means something for a real, persisted ScheduledPost row (see
+            // ADR-035: an immediate export failure isn't persisted anywhere, unlike this one).
+            var draftIds = drafts.Select(d => d.Id).ToList();
+            var scheduledRows = await db.ScheduledPosts
+                .Where(s => draftIds.Contains(s.DraftId) && (s.Status == "Pending" || s.Status == "Failed"))
+                .ToListAsync();
+            var scheduled = scheduledRows
+                .GroupBy(s => s.DraftId)
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(s => s.ScheduledAtUtc).First());
+
+            return drafts.Select(d => new
+            {
+                d.Id, d.Title, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
+                d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername,
+                Languages = d.Translations.Select(t => t.Language).ToList(),
+                StaleLanguages = d.Translations.Where(t => t.UpdatedAt < d.UpdatedAt).Select(t => t.Language).ToList(),
+                Scheduled = scheduled.TryGetValue(d.Id, out var s)
+                    ? new { s.ScheduledAtUtc, s.ChatId, s.Status, s.Error }
+                    : null,
+            });
+        });
+
+        groupBuilder.MapPost("/{id:guid}/archive", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+            draft.IsArchived = true;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.IsArchived });
+        });
+
+        groupBuilder.MapPost("/{id:guid}/unarchive", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+            draft.IsArchived = false;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.IsArchived });
         });
         
         groupBuilder.MapGet("/{id:guid}", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
@@ -116,6 +160,26 @@ public static class DraftEndpoints
             return Results.Ok(new { draft.Tags });
         });
         
+        // Backs the tag "cloud" picker (ADR-035) — usage counts across every one of the owner's
+        // drafts. No separate Tag table exists; Draft.Tags is a flat comma-separated column, so
+        // this aggregates in-memory rather than adding relational tag storage for a picker list.
+        groupBuilder.MapGet("/tags", async (ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var allTags = await db.Drafts.Where(d => d.OwnerId == uid && d.Tags != "")
+                .Select(d => d.Tags)
+                .ToListAsync();
+
+            var counts = allTags
+                .SelectMany(t => t.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                .GroupBy(t => t)
+                .Select(g => new { Tag = g.Key, Count = g.Count() })
+                .OrderByDescending(g => g.Count)
+                .ToList();
+
+            return Results.Ok(counts);
+        });
+
         groupBuilder.MapGet("/{id:guid}/translations/{lang}", async (Guid id, string lang, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -407,10 +471,14 @@ public static class DraftEndpoints
 
             var blogHost = cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost;
             var body = CedarToBlogHtmlRenderer.Render(cedarJson, $"https://{blogHost}", language);
-            var owner = await db.Users.Where(u => u.Id == uid).Select(u => u.PostSignature).FirstAsync();
+            var owner = await db.Users.Where(u => u.Id == uid)
+                .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PlanTier, u.PlanExpiresAt })
+                .FirstAsync();
+            var ownerPlan = SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow);
+            var signature = PlanLimitations.ResolveSignature(ownerPlan, owner.PostSignature, owner.PostSignatureUrl);
             var publishedAt = draft.BlogPublishedAt ?? draft.CreatedAt;
 
-            var html = StaticExportHtml(title, body, language, owner, publishedAt, cedarJson);
+            var html = StaticExportHtml(title, body, language, signature, publishedAt, cedarJson);
             var fileName = SanitizeFileName(title) + ".html";
             return Results.File(System.Text.Encoding.UTF8.GetBytes(html), "text/html", fileName);
         });
@@ -626,13 +694,12 @@ public static class DraftEndpoints
     // Duplicated rather than shared (docs/DESIGN.md already notes CSS is duplicated per-component
     // in this codebase, not centralized) because this needs to be fully self-contained in one
     // file with no external <link>/fetch of any kind.
-    private static string StaticExportHtml(string title, string bodyHtml, string lang, string? signature, DateTime publishedAt, string cedarJson)
+    private static string StaticExportHtml(string title, string bodyHtml, string lang, ResolvedSignature? signature, DateTime publishedAt, string cedarJson)
     {
         var mathAssets = bodyHtml.Contains("math-tex")
             ? """<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"><script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" onload="document.querySelectorAll('.math-tex').forEach(function (el) { try { katex.render(el.textContent, el, { displayMode: el.dataset.display === 'true', throwOnError: false }); } catch (e) {} });"></script>"""
             : "";
-        var signatureBlock = string.IsNullOrWhiteSpace(signature) ? "" :
-            $"<div class=\"post-signature\">{System.Net.WebUtility.HtmlEncode(signature)}</div>";
+        var signatureBlock = BlogEndpoints.SignatureHtml(signature, "div");
         // Same rule as BlogEndpoints.RenderPostAsync: skip the separate <h1> if the document's
         // own first block is already a heading, to avoid showing the title twice.
         var titleHeading = HeadingOutline.StartsWithHeading(cedarJson)

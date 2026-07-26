@@ -39,6 +39,8 @@ Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTUR
 - `docs/DESIGN.md` — design tokens (colors/spacing/typography), component patterns
 - `docs/DECISIONS.md` — ADR log: why things were built the way they were
 - `docs/ROADMAP.md` — phase-by-phase execution status (the live plan — update it when closing items)
+- `docs/BACKLOG.md` — the only source of open, not-yet-started ideas/features/tech-debt (kept separate from ROADMAP on purpose)
+- `docs/UI-INVENTORY.md` — per-element inventory of the frontend UI (location, type, purpose, loading-state check) — update it when adding/changing a UI element
 - `docs/integrations-setup.md` — payment/translation provider setup runbook
 - `TASKS.md` — short-horizon "what's next" list
 - `CHANGELOG.md` — human-readable history by session/date

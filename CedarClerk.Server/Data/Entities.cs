@@ -40,6 +40,10 @@ public class ApplicationUser : IdentityUser
     /// </summary>
     public string? PostSignature { get; set; }
 
+    // Pro-only: makes the whole PostSignature text a clickable link — see Phase 8 Step 5,
+    // docs/ROADMAP.md. Free-tier posts never read this; they get the fixed attribution instead.
+    public string? PostSignatureUrl { get; set; }
+
     public string? StripeCustomerId { get; set; }
 
     // Header Slot System (blog-only, see docs/ROADMAP.md Phase 8 Step 4) — fixed profile values
@@ -60,6 +64,14 @@ public class ApplicationUser : IdentityUser
     public string? SocialFacebookUrl { get; set; }
     public string? SocialYoutubeUrl { get; set; }
     public string? SocialGithubUrl { get; set; }
+
+    // Editor redesign (ADR-035, docs/DECISIONS.md) — null always means "use the built-in
+    // default", so existing accounts are unaffected until they opt in. JSON blobs rather than
+    // flat columns: these are variable-length/growable preference bags, not a fixed field set
+    // (contrast the flat SocialXxxUrl columns above, which ARE a fixed set).
+    public string? ToolbarLayoutJson { get; set; }
+    public string? AppearancePrefsJson { get; set; }
+    public string? NewDraftDefaultsJson { get; set; }
 }
 
 public class Payment
@@ -124,6 +136,10 @@ public class Draft
     public string? LastTelegramChatId { get; set; }
     public int? LastTelegramMessageId { get; set; }
     public string? LastTelegramUsername { get; set; }
+
+    // /drafts screen (ADR-035, docs/DECISIONS.md) — the only new *content* flag added for the
+    // editor redesign; everything else there is a user preference, not draft state.
+    public bool IsArchived { get; set; }
 }
 
 public class DraftTranslation

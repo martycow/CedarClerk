@@ -21,6 +21,11 @@ Full story: ADR-018/019 in `docs/DECISIONS.md`, `.claude/rules/telegram-bot.md`.
 - [ ] End-to-end phone check: blog reactions/comments + the "Read on the blog →" cross-link, on a real `@testingandfun` post.
 - [ ] RSS feed — rolled into Phase 8 Step 2 (see `docs/ROADMAP.md`).
 
+## Editor redesign (24.07.2026) — built, not yet live-verified
+See ADR-035, `docs/DECISIONS.md`, for full scope (toolbar customization, Appearance settings, unified Insert modal, tag cloud, New Draft dialog, `/drafts` screen). `dotnet test`/`ng build` pass but nothing here has been exercised in a real browser yet.
+- [ ] Click through all of it in `ng serve` + `dotnet run` — toolbar preset switching, drag-and-drop between rows, accent presets, the new-draft dialog, `/drafts` filters, the unified Insert modal's clipboard auto-detect.
+- [ ] Verify a real published post (Telegram + blog) still looks right after the toolbar/Insert-modal rewiring — no renderer changed, but the client-side node-insertion paths did.
+
 ## Phase 8 (v0.8.0) — planned, not started
 See `docs/ROADMAP.md` Phase 8 for the full 8-step breakdown (blog polish/bugfixes, RSS, legal pages, Header Slot System, signature monetization, tags, comments, AI progress bar) and the backlog table for what's deliberately deferred out of it.
 

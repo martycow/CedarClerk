@@ -671,9 +671,23 @@ public static class BlogEndpoints
 
         // Atomic UPDATE (not draft.ViewCount++ + SaveChanges) so concurrent page views don't lose
         // updates to each other. Shared across RU/EN — see ADR-023, docs/DECISIONS.md.
-        var viewCount = draft.ViewCount + 1;
-        await db.Drafts.Where(d => d.Id == draft.Id)
-            .ExecuteUpdateAsync(s => s.SetProperty(d => d.ViewCount, d => d.ViewCount + 1));
+        // Gated by a short-lived per-post cookie so switching RU<->EN (a full page reload back
+        // to this same handler) doesn't count as an extra view.
+        var viewedCookieName = Consts.General.ViewedCookiePrefix + draft.Id;
+        var viewCount = draft.ViewCount;
+        if (!ctx.Request.Cookies.ContainsKey(viewedCookieName))
+        {
+            viewCount++;
+            await db.Drafts.Where(d => d.Id == draft.Id)
+                .ExecuteUpdateAsync(s => s.SetProperty(d => d.ViewCount, d => d.ViewCount + 1));
+            ctx.Response.Cookies.Append(viewedCookieName, "1", new CookieOptions
+            {
+                MaxAge = TimeSpan.FromMinutes(30),
+                HttpOnly = true,
+                IsEssential = true,
+                SameSite = SameSiteMode.Lax
+            });
+        }
 
         var availableLanguages = await db.DraftTranslations.Where(t => t.DraftId == draft.Id)
             .Select(t => t.Language)
@@ -725,17 +739,16 @@ public static class BlogEndpoints
         var owner = await db.Users.Where(u => u.Id == draft.OwnerId)
             .Select(u => new
             {
-                u.PostSignature, u.AuthorDisplayName, u.ProfileUrl, u.ProfileLocation,
+                u.PostSignature, u.PostSignatureUrl, u.AuthorDisplayName, u.ProfileUrl, u.ProfileLocation,
                 u.HeaderSlot1Type, u.HeaderSlot2Type, u.HeaderSlot3Type, u.PlanTier, u.PlanExpiresAt,
             })
             .FirstAsync();
-        var signatureBlock = string.IsNullOrWhiteSpace(owner.PostSignature) ? "" :
-            $"<span class=\"post-signature\">{System.Net.WebUtility.HtmlEncode(owner.PostSignature)}</span>";
+        var ownerPlan = SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow);
+        var signatureBlock = SignatureHtml(PlanLimitations.ResolveSignature(ownerPlan, owner.PostSignature, owner.PostSignatureUrl), "span");
 
         var headerSlotsLine = RenderHeaderSlotsLine(owner.HeaderSlot1Type, owner.HeaderSlot2Type, owner.HeaderSlot3Type,
             owner.AuthorDisplayName, owner.ProfileUrl, owner.ProfileLocation,
-            SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow),
-            draft.BlogPublishedAt, cedarJson);
+            ownerPlan, draft.BlogPublishedAt, cedarJson);
 
         var body = CedarToBlogHtmlRenderer.Render(cedarJson, $"https://{Consts.URLs.BlogHost}", lang);
         var dateLine = draft.BlogPublishedAt is { } published
@@ -794,6 +807,19 @@ public static class BlogEndpoints
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
         await ctx.Response.WriteAsync(PageShell(title, html, lang, RenderHeader(channel)));
+    }
+
+    // Wraps a resolved end-of-post signature (see PlanLimitations.ResolveSignature, Phase 8 Step 5)
+    // as an anchor when it has a Href, plain encoded text otherwise. Shared with DraftEndpoints'
+    // static HTML export — same rule, different wrapper tag (span on the live blog page, div there).
+    internal static string SignatureHtml(ResolvedSignature? sig, string tag)
+    {
+        if (sig is null)
+            return "";
+        var text = System.Net.WebUtility.HtmlEncode(sig.Text);
+        var inner = sig.Href is null ? text
+            : $"<a href=\"{System.Net.WebUtility.HtmlEncode(sig.Href)}\" target=\"_blank\" rel=\"noopener\">{text}</a>";
+        return $"<{tag} class=\"post-signature\">{inner}</{tag}>";
     }
 
     // Blog-only (see docs/ROADMAP.md Phase 8 Step 4 / ADR in docs/DECISIONS.md) — a subtitle line

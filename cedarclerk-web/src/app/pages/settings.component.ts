@@ -4,6 +4,10 @@ import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
+import { AppearanceService, ACCENT_PRESETS, AppearancePrefs } from '../core/appearance.service';
+import { ToolbarLayoutService } from '../core/toolbar-layout.service';
+import { TOOLBAR_GROUPS, ToolbarButtonId, ToolbarPreset, presetLayout } from '../core/toolbar-layout';
+import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { BillingService, BillingStatus, PlanId } from '../core/billing.service';
 import { TelegramLinkService } from '../core/telegram-link.service';
 import { ChannelsService, Channel } from '../core/channels.service';
@@ -19,18 +23,25 @@ type PayMethod = 'stripe' | 'paypal' | 'stars';
 
 @Component({
     selector: 'app-settings',
-    imports: [FormsModule, DatePipe, RouterLink, CedarLogoComponent, ArrowLeft, Check, Send, AtSign, Camera, ThumbsUp, PlaySquare, Code2],
+    imports: [FormsModule, DatePipe, RouterLink, DragDropModule, CedarLogoComponent, ArrowLeft, Check, Send, AtSign, Camera, ThumbsUp, PlaySquare, Code2],
     templateUrl: 'settings.component.html',
     styleUrls: ['settings.component.css']
 })
 export class SettingsComponent implements OnInit {
     auth = inject(AuthService);
     theme = inject(ThemeService);
+    appearance = inject(AppearanceService);
+    toolbarLayout = inject(ToolbarLayoutService);
     private billingApi = inject(BillingService);
     private telegramLink = inject(TelegramLinkService);
     private channelsApi = inject(ChannelsService);
 
+    // Mirrors Consts.Signatures.FreeAttributionText (CedarClerk.Core) — shown so Free-tier users
+    // know what's being appended in place of a custom signature.
+    readonly freeAttributionText = 'Published with Cedar Clerk';
+
     signatureText = '';
+    signatureUrlText = '';
     signatureBusy = signal(false);
     signatureSaved = signal(false);
     signatureError = signal<string | null>(null);
@@ -54,6 +65,16 @@ export class SettingsComponent implements OnInit {
     socialSaved = signal(false);
     socialError = signal<string | null>(null);
 
+    readonly accentPresets = ACCENT_PRESETS;
+    appearanceMode = signal<'light' | 'dark'>('light');
+    appearanceError = signal<string | null>(null);
+
+    readonly toolbarGroups = TOOLBAR_GROUPS;
+    readonly movableToolbarGroups = TOOLBAR_GROUPS.filter(g => g.id !== 'ai');
+    row1Groups = signal<string[]>([]);
+    row2Groups = signal<string[]>([]);
+    toolbarError = signal<string | null>(null);
+
     billing = signal<BillingStatus | null>(null);
     billingBusy = signal(false);
     billingMessage = signal<string | null>(null);
@@ -69,6 +90,7 @@ export class SettingsComponent implements OnInit {
 
     async ngOnInit() {
         this.signatureText = this.auth.postSignature() ?? '';
+        this.signatureUrlText = this.auth.postSignatureUrl() ?? '';
         this.authorDisplayNameText = this.auth.authorDisplayName() ?? '';
         this.profileUrlText = this.auth.profileUrl() ?? '';
         this.profileLocationText = this.auth.profileLocation() ?? '';
@@ -83,9 +105,24 @@ export class SettingsComponent implements OnInit {
         try { this.billing.set(await this.billingApi.status()); } catch { /* non-critical */ }
         try { this.botStatus.set(await this.telegramLink.botStatus()); } catch { /* non-critical */ }
         try { this.channels.set(await this.channelsApi.list()); } catch { /* non-critical */ }
+        this.initToolbarRows();
+    }
+
+    private initToolbarRows() {
+        const row2 = this.toolbarLayout.layout().row2Groups;
+        const ids = this.movableToolbarGroups.map(g => g.id);
+        this.row2Groups.set(ids.filter(id => row2.includes(id)));
+        this.row1Groups.set(ids.filter(id => !row2.includes(id)));
     }
 
     hasProHeaderSlot(): boolean {
+        const t = this.auth.planTier();
+        return t === 'Pro' || t === 'ProPlus' || t === 'Forever';
+    }
+
+    // Same Pro+ gate as hasProHeaderSlot() (PlanLimitations.HasCustomSignature server-side) — kept
+    // as its own method since it reads as "can this user customize their signature", not slots.
+    hasProSignature(): boolean {
         const t = this.auth.planTier();
         return t === 'Pro' || t === 'ProPlus' || t === 'Forever';
     }
@@ -103,13 +140,124 @@ export class SettingsComponent implements OnInit {
         document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
+    // Appearance (ADR-035) — applies instantly and saves in the background, no Save button
+    // (these are pure preference toggles that benefit from immediate visual feedback).
+    activeAccentHex(): string {
+        const p = this.appearance.prefs();
+        return this.appearanceMode() === 'dark' ? p.accentDark : p.accentLight;
+    }
+
+    isActivePreset(hex: string): boolean {
+        return this.activeAccentHex().toUpperCase() === hex.toUpperCase();
+    }
+
+    private async saveAppearance(patch: Partial<AppearancePrefs>) {
+        this.appearanceError.set(null);
+        try {
+            await this.appearance.save(patch);
+        } catch (e) {
+            this.appearanceError.set(httpErrorMessage(e, 'Failed to save appearance'));
+        }
+    }
+
+    pickAccentPreset(hex: string) {
+        this.saveAppearance(this.appearanceMode() === 'dark' ? { accentDark: hex } : { accentLight: hex });
+    }
+
+    setSheetWidth(value: AppearancePrefs['sheetWidth']) {
+        this.saveAppearance({ sheetWidth: value });
+    }
+
+    setTypeface(value: AppearancePrefs['typeface']) {
+        this.saveAppearance({ typeface: value });
+    }
+
+    setFontSize(px: number) {
+        this.saveAppearance({ fontSize: px });
+    }
+
+    setLineHeight(value: number) {
+        this.saveAppearance({ lineHeight: value });
+    }
+
+    toggleAppearanceFlag(key: 'showRuler' | 'showParagraphNumbers' | 'showWordCount' | 'focusModeHideToolbar' | 'sheetFlush', ev: Event) {
+        this.saveAppearance({ [key]: (ev.target as HTMLInputElement).checked });
+    }
+
+    // Toolbar customization (ADR-035) — presets set the whole layout; drag-and-drop moves whole
+    // groups between rows (not individual buttons — see core/toolbar-layout.ts for why); the
+    // checkbox catalog hides/shows individual buttons regardless of which row their group is in.
+    async pickToolbarPreset(preset: ToolbarPreset) {
+        this.toolbarError.set(null);
+        try {
+            await this.toolbarLayout.save(presetLayout(preset));
+            this.initToolbarRows();
+        } catch (e) {
+            this.toolbarError.set(httpErrorMessage(e, 'Failed to save toolbar layout'));
+        }
+    }
+
+    async dropToolbarGroup(event: CdkDragDrop<string[]>) {
+        if (event.previousContainer === event.container) {
+            moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+        } else {
+            transferArrayItem(event.previousContainer.data, event.container.data, event.previousIndex, event.currentIndex);
+        }
+        this.toolbarError.set(null);
+        try {
+            await this.toolbarLayout.save({ ...this.toolbarLayout.layout(), preset: 'custom', row2Groups: [...this.row2Groups()] });
+        } catch (e) {
+            this.toolbarError.set(httpErrorMessage(e, 'Failed to save toolbar layout'));
+        }
+    }
+
+    groupLabel(id: string): string {
+        return this.toolbarGroups.find(g => g.id === id)?.label ?? id;
+    }
+
+    groupButtonIds(group: { buttons: { id: ToolbarButtonId }[] }): ToolbarButtonId[] {
+        return group.buttons.map(b => b.id);
+    }
+
+    isButtonHidden(id: ToolbarButtonId): boolean {
+        return this.toolbarLayout.layout().hiddenButtons.includes(id);
+    }
+
+    groupVisibleCount(buttonIds: ToolbarButtonId[]): number {
+        return buttonIds.filter(id => !this.isButtonHidden(id)).length;
+    }
+
+    private async saveHiddenButtons(hiddenButtons: ToolbarButtonId[]) {
+        this.toolbarError.set(null);
+        try {
+            await this.toolbarLayout.save({ ...this.toolbarLayout.layout(), preset: 'custom', hiddenButtons });
+        } catch (e) {
+            this.toolbarError.set(httpErrorMessage(e, 'Failed to save toolbar layout'));
+        }
+    }
+
+    toggleButtonVisible(id: ToolbarButtonId, ev: Event) {
+        const checked = (ev.target as HTMLInputElement).checked;
+        const current = this.toolbarLayout.layout().hiddenButtons;
+        this.saveHiddenButtons(checked ? current.filter(b => b !== id) : [...current, id]);
+    }
+
+    toggleGroupVisible(buttonIds: ToolbarButtonId[], ev: Event) {
+        const checked = (ev.target as HTMLInputElement).checked;
+        const current = this.toolbarLayout.layout().hiddenButtons;
+        this.saveHiddenButtons(checked
+            ? current.filter(id => !buttonIds.includes(id as ToolbarButtonId))
+            : [...new Set([...current, ...buttonIds])]);
+    }
+
     async saveSignature() {
         this.signatureBusy.set(true);
         this.signatureSaved.set(false);
         this.signatureError.set(null);
         try {
-            await this.auth.saveSignature(this.signatureText);
+            await this.auth.saveSignature(this.signatureText, this.signatureUrlText);
             this.signatureText = this.auth.postSignature() ?? '';
+            this.signatureUrlText = this.auth.postSignatureUrl() ?? '';
             this.signatureSaved.set(true);
             setTimeout(() => this.signatureSaved.set(false), 2500);
         } catch (e) {

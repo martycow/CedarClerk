@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
+export interface ScheduledInfo { scheduledAtUtc: string; chatId: string; status: string; error: string | null; }
 export interface DraftMeta {
     id: string;
     title: string;
@@ -12,6 +13,11 @@ export interface DraftMeta {
     blogPublishedAt: string | null;
     languages: string[]; // translation languages that exist ("en"), primary (RU) is implicit
     tags: string; // comma-separated lowercase tags, shared across language versions
+    isArchived: boolean;
+    lastTelegramMessageId: number | null;
+    lastTelegramUsername: string | null;
+    staleLanguages: string[]; // subset of `languages` whose translation predates the last RU edit
+    scheduled: ScheduledInfo | null; // most recent Pending/Failed ScheduledPost row, if any
 }
 export interface TranslationMeta { language: string; title: string; updatedAt: string; }
 export interface TranslationFull extends TranslationMeta { cedarJson: string; sourceSnapshotJson: string | null; }
@@ -43,8 +49,20 @@ export class DraftsService {
          return firstValueFrom(this.http.delete(`/api/drafts/${id}`));
     }
 
+    archive(id: string) {
+        return firstValueFrom(this.http.post<{ isArchived: boolean }>(`/api/drafts/${id}/archive`, {}));
+    }
+
+    unarchive(id: string) {
+        return firstValueFrom(this.http.post<{ isArchived: boolean }>(`/api/drafts/${id}/unarchive`, {}));
+    }
+
     updateTags(id: string, tags: string) {
         return firstValueFrom(this.http.put<{ tags: string }>(`/api/drafts/${id}/tags`, { tags }));
+    }
+
+    listTagUsage() {
+        return firstValueFrom(this.http.get<{ tag: string; count: number }[]>('/api/drafts/tags'));
     }
 
     getTranslation(id: string, lang: string) {

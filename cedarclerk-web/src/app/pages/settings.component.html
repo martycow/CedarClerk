@@ -17,6 +17,8 @@
     <div class="settings-body">
         <nav class="anchor-chips">
             <button (click)="jump('sec-profile')">Profile</button>
+            <button (click)="jump('sec-appearance')">Appearance</button>
+            <button (click)="jump('sec-toolbar')">Toolbar</button>
             <button (click)="jump('sec-header-slots')">Header slots</button>
             <button (click)="jump('sec-social-links')">Social links</button>
             <button (click)="jump('sec-subscription')">Subscription</button>
@@ -37,11 +39,19 @@
             </div>
 
             <div class="field-group">
-                <label for="cc-sig">Post signature</label>
-                <p class="field-hint">Appended to the end of every published post (Telegram &amp; blog).</p>
-                <textarea id="cc-sig" [(ngModel)]="signatureText" rows="2" placeholder="e.g. — M.C. © 2026"></textarea>
+                <label for="cc-sig">Post signature @if (!hasProSignature()) { <span class="ai-badge">PRO</span> }</label>
+                @if (hasProSignature()) {
+                <p class="field-hint">Appended to the end of every published post (Telegram &amp; blog). Leave empty to publish with no signature at all.</p>
+                } @else {
+                <p class="field-hint">Free posts are attributed with "{{ freeAttributionText }}" — upgrade to Pro to replace it with your own (optionally a clickable link) or remove it entirely.</p>
+                }
+                <textarea id="cc-sig" [(ngModel)]="signatureText" rows="2" placeholder="e.g. — M.C. © 2026"
+                    [disabled]="!hasProSignature()" [title]="hasProSignature() ? '' : 'Upgrade to Pro to customize your signature'"></textarea>
+                @if (hasProSignature()) {
+                <input [(ngModel)]="signatureUrlText" placeholder="Optional link — makes the signature clickable, e.g. https://example.com">
+                }
                 <div class="field-actions">
-                    <button class="btn-primary" (click)="saveSignature()" [disabled]="signatureBusy()">
+                    <button class="btn-primary" (click)="saveSignature()" [disabled]="signatureBusy() || !hasProSignature()">
                         {{ signatureBusy() ? '…' : 'Save signature' }}
                     </button>
                     @if (signatureSaved()) {
@@ -54,6 +64,137 @@
             <div class="card-footer-row">
                 <span class="field-hint">Done for the day?</span>
                 <button class="btn-danger-ghost" (click)="logout()">Log out</button>
+            </div>
+        </section>
+
+        <!-- ============ APPEARANCE ============ -->
+        <section id="sec-appearance" class="settings-card">
+            <h2>Appearance</h2>
+            <p class="field-hint">Only affects your account on this device. Applies instantly — no Save button here.</p>
+
+            <div class="field-group">
+                <label>Theme — editing the <b>{{ appearanceMode() }}</b> palette</label>
+                <div class="format-toggle" style="max-width:180px">
+                    <button [class.on]="appearanceMode() === 'light'" (click)="appearanceMode.set('light')">Light</button>
+                    <button [class.on]="appearanceMode() === 'dark'" (click)="appearanceMode.set('dark')">Dark</button>
+                </div>
+            </div>
+
+            <div class="accent-presets">
+                @for (preset of accentPresets; track preset.name) {
+                <button class="accent-preset" [class.on]="isActivePreset(preset.hex)" (click)="pickAccentPreset(preset.hex)">
+                    <span class="accent-swatch" [style.background]="preset.hex"></span>
+                    {{ preset.name }}
+                </button>
+                }
+            </div>
+            <p class="field-hint">Surfaces are derived from the accent — one hue, always.</p>
+            @if (appearanceError()) { <p class="field-error">{{ appearanceError() }}</p> }
+
+            <div class="popover-divider"></div>
+
+            <div class="field-group">
+                <label>Writing sheet width</label>
+                <div class="format-toggle" style="max-width:320px">
+                    <button [class.on]="appearance.prefs().sheetWidth === 'narrow'" (click)="setSheetWidth('narrow')">Narrow</button>
+                    <button [class.on]="appearance.prefs().sheetWidth === 'normal'" (click)="setSheetWidth('normal')">Normal</button>
+                    <button [class.on]="appearance.prefs().sheetWidth === 'wide'" (click)="setSheetWidth('wide')">Wide</button>
+                    <button [class.on]="appearance.prefs().sheetWidth === 'full'" (click)="setSheetWidth('full')">Full</button>
+                </div>
+            </div>
+
+            <div class="field-group">
+                <label>Typeface <span class="field-hint" style="display:inline">— affects the sheet only, not the app chrome</span></label>
+                <div class="format-toggle" style="max-width:220px">
+                    <button [class.on]="appearance.prefs().typeface === 'system'" (click)="setTypeface('system')">System</button>
+                    <button [class.on]="appearance.prefs().typeface === 'serif'" (click)="setTypeface('serif')">Serif</button>
+                    <button [class.on]="appearance.prefs().typeface === 'mono'" (click)="setTypeface('mono')">Mono</button>
+                </div>
+            </div>
+
+            <div class="field-group">
+                <label>Text size — {{ appearance.prefs().fontSize }}px</label>
+                <input type="range" min="13" max="22" step="0.5"
+                    [value]="appearance.prefs().fontSize"
+                    (input)="setFontSize(+$any($event.target).value)">
+            </div>
+
+            <div class="field-group">
+                <label>Line height — {{ appearance.prefs().lineHeight }}</label>
+                <input type="range" min="1.2" max="2.1" step="0.05"
+                    [value]="appearance.prefs().lineHeight"
+                    (input)="setLineHeight(+$any($event.target).value)">
+            </div>
+
+            <div class="appearance-toggles">
+                <label><input type="checkbox" [checked]="appearance.prefs().showRuler" (change)="toggleAppearanceFlag('showRuler', $event)"> Show ruler above the sheet</label>
+                <label><input type="checkbox" [checked]="appearance.prefs().showParagraphNumbers" (change)="toggleAppearanceFlag('showParagraphNumbers', $event)"> Number paragraphs in the gutter</label>
+                <label><input type="checkbox" [checked]="appearance.prefs().showWordCount" (change)="toggleAppearanceFlag('showWordCount', $event)"> Word &amp; character counter in the status bar</label>
+                <label><input type="checkbox" [checked]="appearance.prefs().focusModeHideToolbar" (change)="toggleAppearanceFlag('focusModeHideToolbar', $event)"> Hide the toolbar while typing (focus mode)</label>
+                <label><input type="checkbox" [checked]="appearance.prefs().sheetFlush" (change)="toggleAppearanceFlag('sheetFlush', $event)"> Sheet without the paper card (merges with the canvas)</label>
+            </div>
+        </section>
+
+        <!-- ============ TOOLBAR ============ -->
+        <section id="sec-toolbar" class="settings-card">
+            <h2>Toolbar</h2>
+            <p class="field-hint">Drag whole groups between rows. Checkboxes control which buttons show at all — unchecked ones just leave the ribbon, nothing is deleted.</p>
+
+            <div class="field-group">
+                <label>Preset</label>
+                <div class="format-toggle" style="max-width:340px">
+                    <button [class.on]="toolbarLayout.layout().preset === 'minimal'" (click)="pickToolbarPreset('minimal')">Minimal</button>
+                    <button [class.on]="toolbarLayout.layout().preset === 'standard'" (click)="pickToolbarPreset('standard')">Standard</button>
+                    <button [class.on]="toolbarLayout.layout().preset === 'everything'" (click)="pickToolbarPreset('everything')">Everything</button>
+                    <button [class.on]="toolbarLayout.layout().preset === 'custom'" disabled>Custom</button>
+                </div>
+            </div>
+            @if (toolbarError()) { <p class="field-error">{{ toolbarError() }}</p> }
+
+            <div class="toolbar-rows-editor">
+                <div class="toolbar-row-zone">
+                    <span class="field-hint" style="display:block">Row 1 — always visible</span>
+                    <div class="toolbar-group-list" cdkDropList #row1List="cdkDropList"
+                        [cdkDropListData]="row1Groups()" [cdkDropListConnectedTo]="[row2List]"
+                        (cdkDropListDropped)="dropToolbarGroup($event)">
+                        @for (id of row1Groups(); track id) {
+                        <div class="toolbar-group-chip" cdkDrag>⠿ {{ groupLabel(id) }}</div>
+                        }
+                    </div>
+                </div>
+                <div class="toolbar-row-zone">
+                    <span class="field-hint" style="display:block">Row 2 — optional</span>
+                    <div class="toolbar-group-list" cdkDropList #row2List="cdkDropList"
+                        [cdkDropListData]="row2Groups()" [cdkDropListConnectedTo]="[row1List]"
+                        (cdkDropListDropped)="dropToolbarGroup($event)">
+                        @for (id of row2Groups(); track id) {
+                        <div class="toolbar-group-chip" cdkDrag>⠿ {{ groupLabel(id) }}</div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="popover-divider"></div>
+
+            <div class="toolbar-catalog">
+                @for (group of toolbarGroups; track group.id) {
+                <div class="catalog-group">
+                    <label class="catalog-group-head">
+                        <input type="checkbox" [checked]="groupVisibleCount(groupButtonIds(group)) > 0" (change)="toggleGroupVisible(groupButtonIds(group), $event)">
+                        {{ group.label }} <span class="catalog-count">{{ groupVisibleCount(groupButtonIds(group)) }} of {{ group.buttons.length }}</span>
+                    </label>
+                    <div class="catalog-buttons">
+                        @for (b of group.buttons; track b.id) {
+                        <label><input type="checkbox" [checked]="!isButtonHidden(b.id)" (change)="toggleButtonVisible(b.id, $event)"> {{ b.label }}</label>
+                        }
+                    </div>
+                </div>
+                }
+            </div>
+
+            <div class="card-footer-row">
+                <span class="field-hint">Based on {{ toolbarLayout.layout().preset }}</span>
+                <button class="btn-danger-ghost" (click)="pickToolbarPreset('standard')">Reset to Standard</button>
             </div>
         </section>
 

@@ -17,6 +17,7 @@ export class AuthService {
     readonly telegramUsername = signal<string | null>(null);
     readonly telegramLinkedAt = signal<string | null>(null);
     readonly postSignature = signal<string | null>(null);
+    readonly postSignatureUrl = signal<string | null>(null);
     readonly authorDisplayName = signal<string | null>(null);
     readonly profileUrl = signal<string | null>(null);
     readonly profileLocation = signal<string | null>(null);
@@ -28,6 +29,9 @@ export class AuthService {
     readonly socialFacebookUrl = signal<string | null>(null);
     readonly socialYoutubeUrl = signal<string | null>(null);
     readonly socialGithubUrl = signal<string | null>(null);
+    readonly toolbarLayoutJson = signal<string | null>(null);
+    readonly appearancePrefsJson = signal<string | null>(null);
+    readonly newDraftDefaultsJson = signal<string | null>(null);
 
     async login(email: string, password: string): Promise<boolean> {
         try {
@@ -65,11 +69,12 @@ export class AuthService {
             const me = await firstValueFrom(this.http.get<{
                 email: string; createdAt: string | null; planTier: string | null; planExpiresAt: string | null; trialUsed: boolean;
                 telegramLinked: boolean; telegramUsername: string | null; telegramLinkedAt: string | null;
-                postSignature: string | null;
+                postSignature: string | null; postSignatureUrl: string | null;
                 authorDisplayName: string | null; profileUrl: string | null; profileLocation: string | null;
                 headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
                 socialTwitterUrl: string | null; socialInstagramUrl: string | null; socialFacebookUrl: string | null;
                 socialYoutubeUrl: string | null; socialGithubUrl: string | null;
+                toolbarLayoutJson: string | null; appearancePrefsJson: string | null; newDraftDefaultsJson: string | null;
             }>('/api/auth/me'));
             this.userEmail.set(me.email);
             this.createdAt.set(me.createdAt);
@@ -80,6 +85,7 @@ export class AuthService {
             this.telegramUsername.set(me.telegramUsername);
             this.telegramLinkedAt.set(me.telegramLinkedAt);
             this.postSignature.set(me.postSignature);
+            this.postSignatureUrl.set(me.postSignatureUrl);
             this.authorDisplayName.set(me.authorDisplayName);
             this.profileUrl.set(me.profileUrl);
             this.profileLocation.set(me.profileLocation);
@@ -91,6 +97,9 @@ export class AuthService {
             this.socialFacebookUrl.set(me.socialFacebookUrl);
             this.socialYoutubeUrl.set(me.socialYoutubeUrl);
             this.socialGithubUrl.set(me.socialGithubUrl);
+            this.toolbarLayoutJson.set(me.toolbarLayoutJson);
+            this.appearancePrefsJson.set(me.appearancePrefsJson);
+            this.newDraftDefaultsJson.set(me.newDraftDefaultsJson);
         } catch {
             this.userEmail.set(null);
             this.createdAt.set(null);
@@ -101,6 +110,7 @@ export class AuthService {
             this.telegramUsername.set(null);
             this.telegramLinkedAt.set(null);
             this.postSignature.set(null);
+            this.postSignatureUrl.set(null);
             this.authorDisplayName.set(null);
             this.profileUrl.set(null);
             this.profileLocation.set(null);
@@ -112,13 +122,17 @@ export class AuthService {
             this.socialFacebookUrl.set(null);
             this.socialYoutubeUrl.set(null);
             this.socialGithubUrl.set(null);
+            this.toolbarLayoutJson.set(null);
+            this.appearancePrefsJson.set(null);
+            this.newDraftDefaultsJson.set(null);
         }
     }
 
-    async saveSignature(signature: string): Promise<void> {
-        const res = await firstValueFrom(this.http.post<{ postSignature: string | null }>(
-            '/api/auth/signature', { signature }));
+    async saveSignature(signature: string, signatureUrl: string): Promise<void> {
+        const res = await firstValueFrom(this.http.post<{ postSignature: string | null; postSignatureUrl: string | null }>(
+            '/api/auth/signature', { signature, signatureUrl }));
         this.postSignature.set(res.postSignature);
+        this.postSignatureUrl.set(res.postSignatureUrl);
     }
 
     async saveProfile(profile: {
@@ -144,6 +158,24 @@ export class AuthService {
         this.socialFacebookUrl.set(res.socialFacebookUrl);
         this.socialYoutubeUrl.set(res.socialYoutubeUrl);
         this.socialGithubUrl.set(res.socialGithubUrl);
+    }
+
+    async saveToolbarLayout(layoutJson: string | null): Promise<void> {
+        const res = await firstValueFrom(this.http.post<{ toolbarLayoutJson: string | null }>(
+            '/api/auth/toolbar-layout', { layoutJson }));
+        this.toolbarLayoutJson.set(res.toolbarLayoutJson);
+    }
+
+    async saveAppearancePrefs(prefsJson: string | null): Promise<void> {
+        const res = await firstValueFrom(this.http.post<{ appearancePrefsJson: string | null }>(
+            '/api/auth/appearance', { prefsJson }));
+        this.appearancePrefsJson.set(res.appearancePrefsJson);
+    }
+
+    async saveNewDraftDefaults(defaultsJson: string | null): Promise<void> {
+        const res = await firstValueFrom(this.http.post<{ newDraftDefaultsJson: string | null }>(
+            '/api/auth/new-draft-defaults', { defaultsJson }));
+        this.newDraftDefaultsJson.set(res.newDraftDefaultsJson);
     }
 
     async logout(): Promise<void> {

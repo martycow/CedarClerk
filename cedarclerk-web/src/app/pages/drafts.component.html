@@ -1,0 +1,127 @@
+<div class="drafts-page">
+    <header class="drafts-header">
+        <a class="icon-btn" routerLink="/editor" title="Back to editor">
+            <svg lucideArrowLeft class="icon"></svg>
+        </a>
+        <app-cedar-logo [size]="19"></app-cedar-logo>
+        <span class="brand-name">Cedar Clerk</span>
+        <span class="crumb-sep">/</span>
+        <span class="crumb-current">Drafts</span>
+        <span class="spacer"></span>
+        <button class="icon-btn" (click)="theme.toggle()" title="Toggle theme">
+            {{ theme.theme() === 'dark' ? '☀' : '☾' }}
+        </button>
+        <span class="avatar">{{ avatarInitial() }}</span>
+    </header>
+
+    <div class="drafts-body">
+        @if (loading()) {
+        <p class="hint">Loading…</p>
+        } @else {
+        <div class="drafts-toolbar">
+            <div>
+                <h1>Drafts</h1>
+                <div class="drafts-sub">{{ drafts().length }} posts</div>
+            </div>
+            <span class="spacer"></span>
+            <input class="search-input" [(ngModel)]="search" placeholder="Search title or tag">
+            <div class="view-toggle">
+                <button [class.active]="view() === 'table'" (click)="view.set('table')" title="Table">
+                    <svg lucideList class="icon-sm"></svg>
+                </button>
+                <button [class.active]="view() === 'grid'" (click)="view.set('grid')" title="Grid">
+                    <svg lucideLayoutGrid class="icon-sm"></svg>
+                </button>
+            </div>
+            <button class="btn-accent" (click)="newDraft()"><svg lucidePlus class="icon-sm"></svg> New draft</button>
+        </div>
+
+        <div class="filter-tabs">
+            <button [class.active]="filter() === 'all'" (click)="filter.set('all')">All {{ filterCount('all') }}</button>
+            <button [class.active]="filter() === 'draft'" (click)="filter.set('draft')">Drafts {{ filterCount('draft') }}</button>
+            <button [class.active]="filter() === 'scheduled'" (click)="filter.set('scheduled')">Scheduled {{ filterCount('scheduled') }}</button>
+            <button [class.active]="filter() === 'published'" (click)="filter.set('published')">Published {{ filterCount('published') }}</button>
+            <button [class.active]="filter() === 'attention'" (click)="filter.set('attention')">Needs attention {{ filterCount('attention') }}</button>
+            <button [class.active]="filter() === 'archived'" (click)="filter.set('archived')">Archived {{ filterCount('archived') }}</button>
+        </div>
+
+        @if (error()) { <p class="channel-error">{{ error() }}</p> }
+
+        @if (view() === 'table') {
+        <div class="drafts-table">
+            <div class="drafts-row drafts-row-head">
+                <span>Title</span><span>State</span><span>Languages</span><span>Tags</span><span class="right">Updated</span><span></span>
+            </div>
+            @for (d of filteredDrafts(); track d.id) {
+            <div class="drafts-row" [class.busy]="busyId() === d.id" (click)="openDraft(d.id)">
+                <div class="drafts-title-cell">
+                    <div class="drafts-title">{{ d.title || 'Untitled' }}</div>
+                </div>
+                <div>
+                    <span class="status-badge" [class.tone-danger]="status(d).tone === 'danger'" [class.tone-ok]="status(d).tone === 'ok'">
+                        {{ status(d).label }}
+                    </span>
+                    @if (status(d).detail) { <div class="status-detail">{{ status(d).detail }}</div> }
+                </div>
+                <div class="lang-badges">
+                    <span class="draft-lang-badge">RU</span>
+                    @if (d.languages.includes('en')) { <span class="draft-lang-badge">EN</span> }
+                </div>
+                <div class="tags-cell">
+                    @for (t of d.tags.split(',').slice(0, 3); track t) { @if (t) { <span class="tag-chip-ro">#{{ t }}</span> } }
+                </div>
+                <div class="right">{{ d.updatedAt | date:'d MMM, HH:mm' }}</div>
+                <div class="row-actions">
+                    <button class="mini" (click)="toggleArchive(d, $event)" [disabled]="busyId() === d.id" [title]="d.isArchived ? 'Unarchive' : 'Archive'">
+                        @if (busyId() === d.id) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+                        @else if (d.isArchived) { <svg lucideArchiveRestore class="icon-sm"></svg> }
+                        @else { <svg lucideArchive class="icon-sm"></svg> }
+                    </button>
+                    <button class="mini-remove" (click)="askDelete(d, $event)" [disabled]="busyId() === d.id" title="Delete">
+                        <svg lucideTrash2 class="icon-sm"></svg>
+                    </button>
+                </div>
+            </div>
+            } @empty {
+            <p class="hint">Nothing here.</p>
+            }
+        </div>
+        } @else {
+        <div class="drafts-grid">
+            @for (d of filteredDrafts(); track d.id) {
+            <div class="draft-card" [class.busy]="busyId() === d.id" (click)="openDraft(d.id)">
+                <div class="drafts-title">{{ d.title || 'Untitled' }}</div>
+                <span class="status-badge" [class.tone-danger]="status(d).tone === 'danger'" [class.tone-ok]="status(d).tone === 'ok'">
+                    {{ status(d).label }}
+                </span>
+                @if (status(d).detail) { <div class="status-detail">{{ status(d).detail }}</div> }
+                <div class="drafts-card-foot">
+                    <span>{{ d.updatedAt | date:'d MMM, HH:mm' }}</span>
+                    <span class="row-actions">
+                        <button class="mini" (click)="toggleArchive(d, $event)" [disabled]="busyId() === d.id" [title]="d.isArchived ? 'Unarchive' : 'Archive'">
+                            @if (d.isArchived) { <svg lucideArchiveRestore class="icon-sm"></svg> } @else { <svg lucideArchive class="icon-sm"></svg> }
+                        </button>
+                        <button class="mini-remove" (click)="askDelete(d, $event)" [disabled]="busyId() === d.id" title="Delete">
+                            <svg lucideTrash2 class="icon-sm"></svg>
+                        </button>
+                    </span>
+                </div>
+            </div>
+            } @empty {
+            <p class="hint">Nothing here.</p>
+            }
+        </div>
+        }
+        }
+    </div>
+
+    @if (deleteConfirmId()) {
+    <app-modal (closed)="cancelDelete()">
+        <svg modal-icon lucideTrash2 class="icon"></svg>
+        <span modal-title>Delete this draft?</span>
+        <p>This cannot be undone.</p>
+        <button modal-actions class="btn-ghost" (click)="cancelDelete()">Cancel</button>
+        <button modal-actions class="btn-accent" (click)="confirmDelete()">Delete</button>
+    </app-modal>
+    }
+</div>

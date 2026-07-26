@@ -90,21 +90,22 @@ public static class PostEndpoints
             return new PublishResult(null, "Draft is empty");
 
         var owner = await db.Users.Where(u => u.Id == ownerId)
-            .Select(u => new { u.PostSignature, u.PlanTier, u.PlanExpiresAt })
+            .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PlanTier, u.PlanExpiresAt })
             .FirstAsync();
 
-        // Adding Signature (Custom of Default)
+        // Free tier always gets the fixed Cedar Clerk attribution; Pro+ can replace it with a
+        // custom signature (optionally a clickable link) or clear it entirely. See Phase 8 Step 5,
+        // docs/ROADMAP.md, and ADR-034 in docs/DECISIONS.md.
         var currentPlan = SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow);
-        var signature = PlanLimitations.HasCustomSignature(currentPlan)
-            ? owner.PostSignature
-            : null;
-
-        if (!string.IsNullOrWhiteSpace(signature))
+        var resolvedSignature = PlanLimitations.ResolveSignature(currentPlan, owner.PostSignature, owner.PostSignatureUrl);
+        if (resolvedSignature is { } sig)
         {
-            blocks.AddRange(signature.Split('\n')
+            blocks.AddRange(sig.Text.Split('\n')
                 .Select(l => l.Trim())
                 .Where(l => l.Length > 0)
-                .Select(l => (CedarRichBlock)new RichParagraphBlock(new RichRunText(l))));
+                .Select(l => (CedarRichBlock)new RichParagraphBlock(sig.Href is null
+                    ? new RichRunText(l)
+                    : new RichRunLink(new RichRunText(l), sig.Href))));
         }
 
         // Adding Cross-link to Blog site in the end of Telegram post
