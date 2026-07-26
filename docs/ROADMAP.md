@@ -158,7 +158,7 @@ Executing `_Documents_/CedarClerk/Brainstorm_Features.md` (27 items, Marty's own
 - [x] B14 — Re-translate is now always offered on the EN tab (the stale dot clears itself, which used to leave delete as the only action) and gets the same progress bar + cancel as first-time auto-translate (26.07.2026)
 - [ ] B23 — `/drafts` gains view/reaction counts with a since-last-session delta
 - [ ] B26 — UI language picker (RU/EN), laid out to survive long-word languages
-- [ ] B3 — Registration form for private posts, with an optional questionnaire
+- [x] B3 — Registration form for private posts (26.07.2026, ADR-042) — per-post configurable form (name/nickname/email/social + custom text/choice questions), shown instead of the 404 when configured, grants access on submit, first rate limit on the public blog. Owner configures it and reads submissions in the Export modal. **Not yet live-verified in a browser**
 
 **Medium**
 - [ ] B4 — Export channel selector: no free-text entry, icons

@@ -2,6 +2,18 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-07-26, Phase 9 (brainstorm sweep)
+Imported `_Documents_/CedarClerk/Brainstorm_Features.md` (27 items with Marty's own priorities) into `docs/BACKLOG.md` and opened Phase 9 in `docs/ROADMAP.md`, executing High → Medium → Low with one commit per item.
+
+High items done so far:
+- **B22 topbar layout** — brand/divider/drafts/title/save-state left, Export + theme + profile right; stats/comments moved into the account popover. Reversed part of the same day's earlier topbar work (`.cedar` download went back into Export, import onto `/drafts`) — B22 was the newer instruction.
+- **B21** — channels menu moved out of the topbar into the top of the Export window.
+- **B5 Export redesign** — a checkbox per destination gating its settings, one Publish button firing every ticked destination in sequence, file list now shows count + total size.
+- **B24** — `/drafts` table scrolls horizontally again; `overflow:hidden` (there only to clip rounded corners) had been cutting the fixed-width column grid off on iPad.
+- **B25** — draft state strip above the language tabs: private/public, LIVE, links to the live blog/Telegram post.
+- **B14 auto-translate fix** — root cause was that Re-translate only rendered while `enStale()` was true, and that flag clears itself as soon as the EN version is touched, leaving delete as the only action. It's now always offered, with the same progress bar + cancel as first-time auto-translate.
+- **B3 registration form for private posts** (ADR-042) — biggest item so far. An uninvited visitor of a private post now gets a per-post configurable form (name/nickname/email/social + custom text/choice questions) instead of a 404, and is let in on submit. **This deliberately supersedes part of ADR-041**: a private post with a form is "locked", not "hidden". With no form configured the original indistinguishable-from-404 behaviour is unchanged. Parsing and rendering live in Core (unit-tested, and the tests assert escaping of author-authored labels — the one new injection surface); submissions land in a new `PostRegistration` table; the public endpoint carries the first rate limit in the blog endpoints (3 per visitor per post per 24h). Owner configures the form and reads submissions in the Export modal.
+
 ## 2026-07-26, drafts UI restructure (uncommitted)
 Five requests from Marty after using the deployed private-posts work:
 - **New Draft dialog** gained a "Private post" checkbox and a target-folder pill row. Both are applied as follow-up calls right after creation (the create endpoint takes neither) and deliberately **not** saved into `newDraftDefaultsJson` alongside languages/tags/template — they're per-draft intent, not a preference to repeat every time. The folder picker is a pill row rather than the editor's folder popover, because a nested `app-popover` inside `app-modal` fights the modal's own fixed positioning.
@@ -9,6 +21,8 @@ Five requests from Marty after using the deployed private-posts work:
 - **The editor's drafts popover is gone.** The hamburger button now links straight to `/drafts`. Removed with it: the in-topbar draft switcher, its per-draft delete (and the delete-confirm modal it was the only trigger for — `/drafts` has its own), plus the now-orphaned `.drafts-popover`/`.draft-item`/`.draft-info`/`.hint` CSS.
 - **`.cedar` import/export moved into the topbar** as icon buttons. Import errors had nowhere to render once the popover was gone, so they now surface as a dismissible toast reusing the existing `.ai-toast` placement. The download button is hidden below 768px — the topbar mobile-overflow fix from 25.07.2026 leaves no room, and the same action already exists in the Export modal, which is reachable on mobile.
 - **Markdown (`.zip`) import moved to `/drafts`** — it lived *only* in the removed popover, so leaving it there would have made the feature unreachable. `/drafts` had no import UI at all before this.
+- **`/drafts` is now the landing screen**: login and the `''`/`**` route fallbacks all point at it instead of `/editor`, and its back-to-editor button is gone (nothing to go back to). **Registration still lands on `/editor`** — a brand-new account has no drafts to choose between, and the editor auto-creates the first one, so bouncing through an empty list would just add a click.
+- **Debug console hidden on public routes** — it was mounted unconditionally in the root shell, so it floated over the login/register forms. Now gated behind `App.showDebugConsole()`, which tracks `NavigationEnd` against a `PUBLIC_ROUTES` list. Scoped to all four no-account-required routes (`/login`, `/register`, `/terms`, `/privacy`) rather than just the two Marty named — the console reports the signed-in owner's own API traffic, so it's equally meaningless on the legal pages.
 
 ## 2026-07-26, deploy follow-ups (uncommitted)
 - Deployed the Folders/notifications/private-posts work to production (both migrations applied cleanly, health + blog + RSS all 200). Marty confirmed everything works **except email delivery**.
