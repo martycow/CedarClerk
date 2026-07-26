@@ -150,12 +150,12 @@ Step order below follows implementation dependencies, not the lettered order (A�
 Executing `_Documents_/CedarClerk/Brainstorm_Features.md` (27 items, Marty's own priorities) in **High → Medium → Low** order. Full item text lives in `docs/BACKLOG.md` under "Brainstorm 26.07.2026"; this is the status checklist. One commit per item, short messages.
 
 **High**
-- [ ] B22 — Topbar layout: logo/divider/drafts/title/save-state on the left, Export + theme + profile on the right; `.cedar` download → Export, import → drafts page; stats/comments regroup next to settings. **Partially reverses the topbar work done earlier on 26.07.2026** — B22 is the newer instruction and wins
-- [ ] B21 — Channels menu moves into the top of the Export window
-- [ ] B5 — Export window redesign: per-destination checkboxes with unfolding settings, files/statistics section, a single Publish button for every enabled destination
-- [ ] B24 — `/drafts` table can't scroll horizontally on iPad
-- [ ] B25 — Draft state indicators in the workspace (private/published, LIVE + post links)
-- [ ] B14 — Auto-translate: real re-translate button + matching progress indicator; stale badge currently clears itself
+- [x] B22 — Topbar layout (26.07.2026) — brand/divider/drafts/title/save-state left, Export + theme + profile right; `.cedar` download back into Export, import onto `/drafts`; stats/comments moved into the account popover next to Settings. Reversed part of the same-day topbar work, as expected
+- [x] B21 — Channels menu moved into the top of the Export window (26.07.2026), outside the `currentId()` guard since connecting a channel isn't draft-specific
+- [x] B5 — Export window redesign (26.07.2026): a checkbox per destination gating its settings, one Publish button firing every ticked destination in sequence, file list now shows count + total size
+- [x] B24 — `/drafts` table scrolls horizontally (26.07.2026) — `overflow:hidden` (there only to clip rounded corners) was cutting off the fixed-width column grid with no way to reach it
+- [x] B25 — Draft state strip above the language tabs (26.07.2026): private/public, LIVE, and links to the live blog/Telegram post
+- [x] B14 — Re-translate is now always offered on the EN tab (the stale dot clears itself, which used to leave delete as the only action) and gets the same progress bar + cancel as first-time auto-translate (26.07.2026)
 - [ ] B23 — `/drafts` gains view/reaction counts with a since-last-session delta
 - [ ] B26 — UI language picker (RU/EN), laid out to survive long-word languages
 - [ ] B3 — Registration form for private posts, with an optional questionnaire
