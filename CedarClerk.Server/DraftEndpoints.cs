@@ -20,6 +20,7 @@ public static class DraftEndpoints
     public record UpdateFolderRequest(Guid? FolderId);
     public record UpdatePrivateRequest(bool IsPrivate);
     public record AddInviteRequest(string Email);
+    public record UpdateRegistrationFormRequest(string? FormJson);
 
     private const int InviteEmailMaxLength = 254;
 
@@ -218,6 +219,36 @@ public static class DraftEndpoints
             draft.IsPrivate = req.IsPrivate;
             await db.SaveChangesAsync();
             return Results.Ok(new { draft.IsPrivate });
+        });
+
+        // Registration form (B3) — shown to uninvited visitors of a private post. Length-checked
+        // only; the client owns the JSON shape, same treatment as the preference blobs in
+        // AuthEndpoints. Null clears the form (back to the plain 404 for uninvited visitors).
+        groupBuilder.MapPost("/{id:guid}/registration-form", async (Guid id, UpdateRegistrationFormRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            if (req.FormJson is { Length: > Consts.RegistrationForm.FormJsonMaxChars })
+                return Results.BadRequest(new { error = "Registration form is too large" });
+
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            draft.RegistrationFormJson = string.IsNullOrWhiteSpace(req.FormJson) ? null : req.FormJson;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.RegistrationFormJson });
+        });
+
+        groupBuilder.MapGet("/{id:guid}/registrations", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var owns = await db.Drafts.AnyAsync(d => d.Id == id && d.OwnerId == uid);
+            if (!owns) return Results.NotFound();
+
+            var rows = await db.PostRegistrations.Where(r => r.DraftId == id)
+                .OrderByDescending(r => r.CreatedAt)
+                .Select(r => new { r.Id, r.Name, r.Nickname, r.Email, r.SocialLink, r.AnswersJson, r.CreatedAt })
+                .ToListAsync();
+            return Results.Ok(rows);
         });
 
         groupBuilder.MapGet("/{id:guid}/invites", async (Guid id, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg) =>

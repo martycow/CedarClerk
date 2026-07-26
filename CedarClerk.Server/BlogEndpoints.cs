@@ -28,6 +28,7 @@ public static class BlogEndpoints
 
     private record ReactRequest(string? AnnotationId, string Kind);
     private record CommentRequest(string? AnnotationId, string? AuthorName, string Text, Guid? ParentCommentId = null);
+    private record RegistrationRequest(string? Name, string? Nickname, string? Email, string? SocialLink, Dictionary<string, string>? Answers);
     private record BlogChannelInfo(string Title, string? Username, int? MemberCount);
 
     public static void MapBlogEndpoints(this WebApplication app)
@@ -226,6 +227,8 @@ public static class BlogEndpoints
                 await PostReactionAsync(ctx, db, slug);
             else if (action == "comments" && ctx.Request.Method == HttpMethods.Post)
                 await PostCommentAsync(ctx, db, slug);
+            else if (action == "register" && ctx.Request.Method == HttpMethods.Post)
+                await PostRegistrationAsync(ctx, db, slug);
             else
                 ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
@@ -392,6 +395,120 @@ public static class BlogEndpoints
 
         ctx.Response.ContentType = "application/json";
         await JsonSerializer.SerializeAsync(ctx.Response.Body, new { counts, myVote }, JsonOpts);
+    }
+
+    // Registration-form submission on a private post (B3). Grants access immediately by setting
+    // the same cookie a valid invite token sets — the form collects an audience, it isn't a
+    // verification step (nothing confirms the email). See the ADR following ADR-041.
+    private static async Task PostRegistrationAsync(HttpContext ctx, CedarDbContext db, string slug)
+    {
+        var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.IsBlogPublished);
+        // Only private posts that actually have a form configured accept submissions.
+        if (draft is null || !draft.IsPrivate || RegistrationFormDefinition.Parse(draft.RegistrationFormJson) is not { } form)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        RegistrationRequest? req;
+        try
+        {
+            req = await JsonSerializer.DeserializeAsync<RegistrationRequest>(ctx.Request.Body, JsonOpts);
+        }
+        catch (JsonException)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            return;
+        }
+        if (req is null)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            return;
+        }
+
+        var visitor = VisitorHash(ctx);
+        var since = DateTime.UtcNow - Consts.RegistrationForm.SubmissionWindow;
+        var recent = await db.PostRegistrations
+            .CountAsync(r => r.DraftId == draft.Id && r.VisitorHash == visitor && r.CreatedAt >= since);
+        if (recent >= Consts.RegistrationForm.MaxSubmissionsPerVisitor)
+        {
+            await WriteJsonErrorAsync(ctx, StatusCodes.Status429TooManyRequests, "Too many submissions — try again later.");
+            return;
+        }
+
+        var name = Trim(req.Name);
+        var nickname = Trim(req.Nickname);
+        var email = Trim(req.Email);
+        var social = Trim(req.SocialLink);
+
+        // Mirror whatever the owner marked required — the client enforces it too, but a form
+        // POST is trivially replayable outside the browser.
+        if ((form.RequireName && name is null) || (form.RequireNickname && nickname is null)
+            || (form.RequireEmail && email is null) || (form.RequireSocial && social is null))
+        {
+            await WriteJsonErrorAsync(ctx, StatusCodes.Status400BadRequest, "Please fill in every required field.");
+            return;
+        }
+        if (form.RequireEmail && email is not null && !email.Contains('@'))
+        {
+            await WriteJsonErrorAsync(ctx, StatusCodes.Status400BadRequest, "Enter a valid email address.");
+            return;
+        }
+
+        var answers = req.Answers is { Count: > 0 }
+            ? JsonSerializer.Serialize(req.Answers, JsonOpts)
+            : null;
+        if (answers is { Length: > Consts.RegistrationForm.AnswersJsonMaxChars })
+        {
+            await WriteJsonErrorAsync(ctx, StatusCodes.Status400BadRequest, "Answers are too long.");
+            return;
+        }
+        foreach (var q in form.Questions.Where(q => q.Required))
+        {
+            if (req.Answers is null || !req.Answers.TryGetValue(q.Id, out var a) || string.IsNullOrWhiteSpace(a))
+            {
+                await WriteJsonErrorAsync(ctx, StatusCodes.Status400BadRequest, "Please answer every required question.");
+                return;
+            }
+        }
+
+        db.PostRegistrations.Add(new PostRegistration
+        {
+            DraftId = draft.Id,
+            Name = name,
+            Nickname = nickname,
+            Email = email,
+            SocialLink = social,
+            AnswersJson = answers,
+            VisitorHash = visitor,
+        });
+        await db.SaveChangesAsync();
+
+        ctx.Response.Cookies.Append(Consts.General.PrivateAccessCookiePrefix + draft.Id, "1", new CookieOptions
+        {
+            MaxAge = TimeSpan.FromDays(90),
+            HttpOnly = true,
+            IsEssential = true,
+            SameSite = SameSiteMode.Lax
+        });
+
+        ctx.Response.StatusCode = StatusCodes.Status201Created;
+        ctx.Response.ContentType = "application/json";
+        await JsonSerializer.SerializeAsync(ctx.Response.Body, new { ok = true }, JsonOpts);
+    }
+
+    private static string? Trim(string? s)
+    {
+        var t = s?.Trim();
+        if (string.IsNullOrEmpty(t)) return null;
+        return t.Length > Consts.RegistrationForm.FieldMaxLength ? t[..Consts.RegistrationForm.FieldMaxLength] : t;
+    }
+
+    private static async Task WriteJsonErrorAsync(HttpContext ctx, int status, string message)
+    {
+        ctx.Response.StatusCode = status;
+        ctx.Response.ContentType = "application/json";
+        await JsonSerializer.SerializeAsync(ctx.Response.Body, new { error = message }, JsonOpts);
     }
 
     private static async Task PostCommentAsync(HttpContext ctx, CedarDbContext db, string slug)
