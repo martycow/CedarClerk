@@ -10,7 +10,10 @@ import { EditorState, TextSelection } from '@tiptap/pm/state';
 import { Node as PMNode, Slice } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import { AuthService } from '../core/auth.service';
-import { DraftsService, DraftMeta, TranslationMeta, AiEditKind, PostInvite } from '../core/drafts.service';
+import {
+    DraftsService, DraftMeta, TranslationMeta, AiEditKind, PostInvite,
+    RegistrationForm, RegistrationQuestion, PostRegistration, parseRegistrationForm,
+} from '../core/drafts.service';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, PostLanguage, CompressionLevel, ScheduledPost } from '../core/posts.service';
 import { ChannelsService, Channel, ChannelStats, KnownChat } from '../core/channels.service';
@@ -294,6 +297,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     inviteEmailInput = '';
     inviteBusy = signal(false);
     inviteError = signal<string | null>(null);
+
+    // Registration form (B3) — null means uninvited visitors keep getting the plain 404.
+    regForm = signal<RegistrationForm | null>(null);
+    regBusy = signal(false);
+    registrations = signal<PostRegistration[]>([]);
+    registrationsOpen = signal(false);
 
     zoom = signal(100);
 
@@ -964,6 +973,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.currentFolderId.set(draft.folderId);
             this.isPrivate.set(draft.isPrivate);
             this.invites.set([]);
+            this.regForm.set(parseRegistrationForm(draft.registrationFormJson));
+            this.registrations.set([]);
+            this.registrationsOpen.set(false);
             this.editor?.setEditable(true);
             this.editor?.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC), { emitUpdate: false });
             this.resetHistory();
@@ -1035,6 +1047,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.currentFolderId.set(folderId);
             this.isPrivate.set(isPrivate);
             this.invites.set([]);
+            this.regForm.set(null);
+            this.registrations.set([]);
+            this.registrationsOpen.set(false);
             this.editor?.setEditable(true);
             this.editor?.commands.setContent(JSON.parse(cedarJson), { emitUpdate: false });
             this.resetHistory();
@@ -1246,6 +1261,103 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.inviteError.set('Failed to resend invite');
         } finally {
             this.inviteBusy.set(false);
+        }
+    }
+
+    // Registration form (B3). The whole definition is persisted as one JSON blob on every edit —
+    // it's small and always fully in hand, so incremental patching would only add moving parts.
+    private async persistRegForm() {
+        const id = this.currentId();
+        if (!id) return;
+        this.regBusy.set(true);
+        try {
+            const form = this.regForm();
+            await this.draftsApi.setRegistrationForm(id, form ? JSON.stringify(form) : null);
+        } catch (e) {
+            this.inviteError.set(httpErrorMessage(e, 'Failed to save the registration form'));
+        } finally {
+            this.regBusy.set(false);
+        }
+    }
+
+    async toggleRegForm() {
+        this.regForm.set(this.regForm()
+            ? null
+            : { requireName: true, requireNickname: false, requireEmail: true, requireSocial: false, questions: [] });
+        await this.persistRegForm();
+    }
+
+    async toggleRegField(field: 'requireName' | 'requireNickname' | 'requireEmail' | 'requireSocial') {
+        const form = this.regForm();
+        if (!form) return;
+        this.regForm.set({ ...form, [field]: !form[field] });
+        await this.persistRegForm();
+    }
+
+    async setRegIntro(intro: string) {
+        const form = this.regForm();
+        if (!form) return;
+        this.regForm.set({ ...form, intro: intro.trim() || undefined });
+        await this.persistRegForm();
+    }
+
+    async addRegQuestion() {
+        const form = this.regForm();
+        if (!form) return;
+        const q: RegistrationQuestion = { id: `q${Date.now()}`, label: '', type: 'text', required: false };
+        this.regForm.set({ ...form, questions: [...form.questions, q] });
+        // Not persisted yet — an unlabelled question is dropped by the parser anyway; it saves
+        // once the label is typed (updateRegQuestion below).
+    }
+
+    async updateRegQuestion(id: string, patch: Partial<RegistrationQuestion>) {
+        const form = this.regForm();
+        if (!form) return;
+        this.regForm.set({ ...form, questions: form.questions.map(q => q.id === id ? { ...q, ...patch } : q) });
+        await this.persistRegForm();
+    }
+
+    async removeRegQuestion(id: string) {
+        const form = this.regForm();
+        if (!form) return;
+        this.regForm.set({ ...form, questions: form.questions.filter(q => q.id !== id) });
+        await this.persistRegForm();
+    }
+
+    setRegQuestionOptions(id: string, raw: string) {
+        this.updateRegQuestion(id, { options: raw.split(',').map(o => o.trim()).filter(o => o.length > 0) });
+    }
+
+    regQuestionOptionsText(q: RegistrationQuestion): string {
+        return (q.options ?? []).join(', ');
+    }
+
+    async toggleRegistrationsList() {
+        const id = this.currentId();
+        if (!id) return;
+        const opening = !this.registrationsOpen();
+        this.registrationsOpen.set(opening);
+        if (!opening) return;
+        try {
+            this.registrations.set(await this.draftsApi.listRegistrations(id));
+        } catch {
+            this.registrations.set([]);
+        }
+    }
+
+    // Answers are stored as a JSON map keyed by question id; show them against the current
+    // question labels, falling back to the raw id for questions since deleted.
+    registrationAnswers(r: PostRegistration): { label: string; value: string }[] {
+        if (!r.answersJson) return [];
+        try {
+            const map = JSON.parse(r.answersJson) as Record<string, string>;
+            const questions = this.regForm()?.questions ?? [];
+            return Object.entries(map).map(([key, value]) => ({
+                label: questions.find(q => q.id === key)?.label || key,
+                value,
+            }));
+        } catch {
+            return [];
         }
     }
 

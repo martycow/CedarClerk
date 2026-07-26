@@ -30,11 +30,44 @@ export interface DraftMeta {
 }
 export interface TranslationMeta { language: string; title: string; updatedAt: string; }
 export interface TranslationFull extends TranslationMeta { cedarJson: string; sourceSnapshotJson: string | null; }
-export interface DraftFull extends DraftMeta { cedarJson: string; translations: TranslationMeta[]; }
+export interface DraftFull extends DraftMeta { cedarJson: string; translations: TranslationMeta[]; registrationFormJson: string | null; }
 export type AiEditKind = 'fix-errors' | 'schizo';
 export interface AiEditResult { title: string; cedarJson: string; updatedAt: string; }
 export interface FolderMeta { id: string; name: string; count: number; }
 export interface PostInvite { id: string; email: string; createdAt: string; url: string; }
+
+// Registration form shown to uninvited visitors of a private post (B3). The JSON shape is
+// owned by the client — the server only length-checks the blob.
+export type RegistrationQuestionType = 'text' | 'choice';
+export interface RegistrationQuestion { id: string; label: string; type: RegistrationQuestionType; options?: string[]; required?: boolean; }
+export interface RegistrationForm {
+    intro?: string;
+    requireName: boolean; requireNickname: boolean; requireEmail: boolean; requireSocial: boolean;
+    questions: RegistrationQuestion[];
+}
+export interface PostRegistration {
+    id: string; name: string | null; nickname: string | null; email: string | null;
+    socialLink: string | null; answersJson: string | null; createdAt: string;
+}
+
+// A corrupt/hand-edited blob must not break the editor — mirrors the server-side parser's
+// "degrade, never throw" behaviour (CedarClerk.Core/RegistrationFormDefinition.cs).
+export function parseRegistrationForm(json: string | null | undefined): RegistrationForm | null {
+    if (!json) return null;
+    try {
+        const raw = JSON.parse(json) as Partial<RegistrationForm>;
+        return {
+            intro: raw.intro,
+            requireName: !!raw.requireName,
+            requireNickname: !!raw.requireNickname,
+            requireEmail: !!raw.requireEmail,
+            requireSocial: !!raw.requireSocial,
+            questions: Array.isArray(raw.questions) ? raw.questions : [],
+        };
+    } catch {
+        return { requireName: true, requireNickname: false, requireEmail: true, requireSocial: false, questions: [] };
+    }
+}
 
 @Injectable({ providedIn: 'root' })
 export class DraftsService {
@@ -82,6 +115,15 @@ export class DraftsService {
 
     setDraftPrivate(id: string, isPrivate: boolean) {
         return firstValueFrom(this.http.post<{ isPrivate: boolean }>(`/api/drafts/${id}/private`, { isPrivate }));
+    }
+
+    setRegistrationForm(id: string, formJson: string | null) {
+        return firstValueFrom(this.http.post<{ registrationFormJson: string | null }>(
+            `/api/drafts/${id}/registration-form`, { formJson }));
+    }
+
+    listRegistrations(id: string) {
+        return firstValueFrom(this.http.get<PostRegistration[]>(`/api/drafts/${id}/registrations`));
     }
 
     listInvites(id: string) {

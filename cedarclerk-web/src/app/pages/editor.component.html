@@ -220,6 +220,75 @@
                     }
                     @if (inviteError()) { <p class="channel-error">{{ inviteError() }}</p> }
                 </div>
+
+                <!--Registration form (B3): without one, uninvited visitors get a plain 404;
+                with one, they get this form and are let in as soon as they fill it.-->
+                <label class="field-hint" style="margin-top:10px">
+                    <input type="checkbox" [checked]="!!regForm()" (change)="toggleRegForm()" [disabled]="regBusy()">
+                    Show a registration form to uninvited visitors
+                </label>
+                @if (regForm(); as form) {
+                <div class="invite-list">
+                    <input class="chat-input" [value]="form.intro ?? ''" (change)="setRegIntro($any($event.target).value)"
+                        placeholder="Intro text shown above the form (optional)" maxlength="500">
+                    <div class="reg-field-flags">
+                        <label class="field-hint"><input type="checkbox" [checked]="form.requireName" (change)="toggleRegField('requireName')"> Name</label>
+                        <label class="field-hint"><input type="checkbox" [checked]="form.requireNickname" (change)="toggleRegField('requireNickname')"> Nickname</label>
+                        <label class="field-hint"><input type="checkbox" [checked]="form.requireEmail" (change)="toggleRegField('requireEmail')"> Email</label>
+                        <label class="field-hint"><input type="checkbox" [checked]="form.requireSocial" (change)="toggleRegField('requireSocial')"> Social link</label>
+                    </div>
+
+                    @for (q of form.questions; track q.id) {
+                    <div class="reg-question-row">
+                        <input class="chat-input" [value]="q.label" (change)="updateRegQuestion(q.id, { label: $any($event.target).value })"
+                            placeholder="Question" maxlength="200">
+                        <div class="format-toggle">
+                            <button [class.on]="q.type === 'text'" (click)="updateRegQuestion(q.id, { type: 'text' })">Text</button>
+                            <button [class.on]="q.type === 'choice'" (click)="updateRegQuestion(q.id, { type: 'choice' })">Choice</button>
+                        </div>
+                        @if (q.type === 'choice') {
+                        <input class="chat-input" [value]="regQuestionOptionsText(q)" (change)="setRegQuestionOptions(q.id, $any($event.target).value)"
+                            placeholder="Options, comma separated" maxlength="500">
+                        }
+                        <label class="field-hint">
+                            <input type="checkbox" [checked]="!!q.required" (change)="updateRegQuestion(q.id, { required: !q.required })"> Required
+                        </label>
+                        <button class="mini-remove" (click)="removeRegQuestion(q.id)" title="Remove question">
+                            <svg lucideX class="icon-sm"></svg>
+                        </button>
+                    </div>
+                    }
+                    <button class="export-btn" (click)="addRegQuestion()">
+                        <svg lucidePlus class="icon-sm"></svg> Add question
+                    </button>
+
+                    <button class="export-btn" (click)="toggleRegistrationsList()">
+                        {{ registrationsOpen() ? 'Hide submissions' : 'Show submissions' }}
+                    </button>
+                    @if (registrationsOpen()) {
+                        @if (!registrations().length) {
+                        <p class="field-hint-inline">Nobody has registered yet.</p>
+                        } @else {
+                            @for (r of registrations(); track r.id) {
+                            <div class="registration-row">
+                                <div class="registration-head">
+                                    <span class="invite-email">{{ r.name || r.nickname || r.email || 'Anonymous' }}</span>
+                                    <span class="field-hint-inline">{{ r.createdAt | date:'d MMM, HH:mm' }}</span>
+                                </div>
+                                <div class="field-hint-inline">
+                                    @if (r.email) { {{ r.email }} }
+                                    @if (r.nickname) { · {{ r.nickname }} }
+                                    @if (r.socialLink) { · {{ r.socialLink }} }
+                                </div>
+                                @for (a of registrationAnswers(r); track a.label) {
+                                <div class="field-hint-inline">{{ a.label }}: {{ a.value }}</div>
+                                }
+                            </div>
+                            }
+                        }
+                    }
+                </div>
+                }
                 }
             </div>
 

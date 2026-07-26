@@ -229,6 +229,45 @@
     align-items: center;
 }
 
+/* Registration form editor (B3) */
+.reg-field-flags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.reg-question-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    position: relative;
+}
+
+.reg-question-row .mini-remove {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+}
+
+.registration-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+}
+
+.registration-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
 .invite-add-row .chat-input {
     flex: 1;
 }
