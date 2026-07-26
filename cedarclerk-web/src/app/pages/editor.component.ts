@@ -69,7 +69,7 @@ import {
     LucideFileText as FileText, LucideHeart as Heart, LucideNotebook as Notebook, LucideFile as FileIcon,
     LucideThumbsUp as ThumbsUp,
     LucideSlidersHorizontal as SlidersHorizontal,
-    LucideFolder as Folder,
+    LucideFolder as Folder, LucideLock as Lock,
 } from '@lucide/angular';
 
 const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
@@ -175,7 +175,7 @@ interface UploadItem {
         ChevronDown, Check, Download, MessageSquare, LineChart, RefreshCw,
         Settings, Sparkle, TableOfContentsIcon, DividerIcon,
         AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
-        SlidersHorizontal, Folder,
+        SlidersHorizontal, Folder, Lock,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -361,6 +361,19 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     sheetMaxWidthPx(): number {
         return SHEET_WIDTH_PX[this.appearance.prefs().sheetWidth];
+    }
+
+    // Draft state strip above the language tabs (B22/B25) — the Telegram link comes from the
+    // drafts list rather than its own signal, since PublishAsync already records it there.
+    telegramPostUrl(): string | null {
+        const meta = this.drafts().find(d => d.id === this.currentId());
+        return meta?.lastTelegramUsername && meta?.lastTelegramMessageId
+            ? `https://t.me/${meta.lastTelegramUsername}/${meta.lastTelegramMessageId}`
+            : null;
+    }
+
+    isLive(): boolean {
+        return !!this.currentBlog()?.isPublished || this.telegramPostUrl() !== null;
     }
 
     sheetTypefaceStack(): string {

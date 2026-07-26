@@ -813,6 +813,27 @@
     <!--Main content-->
     <div class="main">
         <section class="canvas">
+            <!--Draft state strip (B25): private/public, live-or-not, and where it's live.-->
+            @if (currentId()) {
+            <div class="draft-state-row" [style.max-width.px]="sheetMaxWidthPx()">
+                @if (isPrivate()) {
+                <span class="state-chip private"><svg lucideLock class="icon-xs"></svg> Private</span>
+                } @else {
+                <span class="state-chip">Public</span>
+                }
+                @if (isLive()) {
+                <span class="state-chip live">LIVE</span>
+                @if (currentBlog()?.isPublished) {
+                <a class="state-link" [href]="blogUrl()" target="_blank" rel="noopener">Blog &#8599;</a>
+                }
+                @if (telegramPostUrl(); as tg) {
+                <a class="state-link" [href]="tg" target="_blank" rel="noopener">Telegram &#8599;</a>
+                }
+                } @else {
+                <span class="state-chip">Not published</span>
+                }
+            </div>
+            }
             <div class="lang-tabs" [style.max-width.px]="sheetMaxWidthPx()">
                 <button [class.on]="lang() === 'ru'" (click)="switchLang('ru')">RU</button>
                 <button [class.on]="lang() === 'en'" (click)="switchLang('en')">
