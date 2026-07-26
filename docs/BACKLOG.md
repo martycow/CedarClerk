@@ -20,7 +20,7 @@ Migrated from `docs/ROADMAP.md` (16.07.2026 origin dates preserved) on 25.07.202
 |---|---|---|
 | 6 | Loading indicator for import/export and other long operations | Broader than the existing AI-op indicator (Phase 8 Step 8 in `docs/ROADMAP.md` — currently just an elapsed-time counter, no real progress bar). Needs coverage on `.cedar`/Markdown import, blog export, and any other long-running action that currently gives no feedback |
 | 7 | Tag picker/creator popup everywhere tags are used | A tag-cloud picker popover already exists in the editor (`editor.component.html:821-855`), but `Tag` isn't a normalized entity — `Draft.Tags` is a flat string column (`Entities.cs:132`), parsed/joined client-side. Decide whether to spread the existing UI pattern to more places as-is, or normalize the schema first |
-| 8 | Show all tags on a blog post card | Check today's blog post-card markup for tag truncation before scoping — not yet verified whether tags are actually being cut off or just not styled prominently |
+| 8 | Show all tags on a blog post card | **Confirmed 25.07.2026**: `BlogEndpoints.cs:598-599` (post-list card rendering) only emits `tags[0]` — truncates to a single tag per card even when a post has multiple. The single-post page's own tag row (`BlogEndpoints.cs:734-737`, `post-tags-row`) already shows all tags correctly — the fix is making the card use the same pattern instead of `tags[0]` |
 | 9 | Store `session_id` in a cookie for auto-login | **Likely already implemented** — ASP.NET Identity already sets a persistent auth cookie today (`isPersistent: true`, `AuthEndpoints.cs:61-71`); `auth.service.ts` relies on the browser cookie jar, no manual token handling. Confirm with Marty what's actually failing (session too short-lived? doesn't survive a browser restart?) before treating this as new work |
 | 10 | Email confirmation at registration | Duplicate of idea #2 above — do not scope twice, just link back to #2 |
 | 11 | Glossary of terms: term list, highlight recognized terms in text, click-to-view description popup, term-creation menu, auto-detect terms before posting | Large multi-part feature: new `Term`/`Definition` entity, text-scan pass (on save and/or pre-publish), inline TipTap decoration for recognized terms, click handler + description popover, term-authoring UI. Needs its own scoping session, not a quick add |
@@ -29,7 +29,21 @@ Migrated from `docs/ROADMAP.md` (16.07.2026 origin dates preserved) on 25.07.202
 | 14 | Move AI features into a separate popup/menu | An `.ai-chip` AI popover already exists in the toolbar today. Clarify with Marty what's actually wanted — a different location for the same popover, or a fundamentally different UI pattern (e.g. a floating button off the toolbar entirely) |
 | 15 | Start adding integration buttons for other social networks | Today's "Integrations" section in Settings (`settings.component.html:408-467`) only has Telegram. Overlaps with idea #1 above (Twitter/Bluesky cross-posting, already an ADR-021 positioning decision) — treat as the same initiative, don't scope as a separate item |
 
-## Deferred by decision, not oversight
+### Idea dump 25.07.2026 (from Marty, "Cedar Clerk 0.9.0" feature list)
+
+Raw list, not yet scoped into phase steps — logged here per Marty's call, not started as `Phase 9` in `docs/ROADMAP.md` yet.
+
+| # | What | Notes |
+|---|---|---|
+| 16 | X/Twitter, Bluesky, Threads, Instagram integration | Same initiative as idea #1 (cross-posting, ADR-021) and idea #15 (social integration buttons) — this is the concrete platform list for that already-decided direction, not a new idea. Threads/X/Bluesky/Facebook/Medium/Patreon/Notion/Google Docs already have "Coming soon" placeholder rows in the Export modal's mock list (`editor.component.html`, `export-mock-list`); Instagram is new, not in that mock list yet |
+| 17 | Export menu per social network (except Telegram): preview + thread-splitting for X/Threads/Bluesky | The actual mechanism for #16 — character-limit-aware splitting into a thread, plus a preview before sending. Depends on #16 (need the integrations themselves first) |
+| 18 | Notifications about comments/likes via the Telegram bot | New: bot would need to DM the post owner (not just post to channels) when a `Reaction`/comment is created (`BlogEndpoints.cs`). Needs an opt-in preference (don't spam on every anonymous like) and the bot already has the owner's `TelegramUserId` via account linking (Phase 6) to DM through |
+| 19 | Folders / drafts grouping | `drafts.component`/`/drafts` currently only has tags + status filters (see `docs/UI-INVENTORY.md`), no folder concept. Needs a schema decision (new `Folder` entity + `Draft.FolderId`, vs. reusing tags as pseudo-folders) |
+| 20 | Private posts: require registration to view (20.1), need access management — who can view (20.2), must support polls (20.3) | Biggest item in this dump. 20.1/20.2 is a real access-control feature — needs a decision on model (invite list per post? subscriber tier? paywall?) before scoping. 20.3 depends on idea #22 (polls) existing first — don't scope 20.3 standalone |
+| 21 | Optional registration on the blog site — to comment, reserve a display name, prevent impersonation; possibly a "verified" badge | Blog comments today are anonymous, `VisitorHash`-scoped (IP-based, no accounts) with post-hoc moderation via deletion (ADR-016) — this is a fundamentally different model (real visitor identity) and would sit alongside, not replace, the anonymous path. The "verified" badge sub-idea has no defined meaning yet (verified how — email? something else?) |
+| 22 | Polls, forms, questionnaires | New content-block type, would need: TipTap node + renderer support across all three surfaces (Telegram Blocks, blog HTML, `.cedar`), response storage, and a results view. Referenced as a dependency by idea #20.3 |
+
+**Open dependency note**: idea #20.3 (private posts must support polls) needs #22 (polls) built first — don't scope the "private" half before polls exist as a content type.
 
 | # | What | Why deferred |
 |---|---|---|

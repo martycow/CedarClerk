@@ -2,9 +2,9 @@
 
 Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-saas-plan.md` (v1.7, 15.07.2026) and `Plans/session-brief-v0.8.0-planning.md`, which are now archived under `Plans/OLD/`. **This file is the one live roadmap going forward** — update it when a phase item closes, don't recreate a parallel plan doc. Architectural/product decisions referenced below (why something was built a certain way) live in `docs/DECISIONS.md`, not here — this file tracks *status*, DECISIONS tracks *rationale*.
 
-## Status summary (as of 15.07.2026)
+## Status summary (as of 26.07.2026)
 
-Phases 0–5 done and production-verified. Phase 6 (multi-tenancy & public SaaS) is code-complete except billing/translation are waiting on real provider keys being pushed to the Pi. Phase 7 (Entertainer role) not started. Phase 8 (v0.8.0) is planned but not started — no code written yet.
+Phases 0–5 done and production-verified. Phase 6 (multi-tenancy & public SaaS) is code-complete except billing/translation are waiting on real provider keys being pushed to the Pi. Phase 7 (Entertainer role) not started. **Phase 8 (v0.8.0) is code-complete** — all 8 steps plus the unplanned "Step 9" work done — but Steps 6 (tags in Telegram) and 7 (comments) have **not been live-verified** (deferred by Marty's choice on 26.07.2026); do that before calling the phase fully closed. 4 UI/blog bugs fixed and live-verified 25.07.2026 (view-count double-count on language switch, toolbar popups clipped by a CSS regression, export modal mispositioned, iPad horizontal scroll — see `CHANGELOG.md`). `Consts.CurrentVersion` was bumped to `0.9.0` ahead of Phase 8 actually closing — flagged as a real inconsistency, not yet reconciled with Marty.
 
 ---
 
@@ -87,8 +87,8 @@ Phases 0–5 done and production-verified. Phase 6 (multi-tenancy & public SaaS)
 - [ ] Interactive posts for subscribers: polls / A-B choice blocks
 - [ ] Integration with GDD-style voting for a related project ("Cedar Station")
 
-### Phase 8 — v0.8.0 — planned 15.07.2026, not started
-_Planning only — no code, no EF migrations written yet. Step order below follows implementation dependencies, not the lettered order (A–H) of the original brainstorm._
+### Phase 8 — v0.8.0 — planned 15.07.2026, all steps done (26.07.2026) — live verification of Steps 6/7 still pending
+Step order below follows implementation dependencies, not the lettered order (A–H) of the original brainstorm.
 
 - [x] **Step 1 — Blog polish & bugfixes** (completed 16.07.2026)
   - [x] BUG: article title duplicated in the En version (16.07.2026) — **root cause was structural, not EN-specific**: `RenderPostAsync` always rendered `<h1>{Draft.Title}</h1>` above the document body, but authors routinely also type the "real" title as the document's own first heading, so RU posts showed the same stacked-heading duplication (e.g. `hello-world`: `<h1>Hello World</h1><h1>Всем привет!</h1>`), just more noticeable on the EN translation Marty happened to be reviewing. Fixed via `HeadingOutline.StartsWithHeading(cedarJson)`: skip the page-level `<h1>` when the document already opens with a heading, fall back to it otherwise. Verified live against all 5 published posts (RU + EN) via curl.
@@ -120,16 +120,29 @@ _Planning only — no code, no EF migrations written yet. Step order below follo
   - [x] Links in the signature must be clickable — new `PostSignatureUrl`, single text+URL pair (not per-line rich text)
   - [ ] Pro Plus signature tier — deferred to backlog below, not part of Phase 8
   - [ ] Not yet verified live against `@testingandfun` or on a real blog post
-- [ ] **Step 6 — Tags**
-  - [ ] Extend `Draft.Tags` (currently blog-only) to the Telegram export path
-  - [ ] Autocomplete from previously used tags
-- [ ] **Step 7 — Comments improvements**
-  - [ ] Replies to comments
-  - [ ] Highlight the channel owner's own comments (and only theirs)
-  - [ ] Reserve the owner's display name so visitors can't comment under it
-  - [ ] Show both the post's publish time and each comment's write time
-- [ ] **Step 8 — AI progress bar**
-  - [ ] Real progress indicator for in-editor AI operations (currently just an elapsed-time counter)
+- [x] **Step 6 — Tags** (closed 26.07.2026, see ADR-036)
+  - [x] Extend `Draft.Tags` (currently blog-only) to the Telegram export path — `PostEndpoints.BuildHashtagLine`, appended as a trailing hashtag line in `PublishAsync`. **Not yet verified live against `@testingandfun`** — deferred by Marty's choice, do before considering this fully closed
+  - [x] Autocomplete from previously used tags — shipped as part of Step 9/ADR-035 below: the tag "cloud" picker (`editor.component.ts:234-236,674-680`, `GET /api/drafts/tags` via `drafts.service.ts:64-65`)
+- [x] **Step 7 — Comments improvements** (closed 26.07.2026, see ADR-037)
+  - [x] Replies to comments — `Comment.ParentCommentId`, one level of nesting only (by design, see ADR-037)
+  - [x] Highlight the channel owner's own comments (and only theirs) — whole-article comment box only, not per-fragment inline annotations (see ADR-037's scoping note)
+  - [x] Reserve the owner's display name so visitors can't comment under it — case-insensitive match against `owner.AuthorDisplayName`, 409 on collision, no reservation table
+  - [x] Show both the post's publish time and each comment's write time — "Post published: {date}" line above the comment list
+  - **Not yet verified live in a browser** — deferred by Marty's choice this session
+- [x] **Step 8 — AI progress bar** (closed 26.07.2026, see ADR-038)
+  - [x] Progress indicator for in-editor AI operations — was a plain elapsed-time counter, now an asymptotic pseudo-progress estimate (`pseudo-progress.util.ts`) capped at 90% until the real response arrives, jumping to 100% on completion; **not real token-level streaming** (neither AI provider streams today — see ADR-038 for why that was scoped out). Also added, per Marty's ask: elapsed time still shown alongside the %, a 3-minute client-side timeout, and a Cancel button that genuinely aborts the in-flight request
+- [x] **Step 9 — Additional shipped work, not part of the original 8-step brainstorm** (16–24.07.2026; backfilled into this checklist 25.07.2026 — these existed only in `docs/DECISIONS.md`/`git log` before, with no ROADMAP tracking at all, which is exactly the kind of drift this file exists to prevent)
+  - [x] Public blog view counter (16.07.2026, ADR-023) — `Draft.ViewCount`, shown on the post page and its blog-homepage card; deliberately not the blocked Channel Analysis infra (raw hit count, no dedup, no history)
+  - [x] `/stats` per-channel growth dashboard (17.07.2026, ADR-025) — `ChannelPost` publish log + `ChannelStatSnapshot` gains View/Like/Comment counts, new `stats.component`, extends the Phase 4 subscriber-only sparkline
+  - [x] Markdown (`.zip`) import (17.07.2026, ADR-026) — hand-rolled scoped parser (`MarkdownToCedarConverter`), `POST /api/drafts/import-markdown`, unsupported blocks degrade to plain text rather than crashing
+  - [x] Global exception handling + readable error bodies (19.07.2026, ADR-027) — every endpoint now returns `{ error }` instead of a bodyless 500; extended the empty-container drop guard (ADR-019) to blockquote/toggle/lists/table
+  - [x] Debug console panel + Export redesigned as a categorized modal + static HTML export (19.07.2026, ADR-028) — bottom collapsible request/response console (`DebugLogService`), new shared `ModalComponent`, Export modal split into Site/Blog · Telegram · "Другие площадки" (inert placeholders) · file exports, new `GET /api/drafts/{id}/export-html`
+  - [x] RU/EN structural diff gutter (19.07.2026, ADR-029) — `DraftTranslation.SourceSnapshotJson` + client-side top-level-block LCS diff, colored gutter bars next to the RU editor (>1200px viewports only)
+  - [x] `/stats` gains a channel-agnostic "Blog" tab (19.07.2026, ADR-030) — `BlogStatSnapshot` keyed by `OwnerId`, on-demand first snapshot so the tab isn't empty before the nightly job runs
+  - [x] Large photo auto-compression for Telegram sends (19.07.2026, ADR-031) — root-caused a real prod 502 (Telegram rejects URL-fetched photos above ~10MB); `ImageCompressor`/`SixLabors.ImageSharp`, `Asset.TelegramLocalPath` derivative, generated eagerly on upload and lazily on publish
+  - [x] Compression-level control, per-draft files list, profile social links (19.07.2026, ADR-032) — export-time small/standard/high compression choice, "Файлы в черновике" list with detach-not-delete, 5 new social-link profile fields (informational only, not yet surfaced publicly), mobile topbar overflow fix
+  - [x] YouTube embed block (23.07.2026, ADR-033) — new `youtube` TipTap node, real `<iframe>` on the blog, thumbnail+link on Telegram (no native Blocks link-preview exists)
+  - [x] Editor redesign — toolbar customization, Appearance settings, `/drafts` screen, unified Insert modal, tag cloud, New Draft dialog (24.07.2026, ADR-035) — see `TASKS.md` "Editor redesign" entry for the still-open live-verification checklist; 4 CSS regressions from this redesign's "Cedar Aero" glass effect were found and fixed 25.07.2026 (toolbar popups clipped, export modal mispositioned, iPad horizontal scroll — `CHANGELOG.md`)
 
 **Dependency, recorded not scheduled**: Channel Analysis UI needs a data-collection layer (`PostStatSnapshot`, `ReactionEvent`, a view beacon, `message_reaction_count` in the bot's `allowed_updates`) that doesn't exist in the code yet — historical data can't be backfilled. It's excluded from Phase 8 on purpose; a dedicated data-collection phase needs to run first. See `docs/PRD.md` "Blocked" section.
 

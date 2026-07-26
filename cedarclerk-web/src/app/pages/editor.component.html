@@ -620,15 +620,26 @@
                 <app-popover align="right">
                     <button trigger class="ai-chip" title="AI actions">
                         <svg lucideSparkle class="icon-xs"></svg>
-                        {{ aiEditBusy() ? 'Working… ' + aiEditElapsed() + 's' : 'AI' }}
+                        @if (aiEditBusy()) {
+                            {{ aiEditProgress() }}% · {{ aiEditElapsed() }}s
+                            <span class="ai-chip-progress-track"><span class="ai-chip-progress-fill" [style.width.%]="aiEditProgress()"></span></span>
+                        } @else {
+                            AI
+                        }
                     </button>
                     <div panel class="block-menu">
-                        <button (click)="askAiEdit('fix-errors')" [disabled]="aiEditBusy()">
+                        @if (aiEditBusy()) {
+                        <button (click)="cancelAiEdit()">
+                            <svg lucideX class="icon-xs"></svg> Cancel
+                        </button>
+                        } @else {
+                        <button (click)="askAiEdit('fix-errors')">
                             <svg lucideSparkle class="icon-xs"></svg> Fix errors
                         </button>
-                        <button (click)="askAiEdit('schizo')" [disabled]="aiEditBusy()">
+                        <button (click)="askAiEdit('schizo')">
                             <svg lucideSparkle class="icon-xs"></svg> Schizo-izer
                         </button>
+                        }
                     </div>
                 </app-popover>
             </div>
@@ -811,8 +822,13 @@
                     @if (enStale()) {
                     <button class="retranslate-btn" (click)="autoTranslateEn()" [disabled]="autoTranslating()"
                             title="Russian version changed — re-translate">
-                        {{ autoTranslating() ? autoTranslateElapsed() + 's…' : '↻ Re-translate' }}
+                        {{ autoTranslating() ? autoTranslateProgress() + '% · ' + autoTranslateElapsed() + 's' : '↻ Re-translate' }}
                     </button>
+                    @if (autoTranslating()) {
+                    <button class="lang-delete" (click)="cancelAutoTranslate()" title="Cancel">
+                        <svg lucideX class="icon-sm"></svg>
+                    </button>
+                    }
                     }
                 <button class="lang-delete" (click)="deleteEnVersion()" title="Delete English version">
                     <svg lucideTrash2 class="icon-sm"></svg>
@@ -866,8 +882,9 @@
                 </div>
                 @if (autoTranslating()) {
                 <div class="translate-progress">
-                    <div class="indeterminate-bar"><div class="indeterminate-fill"></div></div>
-                    <p class="translate-status">{{ translateStatusMessage() }} ({{ autoTranslateElapsed() }}s)</p>
+                    <div class="upload-bar"><div class="upload-fill" [style.width.%]="autoTranslateProgress()"></div></div>
+                    <p class="translate-status">{{ translateStatusMessage() }} — {{ autoTranslateProgress() }}% · {{ autoTranslateElapsed() }}s</p>
+                    <button class="btn-ghost" (click)="cancelAutoTranslate()">Cancel</button>
                 </div>
                 }
                 @if (autoTranslateError()) { <p class="channel-error">{{ autoTranslateError() }}</p> }

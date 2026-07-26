@@ -21,6 +21,19 @@ public static class PostEndpoints
         _ => Consts.FileSizes.TelegramSafeImageBytes,
     };
 
+    // Telegram auto-links a plain "#word" in message text client-side — no special API/entity
+    // needed, RichRunText is plain text, not HTML, so no escaping either. Spaces are stripped
+    // from within a tag since a hashtag can't contain them (e.g. "my tag" -> "#mytag"). See the
+    // ADR following ADR-035, docs/DECISIONS.md, for the Phase 8 Step 6 decision.
+    public static string? BuildHashtagLine(string tags)
+    {
+        var list = BlogEndpoints.SplitTags(tags);
+        if (list.Count == 0)
+            return null;
+
+        return string.Join(" ", list.Select(t => "#" + t.Replace(" ", "")));
+    }
+
     public record PublishResult(int? MessageId, string? Error, int StatusCode = StatusCodes.Status400BadRequest)
     {
         public bool Success => Error is null;
@@ -116,6 +129,10 @@ public static class PostEndpoints
 
             blocks.Add(new RichParagraphBlock(new RichRunLink(new RichRunText("Read on the blog →"), blogUrl)));
         }
+
+        // Phase 8 Step 6, docs/ROADMAP.md — tags extended to the Telegram export path.
+        if (BuildHashtagLine(draft.Tags) is { } hashtagLine)
+            blocks.Add(new RichParagraphBlock(new RichRunText(hashtagLine)));
 
         var content = new InputRichMessage { Blocks = blocks.Select(ToInputRichBlock).ToList() };
 

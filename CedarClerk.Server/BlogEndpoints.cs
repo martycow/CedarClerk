@@ -25,7 +25,7 @@ public static class BlogEndpoints
         ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
 
     private record ReactRequest(string? AnnotationId, string Kind);
-    private record CommentRequest(string? AnnotationId, string? AuthorName, string Text);
+    private record CommentRequest(string? AnnotationId, string? AuthorName, string Text, Guid? ParentCommentId = null);
     private record BlogChannelInfo(string Title, string? Username, int? MemberCount);
 
     public static void MapBlogEndpoints(this WebApplication app)
@@ -287,7 +287,7 @@ public static class BlogEndpoints
             var counts = group.GroupBy(r => r.Kind).ToDictionary(g => g.Key, g => g.Count());
             var myVote = group.FirstOrDefault(r => r.VisitorHash == visitor)?.Kind;
             var groupComments = comments.Where(c => c.AnnotationId == annotationId)
-                .Select(c => new { c.Id, authorName = DisplayName(c.AuthorName), c.Text, c.CreatedAt });
+                .Select(c => new { c.Id, authorName = DisplayName(c.AuthorName), c.Text, c.CreatedAt, c.ParentCommentId });
             return new { counts, myVote, comments = groupComments };
         }
 
@@ -385,9 +385,34 @@ public static class BlogEndpoints
         if (authorName is { Length: > AuthorNameMaxLength })
             authorName = authorName[..AuthorNameMaxLength];
 
+        // Reserve the channel owner's display name (Phase 8 Step 7) so a visitor can't post under
+        // it and be mistaken for the real author — a plain case-insensitive match against the live
+        // profile value, not a separate reservation table (see the ADR following ADR-035,
+        // docs/DECISIONS.md). Skipped entirely when the owner hasn't set a display name.
+        var ownerName = await db.Users.Where(u => u.Id == draft.OwnerId).Select(u => u.AuthorDisplayName).FirstAsync();
+        if (!string.IsNullOrWhiteSpace(ownerName) && !string.IsNullOrWhiteSpace(authorName)
+            && string.Equals(authorName, ownerName, StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status409Conflict;
+            ctx.Response.ContentType = "application/json";
+            await JsonSerializer.SerializeAsync(ctx.Response.Body, new { error = "That name is reserved for the post's author." }, JsonOpts);
+            return;
+        }
+
         var annotationId = string.IsNullOrEmpty(req?.AnnotationId) ? null : req.AnnotationId;
 
-        var comment = new Comment { DraftId = draft.Id, AnnotationId = annotationId, AuthorName = authorName, Text = text };
+        // One level of nesting only — a reply's parent must itself be a top-level comment on the
+        // same draft, otherwise silently treat the submission as top-level rather than erroring on
+        // a stale/tampered parentId (see the ADR following ADR-035, docs/DECISIONS.md).
+        Guid? parentCommentId = null;
+        if (req?.ParentCommentId is { } pid)
+        {
+            var parent = await db.Comments.FirstOrDefaultAsync(c => c.Id == pid && c.DraftId == draft.Id);
+            if (parent is not null && parent.ParentCommentId is null)
+                parentCommentId = pid;
+        }
+
+        var comment = new Comment { DraftId = draft.Id, AnnotationId = annotationId, AuthorName = authorName, Text = text, ParentCommentId = parentCommentId };
         db.Comments.Add(comment);
         await db.SaveChangesAsync();
 
@@ -399,13 +424,14 @@ public static class BlogEndpoints
             authorName = DisplayName(comment.AuthorName),
             comment.Text,
             comment.CreatedAt,
+            comment.ParentCommentId,
         }, JsonOpts);
     }
 
     private static string DisplayName(string? authorName) =>
         string.IsNullOrWhiteSpace(authorName) ? "Anonymous" : authorName;
 
-    private static List<string> SplitTags(string tags) =>
+    internal static List<string> SplitTags(string tags) =>
         tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
     private static string TagFilterUrl(IEnumerable<string> tags)
@@ -788,7 +814,7 @@ public static class BlogEndpoints
             """;
 
         var articleBlock = "<div class=\"annotation article-annotation\" data-annotation-id=\"\">"
-            + CedarToBlogHtmlRenderer.AnnotationControlsHtml(lang) + "</div>";
+            + CedarToBlogHtmlRenderer.AnnotationControlsHtml(lang, owner.AuthorDisplayName, draft.BlogPublishedAt) + "</div>";
 
         var backLinkLabel = lang == Languages.English ? "All posts" : "Все посты";
         var backToTopLabel = lang == Languages.English ? "Back to top" : "Наверх";
@@ -1021,14 +1047,26 @@ public static class BlogEndpoints
         .comment-count-label { font-size: 13px; color: var(--t3); }
         .comment-box { background: var(--sheet); border-radius: 12px; box-shadow: var(--shadow); padding: 20px 24px; }
         .comment-box-label { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; font-weight: 600; color: var(--t3); margin: 0 0 12px; }
+        .comment-published-line { font-size: 11.5px; color: var(--t3); margin: -8px 0 12px; }
         .comment-list { display: flex; flex-direction: column; gap: 4px; margin: 0 0 14px; }
         .comment-item { display: flex; gap: 10px; padding: 8px 10px; border-radius: 9px; transition: background .25s; }
         .comment-item.glow { background: var(--asoft); }
+        .comment-item.owner { background: var(--asoft); border: 1px solid var(--abord); }
+        .comment-item.owner .comment-meta::after { content: '★'; color: var(--accent); font-size: 11px; }
+        .comment-item.comment-reply { margin-left: 30px; padding-top: 6px; padding-bottom: 6px; }
+        .comment-item.comment-reply .comment-avatar { width: 22px; height: 22px; font-size: 9.5px; }
+        .comment-item.comment-reply .comment-meta { font-size: 12px; }
+        .comment-item.comment-reply .comment-text { font-size: 13px; }
         .comment-avatar { width: 28px; height: 28px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex: none; }
         .comment-meta { display: flex; align-items: baseline; gap: 7px; font-size: 13px; font-weight: 600; }
         .comment-meta time { font-size: 11px; font-weight: 400; color: var(--t3); }
         .comment-anchor { font-size: 11px; color: var(--accent); background: var(--asoft); border-radius: 5px; padding: 2px 7px; display: inline-block; margin: 3px 0 1px; }
         .comment-text { font-size: 14px; line-height: 1.5; }
+        .reply-btn { align-self: flex-start; margin-top: 4px; background: none; border: none; color: var(--t3); font-size: 12px; font-family: inherit; cursor: pointer; padding: 0; }
+        .reply-btn:hover { color: var(--accent); text-decoration: underline; }
+        .comment-reply-indicator { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--t3); margin: 0 0 8px; }
+        .comment-reply-indicator .reply-target-name { font-weight: 600; color: var(--text); }
+        .comment-reply-indicator .cancel-reply { background: none; border: 1px solid var(--border); border-radius: 999px; padding: 1px 9px; font-size: 11.5px; color: var(--t2); cursor: pointer; font-family: inherit; }
         .comment-load-more { display: block; margin: 0 0 10px; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: var(--text); font: inherit; font-size: 12.5px; }
         .comment-form { display: flex; flex-direction: column; gap: 8px; }
         .comment-form input, .comment-form textarea { flex: 1; border: 1px solid var(--border); background: var(--sheet); color: var(--text); border-radius: 8px; padding: 9px 12px; font-size: 13.5px; font-family: inherit; outline: none; resize: vertical; }
@@ -1111,42 +1149,76 @@ public static class BlogEndpoints
 
             var PAGE_SIZE = 20;
             var AVATAR_COLORS = ['#7A5A3A', '#375D74', '#3E7A4E', '#8A4A6B', '#5B6E46'];
+            var REPLY_LABEL = document.documentElement.lang === 'en' ? 'Reply' : 'Ответить';
             function avatarColor(name) {
                 var hash = 0;
                 for (var i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
                 return AVATAR_COLORS[hash % AVATAR_COLORS.length];
             }
 
-            function renderCommentsPage(listEl, moreBtn, comments, shownCount) {
-                listEl.innerHTML = '';
-                comments.slice(0, shownCount).forEach(function (c) {
-                    var name = c.authorName || 'Anonymous';
-                    var item = document.createElement('div');
-                    item.className = 'comment-item';
-                    var avatar = document.createElement('div');
-                    avatar.className = 'comment-avatar';
-                    avatar.style.background = avatarColor(name);
-                    avatar.textContent = name.charAt(0).toUpperCase();
-                    var body = document.createElement('div');
-                    var meta = document.createElement('div');
-                    meta.className = 'comment-meta';
-                    var nameEl = document.createElement('span');
-                    nameEl.textContent = name;
-                    var timeEl = document.createElement('time');
-                    var cDate = new Date(c.createdAt);
-                    timeEl.textContent = cDate.toLocaleDateString() + ' ' + cDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    meta.appendChild(nameEl);
-                    meta.appendChild(timeEl);
-                    var text = document.createElement('div');
-                    text.className = 'comment-text';
-                    text.textContent = c.text;
-                    body.appendChild(meta);
-                    body.appendChild(text);
-                    item.appendChild(avatar);
-                    item.appendChild(body);
-                    listEl.appendChild(item);
+            // One level of nesting only (Phase 8 Step 7, see the ADR following ADR-035,
+            // docs/DECISIONS.md) — splits the flat comment list into top-level comments (paginated
+            // by PAGE_SIZE, same as before) and a parentId->replies map (always shown in full
+            // alongside their visible parent, never paginated separately).
+            function regroup(comments) {
+                var topLevel = [];
+                var repliesByParent = {};
+                comments.forEach(function (c) {
+                    if (c.parentCommentId) {
+                        (repliesByParent[c.parentCommentId] = repliesByParent[c.parentCommentId] || []).push(c);
+                    } else {
+                        topLevel.push(c);
+                    }
                 });
-                if (moreBtn) moreBtn.hidden = shownCount >= comments.length;
+                return { topLevel: topLevel, repliesByParent: repliesByParent };
+            }
+
+            function buildCommentItem(c, ownerName, isReply, onReply) {
+                var name = c.authorName || 'Anonymous';
+                var item = document.createElement('div');
+                item.className = isReply ? 'comment-item comment-reply' : 'comment-item';
+                if (ownerName && name.toLowerCase() === ownerName.toLowerCase()) item.classList.add('owner');
+                var avatar = document.createElement('div');
+                avatar.className = 'comment-avatar';
+                avatar.style.background = avatarColor(name);
+                avatar.textContent = name.charAt(0).toUpperCase();
+                var body = document.createElement('div');
+                var meta = document.createElement('div');
+                meta.className = 'comment-meta';
+                var nameEl = document.createElement('span');
+                nameEl.textContent = name;
+                var timeEl = document.createElement('time');
+                var cDate = new Date(c.createdAt);
+                timeEl.textContent = cDate.toLocaleDateString() + ' ' + cDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                meta.appendChild(nameEl);
+                meta.appendChild(timeEl);
+                var text = document.createElement('div');
+                text.className = 'comment-text';
+                text.textContent = c.text;
+                body.appendChild(meta);
+                body.appendChild(text);
+                if (!isReply && onReply) {
+                    var replyBtn = document.createElement('button');
+                    replyBtn.type = 'button';
+                    replyBtn.className = 'reply-btn';
+                    replyBtn.textContent = REPLY_LABEL;
+                    replyBtn.addEventListener('click', function () { onReply(c.id, name); });
+                    body.appendChild(replyBtn);
+                }
+                item.appendChild(avatar);
+                item.appendChild(body);
+                return item;
+            }
+
+            function renderCommentsPage(listEl, moreBtn, topLevel, repliesByParent, shownCount, ownerName, onReply) {
+                listEl.innerHTML = '';
+                topLevel.slice(0, shownCount).forEach(function (c) {
+                    listEl.appendChild(buildCommentItem(c, ownerName, false, onReply));
+                    (repliesByParent[c.id] || []).forEach(function (r) {
+                        listEl.appendChild(buildCommentItem(r, ownerName, true, null));
+                    });
+                });
+                if (moreBtn) moreBtn.hidden = shownCount >= topLevel.length;
             }
 
             function hydrate(el, annotationId, info) {
@@ -1175,22 +1247,48 @@ public static class BlogEndpoints
                     });
                 });
 
+                var commentBox = el.querySelector('.comment-box');
+                var ownerName = commentBox ? commentBox.getAttribute('data-owner-name') : null;
                 var commentList = el.querySelector('.comment-list');
                 var moreBtn = el.querySelector('.comment-load-more');
                 var commentCountEl = el.querySelector('.comment-count');
                 var comments = (info.comments || []).slice();
                 var shown = Math.min(PAGE_SIZE, comments.length);
-                if (commentCountEl) commentCountEl.textContent = comments.length;
-                renderCommentsPage(commentList, moreBtn, comments, shown);
+
+                var replyIndicator = el.querySelector('.comment-reply-indicator');
+                var replyTargetEl = el.querySelector('.reply-target-name');
+                var cancelReplyBtn = el.querySelector('.cancel-reply');
+                var form = el.querySelector('.comment-form');
+                var parentIdInput = form ? form.querySelector('.comment-parent-id') : null;
+
+                function startReply(id, name) {
+                    if (!parentIdInput) return;
+                    parentIdInput.value = id;
+                    if (replyTargetEl) replyTargetEl.textContent = name;
+                    if (replyIndicator) replyIndicator.hidden = false;
+                    var textInput = form.querySelector('textarea.comment-text');
+                    if (textInput) textInput.focus();
+                }
+                function cancelReply() {
+                    if (parentIdInput) parentIdInput.value = '';
+                    if (replyIndicator) replyIndicator.hidden = true;
+                }
+                if (cancelReplyBtn) cancelReplyBtn.addEventListener('click', cancelReply);
+
+                function render() {
+                    var grouped = regroup(comments);
+                    if (commentCountEl) commentCountEl.textContent = comments.length;
+                    renderCommentsPage(commentList, moreBtn, grouped.topLevel, grouped.repliesByParent, shown, ownerName, startReply);
+                }
+                render();
 
                 if (moreBtn) {
                     moreBtn.addEventListener('click', function () {
-                        shown = Math.min(shown + PAGE_SIZE, comments.length);
-                        renderCommentsPage(commentList, moreBtn, comments, shown);
+                        shown = Math.min(shown + PAGE_SIZE, regroup(comments).topLevel.length);
+                        render();
                     });
                 }
 
-                var form = el.querySelector('.comment-form');
                 if (form) {
                     form.addEventListener('submit', function (e) {
                         e.preventDefault();
@@ -1198,21 +1296,22 @@ public static class BlogEndpoints
                         var textInput = form.querySelector('textarea.comment-text');
                         var text = textInput.value.trim();
                         if (!text) return;
+                        var parentCommentId = parentIdInput && parentIdInput.value ? parentIdInput.value : null;
                         fetch('/api/posts/' + encodeURIComponent(slug) + '/comments', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ annotationId: annotationId || null, authorName: authorInput.value.trim(), text: text })
+                            body: JSON.stringify({ annotationId: annotationId || null, authorName: authorInput.value.trim(), text: text, parentCommentId: parentCommentId })
                         })
-                            .then(function (r) { if (!r.ok) throw new Error('failed'); return r.json(); })
+                            .then(function (r) { if (!r.ok) return r.json().then(function (e) { throw new Error(e.error || 'failed'); }); return r.json(); })
                             .then(function (c) {
                                 comments.unshift(c);
-                                shown = Math.min(shown + 1, comments.length);
-                                if (commentCountEl) commentCountEl.textContent = comments.length;
-                                renderCommentsPage(commentList, moreBtn, comments, shown);
+                                if (!c.parentCommentId) shown = Math.min(shown + 1, regroup(comments).topLevel.length);
+                                render();
                                 textInput.value = '';
                                 authorInput.value = '';
+                                cancelReply();
                             })
-                            .catch(function () {});
+                            .catch(function (err) { alert(err.message || 'Failed to post comment'); });
                     });
                 }
             }

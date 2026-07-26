@@ -1,6 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
+
+// Phase 8 Step 8, docs/ROADMAP.md — neither AI provider streams, so there's no way to signal
+// real progress; this is purely a "don't let a stuck call hang forever" ceiling, enforced
+// client-side (unsubscribing aborts the underlying HTTP request — see editor.component.ts's
+// aiEdit()/runAutoTranslate()). Independent of the tighter server-side Consts.Anthropic.RequestTimeout
+// (60s) — this is the user-facing cap across whichever provider/path ends up handling the call.
+export const AI_OPERATION_TIMEOUT_MS = 180_000;
 
 export interface ScheduledInfo { scheduledAtUtc: string; chatId: string; status: string; error: string | null; }
 export interface DraftMeta {
@@ -78,12 +85,18 @@ export class DraftsService {
         return firstValueFrom(this.http.delete(`/api/drafts/${id}/translations/${lang}`));
     }
 
-    autoTranslate(id: string, lang: string) {
-        return firstValueFrom(this.http.post<TranslationFull>(`/api/drafts/${id}/translations/${lang}/auto`, {}));
+    // Returns the raw Observable (not a Promise) so the caller can unsubscribe to cancel the
+    // in-flight request (Step 8's cancel button) — firstValueFrom's underlying subscription isn't
+    // reachable for that once wrapped. timeout() below caps how long an unsubscribed caller would
+    // otherwise wait indefinitely.
+    autoTranslate$(id: string, lang: string) {
+        return this.http.post<TranslationFull>(`/api/drafts/${id}/translations/${lang}/auto`, {})
+            .pipe(timeout(AI_OPERATION_TIMEOUT_MS));
     }
 
-    aiEdit(id: string, lang: string, kind: AiEditKind) {
-        return firstValueFrom(this.http.post<AiEditResult>(`/api/drafts/${id}/ai-edit/${lang}/${kind}`, {}));
+    aiEdit$(id: string, lang: string, kind: AiEditKind) {
+        return this.http.post<AiEditResult>(`/api/drafts/${id}/ai-edit/${lang}/${kind}`, {})
+            .pipe(timeout(AI_OPERATION_TIMEOUT_MS));
     }
 
     importCedar(file: File) {

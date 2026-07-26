@@ -262,6 +262,10 @@ public class Comment
     public string? AuthorName { get; set; }
     public string Text { get; set; } = "";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // One level of nesting only (Phase 8 Step 7) — a reply's ParentCommentId always points at a
+    // top-level comment, never at another reply; the UI never offers a reply-to-reply action.
+    public Guid? ParentCommentId { get; set; }
 }
 
 public class BotKnownChat

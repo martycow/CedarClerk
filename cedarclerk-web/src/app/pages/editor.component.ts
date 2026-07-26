@@ -41,6 +41,8 @@ import { ThemeService } from '../core/theme.service';
 import { AppearanceService, SHEET_WIDTH_PX, TYPEFACE_STACK } from '../core/appearance.service';
 import { ToolbarLayoutService } from '../core/toolbar-layout.service';
 import { httpErrorMessage } from '../core/http-error.util';
+import { pseudoProgress } from '../core/pseudo-progress.util';
+import { Subscription, TimeoutError } from 'rxjs';
 import {
     LucideUndo2 as Undo2, LucideRedo2 as Redo2,
     LucideBold as Bold, LucideItalic as Italic, LucideStrikethrough as Strikethrough, LucideCode as Code,
@@ -238,7 +240,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     aiEditBusy = signal(false);
     aiEditElapsed = signal(0);
+    // Pseudo-progress (0-100, Phase 8 Step 8) — neither AI provider streams a response, so this
+    // is an asymptotic estimate (pseudo-progress.util.ts), not a real percentage.
+    aiEditProgress = signal(0);
     private aiEditTicker?: ReturnType<typeof setInterval>;
+    private aiEditSub?: Subscription;
     aiEditError = signal<string | null>(null);
     aiConfirmKind = signal<AiEditKind | null>(null);
     aiToast = signal<string | null>(null);
@@ -246,7 +252,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     autoTranslating = signal(false);
     autoTranslateElapsed = signal(0);
+    autoTranslateProgress = signal(0);
     private autoTranslateTicker?: ReturnType<typeof setInterval>;
+    private autoTranslateSub?: Subscription;
     autoTranslateError = signal<string | null>(null);
     translateConfirmOpen = signal(false);
     exportModalOpen = signal(false);
@@ -527,6 +535,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         clearInterval(this.exportTicker);
         clearInterval(this.blogTicker);
         clearTimeout(this.ruDiffTimer);
+        this.aiEditSub?.unsubscribe();
+        this.autoTranslateSub?.unsubscribe();
         this.editor?.destroy();
     }
 
@@ -599,7 +609,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.title = draft.title;
             this.ruUpdatedAt.set(draft.updatedAt);
             this.editor.setEditable(true);
-            this.editor.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC));
+            this.editor.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC), { emitUpdate: false });
             this.resetHistory();
         } else {
             this.ruSnapshot = { title: this.title, json: JSON.stringify(this.editor.getJSON()) };
@@ -610,14 +620,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 this.enMeta.set({ language: 'en', title: tr.title, updatedAt: tr.updatedAt });
                 this.enSourceSnapshot.set(tr.sourceSnapshotJson);
                 this.editor.setEditable(true);
-                this.editor.commands.setContent(JSON.parse(tr.cedarJson || EMPTY_DOC));
+                this.editor.commands.setContent(JSON.parse(tr.cedarJson || EMPTY_DOC), { emitUpdate: false });
                 this.resetHistory();
             } else {
                 // No EN version yet — show the empty state (Copy from Russian / Start empty)
                 this.lang.set('en');
                 this.title = this.ruSnapshot.title;
                 this.editor.setEditable(false);
-                this.editor.commands.setContent(JSON.parse(EMPTY_DOC));
+                this.editor.commands.setContent(JSON.parse(EMPTY_DOC), { emitUpdate: false });
                 this.resetHistory();
             }
         }
@@ -639,7 +649,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.enSourceSnapshot.set(res.sourceSnapshotJson);
             this.title = title;
             this.editor.setEditable(true);
-            this.editor.commands.setContent(JSON.parse(json));
+            this.editor.commands.setContent(JSON.parse(json), { emitUpdate: false });
             this.resetHistory();
             this.editor.commands.focus();
             this.saveState.set('saved');
@@ -707,39 +717,62 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.translateConfirmOpen.set(false);
     }
 
-    async confirmTranslate() {
+    confirmTranslate() {
         this.translateConfirmOpen.set(false);
-        await this.runAutoTranslate();
+        this.runAutoTranslate();
     }
 
-    private async runAutoTranslate() {
+    private runAutoTranslate() {
         const id = this.currentId();
-        if (!id || !this.editor) return;
+        const editor = this.editor;
+        if (!id || !editor) return;
 
         this.autoTranslating.set(true);
         this.autoTranslateElapsed.set(0);
+        this.autoTranslateProgress.set(0);
         clearInterval(this.autoTranslateTicker);
-        this.autoTranslateTicker = setInterval(() => this.autoTranslateElapsed.update(s => s + 1), 1000);
+        this.autoTranslateTicker = setInterval(() => {
+            this.autoTranslateElapsed.update(s => s + 1);
+            this.autoTranslateProgress.set(pseudoProgress(this.autoTranslateElapsed()));
+        }, 1000);
         this.autoTranslateError.set(null);
-        try {
-            const tr = await this.draftsApi.autoTranslate(id, 'en');
-            this.enMeta.set({ language: 'en', title: tr.title, updatedAt: tr.updatedAt });
-            this.enSourceSnapshot.set(tr.sourceSnapshotJson);
-            this.drafts.update(list => list.map(d => d.id === id ? { ...d, languages: ['en'] } : d));
-            if (this.lang() !== 'en') {
-                this.ruSnapshot = { title: this.title, json: JSON.stringify(this.editor.getJSON()) };
-                this.lang.set('en');
-            }
-            this.title = tr.title;
-            this.editor.setEditable(true);
-            this.editor.commands.setContent(JSON.parse(tr.cedarJson || EMPTY_DOC));
-            this.saveState.set('saved');
-        } catch (e) {
-            this.autoTranslateError.set(httpErrorMessage(e, 'Auto-translate failed — check server logs'));
-        } finally {
-            this.autoTranslating.set(false);
-            clearInterval(this.autoTranslateTicker);
-        }
+
+        this.autoTranslateSub = this.draftsApi.autoTranslate$(id, 'en').subscribe({
+            next: tr => {
+                this.autoTranslateProgress.set(100);
+                this.enMeta.set({ language: 'en', title: tr.title, updatedAt: tr.updatedAt });
+                this.enSourceSnapshot.set(tr.sourceSnapshotJson);
+                this.drafts.update(list => list.map(d => d.id === id ? { ...d, languages: ['en'] } : d));
+                if (this.lang() !== 'en') {
+                    this.ruSnapshot = { title: this.title, json: JSON.stringify(editor.getJSON()) };
+                    this.lang.set('en');
+                }
+                this.title = tr.title;
+                editor.setEditable(true);
+                editor.commands.setContent(JSON.parse(tr.cedarJson || EMPTY_DOC), { emitUpdate: false });
+                this.saveState.set('saved');
+            },
+            error: e => {
+                this.autoTranslateError.set(e instanceof TimeoutError
+                    ? 'Auto-translate timed out after 3 minutes'
+                    : httpErrorMessage(e, 'Auto-translate failed — check server logs'));
+                this.finishAutoTranslate();
+            },
+            complete: () => this.finishAutoTranslate(),
+        });
+    }
+
+    private finishAutoTranslate() {
+        this.autoTranslating.set(false);
+        clearInterval(this.autoTranslateTicker);
+        this.autoTranslateSub = undefined;
+    }
+
+    // User-initiated cancel (Step 8) — unsubscribing aborts the underlying HTTP request; no
+    // error/toast shown since this wasn't a failure, the user just changed their mind.
+    cancelAutoTranslate() {
+        this.autoTranslateSub?.unsubscribe();
+        this.finishAutoTranslate();
     }
 
     // Opens the AI confirm dialog (replaces window.confirm — the only native browser dialog
@@ -752,10 +785,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.aiConfirmKind.set(null);
     }
 
-    async confirmAiEdit() {
+    confirmAiEdit() {
         const kind = this.aiConfirmKind();
         this.aiConfirmKind.set(null);
-        if (kind) await this.aiEdit(kind);
+        if (kind) this.aiEdit(kind);
     }
 
     aiConfirmTitle(): string {
@@ -773,32 +806,54 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // Rewrites the current language version in place via an LLM (Pro Plus, daily quota) — grammar
     // fix or "schizoposting" style rewrite. Same persist-then-load pattern as auto-translate, so
     // Ctrl+Z in the editor can still undo the content swap if the user doesn't like the result.
-    private async aiEdit(kind: AiEditKind) {
+    private aiEdit(kind: AiEditKind) {
         const id = this.currentId();
-        if (!id || !this.editor) return;
+        const editor = this.editor;
+        if (!id || !editor) return;
         const label = kind === 'fix-errors' ? 'Fix errors' : 'Schizo-izer';
 
         this.aiEditBusy.set(true);
         this.aiEditElapsed.set(0);
+        this.aiEditProgress.set(0);
         clearInterval(this.aiEditTicker);
-        this.aiEditTicker = setInterval(() => this.aiEditElapsed.update(s => s + 1), 1000);
+        this.aiEditTicker = setInterval(() => {
+            this.aiEditElapsed.update(s => s + 1);
+            this.aiEditProgress.set(pseudoProgress(this.aiEditElapsed()));
+        }, 1000);
         this.aiEditError.set(null);
-        try {
-            const res = await this.draftsApi.aiEdit(id, this.lang(), kind);
-            this.title = res.title;
-            this.editor.commands.setContent(JSON.parse(res.cedarJson || EMPTY_DOC));
-            this.saveState.set('saved');
-            if (this.lang() === 'en') {
-                this.enMeta.set({ language: 'en', title: res.title, updatedAt: res.updatedAt });
-            }
-            this.refreshMeta(id);
-            this.showAiToast(kind === 'fix-errors' ? 'Fixed your typos. Your voice survived. Moo.' : 'Schizo-izer done. Reality is now optional.');
-        } catch (e) {
-            this.aiEditError.set(httpErrorMessage(e, `${label} failed`));
-        } finally {
-            this.aiEditBusy.set(false);
-            clearInterval(this.aiEditTicker);
-        }
+
+        this.aiEditSub = this.draftsApi.aiEdit$(id, this.lang(), kind).subscribe({
+            next: res => {
+                this.aiEditProgress.set(100);
+                this.title = res.title;
+                editor.commands.setContent(JSON.parse(res.cedarJson || EMPTY_DOC), { emitUpdate: false });
+                this.saveState.set('saved');
+                if (this.lang() === 'en') {
+                    this.enMeta.set({ language: 'en', title: res.title, updatedAt: res.updatedAt });
+                }
+                this.refreshMeta(id);
+                this.showAiToast(kind === 'fix-errors' ? 'Fixed your typos. Your voice survived. Moo.' : 'Schizo-izer done. Reality is now optional.');
+            },
+            error: e => {
+                this.aiEditError.set(e instanceof TimeoutError
+                    ? `${label} timed out after 3 minutes`
+                    : httpErrorMessage(e, `${label} failed`));
+                this.finishAiEdit();
+            },
+            complete: () => this.finishAiEdit(),
+        });
+    }
+
+    private finishAiEdit() {
+        this.aiEditBusy.set(false);
+        clearInterval(this.aiEditTicker);
+        this.aiEditSub = undefined;
+    }
+
+    // User-initiated cancel (Step 8) — see cancelAutoTranslate() above for the same reasoning.
+    cancelAiEdit() {
+        this.aiEditSub?.unsubscribe();
+        this.finishAiEdit();
     }
 
     private showAiToast(text: string) {
@@ -850,7 +905,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.tagList.set(draft.tags ? draft.tags.split(',').filter(t => t.length > 0) : []);
             this.tagInput = '';
             this.editor?.setEditable(true);
-            this.editor?.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC));
+            this.editor?.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC), { emitUpdate: false });
             this.resetHistory();
             this.saveState.set('saved');
             this.currentBlog.set(draft.blogSlug ? { slug: draft.blogSlug, isPublished: draft.isBlogPublished } : null);
@@ -913,7 +968,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.tagList.set(tags);
             this.tagInput = '';
             this.editor?.setEditable(true);
-            this.editor?.commands.setContent(JSON.parse(cedarJson));
+            this.editor?.commands.setContent(JSON.parse(cedarJson), { emitUpdate: false });
             this.resetHistory();
             this.saveState.set('saved');
             this.currentBlog.set(null);

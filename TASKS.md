@@ -7,7 +7,7 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
 - [ ] Manually activate the Stripe Customer Portal in the Stripe Dashboard (Settings → Billing) — the code path (`POST /api/billing/stripe/portal`) exists but the portal itself isn't turned on yet.
 - [x] Run `Scripts/deploy.ps1` end-to-end — done 16.07.2026 (Marty deployed commit `98ec07e`, health check passed).
 - [ ] Verify, in production only (bot is disabled in local dev): a real Stripe test-mode payment (card `4242 4242 4242 4242`) and a real auto-translate call. (Telegram post-signature path — verified working 16.07.2026 as part of the Blocks migration testing below.)
-- [ ] Deploy the empty-carousel/collage fix (`CedarToTelegramBlocksRenderer.cs`, uncommitted as of 16.07.2026) — a draft with a leftover empty carousel/collage node (editor artifact) still fails export with `RICH_MESSAGE_CONTENT_REQUIRED` until this ships. See ADR-019 in `docs/DECISIONS.md`.
+- [x] Deploy the empty-carousel/collage fix (`CedarToTelegramBlocksRenderer.cs`) — **stale as of 25.07.2026**: the fix has been committed and shipped since the `98ec07e` deploy (16.07.2026); the guard (`Count > 0` before yielding carousel/collage/list/table/etc. blocks) is present in the current code. See ADR-019/027 in `docs/DECISIONS.md`.
 
 ## Telegram Bot API 10.2 migration (16.07.2026) — mostly verified live, some gaps remain
 Full story: ADR-018/019 in `docs/DECISIONS.md`, `.claude/rules/telegram-bot.md`. Confirmed working against `@testingandfun` and in real production use (Marty's "My plan" post): text formatting (bold/italic/underline/strike/code/link/spoiler), headings, lists, images with real native captions, multi-image carousel/collage.
@@ -21,13 +21,14 @@ Full story: ADR-018/019 in `docs/DECISIONS.md`, `.claude/rules/telegram-bot.md`.
 - [ ] End-to-end phone check: blog reactions/comments + the "Read on the blog →" cross-link, on a real `@testingandfun` post.
 - [ ] RSS feed — rolled into Phase 8 Step 2 (see `docs/ROADMAP.md`).
 
-## Editor redesign (24.07.2026) — built, not yet live-verified
-See ADR-035, `docs/DECISIONS.md`, for full scope (toolbar customization, Appearance settings, unified Insert modal, tag cloud, New Draft dialog, `/drafts` screen). `dotnet test`/`ng build` pass but nothing here has been exercised in a real browser yet.
-- [ ] Click through all of it in `ng serve` + `dotnet run` — toolbar preset switching, drag-and-drop between rows, accent presets, the new-draft dialog, `/drafts` filters, the unified Insert modal's clipboard auto-detect.
+## Editor redesign (24.07.2026) — partially live-verified
+See ADR-035, `docs/DECISIONS.md`, for full scope (toolbar customization, Appearance settings, unified Insert modal, tag cloud, New Draft dialog, `/drafts` screen).
+- [x] Toolbar popup menus render and the Export modal is positioned/centered correctly — verified 25.07.2026 while fixing 4 unrelated CSS bugs from this redesign's "Cedar Aero" glass effect (`CHANGELOG.md`, `docs/ROADMAP.md` Phase 8 Step 9)
+- [ ] Toolbar preset switching, drag-and-drop between rows, accent presets, the new-draft dialog, `/drafts` filters, the unified Insert modal's clipboard auto-detect — still not clicked through
 - [ ] Verify a real published post (Telegram + blog) still looks right after the toolbar/Insert-modal rewiring — no renderer changed, but the client-side node-insertion paths did.
 
-## Phase 8 (v0.8.0) — planned, not started
-See `docs/ROADMAP.md` Phase 8 for the full 8-step breakdown (blog polish/bugfixes, RSS, legal pages, Header Slot System, signature monetization, tags, comments, AI progress bar) and the backlog table for what's deliberately deferred out of it.
+## Phase 8 (v0.8.0) — well underway
+See `docs/ROADMAP.md` Phase 8 for the full breakdown: Steps 1–5 done, Step 6 (tags) half-done, Steps 7–8 (comments improvements, AI progress bar) not started, plus a large amount of unplanned Step 9 work (view counter, stats Blog tab, Markdown import, exception handling, debug console + export redesign, RU/EN diff gutter, image compression control, YouTube embeds, the editor redesign) that shipped without ever being tracked here until the 25.07.2026 docs audit. `docs/BACKLOG.md` has what's deliberately deferred out of this phase.
 
 ## Tech debt
 See the tech-debt table in `docs/ROADMAP.md` — OS migration (Bullseye→64-bit, ~Aug 2026), cloud backup duplication (rclone), .NET 8 EOL (Nov 2026, bundled with the OS migration).

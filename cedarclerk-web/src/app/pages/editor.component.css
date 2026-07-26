@@ -484,6 +484,8 @@
     cursor: pointer;
     font-family: inherit;
     white-space: nowrap;
+    position: relative;
+    overflow: hidden;
 }
 
 .toolbar .ai-chip:hover {
@@ -492,6 +494,22 @@
 
 .ai-chip .icon-xs {
     color: var(--accent);
+}
+
+/* Phase 8 Step 8 — pseudo-progress bar (see pseudo-progress.util.ts), a thin fill along the
+   chip's bottom edge rather than a separate element, to stay compact in the toolbar. */
+.ai-chip-progress-track {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 2px;
+    background: transparent;
+}
+
+.ai-chip-progress-fill {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    transition: width .4s ease-out;
 }
 
 .sep {
@@ -1098,6 +1116,12 @@
     align-items: center;
     gap: 8px;
     margin-top: 14px;
+}
+
+.translate-progress .upload-bar {
+    width: 220px;
+    max-width: 100%;
+    flex: none;
 }
 
 .inline-progress {

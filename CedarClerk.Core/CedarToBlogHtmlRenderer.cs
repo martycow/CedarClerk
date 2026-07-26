@@ -266,24 +266,40 @@ public static class CedarToBlogHtmlRenderer
     // hydrated client-side (see BlogEndpoints' page script). Also reused as-is by BlogEndpoints for
     // the whole-article reaction/comment block, wrapped in the same ".annotation" div with an empty id.
     // Comments are shown by default (no expand/collapse) — client script paginates the list.
-    public static string AnnotationControlsHtml(string lang = "ru")
+    //
+    // `ownerName`/`publishedAt` are only passed by the whole-article call site (BlogEndpoints,
+    // Phase 8 Step 7) — omitted (null) for every per-fragment inline annotation instance, since
+    // repeating "post published: ..." inside every in-text comment popup would be noise, and the
+    // owner-name data attribute only needs to exist once per page for the hydration script to read.
+    public static string AnnotationControlsHtml(string lang = "ru", string? ownerName = null, DateTime? publishedAt = null)
     {
         var comments = lang == "en" ? "Comments" : "Комментарии";
         var showMore = lang == "en" ? "Show more comments" : "Показать больше комментариев";
         var namePlaceholder = lang == "en" ? "Name (optional)" : "Имя (необязательно)";
         var commentPlaceholder = lang == "en" ? "Add a comment…" : "Добавить комментарий…";
         var send = lang == "en" ? "Send" : "Отправить";
+        var replyingTo = lang == "en" ? "Replying to" : "Ответ";
+        var cancelReply = lang == "en" ? "Cancel" : "Отмена";
+
+        var ownerAttr = string.IsNullOrEmpty(ownerName) ? "" : $" data-owner-name=\"{EscapeAttr(ownerName)}\"";
+        var publishedLine = publishedAt is { } p
+            ? $"<div class=\"comment-published-line\">{(lang == "en" ? "Post published" : "Пост опубликован")}: {p.ToString("d MMM yyyy, HH:mm", CultureInfo.InvariantCulture)}</div>"
+            : "";
+
         return $"""
             <div class="annotation-controls">
             <button type="button" class="react-btn" data-kind="like">&#128077; <span class="count" data-kind-count="like">0</span></button>
             <button type="button" class="react-btn" data-kind="dislike">&#128078; <span class="count" data-kind-count="dislike">0</span></button>
             <span class="comment-count-label">&#128172; <span class="comment-count">0</span></span>
             </div>
-            <div class="comment-box">
+            <div class="comment-box"{ownerAttr}>
             <div class="comment-box-label">{comments}</div>
+            {publishedLine}
             <div class="comment-list"></div>
             <button type="button" class="comment-load-more" hidden>{showMore}</button>
+            <div class="comment-reply-indicator" hidden>{replyingTo} <span class="reply-target-name"></span> <button type="button" class="cancel-reply">{cancelReply}</button></div>
             <form class="comment-form">
+            <input type="hidden" class="comment-parent-id" value="">
             <input type="text" class="comment-author" placeholder="{namePlaceholder}" maxlength="60">
             <textarea class="comment-text" placeholder="{commentPlaceholder}" maxlength="2000" required></textarea>
             <button type="submit">{send}</button>
