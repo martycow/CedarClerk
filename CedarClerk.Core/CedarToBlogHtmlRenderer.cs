@@ -308,6 +308,69 @@ public static class CedarToBlogHtmlRenderer
             """;
     }
 
+    // Registration form shown instead of the post body to an uninvited visitor of a private
+    // post (B3). Hydrated by the page script in BlogEndpoints' ShellTemplate, same as the
+    // comment form above. Every author-authored string (intro, question labels, choice options)
+    // is escaped here — it's the one place visitor-facing HTML is built from owner input.
+    public static string RegistrationFormHtml(RegistrationFormDefinition form, string title, string lang = "ru")
+    {
+        var heading = lang == "en" ? "This post is private" : "Это приватный пост";
+        var blurb = lang == "en"
+            ? "Fill in the form below to get access."
+            : "Заполните форму ниже, чтобы получить доступ.";
+        var submit = lang == "en" ? "Get access" : "Получить доступ";
+        var namePh = lang == "en" ? "First and last name" : "Имя и фамилия";
+        var nickPh = lang == "en" ? "Nickname" : "Никнейм";
+        var emailPh = lang == "en" ? "Email" : "Почта";
+        var socialPh = lang == "en" ? "A social link" : "Ссылка на соцсеть";
+        var choosePh = lang == "en" ? "Choose…" : "Выберите…";
+
+        var sb = new StringBuilder();
+        sb.Append("<div class=\"reg-gate\"><div class=\"reg-card\">");
+        sb.Append("<h1 class=\"reg-title\">").Append(Escape(title)).Append("</h1>");
+        sb.Append("<div class=\"reg-lock\">&#128274; ").Append(heading).Append("</div>");
+        sb.Append("<p class=\"reg-blurb\">").Append(blurb).Append("</p>");
+
+        if (!string.IsNullOrWhiteSpace(form.Intro))
+            sb.Append("<p class=\"reg-intro\">").Append(Escape(form.Intro!)).Append("</p>");
+
+        sb.Append("<form class=\"reg-form\">");
+        if (form.RequireName)
+            sb.Append($"<input type=\"text\" class=\"reg-input\" data-field=\"name\" placeholder=\"{namePh}\" maxlength=\"200\" required>");
+        if (form.RequireNickname)
+            sb.Append($"<input type=\"text\" class=\"reg-input\" data-field=\"nickname\" placeholder=\"{nickPh}\" maxlength=\"200\" required>");
+        if (form.RequireEmail)
+            sb.Append($"<input type=\"email\" class=\"reg-input\" data-field=\"email\" placeholder=\"{emailPh}\" maxlength=\"200\" required>");
+        if (form.RequireSocial)
+            sb.Append($"<input type=\"text\" class=\"reg-input\" data-field=\"social\" placeholder=\"{socialPh}\" maxlength=\"200\" required>");
+
+        foreach (var q in form.Questions)
+        {
+            var req = q.Required ? " required" : "";
+            sb.Append("<label class=\"reg-question\"><span class=\"reg-question-label\">")
+              .Append(Escape(q.Label)).Append(q.Required ? " *" : "").Append("</span>");
+
+            if (q.Type == RegistrationQuestionType.Choice)
+            {
+                sb.Append($"<select class=\"reg-input\" data-question=\"{EscapeAttr(q.Id)}\"{req}>");
+                sb.Append($"<option value=\"\">{choosePh}</option>");
+                foreach (var o in q.Options)
+                    sb.Append($"<option value=\"{EscapeAttr(o)}\">").Append(Escape(o)).Append("</option>");
+                sb.Append("</select>");
+            }
+            else
+            {
+                sb.Append($"<input type=\"text\" class=\"reg-input\" data-question=\"{EscapeAttr(q.Id)}\" maxlength=\"200\"{req}>");
+            }
+            sb.Append("</label>");
+        }
+
+        sb.Append($"<button type=\"submit\" class=\"reg-submit\">{submit}</button>");
+        sb.Append("<p class=\"reg-error\" hidden></p>");
+        sb.Append("</form></div></div>");
+        return sb.ToString();
+    }
+
     private static string FormatDateTime(DateTime dt, string format)
     {
         var parts = new List<string>();
