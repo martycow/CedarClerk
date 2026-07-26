@@ -841,18 +841,14 @@
                     @if (enStale()) { <span class="stale-dot" title="Russian version was edited after this translation"></span> }
                 </button>
                 @if (lang() === 'en' && enMeta()) {
-                    @if (enStale()) {
+                    <!--Always offered, not only while the stale dot is lit (B14): the dot clears
+                    itself as soon as the EN version is touched, which used to leave delete as the
+                    only action even when a re-translate was exactly what was wanted.-->
                     <button class="retranslate-btn" (click)="autoTranslateEn()" [disabled]="autoTranslating()"
-                            title="Russian version changed — re-translate">
-                        {{ autoTranslating() ? autoTranslateProgress() + '% · ' + autoTranslateElapsed() + 's' : '↻ Re-translate' }}
+                            [title]="enStale() ? 'Russian version changed — re-translate' : 'Re-translate from Russian'">
+                        ↻ Re-translate
                     </button>
-                    @if (autoTranslating()) {
-                    <button class="lang-delete" (click)="cancelAutoTranslate()" title="Cancel">
-                        <svg lucideX class="icon-sm"></svg>
-                    </button>
-                    }
-                    }
-                <button class="lang-delete" (click)="deleteEnVersion()" title="Delete English version">
+                <button class="lang-delete" (click)="deleteEnVersion()" [disabled]="autoTranslating()" title="Delete English version">
                     <svg lucideTrash2 class="icon-sm"></svg>
                 </button>
                 }
@@ -903,6 +899,18 @@
                     </div>
                 </app-popover>
             </div>
+            <!--Re-translating an existing EN version gets the same progress treatment as the
+            first-time auto-translate below (B14) — previously it was just % text in the button.-->
+            @if (autoTranslating() && !showEnEmptyState()) {
+            <div class="translate-progress" [style.max-width.px]="sheetMaxWidthPx()">
+                <div class="upload-bar"><div class="upload-fill" [style.width.%]="autoTranslateProgress()"></div></div>
+                <p class="translate-status">{{ translateStatusMessage() }} — {{ autoTranslateProgress() }}% · {{ autoTranslateElapsed() }}s</p>
+                <button class="btn-ghost" (click)="cancelAutoTranslate()">Cancel</button>
+            </div>
+            }
+            @if (autoTranslateError() && !showEnEmptyState()) {
+            <p class="channel-error" [style.max-width.px]="sheetMaxWidthPx()" style="margin:0 auto 8px">{{ autoTranslateError() }}</p>
+            }
             @if (showEnEmptyState()) {
             <div class="sheet en-empty">
                 <p class="en-empty-title">No English version yet</p>
