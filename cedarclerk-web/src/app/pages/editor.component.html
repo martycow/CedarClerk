@@ -26,14 +26,55 @@
 
         <span class="spacer"></span>
 
+        <button class="export-btn export-trigger" (click)="openExportModal()" title="Export">
+            <svg lucideSend class="icon-sm"></svg>
+            <span class="btn-label">Export</span>
+        </button>
+
+        <button class="icon-btn theme-toggle" (click)="theme.toggle()" title="Toggle theme">
+            {{ theme.theme() === 'dark' ? '☀' : '☾' }}
+        </button>
+
         <app-popover align="right">
-            <button trigger class="icon-btn" title="Channels">
-                <svg lucideRadioTower class="icon"></svg>
+            <button trigger class="account-trigger" title="Account">
+                <span class="avatar">{{ avatarInitial() }}</span>
+                <span class="user">{{ auth.userEmail() }}</span>
             </button>
-            <div panel class="channels-popover">
-                <div class="panel-head">
-                    <span class="panel-label">Channels</span>
-                </div>
+            <div panel class="account-popover">
+                <p class="profile-email">{{ auth.userEmail() }}</p>
+                <div class="popover-divider"></div>
+                <!--Stats/comments sit next to Settings per B22 rather than as separate topbar
+                icons — the topbar's right side is Export + theme + profile only now.-->
+                <a class="account-action-btn" routerLink="/comments">
+                    <svg lucideMessageSquare class="icon-sm"></svg>
+                    Comments &amp; likes
+                </a>
+                <a class="account-action-btn" routerLink="/stats">
+                    <svg lucideLineChart class="icon-sm"></svg>
+                    Stats
+                </a>
+                <a class="account-action-btn" routerLink="/settings">
+                    <svg lucideSettings class="icon-sm"></svg>
+                    Settings
+                </a>
+                <button class="logout-btn" (click)="auth.logout()">
+                    <svg lucideLogOut class="icon-sm"></svg>
+                    Log out
+                </button>
+            </div>
+        </app-popover>
+    </header>
+
+    @if (exportModalOpen()) {
+        <app-modal [width]="640" (closed)="exportModalOpen.set(false)">
+            <svg modal-icon lucideSend class="icon"></svg>
+            <span modal-title>Export</span>
+
+            <!--Channels moved here from the topbar (B21) and sit at the very top: they're
+            export configuration, not an editing tool. Outside the currentId() guard because
+            connecting/disconnecting a channel isn't draft-specific.-->
+            <div class="export-section">
+                <div class="export-section-title">Каналы</div>
                 <div class="channel-add">
                     <input class="chat-input" [(ngModel)]="newChannelChatId" [disabled]="channelBusy()" placeholder="@channel or id" (keyup.enter)="connectChannel()">
                     <button class="mini" (click)="connectChannel()" [disabled]="channelBusy()" title="Connect">
@@ -110,51 +151,6 @@
                     </div>
                 }
             </div>
-        </app-popover>
-
-        <button class="export-btn export-trigger" (click)="openExportModal()" title="Export">
-            <svg lucideSend class="icon-sm"></svg>
-            <span class="btn-label">Export</span>
-        </button>
-
-        <button class="icon-btn theme-toggle" (click)="theme.toggle()" title="Toggle theme">
-            {{ theme.theme() === 'dark' ? '☀' : '☾' }}
-        </button>
-
-        <app-popover align="right">
-            <button trigger class="account-trigger" title="Account">
-                <span class="avatar">{{ avatarInitial() }}</span>
-                <span class="user">{{ auth.userEmail() }}</span>
-            </button>
-            <div panel class="account-popover">
-                <p class="profile-email">{{ auth.userEmail() }}</p>
-                <div class="popover-divider"></div>
-                <!--Stats/comments sit next to Settings per B22 rather than as separate topbar
-                icons — the topbar's right side is Export + theme + profile only now.-->
-                <a class="account-action-btn" routerLink="/comments">
-                    <svg lucideMessageSquare class="icon-sm"></svg>
-                    Comments &amp; likes
-                </a>
-                <a class="account-action-btn" routerLink="/stats">
-                    <svg lucideLineChart class="icon-sm"></svg>
-                    Stats
-                </a>
-                <a class="account-action-btn" routerLink="/settings">
-                    <svg lucideSettings class="icon-sm"></svg>
-                    Settings
-                </a>
-                <button class="logout-btn" (click)="auth.logout()">
-                    <svg lucideLogOut class="icon-sm"></svg>
-                    Log out
-                </button>
-            </div>
-        </app-popover>
-    </header>
-
-    @if (exportModalOpen()) {
-        <app-modal [width]="640" (closed)="exportModalOpen.set(false)">
-            <svg modal-icon lucideSend class="icon"></svg>
-            <span modal-title>Export</span>
 
             @if (currentId(); as id) {
             <div class="export-section">
