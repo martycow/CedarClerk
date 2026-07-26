@@ -77,6 +77,11 @@ public class ApplicationUser : IdentityUser
     public string? ToolbarLayoutJson { get; set; }
     public string? AppearancePrefsJson { get; set; }
     public string? NewDraftDefaultsJson { get; set; }
+
+    // Interface language (B26, ADR-044) — "ru"/"en". NOT the content language of a post: that
+    // one is DraftTranslation.Language / Languages.cs. Null means the user never picked, and the
+    // client falls back to the browser's language.
+    public string? UiLanguage { get; set; }
 }
 
 public class Payment

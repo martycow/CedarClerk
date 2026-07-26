@@ -1,25 +1,25 @@
 <div class="auth-page">
-    <button class="theme-toggle" (click)="theme.toggle()" title="Toggle theme">
+    <button class="theme-toggle" (click)="theme.toggle()" [title]="t().common.toggleTheme">
         {{ theme.theme() === 'dark' ? '☀' : '☾' }}
     </button>
 
     <div class="auth-card">
         <div class="auth-header">
             <app-cedar-logo [size]="28"></app-cedar-logo>
-            <div class="auth-title">Join the herd</div>
-            <div class="auth-tagline">Cedar Clerk is invite-only for now.<br>Ask Marty for a code.</div>
+            <div class="auth-title">{{ t().register.title }}</div>
+            <div class="auth-tagline">{{ t().register.tagline }}<br>{{ t().register.taglineAsk }}</div>
         </div>
 
         <div class="field">
-            <label for="cc-reg-email">Email</label>
+            <label for="cc-reg-email">{{ t().register.email }}</label>
             <input id="cc-reg-email" [(ngModel)]="email" placeholder="you@example.com" type="email" autocomplete="username">
         </div>
         <div class="field">
-            <label for="cc-reg-pass">Password</label>
-            <input id="cc-reg-pass" [(ngModel)]="password" placeholder="8+ characters" type="password" autocomplete="new-password">
+            <label for="cc-reg-pass">{{ t().register.password }}</label>
+            <input id="cc-reg-pass" [(ngModel)]="password" [placeholder]="t().register.passwordPlaceholder" type="password" autocomplete="new-password">
         </div>
         <div class="field">
-            <label for="cc-reg-invite">Invite code</label>
+            <label for="cc-reg-invite">{{ t().register.inviteCode }}</label>
             <input id="cc-reg-invite" class="mono" [(ngModel)]="inviteCode" placeholder="CEDAR-MOO-0" type="text" autocomplete="off" (keyup.enter)="submit()">
         </div>
 
@@ -28,10 +28,10 @@
         }
 
         <button class="primary-btn" (click)="submit()" [disabled]="busy()">
-            {{ busy() ? '…' : 'Create account' }}
+            {{ busy() ? '…' : t().register.submit }}
         </button>
 
-        <div class="auth-footer">Already have one? <a routerLink="/login">Log in</a></div>
-        <div class="auth-footer muted">By creating an account you agree to the <a routerLink="/terms">Terms</a> and <a routerLink="/privacy">Privacy Policy</a></div>
+        <div class="auth-footer">{{ t().register.haveAccount }} <a routerLink="/login">{{ t().register.login }}</a></div>
+        <div class="auth-footer muted">{{ t().register.legalPrefix }} <a routerLink="/terms">{{ t().register.legalTerms }}</a> {{ t().register.legalAnd }} <a routerLink="/privacy">{{ t().register.legalPrivacy }}</a></div>
     </div>
 </div>

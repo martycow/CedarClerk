@@ -2,11 +2,13 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { LocaleService, UiLang } from './i18n/locale.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
     private http = inject(HttpClient);
     private router = inject(Router);
+    private locale = inject(LocaleService);
 
     readonly userEmail = signal<string | null>(null);
     readonly createdAt = signal<string | null>(null);
@@ -33,6 +35,7 @@ export class AuthService {
     readonly toolbarLayoutJson = signal<string | null>(null);
     readonly appearancePrefsJson = signal<string | null>(null);
     readonly newDraftDefaultsJson = signal<string | null>(null);
+    readonly uiLanguage = signal<string | null>(null);
 
     async login(email: string, password: string): Promise<boolean> {
         try {
@@ -77,6 +80,7 @@ export class AuthService {
                 socialTwitterUrl: string | null; socialInstagramUrl: string | null; socialFacebookUrl: string | null;
                 socialYoutubeUrl: string | null; socialGithubUrl: string | null;
                 toolbarLayoutJson: string | null; appearancePrefsJson: string | null; newDraftDefaultsJson: string | null;
+                uiLanguage: string | null;
             }>('/api/auth/me'));
             this.userEmail.set(me.email);
             this.createdAt.set(me.createdAt);
@@ -103,6 +107,9 @@ export class AuthService {
             this.toolbarLayoutJson.set(me.toolbarLayoutJson);
             this.appearancePrefsJson.set(me.appearancePrefsJson);
             this.newDraftDefaultsJson.set(me.newDraftDefaultsJson);
+            this.uiLanguage.set(me.uiLanguage);
+            // The profile wins over the localStorage cache the service started from (ADR-044).
+            this.locale.adoptProfileLanguage(me.uiLanguage);
         } catch {
             this.userEmail.set(null);
             this.createdAt.set(null);
@@ -129,6 +136,7 @@ export class AuthService {
             this.toolbarLayoutJson.set(null);
             this.appearancePrefsJson.set(null);
             this.newDraftDefaultsJson.set(null);
+            this.uiLanguage.set(null);
         }
     }
 
@@ -186,6 +194,14 @@ export class AuthService {
         const res = await firstValueFrom(this.http.post<{ newDraftDefaultsJson: string | null }>(
             '/api/auth/new-draft-defaults', { defaultsJson }));
         this.newDraftDefaultsJson.set(res.newDraftDefaultsJson);
+    }
+
+    // Applied locally first so the UI switches on click, not after the round-trip (ADR-044).
+    async saveUiLanguage(uiLanguage: UiLang): Promise<void> {
+        this.locale.set(uiLanguage);
+        const res = await firstValueFrom(this.http.post<{ uiLanguage: string | null }>(
+            '/api/auth/ui-language', { uiLanguage }));
+        this.uiLanguage.set(res.uiLanguage);
     }
 
     async logout(): Promise<void> {

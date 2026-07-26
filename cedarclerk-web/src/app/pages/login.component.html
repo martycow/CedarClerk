@@ -1,5 +1,5 @@
 <div class="auth-page">
-    <button class="theme-toggle" (click)="theme.toggle()" title="Toggle theme">
+    <button class="theme-toggle" (click)="theme.toggle()" [title]="t().common.toggleTheme">
         {{ theme.theme() === 'dark' ? '☀' : '☾' }}
     </button>
 
@@ -7,24 +7,24 @@
         <div class="auth-header">
             <app-cedar-logo [size]="34"></app-cedar-logo>
             <div class="auth-title">Cedar Clerk</div>
-            <div class="auth-tagline">Write here. Publish there. Moo.</div>
+            <div class="auth-tagline">{{ t().login.tagline }}</div>
         </div>
 
         <div class="field">
-            <label for="cc-login-email">Email</label>
+            <label for="cc-login-email">{{ t().login.email }}</label>
             <input id="cc-login-email" [(ngModel)]="email" placeholder="you@example.com" type="email" autocomplete="username">
         </div>
         <div class="field">
-            <label for="cc-login-pass">Password</label>
+            <label for="cc-login-pass">{{ t().login.password }}</label>
             <input id="cc-login-pass" [(ngModel)]="password" placeholder="••••••••" type="password" autocomplete="current-password" (keyup.enter)="submit()">
         </div>
 
         <button class="primary-btn" (click)="submit()" [disabled]="busy()">
-            {{ busy() ? '…' : 'Log in' }}
+            {{ busy() ? '…' : t().login.submit }}
         </button>
 
         @if (error()) { <p class="error">{{ error() }}</p> }
 
-        <div class="auth-footer">No account? <a routerLink="/register">Register</a> <span class="muted">· invite required</span></div>
+        <div class="auth-footer">{{ t().login.noAccount }} <a routerLink="/register">{{ t().login.register }}</a> <span class="muted">{{ t().login.inviteRequired }}</span></div>
     </div>
 </div>

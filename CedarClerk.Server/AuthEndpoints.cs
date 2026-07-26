@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Text.Json.Serialization;
 using CedarClerk.Core;
+using CedarClerk.Localization;
 using CedarClerk.Server.Bot;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,7 @@ public static class AuthEndpoints
     public record ToolbarLayoutRequest(string? LayoutJson);
     public record AppearanceRequest(string? PrefsJson);
     public record NewDraftDefaultsRequest(string? DefaultsJson);
+    public record UiLanguageRequest(string? UiLanguage);
 
     // Arbitrary client-authored JSON blobs (ADR-035) — generous but bounded so a misbehaving
     // client can't grow AspNetUsers rows unbounded.
@@ -107,6 +109,7 @@ public static class AuthEndpoints
                 toolbarLayoutJson = appUser?.ToolbarLayoutJson,
                 appearancePrefsJson = appUser?.AppearancePrefsJson,
                 newDraftDefaultsJson = appUser?.NewDraftDefaultsJson,
+                uiLanguage = appUser?.UiLanguage,
             });
         })
         .RequireAuthorization();
@@ -161,6 +164,22 @@ public static class AuthEndpoints
             user.NewDraftDefaultsJson = req.DefaultsJson;
             await users.UpdateAsync(user);
             return Results.Ok(new { newDraftDefaultsJson = user.NewDraftDefaultsJson });
+        })
+        .RequireAuthorization();
+
+        // Interface language (B26, ADR-044). Its own endpoint rather than a field on /profile,
+        // same reasoning as /appearance above. Null resets to "follow the browser".
+        groupBuilder.MapPost("/ui-language", async (UiLanguageRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users) =>
+        {
+            if (req.UiLanguage is not null && !Languages.IsUiLanguage(req.UiLanguage))
+                return Results.BadRequest(new { error = "Unsupported interface language" });
+
+            var user = await users.GetUserAsync(principal);
+            if (user is null) return Results.Unauthorized();
+
+            user.UiLanguage = req.UiLanguage;
+            await users.UpdateAsync(user);
+            return Results.Ok(new { uiLanguage = user.UiLanguage });
         })
         .RequireAuthorization();
 

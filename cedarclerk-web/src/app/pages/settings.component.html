@@ -17,6 +17,7 @@
     <div class="settings-body">
         <nav class="anchor-chips">
             <button (click)="jump('sec-profile')">Profile</button>
+            <button (click)="jump('sec-language')">{{ t().settings.language.nav }}</button>
             <button (click)="jump('sec-appearance')">Appearance</button>
             <button (click)="jump('sec-toolbar')">Toolbar</button>
             <button (click)="jump('sec-header-slots')">Header slots</button>
@@ -65,6 +66,20 @@
                 <span class="field-hint">Done for the day?</span>
                 <button class="btn-danger-ghost" (click)="logout()">Log out</button>
             </div>
+        </section>
+
+        <!-- ============ APPEARANCE ============ -->
+        <!-- ============ LANGUAGE ============ -->
+        <section id="sec-language" class="settings-card">
+            <h2>{{ t().settings.language.title }}</h2>
+            <p class="field-hint">{{ t().settings.language.hint }}</p>
+            <!--Language names stay in their own language — an endonym list is the one thing
+            nobody needs translated.-->
+            <div class="format-toggle" style="max-width:220px">
+                <button [class.on]="locale.uiLang() === 'en'" (click)="setUiLanguage('en')">English</button>
+                <button [class.on]="locale.uiLang() === 'ru'" (click)="setUiLanguage('ru')">Русский</button>
+            </div>
+            @if (languageError()) { <p class="field-error">{{ languageError() }}</p> }
         </section>
 
         <!-- ============ APPEARANCE ============ -->

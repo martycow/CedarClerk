@@ -4,6 +4,7 @@ import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
+import { LocaleService, UiLang } from '../core/i18n/locale.service';
 import { AppearanceService, ACCENT_PRESETS, AppearancePrefs } from '../core/appearance.service';
 import { ToolbarLayoutService } from '../core/toolbar-layout.service';
 import { TOOLBAR_GROUPS, ToolbarButtonId, ToolbarPreset, presetLayout } from '../core/toolbar-layout';
@@ -30,6 +31,8 @@ type PayMethod = 'stripe' | 'paypal' | 'stars';
 export class SettingsComponent implements OnInit {
     auth = inject(AuthService);
     theme = inject(ThemeService);
+    locale = inject(LocaleService);
+    t = this.locale.t;
     appearance = inject(AppearanceService);
     toolbarLayout = inject(ToolbarLayoutService);
     private billingApi = inject(BillingService);
@@ -68,6 +71,7 @@ export class SettingsComponent implements OnInit {
     readonly accentPresets = ACCENT_PRESETS;
     appearanceMode = signal<'light' | 'dark'>('light');
     appearanceError = signal<string | null>(null);
+    languageError = signal<string | null>(null);
 
     readonly toolbarGroups = TOOLBAR_GROUPS;
     readonly movableToolbarGroups = TOOLBAR_GROUPS.filter(g => g.id !== 'ai');
@@ -139,6 +143,18 @@ export class SettingsComponent implements OnInit {
 
     jump(id: string) {
         document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Interface language (B26, ADR-044). Switches the UI immediately, then persists to the
+    // profile; a failed save leaves the UI switched but says so.
+    async setUiLanguage(lang: UiLang) {
+        if (this.locale.uiLang() === lang) return;
+        this.languageError.set(null);
+        try {
+            await this.auth.saveUiLanguage(lang);
+        } catch (e) {
+            this.languageError.set(httpErrorMessage(e, this.t().settings.language.failed));
+        }
     }
 
     // Appearance (ADR-035) — applies instantly and saves in the background, no Save button
