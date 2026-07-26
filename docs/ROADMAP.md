@@ -146,6 +146,30 @@ Step order below follows implementation dependencies, not the lettered order (A�
 
 **Dependency, recorded not scheduled**: Channel Analysis UI needs a data-collection layer (`PostStatSnapshot`, `ReactionEvent`, a view beacon, `message_reaction_count` in the bot's `allowed_updates`) that doesn't exist in the code yet — historical data can't be backfilled. It's excluded from Phase 8 on purpose; a dedicated data-collection phase needs to run first. See `docs/PRD.md` "Blocked" section.
 
+### Phase 9 — Brainstorm sweep — started 26.07.2026, in progress
+Executing `_Documents_/CedarClerk/Brainstorm_Features.md` (27 items, Marty's own priorities) in **High → Medium → Low** order. Full item text lives in `docs/BACKLOG.md` under "Brainstorm 26.07.2026"; this is the status checklist. One commit per item, short messages.
+
+**High**
+- [ ] B22 — Topbar layout: logo/divider/drafts/title/save-state on the left, Export + theme + profile on the right; `.cedar` download → Export, import → drafts page; stats/comments regroup next to settings. **Partially reverses the topbar work done earlier on 26.07.2026** — B22 is the newer instruction and wins
+- [ ] B21 — Channels menu moves into the top of the Export window
+- [ ] B5 — Export window redesign: per-destination checkboxes with unfolding settings, files/statistics section, a single Publish button for every enabled destination
+- [ ] B24 — `/drafts` table can't scroll horizontally on iPad
+- [ ] B25 — Draft state indicators in the workspace (private/published, LIVE + post links)
+- [ ] B14 — Auto-translate: real re-translate button + matching progress indicator; stale badge currently clears itself
+- [ ] B23 — `/drafts` gains view/reaction counts with a since-last-session delta
+- [ ] B26 — UI language picker (RU/EN), laid out to survive long-word languages
+- [ ] B3 — Registration form for private posts, with an optional questionnaire
+
+**Medium**
+- [ ] B4 — Export channel selector: no free-text entry, icons
+- [ ] B10 — Uniform popup behaviour (backdrop, close only via ✕/action)
+- [ ] B11 — Diff markers level with (and covering) the changed region
+- [ ] B12 — Ruler overlays the writing area; paragraph numbers actually render
+- [ ] B19 — Remaining Insert-group buttons become popups
+
+**Low**
+- [ ] B1 stats range slider · B2 channel icons · B6 single settings entry (gear) · B7 iPad email overflow · B8 monochrome YouTube icon · B9 emoji panel (overflow + more emoji) · B13 whitespace-reveal toggle · B15 customization moves into an editor side panel · B16 custom accent + writing-area presets · B17 bold signature · B18 custom YouTube link text · B20 better drafts icon · B27 single AI button with progress + cancel
+
 ---
 
 ## Backlog

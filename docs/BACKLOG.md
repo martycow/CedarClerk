@@ -45,6 +45,42 @@ Raw list, not yet scoped into phase steps — logged here per Marty's call, not 
 
 **Open dependency note**: idea #20.3 (private posts must support polls) needs #22 (polls) built first — don't scope the "private" half before polls exist as a content type.
 
+### Brainstorm 26.07.2026 (from `_Documents_/CedarClerk/Brainstorm_Features.md`)
+
+27 items with Marty's own High/Medium/Low priorities, imported verbatim in intent. **These are being executed in priority order as Phase 9** — see `docs/ROADMAP.md`. Numbering below is the brainstorm's own (`B1`…`B27`) to avoid colliding with the idea numbers above.
+
+| # | Priority | Tag | What |
+|---|---|---|---|
+| B3 | High | Private Posts | Visiting a private post without a token shows a **customizable registration form** (name, nickname, email, a social link) with an optional Google-Forms-style questionnaire attached (e.g. gaming experience, favourite genre) |
+| B5 | High | Export Window | Redesign: a checkbox per destination (blog, Telegram, Twitter…), its settings unfold when ticked; a separate files/statistics section (incl. total size); **one** Publish button that posts everywhere configured at once |
+| B14 | High | Translation | Auto-translate flow is broken: editing RU lights the EN badge, but switching to EN clears the dot after a second and only offers "delete translation". Needs a proper re-translate button plus the same progress indicator auto-translate has |
+| B21 | High | Export Window | The channels menu moves out of the topbar into the top of the Export window |
+| B22 | High | Topbar | Left→right: logo+name, divider, drafts button, draft-title field, Saved/Unsaved indicator. Right: Export, theme toggle, profile. **Download .cedar moves into Export; Import moves to the drafts page.** Stats/comments buttons move next to the settings button |
+| B23 | High | Drafts Page | New column with view/reaction counts, including the delta since the previous session — possibly a small sparkline |
+| B24 | High | Drafts Page | The table is wide on iPad but can't be scrolled horizontally |
+| B25 | High | Workspace | Show the current draft's state somewhere: private or not, published or not; when published, a LIVE marker with links to the blog/Telegram post |
+| B26 | High | Localization | Language picker in settings (RU/EN for now) — design for languages with very long words (German) not breaking the layout |
+| B4 | Medium | Export Window | Remove free-text channel entry — pick only from configured channels; add small channel icons |
+| B10 | Medium | UI | All popups behave identically: dimmed backdrop, closable only via the ✕ (or an action that implies closing, e.g. Publish) |
+| B11 | Medium | Diff gutters | Diff markers sit above/below the changed lines instead of level with them; should highlight the whole changed region, not draw a thin bar |
+| B12 | Medium | Workspace | The ruler is pointless as-is — it should overlay the writing area; paragraph numbers don't render despite the setting being on |
+| B19 | Medium | Insert Window | Remaining Insert-group buttons (date, footnote, emoji) should all become popups, like the link insert |
+| B1 | Low | Stats Page | Custom stats range: a 1–180 day slider with notches at 14/30/90/180 |
+| B2 | Low | UI | Load small channel icons in the channel list and stats window |
+| B6 | Low | UI | Two entry points to settings today (account popover + toolbar) — keep only the toolbar one, change its icon to a gear |
+| B7 | Low | UI | On iPad the account email overflows the screen edge — shift it left |
+| B8 | Low | UI | The YouTube button is the only coloured one; make it monochrome like the rest |
+| B9 | Low | Insert Window | Emoji panel overflows on the right and only has 40 emoji — too few |
+| B13 | Low | Workspace | Bottom-left toggle to reveal line breaks/tabs, so it's clear where content actually is |
+| B15 | Low | Customization | Move Appearance + toolbar settings out of the settings page into a right-hand panel in the editor, so changes are visible live |
+| B16 | Low | Customization | Custom accent colour picker; writing-area presets per target (Telegram, iPhone, iPad, Blog…) |
+| B17 | Low | Signature | Make the end-of-post signature **bold** so it stands out in Telegram |
+| B18 | Low | YouTube | Let the author set the link text shown in Telegram (currently a fixed "Watch on YouTube") |
+| B20 | Low | UI | Better icon for the drafts-list button |
+| B27 | Low | AI | One AI button opening a popup with the operation choice + progress indicator; window locks during the run but the run can be cancelled (closing the window) |
+
+**Conflict noted at import**: B22 reverses part of the 26.07.2026 topbar restructure done earlier the same day — `.cedar` download/import had just been moved *into* the topbar; B22 sends download to Export and import to the drafts page. B22 wins (it's the newer instruction).
+
 | # | What | Why deferred |
 |---|---|---|
 | 1 | Pro Plus signature tier (rich links etc.) | Three signature tiers before a user base exists adds complexity without benefit |
