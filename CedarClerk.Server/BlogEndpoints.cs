@@ -869,6 +869,19 @@ public static class BlogEndpoints
 
             if (!validInvite)
             {
+                // With a registration form configured the post is "locked", not "hidden" (B3) —
+                // a deliberate departure from the indistinguishable-from-404 behaviour above,
+                // which still applies when no form is set. See the ADR following ADR-041.
+                if (RegistrationFormDefinition.Parse(draft.RegistrationFormJson) is { } form)
+                {
+                    ctx.Response.StatusCode = StatusCodes.Status200OK;
+                    ctx.Response.ContentType = "text/html; charset=utf-8";
+                    await ctx.Response.WriteAsync(PageShell(draft.Title,
+                        CedarToBlogHtmlRenderer.RegistrationFormHtml(form, draft.Title, Languages.Primary),
+                        Languages.Primary, RenderHeader(channel)));
+                    return;
+                }
+
                 ctx.Response.StatusCode = StatusCodes.Status404NotFound;
                 ctx.Response.ContentType = "text/html; charset=utf-8";
                 await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Primary, RenderHeader(channel)));
@@ -1257,6 +1270,23 @@ public static class BlogEndpoints
         .comment-reply-indicator .reply-target-name { font-weight: 600; color: var(--text); }
         .comment-reply-indicator .cancel-reply { background: none; border: 1px solid var(--border); border-radius: 999px; padding: 1px 9px; font-size: 11.5px; color: var(--t2); cursor: pointer; font-family: inherit; }
         .comment-load-more { display: block; margin: 0 0 10px; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: var(--text); font: inherit; font-size: 12.5px; }
+        /* Registration gate for private posts (B3) — replaces the article body entirely. */
+        .reg-gate { display: flex; justify-content: center; padding: 8px 0 40px; }
+        .reg-card { background: var(--sheet); border-radius: 12px; box-shadow: var(--shadow); padding: 28px 30px; max-width: 460px; width: 100%; }
+        .reg-title { font-size: 22px; margin: 0 0 10px; }
+        .reg-lock { font-size: 12px; letter-spacing: .05em; text-transform: uppercase; font-weight: 600; color: var(--t3); margin-bottom: 10px; }
+        .reg-blurb { font-size: 14px; color: var(--t2); margin: 0 0 6px; }
+        .reg-intro { font-size: 14px; line-height: 1.5; margin: 0 0 16px; }
+        .reg-form { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+        .reg-input { border: 1px solid var(--border); background: var(--sheet); color: var(--text); border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; outline: none; width: 100%; box-sizing: border-box; }
+        .reg-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--asoft); }
+        .reg-question { display: flex; flex-direction: column; gap: 5px; }
+        .reg-question-label { font-size: 13px; font-weight: 500; }
+        .reg-submit { border: none; background: var(--accent); color: #F4F2EA; border-radius: 8px; padding: 11px 18px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; margin-top: 4px; }
+        .reg-submit:hover { filter: brightness(1.08); }
+        .reg-submit:disabled { opacity: .6; cursor: default; }
+        .reg-error { color: var(--danger); font-size: 13px; margin: 4px 0 0; }
+
         .comment-form { display: flex; flex-direction: column; gap: 8px; }
         .comment-form input, .comment-form textarea { flex: 1; border: 1px solid var(--border); background: var(--sheet); color: var(--text); border-radius: 8px; padding: 9px 12px; font-size: 13.5px; font-family: inherit; outline: none; resize: vertical; }
         .comment-form input:focus, .comment-form textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--asoft); }
@@ -1328,6 +1358,45 @@ public static class BlogEndpoints
             window.addEventListener('scroll', onScroll, { passive: true });
             onScroll();
             if (topBtn) topBtn.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+        })();
+
+        (function () {
+            var form = document.querySelector('.reg-form');
+            if (!form) return;
+            var slug = location.pathname.replace(/^\/|\/$/g, '');
+            var errEl = form.querySelector('.reg-error');
+
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var submitBtn = form.querySelector('.reg-submit');
+                var payload = { answers: {} };
+                form.querySelectorAll('[data-field]').forEach(function (el) {
+                    var key = el.getAttribute('data-field');
+                    payload[key === 'social' ? 'socialLink' : key] = el.value.trim();
+                });
+                form.querySelectorAll('[data-question]').forEach(function (el) {
+                    payload.answers[el.getAttribute('data-question')] = el.value.trim();
+                });
+
+                errEl.hidden = true;
+                submitBtn.disabled = true;
+                fetch('/api/posts/' + encodeURIComponent(slug) + '/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                    .then(function (r) {
+                        if (!r.ok) return r.json().then(function (e) { throw new Error(e.error || 'Something went wrong'); });
+                        return r.json();
+                    })
+                    // The access cookie comes back on this response — reloading lands on the post.
+                    .then(function () { location.reload(); })
+                    .catch(function (err) {
+                        errEl.textContent = err.message;
+                        errEl.hidden = false;
+                        submitBtn.disabled = false;
+                    });
+            });
         })();
 
         (function () {
