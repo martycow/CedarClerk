@@ -227,7 +227,10 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
-    overflow: hidden;
+    /* Was overflow:hidden (only there to clip the rounded corners), which meant the fixed-width
+       column grid below simply got cut off on iPad with no way to reach it — B24. */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .drafts-row {
@@ -238,6 +241,10 @@
     padding: 11px 16px;
     border-bottom: 1px solid var(--border);
     cursor: pointer;
+    /* Sum of the fixed columns + gaps + padding, leaving room for the 1fr title. Below this
+       the row scrolls horizontally instead of squashing the columns into nothing. Stays under
+       .drafts-body's 1040px content width, so desktop never scrolls. */
+    min-width: 980px;
 }
 
 .drafts-row:last-child {
