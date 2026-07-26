@@ -23,7 +23,9 @@ The main writing surface — by far the most complex page. Topbar + two toolbar 
 
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|
-| Drafts popover | topbar hamburger icon, `.drafts-popover` | popover | List drafts, import `.cedar`/Markdown, jump to full `/drafts` view, create new draft, per-draft delete | Needed & present — spin icon on import buttons (`importingCedar()`/`importingMarkdown()`), `draftsBusy()` disables actions mid-op | No progress %, just a spinner — see Backlog #6 |
+| Drafts link | topbar hamburger icon, `routerLink="/drafts"` | link | Opens the full `/drafts` page. **Replaced the old drafts popover** (26.07.2026) — the in-topbar draft list/switcher and its per-draft delete are gone; `/drafts` is the single place for browsing, deleting and organizing drafts | N/A | |
+| Import `.cedar` | topbar, `.icon-btn` + hidden `#cedarInput` | button | Import a `.cedar` package as a new draft; moved here from the removed popover | Needed & present — spin icon via `importingCedar()`; errors surface as a dismissible toast (`.ai-toast.error`) since the topbar button has no room for text | Markdown (`.zip`) import moved to `/drafts` instead |
+| Download `.cedar` | topbar, `.icon-btn.cedar-download` | link | Downloads the open draft as `.cedar`; only rendered when a draft is open | N/A | Hidden below 768px — the same action exists in the Export modal, which is reachable on mobile |
 | Channels popover | topbar, right side | popover | Connect/select Telegram channels the bot knows about; per-channel sparkline stats | Not verified whether connect-flow has a spinner | Follow up if revisited |
 | Export button + Export modal | topbar `.export-trigger` button → `app-modal` (moved out of `<header>` 25.07.2026, see Bug 3 below) | button + modal | Blog publish/unpublish, Telegram publish + schedule, `.cedar`/static-HTML file export, per-draft asset list | Needed & present — `exporting()`/`blogBusy()`/`scheduling()` each show a spin icon + `.inline-progress` indeterminate bar | Largest modal in the app; was mis-positioned near the top of the screen until the Bug 3 fix (25.07.2026) |
 | Theme toggle | topbar `.theme-toggle` button | button | Switch light/dark theme | N/A — instant, `ThemeService` | |
@@ -40,9 +42,9 @@ The main writing surface — by far the most complex page. Topbar + two toolbar 
 | "Customize toolbar" link | toolbar row 1, far right | link | Jumps to Settings → Toolbar customization | N/A | |
 | Upload-progress panel | editor sheet area | panel | Per-file upload progress bars for media inserts | Present | |
 | AI-confirm modal | `app-modal`, `cancelAiConfirm()` | modal | Confirm before running an AI edit (replaces old `window.confirm()`) | See AI actions popover above | |
-| New-draft dialog | `app-modal`, `closeNewDraftDialog()` | modal | Title, languages, tags, template for a new draft | Not verified | |
+| New-draft dialog | `app-modal`, `closeNewDraftDialog()` | modal | Title, languages, tags, template, target folder, and a "private" checkbox for a new draft. Folder/private are applied as follow-up calls right after creation (the create endpoint doesn't take them) and, unlike languages/tags/template, are **not** remembered in `newDraftDefaultsJson` — they're per-draft intent, not a preference | Needed & present — `draftsBusy()` drives the "Creating…" button state | Folder shown as a pill row, not the editor's folder popover: a nested `app-popover` inside `app-modal` fights the modal's own fixed positioning |
 | Insert modal | `app-modal`, `closeInsertModal()` | modal | Link/YouTube/email/phone/mention insert form | N/A | |
-| Delete-draft confirm | `app-modal`, `cancelDeleteDraft()` | modal | Confirm draft deletion | N/A | |
+| ~~Delete-draft confirm~~ | — | — | **Removed 26.07.2026** along with the drafts popover that was its only trigger — deletion now lives solely on `/drafts` (which has its own confirm modal) | — | |
 | Re-translate confirm | `app-modal`, `cancelTranslateConfirm()` | modal | Confirm overwriting an existing EN translation | N/A | |
 | AI success toast | editor page | toast | Confirms an AI op finished | N/A | |
 | Lang tabs (RU/EN) | editor sheet header | tab | Switch which language's content is being edited; flushes autosave on switch | N/A | Re-translate/delete-EN buttons and a stale-translation indicator live alongside |
@@ -76,8 +78,9 @@ Full-page drafts grid/table — the compact editor drafts popover's bigger sibli
 | Search input | `:27` | input | Client-side filter by title/tag | N/A | Plain string, not a signal |
 | View toggle (table/grid) | `:29-34` | tab | Switches `view()` layout | N/A | |
 | New draft button | `:36` | button | Nav to `/editor?new=1` | N/A | |
+| Import Markdown (`.zip`) | toolbar, `.btn-ghost` + hidden `#markdownInput` | button | Import a Notion-shaped Markdown zip as a new draft. **Moved here 26.07.2026** from the editor's removed drafts popover | Needed & present — spin icon via `importingMarkdown()`; unmatched-image warnings and errors render as inline `.channel-error` lines under the toolbar | On success with no warnings it navigates straight into the new draft; with warnings it stays put so the message is readable |
 | Filter tabs (All/Drafts/Scheduled/Published/Needs attention/Archived) | `:40-45` | tab | Sets `filter()`, live counts via `filterCount()` | N/A | |
-| Draft rows (table/grid) | `:56-113` | panel | Click opens draft; status badge, lang badges, tags, updated date | Needed & present — page-level `loading()` | |
+| Draft rows (table/grid) | `:56-113` | panel | Click opens draft; status badge, lang badges, folder, tags, updated date, and a 🔒 lock icon on private drafts | Needed & present — page-level `loading()` | The private lock sits inside the Title cell in both views rather than as its own column — no `grid-template-columns` change needed, and it works identically in the grid cards |
 | Archive/unarchive button (per row) | `:75-79`, `:101-103` | button | `toggleArchive()` | Needed & present — `busyId()===d.id` spins the icon (table view only; grid view swaps icon without spinning — minor inconsistency) | |
 | Delete button (per row) | `:80-82`, `:104-106` | button | Opens delete-confirm modal | Needed & present — disabled while `busyId()` set | |
 | Delete confirm modal | `:118-126` | modal | Cancel/Delete via `confirmDelete()` | Needed & present | |

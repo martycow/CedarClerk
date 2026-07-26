@@ -26,10 +26,11 @@ export interface DraftMeta {
     staleLanguages: string[]; // subset of `languages` whose translation predates the last RU edit
     scheduled: ScheduledInfo | null; // most recent Pending/Failed ScheduledPost row, if any
     folderId: string | null; // at most one folder per draft — see the ADR following ADR-038
+    isPrivate: boolean; // blog page gated behind PostInvite tokens — see ADR-041
 }
 export interface TranslationMeta { language: string; title: string; updatedAt: string; }
 export interface TranslationFull extends TranslationMeta { cedarJson: string; sourceSnapshotJson: string | null; }
-export interface DraftFull extends DraftMeta { cedarJson: string; translations: TranslationMeta[]; isPrivate: boolean; }
+export interface DraftFull extends DraftMeta { cedarJson: string; translations: TranslationMeta[]; }
 export type AiEditKind = 'fix-errors' | 'schizo';
 export interface AiEditResult { title: string; cedarJson: string; updatedAt: string; }
 export interface FolderMeta { id: string; name: string; count: number; }

@@ -61,7 +61,6 @@ import {
     LucideDownload as Download, LucideUpload as Upload,
     LucideMessageSquare as MessageSquare,
     LucideLineChart as LineChart,
-    LucideFileUp as FileUp,
     LucideRefreshCw as RefreshCw,
     LucideSettings as Settings, LucideSparkle as Sparkle,
     LucideTableOfContents as TableOfContentsIcon,
@@ -173,7 +172,7 @@ interface UploadItem {
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
         Send, Plus, X, LogOut, RadioTower, Trash2,
         EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, Menu, Superscript,
-        ChevronDown, Check, Download, Upload, FileUp, MessageSquare, LineChart, RefreshCw,
+        ChevronDown, Check, Download, Upload, MessageSquare, LineChart, RefreshCw,
         Settings, Sparkle, TableOfContentsIcon, DividerIcon,
         AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
         SlidersHorizontal, Folder,
@@ -191,7 +190,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private assets = inject(AssetsService);
 
     @ViewChild('editorHost') editorHost!: ElementRef<HTMLElement>;
-    @ViewChild('draftsPopover') draftsPopover!: PopoverComponent;
     private editor?: Editor;
     private tick = signal(0);
 
@@ -277,9 +275,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     importingCedar = signal(false);
     importCedarError = signal<string | null>(null);
 
-    importingMarkdown = signal(false);
-    importMarkdownError = signal<string | null>(null);
-    importMarkdownWarning = signal<string | null>(null);
 
     currentBlog = signal<{ slug: string; isPublished: boolean } | null>(null);
     blogBusy = signal(false);
@@ -309,10 +304,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     knownChats = signal<KnownChat[]>([]);
     knownChatsRefreshing = signal(false);
 
-    // Guards openDraft/newDraft/deleteDraft — all three mutate `currentId`/`drafts` and must not
-    // race each other (e.g. a double-click while a draft is still loading).
+    // Guards openDraft/newDraft — both mutate `currentId`/`drafts` and must not race each other
+    // (e.g. a double-click while a draft is still loading). Deletion lives on /drafts now.
     draftsBusy = signal(false);
-    deleteConfirmId = signal<string | null>(null);
     channelBusy = signal(false);
 
     // New Draft dialog (ADR-035) — minimal title+Enter, expandable to languages/tags/template.
@@ -324,6 +318,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     newDraftLanguages: 'ru' | 'en' | 'both' = 'ru';
     newDraftTags = '';
     newDraftTemplate: NewDraftTemplate = 'blank';
+    // Not persisted into newDraftDefaultsJson (unlike languages/tags/template) — "private" and
+    // a target folder are per-draft intent, not a preference to repeat on every new draft.
+    newDraftPrivate = false;
+    newDraftFolderId: string | null = null;
 
     scheduledAt = '';
     scheduling = signal(false);
@@ -930,7 +928,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     async openDraft(id: string) {
         if (this.draftsBusy() || id === this.currentId()) return;
-        this.draftsPopover?.close();
         this.draftsBusy.set(true);
         try {
             clearTimeout(this.saveTimer);
@@ -972,9 +969,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // opts is used by the New Draft dialog (openNewDraftDialog/confirmNewDraft below); the two
     // silent fallback call sites (empty draft list on load, deleting the last remaining draft)
     // call this with no args and get exactly the old blank-"Untitled" behavior.
-    async newDraft(opts?: { title?: string; cedarJson?: string; tags?: string; languages?: 'ru' | 'en' | 'both' }) {
+    async newDraft(opts?: { title?: string; cedarJson?: string; tags?: string; languages?: 'ru' | 'en' | 'both'; isPrivate?: boolean; folderId?: string | null }) {
         if (this.draftsBusy()) return;
-        this.draftsPopover?.close();
         this.draftsBusy.set(true);
         try {
             clearTimeout(this.saveTimer);
@@ -983,9 +979,15 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             const title = opts?.title?.trim() || 'Untitled';
             const cedarJson = opts?.cedarJson ?? EMPTY_DOC;
             const tags = (opts?.tags ?? '').split(',').map(t => t.trim().toLowerCase()).filter(t => t.length > 0);
+            const isPrivate = opts?.isPrivate ?? false;
+            const folderId = opts?.folderId ?? null;
 
             const created = await this.draftsApi.create(title, cedarJson);
+            // Same follow-up-call shape as tags: create first, then apply the extras the
+            // create endpoint doesn't take.
             if (tags.length) await this.draftsApi.updateTags(created.id, tags.join(','));
+            if (isPrivate) await this.draftsApi.setDraftPrivate(created.id, true);
+            if (folderId) await this.draftsApi.setDraftFolder(created.id, folderId);
 
             let languages: string[] = [];
             if (opts?.languages === 'both') {
@@ -999,7 +1001,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 blogSlug: null, isBlogPublished: false, blogPublishedAt: null,
                 languages, tags: tags.join(','),
                 isArchived: false, lastTelegramMessageId: null, lastTelegramUsername: null,
-                staleLanguages: [], scheduled: null, folderId: null,
+                staleLanguages: [], scheduled: null, folderId, isPrivate,
             };
             this.drafts.update(l => [meta, ...l]);
             this.currentId.set(created.id);
@@ -1013,7 +1015,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.ruSnapshot = null;
             this.tagList.set(tags);
             this.tagInput = '';
-            this.currentFolderId.set(null);
+            this.currentFolderId.set(folderId);
+            this.isPrivate.set(isPrivate);
+            this.invites.set([]);
             this.editor?.setEditable(true);
             this.editor?.commands.setContent(JSON.parse(cedarJson), { emitUpdate: false });
             this.resetHistory();
@@ -1026,38 +1030,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
-    // Replaces a window.confirm() — matches the styled-modal pattern already used for AI-edit and
-    // re-translate confirmations elsewhere in this component.
-    askDeleteDraft(id: string) {
-        this.deleteConfirmId.set(id);
-    }
-
-    cancelDeleteDraft() {
-        this.deleteConfirmId.set(null);
-    }
-
-    async confirmDeleteDraft() {
-        const id = this.deleteConfirmId();
-        if (!id || this.draftsBusy()) return;
-        this.draftsBusy.set(true);
-        this.deleteConfirmId.set(null);
-        try {
-            await this.draftsApi.remove(id);
-            this.drafts.update(list => list.filter(d => d.id !== id));
-        } finally {
-            this.draftsBusy.set(false);
-        }
-        if (this.currentId() === id) {
-            const remaining = this.drafts();
-            clearTimeout(this.saveTimer);
-            this.currentId.set(null);
-            if (remaining.length) await this.openDraft(remaining[0].id);
-            else await this.newDraft();
-        }
-    }
-
     openNewDraftDialog() {
-        this.draftsPopover?.close();
         let defaults: { languages?: 'ru' | 'en' | 'both'; tags?: string[]; template?: NewDraftTemplate } = {};
         try {
             defaults = JSON.parse(this.auth.newDraftDefaultsJson() ?? '{}');
@@ -1067,8 +1040,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.newDraftLanguages = defaults.languages ?? 'ru';
         this.newDraftTags = (defaults.tags ?? []).join(', ');
         this.newDraftTemplate = defaults.template ?? 'blank';
+        this.newDraftPrivate = false;
+        this.newDraftFolderId = null;
         this.newDraftExpanded.set(false);
         this.newDraftOpen.set(true);
+        this.ensureFoldersLoaded();
     }
 
     closeNewDraftDialog() {
@@ -1081,6 +1057,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const tags = this.newDraftTags;
         const languages = this.newDraftLanguages;
         const template = this.newDraftTemplate;
+        const isPrivate = this.newDraftPrivate;
+        const folderId = this.newDraftFolderId;
 
         this.closeNewDraftDialog();
         this.auth.saveNewDraftDefaults(JSON.stringify({
@@ -1089,7 +1067,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             template,
         })).catch(() => { /* best-effort — not worth blocking draft creation over */ });
 
-        await this.newDraft({ title, cedarJson: NEW_DRAFT_TEMPLATES[template], tags, languages });
+        await this.newDraft({ title, cedarJson: NEW_DRAFT_TEMPLATES[template], tags, languages, isPrivate, folderId });
     }
 
     async onImportCedarChosen(ev: Event) {
@@ -1098,7 +1076,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         input.value = '';
         if (!file) return;
 
-        this.draftsPopover?.close();
         this.importingCedar.set(true);
         this.importCedarError.set(null);
         try {
@@ -1112,33 +1089,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 : 'Import failed — check the file and try again');
         } finally {
             this.importingCedar.set(false);
-        }
-    }
-
-    async onImportMarkdownChosen(ev: Event) {
-        const input = ev.target as HTMLInputElement;
-        const file = input.files?.[0];
-        input.value = '';
-        if (!file) return;
-
-        this.draftsPopover?.close();
-        this.importingMarkdown.set(true);
-        this.importMarkdownError.set(null);
-        this.importMarkdownWarning.set(null);
-        try {
-            const created = await this.draftsApi.importMarkdown(file);
-            this.drafts.set(await this.draftsApi.list());
-            this.currentId.set(null);
-            await this.openDraft(created.id);
-            if (created.unmatchedImages.length > 0) {
-                this.importMarkdownWarning.set(`Imported, but ${created.unmatchedImages.length} image(s) could not be matched: ${created.unmatchedImages.join(', ')}`);
-            }
-        } catch (e) {
-            this.importMarkdownError.set(e instanceof HttpErrorResponse && e.error?.error
-                ? e.error.error
-                : 'Import failed — check the file and try again');
-        } finally {
-            this.importingMarkdown.set(false);
         }
     }
 
@@ -1233,7 +1183,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.draftAssetsLoading.set(false);
         }
 
-        if (this.currentBlog()?.isPublished) {
+        // Invites need a blog slug (the invite URL points at the post page), which exists from
+        // the first publish onward — but privacy itself can be toggled before that.
+        if (this.currentBlog()) {
             this.invitesLoading.set(true);
             try {
                 this.invites.set(await this.draftsApi.listInvites(id));

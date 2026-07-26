@@ -416,6 +416,12 @@
     height: 12px;
 }
 
+.private-lock {
+    color: var(--t3);
+    vertical-align: -1px;
+    margin-right: 3px;
+}
+
 .folder-filter-btn {
     display: flex;
     align-items: center;

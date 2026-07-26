@@ -1,53 +1,20 @@
 <div class="app">
     <!--Top bar-->
     <header class="topbar">
-        <app-popover #draftsPopover>
-            <button trigger class="icon-btn hamburger" title="Drafts">
-                <svg lucideMenu class="icon"></svg>
-            </button>
-            <div panel class="drafts-popover">
-                <div class="panel-head">
-                    <span class="panel-label">Drafts</span>
-                    <a class="mini" routerLink="/drafts" title="Open full drafts view"><svg lucideLayoutGrid class="icon-sm"></svg></a>
-                    <button class="mini" (click)="cedarInput.click()" [disabled]="importingCedar() || draftsBusy()" title="Import .cedar">
-                        <svg lucideUpload class="icon-sm" [class.spin]="importingCedar()"></svg>
-                    </button>
-                    <button class="mini" (click)="markdownInput.click()" [disabled]="importingMarkdown() || draftsBusy()" title="Import Markdown (.zip)">
-                        <svg lucideFileUp class="icon-sm" [class.spin]="importingMarkdown()"></svg>
-                    </button>
-                    <button class="mini" (click)="openNewDraftDialog()" [disabled]="draftsBusy()" title="New draft">
-                        @if (draftsBusy()) { <svg lucideRefreshCw class="icon-sm spin"></svg> } @else { <svg lucidePlus class="icon-sm"></svg> }
-                    </button>
-                </div>
-                <input #cedarInput type="file" accept=".cedar" hidden (change)="onImportCedarChosen($event)">
-                <input #markdownInput type="file" accept=".zip" hidden (change)="onImportMarkdownChosen($event)">
-                @if (importCedarError()) {
-                <p class="channel-error">{{ importCedarError() }}</p>
-                }
-                @if (importMarkdownError()) {
-                <p class="channel-error">{{ importMarkdownError() }}</p>
-                }
-                @if (importMarkdownWarning()) {
-                <p class="channel-error">{{ importMarkdownWarning() }}</p>
-                }
-                @for (d of drafts(); track d.id) {
-                <div class="draft-item" [class.active]="d.id === currentId()" [class.disabled]="draftsBusy()" (click)="openDraft(d.id)">
-                    <div class="draft-info">
-                        <div class="draft-title">
-                            {{ d.title || 'Untitled' }}
-                            @if (d.languages.includes('en')) { <span class="draft-lang-badge">EN</span> }
-                        </div>
-                        <div class="draft-date">{{ d.updatedAt | date:'d MMM, HH:mm' }}</div>
-                    </div>
-                    <button class="mini-remove" [disabled]="draftsBusy()" (click)="askDeleteDraft(d.id); $event.stopPropagation()" title="Delete draft">
-                        <svg lucideTrash2 class="icon-sm"></svg>
-                    </button>
-                </div>
-                } @empty {
-                <p class="hint">Empty. Click +</p>
-                }
-            </div>
-        </app-popover>
+        <!--Drafts live on their own page now (the old in-topbar popover was removed); .cedar
+        import/export moved here from it. Markdown import moved to /drafts.-->
+        <a class="icon-btn" routerLink="/drafts" title="Drafts">
+            <svg lucideMenu class="icon"></svg>
+        </a>
+        <button class="icon-btn" (click)="cedarInput.click()" [disabled]="importingCedar() || draftsBusy()" title="Import .cedar">
+            <svg lucideUpload class="icon" [class.spin]="importingCedar()"></svg>
+        </button>
+        @if (currentId(); as draftId) {
+        <a class="icon-btn cedar-download" [href]="'/api/drafts/' + draftId + '/cedar'" download title="Download .cedar">
+            <svg lucideDownload class="icon"></svg>
+        </a>
+        }
+        <input #cedarInput type="file" accept=".cedar" hidden (change)="onImportCedarChosen($event)">
 
         <div class="brand">
             <app-cedar-logo [size]="20"></app-cedar-logo>
@@ -211,42 +178,6 @@
                         @if (blogBusy()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
                         {{ blogBusy() ? 'Working… ' + blogElapsed() + 's' : 'Unpublish' }}
                     </button>
-
-                    <div class="popover-divider"></div>
-                    <label class="field-hint">
-                        <input type="checkbox" [checked]="isPrivate()" (change)="togglePrivate()">
-                        Private post (only invited emails can view)
-                    </label>
-                    @if (isPrivate()) {
-                    <div class="invite-list">
-                        @if (invitesLoading()) {
-                        <p class="field-hint-inline">Loading invites…</p>
-                        } @else {
-                            @for (inv of invites(); track inv.id) {
-                            <div class="invite-row">
-                                <span class="invite-email">{{ inv.email }}</span>
-                                <button class="mini" (click)="copyInviteLink(inv.url)" title="Copy invite link">
-                                    <svg lucideLink class="icon-sm"></svg>
-                                </button>
-                                <button class="mini" (click)="resendInvite(inv.id)" [disabled]="inviteBusy()" title="Resend email">
-                                    <svg lucideRefreshCw class="icon-sm"></svg>
-                                </button>
-                                <button class="mini-remove" (click)="revokeInvite(inv.id)" [disabled]="inviteBusy()" title="Revoke access">
-                                    <svg lucideX class="icon-sm"></svg>
-                                </button>
-                            </div>
-                            }
-                            <div class="invite-add-row">
-                                <input class="chat-input" [(ngModel)]="inviteEmailInput" (keydown.enter)="addInvite()"
-                                    placeholder="Add an email and press ↵" type="email">
-                                <button class="mini" (click)="addInvite()" [disabled]="inviteBusy() || !inviteEmailInput.trim()" title="Invite">
-                                    <svg lucidePlus class="icon-sm"></svg>
-                                </button>
-                            </div>
-                        }
-                        @if (inviteError()) { <p class="channel-error">{{ inviteError() }}</p> }
-                    </div>
-                    }
                     } @else {
                     <p class="export-result">Unpublished — link stays <a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
                     <button class="export-btn" (click)="publishToBlog()" [disabled]="blogBusy()">
@@ -267,6 +198,46 @@
                 </div>
                 }
                 @if (blogError()) { <p class="channel-error">{{ blogError() }}</p> }
+
+                <!--Privacy is settable before publishing too, so a post can go live already
+                gated (nobody sees it in the window between publish and flipping the switch).-->
+                <div class="popover-divider"></div>
+                <label class="field-hint">
+                    <input type="checkbox" [checked]="isPrivate()" (change)="togglePrivate()">
+                    Private post (only invited emails can view)
+                </label>
+                @if (isPrivate()) {
+                <div class="invite-list">
+                    @if (!currentBlog()) {
+                    <p class="field-hint-inline">Publish to the blog to start inviting readers — the invite link needs a post URL.</p>
+                    } @else if (invitesLoading()) {
+                    <p class="field-hint-inline">Loading invites…</p>
+                    } @else {
+                        @for (inv of invites(); track inv.id) {
+                        <div class="invite-row">
+                            <span class="invite-email">{{ inv.email }}</span>
+                            <button class="mini" (click)="copyInviteLink(inv.url)" title="Copy invite link">
+                                <svg lucideLink class="icon-sm"></svg>
+                            </button>
+                            <button class="mini" (click)="resendInvite(inv.id)" [disabled]="inviteBusy()" title="Resend email">
+                                <svg lucideRefreshCw class="icon-sm"></svg>
+                            </button>
+                            <button class="mini-remove" (click)="revokeInvite(inv.id)" [disabled]="inviteBusy()" title="Revoke access">
+                                <svg lucideX class="icon-sm"></svg>
+                            </button>
+                        </div>
+                        }
+                        <div class="invite-add-row">
+                            <input class="chat-input" [(ngModel)]="inviteEmailInput" (keydown.enter)="addInvite()"
+                                placeholder="Add an email and press ↵" type="email">
+                            <button class="mini" (click)="addInvite()" [disabled]="inviteBusy() || !inviteEmailInput.trim()" title="Invite">
+                                <svg lucidePlus class="icon-sm"></svg>
+                            </button>
+                        </div>
+                    }
+                    @if (inviteError()) { <p class="channel-error">{{ inviteError() }}</p> }
+                </div>
+                }
             </div>
 
             <div class="export-section">
@@ -745,6 +716,23 @@
                     <button [class.on]="newDraftTemplate === 'photodump'" (click)="newDraftTemplate = 'photodump'">Photo dump</button>
                 </div>
             </div>
+            @if (folders().length) {
+            <div>
+                <span class="tb-caption">Folder</span>
+                <!--A pill row rather than the editor's folder popover: a nested app-popover
+                inside app-modal fights the modal's own fixed positioning/stacking.-->
+                <div class="tag-cloud" style="margin-top:6px">
+                    <button class="tag-pill" [class.on]="newDraftFolderId === null" (click)="newDraftFolderId = null">No folder</button>
+                    @for (f of folders(); track f.id) {
+                    <button class="tag-pill" [class.on]="newDraftFolderId === f.id" (click)="newDraftFolderId = f.id">{{ f.name }}</button>
+                    }
+                </div>
+            </div>
+            }
+            <label class="field-hint">
+                <input type="checkbox" [(ngModel)]="newDraftPrivate">
+                Private post (only invited emails can view it once published)
+            </label>
         </div>
         }
 
@@ -796,19 +784,6 @@
     </app-modal>
     }
 
-    <!--Delete draft confirm dialog (replaces window.confirm)-->
-    @if (deleteConfirmId()) {
-    <app-modal (closed)="cancelDeleteDraft()">
-        <svg modal-icon lucideTrash2 class="icon"></svg>
-        <span modal-title>Delete this draft?</span>
-        <p>This cannot be undone.</p>
-        <button modal-actions class="btn-ghost" (click)="cancelDeleteDraft()" [disabled]="draftsBusy()">Cancel</button>
-        <button modal-actions class="btn-accent" (click)="confirmDeleteDraft()" [disabled]="draftsBusy()">
-            {{ draftsBusy() ? 'Deleting…' : 'Delete' }}
-        </button>
-    </app-modal>
-    }
-
     <!--Re-translate confirm dialog (replaces window.confirm)-->
     @if (translateConfirmOpen()) {
     <app-modal (closed)="cancelTranslateConfirm()">
@@ -825,6 +800,18 @@
     <div class="ai-toast">
         <svg lucideCheck class="icon-xs"></svg>
         <span>{{ toast }}</span>
+    </div>
+    }
+
+    <!--.cedar import error — the topbar button that triggers it has nowhere to show text,
+    so it surfaces as a dismissible toast (same placement as the AI one).-->
+    @if (importCedarError(); as err) {
+    <div class="ai-toast error">
+        <svg lucideX class="icon-xs"></svg>
+        <span>{{ err }}</span>
+        <button class="mini-remove" (click)="importCedarError.set(null)" title="Dismiss">
+            <svg lucideX class="icon-sm"></svg>
+        </button>
     </div>
     }
 

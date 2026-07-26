@@ -615,6 +615,14 @@
     color: var(--ok);
 }
 
+.ai-toast.error {
+    border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+}
+
+.ai-toast.error .icon-xs {
+    color: var(--danger);
+}
+
 /* ---------- Uploads ---------- */
 .uploads {
     display: flex;
@@ -673,19 +681,6 @@
     display: flex;
     flex: 1;
     min-height: 0;
-}
-
-/* The drafts list used to be a permanent left sidebar, then a slide-in drawer; it's now a
-   dropdown off the hamburger button (like the Channels/Export popovers) — one less standalone
-   panel pattern to maintain, and it never fights the toolbar for stacking the way a flex-item
-   sidebar did. */
-.drafts-popover {
-    width: 260px;
-    max-height: 70vh;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
 }
 
 .icon-btn.on {
@@ -751,47 +746,6 @@
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
-}
-
-.hint {
-    color: var(--t3);
-    font-size: 13px;
-}
-
-.draft-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 9px;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-}
-
-.draft-item:hover {
-    background: rgba(128, 120, 100, .12);
-}
-
-.draft-item.active {
-    background: var(--asoft);
-}
-
-.draft-item.disabled {
-    opacity: .55;
-    pointer-events: none;
-}
-
-.draft-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.draft-item .mini-remove {
-    flex: none;
-    opacity: 0;
-}
-
-.draft-item:hover .mini-remove {
-    opacity: 1;
 }
 
 .draft-title {
@@ -1866,6 +1820,9 @@ input[type="datetime-local"]:focus-visible {
     .divider,
     .save-label,
     .export-trigger .btn-label,
+    /* Same "Download .cedar" action also lives in the Export modal, which is reachable on
+       mobile — so dropping it here costs nothing and keeps the row from overflowing again. */
+    .cedar-download,
     .user {
         display: none;
     }

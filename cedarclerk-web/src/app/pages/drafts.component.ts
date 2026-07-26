@@ -14,6 +14,7 @@ import {
     LucideArchive as Archive, LucideArchiveRestore as ArchiveRestore, LucideTrash2 as Trash2,
     LucideRefreshCw as RefreshCw, LucideLayoutGrid as LayoutGrid, LucideList as List,
     LucideFolder as Folder, LucideX as X, LucidePencil as Pencil,
+    LucideLock as Lock, LucideFileUp as FileUp,
 } from '@lucide/angular';
 
 type FilterKey = 'all' | 'draft' | 'scheduled' | 'published' | 'attention' | 'archived';
@@ -58,7 +59,7 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
     imports: [
         DatePipe, FormsModule, RouterLink, CedarLogoComponent, ModalComponent, PopoverComponent,
         ArrowLeft, Plus, Archive, ArchiveRestore, Trash2, RefreshCw, LayoutGrid, List,
-        Folder, X, Pencil,
+        Folder, X, Pencil, Lock, FileUp,
     ],
     templateUrl: 'drafts.component.html',
     styleUrls: ['drafts.component.css'],
@@ -88,6 +89,11 @@ export class DraftsPageComponent implements OnInit {
     editingFolderId = signal<string | null>(null);
     editingFolderName = '';
     deleteFolderConfirmId = signal<string | null>(null);
+
+    // Markdown (.zip) import moved here from the editor's removed drafts popover.
+    importingMarkdown = signal(false);
+    importMarkdownError = signal<string | null>(null);
+    importMarkdownWarning = signal<string | null>(null);
 
     async ngOnInit() {
         try {
@@ -227,6 +233,31 @@ export class DraftsPageComponent implements OnInit {
 
     newDraft() {
         this.router.navigate(['/editor'], { queryParams: { new: 1 } });
+    }
+
+    async onImportMarkdownChosen(ev: Event) {
+        const input = ev.target as HTMLInputElement;
+        const file = input.files?.[0];
+        input.value = '';
+        if (!file || this.importingMarkdown()) return;
+
+        this.importingMarkdown.set(true);
+        this.importMarkdownError.set(null);
+        this.importMarkdownWarning.set(null);
+        try {
+            const created = await this.draftsApi.importMarkdown(file);
+            if (created.unmatchedImages.length > 0) {
+                this.importMarkdownWarning.set(`Imported, but ${created.unmatchedImages.length} image(s) could not be matched: ${created.unmatchedImages.join(', ')}`);
+                this.drafts.set(await this.draftsApi.list());
+            } else {
+                // Nothing to report — go straight to the freshly imported draft.
+                this.router.navigate(['/editor'], { queryParams: { draft: created.id } });
+            }
+        } catch (e) {
+            this.importMarkdownError.set(httpErrorMessage(e, 'Import failed — check the file and try again'));
+        } finally {
+            this.importingMarkdown.set(false);
+        }
     }
 
     async toggleArchive(d: DraftMeta, ev: Event) {

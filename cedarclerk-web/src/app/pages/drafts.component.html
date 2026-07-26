@@ -71,8 +71,17 @@
                     <svg lucideLayoutGrid class="icon-sm"></svg>
                 </button>
             </div>
+            <!--Markdown import lives here (moved off the editor's removed drafts popover) —
+            .cedar import/export sit in the editor topbar instead.-->
+            <button class="btn-ghost" (click)="markdownInput.click()" [disabled]="importingMarkdown()" title="Import Markdown (.zip)">
+                <svg lucideFileUp class="icon-sm" [class.spin]="importingMarkdown()"></svg>
+                Import .zip
+            </button>
+            <input #markdownInput type="file" accept=".zip" hidden (change)="onImportMarkdownChosen($event)">
             <button class="btn-accent" (click)="newDraft()"><svg lucidePlus class="icon-sm"></svg> New draft</button>
         </div>
+        @if (importMarkdownError()) { <p class="channel-error">{{ importMarkdownError() }}</p> }
+        @if (importMarkdownWarning()) { <p class="channel-error">{{ importMarkdownWarning() }}</p> }
 
         <div class="filter-tabs">
             <button [class.active]="filter() === 'all'" (click)="filter.set('all')">All {{ filterCount('all') }}</button>
@@ -93,7 +102,10 @@
             @for (d of filteredDrafts(); track d.id) {
             <div class="drafts-row" [class.busy]="busyId() === d.id" (click)="openDraft(d.id)">
                 <div class="drafts-title-cell">
-                    <div class="drafts-title">{{ d.title || 'Untitled' }}</div>
+                    <div class="drafts-title">
+                        @if (d.isPrivate) { <svg lucideLock class="icon-xs private-lock" title="Private post"></svg> }
+                        {{ d.title || 'Untitled' }}
+                    </div>
                 </div>
                 <div>
                     <span class="status-badge" [class.tone-danger]="status(d).tone === 'danger'" [class.tone-ok]="status(d).tone === 'ok'">
@@ -141,7 +153,10 @@
         <div class="drafts-grid">
             @for (d of filteredDrafts(); track d.id) {
             <div class="draft-card" [class.busy]="busyId() === d.id" (click)="openDraft(d.id)">
-                <div class="drafts-title">{{ d.title || 'Untitled' }}</div>
+                <div class="drafts-title">
+                    @if (d.isPrivate) { <svg lucideLock class="icon-xs private-lock" title="Private post"></svg> }
+                    {{ d.title || 'Untitled' }}
+                </div>
                 <span class="status-badge" [class.tone-danger]="status(d).tone === 'danger'" [class.tone-ok]="status(d).tone === 'ok'">
                     {{ status(d).label }}
                 </span>
