@@ -154,10 +154,13 @@
 
             @if (currentId(); as id) {
             <div class="export-section">
-                <div class="export-section-title">Сайт / Блог</div>
+                <label class="dest-head">
+                    <input type="checkbox" [checked]="destBlog()" (change)="destBlog.set(!destBlog())">
+                    <span class="export-section-title" style="margin:0">Сайт / Блог</span>
+                    @if (currentBlog()?.isPublished) { <span class="state-chip live">LIVE</span> }
+                </label>
                 @if (currentBlog(); as blog) {
                     @if (blog.isPublished) {
-                    <p class="export-result">✓ Published</p>
                     <div class="blog-lang-badges">
                         <a class="blog-lang-badge" [href]="blogUrl()" target="_blank" rel="noopener">RU</a>
                         <a class="blog-lang-badge" [class.disabled]="!enMeta()" [href]="enMeta() ? blogUrl() + '?lang=en' : null" target="_blank" rel="noopener">EN</a>
@@ -169,16 +172,7 @@
                     </button>
                     } @else {
                     <p class="export-result">Unpublished — link stays <a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
-                    <button class="export-btn" (click)="publishToBlog()" [disabled]="blogBusy()">
-                        @if (blogBusy()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
-                        {{ blogBusy() ? 'Working… ' + blogElapsed() + 's' : 'Republish to blog' }}
-                    </button>
                     }
-                } @else {
-                <button class="export-btn" (click)="publishToBlog()" [disabled]="blogBusy()">
-                    @if (blogBusy()) { <svg lucideRefreshCw class="icon-sm spin"></svg> } @else { <svg lucideSend class="icon-sm"></svg> }
-                    {{ blogBusy() ? 'Publishing… ' + blogElapsed() + 's' : 'Publish to blog' }}
-                </button>
                 }
                 @if (blogBusy()) {
                 <div class="inline-progress">
@@ -230,7 +224,11 @@
             </div>
 
             <div class="export-section">
-                <div class="export-section-title">Telegram</div>
+                <label class="dest-head">
+                    <input type="checkbox" [checked]="destTelegram()" (change)="destTelegram.set(!destTelegram())">
+                    <span class="export-section-title" style="margin:0">Telegram</span>
+                    @if (telegramPostUrl()) { <span class="state-chip live">LIVE</span> }
+                </label>
                 @if (selectedChannel(); as sc) {
                 <div class="channel-chosen">
                     <span class="channel-avatar" [style.background]="channelColor(sc.id)">{{ channelInitial(sc.title) }}</span>
@@ -263,14 +261,6 @@
                 </div>
 
                 <div class="publish-actions">
-                    <button class="export-btn" (click)="exportDraft()" [disabled]="exporting()">
-                        @if (exporting()) {
-                        <svg lucideRefreshCw class="icon-sm spin"></svg>
-                        } @else {
-                        <svg lucideSend class="icon-sm"></svg>
-                        }
-                        {{ exporting() ? 'Publishing… ' + exportElapsed() + 's' : 'Publish now' }}
-                    </button>
                     <button class="export-btn" [class.on]="scheduleOpen()" (click)="scheduleOpen.set(!scheduleOpen())">
                         <svg lucideClock class="icon-sm"></svg>
                         Schedule
@@ -366,7 +356,12 @@
             </div>
 
             <div class="export-section">
-                <div class="export-section-title">Файлы в черновике</div>
+                <div class="export-section-title">
+                    Файлы в черновике
+                    @if (draftAssets().length) {
+                    <span class="field-hint-inline">· {{ draftAssets().length }} шт · {{ formatFileSize(totalAssetsBytes()) }}</span>
+                    }
+                </div>
                 @if (draftAssetsLoading()) {
                 <p class="field-hint-inline">Загрузка…</p>
                 } @else if (!draftAssets().length) {
@@ -389,6 +384,13 @@
                 }
             </div>
             }
+
+            <!--One Publish for the whole window (B5) — fires every ticked destination.-->
+            <button modal-actions class="btn-ghost" (click)="exportModalOpen.set(false)">Close</button>
+            <button modal-actions class="btn-accent" (click)="publishAll()" [disabled]="!canPublishAll()">
+                @if (publishingAll()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+                {{ publishingAll() ? 'Publishing…' : 'Publish' }}
+            </button>
     </app-modal>
     }
 

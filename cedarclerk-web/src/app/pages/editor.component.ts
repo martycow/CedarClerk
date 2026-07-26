@@ -265,6 +265,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     exportModalOpen = signal(false);
     draftAssets = signal<DraftAsset[]>([]);
     draftAssetsLoading = signal(false);
+
+    // Export destinations (B5) — tick a destination to unfold its settings; one Publish button
+    // at the bottom fires every ticked one in sequence.
+    destBlog = signal(false);
+    destTelegram = signal(false);
+    publishingAll = signal(false);
     exporting = signal(false);
     exportElapsed = signal(0);
     private exportTicker?: ReturnType<typeof setInterval>;
@@ -1288,6 +1294,31 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.editor.view.dispatch(tr);
         this.markDirty();
         this.draftAssets.update(list => list.filter(a => a.id !== asset.id));
+    }
+
+    totalAssetsBytes(): number {
+        return this.draftAssets().reduce((sum, a) => sum + a.sizeBytes, 0);
+    }
+
+    canPublishAll(): boolean {
+        if (this.publishingAll() || this.blogBusy() || this.exporting()) return false;
+        if (!this.destBlog() && !this.destTelegram()) return false;
+        // Telegram needs a target channel; the blog doesn't need anything extra.
+        return !this.destTelegram() || this.chatId.trim().length > 0;
+    }
+
+    // One Publish for every ticked destination (B5). Run sequentially rather than in parallel so
+    // each destination's own busy/progress state stays readable, and so a Telegram failure
+    // doesn't get visually tangled with the blog's.
+    async publishAll() {
+        if (!this.canPublishAll()) return;
+        this.publishingAll.set(true);
+        try {
+            if (this.destBlog()) await this.publishToBlog();
+            if (this.destTelegram()) await this.exportDraft();
+        } finally {
+            this.publishingAll.set(false);
+        }
     }
 
     async exportDraft() {

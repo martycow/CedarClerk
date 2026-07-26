@@ -882,6 +882,15 @@
 }
 
 /* ---------- Content language tabs (RU | EN) ---------- */
+/* Export destination header (B5) — the checkbox that gates each destination's settings. */
+.dest-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    margin-bottom: 8px;
+}
+
 /* Draft state strip (B25) — sits above the language tabs, same centred column as the sheet. */
 .draft-state-row {
     display: flex;
