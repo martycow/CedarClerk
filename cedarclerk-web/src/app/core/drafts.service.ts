@@ -27,6 +27,12 @@ export interface DraftMeta {
     scheduled: ScheduledInfo | null; // most recent Pending/Failed ScheduledPost row, if any
     folderId: string | null; // at most one folder per draft — see the ADR following ADR-038
     isPrivate: boolean; // blog page gated behind PostInvite tokens — see ADR-041
+    // Blog activity (B23). Totals are all-time; new* is what accumulated since the previous
+    // session (server-side baseline, see DraftStatSeen) and is 0 the first time a draft is listed.
+    viewCount: number;
+    reactionCount: number; // likes + dislikes — the split stays on the blog post page
+    newViewCount: number;
+    newReactionCount: number;
 }
 export interface TranslationMeta { language: string; title: string; updatedAt: string; }
 export interface TranslationFull extends TranslationMeta { cedarJson: string; sourceSnapshotJson: string | null; }

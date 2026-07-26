@@ -15,6 +15,7 @@ import {
     LucideRefreshCw as RefreshCw, LucideLayoutGrid as LayoutGrid, LucideList as List,
     LucideFolder as Folder, LucideX as X, LucidePencil as Pencil,
     LucideLock as Lock, LucideFileUp as FileUp, LucideUpload as Upload,
+    LucideEye as Eye, LucideHeart as Heart,
 } from '@lucide/angular';
 
 type FilterKey = 'all' | 'draft' | 'scheduled' | 'published' | 'attention' | 'archived';
@@ -59,7 +60,7 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
     imports: [
         DatePipe, FormsModule, CedarLogoComponent, ModalComponent, PopoverComponent,
         Plus, Archive, ArchiveRestore, Trash2, RefreshCw, LayoutGrid, List,
-        Folder, X, Pencil, Lock, FileUp, Upload,
+        Folder, X, Pencil, Lock, FileUp, Upload, Eye, Heart,
     ],
     templateUrl: 'drafts.component.html',
     styleUrls: ['drafts.component.css'],
@@ -116,6 +117,11 @@ export class DraftsPageComponent implements OnInit {
 
     status(d: DraftMeta): DraftStatus {
         return computeStatus(d);
+    }
+
+    // A draft that was never on the blog can't have activity — show a dash rather than "0 0" (B23).
+    hasActivity(d: DraftMeta): boolean {
+        return d.isBlogPublished || d.viewCount > 0 || d.reactionCount > 0;
     }
 
     filterCount(key: FilterKey): number {

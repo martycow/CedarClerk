@@ -193,6 +193,28 @@ public class PostRegistration
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+// Per-owner, per-draft baseline the /drafts activity delta is measured against (B23). Written
+// by DraftEndpoints' list query, one row per (OwnerId, DraftId), overwritten in place — this is
+// not a stats history, and it can't be used to backfill one.
+//
+// Two pairs of counters, because "since the previous session" and "since the last page load"
+// are different things: Baseline* is what the shown delta is measured against, Last* is the
+// counters as of the most recent load. When a load comes in more than
+// Consts.DraftActivity.SessionGap after the previous one, the session is considered new and
+// Baseline* takes on Last* — i.e. the counters as they stood when the owner last had the screen
+// open. Inside a session only Last*/SeenAt move, so an F5 doesn't wipe the numbers.
+public class DraftStatSeen
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public Guid DraftId { get; set; }
+    public int BaselineViewCount { get; set; }
+    public int BaselineReactionCount { get; set; }
+    public int LastViewCount { get; set; }
+    public int LastReactionCount { get; set; }
+    public DateTime SeenAt { get; set; } = DateTime.UtcNow;
+}
+
 // A real, named, user-managed entity (create/rename/delete) — unlike Tags, which stay a flat
 // unmanaged string. See the ADR following ADR-038, docs/DECISIONS.md.
 public class Folder

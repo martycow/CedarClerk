@@ -59,7 +59,7 @@ public static class DraftEndpoints
                 .Select(d => new
                 {
                     d.Id, d.Title, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
-                    d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.IsPrivate,
+                    d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.IsPrivate, d.ViewCount,
                     Translations = db.DraftTranslations.Where(t => t.DraftId == d.Id)
                         .Select(t => new { t.Language, t.UpdatedAt }).ToList(),
                 })
@@ -76,10 +76,61 @@ public static class DraftEndpoints
                 .GroupBy(s => s.DraftId)
                 .ToDictionary(g => g.Key, g => g.OrderByDescending(s => s.ScheduledAtUtc).First());
 
+            // Activity column (B23): totals plus what accumulated since the previous session.
+            // Reactions are counted across both kinds — the screen answers "did anything happen
+            // here", the like/dislike split stays on the blog post page.
+            var reactionCounts = await db.Reactions
+                .Where(r => draftIds.Contains(r.DraftId))
+                .GroupBy(r => r.DraftId)
+                .Select(g => new { DraftId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.DraftId, x => x.Count);
+
+            var seenRows = await db.DraftStatSeens.Where(x => x.OwnerId == uid).ToListAsync();
+            var seen = seenRows.ToDictionary(x => x.DraftId);
+            var now = DateTime.UtcNow;
+            var deltas = new Dictionary<Guid, (int Views, int Reactions)>();
+
+            foreach (var d in drafts)
+            {
+                var views = d.ViewCount;
+                var reactions = reactionCounts.GetValueOrDefault(d.Id);
+
+                if (!seen.TryGetValue(d.Id, out var row))
+                {
+                    // First time this draft is listed — no earlier session to compare against.
+                    db.DraftStatSeens.Add(new DraftStatSeen
+                    {
+                        OwnerId = uid, DraftId = d.Id,
+                        BaselineViewCount = views, BaselineReactionCount = reactions,
+                        LastViewCount = views, LastReactionCount = reactions, SeenAt = now,
+                    });
+                    deltas[d.Id] = (0, 0);
+                    continue;
+                }
+
+                if (now - row.SeenAt > Consts.DraftActivity.SessionGap)
+                {
+                    row.BaselineViewCount = row.LastViewCount;
+                    row.BaselineReactionCount = row.LastReactionCount;
+                }
+                row.LastViewCount = views;
+                row.LastReactionCount = reactions;
+                row.SeenAt = now;
+
+                // Max(0, …): a deleted reaction can put the total below the baseline.
+                deltas[d.Id] = (Math.Max(0, views - row.BaselineViewCount), Math.Max(0, reactions - row.BaselineReactionCount));
+            }
+
+            await db.SaveChangesAsync();
+
             return drafts.Select(d => new
             {
                 d.Id, d.Title, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
                 d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.IsPrivate,
+                d.ViewCount,
+                ReactionCount = reactionCounts.GetValueOrDefault(d.Id),
+                NewViewCount = deltas[d.Id].Views,
+                NewReactionCount = deltas[d.Id].Reactions,
                 Languages = d.Translations.Select(t => t.Language).ToList(),
                 StaleLanguages = d.Translations.Where(t => t.UpdatedAt < d.UpdatedAt).Select(t => t.Language).ToList(),
                 Scheduled = scheduled.TryGetValue(d.Id, out var s)
@@ -558,6 +609,8 @@ public static class DraftEndpoints
             var deleted = await db.Drafts
                 .Where(x => x.Id == id && x.OwnerId == uid)
                 .ExecuteDeleteAsync();
+            if (deleted > 0)
+                await db.DraftStatSeens.Where(x => x.DraftId == id && x.OwnerId == uid).ExecuteDeleteAsync();
             return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });
         

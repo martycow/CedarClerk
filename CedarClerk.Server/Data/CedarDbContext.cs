@@ -20,6 +20,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<AiUsage> AiUsages => Set<AiUsage>();
     public DbSet<Folder> Folders => Set<Folder>();
+    public DbSet<DraftStatSeen> DraftStatSeens => Set<DraftStatSeen>();
     public DbSet<PostInvite> PostInvites => Set<PostInvite>();
     public DbSet<PostRegistration> PostRegistrations => Set<PostRegistration>();
 

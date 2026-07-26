@@ -235,7 +235,7 @@
 
 .drafts-row {
     display: grid;
-    grid-template-columns: 1fr 180px 100px 140px 180px 120px 80px;
+    grid-template-columns: 1fr 170px 90px 130px 140px 100px 110px 80px;
     gap: 12px;
     align-items: center;
     padding: 11px 16px;
@@ -244,7 +244,7 @@
     /* Sum of the fixed columns + gaps + padding, leaving room for the 1fr title. Below this
        the row scrolls horizontally instead of squashing the columns into nothing. Stays under
        .drafts-body's 1040px content width, so desktop never scrolls. */
-    min-width: 980px;
+    min-width: 1020px;
 }
 
 .drafts-row:last-child {
@@ -345,6 +345,36 @@
 
 .tag-chip-ro {
     color: var(--t2);
+}
+
+/* Blog views/reactions with a since-last-session delta (B23) */
+.activity-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 11.5px;
+    color: var(--t2);
+}
+
+.activity-metric {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.activity-delta {
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.activity-empty {
+    color: var(--t3);
+}
+
+.draft-card .activity-cell {
+    flex-direction: row;
+    gap: 10px;
+    margin-top: 6px;
 }
 
 .row-actions {

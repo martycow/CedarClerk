@@ -1031,6 +1031,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 languages, tags: tags.join(','),
                 isArchived: false, lastTelegramMessageId: null, lastTelegramUsername: null,
                 staleLanguages: [], scheduled: null, folderId, isPrivate,
+                viewCount: 0, reactionCount: 0, newViewCount: 0, newReactionCount: 0,
             };
             this.drafts.update(l => [meta, ...l]);
             this.currentId.set(created.id);

@@ -101,7 +101,7 @@
         @if (view() === 'table') {
         <div class="drafts-table">
             <div class="drafts-row drafts-row-head">
-                <span>Title</span><span>State</span><span>Languages</span><span>Folder</span><span>Tags</span><span class="right">Updated</span><span></span>
+                <span>Title</span><span>State</span><span>Languages</span><span>Folder</span><span>Tags</span><span>Activity</span><span class="right">Updated</span><span></span>
             </div>
             @for (d of filteredDrafts(); track d.id) {
             <div class="drafts-row" [class.busy]="busyId() === d.id" (click)="openDraft(d.id)">
@@ -136,6 +136,20 @@
                 </div>
                 <div class="tags-cell">
                     @for (t of d.tags.split(',').slice(0, 3); track t) { @if (t) { <span class="tag-chip-ro">#{{ t }}</span> } }
+                </div>
+                <div class="activity-cell">
+                    @if (hasActivity(d)) {
+                    <span class="activity-metric" title="Blog views">
+                        <svg lucideEye class="icon-xs"></svg>{{ d.viewCount }}
+                        @if (d.newViewCount) { <span class="activity-delta">+{{ d.newViewCount }}</span> }
+                    </span>
+                    <span class="activity-metric" title="Reactions (likes + dislikes)">
+                        <svg lucideHeart class="icon-xs"></svg>{{ d.reactionCount }}
+                        @if (d.newReactionCount) { <span class="activity-delta">+{{ d.newReactionCount }}</span> }
+                    </span>
+                    } @else {
+                    <span class="activity-empty">—</span>
+                    }
                 </div>
                 <div class="right">{{ d.updatedAt | date:'d MMM, HH:mm' }}</div>
                 <div class="row-actions">
@@ -176,6 +190,18 @@
                             }
                         </div>
                     </app-popover>
+                </div>
+                }
+                @if (hasActivity(d)) {
+                <div class="activity-cell">
+                    <span class="activity-metric" title="Blog views">
+                        <svg lucideEye class="icon-xs"></svg>{{ d.viewCount }}
+                        @if (d.newViewCount) { <span class="activity-delta">+{{ d.newViewCount }}</span> }
+                    </span>
+                    <span class="activity-metric" title="Reactions (likes + dislikes)">
+                        <svg lucideHeart class="icon-xs"></svg>{{ d.reactionCount }}
+                        @if (d.newReactionCount) { <span class="activity-delta">+{{ d.newReactionCount }}</span> }
+                    </span>
                 </div>
                 }
                 <div class="drafts-card-foot">

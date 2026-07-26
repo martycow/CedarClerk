@@ -160,4 +160,12 @@ public static class Consts
         public const int MaxSubmissionsPerVisitor = 3;
         public static readonly TimeSpan SubmissionWindow = TimeSpan.FromHours(24);
     }
+
+    // View/reaction deltas on the /drafts screen (B23).
+    public static class DraftActivity
+    {
+        // How long the owner has to be away before the next /drafts load counts as a new
+        // session and rolls the DraftStatSeen baseline forward.
+        public static readonly TimeSpan SessionGap = TimeSpan.FromMinutes(30);
+    }
 }
