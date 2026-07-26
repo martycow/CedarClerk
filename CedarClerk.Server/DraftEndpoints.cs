@@ -1,9 +1,11 @@
 ﻿using System.IO.Compression;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text.Json;
 using CedarClerk.Core;
 using CedarClerk.Localization;
 using CedarClerk.Server.Ai;
+using CedarClerk.Server.Email;
 using CedarClerk.Server.Translation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +18,10 @@ public static class DraftEndpoints
     public record SaveTranslationRequest(string Title, string CedarJson);
     public record UpdateTagsRequest(string Tags);
     public record UpdateFolderRequest(Guid? FolderId);
+    public record UpdatePrivateRequest(bool IsPrivate);
+    public record AddInviteRequest(string Email);
+
+    private const int InviteEmailMaxLength = 254;
 
     private const long CedarZipMaxBytes = 50 * 1024 * 1024;
     private const int CedarMaxAssetCount = 50;
@@ -111,7 +117,7 @@ public static class DraftEndpoints
             var translations = await db.DraftTranslations.Where(t => t.DraftId == id)
                 .Select(t => new { t.Language, t.Title, t.UpdatedAt })
                 .ToListAsync();
-            return Results.Ok(new { draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug, draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.FolderId, Translations = translations });
+            return Results.Ok(new { draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug, draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.FolderId, draft.IsPrivate, Translations = translations });
         });
 
         // Backs the export modal's "Files" list — every media asset referenced by this draft
@@ -199,6 +205,85 @@ public static class DraftEndpoints
             draft.FolderId = req.FolderId;
             await db.SaveChangesAsync();
             return Results.Ok(new { draft.FolderId });
+        });
+
+        // Private posts (see the ADR following ADR-040, docs/DECISIONS.md) — invite by email,
+        // gated on the public blog side via BlogEndpoints.HasPrivateAccess.
+        groupBuilder.MapPost("/{id:guid}/private", async (Guid id, UpdatePrivateRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            draft.IsPrivate = req.IsPrivate;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.IsPrivate });
+        });
+
+        groupBuilder.MapGet("/{id:guid}/invites", async (Guid id, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            var invites = await db.PostInvites.Where(pi => pi.DraftId == id).OrderBy(pi => pi.CreatedAt).ToListAsync();
+            return Results.Ok(invites.Select(pi => new { pi.Id, pi.Email, pi.CreatedAt, Url = BuildInviteUrl(cfg, draft, pi.Token) }));
+        });
+
+        // Always creates the invite + returns a copyable link even if the email fails to send
+        // (no email provider configured, Resend error, etc.) — the link is the source of truth,
+        // the email is a convenience on top of it.
+        groupBuilder.MapPost("/{id:guid}/invites", async (Guid id, AddInviteRequest req, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg, ResendEmailProvider email) =>
+        {
+            var emailAddr = req.Email.Trim();
+            if (emailAddr.Length == 0 || emailAddr.Length > InviteEmailMaxLength || !emailAddr.Contains('@'))
+                return Results.Json(new { error = "Enter a valid email address" }, statusCode: StatusCodes.Status400BadRequest);
+
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+            if (draft.BlogSlug is null)
+                return Results.Json(new { error = "Publish this draft to the blog first" }, statusCode: StatusCodes.Status400BadRequest);
+
+            var invite = new PostInvite { DraftId = id, Email = emailAddr, Token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)) };
+            db.PostInvites.Add(invite);
+            await db.SaveChangesAsync();
+
+            var url = BuildInviteUrl(cfg, draft, invite.Token);
+            var emailSent = await email.SendAsync(emailAddr, $"You're invited to read \"{draft.Title}\"",
+                $"<p>You've been invited to a private post: <a href=\"{url}\">{System.Net.WebUtility.HtmlEncode(draft.Title)}</a></p>");
+
+            return Results.Ok(new { invite.Id, invite.Email, invite.CreatedAt, Url = url, EmailSent = emailSent });
+        });
+
+        groupBuilder.MapDelete("/{id:guid}/invites/{inviteId:guid}", async (Guid id, Guid inviteId, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var owns = await db.Drafts.AnyAsync(d => d.Id == id && d.OwnerId == uid);
+            if (!owns) return Results.NotFound();
+
+            var invite = await db.PostInvites.FirstOrDefaultAsync(pi => pi.Id == inviteId && pi.DraftId == id);
+            if (invite is null) return Results.NotFound();
+
+            db.PostInvites.Remove(invite);
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        });
+
+        groupBuilder.MapPost("/{id:guid}/invites/{inviteId:guid}/resend", async (Guid id, Guid inviteId, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg, ResendEmailProvider email) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            var invite = await db.PostInvites.FirstOrDefaultAsync(pi => pi.Id == inviteId && pi.DraftId == id);
+            if (invite is null) return Results.NotFound();
+
+            var url = BuildInviteUrl(cfg, draft, invite.Token);
+            var emailSent = await email.SendAsync(invite.Email, $"You're invited to read \"{draft.Title}\"",
+                $"<p>You've been invited to a private post: <a href=\"{url}\">{System.Net.WebUtility.HtmlEncode(draft.Title)}</a></p>");
+
+            return Results.Ok(new { EmailSent = emailSent });
         });
 
         groupBuilder.MapGet("/{id:guid}/translations/{lang}", async (Guid id, string lang, ClaimsPrincipal user, CedarDbContext db) =>
@@ -701,6 +786,9 @@ public static class DraftEndpoints
         }).DisableAntiforgery()
           .WithMetadata(new RequestFormLimitsAttribute { MultipartBodyLengthLimit = MarkdownZipMaxBytes });
     }
+
+    private static string BuildInviteUrl(IConfiguration cfg, Draft draft, string token) =>
+        $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}/{draft.BlogSlug}?invite={token}";
 
     private static string SanitizeFileName(string title)
     {

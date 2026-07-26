@@ -211,6 +211,42 @@
                         @if (blogBusy()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
                         {{ blogBusy() ? 'Working… ' + blogElapsed() + 's' : 'Unpublish' }}
                     </button>
+
+                    <div class="popover-divider"></div>
+                    <label class="field-hint">
+                        <input type="checkbox" [checked]="isPrivate()" (change)="togglePrivate()">
+                        Private post (only invited emails can view)
+                    </label>
+                    @if (isPrivate()) {
+                    <div class="invite-list">
+                        @if (invitesLoading()) {
+                        <p class="field-hint-inline">Loading invites…</p>
+                        } @else {
+                            @for (inv of invites(); track inv.id) {
+                            <div class="invite-row">
+                                <span class="invite-email">{{ inv.email }}</span>
+                                <button class="mini" (click)="copyInviteLink(inv.url)" title="Copy invite link">
+                                    <svg lucideLink class="icon-sm"></svg>
+                                </button>
+                                <button class="mini" (click)="resendInvite(inv.id)" [disabled]="inviteBusy()" title="Resend email">
+                                    <svg lucideRefreshCw class="icon-sm"></svg>
+                                </button>
+                                <button class="mini-remove" (click)="revokeInvite(inv.id)" [disabled]="inviteBusy()" title="Revoke access">
+                                    <svg lucideX class="icon-sm"></svg>
+                                </button>
+                            </div>
+                            }
+                            <div class="invite-add-row">
+                                <input class="chat-input" [(ngModel)]="inviteEmailInput" (keydown.enter)="addInvite()"
+                                    placeholder="Add an email and press ↵" type="email">
+                                <button class="mini" (click)="addInvite()" [disabled]="inviteBusy() || !inviteEmailInput.trim()" title="Invite">
+                                    <svg lucidePlus class="icon-sm"></svg>
+                                </button>
+                            </div>
+                        }
+                        @if (inviteError()) { <p class="channel-error">{{ inviteError() }}</p> }
+                    </div>
+                    }
                     } @else {
                     <p class="export-result">Unpublished — link stays <a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
                     <button class="export-btn" (click)="publishToBlog()" [disabled]="blogBusy()">

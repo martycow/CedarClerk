@@ -3,6 +3,7 @@ using System;
 using CedarClerk.Server;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CedarClerk.Server.Migrations
 {
     [DbContext(typeof(CedarDbContext))]
-    partial class CedarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260726084334_AddNotifyOnEngagement")]
+    partial class AddNotifyOnEngagement
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.29");
@@ -452,9 +455,6 @@ namespace CedarClerk.Server.Migrations
                     b.Property<bool>("IsBlogPublished")
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool>("IsPrivate")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("LastTelegramChatId")
                         .HasColumnType("TEXT");
 
@@ -584,31 +584,6 @@ namespace CedarClerk.Server.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Payments");
-                });
-
-            modelBuilder.Entity("CedarClerk.Server.PostInvite", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("DraftId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("PostInvites");
                 });
 
             modelBuilder.Entity("CedarClerk.Server.Reaction", b =>

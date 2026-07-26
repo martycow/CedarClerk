@@ -17,6 +17,7 @@ public static class AuthEndpoints
         string? HeaderSlot1Type, string? HeaderSlot2Type, string? HeaderSlot3Type,
         string? SocialTwitterUrl = null, string? SocialInstagramUrl = null, string? SocialFacebookUrl = null,
         string? SocialYoutubeUrl = null, string? SocialGithubUrl = null);
+    public record NotificationPrefsRequest(bool NotifyOnEngagement);
     public record ToolbarLayoutRequest(string? LayoutJson);
     public record AppearanceRequest(string? PrefsJson);
     public record NewDraftDefaultsRequest(string? DefaultsJson);
@@ -89,6 +90,7 @@ public static class AuthEndpoints
                 telegramLinked = appUser?.TelegramUserId is not null,
                 telegramUsername = appUser?.TelegramUsername,
                 telegramLinkedAt = appUser?.TelegramLinkedAt,
+                notifyOnEngagement = appUser?.NotifyOnEngagement ?? false,
                 postSignature = appUser?.PostSignature,
                 postSignatureUrl = appUser?.PostSignatureUrl,
                 authorDisplayName = appUser?.AuthorDisplayName,
@@ -106,6 +108,17 @@ public static class AuthEndpoints
                 appearancePrefsJson = appUser?.AppearancePrefsJson,
                 newDraftDefaultsJson = appUser?.NewDraftDefaultsJson,
             });
+        })
+        .RequireAuthorization();
+
+        groupBuilder.MapPost("/notifications", async (NotificationPrefsRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users) =>
+        {
+            var user = await users.GetUserAsync(principal);
+            if (user is null) return Results.Unauthorized();
+
+            user.NotifyOnEngagement = req.NotifyOnEngagement;
+            await users.UpdateAsync(user);
+            return Results.Ok(new { notifyOnEngagement = user.NotifyOnEngagement });
         })
         .RequireAuthorization();
 

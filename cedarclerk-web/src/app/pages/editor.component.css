@@ -196,6 +196,43 @@
     padding: 5px 8px;
 }
 
+.invite-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.invite-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    border-radius: var(--radius-sm);
+    padding: 4px 4px 4px 10px;
+}
+
+.invite-email {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.invite-add-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.invite-add-row .chat-input {
+    flex: 1;
+}
+
 .channel-chosen-title {
     flex: 1;
     min-width: 0;

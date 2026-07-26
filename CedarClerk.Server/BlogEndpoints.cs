@@ -5,7 +5,9 @@ using System.Text;
 using System.Text.Json;
 using CedarClerk.Core;
 using CedarClerk.Localization;
+using CedarClerk.Server.Bot;
 using Microsoft.EntityFrameworkCore;
+using Telegram.Bot;
 
 namespace CedarClerk.Server;
 
@@ -266,10 +268,17 @@ public static class BlogEndpoints
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(ip + ":" + Consts.General.VisitorHashSalt)));
     }
 
+    // Shared by every "look up a Draft by slug" call site (RenderPostAsync, GetAnnotationsAsync,
+    // PostReactionAsync, PostCommentAsync) — see the ADR following ADR-040, docs/DECISIONS.md.
+    // A private draft is only visible once the invite-grant cookie has been set (RenderPostAsync
+    // is the only place that sets it, after validating a ?invite= token).
+    private static bool HasPrivateAccess(HttpContext ctx, Draft draft) =>
+        !draft.IsPrivate || ctx.Request.Cookies.ContainsKey(Consts.General.PrivateAccessCookiePrefix + draft.Id);
+
     private static async Task GetAnnotationsAsync(HttpContext ctx, CedarDbContext db, string slug)
     {
         var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.IsBlogPublished);
-        if (draft is null)
+        if (draft is null || !HasPrivateAccess(ctx, draft))
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
@@ -307,10 +316,37 @@ public static class BlogEndpoints
         await JsonSerializer.SerializeAsync(ctx.Response.Body, result, JsonOpts);
     }
 
+    // Opt-in DM to the post owner via the bot on genuinely new engagement (see the ADR following
+    // ADR-039, docs/DECISIONS.md) — not on a toggled-off reaction, not on "dislike". Never lets a
+    // failed/unreachable DM affect the anonymous visitor's request; only logs.
+    private static async Task NotifyOwnerAsync(HttpContext ctx, CedarDbContext db, string ownerId, string slug, string message)
+    {
+        var bot = ctx.RequestServices.GetRequiredService<TelegramBotService>();
+        if (!bot.IsRunning) return;
+
+        var owner = await db.Users.Where(u => u.Id == ownerId)
+            .Select(u => new { u.TelegramUserId, u.NotifyOnEngagement }).FirstOrDefaultAsync();
+        if (owner is not { NotifyOnEngagement: true, TelegramUserId: { } chatId }) return;
+
+        try
+        {
+            var cfg = ctx.RequestServices.GetRequiredService<IConfiguration>();
+            var url = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}/{slug}";
+            await bot.Client.SendMessage(chatId, $"{message}\n{url}");
+        }
+        catch (Exception ex)
+        {
+            ctx.RequestServices.GetRequiredService<ILogger<TelegramBotService>>()
+                .LogWarning(ex, "Engagement notification DM failed for owner {OwnerId}", ownerId);
+        }
+    }
+
+    private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max] + "…";
+
     private static async Task PostReactionAsync(HttpContext ctx, CedarDbContext db, string slug)
     {
         var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.IsBlogPublished);
-        if (draft is null)
+        if (draft is null || !HasPrivateAccess(ctx, draft))
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
@@ -338,6 +374,7 @@ public static class BlogEndpoints
         var existing = await db.Reactions.FirstOrDefaultAsync(r =>
             r.DraftId == draft.Id && r.AnnotationId == annotationId && r.VisitorHash == visitor);
 
+        var isNewLike = existing is null && req.Kind == "like";
         if (existing is null)
             db.Reactions.Add(new Reaction { DraftId = draft.Id, AnnotationId = annotationId, Kind = req.Kind, VisitorHash = visitor });
         else if (existing.Kind == req.Kind)
@@ -345,6 +382,9 @@ public static class BlogEndpoints
         else
             existing.Kind = req.Kind;
         await db.SaveChangesAsync();
+
+        if (isNewLike)
+            await NotifyOwnerAsync(ctx, db, draft.OwnerId, slug, $"👍 Someone liked your post \"{draft.Title}\"");
 
         var group = await db.Reactions.Where(r => r.DraftId == draft.Id && r.AnnotationId == annotationId).ToListAsync();
         var counts = group.GroupBy(r => r.Kind).ToDictionary(g => g.Key, g => g.Count());
@@ -357,7 +397,7 @@ public static class BlogEndpoints
     private static async Task PostCommentAsync(HttpContext ctx, CedarDbContext db, string slug)
     {
         var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.IsBlogPublished);
-        if (draft is null)
+        if (draft is null || !HasPrivateAccess(ctx, draft))
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
@@ -415,6 +455,8 @@ public static class BlogEndpoints
         var comment = new Comment { DraftId = draft.Id, AnnotationId = annotationId, AuthorName = authorName, Text = text, ParentCommentId = parentCommentId };
         db.Comments.Add(comment);
         await db.SaveChangesAsync();
+
+        await NotifyOwnerAsync(ctx, db, draft.OwnerId, slug, $"💬 New comment on \"{draft.Title}\": {Truncate(text, 100)}");
 
         ctx.Response.ContentType = "application/json";
         ctx.Response.StatusCode = StatusCodes.Status201Created;
@@ -536,7 +578,10 @@ public static class BlogEndpoints
 
     private static async Task RenderIndexAsync(HttpContext ctx, CedarDbContext db)
     {
-        var posts = await db.Drafts.Where(d => d.IsBlogPublished)
+        // Private posts never appear in the public list (see the ADR following ADR-040,
+        // docs/DECISIONS.md) — listing one would leak its existence even though the single-post
+        // page itself 404s for anyone not invited.
+        var posts = await db.Drafts.Where(d => d.IsBlogPublished && !d.IsPrivate)
             .OrderByDescending(d => d.BlogPublishedAt)
             .Select(d => new
             {
@@ -642,7 +687,7 @@ public static class BlogEndpoints
 
     private static async Task RenderRssAsync(HttpContext ctx, CedarDbContext db)
     {
-        var posts = await db.Drafts.Where(d => d.IsBlogPublished)
+        var posts = await db.Drafts.Where(d => d.IsBlogPublished && !d.IsPrivate)
             .OrderByDescending(d => d.BlogPublishedAt)
             .Take(RssItemLimit)
             .Select(d => new { d.Title, d.BlogSlug, d.BlogPublishedAt, d.CedarJson })
@@ -693,6 +738,33 @@ public static class BlogEndpoints
             ctx.Response.ContentType = "text/html; charset=utf-8";
             await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Primary, RenderHeader(channel)));
             return;
+        }
+
+        // Private posts (see the ADR following ADR-040, docs/DECISIONS.md): a ?invite= token
+        // matching one of this draft's PostInvites grants a long-lived cookie; anything else gets
+        // the exact same "Post not found" as a nonexistent slug, so a private post's existence
+        // isn't distinguishable from a 404 to anyone not invited.
+        if (!HasPrivateAccess(ctx, draft))
+        {
+            var inviteToken = ctx.Request.Query["invite"].FirstOrDefault();
+            var validInvite = inviteToken is not null
+                && await db.PostInvites.AnyAsync(pi => pi.DraftId == draft.Id && pi.Token == inviteToken);
+
+            if (!validInvite)
+            {
+                ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+                ctx.Response.ContentType = "text/html; charset=utf-8";
+                await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Primary, RenderHeader(channel)));
+                return;
+            }
+
+            ctx.Response.Cookies.Append(Consts.General.PrivateAccessCookiePrefix + draft.Id, "1", new CookieOptions
+            {
+                MaxAge = TimeSpan.FromDays(90),
+                HttpOnly = true,
+                IsEssential = true,
+                SameSite = SameSiteMode.Lax
+            });
         }
 
         // Atomic UPDATE (not draft.ViewCount++ + SaveChanges) so concurrent page views don't lose

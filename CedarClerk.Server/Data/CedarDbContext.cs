@@ -20,6 +20,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<AiUsage> AiUsages => Set<AiUsage>();
     public DbSet<Folder> Folders => Set<Folder>();
+    public DbSet<PostInvite> PostInvites => Set<PostInvite>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

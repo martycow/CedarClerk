@@ -16,6 +16,7 @@ export class AuthService {
     readonly telegramLinked = signal(false);
     readonly telegramUsername = signal<string | null>(null);
     readonly telegramLinkedAt = signal<string | null>(null);
+    readonly notifyOnEngagement = signal(false);
     readonly postSignature = signal<string | null>(null);
     readonly postSignatureUrl = signal<string | null>(null);
     readonly authorDisplayName = signal<string | null>(null);
@@ -69,6 +70,7 @@ export class AuthService {
             const me = await firstValueFrom(this.http.get<{
                 email: string; createdAt: string | null; planTier: string | null; planExpiresAt: string | null; trialUsed: boolean;
                 telegramLinked: boolean; telegramUsername: string | null; telegramLinkedAt: string | null;
+                notifyOnEngagement: boolean;
                 postSignature: string | null; postSignatureUrl: string | null;
                 authorDisplayName: string | null; profileUrl: string | null; profileLocation: string | null;
                 headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
@@ -84,6 +86,7 @@ export class AuthService {
             this.telegramLinked.set(me.telegramLinked);
             this.telegramUsername.set(me.telegramUsername);
             this.telegramLinkedAt.set(me.telegramLinkedAt);
+            this.notifyOnEngagement.set(me.notifyOnEngagement);
             this.postSignature.set(me.postSignature);
             this.postSignatureUrl.set(me.postSignatureUrl);
             this.authorDisplayName.set(me.authorDisplayName);
@@ -109,6 +112,7 @@ export class AuthService {
             this.telegramLinked.set(false);
             this.telegramUsername.set(null);
             this.telegramLinkedAt.set(null);
+            this.notifyOnEngagement.set(false);
             this.postSignature.set(null);
             this.postSignatureUrl.set(null);
             this.authorDisplayName.set(null);
@@ -158,6 +162,12 @@ export class AuthService {
         this.socialFacebookUrl.set(res.socialFacebookUrl);
         this.socialYoutubeUrl.set(res.socialYoutubeUrl);
         this.socialGithubUrl.set(res.socialGithubUrl);
+    }
+
+    async saveNotificationPrefs(notifyOnEngagement: boolean): Promise<void> {
+        const res = await firstValueFrom(this.http.post<{ notifyOnEngagement: boolean }>(
+            '/api/auth/notifications', { notifyOnEngagement }));
+        this.notifyOnEngagement.set(res.notifyOnEngagement);
     }
 
     async saveToolbarLayout(layoutJson: string | null): Promise<void> {

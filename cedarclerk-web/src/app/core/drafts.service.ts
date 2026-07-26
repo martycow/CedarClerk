@@ -29,10 +29,11 @@ export interface DraftMeta {
 }
 export interface TranslationMeta { language: string; title: string; updatedAt: string; }
 export interface TranslationFull extends TranslationMeta { cedarJson: string; sourceSnapshotJson: string | null; }
-export interface DraftFull extends DraftMeta { cedarJson: string; translations: TranslationMeta[]; }
+export interface DraftFull extends DraftMeta { cedarJson: string; translations: TranslationMeta[]; isPrivate: boolean; }
 export type AiEditKind = 'fix-errors' | 'schizo';
 export interface AiEditResult { title: string; cedarJson: string; updatedAt: string; }
 export interface FolderMeta { id: string; name: string; count: number; }
+export interface PostInvite { id: string; email: string; createdAt: string; url: string; }
 
 @Injectable({ providedIn: 'root' })
 export class DraftsService {
@@ -76,6 +77,26 @@ export class DraftsService {
 
     setDraftFolder(id: string, folderId: string | null) {
         return firstValueFrom(this.http.put<{ folderId: string | null }>(`/api/drafts/${id}/folder`, { folderId }));
+    }
+
+    setDraftPrivate(id: string, isPrivate: boolean) {
+        return firstValueFrom(this.http.post<{ isPrivate: boolean }>(`/api/drafts/${id}/private`, { isPrivate }));
+    }
+
+    listInvites(id: string) {
+        return firstValueFrom(this.http.get<PostInvite[]>(`/api/drafts/${id}/invites`));
+    }
+
+    addInvite(id: string, email: string) {
+        return firstValueFrom(this.http.post<PostInvite & { emailSent: boolean }>(`/api/drafts/${id}/invites`, { email }));
+    }
+
+    revokeInvite(id: string, inviteId: string) {
+        return firstValueFrom(this.http.delete(`/api/drafts/${id}/invites/${inviteId}`));
+    }
+
+    resendInvite(id: string, inviteId: string) {
+        return firstValueFrom(this.http.post<{ emailSent: boolean }>(`/api/drafts/${id}/invites/${inviteId}/resend`, {}));
     }
 
     listFolders() {

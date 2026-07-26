@@ -82,6 +82,7 @@ export class SettingsComponent implements OnInit {
     payMethod: PayMethod = 'stripe';
 
     telegramBusy = signal(false);
+    notifyBusy = signal(false);
     telegramError = signal<string | null>(null);
     askUnlinkTelegram = signal(false);
 
@@ -385,6 +386,15 @@ export class SettingsComponent implements OnInit {
             this.telegramError.set(e?.error?.error ?? e?.message ?? 'Failed to link Telegram account');
         } finally {
             this.telegramBusy.set(false);
+        }
+    }
+
+    async toggleNotifyOnEngagement() {
+        this.notifyBusy.set(true);
+        try {
+            await this.auth.saveNotificationPrefs(!this.auth.notifyOnEngagement());
+        } finally {
+            this.notifyBusy.set(false);
         }
     }
 

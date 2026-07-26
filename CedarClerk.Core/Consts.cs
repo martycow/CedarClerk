@@ -58,6 +58,11 @@ public static class Consts
         public const string ProviderKeyCfg = "Cedar:Translate:Provider";
 
         public const string ViewedCookiePrefix = "cedar_viewed_";
+
+        // Grants access to a private post once a valid invite token has been presented — much
+        // longer-lived than ViewedCookiePrefix, which is a same-visit view-count dedup, not an
+        // access grant. See the ADR following ADR-040, docs/DECISIONS.md.
+        public const string PrivateAccessCookiePrefix = "cedar_access_";
     }
 
     public static class FileSizes
@@ -133,5 +138,11 @@ public static class Consts
     public static class DeepL
     {
         public const string ApiKeyCfg = "Cedar:DeepL:ApiKey";
+    }
+
+    public static class Email
+    {
+        public const string ResendApiKeyCfg = "Cedar:Email:ResendApiKey";
+        public const string FromAddressCfg = "Cedar:Email:FromAddress";
     }
 }

@@ -34,7 +34,12 @@ public class ApplicationUser : IdentityUser
     public string? TelegramUsername { get; set; }
     public string? TelegramFirstName { get; set; }
     public DateTime? TelegramLinkedAt { get; set; }
-    
+
+    // Opt-in DM via the bot when a new comment or "like" reaction lands on this owner's blog
+    // posts (see the ADR following ADR-039, docs/DECISIONS.md). Default false — a real opt-in,
+    // not opt-out, so linking Telegram alone doesn't start sending unsolicited DMs.
+    public bool NotifyOnEngagement { get; set; }
+
     /// <summary>
     /// User-defined signature in the end of each post
     /// </summary>
@@ -145,6 +150,22 @@ public class Draft
     // Tags, deliberately a plain scalar with no nav property/FK constraint, matching this
     // codebase's "no strict FK-only model" convention (docs/ARCHITECTURE.md). Null = unfiled.
     public Guid? FolderId { get; set; }
+
+    // Gates the published blog page behind PostInvite tokens (see the ADR following ADR-040,
+    // docs/DECISIONS.md) — only meaningful when IsBlogPublished is also true.
+    public bool IsPrivate { get; set; }
+}
+
+// One row per invited email per private Draft. Token grants access (via a long-lived cookie
+// once presented) until the row is deleted — deleting revokes immediately. No nav
+// property/FK constraint, matching Draft.FolderId's convention above.
+public class PostInvite
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid DraftId { get; set; }
+    public string Email { get; set; } = "";
+    public string Token { get; set; } = "";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 // A real, named, user-managed entity (create/rename/delete) — unlike Tags, which stay a flat

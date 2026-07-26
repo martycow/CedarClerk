@@ -10,7 +10,7 @@ import { EditorState, TextSelection } from '@tiptap/pm/state';
 import { Node as PMNode, Slice } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import { AuthService } from '../core/auth.service';
-import { DraftsService, DraftMeta, TranslationMeta, AiEditKind } from '../core/drafts.service';
+import { DraftsService, DraftMeta, TranslationMeta, AiEditKind, PostInvite } from '../core/drafts.service';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, PostLanguage, CompressionLevel, ScheduledPost } from '../core/posts.service';
 import { ChannelsService, Channel, ChannelStats, KnownChat } from '../core/channels.service';
@@ -286,6 +286,15 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     blogElapsed = signal(0);
     private blogTicker?: ReturnType<typeof setInterval>;
     blogError = signal<string | null>(null);
+
+    // Private posts (see the ADR following ADR-040, docs/DECISIONS.md) — email invite list,
+    // only meaningful once the draft is blog-published.
+    isPrivate = signal(false);
+    invites = signal<PostInvite[]>([]);
+    invitesLoading = signal(false);
+    inviteEmailInput = '';
+    inviteBusy = signal(false);
+    inviteError = signal<string | null>(null);
 
     zoom = signal(100);
 
@@ -939,6 +948,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.tagList.set(draft.tags ? draft.tags.split(',').filter(t => t.length > 0) : []);
             this.tagInput = '';
             this.currentFolderId.set(draft.folderId);
+            this.isPrivate.set(draft.isPrivate);
+            this.invites.set([]);
             this.editor?.setEditable(true);
             this.editor?.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC), { emitUpdate: false });
             this.resetHistory();
@@ -1220,6 +1231,82 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.draftAssets.set([]);
         } finally {
             this.draftAssetsLoading.set(false);
+        }
+
+        if (this.currentBlog()?.isPublished) {
+            this.invitesLoading.set(true);
+            try {
+                this.invites.set(await this.draftsApi.listInvites(id));
+            } catch {
+                this.invites.set([]);
+            } finally {
+                this.invitesLoading.set(false);
+            }
+        }
+    }
+
+    async togglePrivate() {
+        const id = this.currentId();
+        if (!id) return;
+        const next = !this.isPrivate();
+        try {
+            const res = await this.draftsApi.setDraftPrivate(id, next);
+            this.isPrivate.set(res.isPrivate);
+        } catch {
+            this.inviteError.set('Failed to update privacy setting');
+        }
+    }
+
+    async addInvite() {
+        const id = this.currentId();
+        const email = this.inviteEmailInput.trim();
+        if (!id || !email || this.inviteBusy()) return;
+        this.inviteBusy.set(true);
+        this.inviteError.set(null);
+        try {
+            const invite = await this.draftsApi.addInvite(id, email);
+            this.invites.update(list => [...list, invite]);
+            this.inviteEmailInput = '';
+        } catch (e) {
+            this.inviteError.set(httpErrorMessage(e, 'Failed to add invite'));
+        } finally {
+            this.inviteBusy.set(false);
+        }
+    }
+
+    async revokeInvite(inviteId: string) {
+        const id = this.currentId();
+        if (!id || this.inviteBusy()) return;
+        this.inviteBusy.set(true);
+        try {
+            await this.draftsApi.revokeInvite(id, inviteId);
+            this.invites.update(list => list.filter(i => i.id !== inviteId));
+        } catch {
+            this.inviteError.set('Failed to revoke invite');
+        } finally {
+            this.inviteBusy.set(false);
+        }
+    }
+
+    async resendInvite(inviteId: string) {
+        const id = this.currentId();
+        if (!id || this.inviteBusy()) return;
+        this.inviteBusy.set(true);
+        try {
+            await this.draftsApi.resendInvite(id, inviteId);
+        } catch {
+            this.inviteError.set('Failed to resend invite');
+        } finally {
+            this.inviteBusy.set(false);
+        }
+    }
+
+    async copyInviteLink(url: string) {
+        try {
+            await navigator.clipboard.writeText(url);
+        } catch {
+            // Clipboard API unavailable (e.g. non-HTTPS context) — silently ignored, the
+            // link is still visible in the UI to copy by hand.
         }
     }
 

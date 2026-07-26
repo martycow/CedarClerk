@@ -1,6 +1,7 @@
 ﻿using CedarClerk.Core;
 using CedarClerk.Server;
 using CedarClerk.Server.Bot;
+using CedarClerk.Server.Email;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -59,7 +60,8 @@ builder.Services.ConfigureApplicationCookie(o =>
 builder.Services.AddSingleton<TelegramBotService>();
 builder.Services.AddSingleton(new MediaPaths(mediaDir));
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramBotService>());
-builder.Services.AddHttpClient(); // named clients used by billing (Stripe) and translation providers
+builder.Services.AddHttpClient(); // named clients used by billing (Stripe), translation providers, and email
+builder.Services.AddSingleton<ResendEmailProvider>();
 
 builder.Services.AddQuartz(q =>
 {
