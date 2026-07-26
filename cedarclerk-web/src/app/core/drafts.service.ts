@@ -25,12 +25,14 @@ export interface DraftMeta {
     lastTelegramUsername: string | null;
     staleLanguages: string[]; // subset of `languages` whose translation predates the last RU edit
     scheduled: ScheduledInfo | null; // most recent Pending/Failed ScheduledPost row, if any
+    folderId: string | null; // at most one folder per draft — see the ADR following ADR-038
 }
 export interface TranslationMeta { language: string; title: string; updatedAt: string; }
 export interface TranslationFull extends TranslationMeta { cedarJson: string; sourceSnapshotJson: string | null; }
 export interface DraftFull extends DraftMeta { cedarJson: string; translations: TranslationMeta[]; }
 export type AiEditKind = 'fix-errors' | 'schizo';
 export interface AiEditResult { title: string; cedarJson: string; updatedAt: string; }
+export interface FolderMeta { id: string; name: string; count: number; }
 
 @Injectable({ providedIn: 'root' })
 export class DraftsService {
@@ -70,6 +72,26 @@ export class DraftsService {
 
     listTagUsage() {
         return firstValueFrom(this.http.get<{ tag: string; count: number }[]>('/api/drafts/tags'));
+    }
+
+    setDraftFolder(id: string, folderId: string | null) {
+        return firstValueFrom(this.http.put<{ folderId: string | null }>(`/api/drafts/${id}/folder`, { folderId }));
+    }
+
+    listFolders() {
+        return firstValueFrom(this.http.get<FolderMeta[]>('/api/folders'));
+    }
+
+    createFolder(name: string) {
+        return firstValueFrom(this.http.post<{ id: string; name: string }>('/api/folders', { name }));
+    }
+
+    renameFolder(id: string, name: string) {
+        return firstValueFrom(this.http.put<{ id: string; name: string }>(`/api/folders/${id}`, { name }));
+    }
+
+    deleteFolder(id: string) {
+        return firstValueFrom(this.http.delete(`/api/folders/${id}`));
     }
 
     getTranslation(id: string, lang: string) {

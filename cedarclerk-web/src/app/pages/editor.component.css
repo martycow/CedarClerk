@@ -1088,6 +1088,50 @@
     color: var(--accent);
 }
 
+.folder-select-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px dashed var(--abord);
+    background: none;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 11px;
+    color: var(--accent);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    margin-left: 4px;
+}
+
+.folder-select-btn:hover {
+    background: var(--asoft);
+}
+
+.folder-pill {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: none;
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    font-family: var(--font-sans);
+}
+
+.folder-pill:hover {
+    background: rgba(128, 120, 100, .1);
+}
+
+.folder-pill.on {
+    background: var(--asoft);
+    color: var(--accent);
+    font-weight: 600;
+}
+
 .sheet.en-empty {
     display: flex;
     flex-direction: column;

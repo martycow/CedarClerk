@@ -70,6 +70,7 @@ import {
     LucideFileText as FileText, LucideHeart as Heart, LucideNotebook as Notebook, LucideFile as FileIcon,
     LucideThumbsUp as ThumbsUp,
     LucideSlidersHorizontal as SlidersHorizontal,
+    LucideFolder as Folder,
 } from '@lucide/angular';
 
 const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
@@ -175,7 +176,7 @@ interface UploadItem {
         ChevronDown, Check, Download, Upload, FileUp, MessageSquare, LineChart, RefreshCw,
         Settings, Sparkle, TableOfContentsIcon, DividerIcon,
         AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
-        SlidersHorizontal,
+        SlidersHorizontal, Folder,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -237,6 +238,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     tagUsage = signal<{ tag: string; count: number }[]>([]);
     private tagUsageLoaded = false;
     tagInput = '';
+
+    // At most one folder per draft (see the ADR following ADR-038, docs/DECISIONS.md) — mirrors
+    // the tag-cloud's lazy-load-on-first-open pattern above.
+    currentFolderId = signal<string | null>(null);
+    folders = signal<{ id: string; name: string; count: number }[]>([]);
+    private foldersLoaded = false;
 
     aiEditBusy = signal(false);
     aiEditElapsed = signal(0);
@@ -702,6 +709,33 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
+    async ensureFoldersLoaded() {
+        if (this.foldersLoaded) return;
+        this.foldersLoaded = true;
+        try {
+            this.folders.set(await this.draftsApi.listFolders());
+        } catch {
+            this.foldersLoaded = false; // allow a retry next time the popover opens
+        }
+    }
+
+    folderName(id: string | null): string {
+        if (id === null) return 'No folder';
+        return this.folders().find(f => f.id === id)?.name ?? 'No folder';
+    }
+
+    async assignFolder(folderId: string | null) {
+        const id = this.currentId();
+        if (!id || this.currentFolderId() === folderId) return;
+        try {
+            await this.draftsApi.setDraftFolder(id, folderId);
+            this.currentFolderId.set(folderId);
+            this.drafts.update(list => list.map(d => d.id === id ? { ...d, folderId } : d));
+        } catch {
+            this.saveState.set('error');
+        }
+    }
+
     // Machine-translates the RU version into EN and loads the result into the editor for review.
     // Replacing an existing translation goes through a confirm modal first (see confirmTranslate()).
     autoTranslateEn() {
@@ -904,6 +938,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.ruSnapshot = null;
             this.tagList.set(draft.tags ? draft.tags.split(',').filter(t => t.length > 0) : []);
             this.tagInput = '';
+            this.currentFolderId.set(draft.folderId);
             this.editor?.setEditable(true);
             this.editor?.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC), { emitUpdate: false });
             this.resetHistory();
@@ -953,7 +988,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 blogSlug: null, isBlogPublished: false, blogPublishedAt: null,
                 languages, tags: tags.join(','),
                 isArchived: false, lastTelegramMessageId: null, lastTelegramUsername: null,
-                staleLanguages: [], scheduled: null,
+                staleLanguages: [], scheduled: null, folderId: null,
             };
             this.drafts.update(l => [meta, ...l]);
             this.currentId.set(created.id);
@@ -967,6 +1002,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.ruSnapshot = null;
             this.tagList.set(tags);
             this.tagInput = '';
+            this.currentFolderId.set(null);
             this.editor?.setEditable(true);
             this.editor?.commands.setContent(JSON.parse(cedarJson), { emitUpdate: false });
             this.resetHistory();

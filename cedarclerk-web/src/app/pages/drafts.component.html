@@ -25,6 +25,44 @@
             </div>
             <span class="spacer"></span>
             <input class="search-input" [(ngModel)]="search" placeholder="Search title or tag">
+            <app-popover>
+                <button trigger class="folder-filter-btn" title="Filter by folder">
+                    <svg lucideFolder class="icon-sm"></svg> {{ selectedFolderLabel() }}
+                </button>
+                <div panel class="folder-menu">
+                    <button class="folder-menu-item" [class.active]="selectedFolder() === 'all'" (click)="selectedFolder.set('all')">All folders</button>
+                    <button class="folder-menu-item" [class.active]="selectedFolder() === 'none'" (click)="selectedFolder.set('none')">No folder</button>
+                    @if (folders().length) {
+                    <div class="folder-menu-sep"></div>
+                    @for (f of folders(); track f.id) {
+                    <div class="folder-menu-row" [class.active]="selectedFolder() === f.id">
+                        @if (editingFolderId() === f.id) {
+                        <input class="folder-rename-input" [(ngModel)]="editingFolderName"
+                               (keydown.enter)="commitRenameFolder()" (keydown.escape)="cancelRenameFolder()"
+                               (blur)="commitRenameFolder()" (click)="$event.stopPropagation()" #renameInput>
+                        } @else {
+                        <button class="folder-menu-item" (click)="selectedFolder.set(f.id)">{{ f.name }}</button>
+                        <span class="folder-count">{{ f.count }}</span>
+                        <button class="folder-icon-btn" (click)="startRenameFolder(f, $event)" title="Rename">
+                            <svg lucidePencil class="icon-xs"></svg>
+                        </button>
+                        <button class="folder-icon-btn" (click)="askDeleteFolder(f, $event)" title="Delete">
+                            <svg lucideX class="icon-xs"></svg>
+                        </button>
+                        }
+                    </div>
+                    }
+                    }
+                    <div class="folder-menu-sep"></div>
+                    @if (folderError()) { <p class="folder-error">{{ folderError() }}</p> }
+                    <div class="folder-add-row">
+                        <input class="folder-add-input" [(ngModel)]="newFolderName" placeholder="New folder…" (keydown.enter)="addFolder()">
+                        <button class="folder-icon-btn" (click)="addFolder()" [disabled]="folderBusy() || !newFolderName.trim()" title="Add folder">
+                            <svg lucidePlus class="icon-xs"></svg>
+                        </button>
+                    </div>
+                </div>
+            </app-popover>
             <div class="view-toggle">
                 <button [class.active]="view() === 'table'" (click)="view.set('table')" title="Table">
                     <svg lucideList class="icon-sm"></svg>
@@ -50,7 +88,7 @@
         @if (view() === 'table') {
         <div class="drafts-table">
             <div class="drafts-row drafts-row-head">
-                <span>Title</span><span>State</span><span>Languages</span><span>Tags</span><span class="right">Updated</span><span></span>
+                <span>Title</span><span>State</span><span>Languages</span><span>Folder</span><span>Tags</span><span class="right">Updated</span><span></span>
             </div>
             @for (d of filteredDrafts(); track d.id) {
             <div class="drafts-row" [class.busy]="busyId() === d.id" (click)="openDraft(d.id)">
@@ -66,6 +104,19 @@
                 <div class="lang-badges">
                     <span class="draft-lang-badge">RU</span>
                     @if (d.languages.includes('en')) { <span class="draft-lang-badge">EN</span> }
+                </div>
+                <div class="folder-cell" (click)="$event.stopPropagation()">
+                    <app-popover>
+                        <button trigger class="folder-cell-btn">
+                            <svg lucideFolder class="icon-xs"></svg> {{ folderName(d.folderId) }}
+                        </button>
+                        <div panel class="folder-menu">
+                            <button class="folder-menu-item" [class.active]="d.folderId === null" (click)="assignFolder(d, null)">No folder</button>
+                            @for (f of folders(); track f.id) {
+                            <button class="folder-menu-item" [class.active]="d.folderId === f.id" (click)="assignFolder(d, f.id)">{{ f.name }}</button>
+                            }
+                        </div>
+                    </app-popover>
                 </div>
                 <div class="tags-cell">
                     @for (t of d.tags.split(',').slice(0, 3); track t) { @if (t) { <span class="tag-chip-ro">#{{ t }}</span> } }
@@ -95,6 +146,19 @@
                     {{ status(d).label }}
                 </span>
                 @if (status(d).detail) { <div class="status-detail">{{ status(d).detail }}</div> }
+                @if (d.folderId) {
+                <div class="folder-cell" (click)="$event.stopPropagation()">
+                    <app-popover>
+                        <button trigger class="folder-cell-btn"><svg lucideFolder class="icon-xs"></svg> {{ folderName(d.folderId) }}</button>
+                        <div panel class="folder-menu">
+                            <button class="folder-menu-item" [class.active]="d.folderId === null" (click)="assignFolder(d, null)">No folder</button>
+                            @for (f of folders(); track f.id) {
+                            <button class="folder-menu-item" [class.active]="d.folderId === f.id" (click)="assignFolder(d, f.id)">{{ f.name }}</button>
+                            }
+                        </div>
+                    </app-popover>
+                </div>
+                }
                 <div class="drafts-card-foot">
                     <span>{{ d.updatedAt | date:'d MMM, HH:mm' }}</span>
                     <span class="row-actions">
@@ -122,6 +186,19 @@
         <p>This cannot be undone.</p>
         <button modal-actions class="btn-ghost" (click)="cancelDelete()">Cancel</button>
         <button modal-actions class="btn-accent" (click)="confirmDelete()">Delete</button>
+    </app-modal>
+    }
+
+    @if (deleteFolderConfirmTarget(); as f) {
+    <app-modal (closed)="cancelDeleteFolder()">
+        <svg modal-icon lucideTrash2 class="icon"></svg>
+        <span modal-title>Delete "{{ f.name }}"?</span>
+        <p>
+            @if (f.count > 0) { {{ f.count }} draft{{ f.count === 1 ? '' : 's' }} will become uncategorized. }
+            The drafts themselves are not deleted.
+        </p>
+        <button modal-actions class="btn-ghost" (click)="cancelDeleteFolder()">Cancel</button>
+        <button modal-actions class="btn-accent" (click)="confirmDeleteFolder()">Delete folder</button>
     </app-modal>
     }
 </div>

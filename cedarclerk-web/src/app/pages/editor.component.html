@@ -869,6 +869,17 @@
                         </div>
                     </app-popover>
                 </div>
+                <app-popover>
+                    <button trigger class="folder-select-btn" (click)="ensureFoldersLoaded()" title="Folder">
+                        <svg lucideFolder class="icon-sm"></svg> {{ folderName(currentFolderId()) }}
+                    </button>
+                    <div panel class="tag-cloud-popover">
+                        <button class="folder-pill" [class.on]="currentFolderId() === null" (click)="assignFolder(null)">No folder</button>
+                        @for (f of folders(); track f.id) {
+                        <button class="folder-pill" [class.on]="currentFolderId() === f.id" (click)="assignFolder(f.id)">{{ f.name }}</button>
+                        }
+                    </div>
+                </app-popover>
             </div>
             @if (showEnEmptyState()) {
             <div class="sheet en-empty">

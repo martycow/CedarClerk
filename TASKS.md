@@ -27,8 +27,8 @@ See ADR-035, `docs/DECISIONS.md`, for full scope (toolbar customization, Appeara
 - [ ] Toolbar preset switching, drag-and-drop between rows, accent presets, the new-draft dialog, `/drafts` filters, the unified Insert modal's clipboard auto-detect — still not clicked through
 - [ ] Verify a real published post (Telegram + blog) still looks right after the toolbar/Insert-modal rewiring — no renderer changed, but the client-side node-insertion paths did.
 
-## Phase 8 (v0.8.0) — well underway
-See `docs/ROADMAP.md` Phase 8 for the full breakdown: Steps 1–5 done, Step 6 (tags) half-done, Steps 7–8 (comments improvements, AI progress bar) not started, plus a large amount of unplanned Step 9 work (view counter, stats Blog tab, Markdown import, exception handling, debug console + export redesign, RU/EN diff gutter, image compression control, YouTube embeds, the editor redesign) that shipped without ever being tracked here until the 25.07.2026 docs audit. `docs/BACKLOG.md` has what's deliberately deferred out of this phase.
+## Phase 8 (v0.8.0) — closed 26.07.2026
+See `docs/ROADMAP.md` Phase 8 for the full breakdown — all 9 steps done. **Not yet live-verified**: Step 6 (tags in Telegram export) and Step 7 (comment replies/highlight/reservation/dual-timestamp) — deferred by Marty's choice, do before treating the phase as fully proven in production. `docs/BACKLOG.md` has what's deliberately deferred out of this phase, plus the newer "Cedar Clerk 0.9.0" idea dump.
 
 ## Tech debt
 See the tech-debt table in `docs/ROADMAP.md` — OS migration (Bullseye→64-bit, ~Aug 2026), cloud backup duplication (rclone), .NET 8 EOL (Nov 2026, bundled with the OS migration).

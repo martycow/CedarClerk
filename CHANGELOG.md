@@ -2,6 +2,10 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-07-26, continued (uncommitted)
+- **BUG**: opening a draft sometimes immediately flagged the EN translation as stale ("Pay attention") even though nothing had been edited. Root cause: TipTap 3's `setContent()` defaults to `emitUpdate: true`, so every one of 8 programmatic content-load call sites (draft open, language switch, AI-edit/auto-translate apply, new draft) fired the same autosave path as a real keystroke, silently bumping `Draft.UpdatedAt` and tripping the `ruUpdatedAt > enMeta.updatedAt` staleness check. Fixed by passing `{ emitUpdate: false }` at all 8 sites.
+- **Folders** (first item picked from the "Cedar Clerk 0.9.0" backlog dump, idea #19) — a real `Folder` entity, one folder per draft (unlike `Tags`, which stay flat/multi-valued/unmanaged). Full CRUD (`FolderEndpoints.cs`), a filter + manage popover and per-row assignment on `/drafts` (table and grid views), and a lighter assign-only selector in the editor next to the tag row. Deleting a folder unassigns its drafts rather than deleting them. See ADR-039, `docs/DECISIONS.md`. **Not yet live-verified in a browser.**
+
 ## 2026-07-26 (uncommitted)
 - **Phase 8 (v0.8.0) closed** — finished the 3 remaining steps found half-done/not-started during the 25.07.2026 docs audit:
   - Step 6 (tags → Telegram): `PostEndpoints.BuildHashtagLine` appends a trailing `#tag1 #tag2` line to every Telegram export, relying on Telegram's native hashtag auto-linking. See ADR-036. **Not yet verified live against `@testingandfun`** — deferred by Marty's choice this session.

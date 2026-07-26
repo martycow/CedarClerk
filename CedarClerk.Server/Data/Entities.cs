@@ -140,6 +140,21 @@ public class Draft
     // /drafts screen (ADR-035, docs/DECISIONS.md) — the only new *content* flag added for the
     // editor redesign; everything else there is a user preference, not draft state.
     public bool IsArchived { get; set; }
+
+    // At most one folder per draft (see the ADR following ADR-038, docs/DECISIONS.md) — unlike
+    // Tags, deliberately a plain scalar with no nav property/FK constraint, matching this
+    // codebase's "no strict FK-only model" convention (docs/ARCHITECTURE.md). Null = unfiled.
+    public Guid? FolderId { get; set; }
+}
+
+// A real, named, user-managed entity (create/rename/delete) — unlike Tags, which stay a flat
+// unmanaged string. See the ADR following ADR-038, docs/DECISIONS.md.
+public class Folder
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public string Name { get; set; } = "";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 public class DraftTranslation

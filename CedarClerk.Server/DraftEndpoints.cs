@@ -15,6 +15,7 @@ public static class DraftEndpoints
     public record SaveDraftRequest(string Title, string CedarJson);
     public record SaveTranslationRequest(string Title, string CedarJson);
     public record UpdateTagsRequest(string Tags);
+    public record UpdateFolderRequest(Guid? FolderId);
 
     private const long CedarZipMaxBytes = 50 * 1024 * 1024;
     private const int CedarMaxAssetCount = 50;
@@ -51,7 +52,7 @@ public static class DraftEndpoints
                 .Select(d => new
                 {
                     d.Id, d.Title, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
-                    d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername,
+                    d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId,
                     Translations = db.DraftTranslations.Where(t => t.DraftId == d.Id)
                         .Select(t => new { t.Language, t.UpdatedAt }).ToList(),
                 })
@@ -71,7 +72,7 @@ public static class DraftEndpoints
             return drafts.Select(d => new
             {
                 d.Id, d.Title, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
-                d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername,
+                d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId,
                 Languages = d.Translations.Select(t => t.Language).ToList(),
                 StaleLanguages = d.Translations.Where(t => t.UpdatedAt < d.UpdatedAt).Select(t => t.Language).ToList(),
                 Scheduled = scheduled.TryGetValue(d.Id, out var s)
@@ -110,7 +111,7 @@ public static class DraftEndpoints
             var translations = await db.DraftTranslations.Where(t => t.DraftId == id)
                 .Select(t => new { t.Language, t.Title, t.UpdatedAt })
                 .ToListAsync();
-            return Results.Ok(new { draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug, draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, Translations = translations });
+            return Results.Ok(new { draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug, draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.FolderId, Translations = translations });
         });
 
         // Backs the export modal's "Files" list — every media asset referenced by this draft
@@ -178,6 +179,26 @@ public static class DraftEndpoints
                 .ToList();
 
             return Results.Ok(counts);
+        });
+
+        // See the ADR following ADR-038, docs/DECISIONS.md — one folder per draft, folderId null
+        // unassigns. FolderId itself is a plain scalar (no FK constraint), so ownership of the
+        // target folder must be checked here explicitly.
+        groupBuilder.MapPut("/{id:guid}/folder", async (Guid id, UpdateFolderRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            if (req.FolderId is { } folderId)
+            {
+                var ownsFolder = await db.Folders.AnyAsync(f => f.Id == folderId && f.OwnerId == uid);
+                if (!ownsFolder) return Results.NotFound();
+            }
+
+            draft.FolderId = req.FolderId;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.FolderId });
         });
 
         groupBuilder.MapGet("/{id:guid}/translations/{lang}", async (Guid id, string lang, ClaimsPrincipal user, CedarDbContext db) =>
