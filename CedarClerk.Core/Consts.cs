@@ -145,4 +145,19 @@ public static class Consts
         public const string ResendApiKeyCfg = "Cedar:Email:ResendApiKey";
         public const string FromAddressCfg = "Cedar:Email:FromAddress";
     }
+
+    // Registration form shown to uninvited visitors of a private post (B3).
+    public static class RegistrationForm
+    {
+        // Matches AuthEndpoints' PreferenceJsonMaxChars — same "client owns the shape, server
+        // only bounds the size" treatment as the other JSON preference blobs.
+        public const int FormJsonMaxChars = 16_000;
+        public const int AnswersJsonMaxChars = 8_000;
+        public const int FieldMaxLength = 200;
+
+        // Per-post, per-visitor submission cap. A public form that hands out access is an
+        // obvious flood target, and nothing else in the blog endpoints is rate-limited.
+        public const int MaxSubmissionsPerVisitor = 3;
+        public static readonly TimeSpan SubmissionWindow = TimeSpan.FromHours(24);
+    }
 }

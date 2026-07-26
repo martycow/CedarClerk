@@ -154,6 +154,12 @@ public class Draft
     // Gates the published blog page behind PostInvite tokens (see the ADR following ADR-040,
     // docs/DECISIONS.md) — only meaningful when IsBlogPublished is also true.
     public bool IsPrivate { get; set; }
+
+    // Registration form shown to uninvited visitors of a private post (B3). Null = no form
+    // configured, so an uninvited visitor still gets the original indistinguishable-from-404
+    // response. A JSON blob rather than columns because the question list is variable-shape —
+    // same reasoning as ApplicationUser's preference blobs; the server only length-checks it.
+    public string? RegistrationFormJson { get; set; }
 }
 
 // One row per invited email per private Draft. Token grants access (via a long-lived cookie
@@ -165,6 +171,25 @@ public class PostInvite
     public Guid DraftId { get; set; }
     public string Email { get; set; } = "";
     public string Token { get; set; } = "";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+// One row per registration-form submission on a private post (B3). Kept separate from
+// PostInvite rather than folded into it: the field sets barely overlap, and the owner's
+// invite list would otherwise have to render half-empty rows of a different kind.
+// AnswersJson holds the custom questionnaire answers keyed by question id.
+public class PostRegistration
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid DraftId { get; set; }
+    public string? Name { get; set; }
+    public string? Nickname { get; set; }
+    public string? Email { get; set; }
+    public string? SocialLink { get; set; }
+    public string? AnswersJson { get; set; }
+    // Same IP-derived hash used for reaction dedup — here it only backs the per-post
+    // submission throttle, so a public form can't be used to flood the owner's list.
+    public string VisitorHash { get; set; } = "";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

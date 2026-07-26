@@ -21,6 +21,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<AiUsage> AiUsages => Set<AiUsage>();
     public DbSet<Folder> Folders => Set<Folder>();
     public DbSet<PostInvite> PostInvites => Set<PostInvite>();
+    public DbSet<PostRegistration> PostRegistrations => Set<PostRegistration>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
