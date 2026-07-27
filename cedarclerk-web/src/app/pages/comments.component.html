@@ -1,9 +1,10 @@
-<!--N7: this is a tab body inside the Posts Manager now, not a page of its own — the page header
-it used to carry lives there. Feedback is grouped per post: the flat stream answered "what's new"
-but not "what happened to this post", which is what this tab is for.-->
-<div class="comments-page">
+<!--N7/FI3.5: a tab body, and since FI3.5 usually a section under the selected post rather than a
+list of every post. Feedback is grouped per post: a flat stream answered "what's new" but not
+"what happened to this post", which is the question being asked here.-->
+<div class="comments-page" [class.scoped]="onlyDraftId()">
     <div class="comments-body">
-        <!--Running total across everything, kept as context above the per-post groups.-->
+        <!--Running total across everything — context only when several posts are on screen.-->
+        @if (!onlyDraftId()) {
         <div class="reactions-card" [class.has-new]="reactions().newLikes || reactions().newDislikes"
              (pointerenter)="markReactionsSeen()">
             <span class="reactions-summary">
@@ -15,6 +16,7 @@ but not "what happened to this post", which is what this tab is for.-->
             </span>
             <span class="reactions-hint">{{ t().feedback.acrossDrafts }}</span>
         </div>
+        }
 
         @if (error()) { <p class="channel-error">{{ error() }}</p> }
 
@@ -24,7 +26,11 @@ but not "what happened to this post", which is what this tab is for.-->
             @for (g of groups(); track g.draftId) {
             <section class="feedback-group">
                 <header class="feedback-group-head" (pointerenter)="markDraftReactionsSeen(g.reactions)">
+                    <!--Scoped under a post that already names itself, the title would just repeat
+                    the heading above it.-->
+                    @if (!onlyDraftId()) {
                     <span class="feedback-group-title">{{ g.draftTitle || t().drafts.untitled }}</span>
+                    }
                     @if (g.reactions; as r) {
                     <span class="feedback-group-reactions" [class.has-new]="r.newLikes || r.newDislikes">
                         👍 {{ r.likes }}@if (r.newLikes) { <span class="new-delta">+{{ r.newLikes }}</span> }

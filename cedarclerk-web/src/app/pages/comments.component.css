@@ -4,6 +4,23 @@
     background: var(--canvas);
 }
 
+/* Scoped under a post in the Posts Manager (FI3.5) it is a section, not a page: no full-viewport
+   height, no canvas of its own, no centring column, and no bottom margin under the last group. */
+:host:has(.comments-page.scoped) {
+    min-height: 0;
+    background: none;
+}
+
+.comments-page.scoped .comments-body {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+}
+
+.comments-page.scoped .feedback-group {
+    margin: 0;
+}
+
 .spacer {
     flex: 1;
 }

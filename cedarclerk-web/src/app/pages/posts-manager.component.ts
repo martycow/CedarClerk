@@ -28,8 +28,11 @@ import {
     LucideRefreshCw as RefreshCw, LucideArrowLeft as ArrowLeft,
 } from '@lucide/angular';
 
-export type ManagerTab = 'posts' | 'feedback' | 'stats' | 'forms';
-const MANAGER_TABS: ManagerTab[] = ['posts', 'feedback', 'stats', 'forms'];
+// FI3.5 removed the 'feedback' tab; ?tab=feedback still resolves (to posts, where feedback now
+// lives) because links to it exist in the wild — the account menu, and Marty's own bookmarks.
+export type ManagerTab = 'posts' | 'stats' | 'forms';
+const MANAGER_TABS: ManagerTab[] = ['posts', 'stats', 'forms'];
+const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
 
 // N7 — the Posts Manager. Comments/reactions and stats used to be two separate top-level pages
 // with their own headers; they are now tab bodies here (their routes redirect), so there is one
@@ -110,7 +113,10 @@ export class PostsManagerComponent implements OnInit {
         // The export modal links straight here when no preset exists yet (I9), so land on the
         // tab that was asked for rather than on the default one.
         const requested = this.route.snapshot.queryParamMap.get('tab');
-        if (requested && MANAGER_TABS.includes(requested as ManagerTab)) this.setTab(requested as ManagerTab);
+        if (requested) {
+            const resolved = RETIRED_TABS[requested] ?? (MANAGER_TABS.includes(requested as ManagerTab) ? requested as ManagerTab : null);
+            if (resolved) this.setTab(resolved);
+        }
     }
 
     // Fire-and-forget: a missing "+N" chip is cosmetic and must not hold up the page.
@@ -126,9 +132,9 @@ export class PostsManagerComponent implements OnInit {
     }
 
     setTab(tab: ManagerTab) {
-        // Leaving the feedback tab is when its badge is worth re-checking: hovering rows there
-        // is exactly what clears the count.
-        if (this.tab() === 'feedback' && tab !== 'feedback') this.feedback.refreshNewCount();
+        // Leaving the posts tab is when the badge is worth re-checking: hovering feedback rows
+        // there is exactly what clears the count.
+        if (this.tab() === 'posts' && tab !== 'posts') this.feedback.refreshNewCount();
         // Leaving the forms tab with unsaved preset edits commits them rather than dropping them.
         if (this.tab() === 'forms' && tab !== 'forms') this.flushPreset();
         this.tab.set(tab);

@@ -1,12 +1,18 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, input, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { CommentsService, AllCommentsComment, DraftReactions } from '../core/comments.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { LocaleService } from '../core/i18n/locale.service';
 import { LucideTrash2 as Trash2 } from '@lucide/angular';
 
-// Rendered as the Posts Manager's "reactions and comments" tab (N7). It no longer owns any page
-// chrome — no header, no theme toggle, no back link.
+// Feedback for published posts. It owns no page chrome — no header, no theme toggle, no back
+// link — because it has never been a page of its own since N7.
+//
+// FI3.5 folded the "Reactions & comments" tab into the Posts tab, so the normal use is now
+// scoped: `onlyDraftId` narrows it to the selected post and drops the group header and the
+// cross-post totals, both of which only make sense when several posts are on screen. Unscoped
+// (the every-post list) is kept because the component is still whole without the Posts Manager
+// around it.
 @Component({
     selector: 'app-comments',
     imports: [DatePipe, Trash2],
@@ -16,6 +22,8 @@ import { LucideTrash2 as Trash2 } from '@lucide/angular';
 export class CommentsComponent implements OnInit, OnDestroy {
     private commentsApi = inject(CommentsService);
     t = inject(LocaleService).t;
+
+    onlyDraftId = input<string | null>(null);
 
     loading = signal(true);
     reactions = signal({ likes: 0, dislikes: 0, newLikes: 0, newDislikes: 0 });
@@ -55,6 +63,19 @@ export class CommentsComponent implements OnInit, OnDestroy {
     // One row per post that has any feedback at all, newest activity first. Reaction-only posts
     // still get a row — a post with 20 likes and no comments is exactly as worth seeing.
     groups(): { draftId: string; draftTitle: string; comments: AllCommentsComment[]; reactions: DraftReactions | null }[] {
+        const only = this.onlyDraftId();
+        if (only) return [this.groupFor(only)];
+        return this.allGroups();
+    }
+
+    // A scoped view always renders its post, even with nothing to show yet — "no comments" is an
+    // answer about this post, whereas the unscoped list omits posts with no feedback entirely.
+    private groupFor(draftId: string) {
+        const found = this.allGroups().find(g => g.draftId === draftId);
+        return found ?? { draftId, draftTitle: '', comments: [], reactions: null };
+    }
+
+    private allGroups(): { draftId: string; draftTitle: string; comments: AllCommentsComment[]; reactions: DraftReactions | null }[] {
         const byDraft = new Map<string, AllCommentsComment[]>();
         for (const c of this.comments()) {
             const list = byDraft.get(c.draftId);

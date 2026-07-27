@@ -18,9 +18,10 @@
 
     <div class="manager-body">
         <nav class="manager-tabs">
-            <button [class.active]="tab() === 'posts'" (click)="setTab('posts')">{{ t().manager.tabs.posts }}</button>
-            <button [class.active]="tab() === 'feedback'" (click)="setTab('feedback')">
-                {{ t().manager.tabs.feedback }}
+            <!--FI3.5: no "Reactions & comments" tab any more — feedback sits under the post it
+            belongs to, on the Posts tab. The count that used to badge that tab badges this one.-->
+            <button [class.active]="tab() === 'posts'" (click)="setTab('posts')">
+                {{ t().manager.tabs.posts }}
                 <app-count-badge [count]="feedback.newComments() + feedback.newReactions()" [title]="t().manager.newSinceLastLook"></app-count-badge>
             </button>
             <button [class.active]="tab() === 'stats'" (click)="setTab('stats')">{{ t().manager.tabs.stats }}</button>
@@ -143,6 +144,15 @@
                     }
                     }
 
+                    <!--FI3.5: this post's reactions and comments, where "what happened with this
+                    post" already lives. One instance filtered by the selected post, so switching
+                    posts costs no request — everything was fetched in one call.-->
+                    <div class="detail-divider"></div>
+                    <div class="detail-field">
+                        <label>{{ t().manager.tabs.feedback }}</label>
+                        <app-comments [onlyDraftId]="d.id"></app-comments>
+                    </div>
+
                     <!--Item 2: a private post's form is chosen HERE, by picking a preset. The
                     definition itself is authored on the Forms tab; the preset is copied onto the
                     post (N12), so editing it later can't rewrite a post that already used it.-->
@@ -247,9 +257,7 @@
             }
         }
 
-        <!--Both tabs below are the former /comments and /stats pages, minus their own page
-        headers — this page provides the chrome now.-->
-        @if (tab() === 'feedback') { <app-comments></app-comments> }
+        <!--The former /stats page, minus its own page header — this page provides the chrome.-->
         @if (tab() === 'stats') { <app-stats></app-stats> }
 
         <!--Item 4: this tab is ONLY about forms. It used to require picking a private post and
