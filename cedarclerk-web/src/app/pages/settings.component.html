@@ -1,14 +1,14 @@
 <div class="settings-page">
     <header class="settings-header">
-        <a class="icon-btn" routerLink="/editor" title="Back to editor">
+        <a class="icon-btn" routerLink="/editor" [title]="t().settings.backToEditor">
             <svg lucideArrowLeft class="icon"></svg>
         </a>
         <app-cedar-logo [size]="19"></app-cedar-logo>
         <span class="brand-name">Cedar Clerk</span>
         <span class="crumb-sep">/</span>
-        <span class="crumb-current">Settings</span>
+        <span class="crumb-current">{{ t().settings.crumb }}</span>
         <span class="spacer"></span>
-        <button class="icon-btn" (click)="theme.toggle()" title="Toggle theme">
+        <button class="icon-btn" (click)="theme.toggle()" [title]="t().common.toggleTheme">
             {{ theme.theme() === 'dark' ? '☀' : '☾' }}
         </button>
         <span class="avatar">{{ avatarInitial() }}</span>
@@ -16,55 +16,55 @@
 
     <div class="settings-body">
         <nav class="anchor-chips">
-            <button (click)="jump('sec-profile')">Profile</button>
+            <button (click)="jump('sec-profile')">{{ t().settings.profile.nav }}</button>
             <button (click)="jump('sec-language')">{{ t().settings.language.nav }}</button>
-            <button (click)="jump('sec-appearance')">Appearance</button>
-            <button (click)="jump('sec-toolbar')">Toolbar</button>
-            <button (click)="jump('sec-header-slots')">Header slots</button>
-            <button (click)="jump('sec-social-links')">Social links</button>
-            <button (click)="jump('sec-subscription')">Subscription</button>
-            <button (click)="jump('sec-integrations')">Integrations</button>
+            <button (click)="jump('sec-appearance')">{{ t().settings.appearance.nav }}</button>
+            <button (click)="jump('sec-toolbar')">{{ t().settings.toolbar.nav }}</button>
+            <button (click)="jump('sec-header-slots')">{{ t().settings.headerSlots.nav }}</button>
+            <button (click)="jump('sec-social-links')">{{ t().settings.social.nav }}</button>
+            <button (click)="jump('sec-subscription')">{{ t().settings.subscription.nav }}</button>
+            <button (click)="jump('sec-integrations')">{{ t().settings.integrations.nav }}</button>
         </nav>
 
         <!-- ============ PROFILE ============ -->
         <section id="sec-profile" class="settings-card">
-            <h2>Profile</h2>
+            <h2>{{ t().settings.profile.title }}</h2>
             <div class="profile-row">
                 <span class="avatar lg">{{ avatarInitial() }}</span>
                 <div>
                     <div class="profile-email">{{ auth.userEmail() }}</div>
                     @if (auth.createdAt(); as since) {
-                    <div class="profile-meta">Member since {{ since | date:'MMMM yyyy' }}</div>
+                    <div class="profile-meta">{{ t().settings.profile.memberSince }} {{ since | date:'MMMM yyyy' }}</div>
                     }
                 </div>
             </div>
 
             <div class="field-group">
-                <label for="cc-sig">Post signature @if (!hasProSignature()) { <span class="ai-badge">PRO</span> }</label>
+                <label for="cc-sig">{{ t().settings.profile.signature }} @if (!hasProSignature()) { <span class="ai-badge">PRO</span> }</label>
                 @if (hasProSignature()) {
-                <p class="field-hint">Appended to the end of every published post (Telegram &amp; blog). Leave empty to publish with no signature at all.</p>
+                <p class="field-hint">{{ t().settings.profile.signatureHintPro }}</p>
                 } @else {
-                <p class="field-hint">Free posts are attributed with "{{ freeAttributionText }}" — upgrade to Pro to replace it with your own (optionally a clickable link) or remove it entirely.</p>
+                <p class="field-hint">{{ t().settings.profile.signatureHintFree(freeAttributionText) }}</p>
                 }
-                <textarea id="cc-sig" [(ngModel)]="signatureText" rows="2" placeholder="e.g. — M.C. © 2026"
-                    [disabled]="!hasProSignature()" [title]="hasProSignature() ? '' : 'Upgrade to Pro to customize your signature'"></textarea>
+                <textarea id="cc-sig" [(ngModel)]="signatureText" rows="2" [placeholder]="t().settings.profile.signaturePlaceholder"
+                    [disabled]="!hasProSignature()" [title]="hasProSignature() ? '' : t().settings.profile.signatureUpgrade"></textarea>
                 @if (hasProSignature()) {
-                <input [(ngModel)]="signatureUrlText" placeholder="Optional link — makes the signature clickable, e.g. https://example.com">
+                <input [(ngModel)]="signatureUrlText" [placeholder]="t().settings.profile.signatureUrlPlaceholder">
                 }
                 <div class="field-actions">
                     <button class="btn-primary" (click)="saveSignature()" [disabled]="signatureBusy() || !hasProSignature()">
-                        {{ signatureBusy() ? '…' : 'Save signature' }}
+                        {{ signatureBusy() ? '…' : t().settings.profile.saveSignature }}
                     </button>
                     @if (signatureSaved()) {
-                    <span class="saved-check"><svg lucideCheck class="icon-xs"></svg>Saved</span>
+                    <span class="saved-check"><svg lucideCheck class="icon-xs"></svg>{{ t().settings.saved }}</span>
                     }
                 </div>
                 @if (signatureError()) { <p class="field-error">{{ signatureError() }}</p> }
             </div>
 
             <div class="card-footer-row">
-                <span class="field-hint">Done for the day?</span>
-                <button class="btn-danger-ghost" (click)="logout()">Log out</button>
+                <span class="field-hint">{{ t().settings.profile.doneForToday }}</span>
+                <button class="btn-danger-ghost" (click)="logout()">{{ t().settings.profile.logout }}</button>
             </div>
         </section>
 
@@ -84,14 +84,14 @@
 
         <!-- ============ APPEARANCE ============ -->
         <section id="sec-appearance" class="settings-card">
-            <h2>Appearance</h2>
-            <p class="field-hint">Only affects your account on this device. Applies instantly — no Save button here.</p>
+            <h2>{{ t().settings.appearance.title }}</h2>
+            <p class="field-hint">{{ t().settings.appearance.hint }}</p>
 
             <div class="field-group">
-                <label>Theme — editing the <b>{{ appearanceMode() }}</b> palette</label>
+                <label>{{ t().settings.appearance.themeLabel }} <b>{{ appearanceMode() }}</b> {{ t().settings.appearance.themePalette }}</label>
                 <div class="format-toggle" style="max-width:180px">
-                    <button [class.on]="appearanceMode() === 'light'" (click)="appearanceMode.set('light')">Light</button>
-                    <button [class.on]="appearanceMode() === 'dark'" (click)="appearanceMode.set('dark')">Dark</button>
+                    <button [class.on]="appearanceMode() === 'light'" (click)="appearanceMode.set('light')">{{ t().settings.appearance.light }}</button>
+                    <button [class.on]="appearanceMode() === 'dark'" (click)="appearanceMode.set('dark')">{{ t().settings.appearance.dark }}</button>
                 </div>
             </div>
 
@@ -103,72 +103,72 @@
                 </button>
                 }
             </div>
-            <p class="field-hint">Surfaces are derived from the accent — one hue, always.</p>
+            <p class="field-hint">{{ t().settings.appearance.accentHint }}</p>
             @if (appearanceError()) { <p class="field-error">{{ appearanceError() }}</p> }
 
             <div class="popover-divider"></div>
 
             <div class="field-group">
-                <label>Writing sheet width</label>
+                <label>{{ t().settings.appearance.sheetWidth }}</label>
                 <div class="format-toggle" style="max-width:320px">
-                    <button [class.on]="appearance.prefs().sheetWidth === 'narrow'" (click)="setSheetWidth('narrow')">Narrow</button>
-                    <button [class.on]="appearance.prefs().sheetWidth === 'normal'" (click)="setSheetWidth('normal')">Normal</button>
-                    <button [class.on]="appearance.prefs().sheetWidth === 'wide'" (click)="setSheetWidth('wide')">Wide</button>
-                    <button [class.on]="appearance.prefs().sheetWidth === 'full'" (click)="setSheetWidth('full')">Full</button>
+                    <button [class.on]="appearance.prefs().sheetWidth === 'narrow'" (click)="setSheetWidth('narrow')">{{ t().settings.appearance.narrow }}</button>
+                    <button [class.on]="appearance.prefs().sheetWidth === 'normal'" (click)="setSheetWidth('normal')">{{ t().settings.appearance.normal }}</button>
+                    <button [class.on]="appearance.prefs().sheetWidth === 'wide'" (click)="setSheetWidth('wide')">{{ t().settings.appearance.wide }}</button>
+                    <button [class.on]="appearance.prefs().sheetWidth === 'full'" (click)="setSheetWidth('full')">{{ t().settings.appearance.full }}</button>
                 </div>
             </div>
 
             <div class="field-group">
-                <label>Typeface <span class="field-hint" style="display:inline">— affects the sheet only, not the app chrome</span></label>
+                <label>{{ t().settings.appearance.typeface }} <span class="field-hint" style="display:inline">{{ t().settings.appearance.typefaceHint }}</span></label>
                 <div class="format-toggle" style="max-width:220px">
-                    <button [class.on]="appearance.prefs().typeface === 'system'" (click)="setTypeface('system')">System</button>
-                    <button [class.on]="appearance.prefs().typeface === 'serif'" (click)="setTypeface('serif')">Serif</button>
-                    <button [class.on]="appearance.prefs().typeface === 'mono'" (click)="setTypeface('mono')">Mono</button>
+                    <button [class.on]="appearance.prefs().typeface === 'system'" (click)="setTypeface('system')">{{ t().settings.appearance.system }}</button>
+                    <button [class.on]="appearance.prefs().typeface === 'serif'" (click)="setTypeface('serif')">{{ t().settings.appearance.serif }}</button>
+                    <button [class.on]="appearance.prefs().typeface === 'mono'" (click)="setTypeface('mono')">{{ t().settings.appearance.mono }}</button>
                 </div>
             </div>
 
             <div class="field-group">
-                <label>Text size — {{ appearance.prefs().fontSize }}px</label>
+                <label>{{ t().settings.appearance.textSize }} — {{ appearance.prefs().fontSize }}px</label>
                 <input type="range" min="13" max="22" step="0.5"
                     [value]="appearance.prefs().fontSize"
                     (input)="setFontSize(+$any($event.target).value)">
             </div>
 
             <div class="field-group">
-                <label>Line height — {{ appearance.prefs().lineHeight }}</label>
+                <label>{{ t().settings.appearance.lineHeight }} — {{ appearance.prefs().lineHeight }}</label>
                 <input type="range" min="1.2" max="2.1" step="0.05"
                     [value]="appearance.prefs().lineHeight"
                     (input)="setLineHeight(+$any($event.target).value)">
             </div>
 
             <div class="appearance-toggles">
-                <label><input type="checkbox" [checked]="appearance.prefs().showRuler" (change)="toggleAppearanceFlag('showRuler', $event)"> Show ruler above the sheet</label>
-                <label><input type="checkbox" [checked]="appearance.prefs().showParagraphNumbers" (change)="toggleAppearanceFlag('showParagraphNumbers', $event)"> Number paragraphs in the gutter</label>
-                <label><input type="checkbox" [checked]="appearance.prefs().showWordCount" (change)="toggleAppearanceFlag('showWordCount', $event)"> Word &amp; character counter in the status bar</label>
-                <label><input type="checkbox" [checked]="appearance.prefs().focusModeHideToolbar" (change)="toggleAppearanceFlag('focusModeHideToolbar', $event)"> Hide the toolbar while typing (focus mode)</label>
-                <label><input type="checkbox" [checked]="appearance.prefs().sheetFlush" (change)="toggleAppearanceFlag('sheetFlush', $event)"> Sheet without the paper card (merges with the canvas)</label>
+                <label><input type="checkbox" [checked]="appearance.prefs().showRuler" (change)="toggleAppearanceFlag('showRuler', $event)"> {{ t().settings.appearance.showRuler }}</label>
+                <label><input type="checkbox" [checked]="appearance.prefs().showParagraphNumbers" (change)="toggleAppearanceFlag('showParagraphNumbers', $event)"> {{ t().settings.appearance.showParagraphNumbers }}</label>
+                <label><input type="checkbox" [checked]="appearance.prefs().showWordCount" (change)="toggleAppearanceFlag('showWordCount', $event)"> {{ t().settings.appearance.showWordCount }}</label>
+                <label><input type="checkbox" [checked]="appearance.prefs().focusModeHideToolbar" (change)="toggleAppearanceFlag('focusModeHideToolbar', $event)"> {{ t().settings.appearance.focusMode }}</label>
+                <label><input type="checkbox" [checked]="appearance.prefs().sheetFlush" (change)="toggleAppearanceFlag('sheetFlush', $event)"> {{ t().settings.appearance.sheetFlush }}</label>
             </div>
         </section>
 
         <!-- ============ TOOLBAR ============ -->
         <section id="sec-toolbar" class="settings-card">
-            <h2>Toolbar</h2>
-            <p class="field-hint">Drag whole groups between rows. Checkboxes control which buttons show at all — unchecked ones just leave the ribbon, nothing is deleted.</p>
+            <h2>{{ t().settings.toolbar.title }}</h2>
+            <p class="field-hint">{{ t().settings.toolbar.hint }}</p>
 
             <div class="field-group">
-                <label>Preset</label>
+                <label>{{ t().settings.toolbar.preset }}</label>
                 <div class="format-toggle" style="max-width:340px">
-                    <button [class.on]="toolbarLayout.layout().preset === 'minimal'" (click)="pickToolbarPreset('minimal')">Minimal</button>
-                    <button [class.on]="toolbarLayout.layout().preset === 'standard'" (click)="pickToolbarPreset('standard')">Standard</button>
-                    <button [class.on]="toolbarLayout.layout().preset === 'everything'" (click)="pickToolbarPreset('everything')">Everything</button>
-                    <button [class.on]="toolbarLayout.layout().preset === 'custom'" disabled>Custom</button>
+                    <button [class.on]="toolbarLayout.layout().preset === 'minimal'" (click)="pickToolbarPreset('minimal')">{{ t().settings.toolbar.minimal }}</button>
+                    <button [class.on]="toolbarLayout.layout().preset === 'standard'" (click)="pickToolbarPreset('standard')">{{ t().settings.toolbar.standard }}</button>
+                    <button [class.on]="toolbarLayout.layout().preset === 'everything'" (click)="pickToolbarPreset('everything')">{{ t().settings.toolbar.everything }}</button>
+                    <button [class.on]="toolbarLayout.layout().preset === 'custom'" disabled>{{ t().settings.toolbar.custom }}</button>
                 </div>
             </div>
             @if (toolbarError()) { <p class="field-error">{{ toolbarError() }}</p> }
 
             <div class="toolbar-rows-editor">
                 <div class="toolbar-row-zone">
-                    <span class="field-hint" style="display:block">Row 1 — always visible</span>
+                    <span class="field-hint" style="display:block">{{ t().settings.toolbar.row1 }}</span>
                     <div class="toolbar-group-list" cdkDropList #row1List="cdkDropList"
                         [cdkDropListData]="row1Groups()" [cdkDropListConnectedTo]="[row2List]"
                         (cdkDropListDropped)="dropToolbarGroup($event)">
@@ -178,7 +178,7 @@
                     </div>
                 </div>
                 <div class="toolbar-row-zone">
-                    <span class="field-hint" style="display:block">Row 2 — optional</span>
+                    <span class="field-hint" style="display:block">{{ t().settings.toolbar.row2 }}</span>
                     <div class="toolbar-group-list" cdkDropList #row2List="cdkDropList"
                         [cdkDropListData]="row2Groups()" [cdkDropListConnectedTo]="[row1List]"
                         (cdkDropListDropped)="dropToolbarGroup($event)">
@@ -196,7 +196,7 @@
                 <div class="catalog-group">
                     <label class="catalog-group-head">
                         <input type="checkbox" [checked]="groupVisibleCount(groupButtonIds(group)) > 0" (change)="toggleGroupVisible(groupButtonIds(group), $event)">
-                        {{ group.label }} <span class="catalog-count">{{ groupVisibleCount(groupButtonIds(group)) }} of {{ group.buttons.length }}</span>
+                        {{ group.label }} <span class="catalog-count">{{ t().settings.toolbar.countOf(groupVisibleCount(groupButtonIds(group)), group.buttons.length) }}</span>
                     </label>
                     <div class="catalog-buttons">
                         @for (b of group.buttons; track b.id) {
@@ -208,31 +208,31 @@
             </div>
 
             <div class="card-footer-row">
-                <span class="field-hint">Based on {{ toolbarLayout.layout().preset }}</span>
-                <button class="btn-danger-ghost" (click)="pickToolbarPreset('standard')">Reset to Standard</button>
+                <span class="field-hint">{{ t().settings.toolbar.basedOn }} {{ toolbarLayout.layout().preset }}</span>
+                <button class="btn-danger-ghost" (click)="pickToolbarPreset('standard')">{{ t().settings.toolbar.resetToStandard }}</button>
             </div>
         </section>
 
         <!-- ============ HEADER SLOTS ============ -->
         <section id="sec-header-slots" class="settings-card">
-            <h2>Header slots</h2>
-            <p class="field-hint">Shown as a subtitle under the title on every blog post: up to three auto-filled values, separated by &bull;.</p>
+            <h2>{{ t().settings.headerSlots.title }}</h2>
+            <p class="field-hint">{{ t().settings.headerSlots.hint }}</p>
 
             <div class="field-group">
-                <label for="cc-author-name">Author display name</label>
-                <input id="cc-author-name" [(ngModel)]="authorDisplayNameText" placeholder="e.g. Marty">
+                <label for="cc-author-name">{{ t().settings.headerSlots.authorName }}</label>
+                <input id="cc-author-name" [(ngModel)]="authorDisplayNameText" [placeholder]="t().settings.headerSlots.authorNamePlaceholder">
             </div>
             <div class="field-group">
-                <label for="cc-profile-url">Profile URL</label>
+                <label for="cc-profile-url">{{ t().settings.headerSlots.profileUrl }}</label>
                 <input id="cc-profile-url" [(ngModel)]="profileUrlText" placeholder="https://example.com">
             </div>
             <div class="field-group">
-                <label for="cc-profile-location">Location</label>
-                <input id="cc-profile-location" [(ngModel)]="profileLocationText" placeholder="e.g. Tbilisi, Georgia">
+                <label for="cc-profile-location">{{ t().settings.headerSlots.location }}</label>
+                <input id="cc-profile-location" [(ngModel)]="profileLocationText" [placeholder]="t().settings.headerSlots.locationPlaceholder">
             </div>
 
             <div class="field-group">
-                <label for="cc-slot-1">Slot 1</label>
+                <label for="cc-slot-1">{{ t().settings.headerSlots.slot(1) }}</label>
                 <select id="cc-slot-1" [(ngModel)]="headerSlot1">
                     <option [ngValue]="null">None</option>
                     <option value="AuthorSignature">Author Signature</option>
@@ -244,7 +244,7 @@
                 </select>
             </div>
             <div class="field-group">
-                <label for="cc-slot-2">Slot 2</label>
+                <label for="cc-slot-2">{{ t().settings.headerSlots.slot(2) }}</label>
                 <select id="cc-slot-2" [(ngModel)]="headerSlot2">
                     <option [ngValue]="null">None</option>
                     <option value="AuthorSignature">Author Signature</option>
@@ -256,9 +256,9 @@
                 </select>
             </div>
             <div class="field-group">
-                <label for="cc-slot-3">Slot 3 @if (!hasProHeaderSlot()) { <span class="ai-badge">PRO</span> }</label>
+                <label for="cc-slot-3">{{ t().settings.headerSlots.slot(3) }} @if (!hasProHeaderSlot()) { <span class="ai-badge">PRO</span> }</label>
                 <select id="cc-slot-3" [(ngModel)]="headerSlot3" [disabled]="!hasProHeaderSlot()"
-                        [title]="hasProHeaderSlot() ? '' : 'Upgrade to Pro to use a third header slot'">
+                        [title]="hasProHeaderSlot() ? '' : t().settings.headerSlots.slotUpgrade">
                     <option [ngValue]="null">None</option>
                     <option value="AuthorSignature">Author Signature</option>
                     <option value="Url">URL</option>
@@ -271,10 +271,10 @@
 
             <div class="field-actions">
                 <button class="btn-primary" (click)="saveProfile()" [disabled]="profileBusy()">
-                    {{ profileBusy() ? '…' : 'Save header slots' }}
+                    {{ profileBusy() ? '…' : t().settings.headerSlots.save }}
                 </button>
                 @if (profileSaved()) {
-                <span class="saved-check"><svg lucideCheck class="icon-xs"></svg>Saved</span>
+                <span class="saved-check"><svg lucideCheck class="icon-xs"></svg>{{ t().settings.saved }}</span>
                 }
             </div>
             @if (profileError()) { <p class="field-error">{{ profileError() }}</p> }
@@ -282,8 +282,8 @@
 
         <!-- ============ SOCIAL LINKS ============ -->
         <section id="sec-social-links" class="settings-card">
-            <h2>Social links</h2>
-            <p class="field-hint">Where else people can find you — kept for your own reference for now.</p>
+            <h2>{{ t().settings.social.title }}</h2>
+            <p class="field-hint">{{ t().settings.social.hint }}</p>
 
             <div class="field-group">
                 <label for="cc-social-twitter"><svg lucideAtSign class="icon-xs"></svg> Twitter / X</label>
@@ -308,10 +308,10 @@
 
             <div class="field-actions">
                 <button class="btn-primary" (click)="saveSocialLinks()" [disabled]="socialBusy()">
-                    {{ socialBusy() ? '…' : 'Save social links' }}
+                    {{ socialBusy() ? '…' : t().settings.social.save }}
                 </button>
                 @if (socialSaved()) {
-                <span class="saved-check"><svg lucideCheck class="icon-xs"></svg>Saved</span>
+                <span class="saved-check"><svg lucideCheck class="icon-xs"></svg>{{ t().settings.saved }}</span>
                 }
             </div>
             @if (socialError()) { <p class="field-error">{{ socialError() }}</p> }
@@ -319,21 +319,21 @@
 
         <!-- ============ SUBSCRIPTION ============ -->
         <section id="sec-subscription" class="settings-card">
-            <h2>Subscription</h2>
+            <h2>{{ t().settings.subscription.title }}</h2>
 
             @if (billing(); as b) {
             <div class="plan-banner">
                 <span class="status-dot"></span>
                 <div>
-                    <div class="plan-banner-title">{{ b.planTier }} plan</div>
+                    <div class="plan-banner-title">{{ b.planTier }} {{ t().settings.subscription.planSuffix }}</div>
                     @if (auth.planExpiresAt(); as until) {
-                    <div class="plan-banner-meta">Renews {{ until | date:'d MMM yyyy' }}</div>
+                    <div class="plan-banner-meta">{{ t().settings.subscription.renews }} {{ until | date:'d MMM yyyy' }}</div>
                     }
                 </div>
                 <span class="spacer"></span>
                 @if (b.stripeCustomerLinked) {
                 <button class="link-btn" (click)="manageStripeBilling()" [disabled]="billingBusy()">
-                    Manage billing (Stripe) ↗
+                    {{ t().settings.subscription.manageStripe }}
                 </button>
                 }
             </div>
@@ -349,71 +349,71 @@
                 <div class="plan-card" [class.current]="b.planTier === 'Free'">
                     <div class="plan-card-name">Free</div>
                     <div class="plan-card-price">$0</div>
-                    <p class="plan-card-desc">1 channel · manual publishing · blog with badge</p>
+                    <p class="plan-card-desc">{{ t().settings.subscription.freeDesc }}</p>
                     @if (b.planTier === 'Free') {
                     <button class="plan-card-btn" disabled>Current plan</button>
                     }
                 </div>
                 <div class="plan-card" [class.current]="b.planTier === 'Pro'">
                     <div class="plan-card-name">Pro</div>
-                    <div class="plan-card-price">${{ b.prices.proUsd }}<span>/mo</span></div>
-                    <p class="plan-card-desc">Unlimited channels · scheduling · translations · blog</p>
+                    <div class="plan-card-price">${{ b.prices.proUsd }}<span>{{ t().settings.subscription.perMonth }}</span></div>
+                    <p class="plan-card-desc">{{ t().settings.subscription.proDesc }}</p>
                     @if (b.planTier === 'Pro') {
                     <button class="plan-card-btn" disabled>Current plan</button>
                     } @else if (b.planTier === 'Free') {
-                    <button class="plan-card-btn" (click)="pickPlan('pro')">Choose Pro</button>
+                    <button class="plan-card-btn" (click)="pickPlan('pro')">{{ t().settings.subscription.choosePro }}</button>
                     }
                 </div>
                 <div class="plan-card" [class.current]="b.planTier === 'ProPlus' || b.planTier === 'Forever'">
                     <div class="plan-card-name">Pro Plus <span class="ai-badge">AI</span></div>
-                    <div class="plan-card-price">${{ b.prices.proPlusUsd }}<span>/mo</span></div>
-                    <p class="plan-card-desc">Everything in Pro · AI Fix errors · AI Schizo-izer</p>
+                    <div class="plan-card-price">${{ b.prices.proPlusUsd }}<span>{{ t().settings.subscription.perMonth }}</span></div>
+                    <p class="plan-card-desc">{{ t().settings.subscription.proPlusDesc }}</p>
                     @if (b.planTier === 'ProPlus' || b.planTier === 'Forever') {
                     <button class="plan-card-btn" disabled>Current plan</button>
                     } @else {
-                    <button class="plan-card-btn accent" (click)="pickPlan('proplus')">Choose Pro Plus</button>
+                    <button class="plan-card-btn accent" (click)="pickPlan('proplus')">{{ t().settings.subscription.chooseProPlus }}</button>
                     }
                 </div>
             </div>
 
             @if (!b.trialUsed && (b.planTier === 'Free' || b.planTier === 'Pro')) {
-            <button class="trial-link" (click)="pickPlan('trial')">Try Pro Plus for ${{ b.prices.trialUsd }}/7 days →</button>
+            <button class="trial-link" (click)="pickPlan('trial')">{{ t().settings.subscription.tryTrial(b.prices.trialUsd) }}</button>
             }
 
             @if (selectedPlan) {
             <div class="payment-step">
-                <div class="field-hint">Pay for {{ selectedPlan === 'proplus' ? 'Pro Plus' : selectedPlan === 'pro' ? 'Pro' : 'the trial' }} with</div>
+                <div class="field-hint">{{ t().settings.subscription.payFor(selectedPlan === 'proplus' ? t().settings.subscription.planProPlus : selectedPlan === 'pro' ? t().settings.subscription.planPro : t().settings.subscription.planTrial) }}</div>
                 <div class="pay-methods">
                     <button class="pay-method" [class.selected]="payMethod === 'stripe'" [disabled]="!b.providers.stripe"
-                            [title]="b.providers.stripe ? '' : 'Stripe is not configured yet'" (click)="payMethod = 'stripe'">
+                            [title]="b.providers.stripe ? '' : t().settings.subscription.stripeUnavailable" (click)="payMethod = 'stripe'">
                         <span class="radio-dot"></span>
                         <span>
-                            <span class="pay-method-label">Card (Stripe)</span>
-                            <span class="pay-method-desc">Visa, Mastercard, Apple Pay</span>
+                            <span class="pay-method-label">{{ t().settings.subscription.stripeLabel }}</span>
+                            <span class="pay-method-desc">{{ t().settings.subscription.stripeDesc }}</span>
                         </span>
                     </button>
                     <button class="pay-method" [class.selected]="payMethod === 'paypal'" [disabled]="!b.providers.paypal"
-                            [title]="b.providers.paypal ? '' : 'PayPal is not configured yet'" (click)="payMethod = 'paypal'">
+                            [title]="b.providers.paypal ? '' : t().settings.subscription.paypalUnavailable" (click)="payMethod = 'paypal'">
                         <span class="radio-dot"></span>
                         <span>
                             <span class="pay-method-label">PayPal</span>
-                            <span class="pay-method-desc">Pay with your PayPal balance</span>
+                            <span class="pay-method-desc">{{ t().settings.subscription.paypalDesc }}</span>
                         </span>
                     </button>
                     <button class="pay-method" [class.selected]="payMethod === 'stars'"
                             [disabled]="!b.providers.telegramStars || !auth.telegramLinked()"
-                            [title]="!b.providers.telegramStars ? 'Telegram Stars is not available yet' : (!auth.telegramLinked() ? 'Link your Telegram account first' : '')"
+                            [title]="!b.providers.telegramStars ? t().settings.subscription.starsUnavailable : (!auth.telegramLinked() ? t().settings.subscription.starsNeedsLink : '')"
                             (click)="payMethod = 'stars'">
                         <span class="radio-dot"></span>
                         <span>
                             <span class="pay-method-label">Telegram Stars</span>
-                            <span class="pay-method-desc">Pay right inside Telegram ★</span>
+                            <span class="pay-method-desc">{{ t().settings.subscription.starsDesc }}</span>
                         </span>
                     </button>
                 </div>
                 <button class="btn-primary" (click)="confirmUpgrade()" [disabled]="billingBusy()">
                     <svg lucideSend class="icon-xs"></svg>
-                    {{ billingBusy() ? '…' : (selectedPlan === 'trial' ? 'Start trial · $' + priceFor(selectedPlan) + '/7 days' : 'Upgrade · $' + priceFor(selectedPlan) + '/mo') }}
+                    {{ billingBusy() ? '…' : (selectedPlan === 'trial' ? t().settings.subscription.startTrial(priceFor(selectedPlan)) : t().settings.subscription.upgrade(priceFor(selectedPlan))) }}
                 </button>
             </div>
             }
@@ -422,7 +422,7 @@
 
         <!-- ============ INTEGRATIONS ============ -->
         <section id="sec-integrations" class="settings-card">
-            <h2>Integrations</h2>
+            <h2>{{ t().settings.integrations.title }}</h2>
 
             <div class="integration-row">
                 <span class="integration-icon telegram">
@@ -430,28 +430,28 @@
                 </span>
                 @if (auth.telegramLinked()) {
                 <div class="integration-body">
-                    <div class="integration-title">Telegram account</div>
+                    <div class="integration-title">{{ t().settings.integrations.telegramAccount }}</div>
                     <div class="integration-meta">
-                        Linked to <span class="strong">&#64;{{ auth.telegramUsername() }}</span>
-                        @if (auth.telegramLinkedAt(); as since) { · since {{ since | date:'d MMM yyyy' }} }
+                        {{ t().settings.integrations.linkedTo }} <span class="strong">&#64;{{ auth.telegramUsername() }}</span>
+                        @if (auth.telegramLinkedAt(); as since) { · {{ t().settings.integrations.since }} {{ since | date:'d MMM yyyy' }} }
                     </div>
                 </div>
                 @if (askUnlinkTelegram()) {
                 <div class="inline-confirm">
-                    <span>Sure?</span>
-                    <button class="btn-danger" (click)="unlinkTelegram()" [disabled]="telegramBusy()">Unlink</button>
-                    <button class="btn-ghost" (click)="askUnlinkTelegram.set(false)">Cancel</button>
+                    <span>{{ t().settings.integrations.sure }}</span>
+                    <button class="btn-danger" (click)="unlinkTelegram()" [disabled]="telegramBusy()">{{ t().settings.integrations.unlink }}</button>
+                    <button class="btn-ghost" (click)="askUnlinkTelegram.set(false)">{{ t().common.cancel }}</button>
                 </div>
                 } @else {
-                <button class="btn-ghost" (click)="askUnlinkTelegram.set(true)">Unlink</button>
+                <button class="btn-ghost" (click)="askUnlinkTelegram.set(true)">{{ t().settings.integrations.unlink }}</button>
                 }
                 } @else {
                 <div class="integration-body">
-                    <div class="integration-title">Telegram account</div>
-                    <div class="integration-meta muted">Not linked. The cow can't reach you.</div>
+                    <div class="integration-title">{{ t().settings.integrations.telegramAccount }}</div>
+                    <div class="integration-meta muted">{{ t().settings.integrations.notLinked }}</div>
                 </div>
                 <button class="btn-primary sm" (click)="linkTelegram()" [disabled]="telegramBusy()">
-                    {{ telegramBusy() ? 'Waiting for Telegram…' : 'Link Telegram' }}
+                    {{ telegramBusy() ? t().settings.integrations.waitingForTelegram : t().settings.integrations.linkTelegram }}
                 </button>
                 }
             </div>
@@ -461,7 +461,7 @@
             <div class="integration-row">
                 <label class="field-hint">
                     <input type="checkbox" [checked]="auth.notifyOnEngagement()" (change)="toggleNotifyOnEngagement()" [disabled]="notifyBusy()">
-                    Notify me on Telegram about new comments and likes
+                    {{ t().settings.integrations.notifyOnEngagement }}
                 </label>
             </div>
             }
@@ -475,11 +475,11 @@
                     @if (botStatus(); as bs) {
                     <div class="integration-meta">
                         <span class="status-dot" [class.down]="!bs.reachable"></span>
-                        {{ bs.reachable ? 'Reachable' : 'Unreachable' }} · publishes on your behalf
+                        {{ bs.reachable ? t().settings.integrations.botReachable : t().settings.integrations.botUnreachable }} · {{ t().settings.integrations.botRole }}
                     </div>
                     }
                 </div>
-                <a class="link-btn" href="https://t.me/CedarClerkBot" target="_blank" rel="noopener">Open bot ↗</a>
+                <a class="link-btn" href="https://t.me/CedarClerkBot" target="_blank" rel="noopener">{{ t().settings.integrations.openBot }}</a>
             </div>
 
             <div class="integration-row dashed">
@@ -487,12 +487,12 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"></circle><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"></path><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"></path><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"></path><path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"></path></svg>
                 </span>
                 <div class="integration-body">
-                    <div class="integration-title">Channels</div>
+                    <div class="integration-title">{{ t().settings.integrations.channels }}</div>
                     <div class="integration-meta">
-                        @if (channels().length) { {{ channels().length }} connected — {{ channelsSummary() }} } @else { None connected yet }
+                        @if (channels().length) { {{ t().settings.integrations.channelsConnected(channels().length) }} — {{ channelsSummary() }} } @else { {{ t().settings.integrations.noChannels }} }
                     </div>
                 </div>
-                <a class="link-btn" routerLink="/editor">Manage in editor →</a>
+                <a class="link-btn" routerLink="/editor">{{ t().settings.integrations.manageInEditor }}</a>
             </div>
         </section>
     </div>

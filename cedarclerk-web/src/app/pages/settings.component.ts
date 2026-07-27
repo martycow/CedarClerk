@@ -173,7 +173,7 @@ export class SettingsComponent implements OnInit {
         try {
             await this.appearance.save(patch);
         } catch (e) {
-            this.appearanceError.set(httpErrorMessage(e, 'Failed to save appearance'));
+            this.appearanceError.set(httpErrorMessage(e, this.t().settings.errors.appearance));
         }
     }
 
@@ -210,7 +210,7 @@ export class SettingsComponent implements OnInit {
             await this.toolbarLayout.save(presetLayout(preset));
             this.initToolbarRows();
         } catch (e) {
-            this.toolbarError.set(httpErrorMessage(e, 'Failed to save toolbar layout'));
+            this.toolbarError.set(httpErrorMessage(e, this.t().settings.errors.toolbar));
         }
     }
 
@@ -224,7 +224,7 @@ export class SettingsComponent implements OnInit {
         try {
             await this.toolbarLayout.save({ ...this.toolbarLayout.layout(), preset: 'custom', row2Groups: [...this.row2Groups()] });
         } catch (e) {
-            this.toolbarError.set(httpErrorMessage(e, 'Failed to save toolbar layout'));
+            this.toolbarError.set(httpErrorMessage(e, this.t().settings.errors.toolbar));
         }
     }
 
@@ -249,7 +249,7 @@ export class SettingsComponent implements OnInit {
         try {
             await this.toolbarLayout.save({ ...this.toolbarLayout.layout(), preset: 'custom', hiddenButtons });
         } catch (e) {
-            this.toolbarError.set(httpErrorMessage(e, 'Failed to save toolbar layout'));
+            this.toolbarError.set(httpErrorMessage(e, this.t().settings.errors.toolbar));
         }
     }
 
@@ -278,7 +278,7 @@ export class SettingsComponent implements OnInit {
             this.signatureSaved.set(true);
             setTimeout(() => this.signatureSaved.set(false), 2500);
         } catch (e) {
-            this.signatureError.set(httpErrorMessage(e, 'Failed to save signature'));
+            this.signatureError.set(httpErrorMessage(e, this.t().settings.errors.signature));
         } finally {
             this.signatureBusy.set(false);
         }
@@ -306,7 +306,7 @@ export class SettingsComponent implements OnInit {
             this.profileSaved.set(true);
             setTimeout(() => this.profileSaved.set(false), 2500);
         } catch (e) {
-            this.profileError.set(httpErrorMessage(e, 'Failed to save header slots'));
+            this.profileError.set(httpErrorMessage(e, this.t().settings.errors.headerSlots));
         } finally {
             this.profileBusy.set(false);
         }
@@ -338,7 +338,7 @@ export class SettingsComponent implements OnInit {
             this.socialSaved.set(true);
             setTimeout(() => this.socialSaved.set(false), 2500);
         } catch (e) {
-            this.socialError.set(httpErrorMessage(e, 'Failed to save social links'));
+            this.socialError.set(httpErrorMessage(e, this.t().settings.errors.social));
         } finally {
             this.socialBusy.set(false);
         }
@@ -374,7 +374,7 @@ export class SettingsComponent implements OnInit {
                 this.selectedPlan = null;
             }
         } catch (e) {
-            this.billingMessage.set(httpErrorMessage(e, 'Checkout failed'));
+            this.billingMessage.set(httpErrorMessage(e, this.t().settings.errors.checkout));
         } finally {
             this.billingBusy.set(false);
         }
@@ -387,7 +387,7 @@ export class SettingsComponent implements OnInit {
             const res = await this.billingApi.stripePortal();
             window.location.href = res.url; // Stripe-hosted subscription management page
         } catch (e) {
-            this.billingMessage.set(httpErrorMessage(e, 'Could not open the billing portal'));
+            this.billingMessage.set(httpErrorMessage(e, this.t().settings.errors.portal));
             this.billingBusy.set(false);
         }
     }
@@ -399,7 +399,7 @@ export class SettingsComponent implements OnInit {
             await this.telegramLink.link();
             await this.auth.refresh();
         } catch (e: any) {
-            this.telegramError.set(e?.error?.error ?? e?.message ?? 'Failed to link Telegram account');
+            this.telegramError.set(e?.error?.error ?? e?.message ?? this.t().settings.errors.linkTelegram);
         } finally {
             this.telegramBusy.set(false);
         }
@@ -422,7 +422,7 @@ export class SettingsComponent implements OnInit {
             await this.auth.refresh();
             this.askUnlinkTelegram.set(false);
         } catch {
-            this.telegramError.set('Failed to unlink Telegram account');
+            this.telegramError.set(this.t().settings.errors.unlinkTelegram);
         } finally {
             this.telegramBusy.set(false);
         }
