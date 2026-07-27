@@ -193,7 +193,18 @@ Full item text in `docs/BACKLOG.md` under "Brainstorm v2"; this is the status ch
 
 **Sequencing note**: N7, N10, N12 (and N8, N9 on top of them) are one project — a single new page — not five separate ones. N4, N5 and N13 all touch the export modal and are cheapest done in one pass.
 
-### Phase 9e — Input sweep v2 — imported 27.07.2026, not started
+### Phase 9e — Input sweep v2 — started 27.07.2026, in progress
+
+**Done so far**
+- [x] DB2.1 — drafts-table column resize was inverted: the handle sat on each column's *left* edge while the drag maths grew it as the pointer moved right. Handle moved to the right edge, where it matches both the maths and every other table
+- [x] DB2.2 default sort by creation date · DB2.3 fixed columns widened so the 1fr Title stops hogging the row · DB2.6 draft names bounded to 1–64 characters
+- [x] DB3.1 — flag emoji replaced with two-letter codes. **This corrects a choice I made in I1/I17**: a flag is not recognisable on Windows, which ships no regional-indicator glyphs and renders the letter pair instead
+- [x] **NF2 — six content languages** (RU, EN, DE, FR, ES, JA). The server needed almost nothing (`DraftTranslation` was already keyed by language string, `ITranslationProvider` already took a target); the editor needed the work — ~20 English-specific places became a `Record<string, TranslationMeta>` with the language passed as a parameter. Tabs render per existing language plus a picker for the rest. **Deliberate simplification**: the RU-side diff gutter tracks one translation's snapshot, following the last-opened tab, because "what changed since translating" has no single answer with several translations. UI locales fall back to English rather than shipping ~650 untranslated keys per language
+- [x] **FI3 (partial)** — Posts Manager: search over title/tags (FI3.10), status chips incl. languages and new-feedback count (FI3.6), per-destination sections for blog/Telegram (FI3.1), editable blog URL with a new `POST /api/drafts/{id}/slug` that slugifies server-side and enforces global uniqueness (FI3.4), publish date (FI3.8), link buttons with icons (FI3.9), form preset as a dropdown with an explicit "no form" (FI3.7), and the toolbar icon changed from a chart to a newspaper (FI3.11)
+
+**Still open in FI3**: 3.2 (tag selector parity), 3.3 (folder picker everywhere + folder deletion), 3.5 (fold the reactions/comments tab into Posts).
+
+
 A second rewrite of `Input.md`, ~60 items, confirmed by Marty as **not overlapping** the earlier lists. Full text and per-item cost analysis in `docs/BACKLOG.md` under "Input sweep v2".
 
 **Three decisions block real work and should come first:**

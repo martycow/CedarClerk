@@ -35,15 +35,24 @@
             } @else {
             <div class="manager-split">
                 <div class="post-list">
-                    @for (d of drafts(); track d.id) {
+                    <!--FI3.10: the list is publish-date ordered, so finding a specific post meant
+                    scrolling. Search covers title and tags.-->
+                    <input class="chat-input post-search" [(ngModel)]="search"
+                           [placeholder]="t().manager.searchPlaceholder">
+                    @for (d of visiblePosts(); track d.id) {
                     <button class="post-row" [class.on]="selectedId() === d.id" (click)="select(d)">
                         <span class="post-row-title">
                             @if (d.isPrivate) { <svg lucideLock class="icon-xs"></svg> }
                             {{ d.title || t().drafts.untitled }}
                         </span>
+                        <!--FI3.6: at a glance - where it is, what languages exist, and whether
+                        anything new arrived.-->
                         <span class="post-row-meta">
                             @if (d.isBlogPublished) { <span class="state-chip live">LIVE</span> }
+                            @if (d.isPrivate) { <span class="state-chip private">{{ t().manager.privateChip }}</span> }
+                            @for (l of d.languages; track l) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
                             @if (d.isArchived) { <span class="state-chip">{{ t().manager.archived }}</span> }
+                            @if (newFeedbackFor(d.id); as n) { <span class="state-chip new">+{{ n }}</span> }
                         </span>
                     </button>
                     } @empty {
@@ -106,15 +115,40 @@
                         </button>
                     </div>
 
-                    @if (blogUrl(d) || telegramUrl(d)) {
-                    <div class="detail-links">
-                        @if (blogUrl(d); as url) {
-                        <a [href]="url" target="_blank" rel="noopener"><svg lucideExternalLink class="icon-xs"></svg> {{ t().manager.blog }}</a>
+                    <!--FI3.1: everything below is per-destination rather than one flat list -
+                    the blog and Telegram have genuinely different settings and links.-->
+                    @if (d.isBlogPublished || blogUrl(d) || telegramUrl(d)) {
+                    <div class="detail-divider"></div>
+                    <div class="detail-field">
+                        <label>{{ t().manager.blog }}</label>
+                        @if (d.blogPublishedAt) {
+                        <p class="field-hint-inline">{{ t().manager.publishedOn }} {{ d.blogPublishedAt | date:'d MMM yyyy, HH:mm' }}</p>
                         }
-                        @if (telegramUrl(d); as url) {
-                        <a [href]="url" target="_blank" rel="noopener"><svg lucideExternalLink class="icon-xs"></svg> {{ t().manager.telegram }}</a>
+                        @if (d.isBlogPublished) {
+                        <!--FI3.4: the URL outlives the draft, so it's worth being able to choose.
+                        Slugified server-side, so a hand-typed value can't be unroutable.-->
+                        <div class="action-row">
+                            <input class="chat-input" [(ngModel)]="editSlug" [placeholder]="t().manager.slugPlaceholder">
+                            <button class="btn-ghost" (click)="saveSlug(d)" [disabled]="busy() || !editSlug.trim()">
+                                {{ t().common.save }}
+                            </button>
+                        </div>
+                        }
+                        @if (blogUrl(d); as url) {
+                        <a class="detail-link-btn" [href]="url" target="_blank" rel="noopener">
+                            <svg lucideExternalLink class="icon-sm"></svg> {{ t().manager.openBlog }}
+                        </a>
                         }
                     </div>
+
+                    @if (telegramUrl(d); as url) {
+                    <div class="detail-field">
+                        <label>{{ t().manager.telegram }}</label>
+                        <a class="detail-link-btn" [href]="url" target="_blank" rel="noopener">
+                            <svg lucideExternalLink class="icon-sm"></svg> {{ t().manager.openTelegram }}
+                        </a>
+                    </div>
+                    }
                     }
 
                     <!--Item 2: a private post's form is chosen HERE, by picking a preset. The
@@ -131,14 +165,13 @@
                         <p class="field-hint-inline">{{ t().manager.forms.formOff }}</p>
                         }
                         @if (presets().length) {
-                        <div class="pill-row">
-                            @for (p of presets(); track p.id) {
-                            <button class="pill" (click)="applyPresetToPost(p)" [disabled]="regBusy()">{{ p.name }}</button>
-                            }
-                            @if (regForm()) {
-                            <button class="pill danger" (click)="clearPostForm()" [disabled]="regBusy()">{{ t().manager.forms.clearForm }}</button>
-                            }
-                        </div>
+                        <!--FI3.7: a dropdown with an explicit "no form" rather than a row of
+                        pills, so the current choice is visible instead of inferred.-->
+                        <select class="chat-input" [value]="''" (change)="pickPreset($any($event.target).value)" [disabled]="regBusy()">
+                            <option value="">{{ regForm() ? t().manager.forms.changeForm : t().manager.forms.noFormChosen }}</option>
+                            @for (p of presets(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+                            @if (regForm()) { <option value="__none">{{ t().manager.forms.clearForm }}</option> }
+                        </select>
                         } @else {
                         <p class="field-hint-inline">{{ t().manager.forms.noPresetsYet }}
                             <button class="link-btn" (click)="setTab('forms')">{{ t().manager.forms.createOne }}</button>

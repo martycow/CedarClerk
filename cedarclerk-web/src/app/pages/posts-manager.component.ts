@@ -65,6 +65,12 @@ export class PostsManagerComponent implements OnInit {
     // endpoint takes title and body together.
     editTitle = '';
     editTags = '';
+    // FI3.4 — the published post's own URL.
+    editSlug = '';
+    // FI3.10 — the list is publish-date ordered; search is how you reach one post directly.
+    search = '';
+    // Per-draft count of comments arrived since the last look, for the list's "+N" chip.
+    newByDraft = signal<Record<string, number>>({});
     renaming = signal(false);
     deleteConfirmId = signal<string | null>(null);
 
@@ -92,6 +98,7 @@ export class PostsManagerComponent implements OnInit {
             const [drafts, folders] = await Promise.all([this.draftsApi.list(), this.draftsApi.listFolders()]);
             this.drafts.set(drafts);
             this.folders.set(folders);
+            this.loadNewFeedback();
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().manager.errors.load));
         } finally {
@@ -101,6 +108,18 @@ export class PostsManagerComponent implements OnInit {
         // tab that was asked for rather than on the default one.
         const requested = this.route.snapshot.queryParamMap.get('tab');
         if (requested && MANAGER_TABS.includes(requested as ManagerTab)) this.setTab(requested as ManagerTab);
+    }
+
+    // Fire-and-forget: a missing "+N" chip is cosmetic and must not hold up the page.
+    private async loadNewFeedback() {
+        try {
+            const feedback = await this.feedback.listAll();
+            const counts: Record<string, number> = {};
+            for (const c of feedback.comments) {
+                if (c.isNew) counts[c.draftId] = (counts[c.draftId] ?? 0) + 1;
+            }
+            this.newByDraft.set(counts);
+        } catch { /* ignore */ }
     }
 
     setTab(tab: ManagerTab) {
@@ -119,10 +138,29 @@ export class PostsManagerComponent implements OnInit {
         return id ? this.drafts().find(d => d.id === id) ?? null : null;
     }
 
+    // FI3.10 — newest published first, then everything unpublished. Search covers title and tags,
+    // which is what a post is actually remembered by.
+    visiblePosts(): DraftMeta[] {
+        const q = this.search.trim().toLowerCase();
+        const matched = q
+            ? this.drafts().filter(d => d.title.toLowerCase().includes(q) || d.tags.toLowerCase().includes(q))
+            : this.drafts();
+        return [...matched].sort((a, b) =>
+            (b.blogPublishedAt ?? '').localeCompare(a.blogPublishedAt ?? '')
+            || b.updatedAt.localeCompare(a.updatedAt));
+    }
+
+    // FI3.6 — how much arrived on this post since the last look. Comments only: reactions have no
+    // per-draft "new" count in the feedback payload.
+    newFeedbackFor(draftId: string): number {
+        return this.newByDraft()[draftId] ?? 0;
+    }
+
     async select(d: DraftMeta) {
         this.selectedId.set(d.id);
         this.editTitle = d.title;
         this.editTags = d.tags;
+        this.editSlug = d.blogSlug ?? '';
         this.registrations.set([]);
         this.regForm.set(null);
         if (d.isPrivate) this.loadForm();
@@ -277,6 +315,35 @@ export class PostsManagerComponent implements OnInit {
                     value: q?.type === 'multi' ? splitMultiAnswer(value).join(', ') : String(value),
                 };
             });
+    }
+
+    // FI3.4 — slugified server-side, so a hand-typed URL can't end up unroutable, and rejected
+    // if another post already holds it (blog lookup is by slug across all owners).
+    async saveSlug(d: DraftMeta) {
+        const slug = this.editSlug.trim();
+        if (!slug || this.busy()) return;
+        this.busy.set(true);
+        this.error.set('');
+        try {
+            const res = await this.draftsApi.setBlogSlug(d.id, slug);
+            this.editSlug = res.blogSlug;
+            this.drafts.update(list => list.map(x => x.id === d.id ? { ...x, blogSlug: res.blogSlug } : x));
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.slug));
+        } finally {
+            this.busy.set(false);
+        }
+    }
+
+    // FI3.7 — one dropdown handles both "use this preset" and "remove the form".
+    pickPreset(value: string) {
+        if (!value) return;
+        if (value === '__none') {
+            this.clearPostForm();
+            return;
+        }
+        const preset = this.presets().find(p => p.id === value);
+        if (preset) this.applyPresetToPost(preset);
     }
 
     // ---------- The post's own form (Posts tab) ----------

@@ -523,3 +523,40 @@
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* FI3.10 — search sits above the list rather than in the page header: it filters this list only. */
+.post-search {
+    margin-bottom: 8px;
+}
+
+/* FI3.6 — status chips in the list row. */
+.state-chip.lang {
+    font-weight: 700;
+    letter-spacing: .03em;
+}
+
+.state-chip.new {
+    background: var(--accent);
+    color: #F4F2EA;
+    font-weight: 700;
+}
+
+/* FI3.9 — links read as buttons now, not as bare anchors in a row. */
+.detail-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    border-radius: var(--radius-md);
+    padding: 6px 12px;
+    font-size: 13px;
+    color: var(--text);
+    text-decoration: none;
+    margin-top: 6px;
+}
+
+.detail-link-btn:hover {
+    background: color-mix(in srgb, var(--accent) 8%, var(--sheet));
+    border-color: var(--abord);
+}

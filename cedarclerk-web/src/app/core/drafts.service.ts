@@ -131,6 +131,11 @@ export class DraftsService {
         return firstValueFrom(this.http.post<{ isPrivate: boolean }>(`/api/drafts/${id}/private`, { isPrivate }));
     }
 
+    // FI3.4 — the server slugifies and enforces global uniqueness, so this can send raw text.
+    setBlogSlug(id: string, slug: string) {
+        return firstValueFrom(this.http.post<{ blogSlug: string }>(`/api/drafts/${id}/slug`, { slug }));
+    }
+
     // Blank clears the watermark; the server trims and returns null for an empty value (I7).
     setDraftWatermark(id: string, watermarkText: string) {
         return firstValueFrom(this.http.post<{ watermarkText: string | null }>(`/api/drafts/${id}/watermark`, { watermarkText }));

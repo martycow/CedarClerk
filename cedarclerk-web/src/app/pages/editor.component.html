@@ -37,7 +37,7 @@
         topbar: the shared account menu drops its nav links here via [showNav]="false", so the
         same screen never offers two routes to the same page.-->
         <a class="export-btn nav-btn" routerLink="/posts" [title]="t().editor.postsManager">
-            <svg lucideLineChart class="icon-sm"></svg>
+            <svg lucideNewspaper class="icon-sm"></svg>
             <span class="btn-label">{{ t().editor.postsManager }}</span>
             <app-count-badge [count]="feedback.newComments() + feedback.newReactions()" [title]="t().editor.newBadge"></app-count-badge>
         </a>

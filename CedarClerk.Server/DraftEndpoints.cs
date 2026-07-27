@@ -20,6 +20,7 @@ public static class DraftEndpoints
     public record UpdateFolderRequest(Guid? FolderId);
     public record UpdatePrivateRequest(bool IsPrivate);
     public record UpdateWatermarkRequest(string? WatermarkText);
+    public record UpdateSlugRequest(string? Slug);
     public record AddInviteRequest(string Email);
     public record UpdateRegistrationFormRequest(string? FormJson);
 
@@ -276,6 +277,33 @@ public static class DraftEndpoints
         // Watermark text tiled over the blog page of a private post (I7). Its own endpoint rather
         // than a field on /private, matching how /tags, /folder and /registration-form each own
         // one concern. Blank clears it.
+        // FI3.4 — a published post's URL is the one piece of it that outlives the draft, so it's
+        // worth being able to choose. Only reachable once published: before that there is no URL
+        // to name, and PublishAsync generates one from the title.
+        groupBuilder.MapPost("/{id:guid}/slug", async (Guid id, UpdateSlugRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+            if (draft.BlogSlug is null)
+                return Results.BadRequest(new { error = "Publish this draft to the blog first" });
+
+            // Run the author's text through the same slugifier the automatic path uses, so a URL
+            // typed by hand can't be something the blog router won't match.
+            var slug = SlugGenerator.Slugify(req.Slug ?? "");
+            if (slug.Length == 0)
+                return Results.BadRequest(new { error = "That URL has no usable characters" });
+
+            // Blog lookup is by slug across all owners, so uniqueness has to be global — not
+            // per-owner like most things here.
+            if (await db.Drafts.AnyAsync(d => d.Id != id && d.BlogSlug == slug))
+                return Results.BadRequest(new { error = "That URL is already taken" });
+
+            draft.BlogSlug = slug;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.BlogSlug });
+        });
+
         groupBuilder.MapPost("/{id:guid}/watermark", async (Guid id, UpdateWatermarkRequest req, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var text = req.WatermarkText?.Trim();
