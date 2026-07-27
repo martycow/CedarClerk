@@ -171,6 +171,11 @@ public class Draft
     // response. A JSON blob rather than columns because the question list is variable-shape —
     // same reasoning as ApplicationUser's preference blobs; the server only length-checks it.
     public string? RegistrationFormJson { get; set; }
+
+    // Watermark text tiled over the rendered blog post (I7). Only applied to private posts —
+    // the point is discouraging redistribution of something handed out per-invite. Null/empty =
+    // no watermark. Plain text, never markup: it is HTML-escaped at render like any author text.
+    public string? WatermarkText { get; set; }
 }
 
 // One row per invited email per private Draft. Token grants access (via a long-lived cookie

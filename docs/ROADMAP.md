@@ -211,7 +211,7 @@ Executing `_Documents_/CedarClerk/Input.md` (32 items). Full text and the per-it
 
 **Improvements — High**
 - [ ] I9 — form presets as a first-class flow: empty-state route to preset creation, explicit Save button on the form page
-- [ ] I7 — configurable watermark on private posts. **Unblocked 27.07.2026**: heavy semi-transparent text, tiled *over* the rendered post on the blog (an overlay above the content, not a background); the editor doesn't render it at all, it only marks the draft with an icon showing a watermark is configured
+- [x] I7 — watermark on private posts (27.07.2026). `Draft.WatermarkText` (migration `AddWatermarkText`, additive) + `POST /api/drafts/{id}/watermark`; set in the export modal's private section, reported by a chip in the editor's state strip and never rendered there. On the blog it's one tiling `background-image` over the post sheet rather than N repeated elements — the sheet's height is post-dependent, and a tile covers any height without guessing a repeat count. `WatermarkRenderer` (Core, 11 unit tests) builds the tile as a **base64** SVG data URI: the payload is author text landing inside a CSS `url()`, and base64 removes every quote, paren and backslash from that context outright instead of relying on an escaping table. Applied only when `IsPrivate` — a public page has nothing to protect. **Not yet live-verified**
 
 **Improvements — Middle**
 - [ ] I1 — language picker on login/register, carried into the new account's `UiLanguage`

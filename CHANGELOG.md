@@ -20,6 +20,18 @@ Two translation misses from the ADR-050 sweep: the paragraph-format dropdown's t
 
 Not started: IB5 (blog comment form). `dotnet test` 278/278, `ng build` clean. Nothing here is live-verified in a browser yet.
 
+### Watermark on private posts (I7)
+
+Specced by Marty mid-session, so it stopped being the blocked item it was imported as: heavy semi-transparent text tiled *over* the blog post, and in the editor nothing but a marker that one is set.
+
+The overlay is a single tiling `background-image`, not N repeated elements — the post sheet's height depends on the post, and a tile covers any height without the renderer guessing how many copies to emit. The tile is an SVG carried as a **base64** data URI rather than percent-encoded XML: the payload is author-supplied text landing inside a CSS `url()`, and base64 removes every quote, paren and backslash from that context outright instead of relying on getting an escaping table right. The text is still XML-escaped inside the SVG, and `WatermarkRenderer` lives in Core with 11 unit tests asserting exactly that — including that hostile input can't break out of the `url()`.
+
+Applied only when the post is private: the watermark exists to discourage redistribution of something handed out per invite, so it has no job on a public page. Fill is mid-grey at low opacity and deliberately not a theme colour — a data-URI SVG can't read the page's CSS variables, and grey is the one value that stays faint-but-legible on both the light and dark blog themes. New `Draft.WatermarkText` (migration `AddWatermarkText`, purely additive) and `POST /api/drafts/{id}/watermark`, its own endpoint in the same one-concern-each style as `/tags`, `/folder` and `/registration-form`. Capped at 60 characters, because a long watermark tiles into unreadable mush.
+
+Drive-by: the state strip's "Private" chip was still hardcoded English.
+
+`dotnet test` 289/289. Not live-verified.
+
 ## 2026-07-26, Phase 9 (brainstorm sweep)
 Imported `_Documents_/CedarClerk/Brainstorm_Features.md` (27 items with Marty's own priorities) into `docs/BACKLOG.md` and opened Phase 9 in `docs/ROADMAP.md`, executing High → Medium → Low with one commit per item.
 

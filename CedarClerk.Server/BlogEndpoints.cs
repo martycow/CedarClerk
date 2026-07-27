@@ -1063,6 +1063,11 @@ public static class BlogEndpoints
             ? ""
             : $"{titleHeading}{headerSlotsLine}<div class=\"post-title-divider\"><span class=\"tdl\"></span><i></i><span class=\"tdl\"></span></div>";
 
+        // I7 — private posts only: the watermark exists to discourage redistribution of something
+        // handed out per invite, so it has no job on a public page. Drawn over the content (the
+        // overlay is the sheet's last child and sits above it), never behind it.
+        var watermark = draft.IsPrivate ? WatermarkRenderer.OverlayHtml(draft.WatermarkText) : "";
+
         var postSheet = $"""
             <div class="post-sheet">
             {metaRow}
@@ -1071,6 +1076,7 @@ public static class BlogEndpoints
             {titleBlock}
             {body}
             {footerRow}
+            {watermark}
             </div>
             """;
 
@@ -1230,7 +1236,11 @@ public static class BlogEndpoints
 
         .back-link { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; padding: 4px 0; margin: 0 0 12px; }
         .back-link:hover { text-decoration: underline; }
-        .post-sheet { background: var(--sheet); border-radius: 12px; box-shadow: var(--shadow); padding: 32px 40px 28px; }
+        .post-sheet { position: relative; background: var(--sheet); border-radius: 12px; box-shadow: var(--shadow); padding: 32px 40px 28px; }
+        /* I7 — tiled over the post, not behind it. pointer-events:none so it can't take a click,
+           and user-select:none so dragging across the page doesn't select the watermark. The
+           tile itself (an SVG data URI) comes from WatermarkRenderer as an inline style. */
+        .watermark-overlay { position: absolute; inset: 0; z-index: 2; pointer-events: none; user-select: none; border-radius: 12px; background-repeat: repeat; }
         .post-sheet h1 { font-size: 27px; font-weight: 700; letter-spacing: -.015em; line-height: 1.22; margin: 0 0 12px; text-align: center; }
         .post-header-slots { font-size: 13px; color: var(--t3); margin: 0 0 18px; text-align: center; }
         .post-header-slots a { color: var(--accent); text-decoration: none; }

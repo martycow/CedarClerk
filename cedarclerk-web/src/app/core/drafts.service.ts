@@ -36,7 +36,11 @@ export interface DraftMeta {
 }
 export interface TranslationMeta { language: string; title: string; updatedAt: string; }
 export interface TranslationFull extends TranslationMeta { cedarJson: string; sourceSnapshotJson: string | null; }
-export interface DraftFull extends DraftMeta { cedarJson: string; translations: TranslationMeta[]; registrationFormJson: string | null; }
+export interface DraftFull extends DraftMeta { cedarJson: string; translations: TranslationMeta[]; registrationFormJson: string | null; watermarkText: string | null; }
+
+// Mirrors Consts.Watermark.MaxLength (CedarClerk.Core) — the server rejects longer text, so the
+// input caps at the same number rather than letting a save fail (I7).
+export const WATERMARK_MAX_LENGTH = 60;
 export type AiEditKind = 'fix-errors' | 'schizo';
 export interface AiEditResult { title: string; cedarJson: string; updatedAt: string; }
 export interface FolderMeta { id: string; name: string; count: number; }
@@ -125,6 +129,11 @@ export class DraftsService {
 
     setDraftPrivate(id: string, isPrivate: boolean) {
         return firstValueFrom(this.http.post<{ isPrivate: boolean }>(`/api/drafts/${id}/private`, { isPrivate }));
+    }
+
+    // Blank clears the watermark; the server trims and returns null for an empty value (I7).
+    setDraftWatermark(id: string, watermarkText: string) {
+        return firstValueFrom(this.http.post<{ watermarkText: string | null }>(`/api/drafts/${id}/watermark`, { watermarkText }));
     }
 
     setRegistrationForm(id: string, formJson: string | null) {

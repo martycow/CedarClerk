@@ -19,6 +19,7 @@ public static class DraftEndpoints
     public record UpdateTagsRequest(string Tags);
     public record UpdateFolderRequest(Guid? FolderId);
     public record UpdatePrivateRequest(bool IsPrivate);
+    public record UpdateWatermarkRequest(string? WatermarkText);
     public record AddInviteRequest(string Email);
     public record UpdateRegistrationFormRequest(string? FormJson);
 
@@ -169,7 +170,7 @@ public static class DraftEndpoints
             var translations = await db.DraftTranslations.Where(t => t.DraftId == id)
                 .Select(t => new { t.Language, t.Title, t.UpdatedAt })
                 .ToListAsync();
-            return Results.Ok(new { draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug, draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.FolderId, draft.IsPrivate, Translations = translations });
+            return Results.Ok(new { draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug, draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.FolderId, draft.IsPrivate, draft.WatermarkText, Translations = translations });
         });
 
         // Backs the export modal's "Files" list — every media asset referenced by this draft
@@ -270,6 +271,24 @@ public static class DraftEndpoints
             draft.IsPrivate = req.IsPrivate;
             await db.SaveChangesAsync();
             return Results.Ok(new { draft.IsPrivate });
+        });
+
+        // Watermark text tiled over the blog page of a private post (I7). Its own endpoint rather
+        // than a field on /private, matching how /tags, /folder and /registration-form each own
+        // one concern. Blank clears it.
+        groupBuilder.MapPost("/{id:guid}/watermark", async (Guid id, UpdateWatermarkRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var text = req.WatermarkText?.Trim();
+            if (text is { Length: > Consts.Watermark.MaxLength })
+                return Results.BadRequest(new { error = "Watermark text is too long" });
+
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            draft.WatermarkText = string.IsNullOrEmpty(text) ? null : text;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.WatermarkText });
         });
 
         // Registration form (B3) — shown to uninvited visitors of a private post. Length-checked

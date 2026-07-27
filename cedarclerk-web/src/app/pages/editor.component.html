@@ -231,6 +231,21 @@
                     }
                 </div>
                 }
+
+                <!--Watermark (I7): private-only, because its job is discouraging redistribution
+                of something handed out per invite. Rendered on the blog page only — the editor
+                just shows a chip in the state strip saying one is set.-->
+                <div class="popover-divider"></div>
+                <span class="tb-caption">{{ t().editor.exportModal.watermark }}</span>
+                <div class="invite-add-row">
+                    <input class="chat-input" [(ngModel)]="watermarkInput" (keydown.enter)="saveWatermark()"
+                        [maxlength]="watermarkMaxLength" [placeholder]="t().editor.exportModal.watermarkPlaceholder">
+                    <button class="mini" (click)="saveWatermark()" [disabled]="watermarkBusy()" [title]="t().common.save">
+                        <svg lucideCheck class="icon-sm"></svg>
+                    </button>
+                </div>
+                <p class="field-hint-inline">{{ t().editor.exportModal.watermarkHint }}</p>
+                @if (watermarkError()) { <p class="channel-error">{{ watermarkError() }}</p> }
                 }
                 }
             </div>
@@ -850,7 +865,12 @@
             @if (currentId()) {
             <div class="draft-state-row" [style.max-width.px]="sheetMaxWidthPx()">
                 @if (isPrivate()) {
-                <span class="state-chip private"><svg lucideLock class="icon-xs"></svg> Private</span>
+                <span class="state-chip private"><svg lucideLock class="icon-xs"></svg> {{ t().editor.state.private }}</span>
+                <!--I7: the watermark itself is never drawn in the editor — it would fight the
+                text you're writing. The strip just reports that one is configured.-->
+                @if (watermarkText()) {
+                <span class="state-chip" [title]="watermarkText()"><svg lucideDroplets class="icon-xs"></svg> {{ t().editor.state.watermarked }}</span>
+                }
                 } @else {
                 <span class="state-chip">{{ t().editor.state.public }}</span>
                 }

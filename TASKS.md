@@ -7,7 +7,9 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
 
 **Bug pass done 27.07.2026** — IB1, IB2, IB4, IB6, IB7, IB8, IB9 fixed (`dotnet test` 278/278, `ng build` clean, **none live-verified in a browser**). IB5 (blog comment form) not started. IB3 is **still open**: two real defects on that path were fixed (client clock leaking into the stale comparison; string-vs-instant timestamp compare), but the underlying "an autosave fires ~1.2s after a RU load" is unexplained and needs a live reproduction.
 
-`I7` (watermark) was specced by Marty 27.07.2026 and is no longer blocked — tiled heavy semi-transparent text laid over the blog post, icon-only in the editor.
+**`I7` (watermark) shipped 27.07.2026** — specced by Marty mid-session and built the same session. Tiled heavy semi-transparent text over the blog post, chip-only in the editor. `dotnet test` 289/289. Not live-verified.
+
+Version bumped to **0.9.1** (`CedarClerk.Core/Consts.cs`) and tagged.
 
 And one needs a single decision before three separate items touch the same screen: `I12` (split Settings) vs `I14`/`B15` (move appearance into the editor) vs `IT2` (delete toolbar customization).
 

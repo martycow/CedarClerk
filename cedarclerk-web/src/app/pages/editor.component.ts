@@ -12,7 +12,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { AuthService } from '../core/auth.service';
 import {
     DraftsService, DraftMeta, TranslationMeta, AiEditKind, PostInvite,
-    RegistrationForm, parseRegistrationForm,
+    RegistrationForm, parseRegistrationForm, WATERMARK_MAX_LENGTH,
 } from '../core/drafts.service';
 import { FormPresetsService, FormPreset } from '../core/form-presets.service';
 import { CommentsService } from '../core/comments.service';
@@ -67,6 +67,7 @@ import {
     LucideCheck as Check,
     LucideDownload as Download,
     LucideMessageSquare as MessageSquare,
+    LucideDroplets as Droplets,
     LucideRefreshCw as RefreshCw,
     LucideSparkle as Sparkle,
     LucideTableOfContents as TableOfContentsIcon,
@@ -179,7 +180,7 @@ interface UploadItem {
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
         Send, Plus, X, Trash2,
         EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, Menu, Superscript,
-        ChevronDown, Check, Download, MessageSquare, RefreshCw,
+        ChevronDown, Check, Download, MessageSquare, Droplets, RefreshCw,
         Sparkle, TableOfContentsIcon, DividerIcon,
         AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
         SlidersHorizontal, Folder, Lock,
@@ -309,6 +310,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     regForm = signal<RegistrationForm | null>(null);
     regBusy = signal(false);
     formPresets = signal<FormPreset[]>([]);
+
+    // Watermark (I7) — drawn on the blog page only, never in the editor. watermarkText() is the
+    // saved value (what the state strip reports); watermarkInput is the unsaved field content.
+    watermarkText = signal<string | null>(null);
+    watermarkInput = '';
+    watermarkBusy = signal(false);
+    watermarkError = signal<string | null>(null);
+    readonly watermarkMaxLength = WATERMARK_MAX_LENGTH;
 
     zoom = signal(100);
 
@@ -996,6 +1005,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.tagInput = '';
             this.currentFolderId.set(draft.folderId);
             this.isPrivate.set(draft.isPrivate);
+            this.watermarkText.set(draft.watermarkText);
+            this.watermarkInput = draft.watermarkText ?? '';
+            this.watermarkError.set(null);
             this.invites.set([]);
             this.regForm.set(parseRegistrationForm(draft.registrationFormJson));
             this.editor?.setEditable(true);
@@ -1069,6 +1081,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.tagInput = '';
             this.currentFolderId.set(folderId);
             this.isPrivate.set(isPrivate);
+            this.watermarkText.set(null);
+            this.watermarkInput = '';
+            this.watermarkError.set(null);
             this.invites.set([]);
             this.regForm.set(null);
             this.editor?.setEditable(true);
@@ -1255,6 +1270,22 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.isPrivate.set(res.isPrivate);
         } catch {
             this.inviteError.set(this.t().editor.errors.privacy);
+        }
+    }
+
+    async saveWatermark() {
+        const id = this.currentId();
+        if (!id) return;
+        this.watermarkBusy.set(true);
+        this.watermarkError.set(null);
+        try {
+            const res = await this.draftsApi.setDraftWatermark(id, this.watermarkInput.trim());
+            this.watermarkText.set(res.watermarkText);
+            this.watermarkInput = res.watermarkText ?? '';
+        } catch (e) {
+            this.watermarkError.set(httpErrorMessage(e, this.t().editor.errors.saveWatermark));
+        } finally {
+            this.watermarkBusy.set(false);
         }
     }
 

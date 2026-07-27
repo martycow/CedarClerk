@@ -2,7 +2,7 @@
 
 public static class Consts
 {
-    public const string CurrentVersion = "0.9.0";
+    public const string CurrentVersion = "0.9.1";
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
     
@@ -159,6 +159,14 @@ public static class Consts
         // obvious flood target, and nothing else in the blog endpoints is rate-limited.
         public const int MaxSubmissionsPerVisitor = 3;
         public static readonly TimeSpan SubmissionWindow = TimeSpan.FromHours(24);
+    }
+
+    // Watermark tiled over a private post's blog page (I7).
+    public static class Watermark
+    {
+        // A watermark is a short label ("CONFIDENTIAL", a reader's name) repeated across the
+        // page — long text tiles into unreadable mush, so the cap is deliberately tight.
+        public const int MaxLength = 60;
     }
 
     // View/reaction deltas on the /drafts screen (B23).
