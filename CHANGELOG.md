@@ -36,6 +36,16 @@ The page itself is the shell plus what's already knowable — headline counts an
 
 **Nothing here is covered by automated tests** — the project has no HTTP-level integration tests, so the gate was verified by reading and needs a live check: a non-admin should get 404 from `/api/admin/users` and a redirect from `/admin`. And `Cedar:AdminEmail` has to be set on the Pi before the panel is reachable in production (`docs/integrations-setup.md` §3b).
 
+### Admin panel Step 2 — user management, with the audit log built in
+
+Per-user actions on an expanded row: set plan tier and expiry, reset trial, lock/unlock, grant/revoke admin. Locking uses Identity's own `LockoutEnd`, so the ordinary sign-in path enforces it and there is no custom check to get wrong. A blank expiry on a paid tier is a manual grant that never expires — reusing the meaning `ApplicationUser` already documents rather than inventing a second convention for the same field.
+
+**Self-targeting is refused server-side** for both lock and admin rights. There is exactly one admin; a self-lockout would have no second admin to undo it and the fix would be hand-editing the database on the Pi. The UI disables those buttons too, but only so the reason is visible — the refusal is on the server.
+
+**The audit log was built now rather than deferred.** It was written up as "decide before Step 2"; the decision is that a log starting halfway through is missing precisely the changes anyone would later go looking for. New `AdminAuditEntry` table (nothing existing touched), written by every mutation, newest-first in the panel. Actor and target emails are denormalized deliberately: a log that stops making sense once the rows it points at change is not a log.
+
+Still not included, per Marty's answers: deleting users (locking is the reversible equivalent) and editing other people's posts.
+
 ### Settings split (I12), zoom removed (IT1), toolbar customization kept (IT2)
 
 **Zoom is gone** (IT1) — signal, both buttons, the `%` readout, the `--zoom` variable the sheet font size was multiplied by, and both dictionary keys. The Appearance panel's font-size slider covers what it was reaching for.

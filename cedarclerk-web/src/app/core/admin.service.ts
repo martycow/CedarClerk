@@ -34,6 +34,15 @@ export interface AdminSummary {
     storageBytes: number;
 }
 
+export interface AdminAuditEntry {
+    id: string;
+    actorEmail: string;
+    action: string;
+    targetEmail: string | null;
+    details: string | null;
+    createdAt: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
     private http = inject(HttpClient);
@@ -44,5 +53,28 @@ export class AdminService {
 
     summary() {
         return firstValueFrom(this.http.get<AdminSummary>('/api/admin/summary'));
+    }
+
+    audit() {
+        return firstValueFrom(this.http.get<AdminAuditEntry[]>('/api/admin/audit'));
+    }
+
+    // expiresAt null on a paid tier is a manual grant that never expires — the same meaning the
+    // rest of the app already gives it, not a second convention.
+    setPlan(userId: string, tier: string, expiresAt: string | null) {
+        return firstValueFrom(this.http.post<{ planTier: string; planExpiresAt: string | null }>(
+            `/api/admin/users/${userId}/plan`, { tier, expiresAt }));
+    }
+
+    resetTrial(userId: string) {
+        return firstValueFrom(this.http.post(`/api/admin/users/${userId}/reset-trial`, {}));
+    }
+
+    setLocked(userId: string, locked: boolean) {
+        return firstValueFrom(this.http.post(`/api/admin/users/${userId}/lock`, { locked }));
+    }
+
+    setAdmin(userId: string, isAdmin: boolean) {
+        return firstValueFrom(this.http.post(`/api/admin/users/${userId}/admin`, { isAdmin }));
     }
 }

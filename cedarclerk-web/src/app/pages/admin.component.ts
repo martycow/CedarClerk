@@ -1,7 +1,8 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { AdminService, AdminSummary, AdminUser } from '../core/admin.service';
+import { FormsModule } from '@angular/forms';
+import { AdminService, AdminAuditEntry, AdminSummary, AdminUser } from '../core/admin.service';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -14,7 +15,7 @@ import { LucideArrowLeft as ArrowLeft, LucideShieldCheck as ShieldCheck } from '
 // management, invite codes and cross-owner posts are steps 2–4 and land here as further tabs.
 @Component({
     selector: 'app-admin',
-    imports: [DatePipe, RouterLink, CedarLogoComponent, AccountMenuComponent, ArrowLeft, ShieldCheck],
+    imports: [DatePipe, FormsModule, RouterLink, CedarLogoComponent, AccountMenuComponent, ArrowLeft, ShieldCheck],
     templateUrl: 'admin.component.html',
     styleUrls: ['admin.component.css'],
 })
@@ -28,17 +29,86 @@ export class AdminComponent implements OnInit {
     error = signal('');
     users = signal<AdminUser[]>([]);
     summary = signal<AdminSummary | null>(null);
+    audit = signal<AdminAuditEntry[]>([]);
+
+    // Step 2 — one expanded row at a time; the actions are destructive-adjacent enough that
+    // having six accounts' worth of controls on screen at once invites a misclick.
+    expandedId = signal<string | null>(null);
+    busy = signal(false);
+    readonly tiers = ['Free', 'Pro', 'ProPlus', 'Forever'];
+    planTier = 'Free';
+    planExpiresAt = '';
 
     async ngOnInit() {
+        await this.reload();
+        this.loading.set(false);
+    }
+
+    private async reload() {
         try {
-            const [users, summary] = await Promise.all([this.api.listUsers(), this.api.summary()]);
+            const [users, summary, audit] = await Promise.all([
+                this.api.listUsers(), this.api.summary(), this.api.audit(),
+            ]);
             this.users.set(users);
             this.summary.set(summary);
+            this.audit.set(audit);
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().admin.loadFailed));
-        } finally {
-            this.loading.set(false);
         }
+    }
+
+    isSelf(u: AdminUser): boolean {
+        return u.email === this.auth.userEmail();
+    }
+
+    toggleExpanded(u: AdminUser) {
+        if (this.expandedId() === u.id) {
+            this.expandedId.set(null);
+            return;
+        }
+        this.expandedId.set(u.id);
+        // Seed the form from what the account currently has, so "save" without touching anything
+        // is a no-op rather than a silent reset to Free.
+        this.planTier = u.planTier;
+        this.planExpiresAt = u.planExpiresAt ? u.planExpiresAt.slice(0, 10) : '';
+    }
+
+    // Every action reloads rather than patching local state: an admin change can move several
+    // things at once (tier + effective tier + audit log), and a stale row here is worse than a
+    // round-trip.
+    private async run(action: () => Promise<unknown>) {
+        if (this.busy()) return;
+        this.busy.set(true);
+        this.error.set('');
+        try {
+            await action();
+            await this.reload();
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().admin.actionFailed));
+        } finally {
+            this.busy.set(false);
+        }
+    }
+
+    savePlan(u: AdminUser) {
+        // A date input gives a bare day; the server stores an instant. End of day UTC, so
+        // "expires on the 5th" means the 5th is still usable.
+        const expiry = this.planTier === 'Free' || !this.planExpiresAt
+            ? null
+            : new Date(`${this.planExpiresAt}T23:59:59Z`).toISOString();
+        return this.run(() => this.api.setPlan(u.id, this.planTier, expiry));
+    }
+
+    resetTrial(u: AdminUser) {
+        return this.run(() => this.api.resetTrial(u.id));
+    }
+
+    toggleLock(u: AdminUser) {
+        return this.run(() => this.api.setLocked(u.id, !u.isLocked));
+    }
+
+    toggleAdmin(u: AdminUser) {
+        return this.run(() => this.api.setAdmin(u.id, !u.isAdmin));
     }
 
     // Bytes are the honest unit server-side; nobody reads a raw byte count.

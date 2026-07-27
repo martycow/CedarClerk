@@ -167,6 +167,14 @@ public static class Consts
         public static readonly TimeSpan SubmissionWindow = TimeSpan.FromHours(24);
     }
 
+    // Admin panel (IF2).
+    public static class Admin
+    {
+        // The audit log grows without bound and nothing pages it yet — this is what the panel
+        // shows, not what is kept.
+        public const int AuditPageSize = 100;
+    }
+
     // Watermark tiled over a private post's blog page (I7).
     public static class Watermark
     {

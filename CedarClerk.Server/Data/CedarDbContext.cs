@@ -18,6 +18,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<BotKnownChatAdmin> BotKnownChatAdmins => Set<BotKnownChatAdmin>();
     public DbSet<DraftTranslation> DraftTranslations => Set<DraftTranslation>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<AdminAuditEntry> AdminAuditEntries => Set<AdminAuditEntry>();
     public DbSet<AiUsage> AiUsages => Set<AiUsage>();
     public DbSet<Folder> Folders => Set<Folder>();
     public DbSet<DraftStatSeen> DraftStatSeens => Set<DraftStatSeen>();

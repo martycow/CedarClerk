@@ -192,3 +192,127 @@
 .admin-next {
     margin-top: 18px;
 }
+
+/* ---------- Step 2: per-user actions ---------- */
+.user-row.clickable {
+    cursor: pointer;
+}
+
+.user-row.clickable:hover {
+    background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+.user-row.expanded {
+    border-bottom-color: transparent;
+}
+
+.user-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 4px 16px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--alt);
+    min-width: 860px;
+}
+
+.action-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.action-group > label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--t2);
+}
+
+.action-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.user-actions select,
+.user-actions input[type="date"] {
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    color: var(--text);
+    border-radius: var(--radius-md);
+    padding: 5px 8px;
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.btn-accent,
+.btn-ghost {
+    border-radius: var(--radius-md);
+    padding: 5px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.btn-accent {
+    border: none;
+    background: var(--accent);
+    color: #F4F2EA;
+}
+
+.btn-ghost {
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    color: var(--text);
+}
+
+.btn-ghost:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent) 8%, var(--sheet));
+}
+
+.btn-accent:disabled,
+.btn-ghost:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.field-hint-inline {
+    font-size: 12px;
+    color: var(--t3);
+    margin: 0;
+}
+
+/* ---------- Audit ---------- */
+.audit-title {
+    margin-top: 28px;
+}
+
+.audit-list {
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+}
+
+.audit-row {
+    display: grid;
+    grid-template-columns: 130px 110px minmax(180px, 1fr) minmax(200px, 1.4fr) minmax(180px, 1fr);
+    gap: 12px;
+    align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+    min-width: 860px;
+}
+
+.audit-row:last-child {
+    border-bottom: none;
+}
+
+.audit-action {
+    font-weight: 600;
+}

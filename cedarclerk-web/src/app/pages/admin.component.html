@@ -65,7 +65,7 @@
                 <span>{{ t().admin.columns.joined }}</span>
             </div>
             @for (u of users(); track u.id) {
-            <div class="user-row">
+            <div class="user-row clickable" [class.expanded]="expandedId() === u.id" (click)="toggleExpanded(u)">
                 <span class="user-email">
                     {{ u.email }}
                     @if (u.isAdmin) { <span class="chip admin">{{ t().admin.adminChip }}</span> }
@@ -86,6 +86,59 @@
                 <span class="muted">{{ t().admin.contentSummary(u.published, u.drafts, u.channels) }}</span>
                 <span class="muted">{{ u.createdAt | date:'d MMM yyyy' }}</span>
             </div>
+
+            @if (expandedId() === u.id) {
+            <div class="user-actions">
+                <div class="action-group">
+                    <label>{{ t().admin.actions.plan }}</label>
+                    <div class="action-row">
+                        <select [(ngModel)]="planTier">
+                            @for (tier of tiers; track tier) { <option [value]="tier">{{ tier }}</option> }
+                        </select>
+                        <!--Blank on a paid tier is a manual grant with no expiry, which is what
+                        the rest of the app already means by a null expiry.-->
+                        <input type="date" [(ngModel)]="planExpiresAt" [disabled]="planTier === 'Free'">
+                        <button class="btn-accent" (click)="savePlan(u)" [disabled]="busy()">{{ t().common.save }}</button>
+                    </div>
+                    <p class="field-hint-inline">{{ planTier === 'Free' ? t().admin.actions.freeHasNoExpiry : t().admin.actions.blankIsForever }}</p>
+                </div>
+
+                <div class="action-row">
+                    <button class="btn-ghost" (click)="resetTrial(u)" [disabled]="busy() || !u.trialUsed">
+                        {{ u.trialUsed ? t().admin.actions.resetTrial : t().admin.actions.trialUnused }}
+                    </button>
+
+                    <!--Self-targeting is refused server-side too; disabling here just explains
+                    why rather than letting the click fail.-->
+                    <button class="btn-ghost" (click)="toggleLock(u)" [disabled]="busy() || isSelf(u)"
+                            [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''">
+                        {{ u.isLocked ? t().admin.actions.unlock : t().admin.actions.lock }}
+                    </button>
+
+                    <button class="btn-ghost" (click)="toggleAdmin(u)" [disabled]="busy() || isSelf(u)"
+                            [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''">
+                        {{ u.isAdmin ? t().admin.actions.revokeAdmin : t().admin.actions.grantAdmin }}
+                    </button>
+                </div>
+
+                <p class="field-hint-inline">{{ t().admin.actions.noDeleteNote }}</p>
+            </div>
+            }
+            }
+        </div>
+
+        <h2 class="admin-section-title audit-title">{{ t().admin.auditTitle }}</h2>
+        <div class="audit-list">
+            @for (a of audit(); track a.id) {
+            <div class="audit-row">
+                <span class="muted">{{ a.createdAt | date:'d MMM, HH:mm' }}</span>
+                <span class="audit-action">{{ a.action }}</span>
+                <span>{{ a.targetEmail || '—' }}</span>
+                <span class="muted">{{ a.details }}</span>
+                <span class="muted">{{ t().admin.byActor(a.actorEmail) }}</span>
+            </div>
+            } @empty {
+            <p class="hint">{{ t().admin.noAudit }}</p>
             }
         </div>
 

@@ -81,11 +81,15 @@ Steps 1–3 are the actual ask; 4–5 are where "чем больше функц�
 ## Build status
 
 - **Step 1 — done 27.07.2026.** `ApplicationUser.IsAdmin` (migration `AddIsAdmin`, additive), config bootstrap from `Cedar:AdminEmail` (grant-only, never revokes), `AdminEndpoints` under `/api/admin` with the admin check on the **group** so a new route can't ship ungated, `GET /users` and `GET /summary`, an `/admin` page with `adminGuard`, and an account-menu entry shown only to admins. The gate returns **404 rather than 403** — an admin panel that answers "wrong, but it exists" tells an ordinary account something it has no business knowing.
-- Steps 2–5: not started.
+- **Step 2 — done 27.07.2026.** Per-user actions on an expanded row: set plan tier and expiry (blank expiry on a paid tier = manual grant that never expires, reusing the meaning `ApplicationUser` already documents rather than inventing a second one), reset trial, lock/unlock (Identity's own `LockoutEnd`, so the normal sign-in path enforces it), grant/revoke admin. **Self-targeting is refused server-side** for lock and admin — there is no second admin to undo a self-lockout, and the fix would be hand-editing the database on the Pi.
+  - **The audit log was built as part of this step, not deferred.** It was listed as "decide before Step 2"; the decision is that a log which starts halfway through is missing exactly the changes someone would go looking for. New `AdminAuditEntry` (migration `AddAdminAuditLog`, a new table, nothing existing touched), written by every mutation, shown newest-first in the panel. Actor and target emails are **denormalized on purpose**: a log that stops making sense once the rows it points at change isn't a log.
+  - Not included, per the decisions above: user deletion and editing other users' content.
+- Steps 3–5: not started.
 
 **Not covered by automated tests.** The project has no HTTP-level integration tests (`CedarClerk.Tests` covers pure helpers and renderers), so the admin gate is verified by reading and must be checked live: sign in as a non-admin and confirm `/api/admin/users` returns 404 and `/admin` redirects.
 
 ## Still open
 
-- **Audit log.** Once Step 2 lets an admin change someone's plan, "who changed what and when" is worth recording from the start — retrofitting means the early changes are invisible. Not built yet; decide before Step 2.
 - **`Cedar:AdminEmail` must be set on the Pi** before the panel is reachable in production — see `docs/integrations-setup.md` §3b.
+- **The audit log has no retention or paging.** It grows forever and the panel shows the newest 100 (`Consts.Admin.AuditPageSize`). Fine at this scale; worth revisiting if it ever gets busy.
+- **Step 3 (invite codes)** is the next one, and it carries the manual-attribution affordance for the two pre-existing accounts.

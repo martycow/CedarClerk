@@ -99,6 +99,27 @@ public class ApplicationUser : IdentityUser
     public DateTime? FeedbackSeenAt { get; set; }
 }
 
+// Every state-changing action taken from the admin panel (IF2, step 2). Written from the start
+// rather than added later: an audit log that begins halfway through is missing exactly the
+// changes someone would go looking for.
+//
+// Actor and target emails are DENORMALIZED on purpose. A log that stops making sense once a row
+// it points at changes or goes away is not a log — it has to read correctly years later without
+// depending on joins that may no longer resolve.
+public class AdminAuditEntry
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string ActorId { get; set; } = default!;
+    public string ActorEmail { get; set; } = "";
+    /// <summary>Short machine-readable verb: plan, lock, unlock, reset-trial, grant-admin…</summary>
+    public string Action { get; set; } = "";
+    public string? TargetUserId { get; set; }
+    public string? TargetEmail { get; set; }
+    /// <summary>Human-readable "from X to Y" detail; never parsed, only displayed.</summary>
+    public string? Details { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 public class Payment
 {
     public Guid Id { get; set; } = Guid.NewGuid();
