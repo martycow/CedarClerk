@@ -27,6 +27,7 @@
         <nav class="anchor-chips">
             @if (tab() === 'profile') {
             <button (click)="jump('sec-profile')">{{ t().settings.profile.nav }}</button>
+            <button (click)="jump('sec-cross-links')">{{ t().settings.crossLinks.nav }}</button>
             <button (click)="jump('sec-header-slots')">{{ t().settings.headerSlots.nav }}</button>
             <button (click)="jump('sec-social-links')">{{ t().settings.social.nav }}</button>
             } @else {
@@ -41,12 +42,29 @@
         <section id="sec-profile" class="settings-card">
             <h2>{{ t().settings.profile.title }}</h2>
             <div class="profile-row">
+                <!--IF1: uploaded picture when set, the initial letter otherwise.-->
+                @if (auth.avatarUrl(); as url) {
+                <img class="avatar lg avatar-img" [src]="url" alt="">
+                } @else {
                 <span class="avatar lg">{{ avatarInitial() }}</span>
+                }
                 <div>
                     <div class="profile-email">{{ auth.userEmail() }}</div>
                     @if (auth.createdAt(); as since) {
                     <div class="profile-meta">{{ t().settings.profile.memberSince }} {{ since | date:'MMMM yyyy' }}</div>
                     }
+                    <div class="avatar-actions">
+                        <label class="btn-primary avatar-pick">
+                            {{ avatarBusy() ? '…' : t().settings.profile.changeAvatar }}
+                            <input type="file" accept="image/*" (change)="onAvatarPicked($event)" [disabled]="avatarBusy()" hidden>
+                        </label>
+                        @if (auth.avatarUrl()) {
+                        <button class="btn-danger-ghost" (click)="clearAvatar()" [disabled]="avatarBusy()">
+                            {{ t().settings.profile.removeAvatar }}
+                        </button>
+                        }
+                    </div>
+                    @if (avatarError()) { <p class="field-error">{{ avatarError() }}</p> }
                 </div>
             </div>
 
@@ -173,6 +191,26 @@
                 }
             </div>
             @if (profileError()) { <p class="field-error">{{ profileError() }}</p> }
+        </section>
+        }
+
+        <!-- ============ CROSS-LINKS (I15) ============ -->
+        @if (tab() === 'profile') {
+        <section id="sec-cross-links" class="settings-card">
+            <h2>{{ t().settings.crossLinks.title }}</h2>
+            <p class="field-hint">{{ t().settings.crossLinks.hint }}</p>
+
+            <div class="field-group">
+                <label for="cc-blog-link">{{ t().settings.crossLinks.blogLink }}</label>
+                <input id="cc-blog-link" [(ngModel)]="blogLinkText" [placeholder]="t().settings.crossLinks.blogLinkDefault" maxlength="80">
+            </div>
+            <div class="field-group">
+                <label for="cc-tg-link">{{ t().settings.crossLinks.telegramLink }}</label>
+                <input id="cc-tg-link" [(ngModel)]="telegramLinkText" [placeholder]="t().settings.crossLinks.telegramLinkDefault" maxlength="80">
+            </div>
+            <!--Saved by the same button as the rest of the profile — these live in the same
+            request, so a second Save here would be a lie about what it does.-->
+            <p class="field-hint">{{ t().settings.crossLinks.savedWithProfile }}</p>
         </section>
         }
 

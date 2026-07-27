@@ -588,6 +588,9 @@ export const en = {
         profile: {
             nav: 'Profile',
             title: 'Profile',
+            changeAvatar: 'Change picture',
+            removeAvatar: 'Remove',
+            avatarFailed: 'Failed to update the picture',
             memberSince: 'Member since',
             signature: 'Post signature',
             signatureHintPro: 'Appended to the end of every published post (Telegram & blog). Leave empty to publish with no signature at all.',
@@ -644,6 +647,16 @@ export const en = {
             basedOn: 'Based on',
             allInGroup: 'All in this group',
             resetToStandard: 'Reset to Standard',
+        },
+        crossLinks: {
+            nav: 'Cross-links',
+            title: 'Cross-links',
+            hint: 'What the link between a post’s two homes says. Leave blank for the built-in wording.',
+            blogLink: 'Telegram post → blog',
+            blogLinkDefault: 'Read on the blog →',
+            telegramLink: 'Blog page → Telegram',
+            telegramLinkDefault: 'View in Telegram →',
+            savedWithProfile: 'Saved together with the header-slot fields below.',
         },
         headerSlots: {
             nav: 'Header slots',

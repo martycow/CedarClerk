@@ -97,3 +97,9 @@
 .logout-btn:hover {
     background: color-mix(in srgb, var(--danger) 8%, var(--sheet));
 }
+
+/* IF1 — the uploaded picture fills the same circle the initial letter drew. */
+.avatar-img {
+    object-fit: cover;
+    padding: 0;
+}

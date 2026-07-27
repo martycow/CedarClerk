@@ -49,7 +49,10 @@ export const YoutubeNode = Node.create({
             const captionInput = document.createElement('input');
             captionInput.type = 'text';
             captionInput.className = 'media-caption-input';
-            captionInput.placeholder = 'Add a caption…';
+            // B18: this doubles as the link text Telegram shows (the renderer falls back to
+            // "Watch on YouTube" only when it's empty), so the placeholder says so rather than
+            // adding a second field that would mean the same thing.
+            captionInput.placeholder = 'Caption / Telegram link text…';
             captionInput.value = (node.attrs['caption'] as string) ?? '';
             captionInput.addEventListener('input', () => {
                 if (typeof getPos !== 'function') return;

@@ -1041,6 +1041,7 @@ public static class BlogEndpoints
             {
                 u.PostSignature, u.PostSignatureUrl, u.AuthorDisplayName, u.ProfileUrl, u.ProfileLocation,
                 u.HeaderSlot1Type, u.HeaderSlot2Type, u.HeaderSlot3Type, u.PlanTier, u.PlanExpiresAt,
+                u.TelegramLinkText,
             })
             .FirstAsync();
         var ownerPlan = SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow);
@@ -1054,7 +1055,11 @@ public static class BlogEndpoints
         var dateLine = draft.BlogPublishedAt is { } published
             ? $"<span class=\"post-card-date\">{published.ToString("d MMM yyyy, HH:mm", CultureInfo.InvariantCulture)}</span>"
             : "";
-        var viewInTelegramLabel = lang == Languages.English ? "View in Telegram &#8594;" : "Смотреть в Telegram &#8594;";
+        // I15 — author's own wording when set; escaped, unlike the built-in defaults which carry
+        // their own arrow entity.
+        var viewInTelegramLabel = string.IsNullOrWhiteSpace(owner.TelegramLinkText)
+            ? (lang == Languages.English ? Consts.CrossLinks.DefaultTelegramLinkTextEn : Consts.CrossLinks.DefaultTelegramLinkTextRu)
+            : System.Net.WebUtility.HtmlEncode(owner.TelegramLinkText.Trim());
         var telegramLink = draft is { LastTelegramUsername: not null, LastTelegramMessageId: not null }
             ? $"<a class=\"telegram-link\" href=\"https://t.me/{draft.LastTelegramUsername}/{draft.LastTelegramMessageId}\" target=\"_blank\" rel=\"noopener\">{viewInTelegramLabel}</a>"
             : "";

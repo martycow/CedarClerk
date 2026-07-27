@@ -3,6 +3,7 @@ using System;
 using CedarClerk.Server;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CedarClerk.Server.Migrations
 {
     [DbContext(typeof(CedarDbContext))]
-    partial class CedarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260727194954_AddCrossLinkTexts")]
+    partial class AddCrossLinkTexts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.29");
@@ -88,9 +91,6 @@ namespace CedarClerk.Server.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("AuthorDisplayName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AvatarUrl")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("BlogLinkText")

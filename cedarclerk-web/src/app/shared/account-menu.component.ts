@@ -17,7 +17,12 @@ import { LucideLineChart as LineChart, LucideSettings as Settings, LucideLogOut 
     template: `
         <app-popover align="right">
             <button trigger class="account-trigger" [title]="t().editor.account">
+                <!--IF1: the uploaded picture when there is one, the initial letter otherwise.-->
+                @if (auth.avatarUrl(); as url) {
+                <img class="avatar avatar-img" [src]="url" alt="">
+                } @else {
                 <span class="avatar">{{ avatarInitial() }}</span>
+                }
                 @if (showEmail()) { <span class="user">{{ auth.userEmail() }}</span> }
             </button>
             <div panel class="account-popover">

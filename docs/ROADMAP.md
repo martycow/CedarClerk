@@ -242,7 +242,8 @@ Executing `_Documents_/CedarClerk/Input.md` (32 items). Full text and the per-it
 - [x] I8 — stats slider. 200px → 420px, taller thumb, and the six notches gained readable labels that are also click targets; unlabelled 1px ticks marked something without saying what
 - [x] I13 — fullscreen toggle in the status bar. Real browser fullscreen rather than a CSS "hide the chrome" mode, kept in sync with a `fullscreenchange` listener since Esc leaves fullscreen without touching the button
 - [x] I17 — flags on the language picker, alongside the endonyms (names stay in their own language). The login/register picker from `I1` was already flag-only
-- [ ] I15 — custom link text for the Telegram↔blog cross-link. Left: unlike the rest of this block it needs a stored setting and touches both renderers, and it should be done together with the open `B18` (custom YouTube link text) since they're the same feature applied twice
+- [x] I15 — cross-link wording (27.07.2026). Two profile fields (`BlogLinkText`, `TelegramLinkText`, migration `AddCrossLinkTexts`), null falling back to the built-in text. **Profile-level rather than per-export**, which is a deliberate deviation from the item's wording: it's branding that reads the same on every post, so retyping it at each export would be a chore rather than a choice. Settings → Profile, saved with the rest of the profile.
+  - **`B18` turned out to be already done**: the YouTube link text in Telegram has always fallen back to the node's caption, with "Watch on YouTube" only as the default. Adding a second field would have duplicated it, so the caption's placeholder now says what it does instead
 
 **Removals**
 - [x] IT1 — editor zoom deleted (27.07.2026). The `zoom` signal, its two buttons, the `%` readout, the `--zoom` CSS variable it multiplied the sheet font size by, and both dictionary keys. Sheet font size in the Appearance panel covers the real need
@@ -250,7 +251,7 @@ Executing `_Documents_/CedarClerk/Input.md` (32 items). Full text and the per-it
 
 **Features**
 - [ ] IF2 — Admin panel: users, posts, invite codes, invite attribution, subscription activation (High) — the largest item across all three lists; needs a role concept, a migration and admin-only endpoints, none of which exist. Same initiative as `docs/BACKLOG.md` idea #12
-- [ ] IF1 — avatar upload (Low)
+- [x] IF1 — avatar upload (27.07.2026). `ApplicationUser.AvatarUrl` (migration `AddAvatarUrl`) holding a `/media/...` path, because the file goes through the ordinary asset upload — same type whitelist, same storage quota, same public serving, no second pipeline. `POST /api/auth/avatar` only records which uploaded image it is, and **rejects anything not starting `/media/`**: accepting an arbitrary URL would let a profile point the app's own chrome at someone else's server. Shown in the shared account menu and the Settings profile card; null keeps the initial-letter placeholder
 
 ---
 

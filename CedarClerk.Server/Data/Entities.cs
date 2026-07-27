@@ -57,9 +57,26 @@ public class ApplicationUser : IdentityUser
     public bool NotifyOnEngagement { get; set; }
 
     /// <summary>
+    /// Profile picture (IF1) — a /media/... path produced by the normal asset upload, so it goes
+    /// through the same type whitelist, storage quota and public serving as post media. Null =
+    /// the initial-letter avatar the app has always drawn.
+    /// </summary>
+    public string? AvatarUrl { get; set; }
+
+    /// <summary>
     /// User-defined signature in the end of each post
     /// </summary>
     public string? PostSignature { get; set; }
+
+    /// <summary>
+    /// Text of the cross-links between a post's two homes (I15). Null falls back to the built-in
+    /// wording. Profile-level rather than per-post: it is branding that reads the same on every
+    /// post, and retyping it at each export would be a chore, not a choice.
+    /// BlogLinkText is what the Telegram post says to reach the blog; TelegramLinkText is the
+    /// reverse. A custom value is used as-is in both UI languages — it's the author's own words.
+    /// </summary>
+    public string? BlogLinkText { get; set; }
+    public string? TelegramLinkText { get; set; }
 
     // Pro-only: makes the whole PostSignature text a clickable link — see Phase 8 Step 5,
     // docs/ROADMAP.md. Free-tier posts never read this; they get the fixed attribution instead.

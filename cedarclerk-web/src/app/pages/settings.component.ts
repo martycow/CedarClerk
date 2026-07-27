@@ -8,6 +8,7 @@ import { LocaleService, UiLang } from '../core/i18n/locale.service';
 import { BillingService, BillingStatus, PlanId } from '../core/billing.service';
 import { TelegramLinkService } from '../core/telegram-link.service';
 import { ChannelsService, Channel } from '../core/channels.service';
+import { AssetsService } from '../core/assets.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { AccountMenuComponent } from '../shared/account-menu.component';
@@ -32,6 +33,7 @@ export class SettingsComponent implements OnInit {
     locale = inject(LocaleService);
     t = this.locale.t;
     private route = inject(ActivatedRoute);
+    private assets = inject(AssetsService);
     private billingApi = inject(BillingService);
     private telegramLink = inject(TelegramLinkService);
     private channelsApi = inject(ChannelsService);
@@ -49,6 +51,11 @@ export class SettingsComponent implements OnInit {
     authorDisplayNameText = '';
     profileUrlText = '';
     profileLocationText = '';
+    // I15 — blank means the built-in wording.
+    avatarBusy = signal(false);
+    avatarError = signal<string | null>(null);
+    blogLinkText = '';
+    telegramLinkText = '';
     headerSlot1: string | null = null;
     headerSlot2: string | null = null;
     headerSlot3: string | null = null;
@@ -97,6 +104,8 @@ export class SettingsComponent implements OnInit {
         this.authorDisplayNameText = this.auth.authorDisplayName() ?? '';
         this.profileUrlText = this.auth.profileUrl() ?? '';
         this.profileLocationText = this.auth.profileLocation() ?? '';
+        this.blogLinkText = this.auth.blogLinkText() ?? '';
+        this.telegramLinkText = this.auth.telegramLinkText() ?? '';
         this.headerSlot1 = this.auth.headerSlot1Type();
         this.headerSlot2 = this.auth.headerSlot2Type();
         this.headerSlot3 = this.auth.headerSlot3Type();
@@ -129,6 +138,38 @@ export class SettingsComponent implements OnInit {
 
     channelsSummary(): string {
         return this.channels().map(c => c.title).join(', ');
+    }
+
+    // IF1 — the file goes through the ordinary asset upload first (type whitelist, storage
+    // quota, public /media serving all reused), then the returned path is recorded as the avatar.
+    async onAvatarPicked(ev: Event) {
+        const input = ev.target as HTMLInputElement;
+        const file = input.files?.[0];
+        if (!file) return;
+        this.avatarBusy.set(true);
+        this.avatarError.set(null);
+        try {
+            const { url } = await this.assets.upload(file);
+            await this.auth.saveAvatar(url);
+        } catch (e) {
+            this.avatarError.set(httpErrorMessage(e, this.t().settings.profile.avatarFailed));
+        } finally {
+            this.avatarBusy.set(false);
+            // Lets the same file be re-picked after a failure.
+            input.value = '';
+        }
+    }
+
+    async clearAvatar() {
+        this.avatarBusy.set(true);
+        this.avatarError.set(null);
+        try {
+            await this.auth.saveAvatar(null);
+        } catch (e) {
+            this.avatarError.set(httpErrorMessage(e, this.t().settings.profile.avatarFailed));
+        } finally {
+            this.avatarBusy.set(false);
+        }
     }
 
     setTab(tab: SettingsTab) {
@@ -183,6 +224,8 @@ export class SettingsComponent implements OnInit {
                 headerSlot1Type: this.headerSlot1,
                 headerSlot2Type: this.headerSlot2,
                 headerSlot3Type: this.headerSlot3,
+                blogLinkText: this.blogLinkText,
+                telegramLinkText: this.telegramLinkText,
             });
             this.authorDisplayNameText = this.auth.authorDisplayName() ?? '';
             this.profileUrlText = this.auth.profileUrl() ?? '';
@@ -190,6 +233,8 @@ export class SettingsComponent implements OnInit {
             this.headerSlot1 = this.auth.headerSlot1Type();
             this.headerSlot2 = this.auth.headerSlot2Type();
             this.headerSlot3 = this.auth.headerSlot3Type();
+            this.blogLinkText = this.auth.blogLinkText() ?? '';
+            this.telegramLinkText = this.auth.telegramLinkText() ?? '';
             this.profileSaved.set(true);
             setTimeout(() => this.profileSaved.set(false), 2500);
         } catch (e) {

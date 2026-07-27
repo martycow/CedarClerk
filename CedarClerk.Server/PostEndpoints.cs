@@ -103,7 +103,7 @@ public static class PostEndpoints
             return new PublishResult(null, "Draft is empty");
 
         var owner = await db.Users.Where(u => u.Id == ownerId)
-            .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PlanTier, u.PlanExpiresAt })
+            .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PlanTier, u.PlanExpiresAt, u.BlogLinkText })
             .FirstAsync();
 
         // Free tier always gets the fixed Cedar Clerk attribution; Pro+ can replace it with a
@@ -127,7 +127,11 @@ public static class PostEndpoints
             var langSuffix = language == Languages.Primary ? "" : $"?lang={language}";
             var blogUrl = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}/{draft.BlogSlug}{langSuffix}";
 
-            blocks.Add(new RichParagraphBlock(new RichRunLink(new RichRunText("Read on the blog →"), blogUrl)));
+            // I15 — the author's own wording when they set one, the built-in otherwise.
+            var blogLinkText = string.IsNullOrWhiteSpace(owner.BlogLinkText)
+                ? Consts.CrossLinks.DefaultBlogLinkText
+                : owner.BlogLinkText.Trim();
+            blocks.Add(new RichParagraphBlock(new RichRunLink(new RichRunText(blogLinkText), blogUrl)));
         }
 
         // Phase 8 Step 6, docs/ROADMAP.md — tags extended to the Telegram export path.

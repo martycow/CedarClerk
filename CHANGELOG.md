@@ -36,6 +36,16 @@ The page itself is the shell plus what's already knowable — headline counts an
 
 **Nothing here is covered by automated tests** — the project has no HTTP-level integration tests, so the gate was verified by reading and needs a live check: a non-admin should get 404 from `/api/admin/users` and a redirect from `/admin`. And `Cedar:AdminEmail` has to be set on the Pi before the panel is reachable in production (`docs/integrations-setup.md` §3b).
 
+### Cross-link wording (I15) and avatars (IF1) — Phase 9c closed
+
+**Cross-links** are two profile fields now, falling back to the built-in text when blank. That is a deliberate deviation from the item, which asked for it at export time: this is branding that reads identically on every post, so retyping it at each export would be a chore rather than a choice. It lives in Settings → Profile and saves with the rest of the profile.
+
+**B18 turned out to be already built.** The YouTube link text in Telegram has always fallen back to the node's caption — "Watch on YouTube" is only the default when the caption is empty. A second field would have meant the same thing twice, so the caption's placeholder now states its dual role instead.
+
+**Avatars** reuse the ordinary asset upload rather than growing a second pipeline: the file goes through `POST /api/assets` with its existing type whitelist, storage quota and public `/media` serving, and `POST /api/auth/avatar` only records which uploaded image it is. That endpoint **rejects anything not starting `/media/`** — accepting an arbitrary URL would let a profile point the app's own chrome at someone else's server. Null keeps the initial-letter placeholder the app has always drawn.
+
+With these, **every item from all three brainstorm lists and the Input sweep is closed**.
+
 ### Registration reported failure on every successful signup
 
 Marty hit this creating an account with a fresh invite code: an error appeared, but the account existed and the code had been consumed. Not a double-submit — deterministic, and it had been true of every registration.

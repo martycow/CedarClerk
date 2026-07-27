@@ -17,12 +17,14 @@ public static class AuthEndpoints
         string? AuthorDisplayName, string? ProfileUrl, string? ProfileLocation,
         string? HeaderSlot1Type, string? HeaderSlot2Type, string? HeaderSlot3Type,
         string? SocialTwitterUrl = null, string? SocialInstagramUrl = null, string? SocialFacebookUrl = null,
-        string? SocialYoutubeUrl = null, string? SocialGithubUrl = null);
+        string? SocialYoutubeUrl = null, string? SocialGithubUrl = null,
+        string? BlogLinkText = null, string? TelegramLinkText = null);
     public record NotificationPrefsRequest(bool NotifyOnEngagement);
     public record ToolbarLayoutRequest(string? LayoutJson);
     public record AppearanceRequest(string? PrefsJson);
     public record NewDraftDefaultsRequest(string? DefaultsJson);
     public record UiLanguageRequest(string? UiLanguage);
+    public record AvatarRequest(string? AvatarUrl);
 
     // Arbitrary client-authored JSON blobs (ADR-035) — generous but bounded so a misbehaving
     // client can't grow AspNetUsers rows unbounded.
@@ -138,6 +140,9 @@ public static class AuthEndpoints
                 socialFacebookUrl = appUser?.SocialFacebookUrl,
                 socialYoutubeUrl = appUser?.SocialYoutubeUrl,
                 socialGithubUrl = appUser?.SocialGithubUrl,
+                avatarUrl = appUser?.AvatarUrl,
+                blogLinkText = appUser?.BlogLinkText,
+                telegramLinkText = appUser?.TelegramLinkText,
                 toolbarLayoutJson = appUser?.ToolbarLayoutJson,
                 appearancePrefsJson = appUser?.AppearancePrefsJson,
                 newDraftDefaultsJson = appUser?.NewDraftDefaultsJson,
@@ -238,6 +243,26 @@ public static class AuthEndpoints
         })
         .RequireAuthorization();
 
+        // IF1 — the file itself goes through POST /api/assets like any other image (same type
+        // whitelist, same storage quota, same public /media serving); this only records which one
+        // is the avatar. Null clears it back to the initial-letter placeholder.
+        groupBuilder.MapPost("/avatar", async (AvatarRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users) =>
+        {
+            var user = await users.GetUserAsync(principal);
+            if (user is null) return Results.Unauthorized();
+
+            var url = req.AvatarUrl?.Trim();
+            // Only ever a path we serve ourselves: accepting an arbitrary URL here would let a
+            // profile point the app's own chrome at someone else's server.
+            if (!string.IsNullOrEmpty(url) && !url.StartsWith("/media/", StringComparison.Ordinal))
+                return Results.BadRequest(new { error = "Avatar must be an uploaded image" });
+
+            user.AvatarUrl = string.IsNullOrEmpty(url) ? null : url;
+            await users.UpdateAsync(user);
+            return Results.Ok(new { avatarUrl = user.AvatarUrl });
+        })
+        .RequireAuthorization();
+
         groupBuilder.MapPost("/profile", async (ProfileRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users) =>
         {
             var user = await users.GetUserAsync(principal);
@@ -264,6 +289,10 @@ public static class AuthEndpoints
             user.SocialFacebookUrl = string.IsNullOrWhiteSpace(req.SocialFacebookUrl) ? null : req.SocialFacebookUrl.Trim();
             user.SocialYoutubeUrl = string.IsNullOrWhiteSpace(req.SocialYoutubeUrl) ? null : req.SocialYoutubeUrl.Trim();
             user.SocialGithubUrl = string.IsNullOrWhiteSpace(req.SocialGithubUrl) ? null : req.SocialGithubUrl.Trim();
+            // I15 — cross-link wording. Not Pro-gated: it replaces one of our strings with the
+            // author's, it doesn't remove attribution the way the signature does.
+            user.BlogLinkText = string.IsNullOrWhiteSpace(req.BlogLinkText) ? null : req.BlogLinkText.Trim();
+            user.TelegramLinkText = string.IsNullOrWhiteSpace(req.TelegramLinkText) ? null : req.TelegramLinkText.Trim();
             await users.UpdateAsync(user);
 
             return Results.Ok(new
@@ -279,6 +308,8 @@ public static class AuthEndpoints
                 socialFacebookUrl = user.SocialFacebookUrl,
                 socialYoutubeUrl = user.SocialYoutubeUrl,
                 socialGithubUrl = user.SocialGithubUrl,
+                blogLinkText = user.BlogLinkText,
+                telegramLinkText = user.TelegramLinkText,
             });
         })
         .RequireAuthorization();

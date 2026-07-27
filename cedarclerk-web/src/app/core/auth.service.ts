@@ -38,6 +38,11 @@ export class AuthService {
     readonly appearancePrefsJson = signal<string | null>(null);
     readonly newDraftDefaultsJson = signal<string | null>(null);
     readonly uiLanguage = signal<string | null>(null);
+    // I15 — cross-link wording; null falls back to the built-in text.
+    // IF1 — a /media/... path, or null for the initial-letter placeholder.
+    readonly avatarUrl = signal<string | null>(null);
+    readonly blogLinkText = signal<string | null>(null);
+    readonly telegramLinkText = signal<string | null>(null);
 
     async login(email: string, password: string): Promise<boolean> {
         try {
@@ -83,6 +88,8 @@ export class AuthService {
                 socialYoutubeUrl: string | null; socialGithubUrl: string | null;
                 toolbarLayoutJson: string | null; appearancePrefsJson: string | null; newDraftDefaultsJson: string | null;
                 uiLanguage: string | null;
+                avatarUrl: string | null;
+                blogLinkText: string | null; telegramLinkText: string | null;
             }>('/api/auth/me'));
             this.userEmail.set(me.email);
             this.createdAt.set(me.createdAt);
@@ -111,6 +118,9 @@ export class AuthService {
             this.appearancePrefsJson.set(me.appearancePrefsJson);
             this.newDraftDefaultsJson.set(me.newDraftDefaultsJson);
             this.uiLanguage.set(me.uiLanguage);
+            this.avatarUrl.set(me.avatarUrl);
+            this.blogLinkText.set(me.blogLinkText);
+            this.telegramLinkText.set(me.telegramLinkText);
             // The profile wins over the localStorage cache the service started from (ADR-044).
             this.locale.adoptProfileLanguage(me.uiLanguage);
         } catch {
@@ -141,6 +151,9 @@ export class AuthService {
             this.appearancePrefsJson.set(null);
             this.newDraftDefaultsJson.set(null);
             this.uiLanguage.set(null);
+            this.avatarUrl.set(null);
+            this.blogLinkText.set(null);
+            this.telegramLinkText.set(null);
         }
     }
 
@@ -151,21 +164,32 @@ export class AuthService {
         this.postSignatureUrl.set(res.postSignatureUrl);
     }
 
+    // IF1 — records which uploaded image is the avatar; null clears it.
+    async saveAvatar(avatarUrl: string | null): Promise<void> {
+        const res = await firstValueFrom(this.http.post<{ avatarUrl: string | null }>(
+            '/api/auth/avatar', { avatarUrl }));
+        this.avatarUrl.set(res.avatarUrl);
+    }
+
     async saveProfile(profile: {
         authorDisplayName: string; profileUrl: string; profileLocation: string;
         headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
         socialTwitterUrl?: string; socialInstagramUrl?: string; socialFacebookUrl?: string;
         socialYoutubeUrl?: string; socialGithubUrl?: string;
+        blogLinkText?: string; telegramLinkText?: string;
     }): Promise<void> {
         const res = await firstValueFrom(this.http.post<{
             authorDisplayName: string | null; profileUrl: string | null; profileLocation: string | null;
             headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
             socialTwitterUrl: string | null; socialInstagramUrl: string | null; socialFacebookUrl: string | null;
             socialYoutubeUrl: string | null; socialGithubUrl: string | null;
+            blogLinkText: string | null; telegramLinkText: string | null;
         }>('/api/auth/profile', profile));
         this.authorDisplayName.set(res.authorDisplayName);
         this.profileUrl.set(res.profileUrl);
         this.profileLocation.set(res.profileLocation);
+        this.blogLinkText.set(res.blogLinkText);
+        this.telegramLinkText.set(res.telegramLinkText);
         this.headerSlot1Type.set(res.headerSlot1Type);
         this.headerSlot2Type.set(res.headerSlot2Type);
         this.headerSlot3Type.set(res.headerSlot3Type);

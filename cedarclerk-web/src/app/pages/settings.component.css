@@ -888,3 +888,20 @@
     border-bottom-color: var(--accent);
     font-weight: 600;
 }
+
+/* IF1 — avatar picker in the profile card. */
+.avatar-img {
+    object-fit: cover;
+}
+
+.avatar-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.avatar-pick {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}

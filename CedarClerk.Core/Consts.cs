@@ -167,6 +167,16 @@ public static class Consts
         public static readonly TimeSpan SubmissionWindow = TimeSpan.FromHours(24);
     }
 
+    // Cross-links between a post's two homes (I15). Overridable per author in Settings; these are
+    // the fallbacks. The blog one is language-dependent because the blog page is; the Telegram one
+    // is written once into the post.
+    public static class CrossLinks
+    {
+        public const string DefaultBlogLinkText = "Read on the blog →";
+        public const string DefaultTelegramLinkTextEn = "View in Telegram &#8594;";
+        public const string DefaultTelegramLinkTextRu = "Смотреть в Telegram &#8594;";
+    }
+
     // Admin panel (IF2).
     public static class Admin
     {

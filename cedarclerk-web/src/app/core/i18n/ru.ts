@@ -589,6 +589,9 @@ export const ru: Dict = {
         profile: {
             nav: 'Профиль',
             title: 'Профиль',
+            changeAvatar: 'Сменить фото',
+            removeAvatar: 'Убрать',
+            avatarFailed: 'Не удалось обновить фото',
             memberSince: 'С нами с',
             signature: 'Подпись под постом',
             signatureHintPro: 'Добавляется в конец каждого опубликованного поста (Telegram и блог). Оставьте пустым, чтобы публиковать вообще без подписи.',
@@ -645,6 +648,16 @@ export const ru: Dict = {
             basedOn: 'На основе',
             allInGroup: 'Вся группа',
             resetToStandard: 'Вернуть стандартный',
+        },
+        crossLinks: {
+            nav: 'Перекрёстные ссылки',
+            title: 'Перекрёстные ссылки',
+            hint: 'Что написано на ссылке между двумя домами поста. Пусто — используется встроенный текст.',
+            blogLink: 'Пост в Telegram → блог',
+            blogLinkDefault: 'Читать в блоге →',
+            telegramLink: 'Страница блога → Telegram',
+            telegramLinkDefault: 'Смотреть в Telegram →',
+            savedWithProfile: 'Сохраняется вместе с полями слотов заголовка ниже.',
         },
         headerSlots: {
             nav: 'Слоты заголовка',
