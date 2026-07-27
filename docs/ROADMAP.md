@@ -235,14 +235,14 @@ Executing `_Documents_/CedarClerk/Input.md` (32 items). Full text and the per-it
 - [x] I16 — custom audio clip name (27.07.2026). **No migration needed after all** — the earlier note here assumed a field on `Asset`, but `InputMediaAudio.Title` is what Telegram labels the player with, and the name belongs to the *insertion* rather than the file: the same asset can legitimately be posted under two names. New `title` attr on the TipTap `audio` node, carried through `RichAudioBlock` to the Blocks renderer, and shown on the blog too since a bare `<audio>` player there is just as anonymous. Blank stays null rather than becoming an empty title
 - [x] I19 — form answers moved to the posts tab (27.07.2026). The submissions list and the per-question distribution charts now sit under the selected post, where "what happened with this post" already lives; the forms tab keeps the form's *definition* (building and reusing it), which is a different job, and points at where the answers went. Partly walks back `N10`'s tab layout, as flagged when the item was imported
 
-**Improvements — Low**
-- [ ] I3 — keyboard shortcuts in toolbar tooltips
-- [ ] I5 — configurable default table size (currently hard-coded 3×2)
-- [ ] I6 — browser autofill on the private-post viewing form
-- [ ] I8 — bigger stats range slider, readable notches (refines `N9`)
-- [ ] I13 — fullscreen toggle
-- [ ] I15 — custom link text for the Telegram↔blog cross-link (do together with the open `B18`)
-- [ ] I17 — flag icons instead of language names
+**Improvements — Low** (27.07.2026: six done, `I15` left)
+- [x] I3 — shortcuts in toolbar tooltips. Every combo was read off TipTap's actual key bindings in the installed packages rather than assumed — a tooltip promising a shortcut that doesn't fire is worse than none. Buttons with no binding are deliberately left alone, and "Mod" resolves to ⌘ or Ctrl the same way the binding does. The hardcoded `(Ctrl+Z)` in the undo/redo dictionary strings went away, since it's now supplied
+- [x] I5 — default table size moved to Appearance (was a hardcoded 3×3, not 3×2). Bounded by `MAX_TABLE_SIZE` = 10 and clamped on read as well as on write, since the preference blob is user-editable through the API
+- [x] I6 — autofill on the private-post form. The page is public and unauthenticated, so there is nothing to prefill server-side; what makes autofill work is naming fields the way browsers expect (`name` matters as much as `autocomplete`). The social field stays `type="text"` on purpose — `type="url"` would reject values the server accepts, like a bare `@handle`
+- [x] I8 — stats slider. 200px → 420px, taller thumb, and the six notches gained readable labels that are also click targets; unlabelled 1px ticks marked something without saying what
+- [x] I13 — fullscreen toggle in the status bar. Real browser fullscreen rather than a CSS "hide the chrome" mode, kept in sync with a `fullscreenchange` listener since Esc leaves fullscreen without touching the button
+- [x] I17 — flags on the language picker, alongside the endonyms (names stay in their own language). The login/register picker from `I1` was already flag-only
+- [ ] I15 — custom link text for the Telegram↔blog cross-link. Left: unlike the rest of this block it needs a stored setting and touches both renderers, and it should be done together with the open `B18` (custom YouTube link text) since they're the same feature applied twice
 
 **Removals**
 - [ ] IT1 — delete editor zoom (verify it's broken first)

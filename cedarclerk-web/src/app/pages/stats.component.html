@@ -24,9 +24,18 @@
                         <input type="range" [min]="rangeMin" [max]="rangeMax" step="1" [value]="rangeDays()"
                                (input)="onRangeInput(+$any($event.target).value)"
                                (change)="onRangeCommit(+$any($event.target).value)">
+                        <!--I8: the notches were unlabelled 1px ticks packed into a 200px track,
+                        so they marked something without saying what. Labelled and on a much
+                        wider track now — a magnet you can't read isn't a landmark.-->
                         <div class="range-notches">
                             @for (n of rangeNotches; track n) {
                             <span class="range-notch" [style.left.%]="notchOffset(n)" [title]="n + ' days'"></span>
+                            }
+                        </div>
+                        <div class="range-notch-labels">
+                            @for (n of rangeNotches; track n) {
+                            <button class="range-notch-label" [style.left.%]="notchOffset(n)"
+                                    [class.on]="rangeDays() === n" (click)="onRangeCommit(n)">{{ n }}</button>
                             }
                         </div>
                     </div>

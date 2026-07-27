@@ -1,5 +1,5 @@
 import {
-    AfterViewInit, Component, ElementRef, OnDestroy,
+    AfterViewInit, Component, ElementRef, HostListener, OnDestroy,
     ViewChild, inject, signal
 } from '@angular/core';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
@@ -47,7 +47,7 @@ import { PopoverComponent } from '../shared/popover.component';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { ModalComponent } from '../shared/modal.component';
 import { ThemeService } from '../core/theme.service';
-import { AppearanceService, SHEET_WIDTH_PX, TYPEFACE_STACK } from '../core/appearance.service';
+import { AppearanceService, SHEET_WIDTH_PX, TYPEFACE_STACK, MAX_TABLE_SIZE } from '../core/appearance.service';
 import { ToolbarLayoutService } from '../core/toolbar-layout.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { pseudoProgress } from '../core/pseudo-progress.util';
@@ -70,6 +70,7 @@ import {
     LucideDownload as Download,
     LucideMessageSquare as MessageSquare,
     LucideDroplets as Droplets,
+    LucideMaximize as Maximize, LucideMinimize as Minimize,
     LucideLineChart as LineChart,
     LucideRefreshCw as RefreshCw,
     LucideSettings as Settings, LucideSparkle as Sparkle,
@@ -182,7 +183,7 @@ interface UploadItem {
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
         Send, Plus, X, Trash2,
         EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, FileStack, Superscript,
-        ChevronDown, Check, Download, MessageSquare, Droplets, LineChart, RefreshCw,
+        ChevronDown, Check, Download, MessageSquare, Droplets, LineChart, RefreshCw, Maximize, Minimize,
         Settings, Sparkle, TableOfContentsIcon, DividerIcon,
         CountBadgeComponent,
         AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
@@ -451,6 +452,45 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     isSelectedChannel(c: Channel): boolean {
         return this.chatId.trim() === String(c.telegramChatId);
+    }
+
+    // I3 — the shortcut a button also answers to, appended to its tooltip. Every entry was read
+    // off TipTap's actual key bindings in the installed packages rather than assumed: a tooltip
+    // promising a shortcut that doesn't fire is worse than no tooltip. Buttons with no binding
+    // (media, tables, insert…) are deliberately absent and render unchanged.
+    private readonly shortcuts: Record<string, string> = {
+        bold: 'Mod+B', italic: 'Mod+I', underline: 'Mod+U', strike: 'Mod+Shift+S',
+        inlineCode: 'Mod+E', codeBlock: 'Mod+Alt+C', blockquote: 'Mod+Shift+B',
+        bulletList: 'Mod+Shift+8', orderedList: 'Mod+Shift+7', taskList: 'Mod+Shift+9',
+        undo: 'Mod+Z', redo: 'Mod+Y',
+    };
+
+    // TipTap's "Mod" is Cmd on Apple hardware and Ctrl everywhere else, so the tooltip has to
+    // resolve it the same way the binding does.
+    private readonly modKey = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent) ? '⌘' : 'Ctrl';
+
+    // I13. Kept in sync with a listener rather than just toggled, because Esc and the browser's
+    // own chrome can leave fullscreen without going through this button.
+    isFullscreen = signal(!!document.fullscreenElement);
+
+    @HostListener('document:fullscreenchange')
+    onFullscreenChange() {
+        this.isFullscreen.set(!!document.fullscreenElement);
+    }
+
+    async toggleFullscreen() {
+        try {
+            if (document.fullscreenElement) await document.exitFullscreen();
+            else await document.documentElement.requestFullscreen();
+        } catch {
+            // Denied by the browser (permissions policy, or not a user gesture) — nothing to
+            // report, the button simply doesn't take effect.
+        }
+    }
+
+    tip(label: string, id: string): string {
+        const combo = this.shortcuts[id];
+        return combo ? `${label} (${combo.replace('Mod', this.modKey)})` : label;
     }
 
     currentBlockLevel(): number {
@@ -1743,7 +1783,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     insertTable() {
-        this.cmd(c => c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }));
+        // I5 — the size comes from Appearance now instead of a hardcoded 3×3. Clamped on read as
+        // well as on write, since the preference blob is user-editable via the API.
+        const rows = Math.min(Math.max(this.appearance.prefs().tableRows, 1), MAX_TABLE_SIZE);
+        const cols = Math.min(Math.max(this.appearance.prefs().tableCols, 1), MAX_TABLE_SIZE);
+        this.cmd(c => c.insertTable({ rows, cols, withHeaderRow: true }));
     }
 
     canAnnotate(): boolean {

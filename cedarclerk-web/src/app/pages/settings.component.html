@@ -66,6 +66,20 @@
             </div>
         </section>
 
+        <!-- ============ LANGUAGE ============ -->
+        <section id="sec-language" class="settings-card">
+            <h2>{{ t().settings.language.title }}</h2>
+            <p class="field-hint">{{ t().settings.language.hint }}</p>
+            <!--I17: a flag beside the endonym. Names stay in their own language — that is the one
+            list nobody needs translated — but a flag is what someone who can't read the current
+            UI language actually recognises, which is the whole point of this control.-->
+            <div class="format-toggle" style="max-width:240px">
+                <button [class.on]="locale.uiLang() === 'en'" (click)="setUiLanguage('en')">🇺🇸 English</button>
+                <button [class.on]="locale.uiLang() === 'ru'" (click)="setUiLanguage('ru')">🇷🇺 Русский</button>
+            </div>
+            @if (languageError()) { <p class="field-error">{{ languageError() }}</p> }
+        </section>
+
         <!-- Appearance and toolbar customization moved into the editor's side panel (I14/B15):
              every control there changes how the writing sheet looks, and judging a type size on a
              different screen is guesswork. Not duplicated here - one home each, same rule as B6. -->

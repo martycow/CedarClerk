@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
-import { AppearanceService, ACCENT_PRESETS, AppearancePrefs } from '../core/appearance.service';
+import { AppearanceService, ACCENT_PRESETS, AppearancePrefs, MAX_TABLE_SIZE } from '../core/appearance.service';
 import { ToolbarLayoutService } from '../core/toolbar-layout.service';
 import { TOOLBAR_GROUPS, ToolbarButtonId, ToolbarPreset, presetLayout } from '../core/toolbar-layout';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -88,6 +88,20 @@ export class AppearancePanelComponent implements OnInit {
 
     setLineHeight(value: number) {
         this.saveAppearance({ lineHeight: value });
+    }
+
+    readonly maxTableSize = MAX_TABLE_SIZE;
+
+    private clampTable(n: number): number {
+        return Number.isFinite(n) ? Math.min(Math.max(Math.round(n), 1), MAX_TABLE_SIZE) : 3;
+    }
+
+    setTableRows(n: number) {
+        this.saveAppearance({ tableRows: this.clampTable(n) });
+    }
+
+    setTableCols(n: number) {
+        this.saveAppearance({ tableCols: this.clampTable(n) });
     }
 
     toggleAppearanceFlag(key: 'showParagraphNumbers' | 'showLineRules' | 'showWordCount' | 'focusModeHideToolbar' | 'sheetFlush', ev: Event) {

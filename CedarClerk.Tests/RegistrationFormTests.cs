@@ -92,6 +92,25 @@ public class RegistrationFormHtmlTests
         Assert.DoesNotContain("data-field=\"social\"", html);
     }
 
+    // I6 — the page is public and unauthenticated, so there is nothing to prefill server-side;
+    // what makes autofill work is naming the fields the way browsers expect. `name` matters as
+    // much as `autocomplete`: a field with neither is invisible to most autofill heuristics.
+    [Fact]
+    public void Standard_fields_carry_autofill_hints()
+    {
+        var form = new RegistrationFormDefinition(null, RequireName: true, RequireNickname: true,
+            RequireEmail: true, RequireSocial: true, []);
+
+        var html = CedarToBlogHtmlRenderer.RegistrationFormHtml(form, "T");
+
+        Assert.Contains("name=\"name\" autocomplete=\"name\"", html);
+        Assert.Contains("name=\"nickname\" autocomplete=\"nickname\"", html);
+        Assert.Contains("name=\"email\" autocomplete=\"email\"", html);
+        Assert.Contains("name=\"url\" autocomplete=\"url\"", html);
+        // type="url" would add browser validation stricter than the server's own rules.
+        Assert.Contains("<input type=\"text\" class=\"reg-input\" data-field=\"social\"", html);
+    }
+
     [Fact]
     public void Renders_choice_question_as_select_with_options()
     {

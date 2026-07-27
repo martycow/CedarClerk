@@ -58,6 +58,18 @@
                 (input)="setLineHeight(+$any($event.target).value)">
         </div>
 
+        <!--I5: Insert → Table used to be a fixed 3×3.-->
+        <div class="ap-field">
+            <label>{{ t().settings.appearance.tableSize }} — {{ appearance.prefs().tableRows }}×{{ appearance.prefs().tableCols }}</label>
+            <div class="ap-table-size">
+                <input type="number" min="1" [max]="maxTableSize" [value]="appearance.prefs().tableRows"
+                    (change)="setTableRows(+$any($event.target).value)">
+                <span>×</span>
+                <input type="number" min="1" [max]="maxTableSize" [value]="appearance.prefs().tableCols"
+                    (change)="setTableCols(+$any($event.target).value)">
+            </div>
+        </div>
+
         <div class="ap-checks">
             <label><input type="checkbox" [checked]="appearance.prefs().showParagraphNumbers" (change)="toggleAppearanceFlag('showParagraphNumbers', $event)"> {{ t().settings.appearance.showParagraphNumbers }}</label>
             <label><input type="checkbox" [checked]="appearance.prefs().showLineRules" (change)="toggleAppearanceFlag('showLineRules', $event)"> {{ t().settings.appearance.showLineRules }}</label>

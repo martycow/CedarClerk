@@ -10,6 +10,9 @@ export interface AppearancePrefs {
     lineHeight: number;
     showParagraphNumbers: boolean;
     showLineRules: boolean;
+    // Default size for Insert → Table (I5). Bounded by MAX_TABLE_SIZE — "within reason", as asked.
+    tableRows: number;
+    tableCols: number;
     showWordCount: boolean;
     focusModeHideToolbar: boolean;
     sheetFlush: boolean; // no paper card — sheet merges with the canvas
@@ -24,10 +27,16 @@ export const DEFAULT_APPEARANCE: AppearancePrefs = {
     lineHeight: 1.6,
     showParagraphNumbers: false,
     showLineRules: false,
+    tableRows: 3,
+    tableCols: 3,
     showWordCount: true,
     focusModeHideToolbar: false,
     sheetFlush: false,
 };
+
+// A table wider or taller than this stops being a table and starts being a spreadsheet — and
+// Telegram's Blocks renderer has to carry every cell.
+export const MAX_TABLE_SIZE = 10;
 
 export const ACCENT_PRESETS: { name: string; hex: string }[] = [
     { name: 'Cedar', hex: '#5B6E46' },

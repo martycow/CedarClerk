@@ -20,6 +20,24 @@ Two translation misses from the ADR-050 sweep: the paragraph-format dropdown's t
 
 Not started: IB5 (blog comment form). `dotnet test` 278/278, `ng build` clean. Nothing here is live-verified in a browser yet.
 
+### Low-priority sweep (I3, I5, I6, I8, I13, I17) — and a regression caught
+
+Six of the seven Low items.
+
+**Toolbar tooltips now name their shortcut** (I3). Every combo was read off TipTap's actual key bindings in the installed packages rather than written from memory — a tooltip promising a shortcut that doesn't fire is worse than no tooltip — so buttons without a binding are deliberately left alone. "Mod" resolves to ⌘ or Ctrl the same way the binding does, and the `(Ctrl+Z)` that was hardcoded into the undo/redo dictionary strings came out, since it's supplied now.
+
+**Table insert stopped being fixed** (I5) — it was 3×3, not the 3×2 the note said. The size lives in Appearance, bounded at 10×10 and clamped on read as well as on write, because the preference blob is editable through the API.
+
+**Autofill on the private-post form** (I6). This page is public and unauthenticated, so there is nothing to prefill from server-side; what makes autofill work is naming the fields the way browsers and password managers expect, and `name` matters as much as `autocomplete` — a field with neither is invisible to most heuristics. The social field deliberately stays `type="text"`: `type="url"` would add browser validation stricter than the server's own rules and start rejecting a bare `@handle`.
+
+**The stats slider became readable** (I8): 200px of track with six unlabelled 1px ticks marked something without saying what. It's 420px now, taller, and the notches carry their day counts — as click targets too, since a value worth marking is worth jumping to.
+
+**Fullscreen** (I13) is real browser fullscreen rather than a CSS "hide the chrome" mode, kept in sync with a `fullscreenchange` listener because Esc leaves fullscreen without going through the button. **Flags on the settings language picker** (I17), beside the endonyms rather than replacing them — names stay in their own language, which is the one list nobody needs translated.
+
+**Regression found and fixed while working on I17**: the settings page had *two* identical `<!-- APPEARANCE -->` comment lines, and the script that removed those sections for I14 matched the first one — silently taking the Language section with it. The language picker had been missing from Settings in the previous commit. Restored.
+
+I15 is left: unlike the rest of this block it needs a stored setting and touches both renderers, and belongs with the open B18 (custom YouTube link text) — the same feature applied twice.
+
 ### Posts Manager restructure and three Appearance-panel bugs
 
 Six items from Marty's live review of the previous deploy.

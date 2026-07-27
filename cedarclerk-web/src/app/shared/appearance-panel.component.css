@@ -219,3 +219,20 @@
         width: 214px;
     }
 }
+
+.ap-table-size {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ap-table-size input {
+    width: 56px;
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    color: var(--text);
+    border-radius: var(--radius-md);
+    padding: 4px 6px;
+    font-family: inherit;
+    font-size: 12.5px;
+}

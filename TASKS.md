@@ -18,6 +18,8 @@ Version bumped to **0.9.1** (`CedarClerk.Core/Consts.cs`) and tagged. **Deployed
 
 **Migrations collapsed to a single `InitialCreate` on prod 27.07.2026** — `__EFMigrationsHistory` now holds one row (`20260727074652_InitialCreate`). This also fixed real drift (two migrations applied on prod whose files had vanished from the repo). New `SchemaDriftGuardTests` fails the build if `Entities.cs` moves without a migration. Procedure and rollback in `.claude/rules/ef-migrations.md`.
 
+**Low block: 6 of 7 done 27.07.2026** — I3, I5, I6, I8, I13, I17. Left: `I15` (custom cross-link text), which needs a stored setting and both renderers, and should be done together with the open `B18`.
+
 **Middle block: 8 of 9 done 27.07.2026** — I1, I2, I4, I10, I11, I14, I16, I18, I19.
 
 Only `I12` (split Settings) is left in the block, and `I14` shrank it: appearance and toolbar customization moved into the editor's side panel, so what remains to split is profile / header slots / social / billing / integrations.

@@ -341,15 +341,21 @@ public static class CedarToBlogHtmlRenderer
         if (!string.IsNullOrWhiteSpace(form.Intro))
             sb.Append("<p class=\"reg-intro\">").Append(Escape(form.Intro!)).Append("</p>");
 
+        // I6 — autofill. This page is public and unauthenticated, so there is nothing server-side
+        // to prefill from; what it can do is name the fields the way browsers and password
+        // managers expect, so their own saved values are offered. `name` attributes matter as much
+        // as `autocomplete` here: a field with neither is invisible to most autofill heuristics.
         sb.Append("<form class=\"reg-form\">");
         if (form.RequireName)
-            sb.Append($"<input type=\"text\" class=\"reg-input\" data-field=\"name\" placeholder=\"{namePh}\" maxlength=\"200\" required>");
+            sb.Append($"<input type=\"text\" class=\"reg-input\" data-field=\"name\" name=\"name\" autocomplete=\"name\" placeholder=\"{namePh}\" maxlength=\"200\" required>");
         if (form.RequireNickname)
-            sb.Append($"<input type=\"text\" class=\"reg-input\" data-field=\"nickname\" placeholder=\"{nickPh}\" maxlength=\"200\" required>");
+            sb.Append($"<input type=\"text\" class=\"reg-input\" data-field=\"nickname\" name=\"nickname\" autocomplete=\"nickname\" placeholder=\"{nickPh}\" maxlength=\"200\" required>");
         if (form.RequireEmail)
-            sb.Append($"<input type=\"email\" class=\"reg-input\" data-field=\"email\" placeholder=\"{emailPh}\" maxlength=\"200\" required>");
+            sb.Append($"<input type=\"email\" class=\"reg-input\" data-field=\"email\" name=\"email\" autocomplete=\"email\" placeholder=\"{emailPh}\" maxlength=\"200\" required>");
         if (form.RequireSocial)
-            sb.Append($"<input type=\"text\" class=\"reg-input\" data-field=\"social\" placeholder=\"{socialPh}\" maxlength=\"200\" required>");
+            // Still type="text": type="url" would add browser validation that rejects values the
+            // server accepts today (a bare @handle, a t.me/… without a scheme).
+            sb.Append($"<input type=\"text\" class=\"reg-input\" data-field=\"social\" name=\"url\" autocomplete=\"url\" placeholder=\"{socialPh}\" maxlength=\"200\" required>");
 
         foreach (var q in form.Questions)
         {

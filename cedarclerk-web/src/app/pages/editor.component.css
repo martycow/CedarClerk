@@ -1987,3 +1987,21 @@ input[type="datetime-local"]:focus-visible {
         padding: 5px 8px;
     }
 }
+
+/* I13 — fullscreen toggle in the status bar; matches the zoom controls beside it rather than the
+   topbar's icon buttons, which are a size larger. */
+.status-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: var(--radius-sm);
+}
+
+.status-icon-btn:hover {
+    background: rgba(128, 120, 100, .16);
+}

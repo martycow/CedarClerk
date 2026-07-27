@@ -458,10 +458,10 @@
         <span class="sep"></span>
         <div class="tb-group">
             <div class="tb-row">
-                @if (!toolbarLayout.isHidden('bold')) { <button (click)="cmd(c => c.toggleBold())" [class.on]="isActive('bold')" [title]="t().editor.tb.bold"><svg lucideBold class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('italic')) { <button (click)="cmd(c => c.toggleItalic())" [class.on]="isActive('italic')" [title]="t().editor.tb.italic"><svg lucideItalic class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('underline')) { <button (click)="cmd(c => c.toggleUnderline())" [class.on]="isActive('underline')" [title]="t().editor.tb.underline"><svg lucideUnderline class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('strike')) { <button (click)="cmd(c => c.toggleStrike())" [class.on]="isActive('strike')" [title]="t().editor.tb.strike"><svg lucideStrikethrough class="icon"></svg></button> }
+                @if (!toolbarLayout.isHidden('bold')) { <button (click)="cmd(c => c.toggleBold())" [class.on]="isActive('bold')" [title]="tip(t().editor.tb.bold, 'bold')"><svg lucideBold class="icon"></svg></button> }
+                @if (!toolbarLayout.isHidden('italic')) { <button (click)="cmd(c => c.toggleItalic())" [class.on]="isActive('italic')" [title]="tip(t().editor.tb.italic, 'italic')"><svg lucideItalic class="icon"></svg></button> }
+                @if (!toolbarLayout.isHidden('underline')) { <button (click)="cmd(c => c.toggleUnderline())" [class.on]="isActive('underline')" [title]="tip(t().editor.tb.underline, 'underline')"><svg lucideUnderline class="icon"></svg></button> }
+                @if (!toolbarLayout.isHidden('strike')) { <button (click)="cmd(c => c.toggleStrike())" [class.on]="isActive('strike')" [title]="tip(t().editor.tb.strike, 'strike')"><svg lucideStrikethrough class="icon"></svg></button> }
                 @if (!toolbarLayout.isHidden('spoiler')) { <button (click)="cmd(c => c.toggleMark('spoiler'))" [class.on]="isActive('spoiler')" [title]="t().editor.tb.spoiler"><svg lucideEyeOff class="icon"></svg></button> }
             </div>
             <span class="tb-caption">{{ t().editor.groups.text }}</span>
@@ -522,9 +522,9 @@
         <span class="sep"></span>
         <div class="tb-group">
             <div class="tb-row">
-                @if (!toolbarLayout.isHidden('bulletList')) { <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')" [title]="t().editor.tb.bulletList"><svg lucideList class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('orderedList')) { <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')" [title]="t().editor.tb.orderedList"><svg lucideListOrdered class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('taskList')) { <button (click)="cmd(c => c.toggleTaskList())" [class.on]="isActive('taskList')" [title]="t().editor.tb.taskList"><svg lucideListTodo class="icon"></svg></button> }
+                @if (!toolbarLayout.isHidden('bulletList')) { <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')" [title]="tip(t().editor.tb.bulletList, 'bulletList')"><svg lucideList class="icon"></svg></button> }
+                @if (!toolbarLayout.isHidden('orderedList')) { <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')" [title]="tip(t().editor.tb.orderedList, 'orderedList')"><svg lucideListOrdered class="icon"></svg></button> }
+                @if (!toolbarLayout.isHidden('taskList')) { <button (click)="cmd(c => c.toggleTaskList())" [class.on]="isActive('taskList')" [title]="tip(t().editor.tb.taskList, 'taskList')"><svg lucideListTodo class="icon"></svg></button> }
                 @if (!toolbarLayout.isHidden('indent')) { <button (click)="indent()" [title]="t().editor.tb.indent"><svg lucideIndent class="icon"></svg></button> }
                 @if (!toolbarLayout.isHidden('outdent')) { <button (click)="outdent()" [title]="t().editor.tb.outdent"><svg lucideOutdent class="icon"></svg></button> }
             </div>
@@ -536,8 +536,8 @@
         <span class="sep"></span>
         <div class="tb-group">
             <div class="tb-row">
-                @if (!toolbarLayout.isHidden('inlineCode')) { <button (click)="cmd(c => c.toggleCode())" [class.on]="isActive('code')" [title]="t().editor.tb.inlineCode"><svg lucideCode class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('codeBlock')) { <button (click)="cmd(c => c.toggleCodeBlock())" [class.on]="isActive('codeBlock')" [title]="t().editor.tb.codeBlock"><svg lucideSquareCode class="icon"></svg></button> }
+                @if (!toolbarLayout.isHidden('inlineCode')) { <button (click)="cmd(c => c.toggleCode())" [class.on]="isActive('code')" [title]="tip(t().editor.tb.inlineCode, 'inlineCode')"><svg lucideCode class="icon"></svg></button> }
+                @if (!toolbarLayout.isHidden('codeBlock')) { <button (click)="cmd(c => c.toggleCodeBlock())" [class.on]="isActive('codeBlock')" [title]="tip(t().editor.tb.codeBlock, 'codeBlock')"><svg lucideSquareCode class="icon"></svg></button> }
             </div>
             <span class="tb-caption">{{ t().editor.groups.code }}</span>
         </div>
@@ -620,7 +620,7 @@
                 </app-popover>
                 }
 
-                @if (!toolbarLayout.isHidden('blockquote')) { <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" [title]="t().editor.tb.blockquote"><svg lucideQuote class="icon"></svg></button> }
+                @if (!toolbarLayout.isHidden('blockquote')) { <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" [title]="tip(t().editor.tb.blockquote, 'blockquote')"><svg lucideQuote class="icon"></svg></button> }
                 @if (!toolbarLayout.isHidden('toggle')) { <button (click)="insertToggle()" [title]="t().editor.tb.toggleBlock"><svg lucideListCollapse class="icon"></svg></button> }
                 @if (!toolbarLayout.isHidden('toc')) { <button (click)="insertTableOfContents()" [title]="t().editor.tb.toc"><svg lucideTableOfContents class="icon"></svg></button> }
                 @if (!toolbarLayout.isHidden('divider')) { <button (click)="insertDivider()" [title]="t().editor.tb.divider"><svg lucideSeparatorHorizontal class="icon"></svg></button> }
@@ -655,8 +655,8 @@
             <span class="tb-caption">{{ t().editor.groups.block }}</span>
         </div>
         <span class="sep"></span>
-        <button (click)="cmd(c => c.undo())" [disabled]="!canUndo()" [title]="t().editor.tb.undo"><svg lucideUndo2 class="icon"></svg></button>
-        <button (click)="cmd(c => c.redo())" [disabled]="!canRedo()" [title]="t().editor.tb.redo"><svg lucideRedo2 class="icon"></svg></button>
+        <button (click)="cmd(c => c.undo())" [disabled]="!canUndo()" [title]="tip(t().editor.tb.undo, 'undo')"><svg lucideUndo2 class="icon"></svg></button>
+        <button (click)="cmd(c => c.redo())" [disabled]="!canRedo()" [title]="tip(t().editor.tb.redo, 'redo')"><svg lucideRedo2 class="icon"></svg></button>
 
         <!--Rendered from the stored order, not a fixed chain of @if: reordering groups within a
         row was draggable in the Appearance panel but had nothing reading it here, so it did
@@ -1058,5 +1058,12 @@
                 @case ('error') { <span class="dot err"></span> <button class="retry-inline" (click)="retrySave()">{{ t().editor.syncFailedRetry }}</button> }
             }
         </div>
+        <!--I13: real browser fullscreen, not a CSS-only "hide the chrome" mode — the ask was a
+        fullscreen button, and the browser's own is the one Esc already exits.-->
+        <button class="status-icon-btn" (click)="toggleFullscreen()"
+                [title]="isFullscreen() ? t().editor.exitFullscreen : t().editor.enterFullscreen">
+            @if (isFullscreen()) { <svg lucideMinimize class="icon-xs"></svg> }
+            @else { <svg lucideMaximize class="icon-xs"></svg> }
+        </button>
     </div>
 </div>
