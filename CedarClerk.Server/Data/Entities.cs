@@ -336,6 +336,27 @@ public class FormPreset
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+// Idea #11 — a term the owner defines once and has explained wherever it appears on the blog.
+// Per-owner, and per content language: the same word needs a different explanation depending on
+// which language's version of a post the reader is on, and a Russian description under an English
+// article would be worse than no tooltip at all.
+public class GlossaryTerm
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public string Term { get; set; } = "";
+    public string Description { get; set; } = "";
+    // Comma-separated other spellings. Russian inflects, so "рендерер" shows up as "рендерера"
+    // and "рендереру"; listing the forms beats guessing at per-language stemming rules.
+    public string Aliases { get; set; } = "";
+    // A /media/... path from the ordinary asset upload, exactly like ApplicationUser.AvatarUrl —
+    // same whitelist, same quota, same public serving, no second pipeline.
+    public string? ImageUrl { get; set; }
+    public string Language { get; set; } = Languages.Primary;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
 // A real, named, user-managed entity (create/rename/delete) — unlike Tags, which stay a flat
 // unmanaged string. See the ADR following ADR-038, docs/DECISIONS.md.
 public class Folder

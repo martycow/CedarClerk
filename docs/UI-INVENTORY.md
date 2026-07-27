@@ -169,3 +169,17 @@ The `/posts` page (N7, ADR-046). `/comments` and `/stats` now redirect here; the
 ## `privacy.component` / `terms.component`
 
 Thin wrappers (10 lines each) around `shared/legal-page.component`, passing only `title`/`updated` inputs. Content is 100% static prose with `[bracketed]` placeholders (see `docs/ROADMAP.md` Phase 8 Step 3) — no interactive elements, nothing to inventory beyond the shared `legal-page` shell already covered above.
+
+---
+
+## `glossary.component` (`cedarclerk-web/src/app/pages/glossary.component.{ts,html,css}`)
+
+Idea #11. Terms the owner defines once, found and explained on the published blog. Reached from the account menu.
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Language tabs | `.lang-tabs` | tab | Terms are listed — and matched — per content language | N/A | A term only ever marks text in its own language: a Russian description under an English article would be worse than no tooltip |
+| New term / edit form | `.term-form` | panel | Term, language, description, other spellings, optional image | Present — `busy()` on Save, `uploading()` on the image picker | One form for both create and edit; a separate create dialog would be the same six fields twice |
+| Term list | `.term-card` | panel | Every term in the selected language, with its aliases and description | Present — page-level `loading()` | |
+| Delete confirm | `app-modal` | modal | Deleting a term stops its tooltip appearing on published posts | N/A | |
+| Glossary tooltip (blog) | `.glossary-term` / `.glossary-pop`, `BlogEndpoints.ShellTemplate` | popover | Shows the description (and image) on hover, focus or tap | N/A | Rendered by `GlossaryScanner`, first occurrence per page only, never inside code or a link. The script writes the description with `textContent`, never `innerHTML` |

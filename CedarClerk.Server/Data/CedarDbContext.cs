@@ -22,6 +22,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<InviteCode> InviteCodes => Set<InviteCode>();
     public DbSet<AiUsage> AiUsages => Set<AiUsage>();
     public DbSet<Folder> Folders => Set<Folder>();
+    public DbSet<GlossaryTerm> GlossaryTerms => Set<GlossaryTerm>();
     public DbSet<DraftStatSeen> DraftStatSeens => Set<DraftStatSeen>();
     public DbSet<FormPreset> FormPresets => Set<FormPreset>();
     public DbSet<PostInvite> PostInvites => Set<PostInvite>();

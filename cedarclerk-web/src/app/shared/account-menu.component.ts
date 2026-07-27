@@ -5,7 +5,7 @@ import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { PopoverComponent } from './popover.component';
 import { CountBadgeComponent } from './count-badge.component';
-import { LucideNewspaper as Newspaper, LucideSettings as Settings, LucideLogOut as LogOut, LucideUserRound as UserRound, LucideShieldCheck as ShieldCheck } from '@lucide/angular';
+import { LucideNewspaper as Newspaper, LucideSettings as Settings, LucideBookMarked as BookMarked, LucideLogOut as LogOut, LucideUserRound as UserRound, LucideShieldCheck as ShieldCheck } from '@lucide/angular';
 
 // IB9 — the avatar was a live account popover in the editor and a dead <span> on /drafts,
 // /settings and /posts, which read as "the profile button doesn't work on some pages". The menu
@@ -13,7 +13,7 @@ import { LucideNewspaper as Newspaper, LucideSettings as Settings, LucideLogOut 
 // becomes one component rather than markup copied four times.
 @Component({
     selector: 'app-account-menu',
-    imports: [RouterLink, PopoverComponent, CountBadgeComponent, Newspaper, Settings, LogOut, UserRound, ShieldCheck],
+    imports: [RouterLink, PopoverComponent, CountBadgeComponent, Newspaper, Settings, LogOut, UserRound, ShieldCheck, BookMarked],
     template: `
         <app-popover align="right">
             <button trigger class="account-trigger" [title]="t().editor.account">
@@ -43,6 +43,10 @@ import { LucideNewspaper as Newspaper, LucideSettings as Settings, LucideLogOut 
                     <svg lucideNewspaper class="icon-sm"></svg>
                     {{ t().editor.postsManager }}
                     <app-count-badge [count]="feedback.newComments() + feedback.newReactions()" [title]="t().editor.newBadge"></app-count-badge>
+                </a>
+                <a class="account-action-btn" routerLink="/glossary">
+                    <svg lucideBookMarked class="icon-sm"></svg>
+                    {{ t().glossary.open }}
                 </a>
                 <a class="account-action-btn" routerLink="/settings">
                     <svg lucideSettings class="icon-sm"></svg>

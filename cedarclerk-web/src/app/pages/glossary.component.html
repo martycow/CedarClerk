@@ -1,0 +1,133 @@
+<div class="glossary-page">
+    <header class="glossary-header">
+        <a class="icon-btn" routerLink="/editor" [title]="t().common.backToEditor">
+            <svg lucideArrowLeft class="icon"></svg>
+        </a>
+        <app-cedar-logo [size]="19"></app-cedar-logo>
+        <span class="brand-name">Cedar Clerk</span>
+        <span class="crumb-sep">/</span>
+        <span class="crumb-current">{{ t().glossary.crumb }}</span>
+        <span class="spacer"></span>
+        <button class="icon-btn" (click)="theme.toggle()" [title]="t().common.toggleTheme">
+            {{ theme.theme() === 'dark' ? '☀' : '☾' }}
+        </button>
+        <app-account-menu></app-account-menu>
+    </header>
+
+    <div class="glossary-body">
+        <p class="hint-bubble">
+            <svg lucideInfo class="icon-sm"></svg>{{ t().glossary.intro }}
+        </p>
+
+        @if (error()) { <p class="channel-error">{{ error() }}</p> }
+
+        <!--Terms are listed per language because that is how they are matched: an English post
+        is scanned against the English terms only.-->
+        <div class="lang-tabs">
+            @for (l of contentLanguages; track l) {
+            <button [class.on]="languageFilter() === l" (click)="languageFilter.set(l)">
+                {{ l.toUpperCase() }}
+                @if (countFor(l)) { <span class="lang-count">{{ countFor(l) }}</span> }
+            </button>
+            }
+            <span class="spacer"></span>
+            <button class="btn-accent" (click)="startNew()">
+                <svg lucidePlus class="icon-sm"></svg> {{ t().glossary.newTerm }}
+            </button>
+        </div>
+
+        @if (loading()) {
+        <p class="hint">{{ t().common.loading }}</p>
+        } @else {
+
+        @if (editing()) {
+        <div class="term-form">
+            <div class="form-row-2">
+                <label class="form-field">
+                    <span class="form-field-label">{{ t().glossary.term }}</span>
+                    <input class="chat-input" [(ngModel)]="editTerm" maxlength="80"
+                           [placeholder]="t().glossary.termPlaceholder">
+                </label>
+                <label class="form-field">
+                    <span class="form-field-label">{{ t().glossary.language }}</span>
+                    <select class="chat-input" [value]="editLanguage()" (change)="editLanguage.set($any($event.target).value)">
+                        @for (l of contentLanguages; track l) { <option [value]="l">{{ l.toUpperCase() }}</option> }
+                    </select>
+                </label>
+            </div>
+
+            <label class="form-field">
+                <span class="form-field-label">{{ t().glossary.description }}</span>
+                <textarea class="chat-input" rows="3" [(ngModel)]="editDescription" maxlength="1000"
+                          [placeholder]="t().glossary.descriptionPlaceholder"></textarea>
+            </label>
+
+            <label class="form-field">
+                <span class="form-field-label">{{ t().glossary.aliases }}</span>
+                <input class="chat-input" [(ngModel)]="editAliases" maxlength="400"
+                       [placeholder]="t().glossary.aliasesPlaceholder">
+                <p class="field-hint-inline">{{ t().glossary.aliasesHint }}</p>
+            </label>
+
+            <div class="form-field">
+                <span class="form-field-label">{{ t().glossary.image }}</span>
+                @if (editImageUrl(); as url) {
+                <div class="term-image-row">
+                    <img [src]="url" alt="">
+                    <button class="mini-remove" (click)="clearImage()" [title]="t().common.delete">
+                        <svg lucideX class="icon-sm"></svg>
+                    </button>
+                </div>
+                }
+                <label class="btn-ghost image-pick">
+                    @if (uploading()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+                    @else { <svg lucideImage class="icon-sm"></svg> }
+                    {{ editImageUrl() ? t().glossary.replaceImage : t().glossary.addImage }}
+                    <input type="file" accept="image/*" hidden (change)="onImageChosen($event)">
+                </label>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn-ghost" (click)="cancelEdit()">{{ t().common.cancel }}</button>
+                <button class="btn-accent" (click)="save()" [disabled]="!canSave()">
+                    @if (busy()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+                    {{ t().common.save }}
+                </button>
+            </div>
+        </div>
+        }
+
+        <div class="term-list">
+            @for (term of visibleTerms(); track term.id) {
+            <div class="term-card" [class.on]="selectedId() === term.id">
+                @if (term.imageUrl) { <img class="term-thumb" [src]="term.imageUrl" alt=""> }
+                <div class="term-body">
+                    <div class="term-head">
+                        <span class="term-name">{{ term.term }}</span>
+                        @for (a of aliasList(term); track a) { <span class="term-alias">{{ a }}</span> }
+                        <span class="spacer"></span>
+                        <button class="mini" (click)="startEdit(term)">{{ t().common.edit }}</button>
+                        <button class="mini-remove" (click)="deleteConfirmId.set(term.id)" [title]="t().common.delete">
+                            <svg lucideTrash2 class="icon-sm"></svg>
+                        </button>
+                    </div>
+                    <p class="term-desc">{{ term.description }}</p>
+                </div>
+            </div>
+            } @empty {
+            <p class="hint">{{ t().glossary.empty }}</p>
+            }
+        </div>
+        }
+    </div>
+
+    @if (deleteTarget(); as term) {
+    <app-modal (closed)="deleteConfirmId.set(null)">
+        <svg modal-icon lucideTrash2 class="icon"></svg>
+        <span modal-title>{{ t().glossary.deleteTitle(term.term) }}</span>
+        <p>{{ t().glossary.deleteBody }}</p>
+        <button modal-actions class="btn-ghost" (click)="deleteConfirmId.set(null)">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-accent" (click)="confirmDelete()">{{ t().common.delete }}</button>
+    </app-modal>
+    }
+</div>

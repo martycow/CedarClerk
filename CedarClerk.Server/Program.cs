@@ -120,6 +120,7 @@ app.MapAuthEndpoints();
 app.MapDraftEndpoints();
 app.MapFolderEndpoints();
 app.MapFormPresetEndpoints();
+app.MapGlossaryEndpoints();
 app.MapBlogEndpoints();
 app.MapPostEndpoints();
 app.MapAssetEndpoints();

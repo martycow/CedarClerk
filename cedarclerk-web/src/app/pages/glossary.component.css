@@ -1,0 +1,212 @@
+:host {
+    display: block;
+    min-height: 100vh;
+    background: var(--canvas);
+}
+
+.icon { width: 18px; height: 18px; }
+.icon-sm { width: 14px; height: 14px; }
+.spacer { flex: 1; }
+
+.spin { animation: spin .8s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.glossary-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 52px;
+    padding: 0 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+
+.brand-name { font-weight: 700; font-size: 13.5px; letter-spacing: -.01em; }
+.crumb-sep { color: var(--t3); font-size: 13px; }
+.crumb-current { font-size: 13.5px; font-weight: 500; color: var(--t2); }
+
+.icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: none;
+    border-radius: var(--radius-md);
+    color: var(--t2);
+    cursor: pointer;
+}
+
+.icon-btn:hover { background: var(--alt); color: var(--text); }
+
+.glossary-body {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 22px 20px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.hint-bubble {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    margin: 0;
+    padding: 8px 11px;
+    border: 1px solid var(--abord);
+    background: var(--asoft);
+    border-radius: var(--radius-md);
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--t2);
+}
+
+.hint-bubble .icon-sm { flex: none; margin-top: 1px; color: var(--accent); }
+
+.lang-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.lang-tabs button {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--t2);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-family: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+.lang-tabs button.on {
+    background: var(--asoft);
+    border-color: var(--abord);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.lang-count { font-size: 10.5px; color: var(--t3); }
+.lang-tabs button.on .lang-count { color: var(--accent); }
+
+.term-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--abord);
+    border-radius: var(--radius-md);
+}
+
+.form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 140px;
+    gap: 10px;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.form-field-label { font-size: 12px; color: var(--t2); }
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.image-pick {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    cursor: pointer;
+}
+
+.term-image-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.term-image-row img {
+    max-width: 180px;
+    max-height: 120px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.term-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.term-card {
+    display: flex;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+
+.term-card.on { border-color: var(--abord); }
+
+.term-thumb {
+    flex: none;
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+}
+
+.term-body { flex: 1; min-width: 0; }
+
+.term-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.term-name { font-weight: 600; font-size: 14px; }
+
+.term-alias {
+    font-size: 11px;
+    color: var(--t3);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 1px 7px;
+}
+
+.term-desc {
+    margin: 4px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--t2);
+    white-space: pre-wrap;
+}
+
+.hint { color: var(--t3); font-size: 13px; }
+
+.channel-error { color: var(--danger); font-size: 13px; margin: 0; }
+
+@media (max-width: 600px) {
+    .form-row-2 { grid-template-columns: 1fr; }
+}

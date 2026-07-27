@@ -15,6 +15,14 @@ public static class CedarToBlogHtmlRenderer
         public required string MediaBaseUrl;
         public required string Lang;
         public List<string> Footnotes { get; } = [];
+        // Idea #11 - glossary terms to mark in body text, and which ones already have been.
+        // The set lives on the context rather than per text node so "first occurrence only"
+        // holds across the whole page.
+        public IReadOnlyList<GlossaryEntry> Glossary { get; init; } = [];
+        public HashSet<string> MarkedTerms { get; } = new(StringComparer.OrdinalIgnoreCase);
+        // Suppressed inside code and inside links: a term in a code sample is code, and a
+        // <span> tooltip nested in an <a> gives the reader two different things one click apart.
+        public int SuppressGlossaryDepth;
         // Pre-computed once per Render() call (see HeadingOutline) — see the comment on
         // CedarToTelegramBlocksRenderer.RenderContext for why this needs to happen up front.
         public IReadOnlyList<HeadingEntry> Outline { get; init; } = [];
@@ -23,12 +31,19 @@ public static class CedarToBlogHtmlRenderer
 
     // "en"/"ru" only, matching CedarClerk.Localization.Languages — Core stays free of a project
     // reference to Localization, so the caller (BlogEndpoints) passes the plain language code.
-    public static string Render(string cedarJson, string mediaBaseUrl, string lang = "ru")
+    public static string Render(string cedarJson, string mediaBaseUrl, string lang = "ru",
+        IReadOnlyList<GlossaryEntry>? glossary = null)
     {
         var root = JsonNode.Parse(cedarJson) ?? throw new ArgumentException("Invalid cedar JSON");
         var doc = root["doc"] ?? root;
         var sb = new StringBuilder();
-        var ctx = new RenderContext { MediaBaseUrl = mediaBaseUrl, Lang = lang, Outline = HeadingOutline.Extract(doc) };
+        var ctx = new RenderContext
+        {
+            MediaBaseUrl = mediaBaseUrl,
+            Lang = lang,
+            Outline = HeadingOutline.Extract(doc),
+            Glossary = glossary ?? [],
+        };
         RenderNodes(doc["content"]?.AsArray(), sb, ctx);
         AppendFootnotes(sb, ctx);
         return sb.ToString();
@@ -111,7 +126,10 @@ public static class CedarToBlogHtmlRenderer
             case "codeBlock":
                 var lang = (string?)node["attrs"]?["language"];
                 sb.Append(lang is null ? "<pre><code>" : $"<pre><code class=\"language-{EscapeAttr(lang)}\">");
+                // A glossary term inside a code sample is code, not a term (idea #11).
+                ctx.SuppressGlossaryDepth++;
                 RenderNodes(node["content"]?.AsArray(), sb, ctx);
+                ctx.SuppressGlossaryDepth--;
                 sb.Append("</code></pre>");
                 break;
 
@@ -130,7 +148,7 @@ public static class CedarToBlogHtmlRenderer
                 break;
 
             case "text":
-                RenderText(node, sb);
+                RenderText(node, sb, ctx);
                 break;
 
             case "image":
@@ -502,11 +520,12 @@ public static class CedarToBlogHtmlRenderer
         }
     }
 
-    private static void RenderText(JsonNode node, StringBuilder sb)
+    private static void RenderText(JsonNode node, StringBuilder sb, RenderContext ctx)
     {
         var text = Escape((string?)node["text"] ?? "");
         var open = new StringBuilder();
         var close = new StringBuilder();
+        var markable = ctx.SuppressGlossaryDepth == 0 && ctx.Glossary.Count > 0;
 
         if (node["marks"]?.AsArray() is { } marks)
         {
@@ -533,11 +552,15 @@ public static class CedarToBlogHtmlRenderer
                     case "code":
                         open.Append("<code>");
                         close.Insert(0, "</code>");
+                        markable = false;
                         break;
                     case "link":
                         var href = EscapeAttr((string?)m["attrs"]?["href"] ?? "");
                         open.Append($"<a href=\"{href}\" rel=\"noopener noreferrer\">");
                         close.Insert(0, "</a>");
+                        // Nesting the tooltip span inside a link would put two different
+                        // destinations under one word.
+                        markable = false;
                         break;
                     case "spoiler":
                         open.Append("<span class=\"spoiler\">");
@@ -547,6 +570,7 @@ public static class CedarToBlogHtmlRenderer
             }
         }
 
+        if (markable) text = GlossaryScanner.Mark(text, ctx.Glossary, ctx.MarkedTerms);
         sb.Append(open).Append(text).Append(close);
     }
 

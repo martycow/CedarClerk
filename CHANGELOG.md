@@ -10,6 +10,25 @@ The host is now `pointer-events: none`, with the tab and panel opting back in, s
 
 Also replaced `app.spec.ts`'s scaffold "should render title" test, which asserted an `<h1>` the app shell has never had and had been red for the whole life of the project.
 
+## 2026-07-27 (latest) — the glossary
+
+Idea #11, specced by Marty in one paragraph and built the same session: a page holding every term, each with a description, other spellings and an optional image; published text is scanned, terms are marked, and hovering or tapping one shows the description.
+
+**The scan runs at blog render time**, against the owner's terms in the language being shown — not in the editor. Marty's wording was "при публикации", and marking as you type would mean a TipTap decoration plugin racing the autosave for something no reader ever sees.
+
+Four rules had to be decided rather than just coded, and each is a judgement about reading rather than about code:
+
+- **Only the first occurrence per page is marked.** An article that uses a word twenty times would otherwise become a page of dashed underlines. This is the call every encyclopaedia makes.
+- **Never inside code.** A term appearing in a code sample is code, not prose.
+- **Never inside a link.** Nesting the tooltip in an `<a>` puts two different destinations under one word.
+- **Aliases instead of stemming.** Russian inflects: a canonical "рендерер" misses "рендерера" and "рендереру". A comma-separated list of forms beats guessing at per-language stemming rules, and it is honest about what it does.
+
+The scanner is a separate, tested unit (19 tests) because of *where* it sits: it runs on text that has already been HTML-escaped and injects markup into it. That means the description has to go into its attribute through attribute-escaping, the matcher has to skip HTML entities whole so it can't mark "amp" and split `&amp;` in half, and the page script writes the description with `textContent` and never `innerHTML`. Tests pin all three, plus the "a description cannot break out of the attribute" case.
+
+Terms are per content language, since the same word needs a different explanation depending on which language's version of a post the reader is on — a Russian description under an English article would be worse than no tooltip. Images go through the ordinary asset upload and are restricted to `/media/...`, the same rule the avatar upload uses: accepting an arbitrary URL would let a glossary tooltip point the blog's own chrome at someone else's server.
+
+**Not built, deliberately**: the original backlog line also asked for inline highlighting in the editor and an auto-detect pass before posting. Neither is in Marty's spec, and both are separately scoped work.
+
 ## 2026-07-27 (latest) — a pass over the backlog, by category
 
 Marty asked for everything in the backlog touching forms, then posts, then stats, then the admin panel, then new editor features. Two of those five turned out to be mostly answered already, which is the recurring shape of this backlog.

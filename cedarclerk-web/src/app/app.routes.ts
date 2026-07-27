@@ -10,6 +10,7 @@ import { PostsManagerComponent } from './pages/posts-manager.component';
 import { TermsComponent } from './pages/terms.component';
 import { PrivacyComponent } from './pages/privacy.component';
 import { AdminComponent } from './pages/admin.component';
+import { GlossaryComponent } from './pages/glossary.component';
 
 export const routes: Routes = [
     { path: 'login', component: LoginComponent },
@@ -20,6 +21,7 @@ export const routes: Routes = [
     { path: 'drafts', component: DraftsPageComponent, canActivate: [authGuard] },
     { path: 'settings', component: SettingsComponent, canActivate: [authGuard] },
     { path: 'posts', component: PostsManagerComponent, canActivate: [authGuard] },
+    { path: 'glossary', component: GlossaryComponent, canActivate: [authGuard] },
     // adminGuard already covers signed-in — it redirects to /login itself (IF2).
     { path: 'admin', component: AdminComponent, canActivate: [adminGuard] },
     // N7 folded both of these into the Posts Manager; the old paths stay as redirects because

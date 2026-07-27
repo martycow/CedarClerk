@@ -1070,7 +1070,10 @@ public static class BlogEndpoints
             owner.AuthorDisplayName, owner.ProfileUrl, owner.ProfileLocation,
             ownerPlan, draft.BlogPublishedAt, cedarJson);
 
-        var body = CedarToBlogHtmlRenderer.Render(cedarJson, $"https://{Consts.URLs.BlogHost}", lang);
+        // Idea #11 - the owner's glossary for the language being shown. Empty for an owner who
+        // never defined one, which costs a single indexed read and changes nothing downstream.
+        var glossary = await GlossaryEndpoints.LoadForAsync(db, draft.OwnerId, lang);
+        var body = CedarToBlogHtmlRenderer.Render(cedarJson, $"https://{Consts.URLs.BlogHost}", lang, glossary);
         var dateLine = draft.BlogPublishedAt is { } published
             ? $"<span class=\"post-card-date\">{published.ToString("d MMM yyyy, HH:mm", CultureInfo.InvariantCulture)}</span>"
             : "";
@@ -1378,6 +1381,18 @@ public static class BlogEndpoints
            script set — the reply target looked impossible to clear, and "show more" was offered
            when there was no more. One global rule rather than a per-class fix, so the next
            element scripted through `hidden` doesn't reintroduce it. */
+        /* Idea #11 - a glossary term in the body, and the card that explains it. The term is
+           focusable so the tooltip is reachable by keyboard and by tap, not only by hover. */
+        .glossary-term { border-bottom: 1px dashed var(--abord); cursor: help; }
+        .glossary-term:hover, .glossary-term:focus { background: var(--asoft); outline: none; }
+        .glossary-pop {
+            position: absolute; z-index: 50; max-width: 300px; padding: 12px 14px;
+            background: var(--sheet); border: 1px solid var(--border); border-radius: 10px;
+            box-shadow: 0 6px 24px rgba(40,35,25,.16); font-size: 13.5px; line-height: 1.5;
+        }
+        .glossary-pop-term { font-weight: 700; margin: 0 0 4px; }
+        .glossary-pop-desc { margin: 0; color: var(--t2); }
+        .glossary-pop img { display: block; width: 100%; border-radius: 6px; margin: 0 0 8px; }
         [hidden] { display: none !important; }
         .comment-reply-indicator { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--t3); margin: 0 0 8px; }
         .comment-reply-indicator .reply-target-name { font-weight: 600; color: var(--text); }
@@ -1435,6 +1450,70 @@ public static class BlogEndpoints
         <span>Made with <a href="https://cedarclerk.mooexe.dev" style="font-weight:500">Cedar Clerk</a> — write here, publish there. Moo.</span>
         </div></div>
         <script>
+        /* Idea #11 - one popup element reused by every term, positioned under whichever term is
+           active. Hover for a pointer, focus/tap for everything else; Escape and any outside
+           click dismiss it. The description arrives as a data attribute already escaped by the
+           renderer, so it is inserted as TEXT here - textContent, never innerHTML - which keeps
+           owner-authored text from becoming markup on a public page. */
+        (function () {
+            var terms = document.querySelectorAll('.glossary-term');
+            if (!terms.length) return;
+
+            var pop = document.createElement('div');
+            pop.className = 'glossary-pop';
+            pop.hidden = true;
+            var img = document.createElement('img');
+            img.hidden = true;
+            var title = document.createElement('p');
+            title.className = 'glossary-pop-term';
+            var desc = document.createElement('p');
+            desc.className = 'glossary-pop-desc';
+            pop.appendChild(img);
+            pop.appendChild(title);
+            pop.appendChild(desc);
+            document.body.appendChild(pop);
+
+            var current = null;
+
+            function hide() {
+                pop.hidden = true;
+                current = null;
+            }
+
+            function show(el) {
+                current = el;
+                title.textContent = el.getAttribute('data-term') || '';
+                desc.textContent = el.getAttribute('data-desc') || '';
+                var src = el.getAttribute('data-img');
+                if (src) { img.src = src; img.hidden = false; } else { img.removeAttribute('src'); img.hidden = true; }
+
+                pop.hidden = false;
+                var r = el.getBoundingClientRect();
+                var top = r.bottom + window.scrollY + 6;
+                var left = r.left + window.scrollX;
+                /* Keep it on screen on a narrow phone, where a term near the right edge would
+                   otherwise push the popup off the viewport and cause a horizontal scroll. */
+                var maxLeft = window.scrollX + document.documentElement.clientWidth - pop.offsetWidth - 8;
+                pop.style.top = top + 'px';
+                pop.style.left = Math.max(window.scrollX + 8, Math.min(left, maxLeft)) + 'px';
+            }
+
+            terms.forEach(function (el) {
+                el.addEventListener('mouseenter', function () { show(el); });
+                el.addEventListener('mouseleave', function () { if (current === el) hide(); });
+                el.addEventListener('focus', function () { show(el); });
+                el.addEventListener('blur', function () { if (current === el) hide(); });
+                el.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    if (current === el) hide(); else show(el);
+                });
+            });
+
+            document.addEventListener('click', hide);
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') hide(); });
+            window.addEventListener('resize', hide);
+        })();
+
         document.querySelectorAll('.carousel').forEach(function (car) {
             var imgs = car.querySelectorAll('.carousel-viewport img');
             var dots = car.querySelectorAll('.carousel-dot');
