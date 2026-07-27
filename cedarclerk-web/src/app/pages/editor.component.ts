@@ -20,8 +20,8 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { AccountMenuComponent } from '../shared/account-menu.component';
 import { CountBadgeComponent } from '../shared/count-badge.component';
 import { AppearancePanelComponent } from '../shared/appearance-panel.component';
-import { DatePipe, NgTemplateOutlet } from '@angular/common';
-import { PostsService, PostFormat, CompressionLevel, ScheduledPost } from '../core/posts.service';
+import { NgTemplateOutlet } from '@angular/common';
+import { PostsService, PostFormat, CompressionLevel } from '../core/posts.service';
 import { PRIMARY_LANGUAGE, CONTENT_LANGUAGES, TRANSLATION_LANGUAGES, endonymOf } from '../core/languages';
 import { ChannelsService, Channel, ChannelStats, KnownChat } from '../core/channels.service';
 import { Table } from '@tiptap/extension-table';
@@ -85,7 +85,7 @@ import {
     LucideFileText as FileText, LucideHeart as Heart, LucideNotebook as Notebook, LucideFile as FileIcon,
     LucideThumbsUp as ThumbsUp,
     LucideLock as Lock,
-    LucideTerminal as Terminal,
+    LucideTerminal as Terminal, LucideInfo as Info,
 } from '@lucide/angular';
 
 const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
@@ -93,6 +93,8 @@ const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '
 // Must match .status-bar's height and the breakpoint that hides it in editor.component.css — the
 // debug console slides out on top of that bar and needs to know it's there.
 const STATUS_BAR_HEIGHT_PX = 27;
+// FI2.11 — how long the "published" confirmation with its links stays up.
+const PUBLISH_TOAST_MS = 10_000;
 const STATUS_BAR_HIDDEN_MQ = '(max-width: 768px)';
 
 // Rounds a date up to the next boundary of `minutes` (e.g. 05:27 + 5min -> 05:30)
@@ -190,7 +192,7 @@ interface UploadItem {
 @Component({
     selector: 'app-editor',
     imports: [
-        FormsModule, DatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent,
+        FormsModule, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent,
         AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent,
         Undo2, Redo2, Bold, Italic, Strikethrough, Code,
         List, ListOrdered, ListTodo, Quote, SquareCode, Outdent, Indent,
@@ -201,7 +203,7 @@ interface UploadItem {
         Settings, ShieldCheck, Sparkle, TableOfContentsIcon, DividerIcon,
         CountBadgeComponent,
         AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
-        Lock, Terminal,
+        Lock, Terminal, Info,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -247,7 +249,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // plain, well-tested syntax for the same underlying rich-block output. HTML stays in use for
     // the blog (CedarToBlogHtmlRenderer, a separate/unrelated renderer).
     readonly format: PostFormat = 'Markdown';
-    exportLang: string = PRIMARY_LANGUAGE;
+    // FI2.2 — languages are ticked, not picked: a post can go to Telegram in several at once,
+    // one message per language. Never empty, since publishing to no language is not a request.
+    exportLangs = signal<string[]>([PRIMARY_LANGUAGE]);
     compressionLevel: CompressionLevel = 'standard';
 
     // Active content language in the editor. 'ru' edits the draft itself (primary version),
@@ -315,6 +319,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     exportResult = signal('');
     exportLink = signal<string | null>(null);
     exportError = signal<{ code?: number; message: string } | null>(null);
+    // FI2.11 — what the last publish produced, with its links. Cleared after 10s.
+    publishSuccess = signal<{ links: { label: string; url: string }[] } | null>(null);
+    private publishToastTimer?: ReturnType<typeof setTimeout>;
 
 
 
@@ -383,7 +390,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     scheduledAt = '';
     scheduling = signal(false);
     scheduleResult = signal('');
-    scheduledPosts = signal<ScheduledPost[]>([]);
 
     readonly commonEmoji = COMMON_EMOJI;
 
@@ -610,7 +616,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (this.route.snapshot.queryParamMap.has('new')) this.openNewDraftDialog();
 
         this.channels.set(await this.channelsApi.list());
-        await this.refreshScheduledPosts();
         await this.refreshChannelStats();
         this.knownChats.set(await this.channelsApi.listKnown());
     }
@@ -643,6 +648,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.debugLog.hostBarHeight.set(0);
         clearTimeout(this.saveTimer);
         clearTimeout(this.aiToastTimer);
+        clearTimeout(this.publishToastTimer);
         clearInterval(this.aiEditTicker);
         clearInterval(this.autoTranslateTicker);
         clearInterval(this.exportTicker);
@@ -1012,6 +1018,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     private showAiToast(text: string) {
         clearTimeout(this.aiToastTimer);
+        clearTimeout(this.publishToastTimer);
         this.aiToast.set(text);
         this.aiToastTimer = setTimeout(() => this.aiToast.set(null), 3000);
     }
@@ -1027,7 +1034,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.setTranslation(lang, null);
         this.activeSourceSnapshot.set(null);
         this.ruDiffMarkers.set([]);
-        if (this.exportLang === lang) this.exportLang = PRIMARY_LANGUAGE;
+        this.exportLangs.update(list => {
+            const next = list.filter(l => l !== lang);
+            return next.length ? next : [PRIMARY_LANGUAGE];
+        });
         await this.switchLang(PRIMARY_LANGUAGE);
     }
 
@@ -1050,7 +1060,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.currentId.set(id);
             this.title = draft.title;
             this.lang.set('ru');
-            this.exportLang = 'ru';
+            this.exportLangs.set([PRIMARY_LANGUAGE]);
             this.ruUpdatedAt.set(draft.updatedAt);
             this.translations.set(Object.fromEntries((draft.translations ?? []).map(t => [t.language, t])));
             this.activeSourceSnapshot.set(null);
@@ -1127,7 +1137,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.currentId.set(created.id);
             this.title = title;
             this.lang.set('ru');
-            this.exportLang = 'ru';
+            this.exportLangs.set([PRIMARY_LANGUAGE]);
             this.ruUpdatedAt.set(meta.updatedAt);
             this.translations.set(Object.fromEntries(
                 languages.filter(l => l !== PRIMARY_LANGUAGE).map(l => [l, { language: l, title, updatedAt: meta.updatedAt }])));
@@ -1221,25 +1231,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.currentBlog.set({ slug: res.slug, isPublished: true });
         } catch (e) {
             this.blogError.set(httpErrorMessage(e, this.t().editor.errors.publish));
-        } finally {
-            this.blogBusy.set(false);
-            clearInterval(this.blogTicker);
-        }
-    }
-
-    async unpublishFromBlog() {
-        const id = this.currentId();
-        if (!id) return;
-        this.blogBusy.set(true);
-        this.blogElapsed.set(0);
-        clearInterval(this.blogTicker);
-        this.blogTicker = setInterval(() => this.blogElapsed.update(s => s + 1), 1000);
-        this.blogError.set(null);
-        try {
-            await this.draftsApi.unpublishFromBlog(id);
-            this.currentBlog.update(b => b ? { ...b, isPublished: false } : b);
-        } catch (e) {
-            this.blogError.set(httpErrorMessage(e, this.t().editor.errors.unpublish));
         } finally {
             this.blogBusy.set(false);
             clearInterval(this.blogTicker);
@@ -1401,6 +1392,18 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     // Applying a preset copies its definition onto the draft (N12, ADR-047) — the full editor
     // for a form lives in the Posts Manager; this modal only makes the pre-publish choice.
+    // FI2.3 — the dropdown reports an id, or the sentinel for "no form".
+    async pickFormPreset(value: string) {
+        if (!value) return;
+        if (value === '__none') {
+            this.regForm.set(null);
+            await this.persistRegForm();
+            return;
+        }
+        const preset = this.formPresets().find(p => p.id === value);
+        if (preset) await this.applyFormPreset(preset);
+    }
+
     async applyFormPreset(preset: FormPreset) {
         this.regForm.set(parseRegistrationForm(preset.formJson));
         await this.persistRegForm();
@@ -1457,6 +1460,29 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return this.draftAssets().reduce((sum, a) => sum + a.sizeBytes, 0);
     }
 
+    isExportLang(lang: string): boolean {
+        return this.exportLangs().includes(lang);
+    }
+
+    toggleExportLang(lang: string) {
+        this.exportLangs.update(list => {
+            if (!list.includes(lang)) return [...list, lang];
+            const next = list.filter(l => l !== lang);
+            // Unticking the last one would leave Publish with nothing to send.
+            return next.length ? next : list;
+        });
+    }
+
+    // FI2.6/FI2.7 — the button says what pressing it does: schedule if a time is set, update if
+    // the blog page is already live, publish otherwise.
+    publishButtonLabel(): string {
+        const tx = this.t().editor.exportModal;
+        if (this.publishingAll()) return tx.publishing;
+        if (this.destTelegram() && this.scheduledAt) return tx.scheduleAndPublish;
+        if (this.destBlog() && this.currentBlog()?.isPublished) return tx.update;
+        return tx.publish;
+    }
+
     canPublishAll(): boolean {
         if (this.publishingAll() || this.blogBusy() || this.exporting()) return false;
         if (!this.destBlog() && !this.destTelegram()) return false;
@@ -1470,17 +1496,35 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     async publishAll() {
         if (!this.canPublishAll()) return;
         this.publishingAll.set(true);
+        this.publishSuccess.set(null);
+        clearTimeout(this.publishToastTimer);
+        const links: { label: string; url: string }[] = [];
         try {
-            if (this.destBlog()) await this.publishToBlog();
-            if (this.destTelegram()) await this.exportDraft();
+            if (this.destBlog()) {
+                await this.publishToBlog();
+                const url = this.blogUrl();
+                if (url && !this.blogError()) links.push({ label: this.t().editor.exportModal.openBlog, url });
+            }
+            if (this.destTelegram()) {
+                // FI2.7 — a set time makes this the same button, scheduling rather than sending.
+                if (this.scheduledAt) await this.schedulePost();
+                else links.push(...await this.exportDraft());
+            }
         } finally {
             this.publishingAll.set(false);
         }
+        if (!this.blogError() && !this.exportError()) this.showPublishSuccess(links);
     }
 
-    async exportDraft() {
+    private showPublishSuccess(links: { label: string; url: string }[]) {
+        this.publishSuccess.set({ links });
+        clearTimeout(this.publishToastTimer);
+        this.publishToastTimer = setTimeout(() => this.publishSuccess.set(null), PUBLISH_TOAST_MS);
+    }
+
+    async exportDraft(): Promise<{ label: string; url: string }[]> {
         const id = this.currentId();
-        if (!id) return;
+        if (!id) return [];
         clearTimeout(this.saveTimer);
         if (this.saveState() !== 'saved') await this.save();
         this.exporting.set(true);
@@ -1490,10 +1534,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.exportResult.set('');
         this.exportLink.set(null);
         this.exportError.set(null);
+        const links: { label: string; url: string }[] = [];
         try {
-            const res = await this.posts.export(id, this.chatId.trim(), this.format, this.exportLang, this.compressionLevel);
-            this.exportResult.set(`✓ Published (message #${res.messageId})`);
-            this.exportLink.set(this.buildTelegramLink(res.chatId, res.messageId));
+            // One message per ticked language (FI2.2), sequentially — Telegram rate-limits, and a
+            // failure part-way through should leave the languages already sent visibly sent.
+            for (const lang of this.exportLangs()) {
+                const res = await this.posts.export(id, this.chatId.trim(), this.format, lang, this.compressionLevel);
+                this.exportResult.set(`✓ Published (message #${res.messageId})`);
+                const url = this.buildTelegramLink(res.chatId, res.messageId);
+                this.exportLink.set(url);
+                if (url) links.push({ label: `${this.t().editor.exportModal.openTelegram} ${lang.toUpperCase()}`, url });
+            }
         } catch (e) {
             const status = e instanceof HttpErrorResponse ? e.status : undefined;
             const serverMessage = httpErrorMessage(e, '');
@@ -1505,6 +1556,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.exporting.set(false);
             clearInterval(this.exportTicker);
         }
+        return links;
     }
 
     private buildTelegramLink(chatId: string, messageId: number): string | null {
@@ -1572,18 +1624,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.scheduleResult.set('');
         try {
             const scheduledAtUtc = new Date(this.scheduledAt).toISOString();
-            await this.posts.schedule(id, this.chatId.trim(), scheduledAtUtc, this.format, this.exportLang);
+            for (const lang of this.exportLangs()) {
+                await this.posts.schedule(id, this.chatId.trim(), scheduledAtUtc, this.format, lang);
+            }
             this.scheduleResult.set('✓ Scheduled');
             this.scheduledAt = '';
-            await this.refreshScheduledPosts();
         } catch {
             this.scheduleResult.set('✗ Scheduling failed');
         } finally {
             this.scheduling.set(false);
         }
     }
-
-    scheduleOpen = signal(false);
 
     quickSchedule(preset: '1m' | '5m' | '1h' | '6h' | '12h' | 'tomorrow') {
         const now = new Date();
@@ -1623,15 +1674,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     pickerZonesHint(): string {
         return this.scheduledAt ? this.zonesHint(new Date(this.scheduledAt)) : '';
-    }
-
-    async cancelScheduled(id: string) {
-        await this.posts.cancelScheduled(id);
-        this.scheduledPosts.update(list => list.filter(p => p.id !== id));
-    }
-
-    private async refreshScheduledPosts() {
-        this.scheduledPosts.set(await this.posts.listScheduled());
     }
 
     onFileChosen(ev: Event) {

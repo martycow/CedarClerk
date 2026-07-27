@@ -10,6 +10,22 @@ The host is now `pointer-events: none`, with the tab and panel opting back in, s
 
 Also replaced `app.spec.ts`'s scaffold "should render title" test, which asserted an `<h1>` the app shell has never had and had been red for the whole life of the project.
 
+## 2026-07-27 (latest), Phase 9e — FI2: the export window does only export
+
+Eleven sub-items, but one rule underneath them, and it is Marty's: **"По хорошему Экспорт управляет ТОЛЬКО экспортом"**. Everything that was really *managing an already-published post* left the window.
+
+**Unpublishing and the scheduled-post list moved to the Posts Manager.** Scheduled sends are shown per post rather than as one global list — every scheduled post belongs to a draft that is already in that list, so nothing became harder to find, and a post with a pending send now carries a ⏰ chip. What stays in Export is sending, and re-sending: with the blog page already live, the Publish button reads **Update**, because rewriting the page is the export, not the management of it. A Telegram post can't be edited after sending, and the hint under the button says so instead of pretending otherwise.
+
+**One publish button.** Setting a time no longer reveals a second Schedule button competing with Publish — it changes what Publish does. The quick presets and the datetime field stayed; the list of what's already scheduled went with the rest of the management.
+
+**Languages became checkboxes**, one Telegram message per ticked language, sent one after another so a rate limit part-way through leaves what already went out visibly sent. Unticking the last language is refused rather than quietly meaning "publish nothing".
+
+**Layout**: channels folded into the Telegram destination behind a disclosure — they only ever meant Telegram, and connecting a channel is rare next to picking one. Invitations and Watermark became sections of their own instead of blocks nested inside the blog destination; who may read a post is not a property of publishing it. The form choice is a dropdown with an explicit "no form", matching what the Posts Manager already had, and every explanatory line became a bubble with an icon so advice stops reading as body text.
+
+**`.zip` export.** New `GET /api/drafts/{id}/export-zip`: a page per language plus the media they reference, rendered with `"."` as the media base so each asset resolves to `./media/...` inside the archive. It replaces the per-language `.html` download, which produced a page whose images all pointed back at blog.mooexe.dev — a saved copy that worked only while the blog was up.
+
+**A green confirmation with the post's links**, held ten seconds. Inside the modal rather than over the page, since the window stays open after publishing and the message is the answer to the button that was just pressed.
+
 ## 2026-07-27 (latest), Phase 9e — FI3 closed
 
 The three items left in the Posts Manager group.

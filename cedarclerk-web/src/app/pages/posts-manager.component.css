@@ -560,3 +560,18 @@
     background: color-mix(in srgb, var(--accent) 8%, var(--sheet));
     border-color: var(--abord);
 }
+
+/* FI2.8 — scheduled sends for the selected post, moved here out of the Export window. */
+.scheduled-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.scheduled-info {
+    flex: 1;
+    min-width: 0;
+}

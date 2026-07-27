@@ -9,6 +9,7 @@ import {
     RegistrationForm, RegistrationQuestion, RegistrationQuestionType, parseRegistrationForm,
 } from '../core/drafts.service';
 import { FormPresetsService, FormPreset } from '../core/form-presets.service';
+import { PostsService, ScheduledPost } from '../core/posts.service';
 import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { CountBadgeComponent } from '../shared/count-badge.component';
@@ -25,7 +26,7 @@ import { StatsComponent } from './stats.component';
 import {
     LucideTrash2 as Trash2, LucideArchive as Archive, LucideArchiveRestore as ArchiveRestore,
     LucidePenLine as PenLine, LucideLock as Lock, LucideExternalLink as ExternalLink,
-    LucideRefreshCw as RefreshCw, LucideArrowLeft as ArrowLeft,
+    LucideRefreshCw as RefreshCw, LucideArrowLeft as ArrowLeft, LucideX as X,
 } from '@lucide/angular';
 
 // FI3.5 removed the 'feedback' tab; ?tab=feedback still resolves (to posts, where feedback now
@@ -43,7 +44,7 @@ const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
     imports: [
         DatePipe, FormsModule, RouterLink, CedarLogoComponent, ModalComponent, CommentsComponent,
         StatsComponent, CountBadgeComponent, AccountMenuComponent, TagPickerComponent, FolderPickerComponent,
-        Trash2, Archive, ArchiveRestore, PenLine, Lock, ExternalLink, RefreshCw, ArrowLeft,
+        Trash2, Archive, ArchiveRestore, PenLine, Lock, ExternalLink, RefreshCw, ArrowLeft, X,
     ],
     templateUrl: 'posts-manager.component.html',
     styleUrls: ['posts-manager.component.css'],
@@ -53,6 +54,7 @@ export class PostsManagerComponent implements OnInit {
     theme = inject(ThemeService);
     private draftsApi = inject(DraftsService);
     private presetsApi = inject(FormPresetsService);
+    private postsApi = inject(PostsService);
     private router = inject(Router);
     private route = inject(ActivatedRoute);
     feedback = inject(CommentsService);
@@ -82,6 +84,11 @@ export class PostsManagerComponent implements OnInit {
     renaming = signal(false);
     deleteConfirmId = signal<string | null>(null);
 
+    // FI2.1/FI2.8 — the two things the Export window stopped doing, because it exports and does
+    // not manage what is already out there.
+    unpublishing = signal(false);
+    scheduled = signal<ScheduledPost[]>([]);
+
     registrations = signal<PostRegistration[]>([]);
     registrationsLoading = signal(false);
 
@@ -104,6 +111,7 @@ export class PostsManagerComponent implements OnInit {
         this.feedback.refreshNewCount();
         try {
             this.drafts.set(await this.draftsApi.list());
+            this.loadScheduled();
             this.loadNewFeedback();
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().manager.errors.load));
@@ -161,6 +169,51 @@ export class PostsManagerComponent implements OnInit {
 
     // FI3.6 — how much arrived on this post since the last look. Comments only: reactions have no
     // per-draft "new" count in the feedback payload.
+    private async loadScheduled() {
+        try {
+            this.scheduled.set(await this.postsApi.listScheduled());
+        } catch { /* the list is context, not the point of the page */ }
+    }
+
+    scheduledFor(draftId: string): ScheduledPost[] {
+        return this.scheduled().filter(p => p.draftId === draftId);
+    }
+
+    hasPendingSchedule(draftId: string): boolean {
+        return this.scheduled().some(p => p.draftId === draftId && p.status === 'Pending');
+    }
+
+    // SQLite stores no DateTimeKind and the server sends UTC without a 'Z', which the browser
+    // would otherwise read as local time.
+    utcDate(iso: string): Date {
+        return new Date(/Z|[+-]\d{2}:\d{2}$/.test(iso) ? iso : iso + 'Z');
+    }
+
+    async cancelScheduled(id: string) {
+        try {
+            await this.postsApi.cancelScheduled(id);
+            this.scheduled.update(list => list.filter(p => p.id !== id));
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.save));
+        }
+    }
+
+    async unpublish(d: DraftMeta) {
+        if (this.busy()) return;
+        this.busy.set(true);
+        this.unpublishing.set(true);
+        this.error.set('');
+        try {
+            await this.draftsApi.unpublishFromBlog(d.id);
+            this.patch(d.id, { isBlogPublished: false });
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().editor.errors.unpublish));
+        } finally {
+            this.busy.set(false);
+            this.unpublishing.set(false);
+        }
+    }
+
     newFeedbackFor(draftId: string): number {
         return this.newByDraft()[draftId] ?? 0;
     }

@@ -720,6 +720,59 @@ public static class DraftEndpoints
             return Results.File(System.Text.Encoding.UTF8.GetBytes(html), "text/html", fileName);
         });
 
+        // FI2.10 — the whole post as a standalone website in one archive: a page per language
+        // plus the media they reference, so it opens from disk with no server and no network.
+        // The per-language .html download it replaces produced a page whose images all pointed
+        // at blog.mooexe.dev, which is a saved page only for as long as the blog is up.
+        groupBuilder.MapGet("/{id:guid}/export-zip", async (Guid id, ClaimsPrincipal user, CedarDbContext db, MediaPaths media, IConfiguration cfg) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            var translations = await db.DraftTranslations.Where(t => t.DraftId == id).ToListAsync();
+            var owner = await db.Users.Where(u => u.Id == uid)
+                .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PlanTier, u.PlanExpiresAt })
+                .FirstAsync();
+            var ownerPlan = SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow);
+            var signature = PlanLimitations.ResolveSignature(ownerPlan, owner.PostSignature, owner.PostSignatureUrl);
+            var publishedAt = draft.BlogPublishedAt ?? draft.CreatedAt;
+
+            var versions = new List<(string Lang, string Title, string CedarJson)> { (Languages.Primary, draft.Title, draft.CedarJson) };
+            versions.AddRange(translations.Select(t => (t.Language, t.Title, t.CedarJson)));
+
+            using var ms = new MemoryStream();
+            using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var written = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var (lang, title, cedarJson) in versions)
+                {
+                    // "." rather than the blog host: ResolveUrl prefixes it onto the leading
+                    // slash of /media/..., which turns every asset into ./media/... — relative
+                    // to the page, which is exactly the layout inside the archive.
+                    var body = CedarToBlogHtmlRenderer.Render(cedarJson, ".", lang);
+                    var html = StaticExportHtml(title, body, lang, signature, publishedAt, cedarJson);
+                    var pageName = lang == Languages.Primary ? "index.html" : $"index.{lang}.html";
+                    var pageEntry = zip.CreateEntry(pageName, CompressionLevel.Optimal);
+                    await using (var pageStream = pageEntry.Open())
+                        await pageStream.WriteAsync(System.Text.Encoding.UTF8.GetBytes(html));
+
+                    foreach (var name in CedarPackage.FindReferencedMediaPaths(cedarJson))
+                    {
+                        if (!written.Add(name)) continue; // shared between language versions
+                        var path = Path.Combine(media.Dir, name);
+                        if (!File.Exists(path)) continue; // removed since; export what still exists
+                        var assetEntry = zip.CreateEntry("media/" + name, CompressionLevel.Optimal);
+                        await using var assetStream = assetEntry.Open();
+                        await using var source = File.OpenRead(path);
+                        await source.CopyToAsync(assetStream);
+                    }
+                }
+            }
+
+            return Results.File(ms.ToArray(), "application/zip", SanitizeFileName(draft.Title) + ".zip");
+        });
+
         groupBuilder.MapPost("/import", async (IFormFile file, ClaimsPrincipal user, CedarDbContext db, MediaPaths media) =>
         {
             if (file.Length == 0 || file.Length > CedarZipMaxBytes)

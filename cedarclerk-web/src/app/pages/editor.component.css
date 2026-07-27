@@ -1869,3 +1869,66 @@ input[type="datetime-local"]:focus-visible {
     color: var(--accent);
     border-color: var(--abord);
 }
+
+/* FI2.5 — hints read as advice rather than as body text: a tinted bubble with an icon, used
+   everywhere an explanatory line sits under a control in the Export window. */
+.hint-bubble {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    margin: 6px 0 0;
+    padding: 7px 10px;
+    border: 1px solid var(--abord);
+    background: var(--asoft);
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--t2);
+}
+
+.hint-bubble .icon-sm {
+    flex: none;
+    margin-top: 1px;
+    color: var(--accent);
+}
+
+/* FI2.2 — languages as checkboxes; several can go out at once. */
+.lang-check-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.lang-check {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    color: var(--t2);
+    cursor: pointer;
+}
+
+/* FI2.11 — the publish confirmation, held for 10 seconds above the modal's action row. */
+.publish-toast {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 10px 0 0;
+    padding: 9px 12px;
+    border: 1px solid color-mix(in srgb, var(--ok) 45%, var(--border));
+    background: color-mix(in srgb, var(--ok) 14%, var(--sheet));
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    color: var(--text);
+}
+
+.publish-toast .icon-sm {
+    color: var(--ok);
+}
+
+.publish-toast a {
+    color: var(--accent);
+    font-weight: 600;
+}

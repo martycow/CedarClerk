@@ -68,21 +68,185 @@
     @if (exportModalOpen()) {
         <!--N13: the export window is the most-used surface after the sheet itself, so it runs
         near the full viewport; .export-grid below turns the extra width into columns rather than
-        one very long scroll. app-modal already clamps to calc(100vw - 32px) on small screens.-->
+        one very long scroll. app-modal already clamps to calc(100vw - 32px) on small screens.
+
+        FI2.6 is the rule this window is now organised around: **Export manages only export.**
+        Unpublishing and scheduled-post management moved to the Posts Manager; what stays is
+        sending the post out, and re-sending it (Update) when it is already live.-->
         <app-modal [width]="1180" (closed)="exportModalOpen.set(false)">
             <svg modal-icon lucideSend class="icon"></svg>
             <span modal-title>{{ t().editor.export }}</span>
 
             <div class="export-grid">
-            <!--Channels moved here from the topbar (B21) and sit at the very top: they're
-            export configuration, not an editing tool. Outside the currentId() guard because
-            connecting/disconnecting a channel isn't draft-specific.-->
-            <div class="export-section">
-                <div class="export-section-title">{{ t().editor.exportModal.channels }}</div>
-                <!--N4: channels are picked by clicking, never typed. The manual field stays as a
-                disclosure, not a visible input, because the "Available" list below is built from
-                my_chat_member updates — an account with no linked Telegram sees nothing there and
-                would otherwise have no way to connect a channel at all.-->
+            @if (currentId(); as id) {
+            <!--N5: an unticked destination folds down to its header so it stops competing for
+            attention. The LIVE chip stays visible while folded — that's state, not settings.-->
+            <div class="export-section" [class.dest-off]="!destBlog()">
+                <label class="dest-head">
+                    <input type="checkbox" [checked]="destBlog()" (change)="destBlog.set(!destBlog())">
+                    <span class="export-section-title" style="margin:0">{{ t().editor.exportModal.siteBlog }}</span>
+                    @if (currentBlog()?.isPublished) { <span class="state-chip live">LIVE</span> }
+                </label>
+                @if (destBlog()) {
+                @if (currentBlog(); as blog) {
+                    @if (blog.isPublished) {
+                    <div class="blog-lang-badges">
+                        <a class="blog-lang-badge" [href]="blogUrl()" target="_blank" rel="noopener">{{ primaryLanguage.toUpperCase() }}</a>
+                        @for (l of existingLanguages(); track l) {
+                        <a class="blog-lang-badge" [href]="blogUrl() + '?lang=' + l" target="_blank" rel="noopener">{{ l.toUpperCase() }}</a>
+                        }
+                    </div>
+                    <p class="export-result"><a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
+                    <!--FI2.6: already live, so publishing again means rewriting the page. The
+                    Unpublish button that used to sit here moved to the Posts Manager (FI2.1).-->
+                    <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.updateHint }}</p>
+                    <a class="state-link" routerLink="/posts">{{ t().editor.exportModal.manageInManager }}</a>
+                    } @else {
+                    <p class="export-result">{{ t().editor.exportModal.unpublishedLinkStays }} <a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
+                    }
+                }
+                @if (blogBusy()) {
+                <div class="inline-progress">
+                    <div class="indeterminate-bar"><div class="indeterminate-fill"></div></div>
+                    <p class="translate-status">{{ blogStatusMessage() }}</p>
+                </div>
+                }
+                @if (blogError()) { <p class="channel-error">{{ blogError() }}</p> }
+
+                <!--Privacy is settable before publishing too, so a post can go live already
+                gated (nobody sees it in the window between publish and flipping the switch).-->
+                <div class="popover-divider"></div>
+                <label class="field-hint">
+                    <input type="checkbox" [checked]="isPrivate()" (change)="togglePrivate()">
+                    {{ t().editor.exportModal.privatePost }}
+                </label>
+
+                <!--FI2.3: the form is a dropdown with an explicit "no form", not a row of chips —
+                the current choice is visible instead of inferred. The definition is authored in
+                the Posts Manager; the preset is copied onto the post (N12), so editing it later
+                can't rewrite a post that already used it.-->
+                @if (isPrivate()) {
+                <div class="reg-preset-row">
+                    <span class="field-hint-inline">
+                        @if (regForm()) { {{ t().editor.exportModal.formOn }} } @else { {{ t().editor.exportModal.formOff }} }
+                    </span>
+                    <a class="state-link" routerLink="/posts">{{ t().editor.exportModal.editInManager }}</a>
+                </div>
+                @if (formPresets().length) {
+                <select class="chat-input" [value]="''" (change)="pickFormPreset($any($event.target).value)" [disabled]="regBusy()">
+                    <option value="">{{ regForm() ? t().manager.forms.changeForm : t().manager.forms.noFormChosen }}</option>
+                    @for (p of formPresets(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+                    @if (regForm()) { <option value="__none">{{ t().manager.forms.clearForm }}</option> }
+                </select>
+                } @else {
+                <!--I9: with no presets the row used to be simply absent, leaving no hint that
+                presets exist or where they're made.-->
+                <div class="reg-preset-row">
+                    <span class="field-hint-inline">{{ t().editor.exportModal.noPresets }}</span>
+                    <a class="state-link" routerLink="/posts" [queryParams]="{ tab: 'forms' }">{{ t().editor.exportModal.createPreset }}</a>
+                </div>
+                }
+                }
+                }
+            </div>
+
+            <!--FI2.9: channels only ever meant Telegram, so the separate Channels section that
+            used to head the window is folded in here, behind a disclosure — connecting a channel
+            is a rare act next to picking one.-->
+            <div class="export-section" [class.dest-off]="!destTelegram()">
+                <label class="dest-head">
+                    <input type="checkbox" [checked]="destTelegram()" (change)="destTelegram.set(!destTelegram())">
+                    <span class="export-section-title" style="margin:0">Telegram</span>
+                    @if (telegramPostUrl()) { <span class="state-chip live">LIVE</span> }
+                </label>
+                @if (destTelegram()) {
+                @if (selectedChannel(); as sc) {
+                <div class="channel-chosen">
+                    <span class="channel-avatar" [style.background]="channelColor(sc.id)">{{ channelInitial(sc.title) }}</span>
+                    <span class="channel-chosen-title">{{ sc.title }}</span>
+                    <button class="mini-remove" (click)="chatId = ''" [title]="t().editor.exportModal.changeChannel"><svg lucideX class="icon-sm"></svg></button>
+                </div>
+                }
+                <!--N4: no free-text target. Picking a connected channel is the only way to set one.-->
+                @if (channels().length) {
+                <div class="channel-pick-row">
+                    @for (c of channels(); track c.id) {
+                    <button class="channel-pick" [class.on]="isSelectedChannel(c)" (click)="selectChannel(c)">
+                        <span class="channel-avatar" [style.background]="channelColor(c.id)">{{ channelInitial(c.title) }}</span>
+                        <span class="channel-pick-title">{{ c.title }}</span>
+                    </button>
+                    }
+                </div>
+                } @else {
+                <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.pickChannelFirst }}</p>
+                }
+
+                <!--FI2.2: languages are checkboxes — a post can go out in several at once, each
+                as its own Telegram message.-->
+                <div class="panel-label" style="margin-top:12px">{{ t().editor.exportModal.languages }}</div>
+                <div class="lang-check-row">
+                    <label class="lang-check">
+                        <input type="checkbox" [checked]="isExportLang(primaryLanguage)" (change)="toggleExportLang(primaryLanguage)">
+                        {{ primaryLanguage.toUpperCase() }}
+                    </label>
+                    @for (l of existingLanguages(); track l) {
+                    <label class="lang-check" [title]="endonym(l)">
+                        <input type="checkbox" [checked]="isExportLang(l)" (change)="toggleExportLang(l)">
+                        {{ l.toUpperCase() }}
+                    </label>
+                    }
+                </div>
+                @if (exportLangs().length > 1) {
+                <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.languagesHint }}</p>
+                }
+
+                <div class="panel-label" style="margin-top:12px">{{ t().editor.exportModal.compression }} <span class="field-hint-inline">{{ t().editor.exportModal.compressionHint }}</span></div>
+                <div class="format-toggle">
+                    <button [class.on]="compressionLevel === 'small'" (click)="compressionLevel = 'small'" [title]="t().editor.exportModal.compressionSmallHint">{{ t().editor.exportModal.compressionSmall }}</button>
+                    <button [class.on]="compressionLevel === 'standard'" (click)="compressionLevel = 'standard'" [title]="t().editor.exportModal.compressionStandardHint">{{ t().editor.exportModal.compressionStandard }}</button>
+                    <button [class.on]="compressionLevel === 'high'" (click)="compressionLevel = 'high'" [title]="t().editor.exportModal.compressionHighHint">{{ t().editor.exportModal.compressionHigh }}</button>
+                </div>
+
+                <!--FI2.7: scheduling is not a second publish button. Setting a time changes what
+                the one Publish button does; the list of what is already scheduled lives in the
+                Posts Manager (FI2.8).-->
+                <div class="popover-divider"></div>
+                <div class="panel-label">{{ t().editor.exportModal.scheduleExport }}</div>
+                <div class="quick-schedule">
+                    <button (click)="quickSchedule('1m')">{{ t().editor.exportModal.in1m }}</button>
+                    <button (click)="quickSchedule('5m')">{{ t().editor.exportModal.in5m }}</button>
+                    <button (click)="quickSchedule('1h')">{{ t().editor.exportModal.in1h }}</button>
+                    <button (click)="quickSchedule('6h')">{{ t().editor.exportModal.in6h }}</button>
+                    <button (click)="quickSchedule('12h')">{{ t().editor.exportModal.in12h }}</button>
+                    <button (click)="quickSchedule('tomorrow')">{{ t().editor.exportModal.tomorrow }}</button>
+                </div>
+                <div class="schedule-row">
+                    <input type="datetime-local" [(ngModel)]="scheduledAt">
+                    @if (scheduledAt) {
+                    <button class="mini-remove" (click)="scheduledAt = ''" [title]="t().common.cancel"><svg lucideX class="icon-sm"></svg></button>
+                    }
+                </div>
+                @if (pickerZonesHint()) { <p class="tz-hint">{{ pickerZonesHint() }}</p> }
+                @if (scheduledAt) {
+                <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.scheduleHint }}</p>
+                <a class="state-link" routerLink="/posts">{{ t().editor.exportModal.manageInManager }}</a>
+                }
+                @if (scheduleResult()) { <p class="export-result">{{ scheduleResult() }}</p> }
+
+                @if (exporting()) {
+                <div class="inline-progress">
+                    <div class="indeterminate-bar"><div class="indeterminate-fill"></div></div>
+                    <p class="translate-status">{{ exportStatusMessage() }}</p>
+                </div>
+                }
+                @if (exportError()) {
+                <p class="channel-error">{{ exportError()!.message }}</p>
+                }
+
+                <div class="popover-divider"></div>
+                <button class="manual-channel-toggle" (click)="manualChannelOpen.set(!manualChannelOpen())">
+                    {{ manualChannelOpen() ? t().editor.exportModal.manualToggleOpen : t().editor.exportModal.channels }}
+                </button>
                 @if (manualChannelOpen()) {
                 <div class="channel-add">
                     <input class="chat-input" [(ngModel)]="newChannelChatId" [disabled]="channelBusy()" [placeholder]="t().editor.exportModal.manualPlaceholder" (keyup.enter)="connectChannel()">
@@ -90,10 +254,8 @@
                         @if (channelBusy()) { <svg lucideRefreshCw class="icon-sm spin"></svg> } @else { <svg lucidePlus class="icon-sm"></svg> }
                     </button>
                 </div>
-                }
                 @if (channelError()) { <p class="channel-error">{{ channelError() }}</p> }
 
-                <div class="popover-divider"></div>
                 <div class="panel-head">
                     <span class="panel-label">{{ t().editor.exportModal.available }}</span>
                     <button class="mini" (click)="refreshKnownChats(); $event.stopPropagation()" [disabled]="knownChatsRefreshing()" [title]="t().editor.exportModal.refresh">
@@ -115,12 +277,11 @@
                     </div>
                     }
                 } @else if (auth.telegramLinked()) {
-                    <p class="channel-error" style="color:var(--t3)">{{ t().editor.exportModal.nothingNew }}</p>
+                    <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.nothingNew }}</p>
                 } @else {
-                    <p class="channel-error" style="color:var(--t3)">{{ t().editor.exportModal.linkTelegramFirst }}</p>
+                    <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.linkTelegramFirst }}</p>
                 }
 
-                <div class="popover-divider"></div>
                 <div class="panel-head">
                     <span class="panel-label">{{ t().editor.exportModal.connected }}</span>
                 </div>
@@ -157,61 +318,21 @@
                     <div class="empty-channels">
                         <div class="empty-cow">🐮</div>
                         <div class="empty-line1">{{ t().editor.exportModal.noChannels }}<br>{{ t().editor.exportModal.cowWaiting }}</div>
-                        <div class="empty-line2">{{ t().editor.exportModal.connectVia }} <span class="mono-accent">@CedarClerkBot</span></div>
+                        <div class="empty-line2">{{ t().editor.exportModal.connectVia }} <span class="mono-accent">&#64;CedarClerkBot</span></div>
                     </div>
                 }
-
-                <button class="manual-channel-toggle" (click)="manualChannelOpen.set(!manualChannelOpen())">
-                    {{ manualChannelOpen() ? t().editor.exportModal.manualToggleOpen : t().editor.exportModal.manualToggleClosed }}
-                </button>
+                }
+                }
             </div>
 
-            @if (currentId(); as id) {
-            <!--N5: an unticked destination folds down to its header so it stops competing for
-            attention. The LIVE chip stays visible while folded — that's state, not settings.-->
-            <div class="export-section" [class.dest-off]="!destBlog()">
-                <label class="dest-head">
-                    <input type="checkbox" [checked]="destBlog()" (change)="destBlog.set(!destBlog())">
-                    <span class="export-section-title" style="margin:0">{{ t().editor.exportModal.siteBlog }}</span>
-                    @if (currentBlog()?.isPublished) { <span class="state-chip live">LIVE</span> }
-                </label>
-                @if (destBlog()) {
-                @if (currentBlog(); as blog) {
-                    @if (blog.isPublished) {
-                    <div class="blog-lang-badges">
-                        <a class="blog-lang-badge" [href]="blogUrl()" target="_blank" rel="noopener">{{ primaryLanguage.toUpperCase() }}</a>
-                        @for (l of existingLanguages(); track l) {
-                        <a class="blog-lang-badge" [href]="blogUrl() + '?lang=' + l" target="_blank" rel="noopener">{{ l.toUpperCase() }}</a>
-                        }
-                    </div>
-                    <p class="export-result"><a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
-                    <button class="export-btn" (click)="unpublishFromBlog()" [disabled]="blogBusy()">
-                        @if (blogBusy()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
-                        {{ blogBusy() ? t().editor.exportModal.working + ' ' + blogElapsed() + 's' : t().editor.exportModal.unpublish }}
-                    </button>
-                    } @else {
-                    <p class="export-result">{{ t().editor.exportModal.unpublishedLinkStays }} <a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
-                    }
-                }
-                @if (blogBusy()) {
-                <div class="inline-progress">
-                    <div class="indeterminate-bar"><div class="indeterminate-fill"></div></div>
-                    <p class="translate-status">{{ blogStatusMessage() }}</p>
-                </div>
-                }
-                @if (blogError()) { <p class="channel-error">{{ blogError() }}</p> }
-
-                <!--Privacy is settable before publishing too, so a post can go live already
-                gated (nobody sees it in the window between publish and flipping the switch).-->
-                <div class="popover-divider"></div>
-                <label class="field-hint">
-                    <input type="checkbox" [checked]="isPrivate()" (change)="togglePrivate()">
-                    {{ t().editor.exportModal.privatePost }}
-                </label>
-                @if (isPrivate()) {
+            <!--FI2.4: invitations are their own section rather than a block nested inside the
+            blog destination — who may read the post is not a property of publishing it.-->
+            @if (isPrivate()) {
+            <div class="export-section">
+                <div class="export-section-title">{{ t().editor.exportModal.invitations }}</div>
                 <div class="invite-list">
                     @if (!currentBlog()) {
-                    <p class="field-hint-inline">{{ t().editor.exportModal.publishFirst }}</p>
+                    <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.publishFirst }}</p>
                     } @else if (invitesLoading()) {
                     <p class="field-hint-inline">{{ t().editor.exportModal.loadingInvites }}</p>
                     } @else {
@@ -239,37 +360,13 @@
                     }
                     @if (inviteError()) { <p class="channel-error">{{ inviteError() }}</p> }
                 </div>
+            </div>
 
-                <!--Registration form (B3): without one, uninvited visitors get a plain 404; with
-                one, they get the form and are let in as soon as they fill it. The editor for it
-                lives in the Posts Manager now (N7/N10) — what's left here is picking a preset
-                before publishing, which is the one form decision that belongs to this moment.-->
-                <div class="reg-preset-row">
-                    <span class="field-hint-inline">
-                        @if (regForm()) { {{ t().editor.exportModal.formOn }} } @else { {{ t().editor.exportModal.formOff }} }
-                    </span>
-                    <a class="state-link" routerLink="/posts">{{ t().editor.exportModal.editInManager }}</a>
-                </div>
-                @if (formPresets().length) {
-                <div class="chip-row">
-                    @for (p of formPresets(); track p.id) {
-                    <button class="chip" (click)="applyFormPreset(p)" [disabled]="regBusy()">{{ p.name }}</button>
-                    }
-                </div>
-                } @else {
-                <!--I9: with no presets the row used to be simply absent, leaving no hint that
-                presets exist or where they're made.-->
-                <div class="reg-preset-row">
-                    <span class="field-hint-inline">{{ t().editor.exportModal.noPresets }}</span>
-                    <a class="state-link" routerLink="/posts" [queryParams]="{ tab: 'forms' }">{{ t().editor.exportModal.createPreset }}</a>
-                </div>
-                }
-
-                <!--Watermark (I7): private-only, because its job is discouraging redistribution
-                of something handed out per invite. Rendered on the blog page only — the editor
-                just shows a chip in the state strip saying one is set.-->
-                <div class="popover-divider"></div>
-                <span class="tb-caption">{{ t().editor.exportModal.watermark }}</span>
+            <!--Watermark (I7): private-only, because its job is discouraging redistribution of
+            something handed out per invite. Its own section since FI2.4, directly under
+            Invitations — the two describe the same handed-out copy.-->
+            <div class="export-section">
+                <div class="export-section-title">{{ t().editor.exportModal.watermark }}</div>
                 <div class="invite-add-row">
                     <input class="chat-input" [(ngModel)]="watermarkInput" (keydown.enter)="saveWatermark()"
                         [maxlength]="watermarkMaxLength" [placeholder]="t().editor.exportModal.watermarkPlaceholder">
@@ -277,120 +374,10 @@
                         <svg lucideCheck class="icon-sm"></svg>
                     </button>
                 </div>
-                <p class="field-hint-inline">{{ t().editor.exportModal.watermarkHint }}</p>
+                <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.watermarkHint }}</p>
                 @if (watermarkError()) { <p class="channel-error">{{ watermarkError() }}</p> }
-                }
-                }
             </div>
-
-            <div class="export-section" [class.dest-off]="!destTelegram()">
-                <label class="dest-head">
-                    <input type="checkbox" [checked]="destTelegram()" (change)="destTelegram.set(!destTelegram())">
-                    <span class="export-section-title" style="margin:0">Telegram</span>
-                    @if (telegramPostUrl()) { <span class="state-chip live">LIVE</span> }
-                </label>
-                @if (destTelegram()) {
-                @if (selectedChannel(); as sc) {
-                <div class="channel-chosen">
-                    <span class="channel-avatar" [style.background]="channelColor(sc.id)">{{ channelInitial(sc.title) }}</span>
-                    <span class="channel-chosen-title">{{ sc.title }}</span>
-                    <button class="mini-remove" (click)="chatId = ''" [title]="t().editor.exportModal.changeChannel"><svg lucideX class="icon-sm"></svg></button>
-                </div>
-                }
-                <!--N4: no free-text target. Picking a connected channel is the only way to set
-                one; connecting a new channel happens in the Каналы section above.-->
-                @if (channels().length) {
-                <div class="channel-pick-row">
-                    @for (c of channels(); track c.id) {
-                    <button class="channel-pick" [class.on]="isSelectedChannel(c)" (click)="selectChannel(c)">
-                        <span class="channel-avatar" [style.background]="channelColor(c.id)">{{ channelInitial(c.title) }}</span>
-                        <span class="channel-pick-title">{{ c.title }}</span>
-                    </button>
-                    }
-                </div>
-                } @else {
-                <p class="field-hint-inline">{{ t().editor.exportModal.pickChannelFirst }}</p>
-                }
-
-                <div class="panel-label" style="margin-top:12px">{{ t().editor.exportModal.language }}</div>
-                <div class="format-toggle">
-                    <button [class.on]="exportLang === primaryLanguage" (click)="exportLang = primaryLanguage">{{ primaryLanguage.toUpperCase() }}</button>
-                    @for (l of existingLanguages(); track l) {
-                    <button [class.on]="exportLang === l" (click)="exportLang = l" [title]="endonym(l)">{{ l.toUpperCase() }}</button>
-                    }
-                </div>
-
-                <div class="panel-label" style="margin-top:12px">{{ t().editor.exportModal.compression }} <span class="field-hint-inline">{{ t().editor.exportModal.compressionHint }}</span></div>
-                <div class="format-toggle">
-                    <button [class.on]="compressionLevel === 'small'" (click)="compressionLevel = 'small'" [title]="t().editor.exportModal.compressionSmallHint">{{ t().editor.exportModal.compressionSmall }}</button>
-                    <button [class.on]="compressionLevel === 'standard'" (click)="compressionLevel = 'standard'" [title]="t().editor.exportModal.compressionStandardHint">{{ t().editor.exportModal.compressionStandard }}</button>
-                    <button [class.on]="compressionLevel === 'high'" (click)="compressionLevel = 'high'" [title]="t().editor.exportModal.compressionHighHint">{{ t().editor.exportModal.compressionHigh }}</button>
-                </div>
-
-                <div class="publish-actions">
-                    <button class="export-btn" [class.on]="scheduleOpen()" (click)="scheduleOpen.set(!scheduleOpen())">
-                        <svg lucideClock class="icon-sm"></svg>
-                        {{ t().editor.exportModal.schedule }}
-                    </button>
-                </div>
-                @if (exporting()) {
-                <div class="inline-progress">
-                    <div class="indeterminate-bar"><div class="indeterminate-fill"></div></div>
-                    <p class="translate-status">{{ exportStatusMessage() }}</p>
-                </div>
-                }
-
-                @if (exportResult()) {
-                <p class="export-result">
-                    {{ exportResult() }}
-                    @if (exportLink()) { <a [href]="exportLink()" target="_blank" rel="noopener">{{ t().editor.exportModal.open }}</a> }
-                </p>
-                }
-                @if (exportError()) {
-                <p class="channel-error">{{ exportError()!.message }}</p>
-                }
-
-                @if (scheduleOpen()) {
-                <div class="popover-divider"></div>
-                <div class="panel-label">{{ t().editor.exportModal.scheduleExport }}</div>
-                <div class="quick-schedule">
-                    <button (click)="quickSchedule('1m')">{{ t().editor.exportModal.in1m }}</button>
-                    <button (click)="quickSchedule('5m')">{{ t().editor.exportModal.in5m }}</button>
-                    <button (click)="quickSchedule('1h')">{{ t().editor.exportModal.in1h }}</button>
-                    <button (click)="quickSchedule('6h')">{{ t().editor.exportModal.in6h }}</button>
-                    <button (click)="quickSchedule('12h')">{{ t().editor.exportModal.in12h }}</button>
-                    <button (click)="quickSchedule('tomorrow')">{{ t().editor.exportModal.tomorrow }}</button>
-                </div>
-
-                <div class="schedule-row">
-                    <input type="datetime-local" [(ngModel)]="scheduledAt">
-                    <button (click)="schedulePost()" [disabled]="scheduling() || !scheduledAt">
-                        @if (scheduling()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
-                        {{ scheduling() ? t().editor.exportModal.scheduling : t().editor.exportModal.schedule }}
-                    </button>
-                </div>
-                @if (pickerZonesHint()) { <p class="tz-hint">{{ pickerZonesHint() }}</p> }
-                @if (scheduleResult()) { <p class="export-result">{{ scheduleResult() }}</p> }
-
-                @if (scheduledPosts().length) {
-                <div class="panel-label" style="margin-top:12px">{{ t().editor.exportModal.scheduledPosts }}</div>
-                @for (p of scheduledPosts(); track p.id) {
-                <div class="scheduled-item">
-                    <div class="scheduled-info">
-                        <div class="draft-title">{{ p.draftTitle || 'Untitled' }}</div>
-                        <div class="draft-date">{{ utcDate(p.scheduledAtUtc) | date:'d MMM, HH:mm' }} · {{ p.channelTitle || p.chatId }} · {{ p.format }} · {{ p.language.toUpperCase() }} · {{ p.status }}</div>
-                        <div class="tz-hint">{{ zonesHint(utcDate(p.scheduledAtUtc)) }}</div>
-                        @if (p.status === 'Failed') { <div class="channel-error">{{ p.error }}</div> }
-                    </div>
-                    <button class="mini-remove" (click)="cancelScheduled(p.id)" [title]="p.status === 'Pending' ? t().editor.exportModal.cancelScheduled : t().editor.exportModal.removeFromList">
-                        <svg lucideX class="icon-sm"></svg>
-                    </button>
-                </div>
-                }
-                }
-                }
-                }
-            </div>
+            }
 
             <div class="export-section">
                 <div class="export-section-title">{{ t().editor.exportModal.otherPlatforms }} <span class="soon-badge">{{ t().editor.exportModal.comingSoon }}</span></div>
@@ -406,26 +393,26 @@
                 </div>
             </div>
 
+            <!--FI2.10: two buttons. The per-language .html links they replace produced a page
+            whose images all pointed back at the blog — a saved page only while the blog is up.-->
             <div class="export-section">
                 <div class="export-section-title">{{ t().editor.exportModal.fileExports }}</div>
                 <a class="export-btn" [href]="'/api/drafts/' + id + '/cedar'" download>
                     <svg lucideDownload class="icon-sm"></svg>
                     {{ t().editor.exportModal.downloadCedar }}
                 </a>
-                <div class="html-export-row">
-                    <span class="panel-label" style="margin:0">{{ t().editor.exportModal.staticHtml }}</span>
-                    <a class="blog-lang-badge" [href]="'/api/drafts/' + id + '/export-html?lang=' + primaryLanguage" download>{{ primaryLanguage.toUpperCase() }}</a>
-                    @for (l of existingLanguages(); track l) {
-                    <a class="blog-lang-badge" [href]="'/api/drafts/' + id + '/export-html?lang=' + l" download>{{ l.toUpperCase() }}</a>
-                    }
-                </div>
+                <a class="export-btn" [href]="'/api/drafts/' + id + '/export-zip'" download>
+                    <svg lucideDownload class="icon-sm"></svg>
+                    {{ t().editor.exportModal.downloadZip }}
+                </a>
+                <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.zipHint }}</p>
             </div>
 
             <div class="export-section">
                 <div class="export-section-title">
                     {{ t().editor.exportModal.draftFiles }}
                     @if (draftAssets().length) {
-                    <span class="field-hint-inline">· {{ draftAssets().length }} шт · {{ formatFileSize(totalAssetsBytes()) }}</span>
+                    <span class="field-hint-inline">· {{ draftAssets().length }} · {{ formatFileSize(totalAssetsBytes()) }}</span>
                     }
                 </div>
                 @if (draftAssetsLoading()) {
@@ -452,11 +439,25 @@
             }
             </div>
 
-            <!--One Publish for the whole window (B5) — fires every ticked destination.-->
+            <!--FI2.11: the result of a publish, with the links it produced, held for 10 seconds.
+            Inside the modal rather than over the page — this is the answer to the button that was
+            just pressed, and the window stays open after publishing.-->
+            @if (publishSuccess(); as done) {
+            <div class="publish-toast">
+                <svg lucideCheck class="icon-sm"></svg>
+                <span>{{ t().editor.exportModal.publishedOk }}</span>
+                @for (link of done.links; track link.url) {
+                <a [href]="link.url" target="_blank" rel="noopener">{{ link.label }}</a>
+                }
+            </div>
+            }
+
+            <!--One Publish for the whole window (B5) — fires every ticked destination. Its label
+            follows what pressing it will actually do (FI2.6/FI2.7).-->
             <button modal-actions class="btn-ghost" (click)="exportModalOpen.set(false)">{{ t().common.close }}</button>
             <button modal-actions class="btn-accent" (click)="publishAll()" [disabled]="!canPublishAll()">
                 @if (publishingAll()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
-                {{ publishingAll() ? t().editor.exportModal.publishing : t().editor.exportModal.publish }}
+                {{ publishButtonLabel() }}
             </button>
     </app-modal>
     }

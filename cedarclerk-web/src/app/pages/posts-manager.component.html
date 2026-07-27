@@ -53,6 +53,7 @@
                             @if (d.isPrivate) { <span class="state-chip private">{{ t().manager.privateChip }}</span> }
                             @for (l of d.languages; track l) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
                             @if (d.isArchived) { <span class="state-chip">{{ t().manager.archived }}</span> }
+                            @if (hasPendingSchedule(d.id)) { <span class="state-chip">⏰ {{ t().manager.scheduledChip }}</span> }
                             @if (newFeedbackFor(d.id); as n) { <span class="state-chip new">+{{ n }}</span> }
                         </span>
                     </button>
@@ -132,6 +133,16 @@
                             <svg lucideExternalLink class="icon-sm"></svg> {{ t().manager.openBlog }}
                         </a>
                         }
+                        <!--FI2.1: unpublishing is managing an already-published post, which the
+                        Export window explicitly stops doing (FI2.6) — it belongs here.-->
+                        @if (d.isBlogPublished) {
+                        <button class="btn-ghost danger" (click)="unpublish(d)" [disabled]="busy()">
+                            @if (unpublishing()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+                            {{ t().manager.unpublish }}
+                        </button>
+                        } @else if (d.blogSlug) {
+                        <p class="field-hint-inline">{{ t().manager.unpublishedNote }} {{ t().manager.republishHint }}</p>
+                        }
                     </div>
 
                     @if (telegramUrl(d); as url) {
@@ -140,6 +151,34 @@
                         <a class="detail-link-btn" [href]="url" target="_blank" rel="noopener">
                             <svg lucideExternalLink class="icon-sm"></svg> {{ t().manager.openTelegram }}
                         </a>
+                    </div>
+                    }
+                    }
+
+                    <!--FI2.8: scheduled posts are managed here, not in the Export window. Kept
+                    per-post rather than as one global list: every scheduled post belongs to a
+                    draft that is in the list on the left, so nothing becomes unreachable, and
+                    the row carries a clock chip so a post with a pending send is findable.-->
+                    @if (scheduledFor(d.id); as scheduled) {
+                    @if (scheduled.length) {
+                    <div class="detail-divider"></div>
+                    <div class="detail-field">
+                        <label>{{ t().manager.scheduled }}</label>
+                        @for (p of scheduled; track p.id) {
+                        <div class="scheduled-item">
+                            <div class="scheduled-info">
+                                <div class="field-hint-inline">
+                                    {{ utcDate(p.scheduledAtUtc) | date:'d MMM yyyy, HH:mm' }} ·
+                                    {{ p.channelTitle || p.chatId }} · {{ p.language.toUpperCase() }} · {{ p.status }}
+                                </div>
+                                @if (p.status === 'Failed') { <p class="channel-error">{{ p.error }}</p> }
+                            </div>
+                            <button class="mini-remove" (click)="cancelScheduled(p.id)"
+                                    [title]="p.status === 'Pending' ? t().manager.cancelScheduled : t().manager.removeFromList">
+                                <svg lucideX class="icon-sm"></svg>
+                            </button>
+                        </div>
+                        }
                     </div>
                     }
                     }
