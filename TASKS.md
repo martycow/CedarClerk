@@ -9,7 +9,9 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
 
 **`I7` (watermark) shipped 27.07.2026** — specced by Marty mid-session and built the same session. Tiled heavy semi-transparent text over the blog post, chip-only in the editor. `dotnet test` 289/289. Not live-verified.
 
-Version bumped to **0.9.1** (`CedarClerk.Core/Consts.cs`) and tagged.
+Version bumped to **0.9.1** (`CedarClerk.Core/Consts.cs`) and tagged. **Deployed to production 27.07.2026** — health check green, migration applied, data intact, blog posts serving.
+
+**Migrations collapsed to a single `InitialCreate` on prod 27.07.2026** — `__EFMigrationsHistory` now holds one row (`20260727074652_InitialCreate`). This also fixed real drift (two migrations applied on prod whose files had vanished from the repo). New `SchemaDriftGuardTests` fails the build if `Entities.cs` moves without a migration. Procedure and rollback in `.claude/rules/ef-migrations.md`.
 
 And one needs a single decision before three separate items touch the same screen: `I12` (split Settings) vs `I14`/`B15` (move appearance into the editor) vs `IT2` (delete toolbar customization).
 

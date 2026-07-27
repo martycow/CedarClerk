@@ -20,6 +20,17 @@ Two translation misses from the ADR-050 sweep: the paragraph-format dropdown's t
 
 Not started: IB5 (blog comment form). `dotnet test` 278/278, `ng build` clean. Nothing here is live-verified in a browser yet.
 
+### Migration chain collapsed, and a guard so drift can't recur
+
+Deploying the above surfaced real drift during the mandatory pre-deploy check: prod's `__EFMigrationsHistory` listed `AddDraftTranslationSourceSnapshot` and `AddBlogStatSnapshot`, but neither file existed in the repo any more — while their changes *had* survived in `CedarDbContextModelSnapshot.cs`. Production was fine (the columns and the table are physically there, verified directly rather than inferred from history rows), but the repo's migration set could no longer build the schema from scratch, so any fresh environment would have come up broken.
+
+Marty asked whether migrations could be dropped entirely, being the only user. They can't: EF Core's only alternative is `EnsureCreated()`, which cannot alter an existing database, so every schema change would mean recreating `cedar.db` — and the data is not disposable (published blog posts have public URLs linked from Telegram, plus comments, reactions, form submissions and a real card payment). What *was* the actual problem — the ritual, and drift going unnoticed — got addressed instead:
+
+- **`SchemaDriftGuardTests`** turns the "always migrate after an `Entities.cs` change" rule into a failing test, via EF 8's `Database.HasPendingModelChanges()`. Confirmed it genuinely fails (a property added without a migration turns it red) rather than being a test that can only pass.
+- **The chain was collapsed to one `InitialCreate`**, on production this time, not just locally. Equivalence was established before touching anything: the new migration was applied to a scratch database and compared against prod by column set and index set — 27/27 tables with identical names/types/nullability, 40/40 identical indexes. Raw `.schema` text differs harmlessly and is the wrong thing to diff, because prod's tables grew through `ALTER TABLE ADD COLUMN` (appends columns, requires defaults) while a fresh `CREATE TABLE` uses model order. The collapse also absorbed the two orphaned migrations, so the drift is gone.
+
+Executed as stop → back up → rewrite history to a single row → deploy → start, in that order, because a service started on the *old* binaries after the history edit would have tried to `CREATE TABLE` over live tables. Verified after: one history row, `PRAGMA integrity_check` ok, 2 users / 9 drafts / 2 channels / 17 comments / 24 reactions / 1 payment unchanged, zero migration statements in the log, and all three real blog posts plus an EN translation still serving 200. Procedure written up in `.claude/rules/ef-migrations.md`.
+
 ### Watermark on private posts (I7)
 
 Specced by Marty mid-session, so it stopped being the blocked item it was imported as: heavy semi-transparent text tiled *over* the blog post, and in the editor nothing but a marker that one is set.

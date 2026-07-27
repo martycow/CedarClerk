@@ -11,14 +11,14 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CedarClerk.Server.Migrations
 {
     [DbContext(typeof(CedarDbContext))]
-    [Migration("20260714040734_AddTelegramLinkedAt")]
-    partial class AddTelegramLinkedAt
+    [Migration("20260727074652_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.28");
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.29");
 
             modelBuilder.Entity("CedarClerk.Server.AiUsage", b =>
                 {
@@ -52,6 +52,12 @@ namespace CedarClerk.Server.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("AppearancePrefsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AuthorDisplayName")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("TEXT");
@@ -66,8 +72,20 @@ namespace CedarClerk.Server.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("FeedbackSeenAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("FreeChannelCooldownUntil")
                         .HasColumnType("TEXT");
+
+                    b.Property<byte?>("HeaderSlot1Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte?>("HeaderSlot2Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte?>("HeaderSlot3Type")
+                        .HasColumnType("INTEGER");
 
                     b.Property<long?>("LastDeletedTelegramChatId")
                         .HasColumnType("INTEGER");
@@ -78,6 +96,9 @@ namespace CedarClerk.Server.Migrations
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("NewDraftDefaultsJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
@@ -85,6 +106,9 @@ namespace CedarClerk.Server.Migrations
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("NotifyOnEngagement")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("PasswordHash")
                         .HasColumnType("TEXT");
@@ -104,7 +128,31 @@ namespace CedarClerk.Server.Migrations
                     b.Property<string>("PostSignature")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("PostSignatureUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProfileLocation")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProfileUrl")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("SecurityStamp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SocialFacebookUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SocialGithubUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SocialInstagramUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SocialTwitterUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SocialYoutubeUrl")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("StripeCustomerId")
@@ -122,11 +170,17 @@ namespace CedarClerk.Server.Migrations
                     b.Property<string>("TelegramUsername")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ToolbarLayoutJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("TrialUsedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("UiLanguage")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
@@ -179,9 +233,39 @@ namespace CedarClerk.Server.Migrations
                     b.Property<string>("TelegramFileId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("TelegramLocalPath")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.ToTable("Assets");
+                });
+
+            modelBuilder.Entity("CedarClerk.Server.BlogStatSnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CommentCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("LikeCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("TakenAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ViewCount")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BlogStatSnapshots");
                 });
 
             modelBuilder.Entity("CedarClerk.Server.BotKnownChat", b =>
@@ -265,6 +349,29 @@ namespace CedarClerk.Server.Migrations
                     b.ToTable("Channels");
                 });
 
+            modelBuilder.Entity("CedarClerk.Server.ChannelPost", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ChannelId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("DraftId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("PublishedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TelegramMessageId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ChannelPosts");
+                });
+
             modelBuilder.Entity("CedarClerk.Server.ChannelStatSnapshot", b =>
                 {
                     b.Property<Guid>("Id")
@@ -274,11 +381,20 @@ namespace CedarClerk.Server.Migrations
                     b.Property<Guid>("ChannelId")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("CommentCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("LikeCount")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("MemberCount")
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("TakenAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("ViewCount")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -303,6 +419,9 @@ namespace CedarClerk.Server.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("DraftId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ParentCommentId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Text")
@@ -333,7 +452,16 @@ namespace CedarClerk.Server.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("FolderId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsBlogPublished")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsPrivate")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("LastTelegramChatId")
@@ -349,6 +477,9 @@ namespace CedarClerk.Server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("RegistrationFormJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Tags")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -360,11 +491,50 @@ namespace CedarClerk.Server.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("ViewCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("WatermarkText")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("OwnerId");
 
                     b.ToTable("Drafts");
+                });
+
+            modelBuilder.Entity("CedarClerk.Server.DraftStatSeen", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("BaselineReactionCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BaselineViewCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("DraftId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LastReactionCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("LastViewCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("SeenAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DraftStatSeens");
                 });
 
             modelBuilder.Entity("CedarClerk.Server.DraftTranslation", b =>
@@ -384,6 +554,9 @@ namespace CedarClerk.Server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SourceSnapshotJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -397,6 +570,54 @@ namespace CedarClerk.Server.Migrations
                         .IsUnique();
 
                     b.ToTable("DraftTranslations");
+                });
+
+            modelBuilder.Entity("CedarClerk.Server.Folder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Folders");
+                });
+
+            modelBuilder.Entity("CedarClerk.Server.FormPreset", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FormJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("FormPresets");
                 });
 
             modelBuilder.Entity("CedarClerk.Server.Payment", b =>
@@ -437,6 +658,67 @@ namespace CedarClerk.Server.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Payments");
+                });
+
+            modelBuilder.Entity("CedarClerk.Server.PostInvite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("DraftId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PostInvites");
+                });
+
+            modelBuilder.Entity("CedarClerk.Server.PostRegistration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AnswersJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("DraftId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Nickname")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SocialLink")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VisitorHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PostRegistrations");
                 });
 
             modelBuilder.Entity("CedarClerk.Server.Reaction", b =>
