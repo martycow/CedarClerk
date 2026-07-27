@@ -117,7 +117,21 @@ Profile, Appearance, Toolbar customization, Header slots, Social links, Subscrip
 
 **Known gap**: nearly every "instant save, no Save button" preference control in Appearance/Toolbar has no loading indicator at all — only an error message on failure, nothing while the request is in flight. Worth fixing alongside Backlog idea #6 (loading indicators for long operations) if that gets scoped.
 
-## `stats.component` (`cedarclerk-web/src/app/pages/stats.component.{ts,html}`)
+## `posts-manager.component` (`cedarclerk-web/src/app/pages/posts-manager.component.{ts,html}`)
+
+The `/posts` page (N7, ADR-046). `/comments` and `/stats` now redirect here; the two components below are rendered as its tab bodies with their own page headers removed.
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Tab strip (Posts · Reactions & comments · Stats · Forms) | `.manager-tabs` | tab | `setTab()`; switching to Forms loads submissions for the selected post | N/A | No fixed widths and `overflow-wrap: anywhere` — the labels get translated eventually and must survive long-word languages (B26) |
+| Post list (left) | `.post-list` | panel | Selects the post the detail pane acts on; LIVE/Archived chips | Needed & present — page-level `loading()` | Also used, filtered to private posts only, by the Forms tab |
+| Detail pane — title/tags + Save | `.post-detail` | input + button | Metadata-only edits | Needed & present — `renaming()` spins the icon, `busy()` disables | A rename re-sends the draft's own `cedarJson` unchanged (the save endpoint takes title+body together) |
+| Detail pane — folder pills | `.pill-row` | button | `assignFolder()`, applies immediately | **Needed but missing** — no per-pill busy state | Same instant-save-no-indicator gap as the Appearance controls above |
+| Detail pane — private / archive / open in editor / delete | `.detail-actions` | button | Metadata actions; delete goes through a confirm modal | Needed & present — all disabled while `busy()` | |
+| Detail pane — Blog / Telegram links | `.detail-links` | link | Opens the published post where it lives | N/A | Rendered only when the draft actually has a slug / message id |
+| Forms tab — submissions list | `.registration-row` | panel | Who submitted a private post's registration form and when | Needed & present — `registrationsLoading()` | Read-only until N10. Answers show the raw answer key, not the question label — labels live in the form definition, not the submission (ADR-042) |
+
+## `stats.component` (`cedarclerk-web/src/app/pages/stats.component.{ts,html}`) — now the Posts Manager's Stats tab
 
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|
@@ -126,7 +140,7 @@ Profile, Appearance, Toolbar customization, Header slots, Social links, Subscrip
 | Metric stat cards (Subscribers/Views/Likes/Comments) | `:41-84` | panel | Current value + week-over-week delta | Needed & present — page-level `loading()` gates first render | Blog view omits Subscribers |
 | Line/area chart + hover tooltip | `:53-79` | panel/popover | SVG sparkline, crosshair tooltip on hover | N/A | Falls back to "Not enough history yet" under 2 snapshots |
 
-## `comments.component` (`cedarclerk-web/src/app/pages/comments.component.{ts,html}`)
+## `comments.component` (`cedarclerk-web/src/app/pages/comments.component.{ts,html}`) — now the Posts Manager's Reactions & comments tab
 
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|

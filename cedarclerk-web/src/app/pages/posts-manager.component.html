@@ -1,0 +1,173 @@
+<div class="manager-page">
+    <header class="manager-header">
+        <app-cedar-logo [size]="19"></app-cedar-logo>
+        <span class="brand-name">Cedar Clerk</span>
+        <span class="crumb-sep">/</span>
+        <span class="crumb-current">Posts Manager</span>
+        <span class="spacer"></span>
+        <button class="icon-btn" (click)="theme.toggle()" title="Toggle theme">
+            {{ theme.theme() === 'dark' ? '☀' : '☾' }}
+        </button>
+        <span class="avatar">{{ avatarInitial() }}</span>
+    </header>
+
+    <div class="manager-body">
+        <nav class="manager-tabs">
+            <button [class.active]="tab() === 'posts'" (click)="setTab('posts')">Posts</button>
+            <button [class.active]="tab() === 'feedback'" (click)="setTab('feedback')">Reactions &amp; comments</button>
+            <button [class.active]="tab() === 'stats'" (click)="setTab('stats')">Stats</button>
+            <button [class.active]="tab() === 'forms'" (click)="setTab('forms')">Forms</button>
+        </nav>
+
+        @if (error()) { <p class="channel-error">{{ error() }}</p> }
+
+        @if (tab() === 'posts') {
+            @if (loading()) {
+            <p class="hint">Loading…</p>
+            } @else {
+            <div class="manager-split">
+                <div class="post-list">
+                    @for (d of drafts(); track d.id) {
+                    <button class="post-row" [class.on]="selectedId() === d.id" (click)="select(d)">
+                        <span class="post-row-title">
+                            @if (d.isPrivate) { <svg lucideLock class="icon-xs"></svg> }
+                            {{ d.title || 'Untitled' }}
+                        </span>
+                        <span class="post-row-meta">
+                            @if (d.isBlogPublished) { <span class="state-chip live">LIVE</span> }
+                            @if (d.isArchived) { <span class="state-chip">Archived</span> }
+                        </span>
+                    </button>
+                    } @empty {
+                    <p class="hint">No posts yet.</p>
+                    }
+                </div>
+
+                <div class="post-detail">
+                    @if (selected(); as d) {
+                    <div class="detail-field">
+                        <label>Title</label>
+                        <input class="chat-input" [(ngModel)]="editTitle">
+                    </div>
+                    <div class="detail-field">
+                        <label>Tags <span class="field-hint-inline">comma-separated</span></label>
+                        <input class="chat-input" [(ngModel)]="editTags" placeholder="no tags">
+                    </div>
+                    <button class="btn-accent" (click)="saveMeta()" [disabled]="busy()">
+                        @if (renaming()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+                        Save
+                    </button>
+
+                    <div class="detail-divider"></div>
+
+                    <div class="detail-field">
+                        <label>Folder</label>
+                        <div class="pill-row">
+                            <button class="pill" [class.on]="d.folderId === null" (click)="assignFolder(null)">No folder</button>
+                            @for (f of folders(); track f.id) {
+                            <button class="pill" [class.on]="d.folderId === f.id" (click)="assignFolder(f.id)">{{ f.name }}</button>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="detail-actions">
+                        <button class="btn-ghost" (click)="togglePrivate()" [disabled]="busy()">
+                            <svg lucideLock class="icon-sm"></svg>
+                            {{ d.isPrivate ? 'Make public' : 'Make private' }}
+                        </button>
+                        <button class="btn-ghost" (click)="toggleArchive()" [disabled]="busy()">
+                            @if (d.isArchived) { <svg lucideArchiveRestore class="icon-sm"></svg> Unarchive }
+                            @else { <svg lucideArchive class="icon-sm"></svg> Archive }
+                        </button>
+                        <button class="btn-ghost" (click)="openInEditor(d)">
+                            <svg lucidePenLine class="icon-sm"></svg>
+                            Open in editor
+                        </button>
+                        <button class="btn-ghost danger" (click)="deleteConfirmId.set(d.id)" [disabled]="busy()">
+                            <svg lucideTrash2 class="icon-sm"></svg>
+                            Delete
+                        </button>
+                    </div>
+
+                    @if (blogUrl(d) || telegramUrl(d)) {
+                    <div class="detail-links">
+                        @if (blogUrl(d); as url) {
+                        <a [href]="url" target="_blank" rel="noopener"><svg lucideExternalLink class="icon-xs"></svg> Blog</a>
+                        }
+                        @if (telegramUrl(d); as url) {
+                        <a [href]="url" target="_blank" rel="noopener"><svg lucideExternalLink class="icon-xs"></svg> Telegram</a>
+                        }
+                    </div>
+                    }
+                    } @else {
+                    <p class="hint">Pick a post on the left.</p>
+                    }
+                </div>
+            </div>
+            }
+        }
+
+        <!--Both tabs below are the former /comments and /stats pages, minus their own page
+        headers — this page provides the chrome now.-->
+        @if (tab() === 'feedback') { <app-comments></app-comments> }
+        @if (tab() === 'stats') { <app-stats></app-stats> }
+
+        @if (tab() === 'forms') {
+            <p class="field-hint">Only private posts have a form. Editing the form, per-question breakdowns and charts come next (N10).</p>
+            <div class="manager-split">
+                <div class="post-list">
+                    @for (d of privatePosts(); track d.id) {
+                    <button class="post-row" [class.on]="selectedId() === d.id" (click)="select(d)">
+                        <span class="post-row-title"><svg lucideLock class="icon-xs"></svg> {{ d.title || 'Untitled' }}</span>
+                    </button>
+                    } @empty {
+                    <p class="hint">No private posts.</p>
+                    }
+                </div>
+                <div class="post-detail">
+                    @if (selected(); as d) {
+                        @if (!d.isPrivate) {
+                        <p class="hint">This post is not private — it has no form.</p>
+                        } @else if (registrationsLoading()) {
+                        <p class="hint">Loading submissions…</p>
+                        } @else {
+                        <div class="detail-field">
+                            <label>Submissions <span class="field-hint-inline">{{ registrations().length }}</span></label>
+                        </div>
+                        @for (r of registrations(); track r.id) {
+                        <div class="registration-row">
+                            <div class="registration-head">
+                                <span class="invite-email">{{ r.name || r.nickname || r.email || 'Anonymous' }}</span>
+                                <span class="field-hint-inline">{{ r.createdAt | date:'d MMM, HH:mm' }}</span>
+                            </div>
+                            <div class="field-hint-inline">
+                                @if (r.email) { {{ r.email }} }
+                                @if (r.nickname) { · {{ r.nickname }} }
+                                @if (r.socialLink) { · {{ r.socialLink }} }
+                            </div>
+                            @for (a of registrationAnswers(r); track a.label) {
+                            <div class="field-hint-inline">{{ a.label }}: {{ a.value }}</div>
+                            }
+                        </div>
+                        } @empty {
+                        <p class="hint">No submissions yet.</p>
+                        }
+                        }
+                    } @else {
+                    <p class="hint">Pick a private post on the left.</p>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (deleteConfirmId()) {
+    <app-modal (closed)="deleteConfirmId.set(null)">
+        <svg modal-icon lucideTrash2 class="icon"></svg>
+        <span modal-title>Delete this post?</span>
+        <p>This cannot be undone.</p>
+        <button modal-actions class="btn-ghost" (click)="deleteConfirmId.set(null)">Cancel</button>
+        <button modal-actions class="btn-accent" (click)="confirmDelete()">Delete</button>
+    </app-modal>
+    }
+</div>

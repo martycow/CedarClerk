@@ -1,19 +1,6 @@
+<!--N7: this is a tab body inside the Posts Manager now, not a page of its own — the page header
+it used to carry lives there.-->
 <div class="comments-page">
-    <header class="comments-header">
-        <a class="icon-btn" routerLink="/editor" title="Back to editor">
-            <svg lucideArrowLeft class="icon"></svg>
-        </a>
-        <app-cedar-logo [size]="19"></app-cedar-logo>
-        <span class="brand-name">Cedar Clerk</span>
-        <span class="crumb-sep">/</span>
-        <span class="crumb-current">Comments &amp; likes</span>
-        <span class="spacer"></span>
-        <button class="icon-btn" (click)="theme.toggle()" title="Toggle theme">
-            {{ theme.theme() === 'dark' ? '☀' : '☾' }}
-        </button>
-        <span class="avatar">{{ avatarInitial() }}</span>
-    </header>
-
     <div class="comments-body">
         <div class="reactions-card">
             <span class="reactions-summary">👍 {{ reactions().likes }} · 👎 {{ reactions().dislikes }}</span>

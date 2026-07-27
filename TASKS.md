@@ -33,7 +33,7 @@ See `docs/ROADMAP.md` Phase 8 for the full breakdown — all 9 steps done. **Not
 
 ## Localization (B26) — half done, 26.07.2026
 Mechanism shipped and live-verified; the translation itself is unfinished. See ADR-044 and the Phase 9 entry in `docs/ROADMAP.md`.
-- [ ] Translate the remaining screens: editor (largest — toolbar, export modal, AI panels), rest of Settings, `/stats`, comments, debug console (~350 of ~450 strings left)
+- [ ] Translate the remaining screens: editor (largest — toolbar, export modal, AI panels), rest of Settings, `/posts` (Posts Manager, incl. its stats and comments tab bodies), debug console (~380 of ~480 strings left — the Posts Manager added English strings of its own, see ADR-046)
 - [ ] Long-word (German) layout pass — no fixed-width buttons, wrapping/ellipsis in the topbar and tab strips. A dev-only pseudo-locale that inflates string length is the cheap way to find the breaks
 - [ ] Decide whether server-side messages get localized (`ErrorMessages.cs` + every `{ error }` body) — a Russian UI currently shows English failure text
 

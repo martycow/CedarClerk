@@ -1,11 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
-import { AuthService } from '../core/auth.service';
-import { ThemeService } from '../core/theme.service';
 import { ChannelsService, Channel, ChannelStats, ChannelStatSnapshotDto, BlogStats, BlogStatSnapshotDto } from '../core/channels.service';
-import { CedarLogoComponent } from '../shared/cedar-logo.component';
-import { LucideArrowLeft as ArrowLeft } from '@lucide/angular';
 
 type MetricKey = 'memberCount' | 'viewCount' | 'likeCount' | 'commentCount';
 
@@ -45,13 +40,12 @@ const PAD_BOTTOM = 4;
 
 @Component({
     selector: 'app-stats',
-    imports: [DatePipe, RouterLink, CedarLogoComponent, ArrowLeft],
+    imports: [DatePipe],
     templateUrl: 'stats.component.html',
     styleUrls: ['stats.component.css'],
 })
+// Rendered as the Posts Manager's statistics tab (N7) — no page chrome of its own any more.
 export class StatsComponent implements OnInit {
-    auth = inject(AuthService);
-    theme = inject(ThemeService);
     private channelsApi = inject(ChannelsService);
 
     loading = signal(true);
@@ -119,11 +113,6 @@ export class StatsComponent implements OnInit {
         } else if (this.selectedChannelId()) {
             this.stats.set(await this.channelsApi.getStats(this.selectedChannelId()!, days));
         }
-    }
-
-    avatarInitial(): string {
-        const email = this.auth.userEmail();
-        return email ? email[0].toUpperCase() : '?';
     }
 
     onHover(event: PointerEvent, key: MetricKey, pointCount: number) {

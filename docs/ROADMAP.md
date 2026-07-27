@@ -174,7 +174,7 @@ Full item text in `docs/BACKLOG.md` under "Brainstorm v2"; this is the status ch
 - [x] N4 — Export: channels picked by clicking only, no text entry (was v1 `B4`) — 26.07.2026, ADR-045. Export-target field removed outright; the connect-by-@username field survives behind a disclosure link, because the discovered-chats list is empty for accounts with no linked Telegram
 - [x] N5 — Export: an unticked destination folds to its header (26.07.2026, ADR-045) — LIVE chip stays visible while folded
 - [ ] N6 — Registration-form field validation (≥2 chars, no specials except `-`) — server-side too, not just the browser
-- [ ] N7 — **Posts Manager**: a new page absorbing comments, reactions, stats and private-post forms
+- [x] N7 — **Posts Manager** at `/posts` (26.07.2026, ADR-046) — four tabs: posts (metadata-only edits: title/tags/folder/private/archive/delete + links out), reactions & comments, stats, forms. The old `/comments` and `/stats` components are reused as tab bodies with their page chrome removed; both routes now redirect. Forms tab is read-only until N10. **Not yet live-verified in a browser**
 - [ ] N10 — Forms tab: edit/delete a form, per-respondent answers, multiple-choice questions + a pie chart
 - [ ] N12 — Form presets, chosen before publishing
 - [x] N13 — Wide export window (26.07.2026, ADR-045) — 1180px with an auto-fit column grid over the sections; needed the `anyComponentStyle` error budget raised 25kB→32kB

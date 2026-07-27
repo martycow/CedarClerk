@@ -1,19 +1,5 @@
+<!--N7: tab body inside the Posts Manager — the page header moved there.-->
 <div class="stats-page">
-    <header class="stats-header">
-        <a class="icon-btn" routerLink="/editor" title="Back to editor">
-            <svg lucideArrowLeft class="icon"></svg>
-        </a>
-        <app-cedar-logo [size]="19"></app-cedar-logo>
-        <span class="brand-name">Cedar Clerk</span>
-        <span class="crumb-sep">/</span>
-        <span class="crumb-current">Stats</span>
-        <span class="spacer"></span>
-        <button class="icon-btn" (click)="theme.toggle()" title="Toggle theme">
-            {{ theme.theme() === 'dark' ? '☀' : '☾' }}
-        </button>
-        <span class="avatar">{{ avatarInitial() }}</span>
-    </header>
-
     <div class="stats-body">
         @if (loading()) {
         <p class="hint">Loading…</p>
