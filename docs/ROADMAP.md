@@ -160,15 +160,33 @@ Executing `_Documents_/CedarClerk/Brainstorm_Features.md` (27 items, Marty's own
 - [~] B26 — UI language picker (RU/EN), laid out to survive long-word languages — **mechanism done 26.07.2026 (ADR-044), translation unfinished**. Shipped: `LocaleService` + typed `en.ts`/`ru.ts` dictionaries (`cedarclerk-web/src/app/core/i18n/`), `ApplicationUser.UiLanguage` (migration `AddUiLanguage`) + `POST /api/auth/ui-language`, picker card in Settings, and login/register/`/drafts` translated. **Still English**: editor (largest), rest of Settings, `/stats`, comments, debug console. Excluded on purpose (see ADR-044): server `{ error }` bodies + `ErrorMessages.cs`, and `/terms`/`/privacy`. The long-word (German) layout pass has not been done
 - [x] B3 — Registration form for private posts (26.07.2026, ADR-042) — per-post configurable form (name/nickname/email/social + custom text/choice questions), shown instead of the 404 when configured, grants access on submit, first rate limit on the public blog. Owner configures it and reads submissions in the Export modal. **Not yet live-verified in a browser**
 
+**The v1 list ends here.** Late on 26.07.2026 Marty rewrote `Brainstorm_Features.md` from scratch — 13 renumbered items replacing the 27 above. Everything shipped stays recorded here; the v1 Medium/Low items that were never started are **parked, not cancelled** (full list in `docs/BACKLOG.md`). Note `B12` among them is a real bug (paragraph numbers don't render although the setting is on), not a feature request.
+
+Deployed to production by Marty on 26.07.2026, including both new migrations (`AddDraftStatSeen`, `AddUiLanguage`); he verifies behaviour live himself and reports back.
+
+### Phase 9b — Brainstorm v2 — not started
+Full item text in `docs/BACKLOG.md` under "Brainstorm v2"; this is the status checklist. One commit per item, short messages.
+
+**High**
+- [ ] N2 — Tag selector in the New Draft dialog (today it's a free-text comma-separated input; the cloud picker exists only in the editor)
+- [ ] N4 — Export: channels picked by clicking only, no text entry (was v1 `B4`)
+- [ ] N5 — Export: an unticked destination collapses/disables its settings block
+- [ ] N6 — Registration-form field validation (≥2 chars, no specials except `-`) — server-side too, not just the browser
+- [ ] N7 — **Posts Manager**: a new page absorbing comments, reactions, stats and private-post forms
+- [ ] N10 — Forms tab: edit/delete a form, per-respondent answers, multiple-choice questions + a pie chart
+- [ ] N12 — Form presets, chosen before publishing
+- [ ] N13 — Wide export window
+
 **Medium**
-- [ ] B4 — Export channel selector: no free-text entry, icons
-- [ ] B10 — Uniform popup behaviour (backdrop, close only via ✕/action)
-- [ ] B11 — Diff markers level with (and covering) the changed region
-- [ ] B12 — Ruler overlays the writing area; paragraph numbers actually render
-- [ ] B19 — Remaining Insert-group buttons become popups
+- [ ] N11 — Telegram DM on a new registration-form submission (extends ADR-040)
 
 **Low**
-- [ ] B1 stats range slider · B2 channel icons · B6 single settings entry (gear) · B7 iPad email overflow · B8 monochrome YouTube icon · B9 emoji panel (overflow + more emoji) · B13 whitespace-reveal toggle · B15 customization moves into an editor side panel · B16 custom accent + writing-area presets · B17 bold signature · B18 custom YouTube link text · B20 better drafts icon · B27 single AI button with progress + cancel
+- [ ] N1 — `/drafts` column sorting + resizable columns
+- [ ] N3 — Round count badges
+- [ ] N8 — Highlight new comments/reactions, mark seen on hover
+- [ ] N9 — Stats range slider, 7 days–6 months, magnetic notches (supersedes v1 `B1`)
+
+**Sequencing note**: N7, N10, N12 (and N8, N9 on top of them) are one project — a single new page — not five separate ones. N4, N5 and N13 all touch the export modal and are cheapest done in one pass.
 
 ---
 

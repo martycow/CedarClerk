@@ -45,9 +45,35 @@ Raw list, not yet scoped into phase steps — logged here per Marty's call, not 
 
 **Open dependency note**: idea #20.3 (private posts must support polls) needs #22 (polls) built first — don't scope the "private" half before polls exist as a content type.
 
-### Brainstorm 26.07.2026 (from `_Documents_/CedarClerk/Brainstorm_Features.md`)
+### Brainstorm v2 — 26.07.2026, current (from `_Documents_/CedarClerk/Brainstorm_Features.md`)
 
-27 items with Marty's own High/Medium/Low priorities, imported verbatim in intent. **These are being executed in priority order as Phase 9** — see `docs/ROADMAP.md`. Numbering below is the brainstorm's own (`B1`…`B27`) to avoid colliding with the idea numbers above.
+**Marty rewrote the brainstorm file from scratch late on 26.07.2026**, replacing the 27-item v1 list below with 13 renumbered items. This table is the live one; v1 is kept underneath only because a chunk of it is neither done nor carried over (see "Parked from v1"). Numbered `N1`…`N13` here — the source file numbers them 1…13, and plain numbers would collide with the idea list above.
+
+| # | Priority | Tag | What | Notes / overlap |
+|---|---|---|---|---|
+| N2 | High | New Draft Window | The new-draft dialog **must** have a tag selector | Real gap, verified in code: the dialog only has a free-text `comma, separated, tags` input (`editor.component.html:769`); the tag-cloud picker with usage counts exists solely in the editor's own tag row (`:931-950`) |
+| N4 | High | Export Window | Remove the channel text inputs — channels are chosen by clicking only | Was v1's `B4`; the "small channel icons" half of B4 is **not** in v2 |
+| N5 | High | Export Window | An unticked destination shrinks or disables its whole settings block so it stops drawing attention | Extends the shipped B5 redesign (checkbox per destination), doesn't replace it |
+| N6 | High | Post Questionnaire | Validate the registration-form inputs: name/surname ≥ 2 characters, no special characters except `-` | Extends the shipped B3 (ADR-042). Server-side validation must move too, not just the browser — the form POST is trivially replayable |
+| N7 | High | Status Page | **New "Posts Manager" page** — comments, likes, stats and private-post form management all move onto it. Sections: post management (pick a post, minimal edits), reactions & comments, statistics, forms (private posts only) | The big one. Absorbs today's `/stats` and `/comments` pages |
+| N10 | High | Status Page | **Forms tab** — private posts only. Edit/delete a form, see who answered what and when, add a multiple-choice field type with a pie chart of the answer distribution | Depends on N7's page existing. Heaviest single item in the list |
+| N12 | High | Status Page | **Form presets** — build a preset of questions once, pick which one to use before publishing a post | Depends on N10 |
+| N13 | High | Export Window | Make the export window much wider — near the full available area. It's the most important window after the writing area | Interacts with N4/N5: worth doing the three as one pass over that modal |
+| N11 | Medium | Notifications | Telegram DM when someone successfully fills in a registration form | Extends ADR-040's notification plumbing, which today fires only on comments and likes |
+| N1 | Low | Drafts Page | Sort the table by the chosen column; resizable columns | |
+| N3 | Low | UI | Small round count badges (e.g. "10 new comments") for things worth attention | Pairs naturally with N8 and with B23's since-last-session delta, which already computes "what's new" server-side |
+| N8 | Low | Status Page | Comments/reactions tab: highlight new entries, mark them seen on hover | Same "seen" problem B23 solved for `/drafts` — reuse the `DraftStatSeen` idea rather than inventing a second one |
+| N9 | Low | Status Page | Custom stats range: 7 days to 6 months, with magnetic notches at 7/14/30/60/90 days | Supersedes v1's `B1` (which said 1–180 days, notches at 14/30/90/180) |
+
+**Grouping note**: N7 + N10 + N12 (+ N8, N9) are not five independent items — they all build one new Posts Manager page. Scheduling them apart would mean building that page's shell three times.
+
+**Not in v2 but still live**: `B26` (interface language) is half-shipped — mechanism + 3 screens done, the rest of the UI still English. It dropped out of the rewritten file, but the work exists in the code and is tracked in `TASKS.md`; don't treat its absence here as cancellation.
+
+**Parked from v1** — neither done nor carried into v2, so deliberately unscheduled rather than deleted: `B10` (uniform popup behaviour), `B11` (diff markers level with the changed region), `B12` (ruler overlay + paragraph numbers not rendering), `B19` (remaining Insert buttons become popups), `B2` (channel icons), `B6` (single settings entry), `B7` (iPad email overflow), `B8` (monochrome YouTube icon), `B9` (emoji panel), `B13` (whitespace reveal), `B15` (customization side panel), `B16` (custom accent + writing-area presets), `B17` (bold signature), `B18` (custom YouTube link text), `B20` (drafts icon), `B27` (single AI button). `B12`'s "paragraph numbers don't render despite the setting being on" is a **bug**, not a feature request — worth pulling back in regardless of the rest.
+
+### Brainstorm v1 — 26.07.2026, superseded
+
+27 items with Marty's own High/Medium/Low priorities. Executed as Phase 9 (see `docs/ROADMAP.md`) until the rewrite above replaced it: `B3`, `B5`, `B14`, `B21`, `B22`, `B23`, `B24`, `B25` shipped, `B26` half-shipped, the rest parked as listed above. Numbering is the brainstorm's own (`B1`…`B27`).
 
 | # | Priority | Tag | What |
 |---|---|---|---|

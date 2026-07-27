@@ -3,10 +3,11 @@
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
 ## Critical before the next production deploy
-- [ ] Push real provider keys to the Pi's `data.conf` — billing (Stripe/Telegram Stars/PayPal) and auto-translate are dead in production until this happens. Full instructions: `docs/integrations-setup.md`.
+- [x] Push real provider keys to the Pi's `data.conf` — done by Marty; **a real payment goes through in production, tested on his own card** (26.07.2026). Auto-translate uses the same keys mechanism but wasn't called out as tested.
 - [ ] Manually activate the Stripe Customer Portal in the Stripe Dashboard (Settings → Billing) — the code path (`POST /api/billing/stripe/portal`) exists but the portal itself isn't turned on yet.
+- [ ] Fresh Resend API key — the configured one 401s (issued for a since-deleted domain), so invite emails still don't send. See `CHANGELOG.md`, 26.07.2026 deploy follow-ups.
 - [x] Run `Scripts/deploy.ps1` end-to-end — done 16.07.2026 (Marty deployed commit `98ec07e`, health check passed).
-- [ ] Verify, in production only (bot is disabled in local dev): a real Stripe test-mode payment (card `4242 4242 4242 4242`) and a real auto-translate call. (Telegram post-signature path — verified working 16.07.2026 as part of the Blocks migration testing below.)
+- [x] Verify a real payment in production — done 26.07.2026 (Marty's own card, not just test mode). A real auto-translate call in production is still unconfirmed.
 - [x] Deploy the empty-carousel/collage fix (`CedarToTelegramBlocksRenderer.cs`) — **stale as of 25.07.2026**: the fix has been committed and shipped since the `98ec07e` deploy (16.07.2026); the guard (`Count > 0` before yielding carousel/collage/list/table/etc. blocks) is present in the current code. See ADR-019/027 in `docs/DECISIONS.md`.
 
 ## Telegram Bot API 10.2 migration (16.07.2026) — mostly verified live, some gaps remain
