@@ -1078,6 +1078,20 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.newDraftExpanded.set(false);
         this.newDraftOpen.set(true);
         this.ensureFoldersLoaded();
+        // N2 — the dialog picks tags from what's already in use, not just free text.
+        this.ensureTagUsageLoaded();
+    }
+
+    // The dialog keeps tags as the comma string the create call wants; these two just let the
+    // pill row read and write that string without a second source of truth.
+    newDraftTagList(): string[] {
+        return this.newDraftTags.split(',').map(t => t.trim()).filter(t => t.length > 0);
+    }
+
+    toggleNewDraftTag(tag: string) {
+        const list = this.newDraftTagList();
+        const next = list.includes(tag) ? list.filter(t => t !== tag) : [...list, tag];
+        this.newDraftTags = next.join(', ');
     }
 
     closeNewDraftDialog() {

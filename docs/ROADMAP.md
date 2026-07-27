@@ -170,7 +170,7 @@ Deployed to production by Marty on 26.07.2026, including both new migrations (`A
 Full item text in `docs/BACKLOG.md` under "Brainstorm v2"; this is the status checklist. One commit per item, short messages.
 
 **High**
-- [ ] N2 — Tag selector in the New Draft dialog (today it's a free-text comma-separated input; the cloud picker exists only in the editor)
+- [x] N2 — Tag selector in the New Draft dialog (27.07.2026) — the same usage-counted tag cloud the editor's tag row uses (`GET /api/drafts/tags`), top 12 by usage, toggling into the existing comma string; the free-text input stays for tags that don't exist yet
 - [x] N4 — Export: channels picked by clicking only, no text entry (was v1 `B4`) — 26.07.2026, ADR-045. Export-target field removed outright; the connect-by-@username field survives behind a disclosure link, because the discovered-chats list is empty for accounts with no linked Telegram
 - [x] N5 — Export: an unticked destination folds to its header (26.07.2026, ADR-045) — LIVE chip stays visible while folded
 - [x] N6 — Registration-form field validation (27.07.2026, ADR-048) — `RegistrationFieldValidator` in Core (unit-tested, Unicode letters so Cyrillic passes), enforced server-side and mirrored in the page script. Name only; nickname/email/social keep their own rules

@@ -737,6 +737,17 @@
             </div>
             <div>
                 <span class="tb-caption">Tags</span>
+                <!--N2: pick from tags already in use (same source as the editor's tag cloud);
+                the input stays for tags that don't exist yet.-->
+                @if (tagUsage().length) {
+                <div class="tag-cloud" style="margin-top:6px">
+                    @for (u of tagUsage().slice(0, 12); track u.tag) {
+                    <button class="tag-pill" [class.on]="newDraftTagList().includes(u.tag)" (click)="toggleNewDraftTag(u.tag)">
+                        #{{ u.tag }} <span class="tag-pill-count">{{ u.count }}</span>
+                    </button>
+                    }
+                </div>
+                }
                 <input class="chat-input" style="margin-top:6px" [(ngModel)]="newDraftTags" placeholder="comma, separated, tags">
             </div>
             <div>
