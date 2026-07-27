@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
 import { LocaleService, UiLang } from '../core/i18n/locale.service';
@@ -18,6 +18,7 @@ import {
 } from '@lucide/angular';
 
 type PayMethod = 'stripe' | 'paypal' | 'stars';
+export type SettingsTab = 'profile' | 'account';
 
 @Component({
     selector: 'app-settings',
@@ -30,6 +31,7 @@ export class SettingsComponent implements OnInit {
     theme = inject(ThemeService);
     locale = inject(LocaleService);
     t = this.locale.t;
+    private route = inject(ActivatedRoute);
     private billingApi = inject(BillingService);
     private telegramLink = inject(TelegramLinkService);
     private channelsApi = inject(ChannelsService);
@@ -65,6 +67,12 @@ export class SettingsComponent implements OnInit {
 
     languageError = signal<string | null>(null);
 
+    // I12 — two groups rather than one long scroll: "profile" is the author and what publishes
+    // under their name, "account" is the machinery (language, plan, connected services). The
+    // account menu deep-links to the profile half, which is what "opened by clicking the user"
+    // meant; the topbar's Settings button still lands on the general page.
+    tab = signal<SettingsTab>('profile');
+
     billing = signal<BillingStatus | null>(null);
     billingBusy = signal(false);
     billingMessage = signal<string | null>(null);
@@ -80,6 +88,10 @@ export class SettingsComponent implements OnInit {
     channels = signal<Channel[]>([]);
 
     async ngOnInit() {
+        // The account menu links to /settings?tab=profile (I12).
+        const requested = this.route.snapshot.queryParamMap.get('tab');
+        if (requested === 'profile' || requested === 'account') this.tab.set(requested);
+
         this.signatureText = this.auth.postSignature() ?? '';
         this.signatureUrlText = this.auth.postSignatureUrl() ?? '';
         this.authorDisplayNameText = this.auth.authorDisplayName() ?? '';
@@ -117,6 +129,10 @@ export class SettingsComponent implements OnInit {
 
     channelsSummary(): string {
         return this.channels().map(c => c.title).join(', ');
+    }
+
+    setTab(tab: SettingsTab) {
+        this.tab.set(tab);
     }
 
     jump(id: string) {

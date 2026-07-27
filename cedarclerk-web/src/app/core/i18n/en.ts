@@ -140,8 +140,6 @@ export const en = {
         logout: 'Log out',
         enterFullscreen: 'Fullscreen',
         exitFullscreen: 'Exit fullscreen',
-        zoomIn: 'Zoom in',
-        zoomOut: 'Zoom out',
         // Toolbar button tooltips.
         tb: {
             undo: 'Undo',
@@ -481,6 +479,10 @@ export const en = {
     },
     settings: {
         crumb: 'Settings',
+        tabs: {
+            profile: 'Profile',
+            account: 'Account',
+        },
         saved: 'Saved',
         language: {
             nav: 'Language',

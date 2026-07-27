@@ -1333,7 +1333,7 @@
     box-shadow: var(--shadow);
     padding: 28px 36px 36px;
     font-family: var(--sheet-typeface, var(--font-sans));
-    font-size: calc(var(--sheet-font-size, 16px) * var(--zoom, 1));
+    font-size: var(--sheet-font-size, 16px);
     line-height: var(--sheet-line-height, 1.6);
 }
 
@@ -1412,35 +1412,6 @@
     border-top: 1px solid var(--border);
     font-size: 11.5px;
     color: var(--t2);
-}
-
-.zoom-control {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.zoom-control button {
-    border: none;
-    background: none;
-    color: var(--t2);
-    cursor: pointer;
-    font-size: 13px;
-    width: 18px;
-    height: 18px;
-    border-radius: 4px;
-    line-height: 1;
-    padding: 0;
-}
-
-.zoom-control button:hover {
-    background: rgba(128, 120, 100, .14);
-}
-
-.zoom-control span {
-    min-width: 36px;
-    text-align: center;
-    font-variant-numeric: tabular-nums;
 }
 
 .sync-indicator {
@@ -1988,8 +1959,8 @@ input[type="datetime-local"]:focus-visible {
     }
 }
 
-/* I13 — fullscreen toggle in the status bar; matches the zoom controls beside it rather than the
-   topbar's icon buttons, which are a size larger. */
+/* I13 — fullscreen toggle in the status bar, sized to the bar rather than to the topbar's
+   icon buttons, which are a size larger. */
 .status-icon-btn {
     display: flex;
     align-items: center;

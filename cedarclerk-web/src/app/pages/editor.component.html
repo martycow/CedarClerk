@@ -1018,7 +1018,6 @@
                     [class.flush]="appearance.prefs().sheetFlush"
                     [class.show-para-numbers]="appearance.prefs().showParagraphNumbers"
                     [class.show-line-rules]="appearance.prefs().showLineRules"
-                    [style.--zoom]="zoomFactor()"
                     [style.--sheet-typeface]="sheetTypefaceStack()"
                     [style.--sheet-font-size.px]="appearance.prefs().fontSize"
                     [style.--sheet-line-height]="appearance.prefs().lineHeight"></div>
@@ -1040,11 +1039,6 @@
 
     <!--Status bar-->
     <div class="status-bar">
-        <div class="zoom-control">
-            <button (click)="zoomOut()" [title]="t().editor.zoomOut">−</button>
-            <span>{{ zoom() }}%</span>
-            <button (click)="zoomIn()" [title]="t().editor.zoomIn">+</button>
-        </div>
         <span class="spacer"></span>
         @if (appearance.prefs().showWordCount) {
         <span>{{ wordCount() }} words</span>

@@ -5,7 +5,7 @@ import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { PopoverComponent } from './popover.component';
 import { CountBadgeComponent } from './count-badge.component';
-import { LucideLineChart as LineChart, LucideSettings as Settings, LucideLogOut as LogOut } from '@lucide/angular';
+import { LucideLineChart as LineChart, LucideSettings as Settings, LucideLogOut as LogOut, LucideUserRound as UserRound } from '@lucide/angular';
 
 // IB9 — the avatar was a live account popover in the editor and a dead <span> on /drafts,
 // /settings and /posts, which read as "the profile button doesn't work on some pages". The menu
@@ -13,7 +13,7 @@ import { LucideLineChart as LineChart, LucideSettings as Settings, LucideLogOut 
 // becomes one component rather than markup copied four times.
 @Component({
     selector: 'app-account-menu',
-    imports: [RouterLink, PopoverComponent, CountBadgeComponent, LineChart, Settings, LogOut],
+    imports: [RouterLink, PopoverComponent, CountBadgeComponent, LineChart, Settings, LogOut, UserRound],
     template: `
         <app-popover align="right">
             <button trigger class="account-trigger" [title]="t().editor.account">
@@ -23,6 +23,13 @@ import { LucideLineChart as LineChart, LucideSettings as Settings, LucideLogOut 
             <div panel class="account-popover">
                 <p class="profile-email">{{ auth.userEmail() }}</p>
                 <div class="popover-divider"></div>
+                <!--I12: the profile half of Settings opens from here — "clicking the user" is
+                where a profile belongs. Shown even when showNav is false, because the topbar's
+                Settings button goes to the general page, not to this.-->
+                <a class="account-action-btn" routerLink="/settings" [queryParams]="{ tab: 'profile' }">
+                    <svg lucideUserRound class="icon-sm"></svg>
+                    {{ t().settings.tabs.profile }}
+                </a>
                 @if (showNav()) {
                 <a class="account-action-btn" routerLink="/editor">
                     {{ t().common.backToEditor }}

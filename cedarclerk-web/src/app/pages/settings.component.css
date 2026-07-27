@@ -857,3 +857,34 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* I12 — two groups instead of one long scroll. Same shape as the Posts Manager's tab strip, so
+   the two settings-shaped pages in the app read the same way. */
+.settings-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.settings-tabs button {
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: 13.5px;
+    color: var(--t2);
+    padding: 7px 14px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+}
+
+.settings-tabs button:hover {
+    color: var(--text);
+}
+
+.settings-tabs button.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    font-weight: 600;
+}

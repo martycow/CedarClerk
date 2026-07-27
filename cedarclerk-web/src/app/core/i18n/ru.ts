@@ -144,8 +144,6 @@ export const ru: Dict = {
         logout: 'Выйти',
         enterFullscreen: 'Полный экран',
         exitFullscreen: 'Выйти из полного экрана',
-        zoomIn: 'Увеличить',
-        zoomOut: 'Уменьшить',
         tb: {
             undo: 'Отменить',
             redo: 'Повторить',
@@ -482,6 +480,10 @@ export const ru: Dict = {
     },
     settings: {
         crumb: 'Настройки',
+        tabs: {
+            profile: 'Профиль',
+            account: 'Аккаунт',
+        },
         saved: 'Сохранено',
         language: {
             nav: 'Язык',

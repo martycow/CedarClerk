@@ -15,16 +15,29 @@
     </header>
 
     <div class="settings-body">
+        <!--I12: split in two. "Profile" is everything about the author and what gets published
+        under their name — it's reached from the account menu, which is where a profile belongs.
+        "Account" is the machinery: language, plan, connected services. Appearance is neither and
+        already lives in the editor's own panel (I14).-->
+        <nav class="settings-tabs">
+            <button [class.active]="tab() === 'profile'" (click)="setTab('profile')">{{ t().settings.tabs.profile }}</button>
+            <button [class.active]="tab() === 'account'" (click)="setTab('account')">{{ t().settings.tabs.account }}</button>
+        </nav>
+
         <nav class="anchor-chips">
+            @if (tab() === 'profile') {
             <button (click)="jump('sec-profile')">{{ t().settings.profile.nav }}</button>
-            <button (click)="jump('sec-language')">{{ t().settings.language.nav }}</button>
             <button (click)="jump('sec-header-slots')">{{ t().settings.headerSlots.nav }}</button>
             <button (click)="jump('sec-social-links')">{{ t().settings.social.nav }}</button>
+            } @else {
+            <button (click)="jump('sec-language')">{{ t().settings.language.nav }}</button>
             <button (click)="jump('sec-subscription')">{{ t().settings.subscription.nav }}</button>
             <button (click)="jump('sec-integrations')">{{ t().settings.integrations.nav }}</button>
+            }
         </nav>
 
         <!-- ============ PROFILE ============ -->
+        @if (tab() === 'profile') {
         <section id="sec-profile" class="settings-card">
             <h2>{{ t().settings.profile.title }}</h2>
             <div class="profile-row">
@@ -65,8 +78,10 @@
                 <button class="btn-danger-ghost" (click)="logout()">{{ t().settings.profile.logout }}</button>
             </div>
         </section>
+        }
 
         <!-- ============ LANGUAGE ============ -->
+        @if (tab() === 'account') {
         <section id="sec-language" class="settings-card">
             <h2>{{ t().settings.language.title }}</h2>
             <p class="field-hint">{{ t().settings.language.hint }}</p>
@@ -79,17 +94,21 @@
             </div>
             @if (languageError()) { <p class="field-error">{{ languageError() }}</p> }
         </section>
+        }
 
         <!-- Appearance and toolbar customization moved into the editor's side panel (I14/B15):
              every control there changes how the writing sheet looks, and judging a type size on a
              different screen is guesswork. Not duplicated here - one home each, same rule as B6. -->
+        @if (tab() === 'account') {
         <section class="settings-card">
             <h2>{{ t().settings.appearance.title }}</h2>
             <p class="field-hint">{{ t().settings.appearance.movedToEditor }}</p>
             <a class="anchor-chips-link" routerLink="/editor">{{ t().common.backToEditor }}</a>
         </section>
+        }
 
         <!-- ============ HEADER SLOTS ============ -->
+        @if (tab() === 'profile') {
         <section id="sec-header-slots" class="settings-card">
             <h2>{{ t().settings.headerSlots.title }}</h2>
             <p class="field-hint">{{ t().settings.headerSlots.hint }}</p>
@@ -155,8 +174,10 @@
             </div>
             @if (profileError()) { <p class="field-error">{{ profileError() }}</p> }
         </section>
+        }
 
         <!-- ============ SOCIAL LINKS ============ -->
+        @if (tab() === 'profile') {
         <section id="sec-social-links" class="settings-card">
             <h2>{{ t().settings.social.title }}</h2>
             <p class="field-hint">{{ t().settings.social.hint }}</p>
@@ -192,8 +213,10 @@
             </div>
             @if (socialError()) { <p class="field-error">{{ socialError() }}</p> }
         </section>
+        }
 
         <!-- ============ SUBSCRIPTION ============ -->
+        @if (tab() === 'account') {
         <section id="sec-subscription" class="settings-card">
             <h2>{{ t().settings.subscription.title }}</h2>
 
@@ -295,8 +318,10 @@
             }
             }
         </section>
+        }
 
         <!-- ============ INTEGRATIONS ============ -->
+        @if (tab() === 'account') {
         <section id="sec-integrations" class="settings-card">
             <h2>{{ t().settings.integrations.title }}</h2>
 
@@ -371,5 +396,6 @@
                 <a class="link-btn" routerLink="/editor">{{ t().settings.integrations.manageInEditor }}</a>
             </div>
         </section>
+        }
     </div>
 </div>

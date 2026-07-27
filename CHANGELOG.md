@@ -20,6 +20,16 @@ Two translation misses from the ADR-050 sweep: the paragraph-format dropdown's t
 
 Not started: IB5 (blog comment form). `dotnet test` 278/278, `ng build` clean. Nothing here is live-verified in a browser yet.
 
+### Settings split (I12), zoom removed (IT1), toolbar customization kept (IT2)
+
+**Zoom is gone** (IT1) — signal, both buttons, the `%` readout, the `--zoom` variable the sheet font size was multiplied by, and both dictionary keys. The Appearance panel's font-size slider covers what it was reaching for.
+
+**Toolbar customization stays** (IT2, declined). It had also stopped being a standalone question: once I14 moved it into the editor's Appearance panel, deleting it would have gutted half of that panel rather than just removing a settings section.
+
+**Settings split in two** (I12). I14 had already taken appearance and toolbar out, so the split landed as **Profile** — the profile card, header slots and social links, i.e. the author and what publishes under their name — and **Account** — language, plan, connected services. The account menu deep-links to the profile half, which is the "opened by clicking the user" part of the ask, while the topbar's Settings button still lands on the page generally.
+
+Sections are guarded by tab individually rather than physically reordered. They were already in the right relative order within each tab, and moving large blocks with a script is precisely what silently deleted the Language section earlier today — not a mistake worth making twice in one day.
+
 ### Low-priority sweep (I3, I5, I6, I8, I13, I17) — and a regression caught
 
 Six of the seven Low items.

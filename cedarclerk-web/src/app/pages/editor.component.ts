@@ -323,8 +323,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     watermarkError = signal<string | null>(null);
     readonly watermarkMaxLength = WATERMARK_MAX_LENGTH;
 
-    zoom = signal(100);
-
     uploads = signal<UploadItem[]>([]);
     private uploadSeq = 0;
 
@@ -389,10 +387,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
-    zoomFactor(): number {
-        return this.zoom() / 100;
-    }
-
     // Writing-sheet preferences (ADR-035, Settings → Appearance) — blog-unaffected, editor-only.
     editorFocused = signal(false);
 
@@ -419,14 +413,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     focusModeActive(): boolean {
         return this.appearance.prefs().focusModeHideToolbar && this.editorFocused();
-    }
-
-    zoomIn() {
-        this.zoom.update(z => Math.min(200, z + 10));
-    }
-
-    zoomOut() {
-        this.zoom.update(z => Math.max(50, z - 10));
     }
 
     wordCount(): number {
