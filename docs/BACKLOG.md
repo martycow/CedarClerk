@@ -100,7 +100,7 @@ Scoped into `docs/ROADMAP.md` Phase 9c; this table is the full text plus the ded
 
 | # | Priority | Tag | What | Verdict / overlap |
 |---|---|---|---|---|
-| IF2 | High | Admin Panel | Admin panel page: manage posts and users, create invite codes, see which user came in on which invite, activate/deactivate a subscription, and much more — "the more functions the better" | **Same initiative as idea #12** above (admin role + user-management CRM), now with a real feature list and High priority. Still needs the role concept, a migration and admin-only endpoints — none of which exist. The largest single item across all three lists |
+| IF2 | High | Admin Panel | Admin panel page: manage posts and users, create invite codes, see which user came in on which invite, activate/deactivate a subscription, and much more — "the more functions the better" | **Same initiative as idea #12** above. **Scoped 27.07.2026 — see `docs/admin-panel-scope.md`** for the verified state of the code, the three decisions it needs, a 5-step build order and 5 open questions. Headline findings: no role concept exists at all; invite codes are one config string, so attribution needs new data and **cannot be backfilled** for existing accounts; and cross-owner access must be a separate `/api/admin` endpoint set rather than a bypass flag threaded through the 61 owner-scoped queries |
 | IF1 | Low | Profile | Avatar upload | New. `AssetEndpoints` + the storage quota already exist, so this is mostly profile plumbing |
 
 ### Brainstorm v2 — 26.07.2026, current (from `_Documents_/CedarClerk/Brainstorm_Features.md`)
