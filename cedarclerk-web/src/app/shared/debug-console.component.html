@@ -1,4 +1,7 @@
-<div class="debug-console" [class.open]="open()">
+<div class="debug-console" [class.open]="open()" [style.--host-bar-h.px]="hostBarHeight()">
+    <!--Only pages without a status bar of their own get a floating tab; the editor hosts the
+    toggle inside its status bar instead (hostBarHeight > 0).-->
+    @if (!hostBarHeight()) {
     <button class="debug-tab" (click)="toggleOpen()">
         <svg lucideTerminal class="icon-sm"></svg>
         <span>{{ t().debug.console }}</span>
@@ -9,9 +12,9 @@
         <span class="debug-badge error">{{ errorCount() }}</span>
         }
     </button>
+    }
 
-    @if (open()) {
-    <div class="debug-panel">
+    <div class="debug-panel" [attr.aria-hidden]="!open()">
         <div class="debug-panel-head">
             <span>{{ t().debug.requests(entries().length) }}</span>
             <div class="spacer"></div>
@@ -19,6 +22,7 @@
             <button class="mini" (click)="toggleOpen()" [title]="t().common.close"><svg lucideX class="icon-sm"></svg></button>
         </div>
         <div class="debug-panel-list">
+            @if (open()) {
             @for (e of entries(); track e.id) {
             <div class="debug-row" [class.expanded]="expandedId() === e.id" (click)="toggleExpand(e.id)">
                 <div class="debug-row-summary">
@@ -49,7 +53,7 @@
             @if (entries().length === 0) {
             <p class="debug-empty">{{ t().debug.empty }}</p>
             }
+            }
         </div>
     </div>
-    }
 </div>

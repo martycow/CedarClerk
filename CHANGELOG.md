@@ -2,6 +2,14 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-07-27 (latest) — the console moves into the status bar
+
+Marty reported the editor's fullscreen button as unclickable, "something is covering it". It was the debug console. Its host is a fixed full-width strip pinned to the bottom of the viewport, and the 27px `margin-bottom` added on 25.07.2026 to lift the closed tab clear of the status bar is *inside* that strip's box — so the strip covered the whole status bar and ate every click aimed at it. The margin had fixed how it looked without fixing what it did.
+
+The host is now `pointer-events: none`, with the tab and panel opting back in, so nothing invisible sits over the bar again. On top of that, Marty's second point — the console belongs *in* the status bar and should slide out of it — is what the console now does: its open state and the host page's bar height moved into `DebugLogService`, the editor renders the toggle as a status-bar button next to fullscreen (with the in-flight/error badges), and the panel animates open above the bar instead of over it. Pages that have no status bar of their own still show the old floating tab, and so does the editor below 768px where the bar itself is hidden.
+
+Also replaced `app.spec.ts`'s scaffold "should render title" test, which asserted an `<h1>` the app shell has never had and had been red for the whole life of the project.
+
 ## 2026-07-27 (late), Phase 9e — second Input sweep
 
 Marty rewrote `Input.md` again: ~60 items across 6 new features, 6 improvement groups and 3 bug groups, confirmed as not overlapping the earlier lists. Imported to `docs/BACKLOG.md` with a cost note per item, since several read as one line and are not.

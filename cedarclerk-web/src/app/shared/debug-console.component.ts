@@ -21,15 +21,16 @@ const MAX_BODY_CHARS = 4000;
 export class DebugConsoleComponent {
     log = inject(DebugLogService);
     t = inject(LocaleService).t;
-    open = signal(false);
     expandedId = signal<number | null>(null);
 
     entries = this.log.entries;
     inFlightCount = this.log.inFlightCount;
     errorCount = computed(() => this.log.errorCount());
+    open = this.log.open;
+    hostBarHeight = this.log.hostBarHeight;
 
     toggleOpen() {
-        this.open.update(v => !v);
+        this.log.toggleOpen();
     }
 
     toggleExpand(id: number) {

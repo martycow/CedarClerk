@@ -1977,6 +1977,35 @@ input[type="datetime-local"]:focus-visible {
     background: rgba(128, 120, 100, .16);
 }
 
+.console-toggle {
+    gap: 5px;
+    font: inherit;
+    padding: 2px 7px;
+}
+
+.console-toggle.active {
+    background: rgba(128, 120, 100, .16);
+    color: var(--text);
+}
+
+.console-badge {
+    border-radius: 999px;
+    padding: 0 5px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 15px;
+}
+
+.console-badge.busy {
+    background: var(--asoft);
+    color: var(--accent);
+}
+
+.console-badge.error {
+    background: color-mix(in srgb, var(--danger) 18%, var(--surface));
+    color: var(--danger);
+}
+
 /* NF2 — the "add a translation" trigger sits with the language tabs. */
 .lang-add {
     border: 1px dashed var(--border);

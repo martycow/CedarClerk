@@ -26,6 +26,19 @@ export class DebugLogService {
     inFlightCount = computed(() => this.entries().filter(e => e.inFlight).length);
     errorCount = computed(() => this.entries().filter(e => e.isError && !e.inFlight).length);
 
+    // Open state lives here, not in the component, so a page that owns a status bar can host the
+    // toggle itself (the editor does) while the panel stays mounted once in the app shell.
+    open = signal(false);
+
+    // Height of the host page's own bottom bar, in px — the panel slides up to sit on top of it
+    // instead of covering it. 0 means "no host bar", which also switches the console back to
+    // rendering its own floating tab.
+    hostBarHeight = signal(0);
+
+    toggleOpen() {
+        this.open.update(v => !v);
+    }
+
     start(method: string, url: string, requestBody: unknown): DebugLogEntry {
         const entry: DebugLogEntry = {
             id: ++this.seq,

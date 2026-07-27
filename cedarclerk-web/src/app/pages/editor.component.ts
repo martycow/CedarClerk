@@ -50,6 +50,7 @@ import { ModalComponent } from '../shared/modal.component';
 import { ThemeService } from '../core/theme.service';
 import { AppearanceService, SHEET_WIDTH_PX, TYPEFACE_STACK, MAX_TABLE_SIZE } from '../core/appearance.service';
 import { ToolbarLayoutService } from '../core/toolbar-layout.service';
+import { DebugLogService } from '../core/debug-log.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { pseudoProgress } from '../core/pseudo-progress.util';
 import { Subscription, TimeoutError } from 'rxjs';
@@ -81,9 +82,15 @@ import {
     LucideFileText as FileText, LucideHeart as Heart, LucideNotebook as Notebook, LucideFile as FileIcon,
     LucideThumbsUp as ThumbsUp,
     LucideFolder as Folder, LucideLock as Lock,
+    LucideTerminal as Terminal,
 } from '@lucide/angular';
 
 const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
+
+// Must match .status-bar's height and the breakpoint that hides it in editor.component.css — the
+// debug console slides out on top of that bar and needs to know it's there.
+const STATUS_BAR_HEIGHT_PX = 27;
+const STATUS_BAR_HIDDEN_MQ = '(max-width: 768px)';
 
 // Rounds a date up to the next boundary of `minutes` (e.g. 05:27 + 5min -> 05:30)
 function ceilToMinutes(date: Date, minutes: number): Date {
@@ -191,7 +198,7 @@ interface UploadItem {
         Settings, ShieldCheck, Sparkle, TableOfContentsIcon, DividerIcon,
         CountBadgeComponent,
         AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
-        Folder, Lock,
+        Folder, Lock, Terminal,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -207,6 +214,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     t = inject(LocaleService).t;
     private route = inject(ActivatedRoute);
     private assets = inject(AssetsService);
+    debugLog = inject(DebugLogService);
+
+    // The status bar hosts the debug console's toggle, so the console is told how tall that bar
+    // is — and that below the mobile breakpoint it isn't rendered at all, where the console goes
+    // back to its own floating tab.
+    private statusBarMq = window.matchMedia(STATUS_BAR_HIDDEN_MQ);
+    private syncStatusBarHeight = () =>
+        this.debugLog.hostBarHeight.set(this.statusBarMq.matches ? 0 : STATUS_BAR_HEIGHT_PX);
 
     @ViewChild('editorHost') editorHost!: ElementRef<HTMLElement>;
     private editor?: Editor;
@@ -507,6 +522,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     async ngAfterViewInit() {
+        this.syncStatusBarHeight();
+        this.statusBarMq.addEventListener('change', this.syncStatusBarHeight);
+
         // Feeds the badge on the Posts Manager link (N3) — fire-and-forget, never blocks setup.
         this.feedback.refreshNewCount();
         // IB6: the folder list used to load only when the picker popover was first opened, but
@@ -627,6 +645,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     ngOnDestroy() {
+        this.statusBarMq.removeEventListener('change', this.syncStatusBarHeight);
+        this.debugLog.hostBarHeight.set(0);
         clearTimeout(this.saveTimer);
         clearTimeout(this.aiToastTimer);
         clearInterval(this.aiEditTicker);

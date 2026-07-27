@@ -5,6 +5,10 @@
     bottom: 0;
     z-index: 200;
     font-family: var(--font-sans);
+    /* The host is a full-width bottom strip whose box (tab + the space reserved for the host
+       page's status bar) sat on top of that status bar and ate its clicks — the editor's
+       fullscreen button was unreachable. Only the actual controls take pointer events now. */
+    pointer-events: none;
 }
 
 .icon-sm { width: 14px; height: 14px; }
@@ -25,15 +29,15 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    /* Clears the editor's status bar (word/char count, sync indicator) — its right-aligned
-       content sits directly under this closed tab otherwise, since both are pinned to the
-       bottom-right corner. Matches .status-bar's height (editor.component.css). */
-    margin-bottom: 27px;
+    /* Sits on top of the host page's own bottom bar (the editor's status bar) rather than over
+       it, and clips the closed panel below itself so opening reads as the panel sliding out of
+       that bar. --host-bar-h is bound from DebugLogService.hostBarHeight. */
+    margin-bottom: var(--host-bar-h, 0px);
 }
 
-.debug-console.open {
-    align-items: stretch;
-    margin-bottom: 0;
+.debug-tab,
+.debug-panel {
+    pointer-events: auto;
 }
 
 .debug-tab {
@@ -83,18 +87,33 @@
     color: var(--danger);
 }
 
+/* Closed is height 0, not display:none — the panel has to stay in the layout for the open/close
+   slide to animate. Height rather than a transform because a transformed panel keeps its 42vh of
+   layout box and would shove the closed tab that far up the screen. */
 .debug-panel {
     display: flex;
     flex-direction: column;
     width: 100%;
-    height: 42vh;
+    height: 0;
+    overflow: hidden;
     background: var(--sheet);
-    border-top: 1px solid var(--border);
+    border-top: 1px solid transparent;
+    transition: height .2s ease, border-top-color .2s ease;
+}
+
+.debug-console.open .debug-panel {
+    height: 42vh;
+    border-top-color: var(--border);
     box-shadow: var(--shadow-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .debug-panel { transition: none; }
 }
 
 .debug-panel-head {
     display: flex;
+    flex: none;
     align-items: center;
     gap: 6px;
     padding: 8px 12px;

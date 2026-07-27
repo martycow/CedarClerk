@@ -1081,6 +1081,19 @@
                 @case ('error') { <span class="dot err"></span> <button class="retry-inline" (click)="retrySave()">{{ t().editor.syncFailedRetry }}</button> }
             }
         </div>
+        <!--The debug console's toggle lives here rather than as a floating tab of its own: that
+        tab's fixed strip covered this bar and swallowed clicks meant for the fullscreen button.-->
+        <button class="status-icon-btn console-toggle" [class.active]="debugLog.open()"
+                (click)="debugLog.toggleOpen()" [title]="t().debug.console">
+            <svg lucideTerminal class="icon-xs"></svg>
+            <span>{{ t().debug.console }}</span>
+            @if (debugLog.inFlightCount() > 0) {
+            <span class="console-badge busy">{{ debugLog.inFlightCount() }}</span>
+            }
+            @if (debugLog.errorCount() > 0) {
+            <span class="console-badge error">{{ debugLog.errorCount() }}</span>
+            }
+        </button>
         <!--I13: real browser fullscreen, not a CSS-only "hide the chrome" mode — the ask was a
         fullscreen button, and the browser's own is the one Esc already exits.-->
         <button class="status-icon-btn" (click)="toggleFullscreen()"
