@@ -82,6 +82,12 @@ public class ApplicationUser : IdentityUser
     // one is DraftTranslation.Language / Languages.cs. Null means the user never picked, and the
     // client falls back to the browser's language.
     public string? UiLanguage { get; set; }
+
+    // High-water mark for "I've seen this feedback" (N8) — comments and reactions created after
+    // it are highlighted as new. One timestamp rather than a per-comment seen table: the list is
+    // ordered by date anyway, so a watermark answers the same question without a row per comment.
+    // Null means nothing has been marked seen yet, so everything reads as new.
+    public DateTime? FeedbackSeenAt { get; set; }
 }
 
 public class Payment

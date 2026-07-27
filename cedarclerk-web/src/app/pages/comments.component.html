@@ -2,19 +2,30 @@
 it used to carry lives there.-->
 <div class="comments-page">
     <div class="comments-body">
-        <div class="reactions-card">
-            <span class="reactions-summary">👍 {{ reactions().likes }} · 👎 {{ reactions().dislikes }}</span>
+        <!--N8: new counts clear on hover, same gesture as the comment cards below.-->
+        <div class="reactions-card" [class.has-new]="reactions().newLikes || reactions().newDislikes"
+             (pointerenter)="markReactionsSeen()">
+            <span class="reactions-summary">
+                👍 {{ reactions().likes }}
+                @if (reactions().newLikes) { <span class="new-delta">+{{ reactions().newLikes }}</span> }
+                ·
+                👎 {{ reactions().dislikes }}
+                @if (reactions().newDislikes) { <span class="new-delta">+{{ reactions().newDislikes }}</span> }
+            </span>
             <span class="reactions-hint">across all your drafts</span>
         </div>
+
+        @if (error()) { <p class="channel-error">{{ error() }}</p> }
 
         @if (loading()) {
         <p class="hint">Loading…</p>
         } @else {
             @for (c of comments(); track c.id) {
-            <div class="comment-card">
+            <div class="comment-card" [class.is-new]="c.isNew" (pointerenter)="markSeen(c)">
                 <div class="comment-row-top">
                     <span class="comment-draft-title">{{ c.draftTitle }}</span>
                     <span class="comment-tag">{{ c.annotationId ? 'In text' : 'Whole article' }}</span>
+                    @if (c.isNew) { <span class="new-chip">New</span> }
                     <span class="spacer"></span>
                     <button class="mini-remove" (click)="deleteComment(c.id)" title="Delete comment">
                         <svg lucideTrash2 class="icon-sm"></svg>

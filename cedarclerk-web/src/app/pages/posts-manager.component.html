@@ -14,7 +14,10 @@
     <div class="manager-body">
         <nav class="manager-tabs">
             <button [class.active]="tab() === 'posts'" (click)="setTab('posts')">Posts</button>
-            <button [class.active]="tab() === 'feedback'" (click)="setTab('feedback')">Reactions &amp; comments</button>
+            <button [class.active]="tab() === 'feedback'" (click)="setTab('feedback')">
+                Reactions &amp; comments
+                <app-count-badge [count]="feedback.newComments() + feedback.newReactions()" title="New since you last looked"></app-count-badge>
+            </button>
             <button [class.active]="tab() === 'stats'" (click)="setTab('stats')">Stats</button>
             <button [class.active]="tab() === 'forms'" (click)="setTab('forms')">Forms</button>
         </nav>

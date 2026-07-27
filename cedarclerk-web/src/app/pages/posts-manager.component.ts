@@ -9,6 +9,8 @@ import {
     RegistrationForm, RegistrationQuestion, RegistrationQuestionType, parseRegistrationForm,
 } from '../core/drafts.service';
 import { FormPresetsService, FormPreset } from '../core/form-presets.service';
+import { CommentsService } from '../core/comments.service';
+import { CountBadgeComponent } from '../shared/count-badge.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { ModalComponent } from '../shared/modal.component';
@@ -30,6 +32,7 @@ export type ManagerTab = 'posts' | 'feedback' | 'stats' | 'forms';
     selector: 'app-posts-manager',
     imports: [
         DatePipe, FormsModule, CedarLogoComponent, ModalComponent, CommentsComponent, StatsComponent,
+        CountBadgeComponent,
         Trash2, Archive, ArchiveRestore, PenLine, Lock, ExternalLink, RefreshCw,
     ],
     templateUrl: 'posts-manager.component.html',
@@ -41,6 +44,7 @@ export class PostsManagerComponent implements OnInit {
     private draftsApi = inject(DraftsService);
     private presetsApi = inject(FormPresetsService);
     private router = inject(Router);
+    feedback = inject(CommentsService);
 
     tab = signal<ManagerTab>('posts');
     loading = signal(true);
@@ -70,6 +74,7 @@ export class PostsManagerComponent implements OnInit {
     newPresetName = '';
 
     async ngOnInit() {
+        this.feedback.refreshNewCount();
         try {
             const [drafts, folders] = await Promise.all([this.draftsApi.list(), this.draftsApi.listFolders()]);
             this.drafts.set(drafts);
@@ -87,6 +92,9 @@ export class PostsManagerComponent implements OnInit {
     }
 
     setTab(tab: ManagerTab) {
+        // Leaving the feedback tab is when its badge is worth re-checking: hovering rows there
+        // is exactly what clears the count.
+        if (this.tab() === 'feedback' && tab !== 'feedback') this.feedback.refreshNewCount();
         this.tab.set(tab);
         if (tab === 'forms') {
             if (!this.presets().length) this.loadPresets();

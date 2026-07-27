@@ -127,6 +127,37 @@
     font-size: 12.5px;
 }
 
+/* N8: unseen feedback. The transition is on the way out, so a card visibly de-highlights under
+   the pointer instead of blinking — that's the feedback that the hover did something. */
+.comment-card.is-new,
+.reactions-card.has-new {
+    border-color: var(--abord);
+    background: var(--asoft);
+    transition: background .5s ease, border-color .5s ease;
+}
+
+.new-chip {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #F4F2EA;
+}
+
+.new-delta {
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.channel-error {
+    font-size: 12px;
+    color: var(--danger);
+    margin: 4px 0;
+}
+
 .comment-row-top {
     display: flex;
     align-items: center;

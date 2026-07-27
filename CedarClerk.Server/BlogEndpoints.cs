@@ -30,6 +30,7 @@ public static class BlogEndpoints
     private record CommentRequest(string? AnnotationId, string? AuthorName, string Text, Guid? ParentCommentId = null);
     private record RegistrationRequest(string? Name, string? Nickname, string? Email, string? SocialLink, Dictionary<string, string>? Answers);
     private record BlogChannelInfo(string Title, string? Username, int? MemberCount);
+    private record MarkSeenRequest(DateTime? SeenAt);
 
     public static void MapBlogEndpoints(this WebApplication app)
     {
@@ -150,6 +151,9 @@ public static class BlogEndpoints
         commentsGroup.MapGet("/", async (ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            // N8 — the watermark is only READ here. Marking things seen is an explicit action
+            // (hovering a row), so opening the page can't silently clear the highlights.
+            var seenAt = await db.Users.Where(u => u.Id == uid).Select(u => u.FeedbackSeenAt).FirstOrDefaultAsync();
             var draftTitleById = await db.Drafts.Where(d => d.OwnerId == uid)
                 .Select(d => new { d.Id, d.Title })
                 .ToDictionaryAsync(d => d.Id, d => d.Title);
@@ -160,17 +164,21 @@ public static class BlogEndpoints
                 .Select(c => new { c.Id, c.DraftId, c.AnnotationId, c.AuthorName, c.Text, c.CreatedAt })
                 .ToListAsync();
 
-            var reactionCounts = await db.Reactions.Where(r => draftIds.Contains(r.DraftId))
-                .GroupBy(r => r.Kind)
-                .Select(g => new { Kind = g.Key, Count = g.Count() })
+            var reactions = await db.Reactions.Where(r => draftIds.Contains(r.DraftId))
+                .Select(r => new { r.Kind, r.CreatedAt })
                 .ToListAsync();
+
+            int Count(string kind, bool onlyNew) => reactions
+                .Count(r => r.Kind == kind && (!onlyNew || (seenAt is null || r.CreatedAt > seenAt)));
 
             return Results.Ok(new
             {
                 reactions = new
                 {
-                    likes = reactionCounts.FirstOrDefault(r => r.Kind == "like")?.Count ?? 0,
-                    dislikes = reactionCounts.FirstOrDefault(r => r.Kind == "dislike")?.Count ?? 0,
+                    likes = Count("like", false),
+                    dislikes = Count("dislike", false),
+                    newLikes = Count("like", true),
+                    newDislikes = Count("dislike", true),
                 },
                 comments = comments.Select(c => new
                 {
@@ -181,8 +189,42 @@ public static class BlogEndpoints
                     c.AuthorName,
                     c.Text,
                     c.CreatedAt,
+                    IsNew = seenAt is null || c.CreatedAt > seenAt,
                 }),
             });
+        });
+
+        // Just the counts behind the attention badges (N3) — the full feedback list is far too
+        // much to fetch for a number in a corner, and this is polled from more than one screen.
+        commentsGroup.MapGet("/new-count", async (ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var seenAt = await db.Users.Where(u => u.Id == uid).Select(u => u.FeedbackSeenAt).FirstOrDefaultAsync();
+            var draftIds = await db.Drafts.Where(d => d.OwnerId == uid).Select(d => d.Id).ToListAsync();
+
+            var newComments = await db.Comments
+                .CountAsync(c => draftIds.Contains(c.DraftId) && (seenAt == null || c.CreatedAt > seenAt));
+            var newReactions = await db.Reactions
+                .CountAsync(r => draftIds.Contains(r.DraftId) && (seenAt == null || r.CreatedAt > seenAt));
+
+            return Results.Ok(new { newComments, newReactions });
+        });
+
+        // Moves the watermark forward only (N8) — a stale request from a tab left open overnight
+        // must not un-see feedback the user has already read elsewhere.
+        commentsGroup.MapPost("/seen", async (MarkSeenRequest req, ClaimsPrincipal principal, CedarDbContext db) =>
+        {
+            var uid = principal.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == uid);
+            if (user is null) return Results.Unauthorized();
+
+            var seenAt = req.SeenAt ?? DateTime.UtcNow;
+            if (user.FeedbackSeenAt is null || seenAt > user.FeedbackSeenAt)
+            {
+                user.FeedbackSeenAt = seenAt;
+                await db.SaveChangesAsync();
+            }
+            return Results.Ok(new { feedbackSeenAt = user.FeedbackSeenAt });
         });
 
         commentsGroup.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>

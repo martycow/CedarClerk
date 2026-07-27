@@ -15,6 +15,8 @@ import {
     RegistrationForm, parseRegistrationForm,
 } from '../core/drafts.service';
 import { FormPresetsService, FormPreset } from '../core/form-presets.service';
+import { CommentsService } from '../core/comments.service';
+import { CountBadgeComponent } from '../shared/count-badge.component';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, PostLanguage, CompressionLevel, ScheduledPost } from '../core/posts.service';
 import { ChannelsService, Channel, ChannelStats, KnownChat } from '../core/channels.service';
@@ -180,6 +182,7 @@ interface UploadItem {
         Settings, Sparkle, TableOfContentsIcon, DividerIcon,
         AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
         SlidersHorizontal, Folder, Lock,
+        CountBadgeComponent,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -191,6 +194,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     toolbarLayout = inject(ToolbarLayoutService);
     private draftsApi = inject(DraftsService);
     private presetsApi = inject(FormPresetsService);
+    feedback = inject(CommentsService);
     private route = inject(ActivatedRoute);
     private assets = inject(AssetsService);
 
@@ -459,6 +463,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     async ngAfterViewInit() {
+        // Feeds the badge on the Posts Manager link (N3) — fire-and-forget, never blocks setup.
+        this.feedback.refreshNewCount();
         const mediaNodeTypes = new Set(['image', 'video', 'audio', 'carousel', 'collage']);
         this.editor = new Editor({
             element: this.editorHost.nativeElement,

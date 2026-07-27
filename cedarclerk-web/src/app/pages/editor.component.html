@@ -48,6 +48,7 @@
                 <a class="account-action-btn" routerLink="/posts">
                     <svg lucideLineChart class="icon-sm"></svg>
                     Posts Manager
+                    <app-count-badge [count]="feedback.newComments() + feedback.newReactions()" title="New comments and reactions"></app-count-badge>
                 </a>
                 <a class="account-action-btn" routerLink="/settings">
                     <svg lucideSettings class="icon-sm"></svg>
