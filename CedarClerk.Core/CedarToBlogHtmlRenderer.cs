@@ -358,6 +358,20 @@ public static class CedarToBlogHtmlRenderer
                     sb.Append($"<option value=\"{EscapeAttr(o)}\">").Append(Escape(o)).Append("</option>");
                 sb.Append("</select>");
             }
+            else if (q.Type == RegistrationQuestionType.Multi)
+            {
+                // Checkboxes, not a multi-<select>: the latter needs ctrl-click to pick more than
+                // one, which nobody discovers on a public page. Collected by the page script into
+                // a JSON array (MultiAnswer, Core) — hence data-question-multi rather than
+                // data-question, which the script reads one value at a time.
+                sb.Append($"<span class=\"reg-multi\" data-question-multi=\"{EscapeAttr(q.Id)}\">");
+                foreach (var o in q.Options)
+                {
+                    sb.Append("<label class=\"reg-multi-option\"><input type=\"checkbox\" value=\"")
+                      .Append(EscapeAttr(o)).Append("\">").Append(Escape(o)).Append("</label>");
+                }
+                sb.Append("</span>");
+            }
             else
             {
                 sb.Append($"<input type=\"text\" class=\"reg-input\" data-question=\"{EscapeAttr(q.Id)}\" maxlength=\"200\"{req}>");

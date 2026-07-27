@@ -44,7 +44,9 @@ export interface PostInvite { id: string; email: string; createdAt: string; url:
 
 // Registration form shown to uninvited visitors of a private post (B3). The JSON shape is
 // owned by the client — the server only length-checks the blob.
-export type RegistrationQuestionType = 'text' | 'choice';
+// 'multi' (N10) answers arrive as a JSON array inside the same string-valued answers map the
+// other types use — see MultiAnswer in CedarClerk.Core for why it isn't a wider type.
+export type RegistrationQuestionType = 'text' | 'choice' | 'multi';
 export interface RegistrationQuestion { id: string; label: string; type: RegistrationQuestionType; options?: string[]; required?: boolean; }
 export interface RegistrationForm {
     intro?: string;

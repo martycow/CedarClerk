@@ -132,4 +132,62 @@ public class RegistrationFormHtmlTests
         Assert.Contains("Needed *", html);
         Assert.Contains("maxlength=\"200\" required", html);
     }
+
+    [Fact]
+    public void Parses_multi_question_type()
+    {
+        var form = RegistrationFormDefinition.Parse(
+            """{"questions":[{"id":"platforms","label":"Platforms","type":"multi","options":["PC","Switch"]}]}""");
+
+        var q = Assert.Single(form!.Questions);
+        Assert.Equal(RegistrationQuestionType.Multi, q.Type);
+        Assert.Equal(["PC", "Switch"], q.Options);
+    }
+
+    [Fact]
+    public void Multi_question_without_options_degrades_to_text()
+    {
+        // Same guard as Choice — a checkbox group of nothing is not renderable.
+        var form = RegistrationFormDefinition.Parse(
+            """{"questions":[{"id":"q","label":"Q","type":"multi","options":[]}]}""");
+
+        Assert.Equal(RegistrationQuestionType.Text, Assert.Single(form!.Questions).Type);
+    }
+
+    [Fact]
+    public void Renders_multi_question_as_checkbox_group()
+    {
+        var form = new RegistrationFormDefinition(null, false, false, false, false,
+            [new RegistrationQuestion("plat", "Platforms", RegistrationQuestionType.Multi, ["PC", "Switch"], false)]);
+
+        var html = CedarToBlogHtmlRenderer.RegistrationFormHtml(form, "T");
+
+        Assert.Contains("data-question-multi=\"plat\"", html);
+        Assert.Contains("<input type=\"checkbox\" value=\"PC\">PC", html);
+        Assert.DoesNotContain("<select", html);
+    }
+
+    [Fact]
+    public void Escapes_options_in_a_multi_question()
+    {
+        var form = new RegistrationFormDefinition(null, false, false, false, false,
+            [new RegistrationQuestion("q", "L", RegistrationQuestionType.Multi, ["\"><script>x</script>"], false)]);
+
+        var html = CedarToBlogHtmlRenderer.RegistrationFormHtml(form, "T");
+
+        Assert.DoesNotContain("<script>x</script>", html);
+        Assert.Contains("&lt;script&gt;", html);
+    }
+
+    [Fact]
+    public void Multi_answer_splits_a_json_array_and_survives_plain_text()
+    {
+        Assert.Equal(["PC", "Switch"], MultiAnswer.Split("""["PC","Switch"]"""));
+        // A single-value answer written by an older row, or by a text question, stays one value.
+        Assert.Equal(["just text"], MultiAnswer.Split("just text"));
+        // Option text that happens to look like an array must not be mangled into pieces.
+        Assert.Equal(["[not, json"], MultiAnswer.Split("[not, json"));
+        Assert.Empty(MultiAnswer.Split(""));
+        Assert.Empty(MultiAnswer.Split("[]"));
+    }
 }

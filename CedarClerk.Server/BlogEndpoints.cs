@@ -465,7 +465,11 @@ public static class BlogEndpoints
         }
         foreach (var q in form.Questions.Where(q => q.Required))
         {
-            if (req.Answers is null || !req.Answers.TryGetValue(q.Id, out var a) || string.IsNullOrWhiteSpace(a))
+            var answered = req.Answers is not null && req.Answers.TryGetValue(q.Id, out var a) && !string.IsNullOrWhiteSpace(a)
+                // A replayed POST can carry a literal empty array where the browser would have
+                // sent "" — an unticked required checkbox group is still unanswered.
+                && (q.Type != RegistrationQuestionType.Multi || MultiAnswer.Split(a).Count > 0);
+            if (!answered)
             {
                 await WriteJsonErrorAsync(ctx, StatusCodes.Status400BadRequest, "Please answer every required question.");
                 return;
@@ -1282,6 +1286,8 @@ public static class BlogEndpoints
         .reg-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--asoft); }
         .reg-question { display: flex; flex-direction: column; gap: 5px; }
         .reg-question-label { font-size: 13px; font-weight: 500; }
+        .reg-multi { display: flex; flex-direction: column; gap: 6px; }
+        .reg-multi-option { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
         .reg-submit { border: none; background: var(--accent); color: #F4F2EA; border-radius: 8px; padding: 11px 18px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; margin-top: 4px; }
         .reg-submit:hover { filter: brightness(1.08); }
         .reg-submit:disabled { opacity: .6; cursor: default; }
@@ -1376,6 +1382,15 @@ public static class BlogEndpoints
                 });
                 form.querySelectorAll('[data-question]').forEach(function (el) {
                     payload.answers[el.getAttribute('data-question')] = el.value.trim();
+                });
+                // Multi-choice answers go over as a JSON array inside the same string map — see
+                // MultiAnswer in CedarClerk.Core.
+                form.querySelectorAll('[data-question-multi]').forEach(function (group) {
+                    var picked = [];
+                    group.querySelectorAll('input[type=checkbox]').forEach(function (box) {
+                        if (box.checked) picked.push(box.value);
+                    });
+                    payload.answers[group.getAttribute('data-question-multi')] = picked.length ? JSON.stringify(picked) : '';
                 });
 
                 errEl.hidden = true;

@@ -17,6 +17,18 @@
     --asoft: color-mix(in srgb, var(--accent) 13%, var(--surface));
     --abord: color-mix(in srgb, var(--accent) 38%, var(--border));
 
+    /* Categorical chart series (N10). Assigned in this fixed order and never cycled — a 7th
+       category folds into "Other". Deliberately excludes --danger/--ok: those mean a state, not
+       an identity. Both light and dark steps were checked against this theme's chart surface
+       (lightness band, chroma floor, colourblind separation, contrast) — re-run that check
+       before changing any value here, don't eyeball it. */
+    --series-1: #6B8A3D;
+    --series-2: #2E6FA8;
+    --series-3: #C56F2C;
+    --series-4: #8A5BA8;
+    --series-5: #A8762A;
+    --series-6: #0E9184;
+
     --radius-sm: 6px;
     --radius-md: 10px;
     --radius-lg: 14px;
@@ -54,6 +66,16 @@
     --accent: color-mix(in srgb, #5B6E46 55%, #E8F0E8 45%);
     --danger: #E2745C;
     --ok: #82BB8C;
+
+    /* Dark series steps are chosen against the dark chart surface, not derived from the light
+       ones — a lightened flip of the light palette lands outside the band this theme needs. */
+    --series-1: #7FA24F;
+    --series-2: #4E90C8;
+    --series-3: #C87A3E;
+    --series-4: #A87CC6;
+    --series-5: #B88C42;
+    --series-6: #2AA294;
+
     --shadow: 0 1px 3px rgba(0, 0, 0, .45);
 
     --blur: saturate(1.7) blur(20px);

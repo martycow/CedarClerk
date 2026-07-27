@@ -113,7 +113,7 @@
         @if (tab() === 'stats') { <app-stats></app-stats> }
 
         @if (tab() === 'forms') {
-            <p class="field-hint">Only private posts have a form. Editing the form, per-question breakdowns and charts come next (N10).</p>
+            <p class="field-hint">Only private posts have a registration form. Uninvited visitors see it instead of a 404 and are let in once they fill it.</p>
             <div class="manager-split">
                 <div class="post-list">
                     @for (d of privatePosts(); track d.id) {
@@ -129,8 +129,121 @@
                         @if (!d.isPrivate) {
                         <p class="hint">This post is not private — it has no form.</p>
                         } @else if (registrationsLoading()) {
-                        <p class="hint">Loading submissions…</p>
+                        <p class="hint">Loading…</p>
                         } @else {
+                        <label class="field-hint">
+                            <input type="checkbox" [checked]="!!regForm()" (change)="toggleForm()" [disabled]="regBusy()">
+                            Show a registration form to uninvited visitors
+                        </label>
+
+                        @if (regForm(); as form) {
+                        <div class="form-editor">
+                            <input class="chat-input" [value]="form.intro ?? ''" (change)="setIntro($any($event.target).value)"
+                                   placeholder="Intro text shown above the form (optional)" maxlength="500">
+                            <div class="pill-row">
+                                <label class="field-hint"><input type="checkbox" [checked]="form.requireName" (change)="toggleFormField('requireName')"> Name</label>
+                                <label class="field-hint"><input type="checkbox" [checked]="form.requireNickname" (change)="toggleFormField('requireNickname')"> Nickname</label>
+                                <label class="field-hint"><input type="checkbox" [checked]="form.requireEmail" (change)="toggleFormField('requireEmail')"> Email</label>
+                                <label class="field-hint"><input type="checkbox" [checked]="form.requireSocial" (change)="toggleFormField('requireSocial')"> Social link</label>
+                            </div>
+
+                            @for (q of form.questions; track q.id) {
+                            <div class="question-row">
+                                <input class="chat-input" [value]="q.label" (change)="updateQuestion(q.id, { label: $any($event.target).value })"
+                                       placeholder="Question" maxlength="200">
+                                <div class="pill-row">
+                                    <button class="pill" [class.on]="q.type === 'text'" (click)="setQuestionType(q.id, 'text')">Text</button>
+                                    <button class="pill" [class.on]="q.type === 'choice'" (click)="setQuestionType(q.id, 'choice')">One of</button>
+                                    <button class="pill" [class.on]="q.type === 'multi'" (click)="setQuestionType(q.id, 'multi')">Several</button>
+                                </div>
+                                @if (q.type === 'choice' || q.type === 'multi') {
+                                <input class="chat-input" [value]="questionOptionsText(q)" (change)="setQuestionOptions(q.id, $any($event.target).value)"
+                                       placeholder="Options, comma separated" maxlength="500">
+                                }
+                                <label class="field-hint">
+                                    <input type="checkbox" [checked]="!!q.required" (change)="updateQuestion(q.id, { required: !q.required })"> Required
+                                </label>
+                                <button class="btn-ghost danger" (click)="removeQuestion(q.id)">
+                                    <svg lucideTrash2 class="icon-sm"></svg> Remove
+                                </button>
+                            </div>
+                            }
+                            <div class="detail-actions">
+                                <button class="btn-ghost" (click)="addQuestion()">Add question</button>
+                                <button class="btn-ghost danger" (click)="deleteForm()" [disabled]="regBusy()">Delete form</button>
+                            </div>
+
+                            <div class="detail-divider"></div>
+
+                            <!--N12: a preset is copied onto the post, never linked, so editing it
+                            later can't rewrite a post that already uses it.-->
+                            <div class="detail-field">
+                                <label>Presets</label>
+                                @if (presets().length) {
+                                <div class="pill-row">
+                                    @for (p of presets(); track p.id) {
+                                    <span class="preset-pill">
+                                        <button class="pill" (click)="applyPreset(p)" [disabled]="regBusy()">{{ p.name }}</button>
+                                        <button class="preset-x" (click)="deletePreset(p)" title="Delete preset">×</button>
+                                    </span>
+                                    }
+                                </div>
+                                } @else {
+                                <p class="field-hint-inline">No presets yet — save this form as one to reuse it on the next post.</p>
+                                }
+                                <div class="preset-add">
+                                    <input class="chat-input" [(ngModel)]="newPresetName" placeholder="Preset name" maxlength="60">
+                                    <button class="btn-ghost" (click)="saveAsPreset()" [disabled]="regBusy() || !newPresetName.trim()">Save as preset</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="detail-divider"></div>
+
+                        <!--Distribution charts: closed questions only. Free text would produce as
+                        many slices as there are submissions.-->
+                        @for (q of chartQuestions(); track q.id) {
+                        @if (distribution(q); as slices) {
+                        @if (slices.length) {
+                        <div class="chart-block">
+                            <div class="chart-title">{{ q.label }}</div>
+                            @if (slices.length === 1) {
+                            <!--A one-slice pie is a full circle carrying no comparison — the
+                            number is the chart here.-->
+                            <p class="chart-single">
+                                <span class="legend-swatch" [style.background]="slices[0].color"></span>
+                                {{ slices[0].label }} — {{ slices[0].count }} ({{ slices[0].percent }}%), everyone who answered
+                            </p>
+                            } @else {
+                            <div class="chart-row">
+                                <svg class="pie" viewBox="0 0 100 100" role="img" [attr.aria-label]="'Answer distribution for ' + q.label">
+                                    @for (s of slices; track s.label) {
+                                    <path [attr.d]="s.path" [attr.fill]="s.color" class="pie-slice">
+                                        <title>{{ s.label }}: {{ s.count }} ({{ s.percent }}%)</title>
+                                    </path>
+                                    }
+                                </svg>
+                                <!--Legend carries label + count + percent, so identity never
+                                rests on colour alone.-->
+                                <ul class="legend">
+                                    @for (s of slices; track s.label) {
+                                    <li>
+                                        <span class="legend-swatch" [style.background]="s.color"></span>
+                                        <span class="legend-label">{{ s.label }}</span>
+                                        <span class="legend-value">{{ s.count }} · {{ s.percent }}%</span>
+                                    </li>
+                                    }
+                                </ul>
+                            </div>
+                            }
+                        </div>
+                        }
+                        }
+                        }
+
+                        <div class="detail-divider"></div>
+                        }
+
                         <div class="detail-field">
                             <label>Submissions <span class="field-hint-inline">{{ registrations().length }}</span></label>
                         </div>

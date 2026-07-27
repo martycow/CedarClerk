@@ -220,6 +220,19 @@ public class DraftStatSeen
     public DateTime SeenAt { get; set; } = DateTime.UtcNow;
 }
 
+// A named, reusable registration-form definition (N12). Holds the exact same client-authored
+// blob shape as Draft.RegistrationFormJson — applying a preset copies the blob onto the draft,
+// it does not link to it, so editing a preset later never silently rewrites a published post's
+// form. Per owner, like Folder.
+public class FormPreset
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public string Name { get; set; } = "";
+    public string FormJson { get; set; } = "";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 // A real, named, user-managed entity (create/rename/delete) — unlike Tags, which stay a flat
 // unmanaged string. See the ADR following ADR-038, docs/DECISIONS.md.
 public class Folder

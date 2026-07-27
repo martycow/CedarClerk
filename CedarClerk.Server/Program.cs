@@ -119,6 +119,7 @@ app.MapWhen(ctx => string.Equals(ctx.Request.Host.Host, blogHost, StringComparis
 app.MapAuthEndpoints();
 app.MapDraftEndpoints();
 app.MapFolderEndpoints();
+app.MapFormPresetEndpoints();
 app.MapBlogEndpoints();
 app.MapPostEndpoints();
 app.MapAssetEndpoints();

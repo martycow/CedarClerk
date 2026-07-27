@@ -4,7 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
-import { DraftsService, DraftMeta, FolderMeta, PostRegistration } from '../core/drafts.service';
+import {
+    DraftsService, DraftMeta, FolderMeta, PostRegistration,
+    RegistrationForm, RegistrationQuestion, RegistrationQuestionType, parseRegistrationForm,
+} from '../core/drafts.service';
+import { FormPresetsService, FormPreset } from '../core/form-presets.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { ModalComponent } from '../shared/modal.component';
@@ -35,6 +39,7 @@ export class PostsManagerComponent implements OnInit {
     auth = inject(AuthService);
     theme = inject(ThemeService);
     private draftsApi = inject(DraftsService);
+    private presetsApi = inject(FormPresetsService);
     private router = inject(Router);
 
     tab = signal<ManagerTab>('posts');
@@ -57,6 +62,13 @@ export class PostsManagerComponent implements OnInit {
     registrations = signal<PostRegistration[]>([]);
     registrationsLoading = signal(false);
 
+    // Forms tab (N10) — the form editor moved here from the export modal, which now only picks a
+    // preset before publishing (N12, ADR-047).
+    regForm = signal<RegistrationForm | null>(null);
+    regBusy = signal(false);
+    presets = signal<FormPreset[]>([]);
+    newPresetName = '';
+
     async ngOnInit() {
         try {
             const [drafts, folders] = await Promise.all([this.draftsApi.list(), this.draftsApi.listFolders()]);
@@ -76,7 +88,10 @@ export class PostsManagerComponent implements OnInit {
 
     setTab(tab: ManagerTab) {
         this.tab.set(tab);
-        if (tab === 'forms' && this.selected()?.isPrivate) this.loadRegistrations();
+        if (tab === 'forms') {
+            if (!this.presets().length) this.loadPresets();
+            if (this.selected()?.isPrivate) this.loadForm();
+        }
     }
 
     // The forms tab only ever deals with private posts — that's the whole point of it.
@@ -94,7 +109,8 @@ export class PostsManagerComponent implements OnInit {
         this.editTitle = d.title;
         this.editTags = d.tags;
         this.registrations.set([]);
-        if (this.tab() === 'forms' && d.isPrivate) this.loadRegistrations();
+        this.regForm.set(null);
+        if (this.tab() === 'forms' && d.isPrivate) this.loadForm();
     }
 
     blogUrl(d: DraftMeta): string | null {
@@ -196,28 +212,260 @@ export class PostsManagerComponent implements OnInit {
         }
     }
 
-    async loadRegistrations() {
+    // Answers are keyed by question id (ADR-042); the labels live in the form definition, which
+    // this tab has in hand — so unlike the first cut, they resolve to the real question text. A
+    // question deleted after someone answered it falls back to its raw key rather than vanishing.
+    registrationAnswers(r: PostRegistration): { label: string; value: string }[] {
+        if (!r.answersJson) return [];
+        let parsed: Record<string, string>;
+        try {
+            parsed = JSON.parse(r.answersJson) as Record<string, string>;
+        } catch {
+            return [];
+        }
+        const questions = this.regForm()?.questions ?? [];
+        return Object.entries(parsed)
+            .filter(([, value]) => `${value}`.trim().length > 0)
+            .map(([key, value]) => {
+                const q = questions.find(x => x.id === key);
+                return {
+                    label: q?.label || key,
+                    value: q?.type === 'multi' ? splitMultiAnswer(value).join(', ') : String(value),
+                };
+            });
+    }
+
+    // ---------- Form editor (N10) ----------
+
+    async loadForm() {
         const d = this.selected();
         if (!d || !d.isPrivate) return;
         this.registrationsLoading.set(true);
         try {
-            this.registrations.set(await this.draftsApi.listRegistrations(d.id));
+            const [full, regs] = await Promise.all([
+                this.draftsApi.get(d.id),
+                this.draftsApi.listRegistrations(d.id),
+            ]);
+            this.regForm.set(parseRegistrationForm(full.registrationFormJson));
+            this.registrations.set(regs);
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to load submissions'));
+            this.error.set(httpErrorMessage(e, 'Failed to load the form'));
         } finally {
             this.registrationsLoading.set(false);
         }
     }
 
-    // Answers are a client-authored blob keyed by question id (ADR-042); the labels live in the
-    // form definition, so a submission alone can only honestly show "question id → answer".
-    registrationAnswers(r: PostRegistration): { label: string; value: string }[] {
-        if (!r.answersJson) return [];
+    // The definition is small and always fully in hand, so every edit persists the whole blob —
+    // same reasoning as the editor's original version of this.
+    private async persistForm() {
+        const d = this.selected();
+        if (!d) return;
+        this.regBusy.set(true);
         try {
-            const parsed = JSON.parse(r.answersJson) as Record<string, string>;
-            return Object.entries(parsed).map(([label, value]) => ({ label, value: String(value) }));
-        } catch {
-            return [];
+            const form = this.regForm();
+            await this.draftsApi.setRegistrationForm(d.id, form ? JSON.stringify(form) : null);
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, 'Failed to save the form'));
+        } finally {
+            this.regBusy.set(false);
         }
     }
+
+    async toggleForm() {
+        this.regForm.set(this.regForm()
+            ? null
+            : { requireName: true, requireNickname: false, requireEmail: true, requireSocial: false, questions: [] });
+        await this.persistForm();
+    }
+
+    async deleteForm() {
+        this.regForm.set(null);
+        await this.persistForm();
+    }
+
+    async toggleFormField(field: 'requireName' | 'requireNickname' | 'requireEmail' | 'requireSocial') {
+        const form = this.regForm();
+        if (!form) return;
+        this.regForm.set({ ...form, [field]: !form[field] });
+        await this.persistForm();
+    }
+
+    async setIntro(intro: string) {
+        const form = this.regForm();
+        if (!form) return;
+        this.regForm.set({ ...form, intro: intro.trim() || undefined });
+        await this.persistForm();
+    }
+
+    addQuestion() {
+        const form = this.regForm();
+        if (!form) return;
+        const q: RegistrationQuestion = { id: `q${Date.now()}`, label: '', type: 'text', required: false };
+        // Not persisted yet: an unlabelled question is dropped by the parser anyway, so it saves
+        // once the label is typed.
+        this.regForm.set({ ...form, questions: [...form.questions, q] });
+    }
+
+    async updateQuestion(id: string, patch: Partial<RegistrationQuestion>) {
+        const form = this.regForm();
+        if (!form) return;
+        this.regForm.set({ ...form, questions: form.questions.map(q => q.id === id ? { ...q, ...patch } : q) });
+        await this.persistForm();
+    }
+
+    async removeQuestion(id: string) {
+        const form = this.regForm();
+        if (!form) return;
+        this.regForm.set({ ...form, questions: form.questions.filter(q => q.id !== id) });
+        await this.persistForm();
+    }
+
+    setQuestionType(id: string, type: RegistrationQuestionType) {
+        this.updateQuestion(id, { type });
+    }
+
+    setQuestionOptions(id: string, raw: string) {
+        this.updateQuestion(id, { options: raw.split(',').map(o => o.trim()).filter(o => o.length > 0) });
+    }
+
+    questionOptionsText(q: RegistrationQuestion): string {
+        return (q.options ?? []).join(', ');
+    }
+
+    // ---------- Presets (N12) ----------
+
+    async loadPresets() {
+        try {
+            this.presets.set(await this.presetsApi.list());
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, 'Failed to load presets'));
+        }
+    }
+
+    async saveAsPreset() {
+        const form = this.regForm();
+        const name = this.newPresetName.trim();
+        if (!form || !name || this.regBusy()) return;
+        this.regBusy.set(true);
+        try {
+            const created = await this.presetsApi.create(name, JSON.stringify(form));
+            this.presets.update(list => [...list, created].sort((a, b) => a.name.localeCompare(b.name)));
+            this.newPresetName = '';
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, 'Failed to save the preset'));
+        } finally {
+            this.regBusy.set(false);
+        }
+    }
+
+    // Copies the preset's definition onto the post. Editing the preset afterwards does not touch
+    // posts that already applied it — that's the point of copying instead of linking.
+    async applyPreset(p: FormPreset) {
+        this.regForm.set(parseRegistrationForm(p.formJson));
+        await this.persistForm();
+    }
+
+    async deletePreset(p: FormPreset) {
+        try {
+            await this.presetsApi.remove(p.id);
+            this.presets.update(list => list.filter(x => x.id !== p.id));
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, 'Failed to delete the preset'));
+        }
+    }
+
+    // ---------- Answer distribution (N10) ----------
+
+    // Only closed questions have a distribution worth drawing — free text would produce as many
+    // slices as submissions.
+    chartQuestions(): RegistrationQuestion[] {
+        return (this.regForm()?.questions ?? []).filter(q => q.type === 'choice' || q.type === 'multi');
+    }
+
+    distribution(q: RegistrationQuestion): PieSlice[] {
+        const counts = new Map<string, number>();
+        for (const r of this.registrations()) {
+            if (!r.answersJson) continue;
+            let parsed: Record<string, string>;
+            try {
+                parsed = JSON.parse(r.answersJson) as Record<string, string>;
+            } catch {
+                continue;
+            }
+            const raw = parsed[q.id];
+            if (raw === undefined) continue;
+            const values = q.type === 'multi' ? splitMultiAnswer(raw) : [String(raw)];
+            for (const v of values) {
+                if (!v.trim()) continue;
+                counts.set(v, (counts.get(v) ?? 0) + 1);
+            }
+        }
+
+        const ordered = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+        // Six is the ceiling on distinguishable series; anything past it folds into one "Other"
+        // slice rather than inventing a seventh colour.
+        const head = ordered.slice(0, SERIES_COUNT - 1);
+        const tail = ordered.slice(SERIES_COUNT - 1);
+        const slices = head.map(([label, count]) => ({ label, count }));
+        if (tail.length) slices.push({ label: 'Other', count: tail.reduce((sum, [, c]) => sum + c, 0) });
+
+        const total = slices.reduce((sum, s) => sum + s.count, 0);
+        if (total === 0) return [];
+
+        // One angle pass, so the arcs and the legend can never disagree about who owns what.
+        let angle = -Math.PI / 2;
+        return slices.map((s, i) => {
+            const sweep = (s.count / total) * Math.PI * 2;
+            const slice: PieSlice = {
+                label: s.label,
+                count: s.count,
+                percent: Math.round((s.count / total) * 100),
+                color: `var(--series-${(i % SERIES_COUNT) + 1})`,
+                path: arcPath(angle, angle + sweep),
+            };
+            angle += sweep;
+            return slice;
+        });
+    }
+}
+
+const SERIES_COUNT = 6;
+const PIE_RADIUS = 46;
+const PIE_CENTER = 50;
+
+export interface PieSlice {
+    label: string;
+    count: number;
+    percent: number;
+    color: string;
+    path: string;
+}
+
+function splitMultiAnswer(value: string): string[] {
+    const trimmed = (value ?? '').trim();
+    if (!trimmed.startsWith('[')) return trimmed ? [trimmed] : [];
+    try {
+        const parsed = JSON.parse(trimmed);
+        return Array.isArray(parsed) ? parsed.map(String).filter(v => v.trim().length > 0) : [trimmed];
+    } catch {
+        return [trimmed];
+    }
+}
+
+// A single slice covering the whole circle can't be drawn as an arc (start and end coincide, so
+// the path collapses) — it becomes two half-circle arcs instead.
+function arcPath(start: number, end: number): string {
+    const full = end - start >= Math.PI * 2 - 1e-6;
+    if (full) {
+        const left = `${PIE_CENTER - PIE_RADIUS} ${PIE_CENTER}`;
+        const right = `${PIE_CENTER + PIE_RADIUS} ${PIE_CENTER}`;
+        return `M ${left} A ${PIE_RADIUS} ${PIE_RADIUS} 0 1 1 ${right} A ${PIE_RADIUS} ${PIE_RADIUS} 0 1 1 ${left} Z`;
+    }
+    const x1 = PIE_CENTER + PIE_RADIUS * Math.cos(start);
+    const y1 = PIE_CENTER + PIE_RADIUS * Math.sin(start);
+    const x2 = PIE_CENTER + PIE_RADIUS * Math.cos(end);
+    const y2 = PIE_CENTER + PIE_RADIUS * Math.sin(end);
+    const largeArc = end - start > Math.PI ? 1 : 0;
+    return `M ${PIE_CENTER} ${PIE_CENTER} L ${x1.toFixed(2)} ${y1.toFixed(2)} `
+        + `A ${PIE_RADIUS} ${PIE_RADIUS} 0 ${largeArc} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`;
 }

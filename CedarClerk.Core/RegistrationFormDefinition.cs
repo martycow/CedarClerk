@@ -7,6 +7,10 @@ public enum RegistrationQuestionType
 {
     Text,
     Choice,
+
+    // Several options at once (N10). Its answer is stored as a JSON array inside the same
+    // string-valued answers map the other types use — see MultiAnswer below for why.
+    Multi,
 }
 
 public record RegistrationQuestion(string Id, string Label, RegistrationQuestionType Type, IReadOnlyList<string> Options, bool Required);
@@ -65,9 +69,12 @@ public record RegistrationFormDefinition(
                 if (string.IsNullOrWhiteSpace(id))
                     id = $"q{questions.Count + 1}";
 
-                var type = (string?)qo["type"] == "choice"
-                    ? RegistrationQuestionType.Choice
-                    : RegistrationQuestionType.Text;
+                var type = (string?)qo["type"] switch
+                {
+                    "choice" => RegistrationQuestionType.Choice,
+                    "multi" => RegistrationQuestionType.Multi,
+                    _ => RegistrationQuestionType.Text,
+                };
 
                 var options = (qo["options"] as JsonArray)?
                     .Select(o => (string?)o)
@@ -75,9 +82,9 @@ public record RegistrationFormDefinition(
                     .Select(o => o!)
                     .ToList() ?? [];
 
-                // A choice question with no options can't be rendered as one — fall back to text
-                // rather than emitting an empty <select>.
-                if (type == RegistrationQuestionType.Choice && options.Count == 0)
+                // A choice/multi question with no options can't be rendered as one — fall back to
+                // text rather than emitting an empty <select> or a checkbox group of nothing.
+                if (type is RegistrationQuestionType.Choice or RegistrationQuestionType.Multi && options.Count == 0)
                     type = RegistrationQuestionType.Text;
 
                 questions.Add(new RegistrationQuestion(id!, label!, type, options, (bool?)qo["required"] ?? false));
@@ -91,5 +98,34 @@ public record RegistrationFormDefinition(
             RequireEmail: (bool?)obj["requireEmail"] ?? false,
             RequireSocial: (bool?)obj["requireSocial"] ?? false,
             Questions: questions);
+    }
+}
+
+// A Multi question's answer travels inside the same Dictionary<string,string> as every other
+// answer (PostRegistration.AnswersJson, ADR-042) — widening that map to a union type would
+// invalidate every row already stored. Instead a multi answer IS a JSON array in the string,
+// which is self-describing: no delimiter to collide with option text, and a plain text answer
+// that happens to look like a list still round-trips as one value.
+public static class MultiAnswer
+{
+    public static IReadOnlyList<string> Split(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return [];
+
+        var trimmed = value.TrimStart();
+        if (!trimmed.StartsWith('['))
+            return [value];
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(value) is { } list
+                ? list.Where(v => !string.IsNullOrWhiteSpace(v)).ToList()
+                : [value];
+        }
+        catch (JsonException)
+        {
+            return [value];
+        }
     }
 }
