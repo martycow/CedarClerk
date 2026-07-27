@@ -88,6 +88,7 @@ export const en = {
             activity: 'Activity',
             updated: 'Updated',
         },
+        resetColumns: 'Reset column widths',
         status: {
             archived: 'Archived',
             publishFailed: 'Publish failed',

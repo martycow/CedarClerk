@@ -275,6 +275,53 @@
     background: var(--alt);
 }
 
+/* N1: the header cell is a sort button; the handle inside it resizes the column. */
+.col-head {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: none;
+    background: none;
+    padding: 0;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+    min-width: 0;
+}
+
+.col-head:hover {
+    color: var(--text);
+}
+
+.col-head.right {
+    justify-content: flex-end;
+}
+
+.col-reset {
+    justify-content: flex-end;
+    color: var(--t3);
+}
+
+/* Sits on the cell's left edge so it drags the boundary the eye actually sees. Widened by a
+   transparent margin — a 1px line is unhittable with a finger. */
+.col-resize {
+    position: absolute;
+    left: -8px;
+    top: -8px;
+    bottom: -8px;
+    width: 5px;
+    cursor: col-resize;
+    touch-action: none;
+}
+
+.col-resize:hover {
+    background: var(--abord);
+}
+
 .right {
     text-align: right;
 }

@@ -100,11 +100,20 @@
 
         @if (view() === 'table') {
         <div class="drafts-table">
-            <div class="drafts-row drafts-row-head">
-                <span>{{ t().drafts.columns.title }}</span><span>{{ t().drafts.columns.state }}</span><span>{{ t().drafts.columns.languages }}</span><span>{{ t().drafts.columns.folder }}</span><span>{{ t().drafts.columns.tags }}</span><span>{{ t().drafts.columns.activity }}</span><span class="right">{{ t().drafts.columns.updated }}</span><span></span>
+            <!--N1: headers sort, and the 5px handle on each fixed column resizes it. Title takes
+            whatever is left, so a resize redistributes rather than widening the table.-->
+            <div class="drafts-row drafts-row-head" [style.gridTemplateColumns]="gridTemplate()">
+                <button class="col-head" (click)="sortBy('title')">{{ t().drafts.columns.title }} {{ sortMark('title') }}</button>
+                <button class="col-head" (click)="sortBy('state')">{{ t().drafts.columns.state }} {{ sortMark('state') }}<span class="col-resize" (pointerdown)="startColResize(0, $event)"></span></button>
+                <button class="col-head" (click)="sortBy('languages')">{{ t().drafts.columns.languages }} {{ sortMark('languages') }}<span class="col-resize" (pointerdown)="startColResize(1, $event)"></span></button>
+                <button class="col-head" (click)="sortBy('folder')">{{ t().drafts.columns.folder }} {{ sortMark('folder') }}<span class="col-resize" (pointerdown)="startColResize(2, $event)"></span></button>
+                <button class="col-head" (click)="sortBy('tags')">{{ t().drafts.columns.tags }} {{ sortMark('tags') }}<span class="col-resize" (pointerdown)="startColResize(3, $event)"></span></button>
+                <button class="col-head" (click)="sortBy('activity')">{{ t().drafts.columns.activity }} {{ sortMark('activity') }}<span class="col-resize" (pointerdown)="startColResize(4, $event)"></span></button>
+                <button class="col-head right" (click)="sortBy('updated')">{{ t().drafts.columns.updated }} {{ sortMark('updated') }}<span class="col-resize" (pointerdown)="startColResize(5, $event)"></span></button>
+                <button class="col-head col-reset" (click)="resetColWidths()" [title]="t().drafts.resetColumns">⤢</button>
             </div>
             @for (d of filteredDrafts(); track d.id) {
-            <div class="drafts-row" [class.busy]="busyId() === d.id" (click)="openDraft(d.id)">
+            <div class="drafts-row" [class.busy]="busyId() === d.id" [style.gridTemplateColumns]="gridTemplate()" (click)="openDraft(d.id)">
                 <div class="drafts-title-cell">
                     <div class="drafts-title">
                         @if (d.isPrivate) { <svg lucideLock class="icon-xs private-lock" [attr.title]="t().drafts.privatePost"></svg> }

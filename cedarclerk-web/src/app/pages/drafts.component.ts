@@ -21,6 +21,24 @@ import {
 } from '@lucide/angular';
 
 type FilterKey = 'all' | 'draft' | 'scheduled' | 'published' | 'attention' | 'archived';
+export type SortKey = 'title' | 'state' | 'languages' | 'folder' | 'tags' | 'activity' | 'updated';
+
+// Widths of the six fixed columns between Title (1fr) and the actions column (N1). Title keeps
+// the leftover space, so it isn't in here — dragging any handle grows/shrinks Title, which is
+// what makes the table feel like it resizes rather than scrolls.
+const DEFAULT_COL_WIDTHS = [170, 90, 130, 140, 100, 110];
+const MIN_COL_WIDTH = 60;
+const COL_STORAGE_KEY = 'cedar-drafts-cols';
+
+function loadColWidths(): number[] {
+    try {
+        const raw = JSON.parse(localStorage.getItem(COL_STORAGE_KEY) ?? '');
+        if (Array.isArray(raw) && raw.length === DEFAULT_COL_WIDTHS.length && raw.every(n => typeof n === 'number' && n >= MIN_COL_WIDTH)) {
+            return raw;
+        }
+    } catch { /* a corrupt/foreign blob just falls back to the defaults */ }
+    return [...DEFAULT_COL_WIDTHS];
+}
 export type DraftStatusTone = 'default' | 'danger' | 'ok';
 export interface DraftStatus { label: string; tone: DraftStatusTone; detail: string; }
 
@@ -84,6 +102,12 @@ export class DraftsPageComponent implements OnInit {
     deleteConfirmId = signal<string | null>(null);
     error = signal('');
 
+    // Sorting + column widths (N1). Both are per-browser view state, not account data — the same
+    // treatment ThemeService gives the theme, and not worth a profile round-trip.
+    sortKey = signal<SortKey>('updated');
+    sortDir = signal<'asc' | 'desc'>('desc');
+    colWidths = signal<number[]>(loadColWidths());
+
     // Folders (Phase "Cedar Clerk 0.9.0" idea #19, see the ADR following ADR-038,
     // docs/DECISIONS.md) — 'all' = no folder filter, 'none' = unfiled drafts only, else a folder id.
     folders = signal<FolderMeta[]>([]);
@@ -135,11 +159,75 @@ export class DraftsPageComponent implements OnInit {
     filteredDrafts(): DraftMeta[] {
         const q = this.search.trim().toLowerCase();
         const folder = this.selectedFolder();
+        const dir = this.sortDir() === 'asc' ? 1 : -1;
+        const key = this.sortKey();
         return this.drafts()
             .filter(d => matchesFilter(d, this.filter()))
             .filter(d => folder === 'all' || (folder === 'none' ? d.folderId === null : d.folderId === folder))
             .filter(d => !q || d.title.toLowerCase().includes(q) || d.tags.toLowerCase().includes(q))
-            .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+            .sort((a, b) => dir * this.compare(a, b, key));
+    }
+
+    private compare(a: DraftMeta, b: DraftMeta, key: SortKey): number {
+        switch (key) {
+            case 'title': return (a.title || '').localeCompare(b.title || '');
+            case 'state': return this.status(a).label.localeCompare(this.status(b).label);
+            case 'languages': return a.languages.length - b.languages.length;
+            case 'folder': return this.folderName(a.folderId).localeCompare(this.folderName(b.folderId));
+            case 'tags': return a.tags.localeCompare(b.tags);
+            // Views and reactions are one column, so they sort as one number.
+            case 'activity': return (a.viewCount + a.reactionCount) - (b.viewCount + b.reactionCount);
+            default: return a.updatedAt.localeCompare(b.updatedAt);
+        }
+    }
+
+    // Clicking the active column flips direction; a new column starts descending, since "newest
+    // / most / last touched first" is what every one of these columns is usually asked for.
+    sortBy(key: SortKey) {
+        if (this.sortKey() === key) {
+            this.sortDir.set(this.sortDir() === 'asc' ? 'desc' : 'asc');
+        } else {
+            this.sortKey.set(key);
+            this.sortDir.set('desc');
+        }
+    }
+
+    sortMark(key: SortKey): string {
+        if (this.sortKey() !== key) return '';
+        return this.sortDir() === 'asc' ? '↑' : '↓';
+    }
+
+    gridTemplate(): string {
+        return `1fr ${this.colWidths().map(w => `${w}px`).join(' ')} 80px`;
+    }
+
+    // Pointer events (not mouse) so a drag works with a trackpad, a pen and an iPad finger alike;
+    // setPointerCapture keeps the drag alive when the pointer leaves the 5px handle.
+    startColResize(index: number, ev: PointerEvent) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const handle = ev.target as HTMLElement;
+        const startX = ev.clientX;
+        const startWidth = this.colWidths()[index];
+        handle.setPointerCapture(ev.pointerId);
+
+        const onMove = (move: PointerEvent) => {
+            const width = Math.max(MIN_COL_WIDTH, Math.round(startWidth + (move.clientX - startX)));
+            this.colWidths.update(list => list.map((w, i) => i === index ? width : w));
+        };
+        const onUp = () => {
+            handle.releasePointerCapture(ev.pointerId);
+            handle.removeEventListener('pointermove', onMove);
+            handle.removeEventListener('pointerup', onUp);
+            localStorage.setItem(COL_STORAGE_KEY, JSON.stringify(this.colWidths()));
+        };
+        handle.addEventListener('pointermove', onMove);
+        handle.addEventListener('pointerup', onUp);
+    }
+
+    resetColWidths() {
+        this.colWidths.set([...DEFAULT_COL_WIDTHS]);
+        localStorage.removeItem(COL_STORAGE_KEY);
     }
 
     folderName(id: string | null): string {

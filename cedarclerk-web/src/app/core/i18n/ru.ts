@@ -92,6 +92,7 @@ export const ru: Dict = {
             activity: 'Активность',
             updated: 'Изменён',
         },
+        resetColumns: 'Сбросить ширину колонок',
         status: {
             archived: 'В архиве',
             publishFailed: 'Публикация не удалась',
