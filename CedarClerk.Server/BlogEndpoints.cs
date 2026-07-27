@@ -1286,6 +1286,7 @@ public static class BlogEndpoints
         .post-sheet ul, .post-sheet ol { font-size: 16px; line-height: 1.7; padding-left: 20px; margin: 0 0 16px; }
         .post-sheet figure { margin: 0 0 16px; }
         .post-sheet figcaption { text-align: center; font-size: 13px; color: var(--t2); margin-top: 6px; }
+        .audio-title { font-size: 13.5px; font-weight: 600; color: var(--text); margin: 10px 0 4px; }
         .post-sheet table { width: 100%; border-collapse: collapse; font-size: 14.5px; margin: 0 0 16px; overflow-x: auto; display: block; }
         .post-sheet th, .post-sheet td { border: 1px solid var(--border); padding: 7px 11px; text-align: left; vertical-align: top; }
         .post-sheet th { background: var(--alt); font-weight: 600; }

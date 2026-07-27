@@ -232,6 +232,19 @@ public class BlogHtmlRendererTests
             CedarToBlogHtmlRenderer.Render(json, Base));
     }
 
+    // I16 — a bare player on the blog is as anonymous as one in Telegram, so the clip name shows
+    // here too. Author text, so it escapes like everything else (see .claude/rules/renderers.md).
+    [Fact]
+    public void Renders_audio_title_above_the_player_and_escapes_it()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"audio","attrs":{"src":"/media/clip.mp3","title":"Ep <3> & co"}}]}
+                   """;
+        var html = CedarToBlogHtmlRenderer.Render(json, Base);
+        Assert.Contains("<div class=\"audio-title\">Ep &lt;3&gt; &amp; co</div>", html);
+        Assert.StartsWith("<div class=\"audio-title\">", html);
+    }
+
     [Fact]
     public void Renders_youtube_as_a_responsive_iframe_embed()
     {

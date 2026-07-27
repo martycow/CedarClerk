@@ -1,0 +1,219 @@
+/* I14 — a panel beside the writing sheet. Collapsed it is a thin vertical handle; open it is a
+   fixed-width column. It never overlays the sheet: the point is watching the sheet change while
+   you drag a slider, which a panel floating on top of it would defeat. */
+.ap-panel {
+    flex: none;
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    border-left: 1px solid var(--border);
+    background: var(--bg);
+    max-height: 100%;
+}
+
+.ap-handle {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--t2);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 12px 6px;
+}
+
+.ap-handle:hover {
+    color: var(--text);
+}
+
+.ap-handle-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    letter-spacing: .04em;
+}
+
+.ap-chevron {
+    font-size: 14px;
+}
+
+.ap-body {
+    width: 268px;
+    box-sizing: border-box;
+    padding: 14px 14px 24px;
+    overflow-y: auto;
+    max-height: 100%;
+}
+
+.ap-body h3 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--t2);
+    margin: 0 0 10px;
+}
+
+.ap-field {
+    margin-bottom: 12px;
+}
+
+.ap-field label {
+    display: block;
+    font-size: 12px;
+    color: var(--t2);
+    margin-bottom: 5px;
+}
+
+.ap-field input[type="range"] {
+    width: 100%;
+}
+
+.ap-toggle {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.ap-toggle button {
+    flex: 1;
+    border: none;
+    background: var(--sheet);
+    color: var(--t2);
+    font-family: inherit;
+    font-size: 11.5px;
+    padding: 5px 2px;
+    cursor: pointer;
+}
+
+.ap-toggle button + button {
+    border-left: 1px solid var(--border);
+}
+
+.ap-toggle button.on {
+    background: var(--accent);
+    color: #F4F2EA;
+}
+
+.ap-accents {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.ap-accent {
+    border: 2px solid transparent;
+    background: none;
+    border-radius: 50%;
+    padding: 1px;
+    cursor: pointer;
+    line-height: 0;
+}
+
+.ap-accent.on {
+    border-color: var(--text);
+}
+
+.ap-swatch {
+    display: block;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+}
+
+.ap-checks {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ap-checks label,
+.ap-catalog label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.ap-divider {
+    border-top: 1px solid var(--border);
+    margin: 16px 0;
+}
+
+.ap-group-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    min-height: 34px;
+    padding: 5px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+}
+
+.ap-group-chip {
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px 9px;
+    font-size: 11.5px;
+    cursor: grab;
+}
+
+/* The catalog is long — collapsing each group keeps the panel scannable in a narrow column. */
+.ap-catalog-group {
+    border-top: 1px solid var(--border);
+    padding: 7px 0;
+}
+
+.ap-catalog-group summary {
+    font-size: 12px;
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.ap-count {
+    color: var(--t3);
+    font-size: 11px;
+}
+
+.ap-catalog-all {
+    margin: 7px 0 4px;
+    font-weight: 600;
+}
+
+.ap-error {
+    color: var(--danger);
+    font-size: 12px;
+    margin: 0 0 10px;
+}
+
+.ap-reset {
+    margin-top: 14px;
+    width: 100%;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--danger);
+    border-radius: var(--radius-md);
+    padding: 6px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* Below this the editor is already tight (see the topbar rules) — a side column would leave the
+   sheet unusable, and every control here also exists nowhere else, so it collapses to the handle
+   only rather than disappearing. */
+@media (max-width: 900px) {
+    .ap-body {
+        width: 214px;
+    }
+}

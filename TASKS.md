@@ -15,14 +15,11 @@ Version bumped to **0.9.1** (`CedarClerk.Core/Consts.cs`) and tagged. **Deployed
 
 **Migrations collapsed to a single `InitialCreate` on prod 27.07.2026** — `__EFMigrationsHistory` now holds one row (`20260727074652_InitialCreate`). This also fixed real drift (two migrations applied on prod whose files had vanished from the repo). New `SchemaDriftGuardTests` fails the build if `Entities.cs` moves without a migration. Procedure and rollback in `.claude/rules/ef-migrations.md`.
 
-**Middle block: 6 of 9 done 27.07.2026** — I1, I2, I4, I10, I11, I18, I19. Left: `I16` (custom audio clip name — needs an `Asset` field + migration, unlike the rest of the block) and the settings pair below.
+**Middle block: 8 of 9 done 27.07.2026** — I1, I2, I4, I10, I11, I14, I16, I18, I19.
 
-**One decision is blocking three items**, all touching the settings screen, and doing them separately would mean designing it three times:
-- `I12` — split Settings into profile / appearance / rest
-- `I14`/`B15` — move appearance + toolbar settings into a right-hand editor panel so changes are visible live
-- `IT2` — delete toolbar customization outright
+Only `I12` (split Settings) is left in the block, and `I14` shrank it: appearance and toolbar customization moved into the editor's side panel, so what remains to split is profile / header slots / social / billing / integrations.
 
-If `IT2` wins, `I14` shrinks to appearance-only and `I12`'s split has one fewer section to place. Needs Marty to say what the end state is before any of the three starts.
+**`IT2` (delete toolbar customization) is still an open question**, and it now interacts with `I14` rather than with Settings: if it wins, the panel loses its toolbar half and keeps only appearance. Worth deciding before `I12` places anything.
 
 ## Critical before the next production deploy
 - [x] Push real provider keys to the Pi's `data.conf` — done by Marty; **a real payment goes through in production, tested on his own card** (26.07.2026). Auto-translate uses the same keys mechanism but wasn't called out as tested.

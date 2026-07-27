@@ -18,8 +18,6 @@
         <nav class="anchor-chips">
             <button (click)="jump('sec-profile')">{{ t().settings.profile.nav }}</button>
             <button (click)="jump('sec-language')">{{ t().settings.language.nav }}</button>
-            <button (click)="jump('sec-appearance')">{{ t().settings.appearance.nav }}</button>
-            <button (click)="jump('sec-toolbar')">{{ t().settings.toolbar.nav }}</button>
             <button (click)="jump('sec-header-slots')">{{ t().settings.headerSlots.nav }}</button>
             <button (click)="jump('sec-social-links')">{{ t().settings.social.nav }}</button>
             <button (click)="jump('sec-subscription')">{{ t().settings.subscription.nav }}</button>
@@ -68,149 +66,13 @@
             </div>
         </section>
 
-        <!-- ============ APPEARANCE ============ -->
-        <!-- ============ LANGUAGE ============ -->
-        <section id="sec-language" class="settings-card">
-            <h2>{{ t().settings.language.title }}</h2>
-            <p class="field-hint">{{ t().settings.language.hint }}</p>
-            <!--Language names stay in their own language — an endonym list is the one thing
-            nobody needs translated.-->
-            <div class="format-toggle" style="max-width:220px">
-                <button [class.on]="locale.uiLang() === 'en'" (click)="setUiLanguage('en')">English</button>
-                <button [class.on]="locale.uiLang() === 'ru'" (click)="setUiLanguage('ru')">Русский</button>
-            </div>
-            @if (languageError()) { <p class="field-error">{{ languageError() }}</p> }
-        </section>
-
-        <!-- ============ APPEARANCE ============ -->
-        <section id="sec-appearance" class="settings-card">
+        <!-- Appearance and toolbar customization moved into the editor's side panel (I14/B15):
+             every control there changes how the writing sheet looks, and judging a type size on a
+             different screen is guesswork. Not duplicated here - one home each, same rule as B6. -->
+        <section class="settings-card">
             <h2>{{ t().settings.appearance.title }}</h2>
-            <p class="field-hint">{{ t().settings.appearance.hint }}</p>
-
-            <div class="field-group">
-                <label>{{ t().settings.appearance.themeLabel }} <b>{{ appearanceMode() }}</b> {{ t().settings.appearance.themePalette }}</label>
-                <div class="format-toggle" style="max-width:180px">
-                    <button [class.on]="appearanceMode() === 'light'" (click)="appearanceMode.set('light')">{{ t().settings.appearance.light }}</button>
-                    <button [class.on]="appearanceMode() === 'dark'" (click)="appearanceMode.set('dark')">{{ t().settings.appearance.dark }}</button>
-                </div>
-            </div>
-
-            <div class="accent-presets">
-                @for (preset of accentPresets; track preset.name) {
-                <button class="accent-preset" [class.on]="isActivePreset(preset.hex)" (click)="pickAccentPreset(preset.hex)">
-                    <span class="accent-swatch" [style.background]="preset.hex"></span>
-                    {{ preset.name }}
-                </button>
-                }
-            </div>
-            <p class="field-hint">{{ t().settings.appearance.accentHint }}</p>
-            @if (appearanceError()) { <p class="field-error">{{ appearanceError() }}</p> }
-
-            <div class="popover-divider"></div>
-
-            <div class="field-group">
-                <label>{{ t().settings.appearance.sheetWidth }}</label>
-                <div class="format-toggle" style="max-width:320px">
-                    <button [class.on]="appearance.prefs().sheetWidth === 'narrow'" (click)="setSheetWidth('narrow')">{{ t().settings.appearance.narrow }}</button>
-                    <button [class.on]="appearance.prefs().sheetWidth === 'normal'" (click)="setSheetWidth('normal')">{{ t().settings.appearance.normal }}</button>
-                    <button [class.on]="appearance.prefs().sheetWidth === 'wide'" (click)="setSheetWidth('wide')">{{ t().settings.appearance.wide }}</button>
-                    <button [class.on]="appearance.prefs().sheetWidth === 'full'" (click)="setSheetWidth('full')">{{ t().settings.appearance.full }}</button>
-                </div>
-            </div>
-
-            <div class="field-group">
-                <label>{{ t().settings.appearance.typeface }} <span class="field-hint" style="display:inline">{{ t().settings.appearance.typefaceHint }}</span></label>
-                <div class="format-toggle" style="max-width:220px">
-                    <button [class.on]="appearance.prefs().typeface === 'system'" (click)="setTypeface('system')">{{ t().settings.appearance.system }}</button>
-                    <button [class.on]="appearance.prefs().typeface === 'serif'" (click)="setTypeface('serif')">{{ t().settings.appearance.serif }}</button>
-                    <button [class.on]="appearance.prefs().typeface === 'mono'" (click)="setTypeface('mono')">{{ t().settings.appearance.mono }}</button>
-                </div>
-            </div>
-
-            <div class="field-group">
-                <label>{{ t().settings.appearance.textSize }} — {{ appearance.prefs().fontSize }}px</label>
-                <input type="range" min="13" max="22" step="0.5"
-                    [value]="appearance.prefs().fontSize"
-                    (input)="setFontSize(+$any($event.target).value)">
-            </div>
-
-            <div class="field-group">
-                <label>{{ t().settings.appearance.lineHeight }} — {{ appearance.prefs().lineHeight }}</label>
-                <input type="range" min="1.2" max="2.1" step="0.05"
-                    [value]="appearance.prefs().lineHeight"
-                    (input)="setLineHeight(+$any($event.target).value)">
-            </div>
-
-            <div class="appearance-toggles">
-                <label><input type="checkbox" [checked]="appearance.prefs().showParagraphNumbers" (change)="toggleAppearanceFlag('showParagraphNumbers', $event)"> {{ t().settings.appearance.showParagraphNumbers }}</label>
-                <label><input type="checkbox" [checked]="appearance.prefs().showLineRules" (change)="toggleAppearanceFlag('showLineRules', $event)"> {{ t().settings.appearance.showLineRules }}</label>
-                <label><input type="checkbox" [checked]="appearance.prefs().showWordCount" (change)="toggleAppearanceFlag('showWordCount', $event)"> {{ t().settings.appearance.showWordCount }}</label>
-                <label><input type="checkbox" [checked]="appearance.prefs().focusModeHideToolbar" (change)="toggleAppearanceFlag('focusModeHideToolbar', $event)"> {{ t().settings.appearance.focusMode }}</label>
-                <label><input type="checkbox" [checked]="appearance.prefs().sheetFlush" (change)="toggleAppearanceFlag('sheetFlush', $event)"> {{ t().settings.appearance.sheetFlush }}</label>
-            </div>
-        </section>
-
-        <!-- ============ TOOLBAR ============ -->
-        <section id="sec-toolbar" class="settings-card">
-            <h2>{{ t().settings.toolbar.title }}</h2>
-            <p class="field-hint">{{ t().settings.toolbar.hint }}</p>
-
-            <div class="field-group">
-                <label>{{ t().settings.toolbar.preset }}</label>
-                <div class="format-toggle" style="max-width:340px">
-                    <button [class.on]="toolbarLayout.layout().preset === 'minimal'" (click)="pickToolbarPreset('minimal')">{{ t().settings.toolbar.minimal }}</button>
-                    <button [class.on]="toolbarLayout.layout().preset === 'standard'" (click)="pickToolbarPreset('standard')">{{ t().settings.toolbar.standard }}</button>
-                    <button [class.on]="toolbarLayout.layout().preset === 'everything'" (click)="pickToolbarPreset('everything')">{{ t().settings.toolbar.everything }}</button>
-                    <button [class.on]="toolbarLayout.layout().preset === 'custom'" disabled>{{ t().settings.toolbar.custom }}</button>
-                </div>
-            </div>
-            @if (toolbarError()) { <p class="field-error">{{ toolbarError() }}</p> }
-
-            <div class="toolbar-rows-editor">
-                <div class="toolbar-row-zone">
-                    <span class="field-hint" style="display:block">{{ t().settings.toolbar.row1 }}</span>
-                    <div class="toolbar-group-list" cdkDropList #row1List="cdkDropList"
-                        [cdkDropListData]="row1Groups()" [cdkDropListConnectedTo]="[row2List]"
-                        (cdkDropListDropped)="dropToolbarGroup($event)">
-                        @for (id of row1Groups(); track id) {
-                        <div class="toolbar-group-chip" cdkDrag>⠿ {{ groupLabel(id) }}</div>
-                        }
-                    </div>
-                </div>
-                <div class="toolbar-row-zone">
-                    <span class="field-hint" style="display:block">{{ t().settings.toolbar.row2 }}</span>
-                    <div class="toolbar-group-list" cdkDropList #row2List="cdkDropList"
-                        [cdkDropListData]="row2Groups()" [cdkDropListConnectedTo]="[row1List]"
-                        (cdkDropListDropped)="dropToolbarGroup($event)">
-                        @for (id of row2Groups(); track id) {
-                        <div class="toolbar-group-chip" cdkDrag>⠿ {{ groupLabel(id) }}</div>
-                        }
-                    </div>
-                </div>
-            </div>
-
-            <div class="popover-divider"></div>
-
-            <div class="toolbar-catalog">
-                @for (group of toolbarGroups; track group.id) {
-                <div class="catalog-group">
-                    <label class="catalog-group-head">
-                        <input type="checkbox" [checked]="groupVisibleCount(groupButtonIds(group)) > 0" (change)="toggleGroupVisible(groupButtonIds(group), $event)">
-                        {{ group.label }} <span class="catalog-count">{{ t().settings.toolbar.countOf(groupVisibleCount(groupButtonIds(group)), group.buttons.length) }}</span>
-                    </label>
-                    <div class="catalog-buttons">
-                        @for (b of group.buttons; track b.id) {
-                        <label><input type="checkbox" [checked]="!isButtonHidden(b.id)" (change)="toggleButtonVisible(b.id, $event)"> {{ b.label }}</label>
-                        }
-                    </div>
-                </div>
-                }
-            </div>
-
-            <div class="card-footer-row">
-                <span class="field-hint">{{ t().settings.toolbar.basedOn }} {{ toolbarLayout.layout().preset }}</span>
-                <button class="btn-danger-ghost" (click)="pickToolbarPreset('standard')">{{ t().settings.toolbar.resetToStandard }}</button>
-            </div>
+            <p class="field-hint">{{ t().settings.appearance.movedToEditor }}</p>
+            <a class="anchor-chips-link" routerLink="/editor">{{ t().common.backToEditor }}</a>
         </section>
 
         <!-- ============ HEADER SLOTS ============ -->

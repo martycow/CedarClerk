@@ -20,6 +20,16 @@ Two translation misses from the ADR-050 sweep: the paragraph-format dropdown's t
 
 Not started: IB5 (blog comment form). `dotnet test` 278/278, `ng build` clean. Nothing here is live-verified in a browser yet.
 
+### Audio clip names (I16) and the appearance panel (I14)
+
+**I16 turned out not to need a migration.** The plan recorded for it assumed a name field on `Asset`; the actual mechanism is `InputMediaAudio.Title`, which is what Telegram labels the player with — without it the player falls back to the filename in the URL, i.e. the generated `asset_<guid>.mp3`. And the name belongs to the *insertion*, not the file: the same asset can legitimately be posted twice under different names. So it's a `title` attribute on the TipTap `audio` node, carried through `RichAudioBlock` into the Blocks renderer, with a second input in the node view above the caption (title names the file in Telegram's player, caption is body text under it — two things that both looked like "the label"). Blank stays null rather than becoming an empty title, which would label the clip `""`. The blog shows it too, since a bare `<audio>` element there is exactly as anonymous, and it escapes like all author text.
+
+**Appearance and toolbar customization left the settings page** (I14/B15, raised three times across the brainstorms). They now live in a panel beside the writing sheet: collapsed it's a vertical handle, open it's a 268px column. Beside rather than over the sheet, deliberately — the entire point is watching the sheet change while dragging a slider, which an overlay would hide. Nothing had to be built to preview anything; the sheet *is* the preview.
+
+Extracted rather than copied: `/settings` dropped both sections and carries a pointer to the editor instead, so each control still has exactly one home — the same rule I11 applied to navigation. Settings lost about 110 lines of TypeScript and 130 of template along with its drag-drop and toolbar imports. The button catalog became collapsible `<details>` groups, which a narrow column needs and a full-width settings card didn't.
+
+That leaves I12 (splitting Settings) smaller than when it was written: appearance and toolbar are already out, so what remains to split is profile / header slots / social / billing / integrations.
+
 ### Middle-priority sweep (I1, I2, I4, I10, I11, I18, I19)
 
 Six of the nine Middle items, all frontend.

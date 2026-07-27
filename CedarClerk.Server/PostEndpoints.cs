@@ -206,7 +206,9 @@ public static class PostEndpoints
         RichDividerBlock => new InputRichBlockDivider(),
         RichPhotoBlock ph => new InputRichBlockPhoto { Photo = new InputMediaPhoto(ph.Url), Caption = ToCaption(ph.Caption) },
         RichVideoBlock v => new InputRichBlockVideo { Video = new InputMediaVideo(v.Url), Caption = ToCaption(v.Caption) },
-        RichAudioBlock a => new InputRichBlockAudio { Audio = new InputMediaAudio(a.Url), Caption = ToCaption(a.Caption) },
+        // Title is what Telegram labels the clip with; without it the player shows the generated
+        // asset_<guid>.mp3 filename from the URL (I16).
+        RichAudioBlock a => new InputRichBlockAudio { Audio = new InputMediaAudio(a.Url) { Title = a.Title }, Caption = ToCaption(a.Caption) },
         RichSlideshowBlock s => new InputRichBlockSlideshow { Blocks = s.Urls.Select(u => (InputRichBlock)new InputRichBlockPhoto { Photo = new InputMediaPhoto(u) }).ToList() },
         RichCollageBlock co => new InputRichBlockCollage { Blocks = co.Urls.Select(u => (InputRichBlock)new InputRichBlockPhoto { Photo = new InputMediaPhoto(u) }).ToList() },
         RichTableBlock t => new InputRichBlockTable { Cells = t.Rows.Select(row => row.Select(ToTableCell).ToList()).ToList(), IsBordered = true },

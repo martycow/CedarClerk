@@ -30,7 +30,10 @@ public sealed record RichQuoteBlock(IReadOnlyList<CedarRichBlock> Blocks) : Ceda
 public sealed record RichDividerBlock : CedarRichBlock;
 public sealed record RichPhotoBlock(string Url, RichRun? Caption) : CedarRichBlock;
 public sealed record RichVideoBlock(string Url, RichRun? Caption) : CedarRichBlock;
-public sealed record RichAudioBlock(string Url, RichRun? Caption) : CedarRichBlock;
+// Title is the clip name Telegram shows in the player (I16). Without it Telegram falls back to
+// the filename in the URL, which is the generated `asset_<guid>.mp3`. It belongs to the
+// insertion, not to the Asset row: the same file can legitimately be posted under two names.
+public sealed record RichAudioBlock(string Url, RichRun? Caption, string? Title = null) : CedarRichBlock;
 public sealed record RichSlideshowBlock(IReadOnlyList<string> Urls) : CedarRichBlock;
 public sealed record RichCollageBlock(IReadOnlyList<string> Urls) : CedarRichBlock;
 public sealed record RichTableBlock(IReadOnlyList<IReadOnlyList<RichTableCell>> Rows) : CedarRichBlock;

@@ -519,6 +519,7 @@ export const en = {
             lineHeight: 'Line height',
             showParagraphNumbers: 'Number paragraphs in the gutter',
             showLineRules: 'Rule off each block',
+            movedToEditor: 'These settings now live in a panel next to the writing sheet, so you can see each change as you make it. Open the editor and use the Appearance handle on the right.',
             showWordCount: 'Word & character counter in the status bar',
             focusMode: 'Hide the toolbar while typing (focus mode)',
             sheetFlush: 'Sheet without the paper card (merges with the canvas)',
@@ -536,6 +537,7 @@ export const en = {
             row2: 'Row 2 — optional',
             countOf: (visible: number, total: number) => `${visible} of ${total}`,
             basedOn: 'Based on',
+            allInGroup: 'All in this group',
             resetToStandard: 'Reset to Standard',
         },
         headerSlots: {

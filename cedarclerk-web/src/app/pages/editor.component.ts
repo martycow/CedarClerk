@@ -19,6 +19,7 @@ import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { AccountMenuComponent } from '../shared/account-menu.component';
 import { CountBadgeComponent } from '../shared/count-badge.component';
+import { AppearancePanelComponent } from '../shared/appearance-panel.component';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, PostLanguage, CompressionLevel, ScheduledPost } from '../core/posts.service';
 import { ChannelsService, Channel, ChannelStats, KnownChat } from '../core/channels.service';
@@ -176,7 +177,7 @@ interface UploadItem {
     selector: 'app-editor',
     imports: [
         FormsModule, DatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent,
-        AccountMenuComponent,
+        AccountMenuComponent, AppearancePanelComponent,
         Undo2, Redo2, Bold, Italic, Strikethrough, Code,
         List, ListOrdered, ListTodo, Quote, SquareCode, Outdent, Indent,
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,

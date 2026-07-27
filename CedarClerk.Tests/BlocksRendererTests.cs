@@ -234,6 +234,37 @@ public class BlocksRendererTests
         Assert.Equal(new RichRunText("Video caption"), video.Caption);
         var audio = Assert.IsType<RichAudioBlock>(blocks[1]);
         Assert.Equal("https://cedarclerk.mooexe.dev/media/sound.mp3", audio.Url);
+        Assert.Null(audio.Title);
+    }
+
+    // Concatenated rather than interpolated: a raw string literal reads {{ }} as interpolation
+    // holes, and this JSON is nothing but braces.
+    private static string AudioJson(string rawTitleAttr) =>
+        "{\"type\":\"doc\",\"content\":[{\"type\":\"audio\",\"attrs\":{\"src\":\"/media/s.mp3\",\"title\":"
+        + rawTitleAttr + "}}]}";
+
+    // I16 — without a title Telegram labels the clip with the generated asset_<guid>.mp3 filename
+    // from the URL, which is what this carries instead.
+    [Theory]
+    [InlineData("\"Episode 3\"", "Episode 3")]
+    [InlineData("\"  Episode 3  \"", "Episode 3")]
+    public void Audio_title_reaches_the_block(string rawAttr, string expected)
+    {
+        var json = AudioJson(rawAttr);
+        var blocks = CedarToTelegramBlocksRenderer.Render(json, "https://cedarclerk.mooexe.dev");
+        Assert.Equal(expected, Assert.IsType<RichAudioBlock>(blocks[0]).Title);
+    }
+
+    // Blank must stay null rather than become an empty title, which would label the clip "".
+    [Theory]
+    [InlineData("\"\"")]
+    [InlineData("\"   \"")]
+    [InlineData("null")]
+    public void Blank_audio_title_is_dropped(string rawAttr)
+    {
+        var json = AudioJson(rawAttr);
+        var blocks = CedarToTelegramBlocksRenderer.Render(json, "https://cedarclerk.mooexe.dev");
+        Assert.Null(Assert.IsType<RichAudioBlock>(blocks[0]).Title);
     }
 
     [Fact]

@@ -1,0 +1,126 @@
+<div class="ap-panel" [class.open]="open()">
+    <button class="ap-handle" (click)="open.set(!open())" [title]="t().settings.appearance.title">
+        <span class="ap-handle-label">{{ t().settings.appearance.title }}</span>
+        <span class="ap-chevron">{{ open() ? '›' : '‹' }}</span>
+    </button>
+
+    @if (open()) {
+    <div class="ap-body">
+        <h3>{{ t().settings.appearance.title }}</h3>
+
+        <div class="ap-field">
+            <label>{{ t().settings.appearance.themeLabel }} <b>{{ appearanceMode() }}</b> {{ t().settings.appearance.themePalette }}</label>
+            <div class="ap-toggle">
+                <button [class.on]="appearanceMode() === 'light'" (click)="appearanceMode.set('light')">{{ t().settings.appearance.light }}</button>
+                <button [class.on]="appearanceMode() === 'dark'" (click)="appearanceMode.set('dark')">{{ t().settings.appearance.dark }}</button>
+            </div>
+        </div>
+
+        <div class="ap-accents">
+            @for (preset of accentPresets; track preset.name) {
+            <button class="ap-accent" [class.on]="isActivePreset(preset.hex)" (click)="pickAccentPreset(preset.hex)" [title]="preset.name">
+                <span class="ap-swatch" [style.background]="preset.hex"></span>
+            </button>
+            }
+        </div>
+        @if (appearanceError()) { <p class="ap-error">{{ appearanceError() }}</p> }
+
+        <div class="ap-field">
+            <label>{{ t().settings.appearance.sheetWidth }}</label>
+            <div class="ap-toggle">
+                <button [class.on]="appearance.prefs().sheetWidth === 'narrow'" (click)="setSheetWidth('narrow')">{{ t().settings.appearance.narrow }}</button>
+                <button [class.on]="appearance.prefs().sheetWidth === 'normal'" (click)="setSheetWidth('normal')">{{ t().settings.appearance.normal }}</button>
+                <button [class.on]="appearance.prefs().sheetWidth === 'wide'" (click)="setSheetWidth('wide')">{{ t().settings.appearance.wide }}</button>
+                <button [class.on]="appearance.prefs().sheetWidth === 'full'" (click)="setSheetWidth('full')">{{ t().settings.appearance.full }}</button>
+            </div>
+        </div>
+
+        <div class="ap-field">
+            <label>{{ t().settings.appearance.typeface }}</label>
+            <div class="ap-toggle">
+                <button [class.on]="appearance.prefs().typeface === 'system'" (click)="setTypeface('system')">{{ t().settings.appearance.system }}</button>
+                <button [class.on]="appearance.prefs().typeface === 'serif'" (click)="setTypeface('serif')">{{ t().settings.appearance.serif }}</button>
+                <button [class.on]="appearance.prefs().typeface === 'mono'" (click)="setTypeface('mono')">{{ t().settings.appearance.mono }}</button>
+            </div>
+        </div>
+
+        <div class="ap-field">
+            <label>{{ t().settings.appearance.textSize }} — {{ appearance.prefs().fontSize }}px</label>
+            <input type="range" min="13" max="22" step="0.5"
+                [value]="appearance.prefs().fontSize"
+                (input)="setFontSize(+$any($event.target).value)">
+        </div>
+
+        <div class="ap-field">
+            <label>{{ t().settings.appearance.lineHeight }} — {{ appearance.prefs().lineHeight }}</label>
+            <input type="range" min="1.2" max="2.1" step="0.05"
+                [value]="appearance.prefs().lineHeight"
+                (input)="setLineHeight(+$any($event.target).value)">
+        </div>
+
+        <div class="ap-checks">
+            <label><input type="checkbox" [checked]="appearance.prefs().showParagraphNumbers" (change)="toggleAppearanceFlag('showParagraphNumbers', $event)"> {{ t().settings.appearance.showParagraphNumbers }}</label>
+            <label><input type="checkbox" [checked]="appearance.prefs().showLineRules" (change)="toggleAppearanceFlag('showLineRules', $event)"> {{ t().settings.appearance.showLineRules }}</label>
+            <label><input type="checkbox" [checked]="appearance.prefs().showWordCount" (change)="toggleAppearanceFlag('showWordCount', $event)"> {{ t().settings.appearance.showWordCount }}</label>
+            <label><input type="checkbox" [checked]="appearance.prefs().focusModeHideToolbar" (change)="toggleAppearanceFlag('focusModeHideToolbar', $event)"> {{ t().settings.appearance.focusMode }}</label>
+            <label><input type="checkbox" [checked]="appearance.prefs().sheetFlush" (change)="toggleAppearanceFlag('sheetFlush', $event)"> {{ t().settings.appearance.sheetFlush }}</label>
+        </div>
+
+        <div class="ap-divider"></div>
+
+        <h3>{{ t().settings.toolbar.title }}</h3>
+
+        <div class="ap-field">
+            <label>{{ t().settings.toolbar.preset }}</label>
+            <div class="ap-toggle">
+                <button [class.on]="toolbarLayout.layout().preset === 'minimal'" (click)="pickToolbarPreset('minimal')">{{ t().settings.toolbar.minimal }}</button>
+                <button [class.on]="toolbarLayout.layout().preset === 'standard'" (click)="pickToolbarPreset('standard')">{{ t().settings.toolbar.standard }}</button>
+                <button [class.on]="toolbarLayout.layout().preset === 'everything'" (click)="pickToolbarPreset('everything')">{{ t().settings.toolbar.everything }}</button>
+            </div>
+        </div>
+        @if (toolbarError()) { <p class="ap-error">{{ toolbarError() }}</p> }
+
+        <div class="ap-field">
+            <label>{{ t().settings.toolbar.row1 }}</label>
+            <div class="ap-group-list" cdkDropList #row1List="cdkDropList"
+                [cdkDropListData]="row1Groups()" [cdkDropListConnectedTo]="[row2List]"
+                (cdkDropListDropped)="dropToolbarGroup($event)">
+                @for (id of row1Groups(); track id) {
+                <div class="ap-group-chip" cdkDrag>⠿ {{ groupLabel(id) }}</div>
+                }
+            </div>
+        </div>
+
+        <div class="ap-field">
+            <label>{{ t().settings.toolbar.row2 }}</label>
+            <div class="ap-group-list" cdkDropList #row2List="cdkDropList"
+                [cdkDropListData]="row2Groups()" [cdkDropListConnectedTo]="[row1List]"
+                (cdkDropListDropped)="dropToolbarGroup($event)">
+                @for (id of row2Groups(); track id) {
+                <div class="ap-group-chip" cdkDrag>⠿ {{ groupLabel(id) }}</div>
+                }
+            </div>
+        </div>
+
+        <div class="ap-catalog">
+            @for (group of toolbarGroups; track group.id) {
+            <details class="ap-catalog-group">
+                <summary>
+                    {{ group.label }}
+                    <span class="ap-count">{{ t().settings.toolbar.countOf(groupVisibleCount(groupButtonIds(group)), group.buttons.length) }}</span>
+                </summary>
+                <label class="ap-catalog-all">
+                    <input type="checkbox" [checked]="groupVisibleCount(groupButtonIds(group)) > 0" (change)="toggleGroupVisible(groupButtonIds(group), $event)">
+                    {{ t().settings.toolbar.allInGroup }}
+                </label>
+                @for (b of group.buttons; track b.id) {
+                <label><input type="checkbox" [checked]="!isButtonHidden(b.id)" (change)="toggleButtonVisible(b.id, $event)"> {{ b.label }}</label>
+                }
+            </details>
+            }
+        </div>
+
+        <button class="ap-reset" (click)="pickToolbarPreset('standard')">{{ t().settings.toolbar.resetToStandard }}</button>
+    </div>
+    }
+</div>

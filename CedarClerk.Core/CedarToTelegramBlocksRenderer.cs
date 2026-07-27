@@ -115,7 +115,9 @@ public static class CedarToTelegramBlocksRenderer
 
             case "audio":
                 var audioUrl = ResolveUrl((string?)node["attrs"]?["src"], ctx.MediaBaseUrl);
-                yield return new RichAudioBlock(audioUrl, CaptionRun((string?)node["attrs"]?["caption"]));
+                var audioTitle = ((string?)node["attrs"]?["title"])?.Trim();
+                yield return new RichAudioBlock(audioUrl, CaptionRun((string?)node["attrs"]?["caption"]),
+                    string.IsNullOrEmpty(audioTitle) ? null : audioTitle);
                 break;
 
             case "youtube":

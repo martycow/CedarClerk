@@ -151,6 +151,11 @@ public static class CedarToBlogHtmlRenderer
 
             case "audio":
                 var audioSrc = ResolveUrl((string?)node["attrs"]?["src"], ctx.MediaBaseUrl);
+                // The clip name (I16) is primarily a Telegram concept, but a bare <audio> player
+                // on the blog is just as anonymous — so it's shown here too when set.
+                var audioName = ((string?)node["attrs"]?["title"])?.Trim();
+                if (!string.IsNullOrEmpty(audioName))
+                    sb.Append("<div class=\"audio-title\">").Append(Escape(audioName)).Append("</div>");
                 AppendMedia(sb, "audio", audioSrc, (string?)node["attrs"]?["caption"], isVoid: false);
                 break;
 

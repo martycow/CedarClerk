@@ -520,6 +520,7 @@ export const ru: Dict = {
             lineHeight: 'Межстрочный интервал',
             showParagraphNumbers: 'Номера абзацев на полях',
             showLineRules: 'Разделительные линии между блоками',
+            movedToEditor: 'Эти настройки переехали в панель рядом с рабочим листом — так видно каждое изменение сразу. Откройте редактор и нажмите вкладку «Внешний вид» справа.',
             showWordCount: 'Счётчик слов и символов в строке состояния',
             focusMode: 'Прятать панель инструментов при наборе (режим фокуса)',
             sheetFlush: 'Лист без бумажной карточки (сливается с холстом)',
@@ -537,6 +538,7 @@ export const ru: Dict = {
             row2: 'Ряд 2 — по желанию',
             countOf: (visible: number, total: number) => `${visible} из ${total}`,
             basedOn: 'На основе',
+            allInGroup: 'Вся группа',
             resetToStandard: 'Вернуть стандартный',
         },
         headerSlots: {
