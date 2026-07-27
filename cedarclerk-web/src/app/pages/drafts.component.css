@@ -227,7 +227,9 @@
 
 .drafts-row {
     display: grid;
-    grid-template-columns: 1fr 170px 90px 130px 140px 100px 110px 80px;
+    /* Static fallback; gridTemplate() sets the real values inline. Kept in step with
+       DEFAULT_COL_WIDTHS so the first paint doesn't jump. */
+    grid-template-columns: 1fr 200px 120px 170px 190px 140px 140px 80px;
     gap: 12px;
     align-items: center;
     padding: 11px 16px;
@@ -298,11 +300,14 @@
     color: var(--t3);
 }
 
-/* Sits on the cell's left edge so it drags the boundary the eye actually sees. Widened by a
-   transparent margin — a 1px line is unhittable with a finger. */
+/* Widened by a transparent margin — a 1px line is unhittable with a finger.
+   DB2.1 — the handle used to sit on its column's LEFT edge while the drag maths grew the column
+   when the pointer moved right, so every resize felt inverted. It belongs on the right edge: the
+   divider you drag right is the one that makes the column to its left wider, which is what both
+   the maths and every other table does. */
 .col-resize {
     position: absolute;
-    left: -8px;
+    right: -8px;
     top: -8px;
     bottom: -8px;
     width: 5px;

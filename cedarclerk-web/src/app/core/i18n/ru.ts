@@ -236,6 +236,7 @@ export const ru: Dict = {
         newDraft: {
             title: 'Новый черновик',
             titlePlaceholder: 'О чём пост?',
+            titleRequired: 'Черновику нужно имя — по нему вы его потом найдёте.',
             moreOptions: 'Больше настроек',
             languages: 'Языки',
             both: 'Оба',

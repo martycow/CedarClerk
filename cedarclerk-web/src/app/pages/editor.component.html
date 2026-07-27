@@ -14,7 +14,7 @@
             <svg lucideFileStack class="icon"></svg>
         </a>
 
-        <input class="title" [(ngModel)]="title" (ngModelChange)="markDirty()" [placeholder]="t().editor.draftTitle">
+        <input class="title" [(ngModel)]="title" (ngModelChange)="markDirty()" [maxlength]="draftTitleMax" [placeholder]="t().editor.draftTitle">
 
         <span class="save-state" [class.saving]="saveState() === 'saving' || saveState() === 'dirty'" [class.error]="saveState() === 'error'">
             @switch (saveState()) {
@@ -753,7 +753,11 @@
         <svg modal-icon lucidePlus class="icon"></svg>
         <span modal-title>{{ t().editor.newDraft.title }}</span>
 
-        <input class="chat-input" [(ngModel)]="newDraftTitle" [placeholder]="t().editor.newDraft.titlePlaceholder" (keyup.enter)="confirmNewDraft()">
+        <input class="chat-input" [(ngModel)]="newDraftTitle" [placeholder]="t().editor.newDraft.titlePlaceholder"
+                   [maxlength]="draftTitleMax" (keyup.enter)="confirmNewDraft()">
+            @if (newDraftTitle.trim().length === 0) {
+            <p class="field-hint-inline">{{ t().editor.newDraft.titleRequired }}</p>
+            }
 
         @if (!newDraftExpanded()) {
         <button class="tag-add-btn" style="margin-top:10px" (click)="newDraftExpanded.set(true)">{{ t().editor.newDraft.moreOptions }}</button>
@@ -811,7 +815,7 @@
         }
 
         <button modal-actions class="btn-ghost" (click)="closeNewDraftDialog()">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="confirmNewDraft()" [disabled]="draftsBusy()">
+        <button modal-actions class="btn-accent" (click)="confirmNewDraft()" [disabled]="draftsBusy() || !newDraftTitleValid()">
             {{ draftsBusy() ? 'Creating…' : 'Create draft' }}
         </button>
     </app-modal>

@@ -22,12 +22,15 @@ import {
 } from '@lucide/angular';
 
 type FilterKey = 'all' | 'draft' | 'scheduled' | 'published' | 'attention' | 'archived';
-export type SortKey = 'title' | 'state' | 'languages' | 'folder' | 'tags' | 'activity' | 'updated';
+export type SortKey = 'title' | 'state' | 'languages' | 'folder' | 'tags' | 'activity' | 'updated' | 'created';
 
 // Widths of the six fixed columns between Title (1fr) and the actions column (N1). Title keeps
 // the leftover space, so it isn't in here — dragging any handle grows/shrinks Title, which is
 // what makes the table feel like it resizes rather than scrolls.
-const DEFAULT_COL_WIDTHS = [170, 90, 130, 140, 100, 110];
+// DB2.3 — Title is the 1fr column, so it soaked up all the slack and started far wider than a
+// post title ever needs. Widening the fixed columns is the safe way to give it less without
+// restructuring the grid (and each is still individually resizable).
+const DEFAULT_COL_WIDTHS = [200, 120, 170, 190, 140, 140];
 const MIN_COL_WIDTH = 60;
 const COL_STORAGE_KEY = 'cedar-drafts-cols';
 
@@ -105,7 +108,9 @@ export class DraftsPageComponent implements OnInit {
 
     // Sorting + column widths (N1). Both are per-browser view state, not account data — the same
     // treatment ThemeService gives the theme, and not worth a profile round-trip.
-    sortKey = signal<SortKey>('updated');
+    // DB2.2 — creation date is the default: it's the one order that never changes under you,
+    // unlike 'updated', which reshuffles the list every time you touch a draft.
+    sortKey = signal<SortKey>('created');
     sortDir = signal<'asc' | 'desc'>('desc');
     colWidths = signal<number[]>(loadColWidths());
 
@@ -173,7 +178,8 @@ export class DraftsPageComponent implements OnInit {
             case 'tags': return a.tags.localeCompare(b.tags);
             // Views and reactions are one column, so they sort as one number.
             case 'activity': return (a.viewCount + a.reactionCount) - (b.viewCount + b.reactionCount);
-            default: return a.updatedAt.localeCompare(b.updatedAt);
+            case 'updated': return a.updatedAt.localeCompare(b.updatedAt);
+            default: return a.createdAt.localeCompare(b.createdAt);
         }
     }
 

@@ -233,6 +233,7 @@ export const en = {
         newDraft: {
             title: 'New draft',
             titlePlaceholder: "What's it about?",
+            titleRequired: 'A draft needs a name — it is how you find it later.',
             moreOptions: 'More options',
             languages: 'Languages',
             both: 'Both',

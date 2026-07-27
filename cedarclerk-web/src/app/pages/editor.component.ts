@@ -97,6 +97,9 @@ function toDatetimeLocalValue(date: Date): string {
 }
 
 type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
+// DB2.6 — matches the maxlength on the title inputs.
+export const DRAFT_TITLE_MAX = 64;
+
 const EMPTY_DOC = '{"type":"doc","content":[{"type":"paragraph"}]}';
 const BLOG_HOST = 'blog.mooexe.dev';
 
@@ -348,6 +351,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     newDraftOpen = signal(false);
     newDraftExpanded = signal(false);
     newDraftTitle = '';
+    readonly draftTitleMax = DRAFT_TITLE_MAX;
     newDraftLanguages: 'ru' | 'en' | 'both' = 'ru';
     newDraftTags = '';
     newDraftTemplate: NewDraftTemplate = 'blank';
@@ -1162,8 +1166,16 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.newDraftOpen.set(false);
     }
 
+    // DB2.6 — a draft with no name is unfindable in the list, and an overlong one breaks every
+    // row it appears in. Bounds checked here as well as on the input's maxlength, because the
+    // dialog also submits on Enter.
+    newDraftTitleValid(): boolean {
+        const len = this.newDraftTitle.trim().length;
+        return len >= 1 && len <= DRAFT_TITLE_MAX;
+    }
+
     async confirmNewDraft() {
-        if (this.draftsBusy()) return;
+        if (this.draftsBusy() || !this.newDraftTitleValid()) return;
         const title = this.newDraftTitle.trim();
         const tags = this.newDraftTags;
         const languages = this.newDraftLanguages;
