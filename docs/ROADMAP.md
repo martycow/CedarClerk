@@ -160,22 +160,24 @@ Executing `_Documents_/CedarClerk/Brainstorm_Features.md` (27 items, Marty's own
 - [~] B26 — UI language picker (RU/EN), laid out to survive long-word languages — **mechanism done 26.07.2026 (ADR-044), translation unfinished**. Shipped: `LocaleService` + typed `en.ts`/`ru.ts` dictionaries (`cedarclerk-web/src/app/core/i18n/`), `ApplicationUser.UiLanguage` (migration `AddUiLanguage`) + `POST /api/auth/ui-language`, picker card in Settings, and login/register/`/drafts` translated. **Still English**: editor (largest), rest of Settings, `/stats`, comments, debug console. Excluded on purpose (see ADR-044): server `{ error }` bodies + `ErrorMessages.cs`, and `/terms`/`/privacy`. The long-word (German) layout pass has not been done
 - [x] B3 — Registration form for private posts (26.07.2026, ADR-042) — per-post configurable form (name/nickname/email/social + custom text/choice questions), shown instead of the 404 when configured, grants access on submit, first rate limit on the public blog. Owner configures it and reads submissions in the Export modal. **Not yet live-verified in a browser**
 
-**The v1 list ends here.** Late on 26.07.2026 Marty rewrote `Brainstorm_Features.md` from scratch — 13 renumbered items replacing the 27 above. Everything shipped stays recorded here; the v1 Medium/Low items that were never started are **parked, not cancelled** (full list in `docs/BACKLOG.md`). Note `B12` among them is a real bug (paragraph numbers don't render although the setting is on), not a feature request.
+**The v1 items above stay open.** Late on 26.07.2026 Marty emptied `Brainstorm_Features.md` and wrote 13 new items into it — an addition, not a replacement (confirmed with him): v1 was already captured in these docs, so the source file got started over. The unshipped v1 Medium/Low items keep their priorities and are simply not the current focus. `B12` among them is a real bug (paragraph numbers don't render although the setting is on), not a feature request.
 
 Deployed to production by Marty on 26.07.2026, including both new migrations (`AddDraftStatSeen`, `AddUiLanguage`); he verifies behaviour live himself and reports back.
 
-### Phase 9b — Brainstorm v2 — not started
+### Phase 9b — Brainstorm v2 — in progress
+**Current focus, set by Marty 26.07.2026**: the export window first (N4 + N5 + N13 as one pass), then the Posts Manager (N7, then N10/N12).
+
 Full item text in `docs/BACKLOG.md` under "Brainstorm v2"; this is the status checklist. One commit per item, short messages.
 
 **High**
 - [ ] N2 — Tag selector in the New Draft dialog (today it's a free-text comma-separated input; the cloud picker exists only in the editor)
-- [ ] N4 — Export: channels picked by clicking only, no text entry (was v1 `B4`)
-- [ ] N5 — Export: an unticked destination collapses/disables its settings block
+- [x] N4 — Export: channels picked by clicking only, no text entry (was v1 `B4`) — 26.07.2026, ADR-045. Export-target field removed outright; the connect-by-@username field survives behind a disclosure link, because the discovered-chats list is empty for accounts with no linked Telegram
+- [x] N5 — Export: an unticked destination folds to its header (26.07.2026, ADR-045) — LIVE chip stays visible while folded
 - [ ] N6 — Registration-form field validation (≥2 chars, no specials except `-`) — server-side too, not just the browser
 - [ ] N7 — **Posts Manager**: a new page absorbing comments, reactions, stats and private-post forms
 - [ ] N10 — Forms tab: edit/delete a form, per-respondent answers, multiple-choice questions + a pie chart
 - [ ] N12 — Form presets, chosen before publishing
-- [ ] N13 — Wide export window
+- [x] N13 — Wide export window (26.07.2026, ADR-045) — 1180px with an auto-fit column grid over the sections; needed the `anyComponentStyle` error budget raised 25kB→32kB
 
 **Medium**
 - [ ] N11 — Telegram DM on a new registration-form submission (extends ADR-040)

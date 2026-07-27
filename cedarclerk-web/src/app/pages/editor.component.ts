@@ -312,6 +312,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     channels = signal<Channel[]>([]);
     channelStats = signal<Record<string, ChannelStats>>({});
     newChannelChatId = '';
+    // N4 — manual @username/id entry is a fallback behind a disclosure, not part of the normal
+    // flow: the discovered-chats list is empty for an account with no linked Telegram.
+    manualChannelOpen = signal(false);
     channelError = signal('');
 
     knownChats = signal<KnownChat[]>([]);

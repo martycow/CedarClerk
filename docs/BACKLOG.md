@@ -47,7 +47,7 @@ Raw list, not yet scoped into phase steps — logged here per Marty's call, not 
 
 ### Brainstorm v2 — 26.07.2026, current (from `_Documents_/CedarClerk/Brainstorm_Features.md`)
 
-**Marty rewrote the brainstorm file from scratch late on 26.07.2026**, replacing the 27-item v1 list below with 13 renumbered items. This table is the live one; v1 is kept underneath only because a chunk of it is neither done nor carried over (see "Parked from v1"). Numbered `N1`…`N13` here — the source file numbers them 1…13, and plain numbers would collide with the idea list above.
+**Late on 26.07.2026 Marty emptied the brainstorm file and wrote 13 new items into it.** This is an *addition*, confirmed with him directly: v1 was already recorded here, so he started the source file over rather than appending. **Nothing in v1 is cancelled** — both lists are live, v2 just holds the newer thinking. Numbered `N1`…`N13` here — the source file numbers them 1…13, and plain numbers would collide with the idea list above.
 
 | # | Priority | Tag | What | Notes / overlap |
 |---|---|---|---|---|
@@ -69,11 +69,11 @@ Raw list, not yet scoped into phase steps — logged here per Marty's call, not 
 
 **Not in v2 but still live**: `B26` (interface language) is half-shipped — mechanism + 3 screens done, the rest of the UI still English. It dropped out of the rewritten file, but the work exists in the code and is tracked in `TASKS.md`; don't treat its absence here as cancellation.
 
-**Parked from v1** — neither done nor carried into v2, so deliberately unscheduled rather than deleted: `B10` (uniform popup behaviour), `B11` (diff markers level with the changed region), `B12` (ruler overlay + paragraph numbers not rendering), `B19` (remaining Insert buttons become popups), `B2` (channel icons), `B6` (single settings entry), `B7` (iPad email overflow), `B8` (monochrome YouTube icon), `B9` (emoji panel), `B13` (whitespace reveal), `B15` (customization side panel), `B16` (custom accent + writing-area presets), `B17` (bold signature), `B18` (custom YouTube link text), `B20` (drafts icon), `B27` (single AI button). `B12`'s "paragraph numbers don't render despite the setting being on" is a **bug**, not a feature request — worth pulling back in regardless of the rest.
+**Still open from v1** (unchanged priorities, just not the current focus): `B10`, `B11`, `B12`, `B19` (Medium) and the whole Low block — `B2`, `B6`, `B7`, `B8`, `B9`, `B13`, `B15`, `B16`, `B17`, `B18`, `B20`, `B27`. Two of them deserve calling out: `B26` (interface language) is **half-shipped** — mechanism plus login/register/`/drafts`, the rest of the UI still English, tracked in `TASKS.md`; and `B12`'s "paragraph numbers don't render despite the setting being on" is a **bug**, not a feature request.
 
-### Brainstorm v1 — 26.07.2026, superseded
+### Brainstorm v1 — 26.07.2026, still live
 
-27 items with Marty's own High/Medium/Low priorities. Executed as Phase 9 (see `docs/ROADMAP.md`) until the rewrite above replaced it: `B3`, `B5`, `B14`, `B21`, `B22`, `B23`, `B24`, `B25` shipped, `B26` half-shipped, the rest parked as listed above. Numbering is the brainstorm's own (`B1`…`B27`).
+27 items with Marty's own High/Medium/Low priorities, executed as Phase 9 (see `docs/ROADMAP.md`). Shipped so far: `B3`, `B5`, `B14`, `B21`, `B22`, `B23`, `B24`, `B25`; `B26` half. The rest are open — see the note above. Numbering is the brainstorm's own (`B1`…`B27`).
 
 | # | Priority | Tag | What |
 |---|---|---|---|

@@ -66,21 +66,31 @@
     </header>
 
     @if (exportModalOpen()) {
-        <app-modal [width]="640" (closed)="exportModalOpen.set(false)">
+        <!--N13: the export window is the most-used surface after the sheet itself, so it runs
+        near the full viewport; .export-grid below turns the extra width into columns rather than
+        one very long scroll. app-modal already clamps to calc(100vw - 32px) on small screens.-->
+        <app-modal [width]="1180" (closed)="exportModalOpen.set(false)">
             <svg modal-icon lucideSend class="icon"></svg>
             <span modal-title>Export</span>
 
+            <div class="export-grid">
             <!--Channels moved here from the topbar (B21) and sit at the very top: they're
             export configuration, not an editing tool. Outside the currentId() guard because
             connecting/disconnecting a channel isn't draft-specific.-->
             <div class="export-section">
                 <div class="export-section-title">Каналы</div>
+                <!--N4: channels are picked by clicking, never typed. The manual field stays as a
+                disclosure, not a visible input, because the "Available" list below is built from
+                my_chat_member updates — an account with no linked Telegram sees nothing there and
+                would otherwise have no way to connect a channel at all.-->
+                @if (manualChannelOpen()) {
                 <div class="channel-add">
                     <input class="chat-input" [(ngModel)]="newChannelChatId" [disabled]="channelBusy()" placeholder="@channel or id" (keyup.enter)="connectChannel()">
                     <button class="mini" (click)="connectChannel()" [disabled]="channelBusy()" title="Connect">
                         @if (channelBusy()) { <svg lucideRefreshCw class="icon-sm spin"></svg> } @else { <svg lucidePlus class="icon-sm"></svg> }
                     </button>
                 </div>
+                }
                 @if (channelError()) { <p class="channel-error">{{ channelError() }}</p> }
 
                 <div class="popover-divider"></div>
@@ -150,15 +160,22 @@
                         <div class="empty-line2">Connect one via <span class="mono-accent">@CedarClerkBot</span></div>
                     </div>
                 }
+
+                <button class="manual-channel-toggle" (click)="manualChannelOpen.set(!manualChannelOpen())">
+                    {{ manualChannelOpen() ? 'Скрыть ручной ввод' : 'Добавить по @имени или id' }}
+                </button>
             </div>
 
             @if (currentId(); as id) {
-            <div class="export-section">
+            <!--N5: an unticked destination folds down to its header so it stops competing for
+            attention. The LIVE chip stays visible while folded — that's state, not settings.-->
+            <div class="export-section" [class.dest-off]="!destBlog()">
                 <label class="dest-head">
                     <input type="checkbox" [checked]="destBlog()" (change)="destBlog.set(!destBlog())">
                     <span class="export-section-title" style="margin:0">Сайт / Блог</span>
                     @if (currentBlog()?.isPublished) { <span class="state-chip live">LIVE</span> }
                 </label>
+                @if (destBlog()) {
                 @if (currentBlog(); as blog) {
                     @if (blog.isPublished) {
                     <div class="blog-lang-badges">
@@ -290,29 +307,36 @@
                 </div>
                 }
                 }
+                }
             </div>
 
-            <div class="export-section">
+            <div class="export-section" [class.dest-off]="!destTelegram()">
                 <label class="dest-head">
                     <input type="checkbox" [checked]="destTelegram()" (change)="destTelegram.set(!destTelegram())">
                     <span class="export-section-title" style="margin:0">Telegram</span>
                     @if (telegramPostUrl()) { <span class="state-chip live">LIVE</span> }
                 </label>
+                @if (destTelegram()) {
                 @if (selectedChannel(); as sc) {
                 <div class="channel-chosen">
                     <span class="channel-avatar" [style.background]="channelColor(sc.id)">{{ channelInitial(sc.title) }}</span>
                     <span class="channel-chosen-title">{{ sc.title }}</span>
                     <button class="mini-remove" (click)="chatId = ''" title="Change channel"><svg lucideX class="icon-sm"></svg></button>
                 </div>
-                } @else {
-                <input class="chat-input" [(ngModel)]="chatId" placeholder="@channel or chat id">
                 }
+                <!--N4: no free-text target. Picking a connected channel is the only way to set
+                one; connecting a new channel happens in the Каналы section above.-->
                 @if (channels().length) {
-                <div class="chip-row">
+                <div class="channel-pick-row">
                     @for (c of channels(); track c.id) {
-                    <button class="chip" (click)="selectChannel(c)">{{ c.title }}</button>
+                    <button class="channel-pick" [class.on]="isSelectedChannel(c)" (click)="selectChannel(c)">
+                        <span class="channel-avatar" [style.background]="channelColor(c.id)">{{ channelInitial(c.title) }}</span>
+                        <span class="channel-pick-title">{{ c.title }}</span>
+                    </button>
                     }
                 </div>
+                } @else {
+                <p class="field-hint-inline">Сначала подключите канал в разделе «Каналы» выше.</p>
                 }
 
                 <div class="panel-label" style="margin-top:12px">Language</div>
@@ -391,6 +415,7 @@
                 }
                 }
                 }
+                }
             </div>
 
             <div class="export-section">
@@ -453,6 +478,7 @@
                 }
             </div>
             }
+            </div>
 
             <!--One Publish for the whole window (B5) — fires every ticked destination.-->
             <button modal-actions class="btn-ghost" (click)="exportModalOpen.set(false)">Close</button>

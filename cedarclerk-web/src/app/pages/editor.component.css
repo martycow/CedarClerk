@@ -1491,15 +1491,85 @@
 }
 
 /* ---------- Export modal ---------- */
+/* N13: the wide export window spends its extra width on columns instead of one tall scroll.
+   Sections keep their own height (align-items:start), and the grid collapses to a single column
+   on its own below ~2 columns' worth of space, so the narrow case needs no media query. */
+.export-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    gap: 12px;
+    align-items: start;
+}
+
 .export-section {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     padding: 12px 14px;
-    margin-bottom: 12px;
+    margin-bottom: 0;
 }
 
-.export-section:last-child {
+/* N5: an unticked destination keeps only its header, muted, so it stops pulling the eye. */
+.export-section.dest-off {
+    background: var(--alt);
+    opacity: .6;
+}
+
+.export-section.dest-off .dest-head {
     margin-bottom: 0;
+}
+
+/* N4: connected channels are picked by clicking one of these, never by typing an id. */
+.channel-pick-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.channel-pick {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 4px 9px 4px 4px;
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+.channel-pick:hover {
+    border-color: var(--accent);
+}
+
+.channel-pick.on {
+    border-color: var(--accent);
+    background: var(--asoft);
+}
+
+/* Long channel names must not stretch the pick row — the reason nothing here is fixed-width. */
+.channel-pick-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.manual-channel-toggle {
+    margin-top: 10px;
+    border: none;
+    background: none;
+    padding: 0;
+    font-size: 11.5px;
+    color: var(--t3);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.manual-channel-toggle:hover {
+    color: var(--accent);
 }
 
 .export-section-title {
