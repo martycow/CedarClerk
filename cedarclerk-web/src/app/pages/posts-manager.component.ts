@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
 import {
@@ -14,13 +14,14 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { CountBadgeComponent } from '../shared/count-badge.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
+import { AccountMenuComponent } from '../shared/account-menu.component';
 import { ModalComponent } from '../shared/modal.component';
 import { CommentsComponent } from './comments.component';
 import { StatsComponent } from './stats.component';
 import {
     LucideTrash2 as Trash2, LucideArchive as Archive, LucideArchiveRestore as ArchiveRestore,
     LucidePenLine as PenLine, LucideLock as Lock, LucideExternalLink as ExternalLink,
-    LucideRefreshCw as RefreshCw,
+    LucideRefreshCw as RefreshCw, LucideArrowLeft as ArrowLeft,
 } from '@lucide/angular';
 
 export type ManagerTab = 'posts' | 'feedback' | 'stats' | 'forms';
@@ -32,9 +33,9 @@ export type ManagerTab = 'posts' | 'feedback' | 'stats' | 'forms';
 @Component({
     selector: 'app-posts-manager',
     imports: [
-        DatePipe, FormsModule, CedarLogoComponent, ModalComponent, CommentsComponent, StatsComponent,
-        CountBadgeComponent,
-        Trash2, Archive, ArchiveRestore, PenLine, Lock, ExternalLink, RefreshCw,
+        DatePipe, FormsModule, RouterLink, CedarLogoComponent, ModalComponent, CommentsComponent,
+        StatsComponent, CountBadgeComponent, AccountMenuComponent,
+        Trash2, Archive, ArchiveRestore, PenLine, Lock, ExternalLink, RefreshCw, ArrowLeft,
     ],
     templateUrl: 'posts-manager.component.html',
     styleUrls: ['posts-manager.component.css'],
@@ -86,11 +87,6 @@ export class PostsManagerComponent implements OnInit {
         } finally {
             this.loading.set(false);
         }
-    }
-
-    avatarInitial(): string {
-        const email = this.auth.userEmail();
-        return email ? email[0].toUpperCase() : '?';
     }
 
     setTab(tab: ManagerTab) {

@@ -1,0 +1,99 @@
+/* Lifted verbatim out of editor.component.css when the account menu became shared (IB9). The
+   page-chrome classes have to be repeated here rather than reused: Angular's style encapsulation
+   means a rule in a page stylesheet can never reach this component's own template. */
+
+.icon-sm {
+    width: 14px;
+    height: 14px;
+}
+
+.account-trigger {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border: none;
+    background: none;
+    padding: 2px 4px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+}
+
+.account-trigger:hover {
+    background: rgba(128, 120, 100, .14);
+}
+
+.avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #F4F2EA;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    flex: none;
+}
+
+.user {
+    color: var(--t2);
+    font-size: 12.5px;
+    max-width: 160px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.profile-email {
+    font-size: 13px;
+    color: var(--text);
+    margin: 6px 0 12px;
+    word-break: break-all;
+}
+
+.popover-divider {
+    border-top: 1px solid var(--border);
+    margin: 14px 0;
+}
+
+.account-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    border-radius: var(--radius-md);
+    padding: 7px 10px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    text-decoration: none;
+}
+
+.account-action-btn:hover {
+    background: color-mix(in srgb, var(--accent) 8%, var(--sheet));
+}
+
+.logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    border-radius: var(--radius-md);
+    padding: 7px 10px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--danger);
+}
+
+.logout-btn:hover {
+    background: color-mix(in srgb, var(--danger) 8%, var(--sheet));
+}

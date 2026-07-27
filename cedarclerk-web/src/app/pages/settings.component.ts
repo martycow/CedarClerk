@@ -14,6 +14,7 @@ import { TelegramLinkService } from '../core/telegram-link.service';
 import { ChannelsService, Channel } from '../core/channels.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
+import { AccountMenuComponent } from '../shared/account-menu.component';
 import {
     LucideArrowLeft as ArrowLeft, LucideCheck as Check, LucideSend as Send,
     LucideAtSign as AtSign, LucideCamera as Camera, LucideThumbsUp as ThumbsUp,
@@ -24,7 +25,7 @@ type PayMethod = 'stripe' | 'paypal' | 'stars';
 
 @Component({
     selector: 'app-settings',
-    imports: [FormsModule, DatePipe, RouterLink, DragDropModule, CedarLogoComponent, ArrowLeft, Check, Send, AtSign, Camera, ThumbsUp, PlaySquare, Code2],
+    imports: [FormsModule, DatePipe, RouterLink, DragDropModule, CedarLogoComponent, AccountMenuComponent, ArrowLeft, Check, Send, AtSign, Camera, ThumbsUp, PlaySquare, Code2],
     templateUrl: 'settings.component.html',
     styleUrls: ['settings.component.css']
 })
@@ -197,7 +198,7 @@ export class SettingsComponent implements OnInit {
         this.saveAppearance({ lineHeight: value });
     }
 
-    toggleAppearanceFlag(key: 'showRuler' | 'showParagraphNumbers' | 'showWordCount' | 'focusModeHideToolbar' | 'sheetFlush', ev: Event) {
+    toggleAppearanceFlag(key: 'showParagraphNumbers' | 'showWordCount' | 'focusModeHideToolbar' | 'sheetFlush', ev: Event) {
         this.saveAppearance({ [key]: (ev.target as HTMLInputElement).checked });
     }
 

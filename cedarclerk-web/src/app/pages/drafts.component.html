@@ -10,7 +10,7 @@
         <button class="icon-btn" (click)="theme.toggle()" [title]="t().common.toggleTheme">
             {{ theme.theme() === 'dark' ? '☀' : '☾' }}
         </button>
-        <span class="avatar">{{ avatarInitial() }}</span>
+        <app-account-menu></app-account-menu>
     </header>
 
     <div class="drafts-body">

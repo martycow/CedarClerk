@@ -1,5 +1,10 @@
 <div class="manager-page">
     <header class="manager-header">
+        <!--IB8: this page had no way out at all — no back link, no account menu — so reaching it
+        meant editing the URL to leave. Same back arrow /settings already carries.-->
+        <a class="icon-btn" routerLink="/editor" [title]="t().common.backToEditor">
+            <svg lucideArrowLeft class="icon"></svg>
+        </a>
         <app-cedar-logo [size]="19"></app-cedar-logo>
         <span class="brand-name">Cedar Clerk</span>
         <span class="crumb-sep">/</span>
@@ -8,7 +13,7 @@
         <button class="icon-btn" (click)="theme.toggle()" [title]="t().common.toggleTheme">
             {{ theme.theme() === 'dark' ? '☀' : '☾' }}
         </button>
-        <span class="avatar">{{ avatarInitial() }}</span>
+        <app-account-menu></app-account-menu>
     </header>
 
     <div class="manager-body">

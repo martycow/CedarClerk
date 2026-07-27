@@ -93,8 +93,10 @@ export class DraftsService {
         return firstValueFrom(this.http.post<{ id: string }>('/api/drafts', { title, cedarJson }));
     }
 
+    // Returns the server's own updatedAt: the caller compares it against translation timestamps,
+    // which are also server-issued, so a client clock must never get into that comparison (IB3).
     update(id: string, title: string, cedarJson: string) {
-        return firstValueFrom(this.http.put(`/api/drafts/${id}`, { title, cedarJson }));
+        return firstValueFrom(this.http.put<{ id: string; updatedAt: string }>(`/api/drafts/${id}`, { title, cedarJson }));
     }
 
     remove(id: string) {

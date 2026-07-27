@@ -2,6 +2,24 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-07-27, Phase 9c (Input.md sweep) — bug pass
+
+Marty's `Input.md` (32 items: 19 improvements, 9 bugs, 2 removals, 2 features) imported into `docs/BACKLOG.md` with a dedup verdict per item — five turned out to be duplicates of open `B`/`N` entries (`I14`≡`B15`, `I18`≡`B20`, `IB4`≡`B12`, `IB7`≡`B11`, `IF2`≡ backlog idea #12) and four are refinements of things that shipped in the previous two days. Scoped as Phase 9c in `docs/ROADMAP.md`, bugs first.
+
+Seven of the nine bugs fixed. Three had a root cause that was not what the symptom suggested:
+
+- **The folder label** (IB6) looked like state being lost on the way back from Settings; it was the folder list loading lazily on first opening the *picker*, while the *label* needed the same list to resolve a name. Any freshly-loaded draft therefore read as unfiled until you clicked the thing that would have told you otherwise. Loaded at editor init now, and an unresolved id shows `…` instead of claiming "no folder".
+- **The diff gutter** (IB7, the never-shipped `B11`) was drawn from correct measurements in the wrong coordinate space: marker offsets came from `.ProseMirror`'s top but the bars are positioned inside `.sheet-wrap`, so every one of them sat exactly the sheet's 28px top padding too high — 40px with the ruler on, which is why it read as inconsistently above *or* below.
+- **The dead profile button** (IB9) was reproducible by reading: the avatar was a real popover in the editor and a plain `<span>` everywhere else. It's now one shared `AccountMenuComponent` used by all four pages, which is also what gave `/posts` a logout — it had neither that nor a back link, so reaching it meant editing the URL to leave (IB8).
+
+**The ruler is gone** (IB4/`B12`). It was never an overlay on the writing area: a 12px decorative strip rendered as a sibling *above* the sheet, which is exactly why it looked like it sat underneath. With no margins or tab stops in this editor for a ruler to control, Marty's "remove it if it can't be fixed" branch was taken outright rather than rebuilt.
+
+Two translation misses from the ADR-050 sweep: the paragraph-format dropdown's trigger label (IB1 — the menu items were translated, but the label came from a function returning a raw English string that the active-state checks also matched against; it returns a block level now) and the whole re-translate flow (IB2 — dialog body, button, both tooltips, and the delete-translation confirm). IB2's other half was layout: the progress bar carried the sheet's max-width without `auto` side margins, pinning it to the far left of the column.
+
+**IB3 (RU load marks EN stale) is only partly addressed and is not closed.** Two genuine defects on that path were found and fixed — `DraftsService.update()` discarded the server's `updatedAt`, so the client re-stamped the RU version from its own clock and any laptop-vs-Pi skew lit the stale dot by itself; and `enStale()` compared the two timestamps as raw strings, which flips on a trailing `Z` or a differing fractional-second precision. Both now use the server's value compared as instants. What is still unexplained is why an autosave fires at all about a second after a RU load: the timing matches the 1.2s debounce exactly, but `setContent` runs with `emitUpdate: false`, `resetHistory` goes through `view.updateState`, and no custom extension appends a transaction. Needs a live reproduction.
+
+Not started: IB5 (blog comment form). `dotnet test` 278/278, `ng build` clean. Nothing here is live-verified in a browser yet.
+
 ## 2026-07-26, Phase 9 (brainstorm sweep)
 Imported `_Documents_/CedarClerk/Brainstorm_Features.md` (27 items with Marty's own priorities) into `docs/BACKLOG.md` and opened Phase 9 in `docs/ROADMAP.md`, executing High → Medium → Low with one commit per item.
 

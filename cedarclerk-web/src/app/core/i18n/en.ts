@@ -17,6 +17,7 @@ export const en = {
         close: 'Close',
         toggleTheme: 'Toggle theme',
         nothingHere: 'Nothing here.',
+        backToEditor: 'Back to editor',
     },
     login: {
         tagline: 'Write here. Publish there. Moo.',
@@ -218,8 +219,13 @@ export const en = {
             startEmpty: 'Start empty',
             noEnglishYet: 'No English version yet',
             deleteEnglish: 'Delete English version',
+            deleteEnglishConfirm: 'Delete the English version? This cannot be undone.',
             staleWarning: 'Russian version was edited after this translation',
             replaceTitle: 'Replace the English version?',
+            replaceBody: 'A fresh machine translation will overwrite the current English version. The original stays in history.',
+            retranslate: '↻ Re-translate',
+            retranslateTitle: 'Re-translate from Russian',
+            retranslateStaleTitle: 'Russian version changed — re-translate',
             diffTitle: 'Changed since the English translation was last synced',
         },
         newDraft: {
@@ -453,7 +459,6 @@ export const en = {
     },
     settings: {
         crumb: 'Settings',
-        backToEditor: 'Back to editor',
         saved: 'Saved',
         language: {
             nav: 'Language',
@@ -497,7 +502,6 @@ export const en = {
             mono: 'Mono',
             textSize: 'Text size',
             lineHeight: 'Line height',
-            showRuler: 'Show ruler above the sheet',
             showParagraphNumbers: 'Number paragraphs in the gutter',
             showWordCount: 'Word & character counter in the status bar',
             focusMode: 'Hide the toolbar while typing (focus mode)',

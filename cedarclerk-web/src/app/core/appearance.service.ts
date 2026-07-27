@@ -8,7 +8,6 @@ export interface AppearancePrefs {
     typeface: 'system' | 'serif' | 'mono';
     fontSize: number; // px, sheet base (before zoom)
     lineHeight: number;
-    showRuler: boolean;
     showParagraphNumbers: boolean;
     showWordCount: boolean;
     focusModeHideToolbar: boolean;
@@ -22,7 +21,6 @@ export const DEFAULT_APPEARANCE: AppearancePrefs = {
     typeface: 'system',
     fontSize: 16,
     lineHeight: 1.6,
-    showRuler: false,
     showParagraphNumbers: false,
     showWordCount: true,
     focusModeHideToolbar: false,

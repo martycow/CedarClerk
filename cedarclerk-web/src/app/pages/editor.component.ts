@@ -17,7 +17,7 @@ import {
 import { FormPresetsService, FormPreset } from '../core/form-presets.service';
 import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
-import { CountBadgeComponent } from '../shared/count-badge.component';
+import { AccountMenuComponent } from '../shared/account-menu.component';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, PostLanguage, CompressionLevel, ScheduledPost } from '../core/posts.service';
 import { ChannelsService, Channel, ChannelStats, KnownChat } from '../core/channels.service';
@@ -59,7 +59,7 @@ import {
     LucideTable as TableIcon, LucideSigma as Sigma, LucideSigmaSquare as SigmaSquare,
     LucideImage as ImageIcon, LucideVideo as VideoIcon, LucideAudioLines as AudioLines, LucideImages as Images,
     LucideSend as Send, LucidePlus as Plus, LucideX as X,
-    LucideLogOut as LogOut, LucideTrash2 as Trash2,
+    LucideTrash2 as Trash2,
     LucideEyeOff as EyeOff, LucideLink as LinkIcon, LucideSmile as Smile, LucideUnderline as Underline,
     LucideClock as Clock, LucideListCollapse as ListCollapse, LucideLayoutGrid as LayoutGrid,
     LucideMenu as Menu, LucideSuperscript as Superscript,
@@ -67,9 +67,8 @@ import {
     LucideCheck as Check,
     LucideDownload as Download,
     LucideMessageSquare as MessageSquare,
-    LucideLineChart as LineChart,
     LucideRefreshCw as RefreshCw,
-    LucideSettings as Settings, LucideSparkle as Sparkle,
+    LucideSparkle as Sparkle,
     LucideTableOfContents as TableOfContentsIcon,
     LucideSeparatorHorizontal as DividerIcon,
     LucideAtSign as AtSign, LucideCloud as Cloud, LucideMessageSquareShare as MessageSquareShare,
@@ -174,16 +173,16 @@ interface UploadItem {
     selector: 'app-editor',
     imports: [
         FormsModule, DatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent,
+        AccountMenuComponent,
         Undo2, Redo2, Bold, Italic, Strikethrough, Code,
         List, ListOrdered, ListTodo, Quote, SquareCode, Outdent, Indent,
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
-        Send, Plus, X, LogOut, Trash2,
+        Send, Plus, X, Trash2,
         EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, Menu, Superscript,
-        ChevronDown, Check, Download, MessageSquare, LineChart, RefreshCw,
-        Settings, Sparkle, TableOfContentsIcon, DividerIcon,
+        ChevronDown, Check, Download, MessageSquare, RefreshCw,
+        Sparkle, TableOfContentsIcon, DividerIcon,
         AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
         SlidersHorizontal, Folder, Lock,
-        CountBadgeComponent,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -428,11 +427,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return this.editor?.getText().length ?? 0;
     }
 
-    avatarInitial(): string {
-        const email = this.auth.userEmail();
-        return email ? email[0].toUpperCase() : '?';
-    }
-
     channelColor(id: string): string {
         let hash = 0;
         for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
@@ -447,12 +441,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return this.chatId.trim() === String(c.telegramChatId);
     }
 
-    currentBlockLabel(): string {
+    currentBlockLevel(): number {
         this.tick();
         for (let level = 1; level <= 6; level++) {
-            if (this.editor?.isActive('heading', { level })) return `Heading ${level}`;
+            if (this.editor?.isActive('heading', { level })) return level;
         }
-        return 'Paragraph';
+        return 0;
     }
 
     setBlockType(level: number) {
@@ -467,6 +461,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     async ngAfterViewInit() {
         // Feeds the badge on the Posts Manager link (N3) — fire-and-forget, never blocks setup.
         this.feedback.refreshNewCount();
+        // IB6: the folder list used to load only when the picker popover was first opened, but
+        // folderName() needs it to resolve the *label* too — so a draft in a folder read as "no
+        // folder" on every fresh editor load (most visibly when coming back from Settings) until
+        // you clicked the picker. Same fire-and-forget treatment as the badge above.
+        this.ensureFoldersLoaded();
         const mediaNodeTypes = new Set(['image', 'video', 'audio', 'carousel', 'collage']);
         this.editor = new Editor({
             element: this.editorHost.nativeElement,
@@ -610,9 +609,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         try {
             const json = JSON.stringify(this.editor.getJSON());
             if (this.lang() === 'ru') {
-                await this.draftsApi.update(id, this.title, json);
-                this.ruUpdatedAt.set(new Date().toISOString());
-                this.refreshMeta(id);
+                const res = await this.draftsApi.update(id, this.title, json);
+                this.ruUpdatedAt.set(res.updatedAt);
+                this.refreshMeta(id, res.updatedAt);
             } else {
                 const res = await this.draftsApi.saveTranslation(id, 'en', this.title, json);
                 this.enMeta.set({ language: 'en', title: this.title, updatedAt: res.updatedAt });
@@ -648,7 +647,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // The RU version was edited after the EN translation was last touched — probably needs re-translating
     enStale(): boolean {
         const en = this.enMeta();
-        return !!en && this.ruUpdatedAt() > en.updatedAt;
+        if (!en) return false;
+        // Compared as instants, not as strings (IB3): the two timestamps reach the client through
+        // different endpoints, and a string compare would flip on nothing more than a difference
+        // in fractional-second digits or a trailing Z.
+        const ru = Date.parse(this.ruUpdatedAt());
+        const tr = Date.parse(en.updatedAt);
+        if (!Number.isFinite(ru) || !Number.isFinite(tr)) return this.ruUpdatedAt() > en.updatedAt;
+        return ru > tr;
     }
 
     async switchLang(target: PostLanguage) {
@@ -767,8 +773,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     folderName(id: string | null): string {
-        if (id === null) return 'No folder';
-        return this.folders().find(f => f.id === id)?.name ?? this.t().editor.tags.noFolder;
+        if (id === null) return this.t().editor.tags.noFolder;
+        const known = this.folders().find(f => f.id === id);
+        if (known) return known.name;
+        // The draft says it's filed but the list hasn't arrived yet — say nothing rather than
+        // say "no folder", which is the false claim IB6 was about.
+        return this.folders().length === 0 ? '…' : this.t().editor.tags.noFolder;
     }
 
     async assignFolder(folderId: string | null) {
@@ -946,7 +956,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     async deleteEnVersion() {
         const id = this.currentId();
         if (!id || !this.enMeta()) return;
-        if (!window.confirm('Delete the English version? This cannot be undone.')) return;
+        if (!window.confirm(this.t().editor.lang.deleteEnglishConfirm)) return;
         clearTimeout(this.saveTimer);
         this.saveState.set('saved'); // discard pending EN edits so nothing re-creates the row
         await this.draftsApi.removeTranslation(id, 'en');
@@ -958,10 +968,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (this.lang() === 'en') await this.switchLang('ru');
     }
 
-    private refreshMeta(id: string) {
+    private refreshMeta(id: string, updatedAt = new Date().toISOString()) {
         this.drafts.update(list => list
             .map(d => d.id === id
-                ? { ...d, title: this.title, updatedAt: new Date().toISOString() }
+                ? { ...d, title: this.title, updatedAt }
                 : d)
             .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
     }
@@ -1789,12 +1799,19 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.ruDiffMarkers.set([]);
             return;
         }
-        const containerTop = pmRoot.getBoundingClientRect().top;
+        // IB7/B11: the markers are absolutely positioned inside .sheet-wrap, so they must be
+        // measured from .sheet-wrap's top — not .ProseMirror's. Measuring from .ProseMirror drew
+        // every bar .sheet's 28px top padding too high (40px with the ruler on), which is the
+        // "sits above the line it belongs to" the report describes.
+        const wrap = this.editorHost.nativeElement.parentElement as HTMLElement | null;
+        const containerTop = (wrap ?? pmRoot).getBoundingClientRect().top;
         const markers: { top: number; height: number; kind: 'added' | 'changed' | 'removed' }[] = [];
         for (const op of ops) {
             const child = pmRoot.children[op.newIndex] as HTMLElement | undefined;
             if (op.kind === 'removed') {
-                const top = child ? child.getBoundingClientRect().top - containerTop : pmRoot.getBoundingClientRect().height;
+                // A deletion past the last surviving block has no element to sit next to, so it
+                // marks the end of the document — also in .sheet-wrap coordinates.
+                const top = (child ?? pmRoot).getBoundingClientRect()[child ? 'top' : 'bottom'] - containerTop;
                 markers.push({ top, height: 3, kind: 'removed' });
                 continue;
             }

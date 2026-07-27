@@ -1243,7 +1243,10 @@
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    margin-top: 14px;
+    /* IB2: the re-translate instance is clamped to the sheet width by an inline max-width, but
+       without `auto` side margins that clamp pinned it to the far left of the full-width column
+       instead of over the sheet. */
+    margin: 14px auto 0;
 }
 
 .translate-progress .upload-bar {
@@ -1329,15 +1332,10 @@
 }
 
 /* Ruler above the sheet (Settings → Appearance) — purely decorative, no snapping/measuring */
-.sheet-ruler {
-    height: 12px;
-    margin-bottom: -1px;
-    border: 1px solid var(--border);
-    border-bottom: none;
-    border-radius: 6px 6px 0 0;
-    background: repeating-linear-gradient(to right, var(--t3) 0 1px, transparent 1px 24px);
-    opacity: .5;
-}
+/* The ruler was removed (IB4). It was a decorative 12px strip *above* the sheet, not an overlay
+   on the writing area, so it read as sitting under the sheet and measured nothing — and there are
+   no margins or tab stops in this editor for a real ruler to control. Marty sanctioned deleting
+   it rather than rebuilding it. */
 
 /* Paragraph numbers live in styles.scss, not here — see the note there (B12). Anything that has
    to match ProseMirror-created nodes cannot be a component-scoped rule. */

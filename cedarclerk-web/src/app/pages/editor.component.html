@@ -35,31 +35,10 @@
             {{ theme.theme() === 'dark' ? '☀' : '☾' }}
         </button>
 
-        <app-popover align="right">
-            <button trigger class="account-trigger" [title]="t().editor.account">
-                <span class="avatar">{{ avatarInitial() }}</span>
-                <span class="user">{{ auth.userEmail() }}</span>
-            </button>
-            <div panel class="account-popover">
-                <p class="profile-email">{{ auth.userEmail() }}</p>
-                <div class="popover-divider"></div>
-                <!--Stats/comments sit next to Settings per B22 rather than as separate topbar
-                icons — the topbar's right side is Export + theme + profile only now.-->
-                <a class="account-action-btn" routerLink="/posts">
-                    <svg lucideLineChart class="icon-sm"></svg>
-                    {{ t().editor.postsManager }}
-                    <app-count-badge [count]="feedback.newComments() + feedback.newReactions()" [title]="t().editor.newBadge"></app-count-badge>
-                </a>
-                <a class="account-action-btn" routerLink="/settings">
-                    <svg lucideSettings class="icon-sm"></svg>
-                    {{ t().editor.settings }}
-                </a>
-                <button class="logout-btn" (click)="auth.logout()">
-                    <svg lucideLogOut class="icon-sm"></svg>
-                    {{ t().editor.logout }}
-                </button>
-            </div>
-        </app-popover>
+        <!--Stats/comments sit next to Settings per B22 rather than as separate topbar icons — the
+        topbar's right side is Export + theme + profile only now. The menu itself is shared with
+        /drafts, /settings and /posts, where the avatar used to be inert (IB9).-->
+        <app-account-menu [showEmail]="true"></app-account-menu>
     </header>
 
     @if (exportModalOpen()) {
@@ -623,17 +602,17 @@
         <div class="tb-group">
             <app-popover>
                 <button trigger class="block-dropdown">
-                    {{ currentBlockLabel() }}
+                    {{ currentBlockLevel() === 0 ? t().editor.blocks.paragraph : t().editor.blocks.heading(currentBlockLevel()) }}
                     <svg lucideChevronDown class="icon-xs"></svg>
                 </button>
                 <div panel class="block-menu">
-                    <button [class.on]="currentBlockLabel() === 'Paragraph'" (click)="setBlockType(0)">{{ t().editor.blocks.paragraph }}</button>
-                    <button [class.on]="currentBlockLabel() === 'Heading 1'" (click)="setBlockType(1)">{{ t().editor.blocks.heading(1) }}</button>
-                    <button [class.on]="currentBlockLabel() === 'Heading 2'" (click)="setBlockType(2)">{{ t().editor.blocks.heading(2) }}</button>
-                    <button [class.on]="currentBlockLabel() === 'Heading 3'" (click)="setBlockType(3)">{{ t().editor.blocks.heading(3) }}</button>
-                    <button [class.on]="currentBlockLabel() === 'Heading 4'" (click)="setBlockType(4)">{{ t().editor.blocks.heading(4) }}</button>
-                    <button [class.on]="currentBlockLabel() === 'Heading 5'" (click)="setBlockType(5)">{{ t().editor.blocks.heading(5) }}</button>
-                    <button [class.on]="currentBlockLabel() === 'Heading 6'" (click)="setBlockType(6)">{{ t().editor.blocks.heading(6) }}</button>
+                    <button [class.on]="currentBlockLevel() === 0" (click)="setBlockType(0)">{{ t().editor.blocks.paragraph }}</button>
+                    <button [class.on]="currentBlockLevel() === 1" (click)="setBlockType(1)">{{ t().editor.blocks.heading(1) }}</button>
+                    <button [class.on]="currentBlockLevel() === 2" (click)="setBlockType(2)">{{ t().editor.blocks.heading(2) }}</button>
+                    <button [class.on]="currentBlockLevel() === 3" (click)="setBlockType(3)">{{ t().editor.blocks.heading(3) }}</button>
+                    <button [class.on]="currentBlockLevel() === 4" (click)="setBlockType(4)">{{ t().editor.blocks.heading(4) }}</button>
+                    <button [class.on]="currentBlockLevel() === 5" (click)="setBlockType(5)">{{ t().editor.blocks.heading(5) }}</button>
+                    <button [class.on]="currentBlockLevel() === 6" (click)="setBlockType(6)">{{ t().editor.blocks.heading(6) }}</button>
                 </div>
             </app-popover>
             <span class="tb-caption">{{ t().editor.groups.block }}</span>
@@ -832,7 +811,7 @@
     <app-modal (closed)="cancelTranslateConfirm()">
         <svg modal-icon lucideRefreshCw class="icon"></svg>
         <span modal-title>{{ t().editor.lang.replaceTitle }}</span>
-        <p>A fresh machine translation will overwrite the current English version. The original stays in history.</p>
+        <p>{{ t().editor.lang.replaceBody }}</p>
         <button modal-actions class="btn-ghost" (click)="cancelTranslateConfirm()">{{ t().common.cancel }}</button>
         <button modal-actions class="btn-accent" (click)="confirmTranslate()">{{ t().common.save }}</button>
     </app-modal>
@@ -899,8 +878,8 @@
                     itself as soon as the EN version is touched, which used to leave delete as the
                     only action even when a re-translate was exactly what was wanted.-->
                     <button class="retranslate-btn" (click)="autoTranslateEn()" [disabled]="autoTranslating()"
-                            [title]="enStale() ? 'Russian version changed — re-translate' : 'Re-translate from Russian'">
-                        ↻ Re-translate
+                            [title]="enStale() ? t().editor.lang.retranslateStaleTitle : t().editor.lang.retranslateTitle">
+                        {{ t().editor.lang.retranslate }}
                     </button>
                 <button class="lang-delete" (click)="deleteEnVersion()" [disabled]="autoTranslating()" [title]="t().editor.lang.deleteEnglish">
                     <svg lucideTrash2 class="icon-sm"></svg>
@@ -987,7 +966,6 @@
             </div>
             }
             <div class="sheet-wrap" [style.display]="showEnEmptyState() ? 'none' : ''" [style.max-width.px]="sheetMaxWidthPx()">
-                @if (appearance.prefs().showRuler) { <div class="sheet-ruler"></div> }
                 <div class="sheet" #editorHost
                     [class.flush]="appearance.prefs().sheetFlush"
                     [class.show-para-numbers]="appearance.prefs().showParagraphNumbers"

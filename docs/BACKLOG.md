@@ -45,6 +45,64 @@ Raw list, not yet scoped into phase steps — logged here per Marty's call, not 
 
 **Open dependency note**: idea #20.3 (private posts must support polls) needs #22 (polls) built first — don't scope the "private" half before polls exist as a content type.
 
+### Input sweep — 27.07.2026, current (from `_Documents_/CedarClerk/Input.md`)
+
+**A third list from Marty**, this time out of `Input.md` rather than `Brainstorm_Features.md` — 19 improvements, 9 bugs, 2 removals, 2 features. Same rule as before: it **adds to** v1/v2, it doesn't cancel them. Numbered `I1`…`I19` (improvements), `IB1`…`IB9` (bugs), `IT1`/`IT2` (removals), `IF1`/`IF2` (features) — plain numbers and `B`/`N` prefixes are already taken.
+
+Scoped into `docs/ROADMAP.md` Phase 9c; this table is the full text plus the dedup verdict for each item.
+
+**Bugs** — these come first in Phase 9c, before any improvement.
+
+| # | Priority | Tag | What | Verdict / overlap |
+|---|---|---|---|---|
+| IB3 | High | Translation | Opening the RU version makes the EN version go Dirty about a second later, as if EN lags behind RU | New. Distinct from `B14` (which was about the re-translate button being hidden) — this is the stale flag firing on a pure read |
+| IB4 | High | Workspace | The ruler is only visible along the top and sits *under* the writing area. If it can't be fixed, remove it | **Duplicate of `B12`**'s first half (the paragraph-number half of B12 shipped 27.07.2026). Removal is now an explicitly sanctioned outcome, which it wasn't in B12 |
+| IB6 | High | Workspace | Return to the editor from Settings and the post reads as "outside any folder" — clicking the folder picker shows the correct one | New. Almost certainly the folder signal not being re-read on route re-entry, not a persistence bug |
+| IB7 | High | Diff gutter | Diff gutter on the right is still drawn above or below the line it belongs to | **Duplicate of `B11`** (Medium, never shipped). "Still" confirms the gutter was never fixed; priority rises to High |
+| IB8 | High | Posts Manager | No way back to the editor from the Posts Manager — no back button, no logout, only editing the URL | New. Real trap: `/posts` was built (N7) with its page chrome stripped, and nothing replaced the topbar |
+| IB1 | Medium | Headers | The paragraph-format dropdown still says "Paragraph" in English in the RU UI | New, and a straight miss from ADR-050's translation sweep |
+| IB2 | Medium | Re-translate dialog | Everything in the dialog is Russian except the description itself; the progress bar slides far left out of the working area when re-translating | New. Two defects in one row — one translation miss, one layout bug |
+| IB5 | Medium | Comments | Blog comment section misbehaves: picking who to reply to can't be undone, and the form is bulky | New. Post-dates `ADR-037` (replies), so it's feedback on shipped work |
+| IB9 | Medium | Profile | On some pages the profile button does nothing — doesn't open | New. Needs the page list narrowed down before it's fixable |
+
+**Improvements**
+
+| # | Priority | Tag | What | Verdict / overlap |
+|---|---|---|---|---|
+| I7 | High | Private Posts | Configurable watermark on private posts | **Specced 27.07.2026, no longer open-ended**: text, in a very heavy semi-transparent face, **tiled over** the post on the blog (above the content, not behind it). In the editor it is *not* rendered — the draft just carries a marker icon saying a watermark is set |
+| I9 | High | Forms | Form presets are a standalone entity; at publish time you pick one. With no preset, a button leads to the preset-creation page. The form page needs a Save button at the bottom so it's clear whether it saved | **Extends the shipped `N10`/`N12`** (ADR-047). Presets already exist and are already copied-not-linked; what's missing is the empty-state route and the explicit Save |
+| I1 | Middle | Login Page | Language picker on login/registration (two flags at the bottom). After registering, Settings should already hold the language chosen at signup | New. `B26`/ADR-044 shipped the picker in Settings only; `UiLanguage` already exists on the user, so signup just needs to carry it |
+| I2 | Medium | Workspace | Line numbers are too small and barely visible; they should hug the left edge with a small gap, VS Code style. Optionally also show horizontal line rules | Refines the paragraph-number feature that shipped 27.07.2026 (`B12` second half) |
+| I4 | Medium | Reactions | A reaction/comment block currently looks exactly like a code block — needs its own visual treatment | New |
+| I10 | Middle | Drafts Sheet | The drafts table can be wider; it should adapt to the screen width | Related to `B24` (horizontal scroll) and `N1` (resizable columns), but neither made the table fluid — the grid is still fixed-width |
+| I11 | Middle | UI | Move the Posts Manager and Settings entry points into the top bar as real buttons, like Export | **Reverses part of `B22`** (which moved them into the account popover) and resolves `B6` (two entry points to Settings) in the opposite direction. Newer instruction wins, same as B22 over the earlier topbar work |
+| I12 | Middle | Settings | Split the settings page: profile settings (opened from the user menu), appearance settings, and the rest | New. Interacts with `I14`/`B15` — decide the split before moving appearance out |
+| I14 | Middle | Customization | Move appearance and toolbar settings into a right-hand panel in the editor so the effect is visible, or at least show a preview inside Settings | **Duplicate of `B15`** + idea #13. Third time it's been raised |
+| I16 | Middle | Audio Insert | Custom name for an inserted audio clip — Telegram currently shows `asset_<...>.mp3` | New |
+| I18 | Middle | UI | Better icon for the drafts-table button — the current one doesn't read as anything | **Duplicate of `B20`** |
+| I19 | Middle | Posts Manager | Move the form-response statistics into the posts tab, where it fits better | New, and it partly walks back `N10`'s tab layout |
+| I3 | Low | Toolbar | Show the keyboard shortcut in the tooltip where one exists; possibly a customizable shortcut map | New |
+| I5 | Low | Insert Table | Table insert is hard-coded to 3×2 — let the default size be configured within sane bounds | New |
+| I6 | Low | Forms | Autofill email/name/nickname in the private-post viewing form | New. Note this is a public, unauthenticated page — autofill can only mean browser autocomplete attributes, not server-side prefill |
+| I8 | Low | Stats | Make the time-range slider bigger both ways; the notches are too close together to read | **Refines the just-shipped `N9`** (27.07.2026, ADR-049) |
+| I13 | Low | UI | Fullscreen toggle button | New |
+| I15 | Low | Signature | Custom link text for the cross-link between the Telegram post and the blog post | New, and the same shape as the open `B18` (custom YouTube link text) — worth doing together |
+| I17 | Low | Localization | Flag icons instead of language names | New. Pairs with `I1` |
+
+**Removals** — Marty asking for features to be deleted, not built.
+
+| # | Priority | Tag | What | Verdict |
+|---|---|---|---|---|
+| IT1 | Low | Status Bar | Delete editor zoom entirely — it doesn't work and seems pointless | New. Verify it's genuinely broken before deleting, then remove the control and its state |
+| IT2 | Low | Settings Page | Delete toolbar customization — looks useful, in practice just clutter | New, and it removes a chunk of `ADR-035`. Interacts with `I12`/`I14`: don't design the settings split around a section that's about to go |
+
+**Features**
+
+| # | Priority | Tag | What | Verdict / overlap |
+|---|---|---|---|---|
+| IF2 | High | Admin Panel | Admin panel page: manage posts and users, create invite codes, see which user came in on which invite, activate/deactivate a subscription, and much more — "the more functions the better" | **Same initiative as idea #12** above (admin role + user-management CRM), now with a real feature list and High priority. Still needs the role concept, a migration and admin-only endpoints — none of which exist. The largest single item across all three lists |
+| IF1 | Low | Profile | Avatar upload | New. `AssetEndpoints` + the storage quota already exist, so this is mostly profile plumbing |
+
 ### Brainstorm v2 — 26.07.2026, current (from `_Documents_/CedarClerk/Brainstorm_Features.md`)
 
 **Late on 26.07.2026 Marty emptied the brainstorm file and wrote 13 new items into it.** This is an *addition*, confirmed with him directly: v1 was already recorded here, so he started the source file over rather than appending. **Nothing in v1 is cancelled** — both lists are live, v2 just holds the newer thinking. Numbered `N1`…`N13` here — the source file numbers them 1…13, and plain numbers would collide with the idea list above.
@@ -131,5 +189,10 @@ Raw list, not yet scoped into phase steps — logged here per Marty's call, not 
 - "Progressive reveal" visual effect for published posts — what exactly is wanted, since `SendRichMessageDraft` can't do it for channels (see `.claude/rules/telegram-bot.md`)
 - Idea #9 (session cookie) — is the existing persistent-cookie behavior actually broken, or is this asking for something else?
 - Idea #14 (AI features popup) — what specifically is wrong with the current `.ai-chip` toolbar popover?
+- ~~`I7` (private-post watermark) — what should it actually be?~~ — answered 27.07.2026: tiled heavy semi-transparent text laid **over** the blog post; the editor only shows a marker icon. Still undecided and worth asking when it's built: is the text fixed per post, or per viewer (burning in the viewer's email would make it leak-traceable)?
+- ~~`IB9` (profile button dead) — on which pages?~~ — resolved by reading the code 27.07.2026: `/drafts`, `/settings` and `/posts`, where the avatar was an inert `<span>`. Fixed
+- `IB3` (RU load marks EN stale) — needs a live reproduction: what fires an autosave ~1.2s after a RU version loads? Nothing in the load path explains it
+- `IT1` (delete zoom) — confirm zoom is genuinely broken and not just unused, before deleting the control
+- `I12` vs `I14`/`B15` vs `IT2` — the settings page is being split, partly moved into the editor, and partly deleted, all at once. Needs one decision about the end state rather than three separate passes
 
 ~~Lifetime-deal pricing — yes/no~~ — resolved: yes, via the Founder/Lifetime invite-code plan (ADR-022, `docs/DECISIONS.md`, Idea #5).

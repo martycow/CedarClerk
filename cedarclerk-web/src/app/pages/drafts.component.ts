@@ -10,6 +10,7 @@ import { Dict } from '../core/i18n/en';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { ModalComponent } from '../shared/modal.component';
 import { PopoverComponent } from '../shared/popover.component';
+import { AccountMenuComponent } from '../shared/account-menu.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import {
     LucidePlus as Plus,
@@ -79,7 +80,7 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
 @Component({
     selector: 'app-drafts',
     imports: [
-        DatePipe, FormsModule, CedarLogoComponent, ModalComponent, PopoverComponent,
+        DatePipe, FormsModule, CedarLogoComponent, ModalComponent, PopoverComponent, AccountMenuComponent,
         Plus, Archive, ArchiveRestore, Trash2, RefreshCw, LayoutGrid, List,
         Folder, X, Pencil, Lock, FileUp, Upload, Eye, Heart,
     ],
@@ -136,11 +137,6 @@ export class DraftsPageComponent implements OnInit {
         } finally {
             this.loading.set(false);
         }
-    }
-
-    avatarInitial(): string {
-        const email = this.auth.userEmail();
-        return email ? email[0].toUpperCase() : '?';
     }
 
     status(d: DraftMeta): DraftStatus {

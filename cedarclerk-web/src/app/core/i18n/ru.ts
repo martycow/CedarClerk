@@ -23,9 +23,10 @@ export const ru: Dict = {
         close: 'Закрыть',
         toggleTheme: 'Сменить тему',
         nothingHere: 'Здесь пусто.',
+        backToEditor: 'Назад в редактор',
     },
     login: {
-        tagline: 'Пишите здесь. Публикуйте там. Му.',
+        tagline: 'Пишите здесь. Публикуйте там. Муууу.',
         email: 'Почта',
         password: 'Пароль',
         submit: 'Войти',
@@ -221,8 +222,13 @@ export const ru: Dict = {
             startEmpty: 'Начать с пустой',
             noEnglishYet: 'Английской версии пока нет',
             deleteEnglish: 'Удалить английскую версию',
+            deleteEnglishConfirm: 'Удалить английскую версию? Это нельзя отменить.',
             staleWarning: 'Русская версия менялась после этого перевода',
             replaceTitle: 'Заменить английскую версию?',
+            replaceBody: 'Свежий машинный перевод перезапишет текущую английскую версию. Оригинал останется в истории.',
+            retranslate: '↻ Перевести заново',
+            retranslateTitle: 'Перевести заново с русского',
+            retranslateStaleTitle: 'Русская версия изменилась — переведите заново',
             diffTitle: 'Изменено после последней синхронизации с английской версией',
         },
         newDraft: {
@@ -454,7 +460,6 @@ export const ru: Dict = {
     },
     settings: {
         crumb: 'Настройки',
-        backToEditor: 'Назад в редактор',
         saved: 'Сохранено',
         language: {
             nav: 'Язык',
@@ -498,7 +503,6 @@ export const ru: Dict = {
             mono: 'Моноширинный',
             textSize: 'Размер текста',
             lineHeight: 'Межстрочный интервал',
-            showRuler: 'Линейка над листом',
             showParagraphNumbers: 'Номера абзацев на полях',
             showWordCount: 'Счётчик слов и символов в строке состояния',
             focusMode: 'Прятать панель инструментов при наборе (режим фокуса)',

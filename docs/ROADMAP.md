@@ -2,7 +2,10 @@
 
 Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-saas-plan.md` (v1.7, 15.07.2026) and `Plans/session-brief-v0.8.0-planning.md`, which are now archived under `Plans/OLD/`. **This file is the one live roadmap going forward** — update it when a phase item closes, don't recreate a parallel plan doc. Architectural/product decisions referenced below (why something was built a certain way) live in `docs/DECISIONS.md`, not here — this file tracks *status*, DECISIONS tracks *rationale*.
 
-## Status summary (as of 26.07.2026)
+## Status summary (as of 27.07.2026)
+
+**Current work: Phase 9c** — the `Input.md` sweep (32 items), bugs first. Phase 9b closed 27.07.2026 with every N-item shipped; several are still not live-verified in a browser.
+
 
 Phases 0–5 done and production-verified. Phase 6 (multi-tenancy & public SaaS) is code-complete except billing/translation are waiting on real provider keys being pushed to the Pi. Phase 7 (Entertainer role) not started. **Phase 8 (v0.8.0) is code-complete** — all 8 steps plus the unplanned "Step 9" work done — but Steps 6 (tags in Telegram) and 7 (comments) have **not been live-verified** (deferred by Marty's choice on 26.07.2026); do that before calling the phase fully closed. 4 UI/blog bugs fixed and live-verified 25.07.2026 (view-count double-count on language switch, toolbar popups clipped by a CSS regression, export modal mispositioned, iPad horizontal scroll — see `CHANGELOG.md`). `Consts.CurrentVersion` was bumped to `0.9.0` ahead of Phase 8 actually closing — flagged as a real inconsistency, not yet reconciled with Marty.
 
@@ -189,6 +192,55 @@ Full item text in `docs/BACKLOG.md` under "Brainstorm v2"; this is the status ch
 - [x] N9 — Stats range slider, 7 days–6 months, magnetic notches at 7/14/30/60/90/180 (27.07.2026, ADR-049) — fetch fires on release, not during the drag. Supersedes v1 `B1`
 
 **Sequencing note**: N7, N10, N12 (and N8, N9 on top of them) are one project — a single new page — not five separate ones. N4, N5 and N13 all touch the export modal and are cheapest done in one pass.
+
+### Phase 9c — Input sweep — started 27.07.2026, in progress
+Executing `_Documents_/CedarClerk/Input.md` (32 items). Full text and the per-item dedup verdict live in `docs/BACKLOG.md` under "Input sweep — 27.07.2026"; this is the status checklist. One commit per item, short messages.
+
+**Order deliberately differs from Marty's priority column**: all 9 bugs go first regardless of their listed priority, because five of them are on paths that shipped in the last two days (`/posts`, the range slider, the translation flow, the ADR-050 translation sweep) and a bug on new code is cheaper to fix while it's still fresh. Improvements follow in High → Middle → Low order after that.
+
+**Bugs — first** (27.07.2026: seven fixed, `dotnet test` 278/278, `ng build` clean — none live-verified in a browser yet)
+- [~] IB3 — RU version silently marks the EN translation Dirty a second after opening (High). **Partially addressed, root cause not confirmed.** Two real defects found and fixed on that path: `DraftsService.update()` threw the server's `updatedAt` away so the client re-stamped the RU version from its *own* clock (any laptop-vs-Pi skew lights the stale dot on its own), and `enStale()` compared the two timestamps as raw strings, which flips on nothing more than a trailing `Z` or a different number of fractional digits. Both now use the server's value, compared as instants. What still isn't explained is *why an autosave fires at all* ~1.2s after a RU load — that matches the autosave debounce exactly, but nothing in the load path (`setContent` runs with `emitUpdate: false`, `resetHistory` uses `view.updateState`, no custom plugin appends transactions) accounts for it. **Needs a live reproduction to close.**
+- [x] IB4 — ruler removed (High, was `B12`'s first half). It was never an overlay: a 12px decorative strip rendered as a *sibling above* `.sheet`, which is why it read as sitting under the writing area. With no margins or tab stops for a real ruler to control, Marty's "remove it" branch was taken — pref, element, CSS, Settings checkbox and both dictionary keys are gone
+- [x] IB6 — folder label (High). Not a route-re-entry bug: the folder list loaded lazily on first opening the *picker*, but `folderName()` needs it to resolve the *label* too, so any freshly-loaded draft read as unfiled until clicked. Loaded at editor init now; the not-yet-loaded case shows `…` rather than falsely claiming "no folder", and the hardcoded English `'No folder'` fallback went onto `t()`
+- [x] IB7 — diff gutter alignment (High, was `B11`). Markers were measured from `.ProseMirror`'s top but drawn absolutely inside `.sheet-wrap`, so every bar sat exactly `.sheet`'s 28px top padding too high (40px with the ruler on). Both the block markers and the end-of-document "removed" marker now measure from `.sheet-wrap`
+- [x] IB8 — back arrow to the editor on `/posts` (High), matching the one `/settings` already had
+- [x] IB1 — paragraph-format dropdown (Medium). The menu items were translated but the trigger label came from `currentBlockLabel()`, which returned a raw English string that the active-state checks also string-matched against; it returns a block *level* now
+- [x] IB2 — re-translate (Medium). Both halves: the dialog body, the button label and its two tooltips were hardcoded English (plus the `deleteEnVersion` confirm, same flow), and the progress block had the sheet's max-width without `auto` side margins, which pinned it to the far left of the full-width column
+- [x] IB9 — dead profile button (Medium). Reproduced by reading: the avatar was a live popover only in the editor and an inert `<span>` on `/drafts`, `/settings` and `/posts`. New shared `AccountMenuComponent` (`shared/account-menu.component.ts`) is used by all four, so the menu has one implementation
+- [ ] IB5 — blog comments: reply target can't be cleared, form is bulky (Medium) — not started
+
+**Improvements — High**
+- [ ] I9 — form presets as a first-class flow: empty-state route to preset creation, explicit Save button on the form page
+- [ ] I7 — configurable watermark on private posts. **Unblocked 27.07.2026**: heavy semi-transparent text, tiled *over* the rendered post on the blog (an overlay above the content, not a background); the editor doesn't render it at all, it only marks the draft with an icon showing a watermark is configured
+
+**Improvements — Middle**
+- [ ] I1 — language picker on login/register, carried into the new account's `UiLanguage`
+- [ ] I2 — line numbers: bigger, left-aligned with a small gutter; optional horizontal rules
+- [ ] I4 — reaction/comment blocks must stop looking like code blocks
+- [ ] I10 — drafts table adapts to the screen width instead of a fixed grid
+- [ ] I11 — Posts Manager and Settings become real top-bar buttons (reverses part of `B22`, resolves `B6` the other way)
+- [ ] I12 — split Settings into profile / appearance / rest — **decide alongside `I14` and `IT2` first**
+- [ ] I14 — appearance + toolbar settings move into an editor side panel, or gain a preview (was `B15`)
+- [ ] I16 — custom name for inserted audio clips, instead of `asset_<...>.mp3` in Telegram
+- [ ] I18 — better icon for the drafts-table button (was `B20`)
+- [ ] I19 — form-response statistics move into the posts tab
+
+**Improvements — Low**
+- [ ] I3 — keyboard shortcuts in toolbar tooltips
+- [ ] I5 — configurable default table size (currently hard-coded 3×2)
+- [ ] I6 — browser autofill on the private-post viewing form
+- [ ] I8 — bigger stats range slider, readable notches (refines `N9`)
+- [ ] I13 — fullscreen toggle
+- [ ] I15 — custom link text for the Telegram↔blog cross-link (do together with the open `B18`)
+- [ ] I17 — flag icons instead of language names
+
+**Removals**
+- [ ] IT1 — delete editor zoom (verify it's broken first)
+- [ ] IT2 — delete toolbar customization (removes part of `ADR-035`)
+
+**Features**
+- [ ] IF2 — Admin panel: users, posts, invite codes, invite attribution, subscription activation (High) — the largest item across all three lists; needs a role concept, a migration and admin-only endpoints, none of which exist. Same initiative as `docs/BACKLOG.md` idea #12
+- [ ] IF1 — avatar upload (Low)
 
 ---
 

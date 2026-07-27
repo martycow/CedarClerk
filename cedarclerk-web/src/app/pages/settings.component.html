@@ -1,6 +1,6 @@
 <div class="settings-page">
     <header class="settings-header">
-        <a class="icon-btn" routerLink="/editor" [title]="t().settings.backToEditor">
+        <a class="icon-btn" routerLink="/editor" [title]="t().common.backToEditor">
             <svg lucideArrowLeft class="icon"></svg>
         </a>
         <app-cedar-logo [size]="19"></app-cedar-logo>
@@ -11,7 +11,7 @@
         <button class="icon-btn" (click)="theme.toggle()" [title]="t().common.toggleTheme">
             {{ theme.theme() === 'dark' ? '☀' : '☾' }}
         </button>
-        <span class="avatar">{{ avatarInitial() }}</span>
+        <app-account-menu></app-account-menu>
     </header>
 
     <div class="settings-body">
@@ -142,7 +142,6 @@
             </div>
 
             <div class="appearance-toggles">
-                <label><input type="checkbox" [checked]="appearance.prefs().showRuler" (change)="toggleAppearanceFlag('showRuler', $event)"> {{ t().settings.appearance.showRuler }}</label>
                 <label><input type="checkbox" [checked]="appearance.prefs().showParagraphNumbers" (change)="toggleAppearanceFlag('showParagraphNumbers', $event)"> {{ t().settings.appearance.showParagraphNumbers }}</label>
                 <label><input type="checkbox" [checked]="appearance.prefs().showWordCount" (change)="toggleAppearanceFlag('showWordCount', $event)"> {{ t().settings.appearance.showWordCount }}</label>
                 <label><input type="checkbox" [checked]="appearance.prefs().focusModeHideToolbar" (change)="toggleAppearanceFlag('focusModeHideToolbar', $event)"> {{ t().settings.appearance.focusMode }}</label>
