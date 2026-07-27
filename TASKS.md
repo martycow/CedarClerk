@@ -2,7 +2,13 @@
 
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
-## Next: Phase 9e — the second `Input.md` sweep (imported 27.07.2026, not started)
+## Now: Phase 9e — the second `Input.md` sweep
+**Done**: DB2, DB3, NF2 (six content languages), **FI3 closed 27.07.2026** (shared tag/folder pickers, folder CRUD everywhere, feedback folded into the Posts tab).
+**Next in order**: FI2 (export window, 11 sub-items — the largest UX group left), then FI4 (forms), FI6, FI1, FI5.
+- [ ] **FI2.8 needs Marty's word**: he proposed moving scheduled-post management out of Export into the Posts Manager and explicitly invited disagreement ("поправь меня если считаешь иначе"). Everything else in FI2 is specified.
+- [ ] **Not live-verified**: the FI3 work above — pickers on four screens, folder delete, embedded feedback.
+
+## Phase 9e detail (imported 27.07.2026)
 ~60 items, confirmed as not overlapping the earlier lists. Analysis in `docs/BACKLOG.md`, order in `docs/ROADMAP.md` Phase 9e.
 
 **Three answers needed before building:**

@@ -10,6 +10,16 @@ The host is now `pointer-events: none`, with the tab and panel opting back in, s
 
 Also replaced `app.spec.ts`'s scaffold "should render title" test, which asserted an `<h1>` the app shell has never had and had been red for the whole life of the project.
 
+## 2026-07-27 (latest), Phase 9e — FI3 closed
+
+The three items left in the Posts Manager group.
+
+**Tags and folders became shared components** (FI3.2/FI3.3). There were three takes on "pick a tag" and three on "pick a folder" — the editor's popovers, the new-draft dialog's pill rows, the posts manager's text-field-plus-pills — so the ask was less about looks than about the same thing being reachable everywhere. `TagPickerComponent` and `FolderPickerComponent` now serve all four screens. Both carry an `inline` mode: an `app-popover` nested inside `app-modal` doesn't position, which is exactly why the new-draft dialog grew its own pill rows in the first place, and inline keeps one implementation rather than forking around that.
+
+The lists behind them moved into `FoldersService` and `TagUsageService`, which buys two things the copies couldn't: a folder created in the editor shows up in the drafts table without a reload, and **creating, renaming and deleting folders now works from anywhere** instead of only from the `/drafts` filter menu — that menu went back to being a pure filter. The picker loads its list on init rather than on first open, because the trigger displays the folder's *name*; loading on open is precisely what made a filed draft read as unfiled until clicked (`IB6`).
+
+**The "Reactions & comments" tab is gone** (FI3.5). `CommentsComponent` takes an `onlyDraftId` and renders under the selected post, dropping the group title and the cross-post totals when scoped — both only mean something with several posts on screen. It's one instance filtered client-side, so switching posts costs no request. Old links to `?tab=feedback` resolve to the Posts tab instead of falling through, and the new-feedback badge moved onto that tab.
+
 ## 2026-07-27 (late), Phase 9e — second Input sweep
 
 Marty rewrote `Input.md` again: ~60 items across 6 new features, 6 improvement groups and 3 bug groups, confirmed as not overlapping the earlier lists. Imported to `docs/BACKLOG.md` with a cost note per item, since several read as one line and are not.
