@@ -30,5 +30,11 @@ See ADR-035, `docs/DECISIONS.md`, for full scope (toolbar customization, Appeara
 ## Phase 8 (v0.8.0) — closed 26.07.2026
 See `docs/ROADMAP.md` Phase 8 for the full breakdown — all 9 steps done. **Not yet live-verified**: Step 6 (tags in Telegram export) and Step 7 (comment replies/highlight/reservation/dual-timestamp) — deferred by Marty's choice, do before treating the phase as fully proven in production. `docs/BACKLOG.md` has what's deliberately deferred out of this phase, plus the newer "Cedar Clerk 0.9.0" idea dump.
 
+## Localization (B26) — half done, 26.07.2026
+Mechanism shipped and live-verified; the translation itself is unfinished. See ADR-044 and the Phase 9 entry in `docs/ROADMAP.md`.
+- [ ] Translate the remaining screens: editor (largest — toolbar, export modal, AI panels), rest of Settings, `/stats`, comments, debug console (~350 of ~450 strings left)
+- [ ] Long-word (German) layout pass — no fixed-width buttons, wrapping/ellipsis in the topbar and tab strips. A dev-only pseudo-locale that inflates string length is the cheap way to find the breaks
+- [ ] Decide whether server-side messages get localized (`ErrorMessages.cs` + every `{ error }` body) — a Russian UI currently shows English failure text
+
 ## Tech debt
 See the tech-debt table in `docs/ROADMAP.md` — OS migration (Bullseye→64-bit, ~Aug 2026), cloud backup duplication (rclone), .NET 8 EOL (Nov 2026, bundled with the OS migration).
