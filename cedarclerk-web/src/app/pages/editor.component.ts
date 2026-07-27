@@ -175,11 +175,44 @@ const BLOG_STATUS_MESSAGES = [
     'Almost done…',
 ];
 
-const COMMON_EMOJI = [
-    '😀', '😂', '😅', '😉', '😊', '😍', '🤔', '😎', '😢', '😡',
-    '👍', '👎', '👏', '🙏', '💪', '🤝', '👋', '✌️', '🤞', '🫡',
-    '❤️', '🔥', '✨', '🎉', '🚀', '⭐', '💯', '⚡', '🌟', '💡',
-    '✅', '❌', '⚠️', '❓', '❗', '📌', '📎', '🔗', '📷', '🎬',
+// B9 - 40 emoji in one unlabelled grid was both too few to find anything in and too wide for
+// the popover, which overflowed to the right. Grouped and much longer now; the popover scrolls
+// rather than growing, and each group is captioned so scanning has something to aim at.
+// Deliberately a hand-picked set rather than a full Unicode table: a picker with every emoji in
+// it needs search, and search needs names in six UI languages.
+const EMOJI_GROUPS: { key: string; emoji: string[] }[] = [
+    {
+        key: 'faces',
+        emoji: [
+            '😀', '😃', '😄', '😁', '😅', '😂', '🙂', '😉', '😊', '😇',
+            '😍', '😘', '😋', '😜', '🤪', '🤨', '🧐', '😎', '🥳', '🤩',
+            '😏', '😒', '😞', '😢', '😭', '😤', '😡', '🤯', '😱', '😳',
+            '🥺', '😬', '🙄', '😴', '🤒', '🤢', '🤠', '🥸', '🤖', '👻',
+        ],
+    },
+    {
+        key: 'gestures',
+        emoji: [
+            '👍', '👎', '👌', '✌️', '🤞', '🤙', '👋', '🤝', '🙏', '👏',
+            '💪', '🫡', '🤷', '🤦', '🙌', '👀', '🧠', '🫶', '✍️', '🤌',
+        ],
+    },
+    {
+        key: 'symbols',
+        emoji: [
+            '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔', '💯', '🔥',
+            '✨', '⭐', '🌟', '⚡', '💥', '🎉', '🎊', '🚀', '💡', '🏆',
+            '✅', '❌', '⚠️', '❓', '❗', '➡️', '⬅️', '🔁', '🔒', '🔓',
+        ],
+    },
+    {
+        key: 'objects',
+        emoji: [
+            '📌', '📎', '🔗', '📷', '🎬', '🎧', '🎮', '📚', '📝', '📅',
+            '💻', '🖱️', '⌨️', '🗂️', '📦', '🛠️', '🧪', '🧭', '☕', '🍺',
+            '🐮', '🌲', '🏔️', '🌊', '🌧️', '❄️', '🌙', '☀️', '🕹️', '🎲',
+        ],
+    },
 ];
 
 interface UploadItem {
@@ -393,7 +426,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     scheduling = signal(false);
     scheduleResult = signal('');
 
-    readonly commonEmoji = COMMON_EMOJI;
+    readonly emojiGroups = EMOJI_GROUPS;
+
+    // B13 - reveals where the content actually is: spaces, tabs and paragraph ends. A pure
+    // display toggle, nothing about the document changes.
+    showInvisibles = signal(false);
 
     dtValue = '';
     dtWeekday = true;

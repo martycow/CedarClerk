@@ -35,6 +35,8 @@ export class AdminComponent implements OnInit {
     users = signal<AdminUser[]>([]);
     summary = signal<AdminSummary | null>(null);
     audit = signal<AdminAuditEntry[]>([]);
+    auditHasMore = signal(false);
+    auditLoadingMore = signal(false);
     invites = signal<AdminInviteCode[]>([]);
     posts = signal<AdminPost[]>([]);
     billing = signal<AdminBilling | null>(null);
@@ -63,6 +65,20 @@ export class AdminComponent implements OnInit {
         this.loading.set(false);
     }
 
+    async loadMoreAudit() {
+        if (this.auditLoadingMore() || !this.auditHasMore()) return;
+        this.auditLoadingMore.set(true);
+        try {
+            const next = await this.api.audit(this.audit().length);
+            this.audit.update(list => [...list, ...next.entries]);
+            this.auditHasMore.set(next.hasMore);
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().admin.loadFailed));
+        } finally {
+            this.auditLoadingMore.set(false);
+        }
+    }
+
     private async reload() {
         try {
             const [users, summary, audit, invites, posts, billing, usage] = await Promise.all([
@@ -71,7 +87,8 @@ export class AdminComponent implements OnInit {
             ]);
             this.users.set(users);
             this.summary.set(summary);
-            this.audit.set(audit);
+            this.audit.set(audit.entries);
+            this.auditHasMore.set(audit.hasMore);
             this.invites.set(invites);
             this.posts.set(posts);
             this.billing.set(billing);

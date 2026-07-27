@@ -137,6 +137,13 @@ export const ru: Dict = {
         syncFailed: 'Синхронизация не удалась',
         syncFailedRetry: 'Синхронизация не удалась · Повторить',
         export: 'Экспорт',
+        showInvisibles: 'Показать знаки абзаца',
+        emoji: {
+            faces: 'Лица',
+            gestures: 'Жесты',
+            symbols: 'Символы',
+            objects: 'Объекты',
+        } as Record<string, string>,
         account: 'Аккаунт',
         postsManager: 'Менеджер постов',
         newBadge: 'Новые комментарии и реакции',
@@ -521,6 +528,7 @@ export const ru: Dict = {
         },
         auditTitle: 'Журнал действий',
         noAudit: 'Отсюда пока ничего не меняли.',
+        loadMoreAudit: 'Более ранние записи',
         byActor: (email: string) => `— ${email}`,
         actionFailed: 'Действие не удалось',
         actions: {

@@ -110,8 +110,11 @@ export class AdminService {
         return firstValueFrom(this.http.get<AdminSummary>('/api/admin/summary'));
     }
 
-    audit() {
-        return firstValueFrom(this.http.get<AdminAuditEntry[]>('/api/admin/audit'));
+    // Paged rather than capped: the log is append-only and never trimmed, so "the newest 100"
+    // would quietly hide everything before them.
+    audit(skip = 0) {
+        return firstValueFrom(this.http.get<{ entries: AdminAuditEntry[]; hasMore: boolean }>(
+            `/api/admin/audit?skip=${skip}`));
     }
 
     // expiresAt null on a paid tier is a manual grant that never expires — the same meaning the

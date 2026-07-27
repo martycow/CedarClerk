@@ -375,12 +375,27 @@ public static class AdminEndpoints
             }).OrderByDescending(x => x.Bytes));
         });
 
-        // Newest first, capped: this grows forever and nothing pages it yet.
-        group.MapGet("/audit", async (CedarDbContext db) =>
-            Results.Ok(await db.AdminAuditEntries
+        // Newest first, paged. The log grows forever by design - a log that starts halfway
+        // through is missing exactly what someone would look for - so the panel reads it a page
+        // at a time instead of only ever showing the newest AuditPageSize entries and silently
+        // hiding the rest. `hasMore` rather than a total: counting the whole table on every page
+        // request buys nothing the "Load more" button needs.
+        group.MapGet("/audit", async (int? skip, CedarDbContext db) =>
+        {
+            var offset = Math.Max(0, skip ?? 0);
+            var page = await db.AdminAuditEntries
                 .OrderByDescending(a => a.CreatedAt)
-                .Take(Consts.Admin.AuditPageSize)
+                .Skip(offset)
+                .Take(Consts.Admin.AuditPageSize + 1)
                 .Select(a => new { a.Id, a.ActorEmail, a.Action, a.TargetEmail, a.Details, a.CreatedAt })
-                .ToListAsync()));
+                .ToListAsync();
+
+            var hasMore = page.Count > Consts.Admin.AuditPageSize;
+            return Results.Ok(new
+            {
+                Entries = hasMore ? page.Take(Consts.Admin.AuditPageSize) : page,
+                HasMore = hasMore,
+            });
+        });
     }
 }

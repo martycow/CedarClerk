@@ -501,8 +501,13 @@
                 <app-popover>
                     <button trigger [title]="t().editor.tb.emoji"><svg lucideSmile class="icon"></svg></button>
                     <div panel class="emoji-popover">
-                        @for (e of commonEmoji; track e) {
-                        <button class="emoji-btn" (click)="insertEmoji(e)">{{ e }}</button>
+                        @for (g of emojiGroups; track g.key) {
+                        <span class="tb-caption">{{ t().editor.emoji[g.key] }}</span>
+                        <div class="emoji-grid">
+                            @for (e of g.emoji; track e) {
+                            <button class="emoji-btn" (click)="insertEmoji(e)">{{ e }}</button>
+                            }
+                        </div>
                         }
                     </div>
                 </app-popover>
@@ -1001,7 +1006,7 @@
             </div>
             }
             <div class="sheet-wrap" [style.display]="showEmptyState() ? 'none' : ''" [style.max-width.px]="sheetMaxWidthPx()">
-                <div class="sheet" #editorHost
+                <div class="sheet" [class.show-invisibles]="showInvisibles()" #editorHost
                     [class.flush]="appearance.prefs().sheetFlush"
                     [class.show-para-numbers]="appearance.prefs().showParagraphNumbers"
                     [class.show-line-rules]="appearance.prefs().showLineRules"
@@ -1039,6 +1044,12 @@
                 @case ('error') { <span class="dot err"></span> <button class="retry-inline" (click)="retrySave()">{{ t().editor.syncFailedRetry }}</button> }
             }
         </div>
+        <!--B13: reveals spaces, tabs and paragraph ends, so it's clear where the content really
+        sits. Display only - the document is untouched.-->
+        <button class="status-icon-btn console-toggle" [class.active]="showInvisibles()"
+                (click)="showInvisibles.set(!showInvisibles())" [title]="t().editor.showInvisibles">
+            <span class="invisibles-glyph">¶</span>
+        </button>
         <!--The debug console's toggle lives here rather than as a floating tab of its own: that
         tab's fixed strip covered this bar and swallowed clicks meant for the fullscreen button.-->
         <button class="status-icon-btn console-toggle" [class.active]="debugLog.open()"

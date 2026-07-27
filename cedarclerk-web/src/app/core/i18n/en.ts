@@ -133,6 +133,13 @@ export const en = {
         syncFailed: 'Sync failed',
         syncFailedRetry: 'Sync failed · Retry',
         export: 'Export',
+        showInvisibles: 'Show paragraph marks',
+        emoji: {
+            faces: 'Faces',
+            gestures: 'Gestures',
+            symbols: 'Symbols',
+            objects: 'Objects',
+        } as Record<string, string>,
         account: 'Account',
         postsManager: 'Posts Manager',
         newBadge: 'New comments and reactions',
@@ -520,6 +527,7 @@ export const en = {
         },
         auditTitle: 'Audit log',
         noAudit: 'Nothing has been changed from here yet.',
+        loadMoreAudit: 'Older entries',
         byActor: (email: string) => `by ${email}`,
         actionFailed: 'Action failed',
         actions: {

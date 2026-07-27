@@ -293,6 +293,13 @@
             } @empty {
             <p class="hint">{{ t().admin.noAudit }}</p>
             }
+            <!--The log is append-only and never trimmed, so a fixed cap would hide history rather
+            than bound it. One page at a time instead.-->
+            @if (auditHasMore()) {
+            <button class="btn-ghost" (click)="loadMoreAudit()" [disabled]="auditLoadingMore()">
+                {{ t().admin.loadMoreAudit }}
+            </button>
+            }
         </div>
 
         }
