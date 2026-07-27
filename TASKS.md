@@ -21,7 +21,7 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
 ## Admin panel (IF2) — Step 1 done 27.07.2026
 Scoped in `docs/admin-panel-scope.md` (decisions and build order are recorded there). Step 1 shipped: `IsAdmin` + migration, `Cedar:AdminEmail` bootstrap, gated `/api/admin` endpoint set, `/admin` page with a user list and summary counts.
 
-- [ ] **Before it works in production: set `Cedar:AdminEmail=cedarworks@mooexe.dev` on the Pi** — see `docs/integrations-setup.md` §3b. Without it nobody is an admin and the panel is unreachable by design
+- [x] **`Cedar:AdminEmail=cedarworks@mooexe.dev` is set on the Pi** — done by Marty, confirmed 27.07.2026. This file had carried it as pending for two sessions after the fact
 - [ ] Live-verify the gate: as a non-admin, `/api/admin/users` must 404 and `/admin` must redirect. No automated test covers this — the project has no HTTP-level integration tests
 - [x] **Step 2 done 27.07.2026** — plan/expiry, reset trial, lock/unlock, grant/revoke admin, all self-targeting refused server-side. The **audit log was built with it** rather than deferred (new `AdminAuditEntry` table): a log that starts halfway through is missing exactly what someone would look for
 - [x] **Step 3 done 27.07.2026** — real `InviteCode` entity, `ApplicationUser.InviteCodeId`, registration switched to look codes up with `Cedar:InviteCode` kept as the fallback, codes deactivated-not-deleted, and manual attribution for the accounts that predate tracking. Shared usability predicate in `CedarClerk.Core/InviteCodeRules.cs` with tests

@@ -95,6 +95,6 @@ Steps 1–3 are the actual ask; 4–5 are where "чем больше функц�
 
 ## Still open
 
-- **`Cedar:AdminEmail` must be set on the Pi** before the panel is reachable in production — see `docs/integrations-setup.md` §3b.
+- **`Cedar:AdminEmail` is set on the Pi** (Marty, confirmed 27.07.2026) — see `docs/integrations-setup.md` §3b.
 - **The audit log has no retention or paging.** It grows forever and the panel shows the newest 100 (`Consts.Admin.AuditPageSize`). Fine at this scale; worth revisiting if it ever gets busy.
 - **Step 3 (invite codes)** is the next one, and it carries the manual-attribution affordance for the two pre-existing accounts.
