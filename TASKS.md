@@ -6,9 +6,9 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
 ~60 items, confirmed as not overlapping the earlier lists. Analysis in `docs/BACKLOG.md`, order in `docs/ROADMAP.md` Phase 9e.
 
 **Three answers needed before building:**
-- [ ] **FI6.2** — collapse to a single paid tier? It reads as a settings tweak but is a pricing restructure (PlanTiers, PlanLimitations, billing, admin panel, ADR-012/013/014)
-- [ ] **NF2** — how many content languages? The editor's two-tab model, `Languages.cs`, auto-translate and the blog's `?lang=` all assume two. FI4 and FI5 wait on this
-- [ ] **NF3** — email confirmation needs a working Resend key; the configured one still 401s
+- [~] **FI6.2 deferred by Marty 27.07.2026** — the tier restructure waits; nothing in Phase 9e should assume it
+- [x] **NF2 answered**: six content languages — RU, EN, DE, FR, ES, JA. The editor's two-tab model, `Languages.cs`, auto-translate and the blog's `?lang=` all assume exactly two today, so this is the structural change FI4 and FI5 were waiting on
+- [x] **NF3 is not blocked** — the Resend key works (verified 27.07.2026). Email confirmation can be built whenever it comes up in the order
 
 **Known regression to fix regardless**: `DB2.1` — drafts-table column resize behaves inverted (`N1`). And `DB3.1`: flag emoji don't render on desktop Windows, which invalidates the flag choice made in `I1`/`I17`.
 
@@ -52,7 +52,7 @@ Only `I12` (split Settings) is left in the block, and `I14` shrank it: appearanc
 ## Critical before the next production deploy
 - [x] Push real provider keys to the Pi's `data.conf` — done by Marty; **a real payment goes through in production, tested on his own card** (26.07.2026). Auto-translate uses the same keys mechanism but wasn't called out as tested.
 - [ ] Manually activate the Stripe Customer Portal in the Stripe Dashboard (Settings → Billing) — the code path (`POST /api/billing/stripe/portal`) exists but the portal itself isn't turned on yet.
-- [ ] Fresh Resend API key — the configured one 401s (issued for a since-deleted domain), so invite emails still don't send. See `CHANGELOG.md`, 26.07.2026 deploy follow-ups.
+- [x] Resend API key — **working as of 27.07.2026**, verified by Marty from the Resend dashboard: `mooexe.dev` is a verified domain and `POST /emails` returns 200. The earlier "the key 401s" note was stale and had been trusted rather than checked; email sending is not a blocker for anything.
 - [x] Run `Scripts/deploy.ps1` end-to-end — done 16.07.2026 (Marty deployed commit `98ec07e`, health check passed).
 - [x] Verify a real payment in production — done 26.07.2026 (Marty's own card, not just test mode). A real auto-translate call in production is still unconfirmed.
 - [x] Deploy the empty-carousel/collage fix (`CedarToTelegramBlocksRenderer.cs`) — **stale as of 25.07.2026**: the fix has been committed and shipped since the `98ec07e` deploy (16.07.2026); the guard (`Count > 0` before yielding carousel/collage/list/table/etc. blocks) is present in the current code. See ADR-019/027 in `docs/DECISIONS.md`.

@@ -2,7 +2,7 @@
 
 public static class Consts
 {
-    public const string CurrentVersion = "0.9.5";
+    public const string CurrentVersion = "0.9.6";
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
     
