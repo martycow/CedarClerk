@@ -5,9 +5,9 @@
         <app-cedar-logo [size]="19"></app-cedar-logo>
         <span class="brand-name">Cedar Clerk</span>
         <span class="crumb-sep">/</span>
-        <span class="crumb-current">Drafts</span>
+        <span class="crumb-current">{{ t().drafts.crumb }}</span>
         <span class="spacer"></span>
-        <button class="icon-btn" (click)="theme.toggle()" title="Toggle theme">
+        <button class="icon-btn" (click)="theme.toggle()" [title]="t().common.toggleTheme">
             {{ theme.theme() === 'dark' ? '☀' : '☾' }}
         </button>
         <span class="avatar">{{ avatarInitial() }}</span>
@@ -15,22 +15,22 @@
 
     <div class="drafts-body">
         @if (loading()) {
-        <p class="hint">Loading…</p>
+        <p class="hint">{{ t().common.loading }}</p>
         } @else {
         <div class="drafts-toolbar">
             <div>
-                <h1>Drafts</h1>
-                <div class="drafts-sub">{{ drafts().length }} posts</div>
+                <h1>{{ t().drafts.title }}</h1>
+                <div class="drafts-sub">{{ t().drafts.postsCount(drafts().length) }}</div>
             </div>
             <span class="spacer"></span>
-            <input class="search-input" [(ngModel)]="search" placeholder="Search title or tag">
+            <input class="search-input" [(ngModel)]="search" [placeholder]="t().drafts.search">
             <app-popover>
-                <button trigger class="folder-filter-btn" title="Filter by folder">
+                <button trigger class="folder-filter-btn" [title]="t().drafts.folders.filter">
                     <svg lucideFolder class="icon-sm"></svg> {{ selectedFolderLabel() }}
                 </button>
                 <div panel class="folder-menu">
-                    <button class="folder-menu-item" [class.active]="selectedFolder() === 'all'" (click)="selectedFolder.set('all')">All folders</button>
-                    <button class="folder-menu-item" [class.active]="selectedFolder() === 'none'" (click)="selectedFolder.set('none')">No folder</button>
+                    <button class="folder-menu-item" [class.active]="selectedFolder() === 'all'" (click)="selectedFolder.set('all')">{{ t().drafts.folders.all }}</button>
+                    <button class="folder-menu-item" [class.active]="selectedFolder() === 'none'" (click)="selectedFolder.set('none')">{{ t().drafts.folders.none }}</button>
                     @if (folders().length) {
                     <div class="folder-menu-sep"></div>
                     @for (f of folders(); track f.id) {
@@ -42,10 +42,10 @@
                         } @else {
                         <button class="folder-menu-item" (click)="selectedFolder.set(f.id)">{{ f.name }}</button>
                         <span class="folder-count">{{ f.count }}</span>
-                        <button class="folder-icon-btn" (click)="startRenameFolder(f, $event)" title="Rename">
+                        <button class="folder-icon-btn" (click)="startRenameFolder(f, $event)" [title]="t().drafts.folders.rename">
                             <svg lucidePencil class="icon-xs"></svg>
                         </button>
-                        <button class="folder-icon-btn" (click)="askDeleteFolder(f, $event)" title="Delete">
+                        <button class="folder-icon-btn" (click)="askDeleteFolder(f, $event)" [title]="t().common.delete">
                             <svg lucideX class="icon-xs"></svg>
                         </button>
                         }
@@ -55,45 +55,45 @@
                     <div class="folder-menu-sep"></div>
                     @if (folderError()) { <p class="folder-error">{{ folderError() }}</p> }
                     <div class="folder-add-row">
-                        <input class="folder-add-input" [(ngModel)]="newFolderName" placeholder="New folder…" (keydown.enter)="addFolder()">
-                        <button class="folder-icon-btn" (click)="addFolder()" [disabled]="folderBusy() || !newFolderName.trim()" title="Add folder">
+                        <input class="folder-add-input" [(ngModel)]="newFolderName" [placeholder]="t().drafts.folders.newPlaceholder" (keydown.enter)="addFolder()">
+                        <button class="folder-icon-btn" (click)="addFolder()" [disabled]="folderBusy() || !newFolderName.trim()" [title]="t().drafts.folders.add">
                             <svg lucidePlus class="icon-xs"></svg>
                         </button>
                     </div>
                 </div>
             </app-popover>
             <div class="view-toggle">
-                <button [class.active]="view() === 'table'" (click)="view.set('table')" title="Table">
+                <button [class.active]="view() === 'table'" (click)="view.set('table')" [title]="t().drafts.viewTable">
                     <svg lucideList class="icon-sm"></svg>
                 </button>
-                <button [class.active]="view() === 'grid'" (click)="view.set('grid')" title="Grid">
+                <button [class.active]="view() === 'grid'" (click)="view.set('grid')" [title]="t().drafts.viewGrid">
                     <svg lucideLayoutGrid class="icon-sm"></svg>
                 </button>
             </div>
             <!--Both imports live here (B22) — the editor topbar keeps only Export/theme/profile.-->
-            <button class="btn-ghost" (click)="cedarInput.click()" [disabled]="importingCedar()" title="Import .cedar">
+            <button class="btn-ghost" (click)="cedarInput.click()" [disabled]="importingCedar()" [title]="t().drafts.importCedar">
                 <svg lucideUpload class="icon-sm" [class.spin]="importingCedar()"></svg>
-                Import .cedar
+                {{ t().drafts.importCedar }}
             </button>
             <input #cedarInput type="file" accept=".cedar" hidden (change)="onImportCedarChosen($event)">
-            <button class="btn-ghost" (click)="markdownInput.click()" [disabled]="importingMarkdown()" title="Import Markdown (.zip)">
+            <button class="btn-ghost" (click)="markdownInput.click()" [disabled]="importingMarkdown()" [title]="t().drafts.importZipTitle">
                 <svg lucideFileUp class="icon-sm" [class.spin]="importingMarkdown()"></svg>
-                Import .zip
+                {{ t().drafts.importZip }}
             </button>
             <input #markdownInput type="file" accept=".zip" hidden (change)="onImportMarkdownChosen($event)">
-            <button class="btn-accent" (click)="newDraft()"><svg lucidePlus class="icon-sm"></svg> New draft</button>
+            <button class="btn-accent" (click)="newDraft()"><svg lucidePlus class="icon-sm"></svg> {{ t().drafts.newDraft }}</button>
         </div>
         @if (importCedarError()) { <p class="channel-error">{{ importCedarError() }}</p> }
         @if (importMarkdownError()) { <p class="channel-error">{{ importMarkdownError() }}</p> }
         @if (importMarkdownWarning()) { <p class="channel-error">{{ importMarkdownWarning() }}</p> }
 
         <div class="filter-tabs">
-            <button [class.active]="filter() === 'all'" (click)="filter.set('all')">All {{ filterCount('all') }}</button>
-            <button [class.active]="filter() === 'draft'" (click)="filter.set('draft')">Drafts {{ filterCount('draft') }}</button>
-            <button [class.active]="filter() === 'scheduled'" (click)="filter.set('scheduled')">Scheduled {{ filterCount('scheduled') }}</button>
-            <button [class.active]="filter() === 'published'" (click)="filter.set('published')">Published {{ filterCount('published') }}</button>
-            <button [class.active]="filter() === 'attention'" (click)="filter.set('attention')">Needs attention {{ filterCount('attention') }}</button>
-            <button [class.active]="filter() === 'archived'" (click)="filter.set('archived')">Archived {{ filterCount('archived') }}</button>
+            <button [class.active]="filter() === 'all'" (click)="filter.set('all')">{{ t().drafts.filters.all }} {{ filterCount('all') }}</button>
+            <button [class.active]="filter() === 'draft'" (click)="filter.set('draft')">{{ t().drafts.filters.draft }} {{ filterCount('draft') }}</button>
+            <button [class.active]="filter() === 'scheduled'" (click)="filter.set('scheduled')">{{ t().drafts.filters.scheduled }} {{ filterCount('scheduled') }}</button>
+            <button [class.active]="filter() === 'published'" (click)="filter.set('published')">{{ t().drafts.filters.published }} {{ filterCount('published') }}</button>
+            <button [class.active]="filter() === 'attention'" (click)="filter.set('attention')">{{ t().drafts.filters.attention }} {{ filterCount('attention') }}</button>
+            <button [class.active]="filter() === 'archived'" (click)="filter.set('archived')">{{ t().drafts.filters.archived }} {{ filterCount('archived') }}</button>
         </div>
 
         @if (error()) { <p class="channel-error">{{ error() }}</p> }
@@ -101,14 +101,14 @@
         @if (view() === 'table') {
         <div class="drafts-table">
             <div class="drafts-row drafts-row-head">
-                <span>Title</span><span>State</span><span>Languages</span><span>Folder</span><span>Tags</span><span>Activity</span><span class="right">Updated</span><span></span>
+                <span>{{ t().drafts.columns.title }}</span><span>{{ t().drafts.columns.state }}</span><span>{{ t().drafts.columns.languages }}</span><span>{{ t().drafts.columns.folder }}</span><span>{{ t().drafts.columns.tags }}</span><span>{{ t().drafts.columns.activity }}</span><span class="right">{{ t().drafts.columns.updated }}</span><span></span>
             </div>
             @for (d of filteredDrafts(); track d.id) {
             <div class="drafts-row" [class.busy]="busyId() === d.id" (click)="openDraft(d.id)">
                 <div class="drafts-title-cell">
                     <div class="drafts-title">
-                        @if (d.isPrivate) { <svg lucideLock class="icon-xs private-lock" title="Private post"></svg> }
-                        {{ d.title || 'Untitled' }}
+                        @if (d.isPrivate) { <svg lucideLock class="icon-xs private-lock" [attr.title]="t().drafts.privatePost"></svg> }
+                        {{ d.title || t().drafts.untitled }}
                     </div>
                 </div>
                 <div>
@@ -127,7 +127,7 @@
                             <svg lucideFolder class="icon-xs"></svg> {{ folderName(d.folderId) }}
                         </button>
                         <div panel class="folder-menu">
-                            <button class="folder-menu-item" [class.active]="d.folderId === null" (click)="assignFolder(d, null)">No folder</button>
+                            <button class="folder-menu-item" [class.active]="d.folderId === null" (click)="assignFolder(d, null)">{{ t().drafts.folders.none }}</button>
                             @for (f of folders(); track f.id) {
                             <button class="folder-menu-item" [class.active]="d.folderId === f.id" (click)="assignFolder(d, f.id)">{{ f.name }}</button>
                             }
@@ -135,15 +135,16 @@
                     </app-popover>
                 </div>
                 <div class="tags-cell">
-                    @for (t of d.tags.split(',').slice(0, 3); track t) { @if (t) { <span class="tag-chip-ro">#{{ t }}</span> } }
+                    <!--Loop variable is `tag`, not `t` — `t` is the dictionary accessor here.-->
+                    @for (tag of d.tags.split(',').slice(0, 3); track tag) { @if (tag) { <span class="tag-chip-ro">#{{ tag }}</span> } }
                 </div>
                 <div class="activity-cell">
                     @if (hasActivity(d)) {
-                    <span class="activity-metric" title="Blog views">
+                    <span class="activity-metric" [title]="t().drafts.activity.views">
                         <svg lucideEye class="icon-xs"></svg>{{ d.viewCount }}
                         @if (d.newViewCount) { <span class="activity-delta">+{{ d.newViewCount }}</span> }
                     </span>
-                    <span class="activity-metric" title="Reactions (likes + dislikes)">
+                    <span class="activity-metric" [title]="t().drafts.activity.reactions">
                         <svg lucideHeart class="icon-xs"></svg>{{ d.reactionCount }}
                         @if (d.newReactionCount) { <span class="activity-delta">+{{ d.newReactionCount }}</span> }
                     </span>
@@ -153,18 +154,18 @@
                 </div>
                 <div class="right">{{ d.updatedAt | date:'d MMM, HH:mm' }}</div>
                 <div class="row-actions">
-                    <button class="mini" (click)="toggleArchive(d, $event)" [disabled]="busyId() === d.id" [title]="d.isArchived ? 'Unarchive' : 'Archive'">
+                    <button class="mini" (click)="toggleArchive(d, $event)" [disabled]="busyId() === d.id" [title]="d.isArchived ? t().drafts.actions.unarchive : t().drafts.actions.archive">
                         @if (busyId() === d.id) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
                         @else if (d.isArchived) { <svg lucideArchiveRestore class="icon-sm"></svg> }
                         @else { <svg lucideArchive class="icon-sm"></svg> }
                     </button>
-                    <button class="mini-remove" (click)="askDelete(d, $event)" [disabled]="busyId() === d.id" title="Delete">
+                    <button class="mini-remove" (click)="askDelete(d, $event)" [disabled]="busyId() === d.id" [title]="t().drafts.actions.deleteDraft">
                         <svg lucideTrash2 class="icon-sm"></svg>
                     </button>
                 </div>
             </div>
             } @empty {
-            <p class="hint">Nothing here.</p>
+            <p class="hint">{{ t().common.nothingHere }}</p>
             }
         </div>
         } @else {
@@ -172,8 +173,8 @@
             @for (d of filteredDrafts(); track d.id) {
             <div class="draft-card" [class.busy]="busyId() === d.id" (click)="openDraft(d.id)">
                 <div class="drafts-title">
-                    @if (d.isPrivate) { <svg lucideLock class="icon-xs private-lock" title="Private post"></svg> }
-                    {{ d.title || 'Untitled' }}
+                    @if (d.isPrivate) { <svg lucideLock class="icon-xs private-lock" [attr.title]="t().drafts.privatePost"></svg> }
+                    {{ d.title || t().drafts.untitled }}
                 </div>
                 <span class="status-badge" [class.tone-danger]="status(d).tone === 'danger'" [class.tone-ok]="status(d).tone === 'ok'">
                     {{ status(d).label }}
@@ -184,7 +185,7 @@
                     <app-popover>
                         <button trigger class="folder-cell-btn"><svg lucideFolder class="icon-xs"></svg> {{ folderName(d.folderId) }}</button>
                         <div panel class="folder-menu">
-                            <button class="folder-menu-item" [class.active]="d.folderId === null" (click)="assignFolder(d, null)">No folder</button>
+                            <button class="folder-menu-item" [class.active]="d.folderId === null" (click)="assignFolder(d, null)">{{ t().drafts.folders.none }}</button>
                             @for (f of folders(); track f.id) {
                             <button class="folder-menu-item" [class.active]="d.folderId === f.id" (click)="assignFolder(d, f.id)">{{ f.name }}</button>
                             }
@@ -194,11 +195,11 @@
                 }
                 @if (hasActivity(d)) {
                 <div class="activity-cell">
-                    <span class="activity-metric" title="Blog views">
+                    <span class="activity-metric" [title]="t().drafts.activity.views">
                         <svg lucideEye class="icon-xs"></svg>{{ d.viewCount }}
                         @if (d.newViewCount) { <span class="activity-delta">+{{ d.newViewCount }}</span> }
                     </span>
-                    <span class="activity-metric" title="Reactions (likes + dislikes)">
+                    <span class="activity-metric" [title]="t().drafts.activity.reactions">
                         <svg lucideHeart class="icon-xs"></svg>{{ d.reactionCount }}
                         @if (d.newReactionCount) { <span class="activity-delta">+{{ d.newReactionCount }}</span> }
                     </span>
@@ -207,17 +208,17 @@
                 <div class="drafts-card-foot">
                     <span>{{ d.updatedAt | date:'d MMM, HH:mm' }}</span>
                     <span class="row-actions">
-                        <button class="mini" (click)="toggleArchive(d, $event)" [disabled]="busyId() === d.id" [title]="d.isArchived ? 'Unarchive' : 'Archive'">
+                        <button class="mini" (click)="toggleArchive(d, $event)" [disabled]="busyId() === d.id" [title]="d.isArchived ? t().drafts.actions.unarchive : t().drafts.actions.archive">
                             @if (d.isArchived) { <svg lucideArchiveRestore class="icon-sm"></svg> } @else { <svg lucideArchive class="icon-sm"></svg> }
                         </button>
-                        <button class="mini-remove" (click)="askDelete(d, $event)" [disabled]="busyId() === d.id" title="Delete">
+                        <button class="mini-remove" (click)="askDelete(d, $event)" [disabled]="busyId() === d.id" [title]="t().drafts.actions.deleteDraft">
                             <svg lucideTrash2 class="icon-sm"></svg>
                         </button>
                     </span>
                 </div>
             </div>
             } @empty {
-            <p class="hint">Nothing here.</p>
+            <p class="hint">{{ t().common.nothingHere }}</p>
             }
         </div>
         }
@@ -227,23 +228,23 @@
     @if (deleteConfirmId()) {
     <app-modal (closed)="cancelDelete()">
         <svg modal-icon lucideTrash2 class="icon"></svg>
-        <span modal-title>Delete this draft?</span>
-        <p>This cannot be undone.</p>
-        <button modal-actions class="btn-ghost" (click)="cancelDelete()">Cancel</button>
-        <button modal-actions class="btn-accent" (click)="confirmDelete()">Delete</button>
+        <span modal-title>{{ t().drafts.deleteDraftTitle }}</span>
+        <p>{{ t().drafts.deleteDraftBody }}</p>
+        <button modal-actions class="btn-ghost" (click)="cancelDelete()">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-accent" (click)="confirmDelete()">{{ t().common.delete }}</button>
     </app-modal>
     }
 
     @if (deleteFolderConfirmTarget(); as f) {
     <app-modal (closed)="cancelDeleteFolder()">
         <svg modal-icon lucideTrash2 class="icon"></svg>
-        <span modal-title>Delete "{{ f.name }}"?</span>
+        <span modal-title>{{ t().drafts.folders.deleteTitle(f.name) }}</span>
         <p>
-            @if (f.count > 0) { {{ f.count }} draft{{ f.count === 1 ? '' : 's' }} will become uncategorized. }
-            The drafts themselves are not deleted.
+            @if (f.count > 0) { {{ t().drafts.folders.deleteOrphans(f.count) }} }
+            {{ t().drafts.folders.deleteKeepsDrafts }}
         </p>
-        <button modal-actions class="btn-ghost" (click)="cancelDeleteFolder()">Cancel</button>
-        <button modal-actions class="btn-accent" (click)="confirmDeleteFolder()">Delete folder</button>
+        <button modal-actions class="btn-ghost" (click)="cancelDeleteFolder()">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-accent" (click)="confirmDeleteFolder()">{{ t().drafts.folders.deleteConfirm }}</button>
     </app-modal>
     }
 </div>

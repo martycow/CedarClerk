@@ -5,6 +5,8 @@ import { Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
 import { DraftsService, DraftMeta, FolderMeta } from '../core/drafts.service';
+import { LocaleService } from '../core/i18n/locale.service';
+import { Dict } from '../core/i18n/en';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { ModalComponent } from '../shared/modal.component';
 import { PopoverComponent } from '../shared/popover.component';
@@ -25,23 +27,24 @@ export interface DraftStatus { label: string; tone: DraftStatusTone; detail: str
 // Matches ADR-035's scoping: only status badges honestly derivable from persisted state.
 // "Unsaved"/"Publishing" from the original mockup are session-local (meaningful only for
 // whichever draft is open in *this* tab right now) and are deliberately not shown here.
-function computeStatus(d: DraftMeta): DraftStatus {
-    if (d.isArchived) return { label: 'Archived', tone: 'default', detail: '' };
+function computeStatus(d: DraftMeta, t: Dict): DraftStatus {
+    const s = t.drafts.status;
+    if (d.isArchived) return { label: s.archived, tone: 'default', detail: '' };
     if (d.scheduled?.status === 'Failed') {
-        return { label: 'Publish failed', tone: 'danger', detail: d.scheduled.error ?? '' };
+        return { label: s.publishFailed, tone: 'danger', detail: d.scheduled.error ?? '' };
     }
     if (d.scheduled?.status === 'Pending') {
         const when = new Date(d.scheduled.scheduledAtUtc).toLocaleString();
-        return { label: 'Scheduled', tone: 'default', detail: `${when} · ${d.scheduled.chatId}` };
+        return { label: s.scheduled, tone: 'default', detail: `${when} · ${d.scheduled.chatId}` };
     }
     if (d.staleLanguages.length > 0) {
-        return { label: 'Translation incomplete', tone: 'default', detail: `${d.staleLanguages.map(l => l.toUpperCase()).join(', ')} behind` };
+        return { label: s.translationIncomplete, tone: 'default', detail: s.translationBehind(d.staleLanguages.map(l => l.toUpperCase()).join(', ')) };
     }
     if (d.isBlogPublished || d.lastTelegramMessageId) {
-        const where = [d.isBlogPublished ? 'Blog' : null, d.lastTelegramMessageId ? 'Telegram' : null].filter(Boolean).join(' · ');
-        return { label: 'Published', tone: 'ok', detail: where };
+        const where = [d.isBlogPublished ? s.blog : null, d.lastTelegramMessageId ? s.telegram : null].filter(Boolean).join(' · ');
+        return { label: s.published, tone: 'ok', detail: where };
     }
-    return { label: 'Draft', tone: 'default', detail: '' };
+    return { label: s.draft, tone: 'default', detail: '' };
 }
 
 function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
@@ -68,6 +71,7 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
 export class DraftsPageComponent implements OnInit {
     auth = inject(AuthService);
     theme = inject(ThemeService);
+    t = inject(LocaleService).t;
     private draftsApi = inject(DraftsService);
     private router = inject(Router);
 
@@ -104,7 +108,7 @@ export class DraftsPageComponent implements OnInit {
             this.drafts.set(drafts);
             this.folders.set(folders);
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to load drafts'));
+            this.error.set(httpErrorMessage(e, this.t().drafts.errors.load));
         } finally {
             this.loading.set(false);
         }
@@ -116,7 +120,7 @@ export class DraftsPageComponent implements OnInit {
     }
 
     status(d: DraftMeta): DraftStatus {
-        return computeStatus(d);
+        return computeStatus(d, this.t());
     }
 
     // A draft that was never on the blog can't have activity — show a dash rather than "0 0" (B23).
@@ -139,14 +143,14 @@ export class DraftsPageComponent implements OnInit {
     }
 
     folderName(id: string | null): string {
-        if (id === null) return 'No folder';
-        return this.folders().find(f => f.id === id)?.name ?? 'No folder';
+        if (id === null) return this.t().drafts.folders.none;
+        return this.folders().find(f => f.id === id)?.name ?? this.t().drafts.folders.none;
     }
 
     selectedFolderLabel(): string {
         const f = this.selectedFolder();
-        if (f === 'all') return 'All folders';
-        if (f === 'none') return 'No folder';
+        if (f === 'all') return this.t().drafts.folders.all;
+        if (f === 'none') return this.t().drafts.folders.none;
         return this.folderName(f);
     }
 
@@ -157,7 +161,7 @@ export class DraftsPageComponent implements OnInit {
             this.drafts.update(list => list.map(x => x.id === d.id ? { ...x, folderId } : x));
             this.folders.set(await this.draftsApi.listFolders());
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to move draft'));
+            this.error.set(httpErrorMessage(e, this.t().drafts.errors.move));
         }
     }
 
@@ -171,7 +175,7 @@ export class DraftsPageComponent implements OnInit {
             this.folders.update(list => [...list, { ...created, count: 0 }].sort((a, b) => a.name.localeCompare(b.name)));
             this.newFolderName = '';
         } catch (e) {
-            this.folderError.set(httpErrorMessage(e, 'Failed to create folder'));
+            this.folderError.set(httpErrorMessage(e, this.t().drafts.errors.createFolder));
         } finally {
             this.folderBusy.set(false);
         }
@@ -198,7 +202,7 @@ export class DraftsPageComponent implements OnInit {
             this.folders.update(list => list.map(f => f.id === id ? { ...f, name: renamed.name } : f).sort((a, b) => a.name.localeCompare(b.name)));
             this.editingFolderId.set(null);
         } catch (e) {
-            this.folderError.set(httpErrorMessage(e, 'Failed to rename folder'));
+            this.folderError.set(httpErrorMessage(e, this.t().drafts.errors.renameFolder));
         } finally {
             this.folderBusy.set(false);
         }
@@ -229,7 +233,7 @@ export class DraftsPageComponent implements OnInit {
             this.drafts.update(list => list.map(d => d.folderId === id ? { ...d, folderId: null } : d));
             if (this.selectedFolder() === id) this.selectedFolder.set('all');
         } catch (e) {
-            this.folderError.set(httpErrorMessage(e, 'Failed to delete folder'));
+            this.folderError.set(httpErrorMessage(e, this.t().drafts.errors.deleteFolder));
         } finally {
             this.folderBusy.set(false);
         }
@@ -255,7 +259,7 @@ export class DraftsPageComponent implements OnInit {
             const created = await this.draftsApi.importCedar(file);
             this.router.navigate(['/editor'], { queryParams: { draft: created.id } });
         } catch (e) {
-            this.importCedarError.set(httpErrorMessage(e, 'Import failed — check the file and try again'));
+            this.importCedarError.set(httpErrorMessage(e, this.t().drafts.errors.import));
         } finally {
             this.importingCedar.set(false);
         }
@@ -273,14 +277,14 @@ export class DraftsPageComponent implements OnInit {
         try {
             const created = await this.draftsApi.importMarkdown(file);
             if (created.unmatchedImages.length > 0) {
-                this.importMarkdownWarning.set(`Imported, but ${created.unmatchedImages.length} image(s) could not be matched: ${created.unmatchedImages.join(', ')}`);
+                this.importMarkdownWarning.set(this.t().drafts.errors.importUnmatched(created.unmatchedImages.length, created.unmatchedImages.join(', ')));
                 this.drafts.set(await this.draftsApi.list());
             } else {
                 // Nothing to report — go straight to the freshly imported draft.
                 this.router.navigate(['/editor'], { queryParams: { draft: created.id } });
             }
         } catch (e) {
-            this.importMarkdownError.set(httpErrorMessage(e, 'Import failed — check the file and try again'));
+            this.importMarkdownError.set(httpErrorMessage(e, this.t().drafts.errors.import));
         } finally {
             this.importingMarkdown.set(false);
         }
@@ -295,7 +299,7 @@ export class DraftsPageComponent implements OnInit {
             const res = d.isArchived ? await this.draftsApi.unarchive(d.id) : await this.draftsApi.archive(d.id);
             this.drafts.update(list => list.map(x => x.id === d.id ? { ...x, isArchived: res.isArchived } : x));
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to update draft'));
+            this.error.set(httpErrorMessage(e, this.t().drafts.errors.update));
         } finally {
             this.busyId.set(null);
         }
@@ -320,7 +324,7 @@ export class DraftsPageComponent implements OnInit {
             await this.draftsApi.remove(id);
             this.drafts.update(list => list.filter(d => d.id !== id));
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to delete draft'));
+            this.error.set(httpErrorMessage(e, this.t().drafts.errors.delete));
         } finally {
             this.busyId.set(null);
         }
