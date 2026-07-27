@@ -96,5 +96,5 @@ Steps 1–3 are the actual ask; 4–5 are where "чем больше функц�
 ## Still open
 
 - **`Cedar:AdminEmail` is set on the Pi** (Marty, confirmed 27.07.2026) — see `docs/integrations-setup.md` §3b.
-- **The audit log has no retention or paging.** It grows forever and the panel shows the newest 100 (`Consts.Admin.AuditPageSize`). Fine at this scale; worth revisiting if it ever gets busy.
-- **Step 3 (invite codes)** is the next one, and it carries the manual-attribution affordance for the two pre-existing accounts.
+- **The audit log pages now** (27.07.2026): `GET /api/admin/audit?skip=` returns a page plus `hasMore`, and the panel has a "Load more". **Retention is still deliberately absent** — the log is append-only on purpose, and trimming it would remove exactly what someone would go looking for.
+- ~~Step 3 (invite codes) is next~~ — stale: steps 3, 4 and 5 all shipped 27.07.2026 and the panel is complete. See `TASKS.md`.

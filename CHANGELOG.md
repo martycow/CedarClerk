@@ -10,6 +10,40 @@ The host is now `pointer-events: none`, with the tab and panel opting back in, s
 
 Also replaced `app.spec.ts`'s scaffold "should render title" test, which asserted an `<h1>` the app shell has never had and had been red for the whole life of the project.
 
+## 2026-07-27 (latest) — a pass over the backlog, by category
+
+Marty asked for everything in the backlog touching forms, then posts, then stats, then the admin panel, then new editor features. Two of those five turned out to be mostly answered already, which is the recurring shape of this backlog.
+
+### Forms (FI4)
+
+**A form preset now has a language, and a post can carry one form per language.** `FormPreset.Language` plus `Draft.RegistrationFormTranslationsJson`, with `RegistrationFormSet` in Core deciding which form a given reader gets. It is deliberately *not* one map holding every language: the single-language post is the common case, and its form stays exactly where every existing row, endpoint and test already looks for it. Ten unit tests pin the picking, the fallback and the "a corrupt blob must not take a published page down" rule.
+
+Two things came out of that which were plainly broken before: the private-post gate always rendered in the primary language, so an English reader of a private post was greeted in Russian even when an English form existed; and the gate's own chrome existed in exactly two languages, four short of the six the app has had since NF2. Both fixed. What is **not** translated is the questions themselves — a form's wording is the owner talking to their reader, and machine-translating that would be putting words in their mouth.
+
+The editor for it stopped being a flat stack of inputs, checkboxes and outlined rows with nothing saying what belonged to what: three labelled blocks, and each question is a card carrying its own type, options and required flag.
+
+**N6 and N11 were already built.** Server-side name validation and the Telegram DM on a form submission both exist in the code. The backlog rows were stale, not the features.
+
+### Posts
+
+**Idea #4 — the draft's name and the article's headline are now two fields.** `Draft.ArticleTitle`, null meaning "same as the name", used by the blog page, the post cards, RSS and both file exports. The per-language half of that item turned out to already be done: `DraftTranslation.Title` has always been that language's own article title.
+
+**Idea #8** — a blog card emitted `tags[0]` and silently dropped every other tag, while the single-post page had always shown them all. **Idea #3** — tags can be renamed and deleted across every draft that carries them, from a `[manage]` mode on the shared picker; a rename onto an existing tag merges rather than duplicating, and the blog follows with no extra step because it reads `Draft.Tags` directly. **B17** — the Telegram signature is bold; a linked signature is bolded *inside* the link, since Telegram renders a bold run within a link but not a link within bold.
+
+### Stats — nothing open
+
+`N9` shipped the custom range, `I8` widened it and labelled the notches, and `B1` was superseded by `N9`. Checked rather than assumed; there is no open stats work in the backlog.
+
+### Admin — one gap, now closed
+
+The panel's five steps were already complete. The single thing `docs/admin-panel-scope.md` still listed was the audit log having no paging: it showed the newest 100 entries and nothing could reach the rest. It pages now (`?skip=`, `hasMore`, a "Load more" button). Retention stays deliberately absent — an append-only log that starts halfway through is missing exactly what someone would go looking for.
+
+### Editor
+
+**B9** — the emoji panel had 40 emoji in one unlabelled grid that overflowed the popover to the right. Four captioned groups now, about 120 emoji, and the popover scrolls instead of growing. Hand-picked rather than a full Unicode table on purpose: a complete picker needs search, and search needs emoji names in six UI languages.
+
+**B13** — a status-bar toggle that reveals where a block actually ends. Paragraph marks only, and that limit is real rather than laziness: in a contenteditable, spaces and tabs can't be drawn without either inserting characters that would end up in the exported text or fighting the browser's own whitespace handling.
+
 ## 2026-07-27 (latest), Phase 9e — FI2: the export window does only export
 
 Eleven sub-items, but one rule underneath them, and it is Marty's: **"По хорошему Экспорт управляет ТОЛЬКО экспортом"**. Everything that was really *managing an already-published post* left the window.

@@ -3,10 +3,20 @@
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
 ## Now: Phase 9e — the second `Input.md` sweep
-**Done**: DB2, DB3, NF2 (six content languages), **FI3 closed 27.07.2026** (shared tag/folder pickers, folder CRUD everywhere, feedback folded into the Posts tab).
-**Next in order**: FI2 (export window, 11 sub-items — the largest UX group left), then FI4 (forms), FI6, FI1, FI5.
-- [ ] **FI2.8 needs Marty's word**: he proposed moving scheduled-post management out of Export into the Posts Manager and explicitly invited disagreement ("поправь меня если считаешь иначе"). Everything else in FI2 is specified.
-- [ ] **Not live-verified**: the FI3 work above — pickers on four screens, folder delete, embedded feedback.
+**Done**: DB2, DB3, NF2 (six content languages), **FI3**, **FI2**, **FI4** — all closed 27.07.2026 — plus a category sweep of the backlog (forms → posts → stats → admin → editor) on Marty's instruction.
+
+**Closed from the older lists in that sweep**: ideas #3, #4, #7, #8, #12, #13; `B1`, `B9`, `B13`, `B17`; `N6` and `N11` were found already built and the backlog rows corrected.
+
+**Next in order**: FI6 (account settings — but 6.2 is a pricing restructure Marty deferred), FI1 (appearance panel UX, 7 sub-items), FI5 (profile settings).
+
+**Left open on purpose, each needing a decision rather than an implementation:**
+- [ ] **NF5 / idea #22 — polls inside a post.** A TipTap node plus renderers on all three surfaces, response storage and a results view. Telegram has native polls but *not* inside `sendRichMessage` Blocks, so that surface likely degrades to a link — worth confirming with Marty before building
+- [ ] **NF1 — post templates.** Cheapest honest shape is a flag on `Draft` plus filtering, not a parallel entity; needs Marty's word on whether a template should be editable exactly like a draft
+- [ ] **Idea #11 — glossary of terms.** Large and multi-part; needs its own scoping session
+- [ ] **Idea #21 — accounts on the blog.** A different identity model sitting alongside anonymous comments; "verified" has no defined meaning yet
+- [ ] **Ideas #9 and #14** — both are questions for Marty, recorded in `docs/BACKLOG.md`'s open-questions list
+
+**Not live-verified** (nothing below has been clicked through in a browser): the FI2 export rebuild, the FI3 pickers and folder delete, the FI4 forms editor and per-language gate, tag rename/delete, article title, audit paging, the emoji panel and the paragraph-mark toggle.
 
 ## Phase 9e detail (imported 27.07.2026)
 ~60 items, confirmed as not overlapping the earlier lists. Analysis in `docs/BACKLOG.md`, order in `docs/ROADMAP.md` Phase 9e.
