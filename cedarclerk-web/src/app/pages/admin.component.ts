@@ -2,7 +2,10 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { AdminService, AdminAuditEntry, AdminInviteCode, AdminSummary, AdminUser } from '../core/admin.service';
+import {
+    AdminService, AdminAuditEntry, AdminBilling, AdminInviteCode, AdminPost, AdminSummary,
+    AdminUsage, AdminUser,
+} from '../core/admin.service';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -11,8 +14,10 @@ import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { AccountMenuComponent } from '../shared/account-menu.component';
 import { LucideArrowLeft as ArrowLeft, LucideShieldCheck as ShieldCheck } from '@lucide/angular';
 
-// Admin panel, step 1 of docs/admin-panel-scope.md: the shell plus the user list. User
-// management, invite codes and cross-owner posts are steps 2–4 and land here as further tabs.
+export type AdminTab = 'users' | 'invites' | 'posts' | 'reports';
+
+// Admin panel (IF2) — all five steps of docs/admin-panel-scope.md. Users and their management,
+// invite codes, a read-only cross-owner post list, billing/usage reporting, and the audit log.
 @Component({
     selector: 'app-admin',
     imports: [DatePipe, FormsModule, RouterLink, CedarLogoComponent, AccountMenuComponent, ArrowLeft, ShieldCheck],
@@ -31,6 +36,13 @@ export class AdminComponent implements OnInit {
     summary = signal<AdminSummary | null>(null);
     audit = signal<AdminAuditEntry[]>([]);
     invites = signal<AdminInviteCode[]>([]);
+    posts = signal<AdminPost[]>([]);
+    billing = signal<AdminBilling | null>(null);
+    usage = signal<AdminUsage[]>([]);
+
+    // The panel outgrew one scroll once steps 4-5 landed — same tab pattern as the Posts Manager
+    // and Settings, so the app's three secondary pages behave alike.
+    tab = signal<AdminTab>('users');
 
     // Step 3 — new code form.
     newCode = '';
@@ -53,16 +65,29 @@ export class AdminComponent implements OnInit {
 
     private async reload() {
         try {
-            const [users, summary, audit, invites] = await Promise.all([
+            const [users, summary, audit, invites, posts, billing, usage] = await Promise.all([
                 this.api.listUsers(), this.api.summary(), this.api.audit(), this.api.listInvites(),
+                this.api.listPosts(), this.api.billing(), this.api.usage(),
             ]);
             this.users.set(users);
             this.summary.set(summary);
             this.audit.set(audit);
             this.invites.set(invites);
+            this.posts.set(posts);
+            this.billing.set(billing);
+            this.usage.set(usage);
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().admin.loadFailed));
         }
+    }
+
+    setTab(tab: AdminTab) {
+        this.tab.set(tab);
+    }
+
+    // Payments are stored in minor units (cents/stars), like everywhere else in billing.
+    formatAmount(amount: number, currency: string): string {
+        return currency.toUpperCase() === 'XTR' ? `${amount} ⭐` : `${(amount / 100).toFixed(2)} ${currency.toUpperCase()}`;
     }
 
     isSelf(u: AdminUser): boolean {

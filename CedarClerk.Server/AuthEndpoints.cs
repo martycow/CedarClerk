@@ -42,7 +42,8 @@ public static class AuthEndpoints
         var groupBuilder = app.MapGroup("/api/auth");
 
         #region Register
-        groupBuilder.MapPost("/register", async (RegisterRequest req, UserManager<ApplicationUser> users, IConfiguration cfg, CedarDbContext db) =>
+        groupBuilder.MapPost("/register", async (RegisterRequest req, UserManager<ApplicationUser> users,
+            SignInManager<ApplicationUser> signIn, IConfiguration cfg, CedarDbContext db) =>
         {
             var submitted = req.InviteCode?.Trim() ?? "";
 
@@ -79,6 +80,12 @@ public static class AuthEndpoints
                 code!.Uses++;
                 await db.SaveChangesAsync();
             }
+
+            // Sign the new account in. Without this, registration succeeded on the server while
+            // the client's follow-up /me returned 401 and it reported "Registration failed" — so
+            // every signup looked broken while having actually worked, and on a single-use invite
+            // code the retry then genuinely failed. isPersistent matches the login endpoint.
+            await signIn.SignInAsync(user, isPersistent: true);
             return Results.Ok(new { message = "Registered" });
         });
         #endregion

@@ -54,7 +54,14 @@
         </div>
         }
 
-        <h2 class="admin-section-title">{{ t().admin.usersTitle }}</h2>
+        <nav class="admin-tabs">
+            <button [class.active]="tab() === 'users'" (click)="setTab('users')">{{ t().admin.usersTitle }}</button>
+            <button [class.active]="tab() === 'invites'" (click)="setTab('invites')">{{ t().admin.invites.title }}</button>
+            <button [class.active]="tab() === 'posts'" (click)="setTab('posts')">{{ t().admin.posts.title }}</button>
+            <button [class.active]="tab() === 'reports'" (click)="setTab('reports')">{{ t().admin.reports.title }}</button>
+        </nav>
+
+        @if (tab() === 'users') {
 
         <div class="user-table">
             <div class="user-row head">
@@ -140,8 +147,9 @@
             }
         </div>
 
-        <h2 class="admin-section-title audit-title">{{ t().admin.invites.title }}</h2>
+        }
 
+        @if (tab() === 'invites') {
         <div class="invite-new">
             <input [(ngModel)]="newCode" [placeholder]="t().admin.invites.codePlaceholder" maxlength="60">
             <input [(ngModel)]="newLabel" [placeholder]="t().admin.invites.labelPlaceholder" maxlength="60">
@@ -183,6 +191,95 @@
             }
         </div>
 
+        }
+
+        @if (tab() === 'posts') {
+        <div class="user-table">
+            <div class="post-row head">
+                <span>{{ t().admin.posts.title2 }}</span>
+                <span>{{ t().admin.posts.owner }}</span>
+                <span>{{ t().admin.posts.state }}</span>
+                <span>{{ t().admin.posts.activity }}</span>
+                <span>{{ t().admin.posts.links }}</span>
+            </div>
+            @for (p of posts(); track p.id) {
+            <div class="post-row">
+                <span class="user-email">{{ p.title || t().drafts.untitled }}</span>
+                <span class="muted">{{ p.ownerEmail }}</span>
+                <span>
+                    @if (p.isBlogPublished) { <span class="chip">{{ t().admin.posts.published }}</span> }
+                    @if (p.isPrivate) { <span class="chip warn">{{ t().admin.posts.private }}</span> }
+                    @if (p.isArchived) { <span class="chip">{{ t().admin.posts.archived }}</span> }
+                </span>
+                <span class="muted">{{ t().admin.posts.activityValue(p.viewCount, p.comments) }}</span>
+                <span class="post-links">
+                    @if (p.blogUrl) { <a [href]="p.blogUrl" target="_blank" rel="noopener">{{ t().manager.blog }}</a> }
+                    @if (p.telegramUrl) { <a [href]="p.telegramUrl" target="_blank" rel="noopener">{{ t().manager.telegram }}</a> }
+                </span>
+            </div>
+            } @empty {
+            <p class="hint invite-empty">{{ t().common.nothingHere }}</p>
+            }
+        </div>
+        <p class="field-hint-inline invite-hint">{{ t().admin.posts.readOnlyNote }}</p>
+        }
+
+        @if (tab() === 'reports') {
+        @if (billing(); as b) {
+        <h2 class="admin-section-title">{{ t().admin.reports.revenue }}</h2>
+        @if (b.totalByCurrency.length) {
+        <div class="summary-grid">
+            @for (tot of b.totalByCurrency; track tot.currency) {
+            <div class="summary-card">
+                <span class="summary-value">{{ formatAmount(tot.total, tot.currency) }}</span>
+                <span class="summary-label">{{ t().admin.reports.completedOnly }}</span>
+            </div>
+            }
+        </div>
+        }
+
+        <div class="user-table">
+            <div class="payment-row head">
+                <span>{{ t().admin.reports.when }}</span>
+                <span>{{ t().admin.reports.who }}</span>
+                <span>{{ t().admin.reports.what }}</span>
+                <span>{{ t().admin.reports.amount }}</span>
+                <span>{{ t().admin.reports.status }}</span>
+            </div>
+            @for (p of b.payments; track p.id) {
+            <div class="payment-row">
+                <span class="muted">{{ p.createdAt | date:'d MMM yyyy, HH:mm' }}</span>
+                <span class="muted">{{ p.ownerEmail }}</span>
+                <span>{{ p.plan }} · {{ p.provider }}</span>
+                <span>{{ formatAmount(p.amount, p.currency) }}</span>
+                <span class="muted">{{ p.status }}</span>
+            </div>
+            } @empty {
+            <p class="hint invite-empty">{{ t().admin.reports.noPayments }}</p>
+            }
+        </div>
+        }
+
+        <h2 class="admin-section-title audit-title">{{ t().admin.reports.usage }}</h2>
+        <div class="user-table">
+            <div class="usage-row head">
+                <span>{{ t().admin.reports.who }}</span>
+                <span>{{ t().admin.reports.storage }}</span>
+                <span>{{ t().admin.reports.files }}</span>
+                <span>{{ t().admin.reports.aiToday }}</span>
+            </div>
+            @for (u of usage(); track u.ownerEmail) {
+            <div class="usage-row">
+                <span class="muted">{{ u.ownerEmail }}</span>
+                <span>{{ formatBytes(u.bytes) }}</span>
+                <span class="muted">{{ u.files }}</span>
+                <span class="muted">{{ u.aiToday }}</span>
+            </div>
+            } @empty {
+            <p class="hint invite-empty">{{ t().common.nothingHere }}</p>
+            }
+        </div>
+
         <h2 class="admin-section-title audit-title">{{ t().admin.auditTitle }}</h2>
         <div class="audit-list">
             @for (a of audit(); track a.id) {
@@ -198,7 +295,7 @@
             }
         </div>
 
-        <p class="hint admin-next">{{ t().admin.stepOneNote }}</p>
+        }
         }
     </div>
 </div>

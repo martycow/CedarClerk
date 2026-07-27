@@ -51,6 +51,44 @@ export interface AdminInviteCode {
     isUsable: boolean;
 }
 
+export interface AdminPost {
+    id: string;
+    title: string;
+    ownerEmail: string | null;
+    updatedAt: string;
+    isBlogPublished: boolean;
+    isPrivate: boolean;
+    isArchived: boolean;
+    viewCount: number;
+    comments: number;
+    blogUrl: string | null;
+    telegramUrl: string | null;
+}
+
+export interface AdminPayment {
+    id: string;
+    provider: string;
+    plan: string;
+    amount: number;
+    currency: string;
+    status: string;
+    createdAt: string;
+    ownerEmail: string | null;
+}
+
+export interface AdminBilling {
+    payments: AdminPayment[];
+    // Completed payments only — a failed or pending row is not money.
+    totalByCurrency: { currency: string; total: number }[];
+}
+
+export interface AdminUsage {
+    ownerEmail: string | null;
+    bytes: number;
+    files: number;
+    aiToday: number;
+}
+
 export interface AdminAuditEntry {
     id: string;
     actorEmail: string;
@@ -93,6 +131,18 @@ export class AdminService {
 
     setAdmin(userId: string, isAdmin: boolean) {
         return firstValueFrom(this.http.post(`/api/admin/users/${userId}/admin`, { isAdmin }));
+    }
+
+    listPosts() {
+        return firstValueFrom(this.http.get<AdminPost[]>('/api/admin/posts'));
+    }
+
+    billing() {
+        return firstValueFrom(this.http.get<AdminBilling>('/api/admin/billing'));
+    }
+
+    usage() {
+        return firstValueFrom(this.http.get<AdminUsage[]>('/api/admin/usage'));
     }
 
     listInvites() {

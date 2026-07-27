@@ -280,6 +280,101 @@ public static class AdminEndpoints
             return Results.Ok(new { target.InviteCodeId });
         });
 
+        // ---------- Step 4: every post, across owners ----------
+        //
+        // READ-ONLY by decision: the panel links out to the live post rather than editing anyone
+        // else's content. Nothing here writes.
+        group.MapGet("/posts", async (CedarDbContext db) =>
+        {
+            var owners = await db.Users.Select(u => new { u.Id, u.Email })
+                .ToDictionaryAsync(u => u.Id, u => u.Email);
+
+            var posts = await db.Drafts
+                .OrderByDescending(d => d.UpdatedAt)
+                .Take(Consts.Admin.PostPageSize)
+                .Select(d => new
+                {
+                    d.Id, d.Title, d.OwnerId, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished,
+                    d.IsPrivate, d.IsArchived, d.ViewCount,
+                    d.LastTelegramUsername, d.LastTelegramMessageId,
+                })
+                .ToListAsync();
+
+            var draftIds = posts.Select(p => p.Id).ToList();
+            var commentCounts = await db.Comments.Where(c => draftIds.Contains(c.DraftId))
+                .GroupBy(c => c.DraftId).Select(g => new { Id = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Id, x => x.Count);
+
+            return Results.Ok(posts.Select(p => new
+            {
+                p.Id,
+                p.Title,
+                OwnerEmail = owners.GetValueOrDefault(p.OwnerId),
+                p.UpdatedAt,
+                p.IsBlogPublished,
+                p.IsPrivate,
+                p.IsArchived,
+                p.ViewCount,
+                Comments = commentCounts.GetValueOrDefault(p.Id),
+                BlogUrl = p.IsBlogPublished && p.BlogSlug != null ? $"https://{Consts.URLs.BlogHost}/{p.BlogSlug}" : null,
+                TelegramUrl = p.LastTelegramUsername != null && p.LastTelegramMessageId != null
+                    ? $"https://t.me/{p.LastTelegramUsername}/{p.LastTelegramMessageId}"
+                    : null,
+            }));
+        });
+
+        // ---------- Step 5: reporting on data that already exists ----------
+
+        group.MapGet("/billing", async (CedarDbContext db) =>
+        {
+            var owners = await db.Users.Select(u => new { u.Id, u.Email })
+                .ToDictionaryAsync(u => u.Id, u => u.Email);
+
+            var payments = await db.Payments
+                .OrderByDescending(p => p.CreatedAt)
+                .Take(Consts.Admin.PaymentPageSize)
+                .ToListAsync();
+
+            return Results.Ok(new
+            {
+                Payments = payments.Select(p => new
+                {
+                    p.Id, p.Provider, p.Plan, p.Amount, p.Currency, p.Status, p.CreatedAt,
+                    OwnerEmail = owners.GetValueOrDefault(p.OwnerId),
+                }),
+                // Only completed payments count toward a revenue figure — a failed or pending row
+                // is not money.
+                TotalByCurrency = payments
+                    .Where(p => p.Status == "completed")
+                    .GroupBy(p => p.Currency)
+                    .Select(g => new { Currency = g.Key, Total = g.Sum(p => p.Amount) }),
+            });
+        });
+
+        // Per-user resource use — storage and today's AI calls. Both already collected; this is
+        // reporting, not new measurement.
+        group.MapGet("/usage", async (CedarDbContext db) =>
+        {
+            var owners = await db.Users.Select(u => new { u.Id, u.Email })
+                .ToDictionaryAsync(u => u.Id, u => u.Email);
+
+            var storage = await db.Assets.GroupBy(a => a.OwnerId)
+                .Select(g => new { OwnerId = g.Key, Bytes = g.Sum(a => (long)a.SizeBytes), Files = g.Count() })
+                .ToListAsync();
+
+            var today = DateTime.UtcNow.Date;
+            var aiToday = await db.AiUsages.Where(a => a.Day == today)
+                .ToDictionaryAsync(a => a.OwnerId, a => a.Count);
+
+            return Results.Ok(storage.Select(s => new
+            {
+                OwnerEmail = owners.GetValueOrDefault(s.OwnerId),
+                s.Bytes,
+                s.Files,
+                AiToday = aiToday.GetValueOrDefault(s.OwnerId),
+            }).OrderByDescending(x => x.Bytes));
+        });
+
         // Newest first, capped: this grows forever and nothing pages it yet.
         group.MapGet("/audit", async (CedarDbContext db) =>
             Results.Ok(await db.AdminAuditEntries

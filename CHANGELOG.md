@@ -36,6 +36,24 @@ The page itself is the shell plus what's already knowable — headline counts an
 
 **Nothing here is covered by automated tests** — the project has no HTTP-level integration tests, so the gate was verified by reading and needs a live check: a non-admin should get 404 from `/api/admin/users` and a redirect from `/admin`. And `Cedar:AdminEmail` has to be set on the Pi before the panel is reachable in production (`docs/integrations-setup.md` §3b).
 
+### Registration reported failure on every successful signup
+
+Marty hit this creating an account with a fresh invite code: an error appeared, but the account existed and the code had been consumed. Not a double-submit — deterministic, and it had been true of every registration.
+
+`AuthService.register` posts to `/api/auth/register`, then calls `refresh()` and decides success by whether `/api/auth/me` now returns a user. But the register endpoint never signed anyone in, so `/me` answered 401 and the client reported "Registration failed" while the server had done exactly what it was asked. Invite codes made it worse rather than causing it: seeing the error, the natural move is to try again, and on a single-use code the retry then genuinely fails — which is what it looked like from the outside.
+
+Registration signs the new account in now, with the same `isPersistent` the login endpoint uses. That is the behaviour you'd expect anyway — you are logged in after signing up — and it makes the client's success check true instead of accidentally right.
+
+### Admin panel Steps 4 and 5 — cross-owner posts and reporting
+
+Step 4 is a read-only list of every post across owners: owner, state, views and comments, and links out to the live blog and Telegram post. Nothing on that tab writes — editing other people's content was ruled out during scoping and stayed out.
+
+Step 5 is reporting on data that already existed: payments from the `Payment` table with a revenue total that counts **completed payments only** (a failed or pending row is not money), plus per-user storage and AI calls. No new collection was added for any of it.
+
+The panel outgrew a single scroll at this point and gained a tab strip, matching the Posts Manager and Settings — the app's three secondary pages now navigate the same way rather than each inventing something. The admin entry point also joined the editor topbar next to Settings, shown only to admins.
+
+**Marty live-verified the gate** on the Step-1/2 build: 404 from `/api/admin/users` for a signed-in non-admin, `/admin` redirects, self-targeting refused. That closes the one check the scoping doc flagged as impossible to automate here.
+
 ### Admin panel Step 3 — real invite codes
 
 Registration checked one shared string from configuration; it now looks up a real `InviteCode` row first and falls back to `Cedar:InviteCode`, which stays deliberately, so a database problem can't lock registration out entirely. Codes carry a label, an optional expiry and an optional use cap, and a limited code's use is counted **after** the account is actually created — a failed registration shouldn't burn one.

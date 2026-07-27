@@ -176,6 +176,10 @@ public static class Consts
 
         // Short enough to type from a message, long enough not to be guessed off a public page.
         public const int MinInviteCodeLength = 6;
+
+        // Both lists are newest-first and unpaged; these are what the panel shows, not what exists.
+        public const int PostPageSize = 100;
+        public const int PaymentPageSize = 100;
     }
 
     // Watermark tiled over a private post's blog page (I7).

@@ -47,6 +47,15 @@
             <span class="btn-label">{{ t().editor.settings }}</span>
         </a>
 
+        <!--IF2: same treatment as the other two nav buttons, but only for an admin. Hiding it is
+        convenience — /api/admin is gated server-side.-->
+        @if (auth.isAdmin()) {
+        <a class="export-btn nav-btn" routerLink="/admin" [title]="t().admin.open">
+            <svg lucideShieldCheck class="icon-sm"></svg>
+            <span class="btn-label">{{ t().admin.crumb }}</span>
+        </a>
+        }
+
         <button class="icon-btn theme-toggle" (click)="theme.toggle()" [title]="t().common.toggleTheme">
             {{ theme.theme() === 'dark' ? '☀' : '☾' }}
         </button>
