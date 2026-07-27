@@ -1,4 +1,34 @@
 <ng-template #cloud>
+    @if (manage()) {
+    <!--Idea #3: managing the tag set itself. Renaming rewrites every draft carrying the tag and
+    deleting strips it from all of them, which is why this is opt-in - on a per-draft picker the
+    same row has to keep meaning "take it off this draft".-->
+    <div class="tag-cloud-section">
+        <span class="tb-caption">{{ t().editor.tags.manage }}</span>
+        @for (u of usage(); track u.tag) {
+        <div class="tag-manage-row">
+            @if (editingTag() === u.tag) {
+            <input class="tag-new-input" [(ngModel)]="editingName"
+                   (keydown.enter)="commitRename()" (keydown.escape)="cancelRename()" (blur)="commitRename()"
+                   maxlength="30">
+            } @else {
+            <button class="tag-pill" [class.on]="has(u.tag)" (click)="toggle(u.tag)">
+                #{{ u.tag }} <span class="tag-pill-count">{{ u.count }}</span>
+            </button>
+            <span class="tag-manage-spacer"></span>
+            <button class="tag-manage-btn" (click)="startRename(u.tag, $event)" [title]="t().editor.tags.rename" [disabled]="busy()">
+                <svg lucidePencil class="icon-xs"></svg>
+            </button>
+            <button class="tag-manage-btn" (click)="askDelete(u.tag, $event)" [title]="t().editor.tags.deleteEverywhere" [disabled]="busy()">
+                <svg lucideX class="icon-xs"></svg>
+            </button>
+            }
+        </div>
+        } @empty {
+        <p class="tag-manage-empty">{{ t().editor.tags.noneYet }}</p>
+        }
+    </div>
+    } @else {
     @if (mostUsed().length) {
     <div class="tag-cloud-section">
         <span class="tb-caption">{{ t().editor.tags.mostUsed }}</span>
@@ -20,6 +50,7 @@
             }
         </div>
     </div>
+    }
     }
     <input class="tag-new-input" [(ngModel)]="newTag" (keydown.enter)="add()"
            [placeholder]="t().editor.tags.newPlaceholder" maxlength="30">
@@ -50,4 +81,16 @@
         </div>
     </app-popover>
 </div>
+}
+
+<!--Deleting a tag strips it from every draft that carries it, which is not something to do on a
+stray click - and unlike a folder there is nothing left behind to restore it from.-->
+@if (confirmDeleteTag(); as tag) {
+<app-modal (closed)="confirmDeleteTag.set(null)">
+    <svg modal-icon lucideTrash2 class="icon"></svg>
+    <span modal-title>{{ t().editor.tags.deleteTitle(tag) }}</span>
+    <p>{{ t().editor.tags.deleteBody }}</p>
+    <button modal-actions class="btn-ghost" (click)="confirmDeleteTag.set(null)">{{ t().common.cancel }}</button>
+    <button modal-actions class="btn-accent" (click)="confirmDelete()">{{ t().common.delete }}</button>
+</app-modal>
 }

@@ -131,6 +131,16 @@ export class DraftsService {
         return firstValueFrom(this.http.put<{ tags: string }>(`/api/drafts/${id}/tags`, { tags }));
     }
 
+    // Idea #3 - the tag *set*, not one draft's tags. Renaming rewrites every draft carrying the
+    // old tag; the blog picks both up with no extra step, since it reads Draft.Tags directly.
+    renameTag(from: string, to: string) {
+        return firstValueFrom(this.http.put<{ renamed: number }>('/api/drafts/tags', { from, to }));
+    }
+
+    deleteTag(tag: string) {
+        return firstValueFrom(this.http.delete<{ removed: number }>(`/api/drafts/tags/${encodeURIComponent(tag)}`));
+    }
+
     listTagUsage() {
         return firstValueFrom(this.http.get<{ tag: string; count: number }[]>('/api/drafts/tags'));
     }

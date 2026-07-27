@@ -17,6 +17,7 @@ public static class DraftEndpoints
     public record SaveDraftRequest(string Title, string CedarJson);
     public record SaveTranslationRequest(string Title, string CedarJson);
     public record UpdateTagsRequest(string Tags);
+    public record RenameTagRequest(string From, string To);
     public record UpdateFolderRequest(Guid? FolderId);
     public record UpdatePrivateRequest(bool IsPrivate);
     public record UpdateWatermarkRequest(string? WatermarkText);
@@ -28,6 +29,10 @@ public static class DraftEndpoints
     public record UpdateRegistrationFormRequest(string? FormJson, string? Language = null);
 
     private const int InviteEmailMaxLength = 254;
+
+    // Matches the editor's own tag input (maxlength=30) - the tag-management endpoints below are
+    // a second way in, and a longer tag would render as one that can't be typed.
+    private const int TagMaxLength = 30;
 
     private const long CedarZipMaxBytes = 50 * 1024 * 1024;
     private const int CedarMaxAssetCount = 50;
@@ -51,6 +56,9 @@ public static class DraftEndpoints
     {
         ".jpg", ".jpeg", ".png", ".gif", ".webp",
     };
+
+    private static List<string> SplitTagList(string tags) =>
+        tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
     public static void MapDraftEndpoints(this WebApplication app)
     {
@@ -235,6 +243,55 @@ public static class DraftEndpoints
         // Backs the tag "cloud" picker (ADR-035) — usage counts across every one of the owner's
         // drafts. No separate Tag table exists; Draft.Tags is a flat comma-separated column, so
         // this aggregates in-memory rather than adding relational tag storage for a picker list.
+        // Idea #3 - managing the tag *set* itself, not one draft's tags. Tags are a flat string
+        // column rather than an entity (deliberately, see ADR-038's neighbour), so renaming means
+        // rewriting every draft that carries it. Both operations propagate to the blog for free:
+        // the blog reads Draft.Tags directly, it has no copy of its own.
+        groupBuilder.MapPut("/tags", async (RenameTagRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var from = req.From?.Trim().ToLowerInvariant();
+            var to = req.To?.Trim().ToLowerInvariant().Replace(",", "");
+            if (string.IsNullOrEmpty(from) || string.IsNullOrEmpty(to))
+                return Results.BadRequest(new { error = "Both the old and the new tag are required" });
+            if (to.Length > TagMaxLength)
+                return Results.BadRequest(new { error = $"Tag is too long ({TagMaxLength} characters maximum)" });
+
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var drafts = await db.Drafts.Where(d => d.OwnerId == uid && d.Tags != "").ToListAsync();
+            var touched = 0;
+            foreach (var draft in drafts)
+            {
+                var tags = SplitTagList(draft.Tags);
+                if (!tags.Contains(from)) continue;
+                // Distinct: renaming "foo" to a tag the draft already has must merge, not
+                // duplicate. Order is otherwise preserved, so nothing visibly reshuffles.
+                var renamed = tags.Select(t => t == from ? to : t).Distinct().ToList();
+                draft.Tags = string.Join(",", renamed);
+                touched++;
+            }
+            await db.SaveChangesAsync();
+            return Results.Ok(new { renamed = touched });
+        });
+
+        groupBuilder.MapDelete("/tags/{tag}", async (string tag, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var target = tag.Trim().ToLowerInvariant();
+            if (target.Length == 0) return Results.BadRequest(new { error = "Tag is required" });
+
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var drafts = await db.Drafts.Where(d => d.OwnerId == uid && d.Tags != "").ToListAsync();
+            var touched = 0;
+            foreach (var draft in drafts)
+            {
+                var tags = SplitTagList(draft.Tags);
+                if (!tags.Contains(target)) continue;
+                draft.Tags = string.Join(",", tags.Where(t => t != target));
+                touched++;
+            }
+            await db.SaveChangesAsync();
+            return Results.Ok(new { removed = touched });
+        });
+
         groupBuilder.MapGet("/tags", async (ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;

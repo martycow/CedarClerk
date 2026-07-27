@@ -24,6 +24,9 @@
             </div>
             <span class="spacer"></span>
             <input class="search-input" [(ngModel)]="search" [placeholder]="t().drafts.search">
+            <!--Idea #3: the tag set itself is managed here - renaming or deleting a tag rewrites
+            every draft that carries it, and the blog follows automatically.-->
+            <app-tag-picker [tags]="[]" [manage]="true"></app-tag-picker>
             <app-popover>
                 <button trigger class="folder-filter-btn" [title]="t().drafts.folders.filter">
                     <svg lucideFolder class="icon-sm"></svg> {{ selectedFolderLabel() }}

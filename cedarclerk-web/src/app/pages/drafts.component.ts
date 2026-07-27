@@ -7,6 +7,7 @@ import { ThemeService } from '../core/theme.service';
 import { DraftsService, DraftMeta } from '../core/drafts.service';
 import { FoldersService } from '../core/folders.service';
 import { FolderPickerComponent } from '../shared/folder-picker.component';
+import { TagPickerComponent } from '../shared/tag-picker.component';
 import { LocaleService } from '../core/i18n/locale.service';
 import { Dict } from '../core/i18n/en';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
@@ -86,7 +87,7 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
     selector: 'app-drafts',
     imports: [
         DatePipe, FormsModule, CedarLogoComponent, ModalComponent, PopoverComponent, AccountMenuComponent,
-        FolderPickerComponent,
+        FolderPickerComponent, TagPickerComponent,
         Plus, Archive, ArchiveRestore, Trash2, RefreshCw, LayoutGrid, List,
         Folder, Lock, FileUp, Upload, Eye, Heart,
     ],

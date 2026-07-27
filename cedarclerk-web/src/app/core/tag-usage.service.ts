@@ -21,6 +21,18 @@ export class TagUsageService {
         }
     }
 
+    // Idea #3 - renaming or deleting a tag rewrites every draft that carries it, so the cloud
+    // is refetched rather than patched: the counts move too, not just the names.
+    async rename(from: string, to: string) {
+        await this.api.renameTag(from, to);
+        await this.refresh();
+    }
+
+    async remove(tag: string) {
+        await this.api.deleteTag(tag);
+        await this.refresh();
+    }
+
     // Called after tags are saved so a newly-invented tag is offered to the next draft rather
     // than only existing on the one it was typed into.
     async refresh() {
