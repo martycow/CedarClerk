@@ -70,10 +70,22 @@ Steps 1–3 are the actual ask; 4–5 are where "чем больше функц�
 - **`CLAUDE.md` says the verification login is `marty@mooexe.dev`; production actually has `cedarworks@mooexe.dev`.** Minor doc drift, but it matters here since that's the account that becomes admin.
 - **This is a multi-tenant feature on a codebase with two accounts.** Everything above is correct and worth doing, but the panel's value scales with users; it's worth agreeing how much of Step 5 is wanted now versus when there are people to administer.
 
-## Open questions for Marty
+## Decisions taken (Marty, 27.07.2026)
 
-1. `IsAdmin` bool or real Identity roles? (I recommend the bool.)
-2. Should user **deletion** be in scope at all, and if so hard or soft?
-3. Should the panel be able to **edit other users' posts**, or read-only with links out?
-4. Do the existing invite-less accounts matter for attribution, or is "unknown for pre-existing users" acceptable?
-5. Keep `Cedar:InviteCode` working as a fallback alongside real codes?
+1. **`IsAdmin` bool**, not Identity roles.
+2. **No user deletion** — he'd rather not delete accounts. Lock/unlock (Identity's `LockoutEnd`) covers the real need in Step 2.
+3. **No editing other users' posts** — the cross-owner post view is read-only, with links out.
+4. **Invite attribution matters.** Since new registrations can be attributed but the two existing accounts can't, Step 3 also gives the admin a way to **set attribution by hand** on an existing user — that turns "permanently unknown" into a one-off manual fix for the accounts that predate the feature.
+5. **`Cedar:InviteCode` stays** as a fallback alongside real codes, so a database problem can't lock registration out entirely.
+
+## Build status
+
+- **Step 1 — done 27.07.2026.** `ApplicationUser.IsAdmin` (migration `AddIsAdmin`, additive), config bootstrap from `Cedar:AdminEmail` (grant-only, never revokes), `AdminEndpoints` under `/api/admin` with the admin check on the **group** so a new route can't ship ungated, `GET /users` and `GET /summary`, an `/admin` page with `adminGuard`, and an account-menu entry shown only to admins. The gate returns **404 rather than 403** — an admin panel that answers "wrong, but it exists" tells an ordinary account something it has no business knowing.
+- Steps 2–5: not started.
+
+**Not covered by automated tests.** The project has no HTTP-level integration tests (`CedarClerk.Tests` covers pure helpers and renderers), so the admin gate is verified by reading and must be checked live: sign in as a non-admin and confirm `/api/admin/users` returns 404 and `/admin` redirects.
+
+## Still open
+
+- **Audit log.** Once Step 2 lets an admin change someone's plan, "who changed what and when" is worth recording from the start — retrofitting means the early changes are invisible. Not built yet; decide before Step 2.
+- **`Cedar:AdminEmail` must be set on the Pi** before the panel is reachable in production — see `docs/integrations-setup.md` §3b.

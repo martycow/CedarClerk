@@ -86,6 +86,9 @@ public static class AuthEndpoints
             {
                 email = user.FindFirstValue(ClaimTypes.Email) ?? user.Identity!.Name,
                 createdAt = appUser?.CreatedAt,
+                // Hides the /admin entry point for everyone else. Not a security boundary —
+                // that lives on the server, on the /api/admin group (IF2).
+                isAdmin = appUser?.IsAdmin ?? false,
                 planTier = appUser is null ? null : SubscriptionPlanHelper.CheckPlanExpiration(appUser.PlanTier, appUser.PlanExpiresAt, DateTime.UtcNow).ToString(),
                 planExpiresAt = appUser?.PlanExpiresAt,
                 trialUsed = appUser?.TrialUsedAt is not null,

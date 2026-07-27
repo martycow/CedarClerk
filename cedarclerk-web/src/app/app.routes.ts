@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth.guard';
+import { adminGuard } from './core/admin.guard';
 import { LoginComponent } from './pages/login.component';
 import { RegisterComponent } from './pages/register.component';
 import { EditorComponent } from './pages/editor.component';
@@ -8,6 +9,7 @@ import { SettingsComponent } from './pages/settings.component';
 import { PostsManagerComponent } from './pages/posts-manager.component';
 import { TermsComponent } from './pages/terms.component';
 import { PrivacyComponent } from './pages/privacy.component';
+import { AdminComponent } from './pages/admin.component';
 
 export const routes: Routes = [
     { path: 'login', component: LoginComponent },
@@ -18,6 +20,8 @@ export const routes: Routes = [
     { path: 'drafts', component: DraftsPageComponent, canActivate: [authGuard] },
     { path: 'settings', component: SettingsComponent, canActivate: [authGuard] },
     { path: 'posts', component: PostsManagerComponent, canActivate: [authGuard] },
+    // adminGuard already covers signed-in — it redirects to /login itself (IF2).
+    { path: 'admin', component: AdminComponent, canActivate: [adminGuard] },
     // N7 folded both of these into the Posts Manager; the old paths stay as redirects because
     // they're what any existing bookmark points at.
     { path: 'comments', redirectTo: 'posts' },

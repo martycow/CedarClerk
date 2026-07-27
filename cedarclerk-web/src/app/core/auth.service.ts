@@ -12,6 +12,8 @@ export class AuthService {
 
     readonly userEmail = signal<string | null>(null);
     readonly createdAt = signal<string | null>(null);
+    // IF2 — hides the /admin entry point. The real gate is server-side on /api/admin.
+    readonly isAdmin = signal(false);
     readonly planTier = signal<string | null>(null);
     readonly planExpiresAt = signal<string | null>(null);
     readonly trialUsed = signal(false);
@@ -71,7 +73,7 @@ export class AuthService {
     async refresh(): Promise<void> {
         try {
             const me = await firstValueFrom(this.http.get<{
-                email: string; createdAt: string | null; planTier: string | null; planExpiresAt: string | null; trialUsed: boolean;
+                email: string; createdAt: string | null; isAdmin: boolean; planTier: string | null; planExpiresAt: string | null; trialUsed: boolean;
                 telegramLinked: boolean; telegramUsername: string | null; telegramLinkedAt: string | null;
                 notifyOnEngagement: boolean;
                 postSignature: string | null; postSignatureUrl: string | null;
@@ -84,6 +86,7 @@ export class AuthService {
             }>('/api/auth/me'));
             this.userEmail.set(me.email);
             this.createdAt.set(me.createdAt);
+            this.isAdmin.set(me.isAdmin);
             this.planTier.set(me.planTier);
             this.planExpiresAt.set(me.planExpiresAt);
             this.trialUsed.set(me.trialUsed);
@@ -113,6 +116,7 @@ export class AuthService {
         } catch {
             this.userEmail.set(null);
             this.createdAt.set(null);
+            this.isAdmin.set(false);
             this.planTier.set(null);
             this.planExpiresAt.set(null);
             this.trialUsed.set(false);

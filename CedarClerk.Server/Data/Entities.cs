@@ -7,6 +7,15 @@ namespace CedarClerk.Server;
 public class ApplicationUser : IdentityUser
 {
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Admin panel access (IF2). A plain flag rather than ASP.NET Identity roles: there is one
+    /// admin, and roles would add two tables and a join to express a single boolean. Granted at
+    /// startup from Cedar:AdminEmail — the first admin cannot be made through the panel itself.
+    /// See docs/admin-panel-scope.md.
+    /// </summary>
+    public bool IsAdmin { get; set; }
+
     public PlanTiers PlanTier { get; set; } = PlanTiers.Free;
 
     /// <summary>

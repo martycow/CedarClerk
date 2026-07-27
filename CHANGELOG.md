@@ -20,6 +20,22 @@ Two translation misses from the ADR-050 sweep: the paragraph-format dropdown's t
 
 Not started: IB5 (blog comment form). `dotnet test` 278/278, `ng build` clean. Nothing here is live-verified in a browser yet.
 
+### Admin panel — scoped, then Step 1 built (IF2)
+
+Researched the code before writing anything; the scoping lives in `docs/admin-panel-scope.md`. Three findings shaped it:
+
+- **No role concept existed at all** — not "unused", absent: `AddIdentityCore` is called without `.AddRoles(...)`, so `AspNetRoles`/`AspNetUserRoles` don't exist and there isn't one role check in the codebase.
+- **Invite codes are a single config string**, and nothing records which code a user registered with. Creating codes needs a new entity; *attribution* needs new data and **cannot be backfilled** — the two existing accounts came in on the shared code and there is no record of it.
+- **61 owner-filtered queries** across 8 endpoint files. The obvious implementation — "if admin, skip the filter" — would put a cross-tenant leak one missed call site away.
+
+Marty's answers: bool not roles, no user deletion, no editing others' posts, attribution matters (so an admin will be able to set it by hand for the pre-existing accounts), and keep the config invite code as a fallback.
+
+**Step 1 shipped**: `ApplicationUser.IsAdmin` with an additive migration; a config bootstrap from `Cedar:AdminEmail` that **grants only and never revokes**, so removing the setting can't silently lock the panel out; and a separate `AdminEndpoints` under `/api/admin` rather than any bypass in the existing endpoints — the security property is now one checkable sentence, "everything under `/api/admin` is admin-only, everything else stays owner-scoped". The check sits on the route **group**, so a route added later can't ship ungated, and it returns **404 rather than 403**: an admin panel that answers "wrong, but it exists" tells an ordinary account something it has no business knowing.
+
+The page itself is the shell plus what's already knowable — headline counts and a user list with plan, Telegram link, content counts and join date, flagging lapsed plans where the stored tier and the effective one disagree. `/api/auth/me` gained `isAdmin` purely so the entry point can be hidden; that is convenience, not the gate.
+
+**Nothing here is covered by automated tests** — the project has no HTTP-level integration tests, so the gate was verified by reading and needs a live check: a non-admin should get 404 from `/api/admin/users` and a redirect from `/admin`. And `Cedar:AdminEmail` has to be set on the Pi before the panel is reachable in production (`docs/integrations-setup.md` §3b).
+
 ### Settings split (I12), zoom removed (IT1), toolbar customization kept (IT2)
 
 **Zoom is gone** (IT1) — signal, both buttons, the `%` readout, the `--zoom` variable the sheet font size was multiplied by, and both dictionary keys. The Appearance panel's font-size slider covers what it was reaching for.

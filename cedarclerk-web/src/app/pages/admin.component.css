@@ -1,0 +1,194 @@
+/* Page chrome mirrors /posts and /settings — the three secondary pages should not each invent
+   their own header. */
+.admin-page {
+    min-height: 100vh;
+    background: var(--canvas);
+    color: var(--text);
+    font-family: var(--font-sans);
+}
+
+.admin-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--glass);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+}
+
+.brand-name {
+    font-weight: 700;
+    font-size: 13.5px;
+    letter-spacing: -.01em;
+}
+
+.crumb-sep {
+    color: var(--t3);
+}
+
+.crumb-current {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    color: var(--t2);
+}
+
+.spacer { flex: 1; }
+.icon { width: 15px; height: 15px; }
+.icon-xs { width: 12px; height: 12px; }
+
+.icon-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    background: none;
+    padding: 5px 8px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    color: var(--t2);
+}
+
+.icon-btn:hover {
+    background: rgba(128, 120, 100, .14);
+}
+
+.admin-body {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+}
+
+.hint {
+    color: var(--t3);
+    font-size: 13px;
+}
+
+.channel-error {
+    color: var(--danger);
+    font-size: 13px;
+}
+
+/* ---------- Summary ---------- */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 26px;
+}
+
+.summary-card {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    padding: 14px 16px;
+}
+
+.summary-value {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+}
+
+.summary-label {
+    font-size: 11.5px;
+    color: var(--t3);
+}
+
+/* ---------- Users ---------- */
+.admin-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--t2);
+    margin: 0 0 10px;
+}
+
+.user-table {
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    /* The row grid has a minimum width; below it the table scrolls rather than crushing the
+       columns — same lesson as B24 on the drafts table. */
+    overflow-x: auto;
+}
+
+.user-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 2fr) minmax(190px, 1.6fr) 130px 170px 110px;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    min-width: 860px;
+}
+
+.user-row:last-child {
+    border-bottom: none;
+}
+
+.user-row.head {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--t3);
+    background: var(--alt);
+}
+
+.user-email {
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.muted {
+    color: var(--t3);
+}
+
+.chip {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 1px 8px;
+    background: var(--alt);
+    color: var(--t2);
+}
+
+.chip.admin {
+    background: var(--asoft);
+    border: 1px solid var(--abord);
+    color: var(--accent);
+}
+
+.chip.warn {
+    background: color-mix(in srgb, #C9A227 18%, transparent);
+    color: #8A6A10;
+}
+
+.chip.danger {
+    background: color-mix(in srgb, var(--danger) 14%, transparent);
+    color: var(--danger);
+}
+
+:root[data-theme="dark"] .chip.warn {
+    color: #E3C35C;
+}
+
+.admin-next {
+    margin-top: 18px;
+}

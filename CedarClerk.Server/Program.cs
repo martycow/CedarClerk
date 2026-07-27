@@ -126,6 +126,7 @@ app.MapAssetEndpoints();
 app.MapChannelEndpoints();
 app.MapScheduledPostEndpoints();
 app.MapBillingEndpoints();
+app.MapAdminEndpoints();
 #endregion
 
 // MUST be here, after all endpoints
@@ -135,9 +136,26 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
     dbContext.Database.Migrate();
-    
+
     // Enable Write-Ahead Logging for better concurrency
     dbContext.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
+
+    // Admin bootstrap (IF2). Grants only — it never revokes, so removing the setting doesn't
+    // silently lock the panel, and an admin promoted later by other means isn't undone on the
+    // next restart. Runs after Migrate() because it writes to a column a migration may just
+    // have added. A missing/unknown email is a no-op: this must never block startup.
+    var adminEmail = app.Configuration[Consts.General.AdminEmailCfg];
+    if (!string.IsNullOrWhiteSpace(adminEmail))
+    {
+        var normalized = adminEmail.Trim().ToUpperInvariant();
+        var admin = dbContext.Users.FirstOrDefault(u => u.NormalizedEmail == normalized);
+        if (admin is { IsAdmin: false })
+        {
+            admin.IsAdmin = true;
+            dbContext.SaveChanges();
+            app.Logger.LogInformation("Admin rights granted to {Email}", adminEmail);
+        }
+    }
 }
 
 #region Health (Heartbeat)

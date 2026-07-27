@@ -55,6 +55,12 @@ public static class Consts
         public const string MainHostCfg = "Cedar:MainHost";
         public const string BlogHostCfg = "Cedar:BlogHost";
         public const string InviteCodeCfg = "Cedar:InviteCode";
+
+        // The account granted admin rights on startup (IF2). Config-driven on purpose: the first
+        // admin can't be made through the admin panel, and this works on a fresh database or a
+        // restored backup without hand-editing SQL on the Pi.
+        public const string AdminEmailCfg = "Cedar:AdminEmail";
+
         public const string ProviderKeyCfg = "Cedar:Translate:Provider";
 
         public const string ViewedCookiePrefix = "cedar_viewed_";

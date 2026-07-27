@@ -1,0 +1,95 @@
+<div class="admin-page">
+    <header class="admin-header">
+        <a class="icon-btn" routerLink="/editor" [title]="t().common.backToEditor">
+            <svg lucideArrowLeft class="icon"></svg>
+        </a>
+        <app-cedar-logo [size]="19"></app-cedar-logo>
+        <span class="brand-name">Cedar Clerk</span>
+        <span class="crumb-sep">/</span>
+        <span class="crumb-current"><svg lucideShieldCheck class="icon-xs"></svg> {{ t().admin.crumb }}</span>
+        <span class="spacer"></span>
+        <button class="icon-btn" (click)="theme.toggle()" [title]="t().common.toggleTheme">
+            {{ theme.theme() === 'dark' ? '☀' : '☾' }}
+        </button>
+        <app-account-menu></app-account-menu>
+    </header>
+
+    <div class="admin-body">
+        @if (error()) { <p class="channel-error">{{ error() }}</p> }
+
+        @if (loading()) {
+        <p class="hint">{{ t().common.loading }}</p>
+        } @else {
+
+        @if (summary(); as s) {
+        <div class="summary-grid">
+            <div class="summary-card">
+                <span class="summary-value">{{ s.users }}</span>
+                <span class="summary-label">{{ t().admin.summary.users }}</span>
+            </div>
+            <div class="summary-card">
+                <span class="summary-value">{{ s.paidUsers }}</span>
+                <span class="summary-label">{{ t().admin.summary.paidUsers }}</span>
+            </div>
+            <div class="summary-card">
+                <span class="summary-value">{{ s.published }} / {{ s.drafts }}</span>
+                <span class="summary-label">{{ t().admin.summary.published }}</span>
+            </div>
+            <div class="summary-card">
+                <span class="summary-value">{{ s.comments }}</span>
+                <span class="summary-label">{{ t().admin.summary.comments }}</span>
+            </div>
+            <div class="summary-card">
+                <span class="summary-value">{{ s.reactions }}</span>
+                <span class="summary-label">{{ t().admin.summary.reactions }}</span>
+            </div>
+            <div class="summary-card">
+                <span class="summary-value">{{ s.channels }}</span>
+                <span class="summary-label">{{ t().admin.summary.channels }}</span>
+            </div>
+            <div class="summary-card">
+                <span class="summary-value">{{ formatBytes(s.storageBytes) }}</span>
+                <span class="summary-label">{{ t().admin.summary.storage }}</span>
+            </div>
+        </div>
+        }
+
+        <h2 class="admin-section-title">{{ t().admin.usersTitle }}</h2>
+
+        <div class="user-table">
+            <div class="user-row head">
+                <span>{{ t().admin.columns.email }}</span>
+                <span>{{ t().admin.columns.plan }}</span>
+                <span>{{ t().admin.columns.telegram }}</span>
+                <span>{{ t().admin.columns.content }}</span>
+                <span>{{ t().admin.columns.joined }}</span>
+            </div>
+            @for (u of users(); track u.id) {
+            <div class="user-row">
+                <span class="user-email">
+                    {{ u.email }}
+                    @if (u.isAdmin) { <span class="chip admin">{{ t().admin.adminChip }}</span> }
+                    @if (u.isLocked) { <span class="chip danger">{{ t().admin.lockedChip }}</span> }
+                </span>
+                <span>
+                    {{ u.effectiveTier }}
+                    <!--A lapsed plan is the one case where the stored tier and the real one
+                    disagree, so it's called out rather than silently shown as Free.-->
+                    @if (isLapsed(u)) { <span class="chip warn">{{ t().admin.lapsedChip(u.planTier) }}</span> }
+                    @if (u.planExpiresAt) {
+                    <span class="muted">· {{ u.planExpiresAt | date:'d MMM yyyy' }}</span>
+                    } @else if (u.effectiveTier !== 'Free') {
+                    <span class="muted">· {{ t().admin.neverExpires }}</span>
+                    }
+                </span>
+                <span class="muted">{{ u.telegramUsername ? '@' + u.telegramUsername : '—' }}</span>
+                <span class="muted">{{ t().admin.contentSummary(u.published, u.drafts, u.channels) }}</span>
+                <span class="muted">{{ u.createdAt | date:'d MMM yyyy' }}</span>
+            </div>
+            }
+        </div>
+
+        <p class="hint admin-next">{{ t().admin.stepOneNote }}</p>
+        }
+    </div>
+</div>
