@@ -133,7 +133,8 @@ export class PostsManagerComponent implements OnInit {
         this.registrations.set([]);
         this.regForm.set(null);
         this.formState.set('saved');
-        if (this.tab() === 'forms' && d.isPrivate) this.loadForm();
+        // Both tabs need this now: forms edits the definition, posts shows the answers (I19).
+        if (d.isPrivate) this.loadForm();
     }
 
     blogUrl(d: DraftMeta): string | null {

@@ -26,5 +26,7 @@
         @if (error()) { <p class="error">{{ error() }}</p> }
 
         <div class="auth-footer">{{ t().login.noAccount }} <a routerLink="/register">{{ t().login.register }}</a> <span class="muted">{{ t().login.inviteRequired }}</span></div>
+
+        <app-lang-switch></app-lang-switch>
     </div>
 </div>

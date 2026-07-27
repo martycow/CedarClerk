@@ -23,6 +23,7 @@ import { LucideLineChart as LineChart, LucideSettings as Settings, LucideLogOut 
             <div panel class="account-popover">
                 <p class="profile-email">{{ auth.userEmail() }}</p>
                 <div class="popover-divider"></div>
+                @if (showNav()) {
                 <a class="account-action-btn" routerLink="/editor">
                     {{ t().common.backToEditor }}
                 </a>
@@ -35,6 +36,7 @@ import { LucideLineChart as LineChart, LucideSettings as Settings, LucideLogOut 
                     <svg lucideSettings class="icon-sm"></svg>
                     {{ t().editor.settings }}
                 </a>
+                }
                 <button class="logout-btn" (click)="auth.logout()">
                     <svg lucideLogOut class="icon-sm"></svg>
                     {{ t().editor.logout }}
@@ -51,6 +53,10 @@ export class AccountMenuComponent {
 
     // Only the editor topbar has the width for it; the other headers carry a breadcrumb instead.
     showEmail = input(false);
+
+    // False on the editor, whose topbar carries these as real buttons (I11) — showing them here
+    // too would put two routes to the same page on one screen, which is what B6 objected to.
+    showNav = input(true);
 
     avatarInitial(): string {
         const email = this.auth.userEmail();

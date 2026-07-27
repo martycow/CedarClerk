@@ -213,17 +213,17 @@ Executing `_Documents_/CedarClerk/Input.md` (32 items). Full text and the per-it
 - [x] I9 — form presets as a first-class flow (27.07.2026). Presets moved out of the per-post form editor into their own block on the Forms tab, so they're managed without selecting a post — they exist independently, which is what Marty's "это независимая сущность" asks for. The form editor stopped persisting silently on every keystroke: edits mark it dirty and an explicit **Save** button with a saved/unsaved/saving state commits them, while switching post or leaving the tab flushes rather than discards (the same guard the editor uses when switching drafts). Enabling/deleting a form still commits immediately — that's structural, it changes what an uninvited visitor gets. The export modal's preset row now has an empty state linking to `/posts?tab=forms` instead of vanishing when no preset exists
 - [x] I7 — watermark on private posts (27.07.2026). `Draft.WatermarkText` (migration `AddWatermarkText`, additive) + `POST /api/drafts/{id}/watermark`; set in the export modal's private section, reported by a chip in the editor's state strip and never rendered there. On the blog it's one tiling `background-image` over the post sheet rather than N repeated elements — the sheet's height is post-dependent, and a tile covers any height without guessing a repeat count. `WatermarkRenderer` (Core, 11 unit tests) builds the tile as a **base64** SVG data URI: the payload is author text landing inside a CSS `url()`, and base64 removes every quote, paren and backslash from that context outright instead of relying on an escaping table. Applied only when `IsPrivate` — a public page has nothing to protect. **Not yet live-verified**
 
-**Improvements — Middle**
-- [ ] I1 — language picker on login/register, carried into the new account's `UiLanguage`
-- [ ] I2 — line numbers: bigger, left-aligned with a small gutter; optional horizontal rules
-- [ ] I4 — reaction/comment blocks must stop looking like code blocks
-- [ ] I10 — drafts table adapts to the screen width instead of a fixed grid
-- [ ] I11 — Posts Manager and Settings become real top-bar buttons (reverses part of `B22`, resolves `B6` the other way)
-- [ ] I12 — split Settings into profile / appearance / rest — **decide alongside `I14` and `IT2` first**
-- [ ] I14 — appearance + toolbar settings move into an editor side panel, or gain a preview (was `B15`)
-- [ ] I16 — custom name for inserted audio clips, instead of `asset_<...>.mp3` in Telegram
-- [ ] I18 — better icon for the drafts-table button (was `B20`)
-- [ ] I19 — form-response statistics move into the posts tab
+**Improvements — Middle** (27.07.2026: six done, three still open)
+- [x] I1 — language picker on login/register (27.07.2026). Shared `LangSwitchComponent`, flags rather than language names (which also delivers `I17` where it matters most — a reader who can't read the current language recognises a flag, not a word). `LocaleService.set` already persists to `localStorage`, so the choice carries across screens; registration additionally pushes it onto the new profile with `saveUiLanguage`, best-effort, so Settings opens already holding it instead of showing an unset picker under a visibly translated UI
+- [x] I2 — paragraph numbers (27.07.2026). Were 10px in the faintest colour, mid-margin; now 12px in `--t2`, in a gutter hugging the sheet's left edge, right-aligned like a code editor's. The optional half shipped too: a new `showLineRules` appearance flag draws a faint rule under each top-level block. Deliberately per-block rather than a ruled-paper background — a repeating gradient can't stay aligned once line-height, headings and images vary
+- [x] I4 — reaction blocks (27.07.2026). A solid-bar tinted panel reads as a quote or a code block; it's now a dashed outline with a 💬 marker, distinct from both blockquote (solid bar, no box) and `pre` (dark box). The marker is an emoji in CSS `content` on purpose — no text means nothing to translate
+- [x] I10 — drafts table width (27.07.2026). The 1080px cap left most of a wide monitor empty while Title was the starved column; raised to 1600px rather than made fully fluid, since a 4K-wide row is unscannable. `N1`'s grid gives Title the leftover space, so the extra width lands where it was needed
+- [x] I11 — Posts Manager and Settings as real topbar buttons (27.07.2026), styled like Export but neutral so Export stays the only tinted control. Reverses that part of `B22` and settles `B6` in favour of the topbar: the shared account menu takes `[showNav]="false"` in the editor, so one screen never offers two routes to the same page. Labels drop on narrow screens like Export's already did
+- [x] I18 — drafts button icon (27.07.2026, was `B20`) — a hamburger reads as "menu"; now `FileStack`
+- [ ] I12 — split Settings into profile / appearance / rest — **blocked on one decision covering `I12` + `I14` + `IT2`** (see below)
+- [ ] I14 — appearance + toolbar settings move into an editor side panel, or gain a preview (was `B15`) — **same decision**
+- [ ] I16 — custom name for inserted audio clips, instead of `asset_<...>.mp3` in Telegram. Needs a backend field on `Asset` plus a migration — not a CSS-level item like the rest of this block
+- [x] I19 — form answers moved to the posts tab (27.07.2026). The submissions list and the per-question distribution charts now sit under the selected post, where "what happened with this post" already lives; the forms tab keeps the form's *definition* (building and reusing it), which is a different job, and points at where the answers went. Partly walks back `N10`'s tab layout, as flagged when the item was imported
 
 **Improvements — Low**
 - [ ] I3 — keyboard shortcuts in toolbar tooltips

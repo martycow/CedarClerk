@@ -20,6 +20,24 @@ Two translation misses from the ADR-050 sweep: the paragraph-format dropdown's t
 
 Not started: IB5 (blog comment form). `dotnet test` 278/278, `ng build` clean. Nothing here is live-verified in a browser yet.
 
+### Middle-priority sweep (I1, I2, I4, I10, I11, I18, I19)
+
+Six of the nine Middle items, all frontend.
+
+**Navigation moved back into the topbar** (I11). Posts Manager and Settings had lived only inside the account popover since B22; they're real buttons next to Export now, styled the same but neutral so Export stays the only tinted control in the row. That reversal also settles B6 — "two entry points to Settings" — in favour of the topbar rather than the popover: the shared account menu takes `[showNav]="false"` on the editor, so no single screen offers two routes to the same page, while the other pages keep the popover links they rely on. The drafts button stopped being a hamburger, which reads as "menu" and said nothing about drafts (I18).
+
+**A language picker on login and register** (I1), which was the one place the UI language couldn't be changed at all: the Settings picker needs an account, and picking a language is the first thing someone who can't read the form wants to do. Flags rather than language names — that's what a reader who doesn't speak the current language can actually recognise, which is also I17's point, delivered where it matters most. Registration pushes the choice onto the new profile so Settings opens already holding it, best-effort so a failure there can never block a signup.
+
+**Paragraph numbers became legible** (I2): 10px in the faintest text colour halfway across the margin, now 12px in `--t2` in a gutter hugging the sheet's left edge, right-aligned so multi-digit numbers line up against the text. The "would be nice" half of that item shipped as well — a new appearance flag rules off each block. Per-block borders rather than a ruled-paper background, because a repeating gradient cannot stay aligned once line-height, headings and images vary.
+
+**Reaction blocks stopped impersonating code blocks** (I4). The old solid-bar tinted panel is the visual language of a quote; it's now a dashed outline with a 💬 marker, distinct from both blockquote and `pre`. The marker is an emoji in CSS `content` deliberately — no text means nothing to translate.
+
+**The drafts table got its width back** (I10): capped at 1080px, it left most of a wide monitor empty while Title — the column that actually needed room — was starved. Raised to 1600px rather than made fully fluid, since a row spanning a 4K display is unscannable, and N1's grid hands the extra space straight to Title.
+
+**Form answers moved to the posts tab** (I19), where "what happened with this post" already lives. The forms tab keeps the form's definition — building it and reusing it as a preset — which is a different job, and now says where the answers went. This partly walks back N10's tab layout, which was flagged when the item was imported.
+
+Still open in this block: I16 (custom audio clip names) needs a backend field and a migration rather than being a frontend change like the rest, and I12/I14 are held behind one design decision — see `TASKS.md`.
+
 ### Blog comments (IB5) and form presets (I9)
 
 **The reply target that couldn't be cleared was a CSS bug, not a script bug.** `cancelReply()` was correct and wired correctly; `.comment-reply-indicator { display: flex }` simply overrides what the `[hidden]` attribute does, so the indicator stayed on screen whatever the script set. The same rule was quietly breaking a second thing nobody had reported: `.comment-load-more { display: block }` meant "show more comments" was offered even when there were none. Fixed once, globally, with `[hidden] { display: none !important }` in the blog stylesheet, so the next element scripted through `hidden` can't reintroduce it. This is the same shape as the paragraph-numbers bug from the day before — a stylesheet quietly defeating behaviour the code got right.

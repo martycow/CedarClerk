@@ -143,6 +143,7 @@
 
             <div class="appearance-toggles">
                 <label><input type="checkbox" [checked]="appearance.prefs().showParagraphNumbers" (change)="toggleAppearanceFlag('showParagraphNumbers', $event)"> {{ t().settings.appearance.showParagraphNumbers }}</label>
+                <label><input type="checkbox" [checked]="appearance.prefs().showLineRules" (change)="toggleAppearanceFlag('showLineRules', $event)"> {{ t().settings.appearance.showLineRules }}</label>
                 <label><input type="checkbox" [checked]="appearance.prefs().showWordCount" (change)="toggleAppearanceFlag('showWordCount', $event)"> {{ t().settings.appearance.showWordCount }}</label>
                 <label><input type="checkbox" [checked]="appearance.prefs().focusModeHideToolbar" (change)="toggleAppearanceFlag('focusModeHideToolbar', $event)"> {{ t().settings.appearance.focusMode }}</label>
                 <label><input type="checkbox" [checked]="appearance.prefs().sheetFlush" (change)="toggleAppearanceFlag('sheetFlush', $event)"> {{ t().settings.appearance.sheetFlush }}</label>

@@ -9,6 +9,7 @@ export interface AppearancePrefs {
     fontSize: number; // px, sheet base (before zoom)
     lineHeight: number;
     showParagraphNumbers: boolean;
+    showLineRules: boolean;
     showWordCount: boolean;
     focusModeHideToolbar: boolean;
     sheetFlush: boolean; // no paper card — sheet merges with the canvas
@@ -22,6 +23,7 @@ export const DEFAULT_APPEARANCE: AppearancePrefs = {
     fontSize: 16,
     lineHeight: 1.6,
     showParagraphNumbers: false,
+    showLineRules: false,
     showWordCount: true,
     focusModeHideToolbar: false,
     sheetFlush: false,

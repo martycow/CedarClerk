@@ -175,6 +175,19 @@
     color: #F4F2EA;
 }
 
+/* I11 — same shape as Export, but neutral: Export is the primary action of this screen and
+   should stay the only tinted control in the row. */
+.nav-btn {
+    background: none;
+    border-color: var(--border);
+    text-decoration: none;
+}
+
+.nav-btn:hover {
+    background: rgba(128, 120, 100, .14);
+    filter: none;
+}
+
 .publish-actions {
     display: flex;
     gap: 6px;
@@ -1959,6 +1972,9 @@ input[type="datetime-local"]:focus-visible {
     .divider,
     .save-label,
     .export-trigger .btn-label,
+    /* I11's two nav buttons keep their icons (and the badge) but drop their labels here, same
+       rule as Export — nothing becomes unreachable, the row just stops overflowing. */
+    .nav-btn .btn-label,
     /* Same "Download .cedar" action also lives in the Export modal, which is reachable on
        mobile — so dropping it here costs nothing and keeps the row from overflowing again. */
     .cedar-download,
@@ -1966,7 +1982,8 @@ input[type="datetime-local"]:focus-visible {
         display: none;
     }
 
-    .export-trigger {
+    .export-trigger,
+    .nav-btn {
         padding: 5px 8px;
     }
 }

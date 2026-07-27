@@ -5,10 +5,11 @@ import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
+import { LangSwitchComponent } from '../shared/lang-switch.component';
 
 @Component({
     selector: 'app-login',
-    imports: [FormsModule, RouterLink, CedarLogoComponent],
+    imports: [FormsModule, RouterLink, CedarLogoComponent, LangSwitchComponent],
     templateUrl: 'login.component.html',
     styleUrls: ['login.component.css']
 })

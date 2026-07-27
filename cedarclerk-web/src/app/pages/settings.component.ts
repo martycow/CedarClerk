@@ -198,7 +198,7 @@ export class SettingsComponent implements OnInit {
         this.saveAppearance({ lineHeight: value });
     }
 
-    toggleAppearanceFlag(key: 'showParagraphNumbers' | 'showWordCount' | 'focusModeHideToolbar' | 'sheetFlush', ev: Event) {
+    toggleAppearanceFlag(key: 'showParagraphNumbers' | 'showLineRules' | 'showWordCount' | 'focusModeHideToolbar' | 'sheetFlush', ev: Event) {
         this.saveAppearance({ [key]: (ev.target as HTMLInputElement).checked });
     }
 

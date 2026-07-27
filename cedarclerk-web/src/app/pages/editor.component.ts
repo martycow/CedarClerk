@@ -18,6 +18,7 @@ import { FormPresetsService, FormPreset } from '../core/form-presets.service';
 import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { AccountMenuComponent } from '../shared/account-menu.component';
+import { CountBadgeComponent } from '../shared/count-badge.component';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, PostLanguage, CompressionLevel, ScheduledPost } from '../core/posts.service';
 import { ChannelsService, Channel, ChannelStats, KnownChat } from '../core/channels.service';
@@ -62,14 +63,15 @@ import {
     LucideTrash2 as Trash2,
     LucideEyeOff as EyeOff, LucideLink as LinkIcon, LucideSmile as Smile, LucideUnderline as Underline,
     LucideClock as Clock, LucideListCollapse as ListCollapse, LucideLayoutGrid as LayoutGrid,
-    LucideMenu as Menu, LucideSuperscript as Superscript,
+    LucideFileStack as FileStack, LucideSuperscript as Superscript,
     LucideChevronDown as ChevronDown,
     LucideCheck as Check,
     LucideDownload as Download,
     LucideMessageSquare as MessageSquare,
     LucideDroplets as Droplets,
+    LucideLineChart as LineChart,
     LucideRefreshCw as RefreshCw,
-    LucideSparkle as Sparkle,
+    LucideSettings as Settings, LucideSparkle as Sparkle,
     LucideTableOfContents as TableOfContentsIcon,
     LucideSeparatorHorizontal as DividerIcon,
     LucideAtSign as AtSign, LucideCloud as Cloud, LucideMessageSquareShare as MessageSquareShare,
@@ -179,9 +181,10 @@ interface UploadItem {
         List, ListOrdered, ListTodo, Quote, SquareCode, Outdent, Indent,
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
         Send, Plus, X, Trash2,
-        EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, Menu, Superscript,
-        ChevronDown, Check, Download, MessageSquare, Droplets, RefreshCw,
-        Sparkle, TableOfContentsIcon, DividerIcon,
+        EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, FileStack, Superscript,
+        ChevronDown, Check, Download, MessageSquare, Droplets, LineChart, RefreshCw,
+        Settings, Sparkle, TableOfContentsIcon, DividerIcon,
+        CountBadgeComponent,
         AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
         SlidersHorizontal, Folder, Lock,
     ],

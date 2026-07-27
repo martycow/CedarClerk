@@ -107,6 +107,77 @@
                         }
                     </div>
                     }
+
+                    <!--I19: form answers and their distribution live here rather than on the forms
+                    tab — this is where "what happened with this post" already is. Only appears for
+                    a private post that actually has a form.-->
+                    @if (d.isPrivate && regForm()) {
+                    <div class="detail-divider"></div>
+
+                    <div class="detail-field">
+                        <label>{{ t().manager.forms.submissions }} <span class="field-hint-inline">{{ registrations().length }}</span></label>
+                    </div>
+
+                    <!--Distribution charts: closed questions only. Free text would produce as many
+                    slices as there are submissions.-->
+                    @for (q of chartQuestions(); track q.id) {
+                    @if (distribution(q); as slices) {
+                    @if (slices.length) {
+                    <div class="chart-block">
+                        <div class="chart-title">{{ q.label }}</div>
+                        @if (slices.length === 1) {
+                        <!--A one-slice pie is a full circle carrying no comparison — the number is
+                        the chart here.-->
+                        <p class="chart-single">
+                            <span class="legend-swatch" [style.background]="slices[0].color"></span>
+                            {{ slices[0].label }} — {{ slices[0].count }} ({{ slices[0].percent }}%), {{ t().manager.forms.everyoneAnswered }}
+                        </p>
+                        } @else {
+                        <div class="chart-row">
+                            <svg class="pie" viewBox="0 0 100 100" role="img" [attr.aria-label]="'Answer distribution for ' + q.label">
+                                @for (s of slices; track s.label) {
+                                <path [attr.d]="s.path" [attr.fill]="s.color" class="pie-slice">
+                                    <title>{{ s.label }}: {{ s.count }} ({{ s.percent }}%)</title>
+                                </path>
+                                }
+                            </svg>
+                            <!--Legend carries label + count + percent, so identity never rests on
+                            colour alone.-->
+                            <ul class="legend">
+                                @for (s of slices; track s.label) {
+                                <li>
+                                    <span class="legend-swatch" [style.background]="s.color"></span>
+                                    <span class="legend-label">{{ s.label }}</span>
+                                    <span class="legend-value">{{ s.count }} · {{ s.percent }}%</span>
+                                </li>
+                                }
+                            </ul>
+                        </div>
+                        }
+                    </div>
+                    }
+                    }
+                    }
+
+                    @for (r of registrations(); track r.id) {
+                    <div class="registration-row">
+                        <div class="registration-head">
+                            <span class="invite-email">{{ r.name || r.nickname || r.email || t().manager.forms.anonymous }}</span>
+                            <span class="field-hint-inline">{{ r.createdAt | date:'d MMM, HH:mm' }}</span>
+                        </div>
+                        <div class="field-hint-inline">
+                            @if (r.email) { {{ r.email }} }
+                            @if (r.nickname) { · {{ r.nickname }} }
+                            @if (r.socialLink) { · {{ r.socialLink }} }
+                        </div>
+                        @for (a of registrationAnswers(r); track a.label) {
+                        <div class="field-hint-inline">{{ a.label }}: {{ a.value }}</div>
+                        }
+                    </div>
+                    } @empty {
+                    <p class="hint">{{ t().manager.forms.noSubmissions }}</p>
+                    }
+                    }
                     } @else {
                     <p class="hint">{{ t().manager.pickPost }}</p>
                     }
@@ -199,73 +270,11 @@
                             </div>
                         </div>
 
-                        <div class="detail-divider"></div>
-
-                        <!--Distribution charts: closed questions only. Free text would produce as
-                        many slices as there are submissions.-->
-                        @for (q of chartQuestions(); track q.id) {
-                        @if (distribution(q); as slices) {
-                        @if (slices.length) {
-                        <div class="chart-block">
-                            <div class="chart-title">{{ q.label }}</div>
-                            @if (slices.length === 1) {
-                            <!--A one-slice pie is a full circle carrying no comparison — the
-                            number is the chart here.-->
-                            <p class="chart-single">
-                                <span class="legend-swatch" [style.background]="slices[0].color"></span>
-                                {{ slices[0].label }} — {{ slices[0].count }} ({{ slices[0].percent }}%), {{ t().manager.forms.everyoneAnswered }}
-                            </p>
-                            } @else {
-                            <div class="chart-row">
-                                <svg class="pie" viewBox="0 0 100 100" role="img" [attr.aria-label]="'Answer distribution for ' + q.label">
-                                    @for (s of slices; track s.label) {
-                                    <path [attr.d]="s.path" [attr.fill]="s.color" class="pie-slice">
-                                        <title>{{ s.label }}: {{ s.count }} ({{ s.percent }}%)</title>
-                                    </path>
-                                    }
-                                </svg>
-                                <!--Legend carries label + count + percent, so identity never
-                                rests on colour alone.-->
-                                <ul class="legend">
-                                    @for (s of slices; track s.label) {
-                                    <li>
-                                        <span class="legend-swatch" [style.background]="s.color"></span>
-                                        <span class="legend-label">{{ s.label }}</span>
-                                        <span class="legend-value">{{ s.count }} · {{ s.percent }}%</span>
-                                    </li>
-                                    }
-                                </ul>
-                            </div>
-                            }
-                        </div>
                         }
-                        }
-                        }
-
-                        <div class="detail-divider"></div>
-                        }
-
-                        <div class="detail-field">
-                            <label>{{ t().manager.forms.submissions }} <span class="field-hint-inline">{{ registrations().length }}</span></label>
-                        </div>
-                        @for (r of registrations(); track r.id) {
-                        <div class="registration-row">
-                            <div class="registration-head">
-                                <span class="invite-email">{{ r.name || r.nickname || r.email || t().manager.forms.anonymous }}</span>
-                                <span class="field-hint-inline">{{ r.createdAt | date:'d MMM, HH:mm' }}</span>
-                            </div>
-                            <div class="field-hint-inline">
-                                @if (r.email) { {{ r.email }} }
-                                @if (r.nickname) { · {{ r.nickname }} }
-                                @if (r.socialLink) { · {{ r.socialLink }} }
-                            </div>
-                            @for (a of registrationAnswers(r); track a.label) {
-                            <div class="field-hint-inline">{{ a.label }}: {{ a.value }}</div>
-                            }
-                        </div>
-                        } @empty {
-                        <p class="hint">{{ t().manager.forms.noSubmissions }}</p>
-                        }
+                        <!--I19: the answers and their distribution moved to the posts tab, where
+                        "what happened with this post" already lives. This tab keeps the form's
+                        definition — building it and reusing it — which is a different job.-->
+                        <p class="field-hint-inline">{{ t().manager.forms.answersMoved }}</p>
                         }
                     } @else {
                     <p class="hint">{{ t().manager.pickPrivatePost }}</p>

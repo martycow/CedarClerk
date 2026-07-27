@@ -106,7 +106,7 @@ body {
    whole bug behind "paragraph numbers don't render although the setting is on" (B12).
    The .sheet class itself comes from the editor template, so keying off it still works. */
 .sheet.show-para-numbers {
-    padding-left: 56px;
+    padding-left: 60px;
 }
 
 .sheet.show-para-numbers .tiptap {
@@ -118,16 +118,31 @@ body {
     position: relative;
 }
 
+/* I2: was 10px in the faintest text colour, sitting mid-margin — "barely visible". Now a legible
+   12px in --t2, in a gutter that hugs the sheet's left edge with a small inset, right-aligned so
+   multi-digit numbers line up against the text like a code editor's. */
 .sheet.show-para-numbers .tiptap > *::before {
     content: counter(cedar-para);
     position: absolute;
-    left: -30px;
-    width: 24px;
+    left: -48px;
+    width: 34px;
     text-align: right;
-    font-size: 10px;
+    font-size: 12px;
     line-height: inherit;
-    color: var(--t3);
+    color: var(--t2);
     user-select: none;
+}
+
+/* I2's optional half: faint rules under each top-level block, so it's visible where one block
+   ends and the next begins. Deliberately per-block rather than a ruled-paper background — a
+   repeating gradient can't stay aligned once line-height, headings and images vary. */
+.sheet.show-line-rules .tiptap > * {
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    padding-bottom: 2px;
+}
+
+.sheet.show-line-rules .tiptap > *:last-child {
+    border-bottom: none;
 }
 
 .tiptap {
@@ -246,12 +261,29 @@ body {
         font-size: 13px;
     }
 
+    /* I4: this used to be a solid-bar tinted panel, which reads as a quote or a code block —
+       nothing said "readers can react to this fragment". The dashed outline separates it from
+       blockquote (solid bar, no box) and from pre (dark box), and the bubble marker names what
+       it is without any text, which also keeps it language-neutral inside a CSS `content`. */
     .annotation-block {
+        position: relative;
+        border: 1px dashed var(--abord);
         border-left: 3px solid var(--accent);
-        background: var(--asoft);
-        border-radius: 0 8px 8px 0;
-        padding: 8px 12px;
-        margin: 8px 0;
+        background: color-mix(in srgb, var(--accent) 5%, transparent);
+        border-radius: 8px;
+        padding: 10px 32px 10px 12px;
+        margin: 10px 0;
+
+        &::after {
+            content: '💬';
+            position: absolute;
+            top: 5px;
+            right: 8px;
+            font-size: 12px;
+            opacity: .5;
+            user-select: none;
+            pointer-events: none;
+        }
     }
 
     .toggle-block {
