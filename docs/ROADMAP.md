@@ -183,10 +183,10 @@ Full item text in `docs/BACKLOG.md` under "Brainstorm v2"; this is the status ch
 - [x] N11 — Telegram DM on a new registration-form submission (27.07.2026, ADR-048) — reuses `NotifyOwnerAsync`, same opt-in and same log-only failure behaviour as comment/like notifications
 
 **Low**
-- [ ] N1 — `/drafts` column sorting + resizable columns
-- [ ] N3 — Round count badges
-- [ ] N8 — Highlight new comments/reactions, mark seen on hover
-- [ ] N9 — Stats range slider, 7 days–6 months, magnetic notches (supersedes v1 `B1`)
+- [x] N1 — `/drafts` column sorting + resizable columns (27.07.2026, ADR-049) — sort state and widths in `localStorage`, Title keeps the leftover space so a resize can't reintroduce the horizontal scroll B24 fixed
+- [x] N3 — Round count badges (27.07.2026, ADR-049) — shared `CountBadgeComponent` fed by `GET /api/comments/new-count`, shown on the Posts Manager tab and the editor's account menu
+- [x] N8 — Highlight new comments/reactions, mark seen on hover (27.07.2026, ADR-049) — `ApplicationUser.FeedbackSeenAt` watermark (migration `AddFeedbackSeenAt`); opening the tab doesn't clear highlights, hovering does, and the watermark flushes once on leave
+- [x] N9 — Stats range slider, 7 days–6 months, magnetic notches at 7/14/30/60/90/180 (27.07.2026, ADR-049) — fetch fires on release, not during the drag. Supersedes v1 `B1`
 
 **Sequencing note**: N7, N10, N12 (and N8, N9 on top of them) are one project — a single new page — not five separate ones. N4, N5 and N13 all touch the export modal and are cheapest done in one pass.
 

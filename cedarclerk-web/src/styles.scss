@@ -99,6 +99,37 @@ body {
     color: var(--text);
 }
 
+/* Paragraph numbers in the gutter (Settings → Appearance). These MUST be global: they were
+   written as component-scoped rules in editor.component.css and never matched anything, because
+   Angular's emulated encapsulation appends an _ngcontent attribute to the last selector and the
+   paragraphs here are created at runtime by ProseMirror, which never carries it. That's the
+   whole bug behind "paragraph numbers don't render although the setting is on" (B12).
+   The .sheet class itself comes from the editor template, so keying off it still works. */
+.sheet.show-para-numbers {
+    padding-left: 56px;
+}
+
+.sheet.show-para-numbers .tiptap {
+    counter-reset: cedar-para;
+}
+
+.sheet.show-para-numbers .tiptap > * {
+    counter-increment: cedar-para;
+    position: relative;
+}
+
+.sheet.show-para-numbers .tiptap > *::before {
+    content: counter(cedar-para);
+    position: absolute;
+    left: -30px;
+    width: 24px;
+    text-align: right;
+    font-size: 10px;
+    line-height: inherit;
+    color: var(--t3);
+    user-select: none;
+}
+
 .tiptap {
     outline: none;
     font-size: inherit;

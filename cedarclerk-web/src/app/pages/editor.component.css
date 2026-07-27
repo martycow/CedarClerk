@@ -1339,30 +1339,8 @@
     opacity: .5;
 }
 
-/* Paragraph numbers in the gutter (Settings → Appearance) — CSS counter on the ProseMirror
-   content's direct children, since TipTap owns that markup and Angular can't template it. */
-.sheet.show-para-numbers {
-    padding-left: 56px;
-}
-
-.sheet.show-para-numbers .tiptap {
-    counter-reset: cedar-para;
-}
-
-.sheet.show-para-numbers .tiptap > * {
-    counter-increment: cedar-para;
-    position: relative;
-}
-
-.sheet.show-para-numbers .tiptap > *::before {
-    content: counter(cedar-para);
-    position: absolute;
-    left: -30px;
-    width: 24px;
-    text-align: right;
-    font-size: 10px;
-    color: var(--t3);
-}
+/* Paragraph numbers live in styles.scss, not here — see the note there (B12). Anything that has
+   to match ProseMirror-created nodes cannot be a component-scoped rule. */
 
 .toolbar.hidden-for-focus {
     height: 0;

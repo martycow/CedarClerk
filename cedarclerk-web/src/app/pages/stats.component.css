@@ -129,6 +129,52 @@
     font-weight: 600;
 }
 
+/* ---------- Range slider (N9) ---------- */
+.range-slider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.range-value {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--t2);
+    min-width: 44px;
+    text-align: right;
+}
+
+.range-track {
+    position: relative;
+    width: 200px;
+}
+
+.range-track input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent);
+    position: relative;
+    z-index: 1;
+}
+
+/* Ticks sit under the thumb, purely as landmarks — the magnet is in the snapping, not here. */
+.range-notches {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 1px;
+    height: 5px;
+    pointer-events: none;
+}
+
+.range-notch {
+    position: absolute;
+    top: 0;
+    width: 1px;
+    height: 5px;
+    background: var(--t3);
+    transform: translateX(-50%);
+}
+
 /* ---------- Stat cards ---------- */
 .stat-grid {
     display: grid;

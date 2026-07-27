@@ -16,10 +16,20 @@
                     }
                 </div>
                 <span class="spacer"></span>
-                <div class="range-tabs">
-                    @for (d of [30, 90, 180]; track d) {
-                    <button class="range-tab" [class.active]="rangeDays() === d" (click)="selectRange(d)">{{ d }}d</button>
-                    }
+                <!--N9: free 7…180-day range with magnetic notches at the common values. The
+                fetch fires on release, not on every pixel of the drag.-->
+                <div class="range-slider">
+                    <span class="range-value">{{ rangeLabel() }}</span>
+                    <div class="range-track">
+                        <input type="range" [min]="rangeMin" [max]="rangeMax" step="1" [value]="rangeDays()"
+                               (input)="onRangeInput(+$any($event.target).value)"
+                               (change)="onRangeCommit(+$any($event.target).value)">
+                        <div class="range-notches">
+                            @for (n of rangeNotches; track n) {
+                            <span class="range-notch" [style.left.%]="notchOffset(n)" [title]="n + ' days'"></span>
+                            }
+                        </div>
+                    </div>
                 </div>
             </div>
 
