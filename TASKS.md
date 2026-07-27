@@ -2,6 +2,9 @@
 
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
+## Phase 9d — live-review fixes (27.07.2026, done)
+Six items from Marty's browser review of 0.9.2: Posts-tab tag picker, per-post form selection, feedback grouped by post, Forms tab reduced to preset authoring only, the stale toolbar-customize button removed, and three Appearance-panel bugs (line height overridden by `.tiptap`, toolbar group order never stored or read, reset button under the debug-console tab). See `docs/ROADMAP.md` Phase 9d.
+
 ## Now: Phase 9c — the `Input.md` sweep (started 27.07.2026)
 32 new items from `_Documents_/CedarClerk/Input.md`, scoped in `docs/ROADMAP.md` Phase 9c with the per-item dedup verdict in `docs/BACKLOG.md`. **All 9 bugs go first**, ahead of the improvements, because five of them are on code that shipped in the last two days.
 

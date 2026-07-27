@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { AuthService } from './auth.service';
-import { DEFAULT_TOOLBAR_LAYOUT, ToolbarButtonId, ToolbarLayout, parseToolbarLayout } from './toolbar-layout';
+import { DEFAULT_TOOLBAR_LAYOUT, ToolbarButtonId, ToolbarLayout, parseToolbarLayout, normalizeRows } from './toolbar-layout';
 
 @Injectable({ providedIn: 'root' })
 export class ToolbarLayoutService {
@@ -21,7 +21,15 @@ export class ToolbarLayoutService {
         return this.layout().hiddenButtons.includes(id);
     }
 
-    isRow2(groupId: string): boolean {
-        return this.layout().row2Groups.includes(groupId);
+    // Ordered, so the editor renders groups in the sequence the panel shows — normalized on read
+    // as well as on parse, since save() writes whatever the caller hands it.
+    row1Ordered(): string[] {
+        const l = this.layout();
+        return normalizeRows(l.row1Groups, l.row2Groups).row1Groups;
+    }
+
+    row2Ordered(): string[] {
+        const l = this.layout();
+        return normalizeRows(l.row1Groups, l.row2Groups).row2Groups;
     }
 }

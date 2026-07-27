@@ -658,12 +658,12 @@
         <button (click)="cmd(c => c.undo())" [disabled]="!canUndo()" [title]="t().editor.tb.undo"><svg lucideUndo2 class="icon"></svg></button>
         <button (click)="cmd(c => c.redo())" [disabled]="!canRedo()" [title]="t().editor.tb.redo"><svg lucideRedo2 class="icon"></svg></button>
 
-        @if (!toolbarLayout.isRow2('text')) { <ng-container *ngTemplateOutlet="tplText"></ng-container> }
-        @if (!toolbarLayout.isRow2('insert')) { <ng-container *ngTemplateOutlet="tplInsert"></ng-container> }
-        @if (!toolbarLayout.isRow2('lists')) { <ng-container *ngTemplateOutlet="tplLists"></ng-container> }
-        @if (!toolbarLayout.isRow2('code')) { <ng-container *ngTemplateOutlet="tplCode"></ng-container> }
-        @if (!toolbarLayout.isRow2('media')) { <ng-container *ngTemplateOutlet="tplMedia"></ng-container> }
-        @if (!toolbarLayout.isRow2('blocks')) { <ng-container *ngTemplateOutlet="tplBlocks"></ng-container> }
+        <!--Rendered from the stored order, not a fixed chain of @if: reordering groups within a
+        row was draggable in the Appearance panel but had nothing reading it here, so it did
+        nothing at all. tplGroup below maps a group id to its template.-->
+        @for (g of toolbarLayout.row1Ordered(); track g) {
+        <ng-container *ngTemplateOutlet="tplGroup; context: { $implicit: g }"></ng-container>
+        }
 
         <span class="tb-flex-spacer"></span>
 
@@ -702,24 +702,30 @@
         </div>
         }
 
-        <span class="sep"></span>
-        <a class="icon-btn" routerLink="/settings" fragment="sec-toolbar" [title]="t().editor.tb.customize">
-            <svg lucideSlidersHorizontal class="icon-sm"></svg>
-        </a>
     </div>
     @if (aiEditError()) { <p class="channel-error" style="margin:4px 14px">{{ aiEditError() }}</p> }
 
-    <!--Toolbar row 2: whichever groups Settings → Toolbar assigned here-->
-    @if (toolbarLayout.layout().row2Groups.length) {
+    <!--Toolbar row 2: whichever groups the Appearance panel assigned here, in its order-->
+    @if (toolbarLayout.row2Ordered().length) {
     <div class="toolbar toolbar-row2" [class.hidden-for-focus]="focusModeActive()">
-        @if (toolbarLayout.isRow2('text')) { <ng-container *ngTemplateOutlet="tplText"></ng-container> }
-        @if (toolbarLayout.isRow2('insert')) { <ng-container *ngTemplateOutlet="tplInsert"></ng-container> }
-        @if (toolbarLayout.isRow2('lists')) { <ng-container *ngTemplateOutlet="tplLists"></ng-container> }
-        @if (toolbarLayout.isRow2('code')) { <ng-container *ngTemplateOutlet="tplCode"></ng-container> }
-        @if (toolbarLayout.isRow2('media')) { <ng-container *ngTemplateOutlet="tplMedia"></ng-container> }
-        @if (toolbarLayout.isRow2('blocks')) { <ng-container *ngTemplateOutlet="tplBlocks"></ng-container> }
+        @for (g of toolbarLayout.row2Ordered(); track g) {
+        <ng-container *ngTemplateOutlet="tplGroup; context: { $implicit: g }"></ng-container>
+        }
     </div>
     }
+
+    <!--One switch shared by both rows, so a group's markup exists once and the rows differ only
+    in which ids they iterate.-->
+    <ng-template #tplGroup let-g>
+        @switch (g) {
+            @case ('text') { <ng-container *ngTemplateOutlet="tplText"></ng-container> }
+            @case ('insert') { <ng-container *ngTemplateOutlet="tplInsert"></ng-container> }
+            @case ('lists') { <ng-container *ngTemplateOutlet="tplLists"></ng-container> }
+            @case ('code') { <ng-container *ngTemplateOutlet="tplCode"></ng-container> }
+            @case ('media') { <ng-container *ngTemplateOutlet="tplMedia"></ng-container> }
+            @case ('blocks') { <ng-container *ngTemplateOutlet="tplBlocks"></ng-container> }
+        }
+    </ng-template>
 
     <!--AI confirm dialog (replaces window.confirm)-->
     @if (aiConfirmKind(); as kind) {

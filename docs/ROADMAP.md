@@ -193,6 +193,16 @@ Full item text in `docs/BACKLOG.md` under "Brainstorm v2"; this is the status ch
 
 **Sequencing note**: N7, N10, N12 (and N8, N9 on top of them) are one project — a single new page — not five separate ones. N4, N5 and N13 all touch the export modal and are cheapest done in one pass.
 
+### Phase 9d — Live-review fixes — 27.07.2026
+Six items from Marty reviewing the 0.9.2 deploy in a browser. Full write-up in `CHANGELOG.md`.
+
+- [x] Posts tab: tag picker over tags already in use, replacing the free-text-only field
+- [x] Posts tab: a private post's registration form is chosen here, by picking a preset
+- [x] Feedback tab: grouped per post with a per-group "show all"; needed a new `reactionsByDraft` split on `GET /api/comments`
+- [x] Forms tab: **only** forms now — no post selection, no post mentions. It authors presets; posts pick them elsewhere
+- [x] Removed the toolbar-customize button from the editor toolbar (it pointed at `/settings#sec-toolbar`, an anchor `I14` deleted)
+- [x] Appearance panel, three bugs: line height was overridden by a hardcoded `line-height` on `.tiptap`; group *order* within a toolbar row was never stored or read (the layout only tracked row-2 membership, and the editor rendered a fixed `@if` chain); the reset button was covered by the fixed debug-console tab
+
 ### Phase 9c — Input sweep — started 27.07.2026, in progress
 Executing `_Documents_/CedarClerk/Input.md` (32 items). Full text and the per-item dedup verdict live in `docs/BACKLOG.md` under "Input sweep — 27.07.2026"; this is the status checklist. One commit per item, short messages.
 

@@ -165,11 +165,23 @@ public static class BlogEndpoints
                 .ToListAsync();
 
             var reactions = await db.Reactions.Where(r => draftIds.Contains(r.DraftId))
-                .Select(r => new { r.Kind, r.CreatedAt })
+                .Select(r => new { r.DraftId, r.Kind, r.CreatedAt })
                 .ToListAsync();
 
             int Count(string kind, bool onlyNew) => reactions
                 .Count(r => r.Kind == kind && (!onlyNew || (seenAt is null || r.CreatedAt > seenAt)));
+
+            // Per-draft split so the feedback tab can group by post instead of showing one
+            // undifferentiated total. Only drafts that actually have reactions appear.
+            var byDraft = reactions.GroupBy(r => r.DraftId).Select(g => new
+            {
+                DraftId = g.Key,
+                DraftTitle = draftTitleById.GetValueOrDefault(g.Key, "Untitled"),
+                Likes = g.Count(r => r.Kind == "like"),
+                Dislikes = g.Count(r => r.Kind == "dislike"),
+                NewLikes = g.Count(r => r.Kind == "like" && (seenAt is null || r.CreatedAt > seenAt)),
+                NewDislikes = g.Count(r => r.Kind == "dislike" && (seenAt is null || r.CreatedAt > seenAt)),
+            }).ToList();
 
             return Results.Ok(new
             {
@@ -180,6 +192,7 @@ public static class BlogEndpoints
                     newLikes = Count("like", true),
                     newDislikes = Count("dislike", true),
                 },
+                reactionsByDraft = byDraft,
                 comments = comments.Select(c => new
                 {
                     c.Id,

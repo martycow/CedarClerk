@@ -44,10 +44,10 @@ export class AppearancePanelComponent implements OnInit {
     }
 
     private initToolbarRows() {
-        const row2 = this.toolbarLayout.layout().row2Groups;
-        const ids = this.movableToolbarGroups.map(g => g.id);
-        this.row2Groups.set(ids.filter(id => row2.includes(id)));
-        this.row1Groups.set(ids.filter(id => !row2.includes(id)));
+        // Read through the service's normalizer so the panel shows exactly the order the toolbar
+        // renders — the two used to be derived separately and could disagree.
+        this.row1Groups.set([...this.toolbarLayout.row1Ordered()]);
+        this.row2Groups.set([...this.toolbarLayout.row2Ordered()]);
     }
 
     // Applies instantly and saves in the background, no Save button (ADR-035) — these are pure
@@ -115,7 +115,14 @@ export class AppearancePanelComponent implements OnInit {
         }
         this.toolbarError.set(null);
         try {
-            await this.toolbarLayout.save({ ...this.toolbarLayout.layout(), preset: 'custom', row2Groups: [...this.row2Groups()] });
+            // Both rows are persisted, in order — saving only row2 was why reordering appeared to
+            // work in the panel and then reverted on reload.
+            await this.toolbarLayout.save({
+                ...this.toolbarLayout.layout(),
+                preset: 'custom',
+                row1Groups: [...this.row1Groups()],
+                row2Groups: [...this.row2Groups()],
+            });
         } catch (e) {
             this.toolbarError.set(httpErrorMessage(e, this.t().settings.errors.toolbar));
         }

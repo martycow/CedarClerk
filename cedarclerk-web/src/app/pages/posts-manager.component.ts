@@ -71,17 +71,20 @@ export class PostsManagerComponent implements OnInit {
     registrations = signal<PostRegistration[]>([]);
     registrationsLoading = signal(false);
 
-    // Forms tab (N10) — the form editor moved here from the export modal, which now only picks a
-    // preset before publishing (N12, ADR-047).
+    // The form attached to the currently selected post. Shown on the POSTS tab (a post is where a
+    // form is used), never edited there directly — you pick a preset, and the preset is copied.
     regForm = signal<RegistrationForm | null>(null);
     regBusy = signal(false);
-    presets = signal<FormPreset[]>([]);
-    newPresetName = '';
 
-    // I9 — the form editor used to persist silently on every keystroke/toggle, which left no way
-    // to tell whether anything had been saved. Edits now mark the form dirty and an explicit Save
-    // button commits them; switching post or leaving the tab flushes first, so nothing is lost.
-    formState = signal<'saved' | 'dirty' | 'saving' | 'error'>('saved');
+    // Forms tab — presets only. It used to require picking a post first and edited that post's
+    // form, which made presets look like a property of a post; they aren't. Forms are authored
+    // here as presets and chosen per post elsewhere.
+    presets = signal<FormPreset[]>([]);
+    selectedPresetId = signal<string | null>(null);
+    presetName = '';
+    presetForm = signal<RegistrationForm | null>(null);
+    presetState = signal<'saved' | 'dirty' | 'saving' | 'error'>('saved');
+    deletePresetId = signal<string | null>(null);
 
     async ngOnInit() {
         this.feedback.refreshNewCount();
@@ -104,19 +107,11 @@ export class PostsManagerComponent implements OnInit {
         // Leaving the feedback tab is when its badge is worth re-checking: hovering rows there
         // is exactly what clears the count.
         if (this.tab() === 'feedback' && tab !== 'feedback') this.feedback.refreshNewCount();
-        // Leaving the forms tab with unsaved edits commits them rather than dropping them (I9).
-        if (this.tab() === 'forms' && tab !== 'forms') this.flushForm();
+        // Leaving the forms tab with unsaved preset edits commits them rather than dropping them.
+        if (this.tab() === 'forms' && tab !== 'forms') this.flushPreset();
         this.tab.set(tab);
-        if (tab === 'forms') {
-            // Presets are independent of any post, so they load with the tab, not with a selection.
-            if (!this.presets().length) this.loadPresets();
-            if (this.selected()?.isPrivate) this.loadForm();
-        }
-    }
-
-    // The forms tab only ever deals with private posts — that's the whole point of it.
-    privatePosts(): DraftMeta[] {
-        return this.drafts().filter(d => d.isPrivate);
+        // Presets are needed by both tabs now: authored on forms, applied to a post on posts.
+        if ((tab === 'forms' || tab === 'posts') && !this.presets().length) this.loadPresets();
     }
 
     selected(): DraftMeta | null {
@@ -125,16 +120,41 @@ export class PostsManagerComponent implements OnInit {
     }
 
     async select(d: DraftMeta) {
-        // Same guard the editor uses when switching drafts: commit before the form is replaced.
-        await this.flushForm();
         this.selectedId.set(d.id);
         this.editTitle = d.title;
         this.editTags = d.tags;
         this.registrations.set([]);
         this.regForm.set(null);
-        this.formState.set('saved');
-        // Both tabs need this now: forms edits the definition, posts shows the answers (I19).
         if (d.isPrivate) this.loadForm();
+    }
+
+    // ---------- Tag selector (I1 on the Posts page) ----------
+
+    tagList(): string[] {
+        return this.editTags.split(',').map(x => x.trim()).filter(x => x.length > 0);
+    }
+
+    // Every tag already in use by this owner, so picking is a choice rather than recall. Free-text
+    // entry stays alongside it for tags that don't exist yet.
+    knownTags(): string[] {
+        const used = new Set<string>();
+        for (const d of this.drafts()) {
+            for (const raw of d.tags.split(',')) {
+                const tag = raw.trim();
+                if (tag) used.add(tag);
+            }
+        }
+        return [...used].sort((a, b) => a.localeCompare(b));
+    }
+
+    toggleTag(tag: string) {
+        const current = this.tagList();
+        const next = current.includes(tag) ? current.filter(x => x !== tag) : [...current, tag];
+        this.editTags = next.join(', ');
+    }
+
+    hasTag(tag: string): boolean {
+        return this.tagList().includes(tag);
     }
 
     blogUrl(d: DraftMeta): string | null {
@@ -259,7 +279,7 @@ export class PostsManagerComponent implements OnInit {
             });
     }
 
-    // ---------- Form editor (N10) ----------
+    // ---------- The post's own form (Posts tab) ----------
 
     async loadForm() {
         const d = this.selected();
@@ -271,7 +291,6 @@ export class PostsManagerComponent implements OnInit {
                 this.draftsApi.listRegistrations(d.id),
             ]);
             this.regForm.set(parseRegistrationForm(full.registrationFormJson));
-            this.formState.set('saved');
             this.registrations.set(regs);
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().manager.errors.loadForm));
@@ -280,83 +299,149 @@ export class PostsManagerComponent implements OnInit {
         }
     }
 
-    // The definition is small and always fully in hand, so a save writes the whole blob — same
-    // reasoning as the editor's original version of this.
-    private async persistForm() {
+    private async persistForm(form: RegistrationForm | null) {
         const d = this.selected();
         if (!d) return;
         this.regBusy.set(true);
-        this.formState.set('saving');
         try {
-            const form = this.regForm();
             await this.draftsApi.setRegistrationForm(d.id, form ? JSON.stringify(form) : null);
-            this.formState.set('saved');
+            this.regForm.set(form);
         } catch (e) {
-            this.formState.set('error');
             this.error.set(httpErrorMessage(e, this.t().manager.errors.saveForm));
         } finally {
             this.regBusy.set(false);
         }
     }
 
-    // Every field edit routes through here (I9): change the blob, mark it dirty, wait for Save.
-    private editForm(next: RegistrationForm | null) {
-        this.regForm.set(next);
-        this.formState.set('dirty');
+    // A post gets a form by choosing a preset, never by editing one in place — the definition is
+    // authored once on the Forms tab. The preset is COPIED here (N12), so editing it afterwards
+    // can't rewrite a post that already used it.
+    async applyPresetToPost(p: FormPreset) {
+        await this.persistForm(parseRegistrationForm(p.formJson));
     }
 
-    async saveForm() {
-        await this.persistForm();
+    async clearPostForm() {
+        await this.persistForm(null);
     }
 
-    // Called before anything that would navigate away from the current form.
-    private async flushForm() {
-        if (this.formState() === 'dirty') await this.persistForm();
+    // ---------- Preset authoring (Forms tab) ----------
+
+    async loadPresets() {
+        try {
+            this.presets.set(await this.presetsApi.list());
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.loadPresets));
+        }
     }
 
-    // Turning the form on/off is structural rather than an edit — it changes what the public page
-    // does with an uninvited visitor, so it commits straight away instead of waiting for Save.
-    async toggleForm() {
-        this.regForm.set(this.regForm()
-            ? null
-            : { requireName: true, requireNickname: false, requireEmail: true, requireSocial: false, questions: [] });
-        await this.persistForm();
+    selectedPreset(): FormPreset | null {
+        const id = this.selectedPresetId();
+        return id ? this.presets().find(p => p.id === id) ?? null : null;
     }
 
-    async deleteForm() {
-        this.regForm.set(null);
-        await this.persistForm();
+    async selectPreset(p: FormPreset) {
+        await this.flushPreset();
+        this.selectedPresetId.set(p.id);
+        this.presetName = p.name;
+        this.presetForm.set(parseRegistrationForm(p.formJson)
+            ?? { requireName: true, requireNickname: false, requireEmail: true, requireSocial: false, questions: [] });
+        this.presetState.set('saved');
     }
 
-    toggleFormField(field: 'requireName' | 'requireNickname' | 'requireEmail' | 'requireSocial') {
-        const form = this.regForm();
+    // Created immediately rather than held as a local draft: a preset with no id has nowhere to
+    // be saved to, and the list is the only place it would show up.
+    async newPreset() {
+        await this.flushPreset();
+        const blank: RegistrationForm = { requireName: true, requireNickname: false, requireEmail: true, requireSocial: false, questions: [] };
+        try {
+            const created = await this.presetsApi.create(this.t().manager.forms.untitledPreset, JSON.stringify(blank));
+            this.presets.update(list => [...list, created]);
+            this.selectedPresetId.set(created.id);
+            this.presetName = created.name;
+            this.presetForm.set(blank);
+            this.presetState.set('saved');
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.savePreset));
+        }
+    }
+
+    private editPreset(next: RegistrationForm) {
+        this.presetForm.set(next);
+        this.presetState.set('dirty');
+    }
+
+    markPresetNameDirty() {
+        this.presetState.set('dirty');
+    }
+
+    async savePreset() {
+        const p = this.selectedPreset();
+        const form = this.presetForm();
+        const name = this.presetName.trim();
+        if (!p || !form || !name) return;
+        this.presetState.set('saving');
+        try {
+            const saved = await this.presetsApi.update(p.id, name, JSON.stringify(form));
+            this.presets.update(list => list.map(x => x.id === saved.id ? saved : x));
+            this.presetState.set('saved');
+        } catch (e) {
+            this.presetState.set('error');
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.savePreset));
+        }
+    }
+
+    private async flushPreset() {
+        if (this.presetState() === 'dirty') await this.savePreset();
+    }
+
+    async confirmDeletePreset() {
+        const id = this.deletePresetId();
+        if (!id) return;
+        this.deletePresetId.set(null);
+        try {
+            await this.presetsApi.remove(id);
+            this.presets.update(list => list.filter(x => x.id !== id));
+            if (this.selectedPresetId() === id) {
+                this.selectedPresetId.set(null);
+                this.presetForm.set(null);
+                this.presetState.set('saved');
+            }
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.deletePreset));
+        }
+    }
+
+    // ---------- Preset form-definition editing ----------
+
+    togglePresetField(field: 'requireName' | 'requireNickname' | 'requireEmail' | 'requireSocial') {
+        const form = this.presetForm();
         if (!form) return;
-        this.editForm({ ...form, [field]: !form[field] });
+        this.editPreset({ ...form, [field]: !form[field] });
     }
 
     setIntro(intro: string) {
-        const form = this.regForm();
+        const form = this.presetForm();
         if (!form) return;
-        this.editForm({ ...form, intro: intro.trim() || undefined });
+        this.editPreset({ ...form, intro: intro.trim() || undefined });
     }
 
     addQuestion() {
-        const form = this.regForm();
+        const form = this.presetForm();
         if (!form) return;
         const q: RegistrationQuestion = { id: `q${Date.now()}`, label: '', type: 'text', required: false };
-        this.editForm({ ...form, questions: [...form.questions, q] });
+        this.editPreset({ ...form, questions: [...form.questions, q] });
     }
 
     updateQuestion(id: string, patch: Partial<RegistrationQuestion>) {
-        const form = this.regForm();
+        const form = this.presetForm();
         if (!form) return;
-        this.editForm({ ...form, questions: form.questions.map(q => q.id === id ? { ...q, ...patch } : q) });
+        this.editPreset({ ...form, questions: form.questions.map(q => q.id === id ? { ...q, ...patch } : q) });
     }
 
     removeQuestion(id: string) {
-        const form = this.regForm();
+        const form = this.presetForm();
         if (!form) return;
-        this.editForm({ ...form, questions: form.questions.filter(q => q.id !== id) });
+        this.editPreset({ ...form, questions: form.questions.filter(q => q.id !== id) });
     }
 
     setQuestionType(id: string, type: RegistrationQuestionType) {
@@ -369,48 +454,6 @@ export class PostsManagerComponent implements OnInit {
 
     questionOptionsText(q: RegistrationQuestion): string {
         return (q.options ?? []).join(', ');
-    }
-
-    // ---------- Presets (N12) ----------
-
-    async loadPresets() {
-        try {
-            this.presets.set(await this.presetsApi.list());
-        } catch (e) {
-            this.error.set(httpErrorMessage(e, this.t().manager.errors.loadPresets));
-        }
-    }
-
-    async saveAsPreset() {
-        const form = this.regForm();
-        const name = this.newPresetName.trim();
-        if (!form || !name || this.regBusy()) return;
-        this.regBusy.set(true);
-        try {
-            const created = await this.presetsApi.create(name, JSON.stringify(form));
-            this.presets.update(list => [...list, created].sort((a, b) => a.name.localeCompare(b.name)));
-            this.newPresetName = '';
-        } catch (e) {
-            this.error.set(httpErrorMessage(e, this.t().manager.errors.savePreset));
-        } finally {
-            this.regBusy.set(false);
-        }
-    }
-
-    // Copies the preset's definition onto the post. Editing the preset afterwards does not touch
-    // posts that already applied it — that's the point of copying instead of linking.
-    async applyPreset(p: FormPreset) {
-        this.regForm.set(parseRegistrationForm(p.formJson));
-        await this.persistForm();
-    }
-
-    async deletePreset(p: FormPreset) {
-        try {
-            await this.presetsApi.remove(p.id);
-            this.presets.update(list => list.filter(x => x.id !== p.id));
-        } catch (e) {
-            this.error.set(httpErrorMessage(e, this.t().manager.errors.deletePreset));
-        }
     }
 
     // ---------- Answer distribution (N10) ----------

@@ -78,7 +78,6 @@ import {
     LucideAtSign as AtSign, LucideCloud as Cloud, LucideMessageSquareShare as MessageSquareShare,
     LucideFileText as FileText, LucideHeart as Heart, LucideNotebook as Notebook, LucideFile as FileIcon,
     LucideThumbsUp as ThumbsUp,
-    LucideSlidersHorizontal as SlidersHorizontal,
     LucideFolder as Folder, LucideLock as Lock,
 } from '@lucide/angular';
 
@@ -187,7 +186,7 @@ interface UploadItem {
         Settings, Sparkle, TableOfContentsIcon, DividerIcon,
         CountBadgeComponent,
         AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
-        SlidersHorizontal, Folder, Lock,
+        Folder, Lock,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']

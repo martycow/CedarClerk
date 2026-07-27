@@ -21,8 +21,19 @@ export interface AllCommentsComment extends DraftComment {
     isNew: boolean; // created after the owner's feedback watermark (N8)
 }
 
+export interface DraftReactions {
+    draftId: string;
+    draftTitle: string;
+    likes: number;
+    dislikes: number;
+    newLikes: number;
+    newDislikes: number;
+}
+
 export interface AllCommentsFeedback {
     reactions: { likes: number; dislikes: number; newLikes: number; newDislikes: number };
+    // Per-post split — the feedback tab groups by post rather than showing one running total.
+    reactionsByDraft: DraftReactions[];
     comments: AllCommentsComment[];
 }
 

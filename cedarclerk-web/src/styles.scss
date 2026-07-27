@@ -148,7 +148,10 @@ body {
 .tiptap {
     outline: none;
     font-size: inherit;
-    line-height: 1.6;
+    /* Inherit, not 1.6: .sheet carries the user's line height as --sheet-line-height, and a fixed
+       value here silently won that cascade — which is why the Appearance slider moved nothing.
+       font-size was already inherited, which is why *that* slider worked. */
+    line-height: inherit;
 
     h1 {
         font-size: 1.625em;

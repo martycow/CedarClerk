@@ -1,8 +1,9 @@
 <!--N7: this is a tab body inside the Posts Manager now, not a page of its own — the page header
-it used to carry lives there.-->
+it used to carry lives there. Feedback is grouped per post: the flat stream answered "what's new"
+but not "what happened to this post", which is what this tab is for.-->
 <div class="comments-page">
     <div class="comments-body">
-        <!--N8: new counts clear on hover, same gesture as the comment cards below.-->
+        <!--Running total across everything, kept as context above the per-post groups.-->
         <div class="reactions-card" [class.has-new]="reactions().newLikes || reactions().newDislikes"
              (pointerenter)="markReactionsSeen()">
             <span class="reactions-summary">
@@ -20,20 +21,46 @@ it used to carry lives there.-->
         @if (loading()) {
         <p class="hint">{{ t().common.loading }}</p>
         } @else {
-            @for (c of comments(); track c.id) {
-            <div class="comment-card" [class.is-new]="c.isNew" (pointerenter)="markSeen(c)">
-                <div class="comment-row-top">
-                    <span class="comment-draft-title">{{ c.draftTitle }}</span>
-                    <span class="comment-tag">{{ c.annotationId ? t().feedback.inText : t().feedback.wholeArticle }}</span>
-                    @if (c.isNew) { <span class="new-chip">{{ t().feedback.newChip }}</span> }
+            @for (g of groups(); track g.draftId) {
+            <section class="feedback-group">
+                <header class="feedback-group-head" (pointerenter)="markDraftReactionsSeen(g.reactions)">
+                    <span class="feedback-group-title">{{ g.draftTitle || t().drafts.untitled }}</span>
+                    @if (g.reactions; as r) {
+                    <span class="feedback-group-reactions" [class.has-new]="r.newLikes || r.newDislikes">
+                        👍 {{ r.likes }}@if (r.newLikes) { <span class="new-delta">+{{ r.newLikes }}</span> }
+                        ·
+                        👎 {{ r.dislikes }}@if (r.newDislikes) { <span class="new-delta">+{{ r.newDislikes }}</span> }
+                    </span>
+                    }
                     <span class="spacer"></span>
-                    <button class="mini-remove" (click)="deleteComment(c.id)" [title]="t().feedback.deleteComment">
-                        <svg lucideTrash2 class="icon-sm"></svg>
-                    </button>
+                    <span class="feedback-group-count">{{ t().feedback.commentCount(g.comments.length) }}</span>
+                </header>
+
+                @for (c of visibleComments(g); track c.id) {
+                <div class="comment-card" [class.is-new]="c.isNew" (pointerenter)="markSeen(c)">
+                    <div class="comment-row-top">
+                        <span class="comment-tag">{{ c.annotationId ? t().feedback.inText : t().feedback.wholeArticle }}</span>
+                        @if (c.isNew) { <span class="new-chip">{{ t().feedback.newChip }}</span> }
+                        <span class="spacer"></span>
+                        <button class="mini-remove" (click)="deleteComment(c.id)" [title]="t().feedback.deleteComment">
+                            <svg lucideTrash2 class="icon-sm"></svg>
+                        </button>
+                    </div>
+                    <div class="comment-row-meta">{{ c.authorName || t().feedback.anonymous }} · {{ c.createdAt | date:'d MMM, HH:mm' }}</div>
+                    <div class="comment-row-text">{{ c.text }}</div>
                 </div>
-                <div class="comment-row-meta">{{ c.authorName || t().feedback.anonymous }} · {{ c.createdAt | date:'d MMM, HH:mm' }}</div>
-                <div class="comment-row-text">{{ c.text }}</div>
-            </div>
+                }
+
+                @if (hiddenCount(g); as hidden) {
+                <button class="feedback-more" (click)="toggleExpanded(g.draftId)">{{ t().feedback.showAll(hidden) }}</button>
+                } @else if (isExpanded(g.draftId) && g.comments.length > 3) {
+                <button class="feedback-more" (click)="toggleExpanded(g.draftId)">{{ t().feedback.showLess }}</button>
+                }
+
+                @if (!g.comments.length) {
+                <p class="hint feedback-reactions-only">{{ t().feedback.reactionsOnly }}</p>
+                }
+            </section>
             } @empty {
             <p class="hint">{{ t().feedback.noComments }}</p>
             }

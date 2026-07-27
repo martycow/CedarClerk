@@ -43,7 +43,9 @@
 .ap-body {
     width: 268px;
     box-sizing: border-box;
-    padding: 14px 14px 24px;
+    /* Deep bottom padding clears the debug-console tab, which is fixed to the bottom-right above
+       the status bar and was covering the last control in this column. */
+    padding: 14px 14px 72px;
     overflow-y: auto;
     max-height: 100%;
 }

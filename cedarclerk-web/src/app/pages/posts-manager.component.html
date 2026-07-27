@@ -57,8 +57,17 @@
                         <label>{{ t().manager.title }}</label>
                         <input class="chat-input" [(ngModel)]="editTitle">
                     </div>
+                    <!--I1 (Posts page): tags are picked from what's already in use rather than
+                    retyped. The free-text field stays for tags that don't exist yet.-->
                     <div class="detail-field">
                         <label>{{ t().manager.tags }} <span class="field-hint-inline">{{ t().manager.tagsHint }}</span></label>
+                        @if (knownTags().length) {
+                        <div class="pill-row">
+                            @for (tag of knownTags(); track tag) {
+                            <button class="pill" [class.on]="hasTag(tag)" (click)="toggleTag(tag)">#{{ tag }}</button>
+                            }
+                        </div>
+                        }
                         <input class="chat-input" [(ngModel)]="editTags" [placeholder]="t().manager.tagsPlaceholder">
                     </div>
                     <button class="btn-accent" (click)="saveMeta()" [disabled]="busy()">
@@ -108,12 +117,39 @@
                     </div>
                     }
 
-                    <!--I19: form answers and their distribution live here rather than on the forms
-                    tab — this is where "what happened with this post" already is. Only appears for
-                    a private post that actually has a form.-->
-                    @if (d.isPrivate && regForm()) {
+                    <!--Item 2: a private post's form is chosen HERE, by picking a preset. The
+                    definition itself is authored on the Forms tab; the preset is copied onto the
+                    post (N12), so editing it later can't rewrite a post that already used it.-->
+                    @if (d.isPrivate) {
                     <div class="detail-divider"></div>
 
+                    <div class="detail-field">
+                        <label>{{ t().manager.forms.postForm }}</label>
+                        @if (regForm()) {
+                        <p class="field-hint-inline">{{ t().manager.forms.formOn }}</p>
+                        } @else {
+                        <p class="field-hint-inline">{{ t().manager.forms.formOff }}</p>
+                        }
+                        @if (presets().length) {
+                        <div class="pill-row">
+                            @for (p of presets(); track p.id) {
+                            <button class="pill" (click)="applyPresetToPost(p)" [disabled]="regBusy()">{{ p.name }}</button>
+                            }
+                            @if (regForm()) {
+                            <button class="pill danger" (click)="clearPostForm()" [disabled]="regBusy()">{{ t().manager.forms.clearForm }}</button>
+                            }
+                        </div>
+                        } @else {
+                        <p class="field-hint-inline">{{ t().manager.forms.noPresetsYet }}
+                            <button class="link-btn" (click)="setTab('forms')">{{ t().manager.forms.createOne }}</button>
+                        </p>
+                        }
+                    </div>
+                    }
+
+                    <!--I19: form answers and their distribution live here rather than on the forms
+                    tab — this is where "what happened with this post" already is.-->
+                    @if (d.isPrivate && regForm()) {
                     <div class="detail-field">
                         <label>{{ t().manager.forms.submissions }} <span class="field-hint-inline">{{ registrations().length }}</span></label>
                     </div>
@@ -191,125 +227,85 @@
         @if (tab() === 'feedback') { <app-comments></app-comments> }
         @if (tab() === 'stats') { <app-stats></app-stats> }
 
+        <!--Item 4: this tab is ONLY about forms. It used to require picking a private post and
+        edited that post's form, which made a form look like a property of a post. Forms are
+        authored here as presets; a post picks one on the Posts tab.-->
         @if (tab() === 'forms') {
-            <p class="field-hint">{{ t().manager.forms.intro }}</p>
+            <p class="field-hint">{{ t().manager.forms.presetsIntro }}</p>
             <div class="manager-split">
                 <div class="post-list">
-                    @for (d of privatePosts(); track d.id) {
-                    <button class="post-row" [class.on]="selectedId() === d.id" (click)="select(d)">
-                        <span class="post-row-title"><svg lucideLock class="icon-xs"></svg> {{ d.title || t().drafts.untitled }}</span>
+                    <button class="btn-ghost preset-new" (click)="newPreset()">+ {{ t().manager.forms.newPreset }}</button>
+                    @for (p of presets(); track p.id) {
+                    <button class="post-row" [class.on]="selectedPresetId() === p.id" (click)="selectPreset(p)">
+                        <span class="post-row-title">{{ p.name }}</span>
                     </button>
                     } @empty {
-                    <p class="hint">{{ t().manager.noPrivatePosts }}</p>
+                    <p class="hint">{{ t().manager.forms.noPresets }}</p>
                     }
                 </div>
+
                 <div class="post-detail">
-                    @if (selected(); as d) {
-                        @if (!d.isPrivate) {
-                        <p class="hint">{{ t().manager.forms.notPrivate }}</p>
-                        } @else if (registrationsLoading()) {
-                        <p class="hint">{{ t().common.loading }}</p>
-                        } @else {
-                        <label class="field-hint">
-                            <input type="checkbox" [checked]="!!regForm()" (change)="toggleForm()" [disabled]="regBusy()">
-                            {{ t().manager.forms.enable }}
-                        </label>
+                    @if (presetForm(); as form) {
+                    <div class="detail-field">
+                        <label>{{ t().manager.forms.presetName }}</label>
+                        <input class="chat-input" [(ngModel)]="presetName" (ngModelChange)="markPresetNameDirty()" maxlength="60">
+                    </div>
 
-                        @if (regForm(); as form) {
-                        <div class="form-editor">
-                            <input class="chat-input" [value]="form.intro ?? ''" (change)="setIntro($any($event.target).value)"
-                                   [placeholder]="t().manager.forms.introPlaceholder" maxlength="500">
-                            <div class="pill-row">
-                                <label class="field-hint"><input type="checkbox" [checked]="form.requireName" (change)="toggleFormField('requireName')"> {{ t().manager.forms.fieldName }}</label>
-                                <label class="field-hint"><input type="checkbox" [checked]="form.requireNickname" (change)="toggleFormField('requireNickname')"> {{ t().manager.forms.fieldNickname }}</label>
-                                <label class="field-hint"><input type="checkbox" [checked]="form.requireEmail" (change)="toggleFormField('requireEmail')"> {{ t().manager.forms.fieldEmail }}</label>
-                                <label class="field-hint"><input type="checkbox" [checked]="form.requireSocial" (change)="toggleFormField('requireSocial')"> {{ t().manager.forms.fieldSocial }}</label>
-                            </div>
-
-                            @for (q of form.questions; track q.id) {
-                            <div class="question-row">
-                                <input class="chat-input" [value]="q.label" (change)="updateQuestion(q.id, { label: $any($event.target).value })"
-                                       [placeholder]="t().manager.forms.questionPlaceholder" maxlength="200">
-                                <div class="pill-row">
-                                    <button class="pill" [class.on]="q.type === 'text'" (click)="setQuestionType(q.id, 'text')">{{ t().manager.forms.typeText }}</button>
-                                    <button class="pill" [class.on]="q.type === 'choice'" (click)="setQuestionType(q.id, 'choice')">{{ t().manager.forms.typeChoice }}</button>
-                                    <button class="pill" [class.on]="q.type === 'multi'" (click)="setQuestionType(q.id, 'multi')">{{ t().manager.forms.typeMulti }}</button>
-                                </div>
-                                @if (q.type === 'choice' || q.type === 'multi') {
-                                <input class="chat-input" [value]="questionOptionsText(q)" (change)="setQuestionOptions(q.id, $any($event.target).value)"
-                                       [placeholder]="t().manager.forms.optionsPlaceholder" maxlength="500">
-                                }
-                                <label class="field-hint">
-                                    <input type="checkbox" [checked]="!!q.required" (change)="updateQuestion(q.id, { required: !q.required })"> {{ t().manager.forms.required }}
-                                </label>
-                                <button class="btn-ghost danger" (click)="removeQuestion(q.id)">
-                                    <svg lucideTrash2 class="icon-sm"></svg> {{ t().manager.forms.removeQuestion }}
-                                </button>
-                            </div>
-                            }
-                            <div class="detail-actions">
-                                <button class="btn-ghost" (click)="addQuestion()">{{ t().manager.forms.addQuestion }}</button>
-                                <button class="btn-ghost danger" (click)="deleteForm()" [disabled]="regBusy()">{{ t().manager.forms.deleteForm }}</button>
-                            </div>
-
-                            <!--I9: edits used to persist silently on every keystroke, which left
-                            no way to tell whether the form had been saved. They wait for this
-                            button now; navigating away flushes rather than discards.-->
-                            <div class="form-save-row">
-                                <button class="btn-accent" (click)="saveForm()" [disabled]="formState() === 'saving' || formState() === 'saved'">
-                                    {{ t().common.save }}
-                                </button>
-                                <span class="form-save-state" [class.dirty]="formState() === 'dirty'" [class.error]="formState() === 'error'">
-                                    @switch (formState()) {
-                                        @case ('saved') { {{ t().manager.forms.saved }} }
-                                        @case ('saving') { {{ t().common.saving }} }
-                                        @case ('dirty') { {{ t().manager.forms.unsaved }} }
-                                        @case ('error') { {{ t().manager.errors.saveForm }} }
-                                    }
-                                </span>
-                            </div>
+                    <div class="form-editor">
+                        <input class="chat-input" [value]="form.intro ?? ''" (change)="setIntro($any($event.target).value)"
+                               [placeholder]="t().manager.forms.introPlaceholder" maxlength="500">
+                        <div class="pill-row">
+                            <label class="field-hint"><input type="checkbox" [checked]="form.requireName" (change)="togglePresetField('requireName')"> {{ t().manager.forms.fieldName }}</label>
+                            <label class="field-hint"><input type="checkbox" [checked]="form.requireNickname" (change)="togglePresetField('requireNickname')"> {{ t().manager.forms.fieldNickname }}</label>
+                            <label class="field-hint"><input type="checkbox" [checked]="form.requireEmail" (change)="togglePresetField('requireEmail')"> {{ t().manager.forms.fieldEmail }}</label>
+                            <label class="field-hint"><input type="checkbox" [checked]="form.requireSocial" (change)="togglePresetField('requireSocial')"> {{ t().manager.forms.fieldSocial }}</label>
                         </div>
 
+                        @for (q of form.questions; track q.id) {
+                        <div class="question-row">
+                            <input class="chat-input" [value]="q.label" (change)="updateQuestion(q.id, { label: $any($event.target).value })"
+                                   [placeholder]="t().manager.forms.questionPlaceholder" maxlength="200">
+                            <div class="pill-row">
+                                <button class="pill" [class.on]="q.type === 'text'" (click)="setQuestionType(q.id, 'text')">{{ t().manager.forms.typeText }}</button>
+                                <button class="pill" [class.on]="q.type === 'choice'" (click)="setQuestionType(q.id, 'choice')">{{ t().manager.forms.typeChoice }}</button>
+                                <button class="pill" [class.on]="q.type === 'multi'" (click)="setQuestionType(q.id, 'multi')">{{ t().manager.forms.typeMulti }}</button>
+                            </div>
+                            @if (q.type === 'choice' || q.type === 'multi') {
+                            <input class="chat-input" [value]="questionOptionsText(q)" (change)="setQuestionOptions(q.id, $any($event.target).value)"
+                                   [placeholder]="t().manager.forms.optionsPlaceholder" maxlength="500">
+                            }
+                            <label class="field-hint">
+                                <input type="checkbox" [checked]="!!q.required" (change)="updateQuestion(q.id, { required: !q.required })"> {{ t().manager.forms.required }}
+                            </label>
+                            <button class="btn-ghost danger" (click)="removeQuestion(q.id)">
+                                <svg lucideTrash2 class="icon-sm"></svg> {{ t().manager.forms.removeQuestion }}
+                            </button>
+                        </div>
                         }
-                        <!--I19: the answers and their distribution moved to the posts tab, where
-                        "what happened with this post" already lives. This tab keeps the form's
-                        definition — building it and reusing it — which is a different job.-->
-                        <p class="field-hint-inline">{{ t().manager.forms.answersMoved }}</p>
-                        }
-                    } @else {
-                    <p class="hint">{{ t().manager.pickPrivatePost }}</p>
-                    }
-                </div>
-            </div>
 
-            <!--I9: presets are their own thing — they exist independently of any post, so they
-            live outside the post/detail split and are managed without selecting anything. A
-            preset is copied onto a post at publish time, never linked, so editing one later
-            can't rewrite a post that already used it (N12).-->
-            <div class="preset-section">
-                <label>{{ t().manager.forms.presets }}</label>
-                <p class="field-hint-inline">{{ t().manager.forms.presetsHint }}</p>
-                @if (presets().length) {
-                <div class="pill-row">
-                    @for (p of presets(); track p.id) {
-                    <span class="preset-pill">
-                        <button class="pill" (click)="applyPreset(p)" [disabled]="regBusy() || !regForm()"
-                                [title]="regForm() ? t().manager.forms.applyPreset : t().manager.forms.applyPresetNeedsForm">{{ p.name }}</button>
-                        <button class="preset-x" (click)="deletePreset(p)" [title]="t().manager.forms.deletePreset">×</button>
-                    </span>
+                        <div class="detail-actions">
+                            <button class="btn-ghost" (click)="addQuestion()">{{ t().manager.forms.addQuestion }}</button>
+                            <button class="btn-ghost danger" (click)="deletePresetId.set(selectedPresetId())">{{ t().manager.forms.deletePreset }}</button>
+                        </div>
+
+                        <div class="form-save-row">
+                            <button class="btn-accent" (click)="savePreset()" [disabled]="presetState() === 'saving' || presetState() === 'saved'">
+                                {{ t().common.save }}
+                            </button>
+                            <span class="form-save-state" [class.dirty]="presetState() === 'dirty'" [class.error]="presetState() === 'error'">
+                                @switch (presetState()) {
+                                    @case ('saved') { {{ t().manager.forms.saved }} }
+                                    @case ('saving') { {{ t().common.saving }} }
+                                    @case ('dirty') { {{ t().manager.forms.unsaved }} }
+                                    @case ('error') { {{ t().manager.errors.savePreset }} }
+                                }
+                            </span>
+                        </div>
+                    </div>
+                    } @else {
+                    <p class="hint">{{ t().manager.forms.pickPreset }}</p>
                     }
                 </div>
-                } @else {
-                <p class="field-hint-inline">{{ t().manager.forms.noPresets }}</p>
-                }
-                @if (regForm()) {
-                <div class="preset-add">
-                    <input class="chat-input" [(ngModel)]="newPresetName" [placeholder]="t().manager.forms.presetNamePlaceholder" maxlength="60">
-                    <button class="btn-ghost" (click)="saveAsPreset()" [disabled]="regBusy() || !newPresetName.trim()">{{ t().manager.forms.savePreset }}</button>
-                </div>
-                } @else {
-                <p class="field-hint-inline">{{ t().manager.forms.presetNeedsForm }}</p>
-                }
             </div>
         }
     </div>
@@ -321,6 +317,18 @@
         <p>{{ t().drafts.deleteDraftBody }}</p>
         <button modal-actions class="btn-ghost" (click)="deleteConfirmId.set(null)">{{ t().common.cancel }}</button>
         <button modal-actions class="btn-accent" (click)="confirmDelete()">{{ t().common.delete }}</button>
+    </app-modal>
+    }
+
+    <!--A preset can be in use by published posts; deleting it doesn't touch them (it was copied,
+    not linked), but it is still not something to do on a stray click.-->
+    @if (deletePresetId()) {
+    <app-modal (closed)="deletePresetId.set(null)">
+        <svg modal-icon lucideTrash2 class="icon"></svg>
+        <span modal-title>{{ t().manager.forms.deletePreset }}</span>
+        <p>{{ t().manager.forms.deletePresetBody }}</p>
+        <button modal-actions class="btn-ghost" (click)="deletePresetId.set(null)">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-accent" (click)="confirmDeletePreset()">{{ t().common.delete }}</button>
     </app-modal>
     }
 </div>

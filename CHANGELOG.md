@@ -20,6 +20,24 @@ Two translation misses from the ADR-050 sweep: the paragraph-format dropdown's t
 
 Not started: IB5 (blog comment form). `dotnet test` 278/278, `ng build` clean. Nothing here is live-verified in a browser yet.
 
+### Posts Manager restructure and three Appearance-panel bugs
+
+Six items from Marty's live review of the previous deploy.
+
+**Forms stopped being a property of a post.** The Forms tab used to make you pick a private post and then edit *that post's* form, which framed a form as belonging to a post; it doesn't. The tab is now purely a form authoring screen — a list of forms on the left, one editor on the right, no post mentioned anywhere — and what it authors are presets. A post picks one on the Posts tab, where the preset is copied onto it (N12's rule, unchanged: editing a form later can't rewrite a post that already used it). Presets are created immediately rather than held as a local draft, since a preset with no id has nowhere to save to.
+
+The Posts tab gained the other half: a tag picker over the tags already in use instead of retyping them into a text field (the free-text input stays for tags that don't exist yet), and the form selector described above.
+
+**Feedback is grouped per post** with a per-group "show all". A flat stream answered "what's new" but not "what happened to this post", which is the question the tab exists for. Reactions needed a server-side split to do this — `/api/comments` now returns `reactionsByDraft` alongside the running total — and a post with reactions but no comments still gets a row, because 20 likes and no comments is exactly as worth seeing.
+
+**Three bugs in the day-old Appearance panel**, all found by Marty using it:
+
+- **Line height did nothing.** `.sheet` carries the preference as `--sheet-line-height`, but `.tiptap` — the element the text is actually in — hardcoded `line-height: 1.6` and silently won that cascade. It inherits now, which is how font-size was already written, and why *that* slider worked.
+- **Reordering groups within a toolbar row did nothing.** The layout model stored only which groups were in row 2, not their order, and the editor rendered them through a fixed chain of `@if` in hardcoded sequence — so dragging reordered a list nothing read. `ToolbarLayout` now carries both rows as ordered lists, the editor renders them by iterating that order, and a normalizer keeps stored layouts (which predate `row1Groups`) and any newly-added group from falling out of the toolbar.
+- **The reset button sat under the debug-console tab**, which is fixed to the bottom-right. The panel's scroll column gained enough bottom padding to clear it.
+
+Also removed the toolbar-customize button from the editor toolbar — it linked to `/settings#sec-toolbar`, an anchor that stopped existing when I14 moved that section into the panel.
+
 ### Audio clip names (I16) and the appearance panel (I14)
 
 **I16 turned out not to need a migration.** The plan recorded for it assumed a name field on `Asset`; the actual mechanism is `InputMediaAudio.Title`, which is what Telegram labels the player with — without it the player falls back to the filename in the URL, i.e. the generated `asset_<guid>.mp3`. And the name belongs to the *insertion*, not the file: the same asset can legitimately be posted twice under different names. So it's a `title` attribute on the TipTap `audio` node, carried through `RichAudioBlock` into the Blocks renderer, with a second input in the node view above the caption (title names the file in Telegram's player, caption is body text under it — two things that both looked like "the label"). Blank stays null rather than becoming an empty title, which would label the clip `""`. The blog shows it too, since a bare `<audio>` element there is exactly as anonymous, and it escapes like all author text.
