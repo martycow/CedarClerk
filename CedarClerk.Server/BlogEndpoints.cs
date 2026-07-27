@@ -1335,6 +1335,12 @@ public static class BlogEndpoints
         .comment-text { font-size: 14px; line-height: 1.5; }
         .reply-btn { align-self: flex-start; margin-top: 4px; background: none; border: none; color: var(--t3); font-size: 12px; font-family: inherit; cursor: pointer; padding: 0; }
         .reply-btn:hover { color: var(--accent); text-decoration: underline; }
+        /* IB5: a `display` rule beats the [hidden] attribute's default `display: none`, so both
+           the reply indicator and the load-more button below stayed on screen no matter what the
+           script set — the reply target looked impossible to clear, and "show more" was offered
+           when there was no more. One global rule rather than a per-class fix, so the next
+           element scripted through `hidden` doesn't reintroduce it. */
+        [hidden] { display: none !important; }
         .comment-reply-indicator { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--t3); margin: 0 0 8px; }
         .comment-reply-indicator .reply-target-name { font-weight: 600; color: var(--text); }
         .comment-reply-indicator .cancel-reply { background: none; border: 1px solid var(--border); border-radius: 999px; padding: 1px 9px; font-size: 11.5px; color: var(--t2); cursor: pointer; font-family: inherit; }
@@ -1358,11 +1364,16 @@ public static class BlogEndpoints
         .reg-submit:disabled { opacity: .6; cursor: default; }
         .reg-error { color: var(--danger); font-size: 13px; margin: 4px 0 0; }
 
+        /* IB5: was three stacked full-width rows (name, textarea, a full-width Send slab). The
+           comment box is a secondary element on the page, so it now leads with the textarea and
+           puts the optional name next to a normal-sized Send button on one row. */
         .comment-form { display: flex; flex-direction: column; gap: 8px; }
-        .comment-form input, .comment-form textarea { flex: 1; border: 1px solid var(--border); background: var(--sheet); color: var(--text); border-radius: 8px; padding: 9px 12px; font-size: 13.5px; font-family: inherit; outline: none; resize: vertical; }
+        .comment-form input, .comment-form textarea { border: 1px solid var(--border); background: var(--sheet); color: var(--text); border-radius: 8px; padding: 9px 12px; font-size: 13.5px; font-family: inherit; outline: none; }
+        .comment-form textarea { min-height: 62px; resize: vertical; }
         .comment-form input:focus, .comment-form textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--asoft); }
-        .comment-form .comment-author { width: 100%; }
-        .comment-form button { align-self: stretch; border: none; background: var(--accent); color: #F4F2EA; border-radius: 8px; padding: 9px 18px; font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: inherit; }
+        .comment-form-row { display: flex; gap: 8px; }
+        .comment-form-row .comment-author { flex: 1; min-width: 0; }
+        .comment-form button { flex: none; border: none; background: var(--accent); color: #F4F2EA; border-radius: 8px; padding: 9px 18px; font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: inherit; }
         .comment-form button:hover { filter: brightness(1.08); }
 
         .site-footer { border-top: 1px solid var(--border); background: var(--surface); }

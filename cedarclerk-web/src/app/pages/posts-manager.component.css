@@ -397,6 +397,46 @@
     margin-top: 8px;
 }
 
+/* I9 — presets moved out of the per-post form editor into their own block below the split, since
+   they exist independently of whichever post happens to be selected. */
+.preset-section {
+    margin-top: 18px;
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--sheet);
+}
+
+.preset-section label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--t2);
+    margin-bottom: 4px;
+}
+
+.form-save-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.form-save-state {
+    font-size: 12.5px;
+    color: var(--t3);
+}
+
+.form-save-state.dirty {
+    color: var(--accent);
+}
+
+.form-save-state.error {
+    color: var(--danger);
+}
+
 /* ---------- Answer distribution (N10) ---------- */
 .chart-block {
     margin-bottom: 16px;

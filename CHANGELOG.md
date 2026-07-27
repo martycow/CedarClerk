@@ -20,6 +20,16 @@ Two translation misses from the ADR-050 sweep: the paragraph-format dropdown's t
 
 Not started: IB5 (blog comment form). `dotnet test` 278/278, `ng build` clean. Nothing here is live-verified in a browser yet.
 
+### Blog comments (IB5) and form presets (I9)
+
+**The reply target that couldn't be cleared was a CSS bug, not a script bug.** `cancelReply()` was correct and wired correctly; `.comment-reply-indicator { display: flex }` simply overrides what the `[hidden]` attribute does, so the indicator stayed on screen whatever the script set. The same rule was quietly breaking a second thing nobody had reported: `.comment-load-more { display: block }` meant "show more comments" was offered even when there were none. Fixed once, globally, with `[hidden] { display: none !important }` in the blog stylesheet, so the next element scripted through `hidden` can't reintroduce it. This is the same shape as the paragraph-numbers bug from the day before — a stylesheet quietly defeating behaviour the code got right.
+
+The comment form was three stacked full-width rows (name, textarea, a full-width Send slab) for what is a secondary element on the page; it now leads with the textarea and puts the optional name next to a normal-sized Send button on one row. A renderer test pins the class names the page script queries — nothing at build time connects the markup in Core to the script in `BlogEndpoints`, so a layout edit is exactly the change that could quietly break posting a comment.
+
+**Form presets became independent (I9).** They were only reachable by first selecting a private post and opening its form, which contradicts what they are; they now live in their own block on the Forms tab, managed without any selection. Saving one still needs an open form to save *from*, and that half stays conditional with an explanation rather than a disabled control with no reason given.
+
+The form editor also stopped saving silently on every keystroke — the real complaint behind "непонятно, форма запостилась или нет". Edits mark the form dirty and an explicit Save button with a saved/unsaved/saving state commits them. Navigating away doesn't discard: switching post or leaving the tab flushes first, the same guard the editor already uses when switching drafts. Enabling or deleting a form still commits immediately, because that's structural rather than an edit — it changes what an uninvited visitor of the post gets. Finally, the export modal's preset row used to disappear entirely when no preset existed, leaving no hint they exist; it now carries an empty state linking to `/posts?tab=forms`, and the manager honours that `tab` query param.
+
 ### Migration chain collapsed, and a guard so drift can't recur
 
 Deploying the above surfaced real drift during the mandatory pre-deploy check: prod's `__EFMigrationsHistory` listed `AddDraftTranslationSourceSnapshot` and `AddBlogStatSnapshot`, but neither file existed in the repo any more — while their changes *had* survived in `CedarDbContextModelSnapshot.cs`. Production was fine (the columns and the table are physically there, verified directly rather than inferred from history rows), but the repo's migration set could no longer build the schema from scratch, so any fresh environment would have come up broken.

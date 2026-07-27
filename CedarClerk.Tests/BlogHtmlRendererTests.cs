@@ -430,6 +430,21 @@ public class BlogHtmlRendererTests
         Assert.Contains("data-kind=\"dislike\"", result);
     }
 
+    // The page script in BlogEndpoints hydrates the comment form by these exact class names, and
+    // nothing at build time connects the two — the IB5 layout change is the kind of edit that
+    // could quietly break posting a comment.
+    [Fact]
+    public void Comment_form_keeps_the_hooks_the_page_script_queries()
+    {
+        var html = CedarToBlogHtmlRenderer.AnnotationControlsHtml();
+        Assert.Contains("class=\"comment-parent-id\"", html);
+        Assert.Contains("class=\"comment-author\"", html);
+        Assert.Contains("<textarea class=\"comment-text\"", html);
+        Assert.Contains("class=\"cancel-reply\"", html);
+        Assert.Contains("class=\"comment-reply-indicator\" hidden", html);
+        Assert.Contains("class=\"comment-load-more\" hidden", html);
+    }
+
     [Fact]
     public void Escapes_annotation_id_in_attribute()
     {

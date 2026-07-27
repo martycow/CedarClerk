@@ -181,28 +181,21 @@
                                 <button class="btn-ghost danger" (click)="deleteForm()" [disabled]="regBusy()">{{ t().manager.forms.deleteForm }}</button>
                             </div>
 
-                            <div class="detail-divider"></div>
-
-                            <!--N12: a preset is copied onto the post, never linked, so editing it
-                            later can't rewrite a post that already uses it.-->
-                            <div class="detail-field">
-                                <label>{{ t().manager.forms.presets }}</label>
-                                @if (presets().length) {
-                                <div class="pill-row">
-                                    @for (p of presets(); track p.id) {
-                                    <span class="preset-pill">
-                                        <button class="pill" (click)="applyPreset(p)" [disabled]="regBusy()">{{ p.name }}</button>
-                                        <button class="preset-x" (click)="deletePreset(p)" [title]="t().manager.forms.deletePreset">×</button>
-                                    </span>
+                            <!--I9: edits used to persist silently on every keystroke, which left
+                            no way to tell whether the form had been saved. They wait for this
+                            button now; navigating away flushes rather than discards.-->
+                            <div class="form-save-row">
+                                <button class="btn-accent" (click)="saveForm()" [disabled]="formState() === 'saving' || formState() === 'saved'">
+                                    {{ t().common.save }}
+                                </button>
+                                <span class="form-save-state" [class.dirty]="formState() === 'dirty'" [class.error]="formState() === 'error'">
+                                    @switch (formState()) {
+                                        @case ('saved') { {{ t().manager.forms.saved }} }
+                                        @case ('saving') { {{ t().common.saving }} }
+                                        @case ('dirty') { {{ t().manager.forms.unsaved }} }
+                                        @case ('error') { {{ t().manager.errors.saveForm }} }
                                     }
-                                </div>
-                                } @else {
-                                <p class="field-hint-inline">{{ t().manager.forms.noPresets }}</p>
-                                }
-                                <div class="preset-add">
-                                    <input class="chat-input" [(ngModel)]="newPresetName" [placeholder]="t().manager.forms.presetNamePlaceholder" maxlength="60">
-                                    <button class="btn-ghost" (click)="saveAsPreset()" [disabled]="regBusy() || !newPresetName.trim()">{{ t().manager.forms.savePreset }}</button>
-                                </div>
+                                </span>
                             </div>
                         </div>
 
@@ -278,6 +271,36 @@
                     <p class="hint">{{ t().manager.pickPrivatePost }}</p>
                     }
                 </div>
+            </div>
+
+            <!--I9: presets are their own thing — they exist independently of any post, so they
+            live outside the post/detail split and are managed without selecting anything. A
+            preset is copied onto a post at publish time, never linked, so editing one later
+            can't rewrite a post that already used it (N12).-->
+            <div class="preset-section">
+                <label>{{ t().manager.forms.presets }}</label>
+                <p class="field-hint-inline">{{ t().manager.forms.presetsHint }}</p>
+                @if (presets().length) {
+                <div class="pill-row">
+                    @for (p of presets(); track p.id) {
+                    <span class="preset-pill">
+                        <button class="pill" (click)="applyPreset(p)" [disabled]="regBusy() || !regForm()"
+                                [title]="regForm() ? t().manager.forms.applyPreset : t().manager.forms.applyPresetNeedsForm">{{ p.name }}</button>
+                        <button class="preset-x" (click)="deletePreset(p)" [title]="t().manager.forms.deletePreset">×</button>
+                    </span>
+                    }
+                </div>
+                } @else {
+                <p class="field-hint-inline">{{ t().manager.forms.noPresets }}</p>
+                }
+                @if (regForm()) {
+                <div class="preset-add">
+                    <input class="chat-input" [(ngModel)]="newPresetName" [placeholder]="t().manager.forms.presetNamePlaceholder" maxlength="60">
+                    <button class="btn-ghost" (click)="saveAsPreset()" [disabled]="regBusy() || !newPresetName.trim()">{{ t().manager.forms.savePreset }}</button>
+                </div>
+                } @else {
+                <p class="field-hint-inline">{{ t().manager.forms.presetNeedsForm }}</p>
+                }
             </div>
         }
     </div>

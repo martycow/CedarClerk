@@ -230,6 +230,13 @@
                     <button class="chip" (click)="applyFormPreset(p)" [disabled]="regBusy()">{{ p.name }}</button>
                     }
                 </div>
+                } @else {
+                <!--I9: with no presets the row used to be simply absent, leaving no hint that
+                presets exist or where they're made.-->
+                <div class="reg-preset-row">
+                    <span class="field-hint-inline">{{ t().editor.exportModal.noPresets }}</span>
+                    <a class="state-link" routerLink="/posts" [queryParams]="{ tab: 'forms' }">{{ t().editor.exportModal.createPreset }}</a>
+                </div>
                 }
 
                 <!--Watermark (I7): private-only, because its job is discouraging redistribution

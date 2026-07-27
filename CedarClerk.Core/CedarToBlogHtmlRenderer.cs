@@ -300,9 +300,11 @@ public static class CedarToBlogHtmlRenderer
             <div class="comment-reply-indicator" hidden>{replyingTo} <span class="reply-target-name"></span> <button type="button" class="cancel-reply">{cancelReply}</button></div>
             <form class="comment-form">
             <input type="hidden" class="comment-parent-id" value="">
-            <input type="text" class="comment-author" placeholder="{namePlaceholder}" maxlength="60">
             <textarea class="comment-text" placeholder="{commentPlaceholder}" maxlength="2000" required></textarea>
+            <div class="comment-form-row">
+            <input type="text" class="comment-author" placeholder="{namePlaceholder}" maxlength="60">
             <button type="submit">{send}</button>
+            </div>
             </form>
             </div>
             """;

@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
 import {
@@ -25,6 +25,7 @@ import {
 } from '@lucide/angular';
 
 export type ManagerTab = 'posts' | 'feedback' | 'stats' | 'forms';
+const MANAGER_TABS: ManagerTab[] = ['posts', 'feedback', 'stats', 'forms'];
 
 // N7 — the Posts Manager. Comments/reactions and stats used to be two separate top-level pages
 // with their own headers; they are now tab bodies here (their routes redirect), so there is one
@@ -46,6 +47,7 @@ export class PostsManagerComponent implements OnInit {
     private draftsApi = inject(DraftsService);
     private presetsApi = inject(FormPresetsService);
     private router = inject(Router);
+    private route = inject(ActivatedRoute);
     feedback = inject(CommentsService);
     t = inject(LocaleService).t;
 
@@ -76,6 +78,11 @@ export class PostsManagerComponent implements OnInit {
     presets = signal<FormPreset[]>([]);
     newPresetName = '';
 
+    // I9 — the form editor used to persist silently on every keystroke/toggle, which left no way
+    // to tell whether anything had been saved. Edits now mark the form dirty and an explicit Save
+    // button commits them; switching post or leaving the tab flushes first, so nothing is lost.
+    formState = signal<'saved' | 'dirty' | 'saving' | 'error'>('saved');
+
     async ngOnInit() {
         this.feedback.refreshNewCount();
         try {
@@ -87,14 +94,21 @@ export class PostsManagerComponent implements OnInit {
         } finally {
             this.loading.set(false);
         }
+        // The export modal links straight here when no preset exists yet (I9), so land on the
+        // tab that was asked for rather than on the default one.
+        const requested = this.route.snapshot.queryParamMap.get('tab');
+        if (requested && MANAGER_TABS.includes(requested as ManagerTab)) this.setTab(requested as ManagerTab);
     }
 
     setTab(tab: ManagerTab) {
         // Leaving the feedback tab is when its badge is worth re-checking: hovering rows there
         // is exactly what clears the count.
         if (this.tab() === 'feedback' && tab !== 'feedback') this.feedback.refreshNewCount();
+        // Leaving the forms tab with unsaved edits commits them rather than dropping them (I9).
+        if (this.tab() === 'forms' && tab !== 'forms') this.flushForm();
         this.tab.set(tab);
         if (tab === 'forms') {
+            // Presets are independent of any post, so they load with the tab, not with a selection.
             if (!this.presets().length) this.loadPresets();
             if (this.selected()?.isPrivate) this.loadForm();
         }
@@ -110,12 +124,15 @@ export class PostsManagerComponent implements OnInit {
         return id ? this.drafts().find(d => d.id === id) ?? null : null;
     }
 
-    select(d: DraftMeta) {
+    async select(d: DraftMeta) {
+        // Same guard the editor uses when switching drafts: commit before the form is replaced.
+        await this.flushForm();
         this.selectedId.set(d.id);
         this.editTitle = d.title;
         this.editTags = d.tags;
         this.registrations.set([]);
         this.regForm.set(null);
+        this.formState.set('saved');
         if (this.tab() === 'forms' && d.isPrivate) this.loadForm();
     }
 
@@ -253,6 +270,7 @@ export class PostsManagerComponent implements OnInit {
                 this.draftsApi.listRegistrations(d.id),
             ]);
             this.regForm.set(parseRegistrationForm(full.registrationFormJson));
+            this.formState.set('saved');
             this.registrations.set(regs);
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().manager.errors.loadForm));
@@ -261,22 +279,42 @@ export class PostsManagerComponent implements OnInit {
         }
     }
 
-    // The definition is small and always fully in hand, so every edit persists the whole blob —
-    // same reasoning as the editor's original version of this.
+    // The definition is small and always fully in hand, so a save writes the whole blob — same
+    // reasoning as the editor's original version of this.
     private async persistForm() {
         const d = this.selected();
         if (!d) return;
         this.regBusy.set(true);
+        this.formState.set('saving');
         try {
             const form = this.regForm();
             await this.draftsApi.setRegistrationForm(d.id, form ? JSON.stringify(form) : null);
+            this.formState.set('saved');
         } catch (e) {
+            this.formState.set('error');
             this.error.set(httpErrorMessage(e, this.t().manager.errors.saveForm));
         } finally {
             this.regBusy.set(false);
         }
     }
 
+    // Every field edit routes through here (I9): change the blob, mark it dirty, wait for Save.
+    private editForm(next: RegistrationForm | null) {
+        this.regForm.set(next);
+        this.formState.set('dirty');
+    }
+
+    async saveForm() {
+        await this.persistForm();
+    }
+
+    // Called before anything that would navigate away from the current form.
+    private async flushForm() {
+        if (this.formState() === 'dirty') await this.persistForm();
+    }
+
+    // Turning the form on/off is structural rather than an edit — it changes what the public page
+    // does with an uninvited visitor, so it commits straight away instead of waiting for Save.
     async toggleForm() {
         this.regForm.set(this.regForm()
             ? null
@@ -289,41 +327,35 @@ export class PostsManagerComponent implements OnInit {
         await this.persistForm();
     }
 
-    async toggleFormField(field: 'requireName' | 'requireNickname' | 'requireEmail' | 'requireSocial') {
+    toggleFormField(field: 'requireName' | 'requireNickname' | 'requireEmail' | 'requireSocial') {
         const form = this.regForm();
         if (!form) return;
-        this.regForm.set({ ...form, [field]: !form[field] });
-        await this.persistForm();
+        this.editForm({ ...form, [field]: !form[field] });
     }
 
-    async setIntro(intro: string) {
+    setIntro(intro: string) {
         const form = this.regForm();
         if (!form) return;
-        this.regForm.set({ ...form, intro: intro.trim() || undefined });
-        await this.persistForm();
+        this.editForm({ ...form, intro: intro.trim() || undefined });
     }
 
     addQuestion() {
         const form = this.regForm();
         if (!form) return;
         const q: RegistrationQuestion = { id: `q${Date.now()}`, label: '', type: 'text', required: false };
-        // Not persisted yet: an unlabelled question is dropped by the parser anyway, so it saves
-        // once the label is typed.
-        this.regForm.set({ ...form, questions: [...form.questions, q] });
+        this.editForm({ ...form, questions: [...form.questions, q] });
     }
 
-    async updateQuestion(id: string, patch: Partial<RegistrationQuestion>) {
+    updateQuestion(id: string, patch: Partial<RegistrationQuestion>) {
         const form = this.regForm();
         if (!form) return;
-        this.regForm.set({ ...form, questions: form.questions.map(q => q.id === id ? { ...q, ...patch } : q) });
-        await this.persistForm();
+        this.editForm({ ...form, questions: form.questions.map(q => q.id === id ? { ...q, ...patch } : q) });
     }
 
-    async removeQuestion(id: string) {
+    removeQuestion(id: string) {
         const form = this.regForm();
         if (!form) return;
-        this.regForm.set({ ...form, questions: form.questions.filter(q => q.id !== id) });
-        await this.persistForm();
+        this.editForm({ ...form, questions: form.questions.filter(q => q.id !== id) });
     }
 
     setQuestionType(id: string, type: RegistrationQuestionType) {
