@@ -17,6 +17,9 @@ public static class AdminEndpoints
     public record SetPlanRequest(string Tier, DateTime? ExpiresAt);
     public record SetLockedRequest(bool Locked);
     public record SetAdminRequest(bool IsAdmin);
+    public record CreateInviteRequest(string Code, string? Label, DateTime? ExpiresAt, int? MaxUses);
+    public record SetActiveRequest(bool IsActive);
+    public record SetUserInviteRequest(Guid? InviteCodeId);
 
     // Every mutation goes through here. Takes the actor and target so the row reads correctly
     // later without joining to anything that might have changed since.
@@ -58,7 +61,7 @@ public static class AdminEndpoints
                 .OrderBy(u => u.CreatedAt)
                 .Select(u => new
                 {
-                    u.Id, u.Email, u.CreatedAt, u.IsAdmin,
+                    u.Id, u.Email, u.CreatedAt, u.IsAdmin, u.InviteCodeId,
                     u.PlanTier, u.PlanExpiresAt, u.TrialUsedAt,
                     u.TelegramUsername,
                     u.LockoutEnd,
@@ -79,6 +82,7 @@ public static class AdminEndpoints
                 u.Email,
                 u.CreatedAt,
                 u.IsAdmin,
+                u.InviteCodeId,
                 // The stored tier and the tier that's actually in force differ once a paid plan
                 // lapses — the list has to show what the user really has right now.
                 PlanTier = u.PlanTier.ToString(),
@@ -187,6 +191,93 @@ public static class AdminEndpoints
             Audit(db, actor, req.IsAdmin ? "grant-admin" : "revoke-admin", target);
             await db.SaveChangesAsync();
             return Results.Ok(new { target.IsAdmin });
+        });
+
+        // ---------- Step 3: invite codes ----------
+
+        group.MapGet("/invites", async (CedarDbContext db) =>
+        {
+            var codes = await db.InviteCodes.OrderByDescending(c => c.CreatedAt).ToListAsync();
+            // Who actually came in on each code. Counted from the users table rather than trusting
+            // InviteCode.Uses — that counter can only ever drift, this can't.
+            var joined = await db.Users.Where(u => u.InviteCodeId != null)
+                .GroupBy(u => u.InviteCodeId!.Value)
+                .Select(g => new { CodeId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.CodeId, x => x.Count);
+
+            var now = DateTime.UtcNow;
+            return Results.Ok(codes.Select(c => new
+            {
+                c.Id, c.Code, c.Label, c.IsActive, c.ExpiresAt, c.MaxUses, c.Uses, c.CreatedAt,
+                Joined = joined.GetValueOrDefault(c.Id),
+                // Same shared predicate registration uses, so the panel can never claim a code
+                // is usable when registration would refuse it (or the reverse).
+                IsUsable = InviteCodeRules.IsUsable(c.IsActive, c.ExpiresAt, c.MaxUses, c.Uses, now),
+            }));
+        });
+
+        group.MapPost("/invites", async (CreateInviteRequest req,
+            ClaimsPrincipal principal, UserManager<ApplicationUser> users, CedarDbContext db) =>
+        {
+            var value = req.Code?.Trim() ?? "";
+            if (value.Length < Consts.Admin.MinInviteCodeLength)
+                return Results.BadRequest(new { error = $"Code must be at least {Consts.Admin.MinInviteCodeLength} characters" });
+            if (await db.InviteCodes.AnyAsync(c => c.Code.ToLower() == value.ToLower()))
+                return Results.BadRequest(new { error = "That code already exists" });
+
+            var actor = (await users.GetUserAsync(principal))!;
+            var code = new InviteCode
+            {
+                Code = value,
+                Label = req.Label?.Trim() ?? "",
+                ExpiresAt = req.ExpiresAt,
+                MaxUses = req.MaxUses is > 0 ? req.MaxUses : null,
+            };
+            db.InviteCodes.Add(code);
+            Audit(db, actor, "invite-create", details: $"{value} ({code.Label})");
+            await db.SaveChangesAsync();
+            return Results.Ok(new { code.Id, code.Code });
+        });
+
+        // Deactivate rather than delete: users point at this row, and removing it would silently
+        // erase the attribution of everyone who joined through it.
+        group.MapPost("/invites/{id:guid}/active", async (Guid id, SetActiveRequest req,
+            ClaimsPrincipal principal, UserManager<ApplicationUser> users, CedarDbContext db) =>
+        {
+            var actor = (await users.GetUserAsync(principal))!;
+            var code = await db.InviteCodes.FirstOrDefaultAsync(c => c.Id == id);
+            if (code is null) return Results.NotFound();
+
+            code.IsActive = req.IsActive;
+            Audit(db, actor, req.IsActive ? "invite-enable" : "invite-disable", details: code.Code);
+            await db.SaveChangesAsync();
+            return Results.Ok(new { code.IsActive });
+        });
+
+        // Manual attribution (Marty's answer 4). Accounts that predate invite tracking, or came in
+        // through the config fallback, have no recoverable code — this is the one-off fix so they
+        // don't read "unknown" forever. Null clears it back to unknown.
+        group.MapPost("/users/{id}/invite", async (string id, SetUserInviteRequest req,
+            ClaimsPrincipal principal, UserManager<ApplicationUser> users, CedarDbContext db) =>
+        {
+            var actor = (await users.GetUserAsync(principal))!;
+            var target = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
+            if (target is null) return Results.NotFound();
+
+            string detail = "cleared";
+            if (req.InviteCodeId is { } codeId)
+            {
+                var code = await db.InviteCodes.FirstOrDefaultAsync(c => c.Id == codeId);
+                if (code is null) return Results.BadRequest(new { error = "No such invite code" });
+                detail = code.Code;
+            }
+
+            target.InviteCodeId = req.InviteCodeId;
+            // Flagged as manual in the log: this is an admin's assertion about history, not
+            // something the system observed, and a year from now that distinction matters.
+            Audit(db, actor, "invite-attribute", target, $"{detail} (set by hand)");
+            await db.SaveChangesAsync();
+            return Results.Ok(new { target.InviteCodeId });
         });
 
         // Newest first, capped: this grows forever and nothing pages it yet.

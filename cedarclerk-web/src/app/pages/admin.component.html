@@ -121,9 +121,65 @@
                     </button>
                 </div>
 
+                <div class="action-group">
+                    <label>{{ t().admin.invites.attribution }}</label>
+                    <div class="action-row">
+                        <select [value]="u.inviteCodeId ?? ''" (change)="attribute(u, $any($event.target).value)" [disabled]="busy()">
+                            <option value="">{{ t().admin.invites.unknownOrigin }}</option>
+                            @for (c of invites(); track c.id) { <option [value]="c.id">{{ c.code }}</option> }
+                        </select>
+                    </div>
+                    <!--Only meaningful for accounts that predate invite tracking; for everyone
+                    else this is already recorded at registration.-->
+                    <p class="field-hint-inline">{{ t().admin.invites.attributionHint }}</p>
+                </div>
+
                 <p class="field-hint-inline">{{ t().admin.actions.noDeleteNote }}</p>
             </div>
             }
+            }
+        </div>
+
+        <h2 class="admin-section-title audit-title">{{ t().admin.invites.title }}</h2>
+
+        <div class="invite-new">
+            <input [(ngModel)]="newCode" [placeholder]="t().admin.invites.codePlaceholder" maxlength="60">
+            <input [(ngModel)]="newLabel" [placeholder]="t().admin.invites.labelPlaceholder" maxlength="60">
+            <input type="date" [(ngModel)]="newExpiresAt" [title]="t().admin.invites.expiresHint">
+            <input type="number" min="1" [(ngModel)]="newMaxUses" [placeholder]="t().admin.invites.maxUsesPlaceholder">
+            <button class="btn-accent" (click)="createInvite()" [disabled]="busy() || !newCode.trim()">
+                {{ t().admin.invites.create }}
+            </button>
+        </div>
+        <p class="field-hint-inline invite-hint">{{ t().admin.invites.blanksHint }}</p>
+
+        <div class="user-table invite-table">
+            <div class="invite-row head">
+                <span>{{ t().admin.invites.code }}</span>
+                <span>{{ t().admin.invites.label }}</span>
+                <span>{{ t().admin.invites.usage }}</span>
+                <span>{{ t().admin.invites.expires }}</span>
+                <span></span>
+            </div>
+            @for (c of invites(); track c.id) {
+            <div class="invite-row">
+                <span class="user-email">
+                    {{ c.code }}
+                    @if (!c.isUsable) { <span class="chip warn">{{ t().admin.invites.notUsable }}</span> }
+                </span>
+                <span class="muted">{{ c.label || '—' }}</span>
+                <!--Joined is counted from accounts; uses is the code's own counter. They agree
+                unless something went wrong, which is worth being able to see.-->
+                <span class="muted">{{ t().admin.invites.usageValue(c.joined, c.maxUses) }}</span>
+                <span class="muted">{{ c.expiresAt ? (c.expiresAt | date:'d MMM yyyy') : t().admin.invites.noExpiry }}</span>
+                <span>
+                    <button class="btn-ghost" (click)="toggleInvite(c)" [disabled]="busy()">
+                        {{ c.isActive ? t().admin.invites.disable : t().admin.invites.enable }}
+                    </button>
+                </span>
+            </div>
+            } @empty {
+            <p class="hint invite-empty">{{ t().admin.invites.none }}</p>
             }
         </div>
 

@@ -173,6 +173,9 @@ public static class Consts
         // The audit log grows without bound and nothing pages it yet — this is what the panel
         // shows, not what is kept.
         public const int AuditPageSize = 100;
+
+        // Short enough to type from a message, long enough not to be guessed off a public page.
+        public const int MinInviteCodeLength = 6;
     }
 
     // Watermark tiled over a private post's blog page (I7).

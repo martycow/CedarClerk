@@ -36,6 +36,16 @@ The page itself is the shell plus what's already knowable — headline counts an
 
 **Nothing here is covered by automated tests** — the project has no HTTP-level integration tests, so the gate was verified by reading and needs a live check: a non-admin should get 404 from `/api/admin/users` and a redirect from `/admin`. And `Cedar:AdminEmail` has to be set on the Pi before the panel is reachable in production (`docs/integrations-setup.md` §3b).
 
+### Admin panel Step 3 — real invite codes
+
+Registration checked one shared string from configuration; it now looks up a real `InviteCode` row first and falls back to `Cedar:InviteCode`, which stays deliberately, so a database problem can't lock registration out entirely. Codes carry a label, an optional expiry and an optional use cap, and a limited code's use is counted **after** the account is actually created — a failed registration shouldn't burn one.
+
+Codes are **deactivated, never deleted**. Accounts point at the row through the new `ApplicationUser.InviteCodeId`, so deleting a code would silently erase the attribution of everyone who joined through it — the same reasoning that keeps user deletion out of the panel entirely.
+
+Attribution can also be **set by hand**, which is the answer to the problem found during scoping: the two pre-existing accounts came in on the shared config code and there is no record of it, so it can never be recovered automatically. The audit entry says "set by hand" — an admin's assertion about history should not read the same as something the system observed.
+
+The "is this code still usable" test briefly existed twice, in registration and in the panel's display flag. That's the shape of bug where the copy that drifts is the one guarding registration, so it moved into `CedarClerk.Core/InviteCodeRules.cs` with tests pinning the edges that actually matter: a cap of 5 admits exactly five accounts, and an expiry closes the code at the instant itself rather than a tick later. 308 tests green.
+
 ### Admin panel Step 2 — user management, with the audit log built in
 
 Per-user actions on an expanded row: set plan tier and expiry, reset trial, lock/unlock, grant/revoke admin. Locking uses Identity's own `LockoutEnd`, so the ordinary sign-in path enforces it and there is no custom check to get wrong. A blank expiry on a paid tier is a manual grant that never expires — reusing the meaning `ApplicationUser` already documents rather than inventing a second convention for the same field.

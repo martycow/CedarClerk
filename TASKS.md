@@ -8,7 +8,8 @@ Scoped in `docs/admin-panel-scope.md` (decisions and build order are recorded th
 - [ ] **Before it works in production: set `Cedar:AdminEmail=cedarworks@mooexe.dev` on the Pi** — see `docs/integrations-setup.md` §3b. Without it nobody is an admin and the panel is unreachable by design
 - [ ] Live-verify the gate: as a non-admin, `/api/admin/users` must 404 and `/admin` must redirect. No automated test covers this — the project has no HTTP-level integration tests
 - [x] **Step 2 done 27.07.2026** — plan/expiry, reset trial, lock/unlock, grant/revoke admin, all self-targeting refused server-side. The **audit log was built with it** rather than deferred (new `AdminAuditEntry` table): a log that starts halfway through is missing exactly what someone would look for
-- [ ] Steps 3–5 (invite codes, cross-owner posts, reporting) — not started. Step 3 carries the manual-attribution affordance for the two accounts that predate invite tracking
+- [x] **Step 3 done 27.07.2026** — real `InviteCode` entity, `ApplicationUser.InviteCodeId`, registration switched to look codes up with `Cedar:InviteCode` kept as the fallback, codes deactivated-not-deleted, and manual attribution for the accounts that predate tracking. Shared usability predicate in `CedarClerk.Core/InviteCodeRules.cs` with tests
+- [ ] Steps 4–5 (cross-owner posts read-only, reporting) — not started
 
 ## Phase 9d — live-review fixes (27.07.2026, done)
 Six items from Marty's browser review of 0.9.2: Posts-tab tag picker, per-post form selection, feedback grouped by post, Forms tab reduced to preset authoring only, the stale toolbar-customize button removed, and three Appearance-panel bugs (line height overridden by `.tiptap`, toolbar group order never stored or read, reset button under the debug-console tab). See `docs/ROADMAP.md` Phase 9d.

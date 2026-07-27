@@ -16,6 +16,13 @@ public class ApplicationUser : IdentityUser
     /// </summary>
     public bool IsAdmin { get; set; }
 
+    /// <summary>
+    /// Which invite code this account registered through (IF2, step 3). Null for accounts created
+    /// before codes existed, or through the config fallback — that attribution genuinely cannot be
+    /// recovered, so an admin can set it by hand instead of it reading "unknown" forever.
+    /// </summary>
+    public Guid? InviteCodeId { get; set; }
+
     public PlanTiers PlanTier { get; set; } = PlanTiers.Free;
 
     /// <summary>
@@ -97,6 +104,27 @@ public class ApplicationUser : IdentityUser
     // ordered by date anyway, so a watermark answers the same question without a row per comment.
     // Null means nothing has been marked seen yet, so everything reads as new.
     public DateTime? FeedbackSeenAt { get; set; }
+}
+
+// Real invite codes (IF2, step 3). Registration used to check one shared string from config
+// (Cedar:InviteCode), which is kept as a fallback so a database problem can't lock registration
+// out entirely — see docs/admin-panel-scope.md.
+//
+// Codes are DEACTIVATED, never deleted: ApplicationUser.InviteCodeId points here, and deleting a
+// row would silently erase the attribution of everyone who joined through it.
+public class InviteCode
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    /// <summary>The string typed at registration. Compared case-insensitively.</summary>
+    public string Code { get; set; } = "";
+    /// <summary>What this code is for ("Twitter launch", "for Sasha") — admin's own note.</summary>
+    public string Label { get; set; } = "";
+    public bool IsActive { get; set; } = true;
+    public DateTime? ExpiresAt { get; set; }
+    /// <summary>Null = unlimited. Uses are counted even after the cap, for the record.</summary>
+    public int? MaxUses { get; set; }
+    public int Uses { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 // Every state-changing action taken from the admin panel (IF2, step 2). Written from the start

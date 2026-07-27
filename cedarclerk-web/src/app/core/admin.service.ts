@@ -10,6 +10,8 @@ export interface AdminUser {
     email: string | null;
     createdAt: string;
     isAdmin: boolean;
+    // Null for accounts that predate invite tracking or used the config fallback.
+    inviteCodeId: string | null;
     planTier: string;
     // What the account effectively has right now: a lapsed paid plan reads as Free here while
     // planTier still says what was bought.
@@ -32,6 +34,21 @@ export interface AdminSummary {
     reactions: number;
     channels: number;
     storageBytes: number;
+}
+
+export interface AdminInviteCode {
+    id: string;
+    code: string;
+    label: string;
+    isActive: boolean;
+    expiresAt: string | null;
+    maxUses: number | null;
+    uses: number;
+    createdAt: string;
+    // Counted from the users table, not from `uses` — that counter can only drift, this can't.
+    joined: number;
+    // Active AND not expired AND under its cap, resolved server-side so the UI doesn't re-derive it.
+    isUsable: boolean;
 }
 
 export interface AdminAuditEntry {
@@ -76,5 +93,24 @@ export class AdminService {
 
     setAdmin(userId: string, isAdmin: boolean) {
         return firstValueFrom(this.http.post(`/api/admin/users/${userId}/admin`, { isAdmin }));
+    }
+
+    listInvites() {
+        return firstValueFrom(this.http.get<AdminInviteCode[]>('/api/admin/invites'));
+    }
+
+    createInvite(code: string, label: string, expiresAt: string | null, maxUses: number | null) {
+        return firstValueFrom(this.http.post('/api/admin/invites', { code, label, expiresAt, maxUses }));
+    }
+
+    // Deactivate, never delete: accounts point at the code row, and removing it would erase
+    // their attribution.
+    setInviteActive(id: string, isActive: boolean) {
+        return firstValueFrom(this.http.post(`/api/admin/invites/${id}/active`, { isActive }));
+    }
+
+    // Manual attribution for accounts that predate invite tracking. Null clears it.
+    setUserInvite(userId: string, inviteCodeId: string | null) {
+        return firstValueFrom(this.http.post(`/api/admin/users/${userId}/invite`, { inviteCodeId }));
     }
 }

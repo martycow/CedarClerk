@@ -316,3 +316,62 @@
 .audit-action {
     font-weight: 600;
 }
+
+/* ---------- Step 3: invite codes ---------- */
+.invite-new {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.invite-new input {
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    color: var(--text);
+    border-radius: var(--radius-md);
+    padding: 6px 10px;
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.invite-new input[type="number"] {
+    width: 110px;
+}
+
+.invite-hint {
+    margin: 0 0 12px;
+}
+
+.invite-table {
+    margin-bottom: 8px;
+}
+
+.invite-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 1.4fr) 120px 140px 130px;
+    gap: 12px;
+    align-items: center;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    min-width: 780px;
+}
+
+.invite-row:last-child {
+    border-bottom: none;
+}
+
+.invite-row.head {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--t3);
+    background: var(--alt);
+}
+
+.invite-empty {
+    padding: 14px 16px;
+    margin: 0;
+}

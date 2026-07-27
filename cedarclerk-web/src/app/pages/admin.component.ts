@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { AdminService, AdminAuditEntry, AdminSummary, AdminUser } from '../core/admin.service';
+import { AdminService, AdminAuditEntry, AdminInviteCode, AdminSummary, AdminUser } from '../core/admin.service';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -30,6 +30,13 @@ export class AdminComponent implements OnInit {
     users = signal<AdminUser[]>([]);
     summary = signal<AdminSummary | null>(null);
     audit = signal<AdminAuditEntry[]>([]);
+    invites = signal<AdminInviteCode[]>([]);
+
+    // Step 3 — new code form.
+    newCode = '';
+    newLabel = '';
+    newExpiresAt = '';
+    newMaxUses: number | null = null;
 
     // Step 2 — one expanded row at a time; the actions are destructive-adjacent enough that
     // having six accounts' worth of controls on screen at once invites a misclick.
@@ -46,12 +53,13 @@ export class AdminComponent implements OnInit {
 
     private async reload() {
         try {
-            const [users, summary, audit] = await Promise.all([
-                this.api.listUsers(), this.api.summary(), this.api.audit(),
+            const [users, summary, audit, invites] = await Promise.all([
+                this.api.listUsers(), this.api.summary(), this.api.audit(), this.api.listInvites(),
             ]);
             this.users.set(users);
             this.summary.set(summary);
             this.audit.set(audit);
+            this.invites.set(invites);
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().admin.loadFailed));
         }
@@ -109,6 +117,35 @@ export class AdminComponent implements OnInit {
 
     toggleAdmin(u: AdminUser) {
         return this.run(() => this.api.setAdmin(u.id, !u.isAdmin));
+    }
+
+    // ---------- Step 3: invite codes ----------
+
+    createInvite() {
+        const code = this.newCode.trim();
+        if (!code) return Promise.resolve();
+        const expiry = this.newExpiresAt ? new Date(`${this.newExpiresAt}T23:59:59Z`).toISOString() : null;
+        return this.run(async () => {
+            await this.api.createInvite(code, this.newLabel.trim(), expiry, this.newMaxUses);
+            this.newCode = '';
+            this.newLabel = '';
+            this.newExpiresAt = '';
+            this.newMaxUses = null;
+        });
+    }
+
+    toggleInvite(c: AdminInviteCode) {
+        return this.run(() => this.api.setInviteActive(c.id, !c.isActive));
+    }
+
+    inviteLabel(u: AdminUser): string {
+        if (!u.inviteCodeId) return this.t().admin.invites.unknownOrigin;
+        return this.invites().find(c => c.id === u.inviteCodeId)?.code ?? this.t().admin.invites.unknownOrigin;
+    }
+
+    // The one-off fix for accounts that predate invite tracking (Marty's answer 4).
+    attribute(u: AdminUser, codeId: string) {
+        return this.run(() => this.api.setUserInvite(u.id, codeId || null));
     }
 
     // Bytes are the honest unit server-side; nobody reads a raw byte count.

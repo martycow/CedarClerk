@@ -42,22 +42,44 @@ public static class AuthEndpoints
         var groupBuilder = app.MapGroup("/api/auth");
 
         #region Register
-        groupBuilder.MapPost("/register", async (RegisterRequest req, UserManager<ApplicationUser> users, IConfiguration cfg) =>
+        groupBuilder.MapPost("/register", async (RegisterRequest req, UserManager<ApplicationUser> users, IConfiguration cfg, CedarDbContext db) =>
         {
-            var invite = cfg[Consts.General.InviteCodeCfg];
-            if (string.IsNullOrEmpty(invite) || req.InviteCode != invite)
+            var submitted = req.InviteCode?.Trim() ?? "";
+
+            // Real invite codes first (IF2 step 3), config code as the fallback — deliberately
+            // kept, so a database problem can't lock registration out entirely.
+            var now = DateTime.UtcNow;
+            var code = await db.InviteCodes.FirstOrDefaultAsync(c => c.Code.ToLower() == submitted.ToLower());
+            var codeUsable = code is not null
+                && InviteCodeRules.IsUsable(code.IsActive, code.ExpiresAt, code.MaxUses, code.Uses, now);
+
+            var configInvite = cfg[Consts.General.InviteCodeCfg];
+            var configMatches = !string.IsNullOrEmpty(configInvite) && submitted == configInvite;
+
+            if (!codeUsable && !configMatches)
                 return Results.BadRequest(new { error = "Invalid invite code" });
 
             var user = new ApplicationUser
             {
-                UserName = req.Email, 
-                Email = req.Email
+                UserName = req.Email,
+                Email = req.Email,
+                // Null when the config fallback was used: there is no code row to point at, and
+                // inventing one would make the attribution list lie.
+                InviteCodeId = codeUsable ? code!.Id : null,
             };
-            
+
             var result = await users.CreateAsync(user, req.Password);
-            return result.Succeeded
-                ? Results.Ok(new { message = "Registered" })
-                : Results.BadRequest(new { errors = result.Errors.Select(e => e.Description) });
+            if (!result.Succeeded)
+                return Results.BadRequest(new { errors = result.Errors.Select(e => e.Description) });
+
+            // Counted only after the account actually exists — a failed registration shouldn't
+            // burn a use off a limited code.
+            if (codeUsable)
+            {
+                code!.Uses++;
+                await db.SaveChangesAsync();
+            }
+            return Results.Ok(new { message = "Registered" });
         });
         #endregion
 
