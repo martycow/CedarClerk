@@ -1,0 +1,53 @@
+<ng-template #cloud>
+    @if (mostUsed().length) {
+    <div class="tag-cloud-section">
+        <span class="tb-caption">{{ t().editor.tags.mostUsed }}</span>
+        <div class="tag-cloud">
+            @for (u of mostUsed(); track u.tag) {
+            <button class="tag-pill" [class.on]="has(u.tag)" (click)="toggle(u.tag)">
+                #{{ u.tag }} <span class="tag-pill-count">{{ u.count }}</span>
+            </button>
+            }
+        </div>
+    </div>
+    }
+    @if (rest().length) {
+    <div class="tag-cloud-section">
+        <span class="tb-caption">{{ t().editor.tags.everythingElse }}</span>
+        <div class="tag-cloud">
+            @for (u of rest(); track u.tag) {
+            <button class="tag-pill" [class.on]="has(u.tag)" (click)="toggle(u.tag)">#{{ u.tag }}</button>
+            }
+        </div>
+    </div>
+    }
+    <input class="tag-new-input" [(ngModel)]="newTag" (keydown.enter)="add()"
+           [placeholder]="t().editor.tags.newPlaceholder" maxlength="30">
+</ng-template>
+
+<!--Inline for hosts that can't carry a popover — see the note in folder-picker.component.html.-->
+@if (inline()) {
+<div class="tag-cloud-popover inline">
+    @if (tags().length) {
+    <div class="tag-row">
+        @for (tag of tags(); track tag) {
+        <span class="tag-chip">#{{ tag }}<button class="tag-x" (click)="remove(tag)" [title]="t().editor.tags.remove">×</button></span>
+        }
+    </div>
+    }
+    <ng-container [ngTemplateOutlet]="cloud"></ng-container>
+</div>
+} @else {
+<div class="tag-row">
+    <!--Loop variable is `tag`, not `t` — `t` is the dictionary accessor here.-->
+    @for (tag of tags(); track tag) {
+    <span class="tag-chip">#{{ tag }}<button class="tag-x" (click)="remove(tag)" [title]="t().editor.tags.remove">×</button></span>
+    }
+    <app-popover>
+        <button trigger class="tag-add-btn" (click)="load()">+ {{ t().editor.tags.label }}</button>
+        <div panel class="tag-cloud-popover">
+            <ng-container [ngTemplateOutlet]="cloud"></ng-container>
+        </div>
+    </app-popover>
+</div>
+}

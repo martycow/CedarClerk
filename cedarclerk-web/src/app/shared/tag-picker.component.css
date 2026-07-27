@@ -1,0 +1,131 @@
+.tag-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-width: 0;
+}
+
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 11px;
+    color: var(--t2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 1px 4px 1px 8px;
+}
+
+.tag-x {
+    border: none;
+    background: none;
+    color: var(--t3);
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    padding: 1px 3px;
+}
+
+.tag-x:hover {
+    color: var(--danger);
+}
+
+.tag-add-btn {
+    border: 1px dashed var(--abord);
+    background: none;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 11px;
+    color: var(--accent);
+    cursor: pointer;
+    font-family: var(--font-sans);
+}
+
+.tag-add-btn:hover {
+    background: var(--asoft);
+}
+
+.tag-cloud-popover {
+    width: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.tag-cloud-popover.inline {
+    width: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 8px;
+}
+
+.tag-cloud-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tb-caption {
+    font-size: 9px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--t3);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.tag-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid var(--border);
+    background: none;
+    border-radius: 999px;
+    padding: 3px 9px;
+    font-size: 11.5px;
+    color: var(--t2);
+    cursor: pointer;
+    font-family: var(--font-sans);
+}
+
+.tag-pill:hover {
+    border-color: var(--abord);
+}
+
+.tag-pill.on {
+    background: var(--asoft);
+    border-color: var(--abord);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.tag-pill-count {
+    color: var(--t3);
+    font-size: 10.5px;
+}
+
+.tag-pill.on .tag-pill-count {
+    color: var(--accent);
+}
+
+.tag-new-input {
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    color: var(--text);
+    border-radius: var(--radius-md);
+    padding: 7px 10px;
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+}
+
+.tag-new-input:focus {
+    border-color: var(--accent);
+}

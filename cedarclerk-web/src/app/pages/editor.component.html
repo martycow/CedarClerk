@@ -774,18 +774,12 @@
             </div>
             <div>
                 <span class="tb-caption">{{ t().editor.tags.label }}</span>
-                <!--N2: pick from tags already in use (same source as the editor's tag cloud);
-                the input stays for tags that don't exist yet.-->
-                @if (tagUsage().length) {
-                <div class="tag-cloud" style="margin-top:6px">
-                    @for (u of tagUsage().slice(0, 12); track u.tag) {
-                    <button class="tag-pill" [class.on]="newDraftTagList().includes(u.tag)" (click)="toggleNewDraftTag(u.tag)">
-                        #{{ u.tag }} <span class="tag-pill-count">{{ u.count }}</span>
-                    </button>
-                    }
+                <!--N2: pick from tags already in use; the shared picker's input covers tags that
+                don't exist yet. Inline because a popover inside app-modal doesn't position.-->
+                <div style="margin-top:6px">
+                    <app-tag-picker [tags]="newDraftTagList()" [inline]="true"
+                                    (tagsChange)="newDraftTagList.set($event)"></app-tag-picker>
                 </div>
-                }
-                <input class="chat-input" style="margin-top:6px" [(ngModel)]="newDraftTags" [placeholder]="t().editor.newDraft.tagsPlaceholder">
             </div>
             <div>
                 <span class="tb-caption">{{ t().editor.newDraft.startFrom }}</span>
@@ -795,19 +789,13 @@
                     <button [class.on]="newDraftTemplate === 'photodump'" (click)="newDraftTemplate = 'photodump'">{{ t().editor.newDraft.photodump }}</button>
                 </div>
             </div>
-            @if (folders().length) {
             <div>
                 <span class="tb-caption">{{ t().editor.tags.folder }}</span>
-                <!--A pill row rather than the editor's folder popover: a nested app-popover
-                inside app-modal fights the modal's own fixed positioning/stacking.-->
-                <div class="tag-cloud" style="margin-top:6px">
-                    <button class="tag-pill" [class.on]="newDraftFolderId === null" (click)="newDraftFolderId = null">{{ t().editor.tags.noFolder }}</button>
-                    @for (f of folders(); track f.id) {
-                    <button class="tag-pill" [class.on]="newDraftFolderId === f.id" (click)="newDraftFolderId = f.id">{{ f.name }}</button>
-                    }
+                <div style="margin-top:6px">
+                    <app-folder-picker [folderId]="newDraftFolderId()" [inline]="true"
+                                       (picked)="newDraftFolderId.set($event)"></app-folder-picker>
                 </div>
             </div>
-            }
             <label class="field-hint">
                 <input type="checkbox" [(ngModel)]="newDraftPrivate">
                 Private post (only invited emails can view it once published)
@@ -962,53 +950,14 @@
                     <svg lucideTrash2 class="icon-sm"></svg>
                 </button>
                 }
-                <div class="tag-row">
-                    <!--Loop variable is `tag`, not `t` — `t` is the dictionary accessor here.-->
-                    @for (tag of tagList(); track tag) {
-                    <span class="tag-chip">#{{ tag }}<button class="tag-x" (click)="removeTag(tag)" [title]="t().editor.tags.remove">×</button></span>
-                    }
-                    <app-popover>
-                        <button trigger class="tag-add-btn" (click)="ensureTagUsageLoaded()">+ {{ t().editor.tags.label }}</button>
-                        <div panel class="tag-cloud-popover">
-                            @if (tagUsage().length) {
-                            <div class="tag-cloud-section">
-                                <span class="tb-caption">{{ t().editor.tags.mostUsed }}</span>
-                                <div class="tag-cloud">
-                                    @for (u of tagUsage().slice(0, 8); track u.tag) {
-                                    <button class="tag-pill" [class.on]="tagList().includes(u.tag)" (click)="toggleTag(u.tag)">
-                                        #{{ u.tag }} <span class="tag-pill-count">{{ u.count }}</span>
-                                    </button>
-                                    }
-                                </div>
-                            </div>
-                            }
-                            @if (tagUsage().length > 8) {
-                            <div class="tag-cloud-section">
-                                <span class="tb-caption">{{ t().editor.tags.everythingElse }}</span>
-                                <div class="tag-cloud">
-                                    @for (u of tagUsage().slice(8); track u.tag) {
-                                    <button class="tag-pill" [class.on]="tagList().includes(u.tag)" (click)="toggleTag(u.tag)">#{{ u.tag }}</button>
-                                    }
-                                </div>
-                            </div>
-                            }
-                            <input class="chat-input" style="margin-top:8px"
-                                [(ngModel)]="tagInput" (keydown.enter)="addTag()"
-                                [placeholder]="t().editor.tags.newPlaceholder" maxlength="30">
-                        </div>
-                    </app-popover>
+                <!--FI3.2/FI3.3: the tag cloud and the folder menu are shared components now, so
+                this row, the new-draft dialog, /drafts and the posts manager all offer the same
+                control instead of three variations on it.-->
+                <div class="tag-row-slot">
+                    <app-tag-picker [tags]="tagList()" (tagsChange)="setTags($event)"></app-tag-picker>
                 </div>
-                <app-popover>
-                    <button trigger class="folder-select-btn" (click)="ensureFoldersLoaded()" [title]="t().editor.tags.folder">
-                        <svg lucideFolder class="icon-sm"></svg> {{ folderName(currentFolderId()) }}
-                    </button>
-                    <div panel class="tag-cloud-popover">
-                        <button class="folder-pill" [class.on]="currentFolderId() === null" (click)="assignFolder(null)">{{ t().editor.tags.noFolder }}</button>
-                        @for (f of folders(); track f.id) {
-                        <button class="folder-pill" [class.on]="currentFolderId() === f.id" (click)="assignFolder(f.id)">{{ f.name }}</button>
-                        }
-                    </div>
-                </app-popover>
+                <app-folder-picker [folderId]="currentFolderId()" [compact]="true"
+                                   (picked)="assignFolder($event)"></app-folder-picker>
             </div>
             <!--Re-translating an existing EN version gets the same progress treatment as the
             first-time auto-translate below (B14) — previously it was just % text in the button.-->

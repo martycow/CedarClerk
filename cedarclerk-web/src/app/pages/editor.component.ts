@@ -51,6 +51,9 @@ import { ThemeService } from '../core/theme.service';
 import { AppearanceService, SHEET_WIDTH_PX, TYPEFACE_STACK, MAX_TABLE_SIZE } from '../core/appearance.service';
 import { ToolbarLayoutService } from '../core/toolbar-layout.service';
 import { DebugLogService } from '../core/debug-log.service';
+import { TagUsageService } from '../core/tag-usage.service';
+import { TagPickerComponent } from '../shared/tag-picker.component';
+import { FolderPickerComponent } from '../shared/folder-picker.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import { pseudoProgress } from '../core/pseudo-progress.util';
 import { Subscription, TimeoutError } from 'rxjs';
@@ -81,7 +84,7 @@ import {
     LucideAtSign as AtSign, LucideCloud as Cloud, LucideMessageSquareShare as MessageSquareShare,
     LucideFileText as FileText, LucideHeart as Heart, LucideNotebook as Notebook, LucideFile as FileIcon,
     LucideThumbsUp as ThumbsUp,
-    LucideFolder as Folder, LucideLock as Lock,
+    LucideLock as Lock,
     LucideTerminal as Terminal,
 } from '@lucide/angular';
 
@@ -188,7 +191,7 @@ interface UploadItem {
     selector: 'app-editor',
     imports: [
         FormsModule, DatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent,
-        AccountMenuComponent, AppearancePanelComponent,
+        AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent,
         Undo2, Redo2, Bold, Italic, Strikethrough, Code,
         List, ListOrdered, ListTodo, Quote, SquareCode, Outdent, Indent,
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
@@ -198,7 +201,7 @@ interface UploadItem {
         Settings, ShieldCheck, Sparkle, TableOfContentsIcon, DividerIcon,
         CountBadgeComponent,
         AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
-        Folder, Lock, Terminal,
+        Lock, Terminal,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -215,6 +218,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private route = inject(ActivatedRoute);
     private assets = inject(AssetsService);
     debugLog = inject(DebugLogService);
+    private tagUsageApi = inject(TagUsageService);
 
     // The status bar hosts the debug console's toggle, so the console is told how tall that bar
     // is — and that below the mobile breakpoint it isn't rendered at all, where the console goes
@@ -271,16 +275,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // Tags are per-draft (shared across language versions) and saved through their own endpoint
     // immediately on add/remove — not through the content autosave, which routes per-language.
     tagList = signal<string[]>([]);
-    // "Cloud" tag picker (ADR-035) — usage counts across every draft, loaded once on first open.
-    tagUsage = signal<{ tag: string; count: number }[]>([]);
-    private tagUsageLoaded = false;
-    tagInput = '';
 
-    // At most one folder per draft (see the ADR following ADR-038, docs/DECISIONS.md) — mirrors
-    // the tag-cloud's lazy-load-on-first-open pattern above.
+    // At most one folder per draft (see the ADR following ADR-038, docs/DECISIONS.md). The list
+    // itself and the cloud of tags in use live in shared services now (FI3.2/FI3.3) — this page
+    // only holds which folder and tags *this* draft has.
     currentFolderId = signal<string | null>(null);
-    folders = signal<{ id: string; name: string; count: number }[]>([]);
-    private foldersLoaded = false;
 
     aiEditBusy = signal(false);
     aiEditElapsed = signal(0);
@@ -374,12 +373,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     newDraftTitle = '';
     readonly draftTitleMax = DRAFT_TITLE_MAX;
     newDraftLanguages: 'ru' | 'en' | 'both' = 'ru';
-    newDraftTags = '';
+    newDraftTagList = signal<string[]>([]);
     newDraftTemplate: NewDraftTemplate = 'blank';
     // Not persisted into newDraftDefaultsJson (unlike languages/tags/template) — "private" and
     // a target folder are per-draft intent, not a preference to repeat on every new draft.
     newDraftPrivate = false;
-    newDraftFolderId: string | null = null;
+    newDraftFolderId = signal<string | null>(null);
 
     scheduledAt = '';
     scheduling = signal(false);
@@ -527,11 +526,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
         // Feeds the badge on the Posts Manager link (N3) — fire-and-forget, never blocks setup.
         this.feedback.refreshNewCount();
-        // IB6: the folder list used to load only when the picker popover was first opened, but
-        // folderName() needs it to resolve the *label* too — so a draft in a folder read as "no
-        // folder" on every fresh editor load (most visibly when coming back from Settings) until
-        // you clicked the picker. Same fire-and-forget treatment as the badge above.
-        this.ensureFoldersLoaded();
         const mediaNodeTypes = new Set(['image', 'video', 'audio', 'carousel', 'collage']);
         this.editor = new Editor({
             element: this.editorHost.nativeElement,
@@ -829,36 +823,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
-    async addTag() {
-        const t = this.tagInput.trim().replace(/^#/, '').replace(/,/g, '').toLowerCase();
-        this.tagInput = '';
-        if (!t || this.tagList().includes(t)) return;
-        this.tagList.update(l => [...l, t]);
+    // The shared tag picker reports the whole list rather than one add/remove at a time, so the
+    // save is one call regardless of what changed.
+    async setTags(tags: string[]) {
+        this.tagList.set(tags.map(t => t.replace(/^#/, '').toLowerCase()));
         await this.persistTags();
-    }
-
-    async removeTag(tag: string) {
-        this.tagList.update(l => l.filter(t => t !== tag));
-        await this.persistTags();
-    }
-
-    async toggleTag(tag: string) {
-        if (this.tagList().includes(tag)) {
-            await this.removeTag(tag);
-        } else {
-            this.tagList.update(l => [...l, tag]);
-            await this.persistTags();
-        }
-    }
-
-    async ensureTagUsageLoaded() {
-        if (this.tagUsageLoaded) return;
-        this.tagUsageLoaded = true;
-        try {
-            this.tagUsage.set(await this.draftsApi.listTagUsage());
-        } catch {
-            this.tagUsageLoaded = false; // allow a retry next time the popover opens
-        }
     }
 
     private async persistTags() {
@@ -867,28 +836,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         try {
             const res = await this.draftsApi.updateTags(id, this.tagList().join(','));
             this.drafts.update(list => list.map(d => d.id === id ? { ...d, tags: res.tags } : d));
+            // A tag invented here should be offered to the next draft, not stay on this one.
+            this.tagUsageApi.refresh();
         } catch {
             this.saveState.set('error');
         }
-    }
-
-    async ensureFoldersLoaded() {
-        if (this.foldersLoaded) return;
-        this.foldersLoaded = true;
-        try {
-            this.folders.set(await this.draftsApi.listFolders());
-        } catch {
-            this.foldersLoaded = false; // allow a retry next time the popover opens
-        }
-    }
-
-    folderName(id: string | null): string {
-        if (id === null) return this.t().editor.tags.noFolder;
-        const known = this.folders().find(f => f.id === id);
-        if (known) return known.name;
-        // The draft says it's filed but the list hasn't arrived yet — say nothing rather than
-        // say "no folder", which is the false claim IB6 was about.
-        return this.folders().length === 0 ? '…' : this.t().editor.tags.noFolder;
     }
 
     async assignFolder(folderId: string | null) {
@@ -1104,7 +1056,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.activeSourceSnapshot.set(null);
             this.ruSnapshot = null;
             this.tagList.set(draft.tags ? draft.tags.split(',').filter(t => t.length > 0) : []);
-            this.tagInput = '';
             this.currentFolderId.set(draft.folderId);
             this.isPrivate.set(draft.isPrivate);
             this.watermarkText.set(draft.watermarkText);
@@ -1184,7 +1135,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.ruDiffMarkers.set([]);
             this.ruSnapshot = null;
             this.tagList.set(tags);
-            this.tagInput = '';
             this.currentFolderId.set(folderId);
             this.isPrivate.set(isPrivate);
             this.watermarkText.set(null);
@@ -1212,27 +1162,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
         this.newDraftTitle = '';
         this.newDraftLanguages = defaults.languages ?? 'ru';
-        this.newDraftTags = (defaults.tags ?? []).join(', ');
+        this.newDraftTagList.set(defaults.tags ?? []);
         this.newDraftTemplate = defaults.template ?? 'blank';
         this.newDraftPrivate = false;
-        this.newDraftFolderId = null;
+        this.newDraftFolderId.set(null);
         this.newDraftExpanded.set(false);
         this.newDraftOpen.set(true);
-        this.ensureFoldersLoaded();
-        // N2 — the dialog picks tags from what's already in use, not just free text.
-        this.ensureTagUsageLoaded();
-    }
-
-    // The dialog keeps tags as the comma string the create call wants; these two just let the
-    // pill row read and write that string without a second source of truth.
-    newDraftTagList(): string[] {
-        return this.newDraftTags.split(',').map(t => t.trim()).filter(t => t.length > 0);
-    }
-
-    toggleNewDraftTag(tag: string) {
-        const list = this.newDraftTagList();
-        const next = list.includes(tag) ? list.filter(t => t !== tag) : [...list, tag];
-        this.newDraftTags = next.join(', ');
     }
 
     closeNewDraftDialog() {
@@ -1250,16 +1185,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     async confirmNewDraft() {
         if (this.draftsBusy() || !this.newDraftTitleValid()) return;
         const title = this.newDraftTitle.trim();
-        const tags = this.newDraftTags;
+        const tagList = this.newDraftTagList().map(t => t.trim().toLowerCase()).filter(t => t.length > 0);
+        const tags = tagList.join(',');
         const languages = this.newDraftLanguages;
         const template = this.newDraftTemplate;
         const isPrivate = this.newDraftPrivate;
-        const folderId = this.newDraftFolderId;
+        const folderId = this.newDraftFolderId();
 
         this.closeNewDraftDialog();
         this.auth.saveNewDraftDefaults(JSON.stringify({
             languages,
-            tags: tags.split(',').map(t => t.trim().toLowerCase()).filter(t => t.length > 0),
+            tags: tagList,
             template,
         })).catch(() => { /* best-effort — not worth blocking draft creation over */ });
 

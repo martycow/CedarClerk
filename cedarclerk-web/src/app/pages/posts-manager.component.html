@@ -66,18 +66,11 @@
                         <label>{{ t().manager.title }}</label>
                         <input class="chat-input" [(ngModel)]="editTitle">
                     </div>
-                    <!--I1 (Posts page): tags are picked from what's already in use rather than
-                    retyped. The free-text field stays for tags that don't exist yet.-->
+                    <!--FI3.2: the same tag picker the editor and the new-draft dialog use, rather
+                    than this page's own text-field-plus-pills take on it.-->
                     <div class="detail-field">
                         <label>{{ t().manager.tags }} <span class="field-hint-inline">{{ t().manager.tagsHint }}</span></label>
-                        @if (knownTags().length) {
-                        <div class="pill-row">
-                            @for (tag of knownTags(); track tag) {
-                            <button class="pill" [class.on]="hasTag(tag)" (click)="toggleTag(tag)">#{{ tag }}</button>
-                            }
-                        </div>
-                        }
-                        <input class="chat-input" [(ngModel)]="editTags" [placeholder]="t().manager.tagsPlaceholder">
+                        <app-tag-picker [tags]="editTags()" (tagsChange)="editTags.set($event)"></app-tag-picker>
                     </div>
                     <button class="btn-accent" (click)="saveMeta()" [disabled]="busy()">
                         @if (renaming()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
@@ -86,13 +79,12 @@
 
                     <div class="detail-divider"></div>
 
+                    <!--FI3.3: folders are picked, created, renamed and deleted from here too now,
+                    with the same control every other screen carries.-->
                     <div class="detail-field">
                         <label>{{ t().manager.folder }}</label>
                         <div class="pill-row">
-                            <button class="pill" [class.on]="d.folderId === null" (click)="assignFolder(null)">{{ t().manager.noFolder }}</button>
-                            @for (f of folders(); track f.id) {
-                            <button class="pill" [class.on]="d.folderId === f.id" (click)="assignFolder(f.id)">{{ f.name }}</button>
-                            }
+                            <app-folder-picker [folderId]="d.folderId" (picked)="assignFolder($event)"></app-folder-picker>
                         </div>
                     </div>
 

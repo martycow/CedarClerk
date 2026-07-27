@@ -1,0 +1,64 @@
+<ng-template #menu>
+    <div class="folder-menu" [class.inline]="inline()">
+        <button class="folder-menu-item" [class.active]="folderId() === null" (click)="pick(null)">
+            {{ t().drafts.folders.none }}
+        </button>
+        @if (folders().length) {
+        <div class="folder-menu-sep"></div>
+        @for (f of folders(); track f.id) {
+        <div class="folder-menu-row" [class.active]="folderId() === f.id">
+            @if (editingId() === f.id) {
+            <input class="folder-input" [(ngModel)]="editingName"
+                   (keydown.enter)="commitRename()" (keydown.escape)="cancelRename()"
+                   (blur)="commitRename()" (click)="$event.stopPropagation()">
+            } @else {
+            <button class="folder-menu-item" (click)="pick(f.id)">{{ f.name }}</button>
+            <span class="folder-count">{{ f.count }}</span>
+            <button class="folder-icon-btn" (click)="startRename(f, $event)" [title]="t().drafts.folders.rename">
+                <svg lucidePencil class="icon-xs"></svg>
+            </button>
+            <button class="folder-icon-btn" (click)="askDelete(f, $event)" [title]="t().common.delete">
+                <svg lucideX class="icon-xs"></svg>
+            </button>
+            }
+        </div>
+        }
+        }
+        <div class="folder-menu-sep"></div>
+        @if (error()) { <p class="folder-error">{{ error() }}</p> }
+        <div class="folder-add-row">
+            <input class="folder-input" [(ngModel)]="newName"
+                   [placeholder]="t().drafts.folders.newPlaceholder" (keydown.enter)="add()">
+            <button class="folder-icon-btn" (click)="add()" [disabled]="busy() || !newName.trim()"
+                    [title]="t().drafts.folders.add">
+                <svg lucidePlus class="icon-xs"></svg>
+            </button>
+        </div>
+    </div>
+</ng-template>
+
+<!--Inline for hosts that can't carry a popover: an app-popover nested in app-modal fights the
+modal's own fixed positioning and stacking, which is why the new-draft dialog never had one.-->
+@if (inline()) {
+<ng-container [ngTemplateOutlet]="menu"></ng-container>
+} @else {
+<app-popover>
+    <button trigger class="folder-trigger" [class.compact]="compact()" (click)="load()" [title]="t().drafts.folders.filter">
+        <svg lucideFolder class="icon-sm"></svg> {{ label() }}
+    </button>
+    <ng-container panel [ngTemplateOutlet]="menu"></ng-container>
+</app-popover>
+}
+
+@if (deleteTarget(); as f) {
+<app-modal (closed)="deleteConfirmId.set(null)">
+    <svg modal-icon lucideTrash2 class="icon"></svg>
+    <span modal-title>{{ t().drafts.folders.deleteTitle(f.name) }}</span>
+    <p>
+        @if (f.count > 0) { {{ t().drafts.folders.deleteOrphans(f.count) }} }
+        {{ t().drafts.folders.deleteKeepsDrafts }}
+    </p>
+    <button modal-actions class="btn-ghost" (click)="deleteConfirmId.set(null)">{{ t().common.cancel }}</button>
+    <button modal-actions class="btn-accent" (click)="confirmDelete()">{{ t().drafts.folders.deleteConfirm }}</button>
+</app-modal>
+}

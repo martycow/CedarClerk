@@ -28,6 +28,9 @@
                 <button trigger class="folder-filter-btn" [title]="t().drafts.folders.filter">
                     <svg lucideFolder class="icon-sm"></svg> {{ selectedFolderLabel() }}
                 </button>
+                <!--FI3.3: filtering only. Creating, renaming and deleting a folder moved into
+                the shared picker on every row, so it is no longer something only this page can
+                do — and the same markup isn't maintained in two places.-->
                 <div panel class="folder-menu">
                     <button class="folder-menu-item" [class.active]="selectedFolder() === 'all'" (click)="selectedFolder.set('all')">{{ t().drafts.folders.all }}</button>
                     <button class="folder-menu-item" [class.active]="selectedFolder() === 'none'" (click)="selectedFolder.set('none')">{{ t().drafts.folders.none }}</button>
@@ -35,31 +38,11 @@
                     <div class="folder-menu-sep"></div>
                     @for (f of folders(); track f.id) {
                     <div class="folder-menu-row" [class.active]="selectedFolder() === f.id">
-                        @if (editingFolderId() === f.id) {
-                        <input class="folder-rename-input" [(ngModel)]="editingFolderName"
-                               (keydown.enter)="commitRenameFolder()" (keydown.escape)="cancelRenameFolder()"
-                               (blur)="commitRenameFolder()" (click)="$event.stopPropagation()" #renameInput>
-                        } @else {
                         <button class="folder-menu-item" (click)="selectedFolder.set(f.id)">{{ f.name }}</button>
                         <span class="folder-count">{{ f.count }}</span>
-                        <button class="folder-icon-btn" (click)="startRenameFolder(f, $event)" [title]="t().drafts.folders.rename">
-                            <svg lucidePencil class="icon-xs"></svg>
-                        </button>
-                        <button class="folder-icon-btn" (click)="askDeleteFolder(f, $event)" [title]="t().common.delete">
-                            <svg lucideX class="icon-xs"></svg>
-                        </button>
-                        }
                     </div>
                     }
                     }
-                    <div class="folder-menu-sep"></div>
-                    @if (folderError()) { <p class="folder-error">{{ folderError() }}</p> }
-                    <div class="folder-add-row">
-                        <input class="folder-add-input" [(ngModel)]="newFolderName" [placeholder]="t().drafts.folders.newPlaceholder" (keydown.enter)="addFolder()">
-                        <button class="folder-icon-btn" (click)="addFolder()" [disabled]="folderBusy() || !newFolderName.trim()" [title]="t().drafts.folders.add">
-                            <svg lucidePlus class="icon-xs"></svg>
-                        </button>
-                    </div>
                 </div>
             </app-popover>
             <div class="view-toggle">
@@ -131,17 +114,8 @@
                     @if (d.languages.includes('en')) { <span class="draft-lang-badge">EN</span> }
                 </div>
                 <div class="folder-cell" (click)="$event.stopPropagation()">
-                    <app-popover>
-                        <button trigger class="folder-cell-btn">
-                            <svg lucideFolder class="icon-xs"></svg> {{ folderName(d.folderId) }}
-                        </button>
-                        <div panel class="folder-menu">
-                            <button class="folder-menu-item" [class.active]="d.folderId === null" (click)="assignFolder(d, null)">{{ t().drafts.folders.none }}</button>
-                            @for (f of folders(); track f.id) {
-                            <button class="folder-menu-item" [class.active]="d.folderId === f.id" (click)="assignFolder(d, f.id)">{{ f.name }}</button>
-                            }
-                        </div>
-                    </app-popover>
+                    <app-folder-picker [folderId]="d.folderId" [compact]="true"
+                                       (picked)="assignFolder(d, $event)"></app-folder-picker>
                 </div>
                 <div class="tags-cell">
                     <!--Loop variable is `tag`, not `t` — `t` is the dictionary accessor here.-->
@@ -191,15 +165,8 @@
                 @if (status(d).detail) { <div class="status-detail">{{ status(d).detail }}</div> }
                 @if (d.folderId) {
                 <div class="folder-cell" (click)="$event.stopPropagation()">
-                    <app-popover>
-                        <button trigger class="folder-cell-btn"><svg lucideFolder class="icon-xs"></svg> {{ folderName(d.folderId) }}</button>
-                        <div panel class="folder-menu">
-                            <button class="folder-menu-item" [class.active]="d.folderId === null" (click)="assignFolder(d, null)">{{ t().drafts.folders.none }}</button>
-                            @for (f of folders(); track f.id) {
-                            <button class="folder-menu-item" [class.active]="d.folderId === f.id" (click)="assignFolder(d, f.id)">{{ f.name }}</button>
-                            }
-                        </div>
-                    </app-popover>
+                    <app-folder-picker [folderId]="d.folderId" [compact]="true"
+                                       (picked)="assignFolder(d, $event)"></app-folder-picker>
                 </div>
                 }
                 @if (hasActivity(d)) {
@@ -244,16 +211,4 @@
     </app-modal>
     }
 
-    @if (deleteFolderConfirmTarget(); as f) {
-    <app-modal (closed)="cancelDeleteFolder()">
-        <svg modal-icon lucideTrash2 class="icon"></svg>
-        <span modal-title>{{ t().drafts.folders.deleteTitle(f.name) }}</span>
-        <p>
-            @if (f.count > 0) { {{ t().drafts.folders.deleteOrphans(f.count) }} }
-            {{ t().drafts.folders.deleteKeepsDrafts }}
-        </p>
-        <button modal-actions class="btn-ghost" (click)="cancelDeleteFolder()">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="confirmDeleteFolder()">{{ t().drafts.folders.deleteConfirm }}</button>
-    </app-modal>
-    }
 </div>

@@ -1,0 +1,150 @@
+.icon-sm { width: 14px; height: 14px; }
+.icon-xs { width: 12px; height: 12px; }
+.icon { width: 20px; height: 20px; }
+
+.folder-trigger {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--t2);
+    border-radius: var(--radius-md);
+    padding: 5px 10px;
+    font-family: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.folder-trigger:hover {
+    color: var(--text);
+    border-color: var(--abord);
+}
+
+/* Table cells and toolbars carry their own framing — a second border there reads as a field. */
+.folder-trigger.compact {
+    border-color: transparent;
+    background: none;
+    padding: 2px 4px;
+}
+
+.folder-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 200px;
+}
+
+.folder-menu.inline {
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 6px;
+}
+
+.folder-menu-item {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    border: none;
+    background: none;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.folder-menu-item:hover {
+    background: rgba(128, 120, 100, .1);
+}
+
+.folder-menu-item.active,
+.folder-menu-row.active .folder-menu-item {
+    background: var(--asoft);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.folder-menu-sep {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+}
+
+.folder-menu-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    border-radius: var(--radius-sm);
+}
+
+.folder-count {
+    font-size: 11px;
+    color: var(--t3);
+    padding: 0 4px;
+    flex: none;
+}
+
+.folder-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex: none;
+    border: none;
+    background: none;
+    border-radius: var(--radius-sm);
+    color: var(--t3);
+    cursor: pointer;
+}
+
+.folder-icon-btn:hover {
+    color: var(--text);
+    background: rgba(128, 120, 100, .14);
+}
+
+.folder-icon-btn:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.folder-input {
+    flex: 1;
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 5px 8px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    min-width: 0;
+}
+
+.folder-input:focus {
+    border-color: var(--accent);
+}
+
+.folder-add-row {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.folder-error {
+    font-size: 11.5px;
+    color: var(--danger);
+    margin: 2px 0 4px;
+}

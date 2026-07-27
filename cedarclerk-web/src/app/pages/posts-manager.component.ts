@@ -5,7 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
 import {
-    DraftsService, DraftMeta, FolderMeta, PostRegistration,
+    DraftsService, DraftMeta, PostRegistration,
     RegistrationForm, RegistrationQuestion, RegistrationQuestionType, parseRegistrationForm,
 } from '../core/drafts.service';
 import { FormPresetsService, FormPreset } from '../core/form-presets.service';
@@ -17,6 +17,10 @@ import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { AccountMenuComponent } from '../shared/account-menu.component';
 import { ModalComponent } from '../shared/modal.component';
 import { CommentsComponent } from './comments.component';
+import { TagPickerComponent } from '../shared/tag-picker.component';
+import { FolderPickerComponent } from '../shared/folder-picker.component';
+import { TagUsageService } from '../core/tag-usage.service';
+import { FoldersService } from '../core/folders.service';
 import { StatsComponent } from './stats.component';
 import {
     LucideTrash2 as Trash2, LucideArchive as Archive, LucideArchiveRestore as ArchiveRestore,
@@ -35,7 +39,7 @@ const MANAGER_TABS: ManagerTab[] = ['posts', 'feedback', 'stats', 'forms'];
     selector: 'app-posts-manager',
     imports: [
         DatePipe, FormsModule, RouterLink, CedarLogoComponent, ModalComponent, CommentsComponent,
-        StatsComponent, CountBadgeComponent, AccountMenuComponent,
+        StatsComponent, CountBadgeComponent, AccountMenuComponent, TagPickerComponent, FolderPickerComponent,
         Trash2, Archive, ArchiveRestore, PenLine, Lock, ExternalLink, RefreshCw, ArrowLeft,
     ],
     templateUrl: 'posts-manager.component.html',
@@ -49,6 +53,8 @@ export class PostsManagerComponent implements OnInit {
     private router = inject(Router);
     private route = inject(ActivatedRoute);
     feedback = inject(CommentsService);
+    private tagUsageApi = inject(TagUsageService);
+    private foldersApi = inject(FoldersService);
     t = inject(LocaleService).t;
 
     tab = signal<ManagerTab>('posts');
@@ -57,14 +63,13 @@ export class PostsManagerComponent implements OnInit {
     busy = signal(false);
 
     drafts = signal<DraftMeta[]>([]);
-    folders = signal<FolderMeta[]>([]);
     selectedId = signal<string | null>(null);
 
     // Minimal edits (Marty's wording) — everything here changes metadata only. Body text stays
     // the editor's job; the rename below still has to round-trip cedarJson because the save
     // endpoint takes title and body together.
     editTitle = '';
-    editTags = '';
+    editTags = signal<string[]>([]);
     // FI3.4 — the published post's own URL.
     editSlug = '';
     // FI3.10 — the list is publish-date ordered; search is how you reach one post directly.
@@ -95,9 +100,7 @@ export class PostsManagerComponent implements OnInit {
     async ngOnInit() {
         this.feedback.refreshNewCount();
         try {
-            const [drafts, folders] = await Promise.all([this.draftsApi.list(), this.draftsApi.listFolders()]);
-            this.drafts.set(drafts);
-            this.folders.set(folders);
+            this.drafts.set(await this.draftsApi.list());
             this.loadNewFeedback();
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().manager.errors.load));
@@ -159,40 +162,11 @@ export class PostsManagerComponent implements OnInit {
     async select(d: DraftMeta) {
         this.selectedId.set(d.id);
         this.editTitle = d.title;
-        this.editTags = d.tags;
+        this.editTags.set(d.tags.split(',').map(x => x.trim()).filter(x => x.length > 0));
         this.editSlug = d.blogSlug ?? '';
         this.registrations.set([]);
         this.regForm.set(null);
         if (d.isPrivate) this.loadForm();
-    }
-
-    // ---------- Tag selector (I1 on the Posts page) ----------
-
-    tagList(): string[] {
-        return this.editTags.split(',').map(x => x.trim()).filter(x => x.length > 0);
-    }
-
-    // Every tag already in use by this owner, so picking is a choice rather than recall. Free-text
-    // entry stays alongside it for tags that don't exist yet.
-    knownTags(): string[] {
-        const used = new Set<string>();
-        for (const d of this.drafts()) {
-            for (const raw of d.tags.split(',')) {
-                const tag = raw.trim();
-                if (tag) used.add(tag);
-            }
-        }
-        return [...used].sort((a, b) => a.localeCompare(b));
-    }
-
-    toggleTag(tag: string) {
-        const current = this.tagList();
-        const next = current.includes(tag) ? current.filter(x => x !== tag) : [...current, tag];
-        this.editTags = next.join(', ');
-    }
-
-    hasTag(tag: string): boolean {
-        return this.tagList().includes(tag);
     }
 
     blogUrl(d: DraftMeta): string | null {
@@ -227,8 +201,11 @@ export class PostsManagerComponent implements OnInit {
                 const full = await this.draftsApi.get(d.id);
                 await this.draftsApi.update(d.id, title, full.cedarJson);
             }
-            const tags = this.editTags.trim();
-            if (tags !== d.tags) await this.draftsApi.updateTags(d.id, tags);
+            const tags = this.editTags().join(',');
+            if (tags !== d.tags) {
+                await this.draftsApi.updateTags(d.id, tags);
+                this.tagUsageApi.refresh();
+            }
             this.patch(d.id, { title, tags });
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().manager.errors.save));
@@ -244,7 +221,7 @@ export class PostsManagerComponent implements OnInit {
         try {
             await this.draftsApi.setDraftFolder(d.id, folderId);
             this.patch(d.id, { folderId });
-            this.folders.set(await this.draftsApi.listFolders());
+            this.foldersApi.reload();
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().manager.errors.move));
         }
