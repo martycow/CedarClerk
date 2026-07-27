@@ -45,6 +45,48 @@ Raw list, not yet scoped into phase steps — logged here per Marty's call, not 
 
 **Open dependency note**: idea #20.3 (private posts must support polls) needs #22 (polls) built first — don't scope the "private" half before polls exist as a content type.
 
+### Input sweep v2 — 27.07.2026 (late), current (from `_Documents_/CedarClerk/Input.md`)
+
+**Marty rewrote `Input.md` again** after the first sweep closed. Confirmed by him: these do **not** overlap the earlier lists. ~60 items across 6 new features, 6 improvement groups and 3 bug groups. Numbered `NF*`, `FI*`, `DB*` — the source file's own numbering.
+
+Scoped as Phase 9e in `docs/ROADMAP.md`. Recorded here with what each actually costs, since several are much larger than one line suggests.
+
+**New features**
+
+| # | Pri | What | Verdict / what it really costs |
+|---|---|---|---|
+| NF3 | High | Email confirmation on registration, required at login | **Was already idea #2/#10** in this file. **Blocked in practice**: the Resend API key configured on the Pi 401s (issued for a since-deleted domain — see `TASKS.md`), so invite emails don't send today either. Confirmation mail would fail the same way. Needs a working key before it can be built, or it ships broken |
+| NF1 | Medium | Post templates — a preset authored in the editor, named like a draft but not a post | Needs a real separation between "draft" and "template" (Marty says so himself). Cheapest honest shape: a flag on `Draft` plus filtering, rather than a parallel entity — the editor, autosave and export all already work on `Draft` |
+| NF4 | Medium | OAuth sign-in: Google, Apple, Meta, Telegram | Telegram is already done (HMAC link, ADR-009) but as *linking*, not *sign-in* — turning it into a login path is its own change. The other three need real provider registrations, secrets on the Pi, and a decision about account merging when an OAuth email matches an existing password account |
+| NF5 | Medium | Polls inside a post | **This is idea #22**, and idea #20.3 depends on it. Marty's suggestion to build it on the existing form-preset entity is a genuinely good reuse — the question/choice model is already there. Still needs a TipTap node, renderers for all three surfaces, response storage and a results view. Telegram has native polls but **not inside `sendRichMessage` Blocks**, so the Telegram surface likely degrades to a link |
+| NF6 | Low | Embed a pay-any-amount form mid-post on the blog | Stripe/PayPal exist for subscriptions only. A public, unauthenticated, arbitrary-amount payment on a blog page is a different flow with its own fraud surface |
+| NF2 | Low | Add ES/FR/DE — UI localization now, translation later | Two separate axes that this item merges: **UI** language (`en.ts`/`ru.ts`, typed so a new locale must implement every key) and **content** language (`DraftTranslation`, the editor's RU/EN tabs, `?lang=` on the blog, auto-translate). The UI half is mechanical; the content half touches the editor's whole language model, which currently assumes exactly two |
+
+**Improvement groups** — each is many sub-items; full text in `Input.md`.
+
+| # | Pri | What | Notes |
+|---|---|---|---|
+| FI2 | High | Export window UX, 11 sub-items | The unifying principle Marty states is worth keeping: **"Export manages ONLY export"**. Unpublish, scheduled-post management and post-publication editing all move to the Posts Manager. Also: RU/EN as checkboxes, a form-preset dropdown for private posts, publish/schedule as one button, and a success toast with links |
+| FI3 | High | Posts Manager UX, 11 sub-items | Includes **removing the "Reactions & comments" tab** and folding it into Posts — compatible with the per-post grouping just built, it moves where that grouping lives. Also a manual blog URL, search, status indicators, and a better toolbar icon (the current one is a chart) |
+| FI4 | High | Forms manager: per-language presets; the layout "rябит" | Per-language presets interact with NF2's content-language axis — worth doing after that decision, not before |
+| FI6 | Medium | Account settings, 5 sub-items | **Sub-item 2 is not a UI change**: "leave ONLY Pro (which is now Pro Plus)" is a **pricing/tier restructure**. It touches `PlanTiers`, `PlanLimitations`, billing, the admin panel and three ADRs (012/013/014). Needs a decision recorded before any code |
+| FI1 | Low | Appearance panel UX, 7 sub-items | Feedback on the day-old panel: it doesn't match the design language, adds a scrollbar, the theme buttons should actually switch theme (today they only pick which theme's accent you're editing — a real ambiguity), more typefaces, and an explicit Apply. Marty suggests making it a popup instead |
+| FI5 | Low | Profile settings: real social icons, more slot types, multi-language signatures | Multi-language signatures depend on the same language decision as NF2/FI4 |
+
+**Bugs**
+
+| # | Pri | What | Notes |
+|---|---|---|---|
+| DB1 | Medium | iPad layout — nothing should overflow the screen | Recurring theme (`B24`, `B7`, the mobile items). Needs a device pass, not a guess |
+| DB3 | Low | **Flag emoji don't render on desktop browsers** | **This invalidates a choice I made**: `I1`/`I17` used flag emoji, reasoning that a flag is recognisable to someone who can't read the language. On Windows that is simply false — it does not ship regional-indicator glyphs, so they render as letter pairs. Needs a different visual (inline SVG, or language codes) |
+| DB2 | Low | Drafts table, 7 sub-items | Includes a real regression: **column resize behaves inverted** (`N1`). Plus a default sort, a narrower Title default, status indicators, name validation (1–64 chars), and the new-draft dialog opening *before* navigation |
+
+**Cross-cutting decisions needed before building**
+
+1. **FI6.2 — collapse the tiers to one paid plan?** Contradicts ADR-012/013/014 and changes billing, limits and the admin panel. Decide first.
+2. **NF2 — how many content languages, really?** The editor's two-tab model, `Languages.cs`, auto-translate and the blog's `?lang=` all assume two. FI4 and FI5 both wait on this.
+3. **NF3 — the Resend key** must work before email confirmation is worth building.
+
 ### Input sweep — 27.07.2026, current (from `_Documents_/CedarClerk/Input.md`)
 
 **A third list from Marty**, this time out of `Input.md` rather than `Brainstorm_Features.md` — 19 improvements, 9 bugs, 2 removals, 2 features. Same rule as before: it **adds to** v1/v2, it doesn't cancel them. Numbered `I1`…`I19` (improvements), `IB1`…`IB9` (bugs), `IT1`/`IT2` (removals), `IF1`/`IF2` (features) — plain numbers and `B`/`N` prefixes are already taken.

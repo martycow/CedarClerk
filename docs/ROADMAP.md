@@ -193,6 +193,16 @@ Full item text in `docs/BACKLOG.md` under "Brainstorm v2"; this is the status ch
 
 **Sequencing note**: N7, N10, N12 (and N8, N9 on top of them) are one project — a single new page — not five separate ones. N4, N5 and N13 all touch the export modal and are cheapest done in one pass.
 
+### Phase 9e — Input sweep v2 — imported 27.07.2026, not started
+A second rewrite of `Input.md`, ~60 items, confirmed by Marty as **not overlapping** the earlier lists. Full text and per-item cost analysis in `docs/BACKLOG.md` under "Input sweep v2".
+
+**Three decisions block real work and should come first:**
+1. **FI6.2 — collapse to a single paid tier?** Stated as a settings tweak, but it is a pricing restructure touching `PlanTiers`, `PlanLimitations`, billing, the admin panel and ADR-012/013/014.
+2. **NF2 — how many content languages?** The editor's RU/EN tabs, `Languages.cs`, auto-translate and the blog's `?lang=` all assume exactly two. FI4 (per-language form presets) and FI5 (multi-language signatures) both wait on the answer.
+3. **NF3 — email confirmation needs a working Resend key.** The configured one 401s today, so invite emails already don't send; confirmation mail would fail identically.
+
+**Suggested order once those are answered**: the three High UX groups (FI2 export, FI3 posts manager, FI4 forms) are the most-used surfaces and are mostly rearrangement of things that exist; DB2/DB3 are small and include a real `N1` regression; NF1/NF5 are the substantial new features; NF4/NF6/NF2 are the largest and most externally-dependent.
+
 ### Phase 9d — Live-review fixes — 27.07.2026
 Six items from Marty reviewing the 0.9.2 deploy in a browser. Full write-up in `CHANGELOG.md`.
 

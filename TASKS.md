@@ -2,6 +2,16 @@
 
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
+## Next: Phase 9e — the second `Input.md` sweep (imported 27.07.2026, not started)
+~60 items, confirmed as not overlapping the earlier lists. Analysis in `docs/BACKLOG.md`, order in `docs/ROADMAP.md` Phase 9e.
+
+**Three answers needed before building:**
+- [ ] **FI6.2** — collapse to a single paid tier? It reads as a settings tweak but is a pricing restructure (PlanTiers, PlanLimitations, billing, admin panel, ADR-012/013/014)
+- [ ] **NF2** — how many content languages? The editor's two-tab model, `Languages.cs`, auto-translate and the blog's `?lang=` all assume two. FI4 and FI5 wait on this
+- [ ] **NF3** — email confirmation needs a working Resend key; the configured one still 401s
+
+**Known regression to fix regardless**: `DB2.1` — drafts-table column resize behaves inverted (`N1`). And `DB3.1`: flag emoji don't render on desktop Windows, which invalidates the flag choice made in `I1`/`I17`.
+
 ## Admin panel (IF2) — Step 1 done 27.07.2026
 Scoped in `docs/admin-panel-scope.md` (decisions and build order are recorded there). Step 1 shipped: `IsAdmin` + migration, `Cedar:AdminEmail` bootstrap, gated `/api/admin` endpoint set, `/admin` page with a user list and summary counts.
 
