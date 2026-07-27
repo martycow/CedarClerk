@@ -245,6 +245,14 @@ public class Draft
     // configured, so an uninvited visitor still gets the original indistinguishable-from-404
     // response. A JSON blob rather than columns because the question list is variable-shape —
     // same reasoning as ApplicationUser's preference blobs; the server only length-checks it.
+    // Idea #4 - the name in the drafts list and the headline the reader sees are two different
+    // things: "devlog 14 (final final)" is a useful name and a bad title. Null means they are the
+    // same, which is what every draft written before this field existed means.
+    //
+    // Only the primary language needs it: a translation already carries its own DraftTranslation
+    // .Title, which has always been the article title for that language.
+    public string? ArticleTitle { get; set; }
+
     public string? RegistrationFormJson { get; set; }
     // FI4.1 — the same form in the post's other languages: a JSON object keyed by language code,
     // each value a form blob shaped exactly like RegistrationFormJson above. Kept beside the

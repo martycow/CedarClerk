@@ -68,6 +68,14 @@
                         <label>{{ t().manager.title }}</label>
                         <input class="chat-input" [(ngModel)]="editTitle">
                     </div>
+                    <!--Idea #4: the name in the drafts list and the headline a reader sees are
+                    two different things. Empty keeps them the same.-->
+                    <div class="detail-field">
+                        <label>{{ t().manager.articleTitle }}</label>
+                        <input class="chat-input" [(ngModel)]="editArticleTitle"
+                               [placeholder]="editTitle || t().manager.articleTitlePlaceholder" maxlength="200">
+                        <p class="field-hint-inline">{{ t().manager.articleTitleHint }}</p>
+                    </div>
                     <!--FI3.2: the same tag picker the editor and the new-draft dialog use, rather
                     than this page's own text-field-plus-pills take on it.-->
                     <div class="detail-field">

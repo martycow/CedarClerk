@@ -780,7 +780,7 @@ public static class BlogEndpoints
             .OrderByDescending(d => d.BlogPublishedAt)
             .Select(d => new
             {
-                d.Id, d.Title, d.BlogSlug, d.BlogPublishedAt, d.Tags, d.CedarJson, d.ViewCount,
+                d.Id, d.Title, d.ArticleTitle, d.BlogSlug, d.BlogPublishedAt, d.Tags, d.CedarJson, d.ViewCount,
                 TranslationLanguages = db.DraftTranslations.Where(t => t.DraftId == d.Id).Select(t => t.Language).ToList(),
             })
             .ToListAsync();
@@ -861,11 +861,14 @@ public static class BlogEndpoints
                     sb.Append(" · ").Append(lang.ToUpperInvariant());
                 sb.Append("</span>");
 
-                if (tags.Count > 0)
-                    sb.Append("<span class=\"post-card-tag\">· ").Append(System.Net.WebUtility.HtmlEncode(tags[0])).Append("</span>");
+                // Idea #8 — every tag, not just the first. The single-post page's own tag row
+                // has always shown them all; the card silently truncated to tags[0], so a post
+                // filed under three tags looked like it had one.
+                foreach (var tag in tags)
+                    sb.Append("<span class=\"post-card-tag\">· ").Append(System.Net.WebUtility.HtmlEncode(tag)).Append("</span>");
 
                 sb.Append("</div>");
-                sb.Append("<div class=\"post-card-title\">").Append(System.Net.WebUtility.HtmlEncode(p.Title)).Append("</div>");
+                sb.Append("<div class=\"post-card-title\">").Append(System.Net.WebUtility.HtmlEncode(p.ArticleTitle ?? p.Title)).Append("</div>");
                 if (excerpt.Length > 0)
                     sb.Append("<div class=\"post-card-excerpt\">").Append(System.Net.WebUtility.HtmlEncode(excerpt)).Append("</div>");
                 sb.Append("<div class=\"post-card-stats\">&#128065; ").Append(p.ViewCount)
@@ -885,7 +888,7 @@ public static class BlogEndpoints
         var posts = await db.Drafts.Where(d => d.IsBlogPublished && !d.IsPrivate)
             .OrderByDescending(d => d.BlogPublishedAt)
             .Take(RssItemLimit)
-            .Select(d => new { d.Title, d.BlogSlug, d.BlogPublishedAt, d.CedarJson })
+            .Select(d => new { d.Title, d.ArticleTitle, d.BlogSlug, d.BlogPublishedAt, d.CedarJson })
             .ToListAsync();
 
         var channel = await GetBlogChannelInfoAsync(db);
@@ -907,7 +910,7 @@ public static class BlogEndpoints
             var url = $"{siteUrl}{p.BlogSlug}";
             var excerpt = Excerpt(p.CedarJson);
             sb.Append("<item>");
-            sb.Append("<title>").Append(System.Net.WebUtility.HtmlEncode(p.Title)).Append("</title>");
+            sb.Append("<title>").Append(System.Net.WebUtility.HtmlEncode(p.ArticleTitle ?? p.Title)).Append("</title>");
             sb.Append("<link>").Append(url).Append("</link>");
             sb.Append("<guid isPermaLink=\"true\">").Append(url).Append("</guid>");
             if (p.BlogPublishedAt is { } published)
@@ -961,8 +964,9 @@ public static class BlogEndpoints
                 {
                     ctx.Response.StatusCode = StatusCodes.Status200OK;
                     ctx.Response.ContentType = "text/html; charset=utf-8";
-                    await ctx.Response.WriteAsync(PageShell(draft.Title,
-                        CedarToBlogHtmlRenderer.RegistrationFormHtml(form, draft.Title, gateLang),
+                    var gateTitle = draft.ArticleTitle ?? draft.Title;
+                    await ctx.Response.WriteAsync(PageShell(gateTitle,
+                        CedarToBlogHtmlRenderer.RegistrationFormHtml(form, gateTitle, gateLang),
                         gateLang, RenderHeader(channel)));
                     return;
                 }
@@ -1008,7 +1012,9 @@ public static class BlogEndpoints
 
         var requestedLang = ctx.Request.Query["lang"].FirstOrDefault();
         var lang = Languages.Primary;
-        var title = draft.Title;
+        // Idea #4 - the reader sees the article title when one is set; draft.Title is the name
+        // the owner files it under, which is not the same thing.
+        var title = draft.ArticleTitle ?? draft.Title;
         var cedarJson = draft.CedarJson;
         var notTranslatedNotice = "";
         if (requestedLang is not null && requestedLang != Languages.Primary && Languages.IsTranslationLanguage(requestedLang))

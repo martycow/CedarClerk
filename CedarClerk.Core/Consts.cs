@@ -192,6 +192,14 @@ public static class Consts
         public const int PaymentPageSize = 100;
     }
 
+    // The reader-facing headline, separate from the draft's own name (idea #4).
+    public static class ArticleTitle
+    {
+        // Deliberately far longer than the 64-character draft *name*: a name is something to
+        // find a draft by in a list, a title is a real headline and routinely longer than that.
+        public const int MaxLength = 200;
+    }
+
     // Watermark tiled over a private post's blog page (I7).
     public static class Watermark
     {

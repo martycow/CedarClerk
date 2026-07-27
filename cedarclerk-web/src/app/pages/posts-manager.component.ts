@@ -75,6 +75,9 @@ export class PostsManagerComponent implements OnInit {
     // the editor's job; the rename below still has to round-trip cedarJson because the save
     // endpoint takes title and body together.
     editTitle = '';
+    // Idea #4 - the headline readers see, kept apart from the draft's own name above. Empty
+    // means "same as the name", which is what it was before this field existed.
+    editArticleTitle = '';
     editTags = signal<string[]>([]);
     // FI3.4 — the published post's own URL.
     editSlug = '';
@@ -232,6 +235,8 @@ export class PostsManagerComponent implements OnInit {
         this.editTitle = d.title;
         this.editTags.set(d.tags.split(',').map(x => x.trim()).filter(x => x.length > 0));
         this.editSlug = d.blogSlug ?? '';
+        this.editArticleTitle = '';
+        this.loadArticleTitle(d.id);
         this.registrations.set([]);
         this.regForm.set(null);
         if (d.isPrivate) this.loadForm();
@@ -269,6 +274,8 @@ export class PostsManagerComponent implements OnInit {
                 const full = await this.draftsApi.get(d.id);
                 await this.draftsApi.update(d.id, title, full.cedarJson);
             }
+            const articleTitle = this.editArticleTitle.trim();
+            await this.draftsApi.setArticleTitle(d.id, articleTitle);
             const tags = this.editTags().join(',');
             if (tags !== d.tags) {
                 await this.draftsApi.updateTags(d.id, tags);
@@ -389,6 +396,15 @@ export class PostsManagerComponent implements OnInit {
         }
         const preset = this.presets().find(p => p.id === value);
         if (preset) this.applyPresetToPost(preset);
+    }
+
+    // Lives on the full draft rather than the list projection - the list is already wide and
+    // the article title is only ever needed for the one post being looked at.
+    private async loadArticleTitle(id: string) {
+        try {
+            const full = await this.draftsApi.get(id);
+            if (this.selectedId() === id) this.editArticleTitle = full.articleTitle ?? '';
+        } catch { /* the field simply stays empty; saving it still works */ }
     }
 
     // ---------- The post's own form (Posts tab) ----------

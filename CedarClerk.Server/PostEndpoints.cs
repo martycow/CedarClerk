@@ -113,12 +113,15 @@ public static class PostEndpoints
         var resolvedSignature = PlanLimitations.ResolveSignature(currentPlan, owner.PostSignature, owner.PostSignatureUrl);
         if (resolvedSignature is { } sig)
         {
+            // B17 - bold, so the signature reads as a signature in the channel rather than as one
+            // more paragraph of the post. A linked signature is bolded inside the link, since
+            // Telegram renders a bold run within a link fine but not a link inside bold.
             blocks.AddRange(sig.Text.Split('\n')
                 .Select(l => l.Trim())
                 .Where(l => l.Length > 0)
                 .Select(l => (CedarRichBlock)new RichParagraphBlock(sig.Href is null
-                    ? new RichRunText(l)
-                    : new RichRunLink(new RichRunText(l), sig.Href))));
+                    ? new RichRunBold(new RichRunText(l))
+                    : new RichRunLink(new RichRunBold(new RichRunText(l)), sig.Href))));
         }
 
         // Adding Cross-link to Blog site in the end of Telegram post

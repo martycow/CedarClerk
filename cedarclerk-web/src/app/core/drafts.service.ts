@@ -42,6 +42,9 @@ export interface DraftFull extends DraftMeta {
     translations: TranslationMeta[];
     registrationFormJson: string | null;
     registrationFormTranslationsJson: string | null;
+    // Idea #4 - the reader-facing headline when it differs from the draft's name; null means
+    // they are the same.
+    articleTitle: string | null;
     // FI4.1 — language codes this post actually has a registration form for, primary first.
     formLanguages: string[];
     watermarkText: string | null;
@@ -141,6 +144,12 @@ export class DraftsService {
     }
 
     // FI3.4 — the server slugifies and enforces global uniqueness, so this can send raw text.
+    // Idea #4 - blank clears it, which restores "the draft's name is the title".
+    setArticleTitle(id: string, articleTitle: string) {
+        return firstValueFrom(this.http.post<{ articleTitle: string | null }>(
+            `/api/drafts/${id}/article-title`, { articleTitle }));
+    }
+
     setBlogSlug(id: string, slug: string) {
         return firstValueFrom(this.http.post<{ blogSlug: string }>(`/api/drafts/${id}/slug`, { slug }));
     }

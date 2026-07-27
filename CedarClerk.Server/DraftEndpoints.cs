@@ -21,6 +21,7 @@ public static class DraftEndpoints
     public record UpdatePrivateRequest(bool IsPrivate);
     public record UpdateWatermarkRequest(string? WatermarkText);
     public record UpdateSlugRequest(string? Slug);
+    public record UpdateArticleTitleRequest(string? ArticleTitle);
     public record AddInviteRequest(string Email);
     // FI4.1 — Language names which language slot the form belongs to; absent or primary writes
     // the post's own RegistrationFormJson, anything else goes into the translations object.
@@ -177,7 +178,7 @@ public static class DraftEndpoints
             {
                 draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug,
                 draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.FolderId, draft.IsPrivate,
-                draft.WatermarkText, draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson,
+                draft.WatermarkText, draft.ArticleTitle, draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson,
                 // FI4.1 — which languages a reader would actually be greeted in.
                 FormLanguages = RegistrationFormSet.LanguagesWithForm(draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson),
                 Translations = translations,
@@ -332,6 +333,23 @@ public static class DraftEndpoints
         // Registration form (B3) — shown to uninvited visitors of a private post. Length-checked
         // only; the client owns the JSON shape, same treatment as the preference blobs in
         // AuthEndpoints. Null clears the form (back to the plain 404 for uninvited visitors).
+        // Idea #4 - the headline the reader sees, when it should differ from the draft's name.
+        // Blank clears it, which restores "the name is the title".
+        groupBuilder.MapPost("/{id:guid}/article-title", async (Guid id, UpdateArticleTitleRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            var title = req.ArticleTitle?.Trim();
+            if (title is { Length: > Consts.ArticleTitle.MaxLength })
+                return Results.BadRequest(new { error = $"Title is too long ({Consts.ArticleTitle.MaxLength} characters maximum)" });
+
+            draft.ArticleTitle = string.IsNullOrWhiteSpace(title) ? null : title;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.ArticleTitle });
+        });
+
         groupBuilder.MapPost("/{id:guid}/registration-form", async (Guid id, UpdateRegistrationFormRequest req, ClaimsPrincipal user, CedarDbContext db) =>
         {
             if (req.FormJson is { Length: > Consts.RegistrationForm.FormJsonMaxChars })
@@ -718,7 +736,9 @@ public static class DraftEndpoints
             if (draft is null) return Results.NotFound();
 
             var language = lang is not null && Languages.IsTranslationLanguage(lang) ? lang : Languages.Primary;
-            var title = draft.Title;
+            // Idea #4 - the exported page is a reader-facing artefact, so it carries the article
+            // title. A translation already has its own title and overwrites this below.
+            var title = draft.ArticleTitle ?? draft.Title;
             var cedarJson = draft.CedarJson;
             if (language != Languages.Primary)
             {
@@ -761,7 +781,10 @@ public static class DraftEndpoints
             var signature = PlanLimitations.ResolveSignature(ownerPlan, owner.PostSignature, owner.PostSignatureUrl);
             var publishedAt = draft.BlogPublishedAt ?? draft.CreatedAt;
 
-            var versions = new List<(string Lang, string Title, string CedarJson)> { (Languages.Primary, draft.Title, draft.CedarJson) };
+            var versions = new List<(string Lang, string Title, string CedarJson)>
+            {
+                (Languages.Primary, draft.ArticleTitle ?? draft.Title, draft.CedarJson),
+            };
             versions.AddRange(translations.Select(t => (t.Language, t.Title, t.CedarJson)));
 
             using var ms = new MemoryStream();
