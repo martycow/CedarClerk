@@ -9,6 +9,9 @@ export interface FormPreset {
     id: string;
     name: string;
     formJson: string;
+    // FI4.1 — the language this preset is written in. Older rows predate the field; the server
+    // backfilled them to the primary language.
+    language: string;
     createdAt: string;
 }
 
@@ -20,12 +23,12 @@ export class FormPresetsService {
         return firstValueFrom(this.http.get<FormPreset[]>('/api/form-presets'));
     }
 
-    create(name: string, formJson: string) {
-        return firstValueFrom(this.http.post<FormPreset>('/api/form-presets', { name, formJson }));
+    create(name: string, formJson: string, language: string) {
+        return firstValueFrom(this.http.post<FormPreset>('/api/form-presets', { name, formJson, language }));
     }
 
-    update(id: string, name: string, formJson: string) {
-        return firstValueFrom(this.http.put<FormPreset>(`/api/form-presets/${id}`, { name, formJson }));
+    update(id: string, name: string, formJson: string, language: string) {
+        return firstValueFrom(this.http.put<FormPreset>(`/api/form-presets/${id}`, { name, formJson, language }));
     }
 
     remove(id: string) {

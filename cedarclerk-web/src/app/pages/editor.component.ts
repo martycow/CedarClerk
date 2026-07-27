@@ -344,6 +344,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     regForm = signal<RegistrationForm | null>(null);
     regBusy = signal(false);
     formPresets = signal<FormPreset[]>([]);
+    // FI4.1 — languages this post actually has a registration form for, primary first.
+    formLanguages = signal<string[]>([]);
 
     // Watermark (I7) — drawn on the blog page only, never in the editor. watermarkText() is the
     // saved value (what the state strip reports); watermarkInput is the unsaved field content.
@@ -1073,6 +1075,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.watermarkError.set(null);
             this.invites.set([]);
             this.regForm.set(parseRegistrationForm(draft.registrationFormJson));
+            this.formLanguages.set(draft.formLanguages ?? []);
             this.editor?.setEditable(true);
             this.editor?.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC), { emitUpdate: false });
             this.resetHistory();
@@ -1376,13 +1379,16 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     // Registration form (B3). The whole definition is persisted as one JSON blob on every edit —
     // it's small and always fully in hand, so incremental patching would only add moving parts.
-    private async persistRegForm() {
+    // FI4.1 — writes into one language's slot. The editor always shows the primary-language
+    // form; attaching a preset written in another language fills that language's slot instead,
+    // which is why applyFormPreset passes the preset's own language rather than assuming.
+    private async persistRegForm(language = PRIMARY_LANGUAGE, form = this.regForm()) {
         const id = this.currentId();
         if (!id) return;
         this.regBusy.set(true);
         try {
-            const form = this.regForm();
-            await this.draftsApi.setRegistrationForm(id, form ? JSON.stringify(form) : null);
+            const res = await this.draftsApi.setRegistrationForm(id, form ? JSON.stringify(form) : null, language);
+            this.formLanguages.set(res.formLanguages ?? []);
         } catch (e) {
             this.inviteError.set(httpErrorMessage(e, this.t().editor.errors.saveForm));
         } finally {
@@ -1405,8 +1411,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     async applyFormPreset(preset: FormPreset) {
-        this.regForm.set(parseRegistrationForm(preset.formJson));
-        await this.persistRegForm();
+        const language = preset.language || PRIMARY_LANGUAGE;
+        const form = parseRegistrationForm(preset.formJson);
+        // Only the primary-language form is the one this screen displays; a preset in another
+        // language is stored for its readers without replacing what the owner sees here.
+        if (language === PRIMARY_LANGUAGE) this.regForm.set(form);
+        await this.persistRegForm(language, form);
     }
 
     async copyInviteLink(url: string) {

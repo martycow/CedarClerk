@@ -10,6 +10,7 @@ import {
 } from '../core/drafts.service';
 import { FormPresetsService, FormPreset } from '../core/form-presets.service';
 import { PostsService, ScheduledPost } from '../core/posts.service';
+import { PRIMARY_LANGUAGE, CONTENT_LANGUAGES } from '../core/languages';
 import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { CountBadgeComponent } from '../shared/count-badge.component';
@@ -26,7 +27,7 @@ import { StatsComponent } from './stats.component';
 import {
     LucideTrash2 as Trash2, LucideArchive as Archive, LucideArchiveRestore as ArchiveRestore,
     LucidePenLine as PenLine, LucideLock as Lock, LucideExternalLink as ExternalLink,
-    LucideRefreshCw as RefreshCw, LucideArrowLeft as ArrowLeft, LucideX as X,
+    LucideRefreshCw as RefreshCw, LucideArrowLeft as ArrowLeft, LucideX as X, LucideInfo as Info,
 } from '@lucide/angular';
 
 // FI3.5 removed the 'feedback' tab; ?tab=feedback still resolves (to posts, where feedback now
@@ -44,7 +45,7 @@ const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
     imports: [
         DatePipe, FormsModule, RouterLink, CedarLogoComponent, ModalComponent, CommentsComponent,
         StatsComponent, CountBadgeComponent, AccountMenuComponent, TagPickerComponent, FolderPickerComponent,
-        Trash2, Archive, ArchiveRestore, PenLine, Lock, ExternalLink, RefreshCw, ArrowLeft, X,
+        Trash2, Archive, ArchiveRestore, PenLine, Lock, ExternalLink, RefreshCw, ArrowLeft, X, Info,
     ],
     templateUrl: 'posts-manager.component.html',
     styleUrls: ['posts-manager.component.css'],
@@ -95,6 +96,8 @@ export class PostsManagerComponent implements OnInit {
     // The form attached to the currently selected post. Shown on the POSTS tab (a post is where a
     // form is used), never edited there directly — you pick a preset, and the preset is copied.
     regForm = signal<RegistrationForm | null>(null);
+    // FI4.1 — languages the selected post has a registration form for, primary first.
+    postFormLanguages = signal<string[]>([]);
     regBusy = signal(false);
 
     // Forms tab — presets only. It used to require picking a post first and edited that post's
@@ -103,6 +106,12 @@ export class PostsManagerComponent implements OnInit {
     presets = signal<FormPreset[]>([]);
     selectedPresetId = signal<string | null>(null);
     presetName = '';
+    // FI4.1 — which language this preset is written in. A post published in several languages
+    // attaches one preset per language; nothing here is machine-translated, since a form's
+    // wording is the owner talking to their reader.
+    presetLanguage = signal<string>(PRIMARY_LANGUAGE);
+    readonly primaryLanguage = PRIMARY_LANGUAGE;
+    readonly contentLanguages = CONTENT_LANGUAGES;
     presetForm = signal<RegistrationForm | null>(null);
     presetState = signal<'saved' | 'dirty' | 'saving' | 'error'>('saved');
     deletePresetId = signal<string | null>(null);
@@ -394,6 +403,7 @@ export class PostsManagerComponent implements OnInit {
                 this.draftsApi.listRegistrations(d.id),
             ]);
             this.regForm.set(parseRegistrationForm(full.registrationFormJson));
+            this.postFormLanguages.set(full.formLanguages ?? []);
             this.registrations.set(regs);
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().manager.errors.loadForm));
@@ -402,13 +412,16 @@ export class PostsManagerComponent implements OnInit {
         }
     }
 
-    private async persistForm(form: RegistrationForm | null) {
+    // FI4.1 — a preset written in another language fills that language's slot; only the primary
+    // one is the form this screen displays.
+    private async persistForm(form: RegistrationForm | null, language = PRIMARY_LANGUAGE) {
         const d = this.selected();
         if (!d) return;
         this.regBusy.set(true);
         try {
-            await this.draftsApi.setRegistrationForm(d.id, form ? JSON.stringify(form) : null);
-            this.regForm.set(form);
+            const res = await this.draftsApi.setRegistrationForm(d.id, form ? JSON.stringify(form) : null, language);
+            this.postFormLanguages.set(res.formLanguages ?? []);
+            if (language === PRIMARY_LANGUAGE) this.regForm.set(form);
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().manager.errors.saveForm));
         } finally {
@@ -420,7 +433,7 @@ export class PostsManagerComponent implements OnInit {
     // authored once on the Forms tab. The preset is COPIED here (N12), so editing it afterwards
     // can't rewrite a post that already used it.
     async applyPresetToPost(p: FormPreset) {
-        await this.persistForm(parseRegistrationForm(p.formJson));
+        await this.persistForm(parseRegistrationForm(p.formJson), p.language || PRIMARY_LANGUAGE);
     }
 
     async clearPostForm() {
@@ -446,6 +459,7 @@ export class PostsManagerComponent implements OnInit {
         await this.flushPreset();
         this.selectedPresetId.set(p.id);
         this.presetName = p.name;
+        this.presetLanguage.set(p.language || PRIMARY_LANGUAGE);
         this.presetForm.set(parseRegistrationForm(p.formJson)
             ?? { requireName: true, requireNickname: false, requireEmail: true, requireSocial: false, questions: [] });
         this.presetState.set('saved');
@@ -457,10 +471,12 @@ export class PostsManagerComponent implements OnInit {
         await this.flushPreset();
         const blank: RegistrationForm = { requireName: true, requireNickname: false, requireEmail: true, requireSocial: false, questions: [] };
         try {
-            const created = await this.presetsApi.create(this.t().manager.forms.untitledPreset, JSON.stringify(blank));
+            const created = await this.presetsApi.create(
+                this.t().manager.forms.untitledPreset, JSON.stringify(blank), PRIMARY_LANGUAGE);
             this.presets.update(list => [...list, created]);
             this.selectedPresetId.set(created.id);
             this.presetName = created.name;
+            this.presetLanguage.set(created.language || PRIMARY_LANGUAGE);
             this.presetForm.set(blank);
             this.presetState.set('saved');
         } catch (e) {
@@ -477,6 +493,11 @@ export class PostsManagerComponent implements OnInit {
         this.presetState.set('dirty');
     }
 
+    setPresetLanguage(lang: string) {
+        this.presetLanguage.set(lang);
+        this.presetState.set('dirty');
+    }
+
     async savePreset() {
         const p = this.selectedPreset();
         const form = this.presetForm();
@@ -484,7 +505,7 @@ export class PostsManagerComponent implements OnInit {
         if (!p || !form || !name) return;
         this.presetState.set('saving');
         try {
-            const saved = await this.presetsApi.update(p.id, name, JSON.stringify(form));
+            const saved = await this.presetsApi.update(p.id, name, JSON.stringify(form), this.presetLanguage());
             this.presets.update(list => list.map(x => x.id === saved.id ? saved : x));
             this.presetState.set('saved');
         } catch (e) {

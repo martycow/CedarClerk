@@ -575,3 +575,126 @@
     flex: 1;
     min-width: 0;
 }
+
+
+/* FI4.2 - the form editor was one flat stack of inputs and outlined rows; these are the three
+   labelled blocks it became, plus the per-question card. Fewer borders, more grouping. */
+.form-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+
+.form-block-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--t3);
+}
+
+.form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 140px;
+    gap: 10px;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.form-field-label {
+    font-size: 12px;
+    color: var(--t2);
+}
+
+.form-check-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px 14px;
+}
+
+.form-check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--t2);
+    cursor: pointer;
+}
+
+/* A question is one card rather than a bordered row among rows, so its type, options and
+   required flag visibly belong to the label above them. */
+.question-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--sheet);
+    overflow: hidden;
+}
+
+.question-card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--alt);
+}
+
+.question-card-head .chat-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.question-number {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--asoft);
+    color: var(--accent);
+    font-size: 11.5px;
+    font-weight: 700;
+}
+
+.question-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+}
+
+.question-card-body .spacer {
+    flex: 1;
+}
+
+/* Matches the Export window's hint treatment (FI2.5) so advice reads the same on both screens. */
+.hint-bubble {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    margin: 0;
+    padding: 7px 10px;
+    border: 1px solid var(--abord);
+    background: var(--asoft);
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--t2);
+}
+
+.hint-bubble .icon-sm {
+    flex: none;
+    margin-top: 1px;
+    color: var(--accent);
+}

@@ -132,10 +132,18 @@
                     </span>
                     <a class="state-link" routerLink="/posts">{{ t().editor.exportModal.editInManager }}</a>
                 </div>
+                <!--FI4.1: which languages a reader would actually be greeted in. A language with
+                no form of its own falls back to the primary one.-->
+                @if (formLanguages().length) {
+                <div class="blog-lang-badges">
+                    <span class="field-hint-inline">{{ t().manager.forms.formLanguages }}</span>
+                    @for (l of formLanguages(); track l) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
+                </div>
+                }
                 @if (formPresets().length) {
                 <select class="chat-input" [value]="''" (change)="pickFormPreset($any($event.target).value)" [disabled]="regBusy()">
                     <option value="">{{ regForm() ? t().manager.forms.changeForm : t().manager.forms.noFormChosen }}</option>
-                    @for (p of formPresets(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+                    @for (p of formPresets(); track p.id) { <option [value]="p.id">{{ p.name }} · {{ (p.language || primaryLanguage).toUpperCase() }}</option> }
                     @if (regForm()) { <option value="__none">{{ t().manager.forms.clearForm }}</option> }
                 </select>
                 } @else {

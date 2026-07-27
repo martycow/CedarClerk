@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom, timeout } from 'rxjs';
+import { PRIMARY_LANGUAGE } from './languages';
 
 // Phase 8 Step 8, docs/ROADMAP.md — neither AI provider streams, so there's no way to signal
 // real progress; this is purely a "don't let a stuck call hang forever" ceiling, enforced
@@ -36,7 +37,15 @@ export interface DraftMeta {
 }
 export interface TranslationMeta { language: string; title: string; updatedAt: string; }
 export interface TranslationFull extends TranslationMeta { cedarJson: string; sourceSnapshotJson: string | null; }
-export interface DraftFull extends DraftMeta { cedarJson: string; translations: TranslationMeta[]; registrationFormJson: string | null; watermarkText: string | null; }
+export interface DraftFull extends DraftMeta {
+    cedarJson: string;
+    translations: TranslationMeta[];
+    registrationFormJson: string | null;
+    registrationFormTranslationsJson: string | null;
+    // FI4.1 — language codes this post actually has a registration form for, primary first.
+    formLanguages: string[];
+    watermarkText: string | null;
+}
 
 // Mirrors Consts.Watermark.MaxLength (CedarClerk.Core) — the server rejects longer text, so the
 // input caps at the same number rather than letting a save fail (I7).
@@ -141,9 +150,11 @@ export class DraftsService {
         return firstValueFrom(this.http.post<{ watermarkText: string | null }>(`/api/drafts/${id}/watermark`, { watermarkText }));
     }
 
-    setRegistrationForm(id: string, formJson: string | null) {
-        return firstValueFrom(this.http.post<{ registrationFormJson: string | null }>(
-            `/api/drafts/${id}/registration-form`, { formJson }));
+    // FI4.1 — `language` names the slot: the primary language writes the post's own form, any
+    // other writes that language's entry beside it.
+    setRegistrationForm(id: string, formJson: string | null, language = PRIMARY_LANGUAGE) {
+        return firstValueFrom(this.http.post<{ registrationFormJson: string | null; formLanguages: string[] }>(
+            `/api/drafts/${id}/registration-form`, { formJson, language }));
     }
 
     listRegistrations(id: string) {

@@ -315,22 +315,49 @@ public static class CedarToBlogHtmlRenderer
             """;
     }
 
+    private sealed record RegistrationGateChrome(
+        string Heading, string Blurb, string Submit,
+        string NamePlaceholder, string NickPlaceholder, string EmailPlaceholder,
+        string SocialPlaceholder, string ChoosePlaceholder);
+
+    // English is the fallback for any code not listed, which is also what the app's own UI
+    // locales do (ADR-050) — an untranslated gate in English beats one in a language the reader
+    // definitely didn't ask for.
+    private static readonly IReadOnlyDictionary<string, RegistrationGateChrome> GateChrome =
+        new Dictionary<string, RegistrationGateChrome>
+        {
+            ["ru"] = new("Это приватный пост", "Заполните форму ниже, чтобы получить доступ.", "Получить доступ",
+                "Имя и фамилия", "Никнейм", "Почта", "Ссылка на соцсеть", "Выберите…"),
+            ["en"] = new("This post is private", "Fill in the form below to get access.", "Get access",
+                "First and last name", "Nickname", "Email", "A social link", "Choose…"),
+            ["de"] = new("Dieser Beitrag ist privat", "Füllen Sie das Formular aus, um Zugang zu erhalten.", "Zugang erhalten",
+                "Vor- und Nachname", "Spitzname", "E-Mail", "Ein Social-Media-Link", "Auswählen…"),
+            ["fr"] = new("Cet article est privé", "Remplissez le formulaire ci-dessous pour obtenir l'accès.", "Obtenir l'accès",
+                "Nom et prénom", "Pseudo", "E-mail", "Un lien vers un réseau social", "Choisir…"),
+            ["es"] = new("Esta publicación es privada", "Rellena el formulario para obtener acceso.", "Obtener acceso",
+                "Nombre y apellidos", "Apodo", "Correo electrónico", "Un enlace a una red social", "Elegir…"),
+            ["ja"] = new("この投稿は非公開です", "アクセスするには以下のフォームにご記入ください。", "アクセスする",
+                "氏名", "ニックネーム", "メールアドレス", "SNSのリンク", "選択してください…"),
+        };
+
     // Registration form shown instead of the post body to an uninvited visitor of a private
     // post (B3). Hydrated by the page script in BlogEndpoints' ShellTemplate, same as the
     // comment form above. Every author-authored string (intro, question labels, choice options)
     // is escaped here — it's the one place visitor-facing HTML is built from owner input.
     public static string RegistrationFormHtml(RegistrationFormDefinition form, string title, string lang = "ru")
     {
-        var heading = lang == "en" ? "This post is private" : "Это приватный пост";
-        var blurb = lang == "en"
-            ? "Fill in the form below to get access."
-            : "Заполните форму ниже, чтобы получить доступ.";
-        var submit = lang == "en" ? "Get access" : "Получить доступ";
-        var namePh = lang == "en" ? "First and last name" : "Имя и фамилия";
-        var nickPh = lang == "en" ? "Nickname" : "Никнейм";
-        var emailPh = lang == "en" ? "Email" : "Почта";
-        var socialPh = lang == "en" ? "A social link" : "Ссылка на соцсеть";
-        var choosePh = lang == "en" ? "Choose…" : "Выберите…";
+        // FI4.1 — the gate's own chrome in every content language, since a post can be read in
+        // any of them (NF2). The author's own words (intro, labels, options) are not translated
+        // here: they come from whichever language's form was picked, see RegistrationFormSet.
+        var chrome = GateChrome.TryGetValue(lang, out var found) ? found : GateChrome["en"];
+        var heading = chrome.Heading;
+        var blurb = chrome.Blurb;
+        var submit = chrome.Submit;
+        var namePh = chrome.NamePlaceholder;
+        var nickPh = chrome.NickPlaceholder;
+        var emailPh = chrome.EmailPlaceholder;
+        var socialPh = chrome.SocialPlaceholder;
+        var choosePh = chrome.ChoosePlaceholder;
 
         var sb = new StringBuilder();
         sb.Append("<div class=\"reg-gate\"><div class=\"reg-card\">");

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CedarClerk.Core;
+using CedarClerk.Localization;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
@@ -9,9 +10,16 @@ namespace CedarClerk.Server;
 // bounds its size and never dictates its shape, exactly like Draft.RegistrationFormJson (ADR-042).
 public static class FormPresetEndpoints
 {
-    public record UpsertPresetRequest(string Name, string? FormJson);
+    // FI4.1 — Language is optional on the wire so an older client (or a hand-rolled call) still
+    // creates a primary-language preset rather than failing.
+    public record UpsertPresetRequest(string Name, string? FormJson, string? Language = null);
 
     private const int PresetNameMaxLength = 60;
+
+    // Anything unrecognised means the primary language rather than an error: the language only
+    // decides which readers get this form, and rejecting the write would lose the form itself.
+    private static string ResolveLanguage(string? lang) =>
+        lang is not null && Languages.ContentLanguages.Contains(lang) ? lang : Languages.Primary;
 
     public static void MapFormPresetEndpoints(this WebApplication app)
     {
@@ -22,7 +30,7 @@ public static class FormPresetEndpoints
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var presets = await db.FormPresets.Where(p => p.OwnerId == uid)
                 .OrderBy(p => p.Name)
-                .Select(p => new { p.Id, p.Name, p.FormJson, p.CreatedAt })
+                .Select(p => new { p.Id, p.Name, p.FormJson, p.Language, p.CreatedAt })
                 .ToListAsync();
             return Results.Ok(presets);
         });
@@ -33,10 +41,16 @@ public static class FormPresetEndpoints
                 return error;
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var preset = new FormPreset { OwnerId = uid, Name = req.Name.Trim(), FormJson = req.FormJson! };
+            var preset = new FormPreset
+            {
+                OwnerId = uid,
+                Name = req.Name.Trim(),
+                FormJson = req.FormJson!,
+                Language = ResolveLanguage(req.Language),
+            };
             db.FormPresets.Add(preset);
             await db.SaveChangesAsync();
-            return Results.Ok(new { preset.Id, preset.Name, preset.FormJson, preset.CreatedAt });
+            return Results.Ok(new { preset.Id, preset.Name, preset.FormJson, preset.Language, preset.CreatedAt });
         });
 
         group.MapPut("/{id:guid}", async (Guid id, UpsertPresetRequest req, ClaimsPrincipal user, CedarDbContext db) =>
@@ -50,8 +64,9 @@ public static class FormPresetEndpoints
 
             preset.Name = req.Name.Trim();
             preset.FormJson = req.FormJson!;
+            preset.Language = ResolveLanguage(req.Language);
             await db.SaveChangesAsync();
-            return Results.Ok(new { preset.Id, preset.Name, preset.FormJson, preset.CreatedAt });
+            return Results.Ok(new { preset.Id, preset.Name, preset.FormJson, preset.Language, preset.CreatedAt });
         });
 
         group.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>

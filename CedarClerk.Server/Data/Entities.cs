@@ -246,6 +246,11 @@ public class Draft
     // response. A JSON blob rather than columns because the question list is variable-shape —
     // same reasoning as ApplicationUser's preference blobs; the server only length-checks it.
     public string? RegistrationFormJson { get; set; }
+    // FI4.1 — the same form in the post's other languages: a JSON object keyed by language code,
+    // each value a form blob shaped exactly like RegistrationFormJson above. Kept beside the
+    // primary field rather than folding it into a map, so every existing post keeps working and
+    // the common single-language case stays a single column read.
+    public string? RegistrationFormTranslationsJson { get; set; }
 
     // Watermark text tiled over the rendered blog post (I7). Only applied to private posts —
     // the point is discouraging redistribution of something handed out per-invite. Null/empty =
@@ -316,6 +321,10 @@ public class FormPreset
     public string OwnerId { get; set; } = default!;
     public string Name { get; set; } = "";
     public string FormJson { get; set; } = "";
+    // FI4.1 — a preset is written in one language; a post published in several attaches one per
+    // language. Translating the *questions* automatically was rejected: a form's wording is the
+    // owner's voice talking to their reader, and a machine translation of it is not.
+    public string Language { get; set; } = Languages.Primary;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

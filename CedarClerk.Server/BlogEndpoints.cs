@@ -459,7 +459,13 @@ public static class BlogEndpoints
     {
         var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.IsBlogPublished);
         // Only private posts that actually have a form configured accept submissions.
-        if (draft is null || !draft.IsPrivate || RegistrationFormDefinition.Parse(draft.RegistrationFormJson) is not { } form)
+        // Validated against the form the visitor was actually shown (FI4.1) — a required question
+        // that only exists in one language must not be enforced against a reader of another.
+        var submitLang = ctx.Request.Query["lang"].FirstOrDefault() is { } sq && Languages.IsTranslationLanguage(sq)
+            ? sq
+            : Languages.Primary;
+        if (draft is null || !draft.IsPrivate
+            || RegistrationFormSet.Pick(draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson, submitLang) is not { } form)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
@@ -944,13 +950,20 @@ public static class BlogEndpoints
                 // With a registration form configured the post is "locked", not "hidden" (B3) —
                 // a deliberate departure from the indistinguishable-from-404 behaviour above,
                 // which still applies when no form is set. See the ADR following ADR-041.
-                if (RegistrationFormDefinition.Parse(draft.RegistrationFormJson) is { } form)
+                // FI4.1 — the gate answers in the language the reader asked for: their own form
+                // if the owner wrote one for it, the primary-language form otherwise. It used to
+                // hardcode the primary language, so an EN reader of a private post was greeted
+                // in Russian even when an EN form existed.
+                var gateLang = ctx.Request.Query["lang"].FirstOrDefault() is { } q && Languages.IsTranslationLanguage(q)
+                    ? q
+                    : Languages.Primary;
+                if (RegistrationFormSet.Pick(draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson, gateLang) is { } form)
                 {
                     ctx.Response.StatusCode = StatusCodes.Status200OK;
                     ctx.Response.ContentType = "text/html; charset=utf-8";
                     await ctx.Response.WriteAsync(PageShell(draft.Title,
-                        CedarToBlogHtmlRenderer.RegistrationFormHtml(form, draft.Title, Languages.Primary),
-                        Languages.Primary, RenderHeader(channel)));
+                        CedarToBlogHtmlRenderer.RegistrationFormHtml(form, draft.Title, gateLang),
+                        gateLang, RenderHeader(channel)));
                     return;
                 }
 

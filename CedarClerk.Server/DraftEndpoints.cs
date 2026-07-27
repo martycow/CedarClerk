@@ -22,7 +22,9 @@ public static class DraftEndpoints
     public record UpdateWatermarkRequest(string? WatermarkText);
     public record UpdateSlugRequest(string? Slug);
     public record AddInviteRequest(string Email);
-    public record UpdateRegistrationFormRequest(string? FormJson);
+    // FI4.1 — Language names which language slot the form belongs to; absent or primary writes
+    // the post's own RegistrationFormJson, anything else goes into the translations object.
+    public record UpdateRegistrationFormRequest(string? FormJson, string? Language = null);
 
     private const int InviteEmailMaxLength = 254;
 
@@ -171,7 +173,15 @@ public static class DraftEndpoints
             var translations = await db.DraftTranslations.Where(t => t.DraftId == id)
                 .Select(t => new { t.Language, t.Title, t.UpdatedAt })
                 .ToListAsync();
-            return Results.Ok(new { draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug, draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.FolderId, draft.IsPrivate, draft.WatermarkText, Translations = translations });
+            return Results.Ok(new
+            {
+                draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug,
+                draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.FolderId, draft.IsPrivate,
+                draft.WatermarkText, draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson,
+                // FI4.1 — which languages a reader would actually be greeted in.
+                FormLanguages = RegistrationFormSet.LanguagesWithForm(draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson),
+                Translations = translations,
+            });
         });
 
         // Backs the export modal's "Files" list — every media asset referenced by this draft
@@ -331,9 +341,22 @@ public static class DraftEndpoints
             var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
             if (draft is null) return Results.NotFound();
 
-            draft.RegistrationFormJson = string.IsNullOrWhiteSpace(req.FormJson) ? null : req.FormJson;
+            var lang = req.Language is not null && Languages.IsTranslationLanguage(req.Language)
+                ? req.Language
+                : Languages.Primary;
+            if (lang == Languages.Primary)
+                draft.RegistrationFormJson = string.IsNullOrWhiteSpace(req.FormJson) ? null : req.FormJson;
+            else
+                draft.RegistrationFormTranslationsJson =
+                    RegistrationFormSet.SetTranslation(draft.RegistrationFormTranslationsJson, lang, req.FormJson);
+
             await db.SaveChangesAsync();
-            return Results.Ok(new { draft.RegistrationFormJson });
+            return Results.Ok(new
+            {
+                draft.RegistrationFormJson,
+                draft.RegistrationFormTranslationsJson,
+                FormLanguages = RegistrationFormSet.LanguagesWithForm(draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson),
+            });
         });
 
         groupBuilder.MapGet("/{id:guid}/registrations", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
