@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DebugLogService } from '../core/debug-log.service';
+import { LocaleService } from '../core/i18n/locale.service';
 import {
     LucideTerminal as Terminal, LucideX as X,
     LucideRefreshCw as RefreshCw, LucideTrash2 as Trash2,
@@ -19,6 +20,7 @@ const MAX_BODY_CHARS = 4000;
 })
 export class DebugConsoleComponent {
     log = inject(DebugLogService);
+    t = inject(LocaleService).t;
     open = signal(false);
     expandedId = signal<number | null>(null);
 

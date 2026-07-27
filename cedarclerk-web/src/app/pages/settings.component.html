@@ -234,38 +234,38 @@
             <div class="field-group">
                 <label for="cc-slot-1">{{ t().settings.headerSlots.slot(1) }}</label>
                 <select id="cc-slot-1" [(ngModel)]="headerSlot1">
-                    <option [ngValue]="null">None</option>
-                    <option value="AuthorSignature">Author Signature</option>
-                    <option value="Url">URL</option>
-                    <option value="MapLocation">Map Location</option>
-                    <option value="PublishedDate">Published Date</option>
-                    <option value="Length">Length</option>
-                    <option value="TimeToRead">Time to Read</option>
+                    <option [ngValue]="null">{{ t().settings.headerSlots.none }}</option>
+                    <option value="AuthorSignature">{{ t().settings.headerSlots.typeAuthorSignature }}</option>
+                    <option value="Url">{{ t().settings.headerSlots.typeUrl }}</option>
+                    <option value="MapLocation">{{ t().settings.headerSlots.typeMapLocation }}</option>
+                    <option value="PublishedDate">{{ t().settings.headerSlots.typePublishedDate }}</option>
+                    <option value="Length">{{ t().settings.headerSlots.typeLength }}</option>
+                    <option value="TimeToRead">{{ t().settings.headerSlots.typeTimeToRead }}</option>
                 </select>
             </div>
             <div class="field-group">
                 <label for="cc-slot-2">{{ t().settings.headerSlots.slot(2) }}</label>
                 <select id="cc-slot-2" [(ngModel)]="headerSlot2">
-                    <option [ngValue]="null">None</option>
-                    <option value="AuthorSignature">Author Signature</option>
-                    <option value="Url">URL</option>
-                    <option value="MapLocation">Map Location</option>
-                    <option value="PublishedDate">Published Date</option>
-                    <option value="Length">Length</option>
-                    <option value="TimeToRead">Time to Read</option>
+                    <option [ngValue]="null">{{ t().settings.headerSlots.none }}</option>
+                    <option value="AuthorSignature">{{ t().settings.headerSlots.typeAuthorSignature }}</option>
+                    <option value="Url">{{ t().settings.headerSlots.typeUrl }}</option>
+                    <option value="MapLocation">{{ t().settings.headerSlots.typeMapLocation }}</option>
+                    <option value="PublishedDate">{{ t().settings.headerSlots.typePublishedDate }}</option>
+                    <option value="Length">{{ t().settings.headerSlots.typeLength }}</option>
+                    <option value="TimeToRead">{{ t().settings.headerSlots.typeTimeToRead }}</option>
                 </select>
             </div>
             <div class="field-group">
                 <label for="cc-slot-3">{{ t().settings.headerSlots.slot(3) }} @if (!hasProHeaderSlot()) { <span class="ai-badge">PRO</span> }</label>
                 <select id="cc-slot-3" [(ngModel)]="headerSlot3" [disabled]="!hasProHeaderSlot()"
                         [title]="hasProHeaderSlot() ? '' : t().settings.headerSlots.slotUpgrade">
-                    <option [ngValue]="null">None</option>
-                    <option value="AuthorSignature">Author Signature</option>
-                    <option value="Url">URL</option>
-                    <option value="MapLocation">Map Location</option>
-                    <option value="PublishedDate">Published Date</option>
-                    <option value="Length">Length</option>
-                    <option value="TimeToRead">Time to Read</option>
+                    <option [ngValue]="null">{{ t().settings.headerSlots.none }}</option>
+                    <option value="AuthorSignature">{{ t().settings.headerSlots.typeAuthorSignature }}</option>
+                    <option value="Url">{{ t().settings.headerSlots.typeUrl }}</option>
+                    <option value="MapLocation">{{ t().settings.headerSlots.typeMapLocation }}</option>
+                    <option value="PublishedDate">{{ t().settings.headerSlots.typePublishedDate }}</option>
+                    <option value="Length">{{ t().settings.headerSlots.typeLength }}</option>
+                    <option value="TimeToRead">{{ t().settings.headerSlots.typeTimeToRead }}</option>
                 </select>
             </div>
 
@@ -351,7 +351,7 @@
                     <div class="plan-card-price">$0</div>
                     <p class="plan-card-desc">{{ t().settings.subscription.freeDesc }}</p>
                     @if (b.planTier === 'Free') {
-                    <button class="plan-card-btn" disabled>Current plan</button>
+                    <button class="plan-card-btn" disabled>{{ t().settings.subscription.currentPlan }}</button>
                     }
                 </div>
                 <div class="plan-card" [class.current]="b.planTier === 'Pro'">
@@ -359,7 +359,7 @@
                     <div class="plan-card-price">${{ b.prices.proUsd }}<span>{{ t().settings.subscription.perMonth }}</span></div>
                     <p class="plan-card-desc">{{ t().settings.subscription.proDesc }}</p>
                     @if (b.planTier === 'Pro') {
-                    <button class="plan-card-btn" disabled>Current plan</button>
+                    <button class="plan-card-btn" disabled>{{ t().settings.subscription.currentPlan }}</button>
                     } @else if (b.planTier === 'Free') {
                     <button class="plan-card-btn" (click)="pickPlan('pro')">{{ t().settings.subscription.choosePro }}</button>
                     }
@@ -369,7 +369,7 @@
                     <div class="plan-card-price">${{ b.prices.proPlusUsd }}<span>{{ t().settings.subscription.perMonth }}</span></div>
                     <p class="plan-card-desc">{{ t().settings.subscription.proPlusDesc }}</p>
                     @if (b.planTier === 'ProPlus' || b.planTier === 'Forever') {
-                    <button class="plan-card-btn" disabled>Current plan</button>
+                    <button class="plan-card-btn" disabled>{{ t().settings.subscription.currentPlan }}</button>
                     } @else {
                     <button class="plan-card-btn accent" (click)="pickPlan('proplus')">{{ t().settings.subscription.chooseProPlus }}</button>
                     }
@@ -396,7 +396,7 @@
                             [title]="b.providers.paypal ? '' : t().settings.subscription.paypalUnavailable" (click)="payMethod = 'paypal'">
                         <span class="radio-dot"></span>
                         <span>
-                            <span class="pay-method-label">PayPal</span>
+                            <span class="pay-method-label">{{ t().settings.subscription.paypalLabel }}</span>
                             <span class="pay-method-desc">{{ t().settings.subscription.paypalDesc }}</span>
                         </span>
                     </button>
@@ -406,7 +406,7 @@
                             (click)="payMethod = 'stars'">
                         <span class="radio-dot"></span>
                         <span>
-                            <span class="pay-method-label">Telegram Stars</span>
+                            <span class="pay-method-label">{{ t().settings.subscription.starsLabel }}</span>
                             <span class="pay-method-desc">{{ t().settings.subscription.starsDesc }}</span>
                         </span>
                     </button>

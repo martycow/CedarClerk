@@ -31,11 +31,12 @@ See ADR-035, `docs/DECISIONS.md`, for full scope (toolbar customization, Appeara
 ## Phase 8 (v0.8.0) — closed 26.07.2026
 See `docs/ROADMAP.md` Phase 8 for the full breakdown — all 9 steps done. **Not yet live-verified**: Step 6 (tags in Telegram export) and Step 7 (comment replies/highlight/reservation/dual-timestamp) — deferred by Marty's choice, do before treating the phase as fully proven in production. `docs/BACKLOG.md` has what's deliberately deferred out of this phase, plus the newer "Cedar Clerk 0.9.0" idea dump.
 
-## Localization (B26) — half done, 26.07.2026
-Mechanism shipped and live-verified; the translation itself is unfinished. See ADR-044 and the Phase 9 entry in `docs/ROADMAP.md`.
-- [ ] Translate the remaining screens: editor (largest — toolbar, export modal, AI panels), rest of Settings, `/posts` (Posts Manager, incl. its stats and comments tab bodies), debug console (~380 of ~480 strings left — the Posts Manager added English strings of its own, see ADR-046)
+## Localization (B26) — app UI done 27.07.2026, two pieces deliberately left
+Every app screen is on `t()` now: login, register, `/drafts`, `/posts` (incl. its stats and comments tab bodies), Settings, the editor (toolbar tooltips, export modal, AI dialogs, status messages) and the debug console. See ADR-044/ADR-050.
 - [ ] Long-word (German) layout pass — no fixed-width buttons, wrapping/ellipsis in the topbar and tab strips. A dev-only pseudo-locale that inflates string length is the cheap way to find the breaks
-- [ ] Decide whether server-side messages get localized (`ErrorMessages.cs` + every `{ error }` body) — a Russian UI currently shows English failure text
+- [ ] Decide whether server-side messages get localized (`ErrorMessages.cs` + every `{ error }` body) — a Russian UI still shows English failure text
+- [ ] `/terms` and `/privacy` stay English — still unfinished `[BRACKETED]` legal drafts, translating them now would be translating a draft
+- [ ] **Not live-verified**: the Russian wording has not been read through in a browser screen by screen
 
 ## Tech debt
 See the tech-debt table in `docs/ROADMAP.md` — OS migration (Bullseye→64-bit, ~Aug 2026), cloud backup duplication (rclone), .NET 8 EOL (Nov 2026, bundled with the OS migration).

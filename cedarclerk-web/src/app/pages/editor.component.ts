@@ -16,6 +16,7 @@ import {
 } from '../core/drafts.service';
 import { FormPresetsService, FormPreset } from '../core/form-presets.service';
 import { CommentsService } from '../core/comments.service';
+import { LocaleService } from '../core/i18n/locale.service';
 import { CountBadgeComponent } from '../shared/count-badge.component';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, PostLanguage, CompressionLevel, ScheduledPost } from '../core/posts.service';
@@ -195,6 +196,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private draftsApi = inject(DraftsService);
     private presetsApi = inject(FormPresetsService);
     feedback = inject(CommentsService);
+    t = inject(LocaleService).t;
     private route = inject(ActivatedRoute);
     private assets = inject(AssetsService);
 
@@ -369,7 +371,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     saveLabel(): string {
         switch (this.saveState()) {
             case 'saved': return 'Saved';
-            case 'saving': return 'Saving…';
+            case 'saving': return this.t().editor.saving;
             case 'dirty': return 'Unsaved changes';
             case 'error': return 'Sync failed';
         }
@@ -626,19 +628,21 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return this.lang() === 'en' && !this.enMeta();
     }
 
+    // Cycled by elapsed seconds (no separate timer) so a long action shows visible progress
+    // instead of a static label. The message lists live in the dictionaries — see editor.statuses.
     translateStatusMessage(): string {
-        const i = Math.floor(this.autoTranslateElapsed() / 4) % TRANSLATE_STATUS_MESSAGES.length;
-        return TRANSLATE_STATUS_MESSAGES[i];
+        const list = this.t().editor.statuses.translate;
+        return list[Math.floor(this.autoTranslateElapsed() / 4) % list.length];
     }
 
     exportStatusMessage(): string {
-        const i = Math.floor(this.exportElapsed() / 2) % EXPORT_STATUS_MESSAGES.length;
-        return EXPORT_STATUS_MESSAGES[i];
+        const list = this.t().editor.statuses.export;
+        return list[Math.floor(this.exportElapsed() / 2) % list.length];
     }
 
     blogStatusMessage(): string {
-        const i = Math.floor(this.blogElapsed() / 2) % BLOG_STATUS_MESSAGES.length;
-        return BLOG_STATUS_MESSAGES[i];
+        const list = this.t().editor.statuses.blog;
+        return list[Math.floor(this.blogElapsed() / 2) % list.length];
     }
 
     // The RU version was edited after the EN translation was last touched — probably needs re-translating
@@ -764,7 +768,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     folderName(id: string | null): string {
         if (id === null) return 'No folder';
-        return this.folders().find(f => f.id === id)?.name ?? 'No folder';
+        return this.folders().find(f => f.id === id)?.name ?? this.t().editor.tags.noFolder;
     }
 
     async assignFolder(folderId: string | null) {
@@ -832,7 +836,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             error: e => {
                 this.autoTranslateError.set(e instanceof TimeoutError
                     ? 'Auto-translate timed out after 3 minutes'
-                    : httpErrorMessage(e, 'Auto-translate failed — check server logs'));
+                    : httpErrorMessage(e, this.t().editor.errors.autoTranslate));
                 this.finishAutoTranslate();
             },
             complete: () => this.finishAutoTranslate(),
@@ -869,15 +873,15 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     aiConfirmTitle(): string {
-        return this.aiConfirmKind() === 'fix-errors' ? 'Fix errors with AI?' : 'Run the Schizo-izer?';
+        return this.aiConfirmKind() === 'fix-errors' ? this.t().editor.ai.fixTitle : this.t().editor.ai.schizoTitle;
     }
 
     aiConfirmBody(): string {
         const words = this.wordCount();
         const lang = this.lang().toUpperCase();
         return this.aiConfirmKind() === 'fix-errors'
-            ? `Claude will proofread the current ${lang} version (${words} words). The original stays in history.`
-            : `Claude will rewrite the current ${lang} version (${words} words) into unhinged schizoposting. The original stays in history.`;
+            ? this.t().editor.ai.fixBody(lang, words)
+            : this.t().editor.ai.schizoBody(lang, words);
     }
 
     // Rewrites the current language version in place via an LLM (Pro Plus, daily quota) — grammar
@@ -887,7 +891,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const id = this.currentId();
         const editor = this.editor;
         if (!id || !editor) return;
-        const label = kind === 'fix-errors' ? 'Fix errors' : 'Schizo-izer';
+        const label = kind === 'fix-errors' ? this.t().editor.ai.fixLabel : this.t().editor.ai.schizoLabel;
 
         this.aiEditBusy.set(true);
         this.aiEditElapsed.set(0);
@@ -1141,7 +1145,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             const res = await this.draftsApi.publishToBlog(id);
             this.currentBlog.set({ slug: res.slug, isPublished: true });
         } catch (e) {
-            this.blogError.set(httpErrorMessage(e, 'Publish failed — check server logs'));
+            this.blogError.set(httpErrorMessage(e, this.t().editor.errors.publish));
         } finally {
             this.blogBusy.set(false);
             clearInterval(this.blogTicker);
@@ -1160,7 +1164,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             await this.draftsApi.unpublishFromBlog(id);
             this.currentBlog.update(b => b ? { ...b, isPublished: false } : b);
         } catch (e) {
-            this.blogError.set(httpErrorMessage(e, 'Unpublish failed — check server logs'));
+            this.blogError.set(httpErrorMessage(e, this.t().editor.errors.unpublish));
         } finally {
             this.blogBusy.set(false);
             clearInterval(this.blogTicker);
@@ -1240,7 +1244,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             const res = await this.draftsApi.setDraftPrivate(id, next);
             this.isPrivate.set(res.isPrivate);
         } catch {
-            this.inviteError.set('Failed to update privacy setting');
+            this.inviteError.set(this.t().editor.errors.privacy);
         }
     }
 
@@ -1255,7 +1259,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.invites.update(list => [...list, invite]);
             this.inviteEmailInput = '';
         } catch (e) {
-            this.inviteError.set(httpErrorMessage(e, 'Failed to add invite'));
+            this.inviteError.set(httpErrorMessage(e, this.t().editor.errors.addInvite));
         } finally {
             this.inviteBusy.set(false);
         }
@@ -1269,7 +1273,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             await this.draftsApi.revokeInvite(id, inviteId);
             this.invites.update(list => list.filter(i => i.id !== inviteId));
         } catch {
-            this.inviteError.set('Failed to revoke invite');
+            this.inviteError.set(this.t().editor.errors.revokeInvite);
         } finally {
             this.inviteBusy.set(false);
         }
@@ -1282,7 +1286,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         try {
             await this.draftsApi.resendInvite(id, inviteId);
         } catch {
-            this.inviteError.set('Failed to resend invite');
+            this.inviteError.set(this.t().editor.errors.resendInvite);
         } finally {
             this.inviteBusy.set(false);
         }
@@ -1298,7 +1302,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             const form = this.regForm();
             await this.draftsApi.setRegistrationForm(id, form ? JSON.stringify(form) : null);
         } catch (e) {
-            this.inviteError.set(httpErrorMessage(e, 'Failed to save the registration form'));
+            this.inviteError.set(httpErrorMessage(e, this.t().editor.errors.saveForm));
         } finally {
             this.regBusy.set(false);
         }
@@ -1430,7 +1434,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.knownChats.update(list => list.filter(k => String(k.telegramChatId) !== chatId));
             await this.refreshChannelStats();
         } catch (e: any) {
-            this.channelError.set(e?.error?.error ?? 'Failed to connect channel');
+            this.channelError.set(e?.error?.error ?? this.t().editor.errors.connectChannel);
         } finally {
             this.channelBusy.set(false);
         }
@@ -1443,7 +1447,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             await this.channelsApi.refreshKnown();
             this.knownChats.set(await this.channelsApi.listKnown());
         } catch {
-            this.channelError.set('Failed to refresh known chats');
+            this.channelError.set(this.t().editor.errors.refreshChats);
         } finally {
             this.knownChatsRefreshing.set(false);
         }
@@ -1631,7 +1635,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (type === 'youtube') {
             const videoId = extractYouTubeId(value);
             if (!videoId) {
-                this.insertError.set('Not a recognized YouTube link');
+                this.insertError.set(this.t().editor.errors.notYoutube);
                 return;
             }
             this.insertNode('youtube', { videoId, caption: this.insertCaption.trim() || null });
