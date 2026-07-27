@@ -173,14 +173,14 @@ Full item text in `docs/BACKLOG.md` under "Brainstorm v2"; this is the status ch
 - [ ] N2 — Tag selector in the New Draft dialog (today it's a free-text comma-separated input; the cloud picker exists only in the editor)
 - [x] N4 — Export: channels picked by clicking only, no text entry (was v1 `B4`) — 26.07.2026, ADR-045. Export-target field removed outright; the connect-by-@username field survives behind a disclosure link, because the discovered-chats list is empty for accounts with no linked Telegram
 - [x] N5 — Export: an unticked destination folds to its header (26.07.2026, ADR-045) — LIVE chip stays visible while folded
-- [ ] N6 — Registration-form field validation (≥2 chars, no specials except `-`) — server-side too, not just the browser
+- [x] N6 — Registration-form field validation (27.07.2026, ADR-048) — `RegistrationFieldValidator` in Core (unit-tested, Unicode letters so Cyrillic passes), enforced server-side and mirrored in the page script. Name only; nickname/email/social keep their own rules
 - [x] N7 — **Posts Manager** at `/posts` (26.07.2026, ADR-046) — four tabs: posts (metadata-only edits: title/tags/folder/private/archive/delete + links out), reactions & comments, stats, forms. The old `/comments` and `/stats` components are reused as tab bodies with their page chrome removed; both routes now redirect. Forms tab is read-only until N10. **Not yet live-verified in a browser**
 - [x] N10 — Forms tab for real (26.07.2026, ADR-047) — form editor + delete moved here from the export modal, submissions with question labels resolved, new `multi` question type (checkboxes; answer stored as a JSON array inside the existing string map), per-question distribution pie with a legend; a single-answer question renders as text, a 7th option folds into "Other". New `--series-1..6` tokens, validated in both themes. **Not yet live-verified**
 - [x] N12 — Form presets (26.07.2026, ADR-047) — `FormPreset` entity + `/api/form-presets` CRUD, managed in the Forms tab, applied as chips in the export modal before publishing. A preset is **copied** onto the post, never linked, so editing it later can't rewrite a live post. **Not yet live-verified**
 - [x] N13 — Wide export window (26.07.2026, ADR-045) — 1180px with an auto-fit column grid over the sections; needed the `anyComponentStyle` error budget raised 25kB→32kB
 
 **Medium**
-- [ ] N11 — Telegram DM on a new registration-form submission (extends ADR-040)
+- [x] N11 — Telegram DM on a new registration-form submission (27.07.2026, ADR-048) — reuses `NotifyOwnerAsync`, same opt-in and same log-only failure behaviour as comment/like notifications
 
 **Low**
 - [ ] N1 — `/drafts` column sorting + resizable columns

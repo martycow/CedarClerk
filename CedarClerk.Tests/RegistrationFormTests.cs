@@ -190,4 +190,34 @@ public class RegistrationFormHtmlTests
         Assert.Empty(MultiAnswer.Split(""));
         Assert.Empty(MultiAnswer.Split("[]"));
     }
+
+    [Theory]
+    [InlineData("Марти")]
+    [InlineData("Anna Maria")]
+    [InlineData("Jean-Luc")]
+    [InlineData("Ли")]
+    public void Accepts_real_names(string name)
+    {
+        Assert.True(RegistrationFieldValidator.IsValidName(name));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("A")]          // shorter than the 2-character floor
+    [InlineData("x1")]         // digits are not letters
+    [InlineData("Bob!")]       // punctuation other than '-'
+    [InlineData("a_b")]
+    [InlineData("--")]         // hyphens only, no letter at all
+    [InlineData("  ")]
+    public void Rejects_junk_names(string name)
+    {
+        Assert.False(RegistrationFieldValidator.IsValidName(name));
+    }
+
+    [Fact]
+    public void Trims_before_measuring_a_name()
+    {
+        Assert.True(RegistrationFieldValidator.IsValidName("  Ян  "));
+        Assert.False(RegistrationFieldValidator.IsValidName("  Я  "));
+    }
 }

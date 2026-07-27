@@ -454,6 +454,14 @@ public static class BlogEndpoints
             await WriteJsonErrorAsync(ctx, StatusCodes.Status400BadRequest, "Enter a valid email address.");
             return;
         }
+        // N6 — applies whenever a name was given, not only when it was required: a junk name in
+        // an optional field is still junk in the owner's audience list.
+        if (name is not null && !RegistrationFieldValidator.IsValidName(name))
+        {
+            await WriteJsonErrorAsync(ctx, StatusCodes.Status400BadRequest,
+                "Name must be at least 2 letters and may only contain letters, spaces and hyphens.");
+            return;
+        }
 
         var answers = req.Answers is { Count: > 0 }
             ? JsonSerializer.Serialize(req.Answers, JsonOpts)
@@ -487,6 +495,11 @@ public static class BlogEndpoints
             VisitorHash = visitor,
         });
         await db.SaveChangesAsync();
+
+        // N11 — same opt-in plumbing as comment/like notifications (ADR-040): a failed or
+        // unreachable DM only logs, it never turns a successful registration into an error.
+        var who = name ?? nickname ?? email ?? "Someone";
+        await NotifyOwnerAsync(ctx, db, draft.OwnerId, slug, $"📝 {who} filled in the form for \"{draft.Title}\"");
 
         ctx.Response.Cookies.Append(Consts.General.PrivateAccessCookiePrefix + draft.Id, "1", new CookieOptions
         {
@@ -1371,6 +1384,11 @@ public static class BlogEndpoints
             if (!form) return;
             var slug = location.pathname.replace(/^\/|\/$/g, '');
             var errEl = form.querySelector('.reg-error');
+            // The shell is one static template for both languages, so client-side copy reads the
+            // page's own lang attribute rather than being interpolated per render.
+            var nameRuleText = document.documentElement.lang === 'en'
+                ? 'Name must be at least 2 letters and may only contain letters, spaces and hyphens.'
+                : 'Имя должно быть не короче 2 букв и содержать только буквы, пробелы и дефисы.';
 
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
@@ -1380,6 +1398,13 @@ public static class BlogEndpoints
                     var key = el.getAttribute('data-field');
                     payload[key === 'social' ? 'socialLink' : key] = el.value.trim();
                 });
+                // N6 — mirrors RegistrationFieldValidator (Core); the server re-checks it, this
+                // only saves a round-trip. \p{L} needs the u flag to match Cyrillic.
+                if (payload.name && !(payload.name.length >= 2 && /^[\p{L}\s-]+$/u.test(payload.name) && /\p{L}/u.test(payload.name))) {
+                    errEl.textContent = nameRuleText;
+                    errEl.hidden = false;
+                    return;
+                }
                 form.querySelectorAll('[data-question]').forEach(function (el) {
                     payload.answers[el.getAttribute('data-question')] = el.value.trim();
                 });
