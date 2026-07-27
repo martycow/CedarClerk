@@ -179,8 +179,10 @@
                 @if (currentBlog(); as blog) {
                     @if (blog.isPublished) {
                     <div class="blog-lang-badges">
-                        <a class="blog-lang-badge" [href]="blogUrl()" target="_blank" rel="noopener">RU</a>
-                        <a class="blog-lang-badge" [class.disabled]="!enMeta()" [href]="enMeta() ? blogUrl() + '?lang=en' : null" target="_blank" rel="noopener">EN</a>
+                        <a class="blog-lang-badge" [href]="blogUrl()" target="_blank" rel="noopener">{{ primaryLanguage.toUpperCase() }}</a>
+                        @for (l of existingLanguages(); track l) {
+                        <a class="blog-lang-badge" [href]="blogUrl() + '?lang=' + l" target="_blank" rel="noopener">{{ l.toUpperCase() }}</a>
+                        }
                     </div>
                     <p class="export-result"><a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
                     <button class="export-btn" (click)="unpublishFromBlog()" [disabled]="blogBusy()">
@@ -312,9 +314,10 @@
 
                 <div class="panel-label" style="margin-top:12px">{{ t().editor.exportModal.language }}</div>
                 <div class="format-toggle">
-                    <button [class.on]="exportLang === 'ru'" (click)="exportLang = 'ru'">RU</button>
-                    <button [class.on]="exportLang === 'en'" (click)="exportLang = 'en'"
-                            [disabled]="!enMeta()" [title]="enMeta() ? '' : 'No English version yet'">EN</button>
+                    <button [class.on]="exportLang === primaryLanguage" (click)="exportLang = primaryLanguage">{{ primaryLanguage.toUpperCase() }}</button>
+                    @for (l of existingLanguages(); track l) {
+                    <button [class.on]="exportLang === l" (click)="exportLang = l" [title]="endonym(l)">{{ l.toUpperCase() }}</button>
+                    }
                 </div>
 
                 <div class="panel-label" style="margin-top:12px">{{ t().editor.exportModal.compression }} <span class="field-hint-inline">{{ t().editor.exportModal.compressionHint }}</span></div>
@@ -411,11 +414,9 @@
                 </a>
                 <div class="html-export-row">
                     <span class="panel-label" style="margin:0">{{ t().editor.exportModal.staticHtml }}</span>
-                    <a class="blog-lang-badge" [href]="'/api/drafts/' + id + '/export-html?lang=ru'" download>RU</a>
-                    @if (enMeta()) {
-                    <a class="blog-lang-badge" [href]="'/api/drafts/' + id + '/export-html?lang=en'" download>EN</a>
-                    } @else {
-                    <span class="blog-lang-badge disabled" [title]="t().editor.lang.noEnglishYet">EN</span>
+                    <a class="blog-lang-badge" [href]="'/api/drafts/' + id + '/export-html?lang=' + primaryLanguage" download>{{ primaryLanguage.toUpperCase() }}</a>
+                    @for (l of existingLanguages(); track l) {
+                    <a class="blog-lang-badge" [href]="'/api/drafts/' + id + '/export-html?lang=' + l" download>{{ l.toUpperCase() }}</a>
                     }
                 </div>
             </div>
@@ -929,20 +930,35 @@
             </div>
             }
             <div class="lang-tabs" [style.max-width.px]="sheetMaxWidthPx()">
-                <button [class.on]="lang() === 'ru'" (click)="switchLang('ru')">RU</button>
-                <button [class.on]="lang() === 'en'" (click)="switchLang('en')">
-                    EN
-                    @if (enStale()) { <span class="stale-dot" [title]="t().editor.lang.staleWarning"></span> }
+                <!--NF2: one tab per language that exists, plus a picker for the rest. Was a
+                fixed RU/EN pair back when a translation could only be English.-->
+                <button [class.on]="lang() === primaryLanguage" (click)="switchLang(primaryLanguage)"
+                        [title]="endonym(primaryLanguage)">{{ primaryLanguage.toUpperCase() }}</button>
+                @for (l of existingLanguages(); track l) {
+                <button [class.on]="lang() === l" (click)="switchLang(l)" [title]="endonym(l)">
+                    {{ l.toUpperCase() }}
+                    @if (isStale(l)) { <span class="stale-dot" [title]="t().editor.lang.staleWarning"></span> }
                 </button>
-                @if (lang() === 'en' && enMeta()) {
+                }
+                @if (missingLanguages().length) {
+                <app-popover>
+                    <button trigger class="lang-add" [title]="t().editor.lang.addTranslation">+</button>
+                    <div panel class="block-menu">
+                        @for (l of missingLanguages(); track l) {
+                        <button (click)="switchLang(l)">{{ l.toUpperCase() }} · {{ endonym(l) }}</button>
+                        }
+                    </div>
+                </app-popover>
+                }
+                @if (lang() !== primaryLanguage && translationOf(lang())) {
                     <!--Always offered, not only while the stale dot is lit (B14): the dot clears
-                    itself as soon as the EN version is touched, which used to leave delete as the
+                    itself as soon as the translation is touched, which used to leave delete as the
                     only action even when a re-translate was exactly what was wanted.-->
-                    <button class="retranslate-btn" (click)="autoTranslateEn()" [disabled]="autoTranslating()"
-                            [title]="enStale() ? t().editor.lang.retranslateStaleTitle : t().editor.lang.retranslateTitle">
+                    <button class="retranslate-btn" (click)="autoTranslate()" [disabled]="autoTranslating()"
+                            [title]="isStale(lang()) ? t().editor.lang.retranslateStaleTitle : t().editor.lang.retranslateTitle">
                         {{ t().editor.lang.retranslate }}
                     </button>
-                <button class="lang-delete" (click)="deleteEnVersion()" [disabled]="autoTranslating()" [title]="t().editor.lang.deleteEnglish">
+                <button class="lang-delete" (click)="deleteVersion()" [disabled]="autoTranslating()" [title]="t().editor.lang.deleteTranslation">
                     <svg lucideTrash2 class="icon-sm"></svg>
                 </button>
                 }
@@ -996,25 +1012,25 @@
             </div>
             <!--Re-translating an existing EN version gets the same progress treatment as the
             first-time auto-translate below (B14) — previously it was just % text in the button.-->
-            @if (autoTranslating() && !showEnEmptyState()) {
+            @if (autoTranslating() && !showEmptyState()) {
             <div class="translate-progress" [style.max-width.px]="sheetMaxWidthPx()">
                 <div class="upload-bar"><div class="upload-fill" [style.width.%]="autoTranslateProgress()"></div></div>
                 <p class="translate-status">{{ translateStatusMessage() }} — {{ autoTranslateProgress() }}% · {{ autoTranslateElapsed() }}s</p>
                 <button class="btn-ghost" (click)="cancelAutoTranslate()">{{ t().common.cancel }}</button>
             </div>
             }
-            @if (autoTranslateError() && !showEnEmptyState()) {
+            @if (autoTranslateError() && !showEmptyState()) {
             <p class="channel-error" [style.max-width.px]="sheetMaxWidthPx()" style="margin:0 auto 8px">{{ autoTranslateError() }}</p>
             }
-            @if (showEnEmptyState()) {
+            @if (showEmptyState()) {
             <div class="sheet en-empty">
-                <p class="en-empty-title">{{ t().editor.lang.noEnglishYet }}</p>
+                <p class="en-empty-title">{{ t().editor.lang.noVersionYet(lang().toUpperCase()) }}</p>
                 <div class="en-empty-actions">
-                    <button class="export-btn" (click)="autoTranslateEn()" [disabled]="autoTranslating()">
+                    <button class="export-btn" (click)="autoTranslate()" [disabled]="autoTranslating()">
                         {{ autoTranslating() ? 'Translating…' : '✦ Auto-translate' }}
                     </button>
-                    <button class="export-btn" (click)="startEnVersion(true)" [disabled]="autoTranslating()">{{ t().editor.lang.copyFromRussian }}</button>
-                    <button class="export-btn" (click)="startEnVersion(false)" [disabled]="autoTranslating()">{{ t().editor.lang.startEmpty }}</button>
+                    <button class="export-btn" (click)="startVersion(true)" [disabled]="autoTranslating()">{{ t().editor.lang.copyFromPrimary }}</button>
+                    <button class="export-btn" (click)="startVersion(false)" [disabled]="autoTranslating()">{{ t().editor.lang.startEmpty }}</button>
                 </div>
                 @if (autoTranslating()) {
                 <div class="translate-progress">
@@ -1026,7 +1042,7 @@
                 @if (autoTranslateError()) { <p class="channel-error">{{ autoTranslateError() }}</p> }
             </div>
             }
-            <div class="sheet-wrap" [style.display]="showEnEmptyState() ? 'none' : ''" [style.max-width.px]="sheetMaxWidthPx()">
+            <div class="sheet-wrap" [style.display]="showEmptyState() ? 'none' : ''" [style.max-width.px]="sheetMaxWidthPx()">
                 <div class="sheet" #editorHost
                     [class.flush]="appearance.prefs().sheetFlush"
                     [class.show-para-numbers]="appearance.prefs().showParagraphNumbers"

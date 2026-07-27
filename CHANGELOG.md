@@ -2,6 +2,30 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-07-27 (late), Phase 9e — second Input sweep
+
+Marty rewrote `Input.md` again: ~60 items across 6 new features, 6 improvement groups and 3 bug groups, confirmed as not overlapping the earlier lists. Imported to `docs/BACKLOG.md` with a cost note per item, since several read as one line and are not.
+
+**I was wrong about email being blocked.** I wrote that NF3 (email confirmation) couldn't be built because the Resend key 401s — taken from a `TASKS.md` note dated the previous day and not checked. Marty's dashboard shows the domain verified and `POST /emails` returning 200. Corrected; email is not a blocker for anything.
+
+### Bug pass (DB2, DB3)
+
+**The inverted column resize** (DB2.1) was real and mine: the handle sat on each column's *left* edge while the drag maths grew the column as the pointer moved right, so every resize felt backwards. The handle belongs on the right edge, where the divider you drag rightward widens the column to its left — which is both what the maths does and what every other table does.
+
+**Flag emoji were the wrong call** (DB3.1), and that call was also mine. I picked them for the language pickers (I1/I17) reasoning that a flag is recognisable to someone who can't read the current language; on Windows that is simply false, since it ships no regional-indicator glyphs and renders the pair of letters instead. Two-letter codes now — what the editor's own content-language tabs already used, identical on every platform, and they scale to six languages where sourcing six flag SVGs would not.
+
+Also: default sort is creation date (DB2.2) — the one order that doesn't reshuffle under you the way "updated" does; the fixed columns widened so the 1fr Title column stops hogging the row (DB2.3); and draft names are bounded to 1–64 characters in both the dialog and the topbar, checked on Enter too (DB2.6).
+
+### NF2 — six content languages
+
+RU, EN, DE, FR, ES, JA. The server turned out to need almost nothing: `DraftTranslation` was already keyed by language string and `ITranslationProvider.TranslateAsync` already took a target language, so expanding `Languages.TranslationLanguages` carried the whole backend.
+
+The editor was the work. It had ~20 places hardcoded to English — a single `enMeta` signal, `enStale()`, `startEnVersion`, `deleteEnVersion`, `autoTranslateEn`, and literal `'en'` in save, load and export paths. Those became a `Record<string, TranslationMeta>` keyed by code, with the language passed as a parameter throughout. Tabs render one per language that exists plus a picker for the rest, and the export modal, blog badges and static-HTML links all loop over what exists instead of naming EN.
+
+One deliberate simplification: the RU-side diff gutter compares against **one** translation's sync snapshot, since "what changed since translating" has no single answer once several translations exist. It follows whichever translation tab was opened last, defaulting to the first.
+
+For the UI-language half, NF2 asked for the slots without the translations, so a locale with no dictionary falls back to English rather than shipping ~650 untranslated keys per language.
+
 ## 2026-07-27, Phase 9c (Input.md sweep) — bug pass
 
 Marty's `Input.md` (32 items: 19 improvements, 9 bugs, 2 removals, 2 features) imported into `docs/BACKLOG.md` with a dedup verdict per item — five turned out to be duplicates of open `B`/`N` entries (`I14`≡`B15`, `I18`≡`B20`, `IB4`≡`B12`, `IB7`≡`B11`, `IF2`≡ backlog idea #12) and four are refinements of things that shipped in the previous two days. Scoped as Phase 9c in `docs/ROADMAP.md`, bugs first.

@@ -21,7 +21,8 @@ import { AccountMenuComponent } from '../shared/account-menu.component';
 import { CountBadgeComponent } from '../shared/count-badge.component';
 import { AppearancePanelComponent } from '../shared/appearance-panel.component';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
-import { PostsService, PostFormat, PostLanguage, CompressionLevel, ScheduledPost } from '../core/posts.service';
+import { PostsService, PostFormat, CompressionLevel, ScheduledPost } from '../core/posts.service';
+import { PRIMARY_LANGUAGE, CONTENT_LANGUAGES, TRANSLATION_LANGUAGES, endonymOf } from '../core/languages';
 import { ChannelsService, Channel, ChannelStats, KnownChat } from '../core/channels.service';
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
@@ -227,14 +228,16 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // plain, well-tested syntax for the same underlying rich-block output. HTML stays in use for
     // the blog (CedarToBlogHtmlRenderer, a separate/unrelated renderer).
     readonly format: PostFormat = 'Markdown';
-    exportLang: PostLanguage = 'ru';
+    exportLang: string = PRIMARY_LANGUAGE;
     compressionLevel: CompressionLevel = 'standard';
 
     // Active content language in the editor. 'ru' edits the draft itself (primary version),
     // 'en' edits the DraftTranslation row. Only one editor instance — switching tabs flushes
     // the autosave for the language being left, then loads the other version's content.
-    lang = signal<PostLanguage>('ru');
-    enMeta = signal<TranslationMeta | null>(null);
+    lang = signal<string>(PRIMARY_LANGUAGE);
+    // NF2 - one entry per existing translation, keyed by language code. Was a single enMeta
+    // signal back when "a translation" could only mean English.
+    translations = signal<Record<string, TranslationMeta>>({});
     private ruUpdatedAt = signal<string>('');
     // RU title+content captured when entering the EN tab — source for "Copy from Russian"
     private ruSnapshot: { title: string; json: string } | null = null;
@@ -243,7 +246,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // auto-translated) — lets the RU tab show a gutter of what's changed structurally since,
     // instead of just the boolean enStale() flag. Null when there's no EN version, or an older
     // translation predating the SourceSnapshotJson column that hasn't been resynced since.
-    private enSourceSnapshot = signal<string | null>(null);
+    // Snapshot of the primary doc as of the ACTIVE translation's last sync - the diff gutter
+    // compares against whichever translation tab you last opened, since "what changed since
+    // translating" has no single answer once there are several.
+    private activeSourceSnapshot = signal<string | null>(null);
     ruDiffMarkers = signal<{ top: number; height: number; kind: 'added' | 'changed' | 'removed' }[]>([]);
     private ruDiffTimer?: ReturnType<typeof setTimeout>;
 
@@ -642,22 +648,23 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private async save() {
         const id = this.currentId();
         if (!id || !this.editor) return;
-        // EN tab with no version created yet — nothing to save (editor is read-only there anyway)
-        if (this.lang() === 'en' && !this.enMeta()) {
+        // A translation tab with no version yet - nothing to save (read-only there anyway)
+        if (this.lang() !== PRIMARY_LANGUAGE && !this.translationOf(this.lang())) {
             this.saveState.set('saved');
             return;
         }
         this.saveState.set('saving');
         try {
             const json = JSON.stringify(this.editor.getJSON());
-            if (this.lang() === 'ru') {
+            if (this.lang() === PRIMARY_LANGUAGE) {
                 const res = await this.draftsApi.update(id, this.title, json);
                 this.ruUpdatedAt.set(res.updatedAt);
                 this.refreshMeta(id, res.updatedAt);
             } else {
-                const res = await this.draftsApi.saveTranslation(id, 'en', this.title, json);
-                this.enMeta.set({ language: 'en', title: this.title, updatedAt: res.updatedAt });
-                this.enSourceSnapshot.set(res.sourceSnapshotJson);
+                const lang = this.lang();
+                const res = await this.draftsApi.saveTranslation(id, lang, this.title, json);
+                this.setTranslation(lang, { language: lang, title: this.title, updatedAt: res.updatedAt });
+                this.activeSourceSnapshot.set(res.sourceSnapshotJson);
             }
             this.saveState.set('saved');
         } catch {
@@ -665,8 +672,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
-    showEnEmptyState(): boolean {
-        return this.lang() === 'en' && !this.enMeta();
+    showEmptyState(): boolean {
+        return this.lang() !== PRIMARY_LANGUAGE && !this.translationOf(this.lang());
     }
 
     // Cycled by elapsed seconds (no separate timer) so a long action shows visible progress
@@ -686,9 +693,34 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return list[Math.floor(this.blogElapsed() / 2) % list.length];
     }
 
-    // The RU version was edited after the EN translation was last touched — probably needs re-translating
-    enStale(): boolean {
-        const en = this.enMeta();
+    translationOf(lang: string): TranslationMeta | null {
+        return this.translations()[lang] ?? null;
+    }
+
+    readonly contentLanguages = CONTENT_LANGUAGES;
+    readonly primaryLanguage = PRIMARY_LANGUAGE;
+
+    endonym(lang: string): string {
+        return endonymOf(lang);
+    }
+
+    // Translation tabs actually present on this draft, in the canonical order rather than
+    // whatever order the server happened to return them in.
+    existingLanguages(): string[] {
+        const have = this.translations();
+        return TRANSLATION_LANGUAGES.filter(l => have[l]);
+    }
+
+    // Languages with no version yet - offered by the "add a translation" control.
+    missingLanguages(): string[] {
+        const have = this.translations();
+        return TRANSLATION_LANGUAGES.filter(l => !have[l]);
+    }
+
+    // The primary version was edited after this translation was last touched - probably needs
+    // re-translating.
+    isStale(lang: string): boolean {
+        const en = this.translationOf(lang);
         if (!en) return false;
         // Compared as instants, not as strings (IB3): the two timestamps reach the client through
         // different endpoints, and a string compare would flip on nothing more than a difference
@@ -699,15 +731,15 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return ru > tr;
     }
 
-    async switchLang(target: PostLanguage) {
+    async switchLang(target: string) {
         const id = this.currentId();
         if (target === this.lang() || !id || !this.editor) return;
         clearTimeout(this.saveTimer);
         if (this.saveState() !== 'saved') await this.save();
 
-        if (target === 'ru') {
+        if (target === PRIMARY_LANGUAGE) {
             const draft = await this.draftsApi.get(id);
-            this.lang.set('ru');
+            this.lang.set(PRIMARY_LANGUAGE);
             this.title = draft.title;
             this.ruUpdatedAt.set(draft.updatedAt);
             this.editor.setEditable(true);
@@ -715,19 +747,20 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.resetHistory();
         } else {
             this.ruSnapshot = { title: this.title, json: JSON.stringify(this.editor.getJSON()) };
-            if (this.enMeta()) {
-                const tr = await this.draftsApi.getTranslation(id, 'en');
-                this.lang.set('en');
+            if (this.translationOf(target)) {
+                const tr = await this.draftsApi.getTranslation(id, target);
+                this.lang.set(target);
                 this.title = tr.title;
-                this.enMeta.set({ language: 'en', title: tr.title, updatedAt: tr.updatedAt });
-                this.enSourceSnapshot.set(tr.sourceSnapshotJson);
+                this.setTranslation(target, { language: target, title: tr.title, updatedAt: tr.updatedAt });
+                this.activeSourceSnapshot.set(tr.sourceSnapshotJson);
                 this.editor.setEditable(true);
                 this.editor.commands.setContent(JSON.parse(tr.cedarJson || EMPTY_DOC), { emitUpdate: false });
                 this.resetHistory();
             } else {
-                // No EN version yet — show the empty state (Copy from Russian / Start empty)
-                this.lang.set('en');
+                // No version in this language yet - empty state (Copy from primary / Start empty)
+                this.lang.set(target);
                 this.title = this.ruSnapshot.title;
+                this.activeSourceSnapshot.set(null);
                 this.editor.setEditable(false);
                 this.editor.commands.setContent(JSON.parse(EMPTY_DOC), { emitUpdate: false });
                 this.resetHistory();
@@ -737,25 +770,40 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.scheduleRuDiffRecompute();
     }
 
-    async startEnVersion(copyFromRu: boolean) {
+    // Keeps the drafts list's language badges in step with what actually exists.
+    private setTranslation(lang: string, meta: TranslationMeta | null) {
+        this.translations.update(map => {
+            const next = { ...map };
+            if (meta) next[lang] = meta;
+            else delete next[lang];
+            return next;
+        });
         const id = this.currentId();
-        if (!id || !this.editor) return;
+        if (id) {
+            const languages = Object.keys(this.translations());
+            this.drafts.update(list => list.map(d => d.id === id ? { ...d, languages } : d));
+        }
+    }
+
+    async startVersion(copyFromRu: boolean) {
+        const id = this.currentId();
+        const lang = this.lang();
+        if (!id || !this.editor || lang === PRIMARY_LANGUAGE) return;
         // Use the title as currently shown/edited, not the RU snapshot — the title field stays
         // live in the "no EN version yet" empty state, so the user may already have renamed it
         // for the English version before clicking either button here.
         const title = this.title;
         const json = copyFromRu ? (this.ruSnapshot?.json ?? EMPTY_DOC) : EMPTY_DOC;
         try {
-            const res = await this.draftsApi.saveTranslation(id, 'en', title, json);
-            this.enMeta.set({ language: 'en', title, updatedAt: res.updatedAt });
-            this.enSourceSnapshot.set(res.sourceSnapshotJson);
+            const res = await this.draftsApi.saveTranslation(id, lang, title, json);
+            this.setTranslation(lang, { language: lang, title, updatedAt: res.updatedAt });
+            this.activeSourceSnapshot.set(res.sourceSnapshotJson);
             this.title = title;
             this.editor.setEditable(true);
             this.editor.commands.setContent(JSON.parse(json), { emitUpdate: false });
             this.resetHistory();
             this.editor.commands.focus();
             this.saveState.set('saved');
-            this.drafts.update(list => list.map(d => d.id === id ? { ...d, languages: ['en'] } : d));
         } catch {
             this.saveState.set('error');
         }
@@ -837,9 +885,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     // Machine-translates the RU version into EN and loads the result into the editor for review.
     // Replacing an existing translation goes through a confirm modal first (see confirmTranslate()).
-    autoTranslateEn() {
+    autoTranslate() {
         if (!this.currentId() || !this.editor) return;
-        if (this.enMeta()) {
+        if (this.lang() === PRIMARY_LANGUAGE) return;
+        if (this.translationOf(this.lang())) {
             this.translateConfirmOpen.set(true);
             return;
         }
@@ -870,15 +919,15 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }, 1000);
         this.autoTranslateError.set(null);
 
-        this.autoTranslateSub = this.draftsApi.autoTranslate$(id, 'en').subscribe({
+        const target = this.lang();
+        this.autoTranslateSub = this.draftsApi.autoTranslate$(id, target).subscribe({
             next: tr => {
                 this.autoTranslateProgress.set(100);
-                this.enMeta.set({ language: 'en', title: tr.title, updatedAt: tr.updatedAt });
-                this.enSourceSnapshot.set(tr.sourceSnapshotJson);
-                this.drafts.update(list => list.map(d => d.id === id ? { ...d, languages: ['en'] } : d));
-                if (this.lang() !== 'en') {
+                this.setTranslation(target, { language: target, title: tr.title, updatedAt: tr.updatedAt });
+                this.activeSourceSnapshot.set(tr.sourceSnapshotJson);
+                if (this.lang() !== target) {
                     this.ruSnapshot = { title: this.title, json: JSON.stringify(editor.getJSON()) };
-                    this.lang.set('en');
+                    this.lang.set(target);
                 }
                 this.title = tr.title;
                 editor.setEditable(true);
@@ -962,7 +1011,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 editor.commands.setContent(JSON.parse(res.cedarJson || EMPTY_DOC), { emitUpdate: false });
                 this.saveState.set('saved');
                 if (this.lang() === 'en') {
-                    this.enMeta.set({ language: 'en', title: res.title, updatedAt: res.updatedAt });
+                    this.setTranslation(this.lang(), { language: this.lang(), title: res.title, updatedAt: res.updatedAt });
                 }
                 this.refreshMeta(id);
                 this.showAiToast(kind === 'fix-errors' ? 'Fixed your typos. Your voice survived. Moo.' : 'Schizo-izer done. Reality is now optional.');
@@ -995,19 +1044,19 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.aiToastTimer = setTimeout(() => this.aiToast.set(null), 3000);
     }
 
-    async deleteEnVersion() {
+    async deleteVersion() {
         const id = this.currentId();
-        if (!id || !this.enMeta()) return;
+        const lang = this.lang();
+        if (!id || lang === PRIMARY_LANGUAGE || !this.translationOf(lang)) return;
         if (!window.confirm(this.t().editor.lang.deleteEnglishConfirm)) return;
         clearTimeout(this.saveTimer);
         this.saveState.set('saved'); // discard pending EN edits so nothing re-creates the row
-        await this.draftsApi.removeTranslation(id, 'en');
-        this.enMeta.set(null);
-        this.enSourceSnapshot.set(null);
+        await this.draftsApi.removeTranslation(id, lang);
+        this.setTranslation(lang, null);
+        this.activeSourceSnapshot.set(null);
         this.ruDiffMarkers.set([]);
-        if (this.exportLang === 'en') this.exportLang = 'ru';
-        this.drafts.update(list => list.map(d => d.id === id ? { ...d, languages: [] } : d));
-        if (this.lang() === 'en') await this.switchLang('ru');
+        if (this.exportLang === lang) this.exportLang = PRIMARY_LANGUAGE;
+        await this.switchLang(PRIMARY_LANGUAGE);
     }
 
     private refreshMeta(id: string, updatedAt = new Date().toISOString()) {
@@ -1031,8 +1080,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.lang.set('ru');
             this.exportLang = 'ru';
             this.ruUpdatedAt.set(draft.updatedAt);
-            this.enMeta.set(draft.translations?.find(t => t.language === 'en') ?? null);
-            this.enSourceSnapshot.set(null);
+            this.translations.set(Object.fromEntries((draft.translations ?? []).map(t => [t.language, t])));
+            this.activeSourceSnapshot.set(null);
             this.ruSnapshot = null;
             this.tagList.set(draft.tags ? draft.tags.split(',').filter(t => t.length > 0) : []);
             this.tagInput = '';
@@ -1052,9 +1101,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
             // Fetch the EN translation's source snapshot in the background (not blocking open)
             // just to populate the RU-tab diff gutter — the list endpoint only returns TranslationMeta.
-            if (this.enMeta()) {
-                this.draftsApi.getTranslation(id, 'en')
-                    .then(tr => { this.enSourceSnapshot.set(tr.sourceSnapshotJson); this.scheduleRuDiffRecompute(); })
+            // The gutter needs one translation's snapshot to diff against; with several, the
+            // first is as good a default as any and switching tabs replaces it.
+            const firstTranslation = Object.keys(this.translations())[0];
+            if (firstTranslation) {
+                this.draftsApi.getTranslation(id, firstTranslation)
+                    .then(tr => { this.activeSourceSnapshot.set(tr.sourceSnapshotJson); this.scheduleRuDiffRecompute(); })
                     .catch(() => {});
             }
         } finally {
@@ -1106,8 +1158,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.lang.set('ru');
             this.exportLang = 'ru';
             this.ruUpdatedAt.set(meta.updatedAt);
-            this.enMeta.set(languages.includes('en') ? { language: 'en', title, updatedAt: meta.updatedAt } : null);
-            this.enSourceSnapshot.set(null);
+            this.translations.set(Object.fromEntries(
+                languages.filter(l => l !== PRIMARY_LANGUAGE).map(l => [l, { language: l, title, updatedAt: meta.updatedAt }])));
+            this.activeSourceSnapshot.set(null);
             this.ruDiffMarkers.set([]);
             this.ruSnapshot = null;
             this.tagList.set(tags);
@@ -1854,7 +1907,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     private recomputeRuDiff() {
-        const snapshot = this.enSourceSnapshot();
+        const snapshot = this.activeSourceSnapshot();
         if (!this.editor || this.lang() !== 'ru' || !snapshot) {
             this.ruDiffMarkers.set([]);
             return;

@@ -3,7 +3,9 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 export type PostFormat = 'Html' | 'Markdown';
-export type PostLanguage = 'ru' | 'en';
+// NF2 — any content language code; the server validates against Languages.ContentLanguages.
+// Was a two-value union back when a post could only be RU or EN.
+export type PostLanguage = string;
 export type CompressionLevel = 'small' | 'standard' | 'high';
 
 export interface ScheduledPost {
