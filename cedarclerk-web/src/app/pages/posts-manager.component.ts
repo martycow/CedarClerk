@@ -10,6 +10,7 @@ import {
 } from '../core/drafts.service';
 import { FormPresetsService, FormPreset } from '../core/form-presets.service';
 import { CommentsService } from '../core/comments.service';
+import { LocaleService } from '../core/i18n/locale.service';
 import { CountBadgeComponent } from '../shared/count-badge.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
@@ -45,6 +46,7 @@ export class PostsManagerComponent implements OnInit {
     private presetsApi = inject(FormPresetsService);
     private router = inject(Router);
     feedback = inject(CommentsService);
+    t = inject(LocaleService).t;
 
     tab = signal<ManagerTab>('posts');
     loading = signal(true);
@@ -80,7 +82,7 @@ export class PostsManagerComponent implements OnInit {
             this.drafts.set(drafts);
             this.folders.set(folders);
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to load posts'));
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.load));
         } finally {
             this.loading.set(false);
         }
@@ -157,7 +159,7 @@ export class PostsManagerComponent implements OnInit {
             if (tags !== d.tags) await this.draftsApi.updateTags(d.id, tags);
             this.patch(d.id, { title, tags });
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to save changes'));
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.save));
         } finally {
             this.busy.set(false);
             this.renaming.set(false);
@@ -172,7 +174,7 @@ export class PostsManagerComponent implements OnInit {
             this.patch(d.id, { folderId });
             this.folders.set(await this.draftsApi.listFolders());
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to move post'));
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.move));
         }
     }
 
@@ -184,7 +186,7 @@ export class PostsManagerComponent implements OnInit {
             await this.draftsApi.setDraftPrivate(d.id, !d.isPrivate);
             this.patch(d.id, { isPrivate: !d.isPrivate });
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to change privacy'));
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.privacy));
         } finally {
             this.busy.set(false);
         }
@@ -198,7 +200,7 @@ export class PostsManagerComponent implements OnInit {
             const res = d.isArchived ? await this.draftsApi.unarchive(d.id) : await this.draftsApi.archive(d.id);
             this.patch(d.id, { isArchived: res.isArchived });
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to update post'));
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.update));
         } finally {
             this.busy.set(false);
         }
@@ -214,7 +216,7 @@ export class PostsManagerComponent implements OnInit {
             this.drafts.update(list => list.filter(d => d.id !== id));
             if (this.selectedId() === id) this.selectedId.set(null);
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to delete post'));
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.delete));
         } finally {
             this.busy.set(false);
         }
@@ -257,7 +259,7 @@ export class PostsManagerComponent implements OnInit {
             this.regForm.set(parseRegistrationForm(full.registrationFormJson));
             this.registrations.set(regs);
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to load the form'));
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.loadForm));
         } finally {
             this.registrationsLoading.set(false);
         }
@@ -273,7 +275,7 @@ export class PostsManagerComponent implements OnInit {
             const form = this.regForm();
             await this.draftsApi.setRegistrationForm(d.id, form ? JSON.stringify(form) : null);
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to save the form'));
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.saveForm));
         } finally {
             this.regBusy.set(false);
         }
@@ -346,7 +348,7 @@ export class PostsManagerComponent implements OnInit {
         try {
             this.presets.set(await this.presetsApi.list());
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to load presets'));
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.loadPresets));
         }
     }
 
@@ -360,7 +362,7 @@ export class PostsManagerComponent implements OnInit {
             this.presets.update(list => [...list, created].sort((a, b) => a.name.localeCompare(b.name)));
             this.newPresetName = '';
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to save the preset'));
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.savePreset));
         } finally {
             this.regBusy.set(false);
         }
@@ -378,7 +380,7 @@ export class PostsManagerComponent implements OnInit {
             await this.presetsApi.remove(p.id);
             this.presets.update(list => list.filter(x => x.id !== p.id));
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to delete the preset'));
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.deletePreset));
         }
     }
 
@@ -415,7 +417,7 @@ export class PostsManagerComponent implements OnInit {
         const head = ordered.slice(0, SERIES_COUNT - 1);
         const tail = ordered.slice(SERIES_COUNT - 1);
         const slices = head.map(([label, count]) => ({ label, count }));
-        if (tail.length) slices.push({ label: 'Other', count: tail.reduce((sum, [, c]) => sum + c, 0) });
+        if (tail.length) slices.push({ label: this.t().manager.forms.other, count: tail.reduce((sum, [, c]) => sum + c, 0) });
 
         const total = slices.reduce((sum, s) => sum + s.count, 0);
         if (total === 0) return [];

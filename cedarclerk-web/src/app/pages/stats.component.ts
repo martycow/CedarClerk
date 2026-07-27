@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ChannelsService, Channel, ChannelStats, ChannelStatSnapshotDto, BlogStats, BlogStatSnapshotDto } from '../core/channels.service';
+import { LocaleService } from '../core/i18n/locale.service';
 
 type MetricKey = 'memberCount' | 'viewCount' | 'likeCount' | 'commentCount';
 
@@ -60,6 +61,7 @@ const PAD_BOTTOM = 4;
 // Rendered as the Posts Manager's statistics tab (N7) — no page chrome of its own any more.
 export class StatsComponent implements OnInit {
     private channelsApi = inject(ChannelsService);
+    t = inject(LocaleService).t;
 
     loading = signal(true);
     channels = signal<Channel[]>([]);
@@ -76,9 +78,9 @@ export class StatsComponent implements OnInit {
             const s = this.blogStats();
             if (!s) return [];
             const base: { key: MetricKey; label: string; current: number | null; delta: number | null }[] = [
-                { key: 'viewCount', label: 'Views', current: s.currentViews, delta: s.deltaWeekViews },
-                { key: 'likeCount', label: 'Likes', current: s.currentLikes, delta: s.deltaWeekLikes },
-                { key: 'commentCount', label: 'Comments', current: s.currentComments, delta: s.deltaWeekComments },
+                { key: 'viewCount', label: this.t().stats.metrics.viewCount, current: s.currentViews, delta: s.deltaWeekViews },
+                { key: 'likeCount', label: this.t().stats.metrics.likeCount, current: s.currentLikes, delta: s.deltaWeekLikes },
+                { key: 'commentCount', label: this.t().stats.metrics.commentCount, current: s.currentComments, delta: s.deltaWeekComments },
             ];
             return base.map(m => ({ ...m, chart: this.buildChart(s.snapshots, m.key) }));
         }
@@ -86,10 +88,10 @@ export class StatsComponent implements OnInit {
         const s = this.stats();
         if (!s) return [];
         const base: { key: MetricKey; label: string; current: number | null; delta: number | null }[] = [
-            { key: 'memberCount', label: 'Subscribers', current: s.current, delta: s.deltaWeek },
-            { key: 'viewCount', label: 'Views', current: s.currentViews, delta: s.deltaWeekViews },
-            { key: 'likeCount', label: 'Likes', current: s.currentLikes, delta: s.deltaWeekLikes },
-            { key: 'commentCount', label: 'Comments', current: s.currentComments, delta: s.deltaWeekComments },
+            { key: 'memberCount', label: this.t().stats.metrics.memberCount, current: s.current, delta: s.deltaWeek },
+            { key: 'viewCount', label: this.t().stats.metrics.viewCount, current: s.currentViews, delta: s.deltaWeekViews },
+            { key: 'likeCount', label: this.t().stats.metrics.likeCount, current: s.currentLikes, delta: s.deltaWeekLikes },
+            { key: 'commentCount', label: this.t().stats.metrics.commentCount, current: s.currentComments, delta: s.deltaWeekComments },
         ];
         return base.map(m => ({ ...m, chart: this.buildChart(s.snapshots, m.key) }));
     });
@@ -140,8 +142,7 @@ export class StatsComponent implements OnInit {
 
     rangeLabel(): string {
         const d = this.rangeDays();
-        if (d % 30 === 0 && d >= 30) return `${d / 30} mo`;
-        return `${d} d`;
+        return d % 30 === 0 && d >= 30 ? this.t().stats.months(d / 30) : this.t().stats.days(d);
     }
 
     readonly rangeNotches = RANGE_NOTCHES;

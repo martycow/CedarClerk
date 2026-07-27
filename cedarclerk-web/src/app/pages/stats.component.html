@@ -2,12 +2,12 @@
 <div class="stats-page">
     <div class="stats-body">
         @if (loading()) {
-        <p class="hint">Loading…</p>
+        <p class="hint">{{ t().common.loading }}</p>
         } @else {
             <div class="filter-row">
                 <div class="channel-tabs">
                     <button class="channel-tab" [class.active]="selectedView() === 'blog'" (click)="selectBlog()">
-                        📄 Blog
+                        📄 {{ t().stats.blog }}
                     </button>
                     @for (c of channels(); track c.id) {
                     <button class="channel-tab" [class.active]="selectedView() === 'channel' && selectedChannelId() === c.id" (click)="selectChannel(c.id)">
@@ -74,7 +74,7 @@
                         </div>
                     </div>
                     } @else {
-                    <p class="chart-empty">Not enough history yet — check back in a few days.</p>
+                    <p class="chart-empty">{{ t().stats.notEnoughHistory }}</p>
                     }
                 </div>
                 }

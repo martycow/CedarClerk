@@ -3,9 +3,9 @@
         <app-cedar-logo [size]="19"></app-cedar-logo>
         <span class="brand-name">Cedar Clerk</span>
         <span class="crumb-sep">/</span>
-        <span class="crumb-current">Posts Manager</span>
+        <span class="crumb-current">{{ t().manager.crumb }}</span>
         <span class="spacer"></span>
-        <button class="icon-btn" (click)="theme.toggle()" title="Toggle theme">
+        <button class="icon-btn" (click)="theme.toggle()" [title]="t().common.toggleTheme">
             {{ theme.theme() === 'dark' ? '☀' : '☾' }}
         </button>
         <span class="avatar">{{ avatarInitial() }}</span>
@@ -13,20 +13,20 @@
 
     <div class="manager-body">
         <nav class="manager-tabs">
-            <button [class.active]="tab() === 'posts'" (click)="setTab('posts')">Posts</button>
+            <button [class.active]="tab() === 'posts'" (click)="setTab('posts')">{{ t().manager.tabs.posts }}</button>
             <button [class.active]="tab() === 'feedback'" (click)="setTab('feedback')">
-                Reactions &amp; comments
-                <app-count-badge [count]="feedback.newComments() + feedback.newReactions()" title="New since you last looked"></app-count-badge>
+                {{ t().manager.tabs.feedback }}
+                <app-count-badge [count]="feedback.newComments() + feedback.newReactions()" [title]="t().manager.newSinceLastLook"></app-count-badge>
             </button>
-            <button [class.active]="tab() === 'stats'" (click)="setTab('stats')">Stats</button>
-            <button [class.active]="tab() === 'forms'" (click)="setTab('forms')">Forms</button>
+            <button [class.active]="tab() === 'stats'" (click)="setTab('stats')">{{ t().manager.tabs.stats }}</button>
+            <button [class.active]="tab() === 'forms'" (click)="setTab('forms')">{{ t().manager.tabs.forms }}</button>
         </nav>
 
         @if (error()) { <p class="channel-error">{{ error() }}</p> }
 
         @if (tab() === 'posts') {
             @if (loading()) {
-            <p class="hint">Loading…</p>
+            <p class="hint">{{ t().common.loading }}</p>
             } @else {
             <div class="manager-split">
                 <div class="post-list">
@@ -34,39 +34,39 @@
                     <button class="post-row" [class.on]="selectedId() === d.id" (click)="select(d)">
                         <span class="post-row-title">
                             @if (d.isPrivate) { <svg lucideLock class="icon-xs"></svg> }
-                            {{ d.title || 'Untitled' }}
+                            {{ d.title || t().drafts.untitled }}
                         </span>
                         <span class="post-row-meta">
                             @if (d.isBlogPublished) { <span class="state-chip live">LIVE</span> }
-                            @if (d.isArchived) { <span class="state-chip">Archived</span> }
+                            @if (d.isArchived) { <span class="state-chip">{{ t().manager.archived }}</span> }
                         </span>
                     </button>
                     } @empty {
-                    <p class="hint">No posts yet.</p>
+                    <p class="hint">{{ t().manager.noPosts }}</p>
                     }
                 </div>
 
                 <div class="post-detail">
                     @if (selected(); as d) {
                     <div class="detail-field">
-                        <label>Title</label>
+                        <label>{{ t().manager.title }}</label>
                         <input class="chat-input" [(ngModel)]="editTitle">
                     </div>
                     <div class="detail-field">
-                        <label>Tags <span class="field-hint-inline">comma-separated</span></label>
-                        <input class="chat-input" [(ngModel)]="editTags" placeholder="no tags">
+                        <label>{{ t().manager.tags }} <span class="field-hint-inline">{{ t().manager.tagsHint }}</span></label>
+                        <input class="chat-input" [(ngModel)]="editTags" [placeholder]="t().manager.tagsPlaceholder">
                     </div>
                     <button class="btn-accent" (click)="saveMeta()" [disabled]="busy()">
                         @if (renaming()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
-                        Save
+                        {{ t().common.save }}
                     </button>
 
                     <div class="detail-divider"></div>
 
                     <div class="detail-field">
-                        <label>Folder</label>
+                        <label>{{ t().manager.folder }}</label>
                         <div class="pill-row">
-                            <button class="pill" [class.on]="d.folderId === null" (click)="assignFolder(null)">No folder</button>
+                            <button class="pill" [class.on]="d.folderId === null" (click)="assignFolder(null)">{{ t().manager.noFolder }}</button>
                             @for (f of folders(); track f.id) {
                             <button class="pill" [class.on]="d.folderId === f.id" (click)="assignFolder(f.id)">{{ f.name }}</button>
                             }
@@ -76,34 +76,34 @@
                     <div class="detail-actions">
                         <button class="btn-ghost" (click)="togglePrivate()" [disabled]="busy()">
                             <svg lucideLock class="icon-sm"></svg>
-                            {{ d.isPrivate ? 'Make public' : 'Make private' }}
+                            {{ d.isPrivate ? t().manager.makePublic : t().manager.makePrivate }}
                         </button>
                         <button class="btn-ghost" (click)="toggleArchive()" [disabled]="busy()">
-                            @if (d.isArchived) { <svg lucideArchiveRestore class="icon-sm"></svg> Unarchive }
-                            @else { <svg lucideArchive class="icon-sm"></svg> Archive }
+                            @if (d.isArchived) { <svg lucideArchiveRestore class="icon-sm"></svg> {{ t().manager.unarchive }} }
+                            @else { <svg lucideArchive class="icon-sm"></svg> {{ t().manager.archive }} }
                         </button>
                         <button class="btn-ghost" (click)="openInEditor(d)">
                             <svg lucidePenLine class="icon-sm"></svg>
-                            Open in editor
+                            {{ t().manager.openInEditor }}
                         </button>
                         <button class="btn-ghost danger" (click)="deleteConfirmId.set(d.id)" [disabled]="busy()">
                             <svg lucideTrash2 class="icon-sm"></svg>
-                            Delete
+                            {{ t().common.delete }}
                         </button>
                     </div>
 
                     @if (blogUrl(d) || telegramUrl(d)) {
                     <div class="detail-links">
                         @if (blogUrl(d); as url) {
-                        <a [href]="url" target="_blank" rel="noopener"><svg lucideExternalLink class="icon-xs"></svg> Blog</a>
+                        <a [href]="url" target="_blank" rel="noopener"><svg lucideExternalLink class="icon-xs"></svg> {{ t().manager.blog }}</a>
                         }
                         @if (telegramUrl(d); as url) {
-                        <a [href]="url" target="_blank" rel="noopener"><svg lucideExternalLink class="icon-xs"></svg> Telegram</a>
+                        <a [href]="url" target="_blank" rel="noopener"><svg lucideExternalLink class="icon-xs"></svg> {{ t().manager.telegram }}</a>
                         }
                     </div>
                     }
                     } @else {
-                    <p class="hint">Pick a post on the left.</p>
+                    <p class="hint">{{ t().manager.pickPost }}</p>
                     }
                 </div>
             </div>
@@ -116,64 +116,64 @@
         @if (tab() === 'stats') { <app-stats></app-stats> }
 
         @if (tab() === 'forms') {
-            <p class="field-hint">Only private posts have a registration form. Uninvited visitors see it instead of a 404 and are let in once they fill it.</p>
+            <p class="field-hint">{{ t().manager.forms.intro }}</p>
             <div class="manager-split">
                 <div class="post-list">
                     @for (d of privatePosts(); track d.id) {
                     <button class="post-row" [class.on]="selectedId() === d.id" (click)="select(d)">
-                        <span class="post-row-title"><svg lucideLock class="icon-xs"></svg> {{ d.title || 'Untitled' }}</span>
+                        <span class="post-row-title"><svg lucideLock class="icon-xs"></svg> {{ d.title || t().drafts.untitled }}</span>
                     </button>
                     } @empty {
-                    <p class="hint">No private posts.</p>
+                    <p class="hint">{{ t().manager.noPrivatePosts }}</p>
                     }
                 </div>
                 <div class="post-detail">
                     @if (selected(); as d) {
                         @if (!d.isPrivate) {
-                        <p class="hint">This post is not private — it has no form.</p>
+                        <p class="hint">{{ t().manager.forms.notPrivate }}</p>
                         } @else if (registrationsLoading()) {
-                        <p class="hint">Loading…</p>
+                        <p class="hint">{{ t().common.loading }}</p>
                         } @else {
                         <label class="field-hint">
                             <input type="checkbox" [checked]="!!regForm()" (change)="toggleForm()" [disabled]="regBusy()">
-                            Show a registration form to uninvited visitors
+                            {{ t().manager.forms.enable }}
                         </label>
 
                         @if (regForm(); as form) {
                         <div class="form-editor">
                             <input class="chat-input" [value]="form.intro ?? ''" (change)="setIntro($any($event.target).value)"
-                                   placeholder="Intro text shown above the form (optional)" maxlength="500">
+                                   [placeholder]="t().manager.forms.introPlaceholder" maxlength="500">
                             <div class="pill-row">
-                                <label class="field-hint"><input type="checkbox" [checked]="form.requireName" (change)="toggleFormField('requireName')"> Name</label>
-                                <label class="field-hint"><input type="checkbox" [checked]="form.requireNickname" (change)="toggleFormField('requireNickname')"> Nickname</label>
-                                <label class="field-hint"><input type="checkbox" [checked]="form.requireEmail" (change)="toggleFormField('requireEmail')"> Email</label>
-                                <label class="field-hint"><input type="checkbox" [checked]="form.requireSocial" (change)="toggleFormField('requireSocial')"> Social link</label>
+                                <label class="field-hint"><input type="checkbox" [checked]="form.requireName" (change)="toggleFormField('requireName')"> {{ t().manager.forms.fieldName }}</label>
+                                <label class="field-hint"><input type="checkbox" [checked]="form.requireNickname" (change)="toggleFormField('requireNickname')"> {{ t().manager.forms.fieldNickname }}</label>
+                                <label class="field-hint"><input type="checkbox" [checked]="form.requireEmail" (change)="toggleFormField('requireEmail')"> {{ t().manager.forms.fieldEmail }}</label>
+                                <label class="field-hint"><input type="checkbox" [checked]="form.requireSocial" (change)="toggleFormField('requireSocial')"> {{ t().manager.forms.fieldSocial }}</label>
                             </div>
 
                             @for (q of form.questions; track q.id) {
                             <div class="question-row">
                                 <input class="chat-input" [value]="q.label" (change)="updateQuestion(q.id, { label: $any($event.target).value })"
-                                       placeholder="Question" maxlength="200">
+                                       [placeholder]="t().manager.forms.questionPlaceholder" maxlength="200">
                                 <div class="pill-row">
-                                    <button class="pill" [class.on]="q.type === 'text'" (click)="setQuestionType(q.id, 'text')">Text</button>
-                                    <button class="pill" [class.on]="q.type === 'choice'" (click)="setQuestionType(q.id, 'choice')">One of</button>
-                                    <button class="pill" [class.on]="q.type === 'multi'" (click)="setQuestionType(q.id, 'multi')">Several</button>
+                                    <button class="pill" [class.on]="q.type === 'text'" (click)="setQuestionType(q.id, 'text')">{{ t().manager.forms.typeText }}</button>
+                                    <button class="pill" [class.on]="q.type === 'choice'" (click)="setQuestionType(q.id, 'choice')">{{ t().manager.forms.typeChoice }}</button>
+                                    <button class="pill" [class.on]="q.type === 'multi'" (click)="setQuestionType(q.id, 'multi')">{{ t().manager.forms.typeMulti }}</button>
                                 </div>
                                 @if (q.type === 'choice' || q.type === 'multi') {
                                 <input class="chat-input" [value]="questionOptionsText(q)" (change)="setQuestionOptions(q.id, $any($event.target).value)"
-                                       placeholder="Options, comma separated" maxlength="500">
+                                       [placeholder]="t().manager.forms.optionsPlaceholder" maxlength="500">
                                 }
                                 <label class="field-hint">
-                                    <input type="checkbox" [checked]="!!q.required" (change)="updateQuestion(q.id, { required: !q.required })"> Required
+                                    <input type="checkbox" [checked]="!!q.required" (change)="updateQuestion(q.id, { required: !q.required })"> {{ t().manager.forms.required }}
                                 </label>
                                 <button class="btn-ghost danger" (click)="removeQuestion(q.id)">
-                                    <svg lucideTrash2 class="icon-sm"></svg> Remove
+                                    <svg lucideTrash2 class="icon-sm"></svg> {{ t().manager.forms.removeQuestion }}
                                 </button>
                             </div>
                             }
                             <div class="detail-actions">
-                                <button class="btn-ghost" (click)="addQuestion()">Add question</button>
-                                <button class="btn-ghost danger" (click)="deleteForm()" [disabled]="regBusy()">Delete form</button>
+                                <button class="btn-ghost" (click)="addQuestion()">{{ t().manager.forms.addQuestion }}</button>
+                                <button class="btn-ghost danger" (click)="deleteForm()" [disabled]="regBusy()">{{ t().manager.forms.deleteForm }}</button>
                             </div>
 
                             <div class="detail-divider"></div>
@@ -181,22 +181,22 @@
                             <!--N12: a preset is copied onto the post, never linked, so editing it
                             later can't rewrite a post that already uses it.-->
                             <div class="detail-field">
-                                <label>Presets</label>
+                                <label>{{ t().manager.forms.presets }}</label>
                                 @if (presets().length) {
                                 <div class="pill-row">
                                     @for (p of presets(); track p.id) {
                                     <span class="preset-pill">
                                         <button class="pill" (click)="applyPreset(p)" [disabled]="regBusy()">{{ p.name }}</button>
-                                        <button class="preset-x" (click)="deletePreset(p)" title="Delete preset">×</button>
+                                        <button class="preset-x" (click)="deletePreset(p)" [title]="t().manager.forms.deletePreset">×</button>
                                     </span>
                                     }
                                 </div>
                                 } @else {
-                                <p class="field-hint-inline">No presets yet — save this form as one to reuse it on the next post.</p>
+                                <p class="field-hint-inline">{{ t().manager.forms.noPresets }}</p>
                                 }
                                 <div class="preset-add">
-                                    <input class="chat-input" [(ngModel)]="newPresetName" placeholder="Preset name" maxlength="60">
-                                    <button class="btn-ghost" (click)="saveAsPreset()" [disabled]="regBusy() || !newPresetName.trim()">Save as preset</button>
+                                    <input class="chat-input" [(ngModel)]="newPresetName" [placeholder]="t().manager.forms.presetNamePlaceholder" maxlength="60">
+                                    <button class="btn-ghost" (click)="saveAsPreset()" [disabled]="regBusy() || !newPresetName.trim()">{{ t().manager.forms.savePreset }}</button>
                                 </div>
                             </div>
                         </div>
@@ -215,7 +215,7 @@
                             number is the chart here.-->
                             <p class="chart-single">
                                 <span class="legend-swatch" [style.background]="slices[0].color"></span>
-                                {{ slices[0].label }} — {{ slices[0].count }} ({{ slices[0].percent }}%), everyone who answered
+                                {{ slices[0].label }} — {{ slices[0].count }} ({{ slices[0].percent }}%), {{ t().manager.forms.everyoneAnswered }}
                             </p>
                             } @else {
                             <div class="chart-row">
@@ -248,12 +248,12 @@
                         }
 
                         <div class="detail-field">
-                            <label>Submissions <span class="field-hint-inline">{{ registrations().length }}</span></label>
+                            <label>{{ t().manager.forms.submissions }} <span class="field-hint-inline">{{ registrations().length }}</span></label>
                         </div>
                         @for (r of registrations(); track r.id) {
                         <div class="registration-row">
                             <div class="registration-head">
-                                <span class="invite-email">{{ r.name || r.nickname || r.email || 'Anonymous' }}</span>
+                                <span class="invite-email">{{ r.name || r.nickname || r.email || t().manager.forms.anonymous }}</span>
                                 <span class="field-hint-inline">{{ r.createdAt | date:'d MMM, HH:mm' }}</span>
                             </div>
                             <div class="field-hint-inline">
@@ -266,11 +266,11 @@
                             }
                         </div>
                         } @empty {
-                        <p class="hint">No submissions yet.</p>
+                        <p class="hint">{{ t().manager.forms.noSubmissions }}</p>
                         }
                         }
                     } @else {
-                    <p class="hint">Pick a private post on the left.</p>
+                    <p class="hint">{{ t().manager.pickPrivatePost }}</p>
                     }
                 </div>
             </div>
@@ -280,10 +280,10 @@
     @if (deleteConfirmId()) {
     <app-modal (closed)="deleteConfirmId.set(null)">
         <svg modal-icon lucideTrash2 class="icon"></svg>
-        <span modal-title>Delete this post?</span>
-        <p>This cannot be undone.</p>
-        <button modal-actions class="btn-ghost" (click)="deleteConfirmId.set(null)">Cancel</button>
-        <button modal-actions class="btn-accent" (click)="confirmDelete()">Delete</button>
+        <span modal-title>{{ t().manager.deletePostTitle }}</span>
+        <p>{{ t().drafts.deleteDraftBody }}</p>
+        <button modal-actions class="btn-ghost" (click)="deleteConfirmId.set(null)">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-accent" (click)="confirmDelete()">{{ t().common.delete }}</button>
     </app-modal>
     }
 </div>

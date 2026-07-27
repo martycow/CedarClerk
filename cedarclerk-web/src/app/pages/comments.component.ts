@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { CommentsService, AllCommentsComment } from '../core/comments.service';
 import { httpErrorMessage } from '../core/http-error.util';
+import { LocaleService } from '../core/i18n/locale.service';
 import { LucideTrash2 as Trash2 } from '@lucide/angular';
 
 // Rendered as the Posts Manager's "reactions and comments" tab (N7). It no longer owns any page
@@ -14,6 +15,7 @@ import { LucideTrash2 as Trash2 } from '@lucide/angular';
 })
 export class CommentsComponent implements OnInit, OnDestroy {
     private commentsApi = inject(CommentsService);
+    t = inject(LocaleService).t;
 
     loading = signal(true);
     reactions = signal({ likes: 0, dislikes: 0, newLikes: 0, newDislikes: 0 });
@@ -32,7 +34,7 @@ export class CommentsComponent implements OnInit, OnDestroy {
             this.reactions.set(feedback.reactions);
             this.comments.set(feedback.comments);
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to load comments'));
+            this.error.set(httpErrorMessage(e, this.t().feedback.loadFailed));
         } finally {
             this.loading.set(false);
         }
@@ -74,7 +76,7 @@ export class CommentsComponent implements OnInit, OnDestroy {
             await this.commentsApi.remove(id);
             this.comments.update(list => list.filter(c => c.id !== id));
         } catch (e) {
-            this.error.set(httpErrorMessage(e, 'Failed to delete the comment'));
+            this.error.set(httpErrorMessage(e, this.t().feedback.deleteFailed));
         }
     }
 }

@@ -12,30 +12,30 @@ it used to carry lives there.-->
                 👎 {{ reactions().dislikes }}
                 @if (reactions().newDislikes) { <span class="new-delta">+{{ reactions().newDislikes }}</span> }
             </span>
-            <span class="reactions-hint">across all your drafts</span>
+            <span class="reactions-hint">{{ t().feedback.acrossDrafts }}</span>
         </div>
 
         @if (error()) { <p class="channel-error">{{ error() }}</p> }
 
         @if (loading()) {
-        <p class="hint">Loading…</p>
+        <p class="hint">{{ t().common.loading }}</p>
         } @else {
             @for (c of comments(); track c.id) {
             <div class="comment-card" [class.is-new]="c.isNew" (pointerenter)="markSeen(c)">
                 <div class="comment-row-top">
                     <span class="comment-draft-title">{{ c.draftTitle }}</span>
-                    <span class="comment-tag">{{ c.annotationId ? 'In text' : 'Whole article' }}</span>
-                    @if (c.isNew) { <span class="new-chip">New</span> }
+                    <span class="comment-tag">{{ c.annotationId ? t().feedback.inText : t().feedback.wholeArticle }}</span>
+                    @if (c.isNew) { <span class="new-chip">{{ t().feedback.newChip }}</span> }
                     <span class="spacer"></span>
-                    <button class="mini-remove" (click)="deleteComment(c.id)" title="Delete comment">
+                    <button class="mini-remove" (click)="deleteComment(c.id)" [title]="t().feedback.deleteComment">
                         <svg lucideTrash2 class="icon-sm"></svg>
                     </button>
                 </div>
-                <div class="comment-row-meta">{{ c.authorName || 'Anonymous' }} · {{ c.createdAt | date:'d MMM, HH:mm' }}</div>
+                <div class="comment-row-meta">{{ c.authorName || t().feedback.anonymous }} · {{ c.createdAt | date:'d MMM, HH:mm' }}</div>
                 <div class="comment-row-text">{{ c.text }}</div>
             </div>
             } @empty {
-            <p class="hint">No comments yet.</p>
+            <p class="hint">{{ t().feedback.noComments }}</p>
             }
         }
     </div>
