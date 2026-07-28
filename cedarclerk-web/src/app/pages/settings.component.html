@@ -182,15 +182,6 @@
                 </select>
             </div>
 
-            <div class="field-actions">
-                <button class="btn-primary" (click)="saveProfile()" [disabled]="profileBusy()">
-                    {{ profileBusy() ? '…' : t().settings.headerSlots.save }}
-                </button>
-                @if (profileSaved()) {
-                <span class="saved-check"><svg lucideCheck class="icon-xs"></svg>{{ t().settings.saved }}</span>
-                }
-            </div>
-            @if (profileError()) { <p class="field-error">{{ profileError() }}</p> }
         </section>
         }
 
@@ -251,16 +242,23 @@
                 <input id="cc-social-github" [(ngModel)]="socialGithubUrlText" placeholder="https://github.com/yourname">
             </div>
 
-            <div class="field-actions">
-                <button class="btn-primary" (click)="saveSocialLinks()" [disabled]="socialBusy()">
-                    {{ socialBusy() ? '…' : t().settings.social.save }}
-                </button>
-                @if (socialSaved()) {
-                <span class="saved-check"><svg lucideCheck class="icon-xs"></svg>{{ t().settings.saved }}</span>
-                }
-            </div>
-            @if (socialError()) { <p class="field-error">{{ socialError() }}</p> }
+            <!--No Save of its own: every section of this tab goes to the same endpoint in one
+            request, and a per-section button wrote null over the sections it didn't send.-->
         </section>
+        }
+
+        <!--One Save for the whole tab. It is sticky rather than sitting at the bottom of a long
+        scroll, so editing the profile card at the top never leaves the button off-screen.-->
+        @if (tab() === 'profile') {
+        <div class="profile-save-bar">
+            <button class="btn-primary" (click)="saveProfile()" [disabled]="profileBusy()">
+                {{ profileBusy() ? '…' : t().settings.saveProfile }}
+            </button>
+            @if (profileSaved()) {
+            <span class="saved-check"><svg lucideCheck class="icon-xs"></svg>{{ t().settings.saved }}</span>
+            }
+            @if (profileError()) { <span class="field-error">{{ profileError() }}</span> }
+        </div>
         }
 
         <!-- ============ SUBSCRIPTION ============ -->

@@ -905,3 +905,17 @@
     align-items: center;
     cursor: pointer;
 }
+
+/* One Save for the whole Profile tab (28.07.2026). Sticky, because the tab is a long scroll and
+   the sections above it all write through the same request - a button at the very bottom would
+   be off-screen exactly when the fields at the top are being edited. */
+.profile-save-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0;
+    background: linear-gradient(to top, var(--canvas) 70%, transparent);
+}

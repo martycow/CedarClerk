@@ -664,6 +664,7 @@ export const en = {
             account: 'Account',
         },
         saved: 'Saved',
+        saveProfile: 'Save profile',
         language: {
             nav: 'Language',
             title: 'Interface language',
@@ -804,8 +805,7 @@ export const en = {
             appearance: 'Failed to save appearance',
             toolbar: 'Failed to save toolbar layout',
             signature: 'Failed to save signature',
-            headerSlots: 'Failed to save header slots',
-            social: 'Failed to save social links',
+            profile: 'Failed to save the profile',
             checkout: 'Checkout failed',
             portal: 'Could not open the billing portal',
             linkTelegram: 'Failed to link Telegram account',

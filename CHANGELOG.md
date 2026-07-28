@@ -10,6 +10,14 @@ The host is now `pointer-events: none`, with the tab and panel opting back in, s
 
 Also replaced `app.spec.ts`'s scaffold "should render title" test, which asserted an `<h1>` the app shell has never had and had been red for the whole life of the project.
 
+## 2026-07-28 (later) — one Save for the profile tab
+
+Marty: adding a language to the cross-links broke the social fields and the header slots, with "failed to save header slots" on screen.
+
+The per-language switcher was the trigger, but not the cause. `/api/auth/profile` takes the **entire** profile in one request, and the page sent it from two buttons carrying different subsets: the header-slots button omitted the social URLs, the social button omitted the cross-link wording. Each therefore wrote null over whatever the other one owned. That was already true before this session — saving one section had always been quietly wiping the other — and making the language switcher save on every click turned an occasional loss into one per click.
+
+One Save for the whole tab now, sending every field it owns, sticky at the bottom so it stays reachable while the sections above are edited. The error text was also wrong in a way worth naming: every failure of that request said "failed to save header slots", because that was the fallback message of whichever button happened to send it.
+
 ## 2026-07-28 — five follow-ups from Marty's review
 
 **A language switcher on the registration gate.** Since the gate became per-language, a reader of a private post had no way to reach the version written for them: the post body they would normally switch languages from is behind that very form. The gate now lists the languages the post has a form for, and the submission carries the language so the server validates against the form the visitor actually saw.

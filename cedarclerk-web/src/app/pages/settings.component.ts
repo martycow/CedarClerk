@@ -73,9 +73,6 @@ export class SettingsComponent implements OnInit {
     socialFacebookUrlText = '';
     socialYoutubeUrlText = '';
     socialGithubUrlText = '';
-    socialBusy = signal(false);
-    socialSaved = signal(false);
-    socialError = signal<string | null>(null);
 
     languageError = signal<string | null>(null);
 
@@ -236,42 +233,18 @@ export class SettingsComponent implements OnInit {
         this.loadLinkTexts();
     }
 
+    // ONE save for the whole Profile tab.
+    //
+    // /api/auth/profile takes the entire profile in a single request, but this page used to send
+    // it from two buttons with different subsets of the fields: the header-slots button omitted
+    // the social URLs, and the social button omitted the cross-link wording. Each therefore wrote
+    // null over whatever the other one owned, so saving one section silently wiped the other.
+    // That was true before the per-language cross-links existed; making the language switcher
+    // save on every click just turned an occasional loss into a constant one.
     async saveProfile() {
         this.profileBusy.set(true);
         this.profileSaved.set(false);
         this.profileError.set(null);
-        try {
-            await this.auth.saveProfile({
-                authorDisplayName: this.authorDisplayNameText,
-                profileUrl: this.profileUrlText,
-                profileLocation: this.profileLocationText,
-                headerSlot1Type: this.headerSlot1,
-                headerSlot2Type: this.headerSlot2,
-                headerSlot3Type: this.headerSlot3,
-                blogLinkText: this.blogLinkText,
-                telegramLinkText: this.telegramLinkText,
-                linkTextLanguage: this.linkTextLanguage(),
-            });
-            this.authorDisplayNameText = this.auth.authorDisplayName() ?? '';
-            this.profileUrlText = this.auth.profileUrl() ?? '';
-            this.profileLocationText = this.auth.profileLocation() ?? '';
-            this.headerSlot1 = this.auth.headerSlot1Type();
-            this.headerSlot2 = this.auth.headerSlot2Type();
-            this.headerSlot3 = this.auth.headerSlot3Type();
-            this.loadLinkTexts();
-            this.profileSaved.set(true);
-            setTimeout(() => this.profileSaved.set(false), 2500);
-        } catch (e) {
-            this.profileError.set(httpErrorMessage(e, this.t().settings.errors.headerSlots));
-        } finally {
-            this.profileBusy.set(false);
-        }
-    }
-
-    async saveSocialLinks() {
-        this.socialBusy.set(true);
-        this.socialSaved.set(false);
-        this.socialError.set(null);
         try {
             await this.auth.saveProfile({
                 authorDisplayName: this.authorDisplayNameText,
@@ -285,20 +258,37 @@ export class SettingsComponent implements OnInit {
                 socialFacebookUrl: this.socialFacebookUrlText,
                 socialYoutubeUrl: this.socialYoutubeUrlText,
                 socialGithubUrl: this.socialGithubUrlText,
+                blogLinkText: this.blogLinkText,
+                telegramLinkText: this.telegramLinkText,
+                linkTextLanguage: this.linkTextLanguage(),
             });
-            this.socialTwitterUrlText = this.auth.socialTwitterUrl() ?? '';
-            this.socialInstagramUrlText = this.auth.socialInstagramUrl() ?? '';
-            this.socialFacebookUrlText = this.auth.socialFacebookUrl() ?? '';
-            this.socialYoutubeUrlText = this.auth.socialYoutubeUrl() ?? '';
-            this.socialGithubUrlText = this.auth.socialGithubUrl() ?? '';
-            this.socialSaved.set(true);
-            setTimeout(() => this.socialSaved.set(false), 2500);
+            this.readBackProfile();
+            this.profileSaved.set(true);
+            setTimeout(() => this.profileSaved.set(false), 2500);
         } catch (e) {
-            this.socialError.set(httpErrorMessage(e, this.t().settings.errors.social));
+            // Was `errors.headerSlots` — the fallback of the button that happened to send the
+            // request, which mislabelled every failure as a header-slot problem.
+            this.profileError.set(httpErrorMessage(e, this.t().settings.errors.profile));
         } finally {
-            this.socialBusy.set(false);
+            this.profileBusy.set(false);
         }
     }
+
+    private readBackProfile() {
+        this.authorDisplayNameText = this.auth.authorDisplayName() ?? '';
+        this.profileUrlText = this.auth.profileUrl() ?? '';
+        this.profileLocationText = this.auth.profileLocation() ?? '';
+        this.headerSlot1 = this.auth.headerSlot1Type();
+        this.headerSlot2 = this.auth.headerSlot2Type();
+        this.headerSlot3 = this.auth.headerSlot3Type();
+        this.socialTwitterUrlText = this.auth.socialTwitterUrl() ?? '';
+        this.socialInstagramUrlText = this.auth.socialInstagramUrl() ?? '';
+        this.socialFacebookUrlText = this.auth.socialFacebookUrl() ?? '';
+        this.socialYoutubeUrlText = this.auth.socialYoutubeUrl() ?? '';
+        this.socialGithubUrlText = this.auth.socialGithubUrl() ?? '';
+        this.loadLinkTexts();
+    }
+
 
     pickPlan(plan: PlanId) {
         this.selectedPlan = plan;
