@@ -226,6 +226,22 @@ export class PostsManagerComponent implements OnInit {
         }
     }
 
+    // Six language chips in a list column is a wall of two-letter boxes that says little more
+    // than three of them plus a count. The full list stays available as the chip's tooltip.
+    private static readonly VisibleLanguageChips = 3;
+
+    visibleLanguages(d: DraftMeta): string[] {
+        return d.languages.slice(0, PostsManagerComponent.VisibleLanguageChips);
+    }
+
+    extraLanguageCount(d: DraftMeta): number {
+        return Math.max(0, d.languages.length - PostsManagerComponent.VisibleLanguageChips);
+    }
+
+    extraLanguageTitle(d: DraftMeta): string {
+        return d.languages.slice(PostsManagerComponent.VisibleLanguageChips).map(l => l.toUpperCase()).join(', ');
+    }
+
     newFeedbackFor(draftId: string): number {
         return this.newByDraft()[draftId] ?? 0;
     }

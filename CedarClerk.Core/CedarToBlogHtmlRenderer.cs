@@ -362,7 +362,14 @@ public static class CedarToBlogHtmlRenderer
     // post (B3). Hydrated by the page script in BlogEndpoints' ShellTemplate, same as the
     // comment form above. Every author-authored string (intro, question labels, choice options)
     // is escaped here — it's the one place visitor-facing HTML is built from owner input.
-    public static string RegistrationFormHtml(RegistrationFormDefinition form, string title, string lang = "ru")
+    /// <param name="availableLanguages">
+    /// Languages this post has a form for, primary first. Rendered as a switcher above the card
+    /// when there is more than one — the reader of a private post has no other way to reach the
+    /// version written for them, since the post body they would normally switch from is hidden
+    /// behind this very form.
+    /// </param>
+    public static string RegistrationFormHtml(RegistrationFormDefinition form, string title, string lang = "ru",
+        IReadOnlyList<string>? availableLanguages = null)
     {
         // FI4.1 — the gate's own chrome in every content language, since a post can be read in
         // any of them (NF2). The author's own words (intro, labels, options) are not translated
@@ -379,6 +386,21 @@ public static class CedarToBlogHtmlRenderer
 
         var sb = new StringBuilder();
         sb.Append("<div class=\"reg-gate\"><div class=\"reg-card\">");
+
+        // The language switcher goes above the title: it changes everything below it, including
+        // the title itself once the post has a translated one.
+        if (availableLanguages is { Count: > 1 })
+        {
+            sb.Append("<div class=\"reg-langs\">");
+            foreach (var code in availableLanguages)
+            {
+                var active = string.Equals(code, lang, StringComparison.OrdinalIgnoreCase);
+                sb.Append("<a class=\"reg-lang").Append(active ? " active" : "").Append("\" href=\"?lang=")
+                  .Append(EscapeAttr(code)).Append("\">").Append(Escape(code.ToUpperInvariant())).Append("</a>");
+            }
+            sb.Append("</div>");
+        }
+
         sb.Append("<h1 class=\"reg-title\">").Append(Escape(title)).Append("</h1>");
         sb.Append("<div class=\"reg-lock\">&#128274; ").Append(heading).Append("</div>");
         sb.Append("<p class=\"reg-blurb\">").Append(blurb).Append("</p>");

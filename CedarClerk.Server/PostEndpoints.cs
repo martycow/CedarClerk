@@ -103,7 +103,7 @@ public static class PostEndpoints
             return new PublishResult(null, "Draft is empty");
 
         var owner = await db.Users.Where(u => u.Id == ownerId)
-            .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PlanTier, u.PlanExpiresAt, u.BlogLinkText })
+            .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PlanTier, u.PlanExpiresAt, u.BlogLinkText, u.BlogLinkTextTranslationsJson })
             .FirstAsync();
 
         // Free tier always gets the fixed Cedar Clerk attribution; Pro+ can replace it with a
@@ -130,10 +130,10 @@ public static class PostEndpoints
             var langSuffix = language == Languages.Primary ? "" : $"?lang={language}";
             var blogUrl = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}/{draft.BlogSlug}{langSuffix}";
 
-            // I15 — the author's own wording when they set one, the built-in otherwise.
-            var blogLinkText = string.IsNullOrWhiteSpace(owner.BlogLinkText)
-                ? Consts.CrossLinks.DefaultBlogLinkText
-                : owner.BlogLinkText.Trim();
+            // I15 — the author's own wording when they set one, the built-in otherwise. Per
+            // language: this line is read by whoever reads that language's version of the post.
+            var blogLinkText = LocalizedTextMap.Pick(owner.BlogLinkText, owner.BlogLinkTextTranslationsJson, language)
+                ?? Consts.CrossLinks.DefaultBlogLinkText;
             blocks.Add(new RichParagraphBlock(new RichRunLink(new RichRunText(blogLinkText), blogUrl)));
         }
 

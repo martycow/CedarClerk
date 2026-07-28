@@ -51,7 +51,10 @@
                         <span class="post-row-meta">
                             @if (d.isBlogPublished) { <span class="state-chip live">LIVE</span> }
                             @if (d.isPrivate) { <span class="state-chip private">{{ t().manager.privateChip }}</span> }
-                            @for (l of d.languages; track l) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
+                            @for (l of visibleLanguages(d); track l) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
+                            @if (extraLanguageCount(d); as extra) {
+                            <span class="state-chip lang" [title]="extraLanguageTitle(d)">+{{ extra }}</span>
+                            }
                             @if (d.isArchived) { <span class="state-chip">{{ t().manager.archived }}</span> }
                             @if (hasPendingSchedule(d.id)) { <span class="state-chip">⏰ {{ t().manager.scheduledChip }}</span> }
                             @if (newFeedbackFor(d.id); as n) { <span class="state-chip new">+{{ n }}</span> }

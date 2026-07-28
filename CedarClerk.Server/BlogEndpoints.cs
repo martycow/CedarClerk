@@ -776,11 +776,14 @@ public static class BlogEndpoints
         // Private posts never appear in the public list (see the ADR following ADR-040,
         // docs/DECISIONS.md) — listing one would leak its existence even though the single-post
         // page itself 404s for anyone not invited.
-        var posts = await db.Drafts.Where(d => d.IsBlogPublished && !d.IsPrivate)
+        // A private post is listed only when its owner asked for it (IsListedWhilePrivate) — the
+        // card advertises that the post exists, the gate still decides who reads it.
+        var posts = await db.Drafts.Where(d => d.IsBlogPublished && (!d.IsPrivate || d.IsListedWhilePrivate))
             .OrderByDescending(d => d.BlogPublishedAt)
             .Select(d => new
             {
                 d.Id, d.Title, d.ArticleTitle, d.BlogSlug, d.BlogPublishedAt, d.Tags, d.CedarJson, d.ViewCount,
+                d.IsPrivate,
                 TranslationLanguages = db.DraftTranslations.Where(t => t.DraftId == d.Id).Select(t => t.Language).ToList(),
             })
             .ToListAsync();
@@ -847,7 +850,10 @@ public static class BlogEndpoints
                 var tags = SplitTags(p.Tags);
                 var likes = likeCounts.GetValueOrDefault(p.Id);
                 var comments = commentCounts.GetValueOrDefault(p.Id);
-                var excerpt = Excerpt(p.CedarJson);
+                // No teaser for a gated post: the card says a post exists and what it is called,
+                // and the excerpt is the one part of it that would be actual content. Deliberate,
+                // and the easy thing to reverse if the teaser turns out to be the point.
+                var excerpt = p.IsPrivate ? "" : Excerpt(p.CedarJson);
 
                 sb.Append("<div class=\"timeline-item\"><span class=\"timeline-dot\"></span>");
                 sb.Append("<a class=\"post-card\" href=\"/").Append(p.BlogSlug).Append("\">");
@@ -867,6 +873,9 @@ public static class BlogEndpoints
                 foreach (var tag in tags)
                     sb.Append("<span class=\"post-card-tag\">· ").Append(System.Net.WebUtility.HtmlEncode(tag)).Append("</span>");
 
+                if (p.IsPrivate)
+                    sb.Append("<span class=\"post-card-locked\">&#128274;</span>");
+
                 sb.Append("</div>");
                 sb.Append("<div class=\"post-card-title\">").Append(System.Net.WebUtility.HtmlEncode(p.ArticleTitle ?? p.Title)).Append("</div>");
                 if (excerpt.Length > 0)
@@ -885,6 +894,9 @@ public static class BlogEndpoints
 
     private static async Task RenderRssAsync(HttpContext ctx, CedarDbContext db)
     {
+        // Public posts only, including the listed-private ones: an RSS item carries an excerpt
+        // and is pulled by readers that never see the gate, so listing a gated post here would
+        // hand out the thing the gate exists to withhold.
         var posts = await db.Drafts.Where(d => d.IsBlogPublished && !d.IsPrivate)
             .OrderByDescending(d => d.BlogPublishedAt)
             .Take(RssItemLimit)
@@ -965,8 +977,12 @@ public static class BlogEndpoints
                     ctx.Response.StatusCode = StatusCodes.Status200OK;
                     ctx.Response.ContentType = "text/html; charset=utf-8";
                     var gateTitle = draft.ArticleTitle ?? draft.Title;
+                    // The reader of a private post can't reach another language any other way -
+                    // the body they would normally switch from is behind this very form.
+                    var gateLanguages = RegistrationFormSet.LanguagesWithForm(
+                        draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson);
                     await ctx.Response.WriteAsync(PageShell(gateTitle,
-                        CedarToBlogHtmlRenderer.RegistrationFormHtml(form, gateTitle, gateLang),
+                        CedarToBlogHtmlRenderer.RegistrationFormHtml(form, gateTitle, gateLang, gateLanguages),
                         gateLang, RenderHeader(channel)));
                     return;
                 }
@@ -1061,6 +1077,7 @@ public static class BlogEndpoints
                 u.PostSignature, u.PostSignatureUrl, u.AuthorDisplayName, u.ProfileUrl, u.ProfileLocation,
                 u.HeaderSlot1Type, u.HeaderSlot2Type, u.HeaderSlot3Type, u.PlanTier, u.PlanExpiresAt,
                 u.TelegramLinkText,
+                u.TelegramLinkTextTranslationsJson,
             })
             .FirstAsync();
         var ownerPlan = SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow);
@@ -1079,9 +1096,9 @@ public static class BlogEndpoints
             : "";
         // I15 — author's own wording when set; escaped, unlike the built-in defaults which carry
         // their own arrow entity.
-        var viewInTelegramLabel = string.IsNullOrWhiteSpace(owner.TelegramLinkText)
+        var viewInTelegramLabel = LocalizedTextMap.Pick(owner.TelegramLinkText, owner.TelegramLinkTextTranslationsJson, lang) is not { } tgLabel
             ? (lang == Languages.English ? Consts.CrossLinks.DefaultTelegramLinkTextEn : Consts.CrossLinks.DefaultTelegramLinkTextRu)
-            : System.Net.WebUtility.HtmlEncode(owner.TelegramLinkText.Trim());
+            : System.Net.WebUtility.HtmlEncode(tgLabel);
         var telegramLink = draft is { LastTelegramUsername: not null, LastTelegramMessageId: not null }
             ? $"<a class=\"telegram-link\" href=\"https://t.me/{draft.LastTelegramUsername}/{draft.LastTelegramMessageId}\" target=\"_blank\" rel=\"noopener\">{viewInTelegramLabel}</a>"
             : "";
@@ -1405,6 +1422,11 @@ public static class BlogEndpoints
         .reg-lock { font-size: 12px; letter-spacing: .05em; text-transform: uppercase; font-weight: 600; color: var(--t3); margin-bottom: 10px; }
         .reg-blurb { font-size: 14px; color: var(--t2); margin: 0 0 6px; }
         .reg-intro { font-size: 14px; line-height: 1.5; margin: 0 0 16px; }
+        .post-card-locked { font-size: 11px; opacity: .75; }
+        .reg-langs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+        .reg-lang { border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--t2); text-decoration: none; }
+        .reg-lang:hover { border-color: var(--abord); color: var(--text); }
+        .reg-lang.active { background: var(--asoft); border-color: var(--abord); color: var(--accent); font-weight: 600; }
         .reg-form { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
         .reg-input { border: 1px solid var(--border); background: var(--sheet); color: var(--text); border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; outline: none; width: 100%; box-sizing: border-box; }
         .reg-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--asoft); }
@@ -1600,7 +1622,11 @@ public static class BlogEndpoints
 
                 errEl.hidden = true;
                 submitBtn.disabled = true;
-                fetch('/api/posts/' + encodeURIComponent(slug) + '/register', {
+                /* Carry the page's language so the server validates against the form this
+                   visitor actually saw - a required question that only exists in one language
+                   must not be enforced against a reader of another. */
+                var gateLang = new URLSearchParams(location.search).get('lang');
+                fetch('/api/posts/' + encodeURIComponent(slug) + '/register' + (gateLang ? '?lang=' + encodeURIComponent(gateLang) : ''), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)

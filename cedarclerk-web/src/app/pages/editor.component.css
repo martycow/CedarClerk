@@ -988,12 +988,17 @@
     text-decoration: underline;
 }
 
+/* Six language tabs plus the add button, the re-translate/delete pair, the tag row and the
+   folder picker all live on this line. At the Appearance panel's narrow sheet width that is
+   wider than the sheet, and without wrapping it simply ran off the side. */
 .lang-tabs {
     display: flex;
     align-items: center;
-    gap: 4px;
+    flex-wrap: wrap;
+    gap: 6px 4px;
     max-width: 680px;
     margin: 0 auto 10px;
+    min-width: 0;
 }
 
 .lang-tabs button {
@@ -1059,6 +1064,8 @@
 .tag-row-slot {
     margin-left: auto;
     min-width: 0;
+    /* Wraps with the row rather than forcing it wider - see .lang-tabs above. */
+    max-width: 100%;
 }
 
 .tag-add-btn {

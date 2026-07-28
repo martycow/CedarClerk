@@ -6,6 +6,7 @@ import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
 import { LocaleService, UiLang } from '../core/i18n/locale.service';
 import { BillingService, BillingStatus, PlanId } from '../core/billing.service';
+import { PRIMARY_LANGUAGE, CONTENT_LANGUAGES } from '../core/languages';
 import { TelegramLinkService } from '../core/telegram-link.service';
 import { ChannelsService, Channel } from '../core/channels.service';
 import { AssetsService } from '../core/assets.service';
@@ -56,6 +57,10 @@ export class SettingsComponent implements OnInit {
     avatarError = signal<string | null>(null);
     blogLinkText = '';
     telegramLinkText = '';
+    // Which language's cross-link wording the two fields above are editing. Switching reloads
+    // them from whichever map holds that language.
+    linkTextLanguage = signal<string>(PRIMARY_LANGUAGE);
+    readonly contentLanguages = CONTENT_LANGUAGES;
     headerSlot1: string | null = null;
     headerSlot2: string | null = null;
     headerSlot3: string | null = null;
@@ -104,8 +109,7 @@ export class SettingsComponent implements OnInit {
         this.authorDisplayNameText = this.auth.authorDisplayName() ?? '';
         this.profileUrlText = this.auth.profileUrl() ?? '';
         this.profileLocationText = this.auth.profileLocation() ?? '';
-        this.blogLinkText = this.auth.blogLinkText() ?? '';
-        this.telegramLinkText = this.auth.telegramLinkText() ?? '';
+        this.loadLinkTexts();
         this.headerSlot1 = this.auth.headerSlot1Type();
         this.headerSlot2 = this.auth.headerSlot2Type();
         this.headerSlot3 = this.auth.headerSlot3Type();
@@ -212,6 +216,26 @@ export class SettingsComponent implements OnInit {
         }
     }
 
+    // The primary language lives in its own field; the rest come out of the per-language map.
+    private loadLinkTexts() {
+        const lang = this.linkTextLanguage();
+        if (lang === PRIMARY_LANGUAGE) {
+            this.loadLinkTexts();
+        } else {
+            this.blogLinkText = this.auth.blogLinkTexts()[lang] ?? '';
+            this.telegramLinkText = this.auth.telegramLinkTexts()[lang] ?? '';
+        }
+    }
+
+    // Saving happens per language, so switching without saving would silently drop what was
+    // typed — flush first, exactly like the forms tab does when leaving a dirty preset.
+    async setLinkTextLanguage(lang: string) {
+        if (lang === this.linkTextLanguage()) return;
+        await this.saveProfile();
+        this.linkTextLanguage.set(lang);
+        this.loadLinkTexts();
+    }
+
     async saveProfile() {
         this.profileBusy.set(true);
         this.profileSaved.set(false);
@@ -226,6 +250,7 @@ export class SettingsComponent implements OnInit {
                 headerSlot3Type: this.headerSlot3,
                 blogLinkText: this.blogLinkText,
                 telegramLinkText: this.telegramLinkText,
+                linkTextLanguage: this.linkTextLanguage(),
             });
             this.authorDisplayNameText = this.auth.authorDisplayName() ?? '';
             this.profileUrlText = this.auth.profileUrl() ?? '';
@@ -233,8 +258,7 @@ export class SettingsComponent implements OnInit {
             this.headerSlot1 = this.auth.headerSlot1Type();
             this.headerSlot2 = this.auth.headerSlot2Type();
             this.headerSlot3 = this.auth.headerSlot3Type();
-            this.blogLinkText = this.auth.blogLinkText() ?? '';
-            this.telegramLinkText = this.auth.telegramLinkText() ?? '';
+            this.loadLinkTexts();
             this.profileSaved.set(true);
             setTimeout(() => this.profileSaved.set(false), 2500);
         } catch (e) {

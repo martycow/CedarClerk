@@ -10,6 +10,25 @@ The host is now `pointer-events: none`, with the tab and panel opting back in, s
 
 Also replaced `app.spec.ts`'s scaffold "should render title" test, which asserted an `<h1>` the app shell has never had and had been red for the whole life of the project.
 
+## 2026-07-28 — five follow-ups from Marty's review
+
+**A language switcher on the registration gate.** Since the gate became per-language, a reader of a private post had no way to reach the version written for them: the post body they would normally switch languages from is behind that very form. The gate now lists the languages the post has a form for, and the submission carries the language so the server validates against the form the visitor actually saw.
+
+**The Glossary is a topbar button**, next to Posts Manager and Settings, instead of living only in the account menu two clicks away from the screen where terms get written.
+
+**Six language chips plus LIVE plus a lock is a long line, and it was breaking two layouts.** In the Posts Manager list the chips ran past the row's edge: the row wraps now, and the language chips collapse past the third into a "+N" carrying the rest as its tooltip — six two-letter boxes in a list column say little more than three and a count. Above the writing area the row holding the language tabs, the add button, the re-translate/delete pair, the tag row and the folder picker never wrapped, so the Appearance panel's narrow sheet width pushed it off the side; it wraps now.
+
+**Cross-links can differ per language.** `LocalizedTextMap` (Core, 10 tests) with the same split `RegistrationFormSet` uses — the primary-language wording stays in its own column, the rest go into a JSON map beside it, so no existing row needed migrating. Settings edits one language at a time and flushes what is typed before switching, the way the forms tab already does.
+
+### Semi-public posts
+
+A new checkbox in Export's blog section: **a private post can be listed on the blog index anyway**, with a lock on its card, still opening the registration form rather than the article. That is the shape Marty asked for — posts that advertise themselves and collect a registration to be read.
+
+Two deliberate limits, both about not handing out through a side door what the gate exists to withhold:
+
+- **No excerpt on the card.** The card carries the title, the date, the tags and the lock; the excerpt is the one part of it that would be actual content. Easy to reverse if the teaser turns out to be the point.
+- **Not in RSS.** An RSS item carries an excerpt and is pulled by readers that never see a gate.
+
 ## 2026-07-27 (latest) — the glossary
 
 Idea #11, specced by Marty in one paragraph and built the same session: a page holding every term, each with a description, other spellings and an optional image; published text is scanned, terms are marked, and hovering or tapping one shows the description.

@@ -200,6 +200,16 @@
             <h2>{{ t().settings.crossLinks.title }}</h2>
             <p class="field-hint">{{ t().settings.crossLinks.hint }}</p>
 
+            <!--Per language: this line is read by whoever reads that language's version of the
+            post. Switching tabs saves what is in the fields first.-->
+            <div class="lang-pick-row">
+                @for (l of contentLanguages; track l) {
+                <button class="pill" [class.on]="linkTextLanguage() === l" (click)="setLinkTextLanguage(l)">
+                    {{ l.toUpperCase() }}
+                </button>
+                }
+            </div>
+
             <div class="field-group">
                 <label for="cc-blog-link">{{ t().settings.crossLinks.blogLink }}</label>
                 <input id="cc-blog-link" [(ngModel)]="blogLinkText" [placeholder]="t().settings.crossLinks.blogLinkDefault" maxlength="80">

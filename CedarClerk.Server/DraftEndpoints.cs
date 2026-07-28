@@ -20,6 +20,7 @@ public static class DraftEndpoints
     public record RenameTagRequest(string From, string To);
     public record UpdateFolderRequest(Guid? FolderId);
     public record UpdatePrivateRequest(bool IsPrivate);
+    public record UpdateListedRequest(bool IsListedWhilePrivate);
     public record UpdateWatermarkRequest(string? WatermarkText);
     public record UpdateSlugRequest(string? Slug);
     public record UpdateArticleTitleRequest(string? ArticleTitle);
@@ -186,7 +187,8 @@ public static class DraftEndpoints
             {
                 draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug,
                 draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.FolderId, draft.IsPrivate,
-                draft.WatermarkText, draft.ArticleTitle, draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson,
+                draft.WatermarkText, draft.ArticleTitle, draft.IsListedWhilePrivate,
+                draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson,
                 // FI4.1 — which languages a reader would actually be greeted in.
                 FormLanguages = RegistrationFormSet.LanguagesWithForm(draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson),
                 Translations = translations,
@@ -392,6 +394,20 @@ public static class DraftEndpoints
         // AuthEndpoints. Null clears the form (back to the plain 404 for uninvited visitors).
         // Idea #4 - the headline the reader sees, when it should differ from the draft's name.
         // Blank clears it, which restores "the name is the title".
+        // Semi-public private posts: listed and searchable on the blog, still gated behind the
+        // registration form. Its own endpoint rather than a field on /private, matching how
+        // /tags, /folder and /slug each own one concern.
+        groupBuilder.MapPost("/{id:guid}/listed", async (Guid id, UpdateListedRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            draft.IsListedWhilePrivate = req.IsListedWhilePrivate;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.IsListedWhilePrivate });
+        });
+
         groupBuilder.MapPost("/{id:guid}/article-title", async (Guid id, UpdateArticleTitleRequest req, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;

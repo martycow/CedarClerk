@@ -326,6 +326,8 @@ export const en = {
             working: 'Working…',
             unpublishedLinkStays: 'Unpublished — link stays',
             privatePost: 'Private post (only invited emails can view)',
+            listedWhilePrivate: 'Show it in the blog list anyway',
+            listedWhilePrivateHint: 'The post appears on the blog index and in tag filters with a lock on its card, and still opens the registration form instead of the article. Its excerpt is not shown, and it stays out of the RSS feed.',
             publishFirst: 'Publish to the blog to start inviting readers — the invite link needs a post URL.',
             loadingInvites: 'Loading invites…',
             invitePlaceholder: 'Add an email and press ↵',

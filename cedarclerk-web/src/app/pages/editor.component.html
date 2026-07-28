@@ -42,6 +42,13 @@
             <app-count-badge [count]="feedback.newComments() + feedback.newReactions()" [title]="t().editor.newBadge"></app-count-badge>
         </a>
 
+        <!--The glossary was reachable only from the account menu, which is two clicks and a
+        guess away from the screen where terms are actually written.-->
+        <a class="export-btn nav-btn" routerLink="/glossary" [title]="t().glossary.open">
+            <svg lucideBookMarked class="icon-sm"></svg>
+            <span class="btn-label">{{ t().glossary.open }}</span>
+        </a>
+
         <a class="export-btn nav-btn" routerLink="/settings" [title]="t().editor.settings">
             <svg lucideSettings class="icon-sm"></svg>
             <span class="btn-label">{{ t().editor.settings }}</span>
@@ -120,6 +127,16 @@
                     <input type="checkbox" [checked]="isPrivate()" (change)="togglePrivate()">
                     {{ t().editor.exportModal.privatePost }}
                 </label>
+                <!--Semi-public: the post is listed and filterable on the blog index with a lock
+                on its card, and still opens the registration form rather than the article. What
+                is advertised changes; what is readable does not.-->
+                @if (isPrivate()) {
+                <label class="field-hint">
+                    <input type="checkbox" [checked]="isListedWhilePrivate()" (change)="toggleListedWhilePrivate()">
+                    {{ t().editor.exportModal.listedWhilePrivate }}
+                </label>
+                <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.listedWhilePrivateHint }}</p>
+                }
 
                 <!--FI2.3: the form is a dropdown with an explicit "no form", not a row of chips —
                 the current choice is visible instead of inferred. The definition is authored in

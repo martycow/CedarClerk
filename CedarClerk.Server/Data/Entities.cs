@@ -77,6 +77,11 @@ public class ApplicationUser : IdentityUser
     /// </summary>
     public string? BlogLinkText { get; set; }
     public string? TelegramLinkText { get; set; }
+    /// A cross-link is read by whoever is reading that language's version of the post, so the
+    /// label belongs to the language too. The primary-language wording stays in the two fields
+    /// above; these hold the rest as a JSON object keyed by language code (LocalizedTextMap).
+    public string? BlogLinkTextTranslationsJson { get; set; }
+    public string? TelegramLinkTextTranslationsJson { get; set; }
 
     // Pro-only: makes the whole PostSignature text a clickable link — see Phase 8 Step 5,
     // docs/ROADMAP.md. Free-tier posts never read this; they get the fixed attribution instead.
@@ -252,6 +257,11 @@ public class Draft
     // Only the primary language needs it: a translation already carries its own DraftTranslation
     // .Title, which has always been the article title for that language.
     public string? ArticleTitle { get; set; }
+
+    // Semi-public: a private post that still appears in the blog index and its tag filters, with
+    // a lock on the card. Clicking it lands on the registration gate exactly as before — this
+    // changes what is *advertised*, never what is *readable*. Meaningless unless IsPrivate.
+    public bool IsListedWhilePrivate { get; set; }
 
     public string? RegistrationFormJson { get; set; }
     // FI4.1 — the same form in the post's other languages: a JSON object keyed by language code,

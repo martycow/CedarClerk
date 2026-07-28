@@ -149,7 +149,8 @@
 .post-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 4px 8px;
     width: 100%;
     text-align: left;
     border: none;
@@ -183,10 +184,15 @@
     white-space: nowrap;
 }
 
+/* LIVE + private + archived + scheduled + new + up to six language chips is a long line for a
+   list column. It wraps under the title instead of running past the edge, and the language chips
+   themselves collapse past the third - see visibleLanguages()/extraLanguageCount(). */
 .post-row-meta {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 4px;
-    flex: none;
+    min-width: 0;
 }
 
 .post-detail {

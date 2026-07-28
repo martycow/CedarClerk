@@ -85,7 +85,7 @@ import {
     LucideFileText as FileText, LucideHeart as Heart, LucideNotebook as Notebook, LucideFile as FileIcon,
     LucideThumbsUp as ThumbsUp,
     LucideLock as Lock,
-    LucideTerminal as Terminal, LucideInfo as Info,
+    LucideTerminal as Terminal, LucideInfo as Info, LucideBookMarked as BookMarked,
 } from '@lucide/angular';
 
 const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
@@ -236,7 +236,7 @@ interface UploadItem {
         Settings, ShieldCheck, Sparkle, TableOfContentsIcon, DividerIcon,
         CountBadgeComponent,
         AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
-        Lock, Terminal, Info,
+        Lock, Terminal, Info, BookMarked,
     ],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
@@ -379,6 +379,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     formPresets = signal<FormPreset[]>([]);
     // FI4.1 — languages this post actually has a registration form for, primary first.
     formLanguages = signal<string[]>([]);
+    // Semi-public: a private post that still appears in the blog index, carrying a lock. Changes
+    // what is advertised, never what is readable — the gate is untouched.
+    isListedWhilePrivate = signal(false);
 
     // Watermark (I7) — drawn on the blog page only, never in the editor. watermarkText() is the
     // saved value (what the state strip reports); watermarkInput is the unsaved field content.
@@ -1113,6 +1116,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.invites.set([]);
             this.regForm.set(parseRegistrationForm(draft.registrationFormJson));
             this.formLanguages.set(draft.formLanguages ?? []);
+            this.isListedWhilePrivate.set(draft.isListedWhilePrivate ?? false);
             this.editor?.setEditable(true);
             this.editor?.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC), { emitUpdate: false });
             this.resetHistory();
@@ -1339,6 +1343,20 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             } finally {
                 this.invitesLoading.set(false);
             }
+        }
+    }
+
+
+    async toggleListedWhilePrivate() {
+        const id = this.currentId();
+        if (!id) return;
+        const next = !this.isListedWhilePrivate();
+        this.isListedWhilePrivate.set(next);
+        try {
+            await this.draftsApi.setDraftListed(id, next);
+        } catch (e) {
+            this.isListedWhilePrivate.set(!next);
+            this.inviteError.set(httpErrorMessage(e, this.t().editor.errors.saveForm));
         }
     }
 

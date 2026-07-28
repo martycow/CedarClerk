@@ -18,7 +18,10 @@ public static class AuthEndpoints
         string? HeaderSlot1Type, string? HeaderSlot2Type, string? HeaderSlot3Type,
         string? SocialTwitterUrl = null, string? SocialInstagramUrl = null, string? SocialFacebookUrl = null,
         string? SocialYoutubeUrl = null, string? SocialGithubUrl = null,
-        string? BlogLinkText = null, string? TelegramLinkText = null);
+        string? BlogLinkText = null, string? TelegramLinkText = null,
+        // Which language the two texts above are for. Absent means the primary one, so an older
+        // client keeps writing exactly what it used to.
+        string? LinkTextLanguage = null);
     public record NotificationPrefsRequest(bool NotifyOnEngagement);
     public record ToolbarLayoutRequest(string? LayoutJson);
     public record AppearanceRequest(string? PrefsJson);
@@ -142,6 +145,8 @@ public static class AuthEndpoints
                 socialGithubUrl = appUser?.SocialGithubUrl,
                 avatarUrl = appUser?.AvatarUrl,
                 blogLinkText = appUser?.BlogLinkText,
+                blogLinkTexts = LocalizedTextMap.All(appUser?.BlogLinkTextTranslationsJson),
+                telegramLinkTexts = LocalizedTextMap.All(appUser?.TelegramLinkTextTranslationsJson),
                 telegramLinkText = appUser?.TelegramLinkText,
                 toolbarLayoutJson = appUser?.ToolbarLayoutJson,
                 appearancePrefsJson = appUser?.AppearancePrefsJson,
@@ -291,8 +296,23 @@ public static class AuthEndpoints
             user.SocialGithubUrl = string.IsNullOrWhiteSpace(req.SocialGithubUrl) ? null : req.SocialGithubUrl.Trim();
             // I15 — cross-link wording. Not Pro-gated: it replaces one of our strings with the
             // author's, it doesn't remove attribution the way the signature does.
-            user.BlogLinkText = string.IsNullOrWhiteSpace(req.BlogLinkText) ? null : req.BlogLinkText.Trim();
-            user.TelegramLinkText = string.IsNullOrWhiteSpace(req.TelegramLinkText) ? null : req.TelegramLinkText.Trim();
+            //
+            // Per language: the cross-link is read by whoever is reading that language's version
+            // of the post. The primary-language wording stays in its own column; the rest go into
+            // a JSON map beside it (LocalizedTextMap), so no existing row had to be migrated.
+            var linkLang = req.LinkTextLanguage is not null && Languages.IsTranslationLanguage(req.LinkTextLanguage)
+                ? req.LinkTextLanguage
+                : Languages.Primary;
+            if (linkLang == Languages.Primary)
+            {
+                user.BlogLinkText = string.IsNullOrWhiteSpace(req.BlogLinkText) ? null : req.BlogLinkText.Trim();
+                user.TelegramLinkText = string.IsNullOrWhiteSpace(req.TelegramLinkText) ? null : req.TelegramLinkText.Trim();
+            }
+            else
+            {
+                user.BlogLinkTextTranslationsJson = LocalizedTextMap.Set(user.BlogLinkTextTranslationsJson, linkLang, req.BlogLinkText);
+                user.TelegramLinkTextTranslationsJson = LocalizedTextMap.Set(user.TelegramLinkTextTranslationsJson, linkLang, req.TelegramLinkText);
+            }
             await users.UpdateAsync(user);
 
             return Results.Ok(new
@@ -310,6 +330,8 @@ public static class AuthEndpoints
                 socialGithubUrl = user.SocialGithubUrl,
                 blogLinkText = user.BlogLinkText,
                 telegramLinkText = user.TelegramLinkText,
+                blogLinkTexts = LocalizedTextMap.All(user.BlogLinkTextTranslationsJson),
+                telegramLinkTexts = LocalizedTextMap.All(user.TelegramLinkTextTranslationsJson),
             });
         })
         .RequireAuthorization();

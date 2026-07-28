@@ -45,6 +45,8 @@ export interface DraftFull extends DraftMeta {
     // Idea #4 - the reader-facing headline when it differs from the draft's name; null means
     // they are the same.
     articleTitle: string | null;
+    // A private post that is still listed on the blog index, with a lock on its card.
+    isListedWhilePrivate: boolean;
     // FI4.1 — language codes this post actually has a registration form for, primary first.
     formLanguages: string[];
     watermarkText: string | null;
@@ -147,6 +149,12 @@ export class DraftsService {
 
     setDraftFolder(id: string, folderId: string | null) {
         return firstValueFrom(this.http.put<{ folderId: string | null }>(`/api/drafts/${id}/folder`, { folderId }));
+    }
+
+    // Semi-public: listed and searchable on the blog, still gated behind the registration form.
+    setDraftListed(id: string, isListedWhilePrivate: boolean) {
+        return firstValueFrom(this.http.post<{ isListedWhilePrivate: boolean }>(
+            `/api/drafts/${id}/listed`, { isListedWhilePrivate }));
     }
 
     setDraftPrivate(id: string, isPrivate: boolean) {

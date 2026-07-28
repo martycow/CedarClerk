@@ -15,7 +15,7 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
 - [ ] **Idea #21 — accounts on the blog.** A different identity model sitting alongside anonymous comments; "verified" has no defined meaning yet
 - [ ] **Ideas #9 and #14** — both are questions for Marty, recorded in `docs/BACKLOG.md`'s open-questions list
 
-**Not live-verified** (nothing below has been clicked through in a browser): the FI2 export rebuild, the FI3 pickers and folder delete, the FI4 forms editor and per-language gate, tag rename/delete, article title, audit paging, the emoji panel and the paragraph-mark toggle, and the glossary — its page, and the tooltip on a real published post.
+**Not live-verified** (nothing below has been clicked through in a browser): the FI2 export rebuild, the FI3 pickers and folder delete, the FI4 forms editor and per-language gate, tag rename/delete, article title, audit paging, the emoji panel and the paragraph-mark toggle, the glossary — its page, and the tooltip on a real published post — and the 28.07.2026 follow-ups: the gate's language switcher, the per-language cross-links, and a semi-public post appearing on the blog index with its lock.
 
 ## Phase 9e detail (imported 27.07.2026)
 ~60 items, confirmed as not overlapping the earlier lists. Analysis in `docs/BACKLOG.md`, order in `docs/ROADMAP.md` Phase 9e.

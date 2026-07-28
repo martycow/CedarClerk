@@ -43,6 +43,10 @@ export class AuthService {
     readonly avatarUrl = signal<string | null>(null);
     readonly blogLinkText = signal<string | null>(null);
     readonly telegramLinkText = signal<string | null>(null);
+    // The same two labels for the non-primary languages, keyed by language code — a cross-link is
+    // read by whoever reads that language's version of the post.
+    readonly blogLinkTexts = signal<Record<string, string>>({});
+    readonly telegramLinkTexts = signal<Record<string, string>>({});
 
     async login(email: string, password: string): Promise<boolean> {
         try {
@@ -90,6 +94,7 @@ export class AuthService {
                 uiLanguage: string | null;
                 avatarUrl: string | null;
                 blogLinkText: string | null; telegramLinkText: string | null;
+                blogLinkTexts?: Record<string, string>; telegramLinkTexts?: Record<string, string>;
             }>('/api/auth/me'));
             this.userEmail.set(me.email);
             this.createdAt.set(me.createdAt);
@@ -121,6 +126,8 @@ export class AuthService {
             this.avatarUrl.set(me.avatarUrl);
             this.blogLinkText.set(me.blogLinkText);
             this.telegramLinkText.set(me.telegramLinkText);
+            this.blogLinkTexts.set(me.blogLinkTexts ?? {});
+            this.telegramLinkTexts.set(me.telegramLinkTexts ?? {});
             // The profile wins over the localStorage cache the service started from (ADR-044).
             this.locale.adoptProfileLanguage(me.uiLanguage);
         } catch {
@@ -154,6 +161,8 @@ export class AuthService {
             this.avatarUrl.set(null);
             this.blogLinkText.set(null);
             this.telegramLinkText.set(null);
+            this.blogLinkTexts.set({});
+            this.telegramLinkTexts.set({});
         }
     }
 
@@ -177,6 +186,8 @@ export class AuthService {
         socialTwitterUrl?: string; socialInstagramUrl?: string; socialFacebookUrl?: string;
         socialYoutubeUrl?: string; socialGithubUrl?: string;
         blogLinkText?: string; telegramLinkText?: string;
+        // Which language the two above are for; omitted means the primary one.
+        linkTextLanguage?: string;
     }): Promise<void> {
         const res = await firstValueFrom(this.http.post<{
             authorDisplayName: string | null; profileUrl: string | null; profileLocation: string | null;
@@ -184,11 +195,14 @@ export class AuthService {
             socialTwitterUrl: string | null; socialInstagramUrl: string | null; socialFacebookUrl: string | null;
             socialYoutubeUrl: string | null; socialGithubUrl: string | null;
             blogLinkText: string | null; telegramLinkText: string | null;
+            blogLinkTexts?: Record<string, string>; telegramLinkTexts?: Record<string, string>;
         }>('/api/auth/profile', profile));
         this.authorDisplayName.set(res.authorDisplayName);
         this.profileUrl.set(res.profileUrl);
         this.profileLocation.set(res.profileLocation);
         this.blogLinkText.set(res.blogLinkText);
+        this.blogLinkTexts.set(res.blogLinkTexts ?? {});
+        this.telegramLinkTexts.set(res.telegramLinkTexts ?? {});
         this.telegramLinkText.set(res.telegramLinkText);
         this.headerSlot1Type.set(res.headerSlot1Type);
         this.headerSlot2Type.set(res.headerSlot2Type);
