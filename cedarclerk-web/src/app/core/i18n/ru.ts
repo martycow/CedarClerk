@@ -766,6 +766,8 @@ export const ru: Dict = {
             typePublishedDate: 'Дата публикации',
             typeLength: 'Объём',
             typeTimeToRead: 'Время чтения',
+            typeWordCount: 'Число слов',
+            typeViewCount: 'Число просмотров',
             save: 'Сохранить слоты',
         },
         social: {

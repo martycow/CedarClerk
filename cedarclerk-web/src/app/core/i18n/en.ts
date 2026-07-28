@@ -765,6 +765,8 @@ export const en = {
             typePublishedDate: 'Published Date',
             typeLength: 'Length',
             typeTimeToRead: 'Time to Read',
+            typeWordCount: 'Word Count',
+            typeViewCount: 'View Count',
             save: 'Save header slots',
         },
         social: {

@@ -23,6 +23,10 @@ export class AuthService {
     readonly notifyOnEngagement = signal(false);
     readonly postSignature = signal<string | null>(null);
     readonly postSignatureUrl = signal<string | null>(null);
+    // FI5 — the same signature in the other content languages, keyed by language code; a
+    // signature is read at the bottom of whichever language's post it is, same reasoning as the
+    // cross-link labels below.
+    readonly postSignatureTexts = signal<Record<string, string>>({});
     readonly authorDisplayName = signal<string | null>(null);
     readonly profileUrl = signal<string | null>(null);
     readonly profileLocation = signal<string | null>(null);
@@ -85,7 +89,7 @@ export class AuthService {
                 email: string; createdAt: string | null; isAdmin: boolean; planTier: string | null; planExpiresAt: string | null; trialUsed: boolean;
                 telegramLinked: boolean; telegramUsername: string | null; telegramLinkedAt: string | null;
                 notifyOnEngagement: boolean;
-                postSignature: string | null; postSignatureUrl: string | null;
+                postSignature: string | null; postSignatureUrl: string | null; postSignatureTexts?: Record<string, string>;
                 authorDisplayName: string | null; profileUrl: string | null; profileLocation: string | null;
                 headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
                 socialTwitterUrl: string | null; socialInstagramUrl: string | null; socialFacebookUrl: string | null;
@@ -108,6 +112,7 @@ export class AuthService {
             this.notifyOnEngagement.set(me.notifyOnEngagement);
             this.postSignature.set(me.postSignature);
             this.postSignatureUrl.set(me.postSignatureUrl);
+            this.postSignatureTexts.set(me.postSignatureTexts ?? {});
             this.authorDisplayName.set(me.authorDisplayName);
             this.profileUrl.set(me.profileUrl);
             this.profileLocation.set(me.profileLocation);
@@ -143,6 +148,7 @@ export class AuthService {
             this.notifyOnEngagement.set(false);
             this.postSignature.set(null);
             this.postSignatureUrl.set(null);
+            this.postSignatureTexts.set({});
             this.authorDisplayName.set(null);
             this.profileUrl.set(null);
             this.profileLocation.set(null);
@@ -166,11 +172,13 @@ export class AuthService {
         }
     }
 
-    async saveSignature(signature: string, signatureUrl: string): Promise<void> {
-        const res = await firstValueFrom(this.http.post<{ postSignature: string | null; postSignatureUrl: string | null }>(
-            '/api/auth/signature', { signature, signatureUrl }));
+    async saveSignature(signature: string, signatureUrl: string, signatureTexts?: Record<string, string>): Promise<void> {
+        const res = await firstValueFrom(this.http.post<{
+            postSignature: string | null; postSignatureUrl: string | null; postSignatureTexts?: Record<string, string>;
+        }>('/api/auth/signature', { signature, signatureUrl, signatureTexts }));
         this.postSignature.set(res.postSignature);
         this.postSignatureUrl.set(res.postSignatureUrl);
+        this.postSignatureTexts.set(res.postSignatureTexts ?? {});
     }
 
     // IF1 — records which uploaded image is the avatar; null clears it.

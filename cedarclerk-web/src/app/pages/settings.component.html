@@ -62,6 +62,15 @@
                 } @else {
                 <p class="field-hint">{{ t().settings.profile.signatureHintFree(freeAttributionText) }}</p>
                 }
+                <!--FI5: the text (not the URL, which reads the same in every language) can differ
+                per content language — same per-language-drafts pattern as the cross-links below.-->
+                <div class="lang-pick-row">
+                    @for (l of contentLanguages; track l) {
+                    <button class="pill" [class.on]="signatureLanguage() === l" (click)="setSignatureLanguage(l)">
+                        {{ l.toUpperCase() }}
+                    </button>
+                    }
+                </div>
                 <textarea id="cc-sig" [(ngModel)]="signatureText" rows="2" [placeholder]="t().settings.profile.signaturePlaceholder"
                     [disabled]="!hasProSignature()" [title]="hasProSignature() ? '' : t().settings.profile.signatureUpgrade"></textarea>
                 @if (hasProSignature()) {
@@ -141,6 +150,8 @@
                     <option value="PublishedDate">{{ t().settings.headerSlots.typePublishedDate }}</option>
                     <option value="Length">{{ t().settings.headerSlots.typeLength }}</option>
                     <option value="TimeToRead">{{ t().settings.headerSlots.typeTimeToRead }}</option>
+                    <option value="WordCount">{{ t().settings.headerSlots.typeWordCount }}</option>
+                    <option value="ViewCount">{{ t().settings.headerSlots.typeViewCount }}</option>
                 </select>
             </div>
             <div class="field-group">
@@ -153,6 +164,8 @@
                     <option value="PublishedDate">{{ t().settings.headerSlots.typePublishedDate }}</option>
                     <option value="Length">{{ t().settings.headerSlots.typeLength }}</option>
                     <option value="TimeToRead">{{ t().settings.headerSlots.typeTimeToRead }}</option>
+                    <option value="WordCount">{{ t().settings.headerSlots.typeWordCount }}</option>
+                    <option value="ViewCount">{{ t().settings.headerSlots.typeViewCount }}</option>
                 </select>
             </div>
             <div class="field-group">
@@ -166,6 +179,8 @@
                     <option value="PublishedDate">{{ t().settings.headerSlots.typePublishedDate }}</option>
                     <option value="Length">{{ t().settings.headerSlots.typeLength }}</option>
                     <option value="TimeToRead">{{ t().settings.headerSlots.typeTimeToRead }}</option>
+                    <option value="WordCount">{{ t().settings.headerSlots.typeWordCount }}</option>
+                    <option value="ViewCount">{{ t().settings.headerSlots.typeViewCount }}</option>
                 </select>
             </div>
 
@@ -209,23 +224,23 @@
             <p class="field-hint">{{ t().settings.social.hint }}</p>
 
             <div class="field-group">
-                <label for="cc-social-twitter"><svg lucideAtSign class="icon-xs"></svg> Twitter / X</label>
+                <label for="cc-social-twitter"><app-brand-icon name="twitter" [size]="12"></app-brand-icon> Twitter / X</label>
                 <input id="cc-social-twitter" [(ngModel)]="socialTwitterUrlText" placeholder="https://x.com/yourhandle">
             </div>
             <div class="field-group">
-                <label for="cc-social-instagram"><svg lucideCamera class="icon-xs"></svg> Instagram</label>
+                <label for="cc-social-instagram"><app-brand-icon name="instagram" [size]="12"></app-brand-icon> Instagram</label>
                 <input id="cc-social-instagram" [(ngModel)]="socialInstagramUrlText" placeholder="https://instagram.com/yourhandle">
             </div>
             <div class="field-group">
-                <label for="cc-social-facebook"><svg lucideThumbsUp class="icon-xs"></svg> Facebook</label>
+                <label for="cc-social-facebook"><app-brand-icon name="facebook" [size]="12"></app-brand-icon> Facebook</label>
                 <input id="cc-social-facebook" [(ngModel)]="socialFacebookUrlText" placeholder="https://facebook.com/yourpage">
             </div>
             <div class="field-group">
-                <label for="cc-social-youtube"><svg lucidePlaySquare class="icon-xs"></svg> YouTube</label>
+                <label for="cc-social-youtube"><app-brand-icon name="youtube" [size]="14"></app-brand-icon> YouTube</label>
                 <input id="cc-social-youtube" [(ngModel)]="socialYoutubeUrlText" placeholder="https://youtube.com/@yourchannel">
             </div>
             <div class="field-group">
-                <label for="cc-social-github"><svg lucideCode2 class="icon-xs"></svg> GitHub</label>
+                <label for="cc-social-github"><app-brand-icon name="github" [size]="12"></app-brand-icon> GitHub</label>
                 <input id="cc-social-github" [(ngModel)]="socialGithubUrlText" placeholder="https://github.com/yourname">
             </div>
 

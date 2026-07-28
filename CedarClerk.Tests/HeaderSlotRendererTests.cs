@@ -4,7 +4,7 @@ namespace CedarClerk.Tests;
 
 public class HeaderSlotRendererTests
 {
-    private static readonly HeaderSlotContext Empty = new(null, null, null, null, 0, 0);
+    private static readonly HeaderSlotContext Empty = new(null, null, null, null, 0, 0, 0);
 
     [Fact]
     public void AuthorSignature_renders_the_display_name()
@@ -61,5 +61,19 @@ public class HeaderSlotRendererTests
     {
         var ctx = Empty with { WordCount = wordCount };
         Assert.Equal(new HeaderSlotValue($"{expectedMinutes} min read", null), HeaderSlotRenderer.Render(HeaderSlotType.TimeToRead, ctx));
+    }
+
+    [Fact]
+    public void WordCount_reports_the_word_count()
+    {
+        var ctx = Empty with { WordCount = 42 };
+        Assert.Equal(new HeaderSlotValue("42 words", null), HeaderSlotRenderer.Render(HeaderSlotType.WordCount, ctx));
+    }
+
+    [Fact]
+    public void ViewCount_reports_the_view_count()
+    {
+        var ctx = Empty with { ViewCount = 7 };
+        Assert.Equal(new HeaderSlotValue("7 views", null), HeaderSlotRenderer.Render(HeaderSlotType.ViewCount, ctx));
     }
 }

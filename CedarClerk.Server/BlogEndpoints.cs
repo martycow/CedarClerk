@@ -1074,18 +1074,20 @@ public static class BlogEndpoints
         var owner = await db.Users.Where(u => u.Id == draft.OwnerId)
             .Select(u => new
             {
-                u.PostSignature, u.PostSignatureUrl, u.AuthorDisplayName, u.ProfileUrl, u.ProfileLocation,
+                u.PostSignature, u.PostSignatureUrl, u.PostSignatureTranslationsJson, u.AuthorDisplayName, u.ProfileUrl, u.ProfileLocation,
                 u.HeaderSlot1Type, u.HeaderSlot2Type, u.HeaderSlot3Type, u.PlanTier, u.PlanExpiresAt,
                 u.TelegramLinkText,
                 u.TelegramLinkTextTranslationsJson,
             })
             .FirstAsync();
         var ownerPlan = SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow);
-        var signatureBlock = SignatureHtml(PlanLimitations.ResolveSignature(ownerPlan, owner.PostSignature, owner.PostSignatureUrl), "span");
+        // FI5 — a signature is read at the bottom of whichever language's post it is.
+        var localizedSignature = LocalizedTextMap.Pick(owner.PostSignature, owner.PostSignatureTranslationsJson, lang);
+        var signatureBlock = SignatureHtml(PlanLimitations.ResolveSignature(ownerPlan, localizedSignature, owner.PostSignatureUrl), "span");
 
         var headerSlotsLine = RenderHeaderSlotsLine(owner.HeaderSlot1Type, owner.HeaderSlot2Type, owner.HeaderSlot3Type,
             owner.AuthorDisplayName, owner.ProfileUrl, owner.ProfileLocation,
-            ownerPlan, draft.BlogPublishedAt, cedarJson);
+            ownerPlan, draft.BlogPublishedAt, cedarJson, viewCount);
 
         // Idea #11 - the owner's glossary for the language being shown. Empty for an owner who
         // never defined one, which costs a single indexed read and changes nothing downstream.
@@ -1178,7 +1180,7 @@ public static class BlogEndpoints
     private static string RenderHeaderSlotsLine(
         HeaderSlotType? slot1, HeaderSlotType? slot2, HeaderSlotType? slot3,
         string? authorDisplayName, string? profileUrl, string? profileLocation,
-        PlanTiers currentPlan, DateTime? publishedAt, string cedarJson)
+        PlanTiers currentPlan, DateTime? publishedAt, string cedarJson, int viewCount)
     {
         var configured = new[] { slot1, slot2, slot3 }.Take(PlanLimitations.MaxHeaderSlots(currentPlan));
 
@@ -1186,7 +1188,7 @@ public static class BlogEndpoints
         try { text = string.Join(" ", TipTapTextNodes.ExtractTexts(cedarJson)).Trim(); }
         catch (Exception) { text = ""; }
         var wordCount = text.Length == 0 ? 0 : text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
-        var ctx = new HeaderSlotContext(authorDisplayName, profileUrl, profileLocation, publishedAt, text.Length, wordCount);
+        var ctx = new HeaderSlotContext(authorDisplayName, profileUrl, profileLocation, publishedAt, text.Length, wordCount, viewCount);
 
         var parts = configured
             .Where(s => s is not null)

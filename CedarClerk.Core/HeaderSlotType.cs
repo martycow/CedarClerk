@@ -8,4 +8,6 @@ public enum HeaderSlotType : byte
     PublishedDate = 3,
     Length = 4,
     TimeToRead = 5,
+    WordCount = 6,
+    ViewCount = 7,
 }

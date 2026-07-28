@@ -103,14 +103,17 @@ public static class PostEndpoints
             return new PublishResult(null, "Draft is empty");
 
         var owner = await db.Users.Where(u => u.Id == ownerId)
-            .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PlanTier, u.PlanExpiresAt, u.BlogLinkText, u.BlogLinkTextTranslationsJson })
+            .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PostSignatureTranslationsJson, u.PlanTier, u.PlanExpiresAt, u.BlogLinkText, u.BlogLinkTextTranslationsJson })
             .FirstAsync();
 
         // Free tier always gets the fixed Cedar Clerk attribution; Pro+ can replace it with a
         // custom signature (optionally a clickable link) or clear it entirely. See Phase 8 Step 5,
         // docs/ROADMAP.md, and ADR-034 in docs/DECISIONS.md.
         var currentPlan = SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow);
-        var resolvedSignature = PlanLimitations.ResolveSignature(currentPlan, owner.PostSignature, owner.PostSignatureUrl);
+        // FI5 — this Telegram send is already per-language (the `language` parameter above), so
+        // the signature appended to it should be too.
+        var localizedSignature = LocalizedTextMap.Pick(owner.PostSignature, owner.PostSignatureTranslationsJson, language);
+        var resolvedSignature = PlanLimitations.ResolveSignature(currentPlan, localizedSignature, owner.PostSignatureUrl);
         if (resolvedSignature is { } sig)
         {
             // B17 - bold, so the signature reads as a signature in the channel rather than as one

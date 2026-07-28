@@ -12,7 +12,10 @@ public static class AuthEndpoints
 {
     public record RegisterRequest(string Email, string Password, string InviteCode);
     public record LoginRequest(string Email, string Password);
-    public record SignatureRequest(string? Signature, string? SignatureUrl = null);
+    public record SignatureRequest(string? Signature, string? SignatureUrl = null,
+        // FI5 — the same signature in the other content languages, keyed by language code. Same
+        // whole-map-per-request shape as ProfileRequest's link-text dictionaries below.
+        Dictionary<string, string>? SignatureTexts = null);
     public record ProfileRequest(
         string? AuthorDisplayName, string? ProfileUrl, string? ProfileLocation,
         string? HeaderSlot1Type, string? HeaderSlot2Type, string? HeaderSlot3Type,
@@ -134,6 +137,7 @@ public static class AuthEndpoints
                 notifyOnEngagement = appUser?.NotifyOnEngagement ?? false,
                 postSignature = appUser?.PostSignature,
                 postSignatureUrl = appUser?.PostSignatureUrl,
+                postSignatureTexts = LocalizedTextMap.All(appUser?.PostSignatureTranslationsJson),
                 authorDisplayName = appUser?.AuthorDisplayName,
                 profileUrl = appUser?.ProfileUrl,
                 profileLocation = appUser?.ProfileLocation,
@@ -235,7 +239,8 @@ public static class AuthEndpoints
 
             var currentPlan = SubscriptionPlanHelper.CheckPlanExpiration(user.PlanTier, user.PlanExpiresAt, DateTime.UtcNow);
 
-            if ((!string.IsNullOrWhiteSpace(req.Signature) || !string.IsNullOrWhiteSpace(req.SignatureUrl))
+            var hasAnyTranslatedText = req.SignatureTexts?.Values.Any(v => !string.IsNullOrWhiteSpace(v)) ?? false;
+            if ((!string.IsNullOrWhiteSpace(req.Signature) || !string.IsNullOrWhiteSpace(req.SignatureUrl) || hasAnyTranslatedText)
                 && !PlanLimitations.HasCustomSignature(currentPlan))
             {
                 return Results.Json(new { error = "Post signature is a Pro feature. Upgrade to use it." },
@@ -244,9 +249,14 @@ public static class AuthEndpoints
 
             user.PostSignature = string.IsNullOrWhiteSpace(req.Signature) ? null : req.Signature.Trim();
             user.PostSignatureUrl = string.IsNullOrWhiteSpace(req.SignatureUrl) ? null : req.SignatureUrl.Trim();
+            if (req.SignatureTexts is not null)
+                user.PostSignatureTranslationsJson = BuildLinkTextMap(req.SignatureTexts);
             await users.UpdateAsync(user);
 
-            return Results.Ok(new { postSignature = user.PostSignature, postSignatureUrl = user.PostSignatureUrl });
+            return Results.Ok(new {
+                postSignature = user.PostSignature, postSignatureUrl = user.PostSignatureUrl,
+                postSignatureTexts = LocalizedTextMap.All(user.PostSignatureTranslationsJson),
+            });
         })
         .RequireAuthorization();
 

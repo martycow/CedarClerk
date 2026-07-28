@@ -68,6 +68,12 @@ public class ApplicationUser : IdentityUser
     /// </summary>
     public string? PostSignature { get; set; }
 
+    /// FI5 — a signature is read at the bottom of whichever language's post it is, so like the
+    /// cross-link labels below it belongs to the language too. Same split as those: the primary
+    /// wording stays in PostSignature above, the rest is a JSON object keyed by language code
+    /// (LocalizedTextMap). Gated by the same Pro check as PostSignature itself.
+    public string? PostSignatureTranslationsJson { get; set; }
+
     /// <summary>
     /// Text of the cross-links between a post's two homes (I15). Null falls back to the built-in
     /// wording. Profile-level rather than per-post: it is branding that reads the same on every

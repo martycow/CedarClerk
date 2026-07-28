@@ -11,18 +11,15 @@ import { ChannelsService, Channel } from '../core/channels.service';
 import { AssetsService } from '../core/assets.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { PageHeaderComponent } from '../shared/page-header.component';
-import {
-    LucideCheck as Check, LucideSend as Send,
-    LucideAtSign as AtSign, LucideCamera as Camera, LucideThumbsUp as ThumbsUp,
-    LucidePlaySquare as PlaySquare, LucideCode2 as Code2,
-} from '@lucide/angular';
+import { BrandIconComponent } from '../shared/brand-icon.component';
+import { LucideCheck as Check, LucideSend as Send } from '@lucide/angular';
 
 type PayMethod = 'stripe' | 'paypal' | 'stars';
 export type SettingsTab = 'profile' | 'account';
 
 @Component({
     selector: 'app-settings',
-    imports: [FormsModule, DatePipe, RouterLink, PageHeaderComponent, Check, Send, AtSign, Camera, ThumbsUp, PlaySquare, Code2],
+    imports: [FormsModule, DatePipe, RouterLink, PageHeaderComponent, BrandIconComponent, Check, Send],
     templateUrl: 'settings.component.html',
     styleUrls: ['settings.component.css']
 })
@@ -45,6 +42,11 @@ export class SettingsComponent implements OnInit {
     signatureBusy = signal(false);
     signatureSaved = signal(false);
     signatureError = signal<string | null>(null);
+    // FI5 — the signature text (not the URL, which isn't language-dependent) can differ per
+    // content language, same "hold every language locally, one field on screen at a time" shape
+    // as the cross-link texts below.
+    signatureLanguage = signal<string>(PRIMARY_LANGUAGE);
+    private signatureDrafts: Record<string, string> = {};
 
     authorDisplayNameText = '';
     profileUrlText = '';
@@ -99,8 +101,8 @@ export class SettingsComponent implements OnInit {
         const requested = this.route.snapshot.queryParamMap.get('tab');
         if (requested === 'profile' || requested === 'account') this.tab.set(requested);
 
-        this.signatureText = this.auth.postSignature() ?? '';
         this.signatureUrlText = this.auth.postSignatureUrl() ?? '';
+        this.loadSignatureTexts();
         this.authorDisplayNameText = this.auth.authorDisplayName() ?? '';
         this.profileUrlText = this.auth.profileUrl() ?? '';
         this.profileLocationText = this.auth.profileLocation() ?? '';
@@ -195,13 +197,15 @@ export class SettingsComponent implements OnInit {
     // the writing sheet (I14/B15) — all of their state and handlers went with them.
 
     async saveSignature() {
+        this.stashSignatureText();
         this.signatureBusy.set(true);
         this.signatureSaved.set(false);
         this.signatureError.set(null);
         try {
-            await this.auth.saveSignature(this.signatureText, this.signatureUrlText);
-            this.signatureText = this.auth.postSignature() ?? '';
+            await this.auth.saveSignature(
+                this.signatureDrafts[PRIMARY_LANGUAGE] ?? '', this.signatureUrlText, this.signatureTextMap());
             this.signatureUrlText = this.auth.postSignatureUrl() ?? '';
+            this.loadSignatureTexts();
             this.signatureSaved.set(true);
             setTimeout(() => this.signatureSaved.set(false), 2500);
         } catch (e) {
@@ -209,6 +213,37 @@ export class SettingsComponent implements OnInit {
         } finally {
             this.signatureBusy.set(false);
         }
+    }
+
+    private loadSignatureTexts() {
+        this.signatureDrafts = {};
+        for (const lang of CONTENT_LANGUAGES) {
+            this.signatureDrafts[lang] = lang === PRIMARY_LANGUAGE
+                ? this.auth.postSignature() ?? ''
+                : this.auth.postSignatureTexts()[lang] ?? '';
+        }
+        this.signatureText = this.signatureDrafts[this.signatureLanguage()] ?? '';
+    }
+
+    private stashSignatureText() {
+        this.signatureDrafts[this.signatureLanguage()] = this.signatureText;
+    }
+
+    setSignatureLanguage(lang: string) {
+        if (lang === this.signatureLanguage()) return;
+        this.stashSignatureText();
+        this.signatureLanguage.set(lang);
+        this.signatureText = this.signatureDrafts[lang] ?? '';
+    }
+
+    private signatureTextMap(): Record<string, string> {
+        const map: Record<string, string> = {};
+        for (const lang of CONTENT_LANGUAGES) {
+            if (lang === PRIMARY_LANGUAGE) continue;
+            const value = this.signatureDrafts[lang]?.trim();
+            if (value) map[lang] = value;
+        }
+        return map;
     }
 
     // Every language is held locally; the two visible fields are just whichever one is selected.

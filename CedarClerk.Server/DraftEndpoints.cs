@@ -825,10 +825,11 @@ public static class DraftEndpoints
             var blogHost = cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost;
             var body = CedarToBlogHtmlRenderer.Render(cedarJson, $"https://{blogHost}", language);
             var owner = await db.Users.Where(u => u.Id == uid)
-                .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PlanTier, u.PlanExpiresAt })
+                .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PostSignatureTranslationsJson, u.PlanTier, u.PlanExpiresAt })
                 .FirstAsync();
             var ownerPlan = SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow);
-            var signature = PlanLimitations.ResolveSignature(ownerPlan, owner.PostSignature, owner.PostSignatureUrl);
+            var localizedSignature = LocalizedTextMap.Pick(owner.PostSignature, owner.PostSignatureTranslationsJson, language);
+            var signature = PlanLimitations.ResolveSignature(ownerPlan, localizedSignature, owner.PostSignatureUrl);
             var publishedAt = draft.BlogPublishedAt ?? draft.CreatedAt;
 
             var html = StaticExportHtml(title, body, language, signature, publishedAt, cedarJson);
@@ -848,10 +849,9 @@ public static class DraftEndpoints
 
             var translations = await db.DraftTranslations.Where(t => t.DraftId == id).ToListAsync();
             var owner = await db.Users.Where(u => u.Id == uid)
-                .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PlanTier, u.PlanExpiresAt })
+                .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PostSignatureTranslationsJson, u.PlanTier, u.PlanExpiresAt })
                 .FirstAsync();
             var ownerPlan = SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow);
-            var signature = PlanLimitations.ResolveSignature(ownerPlan, owner.PostSignature, owner.PostSignatureUrl);
             var publishedAt = draft.BlogPublishedAt ?? draft.CreatedAt;
 
             var versions = new List<(string Lang, string Title, string CedarJson)>
@@ -870,6 +870,11 @@ public static class DraftEndpoints
                     // slash of /media/..., which turns every asset into ./media/... — relative
                     // to the page, which is exactly the layout inside the archive.
                     var body = CedarToBlogHtmlRenderer.Render(cedarJson, ".", lang);
+                    // FI5 — each language's page in the archive gets that language's own signature,
+                    // not the primary one on repeat (this loop used to resolve the signature once,
+                    // outside the loop, before per-language signatures existed).
+                    var localizedSignature = LocalizedTextMap.Pick(owner.PostSignature, owner.PostSignatureTranslationsJson, lang);
+                    var signature = PlanLimitations.ResolveSignature(ownerPlan, localizedSignature, owner.PostSignatureUrl);
                     var html = StaticExportHtml(title, body, lang, signature, publishedAt, cedarJson);
                     var pageName = lang == Languages.Primary ? "index.html" : $"index.{lang}.html";
                     var pageEntry = zip.CreateEntry(pageName, CompressionLevel.Optimal);

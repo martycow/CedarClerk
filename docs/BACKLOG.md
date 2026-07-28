@@ -71,7 +71,7 @@ Scoped as Phase 9e in `docs/ROADMAP.md`. Recorded here with what each actually c
 | FI4 | High | Forms manager: per-language presets; the layout "rябит" | Per-language presets interact with NF2's content-language axis — worth doing after that decision, not before |
 | FI6 | Medium | Account settings, 5 sub-items | **Blocked indefinitely**: sub-items 1/3/4/5's text was lost when `Input.md` was overwritten before this session and neither Marty nor this file recorded them — only sub-item 2 (the deferred pricing restructure) survives. Needs re-specifying from scratch before any code |
 | ~~FI1~~ | ~~Low~~ | ~~Appearance panel UX, 7 sub-items~~ | **Done 28.07.2026** — see `docs/ROADMAP.md` Phase 9e and ADR-053 |
-| FI5 | Low | Profile settings: real social icons, more slot types, multi-language signatures | Multi-language signatures depend on the same language decision as NF2/FI4 — **that decision is now made (NF2 answered: RU/EN/DE/FR/ES/JA)**, so this is unblocked |
+| ~~FI5~~ | ~~Low~~ | ~~Profile settings: real social icons, more slot types, multi-language signatures~~ | **Done 28.07.2026** — see `docs/ROADMAP.md` Phase 9e and ADR-054 |
 
 **Bugs**
 
