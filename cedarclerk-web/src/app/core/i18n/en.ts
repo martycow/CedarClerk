@@ -81,6 +81,7 @@ export const en = {
             published: 'Published',
             attention: 'Needs attention',
             archived: 'Archived',
+            template: 'Templates',
         },
         columns: {
             title: 'Title',
@@ -111,6 +112,8 @@ export const en = {
             archive: 'Archive',
             unarchive: 'Unarchive',
             deleteDraft: 'Delete',
+            markTemplate: 'Mark as template',
+            unmarkTemplate: 'Unmark as template',
         },
         deleteDraftTitle: 'Delete this draft?',
         deleteDraftBody: 'This cannot be undone.',

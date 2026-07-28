@@ -28,6 +28,7 @@ export interface DraftMeta {
     scheduled: ScheduledInfo | null; // most recent Pending/Failed ScheduledPost row, if any
     folderId: string | null; // at most one folder per draft — see the ADR following ADR-038
     isPrivate: boolean; // blog page gated behind PostInvite tokens — see ADR-041
+    isTemplate: boolean; // NF1 — a template, filtered into its own /drafts tab, never published
     // Blog activity (B23). Totals are all-time; new* is what accumulated since the previous
     // session (server-side baseline, see DraftStatSeen) and is 0 the first time a draft is listed.
     viewCount: number;
@@ -159,6 +160,11 @@ export class DraftsService {
 
     setDraftPrivate(id: string, isPrivate: boolean) {
         return firstValueFrom(this.http.post<{ isPrivate: boolean }>(`/api/drafts/${id}/private`, { isPrivate }));
+    }
+
+    // NF1 — post templates.
+    setDraftTemplate(id: string, isTemplate: boolean) {
+        return firstValueFrom(this.http.post<{ isTemplate: boolean }>(`/api/drafts/${id}/template`, { isTemplate }));
     }
 
     // FI3.4 — the server slugifies and enforces global uniqueness, so this can send raw text.

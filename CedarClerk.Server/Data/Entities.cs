@@ -252,6 +252,12 @@ public class Draft
     // docs/DECISIONS.md) — only meaningful when IsBlogPublished is also true.
     public bool IsPrivate { get; set; }
 
+    // NF1 (docs/DECISIONS.md, ADR following ADR-055): a post template. Named and edited exactly
+    // like any other Draft (same autosave, same export), just filtered into its own /drafts tab
+    // instead of the main list and never itself published — the "cheapest honest shape" per
+    // Marty's own framing in docs/BACKLOG.md, a flag rather than a parallel entity.
+    public bool IsTemplate { get; set; }
+
     // Registration form shown to uninvited visitors of a private post (B3). Null = no form
     // configured, so an uninvited visitor still gets the original indistinguishable-from-404
     // response. A JSON blob rather than columns because the question list is variable-shape —

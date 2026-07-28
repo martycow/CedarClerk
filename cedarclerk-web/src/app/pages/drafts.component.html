@@ -70,6 +70,7 @@
             <button [class.active]="filter() === 'published'" (click)="filter.set('published')">{{ t().drafts.filters.published }} {{ filterCount('published') }}</button>
             <button [class.active]="filter() === 'attention'" (click)="filter.set('attention')">{{ t().drafts.filters.attention }} {{ filterCount('attention') }}</button>
             <button [class.active]="filter() === 'archived'" (click)="filter.set('archived')">{{ t().drafts.filters.archived }} {{ filterCount('archived') }}</button>
+            <button [class.active]="filter() === 'template'" (click)="filter.set('template')">{{ t().drafts.filters.template }} {{ filterCount('template') }}</button>
         </div>
 
         @if (error()) { <p class="channel-error">{{ error() }}</p> }
@@ -130,6 +131,9 @@
                 </div>
                 <div class="right">{{ d.updatedAt | date:'d MMM, HH:mm' }}</div>
                 <div class="row-actions">
+                    <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">
+                        <svg lucideLayoutTemplate class="icon-sm"></svg>
+                    </button>
                     <button class="mini" (click)="toggleArchive(d, $event)" [disabled]="busyId() === d.id" [title]="d.isArchived ? t().drafts.actions.unarchive : t().drafts.actions.archive">
                         @if (busyId() === d.id) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
                         @else if (d.isArchived) { <svg lucideArchiveRestore class="icon-sm"></svg> }
@@ -177,6 +181,9 @@
                 <div class="drafts-card-foot">
                     <span>{{ d.updatedAt | date:'d MMM, HH:mm' }}</span>
                     <span class="row-actions">
+                        <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">
+                            <svg lucideLayoutTemplate class="icon-sm"></svg>
+                        </button>
                         <button class="mini" (click)="toggleArchive(d, $event)" [disabled]="busyId() === d.id" [title]="d.isArchived ? t().drafts.actions.unarchive : t().drafts.actions.archive">
                             @if (d.isArchived) { <svg lucideArchiveRestore class="icon-sm"></svg> } @else { <svg lucideArchive class="icon-sm"></svg> }
                         </button>

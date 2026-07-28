@@ -16,13 +16,14 @@ import { httpErrorMessage } from '../core/http-error.util';
 import {
     LucidePlus as Plus,
     LucideArchive as Archive, LucideArchiveRestore as ArchiveRestore, LucideTrash2 as Trash2,
+    LucideLayoutTemplate as LayoutTemplate,
     LucideRefreshCw as RefreshCw, LucideLayoutGrid as LayoutGrid, LucideList as List,
     LucideFolder as Folder,
     LucideLock as Lock, LucideFileUp as FileUp, LucideUpload as Upload,
     LucideEye as Eye, LucideHeart as Heart,
 } from '@lucide/angular';
 
-type FilterKey = 'all' | 'draft' | 'scheduled' | 'published' | 'attention' | 'archived';
+type FilterKey = 'all' | 'draft' | 'scheduled' | 'published' | 'attention' | 'archived' | 'template';
 export type SortKey = 'title' | 'state' | 'languages' | 'folder' | 'tags' | 'activity' | 'updated' | 'created';
 
 // Widths of the six fixed columns between Title (1fr) and the actions column (N1). Title keeps
@@ -72,12 +73,15 @@ function computeStatus(d: DraftMeta, t: Dict): DraftStatus {
 
 function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
     switch (key) {
-        case 'draft': return !d.isArchived && !d.scheduled && !d.isBlogPublished && !d.lastTelegramMessageId;
-        case 'scheduled': return !d.isArchived && d.scheduled?.status === 'Pending';
-        case 'published': return !d.isArchived && (d.isBlogPublished || !!d.lastTelegramMessageId) && d.scheduled?.status !== 'Failed';
-        case 'attention': return !d.isArchived && (d.scheduled?.status === 'Failed' || d.staleLanguages.length > 0);
-        case 'archived': return d.isArchived;
-        default: return !d.isArchived;
+        // NF1 — a template is never a "real" draft/scheduled/published/attention/archived row;
+        // it only ever shows under its own tab, so it doesn't double-count elsewhere.
+        case 'template': return d.isTemplate;
+        case 'draft': return !d.isTemplate && !d.isArchived && !d.scheduled && !d.isBlogPublished && !d.lastTelegramMessageId;
+        case 'scheduled': return !d.isTemplate && !d.isArchived && d.scheduled?.status === 'Pending';
+        case 'published': return !d.isTemplate && !d.isArchived && (d.isBlogPublished || !!d.lastTelegramMessageId) && d.scheduled?.status !== 'Failed';
+        case 'attention': return !d.isTemplate && !d.isArchived && (d.scheduled?.status === 'Failed' || d.staleLanguages.length > 0);
+        case 'archived': return !d.isTemplate && d.isArchived;
+        default: return !d.isTemplate && !d.isArchived;
     }
 }
 
@@ -87,7 +91,7 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
         DatePipe, FormsModule, PageHeaderComponent, ModalComponent, PopoverComponent,
         FolderPickerComponent, TagPickerComponent,
         Plus, Archive, ArchiveRestore, Trash2, RefreshCw, LayoutGrid, List,
-        Folder, Lock, FileUp, Upload, Eye, Heart,
+        Folder, Lock, FileUp, Upload, Eye, Heart, LayoutTemplate,
     ],
     templateUrl: 'drafts.component.html',
     styleUrls: ['drafts.component.css'],
@@ -311,6 +315,22 @@ export class DraftsPageComponent implements OnInit {
         try {
             const res = d.isArchived ? await this.draftsApi.unarchive(d.id) : await this.draftsApi.archive(d.id);
             this.drafts.update(list => list.map(x => x.id === d.id ? { ...x, isArchived: res.isArchived } : x));
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().drafts.errors.update));
+        } finally {
+            this.busyId.set(null);
+        }
+    }
+
+    // NF1 — post templates.
+    async toggleTemplate(d: DraftMeta, ev: Event) {
+        ev.stopPropagation();
+        if (this.busyId()) return;
+        this.busyId.set(d.id);
+        this.error.set('');
+        try {
+            const res = await this.draftsApi.setDraftTemplate(d.id, !d.isTemplate);
+            this.drafts.update(list => list.map(x => x.id === d.id ? { ...x, isTemplate: res.isTemplate } : x));
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().drafts.errors.update));
         } finally {

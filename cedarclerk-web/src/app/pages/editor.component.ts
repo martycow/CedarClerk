@@ -1177,7 +1177,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 blogSlug: null, isBlogPublished: false, blogPublishedAt: null,
                 languages, tags: tags.join(','),
                 isArchived: false, lastTelegramMessageId: null, lastTelegramUsername: null,
-                staleLanguages: [], scheduled: null, folderId, isPrivate,
+                staleLanguages: [], scheduled: null, folderId, isPrivate, isTemplate: false,
                 viewCount: 0, reactionCount: 0, newViewCount: 0, newReactionCount: 0,
             };
             this.drafts.update(l => [meta, ...l]);

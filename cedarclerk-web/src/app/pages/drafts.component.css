@@ -394,6 +394,12 @@
     background: rgba(128, 120, 100, .14);
 }
 
+/* NF1 — marked-as-template state on the toggle button itself. */
+.mini.on {
+    color: var(--accent);
+    background: var(--asoft);
+}
+
 .mini-remove:hover {
     color: var(--danger);
     background: rgba(180, 69, 44, .12);

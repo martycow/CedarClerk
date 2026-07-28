@@ -20,6 +20,7 @@ public static class DraftEndpoints
     public record RenameTagRequest(string From, string To);
     public record UpdateFolderRequest(Guid? FolderId);
     public record UpdatePrivateRequest(bool IsPrivate);
+    public record UpdateTemplateRequest(bool IsTemplate);
     public record UpdateListedRequest(bool IsListedWhilePrivate);
     public record UpdateWatermarkRequest(string? WatermarkText);
     public record UpdateSlugRequest(string? Slug);
@@ -73,7 +74,7 @@ public static class DraftEndpoints
                 .Select(d => new
                 {
                     d.Id, d.Title, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
-                    d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.IsPrivate, d.ViewCount,
+                    d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.IsPrivate, d.IsTemplate, d.ViewCount,
                     Translations = db.DraftTranslations.Where(t => t.DraftId == d.Id)
                         .Select(t => new { t.Language, t.UpdatedAt }).ToList(),
                 })
@@ -140,7 +141,7 @@ public static class DraftEndpoints
             return drafts.Select(d => new
             {
                 d.Id, d.Title, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
-                d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.IsPrivate,
+                d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.IsPrivate, d.IsTemplate,
                 d.ViewCount,
                 ReactionCount = reactionCounts.GetValueOrDefault(d.Id),
                 NewViewCount = deltas[d.Id].Views,
@@ -342,6 +343,18 @@ public static class DraftEndpoints
             draft.IsPrivate = req.IsPrivate;
             await db.SaveChangesAsync();
             return Results.Ok(new { draft.IsPrivate });
+        });
+
+        // NF1 — post templates. Same shape as /private above: one endpoint, a bool body.
+        groupBuilder.MapPost("/{id:guid}/template", async (Guid id, UpdateTemplateRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            draft.IsTemplate = req.IsTemplate;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.IsTemplate });
         });
 
         // Watermark text tiled over the blog page of a private post (I7). Its own endpoint rather

@@ -85,6 +85,7 @@ export const ru: Dict = {
             published: 'Опубликованные',
             attention: 'Требуют внимания',
             archived: 'В архиве',
+            template: 'Шаблоны',
         },
         columns: {
             title: 'Заголовок',
@@ -115,6 +116,8 @@ export const ru: Dict = {
             archive: 'В архив',
             unarchive: 'Вернуть из архива',
             deleteDraft: 'Удалить',
+            markTemplate: 'Пометить как шаблон',
+            unmarkTemplate: 'Снять пометку шаблона',
         },
         deleteDraftTitle: 'Удалить черновик?',
         deleteDraftBody: 'Это действие необратимо.',
