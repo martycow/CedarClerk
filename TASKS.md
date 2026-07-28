@@ -25,7 +25,7 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
 - [x] **NF2 answered**: six content languages — RU, EN, DE, FR, ES, JA. The editor's two-tab model, `Languages.cs`, auto-translate and the blog's `?lang=` all assume exactly two today, so this is the structural change FI4 and FI5 were waiting on
 - [x] **NF3 is not blocked** — the Resend key works (verified 27.07.2026). Email confirmation can be built whenever it comes up in the order
 
-**Known regression to fix regardless**: `DB2.1` — drafts-table column resize behaves inverted (`N1`). And `DB3.1`: flag emoji don't render on desktop Windows, which invalidates the flag choice made in `I1`/`I17`.
+**~~Known regression to fix regardless~~ — stale, both already fixed.** This file had lagged `docs/ROADMAP.md` Phase 9e, which already recorded both as done: `DB2.1` (resize handle moved to the right edge, verified in code 28.07.2026 — `startColResize`'s math and the handle's `right: -8px` CSS both check out) and `DB3.1` (flag emoji replaced with two-letter codes everywhere — verified 28.07.2026, zero flag-emoji characters remain anywhere in `cedarclerk-web/src`).
 
 ## Admin panel (IF2) — Step 1 done 27.07.2026
 Scoped in `docs/admin-panel-scope.md` (decisions and build order are recorded there). Step 1 shipped: `IsAdmin` + migration, `Cedar:AdminEmail` bootstrap, gated `/api/admin` endpoint set, `/admin` page with a user list and summary counts.
