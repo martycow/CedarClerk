@@ -9,10 +9,10 @@
         <h3>{{ t().settings.appearance.title }}</h3>
 
         <div class="ap-field">
-            <label>{{ t().settings.appearance.themeLabel }} <b>{{ appearanceMode() }}</b> {{ t().settings.appearance.themePalette }}</label>
+            <label>{{ t().settings.appearance.themeLabel }}</label>
             <div class="ap-toggle">
-                <button [class.on]="appearanceMode() === 'light'" (click)="appearanceMode.set('light')">{{ t().settings.appearance.light }}</button>
-                <button [class.on]="appearanceMode() === 'dark'" (click)="appearanceMode.set('dark')">{{ t().settings.appearance.dark }}</button>
+                <button [class.on]="theme.theme() === 'light'" (click)="theme.set('light')">{{ t().settings.appearance.light }}</button>
+                <button [class.on]="theme.theme() === 'dark'" (click)="theme.set('dark')">{{ t().settings.appearance.dark }}</button>
             </div>
         </div>
 
@@ -37,10 +37,12 @@
 
         <div class="ap-field">
             <label>{{ t().settings.appearance.typeface }}</label>
-            <div class="ap-toggle">
+            <div class="ap-chip-grid">
                 <button [class.on]="appearance.prefs().typeface === 'system'" (click)="setTypeface('system')">{{ t().settings.appearance.system }}</button>
                 <button [class.on]="appearance.prefs().typeface === 'serif'" (click)="setTypeface('serif')">{{ t().settings.appearance.serif }}</button>
+                <button [class.on]="appearance.prefs().typeface === 'serifClassic'" (click)="setTypeface('serifClassic')">{{ t().settings.appearance.serifClassic }}</button>
                 <button [class.on]="appearance.prefs().typeface === 'mono'" (click)="setTypeface('mono')">{{ t().settings.appearance.mono }}</button>
+                <button [class.on]="appearance.prefs().typeface === 'rounded'" (click)="setTypeface('rounded')">{{ t().settings.appearance.rounded }}</button>
             </div>
         </div>
 
@@ -77,6 +79,12 @@
             <label><input type="checkbox" [checked]="appearance.prefs().focusModeHideToolbar" (change)="toggleAppearanceFlag('focusModeHideToolbar', $event)"> {{ t().settings.appearance.focusMode }}</label>
             <label><input type="checkbox" [checked]="appearance.prefs().sheetFlush" (change)="toggleAppearanceFlag('sheetFlush', $event)"> {{ t().settings.appearance.sheetFlush }}</label>
         </div>
+
+        <button class="ap-apply" [class.saved]="applySaved()" [disabled]="!appearance.dirty() || applyBusy()" (click)="apply()">
+            @if (applyBusy()) { {{ t().common.saving }} }
+            @else if (applySaved()) { {{ t().common.saved }} }
+            @else { {{ t().settings.appearance.apply }} }
+        </button>
 
         <div class="ap-divider"></div>
 

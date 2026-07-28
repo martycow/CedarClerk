@@ -69,9 +69,9 @@ Scoped as Phase 9e in `docs/ROADMAP.md`. Recorded here with what each actually c
 | FI2 | High | Export window UX, 11 sub-items | The unifying principle Marty states is worth keeping: **"Export manages ONLY export"**. Unpublish, scheduled-post management and post-publication editing all move to the Posts Manager. Also: RU/EN as checkboxes, a form-preset dropdown for private posts, publish/schedule as one button, and a success toast with links |
 | FI3 | High | Posts Manager UX, 11 sub-items | Includes **removing the "Reactions & comments" tab** and folding it into Posts — compatible with the per-post grouping just built, it moves where that grouping lives. Also a manual blog URL, search, status indicators, and a better toolbar icon (the current one is a chart) |
 | FI4 | High | Forms manager: per-language presets; the layout "rябит" | Per-language presets interact with NF2's content-language axis — worth doing after that decision, not before |
-| FI6 | Medium | Account settings, 5 sub-items | **Sub-item 2 is not a UI change**: "leave ONLY Pro (which is now Pro Plus)" is a **pricing/tier restructure**. It touches `PlanTiers`, `PlanLimitations`, billing, the admin panel and three ADRs (012/013/014). Needs a decision recorded before any code |
-| FI1 | Low | Appearance panel UX, 7 sub-items | Feedback on the day-old panel: it doesn't match the design language, adds a scrollbar, the theme buttons should actually switch theme (today they only pick which theme's accent you're editing — a real ambiguity), more typefaces, and an explicit Apply. Marty suggests making it a popup instead |
-| FI5 | Low | Profile settings: real social icons, more slot types, multi-language signatures | Multi-language signatures depend on the same language decision as NF2/FI4 |
+| FI6 | Medium | Account settings, 5 sub-items | **Blocked indefinitely**: sub-items 1/3/4/5's text was lost when `Input.md` was overwritten before this session and neither Marty nor this file recorded them — only sub-item 2 (the deferred pricing restructure) survives. Needs re-specifying from scratch before any code |
+| ~~FI1~~ | ~~Low~~ | ~~Appearance panel UX, 7 sub-items~~ | **Done 28.07.2026** — see `docs/ROADMAP.md` Phase 9e and ADR-053 |
+| FI5 | Low | Profile settings: real social icons, more slot types, multi-language signatures | Multi-language signatures depend on the same language decision as NF2/FI4 — **that decision is now made (NF2 answered: RU/EN/DE/FR/ES/JA)**, so this is unblocked |
 
 **Bugs**
 

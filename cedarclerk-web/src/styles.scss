@@ -107,6 +107,32 @@ html, body {
     overflow-x: hidden;
 }
 
+/* FI1 — thin, token-coloured scrollbars everywhere (the appearance panel's default OS scrollbar
+   in its narrow column was the concrete complaint, but a chunky grey bar looks out of place
+   anywhere in this app, not just there). Global rather than panel-scoped on purpose. */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+
+::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--t3);
+}
+
 body {
     margin: 0;
     font-family: var(--font-sans);

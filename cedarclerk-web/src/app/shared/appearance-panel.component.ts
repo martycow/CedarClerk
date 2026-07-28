@@ -4,6 +4,7 @@ import { AppearanceService, ACCENT_PRESETS, AppearancePrefs, MAX_TABLE_SIZE } fr
 import { ToolbarLayoutService } from '../core/toolbar-layout.service';
 import { TOOLBAR_GROUPS, ToolbarButtonId, ToolbarPreset, presetLayout } from '../core/toolbar-layout';
 import { LocaleService } from '../core/i18n/locale.service';
+import { ThemeService } from '../core/theme.service';
 import { httpErrorMessage } from '../core/http-error.util';
 
 // I14/B15 — appearance and toolbar customization moved out of the settings page into a panel that
@@ -22,6 +23,7 @@ import { httpErrorMessage } from '../core/http-error.util';
 export class AppearancePanelComponent implements OnInit {
     appearance = inject(AppearanceService);
     toolbarLayout = inject(ToolbarLayoutService);
+    theme = inject(ThemeService);
     t = inject(LocaleService).t;
 
     readonly accentPresets = ACCENT_PRESETS;
@@ -29,8 +31,9 @@ export class AppearancePanelComponent implements OnInit {
     // The AI group is pinned — it isn't a normal toolbar group that can be moved between rows.
     readonly movableToolbarGroups = TOOLBAR_GROUPS.filter(g => g.id !== 'ai');
 
-    appearanceMode = signal<'light' | 'dark'>('light');
     appearanceError = signal<string | null>(null);
+    applyBusy = signal(false);
+    applySaved = signal(false);
     row1Groups = signal<string[]>([]);
     row2Groups = signal<string[]>([]);
     toolbarError = signal<string | null>(null);
@@ -50,44 +53,39 @@ export class AppearancePanelComponent implements OnInit {
         this.row2Groups.set([...this.toolbarLayout.row2Ordered()]);
     }
 
-    // Applies instantly and saves in the background, no Save button (ADR-035) — these are pure
-    // preference toggles, and immediate visual feedback is the entire point of this panel.
+    // FI1: the toggle used to only pick which theme's accent the swatches below edit, while the
+    // app's actual theme stayed whatever it already was — indistinguishable from a dead control.
+    // It now IS the real theme switch (instant, like every other theme toggle in the app); the
+    // accent swatches simply follow whichever theme that leaves you on.
     activeAccentHex(): string {
         const p = this.appearance.prefs();
-        return this.appearanceMode() === 'dark' ? p.accentDark : p.accentLight;
+        return this.theme.theme() === 'dark' ? p.accentDark : p.accentLight;
     }
 
     isActivePreset(hex: string): boolean {
         return this.activeAccentHex().toUpperCase() === hex.toUpperCase();
     }
 
-    private async saveAppearance(patch: Partial<AppearancePrefs>) {
-        this.appearanceError.set(null);
-        try {
-            await this.appearance.save(patch);
-        } catch (e) {
-            this.appearanceError.set(httpErrorMessage(e, this.t().settings.errors.appearance));
-        }
-    }
-
+    // FI1: preview-only from here down — every control updates the sheet immediately through
+    // `AppearanceService.prefs`, but no request goes out until Apply is pressed (see apply()).
     pickAccentPreset(hex: string) {
-        this.saveAppearance(this.appearanceMode() === 'dark' ? { accentDark: hex } : { accentLight: hex });
+        this.appearance.preview(this.theme.theme() === 'dark' ? { accentDark: hex } : { accentLight: hex });
     }
 
     setSheetWidth(value: AppearancePrefs['sheetWidth']) {
-        this.saveAppearance({ sheetWidth: value });
+        this.appearance.preview({ sheetWidth: value });
     }
 
     setTypeface(value: AppearancePrefs['typeface']) {
-        this.saveAppearance({ typeface: value });
+        this.appearance.preview({ typeface: value });
     }
 
     setFontSize(px: number) {
-        this.saveAppearance({ fontSize: px });
+        this.appearance.preview({ fontSize: px });
     }
 
     setLineHeight(value: number) {
-        this.saveAppearance({ lineHeight: value });
+        this.appearance.preview({ lineHeight: value });
     }
 
     readonly maxTableSize = MAX_TABLE_SIZE;
@@ -97,15 +95,29 @@ export class AppearancePanelComponent implements OnInit {
     }
 
     setTableRows(n: number) {
-        this.saveAppearance({ tableRows: this.clampTable(n) });
+        this.appearance.preview({ tableRows: this.clampTable(n) });
     }
 
     setTableCols(n: number) {
-        this.saveAppearance({ tableCols: this.clampTable(n) });
+        this.appearance.preview({ tableCols: this.clampTable(n) });
     }
 
     toggleAppearanceFlag(key: 'showParagraphNumbers' | 'showLineRules' | 'showWordCount' | 'focusModeHideToolbar' | 'sheetFlush', ev: Event) {
-        this.saveAppearance({ [key]: (ev.target as HTMLInputElement).checked });
+        this.appearance.preview({ [key]: (ev.target as HTMLInputElement).checked });
+    }
+
+    async apply() {
+        this.appearanceError.set(null);
+        this.applyBusy.set(true);
+        try {
+            await this.appearance.commit();
+            this.applySaved.set(true);
+            setTimeout(() => this.applySaved.set(false), 2000);
+        } catch (e) {
+            this.appearanceError.set(httpErrorMessage(e, this.t().settings.errors.appearance));
+        } finally {
+            this.applyBusy.set(false);
+        }
     }
 
     // Presets set the whole layout; drag-and-drop moves whole groups between rows (not individual

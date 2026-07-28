@@ -196,6 +196,7 @@ Full item text in `docs/BACKLOG.md` under "Brainstorm v2"; this is the status ch
 ### Phase 9e — Input sweep v2 — started 27.07.2026, in progress
 
 **Done so far**
+- [x] **FI1 — Appearance panel UX** (28.07.2026, ADR-053). Light/Dark toggle now switches the real theme instead of silently only picking which theme's accent to edit; the appearance half of the panel (not the toolbar half) moved to an explicit Apply, previewing live via a new `AppearanceService.preview()`/`commit()` split rather than saving per interaction; two more system-font typefaces (Classic serif, Rounded); a global thin scrollbar (there was no scrollbar styling anywhere in the app before this); hardcoded font-sizes in this component now use the `--fs-*` scale. **Left as a side panel, not a popup** — Marty's suggestion, not an instruction, and a popup would cover the sheet it's meant to preview
 - [x] DB2.1 — drafts-table column resize was inverted: the handle sat on each column's *left* edge while the drag maths grew it as the pointer moved right. Handle moved to the right edge, where it matches both the maths and every other table
 - [x] DB2.2 default sort by creation date · DB2.3 fixed columns widened so the 1fr Title stops hogging the row · DB2.6 draft names bounded to 1–64 characters
 - [x] DB3.1 — flag emoji replaced with two-letter codes. **This corrects a choice I made in I1/I17**: a flag is not recognisable on Windows, which ships no regional-indicator glyphs and renders the letter pair instead

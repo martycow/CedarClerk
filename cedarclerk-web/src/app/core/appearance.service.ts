@@ -5,7 +5,7 @@ export interface AppearancePrefs {
     accentLight: string;
     accentDark: string;
     sheetWidth: 'narrow' | 'normal' | 'wide' | 'full';
-    typeface: 'system' | 'serif' | 'mono';
+    typeface: 'system' | 'serif' | 'serifClassic' | 'mono' | 'rounded';
     fontSize: number; // px, sheet base (before zoom)
     lineHeight: number;
     showParagraphNumbers: boolean;
@@ -50,20 +50,33 @@ export const SHEET_WIDTH_PX: Record<AppearancePrefs['sheetWidth'], number> = {
     narrow: 560, normal: 680, wide: 820, full: 1040,
 };
 
+// System stacks only (FI1) — no webfonts ship (see docs/DESIGN.md), so "more typefaces" means
+// more of what the OS already has, not a new loading path.
 export const TYPEFACE_STACK: Record<AppearancePrefs['typeface'], string> = {
     system: 'var(--font-sans)',
     serif: 'Georgia, "Iowan Old Style", serif',
+    serifClassic: '"Times New Roman", Times, "Liberation Serif", serif',
     mono: 'var(--font-mono)',
+    rounded: 'ui-rounded, "SF Pro Rounded", "Segoe UI Rounded", var(--font-sans)',
 };
 
-// Personal editor preferences (ADR-035) — deliberately scoped to the authoring app only, never
-// applied to the public blog (which keeps its own fixed branding). Only the accent is genuinely
-// global chrome (topbar/toolbar/buttons everywhere); the writing-sheet prefs (width/typeface/
-// font-size/etc.) are read directly by EditorComponent since they only affect its own template.
+// Personal editor preferences (ADR-035, revised by FI1) — deliberately scoped to the authoring
+// app only, never applied to the public blog (which keeps its own fixed branding). Only the
+// accent is genuinely global chrome (topbar/toolbar/buttons everywhere); the writing-sheet prefs
+// (width/typeface/font-size/etc.) are read directly by EditorComponent since they only affect its
+// own template.
+//
+// FI1 reversed ADR-035's "applies instantly, no Save button" for this half of the panel: `prefs`
+// still updates (and the sheet still re-renders) on every interaction — that live preview is the
+// entire point of the side panel — but the network round-trip is now deferred to an explicit
+// `commit()`, so dragging a slider no longer fires a save per tick. `preview()` is the live-only
+// half, `commit()` is the persist half; `dirty` is what the panel's Apply button gates on.
 @Injectable({ providedIn: 'root' })
 export class AppearanceService {
     private auth = inject(AuthService);
     readonly prefs = signal<AppearancePrefs>(DEFAULT_APPEARANCE);
+    readonly dirty = signal(false);
+    private committed: AppearancePrefs = DEFAULT_APPEARANCE;
 
     // Idempotent — safe to call on every authGuard pass, not just the first one.
     loadFromAuth() {
@@ -75,14 +88,27 @@ export class AppearanceService {
         }
         const merged = { ...DEFAULT_APPEARANCE, ...parsed };
         this.prefs.set(merged);
+        this.committed = merged;
+        this.dirty.set(false);
         this.applyAccent(merged);
     }
 
-    async save(patch: Partial<AppearancePrefs>): Promise<void> {
+    // Applies live (sheet + accent CSS var) without saving — the panel calls this on every
+    // control interaction so the preview stays instant even though persistence no longer is.
+    preview(patch: Partial<AppearancePrefs>) {
         const merged = { ...this.prefs(), ...patch };
         this.prefs.set(merged);
         this.applyAccent(merged);
-        await this.auth.saveAppearancePrefs(JSON.stringify(merged));
+        this.dirty.set(true);
+    }
+
+    // Persists whatever is currently being previewed. Throws on failure — the caller (the
+    // panel's Apply button) is what shows the error, same as every other explicit save in the app.
+    async commit(): Promise<void> {
+        const current = this.prefs();
+        await this.auth.saveAppearancePrefs(JSON.stringify(current));
+        this.committed = current;
+        this.dirty.set(false);
     }
 
     private applyAccent(p: AppearancePrefs) {
