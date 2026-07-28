@@ -279,7 +279,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private posts = inject(PostsService); // + import сверху
     private channelsApi = inject(ChannelsService);
 
-    chatId = '@testingandfun';
+    chatId = '';
     // Telegram export is Markdown-only — the Rich Message HTML mode needs exact custom tag
     // names (<photo>, <tg-slideshow>, ...) and has repeatedly broken in practice; Markdown uses
     // plain, well-tested syntax for the same underlying rich-block output. HTML stays in use for

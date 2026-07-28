@@ -186,6 +186,26 @@ body {
     border-bottom: none;
 }
 
+/* DB2 (28.07.2026) — same bug class as B12: this lived in editor.component.css, whose emulated
+   view encapsulation appends an _ngcontent attribute to the compiled selector's last element.
+   ProseMirror creates .ProseMirror's own paragraphs/headings at runtime and they never carry that
+   attribute, so `.sheet.show-invisibles .ProseMirror p::after` compiled to something that could
+   never match anything — the status-bar ¶ button toggled the class fine, nothing ever rendered.
+   Moved here verbatim (global styles.scss has no encapsulation to fight) rather than rewritten. */
+.sheet.show-invisibles .ProseMirror p::after,
+.sheet.show-invisibles .ProseMirror h1::after,
+.sheet.show-invisibles .ProseMirror h2::after,
+.sheet.show-invisibles .ProseMirror h3::after,
+.sheet.show-invisibles .ProseMirror h4::after,
+.sheet.show-invisibles .ProseMirror h5::after,
+.sheet.show-invisibles .ProseMirror h6::after {
+    content: '¶';
+    color: var(--abord);
+    margin-left: 3px;
+    font-weight: 400;
+    user-select: none;
+}
+
 .tiptap {
     outline: none;
     font-size: inherit;

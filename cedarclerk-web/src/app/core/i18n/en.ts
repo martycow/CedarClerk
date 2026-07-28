@@ -488,6 +488,9 @@ export const en = {
             noFormChosen: 'Choose a form…',
             clearForm: 'Remove form',
             noPresetsYet: 'No forms yet.',
+            // DB1 — distinct from noPresetsYet: this post already has a form (the select above is
+            // showing), there's just no *saved preset* library to pick a different one from yet.
+            noPresetsSaved: 'No saved form presets yet.',
             createOne: 'Create one',
             presets: 'Presets',
             noPresets: 'No presets yet — save this form as one to reuse it on the next post.',

@@ -2,7 +2,19 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
-## 2026-07-28 (latest) — Phase 9e continues: appearance, profile, polls, templates
+## 2026-07-28 (latest) — three bugs from the newest Input.md sweep
+
+Three independent fixes, all from the newest batch of reported bugs (reusing the same DB1-DB3 numbering as an earlier, unrelated sweep — see that sweep's own entry below for the drafts-table bugs it covered instead):
+
+**DB1 — Posts Manager's contradictory "no forms yet" banner.** It showed whenever the reusable preset library was empty, even when the post itself already had its own attached form with real answers and charts sitting right below it. The two conditions aren't the same thing; the banner now only claims "no forms" when neither is true, with a separate, honest message for the "form attached, no saved presets" case.
+
+**DB2 — dead paragraph-display status-bar button.** Same root cause as the historical "B12" bug: the `¶` marker CSS lived in `editor.component.css`, scoped by Angular's emulated view encapsulation, targeting ProseMirror's runtime-rendered DOM — which carries no `_ngcontent` attribute, so the rule could never match. Moved to global `styles.scss`, the established fix for this exact bug class.
+
+**DB3 — publishing with zero channels connected threw a raw DB error.** Two compounding bugs: `editor.component.ts`'s `chatId` defaulted to the hardcoded string `'@testingandfun'` (a leftover dev value), which let the Publish button's "a channel is picked" gate pass even with nothing actually selected — so the request reached the backend instead of being blocked client-side. Once there, `SubscriptionPlan.ResolveOwnedChannelAsync`'s username lookup used `Equals(username, StringComparison.CurrentCultureIgnoreCase)` inside an EF Core query — untranslatable by the SQLite provider, so instead of returning null (clean 403) it threw at query time, surfacing to the user as exactly the kind of raw, DB-flavored error reported. Fixed both: `chatId` now defaults to `''`, and the lookup compares via `.ToLower()` (translates to SQL `LOWER()`). Added `SubscriptionPlanTests.cs` as a regression guard, since this failure mode only shows up against a real query provider, not by reading the code.
+
+Version bumped to **0.9.13**.
+
+## 2026-07-28 — Phase 9e continues: appearance, profile, polls, templates
 
 Five items from the FI6/FI1/FI5/NF5/NF1 queue, in order. **FI6 (account settings) was skipped** — its own sub-item text had been lost when `Input.md` got overwritten before this session, and neither Marty nor this file's own notes retained it; only the pricing-restructure sub-item (already deferred separately) survived. Everything else landed:
 

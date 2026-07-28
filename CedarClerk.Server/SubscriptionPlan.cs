@@ -65,11 +65,11 @@ public static class SubscriptionPlan
         var trimmed = chatId.Trim();
         if (trimmed.StartsWith('@'))
         {
-            var username = trimmed[1..];
+            var username = trimmed[1..].ToLower();
             return await db.Channels.FirstOrDefaultAsync(c =>
-                c.OwnerId == userId && 
-                c.Username != null && 
-                c.Username.Equals(username, StringComparison.CurrentCultureIgnoreCase));
+                c.OwnerId == userId &&
+                c.Username != null &&
+                c.Username.ToLower() == username);
         }
         return long.TryParse(trimmed, out var numericId)
             ? await db.Channels.FirstOrDefaultAsync(c => c.OwnerId == userId && c.TelegramChatId == numericId)

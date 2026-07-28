@@ -1956,20 +1956,9 @@ input[type="datetime-local"]:focus-visible {
 /* B13 - reveal where a block actually ends. Rendered as ::after decoration so the document stays
    exactly as written; a real pilcrow character would end up in the exported text. Spaces and tabs
    are deliberately NOT marked for the same reason: in a contenteditable there is no way to draw
-   them without either inserting characters or fighting the browser's own whitespace handling. */
-.sheet.show-invisibles .ProseMirror p::after,
-.sheet.show-invisibles .ProseMirror h1::after,
-.sheet.show-invisibles .ProseMirror h2::after,
-.sheet.show-invisibles .ProseMirror h3::after,
-.sheet.show-invisibles .ProseMirror h4::after,
-.sheet.show-invisibles .ProseMirror h5::after,
-.sheet.show-invisibles .ProseMirror h6::after {
-    content: '¶';
-    color: var(--abord);
-    margin-left: 3px;
-    font-weight: 400;
-    user-select: none;
-}
+   them without either inserting characters or fighting the browser's own whitespace handling.
+   DB2: the actual rule moved to styles.scss (global) — this component's emulated encapsulation
+   meant it never matched ProseMirror's runtime-rendered paragraphs, so the button did nothing. */
 
 .invisibles-glyph {
     font-size: 13px;

@@ -209,7 +209,15 @@
                             @for (l of postFormLanguages(); track l) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
                         </div>
                         }
-                        @if (presets().length) {
+                        <!--DB1: this used to read "@if (presets().length)" alone, so a post that
+                        already had a form attached (regForm() true, submissions/charts rendering
+                        below) but zero *saved presets* fell into the else branch and showed "No
+                        forms yet" right next to those real answers — presets (the reusable
+                        library) and this post's own attached form are different things; an empty
+                        library doesn't mean this post has no form. The picker (with a Clear option)
+                        now shows whenever there's something to pick from OR clear; the "no presets"
+                        hint is a separate, honestly-worded note about the library being empty.-->
+                        @if (presets().length || regForm()) {
                         <!--FI3.7: a dropdown with an explicit "no form" rather than a row of
                         pills, so the current choice is visible instead of inferred. The option
                         carries the preset's language (FI4.1), since that decides which readers
@@ -219,6 +227,11 @@
                             @for (p of presets(); track p.id) { <option [value]="p.id">{{ p.name }} · {{ (p.language || primaryLanguage).toUpperCase() }}</option> }
                             @if (regForm()) { <option value="__none">{{ t().manager.forms.clearForm }}</option> }
                         </select>
+                        @if (!presets().length) {
+                        <p class="field-hint-inline">{{ t().manager.forms.noPresetsSaved }}
+                            <button class="link-btn" (click)="setTab('forms')">{{ t().manager.forms.createOne }}</button>
+                        </p>
+                        }
                         } @else {
                         <p class="field-hint-inline">{{ t().manager.forms.noPresetsYet }}
                             <button class="link-btn" (click)="setTab('forms')">{{ t().manager.forms.createOne }}</button>
