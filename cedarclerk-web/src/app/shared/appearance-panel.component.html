@@ -1,13 +1,9 @@
-<div class="ap-panel" [class.open]="open()">
-    <button class="ap-handle" (click)="open.set(!open())" [title]="t().settings.appearance.title">
-        <span class="ap-handle-label">{{ t().settings.appearance.title }}</span>
-        <span class="ap-chevron">{{ open() ? '›' : '‹' }}</span>
-    </button>
+@if (open()) {
+<app-modal [width]="440" (closed)="open.set(false)">
+    <svg modal-icon lucidePalette class="icon-sm"></svg>
+    <span modal-title>{{ t().settings.appearance.title }}</span>
 
-    @if (open()) {
     <div class="ap-body">
-        <h3>{{ t().settings.appearance.title }}</h3>
-
         <div class="ap-field">
             <label>{{ t().settings.appearance.themeLabel }}</label>
             <div class="ap-toggle">
@@ -142,5 +138,5 @@
 
         <button class="ap-reset" (click)="pickToolbarPreset('standard')">{{ t().settings.toolbar.resetToStandard }}</button>
     </div>
-    }
-</div>
+</app-modal>
+}

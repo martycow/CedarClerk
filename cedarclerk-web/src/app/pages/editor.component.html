@@ -63,6 +63,10 @@
         </a>
         }
 
+        <button class="icon-btn" (click)="apPanel.open.set(true)" [title]="t().settings.appearance.title">
+            <svg lucidePalette class="icon-sm"></svg>
+        </button>
+
         <button class="icon-btn theme-toggle" (click)="theme.toggle()" [title]="t().common.toggleTheme">
             {{ theme.theme() === 'dark' ? '☀' : '☾' }}
         </button>
@@ -1041,10 +1045,10 @@
             </div>
         </section>
 
-        <!--I14/B15: appearance + toolbar customization moved out of /settings to sit beside the
-        sheet, because every control in it changes how that sheet looks — the sheet is the
-        preview, so nothing extra had to be built to preview anything.-->
-        <app-appearance-panel></app-appearance-panel>
+        <!--FI1 (28.07.2026, ADR following ADR-053): moved off the sheet's own side into a modal —
+        the always-present sliding column broke the page's own layout logic and produced a second,
+        page-level scrollbar alongside the sheet's own. Opened from the topbar's palette button.-->
+        <app-appearance-panel #apPanel></app-appearance-panel>
     </div>
 
     <!--Status bar-->

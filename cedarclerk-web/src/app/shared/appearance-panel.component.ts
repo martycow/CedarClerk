@@ -5,18 +5,22 @@ import { ToolbarLayoutService } from '../core/toolbar-layout.service';
 import { TOOLBAR_GROUPS, ToolbarButtonId, ToolbarPreset, presetLayout } from '../core/toolbar-layout';
 import { LocaleService } from '../core/i18n/locale.service';
 import { ThemeService } from '../core/theme.service';
+import { ModalComponent } from './modal.component';
 import { httpErrorMessage } from '../core/http-error.util';
+import { LucidePalette as Palette } from '@lucide/angular';
 
-// I14/B15 — appearance and toolbar customization moved out of the settings page into a panel that
-// sits beside the writing sheet, because every control here changes how *that sheet* looks and
-// judging a type size or a line height on a different screen is guesswork. The sheet is the
-// preview; nothing extra had to be built to preview it.
+// I14/B15 put appearance and toolbar customization in a panel beside the writing sheet, so every
+// control's effect on *that sheet* was visible without judging it on a different screen.
 //
-// Extracted rather than duplicated: /settings dropped both sections, so there is still exactly
-// one place each of these lives (the same reasoning as B6/I11 for navigation).
+// Moved into a modal (28.07.2026, ADR following ADR-053) — the always-present sliding column
+// broke the page's own layout (a second, page-level scrollbar alongside the sheet's own) and,
+// per Marty's direct call, didn't belong pinned to the side regardless. Live preview while
+// dragging a slider is the one thing this trades away; everything still updates the sheet the
+// instant the modal closes (the `prefs` signal never stopped updating live, only its visibility
+// changed) rather than requiring Apply-then-close to see anything.
 @Component({
     selector: 'app-appearance-panel',
-    imports: [DragDropModule],
+    imports: [DragDropModule, ModalComponent, Palette],
     templateUrl: 'appearance-panel.component.html',
     styleUrls: ['appearance-panel.component.css'],
 })
@@ -38,8 +42,9 @@ export class AppearancePanelComponent implements OnInit {
     row2Groups = signal<string[]>([]);
     toolbarError = signal<string | null>(null);
 
-    // Collapsed by default: the panel shares horizontal space with the sheet, and the sheet is
-    // what the user came for.
+    // Closed by default; opened from the topbar's palette button (editor.component.html holds
+    // the trigger via a template reference variable, since the button lives in a different part
+    // of that template than this component's own tag).
     open = signal(false);
 
     ngOnInit() {

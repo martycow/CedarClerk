@@ -1,53 +1,8 @@
-/* I14 — a panel beside the writing sheet. Collapsed it is a thin vertical handle; open it is a
-   fixed-width column. It never overlays the sheet: the point is watching the sheet change while
-   you drag a slider, which a panel floating on top of it would defeat. */
-.ap-panel {
-    flex: none;
-    display: flex;
-    align-items: flex-start;
-    gap: 0;
-    border-left: 1px solid var(--border);
-    background: var(--bg);
-    max-height: 100%;
-}
-
-.ap-handle {
-    flex: none;
+/* Opened from the topbar's palette button, rendered by app-modal — the modal shell owns sizing,
+   centering and its own internal scroll (.modal-body), so this is just the content layout. */
+.ap-body {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    border: none;
-    background: none;
-    cursor: pointer;
-    color: var(--t2);
-    font-family: inherit;
-    font-size: var(--fs-12);
-    padding: 12px 6px;
-}
-
-.ap-handle:hover {
-    color: var(--text);
-}
-
-.ap-handle-label {
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-    letter-spacing: .04em;
-}
-
-.ap-chevron {
-    font-size: var(--fs-14);
-}
-
-.ap-body {
-    width: 268px;
-    box-sizing: border-box;
-    /* Deep bottom padding clears the debug-console tab, which is fixed to the bottom-right above
-       the status bar and was covering the last control in this column. */
-    padding: 14px 14px 72px;
-    overflow-y: auto;
-    max-height: 100%;
 }
 
 .ap-body h3 {
@@ -267,15 +222,6 @@
     font-family: inherit;
     font-size: var(--fs-12);
     cursor: pointer;
-}
-
-/* Below this the editor is already tight (see the topbar rules) — a side column would leave the
-   sheet unusable, and every control here also exists nowhere else, so it collapses to the handle
-   only rather than disappearing. */
-@media (max-width: 900px) {
-    .ap-body {
-        width: 214px;
-    }
 }
 
 .ap-table-size {
