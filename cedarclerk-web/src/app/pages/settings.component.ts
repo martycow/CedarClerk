@@ -3,7 +3,6 @@ import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
-import { ThemeService } from '../core/theme.service';
 import { LocaleService, UiLang } from '../core/i18n/locale.service';
 import { BillingService, BillingStatus, PlanId } from '../core/billing.service';
 import { PRIMARY_LANGUAGE, CONTENT_LANGUAGES } from '../core/languages';
@@ -11,10 +10,9 @@ import { TelegramLinkService } from '../core/telegram-link.service';
 import { ChannelsService, Channel } from '../core/channels.service';
 import { AssetsService } from '../core/assets.service';
 import { httpErrorMessage } from '../core/http-error.util';
-import { CedarLogoComponent } from '../shared/cedar-logo.component';
-import { AccountMenuComponent } from '../shared/account-menu.component';
+import { PageHeaderComponent } from '../shared/page-header.component';
 import {
-    LucideArrowLeft as ArrowLeft, LucideCheck as Check, LucideSend as Send,
+    LucideCheck as Check, LucideSend as Send,
     LucideAtSign as AtSign, LucideCamera as Camera, LucideThumbsUp as ThumbsUp,
     LucidePlaySquare as PlaySquare, LucideCode2 as Code2,
 } from '@lucide/angular';
@@ -24,13 +22,12 @@ export type SettingsTab = 'profile' | 'account';
 
 @Component({
     selector: 'app-settings',
-    imports: [FormsModule, DatePipe, RouterLink, CedarLogoComponent, AccountMenuComponent, ArrowLeft, Check, Send, AtSign, Camera, ThumbsUp, PlaySquare, Code2],
+    imports: [FormsModule, DatePipe, RouterLink, PageHeaderComponent, Check, Send, AtSign, Camera, ThumbsUp, PlaySquare, Code2],
     templateUrl: 'settings.component.html',
     styleUrls: ['settings.component.css']
 })
 export class SettingsComponent implements OnInit {
     auth = inject(AuthService);
-    theme = inject(ThemeService);
     locale = inject(LocaleService);
     t = this.locale.t;
     private route = inject(ActivatedRoute);

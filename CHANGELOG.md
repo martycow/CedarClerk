@@ -2,7 +2,15 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
-## 2026-07-27 (latest) — the console moves into the status bar
+## 2026-07-27 (latest) — one header, everywhere
+
+Claude Design brief + spec came back for a header/navigation redesign covering the editor topbar and the four "secondary" screens (Posts Manager, Glossary, Settings, Admin). Those four had quietly drifted into two different visual styles — Posts and Admin had the glass material the editor topbar uses, Glossary and Settings had a flat solid fill instead — and none of them had real navigation buttons to each other. The only way from Glossary to Settings was opening the account popover.
+
+All four (plus `/drafts`, which would otherwise have lost its only route to the others) now share one component, `app-page-header`: back-to-editor, logo, breadcrumb, the same glass material, and a nav row — Posts/Glossary/Settings/Admin — with the current page filled in accent, same shape as the editor topbar's own nav buttons. The account popover's Posts/Glossary/Settings links are gone; with a nav row on every screen they were pure duplication.
+
+Bundled in two small, low-risk fixes the spec flagged along the way: the export/publish modal's shadow was hardcoded to the light-theme value even in dark mode (now reads `--shadow-lg`, which has a proper dark value), and a font-size token scale (`--fs-9`…`--fs-27`) was added for the new header to use — not a repo-wide sweep, existing hardcoded sizes elsewhere are untouched. Full reasoning in `docs/DECISIONS.md` ADR-052.
+
+## 2026-07-27 — the console moves into the status bar
 
 Marty reported the editor's fullscreen button as unclickable, "something is covering it". It was the debug console. Its host is a fixed full-width strip pinned to the bottom of the viewport, and the 27px `margin-bottom` added on 25.07.2026 to lift the closed tab clear of the status bar is *inside* that strip's box — so the strip covered the whole status bar and ate every click aimed at it. The margin had fixed how it looked without fixing what it did.
 

@@ -1,19 +1,22 @@
 import { Component, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
-import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { PopoverComponent } from './popover.component';
-import { CountBadgeComponent } from './count-badge.component';
-import { LucideNewspaper as Newspaper, LucideSettings as Settings, LucideBookMarked as BookMarked, LucideLogOut as LogOut, LucideUserRound as UserRound, LucideShieldCheck as ShieldCheck } from '@lucide/angular';
+import { LucideLogOut as LogOut, LucideUserRound as UserRound, LucideShieldCheck as ShieldCheck } from '@lucide/angular';
 
 // IB9 — the avatar was a live account popover in the editor and a dead <span> on /drafts,
 // /settings and /posts, which read as "the profile button doesn't work on some pages". The menu
 // is the only page-chrome element with real behaviour (routing, logout, a live badge), so it
 // becomes one component rather than markup copied four times.
+//
+// Header redesign (27.07.2026, docs/DECISIONS.md): every screen now carries the nav row itself
+// (app-page-header / the editor topbar's own buttons, I11), so the popover no longer duplicates
+// Posts/Glossary/Settings links — the old showNav input is gone, this menu is just Profile,
+// Admin (if applicable) and Logout everywhere.
 @Component({
     selector: 'app-account-menu',
-    imports: [RouterLink, PopoverComponent, CountBadgeComponent, Newspaper, Settings, LogOut, UserRound, ShieldCheck, BookMarked],
+    imports: [RouterLink, PopoverComponent, UserRound, ShieldCheck, LogOut],
     template: `
         <app-popover align="right">
             <button trigger class="account-trigger" [title]="t().editor.account">
@@ -29,30 +32,11 @@ import { LucideNewspaper as Newspaper, LucideSettings as Settings, LucideBookMar
                 <p class="profile-email">{{ auth.userEmail() }}</p>
                 <div class="popover-divider"></div>
                 <!--I12: the profile half of Settings opens from here — "clicking the user" is
-                where a profile belongs. Shown even when showNav is false, because the topbar's
-                Settings button goes to the general page, not to this.-->
+                where a profile belongs; the topbar's Settings button goes to the general page.-->
                 <a class="account-action-btn" routerLink="/settings" [queryParams]="{ tab: 'profile' }">
                     <svg lucideUserRound class="icon-sm"></svg>
                     {{ t().settings.tabs.profile }}
                 </a>
-                @if (showNav()) {
-                <a class="account-action-btn" routerLink="/editor">
-                    {{ t().common.backToEditor }}
-                </a>
-                <a class="account-action-btn" routerLink="/posts">
-                    <svg lucideNewspaper class="icon-sm"></svg>
-                    {{ t().editor.postsManager }}
-                    <app-count-badge [count]="feedback.newComments() + feedback.newReactions()" [title]="t().editor.newBadge"></app-count-badge>
-                </a>
-                <a class="account-action-btn" routerLink="/glossary">
-                    <svg lucideBookMarked class="icon-sm"></svg>
-                    {{ t().glossary.open }}
-                </a>
-                <a class="account-action-btn" routerLink="/settings">
-                    <svg lucideSettings class="icon-sm"></svg>
-                    {{ t().editor.settings }}
-                </a>
-                }
                 <!--IF2: only rendered for an admin, and only as a shortcut — /api/admin is gated
                 server-side, so hiding it here is convenience, not security.-->
                 @if (auth.isAdmin()) {
@@ -72,15 +56,10 @@ import { LucideNewspaper as Newspaper, LucideSettings as Settings, LucideBookMar
 })
 export class AccountMenuComponent {
     auth = inject(AuthService);
-    feedback = inject(CommentsService);
     t = inject(LocaleService).t;
 
     // Only the editor topbar has the width for it; the other headers carry a breadcrumb instead.
     showEmail = input(false);
-
-    // False on the editor, whose topbar carries these as real buttons (I11) — showing them here
-    // too would put two routes to the same page on one screen, which is what B6 objected to.
-    showNav = input(true);
 
     avatarInitial(): string {
         const email = this.auth.userEmail();

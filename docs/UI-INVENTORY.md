@@ -65,6 +65,8 @@ The main writing surface — by far the most complex page. Topbar + two toolbar 
 | `app-debug-console` | `debug-console.component.ts`, mounted in the root app shell behind `showDebugConsole()` | floating tab + panel | Dev tool: inspect in-flight/failed API requests without SSH-ing into the Pi | N/A (dev tool) | Fixed `bottom:0` overlay, always on top (`z-index:200`), `pointer-events: none` on the host so only the panel/tab take clicks. Open state lives in `DebugLogService.open`; `DebugLogService.hostBarHeight` (set by the editor to its status-bar height, 0 below the 768px breakpoint) both lifts the panel to sit on top of that bar and suppresses the floating tab — in the editor the toggle is a status-bar button instead, and the panel animates open by height (27.07.2026). Pages with no status bar keep the floating tab. **Hidden on public routes** (`/login`, `/register`, `/terms`, `/privacy`) since 26.07.2026 — it reports the signed-in owner's own API traffic, so it's meaningless (and visually intrusive) on pages reachable without an account (`app.ts`'s `PUBLIC_ROUTES`) |
 | `cedar-logo` | `cedar-logo.component.ts` | decorative | Logo SVG, used in topbar/auth pages | N/A | |
 | `legal-page` | `legal-page.component.ts` | layout wrapper | Shared frame (logo/title/back-link/prose styling) for Terms/Privacy | N/A | |
+| `app-page-header` | `page-header.component.{ts,html,css}` | header | **Added 27.07.2026 (header/nav redesign, ADR-052)**. Glass header shared by `/posts`, `/glossary`, `/settings`, `/admin` and `/drafts` — back-to-editor (hidden on `/drafts` via `[showBack]="false"`), logo, breadcrumb, a nav row (Posts/Glossary/Settings/Admin, current page filled `--accent`), theme toggle, `app-account-menu`. Replaces four near-identical header blocks (Posts/Admin already had the glass fill, Glossary/Settings didn't) plus `/drafts`'s own copy. The editor topbar keeps its own markup (draft title instead of a breadcrumb) but now shares the same nav-row visual pattern | N/A | `page` input selects the breadcrumb text and which nav button gets the active fill; admin button only renders for `auth.isAdmin()` |
+| `app-account-menu` | `account-menu.component.ts` | popover | Avatar trigger → profile link, admin shortcut (if applicable), logout | N/A | **`showNav` input removed 27.07.2026** — every screen now carries the nav row itself via `app-page-header`/the editor topbar, so this popover no longer duplicates Posts/Glossary/Settings links on any page |
 
 ---
 
@@ -74,8 +76,7 @@ Full-page drafts grid/table — the compact editor drafts popover's bigger sibli
 
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|
-| ~~Back-to-editor link~~ | — | — | **Removed 26.07.2026** — `/drafts` became the post-login landing screen, so there is nothing to go "back" to. The editor is reached by opening a draft or "New draft" | — | |
-| Theme toggle | `:11` | button | Light/dark switch | N/A | Same pattern on every page's header |
+| Header (back link, nav row, theme toggle, account menu) | `<app-page-header page="drafts" [showBack]="false">` | header | **27.07.2026 (ADR-052)**: moved into the shared `app-page-header` (see Shared components). Back-to-editor stays hidden (nothing to go "back" to — the editor is reached by opening a draft or "New draft"), but Posts/Glossary/Settings/Admin nav buttons are now present here too, which they weren't before | N/A | |
 | Search input | `:27` | input | Client-side filter by title/tag | N/A | Plain string, not a signal |
 | View toggle (table/grid) | `:29-34` | tab | Switches `view()` layout | N/A | |
 | New draft button | `:36` | button | Nav to `/editor?new=1` | N/A | |
@@ -94,6 +95,7 @@ Profile, Appearance, Toolbar customization, Header slots, Social links, Subscrip
 
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|
+| Header | `<app-page-header page="settings">` | header | **27.07.2026 (ADR-052)**: moved into the shared `app-page-header` — gained the glass material it didn't have before (was a solid `--surface` fill) and a Posts/Glossary/Settings/Admin nav row | N/A | See Shared components |
 | Anchor chip nav | `:18-26` | chip-row | Jumps to each section | N/A | 7 chips |
 | Post signature + URL fields | `:48-56` | panel + button | Pro-gated custom signature | Needed & present — `signatureBusy()`/`signatureSaved()` | Free users see static attribution instead |
 | Theme mode toggle | `:78-79` | tab | Which palette is being edited (local UI state) | N/A | |
@@ -124,6 +126,7 @@ The `/posts` page (N7, ADR-046). `/comments` and `/stats` now redirect here; the
 
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|
+| Header | `<app-page-header page="posts">` | header | **27.07.2026 (ADR-052)**: moved into the shared `app-page-header` — same glass material it already had, but now with a Posts/Glossary/Settings/Admin nav row (was reachable only via the account popover before) | N/A | See Shared components |
 | Tab strip (Posts · Stats · Forms) | `.manager-tabs` | tab | `setTab()`; switching to Forms loads submissions for the selected post | N/A | "Reactions & comments" removed by FI3.5 (27.07.2026) — feedback renders under the selected post instead, and the new-feedback badge moved onto Posts. `?tab=feedback` still resolves, to Posts. No fixed widths and `overflow-wrap: anywhere` — the labels get translated eventually and must survive long-word languages (B26) |
 | Post list (left) | `.post-list` | panel | Selects the post the detail pane acts on; LIVE/Archived chips | Needed & present — page-level `loading()` | Also used, filtered to private posts only, by the Forms tab |
 | Detail pane — title/tags + Save | `.post-detail` | input + button | Metadata-only edits | Needed & present — `renaming()` spins the icon, `busy()` disables | A rename re-sends the draft's own `cedarJson` unchanged (the save endpoint takes title+body together) |
@@ -174,10 +177,11 @@ Thin wrappers (10 lines each) around `shared/legal-page.component`, passing only
 
 ## `glossary.component` (`cedarclerk-web/src/app/pages/glossary.component.{ts,html,css}`)
 
-Idea #11. Terms the owner defines once, found and explained on the published blog. Reached from the account menu.
+Idea #11. Terms the owner defines once, found and explained on the published blog. Reached via the nav row on every screen's header (account-menu link removed 27.07.2026, ADR-052).
 
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|
+| Header | `<app-page-header page="glossary">` | header | **27.07.2026 (ADR-052)**: moved into the shared `app-page-header` — gained the glass material it didn't have before (was a solid `--surface` fill) and a Posts/Glossary/Settings/Admin nav row | N/A | See Shared components |
 | Language tabs | `.lang-tabs` | tab | Terms are listed — and matched — per content language | N/A | A term only ever marks text in its own language: a Russian description under an English article would be worse than no tooltip |
 | New term / edit form | `.term-form` | panel | Term, language, description, other spellings, optional image | Present — `busy()` on Save, `uploading()` on the image picker | One form for both create and edit; a separate create dialog would be the same six fields twice |
 | Term list | `.term-card` | panel | Every term in the selected language, with its aliases and description | Present — page-level `loading()` | |

@@ -33,9 +33,9 @@
         </button>
 
         <!--I11: real topbar buttons, like Export — they used to live only inside the account
-        popover (B22). Reversing that also settles B6 (two ways into Settings) in favour of the
-        topbar: the shared account menu drops its nav links here via [showNav]="false", so the
-        same screen never offers two routes to the same page.-->
+        popover (B22). Reversing that also settled B6 (two ways into Settings) in favour of the
+        topbar; the same nav row now ships on every screen (27.07.2026 header redesign), so the
+        account menu itself never carries these links at all any more.-->
         <a class="export-btn nav-btn" routerLink="/posts" [title]="t().editor.postsManager">
             <svg lucideNewspaper class="icon-sm"></svg>
             <span class="btn-label">{{ t().editor.postsManager }}</span>
@@ -69,7 +69,7 @@
 
         <!--The menu itself is shared with /drafts, /settings and /posts, where the avatar used to
         be inert (IB9).-->
-        <app-account-menu [showEmail]="true" [showNav]="false"></app-account-menu>
+        <app-account-menu [showEmail]="true"></app-account-menu>
     </header>
 
     @if (exportModalOpen()) {

@@ -1,18 +1,14 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import {
     AdminService, AdminAuditEntry, AdminBilling, AdminInviteCode, AdminPost, AdminSummary,
     AdminUsage, AdminUser,
 } from '../core/admin.service';
 import { AuthService } from '../core/auth.service';
-import { ThemeService } from '../core/theme.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
-import { CedarLogoComponent } from '../shared/cedar-logo.component';
-import { AccountMenuComponent } from '../shared/account-menu.component';
-import { LucideArrowLeft as ArrowLeft, LucideShieldCheck as ShieldCheck } from '@lucide/angular';
+import { PageHeaderComponent } from '../shared/page-header.component';
 
 export type AdminTab = 'users' | 'invites' | 'posts' | 'reports';
 
@@ -20,13 +16,12 @@ export type AdminTab = 'users' | 'invites' | 'posts' | 'reports';
 // invite codes, a read-only cross-owner post list, billing/usage reporting, and the audit log.
 @Component({
     selector: 'app-admin',
-    imports: [DatePipe, FormsModule, RouterLink, CedarLogoComponent, AccountMenuComponent, ArrowLeft, ShieldCheck],
+    imports: [DatePipe, FormsModule, PageHeaderComponent],
     templateUrl: 'admin.component.html',
     styleUrls: ['admin.component.css'],
 })
 export class AdminComponent implements OnInit {
     auth = inject(AuthService);
-    theme = inject(ThemeService);
     t = inject(LocaleService).t;
     private api = inject(AdminService);
 

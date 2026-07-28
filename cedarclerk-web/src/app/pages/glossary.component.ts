@@ -1,17 +1,14 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { ThemeService } from '../core/theme.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { GlossaryService, GlossaryTerm } from '../core/glossary.service';
 import { AssetsService } from '../core/assets.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { PRIMARY_LANGUAGE, CONTENT_LANGUAGES } from '../core/languages';
-import { CedarLogoComponent } from '../shared/cedar-logo.component';
-import { AccountMenuComponent } from '../shared/account-menu.component';
+import { PageHeaderComponent } from '../shared/page-header.component';
 import { ModalComponent } from '../shared/modal.component';
 import {
-    LucideArrowLeft as ArrowLeft, LucideTrash2 as Trash2, LucidePlus as Plus,
+    LucideTrash2 as Trash2, LucidePlus as Plus,
     LucideRefreshCw as RefreshCw, LucideImage as ImageIcon, LucideX as X, LucideInfo as Info,
 } from '@lucide/angular';
 
@@ -20,14 +17,13 @@ import {
 @Component({
     selector: 'app-glossary',
     imports: [
-        FormsModule, RouterLink, CedarLogoComponent, AccountMenuComponent, ModalComponent,
-        ArrowLeft, Trash2, Plus, RefreshCw, ImageIcon, X, Info,
+        FormsModule, PageHeaderComponent, ModalComponent,
+        Trash2, Plus, RefreshCw, ImageIcon, X, Info,
     ],
     templateUrl: 'glossary.component.html',
     styleUrls: ['glossary.component.css'],
 })
 export class GlossaryComponent implements OnInit {
-    theme = inject(ThemeService);
     t = inject(LocaleService).t;
     private api = inject(GlossaryService);
     private assets = inject(AssetsService);

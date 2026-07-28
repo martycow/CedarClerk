@@ -1,0 +1,38 @@
+<header class="page-header">
+    @if (showBack()) {
+    <a class="icon-btn" routerLink="/editor" [title]="t().common.backToEditor">
+        <svg lucideArrowLeft class="icon"></svg>
+    </a>
+    }
+    <app-cedar-logo [size]="19"></app-cedar-logo>
+    <span class="brand-name">Cedar Clerk</span>
+    <span class="crumb-sep">/</span>
+    <span class="crumb-current">{{ crumb() }}</span>
+    <span class="spacer"></span>
+
+    <a class="nav-btn" [class.on]="page() === 'posts'" routerLink="/posts" [title]="t().editor.postsManager">
+        <svg lucideNewspaper class="icon-sm"></svg>
+        <span class="btn-label">{{ t().editor.postsManager }}</span>
+        <app-count-badge [count]="feedback.newComments() + feedback.newReactions()" [title]="t().editor.newBadge"></app-count-badge>
+    </a>
+    <a class="nav-btn" [class.on]="page() === 'glossary'" routerLink="/glossary" [title]="t().glossary.open">
+        <svg lucideBookMarked class="icon-sm"></svg>
+        <span class="btn-label">{{ t().glossary.open }}</span>
+    </a>
+    <a class="nav-btn" [class.on]="page() === 'settings'" routerLink="/settings" [title]="t().editor.settings">
+        <svg lucideSettings class="icon-sm"></svg>
+        <span class="btn-label">{{ t().editor.settings }}</span>
+    </a>
+    <!--IF2: convenience only — /api/admin is gated server-side.-->
+    @if (auth.isAdmin()) {
+    <a class="nav-btn" [class.on]="page() === 'admin'" routerLink="/admin" [title]="t().admin.open">
+        <svg lucideShieldCheck class="icon-sm"></svg>
+        <span class="btn-label">{{ t().admin.crumb }}</span>
+    </a>
+    }
+
+    <button class="icon-btn theme-toggle" (click)="theme.toggle()" [title]="t().common.toggleTheme">
+        {{ theme.theme() === 'dark' ? '☀' : '☾' }}
+    </button>
+    <app-account-menu></app-account-menu>
+</header>

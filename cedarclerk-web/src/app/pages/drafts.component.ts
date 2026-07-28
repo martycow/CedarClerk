@@ -3,17 +3,15 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
-import { ThemeService } from '../core/theme.service';
 import { DraftsService, DraftMeta } from '../core/drafts.service';
 import { FoldersService } from '../core/folders.service';
 import { FolderPickerComponent } from '../shared/folder-picker.component';
 import { TagPickerComponent } from '../shared/tag-picker.component';
 import { LocaleService } from '../core/i18n/locale.service';
 import { Dict } from '../core/i18n/en';
-import { CedarLogoComponent } from '../shared/cedar-logo.component';
+import { PageHeaderComponent } from '../shared/page-header.component';
 import { ModalComponent } from '../shared/modal.component';
 import { PopoverComponent } from '../shared/popover.component';
-import { AccountMenuComponent } from '../shared/account-menu.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import {
     LucidePlus as Plus,
@@ -86,7 +84,7 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
 @Component({
     selector: 'app-drafts',
     imports: [
-        DatePipe, FormsModule, CedarLogoComponent, ModalComponent, PopoverComponent, AccountMenuComponent,
+        DatePipe, FormsModule, PageHeaderComponent, ModalComponent, PopoverComponent,
         FolderPickerComponent, TagPickerComponent,
         Plus, Archive, ArchiveRestore, Trash2, RefreshCw, LayoutGrid, List,
         Folder, Lock, FileUp, Upload, Eye, Heart,
@@ -96,7 +94,6 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
 })
 export class DraftsPageComponent implements OnInit {
     auth = inject(AuthService);
-    theme = inject(ThemeService);
     t = inject(LocaleService).t;
     private draftsApi = inject(DraftsService);
     private foldersApi = inject(FoldersService);

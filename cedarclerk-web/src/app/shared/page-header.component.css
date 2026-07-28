@@ -1,0 +1,123 @@
+:host {
+    display: contents;
+}
+
+.page-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 52px;
+    padding: 0 20px;
+    background: var(--glass);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    border-bottom: 1px solid var(--glass-border);
+    box-shadow: var(--gloss-top);
+}
+
+.icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex: none;
+    border: none;
+    background: none;
+    border-radius: var(--radius-md);
+    color: var(--t2);
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 15px;
+}
+
+.icon-btn:hover {
+    background: rgba(128, 120, 100, .14);
+    color: var(--text);
+}
+
+.icon {
+    width: 15px;
+    height: 15px;
+}
+
+.icon-sm {
+    width: 14px;
+    height: 14px;
+}
+
+.brand-name {
+    font-weight: 700;
+    font-size: var(--fs-13);
+    letter-spacing: -.01em;
+    white-space: nowrap;
+}
+
+.crumb-sep {
+    color: var(--t3);
+    font-size: var(--fs-13);
+}
+
+.crumb-current {
+    font-size: var(--fs-13);
+    font-weight: 500;
+    color: var(--t2);
+    white-space: nowrap;
+}
+
+.spacer {
+    flex: 1;
+}
+
+/* Same shape/soft-active pattern as the editor topbar's nav buttons (I11) — the current page's
+   button fills with --accent, exactly like .export-btn.on there. */
+.nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: none;
+    border: 1px solid var(--border);
+    background: none;
+    border-radius: var(--radius-md);
+    padding: 5px 14px;
+    cursor: pointer;
+    font-size: var(--fs-13);
+    color: var(--t2);
+    font-family: inherit;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.nav-btn:hover {
+    background: rgba(128, 120, 100, .14);
+}
+
+.nav-btn.on {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #F4F2EA;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        gap: 4px;
+        padding: 0 10px;
+    }
+
+    .brand-name,
+    .crumb-sep {
+        display: none;
+    }
+
+    .nav-btn .btn-label {
+        display: none;
+    }
+
+    .nav-btn {
+        padding: 5px 8px;
+    }
+}

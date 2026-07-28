@@ -13,6 +13,7 @@
     --ok: #3E7A4E;
     --shadow: 0 1px 3px rgba(40, 35, 25, .10);
     --shadow-md: 0 8px 24px rgba(40, 35, 25, .12);
+    --shadow-lg: 0 24px 64px rgba(0, 0, 0, .30);
 
     --asoft: color-mix(in srgb, var(--accent) 13%, var(--surface));
     --abord: color-mix(in srgb, var(--accent) 38%, var(--border));
@@ -42,6 +43,19 @@
 
     --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --font-mono: ui-monospace, Menlo, Consolas, monospace;
+
+    /* Font-size scale (header/nav redesign, 27.07.2026) — reverse-engineered from the sizes
+       already hardcoded across the app/blog, not new values. Existing hardcodes are left alone;
+       only newly-written chrome (docs/DECISIONS.md) reaches for these. */
+    --fs-9: 9px;
+    --fs-11: 11px;
+    --fs-12: 12px;
+    --fs-13: 13px;
+    --fs-14: 14px;
+    --fs-16: 16px;
+    --fs-19: 19px;
+    --fs-20: 20px;
+    --fs-27: 27px;
 
     /* "Cedar Aero" chrome materials (ADR-035, editor redesign) — applied to toolbars/popovers/
        modals only; content sheets (the writing surface, cards) stay solid for readability. */
@@ -77,6 +91,7 @@
     --series-6: #2AA294;
 
     --shadow: 0 1px 3px rgba(0, 0, 0, .45);
+    --shadow-lg: 0 24px 64px rgba(0, 0, 0, .6);
 
     --blur: saturate(1.7) blur(20px);
     --glass: color-mix(in srgb, var(--surface) 58%, transparent);

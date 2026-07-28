@@ -1,9 +1,8 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
-import { ThemeService } from '../core/theme.service';
 import {
     DraftsService, DraftMeta, PostRegistration,
     RegistrationForm, RegistrationQuestion, RegistrationQuestionType, parseRegistrationForm,
@@ -15,8 +14,7 @@ import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { CountBadgeComponent } from '../shared/count-badge.component';
 import { httpErrorMessage } from '../core/http-error.util';
-import { CedarLogoComponent } from '../shared/cedar-logo.component';
-import { AccountMenuComponent } from '../shared/account-menu.component';
+import { PageHeaderComponent } from '../shared/page-header.component';
 import { ModalComponent } from '../shared/modal.component';
 import { CommentsComponent } from './comments.component';
 import { TagPickerComponent } from '../shared/tag-picker.component';
@@ -27,7 +25,7 @@ import { StatsComponent } from './stats.component';
 import {
     LucideTrash2 as Trash2, LucideArchive as Archive, LucideArchiveRestore as ArchiveRestore,
     LucidePenLine as PenLine, LucideLock as Lock, LucideExternalLink as ExternalLink,
-    LucideRefreshCw as RefreshCw, LucideArrowLeft as ArrowLeft, LucideX as X, LucideInfo as Info,
+    LucideRefreshCw as RefreshCw, LucideX as X, LucideInfo as Info,
 } from '@lucide/angular';
 
 // FI3.5 removed the 'feedback' tab; ?tab=feedback still resolves (to posts, where feedback now
@@ -43,16 +41,15 @@ const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
 @Component({
     selector: 'app-posts-manager',
     imports: [
-        DatePipe, FormsModule, RouterLink, CedarLogoComponent, ModalComponent, CommentsComponent,
-        StatsComponent, CountBadgeComponent, AccountMenuComponent, TagPickerComponent, FolderPickerComponent,
-        Trash2, Archive, ArchiveRestore, PenLine, Lock, ExternalLink, RefreshCw, ArrowLeft, X, Info,
+        DatePipe, FormsModule, PageHeaderComponent, ModalComponent, CommentsComponent,
+        StatsComponent, CountBadgeComponent, TagPickerComponent, FolderPickerComponent,
+        Trash2, Archive, ArchiveRestore, PenLine, Lock, ExternalLink, RefreshCw, X, Info,
     ],
     templateUrl: 'posts-manager.component.html',
     styleUrls: ['posts-manager.component.css'],
 })
 export class PostsManagerComponent implements OnInit {
     auth = inject(AuthService);
-    theme = inject(ThemeService);
     private draftsApi = inject(DraftsService);
     private presetsApi = inject(FormPresetsService);
     private postsApi = inject(PostsService);

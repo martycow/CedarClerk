@@ -17,39 +17,7 @@
     margin: 4px 0;
 }
 
-/* ---------- Header (matches stats/settings/comments) ---------- */
-.drafts-header {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    height: 52px;
-    padding: 0 20px;
-    background: var(--glass);
-    backdrop-filter: var(--blur);
-    -webkit-backdrop-filter: var(--blur);
-    border-bottom: 1px solid var(--glass-border);
-}
-
-.brand-name {
-    font-weight: 700;
-    font-size: 13.5px;
-    letter-spacing: -.01em;
-}
-
-.crumb-sep {
-    color: var(--t3);
-    font-size: 13px;
-}
-
-.crumb-current {
-    font-size: 13.5px;
-    font-weight: 500;
-    color: var(--t2);
-}
-
+/* Page chrome now lives in the shared app-page-header (docs/DECISIONS.md, 27.07.2026). */
 .icon {
     width: 15px;
     height: 15px;
@@ -63,24 +31,6 @@
 .spacer {
     flex: 1;
 }
-
-.icon-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    border: none;
-    background: none;
-    padding: 5px 8px;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    color: var(--t2);
-}
-
-.icon-btn:hover {
-    background: rgba(128, 120, 100, .14);
-}
-
-/* .avatar lives in account-menu.component.css now (IB9). */
 
 /* ---------- Body ---------- */
 /* I10: was capped at 1080px, which left most of a wide monitor empty while the Title column was

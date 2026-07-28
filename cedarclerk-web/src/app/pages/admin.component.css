@@ -1,60 +1,9 @@
-/* Page chrome mirrors /posts and /settings — the three secondary pages should not each invent
-   their own header. */
+/* Page chrome now lives in the shared app-page-header (see docs/DECISIONS.md, 27.07.2026). */
 .admin-page {
     min-height: 100vh;
     background: var(--canvas);
     color: var(--text);
     font-family: var(--font-sans);
-}
-
-.admin-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 44px;
-    padding: 0 14px;
-    border-bottom: 1px solid var(--border);
-    background: var(--glass);
-    backdrop-filter: var(--blur);
-    -webkit-backdrop-filter: var(--blur);
-}
-
-.brand-name {
-    font-weight: 700;
-    font-size: 13.5px;
-    letter-spacing: -.01em;
-}
-
-.crumb-sep {
-    color: var(--t3);
-}
-
-.crumb-current {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 13px;
-    color: var(--t2);
-}
-
-.spacer { flex: 1; }
-.icon { width: 15px; height: 15px; }
-.icon-xs { width: 12px; height: 12px; }
-
-.icon-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    border: none;
-    background: none;
-    padding: 5px 8px;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    color: var(--t2);
-}
-
-.icon-btn:hover {
-    background: rgba(128, 120, 100, .14);
 }
 
 .admin-body {

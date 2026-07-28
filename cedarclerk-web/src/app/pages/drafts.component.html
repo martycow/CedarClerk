@@ -1,17 +1,7 @@
 <div class="drafts-page">
     <!--No back button: this is the post-login landing screen, so there's nothing to go back to.
     The editor is reached by opening a draft (or "New draft").-->
-    <header class="drafts-header">
-        <app-cedar-logo [size]="19"></app-cedar-logo>
-        <span class="brand-name">Cedar Clerk</span>
-        <span class="crumb-sep">/</span>
-        <span class="crumb-current">{{ t().drafts.crumb }}</span>
-        <span class="spacer"></span>
-        <button class="icon-btn" (click)="theme.toggle()" [title]="t().common.toggleTheme">
-            {{ theme.theme() === 'dark' ? '☀' : '☾' }}
-        </button>
-        <app-account-menu></app-account-menu>
-    </header>
+    <app-page-header page="drafts" [showBack]="false"></app-page-header>
 
     <div class="drafts-body">
         @if (loading()) {
