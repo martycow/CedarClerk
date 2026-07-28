@@ -27,6 +27,7 @@ public static class BlogEndpoints
         ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
 
     private record ReactRequest(string? AnnotationId, string Kind);
+    private record PollVoteRequest(string PollId, string Option);
     private record CommentRequest(string? AnnotationId, string? AuthorName, string Text, Guid? ParentCommentId = null);
     private record RegistrationRequest(string? Name, string? Nickname, string? Email, string? SocialLink, Dictionary<string, string>? Answers);
     private record BlogChannelInfo(string Title, string? Username, int? MemberCount);
@@ -284,6 +285,8 @@ public static class BlogEndpoints
                 await PostCommentAsync(ctx, db, slug);
             else if (action == "register" && ctx.Request.Method == HttpMethods.Post)
                 await PostRegistrationAsync(ctx, db, slug);
+            else if (action == "poll" && ctx.Request.Method == HttpMethods.Post)
+                await PostPollVoteAsync(ctx, db, slug);
             else
                 ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
@@ -347,6 +350,14 @@ public static class BlogEndpoints
         var comments = await db.Comments.Where(c => c.DraftId == draft.Id)
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync();
+        // NF5 — every poll on the page in one request, alongside the reactions/comments this
+        // endpoint already bootstraps; keyed by poll id since a post can hold more than one.
+        var pollVotes = await db.PollVotes.Where(v => v.DraftId == draft.Id).ToListAsync();
+        var polls = pollVotes.GroupBy(v => v.PollId).ToDictionary(g => g.Key, g => new
+        {
+            counts = g.GroupBy(v => v.Option).ToDictionary(gg => gg.Key, gg => gg.Count()),
+            myVote = g.FirstOrDefault(v => v.VisitorHash == visitor)?.Option,
+        });
 
         object BuildGroup(string? annotationId)
         {
@@ -368,6 +379,7 @@ public static class BlogEndpoints
         {
             article = BuildGroup(null),
             annotations = annotationIds.ToDictionary(id => id!, id => BuildGroup(id)),
+            polls,
         };
 
         ctx.Response.ContentType = "application/json";
@@ -447,6 +459,52 @@ public static class BlogEndpoints
         var group = await db.Reactions.Where(r => r.DraftId == draft.Id && r.AnnotationId == annotationId).ToListAsync();
         var counts = group.GroupBy(r => r.Kind).ToDictionary(g => g.Key, g => g.Count());
         var myVote = group.FirstOrDefault(r => r.VisitorHash == visitor)?.Kind;
+
+        ctx.Response.ContentType = "application/json";
+        await JsonSerializer.SerializeAsync(ctx.Response.Body, new { counts, myVote }, JsonOpts);
+    }
+
+    // NF5 — one vote per (poll, visitor). Changing your answer updates the existing row; there is
+    // no "unvote", unlike a reaction toggle — a poll has no meaningful "no answer" state to return
+    // to once you've picked one, the way a like does.
+    private static async Task PostPollVoteAsync(HttpContext ctx, CedarDbContext db, string slug)
+    {
+        var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.IsBlogPublished);
+        if (draft is null || !HasPrivateAccess(ctx, draft))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        PollVoteRequest? req;
+        try
+        {
+            req = await JsonSerializer.DeserializeAsync<PollVoteRequest>(ctx.Request.Body, JsonOpts);
+        }
+        catch (JsonException)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            return;
+        }
+        if (req is null || string.IsNullOrWhiteSpace(req.PollId) || string.IsNullOrWhiteSpace(req.Option))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            return;
+        }
+
+        var visitor = VisitorHash(ctx);
+        var existing = await db.PollVotes.FirstOrDefaultAsync(v =>
+            v.DraftId == draft.Id && v.PollId == req.PollId && v.VisitorHash == visitor);
+
+        if (existing is null)
+            db.PollVotes.Add(new PollVote { DraftId = draft.Id, PollId = req.PollId, Option = req.Option, VisitorHash = visitor });
+        else
+            existing.Option = req.Option;
+        await db.SaveChangesAsync();
+
+        var group = await db.PollVotes.Where(v => v.DraftId == draft.Id && v.PollId == req.PollId).ToListAsync();
+        var counts = group.GroupBy(v => v.Option).ToDictionary(g => g.Key, g => g.Count());
+        var myVote = group.FirstOrDefault(v => v.VisitorHash == visitor)?.Option;
 
         ctx.Response.ContentType = "application/json";
         await JsonSerializer.SerializeAsync(ctx.Response.Body, new { counts, myVote }, JsonOpts);
@@ -1367,6 +1425,18 @@ public static class BlogEndpoints
         .footnotes { font-size: 12.5px; color: var(--t2); border-top: 1px solid var(--border); padding: 10px 0 0; margin: 0 0 4px; }
         .footnotes sup, .post-sheet sup { color: var(--accent); font-weight: 600; }
 
+        .poll-block { border: 1px solid var(--border); background: var(--sheet); border-radius: 10px; padding: 16px 18px; margin: 16px 0; }
+        .poll-question { font-weight: 700; font-size: 15px; margin-bottom: 10px; }
+        .poll-options { display: flex; flex-direction: column; gap: 6px; }
+        .poll-option { position: relative; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 8px 12px; cursor: pointer; font-family: inherit; font-size: 13.5px; color: var(--text); text-align: left; overflow: hidden; }
+        .poll-option:hover { border-color: var(--abord); }
+        .poll-option.voted { border-color: var(--abord); }
+        .poll-option-label { position: relative; z-index: 1; flex: 1; }
+        .poll-option-bar { position: absolute; inset: 0; z-index: 0; }
+        .poll-option-fill { display: block; height: 100%; width: 0%; background: var(--asoft); transition: width .3s ease; }
+        .poll-option-pct { position: relative; z-index: 1; font-size: 12px; color: var(--t3); font-variant-numeric: tabular-nums; }
+        .poll-total { font-size: 11.5px; color: var(--t3); margin-top: 8px; }
+
         .annotation { border-left: 3px solid var(--abord); background: var(--asoft); padding: 10px 14px; margin: 16px 0; border-radius: 4px; }
         .article-annotation { border-left: none; background: none; padding: 0; margin: 16px 0 0; }
         .annotation-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
@@ -1822,6 +1892,49 @@ public static class BlogEndpoints
                 }
             }
 
+            // NF5 — polls piggyback on the same bootstrap fetch as reactions/comments; every real
+            // post page has at least the whole-article annotation block, so this fetch always runs.
+            function hydratePoll(el, info) {
+                var counts = (info && info.counts) || {};
+                var myVote = info && info.myVote;
+                var total = Object.keys(counts).reduce(function (sum, k) { return sum + counts[k]; }, 0);
+                var totalEl = el.querySelector('.poll-total');
+
+                function paint() {
+                    el.querySelectorAll('.poll-option').forEach(function (btn) {
+                        var opt = btn.getAttribute('data-option');
+                        var pct = total > 0 ? Math.round(((counts[opt] || 0) / total) * 100) : 0;
+                        var fill = btn.querySelector('.poll-option-fill');
+                        var pctEl = btn.querySelector('.poll-option-pct');
+                        var voted = !!myVote;
+                        if (fill) fill.style.width = voted ? pct + '%' : '0%';
+                        if (pctEl) pctEl.textContent = voted ? pct + '%' : '';
+                        btn.classList.toggle('voted', myVote === opt);
+                    });
+                    if (totalEl) totalEl.textContent = total > 0 ? (total === 1 ? '1 vote' : total + ' votes') : '';
+                }
+                paint();
+
+                el.querySelectorAll('.poll-option').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        var option = btn.getAttribute('data-option');
+                        fetch('/api/posts/' + encodeURIComponent(slug) + '/poll', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ pollId: el.getAttribute('data-poll-id'), option: option })
+                        })
+                            .then(function (r) { return r.json(); })
+                            .then(function (res) {
+                                counts = res.counts || {};
+                                myVote = res.myVote;
+                                total = Object.keys(counts).reduce(function (sum, k) { return sum + counts[k]; }, 0);
+                                paint();
+                            })
+                            .catch(function () {});
+                    });
+                });
+            }
+
             fetch('/api/posts/' + encodeURIComponent(slug) + '/annotations')
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
@@ -1829,6 +1942,10 @@ public static class BlogEndpoints
                         var id = el.getAttribute('data-annotation-id') || '';
                         var info = id ? (data.annotations[id] || { counts: {}, myVote: null, comments: [] }) : data.article;
                         hydrate(el, id, info);
+                    });
+                    document.querySelectorAll('.poll-block').forEach(function (el) {
+                        var pollId = el.getAttribute('data-poll-id') || '';
+                        hydratePoll(el, (data.polls && data.polls[pollId]) || { counts: {}, myVote: null });
                     });
                 })
                 .catch(function () {});

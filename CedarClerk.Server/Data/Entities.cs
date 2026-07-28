@@ -487,7 +487,23 @@ public class Reaction
     /// <summary>
     /// Like/Dislike
     /// </summary>
-    public string Kind { get; set; } = ""; 
+    public string Kind { get; set; } = "";
+    public string VisitorHash { get; set; } = "";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+// NF5 — one vote per (poll, visitor); switching an answer updates the existing row rather than
+// adding a second one. Same anonymous VisitorHash approach as Reaction (ADR-016) — polls are a
+// blog-only content block (docs/DECISIONS.md ADR following ADR-054), not a Telegram feature, so
+// there is no equivalent on that surface to keep in sync.
+public class PollVote
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid DraftId { get; set; }
+
+    /// <summary>The poll node's own `id` attr — a post can contain more than one poll.</summary>
+    public string PollId { get; set; } = "";
+    public string Option { get; set; } = "";
     public string VisitorHash { get; set; } = "";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

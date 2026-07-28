@@ -39,6 +39,7 @@ import { CollageNode } from '../tiptap-extensions/collage-node';
 import { SpoilerMark } from '../tiptap-extensions/spoiler-mark';
 import { DateTimeNode } from '../tiptap-extensions/datetime-node';
 import { ToggleNode } from '../tiptap-extensions/toggle-node';
+import { PollNode } from '../tiptap-extensions/poll-node';
 import { ImageNode } from '../tiptap-extensions/image-node';
 import { FootnoteNode } from '../tiptap-extensions/footnote-node';
 import { AnnotationNode } from '../tiptap-extensions/annotation-node';
@@ -74,6 +75,7 @@ import {
     LucideCheck as Check,
     LucideDownload as Download,
     LucideMessageSquare as MessageSquare,
+    LucideVote as Vote,
     LucideDroplets as Droplets,
     LucideMaximize as Maximize, LucideMinimize as Minimize,
     LucideNewspaper as Newspaper,
@@ -232,7 +234,7 @@ interface UploadItem {
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
         Send, Plus, X, Trash2,
         EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, FileStack, Superscript,
-        ChevronDown, Check, Download, MessageSquare, Droplets, Newspaper, RefreshCw, Maximize, Minimize,
+        ChevronDown, Check, Download, MessageSquare, Vote, Droplets, Newspaper, RefreshCw, Maximize, Minimize,
         Settings, ShieldCheck, Sparkle, TableOfContentsIcon, DividerIcon,
         CountBadgeComponent,
         AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
@@ -624,6 +626,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 FootnoteNode,
                 DateTimeNode,
                 ToggleNode,
+                PollNode,
                 AnnotationNode,
                 TableOfContentsNode,
                 YoutubeNode,
@@ -1877,6 +1880,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             attrs: { summary: 'Details' },
             content: [{ type: 'paragraph' }],
         }));
+    }
+
+    // NF5 — id is assigned by the node view on first mount (PollNode), not here; question/options
+    // are edited inline via the node's own inputs, same interaction model as the toggle above.
+    insertPoll() {
+        this.cmd(c => c.insertContent({ type: 'poll', attrs: { question: '', options: ['', ''] } }));
     }
 
     // Content is auto-generated from the document's headings at render/export time (Core's

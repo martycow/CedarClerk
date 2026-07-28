@@ -670,6 +670,7 @@
                     <svg lucideMessageSquare class="icon"></svg>
                 </button>
                 }
+                @if (!toolbarLayout.isHidden('poll')) { <button (click)="insertPoll()" [title]="t().editor.tb.poll"><svg lucideVote class="icon"></svg></button> }
             </div>
             <span class="tb-caption">{{ t().editor.groups.blocks }}</span>
         </div>

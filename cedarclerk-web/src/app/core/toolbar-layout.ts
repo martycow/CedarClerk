@@ -10,7 +10,7 @@ export type ToolbarButtonId =
     | 'bulletList' | 'orderedList' | 'taskList' | 'indent' | 'outdent'
     | 'inlineCode' | 'codeBlock'
     | 'image' | 'video' | 'gif' | 'audio' | 'carousel' | 'collage' | 'youtube'
-    | 'table' | 'formula' | 'blockquote' | 'toggle' | 'toc' | 'divider' | 'annotation'
+    | 'table' | 'formula' | 'blockquote' | 'toggle' | 'toc' | 'divider' | 'annotation' | 'poll'
     | 'aiActions';
 
 export interface ToolbarGroupDef {
@@ -53,7 +53,7 @@ export const TOOLBAR_GROUPS: ToolbarGroupDef[] = [
         id: 'blocks', label: 'Blocks', buttons: [
             { id: 'table', label: 'Table' }, { id: 'formula', label: 'Formula' }, { id: 'blockquote', label: 'Blockquote' },
             { id: 'toggle', label: 'Toggle block' }, { id: 'toc', label: 'Table of contents' },
-            { id: 'divider', label: 'Divider' }, { id: 'annotation', label: 'Annotation' },
+            { id: 'divider', label: 'Divider' }, { id: 'annotation', label: 'Annotation' }, { id: 'poll', label: 'Poll' },
         ],
     },
     { id: 'ai', label: 'AI', buttons: [{ id: 'aiActions', label: 'Fix errors / Schizo-izer' }] },
@@ -83,7 +83,7 @@ const MINIMAL_HIDDEN: ToolbarButtonId[] = [
     'underline', 'strike', 'spoiler', 'emoji', 'datetime', 'footnote',
     'orderedList', 'taskList', 'indent', 'outdent', 'inlineCode', 'codeBlock',
     'video', 'gif', 'audio', 'carousel', 'collage', 'youtube',
-    'table', 'formula', 'toggle', 'toc', 'divider', 'annotation',
+    'table', 'formula', 'toggle', 'toc', 'divider', 'annotation', 'poll',
 ];
 
 export const DEFAULT_TOOLBAR_LAYOUT: ToolbarLayout = {

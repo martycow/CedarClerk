@@ -179,6 +179,7 @@ export const en = {
             divider: 'Divider — horizontal rule',
             toc: 'Table of contents — auto-generated from headings, works on the blog and (as jump links) in Telegram',
             annotation: 'Mark for comments — wraps the selection so it can carry likes/comments on the blog',
+            poll: 'Insert poll — blog readers only, not sent to Telegram',
             datetime: 'Date/time',
             footnote: 'Footnote',
             emoji: 'Emoji',

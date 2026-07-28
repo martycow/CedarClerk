@@ -13,6 +13,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<BlogStatSnapshot> BlogStatSnapshots => Set<BlogStatSnapshot>();
     public DbSet<ChannelPost> ChannelPosts => Set<ChannelPost>();
     public DbSet<Reaction> Reactions => Set<Reaction>();
+    public DbSet<PollVote> PollVotes => Set<PollVote>();
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<BotKnownChat> BotKnownChats => Set<BotKnownChat>();
     public DbSet<BotKnownChatAdmin> BotKnownChatAdmins => Set<BotKnownChatAdmin>();

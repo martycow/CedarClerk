@@ -351,6 +351,87 @@ body {
         }
     }
 
+    /* NF5 — authoring view for the poll node (rendered blog-side markup + CSS live in
+       BlogEndpoints.cs, since the reader-facing vote UI is server-rendered, not TipTap output).
+       Same reason as .toggle-block above for living here rather than in editor.component.css:
+       PollNode builds this DOM by hand (addNodeView), which never carries Angular's
+       _ngcontent encapsulation attribute. */
+    .poll-editor {
+        border: 1px dashed var(--abord);
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin: 8px 0;
+        background: var(--asoft);
+
+        .poll-editor-question {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            border: none;
+            outline: none;
+            font-weight: 600;
+            font-size: 15px;
+            background: transparent;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .poll-editor-options {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .poll-editor-option-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+
+            input {
+                flex: 1;
+                border: 1px solid var(--border);
+                background: var(--sheet);
+                color: var(--text);
+                border-radius: var(--radius-sm);
+                padding: 5px 8px;
+                font-size: 13px;
+                font-family: inherit;
+            }
+        }
+
+        .poll-editor-remove {
+            border: none;
+            background: none;
+            color: var(--t3);
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+            padding: 2px 6px;
+
+            &:hover {
+                color: var(--danger);
+            }
+        }
+
+        .poll-editor-add {
+            align-self: flex-start;
+            margin-top: 4px;
+            border: 1px dashed var(--border);
+            background: none;
+            color: var(--t2);
+            border-radius: var(--radius-sm);
+            padding: 4px 10px;
+            font-size: 12px;
+            font-family: inherit;
+            cursor: pointer;
+
+            &:hover {
+                border-color: var(--abord);
+                color: var(--text);
+            }
+        }
+    }
+
     .toc-block {
         border: 1px solid var(--border);
         background: var(--asoft);

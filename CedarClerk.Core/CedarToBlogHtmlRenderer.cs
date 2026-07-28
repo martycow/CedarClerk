@@ -268,6 +268,27 @@ public static class CedarToBlogHtmlRenderer
                 sb.Append($"<sup><a href=\"#fn-{ctx.Footnotes.Count}\">[{ctx.Footnotes.Count}]</a></sup>");
                 break;
 
+            // NF5 — deliberately blog-only (Marty's own call: "опросы только на сайте"). A poll has
+            // no content, so the Telegram/Markdown renderers' shared "unknown type" default (render
+            // children only) naturally renders nothing for it — no explicit skip needed there.
+            case "poll":
+                var pollId = (string?)node["attrs"]?["id"] ?? "";
+                var question = Escape((string?)node["attrs"]?["question"] ?? "");
+                var options = (node["attrs"]?["options"] as JsonArray)?
+                    .Select(o => (string?)o).Where(o => !string.IsNullOrWhiteSpace(o)).Select(o => o!).ToList() ?? [];
+                // Same rule as an empty carousel/collage (ADR-019): nothing to vote on, drop it.
+                if (options.Count == 0) break;
+                sb.Append($"<div class=\"poll-block\" data-poll-id=\"{EscapeAttr(pollId)}\"><div class=\"poll-question\">{question}</div><div class=\"poll-options\">");
+                foreach (var opt in options)
+                {
+                    sb.Append($"<button type=\"button\" class=\"poll-option\" data-option=\"{EscapeAttr(opt)}\">" +
+                        $"<span class=\"poll-option-label\">{Escape(opt)}</span>" +
+                        "<span class=\"poll-option-bar\"><span class=\"poll-option-fill\"></span></span>" +
+                        "<span class=\"poll-option-pct\"></span></button>");
+                }
+                sb.Append("</div><div class=\"poll-total\"></div></div>");
+                break;
+
             // Intentionally not handled by CedarToTelegramHtmlRenderer/CedarToTelegramMarkdownRenderer —
             // both fall through to their own "unknown type" default (render children only), which is
             // exactly the desired behavior there: Telegram has no concept of anchored reactions/comments.

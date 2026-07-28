@@ -362,6 +362,41 @@ public class BlogHtmlRendererTests
     }
 
     [Fact]
+    public void Renders_poll_block_with_question_and_options()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"poll","attrs":{"id":"p1","question":"Best editor?","options":["Cedar","Notepad"]}}]}
+                   """;
+        Assert.Equal(
+            "<div class=\"poll-block\" data-poll-id=\"p1\"><div class=\"poll-question\">Best editor?</div><div class=\"poll-options\">" +
+            "<button type=\"button\" class=\"poll-option\" data-option=\"Cedar\"><span class=\"poll-option-label\">Cedar</span><span class=\"poll-option-bar\"><span class=\"poll-option-fill\"></span></span><span class=\"poll-option-pct\"></span></button>" +
+            "<button type=\"button\" class=\"poll-option\" data-option=\"Notepad\"><span class=\"poll-option-label\">Notepad</span><span class=\"poll-option-bar\"><span class=\"poll-option-fill\"></span></span><span class=\"poll-option-pct\"></span></button>" +
+            "</div><div class=\"poll-total\"></div></div>",
+            CedarToBlogHtmlRenderer.Render(json, Base));
+    }
+
+    [Fact]
+    public void Poll_with_no_options_is_dropped_entirely()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"poll","attrs":{"id":"p1","question":"Empty?","options":[]}}]}
+                   """;
+        Assert.Equal("", CedarToBlogHtmlRenderer.Render(json, Base));
+    }
+
+    [Fact]
+    public void Poll_question_and_options_are_escaped()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"poll","attrs":{"id":"p1","question":"A < B?","options":["<script>"]}}]}
+                   """;
+        var html = CedarToBlogHtmlRenderer.Render(json, Base);
+        Assert.Contains("A &lt; B?", html);
+        Assert.Contains("data-option=\"&lt;script&gt;\"", html);
+        Assert.Contains("<span class=\"poll-option-label\">&lt;script&gt;</span>", html);
+    }
+
+    [Fact]
     public void Renders_block_math_as_katex_target_div()
     {
         var json = """

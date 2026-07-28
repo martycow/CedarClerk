@@ -453,4 +453,15 @@ public class BlocksRendererTests
         var blocks = CedarToTelegramBlocksRenderer.Render(json);
         Assert.Equal(new RichParagraphBlock(new RichRunText("marked text")), Assert.Single(blocks));
     }
+
+    [Fact]
+    public void Poll_is_blog_only_and_renders_nothing_on_telegram()
+    {
+        // NF5, Marty's decision: "опросы только на сайте" — a poll has no content for the shared
+        // "unknown type" default (render children) to fall back to, so it produces nothing at all.
+        var json = """
+                   {"type":"doc","content":[{"type":"poll","attrs":{"id":"p1","question":"Q?","options":["A","B"]}}]}
+                   """;
+        Assert.Empty(CedarToTelegramBlocksRenderer.Render(json));
+    }
 }
