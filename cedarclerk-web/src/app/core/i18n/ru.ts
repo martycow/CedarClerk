@@ -204,6 +204,7 @@ export const ru: Dict = {
             code: 'Код',
             media: 'Медиа',
             blocks: 'Блоки',
+            feedback: 'Отзывы',
             insert: 'Вставка',
             link: 'Ссылка',
             mention: 'Упоминание',

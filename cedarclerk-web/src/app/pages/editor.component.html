@@ -669,6 +669,17 @@
                 @if (!toolbarLayout.isHidden('toggle')) { <button (click)="insertToggle()" [title]="t().editor.tb.toggleBlock"><svg lucideListCollapse class="icon"></svg></button> }
                 @if (!toolbarLayout.isHidden('toc')) { <button (click)="insertTableOfContents()" [title]="t().editor.tb.toc"><svg lucideTableOfContents class="icon"></svg></button> }
                 @if (!toolbarLayout.isHidden('divider')) { <button (click)="insertDivider()" [title]="t().editor.tb.divider"><svg lucideSeparatorHorizontal class="icon"></svg></button> }
+            </div>
+            <span class="tb-caption">{{ t().editor.groups.blocks }}</span>
+        </div>
+    </ng-template>
+
+    <!--Split out from Blocks on Marty's request: these are reader-engagement tools (comment
+    anchors, a vote), not content-authoring blocks like tables/formulas/dividers.-->
+    <ng-template #tplFeedback>
+        <span class="sep"></span>
+        <div class="tb-group">
+            <div class="tb-row">
                 @if (!toolbarLayout.isHidden('annotation')) {
                 <button (click)="insertAnnotation()" [disabled]="!canAnnotate()" [title]="t().editor.tb.annotation">
                     <svg lucideMessageSquare class="icon"></svg>
@@ -676,7 +687,7 @@
                 }
                 @if (!toolbarLayout.isHidden('poll')) { <button (click)="insertPoll()" [title]="t().editor.tb.poll"><svg lucideVote class="icon"></svg></button> }
             </div>
-            <span class="tb-caption">{{ t().editor.groups.blocks }}</span>
+            <span class="tb-caption">{{ t().editor.groups.feedback }}</span>
         </div>
     </ng-template>
 
@@ -770,6 +781,7 @@
             @case ('code') { <ng-container *ngTemplateOutlet="tplCode"></ng-container> }
             @case ('media') { <ng-container *ngTemplateOutlet="tplMedia"></ng-container> }
             @case ('blocks') { <ng-container *ngTemplateOutlet="tplBlocks"></ng-container> }
+            @case ('feedback') { <ng-container *ngTemplateOutlet="tplFeedback"></ng-container> }
         }
     </ng-template>
 

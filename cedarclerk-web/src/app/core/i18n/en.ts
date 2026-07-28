@@ -201,6 +201,7 @@ export const en = {
             code: 'Code',
             media: 'Media',
             blocks: 'Blocks',
+            feedback: 'Feedback',
             insert: 'Insert',
             link: 'Link',
             mention: 'Mention',

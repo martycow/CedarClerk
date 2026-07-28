@@ -63,8 +63,7 @@ export const PollNode = Node.create({
             optsWrap.className = 'poll-editor-options';
             wrap.appendChild(optsWrap);
 
-            function renderOptions() {
-                const options = (node.attrs['options'] as string[]) ?? [];
+            function buildOptions(options: string[]) {
                 optsWrap.innerHTML = '';
                 options.forEach((opt, i) => {
                     const row = document.createElement('div');
@@ -86,8 +85,14 @@ export const PollNode = Node.create({
                         removeBtn.type = 'button';
                         removeBtn.className = 'poll-editor-remove';
                         removeBtn.textContent = '×';
+                        // Reads node.attrs live, not the `options` this closure was built with —
+                        // buildOptions only re-runs on a count change, so by the time this is
+                        // clicked, edits typed since the last rebuild would otherwise be silently
+                        // discarded (the exact bug this line fixes: +Option/remove reverting text
+                        // typed into the other fields back to whatever they were at last rebuild).
                         removeBtn.addEventListener('click', () => {
-                            patch({ options: options.filter((_, idx) => idx !== i) });
+                            const current = (node.attrs['options'] as string[]) ?? [];
+                            patch({ options: current.filter((_, idx) => idx !== i) });
                         });
                         row.appendChild(removeBtn);
                     }
@@ -99,14 +104,44 @@ export const PollNode = Node.create({
                     addBtn.type = 'button';
                     addBtn.className = 'poll-editor-add';
                     addBtn.textContent = '+ Option';
-                    addBtn.addEventListener('click', () => patch({ options: [...options, ''] }));
+                    addBtn.addEventListener('click', () => {
+                        const current = (node.attrs['options'] as string[]) ?? [];
+                        patch({ options: [...current, ''] });
+                    });
                     optsWrap.appendChild(addBtn);
                 }
             }
-            renderOptions();
+
+            // Called on every keystroke (via patch() -> node update), so a full rebuild here — as
+            // opposed to the initial build above — would tear down and recreate the very <input>
+            // the user is mid-word in, losing focus after the first character (the second bug this
+            // node shipped with: the question field worked because it's a single persistent input
+            // guarded by the activeElement check, but this list was unconditionally rebuilt every
+            // time). Only rebuild when the option COUNT changed (add/remove); otherwise sync values
+            // into the existing inputs in place, skipping whichever one currently has focus.
+            function renderOptions() {
+                const options = (node.attrs['options'] as string[]) ?? [];
+                const rows = optsWrap.querySelectorAll<HTMLInputElement>('.poll-editor-option-row input');
+                if (rows.length !== options.length) {
+                    buildOptions(options);
+                    return;
+                }
+                rows.forEach((input, i) => {
+                    if (document.activeElement !== input) input.value = options[i] ?? '';
+                });
+            }
+            buildOptions(node.attrs['options'] as string[] ?? []);
 
             return {
                 dom: wrap,
+                // Without this, clicking into one of this node's own <input>s first creates a
+                // ProseMirror NodeSelection around the whole atom (this node has no contentDOM,
+                // so PM doesn't know the inputs are foreign interactive elements) — the next
+                // keystroke then replaces the entire poll instead of typing into the field. This
+                // node has no editable ProseMirror content at all (question/options live in
+                // attrs), so it's safe to tell PM to ignore every event and mutation inside it.
+                stopEvent: () => true,
+                ignoreMutation: () => true,
                 update: updatedNode => {
                     if (updatedNode.type.name !== 'poll') return false;
                     node = updatedNode;

@@ -53,7 +53,15 @@ export const TOOLBAR_GROUPS: ToolbarGroupDef[] = [
         id: 'blocks', label: 'Blocks', buttons: [
             { id: 'table', label: 'Table' }, { id: 'formula', label: 'Formula' }, { id: 'blockquote', label: 'Blockquote' },
             { id: 'toggle', label: 'Toggle block' }, { id: 'toc', label: 'Table of contents' },
-            { id: 'divider', label: 'Divider' }, { id: 'annotation', label: 'Annotation' }, { id: 'poll', label: 'Poll' },
+            { id: 'divider', label: 'Divider' },
+        ],
+    },
+    // Reader-engagement tools — split out from "Blocks" on Marty's request: these two are about
+    // getting feedback from a reader (comment anchors, a vote), not authoring content, so they
+    // don't belong grouped with tables/formulas/dividers.
+    {
+        id: 'feedback', label: 'Feedback', buttons: [
+            { id: 'annotation', label: 'Annotation' }, { id: 'poll', label: 'Poll' },
         ],
     },
     { id: 'ai', label: 'AI', buttons: [{ id: 'aiActions', label: 'Fix errors / Schizo-izer' }] },
@@ -73,7 +81,7 @@ export interface ToolbarLayout {
     hiddenButtons: ToolbarButtonId[];
 }
 
-export const STANDARD_ROW2_GROUPS = ['code', 'media', 'blocks'];
+export const STANDARD_ROW2_GROUPS = ['code', 'media', 'blocks', 'feedback'];
 export const STANDARD_ROW1_GROUPS = ['text', 'insert', 'lists'];
 
 // 'ai' is pinned to row 1 outside the group system (never movable), so it is not orderable.
