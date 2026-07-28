@@ -46,7 +46,7 @@ Roughly a ×2 progression, not a strict 4px-multiple ramp.
 --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 --font-mono: ui-monospace, Menlo, Consolas, monospace;
 ```
-**There is no font-size scale token.** Sizes are hardcoded per usage — e.g. editor `.tiptap h1 { font-size: 1.625em }`, `h2 { font-size: 1.3125em }`, inline code `14px`, modal body text `13px`, toast text `13px / weight 500`. This is a real gap, not an oversight to silently "fix" here — flagging it as known debt.
+Font-size scale (added 27.07.2026, header/nav redesign, ADR-052): `--fs-9: 9px; --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-19: 19px; --fs-20: 20px; --fs-27: 27px;`. Adopted by the new shared header; most pre-existing component CSS still hardcodes its own sizes (e.g. editor `.tiptap h1 { font-size: 1.625em }`, `h2 { font-size: 1.3125em }`, inline code `14px`) rather than having been swept to the tokens — a real gap, not fixed here.
 
 ## Component patterns (convention, not enforced)
 
@@ -94,7 +94,7 @@ Global (not component-scoped, since TipTap content is rendered via `innerHTML` i
 
 ## Known design debt
 
-- No font-size scale — see Typography above.
+- Font-size scale (`--fs-*`) exists but isn't adopted outside the new shared header — see Typography above.
 - `.btn-*`/`.modal-*` duplicated with drifted values across `editor.component.css` and `settings.component.css` instead of a shared component.
 - `--shadow-md` exists as a token but isn't consistently used — some components (modal, toast) hardcode their own box-shadow values instead.
 
