@@ -2,7 +2,23 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
-## 2026-07-27 (latest) — one header, everywhere
+## 2026-07-28 (latest) — Phase 9e continues: appearance, profile, polls, templates
+
+Five items from the FI6/FI1/FI5/NF5/NF1 queue, in order. **FI6 (account settings) was skipped** — its own sub-item text had been lost when `Input.md` got overwritten before this session, and neither Marty nor this file's own notes retained it; only the pricing-restructure sub-item (already deferred separately) survived. Everything else landed:
+
+**FI1 — Appearance panel.** The Light/Dark toggle now actually switches the theme — it used to only pick which theme's accent the swatches below would edit, with no visible effect of its own, which is exactly the "real ambiguity" Marty's feedback named. The panel moved to an explicit Apply for its preference controls (sheet width, typeface, font/line size, table size, the five checkboxes): still live-previewed instantly since that's the whole point of the side panel, but the save request no longer fires on every slider tick. Two more typefaces, and a global thin scrollbar — there wasn't a single scrollbar style anywhere in the app before this.
+
+**FI5 — Profile settings.** Real inlined brand-mark icons for Twitter/X, Instagram, Facebook, YouTube, GitHub in the social-links row, replacing generic Lucide glyphs that didn't read as their brands (Lucide carries no logos at all — checked). Two new header-slot types (word count, view count). Post signatures can now differ per content language, following the same pattern already used for the cross-link labels — caught along the way: the `.zip` export had been quietly reusing the *primary*-language signature on every page in the archive, since no per-language mechanism existed until now.
+
+**NF5 — Polls.** Blog-only, per Marty's explicit call — no Telegram surface at all, not even a degraded link. A new poll content block (question + options), one vote per anonymous visitor (same hashing approach the like/dislike reactions already use), results shown only after you vote. Not built on the form-preset entity as originally suggested — a poll is content anyone can vote on inline, a private-post access form is a different thing entirely.
+
+**NF1 — Post templates.** A `Draft.IsTemplate` flag plus a new `/drafts` filter tab, exactly the "cheapest honest shape" already scoped for it. A template is written and autosaved exactly like any other draft; it's just filtered out of the main list once marked. No "duplicate into a new draft" flow yet — that's real, separate work.
+
+Also: `TASKS.md`'s "known regression" note for `DB2.1`/`DB3.1` was stale — both were already fixed (verified directly in code this session), the file just hadn't caught up with `docs/ROADMAP.md`.
+
+Version bumped to **0.9.12**.
+
+## 2026-07-27 — one header, everywhere
 
 Claude Design brief + spec came back for a header/navigation redesign covering the editor topbar and the four "secondary" screens (Posts Manager, Glossary, Settings, Admin). Those four had quietly drifted into two different visual styles — Posts and Admin had the glass material the editor topbar uses, Glossary and Settings had a flat solid fill instead — and none of them had real navigation buttons to each other. The only way from Glossary to Settings was opening the account popover.
 
