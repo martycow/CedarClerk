@@ -919,3 +919,36 @@
     padding: 12px 0;
     background: linear-gradient(to top, var(--canvas) 70%, transparent);
 }
+
+/* The cross-link language picker. `.pill` is styled in the posts manager, and Angular's emulated
+   encapsulation keeps that stylesheet to that component — here the buttons rendered as bare
+   browser buttons with no active state, so clicking a language looked like it did nothing. */
+.lang-pick-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 12px;
+}
+
+.lang-pick-row .pill {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--t2);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-family: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+.lang-pick-row .pill:hover {
+    border-color: var(--abord);
+    color: var(--text);
+}
+
+.lang-pick-row .pill.on {
+    background: var(--asoft);
+    border-color: var(--abord);
+    color: var(--accent);
+    font-weight: 600;
+}

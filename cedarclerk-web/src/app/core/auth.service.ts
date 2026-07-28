@@ -186,8 +186,8 @@ export class AuthService {
         socialTwitterUrl?: string; socialInstagramUrl?: string; socialFacebookUrl?: string;
         socialYoutubeUrl?: string; socialGithubUrl?: string;
         blogLinkText?: string; telegramLinkText?: string;
-        // Which language the two above are for; omitted means the primary one.
-        linkTextLanguage?: string;
+        // The other languages, whole — one Save sends every language it edited.
+        blogLinkTexts?: Record<string, string>; telegramLinkTexts?: Record<string, string>;
     }): Promise<void> {
         const res = await firstValueFrom(this.http.post<{
             authorDisplayName: string | null; profileUrl: string | null; profileLocation: string | null;

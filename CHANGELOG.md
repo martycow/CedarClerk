@@ -10,6 +10,18 @@ The host is now `pointer-events: none`, with the tab and panel opting back in, s
 
 Also replaced `app.spec.ts`'s scaffold "should render title" test, which asserted an `<h1>` the app shell has never had and had been red for the whole life of the project.
 
+## 2026-07-28 (later still) — the profile tab, properly
+
+The single Save was necessary but not sufficient. Three separate faults were stacked on that screen, and only the first one was mine from this session:
+
+**1. `loadLinkTexts()` called itself.** A blanket search-and-replace I ran while adding the per-language fields rewrote the primary-language branch of that method into a call to the method itself — infinite recursion. That is what made clicking a language "do nothing": the handler blew the stack before it changed anything. Caught by reading the method, not by the build, since infinite recursion is perfectly valid TypeScript.
+
+**2. A lapsed Pro plan made the profile unsaveable forever.** The endpoint rejected *any* request carrying a third header slot when the plan didn't allow three. An account that had once been Pro, with a third slot still stored, therefore failed every profile save — on a field the user wasn't editing, with an error message about header slots regardless of what they had actually changed. The gate now applies only to *setting* the slot: an unchanged stored value passes through. That isn't a loophole, because `PlanLimitations` decides what actually renders, so a lapsed account still doesn't get three slots on its blog.
+
+**3. The language buttons had no styles.** `.pill` is styled in the posts manager, and Angular's emulated encapsulation keeps that stylesheet to that component, so here they rendered as bare browser buttons with no active state — a second, independent reason clicking a language looked inert.
+
+**And the design was wrong regardless**: switching language fired a save. Marty said as much — it "just triggers api/auth/profile". Every language is now held locally and the single Save sends them all in one request, so clicking through languages makes no request at all and a failure can never leave half the languages written.
+
 ## 2026-07-28 (later) — one Save for the profile tab
 
 Marty: adding a language to the cross-links broke the social fields and the header slots, with "failed to save header slots" on screen.

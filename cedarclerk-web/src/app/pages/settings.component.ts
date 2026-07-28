@@ -60,6 +60,7 @@ export class SettingsComponent implements OnInit {
     // Which language's cross-link wording the two fields above are editing. Switching reloads
     // them from whichever map holds that language.
     linkTextLanguage = signal<string>(PRIMARY_LANGUAGE);
+    private linkTextDrafts: Record<string, { blog: string; telegram: string }> = {};
     readonly contentLanguages = CONTENT_LANGUAGES;
     headerSlot1: string | null = null;
     headerSlot2: string | null = null;
@@ -213,24 +214,49 @@ export class SettingsComponent implements OnInit {
         }
     }
 
-    // The primary language lives in its own field; the rest come out of the per-language map.
+    // Every language is held locally; the two visible fields are just whichever one is selected.
+    // (An earlier version of this method called itself on the primary-language branch — infinite
+    // recursion, which is what made clicking a language look like it did nothing at all.)
     private loadLinkTexts() {
-        const lang = this.linkTextLanguage();
-        if (lang === PRIMARY_LANGUAGE) {
-            this.loadLinkTexts();
-        } else {
-            this.blogLinkText = this.auth.blogLinkTexts()[lang] ?? '';
-            this.telegramLinkText = this.auth.telegramLinkTexts()[lang] ?? '';
+        this.linkTextDrafts = {};
+        for (const lang of CONTENT_LANGUAGES) {
+            this.linkTextDrafts[lang] = lang === PRIMARY_LANGUAGE
+                ? { blog: this.auth.blogLinkText() ?? '', telegram: this.auth.telegramLinkText() ?? '' }
+                : { blog: this.auth.blogLinkTexts()[lang] ?? '', telegram: this.auth.telegramLinkTexts()[lang] ?? '' };
         }
+        this.showLinkTexts(this.linkTextLanguage());
     }
 
-    // Saving happens per language, so switching without saving would silently drop what was
-    // typed — flush first, exactly like the forms tab does when leaving a dirty preset.
-    async setLinkTextLanguage(lang: string) {
+    private showLinkTexts(lang: string) {
+        const draft = this.linkTextDrafts[lang] ?? { blog: '', telegram: '' };
+        this.blogLinkText = draft.blog;
+        this.telegramLinkText = draft.telegram;
+    }
+
+    private stashLinkTexts() {
+        this.linkTextDrafts[this.linkTextLanguage()] = {
+            blog: this.blogLinkText,
+            telegram: this.telegramLinkText,
+        };
+    }
+
+    // Purely local: every language goes to the server together when Save is pressed, so clicking
+    // through the languages never fires a request and can never half-save.
+    setLinkTextLanguage(lang: string) {
         if (lang === this.linkTextLanguage()) return;
-        await this.saveProfile();
+        this.stashLinkTexts();
         this.linkTextLanguage.set(lang);
-        this.loadLinkTexts();
+        this.showLinkTexts(lang);
+    }
+
+    private linkTextMap(which: 'blog' | 'telegram'): Record<string, string> {
+        const map: Record<string, string> = {};
+        for (const lang of CONTENT_LANGUAGES) {
+            if (lang === PRIMARY_LANGUAGE) continue;
+            const value = this.linkTextDrafts[lang]?.[which]?.trim();
+            if (value) map[lang] = value;
+        }
+        return map;
     }
 
     // ONE save for the whole Profile tab.
@@ -242,6 +268,9 @@ export class SettingsComponent implements OnInit {
     // That was true before the per-language cross-links existed; making the language switcher
     // save on every click just turned an occasional loss into a constant one.
     async saveProfile() {
+        // What is on screen belongs to the selected language and has to join the rest before the
+        // request is built.
+        this.stashLinkTexts();
         this.profileBusy.set(true);
         this.profileSaved.set(false);
         this.profileError.set(null);
@@ -258,9 +287,10 @@ export class SettingsComponent implements OnInit {
                 socialFacebookUrl: this.socialFacebookUrlText,
                 socialYoutubeUrl: this.socialYoutubeUrlText,
                 socialGithubUrl: this.socialGithubUrlText,
-                blogLinkText: this.blogLinkText,
-                telegramLinkText: this.telegramLinkText,
-                linkTextLanguage: this.linkTextLanguage(),
+                blogLinkText: this.linkTextDrafts[PRIMARY_LANGUAGE]?.blog ?? '',
+                telegramLinkText: this.linkTextDrafts[PRIMARY_LANGUAGE]?.telegram ?? '',
+                blogLinkTexts: this.linkTextMap('blog'),
+                telegramLinkTexts: this.linkTextMap('telegram'),
             });
             this.readBackProfile();
             this.profileSaved.set(true);

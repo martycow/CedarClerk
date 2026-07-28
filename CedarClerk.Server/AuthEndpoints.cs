@@ -19,9 +19,11 @@ public static class AuthEndpoints
         string? SocialTwitterUrl = null, string? SocialInstagramUrl = null, string? SocialFacebookUrl = null,
         string? SocialYoutubeUrl = null, string? SocialGithubUrl = null,
         string? BlogLinkText = null, string? TelegramLinkText = null,
-        // Which language the two texts above are for. Absent means the primary one, so an older
-        // client keeps writing exactly what it used to.
-        string? LinkTextLanguage = null);
+        // The same two labels in the other content languages, keyed by language code. Sent whole
+        // rather than one language per request: the page has a single Save, and a request per
+        // language would mean a partial save the moment one of them failed.
+        Dictionary<string, string>? BlogLinkTexts = null,
+        Dictionary<string, string>? TelegramLinkTexts = null);
     public record NotificationPrefsRequest(bool NotifyOnEngagement);
     public record ToolbarLayoutRequest(string? LayoutJson);
     public record AppearanceRequest(string? PrefsJson);
@@ -277,7 +279,16 @@ public static class AuthEndpoints
             var currentPlan = SubscriptionPlanHelper.CheckPlanExpiration(user.PlanTier, user.PlanExpiresAt, DateTime.UtcNow);
             var slot3 = ParseSlotType(req.HeaderSlot3Type);
 
-            if (slot3 is not null && PlanLimitations.MaxHeaderSlots(currentPlan) < 3)
+            // The third slot is a Pro feature, but the gate only applies to *setting* it. It used
+            // to reject any request that carried a third slot at all, which meant an account whose
+            // Pro period had lapsed with a third slot already stored could never save its profile
+            // again — every save failed on a field the user was not even editing, and the error
+            // said "header slots" no matter what they had actually changed.
+            //
+            // Keeping the stored value is not a loophole: PlanLimitations decides what actually
+            // renders, so a lapsed account still doesn't get three slots on its blog.
+            var slot3Unchanged = slot3 == user.HeaderSlot3Type;
+            if (slot3 is not null && !slot3Unchanged && PlanLimitations.MaxHeaderSlots(currentPlan) < 3)
             {
                 return Results.Json(new { error = "The third header slot is a Pro feature. Upgrade to use it." },
                     statusCode: StatusCodes.Status403Forbidden);
@@ -300,19 +311,12 @@ public static class AuthEndpoints
             // Per language: the cross-link is read by whoever is reading that language's version
             // of the post. The primary-language wording stays in its own column; the rest go into
             // a JSON map beside it (LocalizedTextMap), so no existing row had to be migrated.
-            var linkLang = req.LinkTextLanguage is not null && Languages.IsTranslationLanguage(req.LinkTextLanguage)
-                ? req.LinkTextLanguage
-                : Languages.Primary;
-            if (linkLang == Languages.Primary)
-            {
-                user.BlogLinkText = string.IsNullOrWhiteSpace(req.BlogLinkText) ? null : req.BlogLinkText.Trim();
-                user.TelegramLinkText = string.IsNullOrWhiteSpace(req.TelegramLinkText) ? null : req.TelegramLinkText.Trim();
-            }
-            else
-            {
-                user.BlogLinkTextTranslationsJson = LocalizedTextMap.Set(user.BlogLinkTextTranslationsJson, linkLang, req.BlogLinkText);
-                user.TelegramLinkTextTranslationsJson = LocalizedTextMap.Set(user.TelegramLinkTextTranslationsJson, linkLang, req.TelegramLinkText);
-            }
+            user.BlogLinkText = string.IsNullOrWhiteSpace(req.BlogLinkText) ? null : req.BlogLinkText.Trim();
+            user.TelegramLinkText = string.IsNullOrWhiteSpace(req.TelegramLinkText) ? null : req.TelegramLinkText.Trim();
+            if (req.BlogLinkTexts is not null)
+                user.BlogLinkTextTranslationsJson = BuildLinkTextMap(req.BlogLinkTexts);
+            if (req.TelegramLinkTexts is not null)
+                user.TelegramLinkTextTranslationsJson = BuildLinkTextMap(req.TelegramLinkTexts);
             await users.UpdateAsync(user);
 
             return Results.Ok(new
@@ -396,6 +400,19 @@ public static class AuthEndpoints
         groupBuilder.MapGet("/telegram/status", (TelegramBotService bot) =>
             Results.Ok(new { reachable = bot.IsRunning, botUsername = bot.IsRunning ? bot.Me.Username : null }))
         .RequireAuthorization();
+    }
+
+    // Unknown codes and blanks are dropped rather than rejected: the map is a set of optional
+    // labels, and refusing the whole profile save over one stray key would be out of proportion.
+    private static string? BuildLinkTextMap(Dictionary<string, string> texts)
+    {
+        string? json = null;
+        foreach (var (lang, text) in texts)
+        {
+            if (!Languages.IsTranslationLanguage(lang)) continue;
+            json = LocalizedTextMap.Set(json, lang, text);
+        }
+        return json;
     }
 
     private static HeaderSlotType? ParseSlotType(string? value) =>
