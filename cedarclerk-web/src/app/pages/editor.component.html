@@ -1,18 +1,21 @@
 <div class="app">
     <!--Top bar-->
     <header class="topbar">
-        <!--Order per brainstorm B22: brand, divider, drafts, title, save-state | Export, theme,
-        account. .cedar download lives in the Export modal; .cedar import lives on /drafts.-->
-        <div class="brand">
-            <app-cedar-logo [size]="20"></app-cedar-logo>
-            <span class="brand-name">Cedar Clerk</span>
-        </div>
-        <span class="divider"></span>
-
+        <!--Order: drafts, brand, divider, title, save-state | Export, theme, account. .cedar
+        download lives in the Export modal; .cedar import lives on /drafts. Drafts moved leftmost
+        of everything, ahead of the logo (Marty, 28.07.2026) — it's the way back out to every
+        other draft, not a peer of the branding it used to trail.-->
         <!--I18: was a hamburger, which reads as "menu" and said nothing about drafts.-->
         <a class="icon-btn" routerLink="/drafts" [title]="t().editor.drafts">
             <svg lucideFileStack class="icon"></svg>
         </a>
+
+        <div class="brand">
+            <app-cedar-logo [size]="20"></app-cedar-logo>
+            <span class="brand-name">Cedar Clerk</span>
+            @if (version.version(); as v) { <span class="version-tag" [title]="'v' + v">v{{ v }}</span> }
+        </div>
+        <span class="divider"></span>
 
         <input class="title" [(ngModel)]="title" (ngModelChange)="markDirty()" [maxlength]="draftTitleMax" [placeholder]="t().editor.draftTitle">
 
@@ -83,13 +86,21 @@
 
         FI2.6 is the rule this window is now organised around: **Export manages only export.**
         Unpublishing and scheduled-post management moved to the Posts Manager; what stays is
-        sending the post out, and re-sending it (Update) when it is already live.-->
-        <app-modal [width]="1180" (closed)="exportModalOpen.set(false)">
+        sending the post out, and re-sending it (Update) when it is already live.
+
+        Priority Fixes 02 (Claude Design, 28.07.2026): 1180 -> 1150, joining the same workspace-
+        width bucket as Posts Manager/Stats/Admin instead of its own one-off number.-->
+        <app-modal [width]="1150" (closed)="exportModalOpen.set(false)">
             <svg modal-icon lucideSend class="icon"></svg>
             <span modal-title>{{ t().editor.export }}</span>
 
             <div class="export-grid">
             @if (currentId(); as id) {
+            <!--Priority Fixes 04 (Claude Design, 28.07.2026): Site/Blog and Telegram are the two
+            sections whose content length actually varies a lot (Telegram in particular can run
+            close to the modal's full height), so they anchor their own column each rather than
+            flowing through a width-only auto-fit grid that was blind to that difference.-->
+            <div class="export-row-primary">
             <!--N5: an unticked destination folds down to its header so it stops competing for
             attention. The LIVE chip stays visible while folded — that's state, not settings.-->
             <div class="export-section" [class.dest-off]="!destBlog()">
@@ -142,39 +153,22 @@
                 <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.listedWhilePrivateHint }}</p>
                 }
 
-                <!--FI2.3: the form is a dropdown with an explicit "no form", not a row of chips —
-                the current choice is visible instead of inferred. The definition is authored in
-                the Posts Manager; the preset is copied onto the post (N12), so editing it later
-                can't rewrite a post that already used it.-->
+                <!--Design review (Claude Design, 28.07.2026) — "the form lives in three places at
+                once" (Forms defines it, Posts assigns it, here re-picks it). app-form-ref is the
+                same shared shape used on the Posts tab, always pointing back to Forms — same
+                component, this page's own already-translated wording.-->
                 @if (isPrivate()) {
-                <div class="reg-preset-row">
-                    <span class="field-hint-inline">
-                        @if (regForm()) { {{ t().editor.exportModal.formOn }} } @else { {{ t().editor.exportModal.formOff }} }
-                    </span>
-                    <a class="state-link" routerLink="/posts">{{ t().editor.exportModal.editInManager }}</a>
-                </div>
-                <!--FI4.1: which languages a reader would actually be greeted in. A language with
-                no form of its own falls back to the primary one.-->
-                @if (formLanguages().length) {
-                <div class="blog-lang-badges">
-                    <span class="field-hint-inline">{{ t().manager.forms.formLanguages }}</span>
-                    @for (l of formLanguages(); track l) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
-                </div>
-                }
-                @if (formPresets().length) {
-                <select class="chat-input" [value]="''" (change)="pickFormPreset($any($event.target).value)" [disabled]="regBusy()">
-                    <option value="">{{ regForm() ? t().manager.forms.changeForm : t().manager.forms.noFormChosen }}</option>
-                    @for (p of formPresets(); track p.id) { <option [value]="p.id">{{ p.name }} · {{ (p.language || primaryLanguage).toUpperCase() }}</option> }
-                    @if (regForm()) { <option value="__none">{{ t().manager.forms.clearForm }}</option> }
-                </select>
-                } @else {
-                <!--I9: with no presets the row used to be simply absent, leaving no hint that
-                presets exist or where they're made.-->
-                <div class="reg-preset-row">
-                    <span class="field-hint-inline">{{ t().editor.exportModal.noPresets }}</span>
-                    <a class="state-link" routerLink="/posts" [queryParams]="{ tab: 'forms' }">{{ t().editor.exportModal.createPreset }}</a>
-                </div>
-                }
+                <app-form-ref
+                    [regForm]="regForm()" [presets]="formPresets()" [languages]="formLanguages()"
+                    [primaryLanguage]="primaryLanguage" [busy]="regBusy()"
+                    [onLabel]="t().editor.exportModal.formOn" [offLabel]="t().editor.exportModal.formOff"
+                    [changeLabel]="t().manager.forms.changeForm" [noFormLabel]="t().manager.forms.noFormChosen"
+                    [clearLabel]="t().manager.forms.clearForm" [languagesLabel]="t().manager.forms.formLanguages"
+                    [noPresetsLabel]="t().editor.exportModal.noPresets"
+                    [createLabel]="t().editor.exportModal.createPreset" [manageLabel]="t().editor.exportModal.editInManager"
+                    [manageRoute]="['/posts']" [manageQueryParams]="{ tab: 'forms' }"
+                    (pick)="pickFormPreset($event)">
+                </app-form-ref>
                 }
                 }
             </div>
@@ -353,7 +347,14 @@
                 }
                 }
             </div>
+            </div>
+            <!-- /export-row-primary -->
 
+            <!--Priority Fixes 04 (Claude Design, 28.07.2026): Invitations/Watermark/File exports
+            are all short, fixed-height utility panels — grouped into their own row so they form a
+            balanced line instead of one auto-fit column stretching far past its own content while
+            sitting next to Telegram's much taller column.-->
+            <div class="export-row-utility">
             <!--FI2.4: invitations are their own section rather than a block nested inside the
             blog destination — who may read the post is not a property of publishing it.-->
             @if (isPrivate()) {
@@ -408,20 +409,6 @@
             </div>
             }
 
-            <div class="export-section">
-                <div class="export-section-title">{{ t().editor.exportModal.otherPlatforms }} <span class="soon-badge">{{ t().editor.exportModal.comingSoon }}</span></div>
-                <div class="export-mock-list">
-                    <div class="export-mock-row"><svg lucideAtSign class="icon-sm"></svg><span>Twitter / X</span></div>
-                    <div class="export-mock-row"><svg lucideThumbsUp class="icon-sm"></svg><span>Facebook</span></div>
-                    <div class="export-mock-row"><svg lucideCloud class="icon-sm"></svg><span>Bluesky</span></div>
-                    <div class="export-mock-row"><svg lucideMessageSquareShare class="icon-sm"></svg><span>Threads</span></div>
-                    <div class="export-mock-row"><svg lucideFileText class="icon-sm"></svg><span>Medium</span></div>
-                    <div class="export-mock-row"><svg lucideHeart class="icon-sm"></svg><span>Patreon</span></div>
-                    <div class="export-mock-row"><svg lucideNotebook class="icon-sm"></svg><span>Notion</span></div>
-                    <div class="export-mock-row"><svg lucideFile class="icon-sm"></svg><span>Google Docs</span></div>
-                </div>
-            </div>
-
             <!--FI2.10: two buttons. The per-language .html links they replace produced a page
             whose images all pointed back at the blog — a saved page only while the blog is up.-->
             <div class="export-section">
@@ -435,6 +422,30 @@
                     {{ t().editor.exportModal.downloadZip }}
                 </a>
                 <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.zipHint }}</p>
+            </div>
+            </div>
+            <!-- /export-row-utility -->
+
+            <!--Priority Fixes 03 (Claude Design, 28.07.2026): eight full-weight "Coming soon" rows
+            for platforms that don't exist yet, right next to the live Telegram/Blog sections,
+            collapse to one low-emphasis, expandable line.-->
+            <div class="export-section">
+                <button class="other-platforms-toggle" (click)="otherPlatformsOpen.set(!otherPlatformsOpen())">
+                    <span class="field-hint-inline">{{ t().editor.exportModal.otherPlatformsSummary }}</span>
+                    <svg lucideChevronDown class="icon-sm" [class.rotated]="otherPlatformsOpen()"></svg>
+                </button>
+                @if (otherPlatformsOpen()) {
+                <div class="export-mock-list">
+                    <div class="export-mock-row"><svg lucideAtSign class="icon-sm"></svg><span>Twitter / X</span></div>
+                    <div class="export-mock-row"><svg lucideThumbsUp class="icon-sm"></svg><span>Facebook</span></div>
+                    <div class="export-mock-row"><svg lucideCloud class="icon-sm"></svg><span>Bluesky</span></div>
+                    <div class="export-mock-row"><svg lucideMessageSquareShare class="icon-sm"></svg><span>Threads</span></div>
+                    <div class="export-mock-row"><svg lucideFileText class="icon-sm"></svg><span>Medium</span></div>
+                    <div class="export-mock-row"><svg lucideHeart class="icon-sm"></svg><span>Patreon</span></div>
+                    <div class="export-mock-row"><svg lucideNotebook class="icon-sm"></svg><span>Notion</span></div>
+                    <div class="export-mock-row"><svg lucideFile class="icon-sm"></svg><span>Google Docs</span></div>
+                </div>
+                }
             </div>
 
             <div class="export-section">
@@ -503,6 +514,13 @@
                 @if (!toolbarLayout.isHidden('underline')) { <button (click)="cmd(c => c.toggleUnderline())" [class.on]="isActive('underline')" [title]="tip(t().editor.tb.underline, 'underline')"><svg lucideUnderline class="icon"></svg></button> }
                 @if (!toolbarLayout.isHidden('strike')) { <button (click)="cmd(c => c.toggleStrike())" [class.on]="isActive('strike')" [title]="tip(t().editor.tb.strike, 'strike')"><svg lucideStrikethrough class="icon"></svg></button> }
                 @if (!toolbarLayout.isHidden('spoiler')) { <button (click)="cmd(c => c.toggleMark('spoiler'))" [class.on]="isActive('spoiler')" [title]="t().editor.tb.spoiler"><svg lucideEyeOff class="icon"></svg></button> }
+                @if (!toolbarLayout.isHidden('align')) {
+                <span class="sep"></span>
+                <button (click)="setAlign('left')" [class.on]="isActive('paragraph', {textAlign:'left'}) || isActive('heading', {textAlign:'left'})" [title]="t().editor.tb.alignLeft"><svg lucideAlignLeft class="icon"></svg></button>
+                <button (click)="setAlign('center')" [class.on]="isActive('paragraph', {textAlign:'center'}) || isActive('heading', {textAlign:'center'})" [title]="t().editor.tb.alignCenter"><svg lucideAlignCenter class="icon"></svg></button>
+                <button (click)="setAlign('right')" [class.on]="isActive('paragraph', {textAlign:'right'}) || isActive('heading', {textAlign:'right'})" [title]="t().editor.tb.alignRight"><svg lucideAlignRight class="icon"></svg></button>
+                <button (click)="setAlign('justify')" [class.on]="isActive('paragraph', {textAlign:'justify'}) || isActive('heading', {textAlign:'justify'})" [title]="t().editor.tb.alignJustify"><svg lucideAlignJustify class="icon"></svg></button>
+                }
             </div>
             <span class="tb-caption">{{ t().editor.groups.text }}</span>
         </div>
@@ -519,34 +537,11 @@
                 }
 
                 @if (!toolbarLayout.isHidden('emoji')) {
-                <app-popover>
-                    <button trigger [title]="t().editor.tb.emoji"><svg lucideSmile class="icon"></svg></button>
-                    <div panel class="emoji-popover">
-                        @for (g of emojiGroups; track g.key) {
-                        <span class="tb-caption">{{ t().editor.emoji[g.key] }}</span>
-                        <div class="emoji-grid">
-                            @for (e of g.emoji; track e) {
-                            <button class="emoji-btn" (click)="insertEmoji(e)">{{ e }}</button>
-                            }
-                        </div>
-                        }
-                    </div>
-                </app-popover>
+                <button (click)="emojiOpen.set(true)" [title]="t().editor.tb.emoji"><svg lucideSmile class="icon"></svg></button>
                 }
 
                 @if (!toolbarLayout.isHidden('datetime')) {
-                <app-popover>
-                    <button trigger [title]="t().editor.tb.datetime"><svg lucideClock class="icon"></svg></button>
-                    <div panel>
-                        <input type="datetime-local" [(ngModel)]="dtValue">
-                        <div class="dt-flags">
-                            <label><input type="checkbox" [(ngModel)]="dtWeekday"> Weekday</label>
-                            <label><input type="checkbox" [(ngModel)]="dtDate"> Date</label>
-                            <label><input type="checkbox" [(ngModel)]="dtTime"> Time</label>
-                        </div>
-                        <button class="export-btn full" style="margin-top:8px" (click)="insertDateTime()" [disabled]="!dtValue">{{ t().editor.groups.insert }}</button>
-                    </div>
-                </app-popover>
+                <button (click)="datetimeOpen.set(true)" [title]="t().editor.tb.datetime"><svg lucideClock class="icon"></svg></button>
                 }
 
                 @if (!toolbarLayout.isHidden('footnote')) {
@@ -796,65 +791,42 @@
     </app-modal>
     }
 
-    <!--New draft dialog: minimal title+Enter, expandable to languages/tags/template-->
-    @if (newDraftOpen()) {
-    <app-modal [width]="440" (closed)="closeNewDraftDialog()">
-        <svg modal-icon lucidePlus class="icon"></svg>
-        <span modal-title>{{ t().editor.newDraft.title }}</span>
+    <!--Emoji modal: was app-popover, moved 28.07.2026 — the grid genuinely scrolls (120 emoji,
+    4 groups) and PopoverComponent closes on any document scroll, so scrolling the panel closed
+    it. Same fix ADR-057 already applied to the Appearance panel.-->
+    @if (emojiOpen()) {
+    <app-modal [width]="320" (closed)="emojiOpen.set(false)">
+        <svg modal-icon lucideSmile class="icon"></svg>
+        <span modal-title>{{ t().editor.tb.emoji }}</span>
 
-        <input class="chat-input" [(ngModel)]="newDraftTitle" [placeholder]="t().editor.newDraft.titlePlaceholder"
-                   [maxlength]="draftTitleMax" (keyup.enter)="confirmNewDraft()">
-            @if (newDraftTitle.trim().length === 0) {
-            <p class="field-hint-inline">{{ t().editor.newDraft.titleRequired }}</p>
+        <div class="emoji-popover">
+            @for (g of emojiGroups; track g.key) {
+            <span class="tb-caption">{{ t().editor.emoji[g.key] }}</span>
+            <div class="emoji-grid">
+                @for (e of g.emoji; track e) {
+                <button class="emoji-btn" (click)="insertEmoji(e)">{{ e }}</button>
+                }
+            </div>
             }
-
-        @if (!newDraftExpanded()) {
-        <button class="tag-add-btn" style="margin-top:10px" (click)="newDraftExpanded.set(true)">{{ t().editor.newDraft.moreOptions }}</button>
-        } @else {
-        <div style="margin-top:12px; display:flex; flex-direction:column; gap:12px">
-            <div>
-                <span class="tb-caption">{{ t().editor.newDraft.languages }}</span>
-                <div class="format-toggle" style="margin-top:6px">
-                    <button [class.on]="newDraftLanguages === 'ru'" (click)="newDraftLanguages = 'ru'">RU</button>
-                    <button [class.on]="newDraftLanguages === 'en'" (click)="newDraftLanguages = 'en'">EN</button>
-                    <button [class.on]="newDraftLanguages === 'both'" (click)="newDraftLanguages = 'both'">{{ t().editor.newDraft.both }}</button>
-                </div>
-            </div>
-            <div>
-                <span class="tb-caption">{{ t().editor.tags.label }}</span>
-                <!--N2: pick from tags already in use; the shared picker's input covers tags that
-                don't exist yet. Inline because a popover inside app-modal doesn't position.-->
-                <div style="margin-top:6px">
-                    <app-tag-picker [tags]="newDraftTagList()" [inline]="true"
-                                    (tagsChange)="newDraftTagList.set($event)"></app-tag-picker>
-                </div>
-            </div>
-            <div>
-                <span class="tb-caption">{{ t().editor.newDraft.startFrom }}</span>
-                <div class="format-toggle" style="margin-top:6px">
-                    <button [class.on]="newDraftTemplate === 'blank'" (click)="newDraftTemplate = 'blank'">{{ t().editor.newDraft.blank }}</button>
-                    <button [class.on]="newDraftTemplate === 'devlog'" (click)="newDraftTemplate = 'devlog'">{{ t().editor.newDraft.devlog }}</button>
-                    <button [class.on]="newDraftTemplate === 'photodump'" (click)="newDraftTemplate = 'photodump'">{{ t().editor.newDraft.photodump }}</button>
-                </div>
-            </div>
-            <div>
-                <span class="tb-caption">{{ t().editor.tags.folder }}</span>
-                <div style="margin-top:6px">
-                    <app-folder-picker [folderId]="newDraftFolderId()" [inline]="true"
-                                       (picked)="newDraftFolderId.set($event)"></app-folder-picker>
-                </div>
-            </div>
-            <label class="field-hint">
-                <input type="checkbox" [(ngModel)]="newDraftPrivate">
-                Private post (only invited emails can view it once published)
-            </label>
         </div>
-        }
+    </app-modal>
+    }
 
-        <button modal-actions class="btn-ghost" (click)="closeNewDraftDialog()">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="confirmNewDraft()" [disabled]="draftsBusy() || !newDraftTitleValid()">
-            {{ draftsBusy() ? 'Creating…' : 'Create draft' }}
-        </button>
+    <!--Date/time modal: was app-popover, moved alongside the emoji panel for consistency.-->
+    @if (datetimeOpen()) {
+    <app-modal [width]="320" (closed)="datetimeOpen.set(false)">
+        <svg modal-icon lucideClock class="icon"></svg>
+        <span modal-title>{{ t().editor.tb.datetime }}</span>
+
+        <input type="datetime-local" class="chat-input" [(ngModel)]="dtValue">
+        <div class="dt-flags">
+            <label><input type="checkbox" [(ngModel)]="dtWeekday"> Weekday</label>
+            <label><input type="checkbox" [(ngModel)]="dtDate"> Date</label>
+            <label><input type="checkbox" [(ngModel)]="dtTime"> Time</label>
+        </div>
+
+        <button modal-actions class="btn-ghost" (click)="datetimeOpen.set(false)">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-accent" (click)="insertDateTime()" [disabled]="!dtValue">{{ t().editor.groups.insert }}</button>
     </app-modal>
     }
 

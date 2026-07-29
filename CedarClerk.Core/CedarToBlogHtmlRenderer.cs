@@ -88,7 +88,7 @@ public static class CedarToBlogHtmlRenderer
         switch ((string?)node["type"])
         {
             case "paragraph":
-                sb.Append("<p>");
+                sb.Append($"<p{AlignStyle(node)}>");
                 RenderNodes(node["content"]?.AsArray(), sb, ctx);
                 sb.Append("</p>");
                 break;
@@ -96,7 +96,7 @@ public static class CedarToBlogHtmlRenderer
             case "heading":
                 var level = Math.Clamp((int?)node["attrs"]?["level"] ?? 1, 1, 6);
                 var headingSlug = ctx.Outline[ctx.HeadingIndex++].Slug;
-                sb.Append($"<h{level} id=\"{EscapeAttr(headingSlug)}\">");
+                sb.Append($"<h{level} id=\"{EscapeAttr(headingSlug)}\"{AlignStyle(node)}>");
                 RenderNodes(node["content"]?.AsArray(), sb, ctx);
                 sb.Append($"</h{level}>");
                 break;
@@ -621,4 +621,19 @@ public static class CedarToBlogHtmlRenderer
         s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
 
     private static string EscapeAttr(string s) => Escape(s).Replace("\"", "&quot;");
+
+    // Editor's @tiptap/extension-text-align (paragraph/heading only — see editor.component.ts).
+    // Whitelisted rather than interpolated raw, same invariant as every other attribute value
+    // here, even though the only realistic source is the extension's own fixed value set.
+    private static readonly HashSet<string> ValidTextAligns = new(StringComparer.Ordinal) { "left", "center", "right", "justify" };
+
+    private static string AlignStyle(JsonNode node)
+    {
+        var align = (string?)node["attrs"]?["textAlign"];
+        // "left" is the extension's own default — an explicit style for it is redundant, and
+        // omitting it keeps output byte-identical for documents that never touch alignment.
+        return align is not null && align != "left" && ValidTextAligns.Contains(align)
+            ? $" style=\"text-align:{align}\""
+            : "";
+    }
 }

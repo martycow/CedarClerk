@@ -1,9 +1,14 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Subscription, TimeoutError } from 'rxjs';
 import { AuthService } from '../core/auth.service';
-import { DraftsService, DraftMeta } from '../core/drafts.service';
+import {
+    DraftsService, DraftMeta, DRAFT_TITLE_MAX, EMPTY_DOC, NewDraftTemplate, NEW_DRAFT_TEMPLATES,
+    CLOUDFLARE_UPLOAD_LIMIT_BYTES,
+} from '../core/drafts.service';
 import { FoldersService } from '../core/folders.service';
 import { FolderPickerComponent } from '../shared/folder-picker.component';
 import { TagPickerComponent } from '../shared/tag-picker.component';
@@ -20,7 +25,7 @@ import {
     LucideRefreshCw as RefreshCw, LucideLayoutGrid as LayoutGrid, LucideList as List,
     LucideFolder as Folder,
     LucideLock as Lock, LucideFileUp as FileUp, LucideUpload as Upload,
-    LucideEye as Eye, LucideHeart as Heart,
+    LucideEye as Eye, LucideHeart as Heart, LucideTriangleAlert as TriangleAlert,
 } from '@lucide/angular';
 
 type FilterKey = 'all' | 'draft' | 'scheduled' | 'published' | 'attention' | 'archived' | 'template';
@@ -91,12 +96,12 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
         DatePipe, FormsModule, PageHeaderComponent, ModalComponent, PopoverComponent,
         FolderPickerComponent, TagPickerComponent,
         Plus, Archive, ArchiveRestore, Trash2, RefreshCw, LayoutGrid, List,
-        Folder, Lock, FileUp, Upload, Eye, Heart, LayoutTemplate,
+        Folder, Lock, FileUp, Upload, Eye, Heart, LayoutTemplate, TriangleAlert,
     ],
     templateUrl: 'drafts.component.html',
     styleUrls: ['drafts.component.css'],
 })
-export class DraftsPageComponent implements OnInit {
+export class DraftsPageComponent implements OnInit, OnDestroy {
     auth = inject(AuthService);
     t = inject(LocaleService).t;
     private draftsApi = inject(DraftsService);
@@ -133,6 +138,10 @@ export class DraftsPageComponent implements OnInit {
     importingMarkdown = signal(false);
     importMarkdownError = signal<string | null>(null);
     importMarkdownWarning = signal<string | null>(null);
+    // Real byte-level upload progress (not the AI operations' pseudo-progress — an upload's
+    // percentage is genuine) — null until the browser reports the first chunk.
+    importMarkdownProgress = signal<number | null>(null);
+    private importMarkdownSub?: Subscription;
 
     async ngOnInit() {
         try {
@@ -143,6 +152,10 @@ export class DraftsPageComponent implements OnInit {
         } finally {
             this.loading.set(false);
         }
+    }
+
+    ngOnDestroy() {
+        this.importMarkdownSub?.unsubscribe();
     }
 
     status(d: DraftMeta): DraftStatus {
@@ -260,8 +273,88 @@ export class DraftsPageComponent implements OnInit {
         this.router.navigate(['/editor'], { queryParams: { draft: id } });
     }
 
-    newDraft() {
-        this.router.navigate(['/editor'], { queryParams: { new: 1 } });
+    // The dialog used to just navigate to /editor?new=1 and let the editor page create the draft
+    // and open there — that put the browser on /editor mid-creation, with nothing in it yet, and
+    // any creation failure landed on a blank editor rather than back here. Creation now happens
+    // here, on /drafts; navigation to the editor only fires once the draft actually exists
+    // (Marty, 28.07.2026) — same shape as onImportCedarChosen below, which already worked this way.
+    readonly draftTitleMax = DRAFT_TITLE_MAX;
+    newDraftOpen = signal(false);
+    newDraftExpanded = signal(false);
+    newDraftTitle = '';
+    newDraftLanguages: 'ru' | 'en' | 'both' = 'ru';
+    newDraftTagList = signal<string[]>([]);
+    newDraftTemplate: NewDraftTemplate = 'blank';
+    // Not persisted into newDraftDefaultsJson (unlike languages/tags/template) — "private" and
+    // a target folder are per-draft intent, not a preference to repeat on every new draft.
+    newDraftPrivate = false;
+    newDraftFolderId = signal<string | null>(null);
+    creatingDraft = signal(false);
+    newDraftError = signal<string | null>(null);
+
+    openNewDraftDialog() {
+        let defaults: { languages?: 'ru' | 'en' | 'both'; tags?: string[]; template?: NewDraftTemplate } = {};
+        try {
+            defaults = JSON.parse(this.auth.newDraftDefaultsJson() ?? '{}');
+        } catch { /* ignore a corrupt/foreign blob, fall back to built-in defaults */ }
+
+        this.newDraftTitle = '';
+        this.newDraftLanguages = defaults.languages ?? 'ru';
+        this.newDraftTagList.set(defaults.tags ?? []);
+        this.newDraftTemplate = defaults.template ?? 'blank';
+        this.newDraftPrivate = false;
+        this.newDraftFolderId.set(null);
+        this.newDraftExpanded.set(false);
+        this.newDraftError.set(null);
+        this.newDraftOpen.set(true);
+    }
+
+    closeNewDraftDialog() {
+        this.newDraftOpen.set(false);
+    }
+
+    // DB2.6 — a draft with no name is unfindable in the list, and an overlong one breaks every
+    // row it appears in. Bounds checked here as well as on the input's maxlength, because the
+    // dialog also submits on Enter.
+    newDraftTitleValid(): boolean {
+        const len = this.newDraftTitle.trim().length;
+        return len >= 1 && len <= DRAFT_TITLE_MAX;
+    }
+
+    async confirmNewDraft() {
+        if (this.creatingDraft() || !this.newDraftTitleValid()) return;
+        const title = this.newDraftTitle.trim();
+        const tagList = this.newDraftTagList().map(t => t.trim().toLowerCase()).filter(t => t.length > 0);
+        const tags = tagList.join(',');
+        const languages = this.newDraftLanguages;
+        const template = this.newDraftTemplate;
+        const isPrivate = this.newDraftPrivate;
+        const folderId = this.newDraftFolderId();
+
+        this.auth.saveNewDraftDefaults(JSON.stringify({
+            languages,
+            tags: tagList,
+            template,
+        })).catch(() => { /* best-effort — not worth blocking draft creation over */ });
+
+        this.creatingDraft.set(true);
+        this.newDraftError.set(null);
+        try {
+            const created = await this.draftsApi.create(title, NEW_DRAFT_TEMPLATES[template]);
+            // Same follow-up-call shape as tags on the main list row: create first, then apply
+            // the extras the create endpoint doesn't take.
+            if (tags) await this.draftsApi.updateTags(created.id, tags);
+            if (isPrivate) await this.draftsApi.setDraftPrivate(created.id, true);
+            if (folderId) await this.draftsApi.setDraftFolder(created.id, folderId);
+            if (languages === 'both') await this.draftsApi.saveTranslation(created.id, 'en', title, EMPTY_DOC);
+
+            this.closeNewDraftDialog();
+            this.router.navigate(['/editor'], { queryParams: { draft: created.id } });
+        } catch (e) {
+            this.newDraftError.set(httpErrorMessage(e, this.t().drafts.errors.create));
+        } finally {
+            this.creatingDraft.set(false);
+        }
     }
 
     async onImportCedarChosen(ev: Event) {
@@ -282,29 +375,68 @@ export class DraftsPageComponent implements OnInit {
         }
     }
 
-    async onImportMarkdownChosen(ev: Event) {
+    onImportMarkdownChosen(ev: Event) {
         const input = ev.target as HTMLInputElement;
         const file = input.files?.[0];
         input.value = '';
         if (!file || this.importingMarkdown()) return;
 
+        // Fail fast instead of letting a doomed upload run for a minute before Cloudflare's edge
+        // rejects it anyway (see CLOUDFLARE_UPLOAD_LIMIT_BYTES) — same message either way.
+        if (file.size > CLOUDFLARE_UPLOAD_LIMIT_BYTES) {
+            this.importMarkdownError.set(this.t().drafts.errors.importTooLarge);
+            return;
+        }
+
         this.importingMarkdown.set(true);
         this.importMarkdownError.set(null);
         this.importMarkdownWarning.set(null);
-        try {
-            const created = await this.draftsApi.importMarkdown(file);
-            if (created.unmatchedImages.length > 0) {
-                this.importMarkdownWarning.set(this.t().drafts.errors.importUnmatched(created.unmatchedImages.length, created.unmatchedImages.join(', ')));
-                this.drafts.set(await this.draftsApi.list());
-            } else {
-                // Nothing to report — go straight to the freshly imported draft.
-                this.router.navigate(['/editor'], { queryParams: { draft: created.id } });
-            }
-        } catch (e) {
-            this.importMarkdownError.set(httpErrorMessage(e, this.t().drafts.errors.import));
-        } finally {
-            this.importingMarkdown.set(false);
-        }
+        this.importMarkdownProgress.set(0);
+
+        this.importMarkdownSub = this.draftsApi.importMarkdown$(file).subscribe({
+            next: event => {
+                if (event.type === HttpEventType.UploadProgress && event.total) {
+                    this.importMarkdownProgress.set(Math.round((event.loaded / event.total) * 100));
+                } else if (event.type === HttpEventType.Response && event.body) {
+                    const created = event.body;
+                    if (created.unmatchedImages.length > 0) {
+                        this.importMarkdownWarning.set(this.t().drafts.errors.importUnmatched(created.unmatchedImages.length, created.unmatchedImages.join(', ')));
+                        this.draftsApi.list().then(list => this.drafts.set(list));
+                    } else {
+                        // Nothing to report — go straight to the freshly imported draft.
+                        this.router.navigate(['/editor'], { queryParams: { draft: created.id } });
+                    }
+                }
+            },
+            error: e => {
+                // 413 here means a proxy/tunnel in front of the server rejected the body outright
+                // (confirmed 28.07.2026 against a real oversized upload — Kestrel's own limit is
+                // 200MB and would surface as our own JSON {error}, not a bare 413) — worth naming
+                // explicitly rather than falling through to the generic import-failed message.
+                if (e instanceof HttpErrorResponse && e.status === 413) {
+                    this.importMarkdownError.set(this.t().drafts.errors.importTooLarge);
+                } else {
+                    this.importMarkdownError.set(e instanceof TimeoutError
+                        ? this.t().drafts.errors.importStalled
+                        : httpErrorMessage(e, this.t().drafts.errors.import));
+                }
+                this.finishImportMarkdown();
+            },
+            complete: () => this.finishImportMarkdown(),
+        });
+    }
+
+    private finishImportMarkdown() {
+        this.importingMarkdown.set(false);
+        this.importMarkdownProgress.set(null);
+        this.importMarkdownSub = undefined;
+    }
+
+    // User-initiated cancel — unsubscribing aborts the underlying HTTP request, same reasoning as
+    // cancelAutoTranslate/cancelAiEdit in the editor.
+    cancelImportMarkdown() {
+        this.importMarkdownSub?.unsubscribe();
+        this.finishImportMarkdown();
     }
 
     async toggleArchive(d: DraftMeta, ev: Event) {

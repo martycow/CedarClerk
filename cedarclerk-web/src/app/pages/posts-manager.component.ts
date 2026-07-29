@@ -19,6 +19,7 @@ import { ModalComponent } from '../shared/modal.component';
 import { CommentsComponent } from './comments.component';
 import { TagPickerComponent } from '../shared/tag-picker.component';
 import { FolderPickerComponent } from '../shared/folder-picker.component';
+import { FormRefComponent } from '../shared/form-ref.component';
 import { TagUsageService } from '../core/tag-usage.service';
 import { FoldersService } from '../core/folders.service';
 import { StatsComponent } from './stats.component';
@@ -42,7 +43,7 @@ const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
     selector: 'app-posts-manager',
     imports: [
         DatePipe, FormsModule, PageHeaderComponent, ModalComponent, CommentsComponent,
-        StatsComponent, CountBadgeComponent, TagPickerComponent, FolderPickerComponent,
+        StatsComponent, CountBadgeComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent,
         Trash2, Archive, ArchiveRestore, PenLine, Lock, ExternalLink, RefreshCw, X, Info,
     ],
     templateUrl: 'posts-manager.component.html',

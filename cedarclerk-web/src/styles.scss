@@ -335,7 +335,7 @@ body {
         border-left: 3px solid var(--accent);
         background: color-mix(in srgb, var(--accent) 5%, transparent);
         border-radius: 8px;
-        padding: 10px 32px 10px 12px;
+        padding: 10px 50px 10px 12px;
         margin: 10px 0;
 
         &::after {
@@ -347,6 +347,30 @@ body {
             opacity: .5;
             user-select: none;
             pointer-events: none;
+        }
+
+        // Unwrap-only delete — removes just this wrapper, keeps its content. Left of the
+        // decorative 💬 marker (which stays pointer-events:none, unchanged, I4) rather than
+        // replacing it, so the block still visually reads as "reactable" once the control is gone.
+        .annotation-remove {
+            position: absolute;
+            top: 4px;
+            right: 26px;
+            border: none;
+            background: color-mix(in srgb, var(--text) 12%, transparent);
+            color: var(--t2);
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            line-height: 1;
+            font-size: 13px;
+            padding: 0;
+            cursor: pointer;
+
+            &:hover {
+                background: var(--danger);
+                color: #F4F2EA;
+            }
         }
     }
 

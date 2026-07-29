@@ -1,14 +1,70 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpEvent } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { firstValueFrom, timeout } from 'rxjs';
+import { Observable, firstValueFrom, timeout } from 'rxjs';
 import { PRIMARY_LANGUAGE } from './languages';
 
 // Phase 8 Step 8, docs/ROADMAP.md — neither AI provider streams, so there's no way to signal
-// real progress; this is purely a "don't let a stuck call hang forever" ceiling, enforced
-// client-side (unsubscribing aborts the underlying HTTP request — see editor.component.ts's
-// aiEdit()/runAutoTranslate()). Independent of the tighter server-side Consts.Anthropic.RequestTimeout
-// (60s) — this is the user-facing cap across whichever provider/path ends up handling the call.
-export const AI_OPERATION_TIMEOUT_MS = 180_000;
+// real progress; this is purely a "don't let it look stuck forever" ceiling — how long the client
+// keeps polling GET /api/ai-jobs/{jobId} (ADR-058-follow-up) before giving up and reporting a
+// timeout. Matches the server-side Consts.Anthropic.RequestTimeout (600s = 10 min, the cap on a
+// single Anthropic attempt) so the client doesn't give up before the backend job even could.
+// Marty, 29.07.2026 — bumped from 3 minutes for a large document's translation.
+// AI-edit (fix-errors/schizo) only — auto-translate has its own longer AUTO_TRANSLATE_TIMEOUT_MS.
+export const AI_OPERATION_TIMEOUT_MS = 600_000;
+
+// Marty, 29.07.2026 — auto-translate specifically bumped to 20 min. Matches the server-side
+// Consts.Anthropic.AutoTranslateTimeout — see its comment for why translation gets a longer
+// leash than AI-edit.
+export const AUTO_TRANSLATE_TIMEOUT_MS = 1_200_000;
+
+// A large Notion markdown export can legitimately take minutes to upload over the Pi's residential
+// connection — a fixed overall timeout would cut off a real-but-slow upload. `{ each }` instead
+// resets on every progress tick, so only genuine silence (a dropped connection, not a slow one)
+// times out. Previously there was no timeout at all, which made a slow-but-live upload and a truly
+// hung one look identical (Marty, 28.07.2026 — reported as "spins/loads forever").
+export const UPLOAD_STALL_TIMEOUT_MS = 60_000;
+
+// Cloudflare's own edge enforces this ceiling in front of the tunnel on the current Free/Pro plan
+// — confirmed empirically 28.07.2026 (a real 150MB upload got a bare 413 from Cloudflare after
+// ~1MB, well before reaching Kestrel, whose own cap is MarkdownZipMaxBytes server-side/200MB).
+// Not something this app can raise or detect authoritatively — checked client-side only, to fail
+// fast with an honest message instead of letting a doomed upload run for a minute first.
+export const CLOUDFLARE_UPLOAD_LIMIT_BYTES = 100 * 1024 * 1024;
+
+// DB2.6 — matches the maxlength on the title inputs.
+export const DRAFT_TITLE_MAX = 64;
+
+export const EMPTY_DOC = '{"type":"doc","content":[{"type":"paragraph"}]}';
+
+// Shared between the New Draft dialog (now on /drafts, 28.07.2026 — creation used to navigate to
+// /editor first and open the dialog there, which meant the editor page existed mid-creation with
+// nothing in it yet) and editor.component.ts's own silent fallback creation (empty draft list on
+// load, deleting the last remaining draft), which still runs on the editor page directly.
+export type NewDraftTemplate = 'blank' | 'devlog' | 'photodump';
+export const NEW_DRAFT_TEMPLATES: Record<NewDraftTemplate, string> = {
+    blank: EMPTY_DOC,
+    devlog: JSON.stringify({
+        type: 'doc',
+        content: [
+            { type: 'paragraph', content: [{ type: 'text', text: 'What happened this week…' }] },
+            {
+                type: 'bulletList',
+                content: [
+                    { type: 'listItem', content: [{ type: 'paragraph' }] },
+                    { type: 'listItem', content: [{ type: 'paragraph' }] },
+                ],
+            },
+            { type: 'paragraph', content: [{ type: 'text', text: "What's next." }] },
+        ],
+    }),
+    photodump: JSON.stringify({
+        type: 'doc',
+        content: [
+            { type: 'paragraph', content: [{ type: 'text', text: 'A few photos from…' }] },
+            { type: 'paragraph' },
+        ],
+    }),
+};
 
 export interface ScheduledInfo { scheduledAtUtc: string; chatId: string; status: string; error: string | null; }
 export interface DraftMeta {
@@ -58,6 +114,7 @@ export interface DraftFull extends DraftMeta {
 export const WATERMARK_MAX_LENGTH = 60;
 export type AiEditKind = 'fix-errors' | 'schizo';
 export interface AiEditResult { title: string; cedarJson: string; updatedAt: string; }
+export interface AiJobPoll<T> { status: 'pending' | 'running' | 'completed' | 'failed'; result: T | null; error: string | null; }
 export interface FolderMeta { id: string; name: string; count: number; }
 export interface PostInvite { id: string; email: string; createdAt: string; url: string; }
 
@@ -239,18 +296,26 @@ export class DraftsService {
         return firstValueFrom(this.http.delete(`/api/drafts/${id}/translations/${lang}`));
     }
 
-    // Returns the raw Observable (not a Promise) so the caller can unsubscribe to cancel the
-    // in-flight request (Step 8's cancel button) — firstValueFrom's underlying subscription isn't
-    // reachable for that once wrapped. timeout() below caps how long an unsubscribed caller would
-    // otherwise wait indefinitely.
-    autoTranslate$(id: string, lang: string) {
-        return this.http.post<TranslationFull>(`/api/drafts/${id}/translations/${lang}/auto`, {})
-            .pipe(timeout(AI_OPERATION_TIMEOUT_MS));
+    // ADR-058-follow-up (29.07.2026) — auto-translate/ai-edit no longer hold one HTTP request open
+    // for the whole Anthropic call (a large document's translation can legitimately outrun
+    // Cloudflare Tunnel's own edge timeout, which then 502s the browser even though this server
+    // finishes and saves the result seconds later — confirmed directly, not theorized). The POST
+    // now starts a background job and returns immediately; editor.component.ts polls
+    // getAiJob() with short requests instead.
+    startAutoTranslate(id: string, lang: string) {
+        return firstValueFrom(this.http.post<{ jobId: string }>(`/api/drafts/${id}/translations/${lang}/auto`, {}));
     }
 
-    aiEdit$(id: string, lang: string, kind: AiEditKind) {
-        return this.http.post<AiEditResult>(`/api/drafts/${id}/ai-edit/${lang}/${kind}`, {})
-            .pipe(timeout(AI_OPERATION_TIMEOUT_MS));
+    startAiEdit(id: string, lang: string, kind: AiEditKind) {
+        return firstValueFrom(this.http.post<{ jobId: string }>(`/api/drafts/${id}/ai-edit/${lang}/${kind}`, {}));
+    }
+
+    getAiJob<T>(jobId: string) {
+        return firstValueFrom(this.http.get<AiJobPoll<T>>(`/api/ai-jobs/${jobId}`));
+    }
+
+    cancelAiJob(jobId: string) {
+        return firstValueFrom(this.http.delete(`/api/ai-jobs/${jobId}`));
     }
 
     importCedar(file: File) {
@@ -259,10 +324,15 @@ export class DraftsService {
         return firstValueFrom(this.http.post<{ id: string }>('/api/drafts/import', formData));
     }
 
-    importMarkdown(file: File) {
+    // Raw event stream (reportProgress), not a Promise — real upload-percentage feedback needs the
+    // HttpEvent stream, and returning an Observable lets the caller unsubscribe to cancel the
+    // in-flight upload.
+    importMarkdown$(file: File): Observable<HttpEvent<{ id: string; unmatchedImages: string[] }>> {
         const formData = new FormData();
         formData.append('file', file);
-        return firstValueFrom(this.http.post<{ id: string; unmatchedImages: string[] }>('/api/drafts/import-markdown', formData));
+        return this.http.post<{ id: string; unmatchedImages: string[] }>('/api/drafts/import-markdown', formData, {
+            reportProgress: true, observe: 'events',
+        }).pipe(timeout({ each: UPLOAD_STALL_TIMEOUT_MS }));
     }
 
     publishToBlog(id: string) {

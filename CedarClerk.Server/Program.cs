@@ -28,9 +28,13 @@ if (dataDir == null)
 
 var mediaDir = Path.Combine(dataDir, "media");
 var dbPath = Path.Combine(dataDir, Consts.DbFileName);
+// ADR-058 — where a zip too large for Cloudflare's edge (~100MB) is scp'd for the local-only
+// import bypass. Under dataDir so it's covered by the existing backup cron.
+var importTmpDir = Path.Combine(dataDir, "import-tmp");
 
 Directory.CreateDirectory(dataDir);
 Directory.CreateDirectory(mediaDir);
+Directory.CreateDirectory(importTmpDir);
 #endregion
 
 #region Services
@@ -59,6 +63,8 @@ builder.Services.ConfigureApplicationCookie(o =>
 
 builder.Services.AddSingleton<TelegramBotService>();
 builder.Services.AddSingleton(new MediaPaths(mediaDir));
+builder.Services.AddSingleton(new ImportTmpPaths(importTmpDir));
+builder.Services.AddSingleton<AiJobService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramBotService>());
 builder.Services.AddHttpClient(); // named clients used by billing (Stripe), translation providers, and email
 builder.Services.AddSingleton<ResendEmailProvider>();
@@ -128,6 +134,7 @@ app.MapChannelEndpoints();
 app.MapScheduledPostEndpoints();
 app.MapBillingEndpoints();
 app.MapAdminEndpoints();
+app.MapAiJobEndpoints();
 #endregion
 
 // MUST be here, after all endpoints

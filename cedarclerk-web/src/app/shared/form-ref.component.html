@@ -1,0 +1,44 @@
+<div class="form-ref">
+    <div class="form-ref-head">
+        <svg lucideClipboardList class="icon-sm"></svg>
+        <span class="form-ref-status">{{ regForm() ? onLabel() : offLabel() }}</span>
+        <span class="spacer"></span>
+        @if (manageRoute()) {
+        <a class="form-ref-manage" [routerLink]="manageRoute()" [queryParams]="manageQueryParams()">{{ manageLabel() }}</a>
+        } @else {
+        <button class="form-ref-manage" (click)="manage.emit()">{{ manageLabel() }}</button>
+        }
+    </div>
+
+    @if (languages().length) {
+    <div class="form-ref-langs">
+        <span class="form-ref-langs-label">{{ languagesLabel() }}</span>
+        @for (l of languages(); track l) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
+    </div>
+    }
+
+    @if (presets().length || regForm()) {
+    <select class="chat-input" [value]="''" (change)="pick.emit($any($event.target).value)" [disabled]="busy()">
+        <option value="">{{ regForm() ? changeLabel() : noFormLabel() }}</option>
+        @for (p of presets(); track p.id) { <option [value]="p.id">{{ p.name }} · {{ (p.language || primaryLanguage()).toUpperCase() }}</option> }
+        @if (regForm()) { <option value="__none">{{ clearLabel() }}</option> }
+    </select>
+    @if (!presets().length) {
+    <p class="form-ref-hint">{{ emptyHint() }}
+        @if (manageRoute()) {
+        <a [routerLink]="manageRoute()" [queryParams]="manageQueryParams()">{{ createLabel() }}</a>
+        } @else {
+        <button (click)="manage.emit()">{{ createLabel() }}</button>
+        }
+    </p>
+    }
+    } @else {
+    <p class="form-ref-hint">{{ emptyHint() }}
+        @if (manageRoute()) {
+        <a [routerLink]="manageRoute()" [queryParams]="manageQueryParams()">{{ createLabel() }}</a>
+        } @else {
+        <button (click)="manage.emit()">{{ createLabel() }}</button>
+        }
+    </p>
+    }
+</div>

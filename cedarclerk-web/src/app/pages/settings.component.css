@@ -13,6 +13,11 @@
     height: 12px;
 }
 
+.icon-xxs {
+    width: 10px;
+    height: 10px;
+}
+
 .avatar {
     width: 26px;
     height: 26px;
@@ -34,8 +39,10 @@
 }
 
 /* ---------- Body layout ---------- */
+/* Priority Fixes 02 (Claude Design, 28.07.2026): container widths converge to two buckets — a
+   ~700px reading width for text-form pages, ~1150px workspace width for list/grid pages. */
 .settings-body {
-    max-width: 680px;
+    max-width: 700px;
     margin: 0 auto;
     padding: 26px 20px 60px;
     display: flex;
@@ -566,6 +573,7 @@
     font-weight: 700;
 }
 
+/* .ai-badge marks a real AI feature (Pro Plus) — accent-filled, matches the plan's own colour. */
 .ai-badge {
     font-size: 9.5px;
     font-weight: 700;
@@ -574,6 +582,24 @@
     background: var(--accent);
     border-radius: 4px;
     padding: 2px 5px;
+    margin-left: 4px;
+}
+
+/* Priority Fixes 05 (Claude Design, 28.07.2026): .pro-lock-badge marks "this field is gated
+   behind a paid plan" — a different idea from .ai-badge's "this is an AI feature", so it gets a
+   different shape: outlined/neutral with a lock glyph instead of an accent-filled pill. */
+.pro-lock-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    color: var(--t2);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
     margin-left: 4px;
 }
 

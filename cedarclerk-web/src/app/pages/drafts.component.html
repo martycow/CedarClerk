@@ -57,11 +57,31 @@
                 {{ t().drafts.importZip }}
             </button>
             <input #markdownInput type="file" accept=".zip" hidden (change)="onImportMarkdownChosen($event)">
-            <button class="btn-accent" (click)="newDraft()"><svg lucidePlus class="icon-sm"></svg> {{ t().drafts.newDraft }}</button>
+            <button class="btn-accent" (click)="openNewDraftDialog()"><svg lucidePlus class="icon-sm"></svg> {{ t().drafts.newDraft }}</button>
         </div>
-        @if (importCedarError()) { <p class="channel-error">{{ importCedarError() }}</p> }
-        @if (importMarkdownError()) { <p class="channel-error">{{ importMarkdownError() }}</p> }
-        @if (importMarkdownWarning()) { <p class="channel-error">{{ importMarkdownWarning() }}</p> }
+        @if (importCedarError()) { <p class="error-box"><svg lucideTriangleAlert class="icon-sm"></svg>{{ importCedarError() }}</p> }
+        @if (importMarkdownError()) { <p class="error-box"><svg lucideTriangleAlert class="icon-sm"></svg>{{ importMarkdownError() }}</p> }
+        @if (importMarkdownWarning()) { <p class="error-box"><svg lucideTriangleAlert class="icon-sm"></svg>{{ importMarkdownWarning() }}</p> }
+        <!--Real upload-percentage feedback, as a modal (28.07.2026 — Marty asked for the dimmed-
+        backdrop popup shape instead of an inline bar). A large Notion export can take minutes over
+        the Pi's connection; with nothing shown that was indistinguishable from a hang. Closing the
+        modal (backdrop click/Escape/×) cancels, same as every other modal in the app.-->
+        @if (importingMarkdown()) {
+        <app-modal [width]="360" (closed)="cancelImportMarkdown()">
+            <svg modal-icon lucideFileUp class="icon"></svg>
+            <span modal-title>{{ t().drafts.importZipTitle }}</span>
+
+            <div class="translate-progress">
+                <div class="upload-bar"><div class="upload-fill" [style.width.%]="importMarkdownProgress()"></div></div>
+                <p class="translate-status">
+                    @if (importMarkdownProgress() === 100) { {{ t().drafts.importProcessing }} }
+                    @else { {{ t().drafts.importUploading }} — {{ importMarkdownProgress() }}% }
+                </p>
+            </div>
+
+            <button modal-actions class="btn-ghost" (click)="cancelImportMarkdown()">{{ t().common.cancel }}</button>
+        </app-modal>
+        }
 
         <div class="filter-tabs">
             <button [class.active]="filter() === 'all'" (click)="filter.set('all')">{{ t().drafts.filters.all }} {{ filterCount('all') }}</button>
@@ -73,7 +93,7 @@
             <button [class.active]="filter() === 'template'" (click)="filter.set('template')">{{ t().drafts.filters.template }} {{ filterCount('template') }}</button>
         </div>
 
-        @if (error()) { <p class="channel-error">{{ error() }}</p> }
+        @if (error()) { <p class="error-box"><svg lucideTriangleAlert class="icon-sm"></svg>{{ error() }}</p> }
 
         @if (view() === 'table') {
         <div class="drafts-table">
@@ -200,6 +220,72 @@
         }
         }
     </div>
+
+    <!--New draft dialog: minimal title+Enter, expandable to languages/tags/template. Moved here
+    from the editor (28.07.2026) — creating used to navigate to /editor first and open the dialog
+    there; now it stays on /drafts and only navigates once the draft actually exists.-->
+    @if (newDraftOpen()) {
+    <app-modal [width]="440" (closed)="closeNewDraftDialog()">
+        <svg modal-icon lucidePlus class="icon"></svg>
+        <span modal-title>{{ t().editor.newDraft.title }}</span>
+
+        <input class="chat-input" [(ngModel)]="newDraftTitle" [placeholder]="t().editor.newDraft.titlePlaceholder"
+                   [maxlength]="draftTitleMax" (keyup.enter)="confirmNewDraft()">
+            @if (newDraftTitle.trim().length === 0) {
+            <p class="field-hint-inline">{{ t().editor.newDraft.titleRequired }}</p>
+            }
+
+        @if (!newDraftExpanded()) {
+        <button class="tag-add-btn" style="margin-top:10px" (click)="newDraftExpanded.set(true)">{{ t().editor.newDraft.moreOptions }}</button>
+        } @else {
+        <div style="margin-top:12px; display:flex; flex-direction:column; gap:12px">
+            <div>
+                <span class="tb-caption">{{ t().editor.newDraft.languages }}</span>
+                <div class="format-toggle" style="margin-top:6px">
+                    <button [class.on]="newDraftLanguages === 'ru'" (click)="newDraftLanguages = 'ru'">RU</button>
+                    <button [class.on]="newDraftLanguages === 'en'" (click)="newDraftLanguages = 'en'">EN</button>
+                    <button [class.on]="newDraftLanguages === 'both'" (click)="newDraftLanguages = 'both'">{{ t().editor.newDraft.both }}</button>
+                </div>
+            </div>
+            <div>
+                <span class="tb-caption">{{ t().editor.tags.label }}</span>
+                <!--N2: pick from tags already in use; the shared picker's input covers tags that
+                don't exist yet. Inline because a popover inside app-modal doesn't position.-->
+                <div style="margin-top:6px">
+                    <app-tag-picker [tags]="newDraftTagList()" [inline]="true"
+                                    (tagsChange)="newDraftTagList.set($event)"></app-tag-picker>
+                </div>
+            </div>
+            <div>
+                <span class="tb-caption">{{ t().editor.newDraft.startFrom }}</span>
+                <div class="format-toggle" style="margin-top:6px">
+                    <button [class.on]="newDraftTemplate === 'blank'" (click)="newDraftTemplate = 'blank'">{{ t().editor.newDraft.blank }}</button>
+                    <button [class.on]="newDraftTemplate === 'devlog'" (click)="newDraftTemplate = 'devlog'">{{ t().editor.newDraft.devlog }}</button>
+                    <button [class.on]="newDraftTemplate === 'photodump'" (click)="newDraftTemplate = 'photodump'">{{ t().editor.newDraft.photodump }}</button>
+                </div>
+            </div>
+            <div>
+                <span class="tb-caption">{{ t().editor.tags.folder }}</span>
+                <div style="margin-top:6px">
+                    <app-folder-picker [folderId]="newDraftFolderId()" [inline]="true"
+                                       (picked)="newDraftFolderId.set($event)"></app-folder-picker>
+                </div>
+            </div>
+            <label class="field-hint">
+                <input type="checkbox" [(ngModel)]="newDraftPrivate">
+                {{ t().drafts.privatePost }}
+            </label>
+        </div>
+        }
+
+        @if (newDraftError()) { <p class="error-box"><svg lucideTriangleAlert class="icon-sm"></svg>{{ newDraftError() }}</p> }
+
+        <button modal-actions class="btn-ghost" (click)="closeNewDraftDialog()">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-accent" (click)="confirmNewDraft()" [disabled]="creatingDraft() || !newDraftTitleValid()">
+            {{ creatingDraft() ? t().common.loading : t().drafts.newDraft }}
+        </button>
+    </app-modal>
+    }
 
     @if (deleteConfirmId()) {
     <app-modal (closed)="cancelDelete()">

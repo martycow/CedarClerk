@@ -196,47 +196,22 @@
 
                     <div class="detail-field">
                         <label>{{ t().manager.forms.postForm }}</label>
-                        @if (regForm()) {
-                        <p class="field-hint-inline">{{ t().manager.forms.formOn }}</p>
-                        } @else {
-                        <p class="field-hint-inline">{{ t().manager.forms.formOff }}</p>
-                        }
-                        <!--FI4.1: which languages a reader would actually be greeted in; a
-                        language with no form of its own falls back to the primary one.-->
-                        @if (postFormLanguages().length) {
-                        <div class="pill-row">
-                            <span class="field-hint-inline">{{ t().manager.forms.formLanguages }}</span>
-                            @for (l of postFormLanguages(); track l) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
-                        </div>
-                        }
-                        <!--DB1: this used to read "@if (presets().length)" alone, so a post that
-                        already had a form attached (regForm() true, submissions/charts rendering
-                        below) but zero *saved presets* fell into the else branch and showed "No
-                        forms yet" right next to those real answers — presets (the reusable
-                        library) and this post's own attached form are different things; an empty
-                        library doesn't mean this post has no form. The picker (with a Clear option)
-                        now shows whenever there's something to pick from OR clear; the "no presets"
-                        hint is a separate, honestly-worded note about the library being empty.-->
-                        @if (presets().length || regForm()) {
-                        <!--FI3.7: a dropdown with an explicit "no form" rather than a row of
-                        pills, so the current choice is visible instead of inferred. The option
-                        carries the preset's language (FI4.1), since that decides which readers
-                        it will be shown to.-->
-                        <select class="chat-input" [value]="''" (change)="pickPreset($any($event.target).value)" [disabled]="regBusy()">
-                            <option value="">{{ regForm() ? t().manager.forms.changeForm : t().manager.forms.noFormChosen }}</option>
-                            @for (p of presets(); track p.id) { <option [value]="p.id">{{ p.name }} · {{ (p.language || primaryLanguage).toUpperCase() }}</option> }
-                            @if (regForm()) { <option value="__none">{{ t().manager.forms.clearForm }}</option> }
-                        </select>
-                        @if (!presets().length) {
-                        <p class="field-hint-inline">{{ t().manager.forms.noPresetsSaved }}
-                            <button class="link-btn" (click)="setTab('forms')">{{ t().manager.forms.createOne }}</button>
-                        </p>
-                        }
-                        } @else {
-                        <p class="field-hint-inline">{{ t().manager.forms.noPresetsYet }}
-                            <button class="link-btn" (click)="setTab('forms')">{{ t().manager.forms.createOne }}</button>
-                        </p>
-                        }
+                        <!--Design review (Claude Design, 28.07.2026) — "the form lives in three
+                        places at once" (Forms defines it, here assigns it, Export re-picks it).
+                        app-form-ref is the one shared shape for the assign/re-pick half, always
+                        pointing back to Forms. Behavior (DB1's "form attached but library empty"
+                        distinction, FI3.7's explicit-clear dropdown, FI4.1's language list) lives
+                        in the component; wording stays this page's own t() strings.-->
+                        <app-form-ref
+                            [regForm]="regForm()" [presets]="presets()" [languages]="postFormLanguages()"
+                            [primaryLanguage]="primaryLanguage" [busy]="regBusy()"
+                            [onLabel]="t().manager.forms.formOn" [offLabel]="t().manager.forms.formOff"
+                            [changeLabel]="t().manager.forms.changeForm" [noFormLabel]="t().manager.forms.noFormChosen"
+                            [clearLabel]="t().manager.forms.clearForm" [languagesLabel]="t().manager.forms.formLanguages"
+                            [noPresetsLabel]="t().manager.forms.noPresetsYet" [noPresetsSavedLabel]="t().manager.forms.noPresetsSaved"
+                            [createLabel]="t().manager.forms.createOne" [manageLabel]="t().manager.tabs.forms"
+                            (pick)="pickPreset($event)" (manage)="setTab('forms')">
+                        </app-form-ref>
                     </div>
                     }
 

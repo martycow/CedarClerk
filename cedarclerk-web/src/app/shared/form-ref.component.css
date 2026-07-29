@@ -1,0 +1,117 @@
+:host {
+    display: block;
+}
+
+/* Same bordered/tinted/iconed shape as .hint-bubble elsewhere in the app — this is a standing
+   status ("a form is/isn't attached"), which is exactly what that shape is for. */
+.form-ref {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border: 1px solid var(--abord);
+    background: var(--asoft);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+}
+
+.form-ref-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--t2);
+}
+
+.form-ref-head .icon-sm {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    color: var(--accent);
+}
+
+.form-ref-status {
+    line-height: 1.4;
+}
+
+.spacer {
+    flex: 1;
+}
+
+.form-ref-manage {
+    flex: none;
+    border: none;
+    background: none;
+    color: var(--accent);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.form-ref-manage:hover {
+    text-decoration: underline;
+}
+
+.form-ref-langs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+}
+
+.form-ref-langs-label {
+    font-size: 11.5px;
+    color: var(--t2);
+    margin-right: 2px;
+}
+
+.state-chip.lang {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--alt);
+    color: var(--t2);
+}
+
+.chat-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--sheet);
+    color: var(--text);
+}
+
+.form-ref-hint {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--t2);
+}
+
+.form-ref-hint a,
+.form-ref-hint button {
+    border: none;
+    background: none;
+    padding: 0;
+    color: var(--accent);
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    text-decoration: none;
+}
+
+.form-ref-hint a:hover,
+.form-ref-hint button:hover {
+    text-decoration: underline;
+}

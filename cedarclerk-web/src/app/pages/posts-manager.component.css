@@ -38,8 +38,9 @@
 
 /* .avatar lives in account-menu.component.css now (IB9). */
 
+/* Priority Fixes 02 (Claude Design, 28.07.2026): joins the ~1150px workspace-width bucket. */
 .manager-body {
-    max-width: 1080px;
+    max-width: 1150px;
     margin: 0 auto;
     padding: 20px;
 }
@@ -88,12 +89,14 @@
     }
 }
 
+/* Priority Fixes 02 (Claude Design, 28.07.2026): radius-md -> radius-lg, matching the same
+   --sheet+--border+--shadow "card" pattern used by Settings/Admin/Stats. */
 .post-list {
     display: flex;
     flex-direction: column;
     gap: 4px;
     border: 1px solid var(--border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     padding: 8px;
     background: var(--sheet);
 }
@@ -149,7 +152,7 @@
 
 .post-detail {
     border: 1px solid var(--border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     padding: 14px 16px;
     background: var(--sheet);
 }

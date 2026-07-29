@@ -50,87 +50,88 @@
 
         @if (tab() === 'users') {
 
-        <div class="user-table">
-            <div class="user-row head">
-                <span>{{ t().admin.columns.email }}</span>
-                <span>{{ t().admin.columns.plan }}</span>
-                <span>{{ t().admin.columns.telegram }}</span>
-                <span>{{ t().admin.columns.content }}</span>
-                <span>{{ t().admin.columns.joined }}</span>
-            </div>
+        <!--Priority Fixes 01 (Claude Design, 28.07.2026): the fixed-grid table shell swaps for
+        the sheet-card list the rest of the app already uses (Posts Manager, Settings, Admin's
+        own summary cards) — same data, same row-expand-to-actions interaction.-->
+        <div class="user-cards">
             @for (u of users(); track u.id) {
-            <div class="user-row clickable" [class.expanded]="expandedId() === u.id" (click)="toggleExpanded(u)">
-                <span class="user-email">
-                    {{ u.email }}
-                    @if (u.isAdmin) { <span class="chip admin">{{ t().admin.adminChip }}</span> }
-                    @if (u.isLocked) { <span class="chip danger">{{ t().admin.lockedChip }}</span> }
-                </span>
-                <span>
-                    {{ u.effectiveTier }}
-                    <!--A lapsed plan is the one case where the stored tier and the real one
-                    disagree, so it's called out rather than silently shown as Free.-->
-                    @if (isLapsed(u)) { <span class="chip warn">{{ t().admin.lapsedChip(u.planTier) }}</span> }
-                    @if (u.planExpiresAt) {
-                    <span class="muted">· {{ u.planExpiresAt | date:'d MMM yyyy' }}</span>
-                    } @else if (u.effectiveTier !== 'Free') {
-                    <span class="muted">· {{ t().admin.neverExpires }}</span>
-                    }
-                </span>
-                <span class="muted">{{ u.telegramUsername ? '@' + u.telegramUsername : '—' }}</span>
-                <span class="muted">{{ t().admin.contentSummary(u.published, u.drafts, u.channels) }}</span>
-                <span class="muted">{{ u.createdAt | date:'d MMM yyyy' }}</span>
-            </div>
-
-            @if (expandedId() === u.id) {
-            <div class="user-actions">
-                <div class="action-group">
-                    <label>{{ t().admin.actions.plan }}</label>
-                    <div class="action-row">
-                        <select [(ngModel)]="planTier">
-                            @for (tier of tiers; track tier) { <option [value]="tier">{{ tier }}</option> }
-                        </select>
-                        <!--Blank on a paid tier is a manual grant with no expiry, which is what
-                        the rest of the app already means by a null expiry.-->
-                        <input type="date" [(ngModel)]="planExpiresAt" [disabled]="planTier === 'Free'">
-                        <button class="btn-accent" (click)="savePlan(u)" [disabled]="busy()">{{ t().common.save }}</button>
+            <div class="user-card" [class.expanded]="expandedId() === u.id" (click)="toggleExpanded(u)">
+                <div class="user-card-main">
+                    <span class="user-avatar" [style.background]="avatarColor(u.email)">{{ avatarInitial(u.email) }}</span>
+                    <div class="user-card-body">
+                        <div class="user-card-top">
+                            <span class="user-email">{{ u.email }}</span>
+                            @if (u.isAdmin) { <span class="chip admin">{{ t().admin.adminChip }}</span> }
+                            @if (u.isLocked) { <span class="chip danger">{{ t().admin.lockedChip }}</span> }
+                            <span class="chip plan" [class.accent]="u.effectiveTier !== 'Free'">{{ u.effectiveTier }}</span>
+                            <!--A lapsed plan is the one case where the stored tier and the real
+                            one disagree, so it's called out rather than silently shown as Free.-->
+                            @if (isLapsed(u)) { <span class="chip warn">{{ t().admin.lapsedChip(u.planTier) }}</span> }
+                        </div>
+                        <div class="user-card-meta muted">
+                            {{ u.telegramUsername ? '@' + u.telegramUsername : t().admin.columns.telegram + ': —' }}
+                            · {{ t().admin.contentSummary(u.published, u.drafts, u.channels) }}
+                            · {{ u.createdAt | date:'d MMM yyyy' }}
+                            @if (u.planExpiresAt) {
+                            · {{ u.planExpiresAt | date:'d MMM yyyy' }}
+                            } @else if (u.effectiveTier !== 'Free') {
+                            · {{ t().admin.neverExpires }}
+                            }
+                        </div>
                     </div>
-                    <p class="field-hint-inline">{{ planTier === 'Free' ? t().admin.actions.freeHasNoExpiry : t().admin.actions.blankIsForever }}</p>
                 </div>
 
-                <div class="action-row">
-                    <button class="btn-ghost" (click)="resetTrial(u)" [disabled]="busy() || !u.trialUsed">
-                        {{ u.trialUsed ? t().admin.actions.resetTrial : t().admin.actions.trialUnused }}
-                    </button>
-
-                    <!--Self-targeting is refused server-side too; disabling here just explains
-                    why rather than letting the click fail.-->
-                    <button class="btn-ghost" (click)="toggleLock(u)" [disabled]="busy() || isSelf(u)"
-                            [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''">
-                        {{ u.isLocked ? t().admin.actions.unlock : t().admin.actions.lock }}
-                    </button>
-
-                    <button class="btn-ghost" (click)="toggleAdmin(u)" [disabled]="busy() || isSelf(u)"
-                            [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''">
-                        {{ u.isAdmin ? t().admin.actions.revokeAdmin : t().admin.actions.grantAdmin }}
-                    </button>
-                </div>
-
-                <div class="action-group">
-                    <label>{{ t().admin.invites.attribution }}</label>
-                    <div class="action-row">
-                        <select [value]="u.inviteCodeId ?? ''" (change)="attribute(u, $any($event.target).value)" [disabled]="busy()">
-                            <option value="">{{ t().admin.invites.unknownOrigin }}</option>
-                            @for (c of invites(); track c.id) { <option [value]="c.id">{{ c.code }}</option> }
-                        </select>
+                @if (expandedId() === u.id) {
+                <div class="user-actions" (click)="$event.stopPropagation()">
+                    <div class="action-group">
+                        <label>{{ t().admin.actions.plan }}</label>
+                        <div class="action-row">
+                            <select [(ngModel)]="planTier">
+                                @for (tier of tiers; track tier) { <option [value]="tier">{{ tier }}</option> }
+                            </select>
+                            <!--Blank on a paid tier is a manual grant with no expiry, which is what
+                            the rest of the app already means by a null expiry.-->
+                            <input type="date" [(ngModel)]="planExpiresAt" [disabled]="planTier === 'Free'">
+                            <button class="btn-accent" (click)="savePlan(u)" [disabled]="busy()">{{ t().common.save }}</button>
+                        </div>
+                        <p class="field-hint-inline">{{ planTier === 'Free' ? t().admin.actions.freeHasNoExpiry : t().admin.actions.blankIsForever }}</p>
                     </div>
-                    <!--Only meaningful for accounts that predate invite tracking; for everyone
-                    else this is already recorded at registration.-->
-                    <p class="field-hint-inline">{{ t().admin.invites.attributionHint }}</p>
-                </div>
 
-                <p class="field-hint-inline">{{ t().admin.actions.noDeleteNote }}</p>
+                    <div class="action-row">
+                        <button class="btn-ghost" (click)="resetTrial(u)" [disabled]="busy() || !u.trialUsed">
+                            {{ u.trialUsed ? t().admin.actions.resetTrial : t().admin.actions.trialUnused }}
+                        </button>
+
+                        <!--Self-targeting is refused server-side too; disabling here just explains
+                        why rather than letting the click fail.-->
+                        <button class="btn-ghost" (click)="toggleLock(u)" [disabled]="busy() || isSelf(u)"
+                                [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''">
+                            {{ u.isLocked ? t().admin.actions.unlock : t().admin.actions.lock }}
+                        </button>
+
+                        <button class="btn-ghost" (click)="toggleAdmin(u)" [disabled]="busy() || isSelf(u)"
+                                [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''">
+                            {{ u.isAdmin ? t().admin.actions.revokeAdmin : t().admin.actions.grantAdmin }}
+                        </button>
+                    </div>
+
+                    <div class="action-group">
+                        <label>{{ t().admin.invites.attribution }}</label>
+                        <div class="action-row">
+                            <select [value]="u.inviteCodeId ?? ''" (change)="attribute(u, $any($event.target).value)" [disabled]="busy()">
+                                <option value="">{{ t().admin.invites.unknownOrigin }}</option>
+                                @for (c of invites(); track c.id) { <option [value]="c.id">{{ c.code }}</option> }
+                            </select>
+                        </div>
+                        <!--Only meaningful for accounts that predate invite tracking; for everyone
+                        else this is already recorded at registration.-->
+                        <p class="field-hint-inline">{{ t().admin.invites.attributionHint }}</p>
+                    </div>
+
+                    <p class="field-hint-inline">{{ t().admin.actions.noDeleteNote }}</p>
+                </div>
+                }
             </div>
-            }
             }
         </div>
 

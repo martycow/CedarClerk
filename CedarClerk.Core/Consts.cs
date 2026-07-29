@@ -2,7 +2,7 @@
 
 public static class Consts
 {
-    public const string CurrentVersion = "0.9.13";
+    public const string CurrentVersion = "0.9.14";
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
     
@@ -126,12 +126,52 @@ public static class Consts
     {
         public const string ApiKeyCfg = "Cedar:Anthropic:ApiKey";
         public const string ModelCfg = "Cedar:Anthropic:Model";
-        public const string DefaultModel = "claude-opus-4-8";
+        public const string DefaultModel = "claude-haiku-4-5";
 
         // The SDK's own per-call default (10 min, 2 retries) can leave a request hanging for
-        // ~30 minutes with zero feedback before it ever surfaces an error. Bound it much tighter
-        // so a stuck call fails fast with a clear message instead of looking frozen.
-        public static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(60);
+        // ~30 minutes with zero feedback before it ever surfaces an error. This matches the SDK's
+        // own 10-minute duration but drops the built-in retries — both providers set
+        // MaxRetries = 0 on the client and add their own narrow, bounded retry instead (only for
+        // Anthropic's OverloadedError/RateLimitError, which return fast, not after a long hang —
+        // see AnthropicTranslationProvider.cs) — so a genuinely stuck call still fails within this
+        // one window instead of the SDK's worst case of three consecutive 10-minute hangs.
+        // ADR-058-follow-up (29.07.2026) moved the caller (auto-translate/ai-edit) off one
+        // held-open HTTP request onto a background job + polling, so a large document is now free
+        // to actually use the full 10 minutes if it genuinely needs it — nothing upstream is
+        // waiting on one live connection anymore.
+        public static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(600);
+
+        // Marty, 29.07.2026 — auto-translate specifically gets a longer leash than RequestTimeout
+        // above: a large document's translation is the slowest AI call in the app (whole-document
+        // JSON round-trip, not a short edit pass), so 10 minutes was cutting it close. AI-edit
+        // (fix-errors/schizo) stays on RequestTimeout — it's a lighter pass with no reports of
+        // running long. Used as both the SDK client's own Timeout (AnthropicTranslationProvider)
+        // and the job's hardTimeout backstop (DraftEndpoints); the frontend's matching poll
+        // deadline is AUTO_TRANSLATE_TIMEOUT_MS in drafts.service.ts.
+        public static readonly TimeSpan AutoTranslateTimeout = TimeSpan.FromMinutes(20);
+
+        // ADR-059 (docs/DECISIONS.md) — auto-translate no longer round-trips the whole document as
+        // one prompt; it extracts text (TipTapTextNodes), splits into chunks of at most this many
+        // characters (whole strings only — a chunk never splits one string in half) or
+        // TranslationChunkMaxStrings items, whichever comes first, and translates chunks in
+        // parallel. ChunkRequestTimeout is deliberately short and per-CHUNK (not per-document) —
+        // each call is now small, so a stuck one should fail fast into the existing bounded retry
+        // instead of waiting on the old whole-document-sized window. AutoTranslateTimeout above is
+        // unchanged and still the outer ceiling across every chunk (the AiJobService hard-timeout).
+        public static readonly TimeSpan ChunkRequestTimeout = TimeSpan.FromMinutes(2);
+        public const int TranslationChunkCharBudget = 6_000;
+        public const int TranslationChunkMaxStrings = 150;
+        public const int MaxParallelChunks = 4;
+
+        // 29.07.2026 — a real ~47,000-character document 502'd with "Model returned malformed
+        // translation output": the response is required to be one JSON object containing the
+        // ENTIRE translated document (all TipTap structure, not just prose) plus the title, and
+        // the old cap of 16,000 tokens was too small to hold that for a document this size — the
+        // model's output got cut off mid-JSON, which is exactly what a truncated-JSON parse error
+        // looks like. Raised to the model's own real ceiling: Haiku 4.5 supports up to 64,000
+        // output tokens (Anthropic's own model comparison table, verified 29.07.2026) — comfortably
+        // above what even a large document's translated JSON should need.
+        public const int MaxOutputTokens = 64_000;
     }
 
     public static class OpenAi

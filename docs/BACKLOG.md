@@ -215,6 +215,12 @@ Scoped into `docs/ROADMAP.md` Phase 9c; this table is the full text plus the ded
 | 4 | General "redesign" | Needs to be broken into concrete pain points first, not scheduled as a monolithic item |
 | 5 | Text alignment in the editor | Needs evaluation against Telegram HTML export limits before it can be scoped |
 
+### Idea dump 28.07.2026 (from this session)
+
+| # | What | Notes |
+|---|---|---|
+| 23 | General fix for >100MB imports: chunked upload protocol | Deferred in favor of a one-off local-only import bypass (`POST /api/drafts/import-markdown-local`, loopback+Host-gated, triggered over SSH on the Pi — see ADR-058, `docs/DECISIONS.md`) for a single ~148MB Notion export, since Cloudflare's edge hard-rejects request bodies over 100MB on the current Free/Pro plan (verified via `curl` against production, 28.07.2026) and that isn't fixable in app code. Worth building for real if bulk imports become a recurring need for more than one user, not just this one-off. Needs a from-scratch session/chunk protocol: a new upload-session concept (entity or in-memory), start/chunk/finalize endpoints, an abandoned-upload cleanup job, and a client-side `File.slice()` + retry/progress loop on the Angular side — zero existing scaffolding to build on anywhere in the codebase |
+
 ## Tech debt (acknowledged, non-blocking)
 
 | # | What | Deadline / trigger |

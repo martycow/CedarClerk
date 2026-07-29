@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { CommentsService } from '../core/comments.service';
 import { ThemeService } from '../core/theme.service';
+import { VersionService } from '../core/version.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { CedarLogoComponent } from './cedar-logo.component';
 import { AccountMenuComponent } from './account-menu.component';
@@ -34,6 +35,7 @@ export class PageHeaderComponent {
     auth = inject(AuthService);
     theme = inject(ThemeService);
     feedback = inject(CommentsService);
+    version = inject(VersionService);
     t = inject(LocaleService).t;
 
     page = input.required<PageHeaderPage>();

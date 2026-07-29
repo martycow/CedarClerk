@@ -56,7 +56,7 @@
             </div>
 
             <div class="field-group">
-                <label for="cc-sig">{{ t().settings.profile.signature }} @if (!hasProSignature()) { <span class="ai-badge">PRO</span> }</label>
+                <label for="cc-sig">{{ t().settings.profile.signature }} @if (!hasProSignature()) { <span class="pro-lock-badge"><svg lucideLock class="icon-xxs"></svg>PRO</span> }</label>
                 @if (hasProSignature()) {
                 <p class="field-hint">{{ t().settings.profile.signatureHintPro }}</p>
                 } @else {
@@ -169,7 +169,7 @@
                 </select>
             </div>
             <div class="field-group">
-                <label for="cc-slot-3">{{ t().settings.headerSlots.slot(3) }} @if (!hasProHeaderSlot()) { <span class="ai-badge">PRO</span> }</label>
+                <label for="cc-slot-3">{{ t().settings.headerSlots.slot(3) }} @if (!hasProHeaderSlot()) { <span class="pro-lock-badge"><svg lucideLock class="icon-xxs"></svg>PRO</span> }</label>
                 <select id="cc-slot-3" [(ngModel)]="headerSlot3" [disabled]="!hasProHeaderSlot()"
                         [title]="hasProHeaderSlot() ? '' : t().settings.headerSlots.slotUpgrade">
                     <option [ngValue]="null">{{ t().settings.headerSlots.none }}</option>

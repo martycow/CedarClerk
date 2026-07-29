@@ -47,6 +47,12 @@
     letter-spacing: -.01em;
 }
 
+.version-tag {
+    font-size: 10.5px;
+    color: var(--t3);
+    white-space: nowrap;
+}
+
 .divider {
     width: 1px;
     height: 18px;
@@ -1309,8 +1315,34 @@
    Sections keep their own height (align-items:start), and the grid collapses to a single column
    on its own below ~2 columns' worth of space, so the narrow case needs no media query. */
 .export-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Priority Fixes 04 (Claude Design, 28.07.2026) — Site/Blog and Telegram are the two sections
+   whose height genuinely varies with content; they anchor their own column each instead of
+   flowing through a width-only auto-fit grid that was blind to that difference. */
+.export-row-primary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: start;
+}
+
+@media (max-width: 720px) {
+    .export-row-primary {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Invitations/Watermark/File exports are short, fixed-height utility panels — grouped into their
+   own row so they form a balanced line instead of stretching one auto-fit column past its own
+   content next to Telegram's much taller one. auto-fit collapses gracefully to 1-3 panels
+   depending on whether the post is private. */
+.export-row-utility {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 12px;
     align-items: start;
 }
@@ -1398,18 +1430,34 @@
     margin-bottom: 10px;
 }
 
-.soon-badge {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0;
-    text-transform: none;
+/* Priority Fixes 03 (Claude Design, 28.07.2026) — the "coming soon" stack collapses behind this
+   disclosure line instead of drawing full attention next to the live Telegram/Blog sections. */
+.other-platforms-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+}
+
+.other-platforms-toggle .icon-sm {
     color: var(--t3);
-    background: var(--alt);
-    border-radius: 999px;
-    padding: 2px 8px;
+    flex: none;
+    transition: transform .15s ease;
+}
+
+.other-platforms-toggle .icon-sm.rotated {
+    transform: rotate(180deg);
 }
 
 .export-mock-list {
+    margin-top: 8px;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -1794,6 +1842,7 @@ input[type="datetime-local"]:focus-visible {
     }
 
     .brand-name,
+    .version-tag,
     .divider,
     .save-label,
     .export-trigger .btn-label,

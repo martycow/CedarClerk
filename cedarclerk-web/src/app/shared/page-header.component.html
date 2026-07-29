@@ -6,6 +6,7 @@
     }
     <app-cedar-logo [size]="19"></app-cedar-logo>
     <span class="brand-name">Cedar Clerk</span>
+    @if (version.version(); as v) { <span class="version-tag" [title]="'v' + v">v{{ v }}</span> }
     <span class="crumb-sep">/</span>
     <span class="crumb-current">{{ crumb() }}</span>
     <span class="spacer"></span>

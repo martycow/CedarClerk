@@ -515,4 +515,62 @@ public class BlogHtmlRendererTests
                    """;
         Assert.Equal("<hr><p>a<br>b</p>", CedarToBlogHtmlRenderer.Render(json, Base));
     }
+
+    [Theory]
+    [InlineData("center")]
+    [InlineData("right")]
+    [InlineData("justify")]
+    public void Renders_paragraph_text_align_style(string align)
+    {
+        var json = $$"""
+                   {"type":"doc","content":[{"type":"paragraph","attrs":{"textAlign":"{{align}}"},"content":[
+                       {"type":"text","text":"x"}
+                   ]}]}
+                   """;
+        Assert.Equal($"<p style=\"text-align:{align}\">x</p>", CedarToBlogHtmlRenderer.Render(json, Base));
+    }
+
+    [Fact]
+    public void Omits_text_align_style_for_the_default_left_value()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"paragraph","attrs":{"textAlign":"left"},"content":[
+                       {"type":"text","text":"x"}
+                   ]}]}
+                   """;
+        Assert.Equal("<p>x</p>", CedarToBlogHtmlRenderer.Render(json, Base));
+    }
+
+    [Fact]
+    public void Omits_text_align_style_when_no_attrs_present()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"paragraph","content":[
+                       {"type":"text","text":"x"}
+                   ]}]}
+                   """;
+        Assert.Equal("<p>x</p>", CedarToBlogHtmlRenderer.Render(json, Base));
+    }
+
+    [Fact]
+    public void Ignores_an_unrecognized_text_align_value()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"paragraph","attrs":{"textAlign":"diagonal"},"content":[
+                       {"type":"text","text":"x"}
+                   ]}]}
+                   """;
+        Assert.Equal("<p>x</p>", CedarToBlogHtmlRenderer.Render(json, Base));
+    }
+
+    [Fact]
+    public void Renders_heading_text_align_style_alongside_its_id()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"heading","attrs":{"level":2,"textAlign":"center"},"content":[
+                       {"type":"text","text":"Title"}
+                   ]}]}
+                   """;
+        Assert.Equal("<h2 id=\"title\" style=\"text-align:center\">Title</h2>", CedarToBlogHtmlRenderer.Render(json, Base));
+    }
 }

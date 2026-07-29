@@ -83,8 +83,10 @@
 }
 
 /* ---------- Body ---------- */
+/* Priority Fixes 02 (Claude Design, 28.07.2026): joins the ~1150px workspace-width bucket
+   (Posts Manager, Export, Admin) instead of its own one-off 920px. */
 .stats-body {
-    max-width: 920px;
+    max-width: 1150px;
     margin: 0 auto;
     padding: 26px 20px 60px;
     display: flex;

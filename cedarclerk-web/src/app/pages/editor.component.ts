@@ -11,8 +11,9 @@ import { Node as PMNode, Slice } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import { AuthService } from '../core/auth.service';
 import {
-    DraftsService, DraftMeta, TranslationMeta, AiEditKind, PostInvite,
+    DraftsService, DraftMeta, TranslationMeta, TranslationFull, AiEditKind, AiEditResult, PostInvite,
     RegistrationForm, parseRegistrationForm, WATERMARK_MAX_LENGTH,
+    DRAFT_TITLE_MAX, EMPTY_DOC, AI_OPERATION_TIMEOUT_MS, AUTO_TRANSLATE_TIMEOUT_MS,
 } from '../core/drafts.service';
 import { FormPresetsService, FormPreset } from '../core/form-presets.service';
 import { CommentsService } from '../core/comments.service';
@@ -31,6 +32,7 @@ import { TableCell } from '@tiptap/extension-table-cell';
 import { TaskList } from '@tiptap/extension-task-list';
 import { TaskItem } from '@tiptap/extension-task-item';
 import { Mathematics } from '@tiptap/extension-mathematics';
+import { TextAlign } from '@tiptap/extension-text-align';
 import { AssetsService, DraftAsset } from '../core/assets.service';
 import { VideoNode } from '../tiptap-extensions/video-node';
 import { AudioNode } from '../tiptap-extensions/audio-node';
@@ -49,15 +51,16 @@ import { PopoverComponent } from '../shared/popover.component';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { ModalComponent } from '../shared/modal.component';
 import { ThemeService } from '../core/theme.service';
+import { VersionService } from '../core/version.service';
 import { AppearanceService, SHEET_WIDTH_PX, TYPEFACE_STACK, MAX_TABLE_SIZE } from '../core/appearance.service';
 import { ToolbarLayoutService } from '../core/toolbar-layout.service';
 import { DebugLogService } from '../core/debug-log.service';
 import { TagUsageService } from '../core/tag-usage.service';
 import { TagPickerComponent } from '../shared/tag-picker.component';
 import { FolderPickerComponent } from '../shared/folder-picker.component';
+import { FormRefComponent } from '../shared/form-ref.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import { pseudoProgress } from '../core/pseudo-progress.util';
-import { Subscription, TimeoutError } from 'rxjs';
 import {
     LucideUndo2 as Undo2, LucideRedo2 as Redo2,
     LucideBold as Bold, LucideItalic as Italic, LucideStrikethrough as Strikethrough, LucideCode as Code,
@@ -69,6 +72,7 @@ import {
     LucideSend as Send, LucidePlus as Plus, LucideX as X,
     LucideTrash2 as Trash2,
     LucideEyeOff as EyeOff, LucideLink as LinkIcon, LucideSmile as Smile, LucideUnderline as Underline,
+    LucideAlignLeft as AlignLeft, LucideAlignCenter as AlignCenter, LucideAlignRight as AlignRight, LucideAlignJustify as AlignJustify,
     LucideClock as Clock, LucideListCollapse as ListCollapse, LucideLayoutGrid as LayoutGrid,
     LucideFileStack as FileStack, LucideSuperscript as Superscript,
     LucideChevronDown as ChevronDown,
@@ -113,37 +117,12 @@ function toDatetimeLocalValue(date: Date): string {
 }
 
 type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
-// DB2.6 — matches the maxlength on the title inputs.
-export const DRAFT_TITLE_MAX = 64;
 
-const EMPTY_DOC = '{"type":"doc","content":[{"type":"paragraph"}]}';
+// Distinguishes "the client gave up polling" from any other rejection in pollAiJob's callers,
+// same role TimeoutError used to play for the old RxJS-based autoTranslate$/aiEdit$.
+class AiJobTimeoutError extends Error {}
+
 const BLOG_HOST = 'blog.mooexe.dev';
-
-type NewDraftTemplate = 'blank' | 'devlog' | 'photodump';
-const NEW_DRAFT_TEMPLATES: Record<NewDraftTemplate, string> = {
-    blank: EMPTY_DOC,
-    devlog: JSON.stringify({
-        type: 'doc',
-        content: [
-            { type: 'paragraph', content: [{ type: 'text', text: 'What happened this week…' }] },
-            {
-                type: 'bulletList',
-                content: [
-                    { type: 'listItem', content: [{ type: 'paragraph' }] },
-                    { type: 'listItem', content: [{ type: 'paragraph' }] },
-                ],
-            },
-            { type: 'paragraph', content: [{ type: 'text', text: "What's next." }] },
-        ],
-    }),
-    photodump: JSON.stringify({
-        type: 'doc',
-        content: [
-            { type: 'paragraph', content: [{ type: 'text', text: 'A few photos from…' }] },
-            { type: 'paragraph' },
-        ],
-    }),
-};
 
 // Extra timezones shown alongside the local time when scheduling a post; will move to user settings later
 const EXTRA_TIMEZONES: { label: string; zone: string }[] = [
@@ -229,12 +208,13 @@ interface UploadItem {
     selector: 'app-editor',
     imports: [
         FormsModule, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent,
-        AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent,
+        AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent,
         Undo2, Redo2, Bold, Italic, Strikethrough, Code,
         List, ListOrdered, ListTodo, Quote, SquareCode, Outdent, Indent,
         TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
         Send, Plus, X, Trash2,
         EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, FileStack, Superscript,
+        AlignLeft, AlignCenter, AlignRight, AlignJustify,
         ChevronDown, Check, Download, MessageSquare, Vote, Palette, Droplets, Newspaper, RefreshCw, Maximize, Minimize,
         Settings, ShieldCheck, Sparkle, TableOfContentsIcon, DividerIcon,
         CountBadgeComponent,
@@ -247,6 +227,7 @@ interface UploadItem {
 export class EditorComponent implements AfterViewInit, OnDestroy {
     auth = inject(AuthService);
     theme = inject(ThemeService);
+    version = inject(VersionService);
     appearance = inject(AppearanceService);
     toolbarLayout = inject(ToolbarLayoutService);
     private draftsApi = inject(DraftsService);
@@ -327,7 +308,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // is an asymptotic estimate (pseudo-progress.util.ts), not a real percentage.
     aiEditProgress = signal(0);
     private aiEditTicker?: ReturnType<typeof setInterval>;
-    private aiEditSub?: Subscription;
+    private aiEditJobId: string | null = null;
+    private aiEditCancelled = false;
     aiEditError = signal<string | null>(null);
     aiConfirmKind = signal<AiEditKind | null>(null);
     aiToast = signal<string | null>(null);
@@ -337,7 +319,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     autoTranslateElapsed = signal(0);
     autoTranslateProgress = signal(0);
     private autoTranslateTicker?: ReturnType<typeof setInterval>;
-    private autoTranslateSub?: Subscription;
+    private autoTranslateJobId: string | null = null;
+    private autoTranslateCancelled = false;
     autoTranslateError = signal<string | null>(null);
     translateConfirmOpen = signal(false);
     exportModalOpen = signal(false);
@@ -405,6 +388,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     manualChannelOpen = signal(false);
     channelError = signal('');
 
+    // Priority Fixes 03 (Claude Design, 28.07.2026) — the 8-row "coming soon" stack collapses to
+    // one low-emphasis line, expandable on click rather than always drawing full attention next
+    // to the live Telegram/Blog sections.
+    otherPlatformsOpen = signal(false);
+
     knownChats = signal<KnownChat[]>([]);
     knownChatsRefreshing = signal(false);
 
@@ -414,19 +402,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     channelBusy = signal(false);
 
     // New Draft dialog (ADR-035) — minimal title+Enter, expandable to languages/tags/template.
-    // Channels/schedule-at-creation from the mockup were deliberately dropped: Cedar Clerk has no
-    // draft-to-channel relationship at creation time, only at export (see ADR-035).
-    newDraftOpen = signal(false);
-    newDraftExpanded = signal(false);
-    newDraftTitle = '';
+    // The New Draft dialog itself now lives on /drafts (28.07.2026) — creating used to navigate
+    // to /editor first and open the dialog there, leaving the editor page rendered with nothing
+    // in it yet mid-creation. newDraft(opts) below stays here: it's still used by the two silent
+    // fallbacks (empty draft list on load, deleting the last remaining draft) and needs the live
+    // TipTap editor instance, which only exists on this page.
     readonly draftTitleMax = DRAFT_TITLE_MAX;
-    newDraftLanguages: 'ru' | 'en' | 'both' = 'ru';
-    newDraftTagList = signal<string[]>([]);
-    newDraftTemplate: NewDraftTemplate = 'blank';
-    // Not persisted into newDraftDefaultsJson (unlike languages/tags/template) — "private" and
-    // a target folder are per-draft intent, not a preference to repeat on every new draft.
-    newDraftPrivate = false;
-    newDraftFolderId = signal<string | null>(null);
 
     scheduledAt = '';
     scheduling = signal(false);
@@ -452,6 +433,15 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     insertValue = '';
     insertCaption = '';
     insertError = signal('');
+
+    // Emoji/datetime moved from app-popover to app-modal (Marty, 28.07.2026) — the emoji panel's
+    // 120-emoji grid genuinely scrolls internally (.emoji-popover, max-height:320px), and
+    // PopoverComponent closes on ANY document-level scroll event (it can't distinguish the panel's
+    // own scroll from the page's), so scrolling the panel closed it instead — same root cause
+    // ADR-057 already fixed for the Appearance panel. Datetime moved alongside it for consistency,
+    // per Marty's own ask, even though its content is too short to hit the same bug independently.
+    emojiOpen = signal(false);
+    datetimeOpen = signal(false);
 
     saveLabel(): string {
         switch (this.saveState()) {
@@ -638,6 +628,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 TaskList,
                 TaskItem.configure({ nested: true }),
                 Mathematics,
+                // Blog-only in intent (Marty, 28.07.2026) — Telegram has no alignment concept, so
+                // CedarToTelegramHtmlRenderer/CedarToTelegramBlocksRenderer simply never read the
+                // attr this adds. Scoped to paragraph/heading, matching the two block types
+                // CedarToBlogHtmlRenderer emits with straightforward single-tag HTML.
+                TextAlign.configure({ types: ['paragraph', 'heading'] }),
             ],
             content: '',
             onTransaction: () => {
@@ -657,9 +652,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const targetId = requestedId && list.some(d => d.id === requestedId) ? requestedId : list[0]?.id;
         if (targetId) await this.openDraft(targetId);
         else await this.newDraft();
-
-        // /drafts' "New draft" button links here as /editor?new=1
-        if (this.route.snapshot.queryParamMap.has('new')) this.openNewDraftDialog();
 
         this.channels.set(await this.channelsApi.list());
         await this.refreshChannelStats();
@@ -700,8 +692,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         clearInterval(this.exportTicker);
         clearInterval(this.blogTicker);
         clearTimeout(this.ruDiffTimer);
-        this.aiEditSub?.unsubscribe();
-        this.autoTranslateSub?.unsubscribe();
+        this.aiEditCancelled = true;
+        this.autoTranslateCancelled = true;
         this.editor?.destroy();
     }
 
@@ -928,7 +920,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.runAutoTranslate();
     }
 
-    private runAutoTranslate() {
+    // ADR-058-follow-up (29.07.2026) — used to be one held-open POST; a large document's
+    // translation can legitimately outrun Cloudflare Tunnel's own edge timeout, which then 502s
+    // the browser even though the server finishes and saves the result seconds later (confirmed
+    // directly against a real ~360-line document). Starts a background job and polls for it
+    // instead, so no single request needs to stay open longer than a couple of seconds.
+    private async runAutoTranslate() {
         const id = this.currentId();
         const editor = this.editor;
         if (!id || !editor) return;
@@ -942,42 +939,63 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.autoTranslateProgress.set(pseudoProgress(this.autoTranslateElapsed()));
         }, 1000);
         this.autoTranslateError.set(null);
+        this.autoTranslateCancelled = false;
 
         const target = this.lang();
-        this.autoTranslateSub = this.draftsApi.autoTranslate$(id, target).subscribe({
-            next: tr => {
-                this.autoTranslateProgress.set(100);
-                this.setTranslation(target, { language: target, title: tr.title, updatedAt: tr.updatedAt });
-                this.activeSourceSnapshot.set(tr.sourceSnapshotJson);
-                if (this.lang() !== target) {
-                    this.ruSnapshot = { title: this.title, json: JSON.stringify(editor.getJSON()) };
-                    this.lang.set(target);
-                }
-                this.title = tr.title;
-                editor.setEditable(true);
-                editor.commands.setContent(JSON.parse(tr.cedarJson || EMPTY_DOC), { emitUpdate: false });
-                this.saveState.set('saved');
-            },
-            error: e => {
-                this.autoTranslateError.set(e instanceof TimeoutError
-                    ? 'Auto-translate timed out after 3 minutes'
-                    : httpErrorMessage(e, this.t().editor.errors.autoTranslate));
-                this.finishAutoTranslate();
-            },
-            complete: () => this.finishAutoTranslate(),
-        });
+        try {
+            const { jobId } = await this.draftsApi.startAutoTranslate(id, target);
+            this.autoTranslateJobId = jobId;
+            const tr = await this.pollAiJob<TranslationFull>(jobId, () => this.autoTranslateCancelled, AUTO_TRANSLATE_TIMEOUT_MS);
+            if (tr === null) return; // cancelled — no error, the user just changed their mind
+
+            this.autoTranslateProgress.set(100);
+            this.setTranslation(target, { language: target, title: tr.title, updatedAt: tr.updatedAt });
+            this.activeSourceSnapshot.set(tr.sourceSnapshotJson);
+            if (this.lang() !== target) {
+                this.ruSnapshot = { title: this.title, json: JSON.stringify(editor.getJSON()) };
+                this.lang.set(target);
+            }
+            this.title = tr.title;
+            editor.setEditable(true);
+            editor.commands.setContent(JSON.parse(tr.cedarJson || EMPTY_DOC), { emitUpdate: false });
+            this.saveState.set('saved');
+        } catch (e) {
+            this.autoTranslateError.set(e instanceof AiJobTimeoutError
+                ? 'Auto-translate timed out after 20 minutes'
+                : httpErrorMessage(e, this.t().editor.errors.autoTranslate));
+        } finally {
+            this.finishAutoTranslate();
+        }
+    }
+
+    // Shared by auto-translate and AI-edit — polls GET /api/ai-jobs/{jobId} until it completes,
+    // fails, is cancelled (returns null; not an error), or the client gives up waiting. Defaults to
+    // AI_OPERATION_TIMEOUT_MS (10 min, matching the backend's AI-edit cap); auto-translate passes
+    // its own longer AUTO_TRANSLATE_TIMEOUT_MS (20 min) explicitly.
+    private async pollAiJob<T>(jobId: string, isCancelled: () => boolean, timeoutMs = AI_OPERATION_TIMEOUT_MS, intervalMs = 2000): Promise<T | null> {
+        const deadline = Date.now() + timeoutMs;
+        while (true) {
+            if (isCancelled()) return null;
+            if (Date.now() > deadline) throw new AiJobTimeoutError();
+            await new Promise(resolve => setTimeout(resolve, intervalMs));
+            if (isCancelled()) return null;
+            const job = await this.draftsApi.getAiJob<T>(jobId);
+            if (job.status === 'completed') return job.result as T;
+            if (job.status === 'failed') throw new Error(job.error ?? 'Job failed');
+        }
     }
 
     private finishAutoTranslate() {
         this.autoTranslating.set(false);
         clearInterval(this.autoTranslateTicker);
-        this.autoTranslateSub = undefined;
+        this.autoTranslateJobId = null;
     }
 
-    // User-initiated cancel (Step 8) — unsubscribing aborts the underlying HTTP request; no
-    // error/toast shown since this wasn't a failure, the user just changed their mind.
+    // User-initiated cancel (Step 8) — cancels the background job server-side and stops polling;
+    // no error/toast shown since this wasn't a failure, the user just changed their mind.
     cancelAutoTranslate() {
-        this.autoTranslateSub?.unsubscribe();
+        this.autoTranslateCancelled = true;
+        if (this.autoTranslateJobId) this.draftsApi.cancelAiJob(this.autoTranslateJobId).catch(() => {});
         this.finishAutoTranslate();
     }
 
@@ -1012,7 +1030,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // Rewrites the current language version in place via an LLM (Pro Plus, daily quota) — grammar
     // fix or "schizoposting" style rewrite. Same persist-then-load pattern as auto-translate, so
     // Ctrl+Z in the editor can still undo the content swap if the user doesn't like the result.
-    private aiEdit(kind: AiEditKind) {
+    // Job/poll shape (ADR-058-follow-up) — see runAutoTranslate()'s comment for why.
+    private async aiEdit(kind: AiEditKind) {
         const id = this.currentId();
         const editor = this.editor;
         if (!id || !editor) return;
@@ -1027,38 +1046,42 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.aiEditProgress.set(pseudoProgress(this.aiEditElapsed()));
         }, 1000);
         this.aiEditError.set(null);
+        this.aiEditCancelled = false;
 
-        this.aiEditSub = this.draftsApi.aiEdit$(id, this.lang(), kind).subscribe({
-            next: res => {
-                this.aiEditProgress.set(100);
-                this.title = res.title;
-                editor.commands.setContent(JSON.parse(res.cedarJson || EMPTY_DOC), { emitUpdate: false });
-                this.saveState.set('saved');
-                if (this.lang() === 'en') {
-                    this.setTranslation(this.lang(), { language: this.lang(), title: res.title, updatedAt: res.updatedAt });
-                }
-                this.refreshMeta(id);
-                this.showAiToast(kind === 'fix-errors' ? 'Fixed your typos. Your voice survived. Moo.' : 'Schizo-izer done. Reality is now optional.');
-            },
-            error: e => {
-                this.aiEditError.set(e instanceof TimeoutError
-                    ? `${label} timed out after 3 minutes`
-                    : httpErrorMessage(e, `${label} failed`));
-                this.finishAiEdit();
-            },
-            complete: () => this.finishAiEdit(),
-        });
+        try {
+            const { jobId } = await this.draftsApi.startAiEdit(id, this.lang(), kind);
+            this.aiEditJobId = jobId;
+            const res = await this.pollAiJob<AiEditResult>(jobId, () => this.aiEditCancelled);
+            if (res === null) return; // cancelled — no error, the user just changed their mind
+
+            this.aiEditProgress.set(100);
+            this.title = res.title;
+            editor.commands.setContent(JSON.parse(res.cedarJson || EMPTY_DOC), { emitUpdate: false });
+            this.saveState.set('saved');
+            if (this.lang() === 'en') {
+                this.setTranslation(this.lang(), { language: this.lang(), title: res.title, updatedAt: res.updatedAt });
+            }
+            this.refreshMeta(id);
+            this.showAiToast(kind === 'fix-errors' ? 'Fixed your typos. Your voice survived. Moo.' : 'Schizo-izer done. Reality is now optional.');
+        } catch (e) {
+            this.aiEditError.set(e instanceof AiJobTimeoutError
+                ? `${label} timed out after 10 minutes`
+                : httpErrorMessage(e, `${label} failed`));
+        } finally {
+            this.finishAiEdit();
+        }
     }
 
     private finishAiEdit() {
         this.aiEditBusy.set(false);
         clearInterval(this.aiEditTicker);
-        this.aiEditSub = undefined;
+        this.aiEditJobId = null;
     }
 
     // User-initiated cancel (Step 8) — see cancelAutoTranslate() above for the same reasoning.
     cancelAiEdit() {
-        this.aiEditSub?.unsubscribe();
+        this.aiEditCancelled = true;
+        if (this.aiEditJobId) this.draftsApi.cancelAiJob(this.aiEditJobId).catch(() => {});
         this.finishAiEdit();
     }
 
@@ -1143,9 +1166,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
-    // opts is used by the New Draft dialog (openNewDraftDialog/confirmNewDraft below); the two
-    // silent fallback call sites (empty draft list on load, deleting the last remaining draft)
-    // call this with no args and get exactly the old blank-"Untitled" behavior.
+    // opts was used by the New Draft dialog before it moved to /drafts (28.07.2026); the two
+    // silent fallback call sites left here (empty draft list on load, deleting the last remaining
+    // draft) call this with no args and get exactly the old blank-"Untitled" behavior.
     async newDraft(opts?: { title?: string; cedarJson?: string; tags?: string; languages?: 'ru' | 'en' | 'both'; isPrivate?: boolean; folderId?: string | null }) {
         if (this.draftsBusy()) return;
         this.draftsBusy.set(true);
@@ -1212,53 +1235,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
-    openNewDraftDialog() {
-        let defaults: { languages?: 'ru' | 'en' | 'both'; tags?: string[]; template?: NewDraftTemplate } = {};
-        try {
-            defaults = JSON.parse(this.auth.newDraftDefaultsJson() ?? '{}');
-        } catch { /* ignore a corrupt/foreign blob, fall back to built-in defaults */ }
-
-        this.newDraftTitle = '';
-        this.newDraftLanguages = defaults.languages ?? 'ru';
-        this.newDraftTagList.set(defaults.tags ?? []);
-        this.newDraftTemplate = defaults.template ?? 'blank';
-        this.newDraftPrivate = false;
-        this.newDraftFolderId.set(null);
-        this.newDraftExpanded.set(false);
-        this.newDraftOpen.set(true);
-    }
-
-    closeNewDraftDialog() {
-        this.newDraftOpen.set(false);
-    }
-
-    // DB2.6 — a draft with no name is unfindable in the list, and an overlong one breaks every
-    // row it appears in. Bounds checked here as well as on the input's maxlength, because the
-    // dialog also submits on Enter.
-    newDraftTitleValid(): boolean {
-        const len = this.newDraftTitle.trim().length;
-        return len >= 1 && len <= DRAFT_TITLE_MAX;
-    }
-
-    async confirmNewDraft() {
-        if (this.draftsBusy() || !this.newDraftTitleValid()) return;
-        const title = this.newDraftTitle.trim();
-        const tagList = this.newDraftTagList().map(t => t.trim().toLowerCase()).filter(t => t.length > 0);
-        const tags = tagList.join(',');
-        const languages = this.newDraftLanguages;
-        const template = this.newDraftTemplate;
-        const isPrivate = this.newDraftPrivate;
-        const folderId = this.newDraftFolderId();
-
-        this.closeNewDraftDialog();
-        this.auth.saveNewDraftDefaults(JSON.stringify({
-            languages,
-            tags: tagList,
-            template,
-        })).catch(() => { /* best-effort — not worth blocking draft creation over */ });
-
-        await this.newDraft({ title, cedarJson: NEW_DRAFT_TEMPLATES[template], tags, languages, isPrivate, folderId });
-    }
 
 
     blogUrl(): string | null {
@@ -1293,6 +1269,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     isActive(name: string, attrs?: Record<string, any>): boolean {
         this.tick();
         return this.editor?.isActive(name, attrs) ?? false;
+    }
+
+    // Blog-only (see the TextAlign.configure comment above) — 'left' is the extension's own
+    // default, so setAlign('left') both sets it explicitly and clears a non-default value.
+    setAlign(align: 'left' | 'center' | 'right' | 'justify') {
+        this.cmd(c => c.setTextAlign(align));
     }
 
     canUndo(): boolean {
@@ -1873,6 +1855,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const format = (this.dtWeekday ? 'w' : '') + (this.dtDate ? 'D' : '') + (this.dtTime ? 'T' : '');
         this.cmd(c => c.insertContent({ type: 'datetime', attrs: { unix, format: format || 'wDT' } }));
         this.dtValue = '';
+        this.datetimeOpen.set(false);
     }
 
     insertToggle() {

@@ -1,4 +1,5 @@
 ﻿using System.IO.Compression;
+using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -7,10 +8,15 @@ using CedarClerk.Localization;
 using CedarClerk.Server.Ai;
 using CedarClerk.Server.Email;
 using CedarClerk.Server.Translation;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
+
+// ADR-058 — mirrors the MediaPaths pattern (AssetEndpoints.cs). Resolves to CEDAR_DATA_DIR/
+// import-tmp, where a zip too large for Cloudflare's edge is scp'd for a local-only import.
+public record ImportTmpPaths(string Dir);
 
 public static class DraftEndpoints
 {
@@ -29,6 +35,9 @@ public static class DraftEndpoints
     // FI4.1 — Language names which language slot the form belongs to; absent or primary writes
     // the post's own RegistrationFormJson, anything else goes into the translations object.
     public record UpdateRegistrationFormRequest(string? FormJson, string? Language = null);
+    // ADR-058 — the local-only import-bypass request: a filename resolved only against
+    // ImportTmpPaths.Dir (never an arbitrary path) and the email of the account to own the draft.
+    public record LocalImportMarkdownRequest(string ZipFileName, string OwnerEmail);
 
     private const int InviteEmailMaxLength = 254;
 
@@ -577,20 +586,27 @@ public static class DraftEndpoints
             return Results.Ok(new { translation.Language, translation.UpdatedAt, translation.SourceSnapshotJson });
         });
         
-        groupBuilder.MapPost("/{id:guid}/translations/{lang}/auto", async (Guid id, string lang, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg, IHttpClientFactory httpFactory, CancellationToken ct) =>
+        // ADR-058-follow-up — only the fast, DB-only checks stay synchronous here (so bad-language/
+        // not-found/quota errors still return immediately, unchanged). The slow part (the actual
+        // Anthropic call + persisting the result) moves into a background job — see AiJobService's
+        // own comment for why. Returns 202 + a job id instead of the translation itself; the
+        // frontend polls GET /api/ai-jobs/{jobId}.
+        groupBuilder.MapPost("/{id:guid}/translations/{lang}/auto", async (
+            Guid id, string lang, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg,
+            IHttpClientFactory httpFactory, IServiceScopeFactory scopeFactory, AiJobService jobs) =>
         {
             if (!Languages.IsTranslationLanguage(lang))
                 return Results.BadRequest(new { error = $"Unsupported translation language: {lang}" });
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid, ct);
+            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
             if (draft is null) return Results.NotFound();
 
             // AI features are Pro Plus; each call counts against the per-day AI quota
             var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
             if (!PlanLimitations.HasAiFeatures(tier))
                 return Results.Json(new { error = "Auto-translate is a Pro Plus feature. Upgrade to use it." }, statusCode: StatusCodes.Status403Forbidden);
-            
+
             if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
                 return Results.Json(new { error = $"Daily AI limit ({PlanLimitations.AiDailyLimit} calls) reached — resets at midnight UTC." }, statusCode: StatusCodes.Status429TooManyRequests);
 
@@ -606,49 +622,63 @@ public static class DraftEndpoints
             if (provider is null)
                 return Results.Json(new { error = "Auto-translate is not configured" }, statusCode: StatusCodes.Status501NotImplemented);
 
-            TranslationResult result;
-            try
+            var sourceTitle = draft.Title;
+            var sourceCedarJson = draft.CedarJson;
+            var jobId = jobs.Start(uid, async ct =>
             {
-                result = await provider.TranslateAsync(draft.Title, draft.CedarJson, lang, ct);
-            }
-            catch (TranslationException ex)
-            {
-                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status502BadGateway);
-            }
-            
-            try
-            {
-                using var docCheck = JsonDocument.Parse(result.CedarJson);
-                var root = docCheck.RootElement;
-                if (root.ValueKind != JsonValueKind.Object || 
-                    !root.TryGetProperty("type", out var typeProp) || 
-                    typeProp.GetString() != "doc")
+                TranslationResult result;
+                try
                 {
-                    return Results.Json(new { error = "Translator returned an invalid document — try again" },
-                        statusCode: StatusCodes.Status502BadGateway);
+                    result = await provider.TranslateAsync(sourceTitle, sourceCedarJson, lang, ct);
                 }
-            }
-            catch (JsonException)
-            {
-                return Results.Json(new { error = "Translator returned invalid JSON — try again" }, statusCode: StatusCodes.Status502BadGateway);
-            }
+                catch (TranslationException ex)
+                {
+                    return AiJobOutcome.Fail(ex.Message, StatusCodes.Status502BadGateway);
+                }
 
-            var translation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang, ct);
-            if (translation is null)
-            {
-                translation = new DraftTranslation { DraftId = id, Language = lang };
-                db.DraftTranslations.Add(translation);
-            }
-            translation.Title = result.Title;
-            translation.CedarJson = result.CedarJson;
-            translation.UpdatedAt = DateTime.UtcNow;
-            translation.SourceSnapshotJson = draft.CedarJson;
-            await db.SaveChangesAsync(ct);
+                try
+                {
+                    using var docCheck = JsonDocument.Parse(result.CedarJson);
+                    var root = docCheck.RootElement;
+                    if (root.ValueKind != JsonValueKind.Object ||
+                        !root.TryGetProperty("type", out var typeProp) ||
+                        typeProp.GetString() != "doc")
+                    {
+                        return AiJobOutcome.Fail("Translator returned an invalid document — try again", StatusCodes.Status502BadGateway);
+                    }
+                }
+                catch (JsonException)
+                {
+                    return AiJobOutcome.Fail("Translator returned invalid JSON — try again", StatusCodes.Status502BadGateway);
+                }
 
-            return Results.Ok(new { translation.Language, translation.Title, translation.CedarJson, translation.UpdatedAt, translation.SourceSnapshotJson });
+                // Fresh scope: the request's own `db` is disposed once this HTTP request returns,
+                // long before this background work finishes.
+                using var scope = scopeFactory.CreateScope();
+                var scopedDb = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
+                var translation = await scopedDb.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang, ct);
+                if (translation is null)
+                {
+                    translation = new DraftTranslation { DraftId = id, Language = lang };
+                    scopedDb.DraftTranslations.Add(translation);
+                }
+                translation.Title = result.Title;
+                translation.CedarJson = result.CedarJson;
+                translation.UpdatedAt = DateTime.UtcNow;
+                translation.SourceSnapshotJson = sourceCedarJson;
+                await scopedDb.SaveChangesAsync(ct);
+
+                return AiJobOutcome.Ok(new { translation.Language, translation.Title, translation.CedarJson, translation.UpdatedAt, translation.SourceSnapshotJson });
+            }, Consts.Anthropic.AutoTranslateTimeout);
+
+            return Results.Accepted(value: new { jobId });
         });
 
-        groupBuilder.MapPost("/{id:guid}/ai-edit/{lang}/{kind}", async (Guid id, string lang, string kind, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg, IHttpClientFactory httpFactory, CancellationToken ct) =>
+        // ADR-058-follow-up — same shape as auto-translate above: fast checks stay synchronous,
+        // the AI call + persist move into a background job, response is 202 + a job id.
+        groupBuilder.MapPost("/{id:guid}/ai-edit/{lang}/{kind}", async (
+            Guid id, string lang, string kind, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg,
+            IHttpClientFactory httpFactory, IServiceScopeFactory scopeFactory, AiJobService jobs) =>
         {
             if (lang != Languages.Primary && !Languages.IsTranslationLanguage(lang))
                 return Results.BadRequest(new { error = $"Unsupported language: {lang}" });
@@ -662,7 +692,7 @@ public static class DraftEndpoints
             }
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid, ct);
+            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
             if (draft is null) return Results.NotFound();
 
             // AI features are Pro Plus; each call counts against the per-day AI quota
@@ -673,19 +703,19 @@ public static class DraftEndpoints
             if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
                 return Results.Json(new { error = $"Daily AI limit ({PlanLimitations.AiDailyLimit} calls) reached — resets at midnight UTC." }, statusCode: StatusCodes.Status429TooManyRequests);
 
-            DraftTranslation? translation = null;
+            var isTranslation = lang != Languages.Primary;
             string sourceTitle, sourceCedarJson;
-            if (lang == Languages.Primary)
+            if (!isTranslation)
             {
                 sourceTitle = draft.Title;
                 sourceCedarJson = draft.CedarJson;
             }
             else
             {
-                translation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang, ct);
-                if (translation is null) return Results.NotFound(new { error = $"No {lang} version to edit yet" });
-                sourceTitle = translation.Title;
-                sourceCedarJson = translation.CedarJson;
+                var existingTranslation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang);
+                if (existingTranslation is null) return Results.NotFound(new { error = $"No {lang} version to edit yet" });
+                sourceTitle = existingTranslation.Title;
+                sourceCedarJson = existingTranslation.CedarJson;
             }
 
             IAiEditProvider? provider;
@@ -700,48 +730,58 @@ public static class DraftEndpoints
             if (provider is null)
                 return Results.Json(new { error = "AI editing is not configured" }, statusCode: StatusCodes.Status501NotImplemented);
 
-            AiEditResult result;
-            try
+            var jobId = jobs.Start(uid, async ct =>
             {
-                result = await provider.EditAsync(sourceTitle, sourceCedarJson, editKind, ct);
-            }
-            catch (AiEditException ex)
-            {
-                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status502BadGateway);
-            }
-
-            try
-            {
-                using var docCheck = JsonDocument.Parse(result.CedarJson);
-                var root = docCheck.RootElement;
-                if (root.ValueKind != JsonValueKind.Object ||
-                    !root.TryGetProperty("type", out var typeProp) ||
-                    typeProp.GetString() != "doc")
+                AiEditResult result;
+                try
                 {
-                    return Results.Json(new { error = "AI returned an invalid document — try again" },
-                        statusCode: StatusCodes.Status502BadGateway);
+                    result = await provider.EditAsync(sourceTitle, sourceCedarJson, editKind, ct);
                 }
-            }
-            catch (JsonException)
-            {
-                return Results.Json(new { error = "AI returned invalid JSON — try again" }, statusCode: StatusCodes.Status502BadGateway);
-            }
+                catch (AiEditException ex)
+                {
+                    return AiJobOutcome.Fail(ex.Message, StatusCodes.Status502BadGateway);
+                }
 
-            if (translation is null)
-            {
-                draft.Title = result.Title;
-                draft.CedarJson = result.CedarJson;
-                draft.UpdatedAt = DateTime.UtcNow;
-            }
-            else
-            {
-                translation.Title = result.Title;
-                translation.CedarJson = result.CedarJson;
-                translation.UpdatedAt = DateTime.UtcNow;
-            }
-            await db.SaveChangesAsync(ct);
+                try
+                {
+                    using var docCheck = JsonDocument.Parse(result.CedarJson);
+                    var root = docCheck.RootElement;
+                    if (root.ValueKind != JsonValueKind.Object ||
+                        !root.TryGetProperty("type", out var typeProp) ||
+                        typeProp.GetString() != "doc")
+                    {
+                        return AiJobOutcome.Fail("AI returned an invalid document — try again", StatusCodes.Status502BadGateway);
+                    }
+                }
+                catch (JsonException)
+                {
+                    return AiJobOutcome.Fail("AI returned invalid JSON — try again", StatusCodes.Status502BadGateway);
+                }
 
-            return Results.Ok(new { title = result.Title, cedarJson = result.CedarJson, updatedAt = DateTime.UtcNow });
+                using var scope = scopeFactory.CreateScope();
+                var scopedDb = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
+                if (!isTranslation)
+                {
+                    var scopedDraft = await scopedDb.Drafts.FirstOrDefaultAsync(d => d.Id == id, ct);
+                    if (scopedDraft is null) return AiJobOutcome.Fail("Draft was deleted", StatusCodes.Status404NotFound);
+                    scopedDraft.Title = result.Title;
+                    scopedDraft.CedarJson = result.CedarJson;
+                    scopedDraft.UpdatedAt = DateTime.UtcNow;
+                }
+                else
+                {
+                    var scopedTranslation = await scopedDb.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang, ct);
+                    if (scopedTranslation is null) return AiJobOutcome.Fail("Translation was deleted", StatusCodes.Status404NotFound);
+                    scopedTranslation.Title = result.Title;
+                    scopedTranslation.CedarJson = result.CedarJson;
+                    scopedTranslation.UpdatedAt = DateTime.UtcNow;
+                }
+                await scopedDb.SaveChangesAsync(ct);
+
+                return AiJobOutcome.Ok(new { title = result.Title, cedarJson = result.CedarJson, updatedAt = DateTime.UtcNow });
+            }, Consts.Anthropic.RequestTimeout);
+
+            return Results.Accepted(value: new { jobId });
         });
 
         groupBuilder.MapDelete("/{id:guid}/translations/{lang}", async (Guid id, string lang, ClaimsPrincipal user, CedarDbContext db) =>
@@ -993,119 +1033,187 @@ public static class DraftEndpoints
                 await uploadStream.CopyToAsync(uploadCopy);
             uploadCopy.Position = 0;
 
-            ZipArchive archive;
-            try
-            {
-                archive = new ZipArchive(uploadCopy, ZipArchiveMode.Read, leaveOpen: true);
-            }
-            catch (InvalidDataException)
-            {
-                return Results.BadRequest(new { error = "The file is not a valid .zip archive." });
-            }
-
-            using (archive)
-            {
-                var mdEntry = archive.Entries.FirstOrDefault(e => e.FullName.EndsWith(".md", StringComparison.OrdinalIgnoreCase));
-                if (mdEntry is null)
-                    return Results.BadRequest(new { error = "No .md file found inside the zip." });
-
-                string markdownText;
-                using (var mdStream = mdEntry.Open())
-                using (var reader = new StreamReader(mdStream))
-                    markdownText = await reader.ReadToEndAsync();
-
-                var imageEntries = archive.Entries
-                    .Where(e => e != mdEntry
-                        && !e.FullName.EndsWith('/')
-                        && ImageFileExtensions.Contains(Path.GetExtension(e.FullName))
-                        && !e.FullName.Contains("..")
-                        && !Path.IsPathRooted(e.FullName))
-                    .ToList();
-
-                if (imageEntries.Count > MarkdownMaxImageCount)
-                    return Results.BadRequest(new { error = $"Too many images in the zip ({MarkdownMaxImageCount} maximum)" });
-
-                var docJson = MarkdownToCedarConverter.Convert(markdownText, out var titleFromHeading);
-                var referencedNames = CedarPackage.FindReferencedMediaPaths(docJson);
-
-                // Matched by basename only — Notion's exact subfolder layout isn't preserved. If the
-                // same filename appears under more than one subfolder (rare, but possible in a large
-                // multi-page export), the first match wins rather than throwing on a duplicate key.
-                var byBasename = new Dictionary<string, ZipArchiveEntry>(StringComparer.Ordinal);
-                var byBasenameCi = new Dictionary<string, ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
-                foreach (var entry in imageEntries)
-                {
-                    var name = Path.GetFileName(entry.FullName);
-                    byBasename.TryAdd(name, entry);
-                    byBasenameCi.TryAdd(name, entry);
-                }
-
-                var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-                var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
-                var usedBytes = await db.Assets.Where(a => a.OwnerId == uid).SumAsync(a => a.SizeBytes);
-
-                var unmatched = new List<string>();
-                var pending = new List<(string OriginalName, byte[] Bytes, string ContentType, string Ext)>();
-                long incomingBytes = 0;
-
-                foreach (var refName in referencedNames)
-                {
-                    if (!byBasename.TryGetValue(refName, out var entry) && !byBasenameCi.TryGetValue(refName, out entry))
-                    {
-                        unmatched.Add(refName);
-                        continue;
-                    }
-
-                    byte[] bytes;
-                    using (var entryStream = entry.Open())
-                    using (var ms = new MemoryStream())
-                    {
-                        await entryStream.CopyToAsync(ms);
-                        bytes = ms.ToArray();
-                    }
-
-                    var contentType = ImageContentSniffer.DetectContentType(bytes);
-                    if (contentType is null || !ImportImageExtensions.TryGetValue(contentType, out var ext) || bytes.Length > Consts.FileSizes.ImageMaxBytes)
-                    {
-                        unmatched.Add(refName);
-                        continue;
-                    }
-
-                    incomingBytes += bytes.Length;
-                    pending.Add((refName, bytes, contentType, ext));
-                }
-
-                if (!PlanLimitations.HasStorageRoom(tier, usedBytes, incomingBytes))
-                    return Results.Json(new { error = $"Storage limit of your plan ({PlanLimitations.StorageLimitBytes(tier) / (1024 * 1024)}MB) exceeded. Upgrade for more." }, statusCode: StatusCodes.Status403Forbidden);
-
-                var pathRewrites = new Dictionary<string, string>();
-                foreach (var (originalName, bytes, contentType, ext) in pending)
-                {
-                    var newName = $"asset_{Guid.NewGuid()}{ext}";
-                    await File.WriteAllBytesAsync(Path.Combine(media.Dir, newName), bytes);
-
-                    db.Assets.Add(new Asset
-                    {
-                        FileName = originalName,
-                        ContentType = contentType,
-                        SizeBytes = bytes.Length,
-                        LocalPath = newName,
-                        OwnerId = uid,
-                    });
-
-                    pathRewrites[originalName] = newName;
-                }
-
-                var rewrittenJson = CedarPackage.RewriteMediaPaths(docJson, pathRewrites);
-                var title = titleFromHeading ?? Path.GetFileNameWithoutExtension(mdEntry.Name);
-                var draft = new Draft { Title = title, CedarJson = rewrittenJson, OwnerId = uid };
-                db.Drafts.Add(draft);
-                await db.SaveChangesAsync();
-
-                return Results.Created($"/api/drafts/{draft.Id}", new { draft.Id, unmatchedImages = unmatched });
-            }
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            return await ImportMarkdownZipAsync(uploadCopy, uid, db, media);
         }).DisableAntiforgery()
           .WithMetadata(new RequestFormLimitsAttribute { MultipartBodyLengthLimit = MarkdownZipMaxBytes });
+
+        // ADR-058 — local-only bypass for imports over Cloudflare's ~100MB edge limit, triggered
+        // over SSH directly on the Pi (never through the tunnel, so that limit never applies).
+        // AllowAnonymous() opts out of the group's RequireAuthorization(); IsGenuinelyLocal() below
+        // is the real gate — see its own comment for why loopback IP alone isn't enough here.
+        groupBuilder.MapPost("/import-markdown-local", async (
+            LocalImportMarkdownRequest req, HttpContext ctx,
+            UserManager<ApplicationUser> users, CedarDbContext db, MediaPaths media, ImportTmpPaths importTmp) =>
+        {
+            if (!IsGenuinelyLocal(ctx))
+                return Results.NotFound(); // 404, not 403 — same instinct as AdminEndpoints' admin gate
+
+            if (!TryResolveImportTmpFile(importTmp.Dir, req.ZipFileName, out var fullPath))
+                return Results.BadRequest(new { error = "Invalid file name." });
+
+            if (!File.Exists(fullPath))
+                return Results.BadRequest(new { error = "File not found in import-tmp directory." });
+
+            var fileInfo = new FileInfo(fullPath);
+            if (fileInfo.Length == 0 || fileInfo.Length > MarkdownZipMaxBytes)
+                return Results.BadRequest(new { error = $"File is too large ({MarkdownZipMaxBytes / (1024 * 1024)}MB maximum)" });
+
+            var owner = await users.FindByEmailAsync(req.OwnerEmail);
+            if (owner is null)
+                return Results.BadRequest(new { error = "No account with that email." });
+
+            await using var zipStream = File.OpenRead(fullPath); // FileStream is already seekable
+            return await ImportMarkdownZipAsync(zipStream, owner.Id, db, media);
+        }).AllowAnonymous();
+    }
+
+    // ADR-058 — extracted verbatim from /import-markdown's handler body so both it and the
+    // local-only bypass share one implementation. Every check/message/order is unchanged from
+    // before the extraction — this is a pure move, not a rewrite.
+    private static async Task<IResult> ImportMarkdownZipAsync(Stream seekableZipStream, string ownerId, CedarDbContext db, MediaPaths media)
+    {
+        ZipArchive archive;
+        try
+        {
+            archive = new ZipArchive(seekableZipStream, ZipArchiveMode.Read, leaveOpen: true);
+        }
+        catch (InvalidDataException)
+        {
+            return Results.BadRequest(new { error = "The file is not a valid .zip archive." });
+        }
+
+        using (archive)
+        {
+            var mdEntry = archive.Entries.FirstOrDefault(e => e.FullName.EndsWith(".md", StringComparison.OrdinalIgnoreCase));
+            if (mdEntry is null)
+                return Results.BadRequest(new { error = "No .md file found inside the zip." });
+
+            string markdownText;
+            using (var mdStream = mdEntry.Open())
+            using (var reader = new StreamReader(mdStream))
+                markdownText = await reader.ReadToEndAsync();
+
+            var imageEntries = archive.Entries
+                .Where(e => e != mdEntry
+                    && !e.FullName.EndsWith('/')
+                    && ImageFileExtensions.Contains(Path.GetExtension(e.FullName))
+                    && !e.FullName.Contains("..")
+                    && !Path.IsPathRooted(e.FullName))
+                .ToList();
+
+            if (imageEntries.Count > MarkdownMaxImageCount)
+                return Results.BadRequest(new { error = $"Too many images in the zip ({MarkdownMaxImageCount} maximum)" });
+
+            var docJson = MarkdownToCedarConverter.Convert(markdownText, out var titleFromHeading);
+            var referencedNames = CedarPackage.FindReferencedMediaPaths(docJson);
+
+            // Matched by basename only — Notion's exact subfolder layout isn't preserved. If the
+            // same filename appears under more than one subfolder (rare, but possible in a large
+            // multi-page export), the first match wins rather than throwing on a duplicate key.
+            var byBasename = new Dictionary<string, ZipArchiveEntry>(StringComparer.Ordinal);
+            var byBasenameCi = new Dictionary<string, ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
+            foreach (var entry in imageEntries)
+            {
+                var name = Path.GetFileName(entry.FullName);
+                byBasename.TryAdd(name, entry);
+                byBasenameCi.TryAdd(name, entry);
+            }
+
+            var tier = await SubscriptionPlan.EffectiveTierAsync(db, ownerId);
+            var usedBytes = await db.Assets.Where(a => a.OwnerId == ownerId).SumAsync(a => a.SizeBytes);
+
+            var unmatched = new List<string>();
+            var pending = new List<(string OriginalName, byte[] Bytes, string ContentType, string Ext)>();
+            long incomingBytes = 0;
+
+            foreach (var refName in referencedNames)
+            {
+                if (!byBasename.TryGetValue(refName, out var entry) && !byBasenameCi.TryGetValue(refName, out entry))
+                {
+                    unmatched.Add(refName);
+                    continue;
+                }
+
+                byte[] bytes;
+                using (var entryStream = entry.Open())
+                using (var ms = new MemoryStream())
+                {
+                    await entryStream.CopyToAsync(ms);
+                    bytes = ms.ToArray();
+                }
+
+                var contentType = ImageContentSniffer.DetectContentType(bytes);
+                if (contentType is null || !ImportImageExtensions.TryGetValue(contentType, out var ext) || bytes.Length > Consts.FileSizes.ImageMaxBytes)
+                {
+                    unmatched.Add(refName);
+                    continue;
+                }
+
+                incomingBytes += bytes.Length;
+                pending.Add((refName, bytes, contentType, ext));
+            }
+
+            if (!PlanLimitations.HasStorageRoom(tier, usedBytes, incomingBytes))
+                return Results.Json(new { error = $"Storage limit of your plan ({PlanLimitations.StorageLimitBytes(tier) / (1024 * 1024)}MB) exceeded. Upgrade for more." }, statusCode: StatusCodes.Status403Forbidden);
+
+            var pathRewrites = new Dictionary<string, string>();
+            foreach (var (originalName, bytes, contentType, ext) in pending)
+            {
+                var newName = $"asset_{Guid.NewGuid()}{ext}";
+                await File.WriteAllBytesAsync(Path.Combine(media.Dir, newName), bytes);
+
+                db.Assets.Add(new Asset
+                {
+                    FileName = originalName,
+                    ContentType = contentType,
+                    SizeBytes = bytes.Length,
+                    LocalPath = newName,
+                    OwnerId = ownerId,
+                });
+
+                pathRewrites[originalName] = newName;
+            }
+
+            var rewrittenJson = CedarPackage.RewriteMediaPaths(docJson, pathRewrites);
+            var title = titleFromHeading ?? Path.GetFileNameWithoutExtension(mdEntry.Name);
+            var draft = new Draft { Title = title, CedarJson = rewrittenJson, OwnerId = ownerId };
+            db.Drafts.Add(draft);
+            await db.SaveChangesAsync();
+
+            return Results.Created($"/api/drafts/{draft.Id}", new { draft.Id, unmatchedImages = unmatched });
+        }
+    }
+
+    // ADR-058 — the real gate for /import-markdown-local. Loopback IP alone is NOT enough:
+    // Kestrel binds only to localhost:8080, and Cloudflare Tunnel reaches the app by connecting
+    // to that same address — so every tunneled request also arrives here from a loopback IP,
+    // indistinguishable by IP alone from a request made directly on the box. The Host header is
+    // the second, load-bearing signal: the tunnel forwards the client's original Host
+    // (cedarclerk.mooexe.dev), never rewriting it to localhost — already relied on elsewhere in
+    // this file for the blog's host-based routing. Only a request that both connects over
+    // loopback AND was addressed to "localhost" (e.g. `curl http://localhost:8080/...` run
+    // directly on the Pi) satisfies both. Deliberately not using CF-Connecting-IP/X-Forwarded-For
+    // — ordinary, attacker-settable headers this app never validates against a trusted-proxy list.
+    private static bool IsGenuinelyLocal(HttpContext ctx) =>
+        ctx.Connection.RemoteIpAddress is { } ip && IPAddress.IsLoopback(ip)
+        && string.Equals(ctx.Request.Host.Host, "localhost", StringComparison.OrdinalIgnoreCase);
+
+    // Same "reject .. / rooted path" instinct already used for zip entries above, applied to the
+    // request's file name instead — the resolved path must stay inside importTmpDir.
+    private static bool TryResolveImportTmpFile(string importTmpDir, string requestedName, out string fullPath)
+    {
+        fullPath = "";
+        if (string.IsNullOrWhiteSpace(requestedName) || requestedName.Contains("..") || Path.IsPathRooted(requestedName))
+            return false;
+
+        var candidate = Path.GetFullPath(Path.Combine(importTmpDir, requestedName));
+        var normalizedDir = Path.GetFullPath(importTmpDir) + Path.DirectorySeparatorChar;
+        if (!candidate.StartsWith(normalizedDir, StringComparison.Ordinal))
+            return false;
+
+        fullPath = candidate;
+        return true;
     }
 
     private static string BuildInviteUrl(IConfiguration cfg, Draft draft, string token) =>

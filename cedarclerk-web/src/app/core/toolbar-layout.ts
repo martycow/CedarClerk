@@ -5,7 +5,7 @@
 // group-level placement still delivers the core "customizable toolbar" value.
 
 export type ToolbarButtonId =
-    | 'bold' | 'italic' | 'underline' | 'strike' | 'spoiler'
+    | 'bold' | 'italic' | 'underline' | 'strike' | 'spoiler' | 'align'
     | 'link' | 'emoji' | 'datetime' | 'footnote'
     | 'bulletList' | 'orderedList' | 'taskList' | 'indent' | 'outdent'
     | 'inlineCode' | 'codeBlock'
@@ -27,6 +27,7 @@ export const TOOLBAR_GROUPS: ToolbarGroupDef[] = [
         id: 'text', label: 'Text', buttons: [
             { id: 'bold', label: 'Bold' }, { id: 'italic', label: 'Italic' }, { id: 'underline', label: 'Underline' },
             { id: 'strike', label: 'Strikethrough' }, { id: 'spoiler', label: 'Spoiler' },
+            { id: 'align', label: 'Text alignment (blog only)' },
         ],
     },
     {
@@ -88,7 +89,7 @@ export const STANDARD_ROW1_GROUPS = ['text', 'insert', 'lists'];
 export const MOVABLE_GROUP_IDS = TOOLBAR_GROUPS.filter(g => g.id !== 'ai').map(g => g.id);
 
 const MINIMAL_HIDDEN: ToolbarButtonId[] = [
-    'underline', 'strike', 'spoiler', 'emoji', 'datetime', 'footnote',
+    'underline', 'strike', 'spoiler', 'align', 'emoji', 'datetime', 'footnote',
     'orderedList', 'taskList', 'indent', 'outdent', 'inlineCode', 'codeBlock',
     'video', 'gif', 'audio', 'carousel', 'collage', 'youtube',
     'table', 'formula', 'toggle', 'toc', 'divider', 'annotation', 'poll',

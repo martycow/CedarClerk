@@ -56,6 +56,18 @@
     white-space: nowrap;
 }
 
+.version-tag {
+    font-size: 10.5px;
+    color: var(--t3);
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .version-tag {
+        display: none;
+    }
+}
+
 .crumb-sep {
     color: var(--t3);
     font-size: var(--fs-13);

@@ -12,14 +12,14 @@ import { AssetsService } from '../core/assets.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { PageHeaderComponent } from '../shared/page-header.component';
 import { BrandIconComponent } from '../shared/brand-icon.component';
-import { LucideCheck as Check, LucideSend as Send } from '@lucide/angular';
+import { LucideCheck as Check, LucideSend as Send, LucideLock as Lock } from '@lucide/angular';
 
 type PayMethod = 'stripe' | 'paypal' | 'stars';
 export type SettingsTab = 'profile' | 'account';
 
 @Component({
     selector: 'app-settings',
-    imports: [FormsModule, DatePipe, RouterLink, PageHeaderComponent, BrandIconComponent, Check, Send],
+    imports: [FormsModule, DatePipe, RouterLink, PageHeaderComponent, BrandIconComponent, Check, Send, Lock],
     templateUrl: 'settings.component.html',
     styleUrls: ['settings.component.css']
 })
