@@ -4,12 +4,13 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { GlossaryService, GlossaryTerm } from '../core/glossary.service';
 import { AssetsService } from '../core/assets.service';
 import { httpErrorMessage } from '../core/http-error.util';
-import { PRIMARY_LANGUAGE, CONTENT_LANGUAGES } from '../core/languages';
+import { PRIMARY_LANGUAGE, CONTENT_LANGUAGES, endonymOf } from '../core/languages';
 import { PageHeaderComponent } from '../shared/page-header.component';
 import { ModalComponent } from '../shared/modal.component';
 import {
-    LucideTrash2 as Trash2, LucidePlus as Plus,
+    LucideTrash2 as Trash2, LucidePlus as Plus, LucidePencil as Pencil,
     LucideRefreshCw as RefreshCw, LucideImage as ImageIcon, LucideX as X, LucideInfo as Info,
+    LucideLanguages as LanguagesIcon,
 } from '@lucide/angular';
 
 // Idea #11 — the glossary page. A term is defined once here and explained wherever it turns up on
@@ -18,7 +19,7 @@ import {
     selector: 'app-glossary',
     imports: [
         FormsModule, PageHeaderComponent, ModalComponent,
-        Trash2, Plus, RefreshCw, ImageIcon, X, Info,
+        Trash2, Plus, Pencil, RefreshCw, ImageIcon, X, Info, LanguagesIcon,
     ],
     templateUrl: 'glossary.component.html',
     styleUrls: ['glossary.component.css'],
@@ -30,6 +31,7 @@ export class GlossaryComponent implements OnInit {
 
     readonly contentLanguages = CONTENT_LANGUAGES;
     readonly primaryLanguage = PRIMARY_LANGUAGE;
+    readonly endonymOf = endonymOf;
 
     terms = signal<GlossaryTerm[]>([]);
     loading = signal(true);
@@ -178,5 +180,63 @@ export class GlossaryComponent implements OnInit {
 
     aliasList(term: GlossaryTerm): string[] {
         return term.aliases.split(',').map(a => a.trim()).filter(a => a.length > 0);
+    }
+
+    // ADR-061 — "selected languages" is a frontend loop: one /translate call per checked
+    // language, sequentially, so quota use and errors stay per-language.
+    translateFor = signal<GlossaryTerm | null>(null);
+    translateSelection = signal<Set<string>>(new Set());
+    translatingLang = signal<string | null>(null);
+    translateError = signal('');
+
+    translateTargets(term: GlossaryTerm): string[] {
+        return this.contentLanguages.filter(l => l !== (term.language || PRIMARY_LANGUAGE));
+    }
+
+    openTranslate(term: GlossaryTerm) {
+        this.translateFor.set(term);
+        this.translateSelection.set(new Set());
+        this.translateError.set('');
+    }
+
+    closeTranslate() {
+        if (this.translatingLang()) return;
+        this.translateFor.set(null);
+    }
+
+    toggleTranslateLang(lang: string) {
+        this.translateSelection.update(s => {
+            const next = new Set(s);
+            next.has(lang) ? next.delete(lang) : next.add(lang);
+            return next;
+        });
+    }
+
+    canTranslate(): boolean {
+        return this.translateSelection().size > 0 && !this.translatingLang();
+    }
+
+    async runTranslate() {
+        const source = this.translateFor();
+        if (!source || !this.canTranslate()) return;
+        this.translateError.set('');
+        const langs = this.contentLanguages.filter(l => this.translateSelection().has(l));
+        for (const lang of langs) {
+            this.translatingLang.set(lang);
+            try {
+                const saved = await this.api.translate(source.id, lang);
+                this.terms.update(list => list.some(t => t.id === saved.id)
+                    ? list.map(t => t.id === saved.id ? saved : t)
+                    : [...list, saved].sort((a, b) => a.term.localeCompare(b.term)));
+                this.toggleTranslateLang(lang);
+            } catch (e) {
+                // Stop on the first failure; the untouched languages stay checked for a retry.
+                this.translateError.set(httpErrorMessage(e, this.t().glossary.translateFailed));
+                this.translatingLang.set(null);
+                return;
+            }
+        }
+        this.translatingLang.set(null);
+        this.translateFor.set(null);
     }
 }

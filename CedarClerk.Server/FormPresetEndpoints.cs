@@ -92,7 +92,7 @@ public static class FormPresetEndpoints
 
             var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
             if (!PlanLimitations.HasAiFeatures(tier))
-                return Results.Json(new { error = "Auto-translate is a Pro Plus feature. Upgrade to use it." }, statusCode: StatusCodes.Status403Forbidden);
+                return Results.Json(new { error = ErrorMessages.AutoTranslateProPlus }, statusCode: StatusCodes.Status403Forbidden);
 
             ITranslationProvider? provider;
             try
@@ -104,7 +104,7 @@ public static class FormPresetEndpoints
                 return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status501NotImplemented);
             }
             if (provider is not ITextsTranslationProvider textsProvider)
-                return Results.Json(new { error = "Auto-translate is not available with the configured provider" }, statusCode: StatusCodes.Status501NotImplemented);
+                return Results.Json(new { error = ErrorMessages.AutoTranslateNoProvider }, statusCode: StatusCodes.Status501NotImplemented);
 
             var upgraded = RegistrationFormTexts.UpgradeToV2(preset.FormJson, preset.Language);
             var sourceLang = RegistrationFormSet.LanguagesWithForm(upgraded, null).FirstOrDefault() ?? Languages.Primary;
@@ -116,7 +116,7 @@ public static class FormPresetEndpoints
                 return Results.BadRequest(new { error = "The form has no text to translate yet" });
 
             if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
-                return Results.Json(new { error = $"Daily AI limit ({PlanLimitations.AiDailyLimit} calls) reached — resets at midnight UTC." }, statusCode: StatusCodes.Status429TooManyRequests);
+                return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);
 
             IReadOnlyList<string> translated;
             try

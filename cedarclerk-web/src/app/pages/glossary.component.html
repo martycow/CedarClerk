@@ -93,7 +93,12 @@
                         <span class="term-name">{{ term.term }}</span>
                         @for (a of aliasList(term); track a) { <span class="term-alias">{{ a }}</span> }
                         <span class="spacer"></span>
-                        <button class="mini" (click)="startEdit(term)">{{ t().common.edit }}</button>
+                        <button class="mini" (click)="startEdit(term)" [title]="t().common.edit">
+                            <svg lucidePencil class="icon-sm"></svg>
+                        </button>
+                        <button class="mini" (click)="openTranslate(term)" [title]="t().glossary.translate">
+                            <svg lucideLanguages class="icon-sm"></svg>
+                        </button>
                         <button class="mini-remove" (click)="deleteConfirmId.set(term.id)" [title]="t().common.delete">
                             <svg lucideTrash2 class="icon-sm"></svg>
                         </button>
@@ -107,6 +112,31 @@
         </div>
         }
     </div>
+
+    @if (translateFor(); as term) {
+    <app-modal (closed)="closeTranslate()">
+        <svg modal-icon lucideLanguages class="icon"></svg>
+        <span modal-title>{{ t().glossary.translateTitle(term.term) }}</span>
+        <p>{{ t().glossary.translateBody }}</p>
+        <div class="lang-check-list">
+            @for (l of translateTargets(term); track l) {
+            <label class="lang-check">
+                <input type="checkbox" [checked]="translateSelection().has(l)"
+                       [disabled]="translatingLang() !== null" (change)="toggleTranslateLang(l)">
+                <span>{{ l.toUpperCase() }} · {{ endonymOf(l) }}</span>
+                @if (translatingLang() === l) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+            </label>
+            }
+        </div>
+        @if (translateError()) { <p class="channel-error">{{ translateError() }}</p> }
+        <button modal-actions class="btn-ghost" (click)="closeTranslate()"
+                [disabled]="translatingLang() !== null">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-accent" (click)="runTranslate()" [disabled]="!canTranslate()">
+            @if (translatingLang()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+            {{ t().glossary.translateRun }}
+        </button>
+    </app-modal>
+    }
 
     @if (deleteTarget(); as term) {
     <app-modal (closed)="deleteConfirmId.set(null)">

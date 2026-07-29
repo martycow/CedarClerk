@@ -44,4 +44,10 @@ export class GlossaryService {
     remove(id: string) {
         return firstValueFrom(this.http.delete(`/api/glossary/${id}`));
     }
+
+    // ADR-061 — machine-translates term+description into `targetLanguage` server-side; returns
+    // the created (or refreshed) term in that language. Pro Plus + daily AI quota, like forms.
+    translate(id: string, targetLanguage: string) {
+        return firstValueFrom(this.http.post<GlossaryTerm>(`/api/glossary/${id}/translate`, { targetLanguage }));
+    }
 }

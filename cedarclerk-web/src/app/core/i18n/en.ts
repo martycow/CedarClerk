@@ -561,6 +561,11 @@ export const en = {
         imageFailed: 'Failed to upload the image',
         deleteTitle: (term: string) => `Delete "${term}"?`,
         deleteBody: 'Published posts stop showing its tooltip. Nothing else changes.',
+        translate: 'Translate into other languages',
+        translateTitle: (term: string) => `Translate "${term}"`,
+        translateBody: 'The term and its description are machine-translated — you can edit the result. Other spellings are not translated: fill them in by hand when needed.',
+        translateRun: 'Translate',
+        translateFailed: 'Failed to translate the term',
     },
     admin: {
         crumb: 'Admin',

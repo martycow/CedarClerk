@@ -2,6 +2,16 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-07-29 — glossary: auto-translate terms + the missing button styles
+
+Two glossary asks from Marty (ADR-061, `docs/DECISIONS.md`):
+
+**Feature — auto-translate a term into selected languages.** New `POST /api/glossary/{id}/translate` — the ADR-060 form-preset shape verbatim: Pro Plus + daily AI quota, `ITextsTranslationProvider` (Anthropic chunked / DeepL batch, others → 501), synchronous. Term + description are translated; **aliases deliberately are not** (they cover one language's inflections — a machine rendering of "рендерер, рендерера" into English is noise), and the image is copied as language-neutral. Upsert by translated term text (case-insensitive), so a second press refreshes the description instead of duplicating the row. UI: a languages icon on every term card opens a modal with checkboxes for the other five content languages; the frontend calls the endpoint once per checked language sequentially, stops on the first failure and leaves the untranslated languages checked for a retry. En route, the three auto-translate gate strings inlined in `DraftEndpoints`/`FormPresetEndpoints` moved to `ErrorMessages` (third use).
+
+**Fix — the glossary page's buttons had no styling at all.** Button/input classes (`btn-accent`, `btn-ghost`, `mini`, `mini-remove`, `chat-input`, `field-hint-inline`) are per-component in this project, and `glossary.component.css` shipped without them — every button rendered as a bare browser default. Copied the definitions from `drafts.component.css`; the per-card "edit" text button became a pencil icon button to match the icon-button row pattern everywhere else.
+
+`dotnet test` 396/396, `ng build` clean. Not yet live-verified in a browser or deployed.
+
 ## 2026-07-30 (latest, uncommitted) — forms: multi-language presets, consent field, and two real fixes
 
 Three form asks from Marty in one pass (ADR-060, `docs/DECISIONS.md`):

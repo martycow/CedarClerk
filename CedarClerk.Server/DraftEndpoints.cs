@@ -616,10 +616,10 @@ public static class DraftEndpoints
             // AI features are Pro Plus; each call counts against the per-day AI quota
             var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
             if (!PlanLimitations.HasAiFeatures(tier))
-                return Results.Json(new { error = "Auto-translate is a Pro Plus feature. Upgrade to use it." }, statusCode: StatusCodes.Status403Forbidden);
+                return Results.Json(new { error = ErrorMessages.AutoTranslateProPlus }, statusCode: StatusCodes.Status403Forbidden);
 
             if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
-                return Results.Json(new { error = $"Daily AI limit ({PlanLimitations.AiDailyLimit} calls) reached — resets at midnight UTC." }, statusCode: StatusCodes.Status429TooManyRequests);
+                return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);
 
             ITranslationProvider? provider;
             try
@@ -712,7 +712,7 @@ public static class DraftEndpoints
                 return Results.Json(new { error = "AI editing is a Pro Plus feature. Upgrade to use it." }, statusCode: StatusCodes.Status403Forbidden);
 
             if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
-                return Results.Json(new { error = $"Daily AI limit ({PlanLimitations.AiDailyLimit} calls) reached — resets at midnight UTC." }, statusCode: StatusCodes.Status429TooManyRequests);
+                return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);
 
             var isTranslation = lang != Languages.Primary;
             string sourceTitle, sourceCedarJson;

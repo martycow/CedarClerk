@@ -489,3 +489,13 @@ Gated with `Results.NotFound()` (404, not 403) on failure — same instinct as `
 
 **Consequence**: `FormPreset.Language` becomes derived metadata (`languages[0]`) kept for wire compatibility; the per-preset language dropdown is replaced by language chips (+ add / auto-translate / remove) in the Forms editor; the comma-separated options input is replaced by per-option rows with one input per active language (a comma field can't keep option ids stable across languages). Distribution charts and the submissions list map stored option ids back to primary-language labels, falling back to the raw stored value for pre-v2 rows.
 
+
+### ADR-061 — Glossary terms get per-term auto-translate into the other content languages
+**Context** (29.07.2026): glossary terms are per-language by design (a post is only scanned against terms in its own language — see the glossary ADR), so a six-language blog means entering the same term up to six times by hand. Marty asked for auto-translation into selected languages.
+
+**Decision**: `POST /api/glossary/{id}/translate` with `{ targetLanguage }` — the ADR-060 form-preset shape verbatim: Pro Plus + the daily AI quota, `ITextsTranslationProvider` (Anthropic chunked / DeepL batch; a provider without it → 501), synchronous — a term is two short strings, well under one chunk.
+- **Term + Description are translated; Aliases deliberately are not.** Aliases exist to cover one specific language''s inflections ("рендерер, рендерера, рендереру") — a word-for-word machine rendering of that list into another language is noise, not coverage. The owner fills them per language when needed. `ImageUrl` is copied — a picture is language-neutral.
+- **Upsert, not blind insert**: if the owner already has a term in the target language whose `Term` equals the translation (case-insensitive), its `Description` is overwritten and its aliases/image are kept; otherwise a new row is created. Pressing the button twice therefore refreshes rather than duplicates.
+- **"Selected languages" is a frontend loop**: the modal collects target-language checkboxes and calls the endpoint once per language, sequentially. No batch endpoint — per-language quota consumption and per-language errors stay legible, and the ADR-060 contract is reused unchanged.
+
+**Consequence**: the auto-translate gate strings ("Pro Plus feature", "not available with the configured provider", the daily-limit message) were inlined twice already (`DraftEndpoints`, `FormPresetEndpoints`); a third use moves them to `ErrorMessages` and the existing call sites are pointed at the consts.
