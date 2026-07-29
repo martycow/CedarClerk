@@ -11,9 +11,22 @@ public enum RegistrationQuestionType
     // Several options at once (N10). Its answer is stored as a JSON array inside the same
     // string-valued answers map the other types use — see MultiAnswer below for why.
     Multi,
+
+    // A block of text (Label — an agreement/consent statement, not a question) with a single
+    // checkbox the reader must tick to proceed — e.g. "I agree to the rules". Always Required
+    // (Parse below forces it): an optional consent checkbox isn't a meaningful concept. Has no
+    // Options; its answer is "yes" when ticked, same absent/blank-means-unanswered shape as every
+    // other type, so the existing generic required-question check needs no special case for it.
+    Consent,
 }
 
-public record RegistrationQuestion(string Id, string Label, RegistrationQuestionType Type, IReadOnlyList<string> Options, bool Required);
+// ADR-060 — an option carries a stable Id distinct from its display Label, so the same choice
+// submitted from different language versions of the form aggregates as one answer. A v1 blob
+// (plain string options) parses with Id == Label, which keeps every already-stored answer
+// displaying identically: the old stored values were the labels.
+public record RegistrationOption(string Id, string Label);
+
+public record RegistrationQuestion(string Id, string Label, RegistrationQuestionType Type, IReadOnlyList<RegistrationOption> Options, bool Required);
 
 // Parsed shape of Draft.RegistrationFormJson (B3) — the form an uninvited visitor of a private
 // post fills in to get access. Parsed in Core so the blog renderer and the submit-validation
@@ -61,25 +74,29 @@ public record RegistrationFormDefinition(
                 if (q is not JsonObject qo)
                     continue;
 
-                var label = (string?)qo["label"];
+                // AsString rather than a (string?) cast throughout: a v2 blob (ADR-060) carries
+                // objects where v1 carries strings, and a cast on an object throws — this parser
+                // must degrade, never throw, whatever shape lands in the column.
+                var label = AsString(qo["label"]);
                 if (string.IsNullOrWhiteSpace(label))
                     continue; // an unlabelled question can't be answered meaningfully
 
-                var id = (string?)qo["id"];
+                var id = AsString(qo["id"]);
                 if (string.IsNullOrWhiteSpace(id))
                     id = $"q{questions.Count + 1}";
 
-                var type = (string?)qo["type"] switch
+                var type = AsString(qo["type"]) switch
                 {
                     "choice" => RegistrationQuestionType.Choice,
                     "multi" => RegistrationQuestionType.Multi,
+                    "consent" => RegistrationQuestionType.Consent,
                     _ => RegistrationQuestionType.Text,
                 };
 
                 var options = (qo["options"] as JsonArray)?
-                    .Select(o => (string?)o)
+                    .Select(o => AsString(o))
                     .Where(o => !string.IsNullOrWhiteSpace(o))
-                    .Select(o => o!)
+                    .Select(o => new RegistrationOption(o!, o!))
                     .ToList() ?? [];
 
                 // A choice/multi question with no options can't be rendered as one — fall back to
@@ -87,18 +104,28 @@ public record RegistrationFormDefinition(
                 if (type is RegistrationQuestionType.Choice or RegistrationQuestionType.Multi && options.Count == 0)
                     type = RegistrationQuestionType.Text;
 
-                questions.Add(new RegistrationQuestion(id!, label!, type, options, (bool?)qo["required"] ?? false));
+                // An optional consent checkbox isn't a meaningful concept — force it regardless of
+                // what a hand-edited/older blob says.
+                var required = type == RegistrationQuestionType.Consent || ((bool?)qo["required"] ?? false);
+
+                questions.Add(new RegistrationQuestion(id!, label!, type, options, required));
             }
         }
 
         return new RegistrationFormDefinition(
-            Intro: (string?)obj["intro"],
-            RequireName: (bool?)obj["requireName"] ?? false,
-            RequireNickname: (bool?)obj["requireNickname"] ?? false,
-            RequireEmail: (bool?)obj["requireEmail"] ?? false,
-            RequireSocial: (bool?)obj["requireSocial"] ?? false,
+            Intro: AsString(obj["intro"]),
+            RequireName: AsBool(obj["requireName"]),
+            RequireNickname: AsBool(obj["requireNickname"]),
+            RequireEmail: AsBool(obj["requireEmail"]),
+            RequireSocial: AsBool(obj["requireSocial"]),
             Questions: questions);
     }
+
+    internal static string? AsString(JsonNode? node) =>
+        node is JsonValue v && v.TryGetValue<string>(out var s) ? s : null;
+
+    internal static bool AsBool(JsonNode? node) =>
+        node is JsonValue v && v.TryGetValue<bool>(out var b) && b;
 }
 
 // A Multi question's answer travels inside the same Dictionary<string,string> as every other

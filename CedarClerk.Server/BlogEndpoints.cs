@@ -1506,6 +1506,9 @@ public static class BlogEndpoints
         .reg-question-label { font-size: 13px; font-weight: 500; }
         .reg-multi { display: flex; flex-direction: column; gap: 6px; }
         .reg-multi-option { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+        .reg-consent { display: flex; flex-direction: column; gap: 6px; }
+        .reg-consent-text { font-size: 13px; line-height: 1.5; margin: 0; white-space: pre-wrap; }
+        .reg-consent-check { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
         .reg-submit { border: none; background: var(--accent); color: #F4F2EA; border-radius: 8px; padding: 11px 18px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; margin-top: 4px; }
         .reg-submit:hover { filter: brightness(1.08); }
         .reg-submit:disabled { opacity: .6; cursor: default; }
@@ -1690,6 +1693,13 @@ public static class BlogEndpoints
                         if (box.checked) picked.push(box.value);
                     });
                     payload.answers[group.getAttribute('data-question-multi')] = picked.length ? JSON.stringify(picked) : '';
+                });
+                // Consent checkbox — .checked, not .value: a checkbox's value attribute is static
+                // and reports the same thing whether it's ticked or not, so the generic
+                // [data-question] handler above (which reads .value) would always say "answered"
+                // even when the reader never ticked it.
+                form.querySelectorAll('[data-question-consent]').forEach(function (el) {
+                    payload.answers[el.getAttribute('data-question-consent')] = el.checked ? 'yes' : '';
                 });
 
                 errEl.hidden = true;

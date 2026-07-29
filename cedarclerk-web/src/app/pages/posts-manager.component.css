@@ -603,7 +603,7 @@
 
 .question-card-head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     padding: 8px 10px;
     background: var(--alt);
@@ -612,6 +612,125 @@
 .question-card-head .chat-input {
     flex: 1;
     min-width: 0;
+}
+
+/* ADR-060 — one label input per active language, stacked; the chip names the language. */
+.q-label-stack {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.q-label-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.q-label-row .state-chip.lang {
+    flex: none;
+}
+
+/* Option rows: one option = one row of per-language inputs sharing a stable id, so a comma
+   field can't desync the languages. */
+.option-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.option-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.option-row .option-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.option-add {
+    align-self: flex-start;
+}
+
+/* Language chips with their add/translate/remove controls. */
+.lang-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.lang-chip-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid var(--abord);
+    background: var(--asoft);
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.lang-chip-edit.primary {
+    border-style: solid;
+    font-weight: 700;
+}
+
+.lang-chip-act {
+    display: inline-flex;
+    align-items: center;
+    border: none;
+    background: none;
+    color: inherit;
+    padding: 0;
+    cursor: pointer;
+    opacity: .7;
+}
+
+.lang-chip-act:hover { opacity: 1; }
+.lang-chip-act:disabled { opacity: .4; cursor: default; }
+
+.lang-add {
+    position: relative;
+    display: inline-flex;
+}
+
+.lang-add-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.lang-add-item {
+    border: none;
+    background: none;
+    color: var(--text);
+    padding: 7px 16px;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.lang-add-item:hover { background: var(--alt); }
+
+.reg-error-inline {
+    color: var(--danger);
+    font-size: 12.5px;
+    margin: 4px 0 0;
 }
 
 .question-number {

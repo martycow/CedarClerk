@@ -52,7 +52,8 @@ public class RegistrationFormDefinitionTests
         Assert.True(form.Questions[0].Required);
         Assert.Empty(form.Questions[0].Options);
         Assert.Equal(RegistrationQuestionType.Choice, form.Questions[1].Type);
-        Assert.Equal(["RPG", "Sim"], form.Questions[1].Options);
+        // v1 options parse with Id == Label — the old stored answers were the labels (ADR-060).
+        Assert.Equal([new("RPG", "RPG"), new RegistrationOption("Sim", "Sim")], form.Questions[1].Options);
         Assert.False(form.Questions[1].Required);
     }
 
@@ -61,6 +62,17 @@ public class RegistrationFormDefinitionTests
     {
         var form = RegistrationFormDefinition.Parse("""{"questions":[{"id":"q","label":"L","type":"choice"}]}""")!;
         Assert.Equal(RegistrationQuestionType.Text, form.Questions[0].Type);
+    }
+
+    [Fact]
+    public void Consent_question_is_always_required_even_if_the_blob_says_otherwise()
+    {
+        var form = RegistrationFormDefinition.Parse(
+            """{"questions":[{"id":"tos","label":"I agree to the rules","type":"consent","required":false}]}""")!;
+
+        var q = Assert.Single(form.Questions);
+        Assert.Equal(RegistrationQuestionType.Consent, q.Type);
+        Assert.True(q.Required);
     }
 
     [Fact]
@@ -115,12 +127,15 @@ public class RegistrationFormHtmlTests
     public void Renders_choice_question_as_select_with_options()
     {
         var form = new RegistrationFormDefinition(null, false, false, false, false,
-            [new RegistrationQuestion("genre", "Genre", RegistrationQuestionType.Choice, ["RPG", "Sim"], false)]);
+            [new RegistrationQuestion("genre", "Genre", RegistrationQuestionType.Choice,
+                [new("RPG", "RPG"), new("sim1", "Sim")], false)]);
 
         var html = CedarToBlogHtmlRenderer.RegistrationFormHtml(form, "T");
 
         Assert.Contains("<select class=\"reg-input\" data-question=\"genre\"", html);
         Assert.Contains("<option value=\"RPG\">RPG</option>", html);
+        // value = the stable option Id, display text = the language's label (ADR-060).
+        Assert.Contains("<option value=\"sim1\">Sim</option>", html);
     }
 
     [Fact]
@@ -129,7 +144,7 @@ public class RegistrationFormHtmlTests
         // Intro, labels and options are owner input rendered into a public page — the one real
         // injection surface this form introduces.
         var form = new RegistrationFormDefinition("<script>x</script>", false, false, false, false,
-            [new RegistrationQuestion("q", "<b>Label</b>", RegistrationQuestionType.Choice, ["\"opt\""], false)]);
+            [new RegistrationQuestion("q", "<b>Label</b>", RegistrationQuestionType.Choice, [new("\"opt\"", "\"opt\"")], false)]);
 
         var html = CedarToBlogHtmlRenderer.RegistrationFormHtml(form, "<h1>Title</h1>");
 
@@ -160,7 +175,7 @@ public class RegistrationFormHtmlTests
 
         var q = Assert.Single(form!.Questions);
         Assert.Equal(RegistrationQuestionType.Multi, q.Type);
-        Assert.Equal(["PC", "Switch"], q.Options);
+        Assert.Equal([new("PC", "PC"), new RegistrationOption("Switch", "Switch")], q.Options);
     }
 
     [Fact]
@@ -177,7 +192,8 @@ public class RegistrationFormHtmlTests
     public void Renders_multi_question_as_checkbox_group()
     {
         var form = new RegistrationFormDefinition(null, false, false, false, false,
-            [new RegistrationQuestion("plat", "Platforms", RegistrationQuestionType.Multi, ["PC", "Switch"], false)]);
+            [new RegistrationQuestion("plat", "Platforms", RegistrationQuestionType.Multi,
+                [new("PC", "PC"), new("Switch", "Switch")], false)]);
 
         var html = CedarToBlogHtmlRenderer.RegistrationFormHtml(form, "T");
 
@@ -190,7 +206,35 @@ public class RegistrationFormHtmlTests
     public void Escapes_options_in_a_multi_question()
     {
         var form = new RegistrationFormDefinition(null, false, false, false, false,
-            [new RegistrationQuestion("q", "L", RegistrationQuestionType.Multi, ["\"><script>x</script>"], false)]);
+            [new RegistrationQuestion("q", "L", RegistrationQuestionType.Multi,
+                [new("\"><script>x</script>", "\"><script>x</script>")], false)]);
+
+        var html = CedarToBlogHtmlRenderer.RegistrationFormHtml(form, "T");
+
+        Assert.DoesNotContain("<script>x</script>", html);
+        Assert.Contains("&lt;script&gt;", html);
+    }
+
+    [Fact]
+    public void Renders_consent_question_as_text_block_and_checkbox()
+    {
+        var form = new RegistrationFormDefinition(null, false, false, false, false,
+            [new RegistrationQuestion("tos", "I agree to the rules", RegistrationQuestionType.Consent, [], true)]);
+
+        var html = CedarToBlogHtmlRenderer.RegistrationFormHtml(form, "T");
+
+        Assert.Contains("<p class=\"reg-consent-text\">I agree to the rules</p>", html);
+        Assert.Contains("<input type=\"checkbox\" data-question-consent=\"tos\" required>", html);
+        // Not the generic single-value handler — a checkbox's .value is static regardless of
+        // whether it's ticked, so the client must read .checked via the distinct attribute instead.
+        Assert.DoesNotContain("data-question=\"tos\"", html);
+    }
+
+    [Fact]
+    public void Escapes_consent_question_text()
+    {
+        var form = new RegistrationFormDefinition(null, false, false, false, false,
+            [new RegistrationQuestion("q", "<script>x</script>", RegistrationQuestionType.Consent, [], true)]);
 
         var html = CedarToBlogHtmlRenderer.RegistrationFormHtml(form, "T");
 

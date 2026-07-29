@@ -454,14 +454,25 @@ public static class DraftEndpoints
             var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
             if (draft is null) return Results.NotFound();
 
-            var lang = req.Language is not null && Languages.IsTranslationLanguage(req.Language)
-                ? req.Language
-                : Languages.Primary;
-            if (lang == Languages.Primary)
-                draft.RegistrationFormJson = string.IsNullOrWhiteSpace(req.FormJson) ? null : req.FormJson;
+            // ADR-060 — a v2 multi-language blob carries every language itself: it goes into the
+            // primary column whole, and the legacy per-language translations column is cleared so
+            // no stale v1 slot can shadow it later if the blob is ever downgraded.
+            if (RegistrationFormSet.IsMultiLanguage(req.FormJson))
+            {
+                draft.RegistrationFormJson = req.FormJson;
+                draft.RegistrationFormTranslationsJson = null;
+            }
             else
-                draft.RegistrationFormTranslationsJson =
-                    RegistrationFormSet.SetTranslation(draft.RegistrationFormTranslationsJson, lang, req.FormJson);
+            {
+                var lang = req.Language is not null && Languages.IsTranslationLanguage(req.Language)
+                    ? req.Language
+                    : Languages.Primary;
+                if (lang == Languages.Primary)
+                    draft.RegistrationFormJson = string.IsNullOrWhiteSpace(req.FormJson) ? null : req.FormJson;
+                else
+                    draft.RegistrationFormTranslationsJson =
+                        RegistrationFormSet.SetTranslation(draft.RegistrationFormTranslationsJson, lang, req.FormJson);
+            }
 
             await db.SaveChangesAsync();
             return Results.Ok(new

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CedarClerk.Core;
 using CedarClerk.Localization;
+using CedarClerk.Server.Translation;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
@@ -75,7 +76,65 @@ public static class FormPresetEndpoints
             var deleted = await db.FormPresets.Where(p => p.Id == id && p.OwnerId == uid).ExecuteDeleteAsync();
             return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });
+
+        // ADR-060 — fill one language of a preset by machine-translating its first language.
+        // Same gates as post auto-translate (Pro Plus + the daily AI quota); runs synchronously
+        // rather than as an AiJob — a form is a handful of short strings, one chunk, seconds.
+        group.MapPost("/{id:guid}/translate", async (Guid id, TranslatePresetRequest req, ClaimsPrincipal user,
+            CedarDbContext db, IConfiguration cfg, IHttpClientFactory httpFactory, CancellationToken ct) =>
+        {
+            if (req.TargetLanguage is null || !Languages.ContentLanguages.Contains(req.TargetLanguage))
+                return Results.BadRequest(new { error = $"Unsupported language: {req.TargetLanguage}" });
+
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var preset = await db.FormPresets.FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == uid, ct);
+            if (preset is null) return Results.NotFound();
+
+            var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
+            if (!PlanLimitations.HasAiFeatures(tier))
+                return Results.Json(new { error = "Auto-translate is a Pro Plus feature. Upgrade to use it." }, statusCode: StatusCodes.Status403Forbidden);
+
+            ITranslationProvider? provider;
+            try
+            {
+                provider = TranslationProviderFactory.Create(cfg, httpFactory);
+            }
+            catch (TranslationException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status501NotImplemented);
+            }
+            if (provider is not ITextsTranslationProvider textsProvider)
+                return Results.Json(new { error = "Auto-translate is not available with the configured provider" }, statusCode: StatusCodes.Status501NotImplemented);
+
+            var upgraded = RegistrationFormTexts.UpgradeToV2(preset.FormJson, preset.Language);
+            var sourceLang = RegistrationFormSet.LanguagesWithForm(upgraded, null).FirstOrDefault() ?? Languages.Primary;
+            if (sourceLang == req.TargetLanguage)
+                return Results.BadRequest(new { error = "The form is already written in this language" });
+
+            var texts = RegistrationFormTexts.ExtractTexts(upgraded, sourceLang);
+            if (texts.All(string.IsNullOrWhiteSpace))
+                return Results.BadRequest(new { error = "The form has no text to translate yet" });
+
+            if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
+                return Results.Json(new { error = $"Daily AI limit ({PlanLimitations.AiDailyLimit} calls) reached — resets at midnight UTC." }, statusCode: StatusCodes.Status429TooManyRequests);
+
+            IReadOnlyList<string> translated;
+            try
+            {
+                translated = await textsProvider.TranslateTextsAsync(texts, req.TargetLanguage, ct);
+            }
+            catch (TranslationException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            preset.FormJson = RegistrationFormTexts.ReplaceTexts(upgraded, req.TargetLanguage, translated);
+            await db.SaveChangesAsync(CancellationToken.None); // the work is done — don't let a disconnect discard it
+            return Results.Ok(new { preset.Id, preset.Name, preset.FormJson, preset.Language, preset.CreatedAt });
+        });
     }
+
+    public record TranslatePresetRequest(string? TargetLanguage);
 
     private static IResult? Validate(UpsertPresetRequest req)
     {

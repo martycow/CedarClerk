@@ -304,9 +304,10 @@
                     @for (p of presets(); track p.id) {
                     <button class="post-row" [class.on]="selectedPresetId() === p.id" (click)="selectPreset(p)">
                         <span class="post-row-title">{{ p.name }}</span>
-                        <!--FI4.1: which language this preset is written in - a post published in
-                        several attaches one per language.-->
-                        <span class="post-row-meta"><span class="state-chip lang">{{ (p.language || primaryLanguage).toUpperCase() }}</span></span>
+                        <!--ADR-060: every language the preset carries text for, first = primary.-->
+                        <span class="post-row-meta">
+                            @for (l of presetLanguagesOf(p); track l) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
+                        </span>
                     </button>
                     } @empty {
                     <p class="hint">{{ t().manager.forms.noPresets }}</p>
@@ -321,26 +322,59 @@
                     is a card carrying its own controls instead of a bordered row among rows.-->
                     <div class="form-block">
                         <span class="form-block-title">{{ t().manager.forms.blockIdentity }}</span>
-                        <div class="form-row-2">
-                            <label class="form-field">
-                                <span class="form-field-label">{{ t().manager.forms.presetName }}</span>
-                                <input class="chat-input" [(ngModel)]="presetName" (ngModelChange)="markPresetNameDirty()" maxlength="60">
-                            </label>
-                            <label class="form-field">
-                                <span class="form-field-label">{{ t().manager.forms.presetLanguage }}</span>
-                                <select class="chat-input" [value]="presetLanguage()" (change)="setPresetLanguage($any($event.target).value)">
-                                    @for (l of contentLanguages; track l) {
-                                    <option [value]="l">{{ l.toUpperCase() }}</option>
+                        <label class="form-field">
+                            <span class="form-field-label">{{ t().manager.forms.presetName }}</span>
+                            <input class="chat-input" [(ngModel)]="presetName" (ngModelChange)="markPresetNameDirty()" maxlength="60">
+                        </label>
+                        <!--ADR-060: one preset carries every language. The first chip is the
+                        skeleton's fallback language; each added one gets its own text field on
+                        every question below, plus an auto-translate shortcut.-->
+                        <div class="form-field">
+                            <span class="form-field-label">{{ t().manager.forms.formLanguages }}</span>
+                            <div class="lang-chip-row">
+                                @for (l of presetLangs(); track l; let first = $first) {
+                                <span class="lang-chip-edit" [class.primary]="first">
+                                    {{ l.toUpperCase() }}
+                                    @if (!first) {
+                                    <button class="lang-chip-act" (click)="translatePresetLanguage(l)"
+                                            [disabled]="presetTranslating() !== null"
+                                            [title]="t().manager.forms.translateLang">
+                                        @if (presetTranslating() === l) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+                                        @else { <svg lucideRefreshCw class="icon-sm"></svg> }
+                                    </button>
+                                    <button class="lang-chip-act" (click)="removePresetLanguage(l)" [title]="t().manager.forms.removeLang">
+                                        <svg lucideX class="icon-sm"></svg>
+                                    </button>
                                     }
-                                </select>
-                            </label>
+                                </span>
+                                }
+                                @if (addableLanguages().length) {
+                                <span class="lang-add">
+                                    <button class="btn-ghost lang-add-btn" (click)="addLangOpen.set(!addLangOpen())">+ {{ t().manager.forms.addLanguage }}</button>
+                                    @if (addLangOpen()) {
+                                    <span class="lang-add-menu">
+                                        @for (l of addableLanguages(); track l) {
+                                        <button class="lang-add-item" (click)="addPresetLanguage(l)">{{ l.toUpperCase() }}</button>
+                                        }
+                                    </span>
+                                    }
+                                </span>
+                                }
+                            </div>
+                            @if (presetTranslateError()) {
+                            <p class="reg-error-inline">{{ presetTranslateError() }}</p>
+                            }
                         </div>
                         <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().manager.forms.languageHint }}</p>
+                        @for (l of presetLangs(); track l) {
                         <label class="form-field">
-                            <span class="form-field-label">{{ t().manager.forms.introLabel }}</span>
-                            <input class="chat-input" [value]="form.intro ?? ''" (change)="setIntro($any($event.target).value)"
+                            <span class="form-field-label">{{ t().manager.forms.introLabel }}
+                                @if (presetLangs().length > 1) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
+                            </span>
+                            <input class="chat-input" [value]="form.intro[l] || ''" (change)="setIntro(l, $any($event.target).value)"
                                    [placeholder]="t().manager.forms.introPlaceholder" maxlength="500">
                         </label>
+                        }
                     </div>
 
                     <div class="form-block">
@@ -360,8 +394,22 @@
                         <div class="question-card">
                             <div class="question-card-head">
                                 <span class="question-number">{{ i + 1 }}</span>
-                                <input class="chat-input" [value]="q.label" (change)="updateQuestion(q.id, { label: $any($event.target).value })"
-                                       [placeholder]="t().manager.forms.questionPlaceholder" maxlength="200">
+                                <!--ADR-060: one input per active language; the option ids below
+                                keep "Да" and "Yes" the same answer in the charts.-->
+                                <div class="q-label-stack">
+                                    @for (l of presetLangs(); track l) {
+                                    <div class="q-label-row">
+                                        @if (presetLangs().length > 1) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
+                                        @if (q.type === 'consent') {
+                                        <textarea class="chat-input" rows="2" [value]="q.label[l] || ''" (change)="setQuestionLabel(q.id, l, $any($event.target).value)"
+                                                  [placeholder]="t().manager.forms.consentPlaceholder" maxlength="1000"></textarea>
+                                        } @else {
+                                        <input class="chat-input" [value]="q.label[l] || ''" (change)="setQuestionLabel(q.id, l, $any($event.target).value)"
+                                               [placeholder]="t().manager.forms.questionPlaceholder" maxlength="200">
+                                        }
+                                    </div>
+                                    }
+                                </div>
                                 <button class="mini-remove" (click)="removeQuestion(q.id)" [title]="t().manager.forms.removeQuestion">
                                     <svg lucideX class="icon-sm"></svg>
                                 </button>
@@ -371,14 +419,33 @@
                                     <button class="pill" [class.on]="q.type === 'text'" (click)="setQuestionType(q.id, 'text')">{{ t().manager.forms.typeText }}</button>
                                     <button class="pill" [class.on]="q.type === 'choice'" (click)="setQuestionType(q.id, 'choice')">{{ t().manager.forms.typeChoice }}</button>
                                     <button class="pill" [class.on]="q.type === 'multi'" (click)="setQuestionType(q.id, 'multi')">{{ t().manager.forms.typeMulti }}</button>
+                                    <button class="pill" [class.on]="q.type === 'consent'" (click)="setQuestionType(q.id, 'consent')">{{ t().manager.forms.typeConsent }}</button>
                                     <span class="spacer"></span>
                                     <label class="form-check">
-                                        <input type="checkbox" [checked]="!!q.required" (change)="updateQuestion(q.id, { required: !q.required })"> {{ t().manager.forms.required }}
+                                        <input type="checkbox" [checked]="!!q.required" [disabled]="q.type === 'consent'"
+                                               (change)="updateQuestion(q.id, { required: !q.required })"> {{ t().manager.forms.required }}
                                     </label>
                                 </div>
                                 @if (q.type === 'choice' || q.type === 'multi') {
-                                <input class="chat-input" [value]="questionOptionsText(q)" (change)="setQuestionOptions(q.id, $any($event.target).value)"
-                                       [placeholder]="t().manager.forms.optionsPlaceholder" maxlength="500">
+                                <div class="option-rows">
+                                    @for (o of q.options; track o.id) {
+                                    <div class="option-row" [class.multi-lang]="presetLangs().length > 1">
+                                        @for (l of presetLangs(); track l) {
+                                        <input class="chat-input option-input" [value]="o.label[l] || ''"
+                                               (change)="setOptionLabel(q.id, o.id, l, $any($event.target).value)"
+                                               [placeholder]="presetLangs().length > 1 ? l.toUpperCase() : t().manager.forms.optionPlaceholder"
+                                               maxlength="200">
+                                        }
+                                        <button class="mini-remove" (click)="removeOption(q.id, o.id)" [title]="t().manager.forms.removeOption">
+                                            <svg lucideX class="icon-sm"></svg>
+                                        </button>
+                                    </div>
+                                    }
+                                    <button class="btn-ghost option-add" (click)="addOption(q.id)">+ {{ t().manager.forms.addOption }}</button>
+                                </div>
+                                }
+                                @if (q.type === 'consent') {
+                                <p class="field-hint-inline">{{ t().manager.forms.consentHint }}</p>
                                 }
                             </div>
                         </div>

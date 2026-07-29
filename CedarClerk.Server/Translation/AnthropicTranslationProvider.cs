@@ -11,7 +11,7 @@ namespace CedarClerk.Server.Translation;
 // DeepLTranslationProvider already used). The model never sees or reproduces TipTap JSON
 // structure, which is what used to make large documents slow and prone to truncated/malformed
 // output. OpenAiTranslationProvider intentionally still uses the old whole-document approach.
-public class AnthropicTranslationProvider(string apiKey, string model) : ITranslationProvider
+public class AnthropicTranslationProvider(string apiKey, string model) : ITranslationProvider, ITextsTranslationProvider
 {
     public string Name => "anthropic";
 
@@ -38,7 +38,15 @@ public class AnthropicTranslationProvider(string apiKey, string model) : ITransl
         var all = new List<string> { title };
         all.AddRange(texts);
 
-        var chunks = ChunkByBudget(all, Consts.Anthropic.TranslationChunkCharBudget, Consts.Anthropic.TranslationChunkMaxStrings);
+        var translatedAll = await TranslateTextsAsync(all, targetLanguage, ct);
+        var translatedTitle = translatedAll[0];
+        var translatedJson = TipTapTextNodes.ReplaceTexts(cedarJson, translatedAll.Skip(1).ToList());
+        return new TranslationResult(translatedTitle, translatedJson);
+    }
+
+    public async Task<IReadOnlyList<string>> TranslateTextsAsync(IReadOnlyList<string> texts, string targetLanguage, CancellationToken ct)
+    {
+        var chunks = ChunkByBudget(texts.ToList(), Consts.Anthropic.TranslationChunkCharBudget, Consts.Anthropic.TranslationChunkMaxStrings);
         var results = new List<string>[chunks.Count];
 
         await Parallel.ForEachAsync(
@@ -46,14 +54,28 @@ public class AnthropicTranslationProvider(string apiKey, string model) : ITransl
             new ParallelOptions { MaxDegreeOfParallelism = Consts.Anthropic.MaxParallelChunks, CancellationToken = ct },
             async (idx, token) => { results[idx] = await TranslateChunkAsync(chunks[idx], targetLanguage, token); });
 
-        var translatedAll = results.SelectMany(r => r).ToList();
-        var translatedTitle = translatedAll[0];
-        var translatedJson = TipTapTextNodes.ReplaceTexts(cedarJson, translatedAll.Skip(1).ToList());
-        return new TranslationResult(translatedTitle, translatedJson);
+        return results.SelectMany(r => r).ToList();
     }
 
     private async Task<List<string>> TranslateChunkAsync(List<string> chunk, string targetLanguage, CancellationToken ct)
     {
+        // Blank/whitespace-only strings need no translation and are excluded from the API call
+        // entirely — one less thing that could come back mismatched, and one less thing to pay for.
+        var nonBlankIndices = new List<int>();
+        var nonBlankTexts = new List<string>();
+        for (var i = 0; i < chunk.Count; i++)
+        {
+            if (!string.IsNullOrWhiteSpace(chunk[i]))
+            {
+                nonBlankIndices.Add(i);
+                nonBlankTexts.Add(chunk[i]);
+            }
+        }
+
+        var result = new List<string>(chunk);
+        if (nonBlankTexts.Count == 0)
+            return result;
+
         // A fresh client per chunk — chunks translate concurrently and the SDK's own
         // thread-safety under concurrent calls on one shared client instance isn't documented;
         // a client is cheap configuration, not a pooled connection, so this sidesteps the question.
@@ -64,20 +86,27 @@ public class AnthropicTranslationProvider(string apiKey, string model) : ITransl
             MaxRetries = 0,
         };
 
-        var prompt = TranslationChunkPromptGenerator.Build(chunk, targetLanguage);
+        var prompt = TranslationChunkPromptGenerator.Build(nonBlankTexts, targetLanguage);
 
-        Message response;
+        List<string> translated;
         var delay = TimeSpan.FromSeconds(2);
         for (var attempt = 1; ; attempt++)
         {
             try
             {
-                response = await client.Messages.Create(new MessageCreateParams
+                var response = await client.Messages.Create(new MessageCreateParams
                 {
                     Model = model,
                     MaxTokens = Consts.Anthropic.MaxOutputTokens,
                     Messages = [new() { Role = Role.User, Content = prompt }],
                 }, cancellationToken: ct);
+
+                var text = string.Concat(response.Content
+                    .Select(b => b.Value)
+                    .OfType<TextBlock>()
+                    .Select(b => b.Text));
+
+                translated = TranslationChunkPromptGenerator.ParseResult(text, nonBlankTexts.Count);
                 break;
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -94,18 +123,28 @@ public class AnthropicTranslationProvider(string apiKey, string model) : ITransl
                 await Task.Delay(delay, ct);
                 delay *= 2;
             }
+            catch (TranslationException) when (attempt < MaxAttempts)
+            {
+                // Malformed/mismatched output (e.g. the model split or dropped one entry) — retry
+                // the same chunk rather than failing the whole translation over what's usually a
+                // one-off slip, same instinct as the overload retry above.
+                await Task.Delay(delay, ct);
+                delay *= 2;
+            }
+            catch (TranslationException)
+            {
+                throw; // out of attempts — surface the specific parse/mismatch error as-is
+            }
             catch (Exception ex)
             {
                 throw new TranslationException($"Anthropic API request failed: {ex.Message}", ex);
             }
         }
 
-        var text = string.Concat(response.Content
-            .Select(b => b.Value)
-            .OfType<TextBlock>()
-            .Select(b => b.Text));
+        for (var i = 0; i < nonBlankIndices.Count; i++)
+            result[nonBlankIndices[i]] = translated[i];
 
-        return TranslationChunkPromptGenerator.ParseResult(text, chunk.Count);
+        return result;
     }
 
     // Groups items into chunks that never split a single string across two chunks — a chunk closes

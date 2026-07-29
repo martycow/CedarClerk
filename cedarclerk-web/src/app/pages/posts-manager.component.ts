@@ -7,7 +7,10 @@ import {
     DraftsService, DraftMeta, PostRegistration,
     RegistrationForm, RegistrationQuestion, RegistrationQuestionType, parseRegistrationForm,
 } from '../core/drafts.service';
-import { FormPresetsService, FormPreset } from '../core/form-presets.service';
+import {
+    FormPresetsService, FormPreset, RegistrationFormEdit, FormQuestionEdit,
+    normalizeFormForEdit, blankFormEdit, newQuestionId, newOptionId,
+} from '../core/form-presets.service';
 import { PostsService, ScheduledPost } from '../core/posts.service';
 import { PRIMARY_LANGUAGE, CONTENT_LANGUAGES } from '../core/languages';
 import { CommentsService } from '../core/comments.service';
@@ -107,18 +110,24 @@ export class PostsManagerComponent implements OnInit {
     presets = signal<FormPreset[]>([]);
     selectedPresetId = signal<string | null>(null);
     presetName = '';
-    // FI4.1 — which language this preset is written in. A post published in several languages
-    // attaches one preset per language; nothing here is machine-translated, since a form's
-    // wording is the owner talking to their reader.
-    presetLanguage = signal<string>(PRIMARY_LANGUAGE);
     readonly primaryLanguage = PRIMARY_LANGUAGE;
     readonly contentLanguages = CONTENT_LANGUAGES;
-    presetForm = signal<RegistrationForm | null>(null);
+    // ADR-060 — the editor works on the v2 multi-language blob natively: one skeleton of stable
+    // question/option ids, per-language texts on top, so "Да" and "Yes" stay one answer.
+    presetForm = signal<RegistrationFormEdit | null>(null);
     presetState = signal<'saved' | 'dirty' | 'saving' | 'error'>('saved');
     deletePresetId = signal<string | null>(null);
+    addLangOpen = signal(false);
+    // The language a machine translation is currently running for, or null.
+    presetTranslating = signal<string | null>(null);
+    presetTranslateError = signal('');
 
     async ngOnInit() {
         this.feedback.refreshNewCount();
+        // The default tab is 'posts' and setTab() only runs for a ?tab= deep link, so without
+        // this eager load a plain landing here never fetched the presets at all — the form
+        // dropdown then claimed "no saved presets yet" over a non-empty library.
+        this.loadPresets();
         try {
             this.drafts.set(await this.draftsApi.list());
             this.loadScheduled();
@@ -376,9 +385,15 @@ export class PostsManagerComponent implements OnInit {
             .filter(([, value]) => `${value}`.trim().length > 0)
             .map(([key, value]) => {
                 const q = questions.find(x => x.id === key);
+                // Stored answers are option ids (ADR-060) — shown as the current form's labels.
+                // A raw value with no matching option (free text, or a pre-v2 row) shows as-is.
+                const labelById = new Map((q?.options ?? []).map(o => [o.id, o.label]));
+                const display = (v: string) => labelById.get(v) ?? v;
                 return {
                     label: q?.label || key,
-                    value: q?.type === 'multi' ? splitMultiAnswer(value).join(', ') : String(value),
+                    value: q?.type === 'multi'
+                        ? splitMultiAnswer(value).map(display).join(', ')
+                        : display(String(value)),
                 };
             });
     }
@@ -442,16 +457,17 @@ export class PostsManagerComponent implements OnInit {
         }
     }
 
-    // FI4.1 — a preset written in another language fills that language's slot; only the primary
-    // one is the form this screen displays.
-    private async persistForm(form: RegistrationForm | null, language = PRIMARY_LANGUAGE) {
+    // The raw blob goes over the wire untouched — re-serializing the single-language projection
+    // here would silently strip a v2 blob's other languages. The displayed form and language
+    // list always come back from the server's response, whatever shape was written.
+    private async persistFormJson(formJson: string | null, language = PRIMARY_LANGUAGE) {
         const d = this.selected();
         if (!d) return;
         this.regBusy.set(true);
         try {
-            const res = await this.draftsApi.setRegistrationForm(d.id, form ? JSON.stringify(form) : null, language);
+            const res = await this.draftsApi.setRegistrationForm(d.id, formJson, language);
             this.postFormLanguages.set(res.formLanguages ?? []);
-            if (language === PRIMARY_LANGUAGE) this.regForm.set(form);
+            this.regForm.set(parseRegistrationForm(res.registrationFormJson));
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().manager.errors.saveForm));
         } finally {
@@ -461,13 +477,14 @@ export class PostsManagerComponent implements OnInit {
 
     // A post gets a form by choosing a preset, never by editing one in place — the definition is
     // authored once on the Forms tab. The preset is COPIED here (N12), so editing it afterwards
-    // can't rewrite a post that already used it.
+    // can't rewrite a post that already used it. A v2 preset carries every language in one blob,
+    // so one click attaches them all (ADR-060); a legacy v1 preset still fills only its slot.
     async applyPresetToPost(p: FormPreset) {
-        await this.persistForm(parseRegistrationForm(p.formJson), p.language || PRIMARY_LANGUAGE);
+        await this.persistFormJson(p.formJson, p.language || PRIMARY_LANGUAGE);
     }
 
     async clearPostForm() {
-        await this.persistForm(null);
+        await this.persistFormJson(null);
     }
 
     // ---------- Preset authoring (Forms tab) ----------
@@ -485,46 +502,53 @@ export class PostsManagerComponent implements OnInit {
         return id ? this.presets().find(p => p.id === id) ?? null : null;
     }
 
+    // Keyed on the blob itself so the list rows don't re-parse on every change-detection pass;
+    // an edit produces a new formJson string and naturally misses the cache.
+    private presetLangsCache = new Map<string, string[]>();
+    presetLanguagesOf(p: FormPreset): string[] {
+        let cached = this.presetLangsCache.get(p.formJson);
+        if (!cached) {
+            cached = normalizeFormForEdit(p.formJson, p.language || PRIMARY_LANGUAGE).languages;
+            this.presetLangsCache.set(p.formJson, cached);
+        }
+        return cached;
+    }
+
     async selectPreset(p: FormPreset) {
         await this.flushPreset();
         this.selectedPresetId.set(p.id);
         this.presetName = p.name;
-        this.presetLanguage.set(p.language || PRIMARY_LANGUAGE);
-        this.presetForm.set(parseRegistrationForm(p.formJson)
-            ?? { requireName: true, requireNickname: false, requireEmail: true, requireSocial: false, questions: [] });
+        this.presetForm.set(normalizeFormForEdit(p.formJson, p.language || PRIMARY_LANGUAGE));
         this.presetState.set('saved');
+        this.presetTranslateError.set('');
+        this.addLangOpen.set(false);
     }
 
     // Created immediately rather than held as a local draft: a preset with no id has nowhere to
     // be saved to, and the list is the only place it would show up.
     async newPreset() {
         await this.flushPreset();
-        const blank: RegistrationForm = { requireName: true, requireNickname: false, requireEmail: true, requireSocial: false, questions: [] };
+        const blank = blankFormEdit(PRIMARY_LANGUAGE);
         try {
             const created = await this.presetsApi.create(
                 this.t().manager.forms.untitledPreset, JSON.stringify(blank), PRIMARY_LANGUAGE);
             this.presets.update(list => [...list, created]);
             this.selectedPresetId.set(created.id);
             this.presetName = created.name;
-            this.presetLanguage.set(created.language || PRIMARY_LANGUAGE);
             this.presetForm.set(blank);
             this.presetState.set('saved');
+            this.presetTranslateError.set('');
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().manager.errors.savePreset));
         }
     }
 
-    private editPreset(next: RegistrationForm) {
+    private editPreset(next: RegistrationFormEdit) {
         this.presetForm.set(next);
         this.presetState.set('dirty');
     }
 
     markPresetNameDirty() {
-        this.presetState.set('dirty');
-    }
-
-    setPresetLanguage(lang: string) {
-        this.presetLanguage.set(lang);
         this.presetState.set('dirty');
     }
 
@@ -535,12 +559,72 @@ export class PostsManagerComponent implements OnInit {
         if (!p || !form || !name) return;
         this.presetState.set('saving');
         try {
-            const saved = await this.presetsApi.update(p.id, name, JSON.stringify(form), this.presetLanguage());
+            const saved = await this.presetsApi.update(p.id, name, JSON.stringify(form), form.languages[0]);
             this.presets.update(list => list.map(x => x.id === saved.id ? saved : x));
             this.presetState.set('saved');
         } catch (e) {
             this.presetState.set('error');
             this.error.set(httpErrorMessage(e, this.t().manager.errors.savePreset));
+        }
+    }
+
+    // ---------- Preset languages (ADR-060) ----------
+
+    presetLangs(): string[] {
+        return this.presetForm()?.languages ?? [];
+    }
+
+    addableLanguages(): string[] {
+        const used = this.presetLangs();
+        return CONTENT_LANGUAGES.filter(l => !used.includes(l));
+    }
+
+    addPresetLanguage(lang: string) {
+        const form = this.presetForm();
+        if (!form || form.languages.includes(lang)) return;
+        this.addLangOpen.set(false);
+        this.editPreset({ ...form, languages: [...form.languages, lang] });
+    }
+
+    // The first language is the skeleton's fallback — everything else may go. Removing one also
+    // strips its texts so a re-added language starts clean instead of resurrecting stale copy.
+    removePresetLanguage(lang: string) {
+        const form = this.presetForm();
+        if (!form || form.languages[0] === lang) return;
+        const strip = (map: Record<string, string>) => {
+            const { [lang]: _, ...rest } = map;
+            return rest;
+        };
+        this.editPreset({
+            ...form,
+            languages: form.languages.filter(l => l !== lang),
+            intro: strip(form.intro),
+            questions: form.questions.map(q => ({
+                ...q,
+                label: strip(q.label),
+                options: q.options.map(o => ({ ...o, label: strip(o.label) })),
+            })),
+        });
+    }
+
+    // Fills one language by machine-translating the preset's first language server-side (same
+    // Pro Plus + daily-quota gates as post auto-translate). Unsaved edits are flushed first so
+    // the server translates what's on screen, and the saved result replaces the local state.
+    async translatePresetLanguage(lang: string) {
+        const p = this.selectedPreset();
+        if (!p || this.presetTranslating()) return;
+        this.presetTranslateError.set('');
+        this.presetTranslating.set(lang);
+        try {
+            await this.flushPreset();
+            const saved = await this.presetsApi.translate(p.id, lang);
+            this.presets.update(list => list.map(x => x.id === saved.id ? saved : x));
+            this.presetForm.set(normalizeFormForEdit(saved.formJson, saved.language || PRIMARY_LANGUAGE));
+            this.presetState.set('saved');
+        } catch (e) {
+            this.presetTranslateError.set(httpErrorMessage(e, this.t().manager.errors.translatePreset));
+        } finally {
+            this.presetTranslating.set(null);
         }
     }
 
@@ -573,20 +657,23 @@ export class PostsManagerComponent implements OnInit {
         this.editPreset({ ...form, [field]: !form[field] });
     }
 
-    setIntro(intro: string) {
+    setIntro(lang: string, intro: string) {
         const form = this.presetForm();
         if (!form) return;
-        this.editPreset({ ...form, intro: intro.trim() || undefined });
+        const next = { ...form.intro };
+        if (intro.trim()) next[lang] = intro;
+        else delete next[lang];
+        this.editPreset({ ...form, intro: next });
     }
 
     addQuestion() {
         const form = this.presetForm();
         if (!form) return;
-        const q: RegistrationQuestion = { id: `q${Date.now()}`, label: '', type: 'text', required: false };
+        const q: FormQuestionEdit = { id: newQuestionId(), label: {}, type: 'text', required: false, options: [] };
         this.editPreset({ ...form, questions: [...form.questions, q] });
     }
 
-    updateQuestion(id: string, patch: Partial<RegistrationQuestion>) {
+    updateQuestion(id: string, patch: Partial<FormQuestionEdit>) {
         const form = this.presetForm();
         if (!form) return;
         this.editPreset({ ...form, questions: form.questions.map(q => q.id === id ? { ...q, ...patch } : q) });
@@ -598,16 +685,51 @@ export class PostsManagerComponent implements OnInit {
         this.editPreset({ ...form, questions: form.questions.filter(q => q.id !== id) });
     }
 
+    setQuestionLabel(id: string, lang: string, value: string) {
+        const q = this.presetForm()?.questions.find(x => x.id === id);
+        if (!q) return;
+        const label = { ...q.label };
+        if (value.trim()) label[lang] = value;
+        else delete label[lang];
+        this.updateQuestion(id, { label });
+    }
+
     setQuestionType(id: string, type: RegistrationQuestionType) {
-        this.updateQuestion(id, { type });
+        const q = this.presetForm()?.questions.find(x => x.id === id);
+        if (!q) return;
+        // An optional consent checkbox isn't a meaningful concept — forced on here (Core's Parse
+        // forces it again server-side, so a hand-edited/older blob can't bypass it either).
+        // Switching to a choice type seeds two empty option rows so there's something to type into.
+        const options = (type === 'choice' || type === 'multi') && q.options.length === 0
+            ? [{ id: newOptionId(), label: {} }, { id: newOptionId(), label: {} }]
+            : q.options;
+        this.updateQuestion(id, type === 'consent' ? { type, required: true, options } : { type, options });
     }
 
-    setQuestionOptions(id: string, raw: string) {
-        this.updateQuestion(id, { options: raw.split(',').map(o => o.trim()).filter(o => o.length > 0) });
+    addOption(qId: string) {
+        const q = this.presetForm()?.questions.find(x => x.id === qId);
+        if (!q) return;
+        this.updateQuestion(qId, { options: [...q.options, { id: newOptionId(), label: {} }] });
     }
 
-    questionOptionsText(q: RegistrationQuestion): string {
-        return (q.options ?? []).join(', ');
+    removeOption(qId: string, optId: string) {
+        const q = this.presetForm()?.questions.find(x => x.id === qId);
+        if (!q) return;
+        this.updateQuestion(qId, { options: q.options.filter(o => o.id !== optId) });
+    }
+
+    setOptionLabel(qId: string, optId: string, lang: string, value: string) {
+        const q = this.presetForm()?.questions.find(x => x.id === qId);
+        if (!q) return;
+        this.updateQuestion(qId, {
+            options: q.options.map(o => {
+                if (o.id !== optId) return o;
+                const label = { ...o.label };
+                if (value.trim()) label[lang] = value;
+                else delete label[lang];
+                return { ...o, label };
+            }),
+        });
     }
 
     // ---------- Answer distribution (N10) ----------
@@ -619,6 +741,10 @@ export class PostsManagerComponent implements OnInit {
     }
 
     distribution(q: RegistrationQuestion): PieSlice[] {
+        // Stored answers are option ids (ADR-060), so "Да" picked on the RU form and "Yes" on
+        // the EN one land in the same bucket; the bucket is displayed under the primary label.
+        // Pre-v2 rows stored the label text itself, which simply misses the map and shows as-is.
+        const labelById = new Map((q.options ?? []).map(o => [o.id, o.label]));
         const counts = new Map<string, number>();
         for (const r of this.registrations()) {
             if (!r.answersJson) continue;
@@ -633,7 +759,8 @@ export class PostsManagerComponent implements OnInit {
             const values = q.type === 'multi' ? splitMultiAnswer(raw) : [String(raw)];
             for (const v of values) {
                 if (!v.trim()) continue;
-                counts.set(v, (counts.get(v) ?? 0) + 1);
+                const label = labelById.get(v) ?? v;
+                counts.set(label, (counts.get(label) ?? 0) + 1);
             }
         }
 

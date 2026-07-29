@@ -1423,13 +1423,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // FI4.1 — writes into one language's slot. The editor always shows the primary-language
     // form; attaching a preset written in another language fills that language's slot instead,
     // which is why applyFormPreset passes the preset's own language rather than assuming.
-    private async persistRegForm(language = PRIMARY_LANGUAGE, form = this.regForm()) {
+    // Takes the raw blob rather than the parsed view — re-serializing the single-language
+    // projection would silently strip a v2 preset's other languages (ADR-060). The displayed
+    // form always comes back from the server's response, whatever shape was written.
+    private async persistRegFormJson(formJson: string | null, language = PRIMARY_LANGUAGE) {
         const id = this.currentId();
         if (!id) return;
         this.regBusy.set(true);
         try {
-            const res = await this.draftsApi.setRegistrationForm(id, form ? JSON.stringify(form) : null, language);
+            const res = await this.draftsApi.setRegistrationForm(id, formJson, language);
             this.formLanguages.set(res.formLanguages ?? []);
+            this.regForm.set(parseRegistrationForm(res.registrationFormJson));
         } catch (e) {
             this.inviteError.set(httpErrorMessage(e, this.t().editor.errors.saveForm));
         } finally {
@@ -1443,21 +1447,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     async pickFormPreset(value: string) {
         if (!value) return;
         if (value === '__none') {
-            this.regForm.set(null);
-            await this.persistRegForm();
+            await this.persistRegFormJson(null);
             return;
         }
         const preset = this.formPresets().find(p => p.id === value);
         if (preset) await this.applyFormPreset(preset);
     }
 
+    // A v2 preset carries every language in one blob, so one pick attaches them all (ADR-060);
+    // a legacy v1 preset still fills only its own language's slot.
     async applyFormPreset(preset: FormPreset) {
-        const language = preset.language || PRIMARY_LANGUAGE;
-        const form = parseRegistrationForm(preset.formJson);
-        // Only the primary-language form is the one this screen displays; a preset in another
-        // language is stored for its readers without replacing what the owner sees here.
-        if (language === PRIMARY_LANGUAGE) this.regForm.set(form);
-        await this.persistRegForm(language, form);
+        await this.persistRegFormJson(preset.formJson, preset.language || PRIMARY_LANGUAGE);
     }
 
     async copyInviteLink(url: string) {

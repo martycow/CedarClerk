@@ -4,7 +4,7 @@ using CedarClerk.Core;
 
 namespace CedarClerk.Server.Translation;
 
-public class DeepLTranslationProvider(IHttpClientFactory httpFactory, string apiKey) : ITranslationProvider
+public class DeepLTranslationProvider(IHttpClientFactory httpFactory, string apiKey) : ITranslationProvider, ITextsTranslationProvider
 {
     public string Name => "deepl";
 
@@ -23,6 +23,15 @@ public class DeepLTranslationProvider(IHttpClientFactory httpFactory, string api
         var batch = new List<string> { title };
         batch.AddRange(texts);
 
+        var translated = await TranslateTextsAsync(batch, targetLanguage, ct);
+
+        var translatedTitle = translated[0];
+        var translatedJson = TipTapTextNodes.ReplaceTexts(cedarJson, translated.Skip(1).ToList());
+        return new TranslationResult(translatedTitle, translatedJson);
+    }
+
+    public async Task<IReadOnlyList<string>> TranslateTextsAsync(IReadOnlyList<string> batch, string targetLanguage, CancellationToken ct)
+    {
         var host = apiKey.EndsWith(":fx") ? "api-free.deepl.com" : "api.deepl.com";
         var http = httpFactory.CreateClient("translation");
         http.Timeout = TimeSpan.FromMinutes(2);
@@ -64,8 +73,6 @@ public class DeepLTranslationProvider(IHttpClientFactory httpFactory, string api
         if (translated.Count != batch.Count)
             throw new TranslationException("DeepL returned a different number of translations than requested");
 
-        var translatedTitle = translated[0];
-        var translatedJson = TipTapTextNodes.ReplaceTexts(cedarJson, translated.Skip(1).ToList());
-        return new TranslationResult(translatedTitle, translatedJson);
+        return translated;
     }
 }

@@ -357,7 +357,7 @@ public static class CedarToBlogHtmlRenderer
     private sealed record RegistrationGateChrome(
         string Heading, string Blurb, string Submit,
         string NamePlaceholder, string NickPlaceholder, string EmailPlaceholder,
-        string SocialPlaceholder, string ChoosePlaceholder);
+        string SocialPlaceholder, string ChoosePlaceholder, string AgreeLabel);
 
     // English is the fallback for any code not listed, which is also what the app's own UI
     // locales do (ADR-050) — an untranslated gate in English beats one in a language the reader
@@ -366,17 +366,17 @@ public static class CedarToBlogHtmlRenderer
         new Dictionary<string, RegistrationGateChrome>
         {
             ["ru"] = new("Это приватный пост", "Заполните форму ниже, чтобы получить доступ.", "Получить доступ",
-                "Имя и фамилия", "Никнейм", "Почта", "Ссылка на соцсеть", "Выберите…"),
+                "Имя и фамилия", "Никнейм", "Почта", "Ссылка на соцсеть", "Выберите…", "Я согласен/-на"),
             ["en"] = new("This post is private", "Fill in the form below to get access.", "Get access",
-                "First and last name", "Nickname", "Email", "A social link", "Choose…"),
+                "First and last name", "Nickname", "Email", "A social link", "Choose…", "I agree"),
             ["de"] = new("Dieser Beitrag ist privat", "Füllen Sie das Formular aus, um Zugang zu erhalten.", "Zugang erhalten",
-                "Vor- und Nachname", "Spitzname", "E-Mail", "Ein Social-Media-Link", "Auswählen…"),
+                "Vor- und Nachname", "Spitzname", "E-Mail", "Ein Social-Media-Link", "Auswählen…", "Ich stimme zu"),
             ["fr"] = new("Cet article est privé", "Remplissez le formulaire ci-dessous pour obtenir l'accès.", "Obtenir l'accès",
-                "Nom et prénom", "Pseudo", "E-mail", "Un lien vers un réseau social", "Choisir…"),
+                "Nom et prénom", "Pseudo", "E-mail", "Un lien vers un réseau social", "Choisir…", "J'accepte"),
             ["es"] = new("Esta publicación es privada", "Rellena el formulario para obtener acceso.", "Obtener acceso",
-                "Nombre y apellidos", "Apodo", "Correo electrónico", "Un enlace a una red social", "Elegir…"),
+                "Nombre y apellidos", "Apodo", "Correo electrónico", "Un enlace a una red social", "Elegir…", "Estoy de acuerdo"),
             ["ja"] = new("この投稿は非公開です", "アクセスするには以下のフォームにご記入ください。", "アクセスする",
-                "氏名", "ニックネーム", "メールアドレス", "SNSのリンク", "選択してください…"),
+                "氏名", "ニックネーム", "メールアドレス", "SNSのリンク", "選択してください…", "同意します"),
         };
 
     // Registration form shown instead of the post body to an uninvited visitor of a private
@@ -404,6 +404,7 @@ public static class CedarToBlogHtmlRenderer
         var emailPh = chrome.EmailPlaceholder;
         var socialPh = chrome.SocialPlaceholder;
         var choosePh = chrome.ChoosePlaceholder;
+        var agreeLabel = chrome.AgreeLabel;
 
         var sb = new StringBuilder();
         sb.Append("<div class=\"reg-gate\"><div class=\"reg-card\">");
@@ -447,16 +448,31 @@ public static class CedarToBlogHtmlRenderer
 
         foreach (var q in form.Questions)
         {
+            if (q.Type == RegistrationQuestionType.Consent)
+            {
+                // A block of text (the consent statement) with a checkbox below it, not a labelled
+                // input like the other types — skips the generic "reg-question" label wrapper below.
+                // data-question-consent (not data-question): the page script reads .checked, not
+                // .value, which a plain checkbox always reports regardless of ticked state.
+                sb.Append("<div class=\"reg-consent\"><p class=\"reg-consent-text\">").Append(Escape(q.Label)).Append("</p>")
+                  .Append("<label class=\"reg-consent-check\"><input type=\"checkbox\" data-question-consent=\"")
+                  .Append(EscapeAttr(q.Id)).Append("\" required> ").Append(Escape(agreeLabel)).Append("</label></div>");
+                continue;
+            }
+
             var req = q.Required ? " required" : "";
             sb.Append("<label class=\"reg-question\"><span class=\"reg-question-label\">")
               .Append(Escape(q.Label)).Append(q.Required ? " *" : "").Append("</span>");
 
             if (q.Type == RegistrationQuestionType.Choice)
             {
+                // value = the option's stable Id, not its label (ADR-060): the stored answer is
+                // then language-neutral, so "Да" and "Yes" aggregate as one slice. For a v1 form
+                // Id == Label, so old forms keep storing exactly what they always did.
                 sb.Append($"<select class=\"reg-input\" data-question=\"{EscapeAttr(q.Id)}\"{req}>");
                 sb.Append($"<option value=\"\">{choosePh}</option>");
                 foreach (var o in q.Options)
-                    sb.Append($"<option value=\"{EscapeAttr(o)}\">").Append(Escape(o)).Append("</option>");
+                    sb.Append($"<option value=\"{EscapeAttr(o.Id)}\">").Append(Escape(o.Label)).Append("</option>");
                 sb.Append("</select>");
             }
             else if (q.Type == RegistrationQuestionType.Multi)
@@ -469,7 +485,7 @@ public static class CedarToBlogHtmlRenderer
                 foreach (var o in q.Options)
                 {
                     sb.Append("<label class=\"reg-multi-option\"><input type=\"checkbox\" value=\"")
-                      .Append(EscapeAttr(o)).Append("\">").Append(Escape(o)).Append("</label>");
+                      .Append(EscapeAttr(o.Id)).Append("\">").Append(Escape(o.Label)).Append("</label>");
                 }
                 sb.Append("</span>");
             }

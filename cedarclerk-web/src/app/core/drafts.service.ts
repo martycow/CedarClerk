@@ -122,34 +122,88 @@ export interface PostInvite { id: string; email: string; createdAt: string; url:
 // owned by the client — the server only length-checks the blob.
 // 'multi' (N10) answers arrive as a JSON array inside the same string-valued answers map the
 // other types use — see MultiAnswer in CedarClerk.Core for why it isn't a wider type.
-export type RegistrationQuestionType = 'text' | 'choice' | 'multi';
-export interface RegistrationQuestion { id: string; label: string; type: RegistrationQuestionType; options?: string[]; required?: boolean; }
+export type RegistrationQuestionType = 'text' | 'choice' | 'multi' | 'consent';
+// ADR-060 — an option's stored answer value is its stable id, not its label, so the same choice
+// picked from different language versions of the form aggregates as one answer. v1 blobs parse
+// with id === label, which is also exactly what their stored answers hold.
+export interface RegistrationOptionView { id: string; label: string; }
+export interface RegistrationQuestion { id: string; label: string; type: RegistrationQuestionType; options?: RegistrationOptionView[]; required?: boolean; }
 export interface RegistrationForm {
     intro?: string;
     requireName: boolean; requireNickname: boolean; requireEmail: boolean; requireSocial: boolean;
     questions: RegistrationQuestion[];
+    // Languages the form carries text for (v2 blobs); a v1 blob reports none.
+    languages: string[];
 }
 export interface PostRegistration {
     id: string; name: string | null; nickname: string | null; email: string | null;
     socialLink: string | null; answersJson: string | null; createdAt: string;
 }
 
+// One language's text out of a v1 plain string or a v2 per-language dictionary, with the same
+// per-string fallback order the server resolves with (CedarClerk.Core/RegistrationFormSet.cs).
+export function pickLangText(node: unknown, lang: string, languages: string[]): string {
+    if (typeof node === 'string') return node;
+    if (node && typeof node === 'object') {
+        const map = node as Record<string, unknown>;
+        const direct = map[lang];
+        if (typeof direct === 'string' && direct.trim()) return direct;
+        for (const l of languages) {
+            const v = map[l];
+            if (typeof v === 'string' && v.trim()) return v;
+        }
+    }
+    return '';
+}
+
 // A corrupt/hand-edited blob must not break the editor — mirrors the server-side parser's
-// "degrade, never throw" behaviour (CedarClerk.Core/RegistrationFormDefinition.cs).
-export function parseRegistrationForm(json: string | null | undefined): RegistrationForm | null {
+// "degrade, never throw" behaviour (CedarClerk.Core/RegistrationFormDefinition.cs). A v2
+// multi-language blob (ADR-060) is projected to one language — the primary by default, since
+// this view feeds the owner-facing charts and status strips.
+export function parseRegistrationForm(json: string | null | undefined, lang = PRIMARY_LANGUAGE): RegistrationForm | null {
     if (!json) return null;
     try {
-        const raw = JSON.parse(json) as Partial<RegistrationForm>;
+        const raw = JSON.parse(json) as Record<string, unknown>;
+        const isV2 = raw['v'] === 2;
+        const languages = isV2 && Array.isArray(raw['languages'])
+            ? (raw['languages'] as unknown[]).filter((l): l is string => typeof l === 'string')
+            : [];
+
+        const questions: RegistrationQuestion[] = [];
+        for (const q of Array.isArray(raw['questions']) ? raw['questions'] as Record<string, unknown>[] : []) {
+            if (!q || typeof q !== 'object') continue;
+            const label = pickLangText(q['label'], lang, languages);
+            if (!label.trim()) continue;
+            const options: RegistrationOptionView[] = [];
+            for (const o of Array.isArray(q['options']) ? q['options'] as unknown[] : []) {
+                if (typeof o === 'string') {
+                    if (o.trim()) options.push({ id: o, label: o });
+                } else if (o && typeof o === 'object') {
+                    const oo = o as Record<string, unknown>;
+                    const optLabel = pickLangText(oo['label'], lang, languages);
+                    if (optLabel.trim()) options.push({ id: typeof oo['id'] === 'string' && oo['id'] ? oo['id'] as string : optLabel, label: optLabel });
+                }
+            }
+            questions.push({
+                id: typeof q['id'] === 'string' && q['id'] ? q['id'] as string : `q${questions.length + 1}`,
+                label,
+                type: (q['type'] === 'choice' || q['type'] === 'multi' || q['type'] === 'consent' ? q['type'] : 'text') as RegistrationQuestionType,
+                options,
+                required: q['type'] === 'consent' || !!q['required'],
+            });
+        }
+
         return {
-            intro: raw.intro,
-            requireName: !!raw.requireName,
-            requireNickname: !!raw.requireNickname,
-            requireEmail: !!raw.requireEmail,
-            requireSocial: !!raw.requireSocial,
-            questions: Array.isArray(raw.questions) ? raw.questions : [],
+            intro: pickLangText(raw['intro'], lang, languages) || undefined,
+            requireName: !!raw['requireName'],
+            requireNickname: !!raw['requireNickname'],
+            requireEmail: !!raw['requireEmail'],
+            requireSocial: !!raw['requireSocial'],
+            questions,
+            languages,
         };
     } catch {
-        return { requireName: true, requireNickname: false, requireEmail: true, requireSocial: false, questions: [] };
+        return { requireName: true, requireNickname: false, requireEmail: true, requireSocial: false, questions: [], languages: [] };
     }
 }
 
