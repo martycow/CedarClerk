@@ -275,6 +275,11 @@ public class Draft
     // changes what is *advertised*, never what is *readable*. Meaningless unless IsPrivate.
     public bool IsListedWhilePrivate { get; set; }
 
+    // Blocks text selection, copy/cut and the context menu on the rendered blog page. Same
+    // redistribution-discouraging family as WatermarkText — a deterrent, not protection (the
+    // page source is still one Ctrl+U away) — and like it, only applied to private posts.
+    public bool DisableCopy { get; set; }
+
     public string? RegistrationFormJson { get; set; }
     // FI4.1 — the same form in the post's other languages: a JSON object keyed by language code,
     // each value a form blob shaped exactly like RegistrationFormJson above. Kept beside the

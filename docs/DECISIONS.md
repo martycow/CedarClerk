@@ -509,3 +509,16 @@ Gated with `Results.NotFound()` (404, not 403) on failure — same instinct as `
 - **Upsert rule is ADR-061's, applied per term**, with one addition: existing target-language terms are loaded once up front (one query, not one per term), and terms created earlier in the same batch participate in the case-insensitive match — two source terms that translate to the same target word update one row instead of inserting a duplicate.
 - **A term whose translation comes back unusable (blank or over-length) is skipped, not fatal**: the endpoint returns the upserted terms plus a `skipped` count. One garbled pair shouldn't discard a whole language's worth of paid translation.
 - Aliases/image treatment is ADR-061's verbatim: aliases stay untranslated, the image is copied onto newly created rows only.
+
+
+### ADR-063 — Private posts can block copying on the blog page (deterrent, not protection)
+**Context** (29.07.2026): Marty asked for a per-post switch — in the Export window and the Posts manager — that forbids copying (and the context menu) on private posts' blog pages. Same motivation as the watermark (I7): discourage redistribution of something handed out per invite.
+
+**Decision**: `Draft.DisableCopy` (bool) + `POST /api/drafts/{id}/disable-copy` — the `/listed`/`/watermark` one-concern-per-endpoint shape verbatim.
+- **Only applied when `IsPrivate` is also true** (same family rule as the watermark): the flag persists independently, but `RenderPostAsync` checks `IsPrivate && DisableCopy`, so flipping a post public silently deactivates the guard without losing the setting.
+- **Render-side, not renderer-side**: a `<style>` (`user-select: none` on `.post-sheet`, `user-drag: none` on its images) plus a tiny inline script blocking `contextmenu`/`copy`/`cut`/`dragstart` — injected by `BlogEndpoints.RenderPostAsync` next to the watermark, never touching `CedarToBlogHtmlRenderer` (which stays a pure document renderer).
+- **Scoped to `.post-sheet` only** — the annotation/comment UI below the sheet keeps normal selection and a working context menu; readers still copy their own comment drafts.
+- **Named honestly**: the entity comment, hints and this ADR all say *deterrent* — the page source is one Ctrl+U away, and the UI hint tells the owner so rather than selling fake DRM.
+- UI: a checkbox in the Export modal's blog section (under "show in list anyway", visible only while Private is on) and one in the Posts manager's private-post section; both call the same endpoint, list/get DTOs carry `disableCopy`.
+
+**Consequence**: nothing changes for public posts or any renderer test; the guard is one string in one method. If a real protection ask ever lands (image watermarking on pixels, PDF-style export), it starts from this flag but is a different feature.

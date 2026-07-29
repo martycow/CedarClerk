@@ -339,6 +339,20 @@ export class PostsManagerComponent implements OnInit {
         }
     }
 
+    async toggleDisableCopy() {
+        const d = this.selected();
+        if (!d || this.busy()) return;
+        this.busy.set(true);
+        try {
+            await this.draftsApi.setDraftDisableCopy(d.id, !d.disableCopy);
+            this.patch(d.id, { disableCopy: !d.disableCopy });
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.privacy));
+        } finally {
+            this.busy.set(false);
+        }
+    }
+
     async toggleArchive() {
         const d = this.selected();
         if (!d || this.busy()) return;

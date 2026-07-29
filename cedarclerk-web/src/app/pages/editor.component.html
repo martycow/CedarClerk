@@ -151,6 +151,11 @@
                     {{ t().editor.exportModal.listedWhilePrivate }}
                 </label>
                 <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.listedWhilePrivateHint }}</p>
+                <label class="field-hint">
+                    <input type="checkbox" [checked]="disableCopy()" (change)="toggleDisableCopy()">
+                    {{ t().editor.exportModal.disableCopy }}
+                </label>
+                <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.disableCopyHint }}</p>
                 }
 
                 <!--Design review (Claude Design, 28.07.2026) — "the form lives in three places at

@@ -28,6 +28,7 @@ public static class DraftEndpoints
     public record UpdatePrivateRequest(bool IsPrivate);
     public record UpdateTemplateRequest(bool IsTemplate);
     public record UpdateListedRequest(bool IsListedWhilePrivate);
+    public record UpdateDisableCopyRequest(bool DisableCopy);
     public record UpdateWatermarkRequest(string? WatermarkText);
     public record UpdateSlugRequest(string? Slug);
     public record UpdateArticleTitleRequest(string? ArticleTitle);
@@ -83,7 +84,8 @@ public static class DraftEndpoints
                 .Select(d => new
                 {
                     d.Id, d.Title, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
-                    d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.IsPrivate, d.IsTemplate, d.ViewCount,
+                    d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.IsPrivate, d.IsTemplate,
+                    d.DisableCopy, d.ViewCount,
                     Translations = db.DraftTranslations.Where(t => t.DraftId == d.Id)
                         .Select(t => new { t.Language, t.UpdatedAt }).ToList(),
                 })
@@ -151,7 +153,7 @@ public static class DraftEndpoints
             {
                 d.Id, d.Title, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
                 d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.IsPrivate, d.IsTemplate,
-                d.ViewCount,
+                d.DisableCopy, d.ViewCount,
                 ReactionCount = reactionCounts.GetValueOrDefault(d.Id),
                 NewViewCount = deltas[d.Id].Views,
                 NewReactionCount = deltas[d.Id].Reactions,
@@ -197,7 +199,7 @@ public static class DraftEndpoints
             {
                 draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug,
                 draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.FolderId, draft.IsPrivate,
-                draft.WatermarkText, draft.ArticleTitle, draft.IsListedWhilePrivate,
+                draft.WatermarkText, draft.ArticleTitle, draft.IsListedWhilePrivate, draft.DisableCopy,
                 draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson,
                 // FI4.1 — which languages a reader would actually be greeted in.
                 FormLanguages = RegistrationFormSet.LanguagesWithForm(draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson),
@@ -428,6 +430,19 @@ public static class DraftEndpoints
             draft.IsListedWhilePrivate = req.IsListedWhilePrivate;
             await db.SaveChangesAsync();
             return Results.Ok(new { draft.IsListedWhilePrivate });
+        });
+
+        // Copy protection on the blog page of a private post — same one-concern-per-endpoint
+        // shape as /listed and /watermark above.
+        groupBuilder.MapPost("/{id:guid}/disable-copy", async (Guid id, UpdateDisableCopyRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            draft.DisableCopy = req.DisableCopy;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.DisableCopy });
         });
 
         groupBuilder.MapPost("/{id:guid}/article-title", async (Guid id, UpdateArticleTitleRequest req, ClaimsPrincipal user, CedarDbContext db) =>

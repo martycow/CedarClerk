@@ -85,6 +85,7 @@ export interface DraftMeta {
     folderId: string | null; // at most one folder per draft — see the ADR following ADR-038
     isPrivate: boolean; // blog page gated behind PostInvite tokens — see ADR-041
     isTemplate: boolean; // NF1 — a template, filtered into its own /drafts tab, never published
+    disableCopy: boolean; // blocks selection/copy/context menu on the blog page; private posts only
     // Blog activity (B23). Totals are all-time; new* is what accumulated since the previous
     // session (server-side baseline, see DraftStatSeen) and is 0 the first time a draft is listed.
     viewCount: number;
@@ -271,6 +272,12 @@ export class DraftsService {
 
     setDraftPrivate(id: string, isPrivate: boolean) {
         return firstValueFrom(this.http.post<{ isPrivate: boolean }>(`/api/drafts/${id}/private`, { isPrivate }));
+    }
+
+    // Copy protection on the blog page of a private post — selection, copy/cut and the context
+    // menu are blocked on the rendered post.
+    setDraftDisableCopy(id: string, disableCopy: boolean) {
+        return firstValueFrom(this.http.post<{ disableCopy: boolean }>(`/api/drafts/${id}/disable-copy`, { disableCopy }));
     }
 
     // NF1 — post templates.

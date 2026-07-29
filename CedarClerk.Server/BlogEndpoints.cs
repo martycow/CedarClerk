@@ -1185,6 +1185,17 @@ public static class BlogEndpoints
         // overlay is the sheet's last child and sits above it), never behind it.
         var watermark = draft.IsPrivate ? WatermarkRenderer.OverlayHtml(draft.WatermarkText) : "";
 
+        // Copy protection (same private-only family as the watermark above): selection, copy/cut
+        // and the context menu are blocked on the post sheet only — the comment/annotation UI
+        // below it stays fully usable. A deterrent, not protection: the source is one Ctrl+U away.
+        var copyGuard = draft is { IsPrivate: true, DisableCopy: true }
+            ? """
+              <style>.post-sheet{-webkit-user-select:none;user-select:none}.post-sheet img{-webkit-user-drag:none;user-drag:none}</style>
+              <script>(function(){var s=document.querySelector('.post-sheet');if(!s)return;
+              ['contextmenu','copy','cut','dragstart'].forEach(function(ev){s.addEventListener(ev,function(e){e.preventDefault();});});})();</script>
+              """
+            : "";
+
         var postSheet = $"""
             <div class="post-sheet">
             {metaRow}
@@ -1211,6 +1222,7 @@ public static class BlogEndpoints
         var html = $"""
             <a class="back-link" href="/">&larr; {backLinkLabel}</a>
             {postSheet}
+            {copyGuard}
             {articleBlock}
             {floatingNav}
             """;

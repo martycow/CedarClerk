@@ -368,6 +368,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // Semi-public: a private post that still appears in the blog index, carrying a lock. Changes
     // what is advertised, never what is readable — the gate is untouched.
     isListedWhilePrivate = signal(false);
+    // Copy protection on the blog page — selection, copy/cut and the context menu are blocked
+    // on the rendered post. Private posts only, same deterrent family as the watermark.
+    disableCopy = signal(false);
 
     // Watermark (I7) — drawn on the blog page only, never in the editor. watermarkText() is the
     // saved value (what the state strip reports); watermarkInput is the unsaved field content.
@@ -1144,6 +1147,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.regForm.set(parseRegistrationForm(draft.registrationFormJson));
             this.formLanguages.set(draft.formLanguages ?? []);
             this.isListedWhilePrivate.set(draft.isListedWhilePrivate ?? false);
+            this.disableCopy.set(draft.disableCopy ?? false);
             this.editor?.setEditable(true);
             this.editor?.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC), { emitUpdate: false });
             this.resetHistory();
@@ -1201,7 +1205,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 blogSlug: null, isBlogPublished: false, blogPublishedAt: null,
                 languages, tags: tags.join(','),
                 isArchived: false, lastTelegramMessageId: null, lastTelegramUsername: null,
-                staleLanguages: [], scheduled: null, folderId, isPrivate, isTemplate: false,
+                staleLanguages: [], scheduled: null, folderId, isPrivate, isTemplate: false, disableCopy: false,
                 viewCount: 0, reactionCount: 0, newViewCount: 0, newReactionCount: 0,
             };
             this.drafts.update(l => [meta, ...l]);
@@ -1218,6 +1222,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.tagList.set(tags);
             this.currentFolderId.set(folderId);
             this.isPrivate.set(isPrivate);
+            this.disableCopy.set(false);
             this.watermarkText.set(null);
             this.watermarkInput = '';
             this.watermarkError.set(null);
@@ -1355,6 +1360,19 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.isPrivate.set(res.isPrivate);
         } catch {
             this.inviteError.set(this.t().editor.errors.privacy);
+        }
+    }
+
+    async toggleDisableCopy() {
+        const id = this.currentId();
+        if (!id) return;
+        const next = !this.disableCopy();
+        this.disableCopy.set(next);
+        try {
+            await this.draftsApi.setDraftDisableCopy(id, next);
+        } catch (e) {
+            this.disableCopy.set(!next);
+            this.inviteError.set(httpErrorMessage(e, this.t().editor.errors.privacy));
         }
     }
 

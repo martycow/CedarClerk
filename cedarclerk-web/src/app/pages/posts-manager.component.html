@@ -194,6 +194,15 @@
                     @if (d.isPrivate) {
                     <div class="detail-divider"></div>
 
+                    <!--Copy protection — same private-only family as the watermark: a deterrent
+                    on the rendered blog page, toggled here and in the editor's Export window.-->
+                    <div class="detail-field">
+                        <label class="field-hint">
+                            <input type="checkbox" [checked]="d.disableCopy" (change)="toggleDisableCopy()" [disabled]="busy()">
+                            {{ t().manager.disableCopy }}
+                        </label>
+                    </div>
+
                     <div class="detail-field">
                         <label>{{ t().manager.forms.postForm }}</label>
                         <!--Design review (Claude Design, 28.07.2026) — "the form lives in three
