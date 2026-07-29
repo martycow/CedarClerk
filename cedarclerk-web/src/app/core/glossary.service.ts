@@ -50,4 +50,11 @@ export class GlossaryService {
     translate(id: string, targetLanguage: string) {
         return firstValueFrom(this.http.post<GlossaryTerm>(`/api/glossary/${id}/translate`, { targetLanguage }));
     }
+
+    // ADR-062 — every term of sourceLanguage into targetLanguage in one call (one quota call for
+    // the whole language). `skipped` counts terms whose translation came back unusable.
+    translateAll(sourceLanguage: string, targetLanguage: string) {
+        return firstValueFrom(this.http.post<{ terms: GlossaryTerm[]; skipped: number }>(
+            '/api/glossary/translate-all', { sourceLanguage, targetLanguage }));
+    }
 }

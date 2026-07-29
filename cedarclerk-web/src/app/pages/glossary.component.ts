@@ -239,4 +239,50 @@ export class GlossaryComponent implements OnInit {
         this.translatingLang.set(null);
         this.translateFor.set(null);
     }
+
+    // ADR-062 — the whole-language sweep. Reuses the per-term modal's selection/progress/error
+    // signals (only one of the two modals is ever open) but calls the batch endpoint, so each
+    // checked language costs one AI call regardless of how many terms there are.
+    translateAllOpen = signal(false);
+
+    translateAllTargets(): string[] {
+        return this.contentLanguages.filter(l => l !== this.languageFilter());
+    }
+
+    openTranslateAll() {
+        this.translateAllOpen.set(true);
+        this.translateSelection.set(new Set());
+        this.translateError.set('');
+    }
+
+    closeTranslateAll() {
+        if (this.translatingLang()) return;
+        this.translateAllOpen.set(false);
+    }
+
+    async runTranslateAll() {
+        if (!this.canTranslate()) return;
+        this.translateError.set('');
+        const source = this.languageFilter();
+        const langs = this.contentLanguages.filter(l => this.translateSelection().has(l));
+        for (const lang of langs) {
+            this.translatingLang.set(lang);
+            try {
+                const { terms } = await this.api.translateAll(source, lang);
+                this.terms.update(list => {
+                    const byId = new Map(list.map(t => [t.id, t]));
+                    for (const t of terms) byId.set(t.id, t);
+                    return [...byId.values()].sort((a, b) => a.term.localeCompare(b.term));
+                });
+                this.toggleTranslateLang(lang);
+            } catch (e) {
+                // Stop on the first failure; the untouched languages stay checked for a retry.
+                this.translateError.set(httpErrorMessage(e, this.t().glossary.translateFailed));
+                this.translatingLang.set(null);
+                return;
+            }
+        }
+        this.translatingLang.set(null);
+        this.translateAllOpen.set(false);
+    }
 }

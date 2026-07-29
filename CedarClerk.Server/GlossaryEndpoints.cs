@@ -154,9 +154,112 @@ public static class GlossaryEndpoints
             await db.SaveChangesAsync(CancellationToken.None); // the work is done — don't let a disconnect discard it
             return Results.Ok(new { term.Id, term.Term, term.Description, term.Aliases, term.ImageUrl, term.Language, term.UpdatedAt });
         });
+        // ADR-062 — the whole-language sweep: every term of sourceLanguage into targetLanguage
+        // for one quota call and one (chunked) provider call, instead of one per term. The
+        // frontend still loops per target language, so quota and errors stay per-language.
+        group.MapPost("/translate-all", async (TranslateAllRequest req, ClaimsPrincipal user,
+            CedarDbContext db, IConfiguration cfg, IHttpClientFactory httpFactory, CancellationToken ct) =>
+        {
+            if (req.SourceLanguage is null || !Languages.ContentLanguages.Contains(req.SourceLanguage))
+                return Results.BadRequest(new { error = $"Unsupported language: {req.SourceLanguage}" });
+            if (req.TargetLanguage is null || !Languages.ContentLanguages.Contains(req.TargetLanguage))
+                return Results.BadRequest(new { error = $"Unsupported language: {req.TargetLanguage}" });
+            if (req.SourceLanguage == req.TargetLanguage)
+                return Results.BadRequest(new { error = "Source and target language are the same" });
+
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var sources = await db.GlossaryTerms
+                .Where(t => t.OwnerId == uid && t.Language == req.SourceLanguage)
+                .OrderBy(t => t.Term)
+                .ToListAsync(ct);
+            if (sources.Count == 0)
+                return Results.BadRequest(new { error = "No terms in this language" });
+
+            var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
+            if (!PlanLimitations.HasAiFeatures(tier))
+                return Results.Json(new { error = ErrorMessages.AutoTranslateProPlus }, statusCode: StatusCodes.Status403Forbidden);
+
+            ITranslationProvider? provider;
+            try
+            {
+                provider = TranslationProviderFactory.Create(cfg, httpFactory);
+            }
+            catch (TranslationException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status501NotImplemented);
+            }
+            if (provider is not ITextsTranslationProvider textsProvider)
+                return Results.Json(new { error = ErrorMessages.AutoTranslateNoProvider }, statusCode: StatusCodes.Status501NotImplemented);
+
+            if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
+                return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);
+
+            IReadOnlyList<string> translated;
+            try
+            {
+                translated = await textsProvider.TranslateTextsAsync(
+                    sources.SelectMany(t => new[] { t.Term, t.Description }).ToList(), req.TargetLanguage, ct);
+            }
+            catch (TranslationException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            // One query for the whole target language; terms created below join the map so two
+            // sources translating to the same word update one row instead of duplicating. ADR-062.
+            var byLowerTerm = (await db.GlossaryTerms
+                    .Where(t => t.OwnerId == uid && t.Language == req.TargetLanguage)
+                    .ToListAsync(ct))
+                .GroupBy(t => t.Term.ToLowerInvariant())
+                .ToDictionary(g => g.Key, g => g.First());
+
+            var upserted = new List<GlossaryTerm>();
+            var skipped = 0;
+            for (var i = 0; i < sources.Count; i++)
+            {
+                var newTerm = translated[i * 2].Trim();
+                var newDescription = translated[i * 2 + 1].Trim();
+                if (newTerm.Length == 0 || newTerm.Length > TermMaxLength || newDescription.Length == 0)
+                {
+                    skipped++;
+                    continue;
+                }
+                if (newDescription.Length > DescriptionMaxLength)
+                    newDescription = newDescription[..DescriptionMaxLength];
+
+                if (byLowerTerm.TryGetValue(newTerm.ToLowerInvariant(), out var existing))
+                {
+                    existing.Description = newDescription;
+                    existing.UpdatedAt = DateTime.UtcNow;
+                    upserted.Add(existing);
+                }
+                else
+                {
+                    var term = new GlossaryTerm
+                    {
+                        OwnerId = uid,
+                        Term = newTerm,
+                        Description = newDescription,
+                        Aliases = "",
+                        ImageUrl = sources[i].ImageUrl,
+                        Language = req.TargetLanguage,
+                    };
+                    db.GlossaryTerms.Add(term);
+                    byLowerTerm[newTerm.ToLowerInvariant()] = term;
+                    upserted.Add(term);
+                }
+            }
+            await db.SaveChangesAsync(CancellationToken.None); // the work is done — don't let a disconnect discard it
+            return Results.Ok(new
+            {
+                terms = upserted.Select(t => new { t.Id, t.Term, t.Description, t.Aliases, t.ImageUrl, t.Language, t.UpdatedAt }),
+                skipped,
+            });
+        });
     }
 
     public record TranslateTermRequest(string? TargetLanguage);
+    public record TranslateAllRequest(string? SourceLanguage, string? TargetLanguage);
 
     /// <summary>
     /// The glossary a blog page renders with: one owner's terms in the language being shown.

@@ -499,3 +499,13 @@ Gated with `Results.NotFound()` (404, not 403) on failure — same instinct as `
 - **"Selected languages" is a frontend loop**: the modal collects target-language checkboxes and calls the endpoint once per language, sequentially. No batch endpoint — per-language quota consumption and per-language errors stay legible, and the ADR-060 contract is reused unchanged.
 
 **Consequence**: the auto-translate gate strings ("Pro Plus feature", "not available with the configured provider", the daily-limit message) were inlined twice already (`DraftEndpoints`, `FormPresetEndpoints`); a third use moves them to `ErrorMessages` and the existing call sites are pointed at the consts.
+
+
+### ADR-062 — Glossary gets a whole-language batch translate (amends ADR-061's "no batch endpoint")
+**Context** (29.07.2026): Marty asked to translate *all* terms of the selected language into the other languages at once. Doing that through ADR-061's per-term endpoint would cost one daily-AI-quota call per term per language — 20 terms into 5 languages is 100 quota calls for what the provider could do in 5. The "no batch endpoint" line in ADR-061 was written for the per-term modal, where the unit of work really is one term; it priced in neither a whole-glossary sweep nor the quota math.
+
+**Decision**: `POST /api/glossary/translate-all` with `{ sourceLanguage, targetLanguage }` — same gates as ADR-061 (Pro Plus, `ITextsTranslationProvider`, daily AI quota), but **one quota call and one provider call per target language**, covering every term of the source language: all term+description pairs go into a single `TranslateTextsAsync` call and the existing chunk machinery (ADR-059) splits them as needed.
+- **The frontend still loops per target language, sequentially** — that part of ADR-061 stands. Per-language quota consumption and per-language errors stay legible; only the per-term loop inside a language collapsed into the batch call.
+- **Upsert rule is ADR-061's, applied per term**, with one addition: existing target-language terms are loaded once up front (one query, not one per term), and terms created earlier in the same batch participate in the case-insensitive match — two source terms that translate to the same target word update one row instead of inserting a duplicate.
+- **A term whose translation comes back unusable (blank or over-length) is skipped, not fatal**: the endpoint returns the upserted terms plus a `skipped` count. One garbled pair shouldn't discard a whole language's worth of paid translation.
+- Aliases/image treatment is ADR-061's verbatim: aliases stay untranslated, the image is copied onto newly created rows only.

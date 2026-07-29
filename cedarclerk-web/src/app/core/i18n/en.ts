@@ -566,6 +566,9 @@ export const en = {
         translateBody: 'The term and its description are machine-translated — you can edit the result. Other spellings are not translated: fill them in by hand when needed.',
         translateRun: 'Translate',
         translateFailed: 'Failed to translate the term',
+        translateAll: 'Translate all',
+        translateAllTitle: (count: number, lang: string) => `Translate all ${count} ${lang} terms`,
+        translateAllBody: 'Every term and description in this language is machine-translated in one go — you can edit the results. Other spellings are not translated. Each checked language costs one AI call.',
     },
     admin: {
         crumb: 'Admin',

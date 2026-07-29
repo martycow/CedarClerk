@@ -2,6 +2,12 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-07-29 (latest, uncommitted) — glossary: translate a whole language at once
+
+Follow-up ask from Marty on ADR-061: translate *all* terms of the selected language into the other languages in one action. Doing it through the per-term endpoint would burn one daily-AI-quota call per term per language, so ADR-062 (`docs/DECISIONS.md`) amends ADR-061's "no batch endpoint": new `POST /api/glossary/translate-all` `{ sourceLanguage, targetLanguage }` — same gates (Pro Plus, `ITextsTranslationProvider`, daily quota), but **one quota call and one chunked provider call per target language** covering every term+description pair of the source language. Upsert per ADR-061's rule, with existing target-language terms loaded once up front and same-batch creations joining the case-insensitive match (two sources translating to the same word update one row). Unusable translations (blank/over-length term) are skipped and counted, not fatal. UI: a "Translate all" ghost button next to the language tabs (shown only when the language has terms) opens a modal identical in shape to the per-term one — target-language checkboxes, sequential per-language calls, stop-on-first-failure with the rest left checked.
+
+`dotnet test` 396/396, `ng build` clean. Not yet live-verified in a browser or deployed.
+
 ## 2026-07-29 — glossary: auto-translate terms + the missing button styles
 
 Two glossary asks from Marty (ADR-061, `docs/DECISIONS.md`):
