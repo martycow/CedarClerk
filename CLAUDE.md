@@ -33,6 +33,7 @@ Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTUR
 | New EF migration | `dotnet ef migrations add <Name> --project CedarClerk.Server` |
 
 ## Docs map
+- `docs/DOCS-FLOW.md` — **read this first**: which doc is the source of truth for what, how an item travels Input.md → BACKLOG → TASKS → ROADMAP/CHANGELOG, and the three rules that keep them in sync
 - `docs/PRODUCT.md` — what Cedar Clerk is, who it's for, pricing
 - `docs/PRD.md` — shipped vs. open requirements, deferred/blocked items
 - `docs/ARCHITECTURE.md` — solution layout, data model, API style, deploy pipeline
