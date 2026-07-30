@@ -1,10 +1,13 @@
 // Content languages a post can exist in (NF2). Mirrors CedarClerk.Localization.Languages — the
 // server validates against its own copy, this one only drives the editor's tabs and labels.
-export const PRIMARY_LANGUAGE = 'ru';
+export const CONTENT_LANGUAGES = ['ru', 'en', 'de', 'fr', 'es', 'ja'];
 
-export const TRANSLATION_LANGUAGES = ['en', 'de', 'fr', 'es', 'ja'] as const;
-
-export const CONTENT_LANGUAGES = [PRIMARY_LANGUAGE, ...TRANSLATION_LANGUAGES];
+// The language a *new* draft starts in. Which language an existing draft is written in is
+// `Draft.primaryLanguage` and is per-draft (ADR-064) — never assume this constant for one that
+// already exists, which is exactly the mistake that left the diff gutter and several exports
+// Russian-only. There is deliberately no "translation languages" list any more: whether a language
+// is a translation depends on the draft (ADR-065).
+export const DEFAULT_PRIMARY_LANGUAGE = 'ru';
 
 // Endonyms — a language name is only useful to someone who reads it, so these are never
 // translated. Shown next to the two-letter tab codes (DB3.1: flag emoji don't render on Windows).

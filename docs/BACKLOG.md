@@ -1,246 +1,102 @@
-# Backlog
+# Backlog — таск-борда
 
-The **only** place to look for open, not-yet-started ideas/features/tech-debt — deliberately separate from `docs/ROADMAP.md`, which mixes this in with phase status and shipped work. If it's not started and not scheduled into a phase, it lives here; once it gets scoped into a phase, move the entry into `docs/ROADMAP.md` and delete it from here.
+**Единственное** место открытых, не начатых задач. Правила ведения:
+- Формат — таск-борда (введён 30.07.2026 по просьбе Марти): ID, Имя, Приоритет, Теги, Описание. Старая нарративная версия со всей историей — в git history этого файла (до 30.07.2026); вычёркнутые строки больше не хранятся, сделанное фиксируется в `docs/ROADMAP.md` / `CHANGELOG.md` и удаляется отсюда.
+- ID стабильные (`T-xxx` задачи, `Q-xx` открытые вопросы), не переиспользуются. В описании в скобках — исходная нумерация Марти (B*, N*, I*, NF*, FI*, idea #*), чтобы старые ссылки в ROADMAP/DECISIONS оставались рабочими.
+- Приоритеты Марти: High / Medium / Low. «Реш.» = сначала нужно решение Марти (см. вопросы внизу).
+- Чек-лист live-верификации уже сделанного живёт в `TASKS.md`, не здесь.
 
-Migrated from `docs/ROADMAP.md` (16.07.2026 origin dates preserved) on 25.07.2026 — content unchanged in the move, only relocated.
+## Новые фичи
 
-## Ideas (not yet scoped into a phase)
-
-| # | What | Notes |
-|---|---|---|
-| 1 | Cross-posting: split a post into parts and publish to Twitter/Bluesky | **Core positioning axis now, not a peripheral nice-to-have** (ADR-021, `docs/DECISIONS.md` — Cedar Clerk is a write-once-publish-everywhere tool, Telegram/blog/Twitter-Bluesky are co-equal destinations). Still not scoped into a phase. Needs an export setting to control social-preview (OpenGraph/card) visibility for those platforms — character-limit-aware splitting, not a straight dump of the Telegram render |
-| 2 | Email confirmation on registration | Currently invite-code gated only, no email verification step at all — needs a provider decision (SMTP vs a transactional-email service) before scoping |
-| ~~3~~ | ~~Dedicated tag-management UI~~ | **Done 27.07.2026** — `PUT /api/drafts/tags` (rename across every draft, merging rather than duplicating when the target already exists) and `DELETE /api/drafts/tags/{tag}`. Surfaced as a `[manage]` mode on the shared `TagPickerComponent`, reachable from `/drafts`. Propagation to the blog is free: it reads `Draft.Tags` directly and keeps no copy |
-| ~~4~~ | ~~Separate "draft name" from "article title"~~ | **Done 27.07.2026** — `Draft.ArticleTitle` (migration `AddArticleTitle`, nullable, null means "same as the name"), edited in the Posts Manager and used by the blog page, the post cards, RSS and both file exports. The per-language half turned out to already exist: `DraftTranslation.Title` has always been that language's own article title, so only the primary language needed a field |
-| 5 | Founder / Lifetime plan via a designated invite code | Low cost, reuses existing invite-code registration infra — see ADR-022, `docs/DECISIONS.md`. Grants a permanent Pro tier (not Pro Plus, no AI); no new schema needed (`ApplicationUser.PlanExpiresAt = null` on a paid tier already means "never expires"). Open: the founder code's actual value |
-
-### Idea dump 25.07.2026 (from Marty, via `/remote-control`)
-
-| # | What | Notes |
-|---|---|---|
-| 6 | Loading indicator for import/export and other long operations | Broader than the existing AI-op indicator (Phase 8 Step 8 in `docs/ROADMAP.md` — currently just an elapsed-time counter, no real progress bar). Needs coverage on `.cedar`/Markdown import, blog export, and any other long-running action that currently gives no feedback |
-| ~~7~~ | ~~Tag picker/creator popup everywhere tags are used~~ | **Done 27.07.2026 (FI3.2)** — extracted as `TagPickerComponent`, used by the editor, the new-draft dialog and the posts manager. The decision it asked for was taken: spread the UI, leave `Draft.Tags` a flat string; idea #3's rename/delete works fine without normalizing |
-| ~~8~~ | ~~Show all tags on a blog post card~~ | **Done 27.07.2026** — the card loops over every tag instead of emitting `tags[0]` |
-| 9 | Store `session_id` in a cookie for auto-login | **Likely already implemented** — ASP.NET Identity already sets a persistent auth cookie today (`isPersistent: true`, `AuthEndpoints.cs:61-71`); `auth.service.ts` relies on the browser cookie jar, no manual token handling. Confirm with Marty what's actually failing (session too short-lived? doesn't survive a browser restart?) before treating this as new work |
-| 10 | Email confirmation at registration | Duplicate of idea #2 above — do not scope twice, just link back to #2 |
-| ~~11~~ | ~~Glossary of terms~~ | **Done 27.07.2026** — `GlossaryTerm` (migration `AddGlossaryTerms`), a `/glossary` page, and `GlossaryScanner` in Core marking terms in the rendered blog HTML with a hover/tap tooltip. **Scoped deliberately narrower than the original line in two places**: the scan runs at render time on the blog only (Marty's ask was "при публикации"), not as an inline TipTap decoration in the editor; and there is no auto-detect-before-posting pass. See the ADR in `docs/DECISIONS.md` |
-| ~~12~~ | ~~Admin role + a dedicated user-management page (mini CRM)~~ | **Done 27.07.2026** — all five steps of `docs/admin-panel-scope.md`; the audit log gained paging on 27.07.2026, which was the last open gap. Original note follows. No role/admin concept existed at all — `ApplicationUser : IdentityUser` has no `IsAdmin`/role field, `Program.cs` calls `AddIdentityCore` without `.AddRoles(...)`, and `AuthEndpoints.cs` has zero role checks. Needs: role concept on `ApplicationUser` (or ASP.NET Identity roles), a migration, admin-only endpoints, and a new page listing/managing users |
-| ~~13~~ | ~~Appearance settings: a small live preview~~ | **Done 27.07.2026 (I14)** — the appearance panel moved into the editor beside the sheet, so the sheet *is* the preview and nothing extra had to be built |
-| 14 | Move AI features into a separate popup/menu | An `.ai-chip` AI popover already exists in the toolbar today. Clarify with Marty what's actually wanted — a different location for the same popover, or a fundamentally different UI pattern (e.g. a floating button off the toolbar entirely) |
-| 15 | Start adding integration buttons for other social networks | Today's "Integrations" section in Settings (`settings.component.html:408-467`) only has Telegram. Overlaps with idea #1 above (Twitter/Bluesky cross-posting, already an ADR-021 positioning decision) — treat as the same initiative, don't scope as a separate item |
-
-### Idea dump 25.07.2026 (from Marty, "Cedar Clerk 0.9.0" feature list)
-
-Raw list, not yet scoped into phase steps — logged here per Marty's call, not started as `Phase 9` in `docs/ROADMAP.md` yet.
-
-| # | What | Notes |
-|---|---|---|
-| 16 | X/Twitter, Bluesky, Threads, Instagram integration | Same initiative as idea #1 (cross-posting, ADR-021) and idea #15 (social integration buttons) — this is the concrete platform list for that already-decided direction, not a new idea. Threads/X/Bluesky/Facebook/Medium/Patreon/Notion/Google Docs already have "Coming soon" placeholder rows in the Export modal's mock list (`editor.component.html`, `export-mock-list`); Instagram is new, not in that mock list yet |
-| 17 | Export menu per social network (except Telegram): preview + thread-splitting for X/Threads/Bluesky | The actual mechanism for #16 — character-limit-aware splitting into a thread, plus a preview before sending. Depends on #16 (need the integrations themselves first) |
-| ~~18~~ | ~~Notifications about comments/likes via the Telegram bot~~ | **Done 26.07.2026** — opt-in toggle in Settings → Integrations, DM on new comments/replies and new "like" reactions only (not dislikes, not un-likes). See ADR-040, `docs/DECISIONS.md`. Not yet live-verified against a real Telegram DM |
-| ~~19~~ | ~~Folders / drafts grouping~~ | **Done 26.07.2026** — real `Folder` entity, one folder per draft, full CRUD (create/rename/delete), filter + per-row assignment on `/drafts`, lighter assign-only selector in the editor. See ADR-039, `docs/DECISIONS.md`. Not yet live-verified in a browser |
-| ~~20.1/20.2~~ 20.3 | ~~Private posts: require registration to view (20.1), access management — who can view (20.2)~~ / must support polls (20.3) | **20.1/20.2 done 26.07.2026** — email invite list per post (`PostInvite`), link-based access via a long-lived cookie, gated at all 4 places a private post could be reached by slug. Required building the project's first real email infrastructure (Resend) as a prerequisite — see ADR-041, `docs/DECISIONS.md`, and `docs/integrations-setup.md` §3 for the manual setup Marty still needs to do (Resend account + domain verification) before email delivery actually works; the link itself is always shown/copyable regardless. **20.3 still open and still depends on #22** (polls) existing first — don't scope it standalone |
-| 21 | Optional registration on the blog site — to comment, reserve a display name, prevent impersonation; possibly a "verified" badge | Blog comments today are anonymous, `VisitorHash`-scoped (IP-based, no accounts) with post-hoc moderation via deletion (ADR-016) — this is a fundamentally different model (real visitor identity) and would sit alongside, not replace, the anonymous path. The "verified" badge sub-idea has no defined meaning yet (verified how — email? something else?) |
-| ~~22~~ | ~~Polls, forms, questionnaires~~ | **Done 28.07.2026 (NF5, ADR-055)** — blog-only per Marty's decision, not sent to Telegram at all. Idea #20.3 (private posts must support polls) is now unblocked, but not itself scoped/built |
-
-**Open dependency note**: idea #20.3 (private posts must support polls) needed #22 (polls) built first — that's now done (NF5, ADR-055), so 20.3 is unblocked but still not itself scoped.
-
-### Input sweep v2 — 27.07.2026 (late), current (from `_Documents_/CedarClerk/Input.md`)
-
-**Marty rewrote `Input.md` again** after the first sweep closed. Confirmed by him: these do **not** overlap the earlier lists. ~60 items across 6 new features, 6 improvement groups and 3 bug groups. Numbered `NF*`, `FI*`, `DB*` — the source file's own numbering.
-
-Scoped as Phase 9e in `docs/ROADMAP.md`. Recorded here with what each actually costs, since several are much larger than one line suggests.
-
-**New features**
-
-| # | Pri | What | Verdict / what it really costs |
-|---|---|---|---|
-| NF3 | High | Email confirmation on registration, required at login | **Was already idea #2/#10** in this file. **Blocked in practice**: the Resend API key configured on the Pi 401s (issued for a since-deleted domain — see `TASKS.md`), so invite emails don't send today either. Confirmation mail would fail the same way. Needs a working key before it can be built, or it ships broken |
-| ~~NF1~~ | ~~Medium~~ | ~~Post templates — a preset authored in the editor, named like a draft but not a post~~ | **Done 28.07.2026** — see `docs/ROADMAP.md` Phase 9e and ADR-056. `Draft.IsTemplate` + a `/drafts` filter tab, no duplication-into-new-draft flow (out of scope, not asked for) |
-| NF4 | Medium | OAuth sign-in: Google, Apple, Meta, Telegram | Telegram is already done (HMAC link, ADR-009) but as *linking*, not *sign-in* — turning it into a login path is its own change. The other three need real provider registrations, secrets on the Pi, and a decision about account merging when an OAuth email matches an existing password account |
-| ~~NF5~~ | ~~Medium~~ | ~~Polls inside a post~~ | **Done 28.07.2026** — see `docs/ROADMAP.md` Phase 9e and ADR-055. Blog-only (Marty's call), not built on the form-preset entity after all (see the ADR for why) |
-| NF6 | Low | Embed a pay-any-amount form mid-post on the blog | Stripe/PayPal exist for subscriptions only. A public, unauthenticated, arbitrary-amount payment on a blog page is a different flow with its own fraud surface |
-| NF2 | Low | Add ES/FR/DE — UI localization now, translation later | Two separate axes that this item merges: **UI** language (`en.ts`/`ru.ts`, typed so a new locale must implement every key) and **content** language (`DraftTranslation`, the editor's RU/EN tabs, `?lang=` on the blog, auto-translate). The UI half is mechanical; the content half touches the editor's whole language model, which currently assumes exactly two |
-
-**Improvement groups** — each is many sub-items; full text in `Input.md`.
-
-| # | Pri | What | Notes |
-|---|---|---|---|
-| FI2 | High | Export window UX, 11 sub-items | The unifying principle Marty states is worth keeping: **"Export manages ONLY export"**. Unpublish, scheduled-post management and post-publication editing all move to the Posts Manager. Also: RU/EN as checkboxes, a form-preset dropdown for private posts, publish/schedule as one button, and a success toast with links |
-| FI3 | High | Posts Manager UX, 11 sub-items | Includes **removing the "Reactions & comments" tab** and folding it into Posts — compatible with the per-post grouping just built, it moves where that grouping lives. Also a manual blog URL, search, status indicators, and a better toolbar icon (the current one is a chart) |
-| FI4 | ~~High~~ done | ~~Forms manager: per-language presets~~ — shipped 30.07.2026 as ADR-060 (one multi-language preset: skeleton + per-language texts, option ids, auto-translate) | Remaining sliver, if the layout still "рябит" visually, is a pure-CSS pass |
-| FI6 | Medium | Account settings, 5 sub-items | **Blocked indefinitely**: sub-items 1/3/4/5's text was lost when `Input.md` was overwritten before this session and neither Marty nor this file recorded them — only sub-item 2 (the deferred pricing restructure) survives. Needs re-specifying from scratch before any code |
-| ~~FI1~~ | ~~Low~~ | ~~Appearance panel UX, 7 sub-items~~ | **Done 28.07.2026** — see `docs/ROADMAP.md` Phase 9e and ADR-053 |
-| ~~FI5~~ | ~~Low~~ | ~~Profile settings: real social icons, more slot types, multi-language signatures~~ | **Done 28.07.2026** — see `docs/ROADMAP.md` Phase 9e and ADR-054 |
-
-**Bugs**
-
-| # | Pri | What | Notes |
-|---|---|---|---|
-| DB1 | Medium | iPad layout — nothing should overflow the screen | Recurring theme (`B24`, `B7`, the mobile items). Needs a device pass, not a guess |
-| DB3 | Low | **Flag emoji don't render on desktop browsers** | **This invalidates a choice I made**: `I1`/`I17` used flag emoji, reasoning that a flag is recognisable to someone who can't read the language. On Windows that is simply false — it does not ship regional-indicator glyphs, so they render as letter pairs. Needs a different visual (inline SVG, or language codes) |
-| DB2 | Low | Drafts table, 7 sub-items | Includes a real regression: **column resize behaves inverted** (`N1`). Plus a default sort, a narrower Title default, status indicators, name validation (1–64 chars), and the new-draft dialog opening *before* navigation |
-
-**Cross-cutting decisions needed before building**
-
-1. **FI6.2 — collapse the tiers to one paid plan?** Contradicts ADR-012/013/014 and changes billing, limits and the admin panel. Decide first.
-2. **NF2 — how many content languages, really?** The editor's two-tab model, `Languages.cs`, auto-translate and the blog's `?lang=` all assume two. FI4 and FI5 both wait on this.
-3. **NF3 — the Resend key** must work before email confirmation is worth building.
-
-### Input sweep — 27.07.2026, current (from `_Documents_/CedarClerk/Input.md`)
-
-**A third list from Marty**, this time out of `Input.md` rather than `Brainstorm_Features.md` — 19 improvements, 9 bugs, 2 removals, 2 features. Same rule as before: it **adds to** v1/v2, it doesn't cancel them. Numbered `I1`…`I19` (improvements), `IB1`…`IB9` (bugs), `IT1`/`IT2` (removals), `IF1`/`IF2` (features) — plain numbers and `B`/`N` prefixes are already taken.
-
-Scoped into `docs/ROADMAP.md` Phase 9c; this table is the full text plus the dedup verdict for each item.
-
-**Bugs** — these come first in Phase 9c, before any improvement.
-
-| # | Priority | Tag | What | Verdict / overlap |
+| ID | Имя | Приоритет | Теги | Описание |
 |---|---|---|---|---|
-| IB3 | High | Translation | Opening the RU version makes the EN version go Dirty about a second later, as if EN lags behind RU | New. Distinct from `B14` (which was about the re-translate button being hidden) — this is the stale flag firing on a pure read |
-| IB4 | High | Workspace | The ruler is only visible along the top and sits *under* the writing area. If it can't be fixed, remove it | **Duplicate of `B12`**'s first half (the paragraph-number half of B12 shipped 27.07.2026). Removal is now an explicitly sanctioned outcome, which it wasn't in B12 |
-| IB6 | High | Workspace | Return to the editor from Settings and the post reads as "outside any folder" — clicking the folder picker shows the correct one | New. Almost certainly the folder signal not being re-read on route re-entry, not a persistence bug |
-| IB7 | High | Diff gutter | Diff gutter on the right is still drawn above or below the line it belongs to | **Duplicate of `B11`** (Medium, never shipped). "Still" confirms the gutter was never fixed; priority rises to High |
-| IB8 | High | Posts Manager | No way back to the editor from the Posts Manager — no back button, no logout, only editing the URL | New. Real trap: `/posts` was built (N7) with its page chrome stripped, and nothing replaced the topbar |
-| IB1 | Medium | Headers | The paragraph-format dropdown still says "Paragraph" in English in the RU UI | New, and a straight miss from ADR-050's translation sweep |
-| IB2 | Medium | Re-translate dialog | Everything in the dialog is Russian except the description itself; the progress bar slides far left out of the working area when re-translating | New. Two defects in one row — one translation miss, one layout bug |
-| IB5 | Medium | Comments | Blog comment section misbehaves: picking who to reply to can't be undone, and the form is bulky | New. Post-dates `ADR-037` (replies), so it's feedback on shipped work |
-| IB9 | Medium | Profile | On some pages the profile button does nothing — doesn't open | New. Needs the page list narrowed down before it's fixable |
+| T-013 | Языки: украинский, беларусский, грузинский | High | Translation | Добавить uk/be/ka в контент-языки (запрос Марти 30.07). Код тривиален: `Languages.cs` + `languages.ts` (константы + эндонимы Українська/Беларуская/ქართული). Нюанс: DeepL НЕ поддерживает be/ka (uk — да) — нужен capability-check у провайдера; Anthropic/OpenAI переводят все три |
+| T-014 | Кнопка «перевести на все выбранные языки» | High | Translation | Одна кнопка: перевести primary на все отмеченные языки. Образец готов — glossary batch translate (ADR-062): модалка с чекбоксами, последовательный цикл по существующему `/translations/{lang}/auto` + поллинг. Показывать цену в AI-вызовах (квота 20/день, 1 вызов на язык) |
+| T-015 | Инкрементальный «до-перевод» | High | Translation | Переводить только изменённые блоки, а не весь документ. Основа есть: `SourceSnapshotJson` + блочный LCS-дифф. Рекомендованный вариант: серверный позиционный сплайс (неизменённые блоки копируются из перевода — ручные правки сохраняются, изменённые переводятся с контекстом соседей). Fallback на полный перевод при отсутствии снапшота/смене primary/ручном изменении структуры. Известные пределы: таблица = один блок; перестановка = delete+insert. Детали — отчёт сессии 30.07 |
+| T-016 | История версий: UI отката (restore) | High | Versioning | `DraftRevision` уже пишется на каждый save/publish, но история read-only — восстановить можно только через sqlite3 на Pi. Нужны: `POST /revisions/{id}/restore` (+ запись revision kind=restore), кнопка «Восстановить» в модалке истории, просмотр содержимого версии |
+| T-017 | Diff между версиями драфта | High | Versioning, Diff | Смотреть отличия версии от текущей / между двумя версиями. Блочный LCS есть на сервере и клиенте; не хватает UI (и починки dirty-логики — T-061) |
+| T-018 | Пакет защиты от потери данных | High | Data Safety | По инциденту 29.07 (T-060). **Пункты 4 и 5 закрыты 30.07 в ADR-065** (blog-guard + серверная проверка fingerprint + сброс автосейва до превью). Осталось: (1) server shrink-guard — пустой док поверх большого = 409 + подтверждение; (2) flush-on-hide (`pagehide`/`visibilitychange` + `fetch keepalive`) — iOS убивает таймеры при закрытии вкладки; (3) optimistic concurrency по UpdatedAt; (6) авто-ретрай упавших сейвов |
+| T-023 | Переносимый доступ читателя к приватному посту | Medium | Private Posts, Blog | Инцидент друга Марти (Telegram in-app → Chrome = регистрация заново, T-064): после сабмита формы редиректить на URL с персональным токеном (механизм `?invite=` уже существует и уже выдаёт куку в любом браузере). Токен = bearer-ссылка, но у owner-инвайтов риск тот же; сделать per-registration (отзываемый). Заодно: кука доступа сейчас presence-only и подделываема по GUID — подписать значение |
+| T-002 | Email-подтверждение регистрации | High | Auth, Email | (idea #2/#10, NF3). Resend работает (проверено 27.07). Подтверждение при регистрации, требование при логине |
+| T-003 | OAuth-вход: Google, Apple, Meta, Telegram | Medium | Auth | (NF4). Telegram-линковка есть (ADR-009), но это не sign-in. Остальным нужны регистрации у провайдеров + секреты на Pi + решение о merge аккаунтов по email |
+| T-001 | Кросспостинг: X/Twitter, Bluesky, Threads, Instagram | Medium | Integrations | (ideas #1/#15/#16/#17, ADR-021 — ось позиционирования). Разбивка на треды с учётом лимитов, превью перед отправкой, настройка OpenGraph. Instagram нет даже в mock-списке |
+| T-004 | Аккаунты читателей на блоге | Medium | Blog, Identity | (idea #21). Опциональная регистрация: комментировать под именем, резерв ника, «verified»-бейдж (смысл не определён). Связана с T-023 — одна модель идентичности читателя на обе задачи |
+| T-009 | Лендинг на cedarclerk.mooexe.dev | Medium | Main Page | (OP1). Лендинг: описание продукта, скриншоты, возможности, прайсинг, пара слов о Марти |
+| T-006 | Опросы в приватных постах | Low | Polls, Private Posts | (idea #20.3). Разблокировано NF5 (опросы есть, blog-only), но не скоуплено |
+| T-005 | Платёжная форма в посте (произвольная сумма) | Low | Payments | (NF6). Публичный неавторизованный платёж — отдельный флоу со своей fraud-поверхностью |
+| T-007 | Founder/Lifetime план через инвайт-код | Low | Billing | (idea #5, ADR-022). Постоянный Pro без новой схемы; открыт вопрос стоимости кода |
+| T-008 | Chunked upload для файлов >100MB | Low | Import | (idea #23, ADR-058). Cloudflare режет тела >100MB; сейчас одноразовый обход через SSH (`_Documents_/CedarClerk/large_file_uploader.md`). Строить по-настоящему, если станет нужно не только Марти |
+| T-010 | Desktop-приложение Windows | Low | Application | (OP2). На базе существующего кода |
+| T-011 | Приложение для iPad (AppStore) | Low | Application | (OP3). Полноэкранный режим, публикация в AppStore |
 
-**Improvements**
+## Улучшения
 
-| # | Priority | Tag | What | Verdict / overlap |
+| ID | Имя | Приоритет | Теги | Описание |
 |---|---|---|---|---|
-| I7 | High | Private Posts | Configurable watermark on private posts | **Specced 27.07.2026, no longer open-ended**: text, in a very heavy semi-transparent face, **tiled over** the post on the blog (above the content, not behind it). In the editor it is *not* rendered — the draft just carries a marker icon saying a watermark is set |
-| I9 | High | Forms | Form presets are a standalone entity; at publish time you pick one. With no preset, a button leads to the preset-creation page. The form page needs a Save button at the bottom so it's clear whether it saved | **Extends the shipped `N10`/`N12`** (ADR-047). Presets already exist and are already copied-not-linked; what's missing is the empty-state route and the explicit Save |
-| I1 | Middle | Login Page | Language picker on login/registration (two flags at the bottom). After registering, Settings should already hold the language chosen at signup | New. `B26`/ADR-044 shipped the picker in Settings only; `UiLanguage` already exists on the user, so signup just needs to carry it |
-| I2 | Medium | Workspace | Line numbers are too small and barely visible; they should hug the left edge with a small gap, VS Code style. Optionally also show horizontal line rules | Refines the paragraph-number feature that shipped 27.07.2026 (`B12` second half) |
-| I4 | Medium | Reactions | A reaction/comment block currently looks exactly like a code block — needs its own visual treatment | New |
-| I10 | Middle | Drafts Sheet | The drafts table can be wider; it should adapt to the screen width | Related to `B24` (horizontal scroll) and `N1` (resizable columns), but neither made the table fluid — the grid is still fixed-width |
-| I11 | Middle | UI | Move the Posts Manager and Settings entry points into the top bar as real buttons, like Export | **Reverses part of `B22`** (which moved them into the account popover) and resolves `B6` (two entry points to Settings) in the opposite direction. Newer instruction wins, same as B22 over the earlier topbar work |
-| I12 | Middle | Settings | Split the settings page: profile settings (opened from the user menu), appearance settings, and the rest | New. Interacts with `I14`/`B15` — decide the split before moving appearance out |
-| I14 | Middle | Customization | Move appearance and toolbar settings into a right-hand panel in the editor so the effect is visible, or at least show a preview inside Settings | **Duplicate of `B15`** + idea #13. Third time it's been raised |
-| I16 | Middle | Audio Insert | Custom name for an inserted audio clip — Telegram currently shows `asset_<...>.mp3` | New |
-| I18 | Middle | UI | Better icon for the drafts-table button — the current one doesn't read as anything | **Duplicate of `B20`** |
-| I19 | Middle | Posts Manager | Move the form-response statistics into the posts tab, where it fits better | New, and it partly walks back `N10`'s tab layout |
-| I3 | Low | Toolbar | Show the keyboard shortcut in the tooltip where one exists; possibly a customizable shortcut map | New |
-| I5 | Low | Insert Table | Table insert is hard-coded to 3×2 — let the default size be configured within sane bounds | New |
-| I6 | Low | Forms | Autofill email/name/nickname in the private-post viewing form | New. Note this is a public, unauthenticated page — autofill can only mean browser autocomplete attributes, not server-side prefill |
-| I8 | Low | Stats | Make the time-range slider bigger both ways; the notches are too close together to read | **Refines the just-shipped `N9`** (27.07.2026, ADR-049) |
-| I13 | Low | UI | Fullscreen toggle button | New |
-| I15 | Low | Signature | Custom link text for the cross-link between the Telegram post and the blog post | New, and the same shape as the open `B18` (custom YouTube link text) — worth doing together |
-| I17 | Low | Localization | Flag icons instead of language names | New. Pairs with `I1` |
+| T-031 | Формы: статичный текст/картинка | High | Forms | (FI2.2 от 28.07). Элемент формы «просто отображается», юзер с ним ничего не делает |
+| T-032 | Формы: ответ в одну строку vs TextArea | High | Forms | (FI2.3 от 28.07). Сейчас только `<input type=text>`; нужен тип «многострочный». FI2.4 (dropdown) уже покрыт типом `choice` — рендерится `<select>`, проверено 30.07 |
+| T-033 | Формы: письмо респонденту на почту | High | Forms, Email | (FI5.2 от 28.07). Текст, отправляемый на email из формы. Resend-инфраструктура готова |
+| T-034 | Адаптивная вёрстка: полный проход | High | UI | (FI4 от 28.07 + B7 + остатки DB1-стар. + mobile-editor из Phase 4). Целевые платформы Марти: iPad 16 (гориз.+верт.), iPhone 13 (верт.). Нужен проход по устройствам, не по догадкам |
+| T-035 | Posts Manager: детали ответа по клику | High | Posts Manager | (FI6.1 от 28.07). Клик на ответ юзера → подробности |
+| T-036 | Posts Manager: страна/IP ответа | High | Posts Manager | (FI6.2 от 28.07). Сейчас хранится только соляной SHA-256 хеш IP — сырых IP нет by design (ADR-016). Показ страны требует хранить IP/geo на сабмите → см. Q-10 |
+| T-037 | Posts Manager: кнопка «Прочитать все» | High | Posts Manager | (FI6.3 от 28.07). Пометить все лайки/комменты просмотренными |
+| T-038 | Posts Manager: скрывать отправленные запланированные | High | Posts Manager | (FI6.4 от 28.07). Показывать только Pending; отправленные — скрывать |
+| T-052 | Terms/Privacy: заполнить заглушки | High | Legal, Нужен Марти | (Phase 8 Step 3). Структура готова, текст в `[BRACKETED]`-заглушках. Жёсткий пре-реквизит публичной регистрации. Заполняет Марти + ревью юриста |
+| T-039 | Экспорт: отключение комментариев и/или лайков у поста | Medium | Export | (FI7 от 28.07). «Информационный пост» без возможности реагировать |
+| T-040 | Глоссарий: склонения для русского | Medium | Glossary | (FI8.1 от 28.07). 6 полей склонений вместо одного поля алиасов. FI8.2 (вёрстка) закрыт ADR-061 |
+| T-041 | Appearance: кнопка Apply будто ничего не делает | Medium | Customization | (FI9 от 28.07). Изменения применяются сразу (live-превью ADR-053), Apply выглядит бессмысленной. Либо убрать кнопку, либо реально откладывать применение — согласовать с ADR-053/057 |
+| T-042 | Индикаторы загрузки длинных операций | Medium | UI | (idea #6). Импорт/экспорт `.cedar`, blog-экспорт и всё длинное без фидбека (AI-операции уже покрыты ADR-038) |
+| T-043 | Единое поведение всех попапов | Medium | UI | (B10). Затемнение, закрытие только по ✕ или действию |
+| T-044 | Insert-кнопки (дата, сноска, эмодзи) как попапы | Medium | UI | (B19). По образцу link-insert |
+| T-050 | Локализация серверных ошибок | Medium | Localization | `ErrorMessages.cs` + все `{ error }`-тела всё ещё английские при русском UI (ADR-050 остаток) |
+| T-030 | Рабочая область: статусы в 3 строки | Low | Workspace | (FI1 от 28.07). Индикаторы/ссылки/языки/теги+папки на разных строках — при многих языках каша |
+| T-045 | Иконки каналов в списках | Low | UI | (B2). Список каналов + окно статистики |
+| T-046 | YouTube-кнопка монохромной | Low | UI | (B8). Единственная цветная кнопка тулбара |
+| T-047 | Кастомный акцент + пресеты области под платформы | Low | Customization | (B16). Пресеты: Telegram, iPhone, iPad, Blog… |
+| T-048 | AI-функции в отдельный попап | Low | AI, Нужен Марти | (B27 + idea #14). `.ai-chip`-поповер уже есть; что именно не устраивает — Q-7 |
+| T-049 | Убрать рудиментарный селектор Markdown/Html из экспорта | Low | Cleanup | `PublishAsync` всегда шлёт Blocks (см. `.claude/rules/telegram-bot.md`); селектор ни на что не влияет |
+| T-051 | Layout-проход для длинных слов (немецкий) | Low | Localization | (B26 остаток). Псевдо-локаль с раздутыми строками — дешёвый способ найти поломки |
 
-**Removals** — Marty asking for features to be deleted, not built.
+## Баги
 
-| # | Priority | Tag | What | Verdict |
+| ID | Имя | Приоритет | Теги | Описание |
 |---|---|---|---|---|
-| IT1 | Low | Status Bar | Delete editor zoom entirely — it doesn't work and seems pointless | New. Verify it's genuinely broken before deleting, then remove the control and its state |
-| IT2 | Low | Settings Page | Delete toolbar customization — looks useful, in practice just clutter | New, and it removes a chunk of `ADR-035`. Interacts with `I12`/`I14`: don't design the settings split around a section that's about to go |
+| T-060 | Пустой автосейв затирает пост (инцидент 29.07) | High | Data Safety, Editor | Русская версия стёрлась до 0 симв. и улетела в блог. Root cause найден 30.07: 1.2s-автосейв честно сохраняет транзиентное пустое состояние (удаление таблицы = пустой док), закрытие Chrome на iOS убивает таймер+PUT с восстановленным контентом, сервер принимает всё без проверок, блог рендерит `CedarJson` живьём. **Частично закрыто 30.07**: блог-публикация теперь требует подтверждения диффа. Осталась главная дыра — сам пустой сейв никто не останавливает (T-018.1) и правки теряются при закрытии вкладки (T-018.2); откат = T-016 |
+| T-062 | Разлогины: падение /me трактуется как logout | High | Auth | Кука жива 30 дней, но `refresh()` ловит ЛЮБУЮ ошибку (network, 5xx, Cloudflare 502 во время деплоя) и обнуляет сессию → форма логина. Плюс тикет внутри куки живёт дефолтные 14 дней (`ExpireTimeSpan` не задан) против 30 у куки. Фикс: обнулять только на 401 + ретрай, `ExpireTimeSpan=30д`, на /login перепроверять живую сессию |
+| T-064 | Доступ читателя не переносится между браузерами | Medium | Private Posts, Blog | Друг Марти: форма в Telegram in-app браузере → открыл в Chrome → регистрация заново. By design: весь доступ = одна локальная кука `cedar_access_{id}`, cookie jar in-app браузера изолирован. Фикс = T-023 |
 
-**Features**
+## Тех-долг
 
-| # | Priority | Tag | What | Verdict / overlap |
+| ID | Имя | Приоритет | Теги | Описание |
 |---|---|---|---|---|
-| IF2 | High | Admin Panel | Admin panel page: manage posts and users, create invite codes, see which user came in on which invite, activate/deactivate a subscription, and much more — "the more functions the better" | **Same initiative as idea #12** above. **Scoped 27.07.2026 — see `docs/admin-panel-scope.md`** for the verified state of the code, the three decisions it needs, a 5-step build order and 5 open questions. Headline findings: no role concept exists at all; invite codes are one config string, so attribution needs new data and **cannot be backfilled** for existing accounts; and cross-owner access must be a separate `/api/admin` endpoint set rather than a bypass flag threaded through the 61 owner-scoped queries |
-| IF1 | Low | Profile | Avatar upload | New. `AssetEndpoints` + the storage quota already exist, so this is mostly profile plumbing |
+| T-074 | DataProtection-ключи → CEDAR_DATA_DIR | High | Infra, Auth | Ключи лежат в `~/.aspnet/DataProtection-Keys` — НЕ бэкапятся и будут потеряны при переустановке ОС Pi (≈август) → разовый разлогин всех и невосстановимые куки. `AddDataProtection().PersistKeysToFileSystem(...)` + скопировать существующий ключ ДО переключения. Обязательный пре-реквизит T-070 |
+| T-070 | Миграция ОС Pi: Bullseye → 64-bit | High | Infra | Security-поддержка Bullseye кончается ≈август 2026. Даёт arm64 + новый .NET. Координировать с Марти (на Pi ещё Freenove-проекты). Сначала T-074! |
+| T-072 | .NET 8 EOL ноябрь 2026 | — | Infra | Runtime-апгрейд в связке с T-070 |
+| T-071 | Дублирование бэкапа в облако (rclone) | Medium | Infra | В БД реальные пользовательские данные; microSD — единственная копия |
+| T-073 | Активировать Stripe Customer Portal | Low | Billing | Ручное действие в Stripe Dashboard (Settings → Billing); код готов |
 
-### Brainstorm v2 — 26.07.2026, current (from `_Documents_/CedarClerk/Brainstorm_Features.md`)
+## Отложено (решение «пока не делаем» уже принято)
 
-**Late on 26.07.2026 Marty emptied the brainstorm file and wrote 13 new items into it.** This is an *addition*, confirmed with him directly: v1 was already recorded here, so he started the source file over rather than appending. **Nothing in v1 is cancelled** — both lists are live, v2 just holds the newer thinking. Numbered `N1`…`N13` here — the source file numbers them 1…13, and plain numbers would collide with the idea list above.
+| Что | Почему |
+|---|---|
+| Pro Plus tier подписи | Три тира подписей до появления юзербазы — лишняя сложность |
+| Эмодзи как Header Slot | Неясная ценность |
+| AI-перевод комментариев | Ждёт систему метеринга AI-кредитов |
+| Общий «редизайн» | Дробить на конкретные боли, не монолит |
+| Выравнивание текста в редакторе | Сначала оценить против лимитов Telegram HTML |
+| IT2 (удалить кастомизацию тулбара) | Отклонено Марти 27.07 |
 
-| # | Priority | Tag | What | Notes / overlap |
-|---|---|---|---|---|
-| N2 | High | New Draft Window | The new-draft dialog **must** have a tag selector | Real gap, verified in code: the dialog only has a free-text `comma, separated, tags` input (`editor.component.html:769`); the tag-cloud picker with usage counts exists solely in the editor's own tag row (`:931-950`) |
-| N4 | High | Export Window | Remove the channel text inputs — channels are chosen by clicking only | Was v1's `B4`; the "small channel icons" half of B4 is **not** in v2 |
-| N5 | High | Export Window | An unticked destination shrinks or disables its whole settings block so it stops drawing attention | Extends the shipped B5 redesign (checkbox per destination), doesn't replace it |
-| ~~N6~~ | High | Post Questionnaire | ~~Validate the registration-form inputs~~ | **Already done** — `RegistrationFieldValidator.IsValidName` (Core) enforced server-side in `BlogEndpoints.PostRegistrationAsync`, applied whenever a name is given rather than only when required. Verified 27.07.2026; this row had been stale |
-| N7 | High | Status Page | **New "Posts Manager" page** — comments, likes, stats and private-post form management all move onto it. Sections: post management (pick a post, minimal edits), reactions & comments, statistics, forms (private posts only) | The big one. Absorbs today's `/stats` and `/comments` pages |
-| N10 | High | Status Page | **Forms tab** — private posts only. Edit/delete a form, see who answered what and when, add a multiple-choice field type with a pie chart of the answer distribution | Depends on N7's page existing. Heaviest single item in the list |
-| N12 | High | Status Page | **Form presets** — build a preset of questions once, pick which one to use before publishing a post | Depends on N10 |
-| N13 | High | Export Window | Make the export window much wider — near the full available area. It's the most important window after the writing area | Interacts with N4/N5: worth doing the three as one pass over that modal |
-| ~~N11~~ | Medium | Notifications | ~~Telegram DM when someone fills in a registration form~~ | **Already done** — same opt-in plumbing as comments/likes, and a failed DM never turns a successful registration into an error. Verified 27.07.2026; this row had been stale |
-| N1 | Low | Drafts Page | Sort the table by the chosen column; resizable columns | |
-| N3 | Low | UI | Small round count badges (e.g. "10 new comments") for things worth attention | Pairs naturally with N8 and with B23's since-last-session delta, which already computes "what's new" server-side |
-| N8 | Low | Status Page | Comments/reactions tab: highlight new entries, mark them seen on hover | Same "seen" problem B23 solved for `/drafts` — reuse the `DraftStatSeen` idea rather than inventing a second one |
-| N9 | Low | Status Page | Custom stats range: 7 days to 6 months, with magnetic notches at 7/14/30/60/90 days | Supersedes v1's `B1` (which said 1–180 days, notches at 14/30/90/180) |
+## Открытые вопросы (нужен Марти)
 
-**Grouping note**: N7 + N10 + N12 (+ N8, N9) are not five independent items — they all build one new Posts Manager page. Scheduling them apart would mean building that page's shell three times.
-
-**Not in v2 but still live**: `B26` (interface language) is half-shipped — mechanism + 3 screens done, the rest of the UI still English. It dropped out of the rewritten file, but the work exists in the code and is tracked in `TASKS.md`; don't treat its absence here as cancellation.
-
-**Still open from v1** (unchanged priorities, just not the current focus): `B10`, `B11`, `B12`, `B19` (Medium) and the whole Low block — `B2`, `B6`, `B7`, `B8`, `B9`, `B13`, `B15`, `B16`, `B17`, `B18`, `B20`, `B27`. Two of them deserve calling out: `B26` (interface language) is **half-shipped** — mechanism plus login/register/`/drafts`, the rest of the UI still English, tracked in `TASKS.md`; and `B12`'s "paragraph numbers don't render despite the setting being on" is a **bug**, not a feature request.
-
-### Brainstorm v1 — 26.07.2026, still live
-
-27 items with Marty's own High/Medium/Low priorities, executed as Phase 9 (see `docs/ROADMAP.md`). Shipped so far: `B3`, `B5`, `B14`, `B21`, `B22`, `B23`, `B24`, `B25`; `B26` half. The rest are open — see the note above. Numbering is the brainstorm's own (`B1`…`B27`).
-
-| # | Priority | Tag | What |
-|---|---|---|---|
-| B3 | High | Private Posts | Visiting a private post without a token shows a **customizable registration form** (name, nickname, email, a social link) with an optional Google-Forms-style questionnaire attached (e.g. gaming experience, favourite genre) |
-| B5 | High | Export Window | Redesign: a checkbox per destination (blog, Telegram, Twitter…), its settings unfold when ticked; a separate files/statistics section (incl. total size); **one** Publish button that posts everywhere configured at once |
-| B14 | High | Translation | Auto-translate flow is broken: editing RU lights the EN badge, but switching to EN clears the dot after a second and only offers "delete translation". Needs a proper re-translate button plus the same progress indicator auto-translate has |
-| B21 | High | Export Window | The channels menu moves out of the topbar into the top of the Export window |
-| B22 | High | Topbar | Left→right: logo+name, divider, drafts button, draft-title field, Saved/Unsaved indicator. Right: Export, theme toggle, profile. **Download .cedar moves into Export; Import moves to the drafts page.** Stats/comments buttons move next to the settings button |
-| B23 | High | Drafts Page | New column with view/reaction counts, including the delta since the previous session — possibly a small sparkline |
-| B24 | High | Drafts Page | The table is wide on iPad but can't be scrolled horizontally |
-| B25 | High | Workspace | Show the current draft's state somewhere: private or not, published or not; when published, a LIVE marker with links to the blog/Telegram post |
-| B26 | High | Localization | Language picker in settings (RU/EN for now) — design for languages with very long words (German) not breaking the layout |
-| B4 | Medium | Export Window | Remove free-text channel entry — pick only from configured channels; add small channel icons |
-| B10 | Medium | UI | All popups behave identically: dimmed backdrop, closable only via the ✕ (or an action that implies closing, e.g. Publish) |
-| B11 | Medium | Diff gutters | Diff markers sit above/below the changed lines instead of level with them; should highlight the whole changed region, not draw a thin bar |
-| B12 | Medium | Workspace | The ruler is pointless as-is — it should overlay the writing area; paragraph numbers don't render despite the setting being on |
-| B19 | Medium | Insert Window | Remaining Insert-group buttons (date, footnote, emoji) should all become popups, like the link insert |
-| ~~B1~~ | Low | Stats Page | ~~Custom stats range~~ — superseded by `N9` and shipped with it (27.07.2026), then widened by `I8`. **Nothing in the backlog touches the stats page any more** |
-| B2 | Low | UI | Load small channel icons in the channel list and stats window |
-| B6 | Low | UI | Two entry points to settings today (account popover + toolbar) — keep only the toolbar one, change its icon to a gear |
-| B7 | Low | UI | On iPad the account email overflows the screen edge — shift it left |
-| B8 | Low | UI | The YouTube button is the only coloured one; make it monochrome like the rest |
-| ~~B9~~ | Low | Insert Window | ~~Emoji panel overflows and has only 40 emoji~~ — **done 27.07.2026**: four captioned groups (~120 emoji), the popover scrolls instead of growing. Deliberately a hand-picked set, not a full Unicode table — that needs search, and search needs names in six UI languages |
-| ~~B13~~ | Low | Workspace | ~~Toggle to reveal where content actually is~~ — **done 27.07.2026**, in the status bar. Paragraph marks only: in a contenteditable, spaces and tabs can't be drawn without either inserting characters that would reach the exported text or fighting the browser's whitespace handling |
-| B15 | Low | Customization | Move Appearance + toolbar settings out of the settings page into a right-hand panel in the editor, so changes are visible live |
-| B16 | Low | Customization | Custom accent colour picker; writing-area presets per target (Telegram, iPhone, iPad, Blog…) |
-| ~~B17~~ | Low | Signature | ~~Make the end-of-post signature bold in Telegram~~ — **done 27.07.2026**. A linked signature is bolded *inside* the link, since Telegram renders bold within a link but not a link within bold |
-| B18 | Low | YouTube | Let the author set the link text shown in Telegram (currently a fixed "Watch on YouTube") |
-| B20 | Low | UI | Better icon for the drafts-list button |
-| B27 | Low | AI | One AI button opening a popup with the operation choice + progress indicator; window locks during the run but the run can be cancelled (closing the window) |
-
-**Conflict noted at import**: B22 reverses part of the 26.07.2026 topbar restructure done earlier the same day — `.cedar` download/import had just been moved *into* the topbar; B22 sends download to Export and import to the drafts page. B22 wins (it's the newer instruction).
-
-| # | What | Why deferred |
-|---|---|---|
-| 1 | Pro Plus signature tier (rich links etc.) | Three signature tiers before a user base exists adds complexity without benefit |
-| 2 | Emoji as a Header Slot type | Unclear value; manual emoji input breaks the automatic-slot model |
-| 3 | Comment translation via AI | Blocked on a not-yet-built AI-credit metering system — unbounded per-comment API cost risk otherwise |
-| 4 | General "redesign" | Needs to be broken into concrete pain points first, not scheduled as a monolithic item |
-| 5 | Text alignment in the editor | Needs evaluation against Telegram HTML export limits before it can be scoped |
-
-### Idea dump 28.07.2026 (from this session)
-
-| # | What | Notes |
-|---|---|---|
-| 23 | General fix for >100MB imports: chunked upload protocol | Deferred in favor of a one-off local-only import bypass (`POST /api/drafts/import-markdown-local`, loopback+Host-gated, triggered over SSH on the Pi — see ADR-058, `docs/DECISIONS.md`) for a single ~148MB Notion export, since Cloudflare's edge hard-rejects request bodies over 100MB on the current Free/Pro plan (verified via `curl` against production, 28.07.2026) and that isn't fixable in app code. Worth building for real if bulk imports become a recurring need for more than one user, not just this one-off. Needs a from-scratch session/chunk protocol: a new upload-session concept (entity or in-memory), start/chunk/finalize endpoints, an abandoned-upload cleanup job, and a client-side `File.slice()` + retry/progress loop on the Angular side — zero existing scaffolding to build on anywhere in the codebase |
-
-## Tech debt (acknowledged, non-blocking)
-
-| # | What | Deadline / trigger |
-|---|---|---|
-| 1 | OS migration: Bullseye → a fresh 64-bit Raspberry Pi OS (gets arm64 + a newer .NET). Bullseye security support ends ~August 2026 | Separate session; the Pi also runs Freenove electronics projects, so timing needs to be coordinated with Marty |
-| 2 | ~~SSH keys instead of password auth~~ | ✅ done 06.07.2026 (ed25519, passwordless deploy) |
-| 3 | Cloud backup duplication (rclone → Google Drive/Dropbox) | Now relevant — the database holds real user data |
-| 4 | .NET 8 EOL November 2026 → runtime upgrade alongside the OS migration (#1) | Bundled with #1 |
-
-## Open questions (need Marty)
-
-- Public name for the shared Cedar Clerk bot
-- Domain strategy — direction resolved (ADR-020: hybrid, separate dedicated domain for tenant blogs, not `mooexe.dev` subdomains), but exact domain name, whether `blog.mooexe.dev` migrates, and subdomain-vs-path scheme for tenants are still open
-- "Progressive reveal" visual effect for published posts — what exactly is wanted, since `SendRichMessageDraft` can't do it for channels (see `.claude/rules/telegram-bot.md`)
-- Idea #9 (session cookie) — is the existing persistent-cookie behavior actually broken, or is this asking for something else?
-- Idea #14 (AI features popup) — what specifically is wrong with the current `.ai-chip` toolbar popover?
-- ~~`I7` (private-post watermark) — what should it actually be?~~ — answered 27.07.2026: tiled heavy semi-transparent text laid **over** the blog post; the editor only shows a marker icon. Still undecided and worth asking when it's built: is the text fixed per post, or per viewer (burning in the viewer's email would make it leak-traceable)?
-- ~~`IB9` (profile button dead) — on which pages?~~ — resolved by reading the code 27.07.2026: `/drafts`, `/settings` and `/posts`, where the avatar was an inert `<span>`. Fixed
-- `IB3` (RU load marks EN stale) — needs a live reproduction: what fires an autosave ~1.2s after a RU version loads? Nothing in the load path explains it
-- `IT1` (delete zoom) — confirm zoom is genuinely broken and not just unused, before deleting the control
-- `I12` vs `I14`/`B15` vs `IT2` — the settings page is being split, partly moved into the editor, and partly deleted, all at once. Needs one decision about the end state rather than three separate passes
-
-~~Lifetime-deal pricing — yes/no~~ — resolved: yes, via the Founder/Lifetime invite-code plan (ADR-022, `docs/DECISIONS.md`, Idea #5).
+| ID | Вопрос |
+|---|---|
+| Q-1 | **Целевая аудитория / скоуп продукта** (30.07): названы фокусы — блоггеры, фотографы/видеомейкеры, помощник писателей, помощник инди-геймдевов. Марти сказал «3 фокуса… 5 категорий», а перечислено 4 — уточнить пятую (или это «блоггеры» как две: текстовые + фото?). Зафиксировать в `docs/PRODUCT.md`, когда устаканится |
+| Q-2 | **Вкладки (tabs) в редакторе** (30.07, п.7): 2–3 изолированные рабочие вкладки со своей историей/состоянием. Мнение Claude — в отчёте 30.07 (сначала optimistic concurrency T-018.3, иначе вкладки = новые пути потери данных) |
+| Q-3 | FI6.2-стар.: схлопнуть тиры до одного платного плана? Противоречит ADR-012/013/014, отложено Марти 27.07 |
+| Q-4 | Публичное имя общего Cedar Clerk бота |
+| Q-5 | Домен тенант-блогов (рабочее имя `cedarclerk.app`, ADR-020): регистрировать? Мигрирует ли `blog.mooexe.dev`? |
+| Q-6 | «Progressive reveal» — что именно хочется (через `SendRichMessageDraft` для каналов невозможно) |
+| Q-7 | AI-попап (T-048): что конкретно не так с текущим `.ai-chip`-поповером? |
+| Q-8 | Watermark приватных постов: текст фиксированный или per-viewer (вшивать email зрителя = отслеживаемость утечек)? |
+| Q-9 | FI6-стар. (настройки аккаунта): текст подпунктов 1/3/4/5 утерян при перезаписи Input.md — нужна переспецификация |
+| Q-10 | T-036 (страна/IP ответа): сырые IP сейчас сознательно не хранятся (только хеш). Начать хранить IP/geo для ответов на формы? Privacy-политика это должна отразить |

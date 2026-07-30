@@ -976,6 +976,18 @@
                     <svg lucideTrash2 class="icon-sm"></svg>
                 </button>
                 }
+                <app-popover>
+                    <button trigger class="retranslate-btn" [title]="t().editor.lang.makePrimaryTitle">★</button>
+                    <div panel class="block-menu">
+                        @for (l of [primaryLanguage, ...existingLanguages()]; track l) {
+                        <button (click)="makePrimary(l)" [disabled]="l === primaryLanguage">
+                            {{ t().editor.lang.makePrimaryOption(l.toUpperCase()) }}
+                        </button>
+                        }
+                    </div>
+                </app-popover>
+                <button class="retranslate-btn" (click)="openRevisions()"
+                        [title]="t().editor.versions.historyTitle(lang().toUpperCase())">◷</button>
                 <!--FI3.2/FI3.3: the tag cloud and the folder menu are shared components now, so
                 this row, the new-draft dialog, /drafts and the posts manager all offer the same
                 control instead of three variations on it.-->
@@ -1040,6 +1052,57 @@
         page-level scrollbar alongside the sheet's own. Opened from the topbar's palette button.-->
         <app-appearance-panel #apPanel></app-appearance-panel>
     </div>
+
+    @if (revisionsOpen()) {
+    <app-modal [width]="520" (closed)="revisionsOpen.set(false)">
+        <h2 modal-title>{{ t().editor.versions.historyTitle(lang().toUpperCase()) }}</h2>
+        <div modal-body>
+            @for (revision of revisions(); track revision.id) {
+            <p class="revision-row">
+                <span class="revision-when">{{ utcDate(revision.createdAt).toLocaleString() }}</span>
+                <span class="revision-kind" [class.publish]="revision.kind !== 'save'">{{ revisionKindLabel(revision.kind) }}</span>
+                <span class="revision-lines">{{ t().editor.versions.blocks(revision.lines) }}</span>
+            </p>
+            } @empty { <p class="empty-note">{{ t().editor.versions.historyEmpty }}</p> }
+        </div>
+        <button modal-actions class="btn-ghost" (click)="revisionsOpen.set(false)">{{ t().editor.versions.close }}</button>
+    </app-modal>
+    }
+
+    <!--ADR-065: every already-live language the click would overwrite, each with its own diff.
+    Showing one language's diff while publishing several is how a changed translation could be
+    confirmed away under a "no changes" summary.-->
+    @if (updateConfirm(); as previews) {
+    <app-modal [width]="560" (closed)="updateConfirm.set(null)">
+        <h2 modal-title>{{ t().editor.versions.confirmTitle }}</h2>
+        <div modal-body>
+            <p>{{ t().editor.versions.confirmIntro }}</p>
+            @for (preview of previews; track preview.language) {
+            <div class="publish-diff">
+                <p class="publish-diff-head">
+                    <strong>{{ preview.language.toUpperCase() }}</strong>
+                    @if (preview.diff; as diff) {
+                    <span>{{ t().editor.versions.changedBlocks(diff.totalChanged) }}</span>
+                    <span class="muted">{{ t().editor.versions.wasNowLines(diff.beforeLines, diff.afterLines) }}</span>
+                    }
+                </p>
+                @if (preview.diff; as diff) {
+                @if (diff.addedLines.length) {
+                <p class="publish-diff-line added">{{ t().editor.versions.addedLines }}: {{ diff.addedLines.join(', ') }}</p>
+                }
+                @if (diff.removedLines.length) {
+                <p class="publish-diff-line removed">{{ t().editor.versions.removedLines }}: {{ diff.removedLines.join(', ') }}</p>
+                }
+                } @else {
+                <p class="publish-diff-line">{{ t().editor.versions.noBaseline }}</p>
+                }
+            </div>
+            }
+        </div>
+        <button modal-actions class="btn-ghost" (click)="updateConfirm.set(null)">{{ t().editor.versions.cancel }}</button>
+        <button modal-actions class="btn-accent" (click)="publishAllConfirmed()">{{ t().editor.versions.confirm }}</button>
+    </app-modal>
+    }
 
     <!--Status bar-->
     <div class="status-bar">

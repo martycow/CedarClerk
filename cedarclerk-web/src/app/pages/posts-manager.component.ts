@@ -12,7 +12,7 @@ import {
     normalizeFormForEdit, blankFormEdit, newQuestionId, newOptionId,
 } from '../core/form-presets.service';
 import { PostsService, ScheduledPost } from '../core/posts.service';
-import { PRIMARY_LANGUAGE, CONTENT_LANGUAGES } from '../core/languages';
+import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES } from '../core/languages';
 import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { CountBadgeComponent } from '../shared/count-badge.component';
@@ -110,7 +110,7 @@ export class PostsManagerComponent implements OnInit {
     presets = signal<FormPreset[]>([]);
     selectedPresetId = signal<string | null>(null);
     presetName = '';
-    readonly primaryLanguage = PRIMARY_LANGUAGE;
+    readonly primaryLanguage = DEFAULT_PRIMARY_LANGUAGE;
     readonly contentLanguages = CONTENT_LANGUAGES;
     // ADR-060 — the editor works on the v2 multi-language blob natively: one skeleton of stable
     // question/option ids, per-language texts on top, so "Да" and "Yes" stay one answer.
@@ -474,7 +474,7 @@ export class PostsManagerComponent implements OnInit {
     // The raw blob goes over the wire untouched — re-serializing the single-language projection
     // here would silently strip a v2 blob's other languages. The displayed form and language
     // list always come back from the server's response, whatever shape was written.
-    private async persistFormJson(formJson: string | null, language = PRIMARY_LANGUAGE) {
+    private async persistFormJson(formJson: string | null, language = DEFAULT_PRIMARY_LANGUAGE) {
         const d = this.selected();
         if (!d) return;
         this.regBusy.set(true);
@@ -494,7 +494,7 @@ export class PostsManagerComponent implements OnInit {
     // can't rewrite a post that already used it. A v2 preset carries every language in one blob,
     // so one click attaches them all (ADR-060); a legacy v1 preset still fills only its slot.
     async applyPresetToPost(p: FormPreset) {
-        await this.persistFormJson(p.formJson, p.language || PRIMARY_LANGUAGE);
+        await this.persistFormJson(p.formJson, p.language || DEFAULT_PRIMARY_LANGUAGE);
     }
 
     async clearPostForm() {
@@ -522,7 +522,7 @@ export class PostsManagerComponent implements OnInit {
     presetLanguagesOf(p: FormPreset): string[] {
         let cached = this.presetLangsCache.get(p.formJson);
         if (!cached) {
-            cached = normalizeFormForEdit(p.formJson, p.language || PRIMARY_LANGUAGE).languages;
+            cached = normalizeFormForEdit(p.formJson, p.language || DEFAULT_PRIMARY_LANGUAGE).languages;
             this.presetLangsCache.set(p.formJson, cached);
         }
         return cached;
@@ -532,7 +532,7 @@ export class PostsManagerComponent implements OnInit {
         await this.flushPreset();
         this.selectedPresetId.set(p.id);
         this.presetName = p.name;
-        this.presetForm.set(normalizeFormForEdit(p.formJson, p.language || PRIMARY_LANGUAGE));
+        this.presetForm.set(normalizeFormForEdit(p.formJson, p.language || DEFAULT_PRIMARY_LANGUAGE));
         this.presetState.set('saved');
         this.presetTranslateError.set('');
         this.addLangOpen.set(false);
@@ -542,10 +542,10 @@ export class PostsManagerComponent implements OnInit {
     // be saved to, and the list is the only place it would show up.
     async newPreset() {
         await this.flushPreset();
-        const blank = blankFormEdit(PRIMARY_LANGUAGE);
+        const blank = blankFormEdit(DEFAULT_PRIMARY_LANGUAGE);
         try {
             const created = await this.presetsApi.create(
-                this.t().manager.forms.untitledPreset, JSON.stringify(blank), PRIMARY_LANGUAGE);
+                this.t().manager.forms.untitledPreset, JSON.stringify(blank), DEFAULT_PRIMARY_LANGUAGE);
             this.presets.update(list => [...list, created]);
             this.selectedPresetId.set(created.id);
             this.presetName = created.name;
@@ -633,7 +633,7 @@ export class PostsManagerComponent implements OnInit {
             await this.flushPreset();
             const saved = await this.presetsApi.translate(p.id, lang);
             this.presets.update(list => list.map(x => x.id === saved.id ? saved : x));
-            this.presetForm.set(normalizeFormForEdit(saved.formJson, saved.language || PRIMARY_LANGUAGE));
+            this.presetForm.set(normalizeFormForEdit(saved.formJson, saved.language || DEFAULT_PRIMARY_LANGUAGE));
             this.presetState.set('saved');
         } catch (e) {
             this.presetTranslateError.set(httpErrorMessage(e, this.t().manager.errors.translatePreset));

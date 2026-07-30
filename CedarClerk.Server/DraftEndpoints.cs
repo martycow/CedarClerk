@@ -22,6 +22,7 @@ public static class DraftEndpoints
 {
     public record SaveDraftRequest(string Title, string CedarJson);
     public record SaveTranslationRequest(string Title, string CedarJson);
+    public record ChangePrimaryLanguageRequest(string Language);
     public record UpdateTagsRequest(string Tags);
     public record RenameTagRequest(string From, string To);
     public record UpdateFolderRequest(Guid? FolderId);
@@ -83,7 +84,7 @@ public static class DraftEndpoints
                 .OrderByDescending(d => d.UpdatedAt)
                 .Select(d => new
                 {
-                    d.Id, d.Title, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
+                    d.Id, d.Title, d.PrimaryLanguage, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
                     d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.IsPrivate, d.IsTemplate,
                     d.DisableCopy, d.ViewCount,
                     Translations = db.DraftTranslations.Where(t => t.DraftId == d.Id)
@@ -151,7 +152,7 @@ public static class DraftEndpoints
 
             return drafts.Select(d => new
             {
-                d.Id, d.Title, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
+                d.Id, d.Title, d.PrimaryLanguage, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
                 d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.IsPrivate, d.IsTemplate,
                 d.DisableCopy, d.ViewCount,
                 ReactionCount = reactionCounts.GetValueOrDefault(d.Id),
@@ -197,7 +198,7 @@ public static class DraftEndpoints
                 .ToListAsync();
             return Results.Ok(new
             {
-                draft.Id, draft.Title, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug,
+                draft.Id, draft.Title, draft.PrimaryLanguage, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug,
                 draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.FolderId, draft.IsPrivate,
                 draft.WatermarkText, draft.ArticleTitle, draft.IsListedWhilePrivate, draft.DisableCopy,
                 draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson,
@@ -479,10 +480,10 @@ public static class DraftEndpoints
             }
             else
             {
-                var lang = req.Language is not null && Languages.IsTranslationLanguage(req.Language)
+                var lang = req.Language is not null && Languages.IsContentLanguage(req.Language)
                     ? req.Language
-                    : Languages.Primary;
-                if (lang == Languages.Primary)
+                    : draft.PrimaryLanguage;
+                if (lang == draft.PrimaryLanguage)
                     draft.RegistrationFormJson = string.IsNullOrWhiteSpace(req.FormJson) ? null : req.FormJson;
                 else
                     draft.RegistrationFormTranslationsJson =
@@ -580,25 +581,45 @@ public static class DraftEndpoints
         groupBuilder.MapGet("/{id:guid}/translations/{lang}", async (Guid id, string lang, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var owns = await db.Drafts.AnyAsync(d => d.Id == id && d.OwnerId == uid);
-            if (!owns) return Results.NotFound();
+            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
 
             var translation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang);
-            return translation is null
-                ? Results.NotFound()
-                : Results.Ok(new { translation.Language, translation.Title, translation.CedarJson, translation.UpdatedAt, translation.SourceSnapshotJson });
+            if (translation is null) return Results.NotFound();
+
+            // ADR-065 — the snapshot only means anything against the language it was translated
+            // from. After a primary-language change it can describe a document in a language this
+            // translation never saw, and the editor's diff gutter would report every block changed.
+            // Null SourceLanguage is a pre-ADR-064 row, where the source was the primary by
+            // definition. Withholding it falls back to the plain staleness indicator.
+            var comparable = translation.SourceLanguage is null || translation.SourceLanguage == draft.PrimaryLanguage;
+            return Results.Ok(new
+            {
+                translation.Language, translation.Title, translation.CedarJson, translation.UpdatedAt,
+                SourceSnapshotJson = comparable ? translation.SourceSnapshotJson : null,
+            });
         });
         
         groupBuilder.MapPut("/{id:guid}/translations/{lang}", async (Guid id, string lang, SaveTranslationRequest req, ClaimsPrincipal user, CedarDbContext db) =>
         {
-            if (!Languages.IsTranslationLanguage(lang))
+            if (!Languages.IsContentLanguage(lang))
                 return Results.BadRequest(new { error = $"Unsupported translation language: {lang}" });
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
             if (draft is null) return Results.NotFound();
+            // ADR-065 — a row in the draft's own primary language would be an invisible second copy
+            // of the canonical document, and later collides with the primary-language swap's insert.
+            if (lang == draft.PrimaryLanguage)
+                return Results.BadRequest(new { error = ErrorMessages.LanguageIsPrimary(lang) });
 
             var translation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang);
+            // ADR-065 — a byte-identical save must not bump UpdatedAt: staleness is a timestamp
+            // comparison, so bumping it here is what marked every other language dirty after a
+            // save that changed nothing (the long-standing IB3).
+            if (translation is not null && translation.Title == req.Title && translation.CedarJson == req.CedarJson)
+                return Results.Ok(new { translation.Language, translation.UpdatedAt, translation.SourceSnapshotJson });
+
             if (translation is null)
             {
                 translation = new DraftTranslation { DraftId = id, Language = lang };
@@ -608,6 +629,8 @@ public static class DraftEndpoints
             translation.CedarJson = req.CedarJson;
             translation.UpdatedAt = DateTime.UtcNow;
             translation.SourceSnapshotJson = draft.CedarJson;
+            translation.SourceLanguage = draft.PrimaryLanguage;
+            await DraftRevisionService.RecordAsync(db, id, lang, req.Title, req.CedarJson);
             await db.SaveChangesAsync();
             return Results.Ok(new { translation.Language, translation.UpdatedAt, translation.SourceSnapshotJson });
         });
@@ -621,12 +644,16 @@ public static class DraftEndpoints
             Guid id, string lang, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg,
             IHttpClientFactory httpFactory, IServiceScopeFactory scopeFactory, AiJobService jobs) =>
         {
-            if (!Languages.IsTranslationLanguage(lang))
+            if (!Languages.IsContentLanguage(lang))
                 return Results.BadRequest(new { error = $"Unsupported translation language: {lang}" });
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
             if (draft is null) return Results.NotFound();
+            // ADR-065 — translating the primary into itself would burn a quota call to produce a
+            // shadow copy of the canonical document.
+            if (lang == draft.PrimaryLanguage)
+                return Results.BadRequest(new { error = ErrorMessages.LanguageIsPrimary(lang) });
 
             // AI features are Pro Plus; each call counts against the per-day AI quota
             var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
@@ -682,6 +709,8 @@ public static class DraftEndpoints
                 // long before this background work finishes.
                 using var scope = scopeFactory.CreateScope();
                 var scopedDb = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
+                var scopedDraft = await scopedDb.Drafts.FirstOrDefaultAsync(d => d.Id == id, ct);
+                if (scopedDraft is null) return AiJobOutcome.Fail("Draft was deleted", StatusCodes.Status404NotFound);
                 var translation = await scopedDb.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang, ct);
                 if (translation is null)
                 {
@@ -692,6 +721,8 @@ public static class DraftEndpoints
                 translation.CedarJson = result.CedarJson;
                 translation.UpdatedAt = DateTime.UtcNow;
                 translation.SourceSnapshotJson = sourceCedarJson;
+                translation.SourceLanguage = scopedDraft.PrimaryLanguage;
+                await DraftRevisionService.RecordAsync(scopedDb, id, lang, result.Title, result.CedarJson, ct: ct);
                 await scopedDb.SaveChangesAsync(ct);
 
                 return AiJobOutcome.Ok(new { translation.Language, translation.Title, translation.CedarJson, translation.UpdatedAt, translation.SourceSnapshotJson });
@@ -706,7 +737,7 @@ public static class DraftEndpoints
             Guid id, string lang, string kind, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg,
             IHttpClientFactory httpFactory, IServiceScopeFactory scopeFactory, AiJobService jobs) =>
         {
-            if (lang != Languages.Primary && !Languages.IsTranslationLanguage(lang))
+            if (!Languages.IsContentLanguage(lang))
                 return Results.BadRequest(new { error = $"Unsupported language: {lang}" });
 
             AiEditKind editKind;
@@ -726,10 +757,9 @@ public static class DraftEndpoints
             if (!PlanLimitations.HasAiFeatures(tier))
                 return Results.Json(new { error = "AI editing is a Pro Plus feature. Upgrade to use it." }, statusCode: StatusCodes.Status403Forbidden);
 
-            if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
-                return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);
-
-            var isTranslation = lang != Languages.Primary;
+            // ADR-065 — which slot holds this language is a per-draft question; comparing against a
+            // literal "ru" made every AI edit on a non-Russian-primary draft a guaranteed 404.
+            var isTranslation = lang != draft.PrimaryLanguage;
             string sourceTitle, sourceCedarJson;
             if (!isTranslation)
             {
@@ -743,6 +773,11 @@ public static class DraftEndpoints
                 sourceTitle = existingTranslation.Title;
                 sourceCedarJson = existingTranslation.CedarJson;
             }
+
+            // Charged only once there is something to edit — the quota used to be spent before the
+            // 404 above, so a doomed request still cost the user one of the day's AI calls.
+            if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
+                return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);
 
             IAiEditProvider? provider;
             try
@@ -802,6 +837,9 @@ public static class DraftEndpoints
                     scopedTranslation.CedarJson = result.CedarJson;
                     scopedTranslation.UpdatedAt = DateTime.UtcNow;
                 }
+                // An AI edit rewrites the whole document without the author reading it first, which
+                // is exactly the kind of change worth being able to look back at.
+                await DraftRevisionService.RecordAsync(scopedDb, id, lang, result.Title, result.CedarJson, ct: ct);
                 await scopedDb.SaveChangesAsync(ct);
 
                 return AiJobOutcome.Ok(new { title = result.Title, cedarJson = result.CedarJson, updatedAt = DateTime.UtcNow });
@@ -819,6 +857,10 @@ public static class DraftEndpoints
             var deleted = await db.DraftTranslations
                 .Where(t => t.DraftId == id && t.Language == lang)
                 .ExecuteDeleteAsync();
+            // ADR-065 — a deleted language must not leave full copies of its text behind in the
+            // revision history (and in every nightly backup generation of it).
+            if (deleted > 0)
+                await db.DraftRevisions.Where(r => r.DraftId == id && r.Language == lang).ExecuteDeleteAsync();
             return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });
         
@@ -827,6 +869,7 @@ public static class DraftEndpoints
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = new Draft { Title = req.Title, CedarJson = req.CedarJson, OwnerId = uid };
             db.Drafts.Add(draft);
+            await DraftRevisionService.RecordAsync(db, draft.Id, draft.PrimaryLanguage, req.Title, req.CedarJson);
             await db.SaveChangesAsync();
             return Results.Created($"/api/drafts/{draft.Id}", new { draft.Id });
         });
@@ -836,11 +879,84 @@ public static class DraftEndpoints
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
             if (draft is null) return Results.NotFound();
+            // ADR-065 — a save that changes nothing changes nothing: the autosave fires on every
+            // pause in typing, including after a typed-then-undone edit or a rename that PUTs the
+            // unchanged body back, and bumping UpdatedAt there is what marked every translation
+            // stale without the primary text having moved (the long-standing IB3).
+            if (draft.Title == req.Title && draft.CedarJson == req.CedarJson)
+                return Results.Ok(new { draft.Id, draft.UpdatedAt });
+
             draft.Title = req.Title;
             draft.CedarJson = req.CedarJson;
             draft.UpdatedAt = DateTime.UtcNow;
+            await DraftRevisionService.RecordAsync(db, id, draft.PrimaryLanguage, req.Title, req.CedarJson);
             await db.SaveChangesAsync();
             return Results.Ok(new { draft.Id, draft.UpdatedAt });
+        });
+
+        groupBuilder.MapPost("/{id:guid}/primary-language", async (Guid id, ChangePrimaryLanguageRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            if (!Languages.IsContentLanguage(req.Language))
+                return Results.BadRequest(new { error = $"Unsupported language: {req.Language}" });
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+            if (req.Language == draft.PrimaryLanguage) return Results.Ok(new { draft.PrimaryLanguage });
+
+            var translations = await db.DraftTranslations.Where(t => t.DraftId == id).ToListAsync();
+            var selected = translations.FirstOrDefault(t => t.Language == req.Language);
+            if (selected is null) return Results.BadRequest(new { error = ErrorMessages.CreateLanguageBeforePrimary });
+
+            var demotedLanguage = draft.PrimaryLanguage;
+            // A row already keyed to the *current* primary language can only be a shadow left by an
+            // older build that allowed it; adding the demoted row on top of it would violate the
+            // unique (DraftId, Language) index and 500. The canonical document wins.
+            if (translations.FirstOrDefault(t => t.Language == demotedLanguage) is { } shadow)
+                db.DraftTranslations.Remove(shadow);
+
+            db.DraftTranslations.Add(new DraftTranslation
+            {
+                DraftId = id, Language = demotedLanguage, Title = draft.Title, CedarJson = draft.CedarJson,
+                UpdatedAt = draft.UpdatedAt,
+                // The two were in sync a moment ago by construction — this is a relabeling, not an
+                // edit — so the demoted language is up to date with its new source as of now.
+                SourceSnapshotJson = selected.CedarJson, SourceLanguage = selected.Language,
+            });
+
+            draft.Title = selected.Title;
+            draft.CedarJson = selected.CedarJson;
+            draft.PrimaryLanguage = selected.Language;
+            // Deliberately the promoted version's own timestamp rather than "now": staleness is a
+            // timestamp comparison, and stamping now would flip every other language to stale for
+            // a change that touched no text. Carrying it over preserves every relative recency.
+            draft.UpdatedAt = selected.UpdatedAt;
+            db.DraftTranslations.Remove(selected);
+
+            // Every remaining translation was translated from a document in the *old* primary
+            // language. Against the new primary that snapshot is not a stale baseline, it is a
+            // meaningless one — it would render a full-document diff in the gutter. Dropping it
+            // says "provenance unknown" honestly and falls back to the timestamp indicator.
+            foreach (var other in translations.Where(t => t.Language != req.Language && t.Language != demotedLanguage))
+            {
+                other.SourceSnapshotJson = null;
+                other.SourceLanguage = null;
+            }
+
+            await DraftRevisionService.RecordAsync(db, id, draft.PrimaryLanguage, draft.Title, draft.CedarJson);
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.PrimaryLanguage, draft.UpdatedAt });
+        });
+
+        groupBuilder.MapGet("/{id:guid}/revisions/{lang}", async (Guid id, string lang, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var owns = await db.Drafts.AnyAsync(d => d.Id == id && d.OwnerId == uid);
+            if (!owns) return Results.NotFound();
+            var rows = await db.DraftRevisions.Where(r => r.DraftId == id && r.Language == lang)
+                .OrderByDescending(r => r.CreatedAt).Take(30).ToListAsync();
+            return Results.Ok(rows.Select(r => new { r.Id, r.Kind, r.Destination, r.CreatedAt, r.Title,
+                fingerprint = DraftRevisionService.Fingerprint(r.Title, r.CedarJson),
+                lines = DraftRevisionService.BlockCount(r.CedarJson) }));
         });
         
         groupBuilder.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
@@ -850,7 +966,14 @@ public static class DraftEndpoints
                 .Where(x => x.Id == id && x.OwnerId == uid)
                 .ExecuteDeleteAsync();
             if (deleted > 0)
+            {
                 await db.DraftStatSeens.Where(x => x.DraftId == id && x.OwnerId == uid).ExecuteDeleteAsync();
+                // ADR-065 — revisions hold complete copies of the document, and unlike
+                // DraftTranslation (which has a real navigation property, so EF cascades it)
+                // DraftRevision is keyed by a bare Guid. Without this a deleted private post lives
+                // on in the database and in every backup generation of it.
+                await db.DraftRevisions.Where(r => r.DraftId == id).ExecuteDeleteAsync();
+            }
             return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });
         
@@ -887,12 +1010,12 @@ public static class DraftEndpoints
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
             if (draft is null) return Results.NotFound();
 
-            var language = lang is not null && Languages.IsTranslationLanguage(lang) ? lang : Languages.Primary;
+            var language = lang is not null && Languages.IsContentLanguage(lang) ? lang : draft.PrimaryLanguage;
             // Idea #4 - the exported page is a reader-facing artefact, so it carries the article
             // title. A translation already has its own title and overwrites this below.
             var title = draft.ArticleTitle ?? draft.Title;
             var cedarJson = draft.CedarJson;
-            if (language != Languages.Primary)
+            if (language != draft.PrimaryLanguage)
             {
                 var translation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == language);
                 if (translation is null)
@@ -935,7 +1058,7 @@ public static class DraftEndpoints
 
             var versions = new List<(string Lang, string Title, string CedarJson)>
             {
-                (Languages.Primary, draft.ArticleTitle ?? draft.Title, draft.CedarJson),
+                (draft.PrimaryLanguage, draft.ArticleTitle ?? draft.Title, draft.CedarJson),
             };
             versions.AddRange(translations.Select(t => (t.Language, t.Title, t.CedarJson)));
 
@@ -955,7 +1078,7 @@ public static class DraftEndpoints
                     var localizedSignature = LocalizedTextMap.Pick(owner.PostSignature, owner.PostSignatureTranslationsJson, lang);
                     var signature = PlanLimitations.ResolveSignature(ownerPlan, localizedSignature, owner.PostSignatureUrl);
                     var html = StaticExportHtml(title, body, lang, signature, publishedAt, cedarJson);
-                    var pageName = lang == Languages.Primary ? "index.html" : $"index.{lang}.html";
+                    var pageName = lang == draft.PrimaryLanguage ? "index.html" : $"index.{lang}.html";
                     var pageEntry = zip.CreateEntry(pageName, CompressionLevel.Optimal);
                     await using (var pageStream = pageEntry.Open())
                         await pageStream.WriteAsync(System.Text.Encoding.UTF8.GetBytes(html));

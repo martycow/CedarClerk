@@ -419,7 +419,7 @@ public static class AuthEndpoints
         string? json = null;
         foreach (var (lang, text) in texts)
         {
-            if (!Languages.IsTranslationLanguage(lang)) continue;
+            if (!Languages.IsContentLanguage(lang)) continue;
             json = LocalizedTextMap.Set(json, lang, text);
         }
         return json;

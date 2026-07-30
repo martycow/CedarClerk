@@ -22,16 +22,41 @@ export interface ScheduledPost {
     channelTitle: string | null;
 }
 
+export interface PublishDiff {
+    beforeLines: number;
+    afterLines: number;
+    addedLines: number[];
+    removedLines: number[];
+    changedLines: number;
+    totalChanged: number;
+}
+
+// ADR-065 — one per language being published. `fingerprint` names the exact version the owner
+// was shown; the server refuses to publish anything else under that confirmation.
+export interface UpdatePreview {
+    language: string;
+    publishedBefore: boolean;
+    fingerprint: string;
+    diff: PublishDiff | null;
+}
+
+export type PublishTarget = 'telegram' | 'blog';
+
 @Injectable({ providedIn: 'root' })
 export class PostsService {
     private http = inject(HttpClient);
 
-    export(draftId: string, chatId: string, format: PostFormat, language: PostLanguage = 'ru', compressionLevel: CompressionLevel = 'standard') {
+    export(draftId: string, chatId: string, format: PostFormat, language: PostLanguage, compressionLevel: CompressionLevel = 'standard',
+           confirmedFingerprint?: string) {
         return firstValueFrom(this.http.post<{ messageId: number; chatId: string }>(
-            '/api/posts/export', { draftId, chatId, format, language, compressionLevel }));
+            '/api/posts/export', { draftId, chatId, format, language, compressionLevel, confirmedFingerprint }));
     }
 
-    schedule(draftId: string, chatId: string, scheduledAtUtc: string, format: PostFormat, language: PostLanguage = 'ru') {
+    updatePreview(draftId: string, kind: PublishTarget, language: PostLanguage, chatId?: string) {
+        return firstValueFrom(this.http.post<UpdatePreview>('/api/posts/update-preview', { draftId, kind, language, chatId }));
+    }
+
+    schedule(draftId: string, chatId: string, scheduledAtUtc: string, format: PostFormat, language: PostLanguage) {
         return firstValueFrom(this.http.post<{ id: string }>(
             '/api/posts/schedule', { draftId, chatId, scheduledAtUtc, format, language }));
     }

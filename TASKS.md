@@ -2,12 +2,15 @@
 
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
-## Now: Phase 9e — the second `Input.md` sweep
-**Done**: DB2, DB3, NF2 (six content languages), **FI3**, **FI2**, **FI4** — all closed 27.07.2026 — plus a category sweep of the backlog (forms → posts → stats → admin → editor) on Marty's instruction.
+## Now (30.07.2026): ADR-064 review + Marty's 8-point list
+1. **Decide what to do with Codex's uncommitted ADR-064 changes** (per-draft primary language, DraftRevision history, publish-diff guard). The 30.07 audit confirmed the direction but found 9 major defects — consolidated as `docs/BACKLOG.md` **T-063**; fix plan in the session report. Nothing should be committed or built on top until the fixes land (in particular: incremental translation is documented in ADR-064 but NOT implemented).
+2. **Marty's 30.07 asks**, registered in the restructured `docs/BACKLOG.md` (now a task board, `T-xxx` IDs): uk/be/ka languages (T-013), translate-to-all button (T-014), incremental re-translation (T-015), revision restore UI (T-016), revision diff view (T-017), data-loss guard package (T-018), false-dirty fix (T-061), session-persistence fixes (T-062 + T-074), cross-browser reader access (T-023/T-064). Product-scope and tabs questions: Q-1/Q-2.
+3. `docs/BACKLOG.md` restructured 30.07 into ID/Имя/Приоритет/Теги/Описание board form — maintain that format from now on; done rows get deleted (history lives in git), open items only.
+
+## Previous: Phase 9e — the second `Input.md` sweep (closed 27–28.07.2026)
+**Done**: DB2, DB3, NF2 (six content languages), **FI3**, **FI2**, **FI4**, FI1, FI5, NF1, NF5 — plus a category sweep of the backlog (forms → posts → stats → admin → editor) on Marty's instruction. Sweep v3 (the 28.07 `Input.md` rewrite) is tracked as Phase 9f in `docs/ROADMAP.md`.
 
 **Closed from the older lists in that sweep**: ideas #3, #4, #7, #8, #12, #13; `B1`, `B9`, `B13`, `B17`; `N6` and `N11` were found already built and the backlog rows corrected.
-
-**Next in order**: FI6 (account settings — but 6.2 is a pricing restructure Marty deferred), FI1 (appearance panel UX, 7 sub-items), FI5 (profile settings).
 
 **Left open on purpose, each needing a decision rather than an implementation:**
 - [ ] **NF5 / idea #22 — polls inside a post.** A TipTap node plus renderers on all three surfaces, response storage and a results view. Telegram has native polls but *not* inside `sendRichMessage` Blocks, so that surface likely degrades to a link — worth confirming with Marty before building
@@ -56,7 +59,7 @@ Version bumped to **0.9.1** (`CedarClerk.Core/Consts.cs`) and tagged. **Deployed
 
 **`I12` done, `IT1` done, `IT2` declined 27.07.2026.** Settings is split into Profile / Account (the account menu opens the Profile half); editor zoom is deleted; toolbar customization stays, and is no longer a standalone question now that `I14` put it in the editor's Appearance panel.
 
-**Low block: 6 of 7 done 27.07.2026** — I3, I5, I6, I8, I13, I17. Left: `I15` (custom cross-link text), which needs a stored setting and both renderers, and should be done together with the open `B18`.
+**Low block: all 7 done 27.07.2026** — I3, I5, I6, I8, I13, I17, and `I15` (cross-link wording landed as two profile fields, `AddCrossLinkTexts`; `B18` turned out to be already done — see `docs/ROADMAP.md`). This line had gone stale claiming I15 was still open.
 
 **Middle block: 8 of 9 done 27.07.2026** — I1, I2, I4, I10, I11, I14, I16, I18, I19.
 

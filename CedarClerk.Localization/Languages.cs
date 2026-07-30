@@ -2,31 +2,29 @@ namespace CedarClerk.Localization;
 
 public static class Languages
 {
-    public const string Primary = "ru";
+    public const string Russian = "ru";
     public const string English = "en";
     public const string German = "de";
     public const string French = "fr";
     public const string Spanish = "es";
     public const string Japanese = "ja";
 
-    // Content languages a post can be translated into (NF2). Primary is deliberately not here:
-    // it's the original, stored on Draft itself rather than as a DraftTranslation row.
-    public static readonly IReadOnlyList<string> TranslationLanguages =
-        [English, German, French, Spanish, Japanese];
-
-    public static bool IsTranslationLanguage(string code) => TranslationLanguages.Contains(code);
-
     /// <summary>
-    /// Every language a post can exist in, primary first — the order the editor shows tabs in.
+    /// Every language a post can be written in. There is deliberately only one such list
+    /// (ADR-065): "is this a translation?" is a per-draft question — <c>lang != draft.PrimaryLanguage</c>
+    /// — and a static list that tried to answer it is what produced both a duplicated "ru" entry
+    /// and translation rows shadowing a draft's own primary language.
     /// </summary>
     public static readonly IReadOnlyList<string> ContentLanguages =
-        [Primary, .. TranslationLanguages];
+        [Russian, English, German, French, Spanish, Japanese];
+
+    public static bool IsContentLanguage(string code) => ContentLanguages.Contains(code);
 
     // Endonyms: a language name is only useful to someone who reads that language, so these are
     // never translated. Used for tab labels and the "add a translation" list.
     private static readonly IReadOnlyDictionary<string, string> Endonyms = new Dictionary<string, string>
     {
-        [Primary] = "Русский",
+        [Russian] = "Русский",
         [English] = "English",
         [German] = "Deutsch",
         [French] = "Français",

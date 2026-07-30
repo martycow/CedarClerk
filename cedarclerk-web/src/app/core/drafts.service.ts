@@ -1,7 +1,7 @@
 import { HttpClient, HttpEvent } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, firstValueFrom, timeout } from 'rxjs';
-import { PRIMARY_LANGUAGE } from './languages';
+import { DEFAULT_PRIMARY_LANGUAGE } from './languages';
 
 // Phase 8 Step 8, docs/ROADMAP.md — neither AI provider streams, so there's no way to signal
 // real progress; this is purely a "don't let it look stuck forever" ceiling — how long the client
@@ -67,11 +67,25 @@ export const NEW_DRAFT_TEMPLATES: Record<NewDraftTemplate, string> = {
 };
 
 export interface ScheduledInfo { scheduledAtUtc: string; chatId: string; status: string; error: string | null; }
+// One stored version of one language of a draft. `kind` is how it came to be: an edit ("save"),
+// or the content actually sent to a destination ("telegram"/"blog") — the latter are the
+// baselines the publish guard diffs against, and are never pruned.
+export interface DraftRevision {
+    id: string;
+    kind: 'save' | 'telegram' | 'blog';
+    destination: string | null;
+    createdAt: string;
+    title: string;
+    fingerprint: string;
+    lines: number;
+}
+
 export interface DraftMeta {
     id: string;
     title: string;
     createdAt: string;
     updatedAt: string;
+    primaryLanguage: string;
     blogSlug: string | null;
     isBlogPublished: boolean;
     blogPublishedAt: string | null;
@@ -161,7 +175,7 @@ export function pickLangText(node: unknown, lang: string, languages: string[]): 
 // "degrade, never throw" behaviour (CedarClerk.Core/RegistrationFormDefinition.cs). A v2
 // multi-language blob (ADR-060) is projected to one language — the primary by default, since
 // this view feeds the owner-facing charts and status strips.
-export function parseRegistrationForm(json: string | null | undefined, lang = PRIMARY_LANGUAGE): RegistrationForm | null {
+export function parseRegistrationForm(json: string | null | undefined, lang = DEFAULT_PRIMARY_LANGUAGE): RegistrationForm | null {
     if (!json) return null;
     try {
         const raw = JSON.parse(json) as Record<string, unknown>;
@@ -303,7 +317,7 @@ export class DraftsService {
 
     // FI4.1 — `language` names the slot: the primary language writes the post's own form, any
     // other writes that language's entry beside it.
-    setRegistrationForm(id: string, formJson: string | null, language = PRIMARY_LANGUAGE) {
+    setRegistrationForm(id: string, formJson: string | null, language = DEFAULT_PRIMARY_LANGUAGE) {
         return firstValueFrom(this.http.post<{ registrationFormJson: string | null; formLanguages: string[] }>(
             `/api/drafts/${id}/registration-form`, { formJson, language }));
     }
@@ -353,6 +367,15 @@ export class DraftsService {
             `/api/drafts/${id}/translations/${lang}`, { title, cedarJson }));
     }
 
+    setPrimaryLanguage(id: string, language: string) {
+        return firstValueFrom(this.http.post<{ primaryLanguage: string; updatedAt: string }>(
+            `/api/drafts/${id}/primary-language`, { language }));
+    }
+
+    revisions(id: string, language: string) {
+        return firstValueFrom(this.http.get<DraftRevision[]>(`/api/drafts/${id}/revisions/${language}`));
+    }
+
     removeTranslation(id: string, lang: string) {
         return firstValueFrom(this.http.delete(`/api/drafts/${id}/translations/${lang}`));
     }
@@ -396,8 +419,11 @@ export class DraftsService {
         }).pipe(timeout({ each: UPLOAD_STALL_TIMEOUT_MS }));
     }
 
-    publishToBlog(id: string) {
-        return firstValueFrom(this.http.post<{ slug: string; url: string }>(`/api/drafts/${id}/publish-blog`, {}));
+    // ADR-065 — one click republishes every language, so the confirmation names a version per
+    // language; the server rejects the publish outright if any of them is no longer current.
+    publishToBlog(id: string, confirmedFingerprints?: Record<string, string>) {
+        return firstValueFrom(this.http.post<{ slug: string; url: string }>(
+            `/api/drafts/${id}/publish-blog`, { confirmedFingerprints }));
     }
 
     unpublishFromBlog(id: string) {

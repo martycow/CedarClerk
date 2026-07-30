@@ -2,7 +2,29 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
-## 2026-07-29 (latest, uncommitted) — private posts: copy protection on the blog page
+## 2026-07-30 (latest, uncommitted) — ADR-064 corrected: the publish guard actually guards
+
+Acting on the audit below. **ADR-065** (`docs/DECISIONS.md`) records what changed and, as importantly, which of ADR-064's own claims were withdrawn.
+
+**The guard moved to the server.** `ConfirmedFingerprint` was declared and never read or sent — the confirmation modal was decoration. Both publish paths now *require* the fingerprint of the version the owner was shown whenever that target already has a publication revision, and answer `409` with a freshly-calculated diff otherwise; the client re-opens the modal on that body instead of showing an error. The client also **flushes the pending autosave before asking for the preview** — with a 1.2s debounce, "type, hit Update" previewed the previous version and published the new one, which is the same defect the guard exists to prevent. The guard now covers **the blog** (ADR-064 said it did; only Telegram had it — and blog-only publishing was the exact path of the 29.07 wipe), keys off the server's `publishedBefore` rather than the client knowing a public post URL (channels without an `@username` silently skipped it entirely), and shows **every already-live language**, since one click publishes them all and a single language's "no changes" could hide a rewritten translation.
+
+**`PrimaryLanguage` is now primary everywhere.** Static HTML export, `.zip` export, AI edit and the v1 registration-form slot still compared against a literal `"ru"`, so a draft whose primary is English got a 400 for its own language, an English document labelled and styled Russian, a duplicate `index.html` in the archive, and a guaranteed 404 from every AI edit — after the quota was already spent (the charge now happens once there is something to edit). There is one list of content languages and one predicate; `TranslationLanguages`/`IsTranslationLanguage` are gone, because "is this a translation" is a per-draft question and answering it statically is what produced both a duplicated `ru` entry and translation rows shadowing a draft's own primary language (which also made the swap 500 on a unique-index collision). The frontend's `PRIMARY_LANGUAGE` became `DEFAULT_PRIMARY_LANGUAGE` — it is only the language a *new* draft starts in — which is what the diff gutter had been getting wrong.
+
+**Revisions stopped being a disk leak and a privacy defect.** They were a full copy of the document on every autosave pause, with no deduplication, no ceiling and no cleanup. Now a revision is written only when the content actually changed, `save` revisions are pruned to the newest 50 per draft+language (publication revisions never are — they are the diff baselines), and deleting a draft or a language deletes its revisions, which previously left complete copies of a deleted private post in production and in all 14 backup generations. **No migration**: an FK with cascade would be a table rebuild on SQLite, which is the class of migration `.claude/rules/ef-migrations.md` exists about — explicit deletes are deterministic and need no schema change, so Codex's migration ships byte-for-byte as generated.
+
+**A no-op save is now a no-op** — the root cause of the false-dirty language tabs (the old `IB3`), finally explained: staleness is a timestamp comparison and the server bumped `UpdatedAt` on saves that changed nothing (a touched title, a typed-then-undone edit, a Posts Manager rename that PUTs the unchanged body back). Both draft and translation saves return early on byte-identical content. Relatedly the primary-language swap carries the promoted version's own timestamp instead of stamping "now", which preserves every relative recency so a pure relabeling flips nothing to stale; it also gives the demoted language a real snapshot, nulls the *other* translations' snapshots rather than leaving them pointing at a document in a language they were never translated from, and `SourceLanguage` — previously write-only — now decides whether a snapshot is offered to the editor at all.
+
+New `DraftRevisionServiceTests` (12 tests) pins the dedup, the pruning-keeps-publications rule, per-language and per-destination isolation of the guard, and that the canonical slot follows `PrimaryLanguage`. All the new UI strings went onto `t()` — they had shipped as hardcoded Russian in the most safety-critical dialog of the change.
+
+`dotnet test` 408/408, `ng build` clean, frontend tests 7/7. **Not yet live-verified in a browser or deployed.**
+
+## 2026-07-30 — audit of the ADR-064 changes + docs actualization (no code changed)
+
+**Audit of Codex's uncommitted ADR-064 work** (per-draft primary language, `DraftRevision` history, publish-diff guard) — a 14-agent adversarial review, every major finding independently re-verified against the working tree. Direction confirmed, but 9 major defects found before anything gets committed: the server-side stale-publish guard the ADR promises is not implemented (`ConfirmedFingerprint` is dead code, the confirm modal is client-side-only and skips the blog path entirely — the exact path of the 29.07 data-loss incident); several endpoints still hardcode `ru` as primary (static export, AI edit, ZIP export → broken for any non-ru-primary draft); the primary-language swap corrupts translation snapshots; `DraftRevisions` grow unboundedly (full document copy per autosave, no dedup/pruning/FK). Same session root-caused three long-standing issues: the 29.07 wipe (transient-empty autosave + no flush-on-close + guard-free PUT; would replay identically today), the false-dirty language tabs (unconditional `UpdatedAt` bump on byte-identical PUTs vs timestamp-only staleness — the old IB3, finally explained), and the frequent re-logins (any `/api/auth/me` failure — network, 5xx, deploy-window 502 — is treated as logout while the cookie is alive; plus the auth ticket's default 14-day `ExpireTimeSpan` under the 30-day cookie). Also mapped: cross-browser private-post access (cookie-only by design; fix = post-registration `?invite=` token) and the translation pipeline's readiness for uk/be/ka + translate-all + incremental re-translation. Full fix plan in the session report; consolidated in `docs/BACKLOG.md` as T-013…T-023, T-060…T-064, T-074.
+
+**Docs actualization**: `docs/BACKLOG.md` restructured into a task board (ID/Имя/Приоритет/Теги/Описание — Marty's own Input.md format; done rows deleted, history in git); the 28.07 `Input.md` rewrite registered as Phase 9f in `docs/ROADMAP.md` (with what already shipped from it — DB1-3, consent, copy protection, multi-language presets — marked done); stale rows fixed (IF2 admin panel claimed "not started" while fully built 27.07; `TASKS.md` claimed I15 open while shipped 27.07); the stale "(latest, uncommitted)" markers above cleared for entries whose commits landed (`4c4737e`, `8221201`, `db89a03`, `c4f2628`, `0f5364e`).
+
+## 2026-07-29 — private posts: copy protection on the blog page
 
 Marty's ask: a switch in the Export window and the Posts manager forbidding copying (and the context menu) on private posts' blog pages. ADR-063 (`docs/DECISIONS.md`): new `Draft.DisableCopy` + `POST /api/drafts/{id}/disable-copy` (the `/listed`/`/watermark` endpoint shape), and `BlogEndpoints.RenderPostAsync` injects — only when the post is *both* private and flagged — a `user-select: none` style plus a tiny script blocking `contextmenu`/`copy`/`cut`/`dragstart`, scoped to `.post-sheet` so the comment/annotation UI below stays fully usable. A deterrent, not protection (the page source is one Ctrl+U away), and the UI hint says so. Checkboxes: Export modal's blog section (visible while Private is on, next to "show in list anyway") and the Posts manager's private-post section. Migration `AddDraftDisableCopy`.
 
@@ -24,7 +46,7 @@ Two glossary asks from Marty (ADR-061, `docs/DECISIONS.md`):
 
 `dotnet test` 396/396, `ng build` clean. Not yet live-verified in a browser or deployed.
 
-## 2026-07-30 (latest, uncommitted) — forms: multi-language presets, consent field, and two real fixes
+## 2026-07-30 — forms: multi-language presets, consent field, and two real fixes
 
 Three form asks from Marty in one pass (ADR-060, `docs/DECISIONS.md`):
 
@@ -36,7 +58,7 @@ Three form asks from Marty in one pass (ADR-060, `docs/DECISIONS.md`):
 
 `dotnet test` 396/396, `ng build` + frontend tests 7/7 clean. Not yet live-verified in a browser or deployed.
 
-## 2026-07-29 (latest, uncommitted) — Anthropic auto-translate: chunked instead of whole-document
+## 2026-07-29 — Anthropic auto-translate: chunked instead of whole-document
 
 Marty hit the same large-document pain again: a real ~47,000-character draft ran past 1000 seconds and had already 502'd once before with "Model returned malformed translation output." Root cause (ADR-059, `docs/DECISIONS.md`): `AnthropicTranslationProvider` sent the entire `Draft.CedarJson` to the model and required it to echo back the *whole* TipTap JSON structure with only `"text"` values translated — slow, and a single truncated/malformed response wasted 100% of the tokens for zero result, with no way to chunk since the contract required one valid JSON document as output.
 
@@ -48,7 +70,7 @@ Marty hit the same large-document pain again: a real ~47,000-character draft ran
 
 `dotnet test` (380/380) clean. Not yet live-verified against a real large document or deployed.
 
-## 2026-07-29 (latest, uncommitted) — auto-translate/AI-edit stop dying to Cloudflare's own timeout
+## 2026-07-29 — auto-translate/AI-edit stop dying to Cloudflare's own timeout
 
 Root-caused all the way, not just patched: Marty's real ~360-line/114KB document auto-translated *successfully* — the server saved a fresh EN translation to the database — but the browser never found out. `cedarclerk.mooexe.dev` sits behind a Cloudflare Tunnel, and the old auto-translate/ai-edit endpoints held one HTTP request open for the entire Anthropic call. For a large document that call can legitimately run long enough to outlive Cloudflare's own edge-to-origin timeout, which then returns its own `cloudflare_error: true` 502 straight to the browser — independent of anything this app does, and even though the origin goes on to finish the work. Confirmed directly: `journalctl` + a read-only `sqlite3` query against the Pi's live DB showed the translation land at 22:27:15, two seconds before a `DELETE /translations/en` request (Marty, having watched a dead spinner, assumed it failed and cleared it) — the retry-on-overload fix from earlier today never had a chance to matter here, since Anthropic wasn't the problem this time.
 
@@ -72,7 +94,7 @@ First fix: `OutputConfig = new OutputConfig { Effort = Effort.Low }` added to bo
 
 `dotnet build`/`dotnet test` (362/362) and `ng build`/`ng test` (7/7) all clean. Not yet live-verified against a real large document or deployed.
 
-## 2026-07-29 (latest, uncommitted) — five follow-ups from Marty's own use
+## 2026-07-29 — five follow-ups from Marty's own use
 
 **Emoji panel moved from popover to modal** — its grid genuinely scrolls (120 emoji, 4 groups, `max-height:320px`), and `PopoverComponent` closes on any document-level scroll (it can't tell the panel's own scroll from the page's), so scrolling the panel closed it. Same root cause ADR-057 already fixed for the Appearance panel. Date/time insertion moved alongside it for consistency, per Marty's own ask, even though its content is too short to hit the bug independently.
 
@@ -84,7 +106,7 @@ First fix: `OutputConfig = new OutputConfig { Effort = Effort.Low }` added to bo
 
 `dotnet build`/`dotnet test` (362/362) and `ng build`/`ng test` (7/7) all clean. Not yet live-verified in a browser or deployed.
 
-## 2026-07-28 (latest, uncommitted) — a local-only bypass for imports over Cloudflare's 100MB edge limit
+## 2026-07-28 — a local-only bypass for imports over Cloudflare's 100MB edge limit
 
 ADR-058, `docs/DECISIONS.md`. The 100MB-upload investigation ended somewhere unfixable in app code (see the previous entry's three follow-ups), so the real next question was what to do about it. Two options were scoped: a general chunked-upload protocol (works for any size, any future user, but zero existing scaffolding to build on — realistically a few hours) versus a one-off local-only bypass (reuses the existing import logic via a small refactor, solves exactly today's need — a single ~148MB Notion export). Marty chose the local bypass now, chunked upload deferred to backlog idea #23.
 

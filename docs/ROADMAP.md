@@ -2,9 +2,9 @@
 
 Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-saas-plan.md` (v1.7, 15.07.2026) and `Plans/session-brief-v0.8.0-planning.md`, which are now archived under `Plans/OLD/`. **This file is the one live roadmap going forward** — update it when a phase item closes, don't recreate a parallel plan doc. Architectural/product decisions referenced below (why something was built a certain way) live in `docs/DECISIONS.md`, not here — this file tracks *status*, DECISIONS tracks *rationale*.
 
-## Status summary (as of 27.07.2026)
+## Status summary (as of 30.07.2026)
 
-**Current work: Phase 9c** — the `Input.md` sweep (32 items), bugs first. Phase 9b closed 27.07.2026 with every N-item shipped; several are still not live-verified in a browser.
+**Current work: Phase 9f** — the 28.07 `Input.md` rewrite (sweep v3) plus AI/translation robustness; and an audit of the uncommitted ADR-064 draft-language/revision changes (30.07 session — review found 9 confirmed major defects, fix plan in the session report; see `docs/BACKLOG.md` T-063). Phases 9c/9d/9e closed 27–28.07.2026. `docs/BACKLOG.md` was restructured into a task board (30.07) — item IDs there are now `T-xxx`/`Q-xx`.
 
 
 Phases 0–5 done and production-verified. Phase 6 (multi-tenancy & public SaaS) is code-complete except billing/translation are waiting on real provider keys being pushed to the Pi. Phase 7 (Entertainer role) not started. **Phase 8 (v0.8.0) is code-complete** — all 8 steps plus the unplanned "Step 9" work done — but Steps 6 (tags in Telegram) and 7 (comments) have **not been live-verified** (deferred by Marty's choice on 26.07.2026); do that before calling the phase fully closed. 4 UI/blog bugs fixed and live-verified 25.07.2026 (view-count double-count on language switch, toolbar popups clipped by a CSS regression, export modal mispositioned, iPad horizontal scroll — see `CHANGELOG.md`). `Consts.CurrentVersion` was bumped to `0.9.0` ahead of Phase 8 actually closing — flagged as a real inconsistency, not yet reconciled with Marty.
@@ -254,6 +254,21 @@ A second rewrite of `Input.md`, ~60 items, confirmed by Marty as **not overlappi
 
 **Suggested order once those are answered**: the three High UX groups (FI2 export, FI3 posts manager, FI4 forms) are the most-used surfaces and are mostly rearrangement of things that exist; DB2/DB3 are small and include a real `N1` regression; NF1/NF5 are the substantial new features; NF4/NF6/NF2 are the largest and most externally-dependent.
 
+### Phase 9f — Input sweep v3 + AI/translation robustness — started 28.07.2026, in progress
+
+Marty rewrote `Input.md` again on 28.07.2026 — this time in the task-board format (ID/Name/Priority/Tags/Description) that `docs/BACKLOG.md` now mirrors. Open remainder registered there as `T-xxx` rows (with the original OP*/FI*/DB* numbers in the descriptions); this is the shipped log.
+
+**Shipped 28–30.07.2026** (full write-ups in `CHANGELOG.md`):
+- [x] **DB1/DB2/DB3 (v3 numbering)** — Posts Manager's contradictory "no forms" banner; dead paragraph-marks button (`¶` CSS scoped by view encapsulation, moved to global styles); raw DB error when publishing with no channel picked (dev-default `@testingandfun` chatId + untranslatable `Equals` in an EF query) — commit `c608fe6`, plus `SubscriptionPlanTests.cs` as a regression guard
+- [x] **AI jobs: no more Cloudflare-timeout deaths** — auto-translate/ai-edit return `202 {jobId}` immediately, work runs in a background job (`AiJobService`), client polls `GET /api/ai-jobs/{id}`; root-caused a real prod incident where a successful translation looked failed and got deleted
+- [x] **Anthropic chunked translation (ADR-059)** — texts extracted flat, chunked, translated in parallel (≤4), spliced back; keyed-JSON response format after a real off-by-two failure; `Walk` now also visits attr texts (poll/captions/footnotes/toggle) that NO provider ever translated before
+- [x] **Multi-language form presets v2 + consent field (ADR-060)** — one skeleton with stable question+option ids, per-language text maps (v1 blobs stay readable); answers language-neutral (option ids), so distributions aggregate across languages; new Consent question type; preset auto-translate endpoint. Closes v3's FI2.1/FI2.4/FI5.1 and v2's FI4
+- [x] **Glossary translate (ADR-061) + batch translate-all (ADR-062)** — per-term and whole-language translation, one quota call per target language; the missing button styles fixed (v3's FI8.2)
+- [x] **Private-post copy protection (ADR-063)** — `Draft.DisableCopy`, `user-select:none` + copy/context-menu block scoped to the post sheet, deterrent-not-protection wording. Closes v3's FI3.1
+- [x] **ADR-064 — per-draft primary language + DraftRevision history + publish-diff guard**, written by Codex 29.07 — audited and **corrected 30.07 as ADR-065**. The audit confirmed the direction and found 9 major defects; all are fixed: the guard is enforced server-side by fingerprint (it was decoration), covers the blog, keys off the server's answer rather than a public post URL, and shows every live language; `PrimaryLanguage` replaced the remaining `"ru"` literals in static/ZIP export, AI edit and the v1 form slot; one content-language list instead of two overlapping ones; revisions dedup, prune and get deleted with their draft; no-op saves no longer bump `UpdatedAt` (which closes the long-standing `IB3` false-dirty bug). Zero migration — Codex's is sound and unchanged. 12 new tests. **Not live-verified or deployed.** **Do not build on ADR-064's incremental-translation claim — explicitly withdrawn in ADR-065, it was documented but never implemented** (T-015)
+
+**Open remainder of sweep v3** (see `docs/BACKLOG.md`): OP1-3 (T-009/T-010/T-011), FI1 (T-030), FI2.2/2.3 (T-031/T-032), FI4 (T-034), FI5.2 (T-033), FI6.1-4 (T-035…T-038), FI7 (T-039), FI8.1 (T-040), FI9 (T-041).
+
 ### Phase 9d — Live-review fixes — 27.07.2026
 Six items from Marty reviewing the 0.9.2 deploy in a browser. Full write-up in `CHANGELOG.md`.
 
@@ -311,7 +326,7 @@ Executing `_Documents_/CedarClerk/Input.md` (32 items). Full text and the per-it
 - [~] IT2 — **declined by Marty 27.07.2026**: toolbar customization stays. It also stopped being a standalone question once `I14` moved it into the editor's Appearance panel — removing it now would gut half of that panel
 
 **Features**
-- [ ] IF2 — Admin panel: users, posts, invite codes, invite attribution, subscription activation (High) — the largest item across all three lists; needs a role concept, a migration and admin-only endpoints, none of which exist. Same initiative as `docs/BACKLOG.md` idea #12
+- [x] IF2 — Admin panel (High) — **this row had gone stale: the panel was fully built 27.07.2026** (all 5 steps of `docs/admin-panel-scope.md`: roles, plan/expiry management, invite-code entity + attribution, cross-owner post list, payments/storage/AI usage, audit log with paging; gate live-verified by Marty). See `TASKS.md` "Admin panel (IF2)"
 - [x] IF1 — avatar upload (27.07.2026). `ApplicationUser.AvatarUrl` (migration `AddAvatarUrl`) holding a `/media/...` path, because the file goes through the ordinary asset upload — same type whitelist, same storage quota, same public serving, no second pipeline. `POST /api/auth/avatar` only records which uploaded image it is, and **rejects anything not starting `/media/`**: accepting an arbitrary URL would let a profile point the app's own chrome at someone else's server. Shown in the shared account menu and the Settings profile card; null keeps the initial-letter placeholder
 
 ---

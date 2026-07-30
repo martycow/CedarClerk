@@ -7,7 +7,9 @@ namespace CedarClerk.Server;
 
 public static class ScheduledPostEndpoints
 {
-    public record ScheduleRequest(Guid DraftId, string ChatId, DateTime ScheduledAtUtc, string Format = Consts.ContentTypes.Markdown, string Language = Languages.Primary);
+    // Language nullable rather than a literal default — it resolves against the draft's own
+    // primary language (ADR-064), which is not Russian for every draft any more.
+    public record ScheduleRequest(Guid DraftId, string ChatId, DateTime ScheduledAtUtc, string Format = Consts.ContentTypes.Markdown, string? Language = null);
 
     public static void MapScheduledPostEndpoints(this WebApplication app)
     {
@@ -44,18 +46,19 @@ public static class ScheduledPostEndpoints
         app.MapPost("/api/posts/schedule", async (ScheduleRequest req, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var draftExists = await db.Drafts.AnyAsync(d => d.Id == req.DraftId && d.OwnerId == uid);
-            if (!draftExists)
+            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == req.DraftId && d.OwnerId == uid);
+            if (draft is null)
                 return Results.NotFound(new { error = "Draft not found" });
             
             if (await SubscriptionPlan.ResolveOwnedChannelAsync(db, uid, req.ChatId) is null)
                 return Results.Json(new { error = "You can only schedule posts to your connected channels — connect this channel first (Channels popup)" }, statusCode: StatusCodes.Status403Forbidden);
 
-            if (req.Language != Languages.Primary)
+            var language = req.Language ?? draft.PrimaryLanguage;
+            if (language != draft.PrimaryLanguage)
             {
-                var hasTranslation = await db.DraftTranslations.AnyAsync(t => t.DraftId == req.DraftId && t.Language == req.Language);
+                var hasTranslation = await db.DraftTranslations.AnyAsync(t => t.DraftId == req.DraftId && t.Language == language);
                 if (!hasTranslation)
-                    return Results.BadRequest(new { error = $"No {req.Language.ToUpperInvariant()} version of this draft" });
+                    return Results.BadRequest(new { error = ErrorMessages.NoVersionInLanguage(language) });
             }
 
             var post = new ScheduledPost
@@ -65,7 +68,7 @@ public static class ScheduledPostEndpoints
                 ScheduledAtUtc = req.ScheduledAtUtc,
                 OwnerId = uid,
                 Format = req.Format,
-                Language = req.Language,
+                Language = language,
             };
             db.ScheduledPosts.Add(post);
             await db.SaveChangesAsync();

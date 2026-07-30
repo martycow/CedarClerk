@@ -1,0 +1,165 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+
+namespace CedarClerk.Server;
+
+public static class DraftRevisionService
+{
+    public static class Kinds
+    {
+        public const string Save = "save";
+        public const string Telegram = "telegram";
+        public const string Blog = "blog";
+    }
+
+    // ADR-065 — a ceiling on the *edit* history only. The autosave fires on every pause in typing,
+    // so without one a few weeks of writing is hundreds of megabytes of near-identical documents in
+    // a SQLite file that gets copied to a microSD every night. Publication revisions are never
+    // pruned: they are the baselines the publish guard diffs against.
+    private const int MaxSaveRevisionsPerLanguage = 50;
+
+    /// <summary>
+    /// Records a revision unless the newest one for the same target already holds this exact
+    /// content. Adds to the change tracker — the caller still owns <c>SaveChangesAsync</c>.
+    /// </summary>
+    public static async Task RecordAsync(CedarDbContext db, Guid draftId, string language, string title, string cedarJson,
+        string kind = Kinds.Save, string? destination = null, CancellationToken ct = default)
+    {
+        var latest = await db.DraftRevisions
+            .Where(r => r.DraftId == draftId && r.Language == language && r.Kind == kind && r.Destination == destination)
+            .OrderByDescending(r => r.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+        // Deliberately compares the content itself rather than a timestamp: the point is to keep
+        // one row per *distinct* version, and two saves a second apart usually differ by nothing.
+        if (latest is not null && latest.Title == title && latest.CedarJson == cedarJson) return;
+
+        db.DraftRevisions.Add(new DraftRevision
+        {
+            DraftId = draftId, Language = language, Title = title, CedarJson = cedarJson,
+            Kind = kind, Destination = destination,
+        });
+
+        if (kind == Kinds.Save) await PruneSavesAsync(db, draftId, language, ct);
+    }
+
+    private static async Task PruneSavesAsync(CedarDbContext db, Guid draftId, string language, CancellationToken ct)
+    {
+        var cutoff = await db.DraftRevisions
+            .Where(r => r.DraftId == draftId && r.Language == language && r.Kind == Kinds.Save)
+            .OrderByDescending(r => r.CreatedAt)
+            .Skip(MaxSaveRevisionsPerLanguage - 1)
+            .Select(r => (DateTime?)r.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+        if (cutoff is null) return;
+
+        await db.DraftRevisions
+            .Where(r => r.DraftId == draftId && r.Language == language && r.Kind == Kinds.Save && r.CreatedAt <= cutoff)
+            .ExecuteDeleteAsync(ct);
+    }
+
+    /// <summary>
+    /// The stored content for a language: the draft's own slot when it is that draft's primary
+    /// language, its translation row otherwise. Null when no such version exists.
+    /// </summary>
+    public static async Task<(string Title, string CedarJson)?> ResolveAsync(CedarDbContext db, Draft draft, string language, CancellationToken ct = default)
+    {
+        if (language == draft.PrimaryLanguage)
+            return (draft.Title, draft.CedarJson);
+        var translation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == draft.Id && t.Language == language, ct);
+        return translation is null ? null : (translation.Title, translation.CedarJson);
+    }
+
+    /// <summary>
+    /// Identifies an exact version of a document. Short on purpose — it travels to the browser and
+    /// back as the "this is what I was shown" token of the publish guard, and 64 bits of a SHA-256
+    /// is far past what an accidental collision between two versions of one post would need.
+    /// </summary>
+    public static string Fingerprint(string title, string cedarJson)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(title + "\n" + cedarJson));
+        return Convert.ToHexString(bytes)[..16];
+    }
+
+    public static int BlockCount(string cedarJson) => Blocks(cedarJson).Count;
+
+    public record PublishPreview(string Language, bool PublishedBefore, string Fingerprint, object? Diff);
+
+    /// <summary>
+    /// What an update to <paramref name="kind"/>/<paramref name="destination"/> would change, diffed
+    /// against the content actually sent there last time. Null when the draft has no such language.
+    /// </summary>
+    public static async Task<PublishPreview?> PreviewAsync(CedarDbContext db, Draft draft, string language,
+        string kind, string? destination, CancellationToken ct = default)
+    {
+        var current = await ResolveAsync(db, draft, language, ct);
+        if (current is null) return null;
+
+        var previous = await LastPublishedAsync(db, draft.Id, language, kind, destination, ct);
+        return new PublishPreview(language, previous is not null,
+            Fingerprint(current.Value.Title, current.Value.CedarJson),
+            previous is null ? null : Diff(previous.CedarJson, current.Value.CedarJson));
+    }
+
+    /// <summary>
+    /// ADR-065 — the publish guard, enforced here rather than trusted to the client. A first
+    /// publication to a target needs no confirmation (there is nothing to overwrite); overwriting
+    /// one requires the caller to name the exact version it showed the user.
+    /// </summary>
+    public static async Task<bool> ConfirmationSatisfiedAsync(CedarDbContext db, Draft draft, string language,
+        string kind, string? destination, string? confirmedFingerprint, CancellationToken ct = default)
+    {
+        if (await LastPublishedAsync(db, draft.Id, language, kind, destination, ct) is null) return true;
+
+        var current = await ResolveAsync(db, draft, language, ct);
+        if (current is null) return true; // nothing to publish; the caller's own 404 is the better error
+        return confirmedFingerprint == Fingerprint(current.Value.Title, current.Value.CedarJson);
+    }
+
+    private static Task<DraftRevision?> LastPublishedAsync(CedarDbContext db, Guid draftId, string language,
+        string kind, string? destination, CancellationToken ct) =>
+        db.DraftRevisions
+            .Where(r => r.DraftId == draftId && r.Language == language && r.Kind == kind && r.Destination == destination)
+            .OrderByDescending(r => r.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+    // Top-level TipTap blocks correspond to the editor's visible lines/blocks closely enough for
+    // a publication warning. It intentionally does not pretend to be a character-perfect diff.
+    public static object Diff(string beforeJson, string afterJson)
+    {
+        var before = Blocks(beforeJson);
+        var after = Blocks(afterJson);
+        var n = before.Count; var m = after.Count;
+        var dp = new int[n + 1, m + 1];
+        for (var i = n - 1; i >= 0; i--)
+        for (var j = m - 1; j >= 0; j--)
+            dp[i, j] = before[i] == after[j] ? dp[i + 1, j + 1] : Math.Max(dp[i + 1, j], dp[i, j + 1]);
+
+        var added = new List<int>(); var removed = new List<int>();
+        var x = 0; var y = 0;
+        while (x < n && y < m)
+        {
+            if (before[x] == after[y]) { x++; y++; }
+            else if (dp[x + 1, y] >= dp[x, y + 1]) { removed.Add(x + 1); x++; }
+            else { added.Add(y + 1); y++; }
+        }
+        while (x++ < n) removed.Add(x);
+        while (y++ < m) added.Add(y);
+        var changed = Math.Min(added.Count, removed.Count);
+        return new { beforeLines = n, afterLines = m, addedLines = added, removedLines = removed,
+            changedLines = changed, totalChanged = Math.Max(added.Count, removed.Count) };
+    }
+
+    private static List<string> Blocks(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.TryGetProperty("content", out var content) && content.ValueKind == JsonValueKind.Array
+                ? content.EnumerateArray().Select(x => x.GetRawText()).ToList() : [];
+        }
+        catch (JsonException) { return []; }
+    }
+}

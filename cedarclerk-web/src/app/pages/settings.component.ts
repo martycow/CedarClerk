@@ -5,7 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { LocaleService, UiLang } from '../core/i18n/locale.service';
 import { BillingService, BillingStatus, PlanId } from '../core/billing.service';
-import { PRIMARY_LANGUAGE, CONTENT_LANGUAGES } from '../core/languages';
+import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES } from '../core/languages';
 import { TelegramLinkService } from '../core/telegram-link.service';
 import { ChannelsService, Channel } from '../core/channels.service';
 import { AssetsService } from '../core/assets.service';
@@ -45,7 +45,7 @@ export class SettingsComponent implements OnInit {
     // FI5 — the signature text (not the URL, which isn't language-dependent) can differ per
     // content language, same "hold every language locally, one field on screen at a time" shape
     // as the cross-link texts below.
-    signatureLanguage = signal<string>(PRIMARY_LANGUAGE);
+    signatureLanguage = signal<string>(DEFAULT_PRIMARY_LANGUAGE);
     private signatureDrafts: Record<string, string> = {};
 
     authorDisplayNameText = '';
@@ -58,7 +58,7 @@ export class SettingsComponent implements OnInit {
     telegramLinkText = '';
     // Which language's cross-link wording the two fields above are editing. Switching reloads
     // them from whichever map holds that language.
-    linkTextLanguage = signal<string>(PRIMARY_LANGUAGE);
+    linkTextLanguage = signal<string>(DEFAULT_PRIMARY_LANGUAGE);
     private linkTextDrafts: Record<string, { blog: string; telegram: string }> = {};
     readonly contentLanguages = CONTENT_LANGUAGES;
     headerSlot1: string | null = null;
@@ -203,7 +203,7 @@ export class SettingsComponent implements OnInit {
         this.signatureError.set(null);
         try {
             await this.auth.saveSignature(
-                this.signatureDrafts[PRIMARY_LANGUAGE] ?? '', this.signatureUrlText, this.signatureTextMap());
+                this.signatureDrafts[DEFAULT_PRIMARY_LANGUAGE] ?? '', this.signatureUrlText, this.signatureTextMap());
             this.signatureUrlText = this.auth.postSignatureUrl() ?? '';
             this.loadSignatureTexts();
             this.signatureSaved.set(true);
@@ -218,7 +218,7 @@ export class SettingsComponent implements OnInit {
     private loadSignatureTexts() {
         this.signatureDrafts = {};
         for (const lang of CONTENT_LANGUAGES) {
-            this.signatureDrafts[lang] = lang === PRIMARY_LANGUAGE
+            this.signatureDrafts[lang] = lang === DEFAULT_PRIMARY_LANGUAGE
                 ? this.auth.postSignature() ?? ''
                 : this.auth.postSignatureTexts()[lang] ?? '';
         }
@@ -239,7 +239,7 @@ export class SettingsComponent implements OnInit {
     private signatureTextMap(): Record<string, string> {
         const map: Record<string, string> = {};
         for (const lang of CONTENT_LANGUAGES) {
-            if (lang === PRIMARY_LANGUAGE) continue;
+            if (lang === DEFAULT_PRIMARY_LANGUAGE) continue;
             const value = this.signatureDrafts[lang]?.trim();
             if (value) map[lang] = value;
         }
@@ -252,7 +252,7 @@ export class SettingsComponent implements OnInit {
     private loadLinkTexts() {
         this.linkTextDrafts = {};
         for (const lang of CONTENT_LANGUAGES) {
-            this.linkTextDrafts[lang] = lang === PRIMARY_LANGUAGE
+            this.linkTextDrafts[lang] = lang === DEFAULT_PRIMARY_LANGUAGE
                 ? { blog: this.auth.blogLinkText() ?? '', telegram: this.auth.telegramLinkText() ?? '' }
                 : { blog: this.auth.blogLinkTexts()[lang] ?? '', telegram: this.auth.telegramLinkTexts()[lang] ?? '' };
         }
@@ -284,7 +284,7 @@ export class SettingsComponent implements OnInit {
     private linkTextMap(which: 'blog' | 'telegram'): Record<string, string> {
         const map: Record<string, string> = {};
         for (const lang of CONTENT_LANGUAGES) {
-            if (lang === PRIMARY_LANGUAGE) continue;
+            if (lang === DEFAULT_PRIMARY_LANGUAGE) continue;
             const value = this.linkTextDrafts[lang]?.[which]?.trim();
             if (value) map[lang] = value;
         }
@@ -319,8 +319,8 @@ export class SettingsComponent implements OnInit {
                 socialFacebookUrl: this.socialFacebookUrlText,
                 socialYoutubeUrl: this.socialYoutubeUrlText,
                 socialGithubUrl: this.socialGithubUrlText,
-                blogLinkText: this.linkTextDrafts[PRIMARY_LANGUAGE]?.blog ?? '',
-                telegramLinkText: this.linkTextDrafts[PRIMARY_LANGUAGE]?.telegram ?? '',
+                blogLinkText: this.linkTextDrafts[DEFAULT_PRIMARY_LANGUAGE]?.blog ?? '',
+                telegramLinkText: this.linkTextDrafts[DEFAULT_PRIMARY_LANGUAGE]?.telegram ?? '',
                 blogLinkTexts: this.linkTextMap('blog'),
                 telegramLinkTexts: this.linkTextMap('telegram'),
             });

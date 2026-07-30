@@ -218,6 +218,9 @@ public class Draft
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Title { get; set; } = "Untitled";
     public string CedarJson { get; set; } = "{}";
+    // The document stored directly on Draft is the canonical version. Existing rows default to
+    // Russian, but a new draft may choose any supported content language (ADR-064).
+    public string PrimaryLanguage { get; set; } = Languages.Russian;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string OwnerId { get; set; } = default!;
@@ -359,7 +362,7 @@ public class FormPreset
     // FI4.1 — a preset is written in one language; a post published in several attaches one per
     // language. Translating the *questions* automatically was rejected: a form's wording is the
     // owner's voice talking to their reader, and a machine translation of it is not.
-    public string Language { get; set; } = Languages.Primary;
+    public string Language { get; set; } = Languages.Russian;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
@@ -379,7 +382,7 @@ public class GlossaryTerm
     // A /media/... path from the ordinary asset upload, exactly like ApplicationUser.AvatarUrl —
     // same whitelist, same quota, same public serving, no second pipeline.
     public string? ImageUrl { get; set; }
-    public string Language { get; set; } = Languages.Primary;
+    public string Language { get; set; } = Languages.Russian;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
@@ -410,6 +413,21 @@ public class DraftTranslation
     // this column (existing rows) or were never resynced since — falls back to the boolean
     // staleness indicator in that case. See ADR in docs/DECISIONS.md.
     public string? SourceSnapshotJson { get; set; }
+    public string? SourceLanguage { get; set; }
+}
+
+// Immutable, per-language content history. A row is written on every explicit content save and
+// when a version is published, so the UI can show both edit history and a safe publish diff.
+public class DraftRevision
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid DraftId { get; set; }
+    public string Language { get; set; } = Languages.Russian;
+    public string Title { get; set; } = "";
+    public string CedarJson { get; set; } = "{}";
+    public string Kind { get; set; } = "save"; // save | telegram | blog
+    public string? Destination { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 public class Channel
@@ -576,5 +594,5 @@ public class ScheduledPost
     public int? MessageId { get; set; }
     public string OwnerId { get; set; } = default!;
     public string Format { get; set; } = Consts.ContentTypes.Markdown;
-    public string Language { get; set; } = Languages.Primary;
+    public string Language { get; set; } = Languages.Russian;
 }

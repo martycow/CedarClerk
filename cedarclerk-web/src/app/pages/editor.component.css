@@ -2013,3 +2013,57 @@ input[type="datetime-local"]:focus-visible {
     font-size: 13px;
     line-height: 1;
 }
+
+/* ADR-065 — version history rows and the publish-confirmation diff. */
+.revision-row {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: var(--fs-13);
+}
+
+.revision-when { color: var(--text); }
+
+.revision-kind {
+    color: var(--t2);
+    font-size: var(--fs-12);
+}
+
+.revision-kind.publish { color: var(--accent); }
+
+.revision-lines {
+    margin-left: auto;
+    color: var(--t3);
+    font-size: var(--fs-12);
+}
+
+.empty-note { color: var(--t2); }
+
+.publish-diff {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--alt);
+}
+
+.publish-diff-head {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    flex-wrap: wrap;
+    font-size: var(--fs-13);
+}
+
+.publish-diff-head .muted { color: var(--t3); }
+
+.publish-diff-line {
+    margin-top: 4px;
+    color: var(--t2);
+    font-size: var(--fs-12);
+}
+
+.publish-diff-line.added { color: var(--ok); }
+.publish-diff-line.removed { color: var(--danger); }

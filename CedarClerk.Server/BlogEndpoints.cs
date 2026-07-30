@@ -32,22 +32,46 @@ public static class BlogEndpoints
     private record RegistrationRequest(string? Name, string? Nickname, string? Email, string? SocialLink, Dictionary<string, string>? Answers);
     private record BlogChannelInfo(string Title, string? Username, int? MemberCount);
     private record MarkSeenRequest(DateTime? SeenAt);
+    // ADR-065 — language → the fingerprint of the version the owner was shown before confirming.
+    public record PublishBlogRequest(Dictionary<string, string>? ConfirmedFingerprints = null);
 
     public static void MapBlogEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/drafts").RequireAuthorization();
 
-        group.MapPost("/{id:guid}/publish-blog", async (Guid id, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg) =>
+        group.MapPost("/{id:guid}/publish-blog", async (Guid id, PublishBlogRequest? req, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
             if (draft is null) return Results.NotFound();
+
+            var translations = await db.DraftTranslations.Where(t => t.DraftId == id).ToListAsync();
+            var languages = new List<string> { draft.PrimaryLanguage };
+            languages.AddRange(translations.Select(t => t.Language));
+
+            // ADR-065 — one click republishes every language, so every language that is already
+            // live has to be confirmed. ADR-064 claimed this guard covered the blog; it did not,
+            // which left the exact path of the 29.07 data-loss incident unprotected.
+            var stale = new List<DraftRevisionService.PublishPreview>();
+            foreach (var lang in languages)
+            {
+                var confirmed = req?.ConfirmedFingerprints?.GetValueOrDefault(lang);
+                if (await DraftRevisionService.ConfirmationSatisfiedAsync(db, draft, lang, DraftRevisionService.Kinds.Blog, null, confirmed))
+                    continue;
+                if (await DraftRevisionService.PreviewAsync(db, draft, lang, DraftRevisionService.Kinds.Blog, null) is { } preview)
+                    stale.Add(preview);
+            }
+            if (stale.Count > 0)
+                return Results.Json(new { error = ErrorMessages.PublishConfirmationStale, previews = stale }, statusCode: StatusCodes.Status409Conflict);
 
             if (!draft.IsBlogPublished || draft.BlogSlug is null)
                 draft.BlogSlug = await GenerateUniqueSlugAsync(db, draft.Id, draft.Title);
 
             draft.BlogPublishedAt ??= DateTime.UtcNow;
             draft.IsBlogPublished = true;
+            await DraftRevisionService.RecordAsync(db, id, draft.PrimaryLanguage, draft.Title, draft.CedarJson, DraftRevisionService.Kinds.Blog);
+            foreach (var translation in translations)
+                await DraftRevisionService.RecordAsync(db, id, translation.Language, translation.Title, translation.CedarJson, DraftRevisionService.Kinds.Blog);
             await db.SaveChangesAsync();
 
             var blogHost = cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost;
@@ -519,9 +543,9 @@ public static class BlogEndpoints
         // Only private posts that actually have a form configured accept submissions.
         // Validated against the form the visitor was actually shown (FI4.1) — a required question
         // that only exists in one language must not be enforced against a reader of another.
-        var submitLang = ctx.Request.Query["lang"].FirstOrDefault() is { } sq && Languages.IsTranslationLanguage(sq)
+        var submitLang = ctx.Request.Query["lang"].FirstOrDefault() is { } sq && Languages.IsContentLanguage(sq)
             ? sq
-            : Languages.Primary;
+            : draft?.PrimaryLanguage ?? Languages.Russian;
         if (draft is null || !draft.IsPrivate
             || RegistrationFormSet.Pick(draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson, submitLang) is not { } form)
         {
@@ -947,7 +971,7 @@ public static class BlogEndpoints
 
         var channel = await GetBlogChannelInfoAsync(db);
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), Languages.Primary, RenderHeader(channel)));
+        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), Languages.Russian, RenderHeader(channel)));
     }
 
     private static async Task RenderRssAsync(HttpContext ctx, CedarDbContext db)
@@ -1004,7 +1028,7 @@ public static class BlogEndpoints
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             ctx.Response.ContentType = "text/html; charset=utf-8";
-            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Primary, RenderHeader(channel)));
+            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(channel)));
             return;
         }
 
@@ -1027,9 +1051,9 @@ public static class BlogEndpoints
                 // if the owner wrote one for it, the primary-language form otherwise. It used to
                 // hardcode the primary language, so an EN reader of a private post was greeted
                 // in Russian even when an EN form existed.
-                var gateLang = ctx.Request.Query["lang"].FirstOrDefault() is { } q && Languages.IsTranslationLanguage(q)
+                var gateLang = ctx.Request.Query["lang"].FirstOrDefault() is { } q && Languages.IsContentLanguage(q)
                     ? q
-                    : Languages.Primary;
+                    : draft.PrimaryLanguage;
                 if (RegistrationFormSet.Pick(draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson, gateLang) is { } form)
                 {
                     ctx.Response.StatusCode = StatusCodes.Status200OK;
@@ -1047,7 +1071,7 @@ public static class BlogEndpoints
 
                 ctx.Response.StatusCode = StatusCodes.Status404NotFound;
                 ctx.Response.ContentType = "text/html; charset=utf-8";
-                await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Primary, RenderHeader(channel)));
+                await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(channel)));
                 return;
             }
 
@@ -1085,13 +1109,13 @@ public static class BlogEndpoints
             .ToListAsync();
 
         var requestedLang = ctx.Request.Query["lang"].FirstOrDefault();
-        var lang = Languages.Primary;
+        var lang = draft.PrimaryLanguage;
         // Idea #4 - the reader sees the article title when one is set; draft.Title is the name
         // the owner files it under, which is not the same thing.
         var title = draft.ArticleTitle ?? draft.Title;
         var cedarJson = draft.CedarJson;
         var notTranslatedNotice = "";
-        if (requestedLang is not null && requestedLang != Languages.Primary && Languages.IsTranslationLanguage(requestedLang))
+        if (requestedLang is not null && requestedLang != draft.PrimaryLanguage && Languages.ContentLanguages.Contains(requestedLang))
         {
             if (availableLanguages.Contains(requestedLang))
             {
@@ -1112,9 +1136,9 @@ public static class BlogEndpoints
         if (availableLanguages.Count > 0)
         {
             var items = new List<string>();
-            items.Add(lang == Languages.Primary
-                ? "<span class=\"lang-switch-btn current\">RU</span>"
-                : $"<a class=\"lang-switch-btn\" href=\"/{draft.BlogSlug}\">RU</a>");
+            items.Add(lang == draft.PrimaryLanguage
+                ? $"<span class=\"lang-switch-btn current\">{draft.PrimaryLanguage.ToUpperInvariant()}</span>"
+                : $"<a class=\"lang-switch-btn\" href=\"/{draft.BlogSlug}\">{draft.PrimaryLanguage.ToUpperInvariant()}</a>");
             foreach (var l in availableLanguages.OrderBy(l => l))
             {
                 items.Add(lang == l

@@ -4,7 +4,7 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { GlossaryService, GlossaryTerm } from '../core/glossary.service';
 import { AssetsService } from '../core/assets.service';
 import { httpErrorMessage } from '../core/http-error.util';
-import { PRIMARY_LANGUAGE, CONTENT_LANGUAGES, endonymOf } from '../core/languages';
+import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES, endonymOf } from '../core/languages';
 import { PageHeaderComponent } from '../shared/page-header.component';
 import { ModalComponent } from '../shared/modal.component';
 import {
@@ -30,7 +30,7 @@ export class GlossaryComponent implements OnInit {
     private assets = inject(AssetsService);
 
     readonly contentLanguages = CONTENT_LANGUAGES;
-    readonly primaryLanguage = PRIMARY_LANGUAGE;
+    readonly primaryLanguage = DEFAULT_PRIMARY_LANGUAGE;
     readonly endonymOf = endonymOf;
 
     terms = signal<GlossaryTerm[]>([]);
@@ -49,10 +49,10 @@ export class GlossaryComponent implements OnInit {
     editDescription = '';
     editAliases = '';
     editImageUrl = signal<string | null>(null);
-    editLanguage = signal<string>(PRIMARY_LANGUAGE);
+    editLanguage = signal<string>(DEFAULT_PRIMARY_LANGUAGE);
 
     // Terms are listed per language, because that is how they are matched.
-    languageFilter = signal<string>(PRIMARY_LANGUAGE);
+    languageFilter = signal<string>(DEFAULT_PRIMARY_LANGUAGE);
 
     async ngOnInit() {
         try {
@@ -66,11 +66,11 @@ export class GlossaryComponent implements OnInit {
 
     visibleTerms(): GlossaryTerm[] {
         const lang = this.languageFilter();
-        return this.terms().filter(t => (t.language || PRIMARY_LANGUAGE) === lang);
+        return this.terms().filter(t => (t.language || DEFAULT_PRIMARY_LANGUAGE) === lang);
     }
 
     countFor(lang: string): number {
-        return this.terms().filter(t => (t.language || PRIMARY_LANGUAGE) === lang).length;
+        return this.terms().filter(t => (t.language || DEFAULT_PRIMARY_LANGUAGE) === lang).length;
     }
 
     startNew() {
@@ -90,7 +90,7 @@ export class GlossaryComponent implements OnInit {
         this.editDescription = term.description;
         this.editAliases = term.aliases;
         this.editImageUrl.set(term.imageUrl);
-        this.editLanguage.set(term.language || PRIMARY_LANGUAGE);
+        this.editLanguage.set(term.language || DEFAULT_PRIMARY_LANGUAGE);
         this.editing.set(true);
         this.error.set('');
     }
@@ -190,7 +190,7 @@ export class GlossaryComponent implements OnInit {
     translateError = signal('');
 
     translateTargets(term: GlossaryTerm): string[] {
-        return this.contentLanguages.filter(l => l !== (term.language || PRIMARY_LANGUAGE));
+        return this.contentLanguages.filter(l => l !== (term.language || DEFAULT_PRIMARY_LANGUAGE));
     }
 
     openTranslate(term: GlossaryTerm) {

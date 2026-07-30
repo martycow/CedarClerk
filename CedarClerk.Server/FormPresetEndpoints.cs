@@ -20,7 +20,7 @@ public static class FormPresetEndpoints
     // Anything unrecognised means the primary language rather than an error: the language only
     // decides which readers get this form, and rejecting the write would lose the form itself.
     private static string ResolveLanguage(string? lang) =>
-        lang is not null && Languages.ContentLanguages.Contains(lang) ? lang : Languages.Primary;
+        lang is not null && Languages.ContentLanguages.Contains(lang) ? lang : Languages.Russian;
 
     public static void MapFormPresetEndpoints(this WebApplication app)
     {
@@ -107,7 +107,7 @@ public static class FormPresetEndpoints
                 return Results.Json(new { error = ErrorMessages.AutoTranslateNoProvider }, statusCode: StatusCodes.Status501NotImplemented);
 
             var upgraded = RegistrationFormTexts.UpgradeToV2(preset.FormJson, preset.Language);
-            var sourceLang = RegistrationFormSet.LanguagesWithForm(upgraded, null).FirstOrDefault() ?? Languages.Primary;
+            var sourceLang = RegistrationFormSet.LanguagesWithForm(upgraded, null).FirstOrDefault() ?? Languages.Russian;
             if (sourceLang == req.TargetLanguage)
                 return Results.BadRequest(new { error = "The form is already written in this language" });
 

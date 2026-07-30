@@ -22,8 +22,9 @@ import { AccountMenuComponent } from '../shared/account-menu.component';
 import { CountBadgeComponent } from '../shared/count-badge.component';
 import { AppearancePanelComponent } from '../shared/appearance-panel.component';
 import { NgTemplateOutlet } from '@angular/common';
-import { PostsService, PostFormat, CompressionLevel } from '../core/posts.service';
-import { PRIMARY_LANGUAGE, CONTENT_LANGUAGES, TRANSLATION_LANGUAGES, endonymOf } from '../core/languages';
+import { PostsService, PostFormat, CompressionLevel, UpdatePreview } from '../core/posts.service';
+import { DraftRevision } from '../core/drafts.service';
+import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES, endonymOf } from '../core/languages';
 import { ChannelsService, Channel, ChannelStats, KnownChat } from '../core/channels.service';
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
@@ -268,13 +269,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     readonly format: PostFormat = 'Markdown';
     // FI2.2 — languages are ticked, not picked: a post can go to Telegram in several at once,
     // one message per language. Never empty, since publishing to no language is not a request.
-    exportLangs = signal<string[]>([PRIMARY_LANGUAGE]);
+    exportLangs = signal<string[]>([DEFAULT_PRIMARY_LANGUAGE]);
     compressionLevel: CompressionLevel = 'standard';
 
     // Active content language in the editor. 'ru' edits the draft itself (primary version),
     // 'en' edits the DraftTranslation row. Only one editor instance — switching tabs flushes
     // the autosave for the language being left, then loads the other version's content.
-    lang = signal<string>(PRIMARY_LANGUAGE);
+    lang = signal<string>(DEFAULT_PRIMARY_LANGUAGE);
     // NF2 - one entry per existing translation, keyed by language code. Was a single enMeta
     // signal back when "a translation" could only mean English.
     translations = signal<Record<string, TranslationMeta>>({});
@@ -710,14 +711,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const id = this.currentId();
         if (!id || !this.editor) return;
         // A translation tab with no version yet - nothing to save (read-only there anyway)
-        if (this.lang() !== PRIMARY_LANGUAGE && !this.translationOf(this.lang())) {
+        if (this.lang() !== this.primaryLanguage && !this.translationOf(this.lang())) {
             this.saveState.set('saved');
             return;
         }
         this.saveState.set('saving');
         try {
             const json = JSON.stringify(this.editor.getJSON());
-            if (this.lang() === PRIMARY_LANGUAGE) {
+            if (this.lang() === this.primaryLanguage) {
                 const res = await this.draftsApi.update(id, this.title, json);
                 this.ruUpdatedAt.set(res.updatedAt);
                 this.refreshMeta(id, res.updatedAt);
@@ -734,7 +735,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     showEmptyState(): boolean {
-        return this.lang() !== PRIMARY_LANGUAGE && !this.translationOf(this.lang());
+        return this.lang() !== this.primaryLanguage && !this.translationOf(this.lang());
     }
 
     // Cycled by elapsed seconds (no separate timer) so a long action shows visible progress
@@ -759,7 +760,16 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     readonly contentLanguages = CONTENT_LANGUAGES;
-    readonly primaryLanguage = PRIMARY_LANGUAGE;
+    // Per-draft, never a UI/global preference. Existing drafts arrive as `ru` from the migration.
+    primaryLanguage = DEFAULT_PRIMARY_LANGUAGE;
+    revisions = signal<DraftRevision[]>([]);
+    revisionsOpen = signal(false);
+    // Every already-live language the pending publish would overwrite — all of them, because one
+    // click publishes them all and a single language's diff can hide changes in the others.
+    updateConfirm = signal<UpdatePreview[] | null>(null);
+    // language → the version the owner was shown; travels with the publish so the server can
+    // refuse anything else (ADR-065).
+    private confirmedFingerprints: Record<string, string> = {};
 
     endonym(lang: string): string {
         return endonymOf(lang);
@@ -769,13 +779,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // whatever order the server happened to return them in.
     existingLanguages(): string[] {
         const have = this.translations();
-        return TRANSLATION_LANGUAGES.filter(l => have[l]);
+        return CONTENT_LANGUAGES.filter(l => l !== this.primaryLanguage && have[l]);
     }
 
     // Languages with no version yet - offered by the "add a translation" control.
     missingLanguages(): string[] {
         const have = this.translations();
-        return TRANSLATION_LANGUAGES.filter(l => !have[l]);
+        return CONTENT_LANGUAGES.filter(l => l !== this.primaryLanguage && !have[l]);
     }
 
     // The primary version was edited after this translation was last touched - probably needs
@@ -798,9 +808,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         clearTimeout(this.saveTimer);
         if (this.saveState() !== 'saved') await this.save();
 
-        if (target === PRIMARY_LANGUAGE) {
+        if (target === this.primaryLanguage) {
             const draft = await this.draftsApi.get(id);
-            this.lang.set(PRIMARY_LANGUAGE);
+            this.lang.set(this.primaryLanguage);
             this.title = draft.title;
             this.ruUpdatedAt.set(draft.updatedAt);
             this.editor.setEditable(true);
@@ -831,6 +841,41 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.scheduleRuDiffRecompute();
     }
 
+    async makePrimary(language: string) {
+        const id = this.currentId();
+        if (!id || language === this.primaryLanguage) return;
+        clearTimeout(this.saveTimer);
+        if (this.saveState() !== 'saved') await this.save();
+        const result = await this.draftsApi.setPrimaryLanguage(id, language);
+        this.primaryLanguage = result.primaryLanguage;
+        const fresh = await this.draftsApi.get(id);
+        this.translations.set(Object.fromEntries((fresh.translations ?? []).map(t => [t.language, t])));
+        this.drafts.update(list => list.map(d => d.id === id
+            ? { ...d, primaryLanguage: this.primaryLanguage, title: fresh.title, updatedAt: fresh.updatedAt }
+            : d));
+        this.lang.set(this.primaryLanguage);
+        this.title = fresh.title;
+        // Without this the stale indicator keeps comparing against the *old* primary's timestamp
+        // and every language tab reads dirty after what is a pure relabeling.
+        this.ruUpdatedAt.set(fresh.updatedAt);
+        this.activeSourceSnapshot.set(null);
+        this.ruDiffMarkers.set([]);
+        this.editor?.commands.setContent(JSON.parse(fresh.cedarJson || EMPTY_DOC), { emitUpdate: false });
+        this.resetHistory();
+    }
+
+    revisionKindLabel(kind: string): string {
+        const v = this.t().editor.versions;
+        return kind === 'telegram' ? v.kindTelegram : kind === 'blog' ? v.kindBlog : v.kindSave;
+    }
+
+    async openRevisions() {
+        const id = this.currentId();
+        if (!id) return;
+        this.revisions.set(await this.draftsApi.revisions(id, this.lang()));
+        this.revisionsOpen.set(true);
+    }
+
     // Keeps the drafts list's language badges in step with what actually exists.
     private setTranslation(lang: string, meta: TranslationMeta | null) {
         this.translations.update(map => {
@@ -849,7 +894,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     async startVersion(copyFromRu: boolean) {
         const id = this.currentId();
         const lang = this.lang();
-        if (!id || !this.editor || lang === PRIMARY_LANGUAGE) return;
+        if (!id || !this.editor || lang === this.primaryLanguage) return;
         // Use the title as currently shown/edited, not the RU snapshot — the title field stays
         // live in the "no EN version yet" empty state, so the user may already have renamed it
         // for the English version before clicking either button here.
@@ -906,7 +951,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // Replacing an existing translation goes through a confirm modal first (see confirmTranslate()).
     autoTranslate() {
         if (!this.currentId() || !this.editor) return;
-        if (this.lang() === PRIMARY_LANGUAGE) return;
+        if (this.lang() === this.primaryLanguage) return;
         if (this.translationOf(this.lang())) {
             this.translateConfirmOpen.set(true);
             return;
@@ -1098,7 +1143,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     async deleteVersion() {
         const id = this.currentId();
         const lang = this.lang();
-        if (!id || lang === PRIMARY_LANGUAGE || !this.translationOf(lang)) return;
+        if (!id || lang === this.primaryLanguage || !this.translationOf(lang)) return;
         if (!window.confirm(this.t().editor.lang.deleteEnglishConfirm)) return;
         clearTimeout(this.saveTimer);
         this.saveState.set('saved'); // discard pending EN edits so nothing re-creates the row
@@ -1108,9 +1153,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.ruDiffMarkers.set([]);
         this.exportLangs.update(list => {
             const next = list.filter(l => l !== lang);
-            return next.length ? next : [PRIMARY_LANGUAGE];
+            return next.length ? next : [this.primaryLanguage];
         });
-        await this.switchLang(PRIMARY_LANGUAGE);
+        await this.switchLang(this.primaryLanguage);
     }
 
     private refreshMeta(id: string, updatedAt = new Date().toISOString()) {
@@ -1131,8 +1176,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             const draft = await this.draftsApi.get(id);
             this.currentId.set(id);
             this.title = draft.title;
-            this.lang.set('ru');
-            this.exportLangs.set([PRIMARY_LANGUAGE]);
+            this.primaryLanguage = draft.primaryLanguage || DEFAULT_PRIMARY_LANGUAGE;
+            this.lang.set(this.primaryLanguage);
+            this.exportLangs.set([this.primaryLanguage]);
             this.ruUpdatedAt.set(draft.updatedAt);
             this.translations.set(Object.fromEntries((draft.translations ?? []).map(t => [t.language, t])));
             this.activeSourceSnapshot.set(null);
@@ -1202,6 +1248,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             const meta: DraftMeta = {
                 id: created.id, title,
                 createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+                primaryLanguage: this.primaryLanguage,
                 blogSlug: null, isBlogPublished: false, blogPublishedAt: null,
                 languages, tags: tags.join(','),
                 isArchived: false, lastTelegramMessageId: null, lastTelegramUsername: null,
@@ -1211,11 +1258,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.drafts.update(l => [meta, ...l]);
             this.currentId.set(created.id);
             this.title = title;
-            this.lang.set('ru');
-            this.exportLangs.set([PRIMARY_LANGUAGE]);
+            this.primaryLanguage = DEFAULT_PRIMARY_LANGUAGE;
+            this.lang.set(this.primaryLanguage);
+            this.exportLangs.set([this.primaryLanguage]);
             this.ruUpdatedAt.set(meta.updatedAt);
             this.translations.set(Object.fromEntries(
-                languages.filter(l => l !== PRIMARY_LANGUAGE).map(l => [l, { language: l, title, updatedAt: meta.updatedAt }])));
+                languages.filter(l => l !== DEFAULT_PRIMARY_LANGUAGE).map(l => [l, { language: l, title, updatedAt: meta.updatedAt }])));
             this.activeSourceSnapshot.set(null);
             this.ruDiffMarkers.set([]);
             this.ruSnapshot = null;
@@ -1256,10 +1304,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.blogTicker = setInterval(() => this.blogElapsed.update(s => s + 1), 1000);
         this.blogError.set(null);
         try {
-            const res = await this.draftsApi.publishToBlog(id);
+            const res = await this.draftsApi.publishToBlog(id, this.confirmedFingerprints);
             this.currentBlog.set({ slug: res.slug, isPublished: true });
         } catch (e) {
-            this.blogError.set(httpErrorMessage(e, this.t().editor.errors.publish));
+            const status = e instanceof HttpErrorResponse ? e.status : undefined;
+            if (!(status === 409 && this.reopenConfirmFrom(e)))
+                this.blogError.set(httpErrorMessage(e, this.t().editor.errors.publish));
         } finally {
             this.blogBusy.set(false);
             clearInterval(this.blogTicker);
@@ -1444,7 +1494,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // Takes the raw blob rather than the parsed view — re-serializing the single-language
     // projection would silently strip a v2 preset's other languages (ADR-060). The displayed
     // form always comes back from the server's response, whatever shape was written.
-    private async persistRegFormJson(formJson: string | null, language = PRIMARY_LANGUAGE) {
+    private async persistRegFormJson(formJson: string | null, language = this.primaryLanguage) {
         const id = this.currentId();
         if (!id) return;
         this.regBusy.set(true);
@@ -1475,7 +1525,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // A v2 preset carries every language in one blob, so one pick attaches them all (ADR-060);
     // a legacy v1 preset still fills only its own language's slot.
     async applyFormPreset(preset: FormPreset) {
-        await this.persistRegFormJson(preset.formJson, preset.language || PRIMARY_LANGUAGE);
+        await this.persistRegFormJson(preset.formJson, preset.language || this.primaryLanguage);
     }
 
     async copyInviteLink(url: string) {
@@ -1564,6 +1614,62 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // doesn't get visually tangled with the blog's.
     async publishAll() {
         if (!this.canPublishAll()) return;
+        const id = this.currentId();
+        if (!id) return;
+
+        // ADR-065 — the pending autosave is flushed BEFORE the diff is calculated. Previewing the
+        // last-saved version and then publishing a newer one is the same defect as not previewing
+        // at all, and the debounce makes it the normal case: type, hit Update, and the paragraph
+        // just typed is not in the diff the server was asked about.
+        clearTimeout(this.saveTimer);
+        if (this.saveState() !== 'saved') await this.save();
+
+        // Whether a target is already live is the server's answer, not ours: the old condition
+        // keyed off a public post URL, which a channel with no @username never has — so exactly
+        // the private-channel case published over a live post with no confirmation at all.
+        const previews: UpdatePreview[] = [];
+        try {
+            if (this.destBlog() && this.currentBlog()?.isPublished) {
+                for (const language of this.blogLanguages())
+                    previews.push(await this.posts.updatePreview(id, 'blog', language));
+            }
+            if (this.destTelegram() && !this.scheduledAt && this.chatId.trim()) {
+                for (const language of this.exportLangs())
+                    previews.push(await this.posts.updatePreview(id, 'telegram', language, this.chatId.trim()));
+            }
+        } catch {
+            // A preview that can't be fetched must not block publishing outright — the server
+            // enforces the same rule again and answers 409 if this really was an unseen overwrite.
+        }
+
+        const live = previews.filter(p => p.publishedBefore);
+        if (live.length > 0) {
+            this.updateConfirm.set(live);
+            this.confirmedFingerprints = Object.fromEntries(previews.map(p => [p.language, p.fingerprint]));
+            return;
+        }
+        this.confirmedFingerprints = Object.fromEntries(previews.map(p => [p.language, p.fingerprint]));
+        await this.publishAllConfirmed();
+    }
+
+    // Every language the blog would republish: the primary plus each translation that exists.
+    private blogLanguages(): string[] {
+        return [this.primaryLanguage, ...this.existingLanguages()];
+    }
+
+    // Turns the server's 409 body back into the confirmation modal. Both publish endpoints answer
+    // with a freshly-calculated preview precisely so the owner can decide on what is true now.
+    private reopenConfirmFrom(e: unknown): boolean {
+        const body = e instanceof HttpErrorResponse ? e.error : null;
+        const previews: UpdatePreview[] | null = body?.previews ?? (body?.preview ? [body.preview] : null);
+        if (!previews?.length) return false;
+        for (const p of previews) this.confirmedFingerprints[p.language] = p.fingerprint;
+        this.updateConfirm.set(previews);
+        return true;
+    }
+
+    async publishAllConfirmed() {
+        this.updateConfirm.set(null);
         this.publishingAll.set(true);
         this.publishSuccess.set(null);
         clearTimeout(this.publishToastTimer);
@@ -1608,7 +1714,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             // One message per ticked language (FI2.2), sequentially — Telegram rate-limits, and a
             // failure part-way through should leave the languages already sent visibly sent.
             for (const lang of this.exportLangs()) {
-                const res = await this.posts.export(id, this.chatId.trim(), this.format, lang, this.compressionLevel);
+                const res = await this.posts.export(id, this.chatId.trim(), this.format, lang, this.compressionLevel,
+                    this.confirmedFingerprints[lang]);
                 this.exportResult.set(`✓ Published (message #${res.messageId})`);
                 const url = this.buildTelegramLink(res.chatId, res.messageId);
                 this.exportLink.set(url);
@@ -1616,6 +1723,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             }
         } catch (e) {
             const status = e instanceof HttpErrorResponse ? e.status : undefined;
+            // ADR-065 — the server refused because the post moved since the diff was shown (a
+            // second tab, a slow save). Re-open the confirmation on the fresh diff instead of
+            // reporting it as a failure: nothing is wrong, the owner just has to look again.
+            if (status === 409 && this.reopenConfirmFrom(e)) return links;
             const serverMessage = httpErrorMessage(e, '');
             const message = status === 503
                 ? `The barn door seems closed — Telegram Bot API didn't respond. Your draft is safe; nothing was published.${serverMessage ? ` (${serverMessage})` : ''}`
@@ -1982,7 +2093,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     private recomputeRuDiff() {
         const snapshot = this.activeSourceSnapshot();
-        if (!this.editor || this.lang() !== 'ru' || !snapshot) {
+        // The gutter belongs to whichever language owns the canonical document — comparing against
+        // a literal 'ru' left it dead on a draft whose primary is another language, and drew a
+        // full-document diff on the RU tab once RU became a translation (ADR-065).
+        if (!this.editor || this.lang() !== this.primaryLanguage || !snapshot) {
             this.ruDiffMarkers.set([]);
             return;
         }

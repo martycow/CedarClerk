@@ -310,5 +310,5 @@ public static class GlossaryEndpoints
     }
 
     private static string ResolveLanguage(string? lang) =>
-        lang is not null && Languages.ContentLanguages.Contains(lang) ? lang : Languages.Primary;
+        lang is not null && Languages.ContentLanguages.Contains(lang) ? lang : Languages.Russian;
 }
