@@ -10,6 +10,15 @@
             <div class="auth-tagline">{{ t().login.tagline }}</div>
         </div>
 
+        @if (auth.serverUnreachable()) {
+        <p class="session-notice">
+            {{ t().login.serverUnreachable }}
+            <button type="button" (click)="retrySession()" [disabled]="probing()">
+                {{ probing() ? t().login.retrying : t().login.retry }}
+            </button>
+        </p>
+        }
+
         <div class="field">
             <label for="cc-login-email">{{ t().login.email }}</label>
             <input id="cc-login-email" [(ngModel)]="email" placeholder="you@example.com" type="email" autocomplete="username">

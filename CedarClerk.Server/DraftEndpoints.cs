@@ -20,8 +20,11 @@ public record ImportTmpPaths(string Dir);
 
 public static class DraftEndpoints
 {
-    public record SaveDraftRequest(string Title, string CedarJson);
-    public record SaveTranslationRequest(string Title, string CedarJson);
+    // ExpectedUpdatedAt/ConfirmShrink are the two save guards (T-018.1/T-018.3) and both are
+    // optional: a client that sends neither behaves exactly as before, which keeps the Posts
+    // manager's rename-PUT and the import paths working unchanged.
+    public record SaveDraftRequest(string Title, string CedarJson, DateTime? ExpectedUpdatedAt = null, bool ConfirmShrink = false);
+    public record SaveTranslationRequest(string Title, string CedarJson, DateTime? ExpectedUpdatedAt = null, bool ConfirmShrink = false);
     public record ChangePrimaryLanguageRequest(string Language);
     public record UpdateTagsRequest(string Tags);
     public record RenameTagRequest(string From, string To);
@@ -40,6 +43,29 @@ public static class DraftEndpoints
     // ADR-058 — the local-only import-bypass request: a filename resolved only against
     // ImportTmpPaths.Dir (never an arbitrary path) and the email of the account to own the draft.
     public record LocalImportMarkdownRequest(string ZipFileName, string OwnerEmail);
+
+    // T-018.1/T-018.3, both from the 29.07.2026 wipe: the two reasons a save is refused rather
+    // than applied. Both answer 409 with a `code` the editor switches on — "stale" wants a reload,
+    // "shrink" wants an explicit confirmation. Returns null when the save may proceed.
+    private static IResult? SaveGuardFailure(DateTime storedUpdatedAt, string storedCedarJson, string incomingCedarJson,
+        DateTime? expectedUpdatedAt, bool confirmShrink)
+    {
+        // Sub-millisecond slack: the timestamp round-trips through JSON and SQLite, and a real
+        // conflicting save is seconds away, not ticks.
+        if (expectedUpdatedAt is not null && Math.Abs((storedUpdatedAt - expectedUpdatedAt.Value).TotalMilliseconds) > 1)
+            return Results.Json(new { error = ErrorMessages.SaveConflict, code = "stale", currentUpdatedAt = storedUpdatedAt },
+                statusCode: StatusCodes.Status409Conflict);
+
+        if (confirmShrink) return null;
+        var verdict = ShrinkGuard.Inspect(storedCedarJson, incomingCedarJson);
+        return verdict.Suspicious
+            ? Results.Json(new
+                {
+                    error = ErrorMessages.SaveShrinkNeedsConfirmation, code = "shrink",
+                    storedTextLength = verdict.StoredTextLength, incomingTextLength = verdict.IncomingTextLength,
+                }, statusCode: StatusCodes.Status409Conflict)
+            : null;
+    }
 
     private const int InviteEmailMaxLength = 254;
 
@@ -620,6 +646,10 @@ public static class DraftEndpoints
             if (translation is not null && translation.Title == req.Title && translation.CedarJson == req.CedarJson)
                 return Results.Ok(new { translation.Language, translation.UpdatedAt, translation.SourceSnapshotJson });
 
+            if (translation is not null &&
+                SaveGuardFailure(translation.UpdatedAt, translation.CedarJson, req.CedarJson, req.ExpectedUpdatedAt, req.ConfirmShrink) is { } refusal)
+                return refusal;
+
             if (translation is null)
             {
                 translation = new DraftTranslation { DraftId = id, Language = lang };
@@ -885,6 +915,9 @@ public static class DraftEndpoints
             // stale without the primary text having moved (the long-standing IB3).
             if (draft.Title == req.Title && draft.CedarJson == req.CedarJson)
                 return Results.Ok(new { draft.Id, draft.UpdatedAt });
+
+            if (SaveGuardFailure(draft.UpdatedAt, draft.CedarJson, req.CedarJson, req.ExpectedUpdatedAt, req.ConfirmShrink) is { } refusal)
+                return refusal;
 
             draft.Title = req.Title;
             draft.CedarJson = req.CedarJson;

@@ -15,6 +15,10 @@ public static class ErrorMessages
     // ADR-065 — the publish guard's answer to "you confirmed a diff of something else".
     public const string PublishConfirmationStale = "This post changed after the update was previewed — review the changes and confirm again.";
 
+    // T-018.1 / T-018.3 — the two ways a save is refused rather than silently applied.
+    public const string SaveShrinkNeedsConfirmation = "This save would delete most of the text — confirm that it's intentional.";
+    public const string SaveConflict = "This version was edited elsewhere after you loaded it — reload before saving.";
+
     public static string AiDailyLimitReached(int limit) => $"Daily AI limit ({limit} calls) reached — resets at midnight UTC.";
     public static string LanguageIsPrimary(string lang) => $"{lang.ToUpperInvariant()} is this draft's primary language — edit it on the main tab.";
     public static string NoVersionInLanguage(string lang) => $"No {lang.ToUpperInvariant()} version of this draft";

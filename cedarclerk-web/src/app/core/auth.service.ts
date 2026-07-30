@@ -4,6 +4,28 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { LocaleService, UiLang } from './i18n/locale.service';
 
+interface MeResponse {
+    email: string; createdAt: string | null; isAdmin: boolean; planTier: string | null; planExpiresAt: string | null; trialUsed: boolean;
+    telegramLinked: boolean; telegramUsername: string | null; telegramLinkedAt: string | null;
+    notifyOnEngagement: boolean;
+    postSignature: string | null; postSignatureUrl: string | null; postSignatureTexts?: Record<string, string>;
+    authorDisplayName: string | null; profileUrl: string | null; profileLocation: string | null;
+    headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
+    socialTwitterUrl: string | null; socialInstagramUrl: string | null; socialFacebookUrl: string | null;
+    socialYoutubeUrl: string | null; socialGithubUrl: string | null;
+    toolbarLayoutJson: string | null; appearancePrefsJson: string | null; newDraftDefaultsJson: string | null;
+    uiLanguage: string | null;
+    avatarUrl: string | null;
+    blogLinkText: string | null; telegramLinkText: string | null;
+    blogLinkTexts?: Record<string, string>; telegramLinkTexts?: Record<string, string>;
+}
+
+// 'unavailable' means the server didn't answer, NOT that nobody is signed in — see refresh().
+export type RefreshOutcome = 'ok' | 'unauthenticated' | 'unavailable';
+
+// Backoff between /me attempts; the sum is how long a guard waits before giving up (T-062).
+const MeRetryDelaysMs = [400, 1200, 3000];
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
     private http = inject(HttpClient);
@@ -51,6 +73,9 @@ export class AuthService {
     // read by whoever reads that language's version of the post.
     readonly blogLinkTexts = signal<Record<string, string>>({});
     readonly telegramLinkTexts = signal<Record<string, string>>({});
+    // True after refresh() exhausted its retries without an answer — the session is unknown, not
+    // over. The login page uses this to offer a retry instead of a "wrong password"-shaped dead end.
+    readonly serverUnreachable = signal(false);
 
     async login(email: string, password: string): Promise<boolean> {
         try {
@@ -83,93 +108,104 @@ export class AuthService {
         return 'Registration failed';
     }
 
-    async refresh(): Promise<void> {
-        try {
-            const me = await firstValueFrom(this.http.get<{
-                email: string; createdAt: string | null; isAdmin: boolean; planTier: string | null; planExpiresAt: string | null; trialUsed: boolean;
-                telegramLinked: boolean; telegramUsername: string | null; telegramLinkedAt: string | null;
-                notifyOnEngagement: boolean;
-                postSignature: string | null; postSignatureUrl: string | null; postSignatureTexts?: Record<string, string>;
-                authorDisplayName: string | null; profileUrl: string | null; profileLocation: string | null;
-                headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
-                socialTwitterUrl: string | null; socialInstagramUrl: string | null; socialFacebookUrl: string | null;
-                socialYoutubeUrl: string | null; socialGithubUrl: string | null;
-                toolbarLayoutJson: string | null; appearancePrefsJson: string | null; newDraftDefaultsJson: string | null;
-                uiLanguage: string | null;
-                avatarUrl: string | null;
-                blogLinkText: string | null; telegramLinkText: string | null;
-                blogLinkTexts?: Record<string, string>; telegramLinkTexts?: Record<string, string>;
-            }>('/api/auth/me'));
-            this.userEmail.set(me.email);
-            this.createdAt.set(me.createdAt);
-            this.isAdmin.set(me.isAdmin);
-            this.planTier.set(me.planTier);
-            this.planExpiresAt.set(me.planExpiresAt);
-            this.trialUsed.set(me.trialUsed);
-            this.telegramLinked.set(me.telegramLinked);
-            this.telegramUsername.set(me.telegramUsername);
-            this.telegramLinkedAt.set(me.telegramLinkedAt);
-            this.notifyOnEngagement.set(me.notifyOnEngagement);
-            this.postSignature.set(me.postSignature);
-            this.postSignatureUrl.set(me.postSignatureUrl);
-            this.postSignatureTexts.set(me.postSignatureTexts ?? {});
-            this.authorDisplayName.set(me.authorDisplayName);
-            this.profileUrl.set(me.profileUrl);
-            this.profileLocation.set(me.profileLocation);
-            this.headerSlot1Type.set(me.headerSlot1Type);
-            this.headerSlot2Type.set(me.headerSlot2Type);
-            this.headerSlot3Type.set(me.headerSlot3Type);
-            this.socialTwitterUrl.set(me.socialTwitterUrl);
-            this.socialInstagramUrl.set(me.socialInstagramUrl);
-            this.socialFacebookUrl.set(me.socialFacebookUrl);
-            this.socialYoutubeUrl.set(me.socialYoutubeUrl);
-            this.socialGithubUrl.set(me.socialGithubUrl);
-            this.toolbarLayoutJson.set(me.toolbarLayoutJson);
-            this.appearancePrefsJson.set(me.appearancePrefsJson);
-            this.newDraftDefaultsJson.set(me.newDraftDefaultsJson);
-            this.uiLanguage.set(me.uiLanguage);
-            this.avatarUrl.set(me.avatarUrl);
-            this.blogLinkText.set(me.blogLinkText);
-            this.telegramLinkText.set(me.telegramLinkText);
-            this.blogLinkTexts.set(me.blogLinkTexts ?? {});
-            this.telegramLinkTexts.set(me.telegramLinkTexts ?? {});
-            // The profile wins over the localStorage cache the service started from (ADR-044).
-            this.locale.adoptProfileLanguage(me.uiLanguage);
-        } catch {
-            this.userEmail.set(null);
-            this.createdAt.set(null);
-            this.isAdmin.set(false);
-            this.planTier.set(null);
-            this.planExpiresAt.set(null);
-            this.trialUsed.set(false);
-            this.telegramLinked.set(false);
-            this.telegramUsername.set(null);
-            this.telegramLinkedAt.set(null);
-            this.notifyOnEngagement.set(false);
-            this.postSignature.set(null);
-            this.postSignatureUrl.set(null);
-            this.postSignatureTexts.set({});
-            this.authorDisplayName.set(null);
-            this.profileUrl.set(null);
-            this.profileLocation.set(null);
-            this.headerSlot1Type.set(null);
-            this.headerSlot2Type.set(null);
-            this.headerSlot3Type.set(null);
-            this.socialTwitterUrl.set(null);
-            this.socialInstagramUrl.set(null);
-            this.socialFacebookUrl.set(null);
-            this.socialYoutubeUrl.set(null);
-            this.socialGithubUrl.set(null);
-            this.toolbarLayoutJson.set(null);
-            this.appearancePrefsJson.set(null);
-            this.newDraftDefaultsJson.set(null);
-            this.uiLanguage.set(null);
-            this.avatarUrl.set(null);
-            this.blogLinkText.set(null);
-            this.telegramLinkText.set(null);
-            this.blogLinkTexts.set({});
-            this.telegramLinkTexts.set({});
+    // A failed /api/auth/me is not proof of a logout (T-062): the auth cookie lives 30 days and
+    // survives network blips, 5xx and the 502 Cloudflare answers with while the Pi restarts
+    // mid-deploy. Only a 401 clears the session; anything else is retried and then reported as
+    // 'unavailable' with the current state left untouched.
+    async refresh(): Promise<RefreshOutcome> {
+        for (let attempt = 0; ; attempt++) {
+            try {
+                const me = await firstValueFrom(this.http.get<MeResponse>('/api/auth/me'));
+                this.applyMe(me);
+                this.serverUnreachable.set(false);
+                return 'ok';
+            } catch (e) {
+                if (e instanceof HttpErrorResponse && e.status === 401) {
+                    this.clearSession();
+                    this.serverUnreachable.set(false);
+                    return 'unauthenticated';
+                }
+                if (attempt >= MeRetryDelaysMs.length) {
+                    this.serverUnreachable.set(true);
+                    return 'unavailable';
+                }
+                await new Promise(resolve => setTimeout(resolve, MeRetryDelaysMs[attempt]));
+            }
         }
+    }
+
+    private applyMe(me: MeResponse): void {
+        this.userEmail.set(me.email);
+        this.createdAt.set(me.createdAt);
+        this.isAdmin.set(me.isAdmin);
+        this.planTier.set(me.planTier);
+        this.planExpiresAt.set(me.planExpiresAt);
+        this.trialUsed.set(me.trialUsed);
+        this.telegramLinked.set(me.telegramLinked);
+        this.telegramUsername.set(me.telegramUsername);
+        this.telegramLinkedAt.set(me.telegramLinkedAt);
+        this.notifyOnEngagement.set(me.notifyOnEngagement);
+        this.postSignature.set(me.postSignature);
+        this.postSignatureUrl.set(me.postSignatureUrl);
+        this.postSignatureTexts.set(me.postSignatureTexts ?? {});
+        this.authorDisplayName.set(me.authorDisplayName);
+        this.profileUrl.set(me.profileUrl);
+        this.profileLocation.set(me.profileLocation);
+        this.headerSlot1Type.set(me.headerSlot1Type);
+        this.headerSlot2Type.set(me.headerSlot2Type);
+        this.headerSlot3Type.set(me.headerSlot3Type);
+        this.socialTwitterUrl.set(me.socialTwitterUrl);
+        this.socialInstagramUrl.set(me.socialInstagramUrl);
+        this.socialFacebookUrl.set(me.socialFacebookUrl);
+        this.socialYoutubeUrl.set(me.socialYoutubeUrl);
+        this.socialGithubUrl.set(me.socialGithubUrl);
+        this.toolbarLayoutJson.set(me.toolbarLayoutJson);
+        this.appearancePrefsJson.set(me.appearancePrefsJson);
+        this.newDraftDefaultsJson.set(me.newDraftDefaultsJson);
+        this.uiLanguage.set(me.uiLanguage);
+        this.avatarUrl.set(me.avatarUrl);
+        this.blogLinkText.set(me.blogLinkText);
+        this.telegramLinkText.set(me.telegramLinkText);
+        this.blogLinkTexts.set(me.blogLinkTexts ?? {});
+        this.telegramLinkTexts.set(me.telegramLinkTexts ?? {});
+        // The profile wins over the localStorage cache the service started from (ADR-044).
+        this.locale.adoptProfileLanguage(me.uiLanguage);
+    }
+
+    private clearSession(): void {
+        this.userEmail.set(null);
+        this.createdAt.set(null);
+        this.isAdmin.set(false);
+        this.planTier.set(null);
+        this.planExpiresAt.set(null);
+        this.trialUsed.set(false);
+        this.telegramLinked.set(false);
+        this.telegramUsername.set(null);
+        this.telegramLinkedAt.set(null);
+        this.notifyOnEngagement.set(false);
+        this.postSignature.set(null);
+        this.postSignatureUrl.set(null);
+        this.postSignatureTexts.set({});
+        this.authorDisplayName.set(null);
+        this.profileUrl.set(null);
+        this.profileLocation.set(null);
+        this.headerSlot1Type.set(null);
+        this.headerSlot2Type.set(null);
+        this.headerSlot3Type.set(null);
+        this.socialTwitterUrl.set(null);
+        this.socialInstagramUrl.set(null);
+        this.socialFacebookUrl.set(null);
+        this.socialYoutubeUrl.set(null);
+        this.socialGithubUrl.set(null);
+        this.toolbarLayoutJson.set(null);
+        this.appearancePrefsJson.set(null);
+        this.newDraftDefaultsJson.set(null);
+        this.uiLanguage.set(null);
+        this.avatarUrl.set(null);
+        this.blogLinkText.set(null);
+        this.telegramLinkText.set(null);
+        this.blogLinkTexts.set({});
+        this.telegramLinkTexts.set({});
     }
 
     async saveSignature(signature: string, signatureUrl: string, signatureTexts?: Record<string, string>): Promise<void> {
@@ -256,7 +292,8 @@ export class AuthService {
 
     async logout(): Promise<void> {
         try { await firstValueFrom(this.http.post('/api/auth/logout', {})); } catch { }
-        this.userEmail.set(null);
+        this.clearSession();
+        this.serverUnreachable.set(false);
         this.router.navigateByUrl('/login');
     }
 }

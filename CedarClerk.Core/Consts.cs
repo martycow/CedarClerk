@@ -5,7 +5,17 @@ public static class Consts
     public const string CurrentVersion = "0.9.15";
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
-    
+
+    // Cookie MaxAge and the auth ticket's own expiry must be the same number — see Program.cs.
+    public static readonly TimeSpan AuthCookieLifetime = TimeSpan.FromDays(30);
+
+    // Part of the data-protection purpose string, so changing it invalidates every existing auth
+    // cookie. This is the value ASP.NET already derived implicitly (IHostEnvironment.ApplicationName
+    // = the server assembly name); pinned only so a project rename can't silently sign everyone
+    // out (T-074).
+    public const string DataProtectionApplicationName = "CedarClerk.Server";
+
+
     public static class ContentTypes
     {
         public const string PlainText = "PlainText";

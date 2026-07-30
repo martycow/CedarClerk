@@ -2,6 +2,7 @@
 using CedarClerk.Server;
 using CedarClerk.Server.Bot;
 using CedarClerk.Server.Email;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -31,14 +32,23 @@ var dbPath = Path.Combine(dataDir, Consts.DbFileName);
 // ADR-058 — where a zip too large for Cloudflare's edge (~100MB) is scp'd for the local-only
 // import bypass. Under dataDir so it's covered by the existing backup cron.
 var importTmpDir = Path.Combine(dataDir, "import-tmp");
+// T-074 — the keys that decrypt every auth cookie. ASP.NET's default location
+// (~/.aspnet/DataProtection-Keys) is outside dataDir, so the backup cron never saw them and a Pi
+// OS reinstall would have signed everyone out irrecoverably.
+var dataProtectionKeysDir = Path.Combine(dataDir, "dataprotection-keys");
 
 Directory.CreateDirectory(dataDir);
 Directory.CreateDirectory(mediaDir);
 Directory.CreateDirectory(importTmpDir);
+Directory.CreateDirectory(dataProtectionKeysDir);
 #endregion
 
 #region Services
 builder.Services.AddDbContext<CedarDbContext>(dbContextBuilder => dbContextBuilder.UseSqlite($"Data Source={dbPath}"));
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysDir))
+    .SetApplicationName(Consts.DataProtectionApplicationName);
 
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
     .AddIdentityCookies();
@@ -56,7 +66,11 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 builder.Services.ConfigureApplicationCookie(o =>
 {
     o.Cookie.HttpOnly = true;
-    o.Cookie.MaxAge = TimeSpan.FromDays(30);
+    o.Cookie.MaxAge = Consts.AuthCookieLifetime;
+    // Without this the ticket inside the cookie expires after Identity's default 14 days while the
+    // cookie itself lives 30 — the shorter one wins and looks like a random logout (T-062).
+    o.ExpireTimeSpan = Consts.AuthCookieLifetime;
+    o.SlidingExpiration = true;
     o.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = 401; return Task.CompletedTask; };
     o.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = 403; return Task.CompletedTask; };
 });

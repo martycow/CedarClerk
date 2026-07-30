@@ -14,6 +14,7 @@ import {
     DraftsService, DraftMeta, TranslationMeta, TranslationFull, AiEditKind, AiEditResult, PostInvite,
     RegistrationForm, parseRegistrationForm, WATERMARK_MAX_LENGTH,
     DRAFT_TITLE_MAX, EMPTY_DOC, AI_OPERATION_TIMEOUT_MS, AUTO_TRANSLATE_TIMEOUT_MS,
+    SaveGuards, SaveRefusal, saveRefusalOf,
 } from '../core/drafts.service';
 import { FormPresetsService, FormPreset } from '../core/form-presets.service';
 import { CommentsService } from '../core/comments.service';
@@ -118,6 +119,13 @@ function toDatetimeLocalValue(date: Date): string {
 }
 
 type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
+
+const AUTOSAVE_DEBOUNCE_MS = 1200;
+// T-018.6 — widening gaps, then the manual "retry" button takes over rather than hammering on.
+const SAVE_RETRY_DELAYS_MS = [2000, 5000, 15000];
+// T-018.2 — the browser caps a keepalive body at 64KB; Cyrillic is 2 bytes per character, so this
+// stays comfortably under it in the worst case rather than at the theoretical edge.
+const KEEPALIVE_MAX_CHARS = 30_000;
 
 // Distinguishes "the client gave up polling" from any other rejection in pollAiJob's callers,
 // same role TimeoutError used to play for the old RxJS-based autoTranslate$/aiEdit$.
@@ -257,6 +265,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     title = '';
 
     private saveTimer?: ReturnType<typeof setTimeout>;
+    private saveRetryTimer?: ReturnType<typeof setTimeout>;
+    private saveAttempt = 0;
+    // T-018 — set when the server refused a save; the editor asks the author instead of retrying.
+    saveRefusal = signal<SaveRefusal | null>(null);
 
     private posts = inject(PostsService); // + import сверху
     private channelsApi = inject(ChannelsService);
@@ -562,12 +574,16 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     retrySave() {
+        this.saveAttempt = 0;
+        this.saveRefusal.set(null);
         this.save();
     }
 
     async ngAfterViewInit() {
         this.syncStatusBarHeight();
         this.statusBarMq.addEventListener('change', this.syncStatusBarHeight);
+        document.addEventListener('visibilitychange', this.onVisibilityChange);
+        window.addEventListener('pagehide', this.onPageHide);
 
         // Feeds the badge on the Posts Manager link (N3) — fire-and-forget, never blocks setup.
         this.feedback.refreshNewCount();
@@ -687,8 +703,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     ngOnDestroy() {
         this.statusBarMq.removeEventListener('change', this.syncStatusBarHeight);
+        document.removeEventListener('visibilitychange', this.onVisibilityChange);
+        window.removeEventListener('pagehide', this.onPageHide);
         this.debugLog.hostBarHeight.set(0);
         clearTimeout(this.saveTimer);
+        clearTimeout(this.saveRetryTimer);
         clearTimeout(this.aiToastTimer);
         clearTimeout(this.publishToastTimer);
         clearInterval(this.aiEditTicker);
@@ -704,10 +723,18 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     markDirty() {
         this.saveState.set('dirty');
         clearTimeout(this.saveTimer);
-        this.saveTimer = setTimeout(() => this.save(), 1200);
+        this.saveTimer = setTimeout(() => this.save(), AUTOSAVE_DEBOUNCE_MS);
     }
 
-    private async save() {
+    // The version of the active language as the server last reported it — the token that makes a
+    // save conditional (T-018.3). Empty means "no baseline", and the server then skips the check.
+    private expectedUpdatedAt(): string | null {
+        return this.lang() === this.primaryLanguage
+            ? this.ruUpdatedAt() || null
+            : this.translationOf(this.lang())?.updatedAt ?? null;
+    }
+
+    private async save(opts: { confirmShrink?: boolean; ignoreExpected?: boolean } = {}) {
         const id = this.currentId();
         if (!id || !this.editor) return;
         // A translation tab with no version yet - nothing to save (read-only there anyway)
@@ -715,23 +742,120 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.saveState.set('saved');
             return;
         }
+        clearTimeout(this.saveTimer);
+        clearTimeout(this.saveRetryTimer);
         this.saveState.set('saving');
+        const guards: SaveGuards = {
+            expectedUpdatedAt: opts.ignoreExpected ? null : this.expectedUpdatedAt(),
+            confirmShrink: opts.confirmShrink ?? false,
+        };
         try {
             const json = JSON.stringify(this.editor.getJSON());
             if (this.lang() === this.primaryLanguage) {
-                const res = await this.draftsApi.update(id, this.title, json);
+                const res = await this.draftsApi.update(id, this.title, json, guards);
                 this.ruUpdatedAt.set(res.updatedAt);
                 this.refreshMeta(id, res.updatedAt);
             } else {
                 const lang = this.lang();
-                const res = await this.draftsApi.saveTranslation(id, lang, this.title, json);
+                const res = await this.draftsApi.saveTranslation(id, lang, this.title, json, guards);
                 this.setTranslation(lang, { language: lang, title: this.title, updatedAt: res.updatedAt });
                 this.activeSourceSnapshot.set(res.sourceSnapshotJson);
             }
+            this.saveAttempt = 0;
             this.saveState.set('saved');
-        } catch {
+        } catch (e) {
+            // A refusal is not a failure to reach the server — the server understood and said no.
+            // Retrying it would just fail identically; the author decides (T-018.1/T-018.3).
+            const refusal = saveRefusalOf(e);
+            if (refusal) {
+                this.saveRefusal.set(refusal);
+                this.saveState.set('dirty');
+                return;
+            }
             this.saveState.set('error');
+            this.scheduleSaveRetry();
         }
+    }
+
+    // T-018.6 — a failed autosave used to leave "Sync failed" on screen and wait for the next
+    // keystroke to try again. Retries on its own with a widening gap, then stops and leaves the
+    // manual button; the state stays 'error' throughout, so the bar never lies about being saved.
+    private scheduleSaveRetry() {
+        if (this.saveAttempt >= SAVE_RETRY_DELAYS_MS.length) return;
+        const delay = SAVE_RETRY_DELAYS_MS[this.saveAttempt++];
+        clearTimeout(this.saveRetryTimer);
+        this.saveRetryTimer = setTimeout(() => this.save(), delay);
+    }
+
+    // The author agreed to a save the shrink guard stopped.
+    confirmRefusedSave() {
+        const refusal = this.saveRefusal();
+        this.saveRefusal.set(null);
+        this.saveAttempt = 0;
+        this.save(refusal?.code === 'stale' ? { ignoreExpected: true } : { confirmShrink: true });
+    }
+
+    // "Give me back what's stored" — the recovery the 29.07 wipe had no button for. Deliberately
+    // not openDraft(), which refuses to reopen the draft already open and would flush the very
+    // save being discarded.
+    async reloadStoredVersion() {
+        const id = this.currentId();
+        this.saveRefusal.set(null);
+        clearTimeout(this.saveTimer);
+        clearTimeout(this.saveRetryTimer);
+        this.saveAttempt = 0;
+        if (!id || !this.editor) return;
+        const lang = this.lang();
+        if (lang === this.primaryLanguage) {
+            const draft = await this.draftsApi.get(id);
+            this.title = draft.title;
+            this.ruUpdatedAt.set(draft.updatedAt);
+            this.editor.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC), { emitUpdate: false });
+        } else {
+            const translation = await this.draftsApi.getTranslation(id, lang);
+            this.title = translation.title;
+            this.setTranslation(lang, { language: lang, title: translation.title, updatedAt: translation.updatedAt });
+            this.activeSourceSnapshot.set(translation.sourceSnapshotJson);
+            this.editor.commands.setContent(JSON.parse(translation.cedarJson || EMPTY_DOC), { emitUpdate: false });
+        }
+        this.resetHistory();
+        this.saveState.set('saved');
+    }
+
+    // T-018.2 — iOS kills a backgrounded tab's timers, so a pending 1.2s autosave simply never
+    // fires and the edits die with the tab (the 29.07 incident's second half). Both events still
+    // run while the page is alive; `keepalive` lets the request outlive it.
+    private onVisibilityChange = () => {
+        if (document.visibilityState === 'hidden') this.flushPendingSave();
+    };
+    private onPageHide = () => this.flushPendingSave();
+
+    private flushPendingSave() {
+        if (this.saveState() !== 'dirty' || !this.editor) return;
+        const id = this.currentId();
+        if (!id) return;
+        const lang = this.lang();
+        if (lang !== this.primaryLanguage && !this.translationOf(lang)) return;
+
+        clearTimeout(this.saveTimer);
+        const body = JSON.stringify({
+            title: this.title,
+            cedarJson: JSON.stringify(this.editor.getJSON()),
+            expectedUpdatedAt: this.expectedUpdatedAt(),
+        });
+        // A keepalive body is capped at 64KB by the browser and a rejected request saves nothing
+        // at all, so past the cap the ordinary save is the best effort available — it usually wins
+        // the race anyway, since the page is still running when this fires.
+        if (body.length > KEEPALIVE_MAX_CHARS) { void this.save(); return; }
+
+        const url = lang === this.primaryLanguage
+            ? `/api/drafts/${id}` : `/api/drafts/${id}/translations/${lang}`;
+        // Raw fetch rather than HttpClient: only fetch can set `keepalive`. It bypasses the debug
+        // console's interceptor, which is the price of the request surviving the page.
+        void fetch(url, {
+            method: 'PUT', keepalive: true, credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' }, body,
+        }).then(res => { if (res.ok) this.saveState.set('saved'); }).catch(() => { });
     }
 
     showEmptyState(): boolean {

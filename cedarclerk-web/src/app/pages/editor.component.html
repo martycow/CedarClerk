@@ -1069,6 +1069,25 @@
     </app-modal>
     }
 
+    <!--T-018.1/T-018.3 — a save the server refused. Nothing is lost at this point: the editor
+    still holds the new text and the server still holds the old one, and this asks which wins.-->
+    @if (saveRefusal(); as refusal) {
+    <app-modal [width]="480" (closed)="saveRefusal.set(null)">
+        <h2 modal-title>{{ t().editor.saveGuard.title }}</h2>
+        <div modal-body>
+            @if (refusal.code === 'shrink') {
+            <p>{{ t().editor.saveGuard.shrinkIntro(refusal.storedTextLength, refusal.incomingTextLength) }}</p>
+            <p class="muted">{{ t().editor.saveGuard.shrinkHint }}</p>
+            } @else {
+            <p>{{ t().editor.saveGuard.staleIntro }}</p>
+            <p class="muted">{{ t().editor.saveGuard.staleHint }}</p>
+            }
+        </div>
+        <button modal-actions class="btn-ghost" (click)="reloadStoredVersion()">{{ t().editor.saveGuard.reload }}</button>
+        <button modal-actions class="btn-accent" (click)="confirmRefusedSave()">{{ t().editor.saveGuard.saveAnyway }}</button>
+    </app-modal>
+    }
+
     <!--ADR-065: every already-live language the click would overwrite, each with its own diff.
     Showing one language's diff while publishing several is how a changed translation could be
     confirmed away under a "no changes" summary.-->

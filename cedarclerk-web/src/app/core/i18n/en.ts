@@ -30,6 +30,9 @@ export const en = {
         register: 'Register',
         inviteRequired: '· invite required',
         failed: 'Wrong email or password',
+        serverUnreachable: "The server didn't answer — your session may still be alive.",
+        retry: 'Check again',
+        retrying: 'Checking…',
     },
     register: {
         title: 'Join the herd',
@@ -280,6 +283,16 @@ export const en = {
             noBaseline: 'Already published, but no saved snapshot of the live version — the next update will show a full diff.',
             cancel: 'Cancel',
             confirm: 'Update',
+        },
+        saveGuard: {
+            title: 'Save stopped',
+            shrinkIntro: (stored: number, incoming: number) =>
+                `This save would delete nearly all of the text: ${stored} characters before, ${incoming} left.`,
+            shrinkHint: "If you didn't mean to, bring the stored version back — it is still intact on the server.",
+            staleIntro: 'This version was edited elsewhere after you opened it.',
+            staleHint: 'Saving now overwrites those edits. Load the stored version if you are unsure.',
+            reload: 'Restore stored',
+            saveAnyway: 'Save anyway',
         },
         newDraft: {
             title: 'New draft',

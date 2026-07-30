@@ -1,4 +1,4 @@
-import { HttpClient, HttpEvent } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpEvent } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, firstValueFrom, timeout } from 'rxjs';
 import { DEFAULT_PRIMARY_LANGUAGE } from './languages';
@@ -222,6 +222,24 @@ export function parseRegistrationForm(json: string | null | undefined, lang = DE
     }
 }
 
+// T-018 — what a save may carry beyond the content itself. `expectedUpdatedAt` is the timestamp
+// of the version being edited (the write 409s if the stored one moved since); `confirmShrink` is
+// the author having agreed to a save that deletes most of the text.
+export interface SaveGuards {
+    expectedUpdatedAt?: string | null;
+    confirmShrink?: boolean;
+}
+
+// The 409 bodies the two guards answer with.
+export type SaveRefusal =
+    | { code: 'shrink'; error: string; storedTextLength: number; incomingTextLength: number }
+    | { code: 'stale'; error: string; currentUpdatedAt: string };
+
+export function saveRefusalOf(e: unknown): SaveRefusal | null {
+    const body = e instanceof HttpErrorResponse && e.status === 409 ? e.error : null;
+    return body?.code === 'shrink' || body?.code === 'stale' ? body as SaveRefusal : null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class DraftsService {
     private http = inject(HttpClient);
@@ -240,8 +258,11 @@ export class DraftsService {
 
     // Returns the server's own updatedAt: the caller compares it against translation timestamps,
     // which are also server-issued, so a client clock must never get into that comparison (IB3).
-    update(id: string, title: string, cedarJson: string) {
-        return firstValueFrom(this.http.put<{ id: string; updatedAt: string }>(`/api/drafts/${id}`, { title, cedarJson }));
+    // `guards` carries the T-018 save guards — expectedUpdatedAt makes the write conditional,
+    // confirmShrink is the answer to a 409 the author agreed to. Both optional server-side.
+    update(id: string, title: string, cedarJson: string, guards: SaveGuards = {}) {
+        return firstValueFrom(this.http.put<{ id: string; updatedAt: string }>(
+            `/api/drafts/${id}`, { title, cedarJson, ...guards }));
     }
 
     remove(id: string) {
@@ -362,9 +383,9 @@ export class DraftsService {
         return firstValueFrom(this.http.get<TranslationFull>(`/api/drafts/${id}/translations/${lang}`));
     }
 
-    saveTranslation(id: string, lang: string, title: string, cedarJson: string) {
+    saveTranslation(id: string, lang: string, title: string, cedarJson: string, guards: SaveGuards = {}) {
         return firstValueFrom(this.http.put<{ language: string; updatedAt: string; sourceSnapshotJson: string | null }>(
-            `/api/drafts/${id}/translations/${lang}`, { title, cedarJson }));
+            `/api/drafts/${id}/translations/${lang}`, { title, cedarJson, ...guards }));
     }
 
     setPrimaryLanguage(id: string, language: string) {

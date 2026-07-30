@@ -15,8 +15,9 @@ export const authGuard: CanActivateFn = async () => {
         toolbarLayout.loadFromAuth();
         return true;
     }
-    await auth.refresh();
-    if (!auth.userEmail()) return router.parseUrl('/login');
+    // 'unavailable' also lands on /login, but with serverUnreachable set so the page offers a
+    // retry instead of pretending the session ended (T-062).
+    if (await auth.refresh() !== 'ok') return router.parseUrl('/login');
     appearance.loadFromAuth();
     toolbarLayout.loadFromAuth();
     return true;

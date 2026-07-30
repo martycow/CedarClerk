@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
@@ -13,8 +13,8 @@ import { LangSwitchComponent } from '../shared/lang-switch.component';
     templateUrl: 'login.component.html',
     styleUrls: ['login.component.css']
 })
-export class LoginComponent {
-    private auth = inject(AuthService);
+export class LoginComponent implements OnInit {
+    auth = inject(AuthService);
     private router = inject(Router);
     theme = inject(ThemeService);
     t = inject(LocaleService).t;
@@ -23,6 +23,21 @@ export class LoginComponent {
     password = '';
     busy = signal(false);
     error = signal('');
+    probing = signal(false);
+
+    // The guard sends us here both for "signed out" and for "the server never answered". In the
+    // second case the cookie may well still be valid, so ask once more before making the owner
+    // type a password (T-062).
+    async ngOnInit() {
+        if (this.auth.serverUnreachable()) await this.retrySession();
+    }
+
+    async retrySession() {
+        this.probing.set(true);
+        const outcome = await this.auth.refresh();
+        this.probing.set(false);
+        if (outcome === 'ok') this.router.navigateByUrl('/drafts');
+    }
 
     async submit() {
         this.busy.set(true);
