@@ -279,6 +279,14 @@ test('@audit styleguide, both themes and both densities', async ({ page }) => {
     await shot(page, '73-styleguide-dark-comfortable');
 });
 
+// T-080 — the icon inventory. Captured for the same reason as the styleguide: the two "one meaning,
+// two glyphs" tables are read, not asserted, and a screenshot is how they get read after a sweep.
+test('@audit icon inventory', async ({ page }) => {
+    await page.goto('/dev/icons');
+    await expect(page.locator('h1')).toContainText('Icons');
+    await shot(page, '74-icons-inventory');
+});
+
 test('@audit dark theme spot check', async ({ page, context }) => {
     await createDraft(context, 'Тёмная тема', ['Текст.']);
     await page.goto('/drafts');

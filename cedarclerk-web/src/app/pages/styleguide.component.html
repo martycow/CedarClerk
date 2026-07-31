@@ -154,6 +154,8 @@
             Phosphor (ADR-072), inlined through one <code>app-icon</code> component. Size comes from
             the <code>--icon-*</code> tokens and never from a caller's pixel value; weight is a prop,
             so "make the icons bolder" is one change rather than a sweep through 200 call sites.
+            What each icon <em>means</em> in this app — and where one meaning has two glyphs — is on
+            <a routerLink="/dev/icons">the icon inventory</a> (T-080).
         </p>
         <div class="sg-space-row">
             @for (i of icons; track i) {

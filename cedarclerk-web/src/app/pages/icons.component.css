@@ -1,0 +1,225 @@
+/* T-080 — held to the same rule as the styleguide (ADR-071 principle 7): every colour, size,
+   spacing and radius comes from a token. Literals appear only where a value is structural. */
+
+.ic {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-5) 120px;
+    color: var(--text);
+    font-size: var(--fs-body);
+}
+
+.ic-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border);
+}
+
+.ic-controls {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.ic-controls input {
+    padding: var(--dens-control-y) var(--dens-control-x);
+    border: 1px solid var(--border);
+    border-radius: var(--dens-radius);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--fs-ui);
+    min-width: 220px;
+}
+
+.btn-ghost.on {
+    border-color: var(--abord);
+    background: var(--asoft);
+    color: var(--accent);
+}
+
+h1 {
+    font-size: var(--fs-27);
+    margin: 0 0 var(--space-1);
+    font-weight: 600;
+}
+
+h2 {
+    font-size: var(--fs-title);
+    margin: var(--space-6) 0 var(--space-2);
+    font-weight: 600;
+}
+
+.ic-sub,
+.ic-note {
+    color: var(--t2);
+    font-size: var(--fs-meta);
+    margin: 0 0 var(--space-3);
+    max-width: 70ch;
+    line-height: 1.5;
+}
+
+.ic-empty {
+    color: var(--t3);
+    font-size: var(--fs-ui);
+}
+
+code {
+    font-family: var(--font-mono);
+    font-size: var(--fs-meta);
+    color: var(--t2);
+}
+
+.ic-totals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: var(--space-4) 0;
+}
+
+.ic-totals div {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    min-width: 110px;
+}
+
+.ic-totals strong {
+    font-size: var(--fs-22);
+    font-weight: 600;
+}
+
+.ic-totals span {
+    color: var(--t2);
+    font-size: var(--fs-caption);
+}
+
+.ic-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.ic-list li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    padding: var(--dens-row-y) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    font-size: var(--fs-ui);
+}
+
+.ic-label {
+    font-weight: 600;
+    min-width: 160px;
+}
+
+.ic-pair {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.ic-count {
+    color: var(--warn);
+    font-size: var(--fs-meta);
+}
+
+.ic-meanings {
+    color: var(--t2);
+    font-size: var(--fs-meta);
+    flex: 1;
+    min-width: 200px;
+}
+
+.ic-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--space-2);
+}
+
+.ic-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    text-align: center;
+}
+
+.ic-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-ui);
+}
+
+.ic-table th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--t2);
+    font-size: var(--fs-caption);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: var(--space-2) var(--space-2);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+}
+
+.ic-table td {
+    padding: var(--dens-row-y) var(--space-2);
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+.ic-table tr.dim td {
+    color: var(--t3);
+}
+
+.ic-table .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--t2);
+}
+
+.ic-files {
+    color: var(--t3);
+    font-size: var(--fs-caption);
+}
+
+@media (max-width: 720px) {
+    .ic {
+        padding: var(--space-4) var(--space-3) 80px;
+    }
+
+    /* A wide inventory table on a phone scrolls in place rather than reflowing — the columns are
+       the point of the table (same call as /admin's log tables in T-081). */
+    .ic-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .ic-files {
+        display: none;
+    }
+}

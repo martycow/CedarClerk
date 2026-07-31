@@ -182,7 +182,7 @@ beside them — not a reading surface, so they follow the list's density rather 
                                 @if (p.status === 'Failed') { <p class="channel-error">{{ p.error }}</p> }
                             </div>
                             <button class="mini-remove" (click)="cancelScheduled(p.id)"
-                                    [title]="p.status === 'Pending' ? t().manager.cancelScheduled : t().manager.removeFromList">
+                                    [title]="p.status === 'Pending' ? t().manager.cancelScheduled : t().manager.removeFromList" [attr.aria-label]="p.status === 'Pending' ? t().manager.cancelScheduled : t().manager.removeFromList">
                                 <app-icon name="x" size="sm"></app-icon>
                             </button>
                         </div>
@@ -365,7 +365,7 @@ beside them — not a reading surface, so they follow the list's density rather 
                                         @if (presetTranslating() === l) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
                                         @else { <app-icon name="arrow-clockwise" size="sm"></app-icon> }
                                     </button>
-                                    <button class="lang-chip-act" (click)="removePresetLanguage(l)" [title]="t().manager.forms.removeLang">
+                                    <button class="lang-chip-act" (click)="removePresetLanguage(l)" [title]="t().manager.forms.removeLang" [attr.aria-label]="t().manager.forms.removeLang">
                                         <app-icon name="x" size="sm"></app-icon>
                                     </button>
                                     }
@@ -434,7 +434,7 @@ beside them — not a reading surface, so they follow the list's density rather 
                                     </div>
                                     }
                                 </div>
-                                <button class="mini-remove" (click)="removeQuestion(q.id)" [title]="t().manager.forms.removeQuestion">
+                                <button class="mini-remove" (click)="removeQuestion(q.id)" [title]="t().manager.forms.removeQuestion" [attr.aria-label]="t().manager.forms.removeQuestion">
                                     <app-icon name="x" size="sm"></app-icon>
                                 </button>
                             </div>
@@ -462,7 +462,7 @@ beside them — not a reading surface, so they follow the list's density rather 
                                                [placeholder]="presetLangs().length > 1 ? l.toUpperCase() : t().manager.forms.optionPlaceholder"
                                                maxlength="200">
                                         }
-                                        <button class="mini-remove" (click)="removeOption(q.id, o.id)" [title]="t().manager.forms.removeOption">
+                                        <button class="mini-remove" (click)="removeOption(q.id, o.id)" [title]="t().manager.forms.removeOption" [attr.aria-label]="t().manager.forms.removeOption">
                                             <app-icon name="x" size="sm"></app-icon>
                                         </button>
                                     </div>

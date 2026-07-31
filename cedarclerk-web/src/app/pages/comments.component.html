@@ -55,7 +55,7 @@ list of every post. Feedback is grouped per post: a flat stream answered "what's
                         <span class="comment-tag">{{ c.annotationId ? t().feedback.inText : t().feedback.wholeArticle }}</span>
                         @if (c.isNew) { <span class="new-chip">{{ t().feedback.newChip }}</span> }
                         <span class="spacer"></span>
-                        <button class="mini-remove" (click)="deleteComment(c.id)" [title]="t().feedback.deleteComment">
+                        <button class="mini-remove" (click)="deleteComment(c.id)" [title]="t().feedback.deleteComment" [attr.aria-label]="t().feedback.deleteComment">
                             <app-icon name="trash" size="sm"></app-icon>
                         </button>
                     </div>

@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ThemeService } from '../core/theme.service';
 import { IconComponent } from '../shared/icon.component';
 import { IconName, IconWeight } from '../shared/icon-data.generated';
@@ -11,7 +12,7 @@ import { IconName, IconWeight } from '../shared/icon-data.generated';
 // ~120 more keys into en.ts/ru.ts to name swatches would be work with no reader.
 @Component({
     selector: 'app-styleguide',
-    imports: [IconComponent],
+    imports: [IconComponent, RouterLink],
     templateUrl: 'styleguide.component.html',
     styleUrls: ['styleguide.component.css'],
 })

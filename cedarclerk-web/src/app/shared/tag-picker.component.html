@@ -16,10 +16,10 @@
                 #{{ u.tag }} <span class="tag-pill-count">{{ u.count }}</span>
             </button>
             <span class="tag-manage-spacer"></span>
-            <button class="tag-manage-btn" (click)="startRename(u.tag, $event)" [title]="t().editor.tags.rename" [disabled]="busy()">
+            <button class="tag-manage-btn" (click)="startRename(u.tag, $event)" [title]="t().editor.tags.rename" [attr.aria-label]="t().editor.tags.rename" [disabled]="busy()">
                 <app-icon name="pencil-simple" size="xs"></app-icon>
             </button>
-            <button class="tag-manage-btn" (click)="askDelete(u.tag, $event)" [title]="t().editor.tags.deleteEverywhere" [disabled]="busy()">
+            <button class="tag-manage-btn" (click)="askDelete(u.tag, $event)" [title]="t().editor.tags.deleteEverywhere" [attr.aria-label]="t().editor.tags.deleteEverywhere" [disabled]="busy()">
                 <app-icon name="x" size="xs"></app-icon>
             </button>
             }

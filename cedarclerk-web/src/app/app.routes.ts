@@ -12,7 +12,6 @@ import { TermsComponent } from './pages/terms.component';
 import { PrivacyComponent } from './pages/privacy.component';
 import { AdminComponent } from './pages/admin.component';
 import { GlossaryComponent } from './pages/glossary.component';
-import { StyleguideComponent } from './pages/styleguide.component';
 
 export const routes: Routes = [
     // guestGuard, not none: a live session means you are already past these two pages.
@@ -27,9 +26,21 @@ export const routes: Routes = [
     { path: 'glossary', component: GlossaryComponent, canActivate: [authGuard] },
     // adminGuard already covers signed-in — it redirects to /login itself (IF2).
     { path: 'admin', component: AdminComponent, canActivate: [adminGuard] },
-    // T-078 — the design-system reference (ADR-071). Behind authGuard rather than open: it is a
-    // development surface, and there is no reason for it to be part of the public site.
-    { path: 'dev/styleguide', component: StyleguideComponent, canActivate: [authGuard] },
+    // T-078 / T-080 — the design-system reference and the icon inventory (ADR-071/072). Behind
+    // authGuard rather than open: development surfaces, with no reason to be part of the public
+    // site. Lazy, unlike every route above them: they carry reference data (the generated icon
+    // usage table among it) that no product screen needs, and the initial bundle is already over
+    // its budget (T-092).
+    {
+        path: 'dev/styleguide',
+        loadComponent: () => import('./pages/styleguide.component').then(m => m.StyleguideComponent),
+        canActivate: [authGuard],
+    },
+    {
+        path: 'dev/icons',
+        loadComponent: () => import('./pages/icons.component').then(m => m.IconsComponent),
+        canActivate: [authGuard],
+    },
     // N7 folded both of these into the Posts Manager; the old paths stay as redirects because
     // they're what any existing bookmark points at.
     { path: 'comments', redirectTo: 'posts' },

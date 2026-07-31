@@ -1,0 +1,112 @@
+<div class="ic">
+
+    <header class="ic-top">
+        <div>
+            <h1>Icons — inventory</h1>
+            <p class="ic-sub">
+                T-080 · Phosphor (ADR-072) through one <code>app-icon</code>. Generated from the real
+                call sites by <code>tools/generate-icon-usage.mjs</code> — re-run it after moving icons.
+            </p>
+        </div>
+        <div class="ic-controls">
+            <input type="search" placeholder="Filter by name or meaning…" [ngModel]="query()"
+                   (ngModelChange)="query.set($event)" aria-label="Filter icons">
+            @for (w of weights; track w) {
+                <button class="btn-ghost" [class.on]="weight() === w" (click)="weight.set(w)">{{ w }}</button>
+            }
+            @for (s of sizes; track s) {
+                <button class="btn-ghost" [class.on]="size() === s" (click)="size.set(s)">{{ s }}</button>
+            }
+        </div>
+    </header>
+
+    <div class="ic-totals">
+        <div><strong>{{ totals().set }}</strong><span>in the set</span></div>
+        <div><strong>{{ totals().used }}</strong><span>drawn somewhere</span></div>
+        <div><strong>{{ totals().sites }}</strong><span>call sites</span></div>
+        <div><strong>{{ unused().length }}</strong><span>unused</span></div>
+        <div><strong>{{ totals().dynamic }}</strong><span>bound at runtime</span></div>
+    </div>
+
+    <!-- ── One meaning, two icons ──────────────────────────────────────────── -->
+    <section>
+        <h2>One meaning drawn two ways</h2>
+        <p class="ic-note">
+            The same accessible name rendered with different icons. Each row is a decision to make:
+            the two are either the same action — and must share one icon — or they are not, and the
+            wording is wrong.
+        </p>
+        @if (ambiguous().length === 0) {
+            <p class="ic-empty">Nothing — every simple label maps onto exactly one icon.</p>
+        } @else {
+            <ul class="ic-list">
+                @for (a of ambiguous(); track a.label) {
+                    <li>
+                        <span class="ic-label">{{ a.label }}</span>
+                        @for (n of a.icons; track n) {
+                            <span class="ic-pair"><app-icon [name]="n" [weight]="weight()" size="sm"></app-icon><code>{{ n }}</code></span>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+
+    <!-- ── One icon, many meanings ─────────────────────────────────────────── -->
+    <section>
+        <h2>One icon carrying several meanings</h2>
+        <p class="ic-note">
+            Three or more distinct labels on the same glyph. Universal actions (close, delete,
+            search) legitimately repeat; a spinner that is also "refresh" and also "archive" does not.
+        </p>
+        <ul class="ic-list">
+            @for (r of overloaded(); track r.name) {
+                <li>
+                    <span class="ic-pair"><app-icon [name]="r.name" [weight]="weight()" size="sm"></app-icon><code>{{ r.name }}</code></span>
+                    <span class="ic-count">{{ r.labels.length }} meanings</span>
+                    <span class="ic-meanings">{{ r.labels.join(' · ') }}</span>
+                </li>
+            }
+        </ul>
+    </section>
+
+    <!-- ── Unused ──────────────────────────────────────────────────────────── -->
+    @if (unused().length) {
+        <section>
+            <h2>In the set, drawn nowhere</h2>
+            <p class="ic-note">
+                Every name here still ships in <code>icon-data.generated.ts</code>. Either a screen
+                lost its icon, or <code>tools/icon-map.json</code> carries an entry nothing needs.
+            </p>
+            <div class="ic-grid">
+                @for (r of unused(); track r.name) {
+                    <div class="ic-cell">
+                        <app-icon [name]="r.name" [weight]="weight()" [size]="size()" [label]="r.name"></app-icon>
+                        <code>{{ r.name }}</code>
+                    </div>
+                }
+            </div>
+        </section>
+    }
+
+    <!-- ── The full inventory ──────────────────────────────────────────────── -->
+    <section>
+        <h2>Every icon, with what it means here</h2>
+        <table class="ic-table">
+            <thead>
+                <tr><th>Icon</th><th>Name</th><th>Uses</th><th>Meanings</th><th>Screens</th></tr>
+            </thead>
+            <tbody>
+                @for (r of filtered(); track r.name) {
+                    <tr [class.dim]="r.count === 0">
+                        <td><app-icon [name]="r.name" [weight]="weight()" [size]="size()" [label]="r.name"></app-icon></td>
+                        <td><code>{{ r.name }}</code></td>
+                        <td class="num">{{ r.count || '—' }}</td>
+                        <td>{{ r.labels.join(' · ') || '—' }}</td>
+                        <td class="ic-files">{{ r.files.join(', ') || '—' }}</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </section>
+</div>

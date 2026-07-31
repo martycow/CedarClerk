@@ -1,6 +1,6 @@
 <header class="page-header">
     @if (showBack()) {
-    <a class="icon-btn" routerLink="/editor" [title]="t().common.backToEditor">
+    <a class="icon-btn" routerLink="/editor" [title]="t().common.backToEditor" [attr.aria-label]="t().common.backToEditor">
         <app-icon name="arrow-left" size="sm"></app-icon>
     </a>
     }

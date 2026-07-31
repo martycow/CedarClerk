@@ -66,7 +66,7 @@
                 @if (editImageUrl(); as url) {
                 <div class="term-image-row">
                     <img [src]="url" alt="">
-                    <button class="mini-remove" (click)="clearImage()" [title]="t().common.delete">
+                    <button class="mini-remove" (click)="clearImage()" [title]="t().common.delete" [attr.aria-label]="t().common.delete">
                         <app-icon name="x" size="sm"></app-icon>
                     </button>
                 </div>
@@ -98,13 +98,13 @@
                         <span class="term-name">{{ term.term }}</span>
                         @for (a of aliasList(term); track a) { <span class="term-alias">{{ a }}</span> }
                         <span class="spacer"></span>
-                        <button class="mini" (click)="startEdit(term)" [title]="t().common.edit">
+                        <button class="mini" (click)="startEdit(term)" [title]="t().common.edit" [attr.aria-label]="t().common.edit">
                             <app-icon name="pencil-simple" size="sm"></app-icon>
                         </button>
-                        <button class="mini" (click)="openTranslate(term)" [title]="t().glossary.translate">
+                        <button class="mini" (click)="openTranslate(term)" [title]="t().glossary.translate" [attr.aria-label]="t().glossary.translate">
                             <app-icon name="translate" size="sm"></app-icon>
                         </button>
-                        <button class="mini-remove" (click)="deleteConfirmId.set(term.id)" [title]="t().common.delete">
+                        <button class="mini-remove" (click)="deleteConfirmId.set(term.id)" [title]="t().common.delete" [attr.aria-label]="t().common.delete">
                             <app-icon name="trash" size="sm"></app-icon>
                         </button>
                     </div>

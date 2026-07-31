@@ -14,10 +14,10 @@
             } @else {
             <button class="folder-menu-item" (click)="pick(f.id)">{{ f.name }}</button>
             <span class="folder-count">{{ f.count }}</span>
-            <button class="folder-icon-btn" (click)="startRename(f, $event)" [title]="t().drafts.folders.rename">
+            <button class="folder-icon-btn" (click)="startRename(f, $event)" [title]="t().drafts.folders.rename" [attr.aria-label]="t().drafts.folders.rename">
                 <app-icon name="pencil-simple" size="xs"></app-icon>
             </button>
-            <button class="folder-icon-btn" (click)="askDelete(f, $event)" [title]="t().common.delete">
+            <button class="folder-icon-btn" (click)="askDelete(f, $event)" [title]="t().common.delete" [attr.aria-label]="t().common.delete">
                 <app-icon name="x" size="xs"></app-icon>
             </button>
             }
@@ -30,7 +30,7 @@
             <input class="folder-input" [(ngModel)]="newName"
                    [placeholder]="t().drafts.folders.newPlaceholder" (keydown.enter)="add()">
             <button class="folder-icon-btn" (click)="add()" [disabled]="busy() || !newName.trim()"
-                    [title]="t().drafts.folders.add">
+                    [title]="t().drafts.folders.add" [attr.aria-label]="t().drafts.folders.add">
                 <app-icon name="plus" size="xs"></app-icon>
             </button>
         </div>

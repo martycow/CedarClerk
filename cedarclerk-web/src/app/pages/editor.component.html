@@ -6,7 +6,7 @@
         of everything, ahead of the logo (Marty, 28.07.2026) — it's the way back out to every
         other draft, not a peer of the branding it used to trail.-->
         <!--I18: was a hamburger, which reads as "menu" and said nothing about drafts.-->
-        <a class="icon-btn" routerLink="/drafts" [title]="t().editor.drafts">
+        <a class="icon-btn" routerLink="/drafts" [title]="t().editor.drafts" [attr.aria-label]="t().editor.drafts">
             <app-icon name="files" size="sm"></app-icon>
         </a>
 
@@ -66,7 +66,7 @@
         </a>
         }
 
-        <button class="icon-btn" (click)="apPanel.open.set(true)" [title]="t().settings.appearance.title">
+        <button class="icon-btn" (click)="apPanel.open.set(true)" [title]="t().settings.appearance.title" [attr.aria-label]="t().settings.appearance.title">
             <app-icon name="palette" size="sm"></app-icon>
         </button>
 
@@ -193,7 +193,7 @@
                 <div class="channel-chosen">
                     <span class="channel-avatar" [style.background]="channelColor(sc.id)">{{ channelInitial(sc.title) }}</span>
                     <span class="channel-chosen-title">{{ sc.title }}</span>
-                    <button class="mini-remove" (click)="chatId = ''" [title]="t().editor.exportModal.changeChannel"><app-icon name="x" size="sm"></app-icon></button>
+                    <button class="mini-remove" (click)="chatId = ''" [title]="t().editor.exportModal.changeChannel" [attr.aria-label]="t().editor.exportModal.changeChannel"><app-icon name="x" size="sm"></app-icon></button>
                 </div>
                 }
                 <!--N4: no free-text target. Picking a connected channel is the only way to set one.-->
@@ -252,7 +252,7 @@
                 <div class="schedule-row">
                     <input type="datetime-local" [(ngModel)]="scheduledAt">
                     @if (scheduledAt) {
-                    <button class="mini-remove" (click)="scheduledAt = ''" [title]="t().common.cancel"><app-icon name="x" size="sm"></app-icon></button>
+                    <button class="mini-remove" (click)="scheduledAt = ''" [title]="t().common.cancel" [attr.aria-label]="t().common.cancel"><app-icon name="x" size="sm"></app-icon></button>
                     }
                 </div>
                 @if (pickerZonesHint()) { <p class="tz-hint">{{ pickerZonesHint() }}</p> }
@@ -287,7 +287,7 @@
 
                 <div class="panel-head">
                     <span class="panel-label">{{ t().editor.exportModal.available }}</span>
-                    <button class="mini" (click)="refreshKnownChats(); $event.stopPropagation()" [disabled]="knownChatsRefreshing()" [title]="t().editor.exportModal.refresh">
+                    <button class="mini" (click)="refreshKnownChats(); $event.stopPropagation()" [disabled]="knownChatsRefreshing()" [title]="t().editor.exportModal.refresh" [attr.aria-label]="t().editor.exportModal.refresh">
                         <app-icon name="arrow-clockwise" size="sm" [class.spin]="knownChatsRefreshing()"></app-icon>
                     </button>
                 </div>
@@ -375,13 +375,13 @@
                         @for (inv of invites(); track inv.id) {
                         <div class="invite-row">
                             <span class="invite-email">{{ inv.email }}</span>
-                            <button class="mini" (click)="copyInviteLink(inv.url)" [title]="t().editor.exportModal.copyInvite">
+                            <button class="mini" (click)="copyInviteLink(inv.url)" [title]="t().editor.exportModal.copyInvite" [attr.aria-label]="t().editor.exportModal.copyInvite">
                                 <app-icon name="link" size="sm"></app-icon>
                             </button>
-                            <button class="mini" (click)="resendInvite(inv.id)" [disabled]="inviteBusy()" [title]="t().editor.exportModal.resend">
+                            <button class="mini" (click)="resendInvite(inv.id)" [disabled]="inviteBusy()" [title]="t().editor.exportModal.resend" [attr.aria-label]="t().editor.exportModal.resend">
                                 <app-icon name="arrow-clockwise" size="sm"></app-icon>
                             </button>
-                            <button class="mini-remove" (click)="revokeInvite(inv.id)" [disabled]="inviteBusy()" [title]="t().editor.exportModal.revoke">
+                            <button class="mini-remove" (click)="revokeInvite(inv.id)" [disabled]="inviteBusy()" [title]="t().editor.exportModal.revoke" [attr.aria-label]="t().editor.exportModal.revoke">
                                 <app-icon name="x" size="sm"></app-icon>
                             </button>
                         </div>
@@ -389,7 +389,7 @@
                         <div class="invite-add-row">
                             <input class="chat-input" [(ngModel)]="inviteEmailInput" (keydown.enter)="addInvite()"
                                 [placeholder]="t().editor.exportModal.invitePlaceholder" type="email">
-                            <button class="mini" (click)="addInvite()" [disabled]="inviteBusy() || !inviteEmailInput.trim()" [title]="t().editor.exportModal.invite">
+                            <button class="mini" (click)="addInvite()" [disabled]="inviteBusy() || !inviteEmailInput.trim()" [title]="t().editor.exportModal.invite" [attr.aria-label]="t().editor.exportModal.invite">
                                 <app-icon name="plus" size="sm"></app-icon>
                             </button>
                         </div>
@@ -406,7 +406,7 @@
                 <div class="invite-add-row">
                     <input class="chat-input" [(ngModel)]="watermarkInput" (keydown.enter)="saveWatermark()"
                         [maxlength]="watermarkMaxLength" [placeholder]="t().editor.exportModal.watermarkPlaceholder">
-                    <button class="mini" (click)="saveWatermark()" [disabled]="watermarkBusy()" [title]="t().common.save">
+                    <button class="mini" (click)="saveWatermark()" [disabled]="watermarkBusy()" [title]="t().common.save" [attr.aria-label]="t().common.save">
                         <app-icon name="check" size="sm"></app-icon>
                     </button>
                 </div>
@@ -474,7 +474,7 @@
                         @if (a.hasTelegramDerivative && a.telegramSizeBytes) {
                         <span class="asset-tg-badge" [title]="t().editor.exportModal.telegramDerivative">TG {{ formatFileSize(a.telegramSizeBytes) }}</span>
                         }
-                        <button class="mini-remove" (click)="removeAssetFromDraft(a)" [title]="t().editor.exportModal.detachAsset">
+                        <button class="mini-remove" (click)="removeAssetFromDraft(a)" [title]="t().editor.exportModal.detachAsset" [attr.aria-label]="t().editor.exportModal.detachAsset">
                             <app-icon name="x" size="sm"></app-icon>
                         </button>
                     </div>
@@ -522,10 +522,10 @@
                 @if (!toolbarLayout.isHidden('spoiler')) { <button (click)="cmd(c => c.toggleMark('spoiler'))" [class.on]="isActive('spoiler')" [title]="t().editor.tb.spoiler"><app-icon name="eye-slash" size="sm"></app-icon></button> }
                 @if (!toolbarLayout.isHidden('align')) {
                 <span class="sep"></span>
-                <button (click)="setAlign('left')" [class.on]="isActive('paragraph', {textAlign:'left'}) || isActive('heading', {textAlign:'left'})" [title]="t().editor.tb.alignLeft"><app-icon name="text-align-left" size="sm"></app-icon></button>
-                <button (click)="setAlign('center')" [class.on]="isActive('paragraph', {textAlign:'center'}) || isActive('heading', {textAlign:'center'})" [title]="t().editor.tb.alignCenter"><app-icon name="text-align-center" size="sm"></app-icon></button>
-                <button (click)="setAlign('right')" [class.on]="isActive('paragraph', {textAlign:'right'}) || isActive('heading', {textAlign:'right'})" [title]="t().editor.tb.alignRight"><app-icon name="text-align-right" size="sm"></app-icon></button>
-                <button (click)="setAlign('justify')" [class.on]="isActive('paragraph', {textAlign:'justify'}) || isActive('heading', {textAlign:'justify'})" [title]="t().editor.tb.alignJustify"><app-icon name="text-align-justify" size="sm"></app-icon></button>
+                <button (click)="setAlign('left')" [class.on]="isActive('paragraph', {textAlign:'left'}) || isActive('heading', {textAlign:'left'})" [title]="t().editor.tb.alignLeft" [attr.aria-label]="t().editor.tb.alignLeft"><app-icon name="text-align-left" size="sm"></app-icon></button>
+                <button (click)="setAlign('center')" [class.on]="isActive('paragraph', {textAlign:'center'}) || isActive('heading', {textAlign:'center'})" [title]="t().editor.tb.alignCenter" [attr.aria-label]="t().editor.tb.alignCenter"><app-icon name="text-align-center" size="sm"></app-icon></button>
+                <button (click)="setAlign('right')" [class.on]="isActive('paragraph', {textAlign:'right'}) || isActive('heading', {textAlign:'right'})" [title]="t().editor.tb.alignRight" [attr.aria-label]="t().editor.tb.alignRight"><app-icon name="text-align-right" size="sm"></app-icon></button>
+                <button (click)="setAlign('justify')" [class.on]="isActive('paragraph', {textAlign:'justify'}) || isActive('heading', {textAlign:'justify'})" [title]="t().editor.tb.alignJustify" [attr.aria-label]="t().editor.tb.alignJustify"><app-icon name="text-align-justify" size="sm"></app-icon></button>
                 }
             </div>
             <span class="tb-caption">{{ t().editor.groups.text }}</span>
@@ -537,22 +537,22 @@
         <div class="tb-group">
             <div class="tb-row">
                 @if (!toolbarLayout.isHidden('link')) {
-                <button (click)="openInsertModal()" [class.on]="isActive('link')" [title]="t().editor.tb.insert">
+                <button (click)="openInsertModal()" [class.on]="isActive('link')" [title]="t().editor.tb.insert" [attr.aria-label]="t().editor.tb.insert">
                     <app-icon name="link" size="sm"></app-icon>
                 </button>
                 }
 
                 @if (!toolbarLayout.isHidden('emoji')) {
-                <button (click)="emojiOpen.set(true)" [title]="t().editor.tb.emoji"><app-icon name="smiley" size="sm"></app-icon></button>
+                <button (click)="emojiOpen.set(true)" [title]="t().editor.tb.emoji" [attr.aria-label]="t().editor.tb.emoji"><app-icon name="smiley" size="sm"></app-icon></button>
                 }
 
                 @if (!toolbarLayout.isHidden('datetime')) {
-                <button (click)="datetimeOpen.set(true)" [title]="t().editor.tb.datetime"><app-icon name="clock" size="sm"></app-icon></button>
+                <button (click)="datetimeOpen.set(true)" [title]="t().editor.tb.datetime" [attr.aria-label]="t().editor.tb.datetime"><app-icon name="clock" size="sm"></app-icon></button>
                 }
 
                 @if (!toolbarLayout.isHidden('footnote')) {
                 <app-popover>
-                    <button trigger [title]="t().editor.tb.footnote"><app-icon name="text-superscript" size="sm"></app-icon></button>
+                    <button trigger [title]="t().editor.tb.footnote" [attr.aria-label]="t().editor.tb.footnote"><app-icon name="text-superscript" size="sm"></app-icon></button>
                     <div panel class="link-popover">
                         <textarea class="chat-input" rows="3" [placeholder]="t().editor.groups.footnotePlaceholder" [(ngModel)]="footnoteText"></textarea>
                         <button class="export-btn full" style="margin-top:8px" (click)="insertFootnote()" [disabled]="!footnoteText.trim()">{{ t().editor.groups.insert }}</button>
@@ -571,8 +571,8 @@
                 @if (!toolbarLayout.isHidden('bulletList')) { <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')" [title]="tip(t().editor.tb.bulletList, 'bulletList')"><app-icon name="list" size="sm"></app-icon></button> }
                 @if (!toolbarLayout.isHidden('orderedList')) { <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')" [title]="tip(t().editor.tb.orderedList, 'orderedList')"><app-icon name="list-numbers" size="sm"></app-icon></button> }
                 @if (!toolbarLayout.isHidden('taskList')) { <button (click)="cmd(c => c.toggleTaskList())" [class.on]="isActive('taskList')" [title]="tip(t().editor.tb.taskList, 'taskList')"><app-icon name="list-checks" size="sm"></app-icon></button> }
-                @if (!toolbarLayout.isHidden('indent')) { <button (click)="indent()" [title]="t().editor.tb.indent"><app-icon name="text-indent" size="sm"></app-icon></button> }
-                @if (!toolbarLayout.isHidden('outdent')) { <button (click)="outdent()" [title]="t().editor.tb.outdent"><app-icon name="text-outdent" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('indent')) { <button (click)="indent()" [title]="t().editor.tb.indent" [attr.aria-label]="t().editor.tb.indent"><app-icon name="text-indent" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('outdent')) { <button (click)="outdent()" [title]="t().editor.tb.outdent" [attr.aria-label]="t().editor.tb.outdent"><app-icon name="text-outdent" size="sm"></app-icon></button> }
             </div>
             <span class="tb-caption">{{ t().editor.groups.lists }}</span>
         </div>
@@ -594,12 +594,12 @@
         <div class="tb-group">
             <div class="tb-row">
                 @if (!toolbarLayout.isHidden('image')) {
-                <button (click)="fileInput.click()" [title]="t().editor.tb.image"><app-icon name="image" size="sm"></app-icon></button>
+                <button (click)="fileInput.click()" [title]="t().editor.tb.image" [attr.aria-label]="t().editor.tb.image"><app-icon name="image" size="sm"></app-icon></button>
                 <input #fileInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onFileChosen($event)">
                 }
 
                 @if (!toolbarLayout.isHidden('video')) {
-                <button (click)="videoInput.click()" [title]="t().editor.tb.video"><app-icon name="video-camera" size="sm"></app-icon></button>
+                <button (click)="videoInput.click()" [title]="t().editor.tb.video" [attr.aria-label]="t().editor.tb.video"><app-icon name="video-camera" size="sm"></app-icon></button>
                 <input #videoInput type="file" accept="video/mp4" multiple hidden (change)="onVideoChosen($event)">
                 }
 
@@ -609,17 +609,17 @@
                 }
 
                 @if (!toolbarLayout.isHidden('audio')) {
-                <button (click)="audioInput.click()" [title]="t().editor.tb.audio"><app-icon name="waveform" size="sm"></app-icon></button>
+                <button (click)="audioInput.click()" [title]="t().editor.tb.audio" [attr.aria-label]="t().editor.tb.audio"><app-icon name="waveform" size="sm"></app-icon></button>
                 <input #audioInput type="file" accept="audio/mpeg,audio/ogg" multiple hidden (change)="onAudioChosen($event)">
                 }
 
                 @if (!toolbarLayout.isHidden('carousel')) {
-                <button (click)="carouselInput.click()" [title]="t().editor.tb.carousel"><app-icon name="images" size="sm"></app-icon></button>
+                <button (click)="carouselInput.click()" [title]="t().editor.tb.carousel" [attr.aria-label]="t().editor.tb.carousel"><app-icon name="images" size="sm"></app-icon></button>
                 <input #carouselInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCarouselChosen($event)">
                 }
 
                 @if (!toolbarLayout.isHidden('collage')) {
-                <button (click)="collageInput.click()" [title]="t().editor.tb.collage"><app-icon name="squares-four" size="sm"></app-icon></button>
+                <button (click)="collageInput.click()" [title]="t().editor.tb.collage" [attr.aria-label]="t().editor.tb.collage"><app-icon name="squares-four" size="sm"></app-icon></button>
                 <input #collageInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCollageChosen($event)">
                 }
 
@@ -639,7 +639,7 @@
             <div class="tb-row">
                 @if (!toolbarLayout.isHidden('table')) {
                 <app-popover>
-                    <button trigger [title]="t().editor.tb.table"><app-icon name="table" size="sm"></app-icon></button>
+                    <button trigger [title]="t().editor.tb.table" [attr.aria-label]="t().editor.tb.table"><app-icon name="table" size="sm"></app-icon></button>
                     <div panel class="block-menu">
                         @if (isActive('table')) {
                         <button (click)="cmd(c => c.addRowBefore())"><app-icon name="plus" size="xs"></app-icon> Add row above</button>
@@ -658,7 +658,7 @@
 
                 @if (!toolbarLayout.isHidden('formula')) {
                 <app-popover>
-                    <button trigger [title]="t().editor.tb.formula"><app-icon name="sigma" size="sm"></app-icon></button>
+                    <button trigger [title]="t().editor.tb.formula" [attr.aria-label]="t().editor.tb.formula"><app-icon name="sigma" size="sm"></app-icon></button>
                     <div panel class="block-menu">
                         <button (click)="insertInlineMath()"><app-icon name="sigma" size="xs"></app-icon> Inline formula</button>
                         <button (click)="insertBlockMath()"><app-icon name="sigma" size="xs"></app-icon> Block formula</button>
@@ -667,9 +667,9 @@
                 }
 
                 @if (!toolbarLayout.isHidden('blockquote')) { <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" [title]="tip(t().editor.tb.blockquote, 'blockquote')"><app-icon name="quotes" size="sm"></app-icon></button> }
-                @if (!toolbarLayout.isHidden('toggle')) { <button (click)="insertToggle()" [title]="t().editor.tb.toggleBlock"><app-icon name="list-dashes" size="sm"></app-icon></button> }
-                @if (!toolbarLayout.isHidden('toc')) { <button (click)="insertTableOfContents()" [title]="t().editor.tb.toc"><app-icon name="list-bullets" size="sm"></app-icon></button> }
-                @if (!toolbarLayout.isHidden('divider')) { <button (click)="insertDivider()" [title]="t().editor.tb.divider"><app-icon name="rows" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('toggle')) { <button (click)="insertToggle()" [title]="t().editor.tb.toggleBlock" [attr.aria-label]="t().editor.tb.toggleBlock"><app-icon name="list-dashes" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('toc')) { <button (click)="insertTableOfContents()" [title]="t().editor.tb.toc" [attr.aria-label]="t().editor.tb.toc"><app-icon name="list-bullets" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('divider')) { <button (click)="insertDivider()" [title]="t().editor.tb.divider" [attr.aria-label]="t().editor.tb.divider"><app-icon name="rows" size="sm"></app-icon></button> }
             </div>
             <span class="tb-caption">{{ t().editor.groups.blocks }}</span>
         </div>
@@ -682,11 +682,11 @@
         <div class="tb-group">
             <div class="tb-row">
                 @if (!toolbarLayout.isHidden('annotation')) {
-                <button (click)="insertAnnotation()" [disabled]="!canAnnotate()" [title]="t().editor.tb.annotation">
+                <button (click)="insertAnnotation()" [disabled]="!canAnnotate()" [title]="t().editor.tb.annotation" [attr.aria-label]="t().editor.tb.annotation">
                     <app-icon name="chat-teardrop" size="sm"></app-icon>
                 </button>
                 }
-                @if (!toolbarLayout.isHidden('poll')) { <button (click)="insertPoll()" [title]="t().editor.tb.poll"><app-icon name="check-square" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('poll')) { <button (click)="insertPoll()" [title]="t().editor.tb.poll" [attr.aria-label]="t().editor.tb.poll"><app-icon name="check-square" size="sm"></app-icon></button> }
             </div>
             <span class="tb-caption">{{ t().editor.groups.feedback }}</span>
         </div>
@@ -743,14 +743,14 @@
                     <div panel class="block-menu">
                         @if (aiEditBusy()) {
                         <button (click)="cancelAiEdit()">
-                            <app-icon name="x" size="xs"></app-icon> Cancel
+                            <app-icon name="x" size="xs"></app-icon> {{ t().common.cancel }}
                         </button>
                         } @else {
                         <button (click)="askAiEdit('fix-errors')">
-                            <app-icon name="sparkle" size="xs"></app-icon> Fix errors
+                            <app-icon name="sparkle" size="xs"></app-icon> {{ t().editor.ai.fixLabel }}
                         </button>
                         <button (click)="askAiEdit('schizo')">
-                            <app-icon name="sparkle" size="xs"></app-icon> Schizo-izer
+                            <app-icon name="sparkle" size="xs"></app-icon> {{ t().editor.ai.schizoLabel }}
                         </button>
                         }
                     </div>
@@ -1007,7 +1007,7 @@
                             [title]="isStale(lang()) ? t().editor.lang.retranslateStaleTitle(primaryLanguage.toUpperCase()) : t().editor.lang.retranslateTitle(primaryLanguage.toUpperCase())">
                         {{ t().editor.lang.retranslate }}
                     </button>
-                <button class="lang-delete" (click)="deleteVersion()" [disabled]="autoTranslating()" [title]="t().editor.lang.deleteTranslation">
+                <button class="lang-delete" (click)="deleteVersion()" [disabled]="autoTranslating()" [title]="t().editor.lang.deleteTranslation" [attr.aria-label]="t().editor.lang.deleteTranslation">
                     <app-icon name="trash" size="sm"></app-icon>
                 </button>
                 }

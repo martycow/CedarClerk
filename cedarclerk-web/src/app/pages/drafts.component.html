@@ -42,10 +42,10 @@ components below also appear on comfortable screens.-->
                 </div>
             </app-popover>
             <div class="view-toggle">
-                <button [class.active]="view() === 'table'" (click)="view.set('table')" [title]="t().drafts.viewTable">
+                <button [class.active]="view() === 'table'" (click)="view.set('table')" [title]="t().drafts.viewTable" [attr.aria-label]="t().drafts.viewTable">
                     <app-icon name="list" size="sm"></app-icon>
                 </button>
-                <button [class.active]="view() === 'grid'" (click)="view.set('grid')" [title]="t().drafts.viewGrid">
+                <button [class.active]="view() === 'grid'" (click)="view.set('grid')" [title]="t().drafts.viewGrid" [attr.aria-label]="t().drafts.viewGrid">
                     <app-icon name="squares-four" size="sm"></app-icon>
                 </button>
             </div>
@@ -173,7 +173,7 @@ components below also appear on comfortable screens.-->
                 <div class="right">{{ d.updatedAt | date:'d MMM, HH:mm' }}</div>
                 }
                 <div class="row-actions">
-                    <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">
+                    <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate" [attr.aria-label]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">
                         <app-icon name="layout" size="sm"></app-icon>
                     </button>
                     <button class="mini" (click)="toggleArchive(d, $event)" [disabled]="busyId() === d.id" [title]="d.isArchived ? t().drafts.actions.unarchive : t().drafts.actions.archive">
@@ -181,7 +181,7 @@ components below also appear on comfortable screens.-->
                         @else if (d.isArchived) { <app-icon name="arrow-counter-clockwise" size="sm"></app-icon> }
                         @else { <app-icon name="archive" size="sm"></app-icon> }
                     </button>
-                    <button class="mini-remove" (click)="askDelete(d, $event)" [disabled]="busyId() === d.id" [title]="t().drafts.actions.deleteDraft">
+                    <button class="mini-remove" (click)="askDelete(d, $event)" [disabled]="busyId() === d.id" [title]="t().drafts.actions.deleteDraft" [attr.aria-label]="t().drafts.actions.deleteDraft">
                         <app-icon name="trash" size="sm"></app-icon>
                     </button>
                 </div>
@@ -223,13 +223,13 @@ components below also appear on comfortable screens.-->
                 <div class="drafts-card-foot">
                     <span>{{ d.updatedAt | date:'d MMM, HH:mm' }}</span>
                     <span class="row-actions">
-                        <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">
+                        <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate" [attr.aria-label]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">
                             <app-icon name="layout" size="sm"></app-icon>
                         </button>
                         <button class="mini" (click)="toggleArchive(d, $event)" [disabled]="busyId() === d.id" [title]="d.isArchived ? t().drafts.actions.unarchive : t().drafts.actions.archive">
                             @if (d.isArchived) { <app-icon name="arrow-counter-clockwise" size="sm"></app-icon> } @else { <app-icon name="archive" size="sm"></app-icon> }
                         </button>
-                        <button class="mini-remove" (click)="askDelete(d, $event)" [disabled]="busyId() === d.id" [title]="t().drafts.actions.deleteDraft">
+                        <button class="mini-remove" (click)="askDelete(d, $event)" [disabled]="busyId() === d.id" [title]="t().drafts.actions.deleteDraft" [attr.aria-label]="t().drafts.actions.deleteDraft">
                             <app-icon name="trash" size="sm"></app-icon>
                         </button>
                     </span>

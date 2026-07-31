@@ -18,8 +18,8 @@
         <div class="debug-panel-head">
             <span>{{ t().debug.requests(entries().length) }}</span>
             <div class="spacer"></div>
-            <button class="mini" (click)="clear()" [title]="t().debug.clear"><app-icon name="trash" size="sm"></app-icon></button>
-            <button class="mini" (click)="toggleOpen()" [title]="t().common.close"><app-icon name="x" size="sm"></app-icon></button>
+            <button class="mini" (click)="clear()" [title]="t().debug.clear" [attr.aria-label]="t().debug.clear"><app-icon name="trash" size="sm"></app-icon></button>
+            <button class="mini" (click)="toggleOpen()" [title]="t().common.close" [attr.aria-label]="t().common.close"><app-icon name="x" size="sm"></app-icon></button>
         </div>
         <div class="debug-panel-list">
             @if (open()) {
