@@ -422,7 +422,7 @@ export const en = {
             formOn: 'Registration form: on',
             formOff: 'Registration form: off — uninvited visitors get a 404',
             editInManager: 'Edit in Posts Manager →',
-            pickChannelFirst: 'Connect a channel in the Channels section above first.',
+            pickChannelFirst: 'Connect a channel in the Channels section below first.',
             changeChannel: 'Change channel',
             language: 'Language',
             compression: 'Photo compression',
