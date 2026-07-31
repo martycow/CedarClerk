@@ -24,7 +24,8 @@ import { CountBadgeComponent } from '../shared/count-badge.component';
 import { AppearancePanelComponent } from '../shared/appearance-panel.component';
 import { NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, CompressionLevel, UpdatePreview } from '../core/posts.service';
-import { DraftRevision } from '../core/drafts.service';
+import { DraftRevision, DraftRevisionDetail, RevisionDiff } from '../core/drafts.service';
+import { plainTextOf } from '../core/cedar-text.util';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES, endonymOf } from '../core/languages';
 import { ChannelsService, Channel, ChannelStats, KnownChat } from '../core/channels.service';
 import { Table } from '@tiptap/extension-table';
@@ -990,14 +991,93 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     revisionKindLabel(kind: string): string {
         const v = this.t().editor.versions;
-        return kind === 'telegram' ? v.kindTelegram : kind === 'blog' ? v.kindBlog : v.kindSave;
+        return kind === 'telegram' ? v.kindTelegram : kind === 'blog' ? v.kindBlog
+            : kind === 'restore' ? v.kindRestore : v.kindSave;
     }
 
     async openRevisions() {
         const id = this.currentId();
         if (!id) return;
+        this.selectedRevision.set(null);
+        this.compareWith.set('current');
         this.revisions.set(await this.draftsApi.revisions(id, this.lang()));
         this.revisionsOpen.set(true);
+    }
+
+    // T-016/T-017 — the row that's open, what it's being compared against, and the resulting diff.
+    // 'current' is not a revision id: it means whatever is stored for this language right now.
+    selectedRevision = signal<DraftRevisionDetail | null>(null);
+    compareWith = signal<string>('current');
+    revisionDiff = signal<RevisionDiff | null>(null);
+    revisionBusy = signal(false);
+    revisionError = signal<string | null>(null);
+
+    async openRevision(revisionId: string) {
+        const id = this.currentId();
+        if (!id) return;
+        this.revisionBusy.set(true);
+        this.revisionError.set(null);
+        try {
+            const detail = await this.draftsApi.revision(id, this.lang(), revisionId);
+            this.selectedRevision.set(detail);
+            this.compareWith.set('current');
+            this.revisionDiff.set(detail.diffToCurrent);
+        } catch {
+            this.revisionError.set(this.t().editor.versions.loadFailed);
+        } finally {
+            this.revisionBusy.set(false);
+        }
+    }
+
+    // The other end of the comparison — any older row, or the stored version.
+    async compareRevisionWith(other: string) {
+        const id = this.currentId();
+        const selected = this.selectedRevision();
+        if (!id || !selected) return;
+        this.compareWith.set(other);
+        this.revisionBusy.set(true);
+        try {
+            const res = await this.draftsApi.revisionDiff(id, this.lang(), selected.id, other);
+            this.revisionDiff.set(res.diff);
+        } catch {
+            this.revisionError.set(this.t().editor.versions.loadFailed);
+        } finally {
+            this.revisionBusy.set(false);
+        }
+    }
+
+    // Text of the opened version, for reading it before deciding to restore. Rendering it through
+    // a second TipTap instance would buy formatting at the cost of a whole editor — the question
+    // here is "is this the version I lost", which the words answer.
+    revisionPreviewText(): string {
+        const json = this.selectedRevision()?.cedarJson;
+        return json ? plainTextOf(json) : '';
+    }
+
+    async restoreRevision() {
+        const id = this.currentId();
+        const selected = this.selectedRevision();
+        if (!id || !selected || !this.editor) return;
+        this.revisionBusy.set(true);
+        try {
+            const res = await this.draftsApi.restoreRevision(id, selected.id);
+            this.title = res.title;
+            if (res.language === this.primaryLanguage) {
+                this.ruUpdatedAt.set(res.updatedAt);
+                this.refreshMeta(id, res.updatedAt);
+            } else {
+                this.setTranslation(res.language, { language: res.language, title: res.title, updatedAt: res.updatedAt });
+            }
+            this.editor.commands.setContent(JSON.parse(res.cedarJson || EMPTY_DOC), { emitUpdate: false });
+            this.resetHistory();
+            this.saveState.set('saved');
+            this.revisionsOpen.set(false);
+            this.selectedRevision.set(null);
+        } catch {
+            this.revisionError.set(this.t().editor.versions.restoreFailed);
+        } finally {
+            this.revisionBusy.set(false);
+        }
     }
 
     // Keeps the drafts list's language badges in step with what actually exists.

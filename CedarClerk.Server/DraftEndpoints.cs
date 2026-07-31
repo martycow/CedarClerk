@@ -991,6 +991,86 @@ public static class DraftEndpoints
                 fingerprint = DraftRevisionService.Fingerprint(r.Title, r.CedarJson),
                 lines = DraftRevisionService.BlockCount(r.CedarJson) }));
         });
+
+        // T-016 — the stored content of one version, plus what it would change if restored. Until
+        // now the history was readable but not reachable: recovering a version meant sqlite3 on
+        // the Pi, which is not a recovery story for anyone but Marty.
+        groupBuilder.MapGet("/{id:guid}/revisions/{lang}/{revisionId:guid}", async (
+            Guid id, string lang, Guid revisionId, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            var revision = await db.DraftRevisions.FirstOrDefaultAsync(r => r.Id == revisionId && r.DraftId == id && r.Language == lang);
+            if (revision is null) return Results.NotFound();
+
+            var current = await DraftRevisionService.ResolveAsync(db, draft, lang);
+            return Results.Ok(new
+            {
+                revision.Id, revision.Kind, revision.Destination, revision.CreatedAt, revision.Title, revision.CedarJson,
+                diffToCurrent = current is null ? null : DraftRevisionService.Diff(revision.CedarJson, current.Value.CedarJson),
+                isCurrent = current is not null && current.Value.Title == revision.Title && current.Value.CedarJson == revision.CedarJson,
+            });
+        });
+
+        // T-017 — any two points in the history, or one against what is in the editor now
+        // ("current"). One endpoint rather than a compare-to-current special case, since the
+        // client already has to pick two ends either way.
+        groupBuilder.MapGet("/{id:guid}/revisions/{lang}/diff", async (
+            Guid id, string lang, string from, string to, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            var before = await SideAsync(from);
+            var after = await SideAsync(to);
+            if (before is null || after is null) return Results.NotFound();
+            return Results.Ok(new { diff = DraftRevisionService.Diff(before, after) });
+
+            async Task<string?> SideAsync(string side) => side == "current"
+                ? (await DraftRevisionService.ResolveAsync(db, draft, lang))?.CedarJson
+                : Guid.TryParse(side, out var revId)
+                    ? (await db.DraftRevisions.FirstOrDefaultAsync(r => r.Id == revId && r.DraftId == id && r.Language == lang))?.CedarJson
+                    : null;
+        });
+
+        // T-016 — restoring is an ordinary edit, not a rewind: the version being replaced is
+        // recorded first, so a restore is itself undoable through the same history.
+        groupBuilder.MapPost("/{id:guid}/revisions/{revisionId:guid}/restore", async (
+            Guid id, Guid revisionId, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            var revision = await db.DraftRevisions.FirstOrDefaultAsync(r => r.Id == revisionId && r.DraftId == id);
+            if (revision is null) return Results.NotFound();
+            var lang = revision.Language;
+
+            var restoredAt = DateTime.UtcNow;
+            if (lang == draft.PrimaryLanguage)
+            {
+                await DraftRevisionService.RecordAsync(db, id, lang, draft.Title, draft.CedarJson);
+                draft.Title = revision.Title;
+                draft.CedarJson = revision.CedarJson;
+                draft.UpdatedAt = restoredAt;
+            }
+            else
+            {
+                var translation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang);
+                if (translation is null) return Results.BadRequest(new { error = ErrorMessages.NoVersionInLanguage(lang) });
+                await DraftRevisionService.RecordAsync(db, id, lang, translation.Title, translation.CedarJson);
+                translation.Title = revision.Title;
+                translation.CedarJson = revision.CedarJson;
+                translation.UpdatedAt = restoredAt;
+            }
+
+            await DraftRevisionService.RecordAsync(db, id, lang, revision.Title, revision.CedarJson, DraftRevisionService.Kinds.Restore);
+            await db.SaveChangesAsync();
+            return Results.Ok(new { language = lang, title = revision.Title, cedarJson = revision.CedarJson, updatedAt = restoredAt });
+        });
         
         groupBuilder.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
         {

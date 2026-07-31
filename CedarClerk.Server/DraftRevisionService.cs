@@ -12,6 +12,9 @@ public static class DraftRevisionService
         public const string Save = "save";
         public const string Telegram = "telegram";
         public const string Blog = "blog";
+        // T-016 — a marker, not a copy of anything new: it names the point the author rewound to
+        // so the history reads as a story. Not pruned (restores are rare and deliberate).
+        public const string Restore = "restore";
     }
 
     // ADR-065 — a ceiling on the *edit* history only. The autosave fires on every pause in typing,

@@ -2015,13 +2015,28 @@ input[type="datetime-local"]:focus-visible {
 }
 
 /* ADR-065 — version history rows and the publish-confirmation diff. */
+/* A row is a button now (T-016): it opens the version rather than just describing it. */
 .revision-row {
     display: flex;
     gap: 12px;
     align-items: baseline;
-    padding: 6px 0;
+    width: 100%;
+    padding: 6px 4px;
+    border: none;
     border-bottom: 1px solid var(--border);
+    border-radius: 6px 6px 0 0;
+    background: none;
+    font: inherit;
     font-size: var(--fs-13);
+    text-align: left;
+    cursor: pointer;
+}
+
+.revision-row:hover { background: var(--alt); }
+
+.revision-row.selected {
+    background: var(--asoft);
+    border-bottom-color: var(--abord);
 }
 
 .revision-when { color: var(--text); }
@@ -2040,6 +2055,52 @@ input[type="datetime-local"]:focus-visible {
 }
 
 .empty-note { color: var(--t2); }
+
+/* T-016/T-017 — the opened version: what it changes, and what it actually says. */
+.revision-detail {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+.revision-detail-head {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: var(--fs-13);
+    color: var(--t2);
+}
+
+.revision-detail-head select {
+    font: inherit;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+}
+
+.revision-preview-title {
+    margin-top: 12px;
+    font-size: var(--fs-12);
+    color: var(--t3);
+}
+
+.revision-preview {
+    max-height: 240px;
+    overflow: auto;
+    margin: 4px 0 0;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--alt);
+    font-family: inherit;
+    font-size: var(--fs-13);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
 
 .publish-diff {
     margin-top: 12px;

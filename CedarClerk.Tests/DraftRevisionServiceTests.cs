@@ -101,6 +101,27 @@ public class DraftRevisionServiceTests
         Assert.False(await db.DraftRevisions.AnyAsync(r => r.CedarJson == Doc("edit0")));
     }
 
+    // T-016 — a restore marker is the one point in the history an author will look for later, so
+    // it must not be swept away by the edit-history ceiling like an ordinary autosave.
+    [Fact]
+    public async Task Restore_markers_survive_the_save_pruning()
+    {
+        using var db = NewDb();
+        var id = Guid.NewGuid();
+
+        await DraftRevisionService.RecordAsync(db, id, Languages.Russian, "T", Doc("rewound here"),
+            DraftRevisionService.Kinds.Restore);
+        await db.SaveChangesAsync();
+
+        for (var i = 0; i < 60; i++)
+        {
+            await DraftRevisionService.RecordAsync(db, id, Languages.Russian, "T", Doc("edit" + i));
+            await db.SaveChangesAsync();
+        }
+
+        Assert.Equal(1, await db.DraftRevisions.CountAsync(r => r.Kind == DraftRevisionService.Kinds.Restore));
+    }
+
     [Fact]
     public async Task A_first_publication_needs_no_confirmation()
     {

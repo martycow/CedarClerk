@@ -1054,18 +1054,62 @@
     </div>
 
     @if (revisionsOpen()) {
-    <app-modal [width]="520" (closed)="revisionsOpen.set(false)">
+    <app-modal [width]="620" (closed)="revisionsOpen.set(false)">
         <h2 modal-title>{{ t().editor.versions.historyTitle(lang().toUpperCase()) }}</h2>
         <div modal-body>
+            @if (revisionError(); as err) { <p class="error">{{ err }}</p> }
+
+            <!--T-016: the list is the way in, not the whole feature — a row opens the version,
+            and only then are "what changed" and "restore" on offer.-->
             @for (revision of revisions(); track revision.id) {
-            <p class="revision-row">
+            <button type="button" class="revision-row" [class.selected]="selectedRevision()?.id === revision.id"
+                    (click)="openRevision(revision.id)">
                 <span class="revision-when">{{ utcDate(revision.createdAt).toLocaleString() }}</span>
                 <span class="revision-kind" [class.publish]="revision.kind !== 'save'">{{ revisionKindLabel(revision.kind) }}</span>
                 <span class="revision-lines">{{ t().editor.versions.blocks(revision.lines) }}</span>
-            </p>
+            </button>
             } @empty { <p class="empty-note">{{ t().editor.versions.historyEmpty }}</p> }
+
+            @if (selectedRevision(); as selected) {
+            <div class="revision-detail">
+                @if (selected.isCurrent) { <p class="muted">{{ t().editor.versions.sameAsCurrent }}</p> }
+
+                <p class="revision-detail-head">
+                    <span>{{ t().editor.versions.comparedWith }}</span>
+                    <select [value]="compareWith()" (change)="compareRevisionWith($any($event.target).value)">
+                        <option value="current">{{ t().editor.versions.currentVersion }}</option>
+                        @for (other of revisions(); track other.id) {
+                        @if (other.id !== selected.id) {
+                        <option [value]="other.id">{{ utcDate(other.createdAt).toLocaleString() }}</option>
+                        }
+                        }
+                    </select>
+                </p>
+
+                @if (revisionDiff(); as diff) {
+                <p class="publish-diff-head">
+                    <span>{{ t().editor.versions.changedBlocks(diff.totalChanged) }}</span>
+                    <span class="muted">{{ t().editor.versions.wasNowLines(diff.beforeLines, diff.afterLines) }}</span>
+                </p>
+                @if (diff.addedLines.length) {
+                <p class="publish-diff-line added">{{ t().editor.versions.addedLines }}: {{ diff.addedLines.join(', ') }}</p>
+                }
+                @if (diff.removedLines.length) {
+                <p class="publish-diff-line removed">{{ t().editor.versions.removedLines }}: {{ diff.removedLines.join(', ') }}</p>
+                }
+                }
+
+                <p class="revision-preview-title">{{ t().editor.versions.preview }}</p>
+                <pre class="revision-preview">{{ revisionPreviewText() }}</pre>
+            </div>
+            }
         </div>
         <button modal-actions class="btn-ghost" (click)="revisionsOpen.set(false)">{{ t().editor.versions.close }}</button>
+        @if (selectedRevision(); as selected) {
+        <button modal-actions class="btn-accent" [disabled]="revisionBusy() || selected.isCurrent" (click)="restoreRevision()">
+            {{ t().editor.versions.restore }}
+        </button>
+        }
     </app-modal>
     }
 

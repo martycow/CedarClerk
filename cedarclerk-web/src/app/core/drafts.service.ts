@@ -72,12 +72,36 @@ export interface ScheduledInfo { scheduledAtUtc: string; chatId: string; status:
 // baselines the publish guard diffs against, and are never pruned.
 export interface DraftRevision {
     id: string;
-    kind: 'save' | 'telegram' | 'blog';
+    kind: RevisionKind;
     destination: string | null;
     createdAt: string;
     title: string;
     fingerprint: string;
     lines: number;
+}
+
+// "restore" marks the point an author rewound to — see T-016.
+export type RevisionKind = 'save' | 'telegram' | 'blog' | 'restore';
+
+// The same row with its stored document, plus what restoring it would change.
+export interface DraftRevisionDetail {
+    id: string;
+    kind: RevisionKind;
+    destination: string | null;
+    createdAt: string;
+    title: string;
+    cedarJson: string;
+    diffToCurrent: RevisionDiff | null;
+    isCurrent: boolean;
+}
+
+export interface RevisionDiff {
+    beforeLines: number;
+    afterLines: number;
+    addedLines: number[];
+    removedLines: number[];
+    changedLines: number;
+    totalChanged: number;
 }
 
 export interface DraftMeta {
@@ -395,6 +419,22 @@ export class DraftsService {
 
     revisions(id: string, language: string) {
         return firstValueFrom(this.http.get<DraftRevision[]>(`/api/drafts/${id}/revisions/${language}`));
+    }
+
+    revision(id: string, language: string, revisionId: string) {
+        return firstValueFrom(this.http.get<DraftRevisionDetail>(`/api/drafts/${id}/revisions/${language}/${revisionId}`));
+    }
+
+    // T-017 — either end may be the literal 'current', which is whatever is stored for that
+    // language right now.
+    revisionDiff(id: string, language: string, from: string, to: string) {
+        return firstValueFrom(this.http.get<{ diff: RevisionDiff }>(
+            `/api/drafts/${id}/revisions/${language}/diff`, { params: { from, to } }));
+    }
+
+    restoreRevision(id: string, revisionId: string) {
+        return firstValueFrom(this.http.post<{ language: string; title: string; cedarJson: string; updatedAt: string }>(
+            `/api/drafts/${id}/revisions/${revisionId}/restore`, {}));
     }
 
     removeTranslation(id: string, lang: string) {
