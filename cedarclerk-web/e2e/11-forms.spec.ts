@@ -83,9 +83,10 @@ test('a private post shows the gate, and a submission reaches the owner', async 
     // browser has already navigated away from is not possible.
     expect((await submitted).status()).toBe(201);
 
-    // Access granted: the same context now sees the body.
-    await readerPage.goto(`${BLOG_ORIGIN}/${slug}`);
-    await expect(readerPage.locator('body')).toContainText('only invited readers should see');
+    // No navigation here: the page script reloads itself once the cookie is in, and a goto racing
+    // that reload aborts it (ERR_ABORTED). Waiting for the body is also the more honest assertion —
+    // it says the reader ended up on the post, not that a second request would have worked.
+    await expect(readerPage.locator('body')).toContainText('only invited readers should see', { timeout: 15_000 });
     await reader.close();
 
     const registrations = await (await context.request.get(`/api/drafts/${id}/registrations`)).json();
