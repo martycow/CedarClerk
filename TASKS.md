@@ -9,16 +9,18 @@ translation, three languages, two form types, Posts Manager, Appearance). `dotne
 `ng build` clean, frontend 11/11. **The entire remaining risk is that none of it has been used by a
 human yet.**
 
-### Blocking the next deploy — a manual step on the Pi
-- [ ] **Copy the existing DataProtection keys into the new location before starting the new
-  binaries** (T-074/ADR-066). They decrypt every auth cookie, and the new build reads them from
-  `CEDAR_DATA_DIR` instead of `~/.aspnet`:
-  ```
-  ssh martycow@raspberrypi.local "mkdir -p ~/cedarclerk/data/dataprotection-keys && cp ~/.aspnet/DataProtection-Keys/*.xml ~/cedarclerk/data/dataprotection-keys/"
-  ```
-  Skipping it costs one mass sign-out — not data, but not nothing either. Do it *before*
-  `Scripts/deploy.ps1`, in the same order `.claude/rules/ef-migrations.md` uses for its own
-  stop → edit → deploy → start argument.
+### Deployed 30.07.2026 — v0.9.16 is in production
+- [x] **DataProtection keys copied into `~/cedarclerk/data/dataprotection-keys/` before the deploy**
+  (T-074/ADR-066), with `cp -p` so the original 06.07 key kept its permissions. Verified after
+  restart: the directory still holds that one key and no newly generated one, which is what
+  "the app found the existing key" looks like from outside.
+- [x] `Scripts/deploy.ps1` run end-to-end. Health check green (`0.9.16`), zero `Applying migration`
+  lines (no schema change shipped today), no `warn:`/`fail:` in the startup log, bot
+  `@cedar_clerk_bot` running, `/`, `blog.mooexe.dev` and `/rss.xml` all 200.
+- [ ] **Confirm an existing session survived** — the one thing that can't be checked from outside:
+  open the app and see whether you are still signed in without re-entering a password. If you are
+  not, the key copy didn't take and everyone was signed out once (recoverable by logging in again,
+  nothing lost).
 - [ ] Still open from before: activate the Stripe Customer Portal in the Stripe Dashboard
   (Settings → Billing) — the code path exists, the portal itself is off.
 
