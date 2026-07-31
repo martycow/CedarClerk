@@ -63,9 +63,12 @@ export async function typeInSheet(page: Page, text: string) {
 // before this edit has been written at all. Waiting for the PUT itself is the only version of
 // this that cannot pass early.
 export async function withSave(page: Page, action: () => Promise<void>) {
+    // 30s, not the debounce's 1.2s plus a little: the window has to survive a machine busy with an
+    // Angular rebuild or a second browser, and a suite that fails on load rather than on breakage
+    // is a suite people stop reading.
     const written = page.waitForResponse(
         r => /\/api\/drafts\//.test(r.url()) && r.request().method() === 'PUT' && r.status() === 200,
-        { timeout: 20_000 },
+        { timeout: 30_000 },
     );
     await action();
     await written;

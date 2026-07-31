@@ -2,6 +2,20 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-07-31 (v0.9.19) — the drafts table had no titles in it on an iPad
+
+Marty sent a screenshot from his iPad: the drafts list, with `TITLE` and `STATE` drawn on top of each other and **not one draft name visible** in any row.
+
+The arithmetic was simply wrong. `.drafts-row` carried `min-width: 1020px`, described in its own comment as "sum of the fixed columns + gaps + padding, leaving room for the 1fr title". The real sum is 960px of fixed columns + 80px of actions + seven 12px gaps + 32px of padding = **1156px before the title gets a single pixel** — so the stated minimum was 136px short. A grid gives a fractional track whatever is left after the fixed ones, and on an iPad's ~1130px of content width that is nothing: the title collapsed to zero and its header slid under the next one.
+
+Three changes, and the first is the one that matters: **the title track has a floor** (`minmax(200px, 1fr)`), so it cannot be squeezed out of existence again. **The row's min-width is now computed** from the columns actually showing rather than written down and left to drift. And below 1280px the table **drops Tags and Activity** instead of scrolling sideways — they are the two columns you can lose and still recognise a post, which is what makes iPad landscape fit whole. The resize handles only render at full width: in compact mode the column indices no longer line up with the stored widths, and a 5px pointer target is not something a finger hits anyway.
+
+Verified at Marty's actual device sizes, not round numbers — iPad landscape (1180), iPad portrait (820) and iPhone 13 (390) are now captured by the audit script. **Still not fixed, and recorded rather than quietly left**: iPad portrait shows every title but scrolls to reach the row actions, and on an iPhone the whole page is wider than the viewport. Both belong to T-034's full responsive pass in Phase 11.
+
+En route, the smoke suite was failing intermittently on one test and the trace said why: the text was typed and saved, `Shift+Home` selected the line, and `Ctrl+B` then did nothing at all — no mark, no document change, so no autosave to wait for. The same test passes when run alone. The suite now clicks the toolbar's Bold button, which is what a person presses anyway, and the shortcut's inconsistency is **T-100** — to be reproduced by hand before deciding whether it is a real bug or an artefact of synthetic key events. `withSave` also got a longer window, because a suite that fails under load rather than on breakage stops being read.
+
+`dotnet test` 442/442, smoke 37/37, `ng build` clean.
+
 ## 2026-07-31 (v0.9.18) — Phase 10: the audit that had to come before the redesign
 
 Marty asked for four things at once: a full UI check, a redesign in one modern style, reworked icons, and one more social network. **ADR-070** splits them into three sequential phases and this session is the first of them, because the project's dominant risk is verification debt, not code debt — a large amount of shipped work had never been opened in a browser, and restyling on top of that destroys the ability to tell an old defect from an introduced one. Phase 11 (Design System 2.0) and Phase 12 (Publishing Targets) are documented, not started; both are blocked on product decisions (Q-11, Q-1).

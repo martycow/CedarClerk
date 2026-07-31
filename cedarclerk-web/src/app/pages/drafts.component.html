@@ -99,18 +99,23 @@
         <div class="drafts-table">
             <!--N1: headers sort, and the 5px handle on each fixed column resizes it. Title takes
             whatever is left, so a resize redistributes rather than widening the table.-->
-            <div class="drafts-row drafts-row-head" [style.gridTemplateColumns]="gridTemplate()">
+            <!--The resize handles only render at full width: in compact mode the column indices no
+            longer line up with colWidths, and a 5px pointer target is not something a finger hits
+            anyway.-->
+            <div class="drafts-row drafts-row-head" [style.gridTemplateColumns]="gridTemplate()" [style.minWidth]="rowMinWidth()">
                 <button class="col-head" (click)="sortBy('title')">{{ t().drafts.columns.title }} {{ sortMark('title') }}</button>
-                <button class="col-head" (click)="sortBy('state')">{{ t().drafts.columns.state }} {{ sortMark('state') }}<span class="col-resize" (pointerdown)="startColResize(0, $event)"></span></button>
-                <button class="col-head" (click)="sortBy('languages')">{{ t().drafts.columns.languages }} {{ sortMark('languages') }}<span class="col-resize" (pointerdown)="startColResize(1, $event)"></span></button>
-                <button class="col-head" (click)="sortBy('folder')">{{ t().drafts.columns.folder }} {{ sortMark('folder') }}<span class="col-resize" (pointerdown)="startColResize(2, $event)"></span></button>
+                <button class="col-head" (click)="sortBy('state')">{{ t().drafts.columns.state }} {{ sortMark('state') }}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(0, $event)"></span>}</button>
+                <button class="col-head" (click)="sortBy('languages')">{{ t().drafts.columns.languages }} {{ sortMark('languages') }}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(1, $event)"></span>}</button>
+                <button class="col-head" (click)="sortBy('folder')">{{ t().drafts.columns.folder }} {{ sortMark('folder') }}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(2, $event)"></span>}</button>
+                @if (!compact()) {
                 <button class="col-head" (click)="sortBy('tags')">{{ t().drafts.columns.tags }} {{ sortMark('tags') }}<span class="col-resize" (pointerdown)="startColResize(3, $event)"></span></button>
                 <button class="col-head" (click)="sortBy('activity')">{{ t().drafts.columns.activity }} {{ sortMark('activity') }}<span class="col-resize" (pointerdown)="startColResize(4, $event)"></span></button>
-                <button class="col-head right" (click)="sortBy('updated')">{{ t().drafts.columns.updated }} {{ sortMark('updated') }}<span class="col-resize" (pointerdown)="startColResize(5, $event)"></span></button>
+                }
+                <button class="col-head right" (click)="sortBy('updated')">{{ t().drafts.columns.updated }} {{ sortMark('updated') }}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(5, $event)"></span>}</button>
                 <button class="col-head col-reset" (click)="resetColWidths()" [title]="t().drafts.resetColumns">⤢</button>
             </div>
             @for (d of filteredDrafts(); track d.id) {
-            <div class="drafts-row" [class.busy]="busyId() === d.id" [style.gridTemplateColumns]="gridTemplate()" (click)="openDraft(d.id)">
+            <div class="drafts-row" [class.busy]="busyId() === d.id" [style.gridTemplateColumns]="gridTemplate()" [style.minWidth]="rowMinWidth()" (click)="openDraft(d.id)">
                 <div class="drafts-title-cell">
                     <div class="drafts-title">
                         @if (d.isPrivate) { <svg lucideLock class="icon-xs private-lock" [attr.title]="t().drafts.privatePost"></svg> }
@@ -131,6 +136,7 @@
                     <app-folder-picker [folderId]="d.folderId" [compact]="true"
                                        (picked)="assignFolder(d, $event)"></app-folder-picker>
                 </div>
+                @if (!compact()) {
                 <div class="tags-cell">
                     <!--Loop variable is `tag`, not `t` — `t` is the dictionary accessor here.-->
                     @for (tag of d.tags.split(',').slice(0, 3); track tag) { @if (tag) { <span class="tag-chip-ro">#{{ tag }}</span> } }
@@ -149,6 +155,7 @@
                     <span class="activity-empty">—</span>
                     }
                 </div>
+                }
                 <div class="right">{{ d.updatedAt | date:'d MMM, HH:mm' }}</div>
                 <div class="row-actions">
                     <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">

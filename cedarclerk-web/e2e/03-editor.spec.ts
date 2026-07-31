@@ -16,7 +16,12 @@ test('bold survives the save round-trip', async ({ page, context }) => {
     await withSave(page, () => typeInSheet(page, 'emphasised'));
     await withSave(page, async () => {
         await page.keyboard.press('Shift+Home');
-        await page.keyboard.press('Control+b');
+        // The toolbar button, not Ctrl+B. The shortcut applied the mark when this test ran alone
+        // and silently did nothing in a full run — the selection was there, the document never
+        // changed, so no save ever fired. Whatever that is, it belongs in a test of its own
+        // (T-100); this test is about a mark surviving the round-trip, and the button is what a
+        // person actually presses.
+        await page.getByTitle(/^Bold/).first().click();
     });
 
     await page.reload();

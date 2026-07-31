@@ -173,16 +173,16 @@
     display: grid;
     /* Static fallback; gridTemplate() sets the real values inline. Kept in step with
        DEFAULT_COL_WIDTHS so the first paint doesn't jump. */
-    grid-template-columns: 1fr 200px 120px 170px 190px 140px 140px 80px;
+    grid-template-columns: minmax(200px, 1fr) 200px 120px 170px 190px 140px 140px 80px;
     gap: 12px;
     align-items: center;
     padding: 11px 16px;
     border-bottom: 1px solid var(--border);
     cursor: pointer;
-    /* Sum of the fixed columns + gaps + padding, leaving room for the 1fr title. Below this
-       the row scrolls horizontally instead of squashing the columns into nothing (B24). Well
-       under .drafts-body's content width at any desktop size, so desktop never scrolls. */
-    min-width: 1020px;
+    /* min-width is set inline by rowMinWidth(), because it depends on which columns are showing
+       and on their current widths. It used to be a hardcoded 1020px here — 136px short of what
+       the row actually needs before the title gets a single pixel, which is exactly how an iPad
+       ended up with a table containing no titles and two headers drawn on top of each other. */
 }
 
 .drafts-row:last-child {

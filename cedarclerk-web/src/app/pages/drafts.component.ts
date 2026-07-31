@@ -41,6 +41,23 @@ const DEFAULT_COL_WIDTHS = [200, 120, 170, 190, 140, 140];
 const MIN_COL_WIDTH = 60;
 const COL_STORAGE_KEY = 'cedar-drafts-cols';
 
+// The title track has a floor now. It used to be a bare `1fr`, and a grid gives a fractional track
+// whatever is left after the fixed ones — which on an iPad is nothing: the fixed columns, the seven
+// gaps and the padding already need 1156px, and the row's stated min-width said 1020px. The result
+// was a table with no titles in it and two column headers drawn on top of each other.
+const TITLE_MIN_WIDTH = 200;
+const ROW_GAP = 12;
+const ROW_PADDING = 32;
+const ACTIONS_WIDTH = 80;
+
+// Below this the row would have to scroll sideways to show everything, so it stops showing
+// everything instead: Tags and Activity are the two columns you can lose and still recognise a
+// post. iPad landscape (1180px) is the case this exists for — Marty reads the list there daily.
+const COMPACT_MAX_WIDTH = 1280;
+// Indices into DEFAULT_COL_WIDTHS: state, languages, folder, updated. Tags (3) and activity (4)
+// are the ones dropped.
+const COMPACT_COLUMNS = [0, 1, 2, 5];
+
 function loadColWidths(): number[] {
     try {
         const raw = JSON.parse(localStorage.getItem(COL_STORAGE_KEY) ?? '');
@@ -124,6 +141,9 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     sortKey = signal<SortKey>('created');
     sortDir = signal<'asc' | 'desc'>('desc');
     colWidths = signal<number[]>(loadColWidths());
+    // Narrow enough that the full column set no longer fits — see COMPACT_MAX_WIDTH.
+    compact = signal(window.innerWidth <= COMPACT_MAX_WIDTH);
+    private readonly onResize = () => this.compact.set(window.innerWidth <= COMPACT_MAX_WIDTH);
 
     // Folders (Phase "Cedar Clerk 0.9.0" idea #19, see the ADR following ADR-038,
     // docs/DECISIONS.md) — 'all' = no folder filter, 'none' = unfiled drafts only, else a folder id.
@@ -144,6 +164,7 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     private importMarkdownSub?: Subscription;
 
     async ngOnInit() {
+        window.addEventListener('resize', this.onResize);
         try {
             const [drafts] = await Promise.all([this.draftsApi.list(), this.foldersApi.ensureLoaded()]);
             this.drafts.set(drafts);
@@ -156,6 +177,7 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
 
     ngOnDestroy() {
         this.importMarkdownSub?.unsubscribe();
+        window.removeEventListener('resize', this.onResize);
     }
 
     status(d: DraftMeta): DraftStatus {
@@ -213,8 +235,25 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
         return this.sortDir() === 'asc' ? '↑' : '↓';
     }
 
+    // Which columns are actually drawn. The template, the row's min-width and the `@if`s in the
+    // markup all read this one signal, so they cannot disagree about how many tracks exist.
+    private visibleColWidths(): number[] {
+        const all = this.colWidths();
+        return this.compact() ? COMPACT_COLUMNS.map(i => all[i]) : all;
+    }
+
     gridTemplate(): string {
-        return `1fr ${this.colWidths().map(w => `${w}px`).join(' ')} 80px`;
+        const cols = this.visibleColWidths();
+        return `minmax(${TITLE_MIN_WIDTH}px, 1fr) ${cols.map(w => `${w}px`).join(' ')} ${ACTIONS_WIDTH}px`;
+    }
+
+    // Computed rather than written down: the old hardcoded 1020px was 136px short of the truth,
+    // which is what let the title collapse instead of the table scrolling.
+    rowMinWidth(): string {
+        const cols = this.visibleColWidths();
+        const fixed = cols.reduce((sum, w) => sum + w, 0) + ACTIONS_WIDTH;
+        const gaps = (cols.length + 1) * ROW_GAP;
+        return `${fixed + gaps + ROW_PADDING + TITLE_MIN_WIDTH}px`;
     }
 
     // Pointer events (not mouse) so a drag works with a trackpad, a pen and an iPad finger alike;

@@ -226,6 +226,31 @@ test('@audit blog surfaces', async ({ page, context }) => {
     await reader.close();
 });
 
+// Marty reads the drafts list on an iPad daily, and that is where the title column collapsed to
+// nothing. These are his actual devices, not round numbers.
+const DEVICES = [
+    { name: 'ipad-landscape', width: 1180, height: 820 },
+    { name: 'ipad-portrait', width: 820, height: 1180 },
+    { name: 'iphone13', width: 390, height: 844 },
+];
+
+for (const device of DEVICES) {
+    test(`@audit drafts on ${device.name}`, async ({ page, context }) => {
+        for (const t of ['Публичный пост о кедрах', 'Draft with a very long title that should not break the row', 'Третий']) {
+            await createDraft(context, t, ['Текст поста.']);
+        }
+        await page.setViewportSize({ width: device.width, height: device.height });
+        await page.goto('/drafts');
+        await expect(page.locator('.drafts-title').first()).toBeVisible();
+        await shot(page, `90-drafts-${device.name}`);
+
+        await page.goto('/posts');
+        await shot(page, `91-posts-${device.name}`);
+        await page.goto('/settings');
+        await shot(page, `92-settings-${device.name}`);
+    });
+}
+
 test('@audit dark theme spot check', async ({ page, context }) => {
     await createDraft(context, 'Тёмная тема', ['Текст.']);
     await page.goto('/drafts');
