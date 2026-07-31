@@ -259,6 +259,26 @@ for (const device of DEVICES) {
     });
 }
 
+// T-078 — the styleguide in all four combinations it exists in. This is the one surface where the
+// screenshots are the deliverable rather than evidence: it is how a token change gets judged
+// without walking the app.
+test('@audit styleguide, both themes and both densities', async ({ page }) => {
+    await page.goto('/dev/styleguide');
+    await expect(page.locator('h1')).toContainText('Design System');
+    await shot(page, '70-styleguide-light-comfortable');
+
+    const density = page.getByRole('button', { name: /Density:/ });
+    await density.click();
+    await shot(page, '71-styleguide-light-compact');
+
+    // The theme button toggles the app-wide ThemeService, so this leaves the suite in dark — the
+    // last two shots are taken in that order deliberately rather than toggling back and forth.
+    await page.getByRole('button', { name: /Theme:/ }).click();
+    await shot(page, '72-styleguide-dark-compact');
+    await density.click();
+    await shot(page, '73-styleguide-dark-comfortable');
+});
+
 test('@audit dark theme spot check', async ({ page, context }) => {
     await createDraft(context, 'Тёмная тема', ['Текст.']);
     await page.goto('/drafts');

@@ -1,0 +1,243 @@
+<div class="sg" [attr.data-density]="compact() ? 'compact' : null">
+
+    <header class="sg-top">
+        <div>
+            <h1>Cedar Clerk — Design System 2.0</h1>
+            <p class="sg-sub">ADR-071 · every token and component state on one screen. Not a product page.</p>
+        </div>
+        <div class="sg-controls">
+            <button class="btn-ghost" (click)="toggleTheme()">Theme: {{ theme() }}</button>
+            <button class="btn-ghost" (click)="compact.set(!compact())">
+                Density: {{ compact() ? 'compact' : 'comfortable' }}
+            </button>
+        </div>
+    </header>
+
+    <p class="sg-note">
+        The density toggle sets <code>data-density</code> on this page's root — the same mechanism
+        <code>ThemeService</code> uses for <code>data-theme</code>. Everything below reacts to it
+        through tokens alone; no component decides its own density.
+    </p>
+
+    <!-- ── Color ───────────────────────────────────────────────────────────── -->
+    <section>
+        <h2>Colour</h2>
+        <div class="sg-swatches">
+            @for (c of colors; track c.name) {
+                <div class="sg-swatch">
+                    <div class="sg-chip" [style.background]="'var(' + c.name + ')'"></div>
+                    <code>{{ c.name }}</code>
+                    <span>{{ c.role }}</span>
+                </div>
+            }
+        </div>
+
+        <h3>Chart series</h3>
+        <p class="sg-note">
+            Fixed order, never cycled — a 7th category folds into "Other". Excludes danger/ok on
+            purpose: those mean a state, not an identity.
+        </p>
+        <div class="sg-series">
+            @for (s of series; track s) {
+                <div class="sg-series-item">
+                    <div class="sg-chip" [style.background]="'var(' + s + ')'"></div>
+                    <code>{{ s }}</code>
+                </div>
+            }
+        </div>
+    </section>
+
+    <!-- ── Typography ──────────────────────────────────────────────────────── -->
+    <section>
+        <h2>Typography</h2>
+
+        <h3>Scale (integers only)</h3>
+        <p class="sg-note">
+            110 of the 314 hardcoded sizes in the app are half-pixels (12.5, 11.5, 10.5, 13.5).
+            They collapse to the nearest integer here — a browser rounds a half-pixel per element
+            at render, so two controls a half-step apart can look identical at one zoom and
+            different at another.
+        </p>
+        @for (s of sizes; track s.token) {
+            <div class="sg-type-row">
+                <code>{{ s.token }}</code>
+                <span [style.font-size]="'var(' + s.token + ')'">Cedar Clerk · Сидар Клерк {{ s.px }}px</span>
+            </div>
+        }
+
+        <h3>Semantic roles</h3>
+        <p class="sg-note">Components use these, not the numbers above. These are what the density switch moves.</p>
+        @for (r of roles; track r.token) {
+            <div class="sg-type-row">
+                <code>{{ r.token }}</code>
+                <span [style.font-size]="'var(' + r.token + ')'">{{ r.use }}</span>
+            </div>
+        }
+
+        <h3>Reading surface — serif</h3>
+        <p class="sg-note">Principle 4: serif in content, sans in chrome. This is the only place a serif appears.</p>
+        <div class="sg-read">
+            <p>
+                Кедровый сруб пахнет смолой ещё год после того, как его собрали. Это единственная
+                поверхность в продукте, где текст набран серифом — тело поста в блоге и лист
+                редактора. Панели, таблицы, формы и меню остаются на <code>--font-sans</code>.
+            </p>
+            <p>
+                A reading surface is set at <code>--fs-read</code> / <code>--lh-read</code>, which
+                is deliberately larger and looser than any chrome on the same screen.
+            </p>
+        </div>
+    </section>
+
+    <!-- ── Space, radius, elevation ────────────────────────────────────────── -->
+    <section>
+        <h2>Spacing</h2>
+        <div class="sg-space-row">
+            @for (s of spaces; track s) {
+                <div class="sg-space-item">
+                    <div class="sg-space-bar" [style.width]="'var(' + s + ')'" [style.height]="'var(' + s + ')'"></div>
+                    <code>{{ s }}</code>
+                </div>
+            }
+        </div>
+
+        <h2>Radius</h2>
+        <div class="sg-space-row">
+            @for (r of radii; track r) {
+                <div class="sg-space-item">
+                    <div class="sg-radius-box" [style.border-radius]="'var(' + r + ')'"></div>
+                    <code>{{ r }}</code>
+                </div>
+            }
+        </div>
+
+        <h2>Elevation</h2>
+        <div class="sg-space-row">
+            @for (e of elevations; track e) {
+                <div class="sg-space-item">
+                    <div class="sg-elev-box" [style.box-shadow]="'var(' + e + ')'"></div>
+                    <code>{{ e }}</code>
+                </div>
+            }
+        </div>
+    </section>
+
+    <!-- ── Motion ──────────────────────────────────────────────────────────── -->
+    <section>
+        <h2>Motion</h2>
+        <p class="sg-note">
+            fast = feedback on something already under the cursor · base = something appearing ·
+            slow = a full-surface change. All three go to 1ms under the OS "reduce motion" setting.
+        </p>
+        <button class="btn-ghost" (click)="replayMotion()">Replay</button>
+        <div class="sg-motion">
+            @for (m of motions; track m) {
+                <div class="sg-motion-row">
+                    <code>{{ m }}</code>
+                    <div class="sg-track">
+                        <!-- Keyed on motionKey so Replay destroys and recreates the element: that
+                             is what restarts a CSS animation, since re-setting the same class does
+                             not. -->
+                        @for (k of [motionKey()]; track k) {
+                            <div class="sg-runner" [style.animation-duration]="'var(' + m + ')'"></div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+
+    <!-- ── Icons ───────────────────────────────────────────────────────────── -->
+    <section>
+        <h2>Icons</h2>
+        <p class="sg-note">
+            Sizes exist as tokens; the set itself is still Lucide until T-079 migrates to Phosphor
+            (ADR-072). <code>.icon</code> is currently declared in 9 files with three different
+            values — these tokens are what replaces that.
+        </p>
+        <div class="sg-space-row">
+            @for (i of icons; track i) {
+                <div class="sg-space-item">
+                    <div class="sg-icon-box" [style.width]="'var(' + i + ')'" [style.height]="'var(' + i + ')'"></div>
+                    <code>{{ i }}</code>
+                </div>
+            }
+        </div>
+
+        <h3>Glyphs from no icon set</h3>
+        <p class="sg-note">
+            These 10 render in the system emoji font — different on every OS, and they cannot carry
+            the labels T-080 needs. Shown so the problem is visible, not described.
+        </p>
+        <div class="sg-glyphs">
+            @for (g of strayGlyphs; track g) {
+                <span>{{ g }}</span>
+            }
+        </div>
+    </section>
+
+    <!-- ── Controls ────────────────────────────────────────────────────────── -->
+    <section>
+        <h2>Buttons</h2>
+        <p class="sg-note">
+            Accent-filled = primary, outlined ghost = secondary. Today these are copy-pasted into
+            editor and settings CSS with drifted values (7px 14px vs 5px 12px); the versions here
+            are the canonical ones and use density tokens, so they change with the toggle above.
+        </p>
+        <div class="sg-row">
+            <button class="btn-accent">Primary</button>
+            <button class="btn-accent" disabled>Primary disabled</button>
+            <button class="btn-ghost">Secondary</button>
+            <button class="btn-ghost" disabled>Secondary disabled</button>
+            <button class="btn-danger">Destructive</button>
+        </div>
+
+        <h2>Fields</h2>
+        <div class="sg-row">
+            <input class="sg-input" placeholder="Text input" />
+            <input class="sg-input" value="Filled value" />
+            <input class="sg-input" placeholder="Disabled" disabled />
+            <select class="sg-input">
+                <option>Select</option>
+            </select>
+        </div>
+        <div class="sg-row">
+            <label class="sg-check"><input type="checkbox" checked /> Checked</label>
+            <label class="sg-check"><input type="checkbox" /> Unchecked</label>
+            <label class="sg-check"><input type="radio" checked name="sg-r" /> Radio</label>
+        </div>
+
+        <h2>Status</h2>
+        <div class="sg-row">
+            <span class="sg-badge">Draft</span>
+            <span class="sg-badge sg-badge-accent">LIVE</span>
+            <span class="sg-badge sg-badge-ok">Published</span>
+            <span class="sg-badge sg-badge-danger">Failed</span>
+            <span class="sg-count">7</span>
+        </div>
+    </section>
+
+    <!-- ── Table ───────────────────────────────────────────────────────────── -->
+    <section>
+        <h2>Table</h2>
+        <p class="sg-note">
+            The clearest thing the density toggle does: row padding, control size, radius, and
+            separation switching from shadow to border. This is what /posts, /drafts, /admin and
+            /stats opt into.
+        </p>
+        <div class="sg-table">
+            <div class="sg-tr sg-th">
+                <span>Title</span><span>State</span><span>Languages</span><span>Views</span>
+            </div>
+            @for (n of [1, 2, 3]; track n) {
+                <div class="sg-tr">
+                    <span>Как я собрал сервер на Raspberry Pi, часть {{ n }}</span>
+                    <span><span class="sg-badge sg-badge-accent">LIVE</span></span>
+                    <span>RU · EN</span>
+                    <span>1 24{{ n }}</span>
+                </div>
+            }
+        </div>
+    </section>
+
+</div>

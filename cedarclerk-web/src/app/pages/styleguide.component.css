@@ -1,0 +1,425 @@
+/* T-078 — the styleguide's own styles. This file is held to the rule the rest of Phase 11 is
+   migrating towards (ADR-071 principle 7): every colour, size, radius, spacing and duration comes
+   from a token. Raw values appear only where they are structural — a grid track, a demo box's
+   dimensions, a hairline width. If a value here ever needs to be a literal, that is a missing
+   token, not an exception. */
+
+.sg {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-5) 120px;
+    color: var(--text);
+    font-size: var(--fs-body);
+}
+
+.sg-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border);
+}
+
+.sg-controls {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+h1 {
+    font-size: var(--fs-27);
+    margin: 0 0 var(--space-1);
+    font-weight: 600;
+}
+
+h2 {
+    font-size: var(--fs-title);
+    margin: var(--space-6) 0 var(--space-3);
+    font-weight: 600;
+}
+
+h3 {
+    font-size: var(--fs-body);
+    margin: var(--space-5) 0 var(--space-2);
+    font-weight: 600;
+    color: var(--t2);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.sg-sub,
+.sg-note {
+    color: var(--t2);
+    font-size: var(--fs-meta);
+    margin: 0 0 var(--space-3);
+    max-width: 70ch;
+    line-height: 1.55;
+}
+
+section {
+    padding-top: var(--space-2);
+}
+
+code {
+    font-family: var(--font-mono);
+    font-size: var(--fs-meta);
+    background: var(--alt);
+    border-radius: var(--radius-sm);
+    padding: 1px var(--space-1);
+    color: var(--t2);
+}
+
+/* ── Colour ─────────────────────────────────────────────────────────────── */
+
+.sg-swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--dens-gap);
+}
+
+.sg-swatch {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+.sg-swatch span {
+    color: var(--t3);
+    font-size: var(--fs-caption);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* A swatch needs a border of its own: --sheet against --bg in light theme is a few percent of
+   lightness apart, and without an outline the two read as one empty rectangle. */
+.sg-chip {
+    width: 34px;
+    height: 22px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    flex: 0 0 auto;
+}
+
+.sg-series {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--dens-gap);
+}
+
+.sg-series-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+/* ── Typography ─────────────────────────────────────────────────────────── */
+
+.sg-type-row {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    align-items: baseline;
+    gap: var(--space-3);
+    padding: var(--space-1) 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+}
+
+.sg-read {
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    font-family: var(--font-serif);
+    font-size: var(--fs-read);
+    line-height: var(--lh-read);
+}
+
+.sg-read p {
+    margin: 0 0 var(--space-3);
+}
+
+.sg-read p:last-child {
+    margin-bottom: 0;
+}
+
+/* ── Space / radius / elevation / icons ─────────────────────────────────── */
+
+.sg-space-row {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-5);
+    flex-wrap: wrap;
+}
+
+.sg-space-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.sg-space-bar {
+    background: var(--accent);
+    border-radius: 2px;
+    min-width: 4px;
+    min-height: 4px;
+}
+
+.sg-radius-box,
+.sg-elev-box {
+    width: 64px;
+    height: 44px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+}
+
+.sg-elev-box {
+    border-radius: var(--radius-md);
+}
+
+.sg-icon-box {
+    background: var(--t2);
+    /* A filled square at the exact token size — the point is the measurement, and a real glyph's
+       optical size differs from its box, which would make the three look less distinct than they
+       are. Replaced with actual Phosphor icons in T-079. */
+    border-radius: 2px;
+}
+
+.sg-glyphs {
+    display: flex;
+    gap: var(--space-4);
+    font-size: var(--fs-20);
+    flex-wrap: wrap;
+}
+
+/* ── Motion ─────────────────────────────────────────────────────────────── */
+
+.sg-motion {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
+.sg-motion-row {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.sg-track {
+    background: var(--alt);
+    border-radius: 999px;
+    height: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+.sg-runner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 28px;
+    border-radius: 999px;
+    background: var(--accent);
+    animation-name: sg-slide;
+    animation-timing-function: var(--ease);
+    animation-fill-mode: forwards;
+}
+
+/* Animates `left`, not a transform: a percentage in translateX resolves against the element's own
+   width (28px), not the track's, so the runner would travel 28px and look broken. */
+@keyframes sg-slide {
+    from { left: 0; }
+    to { left: calc(100% - 28px); }
+}
+
+/* ── Controls ───────────────────────────────────────────────────────────── */
+
+.sg-row {
+    display: flex;
+    align-items: center;
+    gap: var(--dens-gap);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-3);
+}
+
+.btn-accent,
+.btn-ghost,
+.btn-danger {
+    border-radius: var(--dens-radius);
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--dens-fs);
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--motion-fast) var(--ease),
+                border-color var(--motion-fast) var(--ease),
+                color var(--motion-fast) var(--ease);
+}
+
+.btn-accent {
+    border: 1px solid transparent;
+    background: var(--accent);
+    color: var(--sheet);
+}
+
+.btn-accent:hover:not(:disabled) {
+    filter: brightness(1.08);
+}
+
+.btn-ghost {
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--t2);
+    font-weight: 400;
+}
+
+.btn-ghost:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--t3);
+}
+
+.btn-danger {
+    border: 1px solid transparent;
+    background: var(--danger);
+    color: var(--sheet);
+}
+
+.btn-danger:hover:not(:disabled) {
+    filter: brightness(1.08);
+}
+
+button:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+/* Focus is a visible ring on every control, not the browser default, and never removed without a
+   replacement — T-082's rule, applied here first because this is where it is checkable. */
+.btn-accent:focus-visible,
+.btn-ghost:focus-visible,
+.btn-danger:focus-visible,
+.sg-input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.sg-input {
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    color: var(--text);
+    border-radius: var(--dens-radius);
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--dens-fs);
+    font-family: inherit;
+}
+
+.sg-input:disabled {
+    opacity: .5;
+}
+
+.sg-input::placeholder {
+    color: var(--t3);
+}
+
+.sg-check {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--dens-fs);
+    color: var(--t2);
+    cursor: pointer;
+}
+
+.sg-check input {
+    accent-color: var(--accent);
+}
+
+.sg-badge {
+    display: inline-block;
+    border: 1px solid var(--border);
+    background: var(--alt);
+    color: var(--t2);
+    border-radius: 999px;
+    padding: 2px var(--space-2);
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    letter-spacing: .03em;
+}
+
+.sg-badge-accent {
+    background: var(--asoft);
+    border-color: var(--abord);
+    color: var(--accent);
+}
+
+.sg-badge-ok {
+    background: color-mix(in srgb, var(--ok) 14%, transparent);
+    border-color: color-mix(in srgb, var(--ok) 40%, var(--border));
+    color: var(--ok);
+}
+
+.sg-badge-danger {
+    background: color-mix(in srgb, var(--danger) 14%, transparent);
+    border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+    color: var(--danger);
+}
+
+.sg-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 var(--space-1);
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--sheet);
+    font-size: var(--fs-caption);
+    font-weight: 700;
+}
+
+/* ── Table ──────────────────────────────────────────────────────────────── */
+
+.sg-table {
+    border: 1px solid var(--border);
+    border-radius: var(--dens-radius);
+    overflow: hidden;
+    box-shadow: var(--dens-elev);
+}
+
+.sg-tr {
+    display: grid;
+    grid-template-columns: minmax(200px, 1fr) 90px 100px 70px;
+    gap: var(--dens-gap);
+    align-items: center;
+    padding: var(--dens-row-y) var(--dens-control-x);
+    font-size: var(--dens-fs);
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+    background: var(--surface);
+}
+
+.sg-tr:last-child {
+    border-bottom: none;
+}
+
+.sg-tr > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sg-th {
+    background: var(--alt);
+    color: var(--t2);
+    font-size: var(--fs-caption);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    font-weight: 700;
+}

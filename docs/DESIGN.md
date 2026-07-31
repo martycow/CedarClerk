@@ -12,7 +12,7 @@ The visual direction, decided by Marty as the answer to Q-11 and binding on Phas
 4. **Serif for content, sans for chrome.** Blog post body and editor sheet get a serif; toolbars, tables, forms, menus and every control stay on `--font-sans`.
 5. **Light-first, dark as a peer.** Every token added gets both light and dark values in the same edit, never "dark later".
 6. **The blog is inside the system.** `BlogEndpoints.cs` maintains its own `:root` and 21 hex literals, `CedarToBlogHtmlRenderer` another 6 — a hand-kept duplicate token set serving roughly half of what a reader sees. Tokens v2 must reach the server-rendered surfaces too.
-7. **Zero hardcoded values in components** (T-077). The current gap, measured 31.07.2026: **191** `font-size: Npx` declarations across component CSS against the `--fs-*` scale, plus 44 hex literals in `styles.scss`.
+7. **Zero hardcoded values in components** (T-077). The gap, measured 31.07.2026: **314** hardcoded `font-size` declarations across component CSS against the `--fs-*` scale, plus 44 hex literals in `styles.scss`. **110 of the 314 are half-pixel values** (44×`12.5px`, 30×`11.5px`, 16×`10.5px`, 14×`13.5px`), and 79% of all UI text sits in an 11–13.5px band — the type hierarchy is five barely-distinguishable sizes crowded into 2.5px. **The v2 scale is integers only**; half-steps collapse to the nearest whole pixel.
 
 ## Tokens
 
@@ -53,12 +53,55 @@ Theme is applied by `ThemeService` (`cedarclerk-web/src/app/core/theme.service.t
 ```
 Roughly a ×2 progression, not a strict 4px-multiple ramp.
 
+### Density (tokens v2, ADR-071)
+Comfortable is the default, declared in `:root`; `[data-density="compact"]` overrides it on a page root. **Not one colour differs between the two** — density is spacing, size, radius and separation only.
+```
+                    comfortable        compact
+--dens-row-y        10px               6px
+--dens-control-y    7px                5px
+--dens-control-x    14px               10px
+--dens-gap          var(--space-3)     var(--space-2)
+--dens-section      var(--space-5)     var(--space-4)
+--dens-radius       var(--radius-md)   var(--radius-sm)
+--dens-fs           var(--fs-body)     var(--fs-ui)
+--dens-elev         var(--shadow)      none
+```
+
 ### Typography
 ```
---font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
---font-mono: ui-monospace, Menlo, Consolas, monospace;
+--font-sans:  -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+--font-mono:  ui-monospace, Menlo, Consolas, monospace;
+--font-serif: ui-serif, Georgia, "Iowan Old Style", "Source Serif Pro", "Times New Roman", serif;
 ```
-Font-size scale (added 27.07.2026, header/nav redesign, ADR-052): `--fs-9: 9px; --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-19: 19px; --fs-20: 20px; --fs-27: 27px;`. Adopted by the new shared header; most pre-existing component CSS still hardcodes its own sizes (e.g. editor `.tiptap h1 { font-size: 1.625em }`, `h2 { font-size: 1.3125em }`, inline code `14px`) rather than having been swept to the tokens — a real gap, not fixed here.
+`--font-serif` (added 31.07.2026, tokens v2) is for reading surfaces **only** — blog post body and the editor sheet. A system stack on purpose: the Pi serves every byte itself, and adding a downloaded face is a performance/licensing decision nobody has made.
+
+Font-size scale — added 27.07.2026 (ADR-052), extended 31.07.2026 (ADR-071) to `--fs-9/10/11/12/13/14/15/16/17/18/19/20/22/27`. **Integers only**: the 10/15/17/18/22 steps were added because they are measured, in-use sizes; the half-pixel sizes found in the sweep are not tokenized and collapse to the nearest integer.
+
+Semantic roles sit on top, and components reach for **these**, not the numbers — the numbers are the palette, the roles are the meaning, and the roles are what the density switch moves:
+```
+--fs-caption: var(--fs-11);   labels above a field, timestamps
+--fs-meta:    var(--fs-12);   secondary row data, counts
+--fs-ui:      var(--fs-13);   buttons, menu items, table cells
+--fs-body:    var(--fs-14);   default UI text
+--fs-title:   var(--fs-19);   page and section titles
+--fs-read:    var(--fs-17);   reading surfaces
+--lh-read:    1.7;
+```
+
+### Icons (ADR-072)
+```
+--icon-sm: 15px;   --icon-md: 18px;   --icon-lg: 20px;
+```
+These are exactly the three values `.icon` is currently declared with across 9 files — the inconsistency is why they became tokens. Set: **Phosphor**, delivered as inlined SVG behind one `app-icon` component (T-079 not yet done; Lucide is still what renders).
+
+### Motion
+```
+--motion-fast: 120ms;   state feedback on something already under the cursor
+--motion-base: 180ms;   something appearing or moving
+--motion-slow: 280ms;   a full-surface change the eye must follow
+--ease: cubic-bezier(.2, .6, .3, 1);
+```
+All three drop to 1ms under `prefers-reduced-motion: reduce`, which also clamps every animation/transition globally — 1ms rather than 0 so `transitionend` listeners still fire.
 
 ## Component patterns (convention, not enforced)
 

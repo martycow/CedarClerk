@@ -11,12 +11,14 @@ check green, and Marty verified both fixes on the device.
 and one type scale, two density modes. Recorded as **ADR-071** and as the Principles section at the
 top of `docs/DESIGN.md`; **T-075 is closed**. Phase 11 can start.
 
-- [ ] **Q-12 — the icon set** (`docs/BACKLOG.md`). Blocks T-079, not the phase's start: Lucide
-  (incumbent, ISC) vs Phosphor (MIT, 6 weights) vs Tabler (MIT). Brand icons stay separate either way.
-- [ ] **T-077 — tokens v2.** The sweep is now a measured list: 191 hardcoded `font-size: Npx` in
-  component CSS, 44 hex literals in `styles.scss`, and the blog's own `:root` + 21 hex in
-  `BlogEndpoints.cs` + 6 in `CedarToBlogHtmlRenderer` — ADR-071 puts the blog inside the system.
+**Q-12 answered 31.07 — Phosphor** (ADR-072), as inlined SVG behind one `app-icon` component.
+**Tokens v2 and `/dev/styleguide` shipped the same day** — see `docs/ROADMAP.md` Phase 11.
+
 - [ ] **T-076 — mockups**, starting from `_Documents_/CedarClerk/Design-Handoff-2026-07-28/`.
+  Marty's tool, not Claude Code's.
+- [ ] **T-079 — the icon migration.** 79 icons in 203 places, `<svg lucideX>` → `app-icon`.
+- [ ] **T-081 + the T-077 tail** — screen by screen, each one moving its own hardcoded values onto
+  the tokens (314 `font-size` declarations, 44 hex literals) with the smoke suite green after each.
 - [x] ~~Stripe Customer Portal (T-073)~~ — **already active**, confirmed by Marty 31.07.
 - [ ] **T-052 (Terms/Privacy)** — Marty says he doesn't know what to put in the `[BRACKETED]` blanks,
   so the next step is not "fill them in" but sorting them: which need a legal entity/jurisdiction

@@ -41,21 +41,79 @@
     --space-5: 24px;
     --space-6: 32px;
 
+    /* Density (ADR-071 principle 3). These are the COMFORTABLE values, which is the default for
+       the whole product; a page root opts into the tighter set with [data-density="compact"]
+       below. The rule that makes this work: a component uses these tokens and never decides its
+       own density, because several components appear on both kinds of screen. */
+    --dens-row-y: 10px;      /* vertical padding of a table/list row */
+    --dens-control-y: 7px;   /* control padding, vertical */
+    --dens-control-x: 14px;  /* control padding, horizontal */
+    --dens-gap: var(--space-3);
+    --dens-section: var(--space-5);
+    --dens-radius: var(--radius-md);
+    --dens-fs: var(--fs-body);
+    --dens-elev: var(--shadow);
+
     --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --font-mono: ui-monospace, Menlo, Consolas, monospace;
 
-    /* Font-size scale (header/nav redesign, 27.07.2026) — reverse-engineered from the sizes
-       already hardcoded across the app/blog, not new values. Existing hardcodes are left alone;
-       only newly-written chrome (docs/DECISIONS.md) reaches for these. */
+    /* Content serif (ADR-071 principle 4: serif for content, sans for chrome). A system stack,
+       deliberately not a webfont — the Pi serves every byte of this app itself, and adding a
+       downloaded face is a performance and licensing decision nobody has made. Only the reading
+       surfaces use this: the blog post body and the editor sheet. Never toolbars, tables or forms. */
+    --font-serif: ui-serif, Georgia, "Iowan Old Style", "Source Serif Pro", "Times New Roman", serif;
+
+    /* Font-size scale. Originally (27.07.2026) reverse-engineered from what was already hardcoded;
+       extended for tokens v2 (ADR-071) after measuring all 314 hardcoded font-sizes in component
+       CSS. Two things that measurement changed:
+       - The scale is INTEGERS ONLY. 110 of the 314 were half-pixels (44x 12.5, 30x 11.5, 16x 10.5,
+         14x 13.5). A browser rounds those per element at render time, so 12.5 and 13 can look
+         identical at one zoom and different at another. Half-steps collapse to the nearest integer.
+       - 10/15/17/18/22 were added because they are measured, in-use sizes that had no token. */
     --fs-9: 9px;
+    --fs-10: 10px;
     --fs-11: 11px;
     --fs-12: 12px;
     --fs-13: 13px;
     --fs-14: 14px;
+    --fs-15: 15px;
     --fs-16: 16px;
+    --fs-17: 17px;
+    --fs-18: 18px;
     --fs-19: 19px;
     --fs-20: 20px;
+    --fs-22: 22px;
     --fs-27: 27px;
+
+    /* Semantic type roles. Components reach for THESE, not the numeric scale above — the numbers
+       are the palette, these are the meanings. This is what makes a density switch possible at
+       all: --fs-ui/--fs-body change value under [data-density="compact"] and every control that
+       used the role follows, while anything that hardcoded 13px does not. */
+    --fs-caption: var(--fs-11);
+    --fs-meta: var(--fs-12);
+    --fs-ui: var(--fs-13);
+    --fs-body: var(--fs-14);
+    --fs-title: var(--fs-19);
+
+    /* Reading surfaces (blog body, editor sheet) — larger and looser than any chrome. */
+    --fs-read: var(--fs-17);
+    --lh-read: 1.7;
+
+    /* Icon sizes (ADR-072, T-079). These three values are exactly the ones `.icon` is currently
+       declared with in 9 different files (15/18/20px) — the inconsistency is the reason for the
+       tokens, so they are named rather than reconciled to one number. */
+    --icon-sm: 15px;
+    --icon-md: 18px;
+    --icon-lg: 20px;
+
+    /* Motion. Three durations and one curve; a component picks a duration by intent, not by taste.
+       fast = state feedback on something already under the cursor (hover, focus, active),
+       base = something appearing or moving (popover, panel, toast),
+       slow = a full-surface change the eye has to follow (modal, route transition). */
+    --motion-fast: 120ms;
+    --motion-base: 180ms;
+    --motion-slow: 280ms;
+    --ease: cubic-bezier(.2, .6, .3, 1);
 
     /* "Cedar Aero" chrome materials (ADR-035, editor redesign) — applied to toolbars/popovers/
        modals only; content sheets (the writing surface, cards) stay solid for readability. */
@@ -101,10 +159,48 @@
     --glow-accent: 0 0 24px color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
+/* Compact density (ADR-071 principle 3) — for the table-shaped screens: /posts, /drafts, /admin,
+   /stats. Set as an attribute on the page root, the same mechanism ThemeService already uses for
+   data-theme on <html>, so it inherits down through custom properties with no JS involved.
+
+   Note what is NOT here: not one colour. Density is spacing, radius, size and separation only —
+   a second palette for "the dense screens" would be a second visual system wearing a shared name,
+   which is the exact failure ADR-071 chose the hybrid direction to avoid. Separation switches from
+   shadow to border here, which is what makes a dense table read as rows rather than as a stack of
+   floating cards. */
+[data-density="compact"] {
+    --dens-row-y: 6px;
+    --dens-control-y: 5px;
+    --dens-control-x: 10px;
+    --dens-gap: var(--space-2);
+    --dens-section: var(--space-4);
+    --dens-radius: var(--radius-sm);
+    --dens-fs: var(--fs-ui);
+    --dens-elev: none;
+}
+
 html, body {
     /* Defense-in-depth against page-level horizontal scroll on narrow/tablet widths (iPad,
        iPhone) if any component's content ever exceeds the viewport width again. */
     overflow-x: hidden;
+}
+
+/* Honour the OS "reduce motion" setting globally rather than per-component (T-082 covers the rest
+   of accessibility; this one belongs with the motion tokens that just arrived). Durations go to
+   near-zero instead of zero so transitionend listeners still fire — a few places wait for one. */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --motion-fast: 1ms;
+        --motion-base: 1ms;
+        --motion-slow: 1ms;
+    }
+
+    *, *::before, *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 1ms !important;
+        scroll-behavior: auto !important;
+    }
 }
 
 /* FI1 — thin, token-coloured scrollbars everywhere (the appearance panel's default OS scrollbar
