@@ -2,17 +2,32 @@
 
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
-## Now (31.07.2026, after Phase 10): deploy 0.9.18, then answer Q-11
+## Now (31.07.2026): Phase 11 is unblocked — Q-12 next, then the token sweep
 
-Phase 10 closed (ADR-070, `docs/ROADMAP.md`). The frontend has a smoke suite where it had none, the
-UI inventory covers every route plus the blog, and 7 defects were found — 4 fixed, 3 left as
-`T-094`/`T-098`/`T-099`.
+Phase 10 closed (ADR-070). **v0.9.20 is in production** — 0.9.18 plus the two iPad fixes; health
+check green, and Marty verified both fixes on the device.
 
-- [ ] **Deploy 0.9.18** — `Scripts/deploy.ps1`. No migration, no schema change; four frontend fixes
-  and the test/audit tooling, which does not ship to the Pi.
-- [ ] **Q-11 — the visual direction.** This blocks the whole of Phase 11 and is not Claude Code's to
-  answer. Options and a recommendation are in `docs/BACKLOG.md`.
-- [ ] Still open from before: activate the Stripe Customer Portal in the Stripe Dashboard (T-073).
+**Q-11 answered 31.07** — warm editorial base, density borrowed on the table screens, one palette
+and one type scale, two density modes. Recorded as **ADR-071** and as the Principles section at the
+top of `docs/DESIGN.md`; **T-075 is closed**. Phase 11 can start.
+
+- [ ] **Q-12 — the icon set** (`docs/BACKLOG.md`). Blocks T-079, not the phase's start: Lucide
+  (incumbent, ISC) vs Phosphor (MIT, 6 weights) vs Tabler (MIT). Brand icons stay separate either way.
+- [ ] **T-077 — tokens v2.** The sweep is now a measured list: 191 hardcoded `font-size: Npx` in
+  component CSS, 44 hex literals in `styles.scss`, and the blog's own `:root` + 21 hex in
+  `BlogEndpoints.cs` + 6 in `CedarToBlogHtmlRenderer` — ADR-071 puts the blog inside the system.
+- [ ] **T-076 — mockups**, starting from `_Documents_/CedarClerk/Design-Handoff-2026-07-28/`.
+- [x] ~~Stripe Customer Portal (T-073)~~ — **already active**, confirmed by Marty 31.07.
+- [ ] **T-052 (Terms/Privacy)** — Marty says he doesn't know what to put in the `[BRACKETED]` blanks,
+  so the next step is not "fill them in" but sorting them: which need a legal entity/jurisdiction
+  (genuinely blocked), which follow from decisions already made and visible in the code, and which
+  Claude can draft. Hard prerequisite before public registration opens.
+
+### The small defects, none of them blocking
+`T-094` (blog dates: month header always Russian, card date always English, on one page),
+`T-100` (Ctrl+B doesn't always fire — needs a human to try reproducing it), `T-098`, `T-099`.
+`T-034`: iPhone is still wider than the viewport — Marty called it minor, so it rides along with the
+Phase 11 screen migration rather than becoming a hotfix.
 
 ### Run the tests
 - `Scripts/e2e.ps1` — 37 smoke scenarios against an isolated scratch database, no bot token, ~45s.

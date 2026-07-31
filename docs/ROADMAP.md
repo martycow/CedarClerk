@@ -2,9 +2,11 @@
 
 Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-saas-plan.md` (v1.7, 15.07.2026) and `Plans/session-brief-v0.8.0-planning.md`, which are now archived under `Plans/OLD/`. **This file is the one live roadmap going forward** — update it when a phase item closes, don't recreate a parallel plan doc. Architectural/product decisions referenced below (why something was built a certain way) live in `docs/DECISIONS.md`, not here — this file tracks *status*, DECISIONS tracks *rationale*.
 
-## Status summary (as of 30.07.2026)
+## Status summary (as of 31.07.2026)
 
-**Phase 10 — UI Verification Sweep — closed 31.07.2026 (v0.9.18, not deployed).** The frontend has a 37-scenario Playwright smoke suite where it had nothing, the UI inventory covers the screens and the blog, and 7 defects were found of which 4 are fixed. The audit-before-redesign ordering is ADR-070. **Next: Phase 11 (Design System 2.0), blocked on Q-11** — the visual direction is Marty's to choose, and nothing in that phase can start without it. Phase 12 (Publishing Targets) is documented and blocked on Q-1.
+**Phase 10 — UI Verification Sweep — closed 31.07.2026.** The frontend has a 37-scenario Playwright smoke suite where it had nothing, the UI inventory covers the screens and the blog, and 7 defects were found of which 4 are fixed. The audit-before-redesign ordering is ADR-070. **Deployed: production is on v0.9.20** (health check 31.07) — 0.9.18 plus the two iPad fixes that followed it, both verified live by Marty.
+
+**Phase 11 — Design System 2.0 — unblocked and started 31.07.2026.** Marty answered Q-11: **warm editorial as the base, with the dense-product school's density borrowed on the table-shaped screens — one palette, one type scale, two density modes** (ADR-071). T-075 is closed by that ADR plus the new Principles section in `docs/DESIGN.md`. The measured finding that shapes the phase: the current token set is *already* warm editorial (the 08.07 "Cabin" set), so this is systematization plus a density layer, not a repaint — which is why T-081 can migrate screen by screen with the smoke suite green after each. **Next blocker: Q-12 (icon set)**, needed by T-079 but not by the phase's start. Phase 12 (Publishing Targets) stays blocked on Q-1/Q-13/Q-14/Q-15.
 
 **Previous: Phase 9f** — the 28.07 `Input.md` rewrite (sweep v3) plus AI/translation robustness. The ADR-064 audit's fixes landed as ADR-065 and the T-063 row is closed. Phases 9c/9d/9e closed 27–28.07.2026. `docs/BACKLOG.md` was restructured into a task board (30.07) — item IDs there are now `T-xxx`/`Q-xx`.
 

@@ -2,6 +2,18 @@
 
 Source of truth for all values below: `cedarclerk-web/src/styles.scss` (264 lines, the only global stylesheet — there is no separate tokens file). Component-scoped CSS lives alongside each component (`editor.component.css`, `settings.component.css`, etc.) under Angular's default view encapsulation.
 
+## Principles (ADR-071, 31.07.2026)
+
+The visual direction, decided by Marty as the answer to Q-11 and binding on Phase 11. Rationale is in ADR-071; what follows is the rule, not the argument.
+
+1. **Warm editorial is the base.** Paper and wood neutrals, olive accent, generous reading measure. This is a continuation of the 08.07.2026 "Cabin" token set below, not a replacement for it — the palette already expresses this direction, and the work is making every screen honour it.
+2. **One palette, one type scale, product-wide.** There is no second colour set for any screen, ever. Difference between screens is expressed only in spacing, radius and size tokens.
+3. **Density is a surface mode, not a component choice.** A page root opts into `[data-density="compact"]` (same mechanism as `data-theme` on `<html>`); tokens inside resolve tighter — row spacing, control padding, `--radius-md`→`--radius-sm`, and borders rather than shadows for separation. Compact: `/posts`, `/drafts`, `/admin`, `/stats`. Comfortable (default): editor sheet, blog, private-post gate. **A component must never hardcode its density** — several are used on both kinds of screen.
+4. **Serif for content, sans for chrome.** Blog post body and editor sheet get a serif; toolbars, tables, forms, menus and every control stay on `--font-sans`.
+5. **Light-first, dark as a peer.** Every token added gets both light and dark values in the same edit, never "dark later".
+6. **The blog is inside the system.** `BlogEndpoints.cs` maintains its own `:root` and 21 hex literals, `CedarToBlogHtmlRenderer` another 6 — a hand-kept duplicate token set serving roughly half of what a reader sees. Tokens v2 must reach the server-rendered surfaces too.
+7. **Zero hardcoded values in components** (T-077). The current gap, measured 31.07.2026: **191** `font-size: Npx` declarations across component CSS against the `--fs-*` scale, plus 44 hex literals in `styles.scss`.
+
 ## Tokens
 
 ### Color — light (`:root`)
