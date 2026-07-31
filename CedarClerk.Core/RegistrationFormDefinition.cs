@@ -18,6 +18,16 @@ public enum RegistrationQuestionType
     // Options; its answer is "yes" when ticked, same absent/blank-means-unanswered shape as every
     // other type, so the existing generic required-question check needs no special case for it.
     Consent,
+
+    // T-032 — the same answer as Text, in a box that admits it will be more than a line. Kept as
+    // its own type rather than a flag on Text so the editor can offer it as a choice; the stored
+    // answer is an ordinary string and every existing reader of the answers map is unaffected.
+    LongText,
+
+    // T-031 — a block the reader does not fill in: an explanatory paragraph, an image, or both.
+    // Never Required, never collected (Parse forces both), so it is invisible to validation and
+    // to the answers map — it exists only in the rendered form.
+    Static,
 }
 
 // ADR-060 — an option carries a stable Id distinct from its display Label, so the same choice
@@ -26,7 +36,10 @@ public enum RegistrationQuestionType
 // displaying identically: the old stored values were the labels.
 public record RegistrationOption(string Id, string Label);
 
-public record RegistrationQuestion(string Id, string Label, RegistrationQuestionType Type, IReadOnlyList<RegistrationOption> Options, bool Required);
+// ImageUrl only means anything for a Static block (T-031) — a /media/... path uploaded through
+// the ordinary asset endpoint. Optional so every existing blob keeps parsing unchanged.
+public record RegistrationQuestion(string Id, string Label, RegistrationQuestionType Type,
+    IReadOnlyList<RegistrationOption> Options, bool Required, string? ImageUrl = null);
 
 // Parsed shape of Draft.RegistrationFormJson (B3) — the form an uninvited visitor of a private
 // post fills in to get access. Parsed in Core so the blog renderer and the submit-validation
@@ -77,21 +90,28 @@ public record RegistrationFormDefinition(
                 // AsString rather than a (string?) cast throughout: a v2 blob (ADR-060) carries
                 // objects where v1 carries strings, and a cast on an object throws — this parser
                 // must degrade, never throw, whatever shape lands in the column.
-                var label = AsString(qo["label"]);
-                if (string.IsNullOrWhiteSpace(label))
-                    continue; // an unlabelled question can't be answered meaningfully
-
-                var id = AsString(qo["id"]);
-                if (string.IsNullOrWhiteSpace(id))
-                    id = $"q{questions.Count + 1}";
-
                 var type = AsString(qo["type"]) switch
                 {
                     "choice" => RegistrationQuestionType.Choice,
                     "multi" => RegistrationQuestionType.Multi,
                     "consent" => RegistrationQuestionType.Consent,
+                    "longtext" => RegistrationQuestionType.LongText,
+                    "static" => RegistrationQuestionType.Static,
                     _ => RegistrationQuestionType.Text,
                 };
+
+                var imageUrl = type == RegistrationQuestionType.Static ? AsString(qo["imageUrl"]) : null;
+
+                var label = AsString(qo["label"]);
+                // A static block carrying only an image is legitimate; every other type needs a
+                // label, since an unlabelled question can't be answered meaningfully.
+                if (string.IsNullOrWhiteSpace(label) &&
+                    !(type == RegistrationQuestionType.Static && !string.IsNullOrWhiteSpace(imageUrl)))
+                    continue;
+
+                var id = AsString(qo["id"]);
+                if (string.IsNullOrWhiteSpace(id))
+                    id = $"q{questions.Count + 1}";
 
                 var options = (qo["options"] as JsonArray)?
                     .Select(o => AsString(o))
@@ -104,11 +124,17 @@ public record RegistrationFormDefinition(
                 if (type is RegistrationQuestionType.Choice or RegistrationQuestionType.Multi && options.Count == 0)
                     type = RegistrationQuestionType.Text;
 
-                // An optional consent checkbox isn't a meaningful concept — force it regardless of
-                // what a hand-edited/older blob says.
-                var required = type == RegistrationQuestionType.Consent || ((bool?)qo["required"] ?? false);
+                // An optional consent checkbox isn't a meaningful concept, and a required static
+                // block is a form nobody can submit — force both regardless of what a hand-edited
+                // or older blob says.
+                var required = type switch
+                {
+                    RegistrationQuestionType.Consent => true,
+                    RegistrationQuestionType.Static => false,
+                    _ => (bool?)qo["required"] ?? false,
+                };
 
-                questions.Add(new RegistrationQuestion(id!, label!, type, options, required));
+                questions.Add(new RegistrationQuestion(id!, label ?? "", type, options, required, imageUrl));
             }
         }
 

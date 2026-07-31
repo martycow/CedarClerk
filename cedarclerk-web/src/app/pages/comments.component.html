@@ -18,6 +18,13 @@ list of every post. Feedback is grouped per post: a flat stream answered "what's
         </div>
         }
 
+        <!--T-037: hovering every card to clear a backlog is not a workflow.-->
+        @if (hasUnseen()) {
+        <div class="mark-all-row">
+            <button class="btn-ghost" (click)="markEverythingSeen()">{{ t().feedback.markAllSeen }}</button>
+        </div>
+        }
+
         @if (error()) { <p class="channel-error">{{ error() }}</p> }
 
         @if (loading()) {

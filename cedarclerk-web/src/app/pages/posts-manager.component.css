@@ -298,11 +298,42 @@
 }
 
 /* ---------- Forms tab ---------- */
+/* T-035 — a row opens the submission, so it is a button now. */
 .registration-row {
+    display: block;
+    width: 100%;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 8px 10px;
     margin-bottom: 6px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.registration-row:hover { background: var(--alt); }
+
+.answer-block { margin-top: 10px; }
+
+.answer-label {
+    margin: 0;
+    font-size: var(--fs-12);
+    color: var(--t3);
+}
+
+.answer-value {
+    margin: 2px 0 0;
+    font-size: var(--fs-13);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.answer-line {
+    margin: 4px 0 0;
+    font-size: var(--fs-13);
 }
 
 .registration-head {
@@ -745,6 +776,20 @@
     color: var(--accent);
     font-size: 11.5px;
     font-weight: 700;
+}
+
+/* T-031 — a static block's picture: link field with a preview above it. */
+.static-media {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.static-preview {
+    max-width: 220px;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border);
 }
 
 .question-card-body {

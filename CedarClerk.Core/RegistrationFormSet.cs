@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace CedarClerk.Core;
@@ -107,21 +107,29 @@ public static class RegistrationFormSet
                 if (q is not JsonObject qo)
                     continue;
 
-                var label = PickText(qo["label"], lang, languages);
-                if (string.IsNullOrWhiteSpace(label))
-                    continue;
-
-                var id = RegistrationFormDefinition.AsString(qo["id"]);
-                if (string.IsNullOrWhiteSpace(id))
-                    id = $"q{questions.Count + 1}";
-
                 var type = RegistrationFormDefinition.AsString(qo["type"]) switch
                 {
                     "choice" => RegistrationQuestionType.Choice,
                     "multi" => RegistrationQuestionType.Multi,
                     "consent" => RegistrationQuestionType.Consent,
+                    "longtext" => RegistrationQuestionType.LongText,
+                    "static" => RegistrationQuestionType.Static,
                     _ => RegistrationQuestionType.Text,
                 };
+
+                // T-031 — the image is language-neutral, and a static block carrying only one is
+                // legitimate; every other type still needs a label to be answerable.
+                var imageUrl = type == RegistrationQuestionType.Static
+                    ? RegistrationFormDefinition.AsString(qo["imageUrl"]) : null;
+
+                var label = PickText(qo["label"], lang, languages);
+                if (string.IsNullOrWhiteSpace(label) &&
+                    !(type == RegistrationQuestionType.Static && !string.IsNullOrWhiteSpace(imageUrl)))
+                    continue;
+
+                var id = RegistrationFormDefinition.AsString(qo["id"]);
+                if (string.IsNullOrWhiteSpace(id))
+                    id = $"q{questions.Count + 1}";
 
                 var options = new List<RegistrationOption>();
                 if (qo["options"] is JsonArray optArr)
@@ -139,10 +147,14 @@ public static class RegistrationFormSet
                 if (type is RegistrationQuestionType.Choice or RegistrationQuestionType.Multi && options.Count == 0)
                     type = RegistrationQuestionType.Text;
 
-                var required = type == RegistrationQuestionType.Consent
-                    || RegistrationFormDefinition.AsBool(qo["required"]);
+                var required = type switch
+                {
+                    RegistrationQuestionType.Consent => true,
+                    RegistrationQuestionType.Static => false,
+                    _ => RegistrationFormDefinition.AsBool(qo["required"]),
+                };
 
-                questions.Add(new RegistrationQuestion(id!, label!, type, options, required));
+                questions.Add(new RegistrationQuestion(id!, label ?? "", type, options, required, imageUrl));
             }
         }
 

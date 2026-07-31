@@ -284,3 +284,76 @@ public class RegistrationFormHtmlTests
         Assert.False(RegistrationFieldValidator.IsValidName("  Я  "));
     }
 }
+
+// T-031/T-032 — the two question types added 30.07.2026. The static block is the interesting one:
+// it must stay out of validation and out of the answers map, and those are properties of the
+// parser rather than of any one call site.
+public class RegistrationStaticAndLongTextTests
+{
+    [Fact]
+    public void A_long_answer_parses_as_its_own_type()
+    {
+        var form = RegistrationFormDefinition.Parse("""
+            {"questions":[{"id":"q1","label":"Tell me everything","type":"longtext","required":true}]}
+            """)!;
+
+        var q = Assert.Single(form.Questions);
+        Assert.Equal(RegistrationQuestionType.LongText, q.Type);
+        Assert.True(q.Required);
+    }
+
+    [Fact]
+    public void A_static_block_is_never_required_whatever_the_blob_says()
+    {
+        var form = RegistrationFormDefinition.Parse("""
+            {"questions":[{"id":"q1","label":"Read this first","type":"static","required":true}]}
+            """)!;
+
+        var q = Assert.Single(form.Questions);
+        Assert.Equal(RegistrationQuestionType.Static, q.Type);
+        // A required block nobody can fill in is a form that cannot be submitted.
+        Assert.False(q.Required);
+    }
+
+    [Fact]
+    public void A_static_block_may_carry_only_an_image()
+    {
+        var form = RegistrationFormDefinition.Parse("""
+            {"questions":[{"id":"q1","type":"static","imageUrl":"/media/a.png"}]}
+            """)!;
+
+        var q = Assert.Single(form.Questions);
+        Assert.Equal("/media/a.png", q.ImageUrl);
+        Assert.Equal("", q.Label);
+    }
+
+    [Fact]
+    public void An_unlabelled_question_of_any_other_type_is_still_dropped()
+    {
+        var form = RegistrationFormDefinition.Parse("""
+            {"questions":[{"id":"q1","type":"text","imageUrl":"/media/a.png"}]}
+            """)!;
+
+        Assert.Empty(form.Questions);
+    }
+
+    [Fact]
+    public void An_image_url_is_ignored_on_every_type_but_static()
+    {
+        var form = RegistrationFormDefinition.Parse("""
+            {"questions":[{"id":"q1","label":"Name?","type":"text","imageUrl":"/media/a.png"}]}
+            """)!;
+
+        Assert.Null(Assert.Single(form.Questions).ImageUrl);
+    }
+
+    [Fact]
+    public void An_unknown_type_still_degrades_to_text()
+    {
+        var form = RegistrationFormDefinition.Parse("""
+            {"questions":[{"id":"q1","label":"?","type":"hologram"}]}
+            """)!;
+
+        Assert.Equal(RegistrationQuestionType.Text, Assert.Single(form.Questions).Type);
+    }
+}

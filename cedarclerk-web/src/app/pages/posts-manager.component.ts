@@ -194,8 +194,17 @@ export class PostsManagerComponent implements OnInit {
         } catch { /* the list is context, not the point of the page */ }
     }
 
+    // T-038 — a sent schedule is history, not a task: it stays out of the list unless asked for.
+    // Failed ones are never hidden, since those are exactly the ones needing attention.
+    showSentSchedules = signal(false);
+
     scheduledFor(draftId: string): ScheduledPost[] {
-        return this.scheduled().filter(p => p.draftId === draftId);
+        const all = this.scheduled().filter(p => p.draftId === draftId);
+        return this.showSentSchedules() ? all : all.filter(p => p.status !== 'Sent');
+    }
+
+    sentScheduleCount(draftId: string): number {
+        return this.scheduled().filter(p => p.draftId === draftId && p.status === 'Sent').length;
     }
 
     hasPendingSchedule(draftId: string): boolean {
@@ -386,6 +395,9 @@ export class PostsManagerComponent implements OnInit {
     // Answers are keyed by question id (ADR-042); the labels live in the form definition, which
     // this tab has in hand — so unlike the first cut, they resolve to the real question text. A
     // question deleted after someone answered it falls back to its raw key rather than vanishing.
+    // T-035 — the submission opened in full; null when the list is just a list.
+    selectedRegistration = signal<PostRegistration | null>(null);
+
     registrationAnswers(r: PostRegistration): { label: string; value: string }[] {
         if (!r.answersJson) return [];
         let parsed: Record<string, string>;
@@ -717,7 +729,15 @@ export class PostsManagerComponent implements OnInit {
         const options = (type === 'choice' || type === 'multi') && q.options.length === 0
             ? [{ id: newOptionId(), label: {} }, { id: newOptionId(), label: {} }]
             : q.options;
-        this.updateQuestion(id, type === 'consent' ? { type, required: true, options } : { type, options });
+        if (type === 'consent') { this.updateQuestion(id, { type, required: true, options }); return; }
+        // T-031 — a required block nobody can fill in is a form that cannot be submitted; Core's
+        // Parse forces this too, so a hand-edited blob can't bypass it either.
+        if (type === 'static') { this.updateQuestion(id, { type, required: false, options }); return; }
+        this.updateQuestion(id, { type, options });
+    }
+
+    setQuestionImage(id: string, url: string) {
+        this.updateQuestion(id, { imageUrl: url.trim() || null });
     }
 
     addOption(qId: string) {

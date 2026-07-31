@@ -161,12 +161,18 @@ export interface PostInvite { id: string; email: string; createdAt: string; url:
 // owned by the client — the server only length-checks the blob.
 // 'multi' (N10) answers arrive as a JSON array inside the same string-valued answers map the
 // other types use — see MultiAnswer in CedarClerk.Core for why it isn't a wider type.
-export type RegistrationQuestionType = 'text' | 'choice' | 'multi' | 'consent';
+// 'longtext' (T-032) answers the same way 'text' does, in a taller box. 'static' (T-031) is not
+// a question at all: a block of text and/or an image the reader only reads, never required and
+// never present in the answers map.
+export type RegistrationQuestionType = 'text' | 'longtext' | 'choice' | 'multi' | 'consent' | 'static';
+
+export const KNOWN_QUESTION_TYPES: RegistrationQuestionType[] =
+    ['text', 'longtext', 'choice', 'multi', 'consent', 'static'];
 // ADR-060 — an option's stored answer value is its stable id, not its label, so the same choice
 // picked from different language versions of the form aggregates as one answer. v1 blobs parse
 // with id === label, which is also exactly what their stored answers hold.
 export interface RegistrationOptionView { id: string; label: string; }
-export interface RegistrationQuestion { id: string; label: string; type: RegistrationQuestionType; options?: RegistrationOptionView[]; required?: boolean; }
+export interface RegistrationQuestion { id: string; label: string; type: RegistrationQuestionType; options?: RegistrationOptionView[]; required?: boolean; imageUrl?: string | null; }
 export interface RegistrationForm {
     intro?: string;
     requireName: boolean; requireNickname: boolean; requireEmail: boolean; requireSocial: boolean;
@@ -226,9 +232,10 @@ export function parseRegistrationForm(json: string | null | undefined, lang = DE
             questions.push({
                 id: typeof q['id'] === 'string' && q['id'] ? q['id'] as string : `q${questions.length + 1}`,
                 label,
-                type: (q['type'] === 'choice' || q['type'] === 'multi' || q['type'] === 'consent' ? q['type'] : 'text') as RegistrationQuestionType,
+                type: (KNOWN_QUESTION_TYPES.includes(q['type'] as RegistrationQuestionType) ? q['type'] : 'text') as RegistrationQuestionType,
                 options,
-                required: q['type'] === 'consent' || !!q['required'],
+                required: q['type'] === 'consent' || (q['type'] !== 'static' && !!q['required']),
+                imageUrl: typeof q['imageUrl'] === 'string' ? q['imageUrl'] as string : null,
             });
         }
 

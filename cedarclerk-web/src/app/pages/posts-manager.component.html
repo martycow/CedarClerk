@@ -156,10 +156,15 @@
                     draft that is in the list on the left, so nothing becomes unreachable, and
                     the row carries a clock chip so a post with a pending send is findable.-->
                     @if (scheduledFor(d.id); as scheduled) {
-                    @if (scheduled.length) {
+                    @if (scheduled.length || sentScheduleCount(d.id)) {
                     <div class="detail-divider"></div>
                     <div class="detail-field">
                         <label>{{ t().manager.scheduled }}</label>
+                        @if (sentScheduleCount(d.id); as sentCount) {
+                        <button class="btn-ghost mini" (click)="showSentSchedules.set(!showSentSchedules())">
+                            {{ showSentSchedules() ? t().manager.hideSent : t().manager.showSent(sentCount) }}
+                        </button>
+                        }
                         @for (p of scheduled; track p.id) {
                         <div class="scheduled-item">
                             <div class="scheduled-info">
@@ -272,8 +277,10 @@
                     }
                     }
 
+                    <!--T-035: the row is a summary, the modal is the answer. Inline was fine while
+                    every answer was one line; a long answer (T-032) runs to 2000 characters.-->
                     @for (r of registrations(); track r.id) {
-                    <div class="registration-row">
+                    <button type="button" class="registration-row" (click)="selectedRegistration.set(r)">
                         <div class="registration-head">
                             <span class="invite-email">{{ r.name || r.nickname || r.email || t().manager.forms.anonymous }}</span>
                             <span class="field-hint-inline">{{ r.createdAt | date:'d MMM, HH:mm' }}</span>
@@ -283,10 +290,10 @@
                             @if (r.nickname) { · {{ r.nickname }} }
                             @if (r.socialLink) { · {{ r.socialLink }} }
                         </div>
-                        @for (a of registrationAnswers(r); track a.label) {
-                        <div class="field-hint-inline">{{ a.label }}: {{ a.value }}</div>
+                        @if (registrationAnswers(r).length; as answered) {
+                        <div class="field-hint-inline">{{ t().manager.forms.answerCount(answered) }}</div>
                         }
-                    </div>
+                    </button>
                     } @empty {
                     <p class="hint">{{ t().manager.forms.noSubmissions }}</p>
                     }
@@ -409,9 +416,10 @@
                                     @for (l of presetLangs(); track l) {
                                     <div class="q-label-row">
                                         @if (presetLangs().length > 1) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
-                                        @if (q.type === 'consent') {
+                                        @if (q.type === 'consent' || q.type === 'static') {
                                         <textarea class="chat-input" rows="2" [value]="q.label[l] || ''" (change)="setQuestionLabel(q.id, l, $any($event.target).value)"
-                                                  [placeholder]="t().manager.forms.consentPlaceholder" maxlength="1000"></textarea>
+                                                  [placeholder]="q.type === 'static' ? t().manager.forms.staticPlaceholder : t().manager.forms.consentPlaceholder"
+                                                  maxlength="1000"></textarea>
                                         } @else {
                                         <input class="chat-input" [value]="q.label[l] || ''" (change)="setQuestionLabel(q.id, l, $any($event.target).value)"
                                                [placeholder]="t().manager.forms.questionPlaceholder" maxlength="200">
@@ -426,12 +434,14 @@
                             <div class="question-card-body">
                                 <div class="pill-row">
                                     <button class="pill" [class.on]="q.type === 'text'" (click)="setQuestionType(q.id, 'text')">{{ t().manager.forms.typeText }}</button>
+                                    <button class="pill" [class.on]="q.type === 'longtext'" (click)="setQuestionType(q.id, 'longtext')">{{ t().manager.forms.typeLongText }}</button>
                                     <button class="pill" [class.on]="q.type === 'choice'" (click)="setQuestionType(q.id, 'choice')">{{ t().manager.forms.typeChoice }}</button>
                                     <button class="pill" [class.on]="q.type === 'multi'" (click)="setQuestionType(q.id, 'multi')">{{ t().manager.forms.typeMulti }}</button>
                                     <button class="pill" [class.on]="q.type === 'consent'" (click)="setQuestionType(q.id, 'consent')">{{ t().manager.forms.typeConsent }}</button>
+                                    <button class="pill" [class.on]="q.type === 'static'" (click)="setQuestionType(q.id, 'static')">{{ t().manager.forms.typeStatic }}</button>
                                     <span class="spacer"></span>
                                     <label class="form-check">
-                                        <input type="checkbox" [checked]="!!q.required" [disabled]="q.type === 'consent'"
+                                        <input type="checkbox" [checked]="!!q.required" [disabled]="q.type === 'consent' || q.type === 'static'"
                                                (change)="updateQuestion(q.id, { required: !q.required })"> {{ t().manager.forms.required }}
                                     </label>
                                 </div>
@@ -455,6 +465,17 @@
                                 }
                                 @if (q.type === 'consent') {
                                 <p class="field-hint-inline">{{ t().manager.forms.consentHint }}</p>
+                                }
+                                <!--T-031: the picture is language-neutral, so it sits outside the
+                                per-language label stack above.-->
+                                @if (q.type === 'static') {
+                                <div class="static-media">
+                                    @if (q.imageUrl) { <img class="static-preview" [src]="q.imageUrl" alt=""> }
+                                    <input class="chat-input" [value]="q.imageUrl || ''"
+                                           (change)="setQuestionImage(q.id, $any($event.target).value)"
+                                           [placeholder]="t().manager.forms.staticImagePlaceholder" maxlength="500">
+                                </div>
+                                <p class="field-hint-inline">{{ t().manager.forms.staticHint }}</p>
                                 }
                             </div>
                         </div>
@@ -498,6 +519,30 @@
         <p>{{ t().drafts.deleteDraftBody }}</p>
         <button modal-actions class="btn-ghost" (click)="deleteConfirmId.set(null)">{{ t().common.cancel }}</button>
         <button modal-actions class="btn-accent" (click)="confirmDelete()">{{ t().common.delete }}</button>
+    </app-modal>
+    }
+
+    <!--T-035: one submission in full — every built-in field and every answer, untruncated.-->
+    @if (selectedRegistration(); as r) {
+    <app-modal [width]="520" (closed)="selectedRegistration.set(null)">
+        <h2 modal-title>{{ r.name || r.nickname || r.email || t().manager.forms.anonymous }}</h2>
+        <div modal-body>
+            <p class="field-hint-inline">{{ r.createdAt | date:'d MMM yyyy, HH:mm' }}</p>
+            @if (r.name) { <p class="answer-line"><span class="answer-label">{{ t().manager.forms.fieldName }}:</span> {{ r.name }}</p> }
+            @if (r.nickname) { <p class="answer-line"><span class="answer-label">{{ t().manager.forms.fieldNickname }}:</span> {{ r.nickname }}</p> }
+            @if (r.email) { <p class="answer-line"><span class="answer-label">{{ t().manager.forms.fieldEmail }}:</span> {{ r.email }}</p> }
+            @if (r.socialLink) { <p class="answer-line"><span class="answer-label">{{ t().manager.forms.fieldSocial }}:</span> {{ r.socialLink }}</p> }
+
+            @for (a of registrationAnswers(r); track a.label) {
+            <div class="answer-block">
+                <p class="answer-label">{{ a.label }}</p>
+                <p class="answer-value">{{ a.value }}</p>
+            </div>
+            } @empty {
+            <p class="hint">{{ t().manager.forms.noAnswers }}</p>
+            }
+        </div>
+        <button modal-actions class="btn-ghost" (click)="selectedRegistration.set(null)">{{ t().common.close }}</button>
     </app-modal>
     }
 

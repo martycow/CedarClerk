@@ -148,6 +148,26 @@ export class CommentsComponent implements OnInit, OnDestroy {
         if (!this.pendingSeenAt || now > this.pendingSeenAt) this.pendingSeenAt = now;
     }
 
+    // T-037 — hovering every card to clear a backlog is not a workflow. One press marks
+    // everything currently loaded as read, using the same high-water mark the hover path uses.
+    hasUnseen(): boolean {
+        return this.comments().some(c => c.isNew)
+            || this.reactionsByDraft().some(r => r.newLikes > 0 || r.newDislikes > 0)
+            || this.reactions().newLikes > 0 || this.reactions().newDislikes > 0;
+    }
+
+    markEverythingSeen() {
+        if (!this.hasUnseen()) return;
+        this.comments.update(list => list.map(c => ({ ...c, isNew: false })));
+        this.reactionsByDraft.update(list => list.map(r => ({ ...r, newLikes: 0, newDislikes: 0 })));
+        this.reactions.update(r => ({ ...r, newLikes: 0, newDislikes: 0 }));
+        this.pendingSeenAt = new Date().toISOString();
+        this.flushSeen();
+        // The badge on the Posts Manager link reads the same watermark — without this it keeps
+        // claiming there is something new until the next page load.
+        this.commentsApi.refreshNewCount();
+    }
+
     private flushSeen() {
         const seenAt = this.pendingSeenAt;
         if (!seenAt) return;

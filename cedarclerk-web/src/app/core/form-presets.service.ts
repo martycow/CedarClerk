@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { RegistrationQuestionType } from './drafts.service';
+import { KNOWN_QUESTION_TYPES, RegistrationQuestionType } from './drafts.service';
 
 // Reusable registration-form definitions (N12). `formJson` holds the same blob shape as a
 // draft's own form — applying a preset copies it onto the draft rather than linking to it, so
@@ -25,6 +25,9 @@ export interface FormQuestionEdit {
     required?: boolean;
     label: Record<string, string>;
     options: FormOptionEdit[];
+    // T-031 — a static block's image. Language-neutral, like the glossary's (ADR-061): a picture
+    // does not need translating, and one upload per language would be an odd thing to demand.
+    imageUrl?: string | null;
 }
 export interface RegistrationFormEdit {
     v: 2;
@@ -76,13 +79,16 @@ export function normalizeFormForEdit(json: string | null | undefined, fallbackLa
                     options.push({ id: typeof oo['id'] === 'string' && oo['id'] ? oo['id'] as string : newOptionId(), label });
                 }
             }
-            const type = (qo['type'] === 'choice' || qo['type'] === 'multi' || qo['type'] === 'consent' ? qo['type'] : 'text') as RegistrationQuestionType;
+            const type = (KNOWN_QUESTION_TYPES.includes(qo['type'] as RegistrationQuestionType)
+                ? qo['type'] : 'text') as RegistrationQuestionType;
             questions.push({
                 id: typeof qo['id'] === 'string' && qo['id'] ? qo['id'] as string : newQuestionId(),
                 type,
-                required: type === 'consent' || !!qo['required'],
+                // Mirrors Core's Parse: consent is always required, a static block never is.
+                required: type === 'consent' || (type !== 'static' && !!qo['required']),
                 label: textMap(qo['label']),
                 options,
+                imageUrl: typeof qo['imageUrl'] === 'string' ? qo['imageUrl'] as string : null,
             });
         }
 

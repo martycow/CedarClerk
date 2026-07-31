@@ -468,6 +468,20 @@ public static class CedarToBlogHtmlRenderer
                 continue;
             }
 
+            if (q.Type == RegistrationQuestionType.Static)
+            {
+                // T-031 — nothing to fill in, so it is deliberately not a <label> and carries no
+                // data-question attribute: the page script collects answers by that attribute, and
+                // a block with one would submit an empty answer for a question nobody was asked.
+                sb.Append("<div class=\"reg-static\">");
+                if (!string.IsNullOrWhiteSpace(q.ImageUrl))
+                    sb.Append($"<img class=\"reg-static-image\" src=\"{EscapeAttr(q.ImageUrl)}\" alt=\"\">");
+                if (!string.IsNullOrWhiteSpace(q.Label))
+                    sb.Append("<p class=\"reg-static-text\">").Append(Escape(q.Label)).Append("</p>");
+                sb.Append("</div>");
+                continue;
+            }
+
             var req = q.Required ? " required" : "";
             sb.Append("<label class=\"reg-question\"><span class=\"reg-question-label\">")
               .Append(Escape(q.Label)).Append(q.Required ? " *" : "").Append("</span>");
@@ -496,6 +510,13 @@ public static class CedarToBlogHtmlRenderer
                       .Append(EscapeAttr(o.Id)).Append("\">").Append(Escape(o.Label)).Append("</label>");
                 }
                 sb.Append("</span>");
+            }
+            else if (q.Type == RegistrationQuestionType.LongText)
+            {
+                // T-032 — same data-question contract as the single-line input, so the page script
+                // and the stored answer are unchanged; only the box is taller. The longer maxlength
+                // is the point of choosing this type at all.
+                sb.Append($"<textarea class=\"reg-input reg-textarea\" data-question=\"{EscapeAttr(q.Id)}\" rows=\"4\" maxlength=\"2000\"{req}></textarea>");
             }
             else
             {

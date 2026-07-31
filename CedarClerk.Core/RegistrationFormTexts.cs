@@ -39,11 +39,16 @@ public static class RegistrationFormTexts
                     RegistrationQuestionType.Choice => "choice",
                     RegistrationQuestionType.Multi => "multi",
                     RegistrationQuestionType.Consent => "consent",
+                    RegistrationQuestionType.LongText => "longtext",
+                    RegistrationQuestionType.Static => "static",
                     _ => "text",
                 },
                 ["required"] = q.Required,
                 ["label"] = new JsonObject { [lang] = q.Label },
                 ["options"] = options,
+                // T-031 — language-neutral, so it is copied across rather than put in a per-language
+                // dictionary like every text slot above.
+                ["imageUrl"] = q.ImageUrl,
             });
         }
 

@@ -1542,6 +1542,10 @@ public static class BlogEndpoints
         .reg-question-label { font-size: 13px; font-weight: 500; }
         .reg-multi { display: flex; flex-direction: column; gap: 6px; }
         .reg-multi-option { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+        .reg-textarea { resize: vertical; min-height: 88px; line-height: 1.5; }
+        .reg-static { display: flex; flex-direction: column; gap: 8px; }
+        .reg-static-image { width: 100%; height: auto; border-radius: 8px; display: block; }
+        .reg-static-text { font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap; }
         .reg-consent { display: flex; flex-direction: column; gap: 6px; }
         .reg-consent-text { font-size: 13px; line-height: 1.5; margin: 0; white-space: pre-wrap; }
         .reg-consent-check { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }

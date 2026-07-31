@@ -284,3 +284,27 @@
     margin: 0;
     font-size: 12.5px;
 }
+
+/* T-037 — button classes are per-component in this project (the glossary shipped without them
+   once and every button rendered as a browser default), so this is the same definition as
+   drafts.component.css rather than a shared class. */
+.mark-all-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+}
+
+.btn-ghost {
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--t2);
+    border-radius: var(--radius-sm);
+    padding: 7px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.btn-ghost:hover {
+    color: var(--text);
+}
