@@ -1213,14 +1213,14 @@
     <div class="status-bar">
         <span class="spacer"></span>
         @if (appearance.prefs().showWordCount) {
-        <span>{{ wordCount() }} words</span>
-        <span>{{ charCount() }} / 32,768</span>
+        <span>{{ t().editor.words(wordCount()) }}</span>
+        <span>{{ t().editor.chars(charCount()) }}</span>
         }
         <div class="sync-indicator">
             @switch (saveState()) {
-                @case ('saved') { <span class="dot ok"></span> Synced }
-                @case ('saving') { <span class="dot warn"></span> Syncing… }
-                @case ('dirty') { <span class="dot warn"></span> Syncing… }
+                @case ('saved') { <span class="dot ok"></span> {{ t().editor.synced }} }
+                @case ('saving') { <span class="dot warn"></span> {{ t().editor.syncing }} }
+                @case ('dirty') { <span class="dot warn"></span> {{ t().editor.syncing }} }
                 @case ('error') { <span class="dot err"></span> <button class="retry-inline" (click)="retrySave()">{{ t().editor.syncFailedRetry }}</button> }
             }
         </div>

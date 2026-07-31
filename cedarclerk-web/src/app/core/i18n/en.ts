@@ -145,6 +145,14 @@ export const en = {
         unsaved: 'Unsaved changes',
         syncFailed: 'Sync failed',
         syncFailedRetry: 'Sync failed · Retry',
+        // Status bar. Separate from `saved`/`saving` above, which label the topbar indicator —
+        // these are the sync dot's own wording and read as a state, not as an action.
+        words: (n: number) => `${n} ${n === 1 ? 'word' : 'words'}`,
+        // The ceiling is Telegram's per-message limit. Formatted here rather than in the markup so
+        // the thousands separator follows the UI language instead of the browser's locale.
+        chars: (n: number) => `${n.toLocaleString('en')} / 32,768`,
+        synced: 'Synced',
+        syncing: 'Syncing…',
         export: 'Export',
         showInvisibles: 'Show paragraph marks',
         emoji: {
