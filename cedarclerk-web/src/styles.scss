@@ -31,6 +31,11 @@
     --hover-strong: color-mix(in srgb, var(--text) 13%, transparent);
     --hover-danger: color-mix(in srgb, var(--danger) 12%, transparent);
 
+    /* The scrim behind a modal. Was a fixed rgba(24, 21, 16, .45) inside modal.component.css and
+       therefore identical in both themes — which is wrong in the direction that matters: the same
+       45% veil that separates a dialog from a light page barely registers against a dark one. */
+    --scrim: rgba(24, 21, 16, .45);
+
     /* Categorical chart series (N10). Assigned in this fixed order and never cycled — a 7th
        category folds into "Other". Deliberately excludes --danger/--ok: those mean a state, not
        an identity. Both light and dark steps were checked against this theme's chart surface
@@ -165,6 +170,7 @@
 
     --shadow: 0 1px 3px rgba(0, 0, 0, .45);
     --shadow-lg: 0 24px 64px rgba(0, 0, 0, .6);
+    --scrim: rgba(0, 0, 0, .62);
 
     --blur: saturate(1.7) blur(20px);
     --glass: color-mix(in srgb, var(--surface) 58%, transparent);

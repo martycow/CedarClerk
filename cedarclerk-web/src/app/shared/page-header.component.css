@@ -31,11 +31,11 @@
     color: var(--t2);
     cursor: pointer;
     text-decoration: none;
-    font-size: 15px;
+    font-size: var(--fs-15);
 }
 
 .icon-btn:hover {
-    background: rgba(128, 120, 100, .14);
+    background: var(--hover-strong);
     color: var(--text);
 }
 
@@ -57,7 +57,7 @@
 }
 
 .version-tag {
-    font-size: 10.5px;
+    font-size: var(--fs-caption);
     color: var(--t3);
     white-space: nowrap;
 }
@@ -104,13 +104,13 @@
 }
 
 .nav-btn:hover {
-    background: rgba(128, 120, 100, .14);
+    background: var(--hover-strong);
 }
 
 .nav-btn.on {
     background: var(--accent);
     border-color: var(--accent);
-    color: #F4F2EA;
+    color: var(--sheet);
     font-weight: 600;
 }
 

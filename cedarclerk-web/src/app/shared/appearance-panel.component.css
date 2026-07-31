@@ -57,7 +57,7 @@
 
 .ap-toggle button.on {
     background: var(--accent);
-    color: #F4F2EA;
+    color: var(--sheet);
 }
 
 /* Typeface row has 5 options — too many for one seamless strip at 268px, unlike every other 2-4
@@ -85,7 +85,7 @@
 .ap-chip-grid button.on {
     background: var(--accent);
     border-color: var(--accent);
-    color: #F4F2EA;
+    color: var(--sheet);
 }
 
 .ap-accents {
@@ -223,5 +223,5 @@
     border-radius: var(--radius-md);
     padding: 4px 6px;
     font-family: inherit;
-    font-size: 12.5px;
+    font-size: var(--fs-ui);
 }
