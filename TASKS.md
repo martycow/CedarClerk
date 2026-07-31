@@ -2,7 +2,32 @@
 
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
-## Now (30.07.2026, after the v0.9.16 session): live-verify, then deploy
+## Now (31.07.2026, after Phase 10): deploy 0.9.18, then answer Q-11
+
+Phase 10 closed (ADR-070, `docs/ROADMAP.md`). The frontend has a smoke suite where it had none, the
+UI inventory covers every route plus the blog, and 7 defects were found — 4 fixed, 3 left as
+`T-094`/`T-098`/`T-099`.
+
+- [ ] **Deploy 0.9.18** — `Scripts/deploy.ps1`. No migration, no schema change; four frontend fixes
+  and the test/audit tooling, which does not ship to the Pi.
+- [ ] **Q-11 — the visual direction.** This blocks the whole of Phase 11 and is not Claude Code's to
+  answer. Options and a recommendation are in `docs/BACKLOG.md`.
+- [ ] Still open from before: activate the Stripe Customer Portal in the Stripe Dashboard (T-073).
+
+### Run the tests
+- `Scripts/e2e.ps1` — 37 smoke scenarios against an isolated scratch database, no bot token, ~45s.
+- `Scripts/e2e.ps1 -Serve` — the same seeded environment left running, for clicking through by hand.
+- `AUDIT=1 npx playwright test 99-audit` (in `cedarclerk-web`) — re-captures the audit screenshots
+  into `.e2e-audit/`.
+
+### What still nobody has checked
+Each needs a person or a device, not a script: flush-on-hide on a real iPhone; incremental
+re-translation preserving manual corrections (needs a provider key and Pro Plus); the uk/be/ka
+capability refusal; the Posts Manager submission modal and "mark all as read"; tag rename/delete;
+audit paging past the first page; the glossary tooltip on a published post; per-language
+cross-links; and whether the Russian wording actually reads well.
+
+## Previous (30.07.2026, after the v0.9.16 session): live-verify, then deploy
 
 Today's session closed thirteen backlog rows (data safety, sessions, version history, incremental
 translation, three languages, two form types, Posts Manager, Appearance). `dotnet test` 442/442,

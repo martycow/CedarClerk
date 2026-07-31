@@ -4,7 +4,7 @@ Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-
 
 ## Status summary (as of 30.07.2026)
 
-**Current work: Phase 10 — UI Verification Sweep.** v0.9.17 is in production; the audit-before-redesign ordering is ADR-070, and Phases 11 (Design System 2.0) and 12 (Publishing Targets) are documented but not started — both blocked on product decisions (Q-11 and Q-1).
+**Phase 10 — UI Verification Sweep — closed 31.07.2026 (v0.9.18, not deployed).** The frontend has a 37-scenario Playwright smoke suite where it had nothing, the UI inventory covers the screens and the blog, and 7 defects were found of which 4 are fixed. The audit-before-redesign ordering is ADR-070. **Next: Phase 11 (Design System 2.0), blocked on Q-11** — the visual direction is Marty's to choose, and nothing in that phase can start without it. Phase 12 (Publishing Targets) is documented and blocked on Q-1.
 
 **Previous: Phase 9f** — the 28.07 `Input.md` rewrite (sweep v3) plus AI/translation robustness. The ADR-064 audit's fixes landed as ADR-065 and the T-063 row is closed. Phases 9c/9d/9e closed 27–28.07.2026. `docs/BACKLOG.md` was restructured into a task board (30.07) — item IDs there are now `T-xxx`/`Q-xx`.
 
@@ -357,13 +357,15 @@ Ordering rationale in **ADR-070**: the audit runs before the redesign because ve
 - Baseline on `d4f0d7c`: `dotnet test` 442/442, `ng build` clean apart from two budget warnings (initial bundle 1.86 MB vs a 1.00 MB budget; `editor.component.css` 26.71 kB vs 20 kB — recorded as T-092).
 - Working tree clean (no uncommitted Codex work, unlike the ADR-064 precedent); `Input.md` unchanged since 28.07, so sweep v3 remains fully absorbed into Phase 9f.
 
-**Blocks** (each ends in a stop-gate; Marty approves before the next begins):
+**Blocks** (each ended in a stop-gate; Marty approved before the next began) — **all closed 30–31.07.2026**:
 - [x] **Block 0 — pre-work checklist**, reported 30.07.2026
-- [ ] **Block A — document the plan first**: ADR-070, this section, Phase 11/12 headings, `Q-11…Q-15`, and the Phase 11/12 task rows in `docs/BACKLOG.md`
-- [ ] **Block B — Playwright smoke suite**: 12–15 scenarios over the critical paths (session survival, draft round-trip, ShrinkGuard 409 + restore, version restore, translation 202+polling, publish to `@testingandfun`, blog reaction/comment, Posts Manager, forms, admin, locale/theme switch). Runs on Marty's machine only — Playwright browsers do not exist for armhf, so this never enters the deploy pipeline. Local server runs without a bot token (see the note in `.claude/rules/telegram-bot.md`; there is no `appsettings.LocalNoBot.json` — a non-`Development` environment name simply doesn't load the file holding the token, and the "bot is disabled" log line is the confirmation)
-- [ ] **Block C — UI inventory**, extended from the Angular routing config and the real components. The existing `_Documents_/CedarClerk/Design-Handoff-2026-07-28/` package (an 18 KB audit of Posts Manager / Export modal / Settings / Admin plus 21 screenshots) is folded in rather than re-derived
-- [ ] **Block D — live-verify sweep**: walk `TASKS.md`'s checklist by hand, run the smoke suite, and record **every defect as a backlog row without fixing it**
-- [ ] **Block E — fix defects**, only from the list Marty approves, one commit each
+- [x] **Block A — document the plan first**: ADR-070, this section, Phase 11/12 headings, `Q-11…Q-15`, and the Phase 11/12 task rows (`T-075…T-092`) in `docs/BACKLOG.md`
+- [x] **Block B — Playwright smoke suite**: **37 scenarios**, green, one command (`Scripts/e2e.ps1`). Runs on Marty's machine only — Playwright browsers do not exist for armhf, so this never enters the deploy pipeline. The server runs without a bot token (there is no `appsettings.LocalNoBot.json` — a non-`Development` environment name simply doesn't load the file holding the token, and the "bot is disabled" log line is the confirmation). Marty's two calls: an isolated scratch database recreated per run, and no real Telegram publishing — the suite asserts the ownership refusal instead, since the 503 path can't be reached without a connected channel and connecting one needs a live bot
+- [x] **Block C — UI inventory extended** (not rewritten): a verification map per route, `admin.component`, the blog's server-rendered surfaces, everything from 0.9.16–0.9.17, and a measured icon inventory
+- [x] **Block D — audit sweep**: every screen walked and captured (`e2e/99-audit.spec.ts`, `AUDIT=1`), **7 defects** recorded as `T-093…T-099` without fixing
+- [x] **Block E — 4 of 7 fixed**, one commit each: T-093 (status bar hardcoded English), T-095 (Appearance sliders in the browser's blue), T-096 (export hint pointing the wrong way), T-097 (save-guard dialog accenting the destructive button). **T-094** (blog month names) stays open; **T-098**/**T-099** were handed to Phase 11, which touches that markup anyway
+
+**Tooling note**: the visual pass was driven from Playwright, not the Chrome extension — the extension proved unreliable in this environment (screenshots timing out, zoom returning the wrong region, keystrokes never reaching the TipTap surface). `AUDIT=1 npx playwright test 99-audit` reproduces every screenshot.
 
 **Out of scope, deliberately**: any change to style, palette, typography, Cabin tokens or icons; responsive markup; publishing-target work; new features from `Input.md`; the ~130 inline error strings (T-050); `/terms`/`/privacy` (T-052); production deploy.
 
