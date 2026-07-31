@@ -1169,8 +1169,11 @@
             <p class="muted">{{ t().editor.saveGuard.staleHint }}</p>
             }
         </div>
-        <button modal-actions class="btn-ghost" (click)="reloadStoredVersion()">{{ t().editor.saveGuard.reload }}</button>
-        <button modal-actions class="btn-accent" (click)="confirmRefusedSave()">{{ t().editor.saveGuard.saveAnyway }}</button>
+        <!--The safe action carries the accent, not the destructive one: this dialog exists because
+        a save was about to delete a document, and the button the eye lands on should be the one
+        that brings the text back. "Save anyway" stays available, just not emphasised.-->
+        <button modal-actions class="btn-ghost" (click)="confirmRefusedSave()">{{ t().editor.saveGuard.saveAnyway }}</button>
+        <button modal-actions class="btn-accent" (click)="reloadStoredVersion()">{{ t().editor.saveGuard.reload }}</button>
     </app-modal>
     }
 
