@@ -4,7 +4,22 @@ Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-
 
 ## Status summary (as of 30.07.2026)
 
-**Current work: Phase 9f** — the 28.07 `Input.md` rewrite (sweep v3) plus AI/translation robustness; and an audit of the uncommitted ADR-064 draft-language/revision changes (30.07 session — review found 9 confirmed major defects, fix plan in the session report; see `docs/BACKLOG.md` T-063). Phases 9c/9d/9e closed 27–28.07.2026. `docs/BACKLOG.md` was restructured into a task board (30.07) — item IDs there are now `T-xxx`/`Q-xx`.
+**Current work: Phase 9f** — the 28.07 `Input.md` rewrite (sweep v3) plus AI/translation robustness. The ADR-064 audit's fixes landed as ADR-065 and the T-063 row is closed. Phases 9c/9d/9e closed 27–28.07.2026. `docs/BACKLOG.md` was restructured into a task board (30.07) — item IDs there are now `T-xxx`/`Q-xx`.
+
+### Phase 9f — 30.07.2026 session: data safety, version history, incremental translation (v0.9.16)
+Everything below is code-complete with `dotnet test` 442/442 and `ng build` clean. **None of it has been clicked through in a browser, and none of it is deployed** — that is the whole of what's left, and it is tracked in `TASKS.md`.
+
+- [x] **Save guards** (ADR-066, T-018.1/.2/.3/.6, T-060) — the server refuses a save that deletes nearly all the text (`ShrinkGuard`, Core, 7 tests) and answers 409 with a dialog offering "restore stored"; a pending autosave is flushed on `pagehide`/`visibilitychange` with `keepalive`; a save may carry `expectedUpdatedAt` and 409 on a conflict; a failed save retries itself (2s/5s/15s).
+- [x] **Sessions stop dropping** (ADR-066, T-062) — a failed `/api/auth/me` is retried and only a 401 clears the session; the auth ticket got an explicit 30-day `ExpireTimeSpan` against Identity's 14-day default under a 30-day cookie; the login page offers a retry instead of a password prompt when the server never answered.
+- [x] **DataProtection keys moved under `CEDAR_DATA_DIR`** (T-074) — they decrypt every auth cookie and were outside the backup. **The deploy carrying this has a manual prerequisite — see `TASKS.md`.**
+- [x] **Version history became reachable** (ADR-067, T-016/T-017) — open a version, read its text, diff it against any other version or against what is stored now, restore it. A restore records the version it replaced first, so it is itself undoable.
+- [x] **Incremental re-translation** (ADR-068, T-015) — only the top-level blocks that actually changed are sent to the provider; unchanged ones are copied out of the existing translation, manual corrections included. Falls back to a full translation whenever positional reuse can't be trusted. 10 tests.
+- [x] **Three more content languages** (T-013) — uk/be/ka, with a provider capability check (DeepL has no Belarusian or Georgian) asked *before* the AI quota is charged, and the private-post gate translated into all three.
+- [x] **Translate into every selected language in one press** (T-014) — checkbox modal, sequential per-language calls, cost shown up front, whatever stays ticked after a failure is what's left.
+- [x] **Two new form field types** (T-031/T-032) — a long (multi-line) answer, and a static block of text and/or an image the reader only reads. 6 tests.
+- [x] **Posts Manager** (T-035/T-037/T-038) — a submission opens in full on click, "mark all as read" clears a feedback backlog in one press, sent schedules are hidden behind a toggle instead of padding the list.
+- [x] **Appearance panel saves itself** (ADR-069, T-041) — the Apply button that looked like decoration is gone; a status line replaced it.
+- [~] **Server-side messages follow the reader's language** (ADR-069, T-050) — the mechanism is in (no call site passes a language) and `ErrorMessages` is translated, but the ~130 inline strings in the endpoint files are not. **Deliberately half**, and the backlog row says so.
 
 
 Phases 0–5 done and production-verified. Phase 6 (multi-tenancy & public SaaS) is code-complete except billing/translation are waiting on real provider keys being pushed to the Pi. Phase 7 (Entertainer role) not started. **Phase 8 (v0.8.0) is code-complete** — all 8 steps plus the unplanned "Step 9" work done — but Steps 6 (tags in Telegram) and 7 (comments) have **not been live-verified** (deferred by Marty's choice on 26.07.2026); do that before calling the phase fully closed. 4 UI/blog bugs fixed and live-verified 25.07.2026 (view-count double-count on language switch, toolbar popups clipped by a CSS regression, export modal mispositioned, iPad horizontal scroll — see `CHANGELOG.md`). `Consts.CurrentVersion` was bumped to `0.9.0` ahead of Phase 8 actually closing — flagged as a real inconsistency, not yet reconciled with Marty.

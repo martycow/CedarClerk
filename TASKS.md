@@ -2,10 +2,51 @@
 
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
-## Now (30.07.2026): ADR-064 review + Marty's 8-point list
-1. **Decide what to do with Codex's uncommitted ADR-064 changes** (per-draft primary language, DraftRevision history, publish-diff guard). The 30.07 audit confirmed the direction but found 9 major defects — consolidated as `docs/BACKLOG.md` **T-063**; fix plan in the session report. Nothing should be committed or built on top until the fixes land (in particular: incremental translation is documented in ADR-064 but NOT implemented).
-2. **Marty's 30.07 asks**, registered in the restructured `docs/BACKLOG.md` (now a task board, `T-xxx` IDs): uk/be/ka languages (T-013), translate-to-all button (T-014), incremental re-translation (T-015), revision restore UI (T-016), revision diff view (T-017), data-loss guard package (T-018), false-dirty fix (T-061), session-persistence fixes (T-062 + T-074), cross-browser reader access (T-023/T-064). Product-scope and tabs questions: Q-1/Q-2.
-3. `docs/BACKLOG.md` restructured 30.07 into ID/Имя/Приоритет/Теги/Описание board form — maintain that format from now on; done rows get deleted (history lives in git), open items only.
+## Now (30.07.2026, after the v0.9.16 session): live-verify, then deploy
+
+Today's session closed thirteen backlog rows (data safety, sessions, version history, incremental
+translation, three languages, two form types, Posts Manager, Appearance). `dotnet test` 442/442,
+`ng build` clean, frontend 11/11. **The entire remaining risk is that none of it has been used by a
+human yet.**
+
+### Blocking the next deploy — a manual step on the Pi
+- [ ] **Copy the existing DataProtection keys into the new location before starting the new
+  binaries** (T-074/ADR-066). They decrypt every auth cookie, and the new build reads them from
+  `CEDAR_DATA_DIR` instead of `~/.aspnet`:
+  ```
+  ssh martycow@raspberrypi.local "mkdir -p ~/cedarclerk/data/dataprotection-keys && cp ~/.aspnet/DataProtection-Keys/*.xml ~/cedarclerk/data/dataprotection-keys/"
+  ```
+  Skipping it costs one mass sign-out — not data, but not nothing either. Do it *before*
+  `Scripts/deploy.ps1`, in the same order `.claude/rules/ef-migrations.md` uses for its own
+  stop → edit → deploy → start argument.
+- [ ] Still open from before: activate the Stripe Customer Portal in the Stripe Dashboard
+  (Settings → Billing) — the code path exists, the portal itself is off.
+
+### Live-verify (nothing below has been clicked)
+- [ ] **Save guards**: delete a big table and watch the save get refused; check "restore stored"
+  brings the text back; check an ordinary heavy edit is *not* refused (the guard is meant to be
+  lenient — a false positive here is the failure mode that would make Marty hate it).
+- [ ] **flush-on-hide on a real iPhone** — this is the half of T-018 that cannot be tested on a
+  desktop, and the 29.07 incident happened on iOS.
+- [ ] **Version history**: open a version, switch what it compares against, restore one, confirm the
+  restore itself appears in the history.
+- [ ] **Incremental re-translation**: edit one paragraph of a translated post, re-translate, confirm
+  the *other* paragraphs keep their existing wording (hand-edit one first to be sure).
+- [ ] **uk/be/ka**: with DeepL configured, confirm Belarusian reports a clear "provider can't do
+  this" instead of burning a quota call; with Anthropic, confirm all three translate.
+- [ ] Translate-all modal, the two new form field types on a real private post's gate, the Posts
+  Manager submission modal, "mark all as read", the Appearance panel's autosave.
+
+### Older, still not live-verified
+The FI2 export rebuild, the FI3 pickers and folder delete, the FI4 forms editor and per-language
+gate, tag rename/delete, article title, audit paging, the emoji panel and the paragraph-mark
+toggle, the glossary (its page and the tooltip on a real published post), the 28.07 follow-ups
+(the gate's language switcher, per-language cross-links, a semi-public post on the blog index).
+
+### Marty's open questions
+Q-1 (product scope / the fifth category) and Q-2 (editor tabs) are still unanswered in
+`docs/BACKLOG.md`; Q-2's prerequisite — optimistic concurrency — shipped today, so that one is now
+answerable rather than blocked.
 
 ## Previous: Phase 9e — the second `Input.md` sweep (closed 27–28.07.2026)
 **Done**: DB2, DB3, NF2 (six content languages), **FI3**, **FI2**, **FI4**, FI1, FI5, NF1, NF5 — plus a category sweep of the backlog (forms → posts → stats → admin → editor) on Marty's instruction. Sweep v3 (the 28.07 `Input.md` rewrite) is tracked as Phase 9f in `docs/ROADMAP.md`.

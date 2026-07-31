@@ -1,4 +1,5 @@
-﻿using CedarClerk.Core;
+﻿using System.Globalization;
+using CedarClerk.Core;
 using CedarClerk.Server;
 using CedarClerk.Server.Bot;
 using CedarClerk.Server.Email;
@@ -131,6 +132,21 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// T-050 — every ErrorMessages member reads CultureInfo.CurrentUICulture, which .NET already flows
+// across await boundaries. Setting it once here is what lets ~every existing `ErrorMessages.X`
+// call site answer in the reader's language without passing one around. After UseAuthentication,
+// because the signed-in account's own preference outranks the browser's header.
+app.Use(async (ctx, next) =>
+{
+    var lang = ctx.User.Identity?.IsAuthenticated == true
+        ? await LanguagePreference.OfUserAsync(ctx)
+        : null;
+    lang ??= LanguagePreference.FromAcceptLanguage(ctx.Request.Headers.AcceptLanguage.ToString());
+    if (lang is not null)
+        CultureInfo.CurrentUICulture = new CultureInfo(lang);
+    await next();
+});
 
 var blogHost = builder.Configuration[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost;
 app.MapWhen(ctx => string.Equals(ctx.Request.Host.Host, blogHost, StringComparison.OrdinalIgnoreCase),

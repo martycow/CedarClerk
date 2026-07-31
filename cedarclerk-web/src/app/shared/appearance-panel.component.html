@@ -1,5 +1,5 @@
 @if (open()) {
-<app-modal [width]="440" (closed)="open.set(false)">
+<app-modal [width]="440" (closed)="close()">
     <svg modal-icon lucidePalette class="icon-sm"></svg>
     <span modal-title>{{ t().settings.appearance.title }}</span>
 
@@ -76,11 +76,13 @@
             <label><input type="checkbox" [checked]="appearance.prefs().sheetFlush" (change)="toggleAppearanceFlag('sheetFlush', $event)"> {{ t().settings.appearance.sheetFlush }}</label>
         </div>
 
-        <button class="ap-apply" [class.saved]="applySaved()" [disabled]="!appearance.dirty() || applyBusy()" (click)="apply()">
-            @if (applyBusy()) { {{ t().common.saving }} }
-            @else if (applySaved()) { {{ t().common.saved }} }
-            @else { {{ t().settings.appearance.apply }} }
-        </button>
+        <!--T-041: no Apply button — the appearance half saves itself now, like the toolbar half
+        below it always did. This only reports what happened.-->
+        <p class="ap-save-state" [class.error]="saveState() === 'error'">
+            @if (saveState() === 'saving') { {{ t().common.saving }} }
+            @else if (saveState() === 'error') { {{ t().settings.appearance.saveFailed }} }
+            @else { {{ t().common.saved }} }
+        </p>
 
         <div class="ap-divider"></div>
 

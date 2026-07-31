@@ -809,7 +809,7 @@ export const en = {
             serifClassic: 'Classic serif',
             mono: 'Mono',
             rounded: 'Rounded',
-            apply: 'Apply',
+            saveFailed: 'Could not save',
             textSize: 'Text size',
             lineHeight: 'Line height',
             tableSize: 'Default table size',

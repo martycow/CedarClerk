@@ -181,35 +181,16 @@
     margin: 0 0 10px;
 }
 
-/* FI1 — explicit Apply, replacing the old instant-save-per-tick behaviour (ADR-035 revised). Same
-   filled-accent shape as `.export-btn.on`/`.btn-accent` elsewhere, so it reads as the one primary
-   action in the panel; `.ap-toggle`/`.ap-chip-grid` above stay neutral by comparison. */
-.ap-apply {
-    width: 100%;
-    margin-top: 4px;
-    border: none;
-    background: var(--accent);
-    color: #F4F2EA;
-    border-radius: var(--radius-md);
-    padding: 7px;
-    font-family: inherit;
-    font-size: var(--fs-13);
-    font-weight: 600;
-    cursor: pointer;
+/* T-041 — the Apply button is gone; the appearance half saves itself. All that is left is a
+   quiet line saying which of the three states it is in. */
+.ap-save-state {
+    margin: 4px 0 0;
+    font-size: var(--fs-12);
+    color: var(--t3);
+    text-align: right;
 }
 
-.ap-apply:hover:not(:disabled) {
-    filter: brightness(1.08);
-}
-
-.ap-apply:disabled {
-    opacity: .5;
-    cursor: default;
-}
-
-.ap-apply.saved {
-    background: var(--ok);
-}
+.ap-save-state.error { color: var(--danger); }
 
 .ap-reset {
     margin-top: 14px;

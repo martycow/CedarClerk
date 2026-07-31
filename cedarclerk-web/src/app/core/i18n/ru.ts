@@ -810,7 +810,7 @@ export const ru: Dict = {
             serifClassic: 'Классика с засечками',
             mono: 'Моноширинный',
             rounded: 'Закруглённый',
-            apply: 'Применить',
+            saveFailed: 'Не удалось сохранить',
             textSize: 'Размер текста',
             lineHeight: 'Межстрочный интервал',
             tableSize: 'Размер таблицы по умолчанию',

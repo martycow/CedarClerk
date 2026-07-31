@@ -9,6 +9,10 @@ import { ModalComponent } from './modal.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import { LucidePalette as Palette } from '@lucide/angular';
 
+// Long enough that a slider drag is one write, short enough that closing the modal right after a
+// click never races the save (the modal's own close path flushes it anyway — see apply()).
+const APPEARANCE_COMMIT_DEBOUNCE_MS = 600;
+
 // I14/B15 put appearance and toolbar customization in a panel beside the writing sheet, so every
 // control's effect on *that sheet* was visible without judging it on a different screen.
 //
@@ -36,8 +40,12 @@ export class AppearancePanelComponent implements OnInit {
     readonly movableToolbarGroups = TOOLBAR_GROUPS.filter(g => g.id !== 'ai');
 
     appearanceError = signal<string | null>(null);
-    applyBusy = signal(false);
-    applySaved = signal(false);
+    // T-041 — Apply was real (it persisted the prefs) but read as decoration, because every
+    // control already changed the sheet live (ADR-053) and the toolbar half of this same panel
+    // saved itself on click. The appearance half now saves itself too; this is the indicator that
+    // replaced the button.
+    saveState = signal<'saved' | 'saving' | 'error'>('saved');
+    private commitTimer?: ReturnType<typeof setTimeout>;
     row1Groups = signal<string[]>([]);
     row2Groups = signal<string[]>([]);
     toolbarError = signal<string | null>(null);
@@ -71,26 +79,31 @@ export class AppearancePanelComponent implements OnInit {
         return this.activeAccentHex().toUpperCase() === hex.toUpperCase();
     }
 
-    // FI1: preview-only from here down — every control updates the sheet immediately through
-    // `AppearanceService.prefs`, but no request goes out until Apply is pressed (see apply()).
+    // FI1/T-041: every control updates the sheet immediately through `AppearanceService.prefs`
+    // and the write follows on its own a moment later — there is no button to press.
+    private previewAndSave(patch: Partial<AppearancePrefs>) {
+        this.appearance.preview(patch);
+        this.commitSoon();
+    }
+
     pickAccentPreset(hex: string) {
-        this.appearance.preview(this.theme.theme() === 'dark' ? { accentDark: hex } : { accentLight: hex });
+        this.previewAndSave(this.theme.theme() === 'dark' ? { accentDark: hex } : { accentLight: hex });
     }
 
     setSheetWidth(value: AppearancePrefs['sheetWidth']) {
-        this.appearance.preview({ sheetWidth: value });
+        this.previewAndSave({ sheetWidth: value });
     }
 
     setTypeface(value: AppearancePrefs['typeface']) {
-        this.appearance.preview({ typeface: value });
+        this.previewAndSave({ typeface: value });
     }
 
     setFontSize(px: number) {
-        this.appearance.preview({ fontSize: px });
+        this.previewAndSave({ fontSize: px });
     }
 
     setLineHeight(value: number) {
-        this.appearance.preview({ lineHeight: value });
+        this.previewAndSave({ lineHeight: value });
     }
 
     readonly maxTableSize = MAX_TABLE_SIZE;
@@ -100,28 +113,41 @@ export class AppearancePanelComponent implements OnInit {
     }
 
     setTableRows(n: number) {
-        this.appearance.preview({ tableRows: this.clampTable(n) });
+        this.previewAndSave({ tableRows: this.clampTable(n) });
     }
 
     setTableCols(n: number) {
-        this.appearance.preview({ tableCols: this.clampTable(n) });
+        this.previewAndSave({ tableCols: this.clampTable(n) });
     }
 
     toggleAppearanceFlag(key: 'showParagraphNumbers' | 'showLineRules' | 'showWordCount' | 'focusModeHideToolbar' | 'sheetFlush', ev: Event) {
-        this.appearance.preview({ [key]: (ev.target as HTMLInputElement).checked });
+        this.previewAndSave({ [key]: (ev.target as HTMLInputElement).checked });
+    }
+
+    // Debounced rather than per-change: a slider drag is dozens of changes, and the point of
+    // AppearanceService's preview/commit split was to stop firing one save per tick.
+    private commitSoon() {
+        clearTimeout(this.commitTimer);
+        this.commitTimer = setTimeout(() => void this.apply(), APPEARANCE_COMMIT_DEBOUNCE_MS);
+    }
+
+    // Closing must not swallow a debounce still in flight.
+    close() {
+        clearTimeout(this.commitTimer);
+        this.open.set(false);
+        void this.apply();
     }
 
     async apply() {
+        if (!this.appearance.dirty()) return;
         this.appearanceError.set(null);
-        this.applyBusy.set(true);
+        this.saveState.set('saving');
         try {
             await this.appearance.commit();
-            this.applySaved.set(true);
-            setTimeout(() => this.applySaved.set(false), 2000);
+            this.saveState.set('saved');
         } catch (e) {
+            this.saveState.set('error');
             this.appearanceError.set(httpErrorMessage(e, this.t().settings.errors.appearance));
-        } finally {
-            this.applyBusy.set(false);
         }
     }
 
