@@ -17,10 +17,11 @@ human yet.**
 - [x] `Scripts/deploy.ps1` run end-to-end. Health check green (`0.9.16`), zero `Applying migration`
   lines (no schema change shipped today), no `warn:`/`fail:` in the startup log, bot
   `@cedar_clerk_bot` running, `/`, `blog.mooexe.dev` and `/rss.xml` all 200.
-- [ ] **Confirm an existing session survived** — the one thing that can't be checked from outside:
-  open the app and see whether you are still signed in without re-entering a password. If you are
-  not, the key copy didn't take and everyone was signed out once (recoverable by logging in again,
-  nothing lost).
+- [x] **Session survival confirmed** (Marty, 30.07): a cookie issued before the 0.9.17 restart still
+  decrypted after it, which is what a persisted key ring looks like from outside. The key copy took.
+- [x] **`/login` auto-login** (v0.9.17) — it and `/register` were the only routes with no guard, so
+  they showed a form without asking the server anything while every other URL let the same browser
+  in. `guestGuard` fixed it; verified live.
 - [ ] Still open from before: activate the Stripe Customer Portal in the Stripe Dashboard
   (Settings → Billing) — the code path exists, the portal itself is off.
 
