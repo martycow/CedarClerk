@@ -1,4 +1,7 @@
-<div class="drafts-page">
+<!--data-density="compact" (ADR-071 principle 3): this is a table screen, so it opts into the tighter
+token set. The attribute belongs here, on the page root, and never on a component — several of the
+components below also appear on comfortable screens.-->
+<div class="drafts-page" data-density="compact">
     <!--No back button: this is the post-login landing screen, so there's nothing to go back to.
     The editor is reached by opening a draft (or "New draft").-->
     <app-page-header page="drafts" [showBack]="false"></app-page-header>
@@ -105,13 +108,19 @@
             <div class="drafts-row drafts-row-head" [style.gridTemplateColumns]="gridTemplate()" [style.minWidth]="rowMinWidth()">
                 <button class="col-head" (click)="sortBy('title')">{{ t().drafts.columns.title }} {{ sortMark('title') }}</button>
                 <button class="col-head" (click)="sortBy('state')">{{ t().drafts.columns.state }} {{ sortMark('state') }}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(0, $event)"></span>}</button>
+                @if (!phone()) {
                 <button class="col-head" (click)="sortBy('languages')">{{ t().drafts.columns.languages }} {{ sortMark('languages') }}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(1, $event)"></span>}</button>
+                }
+                @if (!tight()) {
                 <button class="col-head" (click)="sortBy('folder')">{{ t().drafts.columns.folder }} {{ sortMark('folder') }}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(2, $event)"></span>}</button>
+                }
                 @if (!compact()) {
                 <button class="col-head" (click)="sortBy('tags')">{{ t().drafts.columns.tags }} {{ sortMark('tags') }}<span class="col-resize" (pointerdown)="startColResize(3, $event)"></span></button>
                 <button class="col-head" (click)="sortBy('activity')">{{ t().drafts.columns.activity }} {{ sortMark('activity') }}<span class="col-resize" (pointerdown)="startColResize(4, $event)"></span></button>
                 }
+                @if (!tight()) {
                 <button class="col-head right" (click)="sortBy('updated')">{{ t().drafts.columns.updated }} {{ sortMark('updated') }}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(5, $event)"></span>}</button>
+                }
                 <button class="col-head col-reset" (click)="resetColWidths()" [title]="t().drafts.resetColumns">⤢</button>
             </div>
             @for (d of filteredDrafts(); track d.id) {
@@ -128,14 +137,18 @@
                     </span>
                     @if (status(d).detail) { <div class="status-detail">{{ status(d).detail }}</div> }
                 </div>
+                @if (!phone()) {
                 <div class="lang-badges">
                     <span class="draft-lang-badge">RU</span>
                     @if (d.languages.includes('en')) { <span class="draft-lang-badge">EN</span> }
                 </div>
+                }
+                @if (!tight()) {
                 <div class="folder-cell" (click)="$event.stopPropagation()">
                     <app-folder-picker [folderId]="d.folderId" [compact]="true"
                                        (picked)="assignFolder(d, $event)"></app-folder-picker>
                 </div>
+                }
                 @if (!compact()) {
                 <div class="tags-cell">
                     <!--Loop variable is `tag`, not `t` — `t` is the dictionary accessor here.-->
@@ -156,7 +169,9 @@
                     }
                 </div>
                 }
+                @if (!tight()) {
                 <div class="right">{{ d.updatedAt | date:'d MMM, HH:mm' }}</div>
+                }
                 <div class="row-actions">
                     <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">
                         <svg lucideLayoutTemplate class="icon-sm"></svg>

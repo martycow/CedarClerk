@@ -1,25 +1,31 @@
+/* Phase 11 / T-081 — first screen migrated to tokens v2 (ADR-071). This page carries
+   data-density="compact" on its root (set in the template), which is what makes --dens-* resolve
+   to the tighter set here; the tokens are never read for a literal value in this file. */
 .drafts-page {
     min-height: 100vh;
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-sans);
-    font-size: 13px;
+    font-size: var(--dens-fs);
 }
 
 .hint {
     color: var(--t3);
-    font-size: 13px;
+    font-size: var(--dens-fs);
 }
 
 /* Page chrome now lives in the shared app-page-header (docs/DECISIONS.md, 27.07.2026). */
+/* .icon and .icon-sm were 15px and 14px — a one-pixel difference carrying two names, which is the
+   kind of thing the icon tokens exist to end. Both resolve to --icon-sm now; T-079 should delete
+   whichever class survives the Phosphor migration. */
 .icon {
-    width: 15px;
-    height: 15px;
+    width: var(--icon-sm);
+    height: var(--icon-sm);
 }
 
 .icon-sm {
-    width: 14px;
-    height: 14px;
+    width: var(--icon-sm);
+    height: var(--icon-sm);
 }
 
 .spacer {
@@ -34,27 +40,32 @@
 .drafts-body {
     max-width: 1600px;
     margin: 0 auto;
-    padding: 26px 20px 60px;
+    padding: var(--dens-section) var(--space-5) var(--space-6);
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--space-4);
 }
 
+/* flex-wrap, not nowrap: on a phone this row holds a title, a search field, three pickers and the
+   New-draft button, which is far more than 390px of viewport. Without wrapping the row simply grew
+   past the edge and the global overflow-x:hidden clipped whatever fell off — which is what "on an
+   iPhone the whole page is wider than the viewport" actually looked like from the inside. */
 .drafts-toolbar {
     display: flex;
     align-items: flex-end;
-    gap: 12px;
+    gap: var(--dens-gap);
+    flex-wrap: wrap;
 }
 
 .drafts-toolbar h1 {
     margin: 0;
-    font-size: 22px;
+    font-size: var(--fs-22);
     font-weight: 700;
     letter-spacing: -.02em;
 }
 
 .drafts-sub {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--t2);
     margin-top: 3px;
 }
@@ -62,20 +73,25 @@
 .search-input {
     width: 240px;
     box-sizing: border-box;
-    padding: 7px 10px;
+    padding: var(--dens-control-y) var(--dens-control-x);
     border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
+    border-radius: var(--dens-radius);
     background: var(--sheet);
     color: var(--text);
     font: inherit;
-    font-size: 13px;
+    font-size: var(--dens-fs);
+}
+
+.search-input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
 }
 
 .view-toggle {
     display: flex;
     gap: 2px;
     background: var(--alt);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     padding: 2px;
 }
 
@@ -101,17 +117,19 @@
 .btn-accent {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
     border: none;
     background: var(--accent);
-    color: #F4F2EA;
-    border-radius: var(--radius-md);
-    padding: 7px 14px;
-    font-size: 12.5px;
+    /* was #F4F2EA — the one hex literal in this file, and it is just the light sheet colour. */
+    color: var(--sheet);
+    border-radius: var(--dens-radius);
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--dens-fs);
     font-weight: 600;
     cursor: pointer;
     font-family: inherit;
     white-space: nowrap;
+    transition: filter var(--motion-fast) var(--ease);
 }
 
 .btn-accent:hover {
@@ -122,11 +140,12 @@
     border: 1px solid var(--border);
     background: none;
     color: var(--t2);
-    border-radius: var(--radius-sm);
-    padding: 7px 14px;
-    font-size: 13px;
+    border-radius: var(--dens-radius);
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--dens-fs);
     cursor: pointer;
     font-family: inherit;
+    transition: color var(--motion-fast) var(--ease);
 }
 
 .btn-ghost:hover {
@@ -136,7 +155,7 @@
 .filter-tabs {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--space-2);
 }
 
 .filter-tabs button {
@@ -144,8 +163,8 @@
     background: var(--sheet);
     color: var(--t2);
     border-radius: 999px;
-    padding: 5px 12px;
-    font-size: 12px;
+    padding: var(--space-1) var(--dens-control-x);
+    font-size: var(--fs-meta);
     cursor: pointer;
     font-family: inherit;
 }
@@ -174,9 +193,9 @@
     /* Static fallback; gridTemplate() sets the real values inline. Kept in step with
        DEFAULT_COL_WIDTHS so the first paint doesn't jump. */
     grid-template-columns: minmax(200px, 1fr) 200px 120px 170px 190px 140px 140px 80px;
-    gap: 12px;
+    gap: var(--dens-gap);
     align-items: center;
-    padding: 11px 16px;
+    padding: var(--dens-row-y) var(--dens-control-x);
     border-bottom: 1px solid var(--border);
     cursor: pointer;
     /* min-width is set inline by rowMinWidth(), because it depends on which columns are showing
@@ -190,7 +209,7 @@
 }
 
 .drafts-row:hover {
-    background: rgba(128, 120, 100, .08);
+    background: var(--hover);
 }
 
 .drafts-row.busy {
@@ -198,15 +217,18 @@
     pointer-events: none;
 }
 
+/* Was 9.5px — a half-pixel, and the smallest text anywhere in the app. --fs-10 is the integer step
+   nearest it; below --fs-11 a header this cramped is barely a label anyway, which is worth
+   revisiting once the mockups exist (T-076). */
 .drafts-row-head {
     cursor: default;
     background: var(--alt);
-    font-size: 9.5px;
+    font-size: var(--fs-10);
     letter-spacing: .07em;
     text-transform: uppercase;
     font-weight: 600;
     color: var(--t3);
-    padding: 8px 16px;
+    padding: var(--space-2) var(--dens-control-x);
 }
 
 .drafts-row-head:hover {
@@ -272,7 +294,7 @@
 }
 
 .drafts-title {
-    font-size: 13.5px;
+    font-size: var(--fs-14);
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
@@ -281,7 +303,7 @@
 
 .status-badge {
     display: inline-block;
-    font-size: 11px;
+    font-size: var(--fs-caption);
     font-weight: 600;
     padding: 2px 8px;
     border-radius: var(--radius-sm);
@@ -300,7 +322,7 @@
 }
 
 .status-detail {
-    font-size: 11px;
+    font-size: var(--fs-caption);
     color: var(--t3);
     margin-top: 2px;
     white-space: nowrap;
@@ -314,7 +336,7 @@
 }
 
 .draft-lang-badge {
-    font-size: 10.5px;
+    font-size: var(--fs-caption);
     font-weight: 600;
     padding: 2px 6px;
     border-radius: 4px;
@@ -326,7 +348,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--t2);
     min-width: 0;
 }
@@ -340,7 +362,7 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--t2);
 }
 
@@ -385,7 +407,7 @@
 }
 
 .mini:hover {
-    background: rgba(128, 120, 100, .14);
+    background: var(--hover-strong);
 }
 
 /* NF1 — marked-as-template state on the toggle button itself. */
@@ -396,7 +418,7 @@
 
 .mini-remove:hover {
     color: var(--danger);
-    background: rgba(180, 69, 44, .12);
+    background: var(--hover-danger);
 }
 
 .mini:disabled, .mini-remove:disabled {
@@ -437,14 +459,14 @@
     align-items: center;
     justify-content: space-between;
     margin-top: 6px;
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--t2);
 }
 
 /* ---------- Folders ---------- */
 .icon-xs {
-    width: 12px;
-    height: 12px;
+    width: var(--icon-xs);
+    height: var(--icon-xs);
 }
 
 .private-lock {
@@ -462,7 +484,7 @@
     color: var(--text);
     border-radius: var(--radius-sm);
     padding: 7px 12px;
-    font-size: 13px;
+    font-size: var(--dens-fs);
     font-family: inherit;
     cursor: pointer;
     white-space: nowrap;
@@ -489,7 +511,7 @@
     padding: 6px 8px;
     border-radius: var(--radius-sm);
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--dens-fs);
     font-family: inherit;
     color: var(--text);
     min-width: 0;
@@ -499,7 +521,7 @@
 }
 
 .folder-menu-item:hover {
-    background: rgba(128, 120, 100, .1);
+    background: var(--hover);
 }
 
 .folder-menu-item.active {
@@ -527,7 +549,7 @@
 }
 
 .folder-count {
-    font-size: 11px;
+    font-size: var(--fs-caption);
     color: var(--t3);
     padding: 0 4px;
     flex: none;
@@ -544,21 +566,21 @@
     padding: 6px 8px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    font-size: 13px;
+    font-size: var(--dens-fs);
     font-family: inherit;
     background: var(--sheet);
     color: var(--text);
 }
 
 .field-hint-inline {
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--t3);
     font-weight: 400;
     margin: 4px 0 0;
 }
 
 .tb-caption {
-    font-size: 9px;
+    font-size: var(--fs-9);
     letter-spacing: .05em;
     text-transform: uppercase;
     color: var(--t3);
@@ -571,7 +593,7 @@
     background: none;
     border-radius: 999px;
     padding: 2px 10px;
-    font-size: 11px;
+    font-size: var(--fs-caption);
     color: var(--accent);
     cursor: pointer;
     font-family: var(--font-sans);
@@ -594,7 +616,7 @@
     border-radius: var(--radius-sm);
     padding: 5px 0;
     cursor: pointer;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--text);
     font-family: inherit;
 }
@@ -608,7 +630,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12.5px;
+    font-size: var(--fs-ui);
     color: var(--text);
     cursor: pointer;
 }
@@ -624,7 +646,7 @@
     border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
     background: color-mix(in srgb, var(--danger) 12%, var(--surface));
     border-radius: var(--radius-md);
-    font-size: 12px;
+    font-size: var(--fs-meta);
     line-height: 1.45;
     color: var(--text);
 }
@@ -665,8 +687,64 @@
 }
 
 .translate-status {
-    font-size: 12.5px;
+    font-size: var(--fs-ui);
     color: var(--t2);
     margin: 0;
+}
+
+/* ---------- Narrow screens (T-034, done with the migration per ADR-070) ----------
+   Marty's targets are iPad 16 in both orientations and iPhone 13 portrait. The table itself was
+   already handled in 0.9.19 (columns drop below 1280, the row has a computed min-width and scrolls
+   inside its own container). What was never handled is everything around it, which is what made a
+   phone page wider than its viewport. */
+
+/* Phone. The toolbar becomes a stack: the search field and the folder trigger each take the full
+   width instead of holding a fixed 240px that cannot fit beside anything else. */
+@media (max-width: 700px) {
+    .drafts-body {
+        padding: var(--space-4) var(--space-3) var(--space-6);
+        gap: var(--space-3);
+    }
+
+    .drafts-toolbar {
+        align-items: stretch;
+    }
+
+    /* The spacer exists to push controls right on a wide row; once the row wraps it would insert a
+       full blank line between the title and the search field. */
+    .spacer {
+        display: none;
+    }
+
+    .search-input {
+        width: 100%;
+        flex: 1 1 100%;
+    }
+
+    .drafts-toolbar h1 {
+        font-size: var(--fs-20);
+    }
+
+    /* A grid of "auto-fill, minmax(240px, 1fr)" leaves a 390px phone with one column and 150px of
+       dead space to its right, because the track cannot grow past its own content box here. */
+    .drafts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Touch pointers, any width. 26px is a comfortable mouse target and a poor finger one; T-082 puts
+   the floor at 44px. Keyed off the pointer, not the viewport, so an iPad in landscape — which is
+   wide enough to miss a width query — still gets targets a thumb can hit. */
+@media (pointer: coarse) {
+    .mini,
+    .mini-remove,
+    .view-toggle button {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .row-actions {
+        gap: var(--space-1);
+    }
 }
 

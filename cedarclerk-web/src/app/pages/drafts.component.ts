@@ -46,8 +46,12 @@ const COL_STORAGE_KEY = 'cedar-drafts-cols';
 // gaps and the padding already need 1156px, and the row's stated min-width said 1020px. The result
 // was a table with no titles in it and two column headers drawn on top of each other.
 const TITLE_MIN_WIDTH = 200;
-const ROW_GAP = 12;
-const ROW_PADDING = 32;
+// These two mirror the compact density tokens the row is laid out with (--dens-gap = --space-2 = 8,
+// --dens-control-x = 10 on each side). They are duplicated here because rowMinWidth() has to add
+// them up in TypeScript, and the 0.9.19 bug was exactly this pair being written down once and then
+// left to drift — so if the density tokens move, these move with them.
+const ROW_GAP = 8;
+const ROW_PADDING = 20;
 const ACTIONS_WIDTH = 80;
 
 // Below this the row would have to scroll sideways to show everything, so it stops showing
@@ -57,6 +61,22 @@ const COMPACT_MAX_WIDTH = 1280;
 // Indices into DEFAULT_COL_WIDTHS: state, languages, folder, updated. Tags (3) and activity (4)
 // are the ones dropped.
 const COMPACT_COLUMNS = [0, 1, 2, 5];
+
+// A second tier for iPad portrait (820px) and phones. Even the compact set leaves the row wider
+// than the viewport there, and what falls off the right edge is the actions column — so archive and
+// delete became unreachable without a sideways scroll inside the table. Folder and Updated go; State
+// and Languages stay, because those are the two a person scans the list *for*.
+const TIGHT_MAX_WIDTH = 900;
+const TIGHT_COLUMNS = [0, 1];
+
+// Phone. The tight set still needs 644px of row (title 200 + state 200 + languages 120 + actions 80
+// + gaps + padding) against 390px of iPhone, so a third tier drops to State alone — and overrides
+// its stored width, because 200px for a one-word badge is a desktop measurement that survives into
+// a place it makes no sense. The title floor drops with it: on a phone a truncated title you can
+// read half of beats a title column you have to scroll to.
+const PHONE_MAX_WIDTH = 560;
+const PHONE_COL_WIDTHS = [80];
+const PHONE_TITLE_MIN_WIDTH = 130;
 
 function loadColWidths(): number[] {
     try {
@@ -143,7 +163,13 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     colWidths = signal<number[]>(loadColWidths());
     // Narrow enough that the full column set no longer fits — see COMPACT_MAX_WIDTH.
     compact = signal(window.innerWidth <= COMPACT_MAX_WIDTH);
-    private readonly onResize = () => this.compact.set(window.innerWidth <= COMPACT_MAX_WIDTH);
+    tight = signal(window.innerWidth <= TIGHT_MAX_WIDTH);
+    phone = signal(window.innerWidth <= PHONE_MAX_WIDTH);
+    private readonly onResize = () => {
+        this.compact.set(window.innerWidth <= COMPACT_MAX_WIDTH);
+        this.tight.set(window.innerWidth <= TIGHT_MAX_WIDTH);
+        this.phone.set(window.innerWidth <= PHONE_MAX_WIDTH);
+    };
 
     // Folders (Phase "Cedar Clerk 0.9.0" idea #19, see the ADR following ADR-038,
     // docs/DECISIONS.md) — 'all' = no folder filter, 'none' = unfiled drafts only, else a folder id.
@@ -239,12 +265,18 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     // markup all read this one signal, so they cannot disagree about how many tracks exist.
     private visibleColWidths(): number[] {
         const all = this.colWidths();
+        if (this.phone()) return PHONE_COL_WIDTHS;
+        if (this.tight()) return TIGHT_COLUMNS.map(i => all[i]);
         return this.compact() ? COMPACT_COLUMNS.map(i => all[i]) : all;
+    }
+
+    private titleMinWidth(): number {
+        return this.phone() ? PHONE_TITLE_MIN_WIDTH : TITLE_MIN_WIDTH;
     }
 
     gridTemplate(): string {
         const cols = this.visibleColWidths();
-        return `minmax(${TITLE_MIN_WIDTH}px, 1fr) ${cols.map(w => `${w}px`).join(' ')} ${ACTIONS_WIDTH}px`;
+        return `minmax(${this.titleMinWidth()}px, 1fr) ${cols.map(w => `${w}px`).join(' ')} ${ACTIONS_WIDTH}px`;
     }
 
     // Computed rather than written down: the old hardcoded 1020px was 136px short of the truth,
@@ -253,7 +285,7 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
         const cols = this.visibleColWidths();
         const fixed = cols.reduce((sum, w) => sum + w, 0) + ACTIONS_WIDTH;
         const gaps = (cols.length + 1) * ROW_GAP;
-        return `${fixed + gaps + ROW_PADDING + TITLE_MIN_WIDTH}px`;
+        return `${fixed + gaps + ROW_PADDING + this.titleMinWidth()}px`;
     }
 
     // Pointer events (not mouse) so a drag works with a trackpad, a pen and an iPad finger alike;

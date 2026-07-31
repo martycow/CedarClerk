@@ -2,6 +2,20 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-07-31 — Phase 11, screen 1: `/drafts` on the new tokens
+
+Migration is **screen by screen**, not all at once, and that is a recorded decision rather than a preference (ADR-070/071): the smoke suite runs green after each one, so "broken by the migration" stays separable from "was already broken". Doing the lot in one commit throws away the only instrument Phase 10 was built to provide.
+
+`/drafts` went first because it is table-shaped — the clearest place to see compact density — and because Marty's iPad and iPhone complaints live on it. **The stylesheet now holds zero hardcoded font-sizes and zero colour literals**, and the page opts into `data-density="compact"` on its root.
+
+Three tokens were added along the way, each because this screen needed it and every other screen will too: `--hover`, `--hover-strong` and `--hover-danger` — the app was carrying `rgba(128, 120, 100, .08 / .1 / .14)` in a dozen places, a colour that belongs to neither theme and merely looked tolerable in both — and `--icon-xs`. Two icon classes turned out to be 15px and 14px: a one-pixel difference carrying two names, now both resolving to `--icon-sm`.
+
+**T-034 closed on this screen at the same time**, per ADR-070's rule that breakpoints ride with the migration rather than following it — written afterwards they cost a second full pass over markup that just moved. The toolbar wraps instead of growing past a phone's viewport (that was the whole of "on an iPhone the page is wider than the screen": a nowrap flex row holding a title, a 240px search field, three pickers and a button, with the global `overflow-x: hidden` quietly clipping whatever fell off). And the column set went from one tier to three: ≤1280 drops Tags and Activity, **≤900 also drops Folder and Updated** — which is what had been pushing the row actions off an iPad in portrait, making archive and delete unreachable — and ≤560 keeps State alone, at 80px rather than the 200px a desktop had chosen for a one-word badge.
+
+The phone tier needed a second pass. Handing the grid one column width while the template still rendered two cells put the extra cell on an implicit second row, so every row grew to double height with the actions wrapped underneath — visible immediately in the capture, and exactly the CSS-versus-TypeScript disagreement the code already carries a warning about from 0.9.19. The `ROW_GAP`/`ROW_PADDING` constants were also updated to match the compact tokens, for the same reason.
+
+Verified by capture at Marty's three real sizes (1180 / 820 / 390), not by eye; `ng build` clean, smoke **37/37**.
+
 ## 2026-07-31 (v0.9.21) — Phase 11 opens: the direction is chosen, and deploys stop being invisible
 
 **Q-11 answered.** Marty picked the hybrid: warm editorial as the base, the dense-product school's density borrowed on the table-shaped screens, one palette and one type scale throughout. Recorded as **ADR-071** with seven binding principles at the top of `docs/DESIGN.md`. **Q-12 answered too — Phosphor** (ADR-072), delivered as inlined SVG behind one `app-icon` component rather than the icon font (ships the whole face, poor host for the labels T-080 needs) or the web-components package (needs `CUSTOM_ELEMENTS_SCHEMA`, which switches off template type-checking for a whole component).

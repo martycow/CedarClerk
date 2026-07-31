@@ -18,6 +18,14 @@
     --asoft: color-mix(in srgb, var(--accent) 13%, var(--surface));
     --abord: color-mix(in srgb, var(--accent) 38%, var(--border));
 
+    /* Hover/pressed wash for rows, menu items and icon buttons. Added with the /drafts migration
+       (tokens v2): every such surface in the app was carrying its own literal — `rgba(128, 120,
+       100, .08)`, `.1`, `.14` — a colour that belongs to neither theme and simply happened to look
+       acceptable in both. Derived from --text, so it follows the theme instead of guessing at it. */
+    --hover: color-mix(in srgb, var(--text) 7%, transparent);
+    --hover-strong: color-mix(in srgb, var(--text) 13%, transparent);
+    --hover-danger: color-mix(in srgb, var(--danger) 12%, transparent);
+
     /* Categorical chart series (N10). Assigned in this fixed order and never cycled — a 7th
        category folds into "Other". Deliberately excludes --danger/--ok: those mean a state, not
        an identity. Both light and dark steps were checked against this theme's chart surface
@@ -102,6 +110,7 @@
     /* Icon sizes (ADR-072, T-079). These three values are exactly the ones `.icon` is currently
        declared with in 9 different files (15/18/20px) — the inconsistency is the reason for the
        tokens, so they are named rather than reconciled to one number. */
+    --icon-xs: 12px;
     --icon-sm: 15px;
     --icon-md: 18px;
     --icon-lg: 20px;
