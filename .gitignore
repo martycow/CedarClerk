@@ -40,3 +40,12 @@ Thumbs.db
 TestResults/
 coverage/
 MISC_FILES/**/*
+# === Playwright (Phase 10 smoke suite) ===
+cedarclerk-web/test-results/
+cedarclerk-web/playwright-report/
+cedarclerk-web/blob-report/
+cedarclerk-web/.playwright/
+# scratch database the e2e launcher creates and wipes
+.e2e-data/
+.e2e-server.log
+.e2e-server.log.err
