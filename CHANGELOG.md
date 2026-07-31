@@ -2,6 +2,22 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-07-31 — Phase 11: the type sweep is finished — **0 hardcoded font-sizes left in the app**
+
+The remaining eleven stylesheets (`glossary`, `login`, `register` and the eight shared components) went in one pass, then the editor's 67 — the single biggest file — closed it out. **314 → 0.**
+
+**Shared components deliberately do not follow density.** A component that appears on both `/drafts` (compact) and `/settings` (comfortable) would otherwise render at two different sizes, and for the page header and the account menu that means the app's chrome changing size depending on which page is under it. Chrome must be stable, so these use the fixed role tokens (`--fs-ui`, `--fs-body`) rather than `--dens-fs`. Density variance stays opt-in, expressed by a page in its own stylesheet.
+
+Two more tokens fell out of the sweep rather than being invented for it:
+- **`--scrim`** — the modal backdrop was a fixed `rgba(24, 21, 16, .45)` identical in both themes, which is wrong in the direction that matters: the same 45% veil that separates a dialog from a light page barely registers against a dark one. Dark now gets its own value.
+- **`--warn` earned its keep immediately.** The editor turned out to hold three more instances of the same tone the admin panel had — `#B08618` on the unsaved-state dot and the sync indicator, and `#C9A227` mixed into the RU/EN diff marker. All four were the same idea written three different ways.
+
+**Two literals stay, both for the same reason**: `#fff` on a channel avatar and on the Telegram brand icon. Those backgrounds are a generated colour and a brand colour — not theme surfaces — so `var(--sheet)` would go dark behind them and become unreadable. A token would be actively wrong there.
+
+`ng build` clean, smoke **37/37**. `editor.component.css` grew from 26.70 kB to 27.44 kB against its 20 kB budget, purely because `var(--fs-ui)` is longer than `13px` — that budget was already over and is T-092.
+
+**Open question this surfaced (Q-16):** ADR-071's principle 4 says the editor sheet gets a serif, but the sheet's typeface is *already a user setting* (`AppearancePrefs.typeface`, five system stacks, default `system` = sans). Honouring the principle means changing a default that every existing user's editor already reflects. Left alone rather than decided quietly.
+
 ## 2026-07-31 — Phase 11, screens 4–6: admin, comments, stats — and the palette's missing third status
 
 Three screens in one pass because they are the same shape: a list, a log and a set of stat cards, all compact, all wanting identical edits. 58 hardcoded font-sizes and 6 colour literals gone.

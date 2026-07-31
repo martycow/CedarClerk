@@ -43,7 +43,7 @@
 
 .brand-name {
     font-weight: 700;
-    font-size: 13.5px;
+    font-size: var(--fs-body);
     letter-spacing: -.01em;
     /* Same reason as .btn-label: squeezed, "Cedar Clerk" broke across two lines and made the whole
        topbar taller — visible on an iPad in portrait. */
@@ -51,7 +51,7 @@
 }
 
 .version-tag {
-    font-size: 10.5px;
+    font-size: var(--fs-caption);
     color: var(--t3);
     white-space: nowrap;
 }
@@ -66,7 +66,7 @@
     border: 1px solid var(--border);
     outline: none;
     background: var(--sheet);
-    font-size: 13px;
+    font-size: var(--fs-ui);
     color: var(--text);
     min-width: 220px;
     padding: 4px 8px;
@@ -87,7 +87,7 @@
     display: flex;
     align-items: center;
     gap: 5px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--t3);
 }
 
@@ -99,7 +99,7 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #B08618;
+    background: var(--warn);
 }
 
 .save-state.error .dot {
@@ -139,7 +139,7 @@
 }
 
 .icon-btn:hover {
-    background: rgba(128, 120, 100, .14);
+    background: var(--hover-strong);
 }
 
 
@@ -147,7 +147,7 @@
     width: 30px;
     height: 30px;
     justify-content: center;
-    font-size: 15px;
+    font-size: var(--fs-15);
     padding: 0;
 }
 
@@ -160,7 +160,7 @@
     border-radius: var(--radius-md);
     padding: 5px 14px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--fs-ui);
     color: var(--text);
     font-family: inherit;
 }
@@ -181,7 +181,7 @@
 
 .export-btn.on {
     background: var(--accent);
-    color: #F4F2EA;
+    color: var(--sheet);
 }
 
 /* I11 — same shape as Export, but neutral: Export is the primary action of this screen and
@@ -193,7 +193,7 @@
 }
 
 .nav-btn:hover {
-    background: rgba(128, 120, 100, .14);
+    background: var(--hover-strong);
     filter: none;
 }
 
@@ -238,7 +238,7 @@
 .invite-email {
     flex: 1;
     min-width: 0;
-    font-size: 13px;
+    font-size: var(--fs-ui);
     color: var(--text);
     white-space: nowrap;
     overflow: hidden;
@@ -297,7 +297,7 @@
 .channel-chosen-title {
     flex: 1;
     min-width: 0;
-    font-size: 13px;
+    font-size: var(--fs-ui);
     font-weight: 500;
     color: var(--text);
     white-space: nowrap;
@@ -317,7 +317,7 @@
 }
 
 .account-trigger:hover {
-    background: rgba(128, 120, 100, .14);
+    background: var(--hover-strong);
 }
 
 .avatar {
@@ -325,11 +325,11 @@
     height: 26px;
     border-radius: 50%;
     background: var(--accent);
-    color: #F4F2EA;
+    color: var(--sheet);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
+    font-size: var(--fs-caption);
     font-weight: 600;
     flex: none;
 }
@@ -351,7 +351,7 @@
     border-radius: var(--radius-md);
     padding: 7px 10px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--fs-ui);
     color: var(--danger);
 }
 
@@ -371,7 +371,7 @@
     border-radius: var(--radius-md);
     padding: 7px 10px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--fs-ui);
     color: var(--text);
     text-decoration: none;
 }
@@ -446,7 +446,7 @@
 }
 
 .tb-caption {
-    font-size: 9px;
+    font-size: var(--fs-9);
     letter-spacing: .05em;
     text-transform: uppercase;
     color: var(--t3);
@@ -474,7 +474,7 @@
     background: var(--sheet);
     border-radius: var(--radius-sm);
     padding: 4px 10px;
-    font-size: 12.5px;
+    font-size: var(--fs-ui);
     color: var(--text);
     cursor: pointer;
     font-family: inherit;
@@ -505,7 +505,7 @@
     padding: 6px 8px;
     border-radius: var(--radius-sm);
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--fs-ui);
     color: var(--text);
     font-family: inherit;
     height: auto;
@@ -513,7 +513,7 @@
 }
 
 .toolbar .block-menu button:hover {
-    background: rgba(128, 120, 100, .12);
+    background: var(--hover-strong);
 }
 
 .toolbar .block-menu button.on {
@@ -531,12 +531,12 @@
     padding: 0;
     border-radius: var(--radius-sm);
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--fs-ui);
     color: var(--t2);
 }
 
 .toolbar button:hover {
-    background: rgba(128, 120, 100, .14);
+    background: var(--hover-strong);
 }
 
 .toolbar button.on {
@@ -551,7 +551,7 @@
 }
 
 .toolbar .gif-btn {
-    font-size: 9.5px;
+    font-size: var(--fs-10);
     font-weight: 700;
     letter-spacing: -.02em;
 }
@@ -566,7 +566,7 @@
     background: var(--asoft);
     border-radius: 7px;
     padding: 4px 10px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     font-weight: 600;
     color: var(--text);
     cursor: pointer;
@@ -613,10 +613,10 @@
 .btn-accent {
     border: none;
     background: var(--accent);
-    color: #F4F2EA;
+    color: var(--sheet);
     border-radius: var(--radius-sm);
     padding: 7px 16px;
-    font-size: 13px;
+    font-size: var(--fs-ui);
     font-weight: 600;
     cursor: pointer;
     font-family: inherit;
@@ -634,7 +634,7 @@
     color: var(--t2);
     border-radius: var(--radius-sm);
     padding: 7px 14px;
-    font-size: 13px;
+    font-size: var(--fs-ui);
     cursor: pointer;
     font-family: inherit;
 }
@@ -655,10 +655,10 @@
     background: var(--sheet);
     border: 1px solid color-mix(in srgb, var(--ok) 35%, var(--border));
     border-radius: var(--radius-md);
-    box-shadow: 0 12px 32px rgba(40, 35, 25, .2);
+    box-shadow: var(--shadow-md);
     padding: 11px 15px;
     color: var(--text);
-    font-size: 13px;
+    font-size: var(--fs-ui);
     font-weight: 500;
 }
 
@@ -688,7 +688,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--t2);
 }
 
@@ -747,7 +747,7 @@
 }
 
 .panel-label {
-    font-size: 10.5px;
+    font-size: var(--fs-caption);
     letter-spacing: .07em;
     text-transform: uppercase;
     font-weight: 600;
@@ -800,7 +800,7 @@
 }
 
 .draft-title {
-    font-size: 13px;
+    font-size: var(--fs-ui);
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
@@ -808,7 +808,7 @@
 }
 
 .draft-date {
-    font-size: 11px;
+    font-size: var(--fs-caption);
     color: var(--t3);
 }
 
@@ -822,7 +822,7 @@
 }
 
 .channel-item:hover {
-    background: rgba(128, 120, 100, .12);
+    background: var(--hover-strong);
 }
 
 .channel-item.active {
@@ -846,7 +846,7 @@
 .channel-item .channel-title {
     flex: 1;
     min-width: 0;
-    font-size: 12.5px;
+    font-size: var(--fs-ui);
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
@@ -857,7 +857,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 11px;
+    font-size: var(--fs-caption);
     color: var(--t3);
 }
 
@@ -883,11 +883,14 @@
     width: 22px;
     height: 22px;
     border-radius: 50%;
+    /* Stays #fff: a channel avatar's background is one of six arbitrary generated colours, not a
+       theme surface, so the readable foreground is white in both themes — var(--sheet) would go
+       dark and become unreadable on a saturated fill. Same reasoning as the brand icons. */
     color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
+    font-size: var(--fs-10);
     font-weight: 700;
     flex: none;
 }
@@ -902,19 +905,19 @@
 }
 
 .empty-cow {
-    font-size: 22px;
+    font-size: var(--fs-22);
     line-height: 1;
     filter: grayscale(.2);
 }
 
 .empty-line1 {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--t2);
     line-height: 1.45;
 }
 
 .empty-line2 {
-    font-size: 11px;
+    font-size: var(--fs-caption);
     color: var(--t3);
     line-height: 1.45;
 }
@@ -956,7 +959,7 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 10.5px;
+    font-size: var(--fs-caption);
     font-weight: 600;
     letter-spacing: .04em;
     text-transform: uppercase;
@@ -977,7 +980,7 @@
 }
 
 .state-link {
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--t2);
     text-decoration: none;
 }
@@ -1009,7 +1012,7 @@
     color: var(--t2);
     border-radius: var(--radius-md);
     padding: 5px 16px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     font-weight: 600;
     letter-spacing: .04em;
     cursor: pointer;
@@ -1045,7 +1048,7 @@
     background: var(--sheet);
     border-radius: 999px;
     padding: 3px 10px;
-    font-size: 11px;
+    font-size: var(--fs-caption);
     color: var(--accent);
     cursor: pointer;
 }
@@ -1072,7 +1075,7 @@
     background: none;
     border-radius: 999px;
     padding: 2px 10px;
-    font-size: 11px;
+    font-size: var(--fs-caption);
     color: var(--accent);
     cursor: pointer;
     font-family: var(--font-sans);
@@ -1092,7 +1095,7 @@
 }
 
 .en-empty-title {
-    font-size: 17px;
+    font-size: var(--fs-17);
     font-weight: 600;
     color: var(--text);
     margin: 0;
@@ -1133,7 +1136,7 @@
 }
 
 .inline-progress .translate-status {
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
 }
 
 .indeterminate-bar {
@@ -1159,14 +1162,14 @@
 }
 
 .translate-status {
-    font-size: 12.5px;
+    font-size: var(--fs-ui);
     color: var(--t2);
     margin: 0;
 }
 
 .draft-lang-badge {
     display: inline-block;
-    font-size: 10px;
+    font-size: var(--fs-10);
     font-weight: 600;
     letter-spacing: .05em;
     color: var(--t3);
@@ -1282,7 +1285,7 @@
 }
 
 .diff-marker.added { background: var(--ok); }
-.diff-marker.changed { background: color-mix(in srgb, var(--accent) 55%, #C9A227 45%); }
+.diff-marker.changed { background: color-mix(in srgb, var(--accent) 55%, var(--warn) 45%); }
 .diff-marker.removed { background: var(--danger); }
 
 /* ---------- Status bar ---------- */
@@ -1295,7 +1298,7 @@
     padding: 0 12px;
     background: var(--surface);
     border-top: 1px solid var(--border);
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--t2);
 }
 
@@ -1317,7 +1320,7 @@
 }
 
 .sync-indicator .dot.warn {
-    background: #B08618;
+    background: var(--warn);
 }
 
 .sync-indicator .dot.err {
@@ -1329,7 +1332,7 @@
     background: none;
     color: var(--danger);
     cursor: pointer;
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     padding: 0;
     text-decoration: underline;
     font-family: inherit;
@@ -1407,7 +1410,7 @@
     color: var(--text);
     border-radius: var(--radius-sm);
     padding: 4px 9px 4px 4px;
-    font-size: 12.5px;
+    font-size: var(--fs-ui);
     cursor: pointer;
 }
 
@@ -1433,7 +1436,7 @@
     border: none;
     background: none;
     padding: 0;
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--t3);
     text-decoration: underline;
     cursor: pointer;
@@ -1447,7 +1450,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 11px;
+    font-size: var(--fs-caption);
     font-weight: 700;
     letter-spacing: .05em;
     text-transform: uppercase;
@@ -1493,7 +1496,7 @@
     align-items: center;
     gap: 9px;
     padding: 6px 4px;
-    font-size: 13px;
+    font-size: var(--fs-ui);
     color: var(--t3);
     opacity: .7;
 }
@@ -1510,7 +1513,7 @@
     color: var(--accent);
     border-radius: var(--radius-sm);
     padding: 3px 12px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     font-weight: 600;
 }
 
@@ -1543,7 +1546,7 @@
     gap: 8px;
     padding: 5px 2px;
     border-bottom: 1px solid var(--border);
-    font-size: 12.5px;
+    font-size: var(--fs-ui);
 }
 
 .asset-row:last-child {
@@ -1566,7 +1569,7 @@
 
 .asset-tg-badge {
     flex: none;
-    font-size: 10.5px;
+    font-size: var(--fs-caption);
     font-weight: 600;
     color: var(--accent);
     background: var(--asoft);
@@ -1604,7 +1607,7 @@
     background: var(--sheet);
     border-radius: 999px;
     padding: 4px 10px;
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--text);
     cursor: pointer;
     font-family: inherit;
@@ -1612,7 +1615,7 @@
 }
 
 .quick-schedule button:hover {
-    background: rgba(128, 120, 100, .12);
+    background: var(--hover-strong);
 }
 
 .chip-row {
@@ -1628,12 +1631,12 @@
     border-radius: 999px;
     padding: 3px 10px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--text);
 }
 
 .chip:hover {
-    background: rgba(128, 120, 100, .12);
+    background: var(--hover-strong);
 }
 
 .format-toggle {
@@ -1656,7 +1659,7 @@
     align-items: center;
     gap: 6px;
     margin-top: 8px;
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--t2);
 }
 
@@ -1667,7 +1670,7 @@
     border-radius: var(--radius-sm);
     padding: 5px 0;
     cursor: pointer;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--text);
     height: auto;
 }
@@ -1688,14 +1691,14 @@
     padding: 6px 8px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    font-size: 13px;
+    font-size: var(--fs-ui);
     background: var(--sheet);
     color: var(--text);
     font-family: inherit;
 }
 
 .export-result {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--ok);
     margin-top: 8px;
 }
@@ -1706,7 +1709,7 @@
 }
 
 .channel-error {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--danger);
     margin: 4px 0;
 }
@@ -1718,7 +1721,7 @@
     background: none;
     color: var(--t3);
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--fs-body);
     line-height: 1;
     padding: 2px 4px;
 }
@@ -1739,7 +1742,7 @@
     padding: 5px 7px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    font-size: 12px;
+    font-size: var(--fs-meta);
     background: var(--sheet);
     color: var(--text);
 }
@@ -1753,7 +1756,7 @@
     border-radius: var(--radius-sm);
     padding: 5px 10px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--text);
     height: auto;
 }
@@ -1773,7 +1776,7 @@
 }
 
 .tz-hint {
-    font-size: 11px;
+    font-size: var(--fs-caption);
     color: var(--t3);
     margin: 2px 0 0;
 }
@@ -1795,20 +1798,20 @@
     border-radius: var(--radius-sm);
     padding: 4px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: var(--fs-16);
     width: auto;
     height: auto;
 }
 
 .emoji-btn:hover {
-    background: rgba(128, 120, 100, .12);
+    background: var(--hover-strong);
 }
 
 .dt-flags {
     display: flex;
     gap: 10px;
     margin-top: 8px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--text);
 }
 
@@ -1901,7 +1904,7 @@ input[type="datetime-local"]:focus-visible {
 }
 
 .status-icon-btn:hover {
-    background: rgba(128, 120, 100, .16);
+    background: var(--hover-strong);
 }
 
 .console-toggle {
@@ -1911,14 +1914,14 @@ input[type="datetime-local"]:focus-visible {
 }
 
 .console-toggle.active {
-    background: rgba(128, 120, 100, .16);
+    background: var(--hover-strong);
     color: var(--text);
 }
 
 .console-badge {
     border-radius: 999px;
     padding: 0 5px;
-    font-size: 10px;
+    font-size: var(--fs-10);
     font-weight: 700;
     line-height: 15px;
 }
@@ -1941,7 +1944,7 @@ input[type="datetime-local"]:focus-visible {
     border-radius: var(--radius-sm);
     padding: 2px 9px;
     font-family: inherit;
-    font-size: 12.5px;
+    font-size: var(--fs-ui);
     cursor: pointer;
 }
 
@@ -1961,7 +1964,7 @@ input[type="datetime-local"]:focus-visible {
     border: 1px solid var(--abord);
     background: var(--asoft);
     border-radius: var(--radius-md);
-    font-size: 12px;
+    font-size: var(--fs-meta);
     line-height: 1.45;
     color: var(--t2);
 }
@@ -1984,7 +1987,7 @@ input[type="datetime-local"]:focus-visible {
     display: flex;
     align-items: center;
     gap: 5px;
-    font-size: 12.5px;
+    font-size: var(--fs-ui);
     color: var(--t2);
     cursor: pointer;
 }
@@ -2000,7 +2003,7 @@ input[type="datetime-local"]:focus-visible {
     border: 1px solid color-mix(in srgb, var(--ok) 45%, var(--border));
     background: color-mix(in srgb, var(--ok) 14%, var(--sheet));
     border-radius: var(--radius-md);
-    font-size: 13px;
+    font-size: var(--fs-ui);
     color: var(--text);
 }
 
@@ -2034,7 +2037,7 @@ input[type="datetime-local"]:focus-visible {
    meant it never matched ProseMirror's runtime-rendered paragraphs, so the button did nothing. */
 
 .invisibles-glyph {
-    font-size: 13px;
+    font-size: var(--fs-ui);
     line-height: 1;
 }
 
