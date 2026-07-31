@@ -4,7 +4,9 @@ Per-element inventory of the frontend UI — what exists, where it lives, what i
 
 ## Format
 
-One table per page/component. Columns:
+Two layers, added 30.07.2026 (Phase 10, ADR-070): the **per-element tables** below — one per page/component, six columns, unchanged — and, at the end of the file, a **verification map** with one row per route/surface plus an icon inventory. They are separate on purpose: "does this popup have a loading indicator" and "has anyone opened this screen" change at different times and for different reasons.
+
+Per-element table columns:
 
 | Column | Meaning |
 |---|---|
@@ -193,3 +195,104 @@ Idea #11. Terms the owner defines once, found and explained on the published blo
 | Profile tab — Save | `.profile-save-bar` | button | One Save for identity, header slots, social links and cross-links | Present — `profileBusy()` | Single on purpose (28.07.2026): they all write through one request, and the per-section buttons that preceded it nulled the sections they did not send |
 | Gate language switcher (blog) | `.reg-langs`, `RegistrationFormHtml` | link row | Switches the private post's registration form between the languages it has one for | N/A | Only rendered with more than one; the reader has no other route to their language, since the post body is behind the form |
 | Glossary tooltip (blog) | `.glossary-term` / `.glossary-pop`, `BlogEndpoints.ShellTemplate` | popover | Shows the description (and image) on hover, focus or tap | N/A | Rendered by `GlossaryScanner`, first occurrence per page only, never inside code or a link. The script writes the description with `textContent`, never `innerHTML` |
+
+---
+
+# Phase 10 additions (30.07.2026)
+
+Everything below was added when Phase 10 (ADR-070) audited this file against the Angular routing config and the real components. **The per-element tables above are unchanged and keep their original six columns** — verification status is tracked in the map below rather than by widening ten tables, so the two can be updated independently.
+
+## Verification map — one row per surface
+
+The `Verified` column is filled in by Phase 10 Block D. `smoke` means a Playwright scenario covers it (`cedarclerk-web/e2e/`, run via `Scripts/e2e.ps1`); `hand` means someone clicked through it in a browser; a defect ID points at a `docs/BACKLOG.md` row.
+
+| Route / surface | Component | States to check | Verified | Defects |
+|---|---|---|---|---|
+| `/login` | `login.component` | error, server-unreachable + retry, already-signed-in redirect | smoke | — |
+| `/register` | `register.component` | invalid invite, duplicate email, guest-guard redirect | — | — |
+| `/drafts` | `drafts.component` | empty, loading, import progress, import error, table vs grid, long titles, horizontal overflow | smoke (list, search, rename, create) | — |
+| `/editor` | `editor.component` | no draft, save states (saved/saving/dirty/error), refused save, offline retry, upload progress, long title | smoke (round-trip, formatting, shrink guard, versions) | — |
+| `/posts` | `posts-manager.component` | empty, no forms, submissions, chip overflow, scheduled toggle | smoke (list, search, forms tab) | — |
+| `/settings` | `settings.component` | Profile vs Account tab, Pro-gated fields, save failure | smoke (deep link, language) | — |
+| `/glossary` | `glossary.component` | empty, per-language empty, translate-all failure mid-run | smoke (page opens) | — |
+| `/admin` | `admin.component` | non-admin gate, empty audit, audit paging, self-targeting refusal | smoke (list, audit shape, gate) | — |
+| `/terms`, `/privacy` | `legal-page.component` | — | — | T-052 (placeholder text) |
+| Blog index | `BlogEndpoints.RenderIndexAsync` | no posts, timeline, tag filter, semi-public lock | smoke (index lists post) | — |
+| Blog post | `BlogEndpoints.RenderPostAsync` | not-translated notice, TOC, watermark, copy protection, floating nav, glossary tooltip, poll | smoke (render, reaction, comment) | — |
+| Registration gate | `CedarToBlogHtmlRenderer.RegistrationFormHtml` | required-field validation, language switcher, consent, static block, long answer | smoke (gate → submit → access) | — |
+| `/rss.xml` | `BlogEndpoints.RenderRssAsync` | empty feed, escaping | smoke | — |
+
+## `admin.component` (`cedarclerk-web/src/app/pages/admin.component.{ts,html,css}`)
+
+IF2, built 27.07.2026 in five steps (`docs/admin-panel-scope.md`). Reached from the nav row, gated by `adminGuard`; a non-admin gets a redirect and the API answers 404 rather than 403 — an account must not learn that an endpoint it may not use exists.
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Summary cards | `.summary-grid` / `.summary-card` | panel | Seven counts: users, paid, published/drafts, comments, reactions, channels, storage | Page-level `loading()` only | Not a dashboard — no history, no deltas; the data-collection layer that would allow them doesn't exist (see the Channel Analysis dependency in `docs/ROADMAP.md`) |
+| Tab strip | `.admin-tabs` | tab | Users · Invites · Posts · Reports | N/A | Four tabs, unlike the Posts Manager's own strip — different component, same visual role, and one of the cross-screen inconsistencies the 28.07 design handoff flags |
+| User card | `.user-card`, expands on click | panel | Email, plan chip, admin/locked/lapsed chips, meta | N/A | Expansion is click-anywhere; the action row stops propagation so a button press doesn't collapse the card |
+| Plan + expiry | `.action-row`, date input + Save | button | Set tier and expiry; blank means forever | Present — `busy()` disables Save | Free has no expiry; the hint line says which rule applies |
+| Reset trial | `.action-row` `.btn-ghost` | button | Clears `TrialUsedAt` so the 7-day trial can be bought again | Present — `busy()` | Disabled when the account never used a trial |
+| Lock / unlock, grant / revoke admin | `.action-row` `.btn-ghost` | button | Account state changes | Present — `busy()` | **Self-targeting is refused server-side**, not merely hidden — the button is also disabled via `isSelf(u)` |
+| Invite attribution | `.action-group` | panel | Assign an invite code to an account that predates code tracking | Present — `busy()` | Manual attribution exists because accounts older than IF2 step 3 have no code to point at |
+| Invite creation | `.invite-new` | panel | New code + label | Present — `busy()` | Codes are deactivated, never deleted — deleting one would silently orphan the accounts attributed to it |
+| Audit log | `.audit-list` / `.audit-row` | panel | Append-only record of every admin action | Present — `auditLoadingMore()` on the Load-more button | Paging added after `docs/admin-panel-scope.md` flagged its absence; **retention is deliberately absent** — the log is append-only on purpose |
+| Load more (audit) | `.btn-ghost` under the list | button | `?skip=` paging, `hasMore` drives visibility | Present | |
+
+## Blog surfaces (server-rendered — `CedarClerk.Server/BlogEndpoints.cs`, `CedarClerk.Core/CedarToBlogHtmlRenderer.cs`)
+
+Not Angular: these are strings built on the server and host-routed by `Program.cs` `MapWhen` on `Host.Host`. They were missing from this file entirely, which matters because roughly half of what a *reader* ever sees lives here — and because the redesign has to touch two style systems, not one.
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Post list / timeline | `RenderIndexAsync`, `.post-list` / `.timeline-item` | panel | Reverse-chronological cards with a vertical chronology line | N/A — server-rendered | A private-but-listed post (`IsListedWhilePrivate`) shows a lock and **withholds its excerpt**, deliberately |
+| Post header slots | `.post-header-slots`, `HeaderSlotRenderer` | panel | Up to three configured values under the title; slot 3 is Pro | N/A | Clamped server-side for a downgraded account, not just hidden in Settings |
+| Table of contents | `<nav class="toc">` | panel | Generated from the document's headings at render time | N/A | Same heading ids the Telegram anchor blocks use |
+| Not-translated notice | `.not-translated-notice` | panel | Shown when the requested language has no translation row | N/A | Renders the original rather than mislabelling the page as the requested language |
+| Reactions | `.annotation-controls` `.react-btn` | button | Anonymous like/dislike, per anchor and whole-article | Optimistic — the count updates locally, no spinner | Deduped by salted `VisitorHash`; raw IPs are never stored (ADR-016) |
+| Comment box | `.comment-box`, `form.comment-form` | panel | Anonymous comment, optional name, one level of replies | No spinner on submit | `[hidden]` is forced globally in the blog stylesheet after a CSS rule silently overrode it twice (IB5) |
+| Registration gate | `.reg-gate` / `.reg-card`, `RegistrationFormHtml` | panel | Shown instead of a 404 on a private post that has a form | Submit disables while the fetch is in flight | Answers in the reader's `?lang=`, falling back to the post's primary — so an English reader of a Russian post sees Russian chrome and untranslated author questions, by design |
+| Watermark | `.watermark-overlay`, `WatermarkRenderer` | panel | Tiled text over a private post | N/A | One tiling `background-image` (base64 SVG data URI), not N repeated elements |
+| Copy protection | `user-select:none` + copy/contextmenu block | — | Deterrent on private posts (ADR-063) | N/A | Deterrent, not protection — the wording in the UI says so |
+| Floating nav | `.floating-nav` | panel | Back-to-menu and back-to-top, after 400px of scroll | N/A | Glyphs (`☰`, `↑`), not icon-set icons — see the icon inventory below |
+| Poll | `poll` node, `PollVote` | panel | Blog-only vote, results shown after voting (ADR-055) | N/A | No Telegram surface at all, by decision |
+| Glossary tooltip | `.glossary-term` / `.glossary-pop` | popover | Hover/focus/tap explanation, first occurrence per page | N/A | Description written with `textContent`, never `innerHTML` |
+| RSS | `RenderRssAsync`, `/rss.xml` | — | Latest 30 published posts | N/A | Auto-discovery `<link>` in every page head |
+
+## Surfaces added in 0.9.16–0.9.17 (30.07.2026) — absent from this file before
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Save-stopped dialog | `editor.component.html` `app-modal`, `saveRefusal()` | modal | The 409 from a refused save — shrink or stale. Buttons are "Restore stored" and "Save anyway" | N/A — the decision *is* the point | ADR-066. Nothing is lost while it is open: the editor holds the new text and the server the old one |
+| Version history | `app-modal`, `revisionsOpen()`, opened by the `◷` button beside the language tabs | modal | List, preview, diff against any other version or against what is stored, restore | Present — `revisionBusy()` | ADR-067. A restore records what it replaced first, so it is itself undoable |
+| Publish-diff confirmation | `app-modal`, `updateConfirm()` | modal | Every already-live language with its own diff, before one click republishes them all | N/A | ADR-065. Server-enforced by fingerprint — the client-side-only version it replaced was decoration |
+| Translate-all | `app-modal`, `translateAllOpen()` | modal | Checkbox per language, sequential calls, cost shown up front | Present — per-language spinner | Whatever stays ticked after a failure is what is left to do |
+| Appearance status line | Appearance modal, where the Apply button was | panel | saved / saving / could not save | Is itself the loading state | ADR-069. The button was real but read as decoration next to a live preview |
+| Long-answer field | `.reg-textarea`, `data-question` | — | Multi-line answer on a registration form (T-031) | N/A | Same `data-question` contract as the single-line input |
+| Static block | `.reg-static` | — | Text and/or image the reader only reads (T-032) | N/A | Carries **no** `data-question` — a block with one would submit an empty answer for a question nobody was asked |
+| Consent field | `.reg-consent`, `data-question-consent` | — | Statement plus a required checkbox (ADR-060) | N/A | Separate attribute because the script reads `.checked`, not `.value` |
+| Guest guard | `core/guest.guard.ts` | — | A live session is redirected away from `/login` and `/register` | N/A | v0.9.17. A server that doesn't answer falls through to the login page — unknown is not the same as proven |
+
+## Icon inventory
+
+Measured against the templates on 30.07.2026, not recalled. Input for `T-079` (one icon set + size tokens) and `T-080` (icon semantics).
+
+| Fact | Number | What it means for Phase 11 |
+|---|---|---|
+| Distinct icons in use | 79 | All from `@lucide/angular` (ISC). Q-12 decides whether this set stays |
+| Total icon usages in templates | 203 | |
+| Icon controls with no visible text, `title` **or** `aria-label` | **0** | Better than assumed — every icon control carries a `title`. The gap is not "unlabelled": `title` never appears on touch, so on iPad/iPhone (T-034) those controls are unlabelled in practice |
+| `aria-label` attributes in the whole app | **1** | Labelling rests entirely on `title`, which browsers also expose as a last-resort accessible name — adequate on a desktop, absent on mobile |
+| Non-set glyphs used as icons | 10 kinds | `☾`/`☀` (theme toggle, 5 files), `👍`/`👎` (comments), `✦` (AI), `◷` (version history), `⤢` (reset column widths), `★`, `¶` (paragraph marks), `⏰` (scheduled), plus `☰`/`↑` on the blog's floating nav. Each renders in the OS emoji font and so follows neither the icon set's weight nor its colour — the same class of problem as the flag emoji DB3.1 already removed for not existing on Windows |
+| `.icon` size definitions | **9 files, three different values** — 15px (×6), 18px (glossary), 20px (folder-picker, tag-picker) | Angular view encapsulation makes each component redefine the class; nothing keeps them equal, and they already are not. This is the concrete case for `--icon-sm/md/lg` |
+| `.icon-sm` size definitions | 10 files: 14px (×9), 13px (comments) | Same cause |
+| `.icon-xs` size definitions | 7 files, 12px everywhere | Consistent today — by luck, not by construction |
+
+Icons appearing in more than one component (`Trash2`, `X`, `Plus`, `Pencil`, `RefreshCw`, `Archive`/`ArchiveRestore`, `Folder`, `Settings`, `Newspaper`, `BookMarked`, `ShieldCheck`, `Terminal`, `Send`, `List`/`LayoutGrid`) are used **consistently** — the same glyph means the same thing on every screen, and no duplicate meanings were found. `RefreshCw` carries two roles (busy spinner with `.spin`, refresh action without), which is conventional and not worth splitting.
+
+## Screens and flows never opened in a browser
+
+Cross-referenced with `TASKS.md`. Note that smoke coverage is a different claim from "a person looked at it and it was right" — it says the flow works, not that it reads well.
+
+- **Covered mechanically as of 30.07.2026** (Phase 10 Block B): save guards (refusal and restore), version history, the private-post gate end to end, blog reactions and comments, the admin gate, the Posts Manager list, the drafts round-trip.
+- **Still seen by nobody**: flush-on-hide on a real iPhone (cannot be staged on a desktop — the 29.07 incident was iOS), incremental re-translation preserving manual corrections, the uk/be/ka provider refusal, the translate-all modal, the two new form field types on a real gate, the Posts Manager submission modal and "mark all as read", the Appearance panel's autosave, the FI2 export rebuild, the FI3 pickers and folder delete, the FI4 forms editor and per-language gate, tag rename/delete, article title, audit paging, the emoji panel, the paragraph-mark toggle, the glossary tooltip on a real published post, per-language cross-links, a semi-public post on the blog index, and Phase 8's Steps 6 and 7 (tags in the Telegram export, comment replies/highlight/name reservation).
