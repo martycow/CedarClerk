@@ -248,6 +248,14 @@ for (const device of DEVICES) {
         await shot(page, `91-posts-${device.name}`);
         await page.goto('/settings');
         await shot(page, `92-settings-${device.name}`);
+
+        // The editor's topbar is the crowded one: title field, save state, Export and four nav
+        // buttons in one row. This is where the labels wrapped onto two lines and the account
+        // email ran off the right edge.
+        const id = await createDraft(context, 'Заголовок поста для проверки топбара', ['Текст.']);
+        await page.goto(`/editor?draft=${id}`);
+        await expect(page.locator('.tiptap')).toBeVisible();
+        await shot(page, `93-editor-${device.name}`);
     });
 }
 

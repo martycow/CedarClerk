@@ -45,6 +45,9 @@
     font-weight: 700;
     font-size: 13.5px;
     letter-spacing: -.01em;
+    /* Same reason as .btn-label: squeezed, "Cedar Clerk" broke across two lines and made the whole
+       topbar taller — visible on an iPad in portrait. */
+    white-space: nowrap;
 }
 
 .version-tag {
@@ -331,21 +334,11 @@
     flex: none;
 }
 
-.user {
-    color: var(--t2);
-    font-size: 12.5px;
-    max-width: 160px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+/* `.user` and `.profile-email` used to live here, styling the account popover this component
+   owned before IB9 extracted it into app-account-menu. View encapsulation means these selectors
+   have matched nothing since — including the `display:none` in the 768px block, which is why the
+   email kept showing on narrow screens. The real rules are in account-menu.component.css. */
 
-.profile-email {
-    font-size: 13px;
-    color: var(--text);
-    margin: 6px 0 12px;
-    word-break: break-all;
-}
 
 .logout-btn {
     display: flex;
@@ -1248,6 +1241,38 @@
     .ru-diff-gutter { display: none; }
 }
 
+/* The editor's topbar is the crowded one — it carries the title field, the save state and Export
+   on top of the four nav buttons every screen has. At an iPad's 1180px the labels no longer fit:
+   "Posts Manager" wrapped onto two lines and overlapped Export, and the account email ran off the
+   right edge of the viewport. The icons stay (each has a title, and the nav row is identical on
+   every other screen), so nothing becomes unreachable — the row just stops overflowing.
+   The 768px block below drops far more; this is the intermediate step that was missing. */
+@media (max-width: 1280px) {
+    .nav-btn .btn-label,
+    .version-tag {
+        display: none;
+    }
+
+    .nav-btn {
+        padding: 5px 8px;
+    }
+}
+
+/* iPad in portrait (820px): with the labels already gone the row still ran ~30px long and pushed
+   the account avatar off the right edge. The wordmark is the cheapest thing to drop — the logo
+   beside it stays, so the app is still named on screen. */
+@media (max-width: 900px) {
+    .brand-name {
+        display: none;
+    }
+}
+
+/* A label that runs out of room must clip, never wrap: a two-line label makes its button taller
+   than the row, which is how "Posts Manager" ended up sitting on top of Export. */
+.btn-label {
+    white-space: nowrap;
+}
+
 .diff-marker {
     position: absolute;
     left: 0;
@@ -1851,8 +1876,7 @@ input[type="datetime-local"]:focus-visible {
     .nav-btn .btn-label,
     /* Same "Download .cedar" action also lives in the Export modal, which is reachable on
        mobile — so dropping it here costs nothing and keeps the row from overflowing again. */
-    .cedar-download,
-    .user {
+    .cedar-download {
         display: none;
     }
 

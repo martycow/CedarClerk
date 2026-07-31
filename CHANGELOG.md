@@ -2,6 +2,18 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-07-31 (v0.9.20) — the editor's topbar didn't fit on an iPad either
+
+Second screenshot from Marty's iPad, two things circled: **"Posts Manager" broken across two lines and sitting on top of the Export button**, and **the account email running off the right edge of the viewport**.
+
+One cause behind both: the editor's topbar is the crowded row — it carries the title field, the save state and Export on top of the four nav buttons every screen has — and the only rule that thinned it out fired at 768px. Between 768 and full width there was nothing, so at an iPad's 1180px everything stayed and the row overflowed. Now the nav buttons drop their labels at ≤1280 and keep their icons (each has a title, and the same row is labelled on every other screen, where it does fit), and labels are `nowrap` so a squeezed one clips instead of becoming two lines and making its button taller than the row.
+
+The email was a different failure: `.user { display: none }` sat in the editor's own stylesheet, and had been dead since IB9 moved the account menu into a shared component — Angular's view encapsulation means an editor selector cannot reach into `app-account-menu`. It never hid anything, on any screen size. The rule now lives where the element does, and the avatar beside it still opens the menu, which shows the full address — so what is hidden is a duplicate, not a fact. The other orphaned rules (`.user`, `.profile-email`) were deleted rather than left looking load-bearing.
+
+iPad portrait (820px) got two more: the wordmark broke across two lines, and with that fixed the row was still ~30px long and pushed the avatar off the edge — so "Cedar Clerk" drops below 900px and the logo carries the branding alone.
+
+Verified at 1180 and 820 by capture, not by eye. **Still open** (T-034, Phase 11): the `/drafts` table scrolls sideways in portrait so the row actions sit past the edge, and on an iPhone the whole page is wider than the viewport.
+
 ## 2026-07-31 (v0.9.19) — the drafts table had no titles in it on an iPad
 
 Marty sent a screenshot from his iPad: the drafts list, with `TITLE` and `STATE` drawn on top of each other and **not one draft name visible** in any row.

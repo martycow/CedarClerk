@@ -45,6 +45,17 @@
     text-overflow: ellipsis;
 }
 
+/* Only the editor's topbar asks for the email (showEmail), and that is the one row with no space
+   to spare: on an iPad it was pushed past the right edge of the viewport, half-visible. The avatar
+   stays, and the menu behind it shows the full address — so this hides a duplicate, not a fact.
+   The rule lives here because the element does: a media query in editor.component.css cannot
+   reach into this component's styles. */
+@media (max-width: 1280px) {
+    .user {
+        display: none;
+    }
+}
+
 .profile-email {
     font-size: 13px;
     color: var(--text);
