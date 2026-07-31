@@ -23,11 +23,11 @@
     height: 26px;
     border-radius: 50%;
     background: var(--accent);
-    color: #F4F2EA;
+    color: var(--sheet);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
+    font-size: var(--fs-caption);
     font-weight: 600;
     flex: none;
 }
@@ -35,7 +35,7 @@
 .avatar.lg {
     width: 46px;
     height: 46px;
-    font-size: 18px;
+    font-size: var(--fs-18);
 }
 
 /* ---------- Body layout ---------- */
@@ -63,8 +63,8 @@
     background: var(--surface);
     color: var(--t2);
     border-radius: 999px;
-    padding: 5px 14px;
-    font-size: 12px;
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--fs-meta);
     font-weight: 500;
     cursor: pointer;
     font-family: inherit;
@@ -85,7 +85,7 @@
 }
 
 .settings-card h2 {
-    font-size: 15px;
+    font-size: var(--fs-15);
     font-weight: 700;
     letter-spacing: -.01em;
     margin: 0 0 16px;
@@ -100,12 +100,12 @@
 }
 
 .profile-email {
-    font-size: 14px;
+    font-size: var(--fs-body);
     font-weight: 600;
 }
 
 .profile-meta {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--t3);
 }
 
@@ -117,7 +117,7 @@
 }
 
 .field-group label {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     font-weight: 600;
     color: var(--t2);
 }
@@ -129,13 +129,13 @@
 }
 
 .field-hint {
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--t3);
     margin: -2px 0 2px;
 }
 
 .field-error {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--danger);
     margin: 6px 0 0;
 }
@@ -147,9 +147,9 @@
     background: var(--sheet);
     color: var(--text);
     border-radius: var(--radius-md);
-    padding: 9px 12px;
+    padding: var(--dens-control-y) var(--dens-control-x);
     font: inherit;
-    font-size: 13.5px;
+    font-size: var(--fs-body);
     line-height: 1.5;
     outline: none;
     box-sizing: border-box;
@@ -190,7 +190,7 @@
     border-radius: var(--radius-sm);
     padding: 6px 0;
     cursor: pointer;
-    font-size: 12.5px;
+    font-size: var(--fs-ui);
     color: var(--text);
     font-family: inherit;
 }
@@ -223,7 +223,7 @@
     border-radius: var(--radius-md);
     padding: 10px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--t2);
     font-family: inherit;
 }
@@ -252,7 +252,7 @@
     display: flex;
     align-items: center;
     gap: 9px;
-    font-size: 12.5px;
+    font-size: var(--fs-ui);
     cursor: pointer;
 }
 
@@ -296,7 +296,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 5px 10px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--t2);
     cursor: grab;
 }
@@ -308,7 +308,7 @@
     box-shadow: var(--shadow-md);
     border-radius: var(--radius-sm);
     padding: 5px 10px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
 }
 
 .cdk-drag-placeholder {
@@ -329,7 +329,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
+    font-size: var(--fs-ui);
     font-weight: 600;
     cursor: pointer;
 }
@@ -342,7 +342,7 @@
 }
 
 .catalog-count {
-    font-size: 11px;
+    font-size: var(--fs-caption);
     color: var(--t3);
     font-weight: 500;
 }
@@ -359,7 +359,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--t2);
     cursor: pointer;
 }
@@ -387,7 +387,7 @@
     display: flex;
     align-items: center;
     gap: 5px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--ok);
     font-weight: 500;
 }
@@ -408,10 +408,10 @@
     gap: 6px;
     border: none;
     background: var(--accent);
-    color: #F4F2EA;
+    color: var(--sheet);
     border-radius: var(--radius-md);
-    padding: 7px 16px;
-    font-size: 12.5px;
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--fs-ui);
     font-weight: 500;
     cursor: pointer;
     font-family: inherit;
@@ -427,8 +427,8 @@
 }
 
 .btn-primary.sm {
-    padding: 6px 14px;
-    font-size: 12px;
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--fs-meta);
 }
 
 .btn-danger-ghost {
@@ -436,8 +436,8 @@
     background: none;
     color: var(--danger);
     border-radius: var(--radius-md);
-    padding: 6px 14px;
-    font-size: 12.5px;
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--fs-ui);
     font-weight: 500;
     cursor: pointer;
     font-family: inherit;
@@ -451,10 +451,10 @@
 .btn-danger {
     border: none;
     background: var(--danger);
-    color: #fff;
+    color: var(--sheet);
     border-radius: var(--radius-sm);
-    padding: 5px 12px;
-    font-size: 12px;
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--fs-meta);
     font-weight: 600;
     cursor: pointer;
     font-family: inherit;
@@ -469,8 +469,8 @@
     background: none;
     color: var(--t2);
     border-radius: var(--radius-sm);
-    padding: 5px 12px;
-    font-size: 12px;
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--fs-meta);
     font-weight: 500;
     cursor: pointer;
     font-family: inherit;
@@ -484,7 +484,7 @@
     border: none;
     background: none;
     color: var(--accent);
-    font-size: 12px;
+    font-size: var(--fs-meta);
     font-weight: 500;
     cursor: pointer;
     font-family: inherit;
@@ -522,13 +522,13 @@
 }
 
 .plan-banner-title {
-    font-size: 13.5px;
+    font-size: var(--fs-body);
     font-weight: 600;
     text-transform: capitalize;
 }
 
 .plan-banner-meta {
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--t2);
 }
 
@@ -541,7 +541,7 @@
     border-radius: var(--radius-md);
     padding: 10px 14px;
     margin: 0 0 16px;
-    font-size: 12.5px;
+    font-size: var(--fs-ui);
     font-weight: 500;
     color: var(--ok);
 }
@@ -569,16 +569,16 @@
 }
 
 .plan-card-name {
-    font-size: 13.5px;
+    font-size: var(--fs-body);
     font-weight: 700;
 }
 
 /* .ai-badge marks a real AI feature (Pro Plus) — accent-filled, matches the plan's own colour. */
 .ai-badge {
-    font-size: 9.5px;
+    font-size: var(--fs-10);
     font-weight: 700;
     letter-spacing: .05em;
-    color: #F4F2EA;
+    color: var(--sheet);
     background: var(--accent);
     border-radius: 4px;
     padding: 2px 5px;
@@ -592,7 +592,7 @@
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    font-size: 9.5px;
+    font-size: var(--fs-10);
     font-weight: 600;
     letter-spacing: .05em;
     color: var(--t2);
@@ -604,19 +604,19 @@
 }
 
 .plan-card-price {
-    font-size: 16px;
+    font-size: var(--fs-16);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
 }
 
 .plan-card-price span {
-    font-size: 11px;
+    font-size: var(--fs-caption);
     font-weight: 500;
     color: var(--t3);
 }
 
 .plan-card-desc {
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--t2);
     line-height: 1.5;
     flex: 1;
@@ -629,7 +629,7 @@
     color: var(--text);
     border-radius: 7px;
     padding: 6px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     font-weight: 600;
     cursor: pointer;
     font-family: inherit;
@@ -643,7 +643,7 @@
 .plan-card-btn.accent {
     border-color: transparent;
     background: var(--accent);
-    color: #F4F2EA;
+    color: var(--sheet);
 }
 
 .plan-card-btn.accent:hover {
@@ -655,7 +655,7 @@
     border: none;
     background: none;
     color: var(--accent);
-    font-size: 12px;
+    font-size: var(--fs-meta);
     font-weight: 500;
     cursor: pointer;
     font-family: inherit;
@@ -733,14 +733,14 @@
 
 .pay-method-label {
     display: block;
-    font-size: 13px;
+    font-size: var(--fs-ui);
     font-weight: 600;
     color: var(--text);
 }
 
 .pay-method-desc {
     display: block;
-    font-size: 11px;
+    font-size: var(--fs-caption);
     color: var(--t3);
 }
 
@@ -771,6 +771,10 @@
     color: #fff;
 }
 
+/* The only two colour literals left on this screen, and deliberately so: #2AABEE is Telegram's
+   brand blue and #fff is its paired foreground. A brand colour is not a theme value — tokenizing it
+   would mean the logo shifting hue between light and dark, which is the one thing a brand mark must
+   not do. Same rule as the brand icons in app-brand-icon (ADR-054). */
 .integration-icon.telegram {
     background: #2AABEE;
 }
@@ -794,7 +798,7 @@
 }
 
 .integration-title {
-    font-size: 13.5px;
+    font-size: var(--fs-body);
     font-weight: 600;
 }
 
@@ -802,7 +806,7 @@
     display: flex;
     align-items: center;
     gap: 5px;
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--t2);
 }
 
@@ -819,13 +823,55 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--t2);
 }
 
 @media (max-width: 640px) {
     .plan-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+/* T-034 — this screen had never been opened on a narrow viewport (it is in the "never checked"
+   list in TASKS.md), and it had exactly one breakpoint: the plan grid above. Everything else kept
+   its desktop measurements.
+   No density switch here: /settings is a form screen, so it stays comfortable (ADR-071). What
+   changes on a phone is the frame around the form, not the form's own breathing room. */
+@media (max-width: 700px) {
+    .settings-body {
+        padding: var(--space-4) var(--space-3) var(--space-6);
+        gap: var(--space-4);
+    }
+
+    /* 26px of side padding inside a card inside a 12px-padded body leaves under 300px of usable
+       width on a 390px phone — the card's own frame was eating a tenth of the screen. */
+    .settings-card {
+        padding: var(--space-4);
+    }
+
+    /* Sticky chips over a short screen cost more than they give: they cover the very content they
+       scroll to. They also wrapped to three rows at this width. */
+    .anchor-chips {
+        position: static;
+        flex-wrap: wrap;
+    }
+
+    .toolbar-rows-editor {
+        flex-direction: column;
+    }
+
+    .accent-presets {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (pointer: coarse) {
+    .anchor-chips button,
+    .btn-primary,
+    .btn-danger,
+    .btn-danger-ghost {
+        min-height: 44px;
     }
 }
 
@@ -842,7 +888,7 @@
     border: none;
     background: none;
     font-family: inherit;
-    font-size: 13.5px;
+    font-size: var(--fs-body);
     color: var(--t2);
     padding: 7px 14px;
     cursor: pointer;
@@ -908,7 +954,7 @@
     border-radius: 999px;
     padding: 4px 12px;
     font-family: inherit;
-    font-size: 12.5px;
+    font-size: var(--fs-ui);
     cursor: pointer;
 }
 

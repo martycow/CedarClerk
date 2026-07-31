@@ -2,6 +2,16 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-07-31 — Phase 11, screen 3: `/settings`, the first comfortable-density screen
+
+The first screen to demonstrate the *other* half of ADR-071: `/settings` is a form, not a table, so it stays **comfortable** and its controls get roomier rather than tighter. Same tokens as `/drafts` and `/posts` — `--dens-control-y/x` — resolving to 7px/14px here instead of 5px/10px, because the page does not carry `data-density="compact"`. Nothing about the components changed; the surface they sit on decides. That is the whole claim of principle 3, and this is the first place it is visible side by side.
+
+43 hardcoded font-sizes and 5 colour literals gone. **Two literals stay on purpose**: `#2AABEE` is Telegram's brand blue and `#fff` its paired foreground. A brand colour is not a theme value — tokenizing it would mean the mark shifting hue between light and dark, which is the one thing a brand mark must not do. Same rule the brand icons already follow (ADR-054).
+
+This screen was on the "never checked on a narrow viewport" list in `TASKS.md`, and it had exactly one breakpoint — the plan grid. Everything else kept desktop measurements: 26px of card padding inside a 20px-padded body left under 300px of usable width on a 390px phone, the card frame eating a tenth of the screen. The anchor chips also stop being sticky there, because on a short screen they cover the content they scroll to, and they were wrapping to three rows anyway. The toolbar-row editor stacks; the accent presets go from five columns to three.
+
+`ng build` clean, smoke **37/37**. 200 hardcoded font-sizes remain across the other 16 stylesheets, from 314 at the start of the phase.
+
 ## 2026-07-31 — Phase 11, screen 2: `/posts`, and two defects the phone capture exposed
 
 Same treatment as `/drafts`: zero hardcoded font-sizes, zero colour literals, `data-density="compact"` on the page root, control padding on the density tokens, plus the narrow-screen and touch-target passes.
