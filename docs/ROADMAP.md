@@ -4,7 +4,9 @@ Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-
 
 ## Status summary (as of 30.07.2026)
 
-**Current work: Phase 9f** — the 28.07 `Input.md` rewrite (sweep v3) plus AI/translation robustness. The ADR-064 audit's fixes landed as ADR-065 and the T-063 row is closed. Phases 9c/9d/9e closed 27–28.07.2026. `docs/BACKLOG.md` was restructured into a task board (30.07) — item IDs there are now `T-xxx`/`Q-xx`.
+**Current work: Phase 10 — UI Verification Sweep.** v0.9.17 is in production; the audit-before-redesign ordering is ADR-070, and Phases 11 (Design System 2.0) and 12 (Publishing Targets) are documented but not started — both blocked on product decisions (Q-11 and Q-1).
+
+**Previous: Phase 9f** — the 28.07 `Input.md` rewrite (sweep v3) plus AI/translation robustness. The ADR-064 audit's fixes landed as ADR-065 and the T-063 row is closed. Phases 9c/9d/9e closed 27–28.07.2026. `docs/BACKLOG.md` was restructured into a task board (30.07) — item IDs there are now `T-xxx`/`Q-xx`.
 
 ### Phase 9f — 30.07.2026 session: data safety, version history, incremental translation (v0.9.16)
 Everything below is code-complete with `dotnet test` 442/442 and `ng build` clean. **None of it has been clicked through in a browser, and none of it is deployed** — that is the whole of what's left, and it is tracked in `TASKS.md`.
@@ -343,6 +345,43 @@ Executing `_Documents_/CedarClerk/Input.md` (32 items). Full text and the per-it
 **Features**
 - [x] IF2 — Admin panel (High) — **this row had gone stale: the panel was fully built 27.07.2026** (all 5 steps of `docs/admin-panel-scope.md`: roles, plan/expiry management, invite-code entity + attribution, cross-owner post list, payments/storage/AI usage, audit log with paging; gate live-verified by Marty). See `TASKS.md` "Admin panel (IF2)"
 - [x] IF1 — avatar upload (27.07.2026). `ApplicationUser.AvatarUrl` (migration `AddAvatarUrl`) holding a `/media/...` path, because the file goes through the ordinary asset upload — same type whitelist, same storage quota, same public serving, no second pipeline. `POST /api/auth/avatar` only records which uploaded image it is, and **rejects anything not starting `/media/`**: accepting an arbitrary URL would let a profile point the app's own chrome at someone else's server. Shown in the shared account menu and the Settings profile card; null keeps the initial-letter placeholder
+
+### Phase 10 — UI Verification Sweep — started 30.07.2026, in progress
+
+Ordering rationale in **ADR-070**: the audit runs before the redesign because verification debt, not code debt, is the project's dominant risk — restyling unverified screens destroys the ability to tell an old defect from an introduced one. **This phase ships no visual change at all**; that is what makes its defect list trustworthy.
+
+**Pre-work findings (30.07.2026)** — recorded because three of them changed the phase's shape:
+- `docs/UI-INVENTORY.md` **already existed** (29.07, 10 sections). It is extended, not rewritten — missing: `admin.component`, the blog pages, everything from 30.07 (ShrinkGuard restore dialog, version-history modal, translate-all modal, the two new form field types, Appearance autosave, `guestGuard`), plus two new columns (Verified, Defect ID) and an icon inventory.
+- **No e2e infrastructure of any kind.** `cedarclerk-web` has Vitest and three spec files (`app`, `cedar-text.util`, `pseudo-progress.util`); Playwright is absent from both `package.json` and `node_modules`.
+- **Login is email+password** (ASP.NET Identity cookie) — the Telegram Login Widget is optional account *linking*, not sign-in. Playwright therefore signs in through the real form and needs no test-only auth path, which removes the risk of shipping one to production.
+- Baseline on `d4f0d7c`: `dotnet test` 442/442, `ng build` clean apart from two budget warnings (initial bundle 1.86 MB vs a 1.00 MB budget; `editor.component.css` 26.71 kB vs 20 kB — recorded as T-092).
+- Working tree clean (no uncommitted Codex work, unlike the ADR-064 precedent); `Input.md` unchanged since 28.07, so sweep v3 remains fully absorbed into Phase 9f.
+
+**Blocks** (each ends in a stop-gate; Marty approves before the next begins):
+- [x] **Block 0 — pre-work checklist**, reported 30.07.2026
+- [ ] **Block A — document the plan first**: ADR-070, this section, Phase 11/12 headings, `Q-11…Q-15`, and the Phase 11/12 task rows in `docs/BACKLOG.md`
+- [ ] **Block B — Playwright smoke suite**: 12–15 scenarios over the critical paths (session survival, draft round-trip, ShrinkGuard 409 + restore, version restore, translation 202+polling, publish to `@testingandfun`, blog reaction/comment, Posts Manager, forms, admin, locale/theme switch). Runs on Marty's machine only — Playwright browsers do not exist for armhf, so this never enters the deploy pipeline. Local server runs without a bot token (see the note in `.claude/rules/telegram-bot.md`; there is no `appsettings.LocalNoBot.json` — a non-`Development` environment name simply doesn't load the file holding the token, and the "bot is disabled" log line is the confirmation)
+- [ ] **Block C — UI inventory**, extended from the Angular routing config and the real components. The existing `_Documents_/CedarClerk/Design-Handoff-2026-07-28/` package (an 18 KB audit of Posts Manager / Export modal / Settings / Admin plus 21 screenshots) is folded in rather than re-derived
+- [ ] **Block D — live-verify sweep**: walk `TASKS.md`'s checklist by hand, run the smoke suite, and record **every defect as a backlog row without fixing it**
+- [ ] **Block E — fix defects**, only from the list Marty approves, one commit each
+
+**Out of scope, deliberately**: any change to style, palette, typography, Cabin tokens or icons; responsive markup; publishing-target work; new features from `Input.md`; the ~130 inline error strings (T-050); `/terms`/`/privacy` (T-052); production deploy.
+
+### Phase 11 — Design System 2.0 — not started, blocked on Q-11
+
+**Blocked on Q-11 (visual direction)** — a product decision, not an implementation one. Prerequisites, all from Phase 10: a verified UI, the inventory, and a green smoke suite to refactor against.
+
+Scope: an ADR fixing the visual direction plus `docs/DESIGN.md` principles → mockups through Claude Design (two handoff packages already exist under `_Documents_/CedarClerk/`) → tokens v2 (palette, type scale, spacing, radius, elevation, motion, zero hardcoded values in components) → `/dev/styleguide` showing every component in every state in both themes → one icon set with `--icon-sm/md/lg` (Q-12) and icon semantics (`aria-label` + tooltip, `/dev/icons`) → screen-by-screen migration against the inventory with the smoke suite green after each → **responsive pass written during the migration, not after** (T-034) → German long-word pass (T-051) → accessibility (AA contrast, focus states, touch targets ≥44px).
+
+Rows: `T-075…T-082` in `docs/BACKLOG.md`, plus the existing `T-034` and `T-051`.
+
+### Phase 12 — Publishing Targets — not started, blocked on Q-1
+
+**Blocked on Q-1 (audience)**, because which network comes first follows from who the product is for, and the cost profiles differ by an order of magnitude — X charges per post (~$0.015, ~$0.20 with a link, and Cedar Clerk almost always posts a link) with the app owner paying under a shared-app model; Instagram needs a Business/Creator account, a linked Facebook Page and a 2–4 week app review; Threads is free of charge but needs Tech Provider Verification and per-scope review; Bluesky and Mastodon need neither and are the natural proving ground for the abstraction.
+
+Scope: an ADR for the publishing-target abstraction → `IPublishTarget` + a `PublishTarget` entity with encrypted per-tenant credentials → **refactor the Telegram export onto the abstraction with no behaviour change, before any second network exists** → capability matrix (character limits, media, formatting) with editor-side validation → degradation rules with per-target override and preview (Q-14) → resolve the public-media-endpoint conflict with private posts, watermark and copy protection (Q-15, overlaps Q-8) → Bluesky connector → `PublishJob` with retry, partial-failure handling and idempotency → Threads connector.
+
+API integration is roughly 20% of this phase; the rest is the degradation model, the capability matrix, the media endpoint and partial failures. Rows: `T-083…T-091` in `docs/BACKLOG.md`; the older umbrella row `T-001` is superseded by them.
 
 ---
 
