@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth.guard';
 import { adminGuard } from './core/admin.guard';
+import { guestGuard } from './core/guest.guard';
 import { LoginComponent } from './pages/login.component';
 import { RegisterComponent } from './pages/register.component';
 import { EditorComponent } from './pages/editor.component';
@@ -13,8 +14,9 @@ import { AdminComponent } from './pages/admin.component';
 import { GlossaryComponent } from './pages/glossary.component';
 
 export const routes: Routes = [
-    { path: 'login', component: LoginComponent },
-    { path: 'register', component: RegisterComponent },
+    // guestGuard, not none: a live session means you are already past these two pages.
+    { path: 'login', component: LoginComponent, canActivate: [guestGuard] },
+    { path: 'register', component: RegisterComponent, canActivate: [guestGuard] },
     { path: 'terms', component: TermsComponent },
     { path: 'privacy', component: PrivacyComponent },
     { path: 'editor', component: EditorComponent, canActivate: [authGuard] },

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
@@ -13,7 +13,7 @@ import { LangSwitchComponent } from '../shared/lang-switch.component';
     templateUrl: 'login.component.html',
     styleUrls: ['login.component.css']
 })
-export class LoginComponent implements OnInit {
+export class LoginComponent {
     auth = inject(AuthService);
     private router = inject(Router);
     theme = inject(ThemeService);
@@ -25,13 +25,8 @@ export class LoginComponent implements OnInit {
     error = signal('');
     probing = signal(false);
 
-    // The guard sends us here both for "signed out" and for "the server never answered". In the
-    // second case the cookie may well still be valid, so ask once more before making the owner
-    // type a password (T-062).
-    async ngOnInit() {
-        if (this.auth.serverUnreachable()) await this.retrySession();
-    }
-
+    // guestGuard has already asked the server once by the time this page renders; this is the
+    // manual retry offered when that attempt got no answer at all, not a second automatic probe.
     async retrySession() {
         this.probing.set(true);
         const outcome = await this.auth.refresh();

@@ -2,6 +2,20 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-07-30 (v0.9.17) — /login was the one page that never asked whether you were already signed in
+
+Reported right after the 0.9.16 deploy: log in, close the browser, reopen it, go to `/login` — and
+it asks for the password again. The cookie was never the problem (`isPersistent: true`, 30-day
+lifetime as of 0.9.16); `/login` and `/register` were simply the only two routes with no guard, so
+they rendered their form without asking the server anything. Every other URL, including `/`, goes
+through `authGuard` and would have let the same browser straight in.
+
+New `guestGuard` — the mirror of `authGuard` — redirects to `/drafts` when a session is live. A
+server that doesn't answer deliberately falls through to the login page instead of redirecting:
+the session is then unknown rather than proven, and the page already has the retry for that case
+(T-062). The login component's own startup probe is gone with it; the guard has asked by the time
+the page renders, and probing again just repeated the retry backoff.
+
 ## 2026-07-30 (v0.9.16) — the 29.07 wipe answered from both ends, and re-translation stopped being all-or-nothing
 
 A full day's pass over the highest-priority rows of the restructured backlog. `dotnet test` 442/442, `ng build` clean, frontend tests 11/11. **Nothing below has been clicked through in a browser or deployed.**
