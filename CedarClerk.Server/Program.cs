@@ -122,8 +122,28 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async ctx =>
     await ctx.Response.WriteAsJsonAsync(new { error = ex is null ? "Unexpected server error" : $"{ex.GetType().Name}: {ex.Message}" });
 }));
 
+// index.html must never be cached without revalidation. It carries the hashed names of every JS/CSS
+// bundle, so a stale copy pins the browser to a build that no longer exists on disk — and because
+// Cloudflare independently caches the hashed assets for 4h, the old bundle is still being served
+// from the edge after the deploy deleted it, which makes a whole deployed release invisible to
+// anyone who had visited before. (Found 31.07.2026: a freshly deployed route kept resolving to the
+// SPA's catch-all in Marty's browser while a private window loaded it fine. The origin was sending
+// no Cache-Control and no ETag on index.html at all — only Last-Modified, which lets a browser
+// apply heuristic freshness and skip asking us entirely.)
+//
+// The hashed assets themselves are deliberately left alone: their names change with their content,
+// so caching them hard is correct and is the reason index.html is the only file that must not be.
+var indexNoCache = new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        if (ctx.File.Name.Equals("index.html", StringComparison.OrdinalIgnoreCase))
+            ctx.Context.Response.Headers.CacheControl = "no-cache, must-revalidate";
+    }
+};
+
 app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseStaticFiles(indexNoCache);
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(mediaDir),
@@ -167,8 +187,10 @@ app.MapAdminEndpoints();
 app.MapAiJobEndpoints();
 #endregion
 
-// MUST be here, after all endpoints
-app.MapFallbackToFile("index.html");
+// MUST be here, after all endpoints. Takes the same options as the static-file middleware above:
+// this is the branch every deep link goes through (/drafts, /dev/styleguide, ...), so leaving it on
+// the defaults would fix caching only for someone who happened to arrive at "/".
+app.MapFallbackToFile("index.html", indexNoCache);
 
 using (var scope = app.Services.CreateScope())
 {
