@@ -1,4 +1,7 @@
-<div class="manager-page">
+<!--Compact density (ADR-071): the Posts Manager is a list-and-detail screen, the same family as
+/drafts. The detail pane holds forms, but they are settings for a row that was picked from the list
+beside them — not a reading surface, so they follow the list's density rather than their own.-->
+<div class="manager-page" data-density="compact">
     <app-page-header page="posts"></app-page-header>
 
     <div class="manager-body">
@@ -27,9 +30,13 @@
                            [placeholder]="t().manager.searchPlaceholder">
                     @for (d of visiblePosts(); track d.id) {
                     <button class="post-row" [class.on]="selectedId() === d.id" (click)="select(d)">
+                        <!--The title text needs its own element: text-overflow does not apply to a
+                        flex container, and .post-row-title has to be one to sit the lock icon
+                        beside the text. Without this the title was clipped mid-word with no
+                        ellipsis at all.-->
                         <span class="post-row-title">
                             @if (d.isPrivate) { <svg lucideLock class="icon-xs"></svg> }
-                            {{ d.title || t().drafts.untitled }}
+                            <span class="post-row-title-text">{{ d.title || t().drafts.untitled }}</span>
                         </span>
                         <!--FI3.6: at a glance - where it is, what languages exist, and whether
                         anything new arrived.-->

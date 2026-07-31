@@ -2,6 +2,21 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-07-31 — Phase 11, screen 2: `/posts`, and two defects the phone capture exposed
+
+Same treatment as `/drafts`: zero hardcoded font-sizes, zero colour literals, `data-density="compact"` on the page root, control padding on the density tokens, plus the narrow-screen and touch-target passes.
+
+**What the migration deliberately did not do**: the card and badge paddings here are 9/11/14/18px, steps the spacing scale does not have. Forcing them onto the nearest token would be a visual decision, and that decision belongs to the mockups (T-076), not to a sweep. They stay as they are and are named here rather than quietly left.
+
+Two real defects turned up, **both pre-existing and neither introduced by the migration** — they are simply what happens when a screen is finally looked at on a phone:
+
+- **Every input on the page hung past the right edge of its card.** `.chat-input` has `width: 100%` with padding and a border and no `box-sizing: border-box`, so it was wider than its container by exactly 22px. Invisible on a desktop, where there is slack to absorb it; unmissable at 390px. The same class in `drafts.component.css` has always carried the line.
+- **Long post titles were clipped mid-word with no ellipsis.** `text-overflow` does not apply to a flex container, and `.post-row-title` has to be one so the lock icon can sit beside the text — so the property had been sitting there doing nothing. The text now has its own element.
+
+A third suspicion did not survive checking: the phone capture looked like the post list was overflowing its card, and the fix I reached for first (`min-width: 0` on the grid children) was aimed at a grid track that measurement showed was already fine — `.post-row` was 348px inside a 348px box. The rule is kept, because a nowrap title in an auto-minimum grid track is a real hazard, but the actual overflow was the input above. Worth recording as the reason to measure rather than pattern-match: the guess and the bug were both about width, and they were not the same bug.
+
+`ng build` clean, smoke **37/37**, captured at 1440 / 1180 / 820 / 390.
+
 ## 2026-07-31 — Phase 11, screen 1: `/drafts` on the new tokens
 
 Migration is **screen by screen**, not all at once, and that is a recorded decision rather than a preference (ADR-070/071): the smoke suite runs green after each one, so "broken by the migration" stays separable from "was already broken". Doing the lot in one commit throws away the only instrument Phase 10 was built to provide.
