@@ -20,7 +20,7 @@
 .tag-x {
     border: none;
     background: none;
-    color: var(--t3);
+    color: var(--t2);
     cursor: pointer;
     font-size: var(--fs-meta);
     line-height: 1;
@@ -70,7 +70,7 @@
     font-size: var(--fs-9);
     letter-spacing: .05em;
     text-transform: uppercase;
-    color: var(--t3);
+    color: var(--t2);
     font-weight: 600;
     white-space: nowrap;
 }
@@ -107,7 +107,7 @@
 }
 
 .tag-pill-count {
-    color: var(--t3);
+    color: var(--t2);
     font-size: var(--fs-caption);
 }
 
@@ -116,7 +116,7 @@
 }
 
 .tag-new-input {
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     background: var(--sheet);
     color: var(--text);
     border-radius: var(--radius-md);
@@ -155,7 +155,7 @@
     border: none;
     background: none;
     border-radius: var(--radius-sm);
-    color: var(--t3);
+    color: var(--t2);
     cursor: pointer;
 }
 
@@ -172,5 +172,5 @@
 .tag-manage-empty {
     margin: 0;
     font-size: var(--fs-meta);
-    color: var(--t3);
+    color: var(--t2);
 }

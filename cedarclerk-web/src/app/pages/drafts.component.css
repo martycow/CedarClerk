@@ -10,7 +10,7 @@
 }
 
 .hint {
-    color: var(--t3);
+    color: var(--t2);
     font-size: var(--dens-fs);
 }
 
@@ -227,7 +227,7 @@
     letter-spacing: .07em;
     text-transform: uppercase;
     font-weight: 600;
-    color: var(--t3);
+    color: var(--t2);
     padding: var(--space-2) var(--dens-control-x);
 }
 
@@ -263,7 +263,7 @@
 
 .col-reset {
     justify-content: flex-end;
-    color: var(--t3);
+    color: var(--t2);
 }
 
 /* Widened by a transparent margin — a 1px line is unhittable with a finger.
@@ -323,7 +323,7 @@
 
 .status-detail {
     font-size: var(--fs-caption);
-    color: var(--t3);
+    color: var(--t2);
     margin-top: 2px;
     white-space: nowrap;
     overflow: hidden;
@@ -378,7 +378,7 @@
 }
 
 .activity-empty {
-    color: var(--t3);
+    color: var(--t2);
 }
 
 .draft-card .activity-cell {
@@ -470,7 +470,7 @@
 }
 
 .private-lock {
-    color: var(--t3);
+    color: var(--t2);
     vertical-align: -1px;
     margin-right: 3px;
 }
@@ -550,7 +550,7 @@
 
 .folder-count {
     font-size: var(--fs-caption);
-    color: var(--t3);
+    color: var(--t2);
     padding: 0 4px;
     flex: none;
 }
@@ -574,7 +574,7 @@
 
 .field-hint-inline {
     font-size: var(--fs-meta);
-    color: var(--t3);
+    color: var(--t2);
     font-weight: 400;
     margin: 4px 0 0;
 }
@@ -583,7 +583,7 @@
     font-size: var(--fs-9);
     letter-spacing: .05em;
     text-transform: uppercase;
-    color: var(--t3);
+    color: var(--t2);
     font-weight: 600;
     white-space: nowrap;
 }

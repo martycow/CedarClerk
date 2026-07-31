@@ -52,7 +52,7 @@
 
 .version-tag {
     font-size: var(--fs-caption);
-    color: var(--t3);
+    color: var(--t2);
     white-space: nowrap;
 }
 
@@ -75,7 +75,7 @@
 }
 
 .title:hover {
-    border-color: var(--t3);
+    border-color: var(--t2);
 }
 
 .title:focus {
@@ -88,7 +88,7 @@
     align-items: center;
     gap: 5px;
     font-size: var(--fs-meta);
-    color: var(--t3);
+    color: var(--t2);
 }
 
 .save-state .icon-xs {
@@ -449,7 +449,7 @@
     font-size: var(--fs-9);
     letter-spacing: .05em;
     text-transform: uppercase;
-    color: var(--t3);
+    color: var(--t2);
     font-weight: 600;
     white-space: nowrap;
 }
@@ -483,7 +483,7 @@
 }
 
 .toolbar .block-dropdown:hover {
-    border-color: var(--t3);
+    border-color: var(--t2);
     background: var(--sheet);
 }
 
@@ -641,7 +641,7 @@
 
 .btn-ghost:hover {
     color: var(--text);
-    border-color: var(--t3);
+    border-color: var(--t2);
 }
 
 .ai-toast {
@@ -716,7 +716,7 @@
 .upload-pct {
     width: 36px;
     text-align: right;
-    color: var(--t3);
+    color: var(--t2);
 }
 
 .upload-item.error {
@@ -751,7 +751,7 @@
     letter-spacing: .07em;
     text-transform: uppercase;
     font-weight: 600;
-    color: var(--t3);
+    color: var(--t2);
 }
 
 .field-hint-inline {
@@ -809,7 +809,7 @@
 
 .draft-date {
     font-size: var(--fs-caption);
-    color: var(--t3);
+    color: var(--t2);
 }
 
 .channel-item {
@@ -858,7 +858,7 @@
     align-items: center;
     gap: 6px;
     font-size: var(--fs-caption);
-    color: var(--t3);
+    color: var(--t2);
 }
 
 .channel-count {
@@ -918,7 +918,7 @@
 
 .empty-line2 {
     font-size: var(--fs-caption);
-    color: var(--t3);
+    color: var(--t2);
     line-height: 1.45;
 }
 
@@ -1040,7 +1040,7 @@
     border: none;
     background: none;
     padding: 5px 8px;
-    color: var(--t3);
+    color: var(--t2);
 }
 
 .lang-tabs .retranslate-btn {
@@ -1172,7 +1172,7 @@
     font-size: var(--fs-10);
     font-weight: 600;
     letter-spacing: .05em;
-    color: var(--t3);
+    color: var(--t2);
     border: 1px solid var(--border);
     border-radius: 999px;
     padding: 0 6px;
@@ -1437,7 +1437,7 @@
     background: none;
     padding: 0;
     font-size: var(--fs-meta);
-    color: var(--t3);
+    color: var(--t2);
     text-decoration: underline;
     cursor: pointer;
 }
@@ -1475,7 +1475,7 @@
 }
 
 .other-platforms-toggle .icon-sm {
-    color: var(--t3);
+    color: var(--t2);
     flex: none;
     transition: transform .15s ease;
 }
@@ -1497,7 +1497,7 @@
     gap: 9px;
     padding: 6px 4px;
     font-size: var(--fs-ui);
-    color: var(--t3);
+    color: var(--t2);
     opacity: .7;
 }
 
@@ -1564,7 +1564,7 @@
 
 .asset-size {
     flex: none;
-    color: var(--t3);
+    color: var(--t2);
 }
 
 .asset-tg-badge {
@@ -1719,7 +1719,7 @@
     align-items: center;
     border: none;
     background: none;
-    color: var(--t3);
+    color: var(--t2);
     cursor: pointer;
     font-size: var(--fs-body);
     line-height: 1;
@@ -1777,7 +1777,7 @@
 
 .tz-hint {
     font-size: var(--fs-caption);
-    color: var(--t3);
+    color: var(--t2);
     margin: 2px 0 0;
 }
 
@@ -2077,7 +2077,7 @@ input[type="datetime-local"]:focus-visible {
 
 .revision-lines {
     margin-left: auto;
-    color: var(--t3);
+    color: var(--t2);
     font-size: var(--fs-12);
 }
 
@@ -2096,7 +2096,7 @@ input[type="datetime-local"]:focus-visible {
 .translate-all-state {
     margin-left: auto;
     font-size: var(--fs-12);
-    color: var(--t3);
+    color: var(--t2);
 }
 
 .translate-all-state.done { color: var(--ok); }
@@ -2121,7 +2121,7 @@ input[type="datetime-local"]:focus-visible {
 .revision-detail-head select {
     font: inherit;
     padding: 4px 8px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     border-radius: 6px;
     background: var(--surface);
     color: var(--text);
@@ -2130,7 +2130,7 @@ input[type="datetime-local"]:focus-visible {
 .revision-preview-title {
     margin-top: 12px;
     font-size: var(--fs-12);
-    color: var(--t3);
+    color: var(--t2);
 }
 
 .revision-preview {
@@ -2164,7 +2164,7 @@ input[type="datetime-local"]:focus-visible {
     font-size: var(--fs-13);
 }
 
-.publish-diff-head .muted { color: var(--t3); }
+.publish-diff-head .muted { color: var(--t2); }
 
 .publish-diff-line {
     margin-top: 4px;

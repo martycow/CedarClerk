@@ -13,9 +13,15 @@ test('the UI language switches to Russian and survives a reload', async ({ page 
     // I12 split Settings in two: the UI language lives under Account, with Profile as the default
     // tab, so the picker is one click away rather than on the page that opens.
     await page.getByRole('button', { name: 'Account', exact: true }).click();
+    // Wait for the write, not just for the UI: the picker sets `lang` on <html> from the signal
+    // immediately, while the profile POST is still in flight. Reloading between the two made this
+    // test fail about one run in ten — /api/auth/me then answered with the old language and
+    // adoptProfileLanguage put the UI back, which looks exactly like a persistence bug.
+    const saved = page.waitForResponse(r => r.url().includes('/api/auth/ui-language') && r.ok());
     await page.locator('button', { hasText: 'RU · Русский' }).first().click();
 
     await expect(page.locator('html')).toHaveAttribute('lang', 'ru', { timeout: 10_000 });
+    await saved;
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
 });

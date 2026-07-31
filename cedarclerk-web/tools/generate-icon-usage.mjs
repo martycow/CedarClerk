@@ -56,6 +56,8 @@ function visibleText(inner) {
 const ICON_RE = /<app-icon\b([^>]*)>/g;
 const NAME_RE = /(?:^|\s)name="([^"]+)"/;
 const DYNAMIC_NAME_RE = /\[name\]="([^"]+)"/;
+const SPIN_RE = /\bclass="[^"]*\bspin\b|\[class\.spin\]/;
+const BUSY = '(busy spinner)';
 
 for (const file of files) {
     const src = readFileSync(file, 'utf8');
@@ -81,7 +83,10 @@ for (const file of files) {
             while ((im = iconRe.exec(inner))) {
                 claimed.add(innerStart + im.index);
                 const name = im[1].match(NAME_RE)?.[1] ?? (im[1].match(DYNAMIC_NAME_RE) ? '(dynamic)' : null);
-                if (name) record(name, label, file);
+                // A spinner (class="spin" / [class.spin]) stands in for the button's icon while
+                // the action runs — it does not mean what the button means. Counting it as a
+                // meaning made arrow-clockwise look like it meant Connect, Save and Disconnect.
+                if (name) record(name, SPIN_RE.test(im[1]) ? BUSY : label, file);
             }
         }
     }
@@ -95,7 +100,7 @@ for (const file of files) {
         const name = attrs.match(NAME_RE)?.[1] ?? (attrs.match(DYNAMIC_NAME_RE) ? '(dynamic)' : null);
         if (!name) continue;
         const own = attrs.match(/\[label\]="([^"]+)"/)?.[1] ?? attrs.match(/label="([^"]+)"/)?.[1] ?? null;
-        record(name, own, file);
+        record(name, SPIN_RE.test(attrs) ? BUSY : own, file);
     }
 }
 

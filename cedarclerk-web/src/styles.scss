@@ -6,16 +6,31 @@
     --alt: #EFECE4;
     --border: #DBD5C8;
     --text: #26231D;
-    --t2: #6B655A;
-    --t3: #9F988A;
-    --accent: #5B6E46;
-    --danger: #B4452C;
-    --ok: #3E7A4E;
+    /* T-082/ADR-074 — the muted tiers and the status tones were re-measured against every surface
+       token, worst case first (which is --canvas: a dark-on-light pair loses contrast as the
+       background darkens, so the recessed surface, not the sheet, is what binds). Each value below
+       is the smallest step towards black that clears 4.5:1 there — the hue is untouched, these are
+       the same colours a shade deeper. See tools/check-contrast.mjs, which now fails the build. */
+    --t2: #686257;
+    /* --t3 is NOT a text colour any more. At 4.5:1 on this palette it lands within two steps of
+       --t2 and the third tier stops existing; instead it keeps its lightness and its job shrinks
+       to placeholder, disabled and decoration, where 3:1 (non-text contrast) is the rule. Anything
+       that used it to say something now uses --t2. */
+    --t3: #847E72;
+    --accent: #566842;
+    --danger: #A84129;
+    --ok: #386D46;
     /* --warn completes the status triad. The app has had three status tones since the admin panel
        shipped, but only two were tokenized: the third lived as #8A6A10 with a hand-written
        :root[data-theme="dark"] override to #E3C35C inside admin.component.css. The value existed
        and was already split by theme by hand — this only gives it a name. */
-    --warn: #8A6A10;
+    --warn: #7B5E0E;
+
+    /* The boundary of a control the user is meant to find and operate — a field, a select, a
+       toggle track. Separate from --border (T-082/ADR-074): that one is a hairline between cards
+       and rows and stays quiet, this one is an affordance and holds 3:1 against every surface. */
+    --border-strong: #857D6F;
+
     --shadow: 0 1px 3px rgba(40, 35, 25, .10);
     --shadow-md: 0 8px 24px rgba(40, 35, 25, .12);
     --shadow-lg: 0 24px 64px rgba(0, 0, 0, .30);
@@ -153,11 +168,14 @@
     --border: #3C382D;
     --text: #EAE6DB;
     --t2: #A69F8F;
-    --t3: #776F5F;
+    /* Same contract as in light (ADR-074), same direction of travel — here the binding surface is
+       --alt, the lightest of the dark set, and the step is towards white rather than black. */
+    --t3: #8B8477;
     --accent: color-mix(in srgb, #5B6E46 55%, #E8F0E8 45%);
     --danger: #E2745C;
     --ok: #82BB8C;
     --warn: #E3C35C;
+    --border-strong: #7B7465;
 
     /* Dark series steps are chosen against the dark chart surface, not derived from the light
        ones — a lightened flip of the light palette lands outside the band this theme needs. */
@@ -221,6 +239,60 @@ html, body {
         animation-iteration-count: 1 !important;
         transition-duration: 1ms !important;
         scroll-behavior: auto !important;
+    }
+}
+
+/* ── Accessibility (T-082 / ADR-074) ─────────────────────────────────────────────────────────
+   Three rules the app had nowhere before this, all global on purpose: a per-component focus style
+   is a per-component decision to forget it, which is exactly what happened — the only :focus-visible
+   rules in the codebase were on the styleguide and on one datetime input. */
+
+/* 1. Focus. Keyboard focus is visible on every control, in both themes, and is never removed
+      without a replacement. :focus-visible rather than :focus so a mouse click does not leave a
+      ring behind; the offset keeps it clear of the control's own border. */
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* The editor sheet is the one place a ring would be wrong: ProseMirror's contenteditable takes
+   focus for ordinary typing, and a permanent outline around the page you are writing on is noise.
+   The caret is the focus indicator there. */
+.tiptap:focus-visible {
+    outline: none;
+}
+
+/* 2. The boundary of a field is an affordance, not decoration, so it uses the stronger token.
+      Component CSS that sets the border in a more specific rule is swept to match (T-082); this
+      rule is the default everything else inherits. Checkbox and radio keep the platform control. */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+    border-color: var(--border-strong);
+}
+
+/* Placeholder text stays on --t3 deliberately: at --t2 it reads as a filled-in value, which is a
+   worse failure than a quiet hint. It clears 3:1, and a field whose ONLY label is its placeholder
+   is a separate defect to fix per field, not by making every placeholder darker. */
+::placeholder {
+    color: var(--t3);
+    opacity: 1;
+}
+
+/* 3. Touch targets. Keyed on pointer type rather than viewport width — the device this actually
+      broke on was an iPad in landscape, which is 1024px wide and every bit as touch-driven as a
+      phone. min-height/min-width rather than height: they win over a component's fixed width by
+      property, not by specificity, so a 28px .mini button grows here without editing 40 files.
+      Inline links in prose are exempt (WCAG 2.5.8 says so), and so are checkboxes and radios,
+      where a 44px box would be a platform control blown up out of shape. */
+@media (pointer: coarse) {
+    button,
+    [role="button"],
+    summary,
+    select,
+    a.icon-btn {
+        min-height: 44px;
+        min-width: 44px;
     }
 }
 
@@ -563,7 +635,7 @@ body {
         .poll-editor-remove {
             border: none;
             background: none;
-            color: var(--t3);
+            color: var(--t2);
             cursor: pointer;
             font-size: 16px;
             line-height: 1;
@@ -611,7 +683,7 @@ body {
 
         .toc-block-empty {
             font-size: 13px;
-            color: var(--t3);
+            color: var(--t2);
             font-style: italic;
         }
 

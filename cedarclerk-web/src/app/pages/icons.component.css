@@ -28,7 +28,7 @@
 
 .ic-controls input {
     padding: var(--dens-control-y) var(--dens-control-x);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     border-radius: var(--dens-radius);
     background: var(--surface);
     color: var(--text);
@@ -65,7 +65,7 @@ h2 {
 }
 
 .ic-empty {
-    color: var(--t3);
+    color: var(--t2);
     font-size: var(--fs-ui);
 }
 
@@ -202,7 +202,7 @@ code {
 }
 
 .ic-files {
-    color: var(--t3);
+    color: var(--t2);
     font-size: var(--fs-caption);
 }
 

@@ -146,7 +146,7 @@
 .debug-empty {
     padding: 16px;
     font-size: var(--fs-ui);
-    color: var(--t3);
+    color: var(--t2);
 }
 
 .debug-row {
@@ -198,7 +198,7 @@
 
 .debug-duration {
     flex: none;
-    color: var(--t3);
+    color: var(--t2);
     width: 60px;
     text-align: right;
 }
@@ -213,7 +213,7 @@
     font-weight: 700;
     letter-spacing: .05em;
     text-transform: uppercase;
-    color: var(--t3);
+    color: var(--t2);
     margin: 6px 0 3px;
 }
 

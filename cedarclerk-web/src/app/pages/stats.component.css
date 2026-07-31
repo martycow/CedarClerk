@@ -9,7 +9,7 @@
 }
 
 .hint {
-    color: var(--t3);
+    color: var(--t2);
     font-size: var(--dens-fs);
 }
 
@@ -121,7 +121,7 @@
 
 .channel-tab:hover, .range-tab:hover {
     color: var(--text);
-    border-color: var(--t3);
+    border-color: var(--t2);
 }
 
 .channel-tab.active, .range-tab.active {
@@ -203,7 +203,7 @@
     font-family: inherit;
     font-size: var(--fs-caption);
     line-height: 14px;
-    color: var(--t3);
+    color: var(--t2);
     cursor: pointer;
 }
 
@@ -259,7 +259,7 @@
 
 .stat-delta {
     font-size: var(--fs-meta);
-    color: var(--t3);
+    color: var(--t2);
     font-variant-numeric: tabular-nums;
 }
 
@@ -272,7 +272,7 @@
 }
 
 .chart-empty {
-    color: var(--t3);
+    color: var(--t2);
     font-size: var(--fs-meta);
     padding: 40px 0;
     text-align: center;
@@ -327,7 +327,7 @@
     display: flex;
     justify-content: space-between;
     font-size: var(--fs-caption);
-    color: var(--t3);
+    color: var(--t2);
     margin-top: 2px;
 }
 
@@ -354,5 +354,5 @@
 
 .tooltip-date {
     font-size: var(--fs-10);
-    color: var(--t3);
+    color: var(--t2);
 }

@@ -16,17 +16,9 @@ export const ICON_USAGE: IconUsageRow[] = [
         "icon": "arrow-clockwise",
         "count": 20,
         "labels": [
-            "d.isArchived ? t().drafts.actions.unarchive : t().drafts.actions.archive",
-            "publishButtonLabel()",
-            "t().common.save",
-            "t().debug.console inFlightCount() errorCount()",
-            "t().editor.exportModal.connect",
-            "t().editor.exportModal.disconnect",
-            "t().editor.exportModal.refresh",
+            "(busy spinner)",
             "t().editor.exportModal.resend",
-            "t().glossary.translateRun",
-            "t().manager.forms.translateLang",
-            "t().manager.unpublish"
+            "t().manager.forms.translateLang"
         ],
         "files": [
             "pages/drafts.component.html",
@@ -325,7 +317,7 @@ export const ICON_USAGE: IconUsageRow[] = [
         "icon": "file-arrow-up",
         "count": 2,
         "labels": [
-            "t().drafts.importZipTitle"
+            "(busy spinner)"
         ],
         "files": [
             "pages/drafts.component.html"
@@ -814,7 +806,7 @@ export const ICON_USAGE: IconUsageRow[] = [
         "icon": "upload-simple",
         "count": 1,
         "labels": [
-            "t().drafts.importCedar"
+            "(busy spinner)"
         ],
         "files": [
             "pages/drafts.component.html"

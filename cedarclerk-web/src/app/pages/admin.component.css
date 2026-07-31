@@ -14,7 +14,7 @@
 }
 
 .hint {
-    color: var(--t3);
+    color: var(--t2);
     font-size: var(--dens-fs);
 }
 
@@ -50,7 +50,7 @@
 
 .summary-label {
     font-size: var(--fs-meta);
-    color: var(--t3);
+    color: var(--t2);
 }
 
 /* ---------- Users ---------- */
@@ -153,7 +153,7 @@
 }
 
 .muted {
-    color: var(--t3);
+    color: var(--t2);
 }
 
 .chip {
@@ -257,7 +257,7 @@
 
 .user-actions select,
 .user-actions input[type="date"] {
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     background: var(--sheet);
     color: var(--text);
     border-radius: var(--radius-md);
@@ -299,7 +299,7 @@
 
 .field-hint-inline {
     font-size: var(--fs-meta);
-    color: var(--t3);
+    color: var(--t2);
     margin: 0;
 }
 
@@ -344,7 +344,7 @@
 }
 
 .invite-new input {
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     background: var(--sheet);
     color: var(--text);
     border-radius: var(--radius-md);
@@ -385,7 +385,7 @@
     font-weight: 700;
     letter-spacing: .05em;
     text-transform: uppercase;
-    color: var(--t3);
+    color: var(--t2);
     background: var(--alt);
 }
 
@@ -449,7 +449,7 @@
     font-weight: 700;
     letter-spacing: .05em;
     text-transform: uppercase;
-    color: var(--t3);
+    color: var(--t2);
     background: var(--alt);
 }
 

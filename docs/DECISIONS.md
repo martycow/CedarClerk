@@ -667,3 +667,32 @@ The reasoning Marty confirmed: a serif on the blog is what the *reader* sees, an
 **Rejected alternative**: applying the serif default only to new accounts. It would have been honest to existing users, but it splits accounts into two classes with different defaults — a permanent data-model wrinkle bought for one font.
 
 **Consequence**: `docs/DESIGN.md` principle 4 is narrowed in place (that file states the current rule, not the history — this entry is the history). Nothing in the code changed: the editor already behaves this way, and the point of recording it is that the next person reading principle 4 does not "fix" the editor to match it. Q-16 is closed.
+
+### ADR-074 — The accessibility contract of the token set: `--t3` stops being a text colour (T-082)
+
+**Context** (31.07.2026): T-082 asked for AA contrast, focus states and 44px touch targets. Measuring first (`cedarclerk-web/tools/check-contrast.mjs`, which resolves the `color-mix()` derivations the same way a browser does) turned "improve accessibility" into a list: **32 failing token pairs** across both themes. The measurement also settled which surface binds — for dark text on a light palette the *recessed* surface `--canvas`, not the sheet, is the worst case, because contrast falls as the background darkens.
+
+**The finding that forced a decision, rather than a fix**: raising `--t3` to 4.5:1 lands it on `#676259`, and `--t2` is `#6B655A`. **At AA, this palette has room for exactly two muted text tiers, not three.** Every option that keeps three tiers either fails the standard or repaints the warm neutrals into something else.
+
+**Decision**: `--t3` is no longer a text colour. Its contract is **placeholder, disabled and decoration**, where the rule is 3:1 (non-text contrast, SC 1.4.11) rather than 4.5:1. Every declaration that used it to say something — 91 of the 107 in the app — moved to `--t2`. What is left on `--t3` is eight rules: three breadcrumb separators, two disabled states, a dimmed table row, a spacer and a placeholder.
+
+The visible consequence, stated plainly because Marty will see it: **meta text across the app is darker now** — timestamps, counts, column headers, hints. The type scale still carries the hierarchy (`--fs-caption`/`--fs-meta` against `--fs-body`); colour no longer carries it twice. This is one token away from being reverted if he hates it.
+
+**Also decided, in the same measurement**:
+- `--t2`, `--accent`, `--danger`, `--ok`, `--warn` each moved one step towards black in the light theme — the smallest step that clears 4.5:1 on `--canvas`. Hue untouched; these are the same colours a shade deeper.
+- **`--border` is deliberately NOT held to 3:1.** It is a hairline between cards and rows and never the only way to identify a control; at 3:1 the whole warm-paper surface reads as a wireframe. The boundary that *is* an affordance got its own token, **`--border-strong`** (3:1 on every surface, both themes), applied to fields, selects and textareas — globally, plus the 11 component rules specific enough to have overridden the global one. `--abord` is exempt for the same reason as `--border`.
+- **Placeholders stay on `--t3`.** At `--t2` a placeholder reads as a filled-in value, which is the worse failure. A field whose only label is its placeholder is a defect to fix per field, not by darkening every placeholder in the app.
+- **Focus** is now one global `:focus-visible` ring in `--accent`, with the editor sheet excluded (a permanent outline around the surface you are typing on is noise; the caret is the indicator). Before this, the entire app had two focus rules, both on surfaces nobody but a developer opens.
+- **Touch targets** are keyed on `@media (pointer: coarse)`, not on viewport width — the device this actually broke on is an iPad in landscape, 1024px wide and entirely touch-driven. `min-height`/`min-width` rather than `height`, because a minimum beats a component's fixed `width` by property rather than by specificity, so 40-odd files did not have to be edited. Inline links (WCAG 2.5.8 exempts them), checkboxes and radios are excluded.
+
+**Consequence**: the contract is enforced, not remembered — `e2e/12-a11y.spec.ts` fails the smoke suite if any pair regresses, and asserts on four screens that no icon-only control lacks an accessible name. The suite went 37 → 42. The blog's server-rendered surfaces are **not** covered: they carry their own `:root` and are still on the old values (ADR-071 principle 6, still open).
+
+### ADR-075 — The icon inventory is generated from the call sites, not maintained (T-080)
+
+**Context** (31.07.2026): T-080 wanted `aria-label` plus tooltip on icon-only controls, and a `/dev/icons` page. The sweep itself was mechanical — all 58 icon-only controls already had a `title`, none had an `aria-label`, and a `title` alone is announced inconsistently by screen readers and not at all on touch.
+
+**Decision**: the page's data comes from `tools/generate-icon-usage.mjs`, which reads every `<app-icon>` call site and the accessible name of the control it sits in, rather than from a hand-kept list. A hand-kept inventory answers "which icon means what here" only until the next commit; this one is wrong only if nobody re-runs it, and `npm run icons:generate` regenerates both it and the icon data together.
+
+**What it caught immediately, and what it got wrong first**: the first run reported six meanings drawn with two icons each — Connect, Save, Disconnect and others. All six were false. A busy button swaps its icon for `arrow-clockwise` with `class="spin"`, and the analyser was reading the spinner as if it meant what the button means. Teaching it that a spinner is a state, not a meaning, dropped `arrow-clockwise` from 11 meanings to 3 and emptied the duplicate list entirely: **the app is in fact consistent here.** The remaining overloaded glyphs are `x` (12 labels), `trash` (5) and `plus` (5) — the universal actions that legitimately repeat.
+
+**Consequence**: `/dev/icons` and `/dev/styleguide` are the first **lazy** routes in the app (`loadComponent`). They carry reference data no product screen needs, and the initial bundle is already over budget (T-092). One string was fixed on the way through: the shared modal's close button was the last hardcoded English label in the app's chrome, and it appears in every modal.

@@ -26,7 +26,7 @@
 }
 
 .hint {
-    color: var(--t3);
+    color: var(--t2);
     font-size: var(--dens-fs);
 }
 
@@ -133,7 +133,7 @@
 
 .reactions-hint {
     font-size: var(--fs-meta);
-    color: var(--t3);
+    color: var(--t2);
 }
 
 .comment-card {
@@ -194,12 +194,12 @@
     font-size: var(--fs-caption);
     text-transform: uppercase;
     letter-spacing: .05em;
-    color: var(--t3);
+    color: var(--t2);
     flex: none;
 }
 
 .comment-row-meta {
-    color: var(--t3);
+    color: var(--t2);
     font-size: var(--fs-caption);
     margin: 4px 0;
 }
@@ -220,7 +220,7 @@
     width: 22px;
     height: 22px;
     cursor: pointer;
-    color: var(--t3);
+    color: var(--t2);
     flex: none;
 }
 
@@ -261,7 +261,7 @@
 
 .feedback-group-count {
     font-size: var(--fs-meta);
-    color: var(--t3);
+    color: var(--t2);
 }
 
 .feedback-more {

@@ -170,7 +170,7 @@
 }
 
 .ap-count {
-    color: var(--t3);
+    color: var(--t2);
     font-size: var(--fs-11);
 }
 
@@ -190,7 +190,7 @@
 .ap-save-state {
     margin: 4px 0 0;
     font-size: var(--fs-12);
-    color: var(--t3);
+    color: var(--t2);
     text-align: right;
 }
 
@@ -217,7 +217,7 @@
 
 .ap-table-size input {
     width: 56px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     background: var(--sheet);
     color: var(--text);
     border-radius: var(--radius-md);

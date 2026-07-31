@@ -84,7 +84,7 @@
 }
 
 .field input {
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     background: var(--sheet);
     color: var(--text);
     border-radius: 8px;
@@ -157,7 +157,7 @@
 }
 
 .auth-footer.muted {
-    color: var(--t3);
+    color: var(--t2);
     font-size: var(--fs-meta);
 }
 

@@ -87,7 +87,7 @@ code {
 }
 
 .sg-swatch span {
-    color: var(--t3);
+    color: var(--t2);
     font-size: var(--fs-caption);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -311,7 +311,7 @@ button:disabled {
 }
 
 .sg-input {
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     background: var(--sheet);
     color: var(--text);
     border-radius: var(--dens-radius);
