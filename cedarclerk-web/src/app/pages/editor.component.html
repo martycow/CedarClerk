@@ -877,11 +877,46 @@
     </app-modal>
     }
 
+    <!--T-014 — same shape as the glossary's batch translate (ADR-062): tick the targets, one
+    language after another, whatever stays ticked after a failure is what's left to do.-->
+    @if (translateAllOpen()) {
+    <app-modal [width]="460" (closed)="translateAllOpen.set(false)">
+        <h2 modal-title>{{ t().editor.lang.translateAllTitle }}</h2>
+        <div modal-body>
+            <p class="muted">{{ t().editor.lang.translateAllIntro(primaryLanguage.toUpperCase()) }}</p>
+
+            @for (l of translateAllCandidates(); track l) {
+            <label class="translate-all-row">
+                <input type="checkbox" [checked]="translateAllTargets().includes(l)"
+                       [disabled]="translateAllBusy()" (change)="toggleTranslateAllTarget(l)">
+                <span>{{ l.toUpperCase() }} · {{ endonym(l) }}</span>
+                @if (translateAllDone().includes(l)) {
+                <span class="translate-all-state done">{{ t().editor.lang.translateAllDone }}</span>
+                } @else if (translateAllCurrent() === l) {
+                <span class="translate-all-state">{{ t().editor.lang.translateAllRunning }}</span>
+                } @else if (translationOf(l)) {
+                <span class="translate-all-state warn">{{ t().editor.lang.translateAllOverwrites }}</span>
+                }
+            </label>
+            }
+
+            <p class="field-hint-inline">{{ t().editor.lang.translateAllCost(translateAllCost()) }}</p>
+            @if (translateAllError(); as err) { <p class="error">{{ err }}</p> }
+        </div>
+        <button modal-actions class="btn-ghost" [disabled]="translateAllBusy()" (click)="translateAllOpen.set(false)">
+            {{ t().common.cancel }}
+        </button>
+        <button modal-actions class="btn-accent" [disabled]="translateAllBusy() || !translateAllCost()" (click)="runTranslateAll()">
+            {{ translateAllBusy() ? t().editor.lang.translateAllRunning : t().editor.lang.translateAllStart }}
+        </button>
+    </app-modal>
+    }
+
     <!--Re-translate confirm dialog (replaces window.confirm)-->
     @if (translateConfirmOpen()) {
     <app-modal (closed)="cancelTranslateConfirm()">
         <svg modal-icon lucideRefreshCw class="icon"></svg>
-        <span modal-title>{{ t().editor.lang.replaceTitle }}</span>
+        <span modal-title>{{ t().editor.lang.replaceTitle(lang().toUpperCase()) }}</span>
         <p>{{ t().editor.lang.replaceBody }}</p>
         <button modal-actions class="btn-ghost" (click)="cancelTranslateConfirm()">{{ t().common.cancel }}</button>
         <button modal-actions class="btn-accent" (click)="confirmTranslate()">{{ t().common.save }}</button>
@@ -951,7 +986,7 @@
                 @for (l of existingLanguages(); track l) {
                 <button [class.on]="lang() === l" (click)="switchLang(l)" [title]="endonym(l)">
                     {{ l.toUpperCase() }}
-                    @if (isStale(l)) { <span class="stale-dot" [title]="t().editor.lang.staleWarning"></span> }
+                    @if (isStale(l)) { <span class="stale-dot" [title]="t().editor.lang.staleWarning(primaryLanguage.toUpperCase())"></span> }
                 </button>
                 }
                 @if (missingLanguages().length) {
@@ -969,7 +1004,7 @@
                     itself as soon as the translation is touched, which used to leave delete as the
                     only action even when a re-translate was exactly what was wanted.-->
                     <button class="retranslate-btn" (click)="autoTranslate()" [disabled]="autoTranslating()"
-                            [title]="isStale(lang()) ? t().editor.lang.retranslateStaleTitle : t().editor.lang.retranslateTitle">
+                            [title]="isStale(lang()) ? t().editor.lang.retranslateStaleTitle(primaryLanguage.toUpperCase()) : t().editor.lang.retranslateTitle(primaryLanguage.toUpperCase())">
                         {{ t().editor.lang.retranslate }}
                     </button>
                 <button class="lang-delete" (click)="deleteVersion()" [disabled]="autoTranslating()" [title]="t().editor.lang.deleteTranslation">
@@ -986,6 +1021,13 @@
                         }
                     </div>
                 </app-popover>
+                <!--T-014: one press instead of walking every tab. Offered from the primary tab
+                only — it translates the primary version, and standing on a translation while
+                asking for "all languages" reads as translating that one.-->
+                @if (lang() === primaryLanguage && missingLanguages().length + existingLanguages().length) {
+                <button class="retranslate-btn" (click)="openTranslateAll()" [disabled]="autoTranslating()"
+                        [title]="t().editor.lang.translateAllTitle">✦ {{ t().editor.lang.translateAll }}</button>
+                }
                 <button class="retranslate-btn" (click)="openRevisions()"
                         [title]="t().editor.versions.historyTitle(lang().toUpperCase())">◷</button>
                 <!--FI3.2/FI3.3: the tag cloud and the folder menu are shared components now, so
@@ -1038,7 +1080,7 @@
                     [style.--sheet-font-size.px]="appearance.prefs().fontSize"
                     [style.--sheet-line-height]="appearance.prefs().lineHeight"></div>
                 @if (lang() === 'ru' && ruDiffMarkers().length) {
-                <div class="ru-diff-gutter" [title]="t().editor.lang.diffTitle">
+                <div class="ru-diff-gutter" [title]="t().editor.lang.diffTitle(lang().toUpperCase())">
                     @for (m of ruDiffMarkers(); track $index) {
                     <div class="diff-marker" [class]="m.kind" [style.top.px]="m.top" [style.height.px]="m.height"></div>
                     }

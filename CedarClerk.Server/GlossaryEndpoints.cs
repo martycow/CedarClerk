@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using CedarClerk.Core;
 using CedarClerk.Localization;
 using CedarClerk.Server.Translation;
@@ -105,6 +105,10 @@ public static class GlossaryEndpoints
             }
             if (provider is not ITextsTranslationProvider textsProvider)
                 return Results.Json(new { error = ErrorMessages.AutoTranslateNoProvider }, statusCode: StatusCodes.Status501NotImplemented);
+            // T-013 — asked before the quota is charged; see the same check in DraftEndpoints.
+            if (!provider.SupportsTargetLanguage(req.TargetLanguage))
+                return Results.Json(new { error = ErrorMessages.LanguageNotSupportedByProvider(req.TargetLanguage, provider.Name) },
+                    statusCode: StatusCodes.Status501NotImplemented);
 
             if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
                 return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);
@@ -190,6 +194,10 @@ public static class GlossaryEndpoints
             }
             if (provider is not ITextsTranslationProvider textsProvider)
                 return Results.Json(new { error = ErrorMessages.AutoTranslateNoProvider }, statusCode: StatusCodes.Status501NotImplemented);
+            // T-013 — asked before the quota is charged; see the same check in DraftEndpoints.
+            if (!provider.SupportsTargetLanguage(req.TargetLanguage))
+                return Results.Json(new { error = ErrorMessages.LanguageNotSupportedByProvider(req.TargetLanguage, provider.Name) },
+                    statusCode: StatusCodes.Status501NotImplemented);
 
             if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
                 return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);

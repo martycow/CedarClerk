@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using CedarClerk.Core;
 using CedarClerk.Localization;
 using CedarClerk.Server.Translation;
@@ -105,6 +105,10 @@ public static class FormPresetEndpoints
             }
             if (provider is not ITextsTranslationProvider textsProvider)
                 return Results.Json(new { error = ErrorMessages.AutoTranslateNoProvider }, statusCode: StatusCodes.Status501NotImplemented);
+            // T-013 — asked before the quota is charged; see the same check in DraftEndpoints.
+            if (!provider.SupportsTargetLanguage(req.TargetLanguage))
+                return Results.Json(new { error = ErrorMessages.LanguageNotSupportedByProvider(req.TargetLanguage, provider.Name) },
+                    statusCode: StatusCodes.Status501NotImplemented);
 
             var upgraded = RegistrationFormTexts.UpgradeToV2(preset.FormJson, preset.Language);
             var sourceLang = RegistrationFormSet.LanguagesWithForm(upgraded, null).FirstOrDefault() ?? Languages.Russian;

@@ -2056,6 +2056,25 @@ input[type="datetime-local"]:focus-visible {
 
 .empty-note { color: var(--t2); }
 
+/* T-014 — one row per target language in the batch-translate dialog. */
+.translate-all-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 6px 0;
+    font-size: var(--fs-13);
+    cursor: pointer;
+}
+
+.translate-all-state {
+    margin-left: auto;
+    font-size: var(--fs-12);
+    color: var(--t3);
+}
+
+.translate-all-state.done { color: var(--ok); }
+.translate-all-state.warn { color: var(--danger); }
+
 /* T-016/T-017 — the opened version: what it changes, and what it actually says. */
 .revision-detail {
     margin-top: 14px;

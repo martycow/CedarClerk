@@ -67,6 +67,25 @@ public static class DraftEndpoints
             : null;
     }
 
+    // T-015 — the splice: only the blocks the plan marked as changed reach the provider, and the
+    // untouched ones are copied out of the existing translation, manual corrections and all.
+    private static async Task<TranslationResult> TranslateIncrementallyAsync(ITranslationProvider provider,
+        IncrementalTranslationPlan.Plan plan, string sourceTitle, string existingTitle, string existingTranslationJson,
+        string lang, CancellationToken ct)
+    {
+        // Nothing moved. The stored translation is already the answer, and spending one of the
+        // twenty daily AI calls to confirm that is not worth it. The consequence — a source whose
+        // *title alone* changed keeps the old translated title — is in ADR-068.
+        if (plan.BlocksToTranslate.Count == 0)
+            return new TranslationResult(existingTitle, existingTranslationJson);
+
+        // A real TipTap document holding just those blocks, so this goes through the ordinary
+        // provider path — which replaces text in place and leaves structure alone (ADR-059), and
+        // therefore hands back the same blocks in the same order.
+        var partial = await provider.TranslateAsync(sourceTitle, IncrementalTranslationPlan.PartialDocument(plan), lang, ct);
+        return new TranslationResult(partial.Title, IncrementalTranslationPlan.Assemble(plan, existingTranslationJson, partial.CedarJson));
+    }
+
     private const int InviteEmailMaxLength = 254;
 
     // Matches the editor's own tag input (maxlength=30) - the tag-management endpoints below are
@@ -690,9 +709,9 @@ public static class DraftEndpoints
             if (!PlanLimitations.HasAiFeatures(tier))
                 return Results.Json(new { error = ErrorMessages.AutoTranslateProPlus }, statusCode: StatusCodes.Status403Forbidden);
 
-            if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
-                return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);
-
+            // T-013 — the provider is resolved and asked about the language BEFORE the quota is
+            // charged: "DeepL has no Georgian" is a configuration fact, and charging a daily call
+            // to discover it is the same mistake ADR-065 fixed for AI edit.
             ITranslationProvider? provider;
             try
             {
@@ -704,18 +723,54 @@ public static class DraftEndpoints
             }
             if (provider is null)
                 return Results.Json(new { error = "Auto-translate is not configured" }, statusCode: StatusCodes.Status501NotImplemented);
+            if (!provider.SupportsTargetLanguage(lang))
+                return Results.Json(new { error = ErrorMessages.LanguageNotSupportedByProvider(lang, provider.Name) },
+                    statusCode: StatusCodes.Status501NotImplemented);
+
+            if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
+                return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);
 
             var sourceTitle = draft.Title;
             var sourceCedarJson = draft.CedarJson;
+            var sourcePrimaryLanguage = draft.PrimaryLanguage;
             var jobId = jobs.Start(uid, async ct =>
             {
+                // T-015 — what the translation looks like *now* decides whether this is a full
+                // translation or a splice of the changed blocks. Read in its own scope: the
+                // provider call below can legitimately run for minutes.
+                string? existingTranslationJson;
+                var existingTitle = sourceTitle;
+                string? snapshotJson;
+                using (var readScope = scopeFactory.CreateScope())
+                {
+                    var readDb = readScope.ServiceProvider.GetRequiredService<CedarDbContext>();
+                    var existing = await readDb.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang, ct);
+                    existingTranslationJson = existing?.CedarJson;
+                    if (existing is not null) existingTitle = existing.Title;
+                    // ADR-065 — a snapshot taken from a different language describes a document
+                    // this translation never saw, so it cannot be diffed against.
+                    snapshotJson = existing is not null && (existing.SourceLanguage is null || existing.SourceLanguage == sourcePrimaryLanguage)
+                        ? existing.SourceSnapshotJson : null;
+                }
+
+                var plan = existingTranslationJson is null ? null
+                    : IncrementalTranslationPlan.Build(snapshotJson, sourceCedarJson, existingTranslationJson);
+
                 TranslationResult result;
                 try
                 {
-                    result = await provider.TranslateAsync(sourceTitle, sourceCedarJson, lang, ct);
+                    result = plan is null
+                        ? await provider.TranslateAsync(sourceTitle, sourceCedarJson, lang, ct)
+                        : await TranslateIncrementallyAsync(provider, plan, sourceTitle, existingTitle, existingTranslationJson!, lang, ct);
                 }
                 catch (TranslationException ex)
                 {
+                    return AiJobOutcome.Fail(ex.Message, StatusCodes.Status502BadGateway);
+                }
+                catch (ArgumentException ex)
+                {
+                    // Assemble() refusing the provider's answer: the splice is the only thing that
+                    // can produce this, and a wrong-shaped document must never be stored.
                     return AiJobOutcome.Fail(ex.Message, StatusCodes.Status502BadGateway);
                 }
 

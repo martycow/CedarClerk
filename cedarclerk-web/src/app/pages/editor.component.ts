@@ -462,10 +462,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     saveLabel(): string {
         switch (this.saveState()) {
-            case 'saved': return 'Saved';
+            case 'saved': return this.t().editor.saved;
             case 'saving': return this.t().editor.saving;
-            case 'dirty': return 'Unsaved changes';
-            case 'error': return 'Sync failed';
+            case 'dirty': return this.t().editor.unsaved;
+            case 'error': return this.t().editor.syncFailed;
         }
     }
 
@@ -1167,6 +1167,74 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.translateConfirmOpen.set(false);
     }
 
+    // T-014 — translate the primary version into every ticked language in one press. Modelled on
+    // the glossary's batch translate (ADR-062): a checkbox list, one existing per-language call
+    // after another, and a stop on the first failure with the rest still ticked.
+    translateAllOpen = signal(false);
+    translateAllTargets = signal<string[]>([]);
+    translateAllBusy = signal(false);
+    translateAllCurrent = signal<string | null>(null);
+    translateAllDone = signal<string[]>([]);
+    translateAllError = signal<string | null>(null);
+
+    translateAllCandidates(): string[] {
+        return this.contentLanguages.filter(l => l !== this.primaryLanguage);
+    }
+
+    openTranslateAll() {
+        if (!this.currentId()) return;
+        this.translateAllTargets.set([]);
+        this.translateAllDone.set([]);
+        this.translateAllError.set(null);
+        this.translateAllOpen.set(true);
+    }
+
+    toggleTranslateAllTarget(lang: string) {
+        this.translateAllTargets.update(list =>
+            list.includes(lang) ? list.filter(l => l !== lang) : [...list, lang]);
+    }
+
+    // Ticked = still to do, so the count is also what the run will cost in daily AI calls.
+    translateAllCost(): number {
+        return this.translateAllTargets().length;
+    }
+
+    async runTranslateAll() {
+        const id = this.currentId();
+        if (!id || this.translateAllBusy()) return;
+        const targets = this.translateAllCandidates().filter(l => this.translateAllTargets().includes(l));
+        if (!targets.length) return;
+
+        // The server translates what is *stored*, so a pending edit has to land first — otherwise
+        // the whole batch is a translation of the previous version (same defect ADR-065 fixed
+        // for publishing).
+        if (this.saveState() !== 'saved') await this.save();
+
+        this.translateAllBusy.set(true);
+        this.translateAllError.set(null);
+        try {
+            for (const target of targets) {
+                this.translateAllCurrent.set(target);
+                const { jobId } = await this.draftsApi.startAutoTranslate(id, target);
+                const translation = await this.pollAiJob<TranslationFull>(jobId, () => false, AUTO_TRANSLATE_TIMEOUT_MS);
+                if (!translation) break;
+                this.setTranslation(target, { language: target, title: translation.title, updatedAt: translation.updatedAt });
+                this.translateAllDone.update(list => [...list, target]);
+                // Untick as we go: whatever stays ticked is exactly the work left after a failure.
+                this.translateAllTargets.update(list => list.filter(l => l !== target));
+            }
+        } catch (e) {
+            this.translateAllError.set(e instanceof AiJobTimeoutError
+                ? this.t().editor.errors.autoTranslateTimeout
+                : httpErrorMessage(e, this.t().editor.errors.autoTranslate));
+        } finally {
+            this.translateAllBusy.set(false);
+            this.translateAllCurrent.set(null);
+            // The open tab's content is stale if this run rewrote it.
+            if (this.translateAllDone().includes(this.lang())) await this.reloadStoredVersion();
+        }
+    }
+
     confirmTranslate() {
         this.translateConfirmOpen.set(false);
         this.runAutoTranslate();
@@ -1213,7 +1281,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.saveState.set('saved');
         } catch (e) {
             this.autoTranslateError.set(e instanceof AiJobTimeoutError
-                ? 'Auto-translate timed out after 20 minutes'
+                ? this.t().editor.errors.autoTranslateTimeout
                 : httpErrorMessage(e, this.t().editor.errors.autoTranslate));
         } finally {
             this.finishAutoTranslate();

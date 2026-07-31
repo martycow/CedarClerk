@@ -1,12 +1,23 @@
 using System.Text;
 using System.Text.Json;
 using CedarClerk.Core;
+using CedarClerk.Localization;
 
 namespace CedarClerk.Server.Translation;
 
 public class DeepLTranslationProvider(IHttpClientFactory httpFactory, string apiKey) : ITranslationProvider, ITextsTranslationProvider
 {
     public string Name => "deepl";
+
+    // The content languages (Languages.ContentLanguages) DeepL accepts as a target — deliberately
+    // a whitelist rather than a "these two are missing" blacklist, so a language added to the app
+    // later is reported as unsupported until someone checks DeepL's list instead of silently
+    // being sent and 400ing. Belarusian and Georgian are the two it has no target for today.
+    private static readonly HashSet<string> SupportedTargets =
+        [Languages.Russian, Languages.English, Languages.German, Languages.French,
+         Languages.Spanish, Languages.Japanese, Languages.Ukrainian];
+
+    public bool SupportsTargetLanguage(string code) => SupportedTargets.Contains(code);
 
     public async Task<TranslationResult> TranslateAsync(string title, string cedarJson, string targetLanguage, CancellationToken ct)
     {

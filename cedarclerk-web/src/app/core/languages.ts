@@ -1,6 +1,6 @@
 // Content languages a post can exist in (NF2). Mirrors CedarClerk.Localization.Languages — the
 // server validates against its own copy, this one only drives the editor's tabs and labels.
-export const CONTENT_LANGUAGES = ['ru', 'en', 'de', 'fr', 'es', 'ja'];
+export const CONTENT_LANGUAGES = ['ru', 'en', 'de', 'fr', 'es', 'ja', 'uk', 'be', 'ka'];
 
 // The language a *new* draft starts in. Which language an existing draft is written in is
 // `Draft.primaryLanguage` and is per-draft (ADR-064) — never assume this constant for one that
@@ -18,6 +18,9 @@ export const LANGUAGE_ENDONYMS: Record<string, string> = {
     fr: 'Français',
     es: 'Español',
     ja: '日本語',
+    uk: 'Українська',
+    be: 'Беларуская',
+    ka: 'ქართული',
 };
 
 export function endonymOf(code: string): string {

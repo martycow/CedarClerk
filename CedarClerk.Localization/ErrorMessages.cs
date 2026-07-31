@@ -19,6 +19,10 @@ public static class ErrorMessages
     public const string SaveShrinkNeedsConfirmation = "This save would delete most of the text — confirm that it's intentional.";
     public const string SaveConflict = "This version was edited elsewhere after you loaded it — reload before saving.";
 
+    // T-013 — named provider and language, because the fix is switching one or picking the other.
+    public static string LanguageNotSupportedByProvider(string lang, string provider) =>
+        $"The configured translation provider ({provider}) cannot translate into {lang.ToUpperInvariant()}.";
+
     public static string AiDailyLimitReached(int limit) => $"Daily AI limit ({limit} calls) reached — resets at midnight UTC.";
     public static string LanguageIsPrimary(string lang) => $"{lang.ToUpperInvariant()} is this draft's primary language — edit it on the main tab.";
     public static string NoVersionInLanguage(string lang) => $"No {lang.ToUpperInvariant()} version of this draft";

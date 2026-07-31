@@ -8,6 +8,9 @@ public static class Languages
     public const string French = "fr";
     public const string Spanish = "es";
     public const string Japanese = "ja";
+    public const string Ukrainian = "uk";
+    public const string Belarusian = "be";
+    public const string Georgian = "ka";
 
     /// <summary>
     /// Every language a post can be written in. There is deliberately only one such list
@@ -16,7 +19,7 @@ public static class Languages
     /// and translation rows shadowing a draft's own primary language.
     /// </summary>
     public static readonly IReadOnlyList<string> ContentLanguages =
-        [Russian, English, German, French, Spanish, Japanese];
+        [Russian, English, German, French, Spanish, Japanese, Ukrainian, Belarusian, Georgian];
 
     public static bool IsContentLanguage(string code) => ContentLanguages.Contains(code);
 
@@ -30,6 +33,9 @@ public static class Languages
         [French] = "Français",
         [Spanish] = "Español",
         [Japanese] = "日本語",
+        [Ukrainian] = "Українська",
+        [Belarusian] = "Беларуская",
+        [Georgian] = "ქართული",
     };
 
     public static string EndonymOf(string code) => Endonyms.GetValueOrDefault(code, code.ToUpperInvariant());

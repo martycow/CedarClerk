@@ -7,6 +7,13 @@ public interface ITranslationProvider
     string Name { get; }
 
     Task<TranslationResult> TranslateAsync(string title, string cedarJson, string targetLanguage, CancellationToken ct);
+
+    /// <summary>
+    /// T-013 — not every provider covers every content language: DeepL has no Belarusian or
+    /// Georgian, while the LLM providers translate all of them. Checked before the AI quota is
+    /// charged, so an unsupported language costs a clear error rather than a call.
+    /// </summary>
+    bool SupportsTargetLanguage(string code) => true;
 }
 
 // ADR-060 — the narrow "translate a flat list of strings" capability form auto-translate needs:
