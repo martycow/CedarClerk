@@ -27,6 +27,10 @@
 
 .ap-field input[type="range"] {
     width: 100%;
+    /* Without this the two sliders render in the browser's own blue — the only saturated blue in
+       the app, sitting inside the panel that exists to choose its colours. Checkboxes elsewhere
+       already do this; these were missed. */
+    accent-color: var(--accent);
 }
 
 .ap-toggle {
