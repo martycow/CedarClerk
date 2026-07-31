@@ -49,3 +49,4 @@ cedarclerk-web/.playwright/
 .e2e-data/
 .e2e-server.log
 .e2e-server.log.err
+.e2e-audit/

@@ -208,19 +208,23 @@ The `Verified` column is filled in by Phase 10 Block D. `smoke` means a Playwrig
 
 | Route / surface | Component | States to check | Verified | Defects |
 |---|---|---|---|---|
-| `/login` | `login.component` | error, server-unreachable + retry, already-signed-in redirect | smoke | — |
-| `/register` | `register.component` | invalid invite, duplicate email, guest-guard redirect | — | — |
-| `/drafts` | `drafts.component` | empty, loading, import progress, import error, table vs grid, long titles, horizontal overflow | smoke (list, search, rename, create) | — |
-| `/editor` | `editor.component` | no draft, save states (saved/saving/dirty/error), refused save, offline retry, upload progress, long title | smoke (round-trip, formatting, shrink guard, versions) | — |
-| `/posts` | `posts-manager.component` | empty, no forms, submissions, chip overflow, scheduled toggle | smoke (list, search, forms tab) | — |
-| `/settings` | `settings.component` | Profile vs Account tab, Pro-gated fields, save failure | smoke (deep link, language) | — |
-| `/glossary` | `glossary.component` | empty, per-language empty, translate-all failure mid-run | smoke (page opens) | — |
-| `/admin` | `admin.component` | non-admin gate, empty audit, audit paging, self-targeting refusal | smoke (list, audit shape, gate) | — |
-| `/terms`, `/privacy` | `legal-page.component` | — | — | T-052 (placeholder text) |
-| Blog index | `BlogEndpoints.RenderIndexAsync` | no posts, timeline, tag filter, semi-public lock | smoke (index lists post) | — |
-| Blog post | `BlogEndpoints.RenderPostAsync` | not-translated notice, TOC, watermark, copy protection, floating nav, glossary tooltip, poll | smoke (render, reaction, comment) | — |
-| Registration gate | `CedarToBlogHtmlRenderer.RegistrationFormHtml` | required-field validation, language switcher, consent, static block, long answer | smoke (gate → submit → access) | — |
+| `/login` | `login.component` | error, server-unreachable + retry, already-signed-in redirect | smoke + hand | — |
+| `/register` | `register.component` | invalid invite, duplicate email, guest-guard redirect | hand | — |
+| `/drafts` | `drafts.component` | empty, loading, import progress, import error, table vs grid, long titles, horizontal overflow | smoke + hand (empty, table, grid, folder menu, tag manage, long title) | — |
+| `/editor` | `editor.component` | no draft, save states (saved/saving/dirty/error), refused save, offline retry, upload progress, long title | smoke + hand (export modal both destinations, version history, translate-all, emoji, paragraph marks, appearance, save-guard dialog) | T-093, T-095, T-096, T-097, T-098 |
+| `/posts` | `posts-manager.component` | empty, no forms, submissions, chip overflow, scheduled toggle | smoke + hand (posts, selected post, forms empty, forms editor with all four field types, stats) | — |
+| `/settings` | `settings.component` | Profile vs Account tab, Pro-gated fields, save failure | smoke + hand (both tabs) | — |
+| `/glossary` | `glossary.component` | empty, per-language empty, translate-all failure mid-run | smoke + hand (empty, one term) | — |
+| `/admin` | `admin.component` | non-admin gate, empty audit, audit paging, self-targeting refusal | smoke + hand (all four tabs) | — |
+| `/terms`, `/privacy` | `legal-page.component` | — | hand (terms) | T-052 (placeholder text) |
+| Blog index | `BlogEndpoints.RenderIndexAsync` | no posts, timeline, tag filter, semi-public lock | smoke + hand (timeline, semi-public lock with excerpt withheld) | T-094, T-099 |
+| Blog post | `BlogEndpoints.RenderPostAsync` | not-translated notice, TOC, watermark, copy protection, floating nav, glossary tooltip, poll | smoke + hand (rendered post) | T-094 |
+| Registration gate | `CedarToBlogHtmlRenderer.RegistrationFormHtml` | required-field validation, language switcher, consent, static block, long answer | smoke + hand (all four field types on a real gate) | T-099 |
 | `/rss.xml` | `BlogEndpoints.RenderRssAsync` | empty feed, escaping | smoke | — |
+
+Screenshots behind the `hand` marks are reproducible with `AUDIT=1 npx playwright test 99-audit` (output in `.e2e-audit/`, gitignored) — captured through Playwright rather than the browser extension, which proved unreliable here: screenshots timing out, zoom returning the wrong region, and keystrokes never reaching the TipTap surface.
+
+**Still not verified by anything**, and each needs a person or a device rather than a script: flush-on-hide on a real iPhone; incremental re-translation preserving manual corrections (needs a provider key and a Pro Plus account); the uk/be/ka capability refusal; the Posts Manager submission modal and "mark all as read" (need a real submission); tag rename/delete; audit paging past the first page; the glossary tooltip on a published post; per-language cross-links; and whether the Russian wording reads well — which is Marty's call, not a script's.
 
 ## `admin.component` (`cedarclerk-web/src/app/pages/admin.component.{ts,html,css}`)
 

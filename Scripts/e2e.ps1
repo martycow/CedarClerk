@@ -19,7 +19,10 @@
 param(
     [switch]$Headed,
     [switch]$KeepData,
-    [string]$Grep
+    [string]$Grep,
+    # Seed the environment and leave it running instead of starting Playwright — the same isolated
+    # database, for walking the screens by hand (Phase 10 Block D). Ctrl+C stops the server.
+    [switch]$Serve
 )
 
 $ErrorActionPreference = 'Stop'
@@ -102,6 +105,16 @@ try {
     Write-Host '=== 3/4 restart (admin bootstrap promotes the account) ===' -ForegroundColor Cyan
     Stop-Server
     Start-Server
+
+    if ($Serve) {
+        Write-Host '=== 4/4 serving ===' -ForegroundColor Cyan
+        Write-Host "  app   http://localhost:8080  (run 'ng serve' separately for :4200)" -ForegroundColor Green
+        Write-Host "  blog  http://blog.localhost:8080" -ForegroundColor Green
+        Write-Host "  login $($env:Cedar__AdminEmail) / E2e-passw0rd!" -ForegroundColor Green
+        Write-Host '  Ctrl+C to stop.' -ForegroundColor DarkGray
+        Wait-Process -Id $script:server.Id
+        exit 0
+    }
 
     Write-Host '=== 4/4 Playwright ===' -ForegroundColor Cyan
     Push-Location $webRoot
