@@ -8,10 +8,7 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { CedarLogoComponent } from './cedar-logo.component';
 import { AccountMenuComponent } from './account-menu.component';
 import { CountBadgeComponent } from './count-badge.component';
-import {
-    LucideArrowLeft as ArrowLeft, LucideNewspaper as Newspaper, LucideBookMarked as BookMarked,
-    LucideSettings as Settings, LucideShieldCheck as ShieldCheck,
-} from '@lucide/angular';
+import { IconComponent } from './icon.component';
 
 export type PageHeaderPage = 'posts' | 'glossary' | 'settings' | 'admin' | 'drafts';
 
@@ -24,10 +21,7 @@ export type PageHeaderPage = 'posts' | 'glossary' | 'settings' | 'admin' | 'draf
 // takes this header too, just with the back arrow hidden.
 @Component({
     selector: 'app-page-header',
-    imports: [
-        RouterLink, CedarLogoComponent, AccountMenuComponent, CountBadgeComponent,
-        ArrowLeft, Newspaper, BookMarked, Settings, ShieldCheck,
-    ],
+    imports: [IconComponent, RouterLink, CedarLogoComponent, AccountMenuComponent, CountBadgeComponent],
     templateUrl: 'page-header.component.html',
     styleUrls: ['page-header.component.css'],
 })

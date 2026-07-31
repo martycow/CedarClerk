@@ -7,7 +7,7 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { ThemeService } from '../core/theme.service';
 import { ModalComponent } from './modal.component';
 import { httpErrorMessage } from '../core/http-error.util';
-import { LucidePalette as Palette } from '@lucide/angular';
+import { IconComponent } from './icon.component';
 
 // Long enough that a slider drag is one write, short enough that closing the modal right after a
 // click never races the save (the modal's own close path flushes it anyway — see apply()).
@@ -24,7 +24,7 @@ const APPEARANCE_COMMIT_DEBOUNCE_MS = 600;
 // changed) rather than requiring Apply-then-close to see anything.
 @Component({
     selector: 'app-appearance-panel',
-    imports: [DragDropModule, ModalComponent, Palette],
+    imports: [IconComponent, DragDropModule, ModalComponent],
     templateUrl: 'appearance-panel.component.html',
     styleUrls: ['appearance-panel.component.css'],
 })

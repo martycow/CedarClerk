@@ -3,7 +3,7 @@ import { DatePipe } from '@angular/common';
 import { CommentsService, AllCommentsComment, DraftReactions } from '../core/comments.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { LocaleService } from '../core/i18n/locale.service';
-import { LucideTrash2 as Trash2 } from '@lucide/angular';
+import { IconComponent } from '../shared/icon.component';
 
 // Feedback for published posts. It owns no page chrome — no header, no theme toggle, no back
 // link — because it has never been a page of its own since N7.
@@ -15,7 +15,7 @@ import { LucideTrash2 as Trash2 } from '@lucide/angular';
 // around it.
 @Component({
     selector: 'app-comments',
-    imports: [DatePipe, Trash2],
+    imports: [IconComponent, DatePipe],
     templateUrl: 'comments.component.html',
     styleUrls: ['comments.component.css']
 })

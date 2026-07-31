@@ -3,7 +3,7 @@
 
     <div class="glossary-body">
         <p class="hint-bubble">
-            <svg lucideInfo class="icon-sm"></svg>{{ t().glossary.intro }}
+            <app-icon name="info" size="sm"></app-icon>{{ t().glossary.intro }}
         </p>
 
         @if (error()) { <p class="channel-error">{{ error() }}</p> }
@@ -20,11 +20,11 @@
             <span class="spacer"></span>
             @if (countFor(languageFilter())) {
             <button class="btn-ghost" (click)="openTranslateAll()">
-                <svg lucideLanguages class="icon-sm"></svg> {{ t().glossary.translateAll }}
+                <app-icon name="translate" size="sm"></app-icon> {{ t().glossary.translateAll }}
             </button>
             }
             <button class="btn-accent" (click)="startNew()">
-                <svg lucidePlus class="icon-sm"></svg> {{ t().glossary.newTerm }}
+                <app-icon name="plus" size="sm"></app-icon> {{ t().glossary.newTerm }}
             </button>
         </div>
 
@@ -67,13 +67,13 @@
                 <div class="term-image-row">
                     <img [src]="url" alt="">
                     <button class="mini-remove" (click)="clearImage()" [title]="t().common.delete">
-                        <svg lucideX class="icon-sm"></svg>
+                        <app-icon name="x" size="sm"></app-icon>
                     </button>
                 </div>
                 }
                 <label class="btn-ghost image-pick">
-                    @if (uploading()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
-                    @else { <svg lucideImage class="icon-sm"></svg> }
+                    @if (uploading()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                    @else { <app-icon name="image" size="sm"></app-icon> }
                     {{ editImageUrl() ? t().glossary.replaceImage : t().glossary.addImage }}
                     <input type="file" accept="image/*" hidden (change)="onImageChosen($event)">
                 </label>
@@ -82,7 +82,7 @@
             <div class="form-actions">
                 <button class="btn-ghost" (click)="cancelEdit()">{{ t().common.cancel }}</button>
                 <button class="btn-accent" (click)="save()" [disabled]="!canSave()">
-                    @if (busy()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+                    @if (busy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
                     {{ t().common.save }}
                 </button>
             </div>
@@ -99,13 +99,13 @@
                         @for (a of aliasList(term); track a) { <span class="term-alias">{{ a }}</span> }
                         <span class="spacer"></span>
                         <button class="mini" (click)="startEdit(term)" [title]="t().common.edit">
-                            <svg lucidePencil class="icon-sm"></svg>
+                            <app-icon name="pencil-simple" size="sm"></app-icon>
                         </button>
                         <button class="mini" (click)="openTranslate(term)" [title]="t().glossary.translate">
-                            <svg lucideLanguages class="icon-sm"></svg>
+                            <app-icon name="translate" size="sm"></app-icon>
                         </button>
                         <button class="mini-remove" (click)="deleteConfirmId.set(term.id)" [title]="t().common.delete">
-                            <svg lucideTrash2 class="icon-sm"></svg>
+                            <app-icon name="trash" size="sm"></app-icon>
                         </button>
                     </div>
                     <p class="term-desc">{{ term.description }}</p>
@@ -120,7 +120,7 @@
 
     @if (translateFor(); as term) {
     <app-modal (closed)="closeTranslate()">
-        <svg modal-icon lucideLanguages class="icon"></svg>
+        <app-icon modal-icon name="translate" size="sm"></app-icon>
         <span modal-title>{{ t().glossary.translateTitle(term.term) }}</span>
         <p>{{ t().glossary.translateBody }}</p>
         <div class="lang-check-list">
@@ -129,7 +129,7 @@
                 <input type="checkbox" [checked]="translateSelection().has(l)"
                        [disabled]="translatingLang() !== null" (change)="toggleTranslateLang(l)">
                 <span>{{ l.toUpperCase() }} · {{ endonymOf(l) }}</span>
-                @if (translatingLang() === l) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+                @if (translatingLang() === l) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
             </label>
             }
         </div>
@@ -137,7 +137,7 @@
         <button modal-actions class="btn-ghost" (click)="closeTranslate()"
                 [disabled]="translatingLang() !== null">{{ t().common.cancel }}</button>
         <button modal-actions class="btn-accent" (click)="runTranslate()" [disabled]="!canTranslate()">
-            @if (translatingLang()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+            @if (translatingLang()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
             {{ t().glossary.translateRun }}
         </button>
     </app-modal>
@@ -145,7 +145,7 @@
 
     @if (translateAllOpen()) {
     <app-modal (closed)="closeTranslateAll()">
-        <svg modal-icon lucideLanguages class="icon"></svg>
+        <app-icon modal-icon name="translate" size="sm"></app-icon>
         <span modal-title>{{ t().glossary.translateAllTitle(countFor(languageFilter()), languageFilter().toUpperCase()) }}</span>
         <p>{{ t().glossary.translateAllBody }}</p>
         <div class="lang-check-list">
@@ -154,7 +154,7 @@
                 <input type="checkbox" [checked]="translateSelection().has(l)"
                        [disabled]="translatingLang() !== null" (change)="toggleTranslateLang(l)">
                 <span>{{ l.toUpperCase() }} · {{ endonymOf(l) }}</span>
-                @if (translatingLang() === l) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+                @if (translatingLang() === l) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
             </label>
             }
         </div>
@@ -162,7 +162,7 @@
         <button modal-actions class="btn-ghost" (click)="closeTranslateAll()"
                 [disabled]="translatingLang() !== null">{{ t().common.cancel }}</button>
         <button modal-actions class="btn-accent" (click)="runTranslateAll()" [disabled]="!canTranslate()">
-            @if (translatingLang()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+            @if (translatingLang()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
             {{ t().glossary.translateRun }}
         </button>
     </app-modal>
@@ -170,7 +170,7 @@
 
     @if (deleteTarget(); as term) {
     <app-modal (closed)="deleteConfirmId.set(null)">
-        <svg modal-icon lucideTrash2 class="icon"></svg>
+        <app-icon modal-icon name="trash" size="sm"></app-icon>
         <span modal-title>{{ t().glossary.deleteTitle(term.term) }}</span>
         <p>{{ t().glossary.deleteBody }}</p>
         <button modal-actions class="btn-ghost" (click)="deleteConfirmId.set(null)">{{ t().common.cancel }}</button>

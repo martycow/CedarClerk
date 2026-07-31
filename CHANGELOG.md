@@ -2,6 +2,24 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-07-31 — Phase 11, T-079: the icon set is Phosphor, behind one component
+
+**206 call sites, 80 icons, 15 TypeScript files — and `@lucide/angular` is gone from `package.json`.**
+
+Everything the app draws now goes through `<app-icon name="…" size="…" weight="…">`. Size comes from the `--icon-*` tokens and never from a caller, weight is a prop, so "make the icons bolder" is one change instead of a fourth sweep through two hundred templates. The set is delivered as a **generated TypeScript constant** (`tools/generate-icons.mjs` → `icon-data.generated.ts`, 80 icons × regular and bold): the package ships raw `.svg` assets and Angular has no loader for those without extra build config, so generating the inner markup keeps the icons tree-shakeable, leaves the build configuration untouched, and makes the set a build-time dependency rather than something the browser fetches. `bypassSecurityTrustHtml` appears exactly once, on a build-time constant — Angular's HTML sanitizer drops SVG children, so there is no alternative that renders anything at all.
+
+The Lucide→Phosphor name map is `tools/icon-map.json`, and **every one of its 80 entries was checked against the package's asset files before use** rather than guessed from memory. Two pairs collapsed: `Sigma`/`SigmaSquare` and `Sparkle`/`Sparkles` were the same idea under two names.
+
+**Two migration scripts went wrong in ways worth recording**, because both were the same class of mistake — a regex that looked bounded and was not:
+- `import\s*\{[\s\S]*?\}\s*from '@lucide/angular';` is lazy, but it still *starts* at the first `import {` in the file, so it swallowed every import statement above the Lucide one. Fourteen files lost their entire import section; the compiler caught it immediately, `git checkout` undid it, and `[^{}]*` — which cannot cross another import's braces — is what actually bounds the match to one statement.
+- The follow-up check `from '.*icon\.component'` matched **`brand-icon.component`**, so `settings.component.ts` was judged to already have the import it was missing. One file, one build error, but the lesson is the same: a pattern that is merely plausible is not a check.
+
+Also fixed by hand: the first script only matched `<svg lucideX …>` where the directive is the *first* attribute, missing the 20 `<svg modal-icon lucideX …>` tags and the inline templates that live in `.ts` files rather than `.html`.
+
+`brand-icon.component` survives unchanged and its comment now says why: no general-purpose set carries brand marks — that was true of Lucide and is equally true of Phosphor. The **10 non-set glyphs** (`☾ ✦ ◷ ⤢ ¶ ⏰ 👍 👎 ☰ ↑`) are also untouched and still labelled as a problem on the styleguide: this task replaced an icon set, not a hunt for text characters doing an icon's job.
+
+The styleguide now renders the real set at four sizes and both weights, and gained `--warn`, `--hover` and `--scrim` swatches. `ng build` clean — the bundle is *smaller* than before despite 57 kB of inlined icon data, since Lucide left with more than it. Smoke **37/37**.
+
 ## 2026-07-31 — Phase 11: the type sweep is finished — **0 hardcoded font-sizes left in the app**
 
 The remaining eleven stylesheets (`glossary`, `login`, `register` and the eight shared components) went in one pass, then the editor's 67 — the single biggest file — closed it out. **314 → 0.**

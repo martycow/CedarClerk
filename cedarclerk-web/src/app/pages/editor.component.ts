@@ -64,39 +64,7 @@ import { FolderPickerComponent } from '../shared/folder-picker.component';
 import { FormRefComponent } from '../shared/form-ref.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import { pseudoProgress } from '../core/pseudo-progress.util';
-import {
-    LucideUndo2 as Undo2, LucideRedo2 as Redo2,
-    LucideBold as Bold, LucideItalic as Italic, LucideStrikethrough as Strikethrough, LucideCode as Code,
-    LucideList as List, LucideListOrdered as ListOrdered, LucideListTodo as ListTodo,
-    LucideQuote as Quote, LucideSquareCode as SquareCode,
-    LucideOutdent as Outdent, LucideIndent as Indent,
-    LucideTable as TableIcon, LucideSigma as Sigma, LucideSigmaSquare as SigmaSquare,
-    LucideImage as ImageIcon, LucideVideo as VideoIcon, LucideAudioLines as AudioLines, LucideImages as Images,
-    LucideSend as Send, LucidePlus as Plus, LucideX as X,
-    LucideTrash2 as Trash2,
-    LucideEyeOff as EyeOff, LucideLink as LinkIcon, LucideSmile as Smile, LucideUnderline as Underline,
-    LucideAlignLeft as AlignLeft, LucideAlignCenter as AlignCenter, LucideAlignRight as AlignRight, LucideAlignJustify as AlignJustify,
-    LucideClock as Clock, LucideListCollapse as ListCollapse, LucideLayoutGrid as LayoutGrid,
-    LucideFileStack as FileStack, LucideSuperscript as Superscript,
-    LucideChevronDown as ChevronDown,
-    LucideCheck as Check,
-    LucideDownload as Download,
-    LucideMessageSquare as MessageSquare,
-    LucideVote as Vote,
-    LucidePalette as Palette,
-    LucideDroplets as Droplets,
-    LucideMaximize as Maximize, LucideMinimize as Minimize,
-    LucideNewspaper as Newspaper,
-    LucideRefreshCw as RefreshCw,
-    LucideSettings as Settings, LucideShieldCheck as ShieldCheck, LucideSparkle as Sparkle,
-    LucideTableOfContents as TableOfContentsIcon,
-    LucideSeparatorHorizontal as DividerIcon,
-    LucideAtSign as AtSign, LucideCloud as Cloud, LucideMessageSquareShare as MessageSquareShare,
-    LucideFileText as FileText, LucideHeart as Heart, LucideNotebook as Notebook, LucideFile as FileIcon,
-    LucideThumbsUp as ThumbsUp,
-    LucideLock as Lock,
-    LucideTerminal as Terminal, LucideInfo as Info, LucideBookMarked as BookMarked,
-} from '@lucide/angular';
+import { IconComponent } from '../shared/icon.component';
 
 const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
 
@@ -216,21 +184,7 @@ interface UploadItem {
 
 @Component({
     selector: 'app-editor',
-    imports: [
-        FormsModule, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent,
-        AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent,
-        Undo2, Redo2, Bold, Italic, Strikethrough, Code,
-        List, ListOrdered, ListTodo, Quote, SquareCode, Outdent, Indent,
-        TableIcon, Sigma, SigmaSquare, ImageIcon, VideoIcon, AudioLines, Images,
-        Send, Plus, X, Trash2,
-        EyeOff, LinkIcon, Smile, Underline, Clock, ListCollapse, LayoutGrid, FileStack, Superscript,
-        AlignLeft, AlignCenter, AlignRight, AlignJustify,
-        ChevronDown, Check, Download, MessageSquare, Vote, Palette, Droplets, Newspaper, RefreshCw, Maximize, Minimize,
-        Settings, ShieldCheck, Sparkle, TableOfContentsIcon, DividerIcon,
-        CountBadgeComponent,
-        AtSign, Cloud, MessageSquareShare, FileText, Heart, Notebook, FileIcon, ThumbsUp,
-        Lock, Terminal, Info, BookMarked,
-    ],
+    imports: [IconComponent, FormsModule, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent, AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent, CountBadgeComponent],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
 })

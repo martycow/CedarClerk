@@ -17,10 +17,10 @@
             </button>
             <span class="tag-manage-spacer"></span>
             <button class="tag-manage-btn" (click)="startRename(u.tag, $event)" [title]="t().editor.tags.rename" [disabled]="busy()">
-                <svg lucidePencil class="icon-xs"></svg>
+                <app-icon name="pencil-simple" size="xs"></app-icon>
             </button>
             <button class="tag-manage-btn" (click)="askDelete(u.tag, $event)" [title]="t().editor.tags.deleteEverywhere" [disabled]="busy()">
-                <svg lucideX class="icon-xs"></svg>
+                <app-icon name="x" size="xs"></app-icon>
             </button>
             }
         </div>
@@ -87,7 +87,7 @@
 stray click - and unlike a folder there is nothing left behind to restore it from.-->
 @if (confirmDeleteTag(); as tag) {
 <app-modal (closed)="confirmDeleteTag.set(null)">
-    <svg modal-icon lucideTrash2 class="icon"></svg>
+    <app-icon modal-icon name="trash" size="sm"></app-icon>
     <span modal-title>{{ t().editor.tags.deleteTitle(tag) }}</span>
     <p>{{ t().editor.tags.deleteBody }}</p>
     <button modal-actions class="btn-ghost" (click)="confirmDeleteTag.set(null)">{{ t().common.cancel }}</button>

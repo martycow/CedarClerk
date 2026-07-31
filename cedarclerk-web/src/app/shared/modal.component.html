@@ -4,7 +4,7 @@
             <ng-content select="[modal-icon]"></ng-content>
             <span class="modal-title"><ng-content select="[modal-title]"></ng-content></span>
             <span class="spacer"></span>
-            <button class="modal-close" (click)="closed.emit()" title="Close"><svg lucideX class="icon-sm"></svg></button>
+            <button class="modal-close" (click)="closed.emit()" title="Close"><app-icon name="x" size="sm"></app-icon></button>
         </div>
         <div class="modal-body"><ng-content></ng-content></div>
         <div class="modal-actions"><ng-content select="[modal-actions]"></ng-content></div>

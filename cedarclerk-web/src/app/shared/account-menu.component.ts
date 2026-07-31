@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { PopoverComponent } from './popover.component';
-import { LucideLogOut as LogOut, LucideUserRound as UserRound, LucideShieldCheck as ShieldCheck } from '@lucide/angular';
+import { IconComponent } from './icon.component';
 
 // IB9 — the avatar was a live account popover in the editor and a dead <span> on /drafts,
 // /settings and /posts, which read as "the profile button doesn't work on some pages". The menu
@@ -16,7 +16,7 @@ import { LucideLogOut as LogOut, LucideUserRound as UserRound, LucideShieldCheck
 // Admin (if applicable) and Logout everywhere.
 @Component({
     selector: 'app-account-menu',
-    imports: [RouterLink, PopoverComponent, UserRound, ShieldCheck, LogOut],
+    imports: [IconComponent, RouterLink, PopoverComponent],
     template: `
         <app-popover align="right">
             <button trigger class="account-trigger" [title]="t().editor.account">
@@ -34,19 +34,19 @@ import { LucideLogOut as LogOut, LucideUserRound as UserRound, LucideShieldCheck
                 <!--I12: the profile half of Settings opens from here — "clicking the user" is
                 where a profile belongs; the topbar's Settings button goes to the general page.-->
                 <a class="account-action-btn" routerLink="/settings" [queryParams]="{ tab: 'profile' }">
-                    <svg lucideUserRound class="icon-sm"></svg>
+                    <app-icon name="user" size="sm"></app-icon>
                     {{ t().settings.tabs.profile }}
                 </a>
                 <!--IF2: only rendered for an admin, and only as a shortcut — /api/admin is gated
                 server-side, so hiding it here is convenience, not security.-->
                 @if (auth.isAdmin()) {
                 <a class="account-action-btn" routerLink="/admin">
-                    <svg lucideShieldCheck class="icon-sm"></svg>
+                    <app-icon name="shield-check" size="sm"></app-icon>
                     {{ t().admin.open }}
                 </a>
                 }
                 <button class="logout-btn" (click)="auth.logout()">
-                    <svg lucideLogOut class="icon-sm"></svg>
+                    <app-icon name="sign-out" size="sm"></app-icon>
                     {{ t().editor.logout }}
                 </button>
             </div>

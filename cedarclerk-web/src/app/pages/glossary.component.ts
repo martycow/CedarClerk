@@ -7,20 +7,13 @@ import { httpErrorMessage } from '../core/http-error.util';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES, endonymOf } from '../core/languages';
 import { PageHeaderComponent } from '../shared/page-header.component';
 import { ModalComponent } from '../shared/modal.component';
-import {
-    LucideTrash2 as Trash2, LucidePlus as Plus, LucidePencil as Pencil,
-    LucideRefreshCw as RefreshCw, LucideImage as ImageIcon, LucideX as X, LucideInfo as Info,
-    LucideLanguages as LanguagesIcon,
-} from '@lucide/angular';
+import { IconComponent } from '../shared/icon.component';
 
 // Idea #11 — the glossary page. A term is defined once here and explained wherever it turns up on
 // the blog; nothing is scanned or marked in the editor, since the ask was for the published page.
 @Component({
     selector: 'app-glossary',
-    imports: [
-        FormsModule, PageHeaderComponent, ModalComponent,
-        Trash2, Plus, Pencil, RefreshCw, ImageIcon, X, Info, LanguagesIcon,
-    ],
+    imports: [IconComponent, FormsModule, PageHeaderComponent, ModalComponent],
     templateUrl: 'glossary.component.html',
     styleUrls: ['glossary.component.css'],
 })

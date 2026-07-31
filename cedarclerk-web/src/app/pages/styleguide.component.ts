@@ -1,5 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { ThemeService } from '../core/theme.service';
+import { IconComponent } from '../shared/icon.component';
+import { IconName, IconWeight } from '../shared/icon-data.generated';
 
 // T-078 — the design-system reference page (ADR-071). One screen showing every token and every
 // component state, in both themes and both density modes, so a divergence is visible without
@@ -9,7 +11,7 @@ import { ThemeService } from '../core/theme.service';
 // ~120 more keys into en.ts/ru.ts to name swatches would be work with no reader.
 @Component({
     selector: 'app-styleguide',
-    imports: [],
+    imports: [IconComponent],
     templateUrl: 'styleguide.component.html',
     styleUrls: ['styleguide.component.css'],
 })
@@ -37,7 +39,10 @@ export class StyleguideComponent {
         { name: '--asoft', role: 'accent wash (derived)' },
         { name: '--abord', role: 'accent border (derived)' },
         { name: '--danger', role: 'destructive action, error' },
+        { name: '--warn', role: 'needs attention, pending' },
         { name: '--ok', role: 'success' },
+        { name: '--hover', role: 'row / menu-item hover wash' },
+        { name: '--scrim', role: 'backdrop behind a modal' },
     ];
 
     readonly series = ['--series-1', '--series-2', '--series-3', '--series-4', '--series-5', '--series-6'];
@@ -61,7 +66,22 @@ export class StyleguideComponent {
     readonly spaces = ['--space-1', '--space-2', '--space-3', '--space-4', '--space-5', '--space-6'];
     readonly radii = ['--radius-sm', '--radius-md', '--radius-lg'];
     readonly elevations = ['--shadow', '--shadow-md', '--shadow-lg'];
-    readonly icons = ['--icon-sm', '--icon-md', '--icon-lg'];
+    readonly icons = [
+        { token: '--icon-xs', size: 'xs' as const },
+        { token: '--icon-sm', size: 'sm' as const },
+        { token: '--icon-md', size: 'md' as const },
+        { token: '--icon-lg', size: 'lg' as const },
+    ];
+
+    readonly weights: IconWeight[] = ['regular', 'bold'];
+
+    // A spread across the set rather than an exhaustive list: enough to judge stroke weight and
+    // optical size against each other, which is what this row is for.
+    readonly sampleIcons: IconName[] = [
+        'trash', 'plus', 'check', 'x', 'warning', 'info', 'lock', 'eye', 'heart', 'archive',
+        'gear', 'folder', 'newspaper', 'translate', 'sparkle', 'paper-plane-tilt', 'clock',
+        'table', 'palette', 'arrow-clockwise',
+    ];
     readonly motions = ['--motion-fast', '--motion-base', '--motion-slow'];
 
     // The 10 glyphs measured outside any icon set (ADR-072) — they render in the system emoji

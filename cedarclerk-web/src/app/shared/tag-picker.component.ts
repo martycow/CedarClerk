@@ -5,7 +5,7 @@ import { TagUsageService } from '../core/tag-usage.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { PopoverComponent } from './popover.component';
 import { ModalComponent } from './modal.component';
-import { LucidePencil as Pencil, LucideX as X, LucideTrash2 as Trash2 } from '@lucide/angular';
+import { IconComponent } from './icon.component';
 
 const MOST_USED_COUNT = 8;
 
@@ -15,7 +15,7 @@ const MOST_USED_COUNT = 8;
 // saves on its Save button, and the new-draft dialog has nothing to save to yet.
 @Component({
     selector: 'app-tag-picker',
-    imports: [FormsModule, NgTemplateOutlet, PopoverComponent, ModalComponent, Pencil, X, Trash2],
+    imports: [IconComponent, FormsModule, NgTemplateOutlet, PopoverComponent, ModalComponent],
     templateUrl: './tag-picker.component.html',
     styleUrl: './tag-picker.component.css',
 })

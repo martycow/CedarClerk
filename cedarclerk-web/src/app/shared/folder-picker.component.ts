@@ -7,10 +7,7 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { PopoverComponent } from './popover.component';
 import { ModalComponent } from './modal.component';
-import {
-    LucideFolder as Folder, LucidePencil as Pencil,
-    LucidePlus as Plus, LucideX as X, LucideTrash2 as Trash2,
-} from '@lucide/angular';
+import { IconComponent } from './icon.component';
 
 // FI3.3 — one folder control for every screen: the editor, the new-draft dialog, the drafts table
 // and the posts manager. Before this, filing a draft looked different on each of them and folders
@@ -23,7 +20,7 @@ import {
 // FoldersService, so a folder created here shows up in every other picker immediately.
 @Component({
     selector: 'app-folder-picker',
-    imports: [FormsModule, NgTemplateOutlet, PopoverComponent, ModalComponent, Folder, Pencil, Plus, X, Trash2],
+    imports: [IconComponent, FormsModule, NgTemplateOutlet, PopoverComponent, ModalComponent],
     templateUrl: './folder-picker.component.html',
     styleUrl: './folder-picker.component.css',
 })

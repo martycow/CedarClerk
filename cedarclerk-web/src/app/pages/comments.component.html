@@ -56,7 +56,7 @@ list of every post. Feedback is grouped per post: a flat stream answered "what's
                         @if (c.isNew) { <span class="new-chip">{{ t().feedback.newChip }}</span> }
                         <span class="spacer"></span>
                         <button class="mini-remove" (click)="deleteComment(c.id)" [title]="t().feedback.deleteComment">
-                            <svg lucideTrash2 class="icon-sm"></svg>
+                            <app-icon name="trash" size="sm"></app-icon>
                         </button>
                     </div>
                     <div class="comment-row-meta">{{ c.authorName || t().feedback.anonymous }} · {{ c.createdAt | date:'d MMM, HH:mm' }}</div>

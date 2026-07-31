@@ -3,10 +3,10 @@
     toggle inside its status bar instead (hostBarHeight > 0).-->
     @if (!hostBarHeight()) {
     <button class="debug-tab" (click)="toggleOpen()">
-        <svg lucideTerminal class="icon-sm"></svg>
+        <app-icon name="terminal-window" size="sm"></app-icon>
         <span>{{ t().debug.console }}</span>
         @if (inFlightCount() > 0) {
-        <span class="debug-badge busy"><svg lucideRefreshCw class="icon-xs spin"></svg>{{ inFlightCount() }}</span>
+        <span class="debug-badge busy"><app-icon name="arrow-clockwise" size="xs" class="spin"></app-icon>{{ inFlightCount() }}</span>
         }
         @if (errorCount() > 0) {
         <span class="debug-badge error">{{ errorCount() }}</span>
@@ -18,8 +18,8 @@
         <div class="debug-panel-head">
             <span>{{ t().debug.requests(entries().length) }}</span>
             <div class="spacer"></div>
-            <button class="mini" (click)="clear()" [title]="t().debug.clear"><svg lucideTrash2 class="icon-sm"></svg></button>
-            <button class="mini" (click)="toggleOpen()" [title]="t().common.close"><svg lucideX class="icon-sm"></svg></button>
+            <button class="mini" (click)="clear()" [title]="t().debug.clear"><app-icon name="trash" size="sm"></app-icon></button>
+            <button class="mini" (click)="toggleOpen()" [title]="t().common.close"><app-icon name="x" size="sm"></app-icon></button>
         </div>
         <div class="debug-panel-list">
             @if (open()) {
@@ -30,7 +30,7 @@
                     <span class="debug-url">{{ e.url }}</span>
                     <span class="spacer"></span>
                     @if (e.inFlight) {
-                    <span class="debug-status pending"><svg lucideRefreshCw class="icon-xs spin"></svg></span>
+                    <span class="debug-status pending"><app-icon name="arrow-clockwise" size="xs" class="spin"></app-icon></span>
                     } @else {
                     <span class="debug-status" [class.error]="e.isError">{{ e.status }}</span>
                     }

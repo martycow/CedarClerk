@@ -1,8 +1,8 @@
 import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LucideClipboardList as ClipboardList } from '@lucide/angular';
 import { FormPreset } from '../core/form-presets.service';
 import { RegistrationForm } from '../core/drafts.service';
+import { IconComponent } from './icon.component';
 
 // Design review (Claude Design, 28.07.2026) — the private-post registration form is defined on
 // the Forms tab, assigned on the Posts tab, and re-picked in the Export modal: three real,
@@ -13,7 +13,7 @@ import { RegistrationForm } from '../core/drafts.service';
 // the Export modal each have their own already-translated wording for the same states.
 @Component({
     selector: 'app-form-ref',
-    imports: [RouterLink, ClipboardList],
+    imports: [IconComponent, RouterLink],
     templateUrl: 'form-ref.component.html',
     styleUrls: ['form-ref.component.css'],
 })

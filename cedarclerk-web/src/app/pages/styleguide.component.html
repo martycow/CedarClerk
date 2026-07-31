@@ -151,23 +151,41 @@
     <section>
         <h2>Icons</h2>
         <p class="sg-note">
-            Sizes exist as tokens; the set itself is still Lucide until T-079 migrates to Phosphor
-            (ADR-072). <code>.icon</code> is currently declared in 9 files with three different
-            values — these tokens are what replaces that.
+            Phosphor (ADR-072), inlined through one <code>app-icon</code> component. Size comes from
+            the <code>--icon-*</code> tokens and never from a caller's pixel value; weight is a prop,
+            so "make the icons bolder" is one change rather than a sweep through 200 call sites.
         </p>
         <div class="sg-space-row">
             @for (i of icons; track i) {
                 <div class="sg-space-item">
-                    <div class="sg-icon-box" [style.width]="'var(' + i + ')'" [style.height]="'var(' + i + ')'"></div>
-                    <code>{{ i }}</code>
+                    <app-icon name="pencil-simple" [size]="i.size"></app-icon>
+                    <code>{{ i.token }}</code>
                 </div>
+            }
+        </div>
+
+        <h3>Weights</h3>
+        <div class="sg-space-row">
+            @for (w of weights; track w) {
+                <div class="sg-space-item">
+                    <app-icon name="pencil-simple" [weight]="w" size="lg"></app-icon>
+                    <code>{{ w }}</code>
+                </div>
+            }
+        </div>
+
+        <h3>The set in use</h3>
+        <div class="sg-glyphs">
+            @for (n of sampleIcons; track n) {
+                <app-icon [name]="n" size="md" [label]="n"></app-icon>
             }
         </div>
 
         <h3>Glyphs from no icon set</h3>
         <p class="sg-note">
-            These 10 render in the system emoji font — different on every OS, and they cannot carry
-            the labels T-080 needs. Shown so the problem is visible, not described.
+            These 10 still render in the system emoji font — different on every OS, and they cannot
+            carry the labels T-080 needs. Not covered by the Phosphor migration, which replaced the
+            icon set rather than hunting for text characters doing an icon's job.
         </p>
         <div class="sg-glyphs">
             @for (g of strayGlyphs; track g) {

@@ -7,7 +7,7 @@
         other draft, not a peer of the branding it used to trail.-->
         <!--I18: was a hamburger, which reads as "menu" and said nothing about drafts.-->
         <a class="icon-btn" routerLink="/drafts" [title]="t().editor.drafts">
-            <svg lucideFileStack class="icon"></svg>
+            <app-icon name="files" size="sm"></app-icon>
         </a>
 
         <div class="brand">
@@ -21,7 +21,7 @@
 
         <span class="save-state" [class.saving]="saveState() === 'saving' || saveState() === 'dirty'" [class.error]="saveState() === 'error'">
             @switch (saveState()) {
-                @case ('saved') { <svg lucideCheck class="icon-xs"></svg> <span class="save-label">{{ t().editor.saved }}</span> }
+                @case ('saved') { <app-icon name="check" size="xs"></app-icon> <span class="save-label">{{ t().editor.saved }}</span> }
                 @case ('saving') { <span class="dot"></span> <span class="save-label">{{ t().editor.saving }}</span> }
                 @case ('dirty') { <span class="dot"></span> <span class="save-label">{{ t().editor.unsaved }}</span> }
                 @case ('error') { <span class="dot"></span> <span class="save-label">{{ t().editor.syncFailed }}</span> }
@@ -31,7 +31,7 @@
         <span class="spacer"></span>
 
         <button class="export-btn export-trigger" (click)="openExportModal()" [title]="t().editor.export">
-            <svg lucideSend class="icon-sm"></svg>
+            <app-icon name="paper-plane-tilt" size="sm"></app-icon>
             <span class="btn-label">{{ t().editor.export }}</span>
         </button>
 
@@ -40,7 +40,7 @@
         topbar; the same nav row now ships on every screen (27.07.2026 header redesign), so the
         account menu itself never carries these links at all any more.-->
         <a class="export-btn nav-btn" routerLink="/posts" [title]="t().editor.postsManager">
-            <svg lucideNewspaper class="icon-sm"></svg>
+            <app-icon name="newspaper" size="sm"></app-icon>
             <span class="btn-label">{{ t().editor.postsManager }}</span>
             <app-count-badge [count]="feedback.newComments() + feedback.newReactions()" [title]="t().editor.newBadge"></app-count-badge>
         </a>
@@ -48,12 +48,12 @@
         <!--The glossary was reachable only from the account menu, which is two clicks and a
         guess away from the screen where terms are actually written.-->
         <a class="export-btn nav-btn" routerLink="/glossary" [title]="t().glossary.open">
-            <svg lucideBookMarked class="icon-sm"></svg>
+            <app-icon name="book-bookmark" size="sm"></app-icon>
             <span class="btn-label">{{ t().glossary.open }}</span>
         </a>
 
         <a class="export-btn nav-btn" routerLink="/settings" [title]="t().editor.settings">
-            <svg lucideSettings class="icon-sm"></svg>
+            <app-icon name="gear" size="sm"></app-icon>
             <span class="btn-label">{{ t().editor.settings }}</span>
         </a>
 
@@ -61,13 +61,13 @@
         convenience — /api/admin is gated server-side.-->
         @if (auth.isAdmin()) {
         <a class="export-btn nav-btn" routerLink="/admin" [title]="t().admin.open">
-            <svg lucideShieldCheck class="icon-sm"></svg>
+            <app-icon name="shield-check" size="sm"></app-icon>
             <span class="btn-label">{{ t().admin.crumb }}</span>
         </a>
         }
 
         <button class="icon-btn" (click)="apPanel.open.set(true)" [title]="t().settings.appearance.title">
-            <svg lucidePalette class="icon-sm"></svg>
+            <app-icon name="palette" size="sm"></app-icon>
         </button>
 
         <button class="icon-btn theme-toggle" (click)="theme.toggle()" [title]="t().common.toggleTheme">
@@ -91,7 +91,7 @@
         Priority Fixes 02 (Claude Design, 28.07.2026): 1180 -> 1150, joining the same workspace-
         width bucket as Posts Manager/Stats/Admin instead of its own one-off number.-->
         <app-modal [width]="1150" (closed)="exportModalOpen.set(false)">
-            <svg modal-icon lucideSend class="icon"></svg>
+            <app-icon modal-icon name="paper-plane-tilt" size="sm"></app-icon>
             <span modal-title>{{ t().editor.export }}</span>
 
             <div class="export-grid">
@@ -121,7 +121,7 @@
                     <p class="export-result"><a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
                     <!--FI2.6: already live, so publishing again means rewriting the page. The
                     Unpublish button that used to sit here moved to the Posts Manager (FI2.1).-->
-                    <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.updateHint }}</p>
+                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.updateHint }}</p>
                     <a class="state-link" routerLink="/posts">{{ t().editor.exportModal.manageInManager }}</a>
                     } @else {
                     <p class="export-result">{{ t().editor.exportModal.unpublishedLinkStays }} <a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
@@ -150,12 +150,12 @@
                     <input type="checkbox" [checked]="isListedWhilePrivate()" (change)="toggleListedWhilePrivate()">
                     {{ t().editor.exportModal.listedWhilePrivate }}
                 </label>
-                <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.listedWhilePrivateHint }}</p>
+                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.listedWhilePrivateHint }}</p>
                 <label class="field-hint">
                     <input type="checkbox" [checked]="disableCopy()" (change)="toggleDisableCopy()">
                     {{ t().editor.exportModal.disableCopy }}
                 </label>
-                <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.disableCopyHint }}</p>
+                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.disableCopyHint }}</p>
                 }
 
                 <!--Design review (Claude Design, 28.07.2026) — "the form lives in three places at
@@ -193,7 +193,7 @@
                 <div class="channel-chosen">
                     <span class="channel-avatar" [style.background]="channelColor(sc.id)">{{ channelInitial(sc.title) }}</span>
                     <span class="channel-chosen-title">{{ sc.title }}</span>
-                    <button class="mini-remove" (click)="chatId = ''" [title]="t().editor.exportModal.changeChannel"><svg lucideX class="icon-sm"></svg></button>
+                    <button class="mini-remove" (click)="chatId = ''" [title]="t().editor.exportModal.changeChannel"><app-icon name="x" size="sm"></app-icon></button>
                 </div>
                 }
                 <!--N4: no free-text target. Picking a connected channel is the only way to set one.-->
@@ -207,7 +207,7 @@
                     }
                 </div>
                 } @else {
-                <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.pickChannelFirst }}</p>
+                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.pickChannelFirst }}</p>
                 }
 
                 <!--FI2.2: languages are checkboxes — a post can go out in several at once, each
@@ -226,7 +226,7 @@
                     }
                 </div>
                 @if (exportLangs().length > 1) {
-                <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.languagesHint }}</p>
+                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.languagesHint }}</p>
                 }
 
                 <div class="panel-label" style="margin-top:12px">{{ t().editor.exportModal.compression }} <span class="field-hint-inline">{{ t().editor.exportModal.compressionHint }}</span></div>
@@ -252,12 +252,12 @@
                 <div class="schedule-row">
                     <input type="datetime-local" [(ngModel)]="scheduledAt">
                     @if (scheduledAt) {
-                    <button class="mini-remove" (click)="scheduledAt = ''" [title]="t().common.cancel"><svg lucideX class="icon-sm"></svg></button>
+                    <button class="mini-remove" (click)="scheduledAt = ''" [title]="t().common.cancel"><app-icon name="x" size="sm"></app-icon></button>
                     }
                 </div>
                 @if (pickerZonesHint()) { <p class="tz-hint">{{ pickerZonesHint() }}</p> }
                 @if (scheduledAt) {
-                <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.scheduleHint }}</p>
+                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.scheduleHint }}</p>
                 <a class="state-link" routerLink="/posts">{{ t().editor.exportModal.manageInManager }}</a>
                 }
                 @if (scheduleResult()) { <p class="export-result">{{ scheduleResult() }}</p> }
@@ -280,7 +280,7 @@
                 <div class="channel-add">
                     <input class="chat-input" [(ngModel)]="newChannelChatId" [disabled]="channelBusy()" [placeholder]="t().editor.exportModal.manualPlaceholder" (keyup.enter)="connectChannel()">
                     <button class="mini" (click)="connectChannel()" [disabled]="channelBusy()" [title]="t().editor.exportModal.connect">
-                        @if (channelBusy()) { <svg lucideRefreshCw class="icon-sm spin"></svg> } @else { <svg lucidePlus class="icon-sm"></svg> }
+                        @if (channelBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> } @else { <app-icon name="plus" size="sm"></app-icon> }
                     </button>
                 </div>
                 @if (channelError()) { <p class="channel-error">{{ channelError() }}</p> }
@@ -288,7 +288,7 @@
                 <div class="panel-head">
                     <span class="panel-label">{{ t().editor.exportModal.available }}</span>
                     <button class="mini" (click)="refreshKnownChats(); $event.stopPropagation()" [disabled]="knownChatsRefreshing()" [title]="t().editor.exportModal.refresh">
-                        <svg lucideRefreshCw class="icon-sm" [class.spin]="knownChatsRefreshing()"></svg>
+                        <app-icon name="arrow-clockwise" size="sm" [class.spin]="knownChatsRefreshing()"></app-icon>
                     </button>
                 </div>
                 @if (knownChats().length) {
@@ -299,16 +299,16 @@
                             <div class="channel-row-top">
                                 <div class="channel-title">{{ k.title }}</div>
                                 <button class="mini" (click)="connectChannel(k.telegramChatId + ''); $event.stopPropagation()" [disabled]="channelBusy()" [title]="t().editor.exportModal.connect">
-                                    @if (channelBusy()) { <svg lucideRefreshCw class="icon-sm spin"></svg> } @else { <svg lucidePlus class="icon-sm"></svg> }
+                                    @if (channelBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> } @else { <app-icon name="plus" size="sm"></app-icon> }
                                 </button>
                             </div>
                         </div>
                     </div>
                     }
                 } @else if (auth.telegramLinked()) {
-                    <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.nothingNew }}</p>
+                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.nothingNew }}</p>
                 } @else {
-                    <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.linkTelegramFirst }}</p>
+                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.linkTelegramFirst }}</p>
                 }
 
                 <div class="panel-head">
@@ -322,7 +322,7 @@
                             <div class="channel-row-top">
                                 <div class="channel-title">{{ c.title }}</div>
                                 <button class="mini-remove" (click)="removeChannel(c.id); $event.stopPropagation()" [disabled]="channelBusy()" [title]="t().editor.exportModal.disconnect">
-                                    @if (channelBusy()) { <svg lucideRefreshCw class="icon-sm spin"></svg> } @else { <svg lucideX class="icon-sm"></svg> }
+                                    @if (channelBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> } @else { <app-icon name="x" size="sm"></app-icon> }
                                 </button>
                             </div>
                             @if (channelStats()[c.id]; as stats) {
@@ -368,7 +368,7 @@
                 <div class="export-section-title">{{ t().editor.exportModal.invitations }}</div>
                 <div class="invite-list">
                     @if (!currentBlog()) {
-                    <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.publishFirst }}</p>
+                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.publishFirst }}</p>
                     } @else if (invitesLoading()) {
                     <p class="field-hint-inline">{{ t().editor.exportModal.loadingInvites }}</p>
                     } @else {
@@ -376,13 +376,13 @@
                         <div class="invite-row">
                             <span class="invite-email">{{ inv.email }}</span>
                             <button class="mini" (click)="copyInviteLink(inv.url)" [title]="t().editor.exportModal.copyInvite">
-                                <svg lucideLink class="icon-sm"></svg>
+                                <app-icon name="link" size="sm"></app-icon>
                             </button>
                             <button class="mini" (click)="resendInvite(inv.id)" [disabled]="inviteBusy()" [title]="t().editor.exportModal.resend">
-                                <svg lucideRefreshCw class="icon-sm"></svg>
+                                <app-icon name="arrow-clockwise" size="sm"></app-icon>
                             </button>
                             <button class="mini-remove" (click)="revokeInvite(inv.id)" [disabled]="inviteBusy()" [title]="t().editor.exportModal.revoke">
-                                <svg lucideX class="icon-sm"></svg>
+                                <app-icon name="x" size="sm"></app-icon>
                             </button>
                         </div>
                         }
@@ -390,7 +390,7 @@
                             <input class="chat-input" [(ngModel)]="inviteEmailInput" (keydown.enter)="addInvite()"
                                 [placeholder]="t().editor.exportModal.invitePlaceholder" type="email">
                             <button class="mini" (click)="addInvite()" [disabled]="inviteBusy() || !inviteEmailInput.trim()" [title]="t().editor.exportModal.invite">
-                                <svg lucidePlus class="icon-sm"></svg>
+                                <app-icon name="plus" size="sm"></app-icon>
                             </button>
                         </div>
                     }
@@ -407,10 +407,10 @@
                     <input class="chat-input" [(ngModel)]="watermarkInput" (keydown.enter)="saveWatermark()"
                         [maxlength]="watermarkMaxLength" [placeholder]="t().editor.exportModal.watermarkPlaceholder">
                     <button class="mini" (click)="saveWatermark()" [disabled]="watermarkBusy()" [title]="t().common.save">
-                        <svg lucideCheck class="icon-sm"></svg>
+                        <app-icon name="check" size="sm"></app-icon>
                     </button>
                 </div>
-                <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.watermarkHint }}</p>
+                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.watermarkHint }}</p>
                 @if (watermarkError()) { <p class="channel-error">{{ watermarkError() }}</p> }
             </div>
             }
@@ -420,14 +420,14 @@
             <div class="export-section">
                 <div class="export-section-title">{{ t().editor.exportModal.fileExports }}</div>
                 <a class="export-btn" [href]="'/api/drafts/' + id + '/cedar'" download>
-                    <svg lucideDownload class="icon-sm"></svg>
+                    <app-icon name="download-simple" size="sm"></app-icon>
                     {{ t().editor.exportModal.downloadCedar }}
                 </a>
                 <a class="export-btn" [href]="'/api/drafts/' + id + '/export-zip'" download>
-                    <svg lucideDownload class="icon-sm"></svg>
+                    <app-icon name="download-simple" size="sm"></app-icon>
                     {{ t().editor.exportModal.downloadZip }}
                 </a>
-                <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().editor.exportModal.zipHint }}</p>
+                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.zipHint }}</p>
             </div>
             </div>
             <!-- /export-row-utility -->
@@ -438,18 +438,18 @@
             <div class="export-section">
                 <button class="other-platforms-toggle" (click)="otherPlatformsOpen.set(!otherPlatformsOpen())">
                     <span class="field-hint-inline">{{ t().editor.exportModal.otherPlatformsSummary }}</span>
-                    <svg lucideChevronDown class="icon-sm" [class.rotated]="otherPlatformsOpen()"></svg>
+                    <app-icon name="caret-down" size="sm" [class.rotated]="otherPlatformsOpen()"></app-icon>
                 </button>
                 @if (otherPlatformsOpen()) {
                 <div class="export-mock-list">
-                    <div class="export-mock-row"><svg lucideAtSign class="icon-sm"></svg><span>Twitter / X</span></div>
-                    <div class="export-mock-row"><svg lucideThumbsUp class="icon-sm"></svg><span>Facebook</span></div>
-                    <div class="export-mock-row"><svg lucideCloud class="icon-sm"></svg><span>Bluesky</span></div>
-                    <div class="export-mock-row"><svg lucideMessageSquareShare class="icon-sm"></svg><span>Threads</span></div>
-                    <div class="export-mock-row"><svg lucideFileText class="icon-sm"></svg><span>Medium</span></div>
-                    <div class="export-mock-row"><svg lucideHeart class="icon-sm"></svg><span>Patreon</span></div>
-                    <div class="export-mock-row"><svg lucideNotebook class="icon-sm"></svg><span>Notion</span></div>
-                    <div class="export-mock-row"><svg lucideFile class="icon-sm"></svg><span>Google Docs</span></div>
+                    <div class="export-mock-row"><app-icon name="at" size="sm"></app-icon><span>Twitter / X</span></div>
+                    <div class="export-mock-row"><app-icon name="thumbs-up" size="sm"></app-icon><span>Facebook</span></div>
+                    <div class="export-mock-row"><app-icon name="cloud" size="sm"></app-icon><span>Bluesky</span></div>
+                    <div class="export-mock-row"><app-icon name="chat-teardrop-dots" size="sm"></app-icon><span>Threads</span></div>
+                    <div class="export-mock-row"><app-icon name="file-text" size="sm"></app-icon><span>Medium</span></div>
+                    <div class="export-mock-row"><app-icon name="heart" size="sm"></app-icon><span>Patreon</span></div>
+                    <div class="export-mock-row"><app-icon name="notebook" size="sm"></app-icon><span>Notion</span></div>
+                    <div class="export-mock-row"><app-icon name="file" size="sm"></app-icon><span>Google Docs</span></div>
                 </div>
                 }
             </div>
@@ -475,7 +475,7 @@
                         <span class="asset-tg-badge" [title]="t().editor.exportModal.telegramDerivative">TG {{ formatFileSize(a.telegramSizeBytes) }}</span>
                         }
                         <button class="mini-remove" (click)="removeAssetFromDraft(a)" [title]="t().editor.exportModal.detachAsset">
-                            <svg lucideX class="icon-sm"></svg>
+                            <app-icon name="x" size="sm"></app-icon>
                         </button>
                     </div>
                     }
@@ -490,7 +490,7 @@
             just pressed, and the window stays open after publishing.-->
             @if (publishSuccess(); as done) {
             <div class="publish-toast">
-                <svg lucideCheck class="icon-sm"></svg>
+                <app-icon name="check" size="sm"></app-icon>
                 <span>{{ t().editor.exportModal.publishedOk }}</span>
                 @for (link of done.links; track link.url) {
                 <a [href]="link.url" target="_blank" rel="noopener">{{ link.label }}</a>
@@ -502,7 +502,7 @@
             follows what pressing it will actually do (FI2.6/FI2.7).-->
             <button modal-actions class="btn-ghost" (click)="exportModalOpen.set(false)">{{ t().common.close }}</button>
             <button modal-actions class="btn-accent" (click)="publishAll()" [disabled]="!canPublishAll()">
-                @if (publishingAll()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+                @if (publishingAll()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
                 {{ publishButtonLabel() }}
             </button>
     </app-modal>
@@ -515,17 +515,17 @@
         <span class="sep"></span>
         <div class="tb-group">
             <div class="tb-row">
-                @if (!toolbarLayout.isHidden('bold')) { <button (click)="cmd(c => c.toggleBold())" [class.on]="isActive('bold')" [title]="tip(t().editor.tb.bold, 'bold')"><svg lucideBold class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('italic')) { <button (click)="cmd(c => c.toggleItalic())" [class.on]="isActive('italic')" [title]="tip(t().editor.tb.italic, 'italic')"><svg lucideItalic class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('underline')) { <button (click)="cmd(c => c.toggleUnderline())" [class.on]="isActive('underline')" [title]="tip(t().editor.tb.underline, 'underline')"><svg lucideUnderline class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('strike')) { <button (click)="cmd(c => c.toggleStrike())" [class.on]="isActive('strike')" [title]="tip(t().editor.tb.strike, 'strike')"><svg lucideStrikethrough class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('spoiler')) { <button (click)="cmd(c => c.toggleMark('spoiler'))" [class.on]="isActive('spoiler')" [title]="t().editor.tb.spoiler"><svg lucideEyeOff class="icon"></svg></button> }
+                @if (!toolbarLayout.isHidden('bold')) { <button (click)="cmd(c => c.toggleBold())" [class.on]="isActive('bold')" [title]="tip(t().editor.tb.bold, 'bold')"><app-icon name="text-b" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('italic')) { <button (click)="cmd(c => c.toggleItalic())" [class.on]="isActive('italic')" [title]="tip(t().editor.tb.italic, 'italic')"><app-icon name="text-italic" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('underline')) { <button (click)="cmd(c => c.toggleUnderline())" [class.on]="isActive('underline')" [title]="tip(t().editor.tb.underline, 'underline')"><app-icon name="text-underline" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('strike')) { <button (click)="cmd(c => c.toggleStrike())" [class.on]="isActive('strike')" [title]="tip(t().editor.tb.strike, 'strike')"><app-icon name="text-strikethrough" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('spoiler')) { <button (click)="cmd(c => c.toggleMark('spoiler'))" [class.on]="isActive('spoiler')" [title]="t().editor.tb.spoiler"><app-icon name="eye-slash" size="sm"></app-icon></button> }
                 @if (!toolbarLayout.isHidden('align')) {
                 <span class="sep"></span>
-                <button (click)="setAlign('left')" [class.on]="isActive('paragraph', {textAlign:'left'}) || isActive('heading', {textAlign:'left'})" [title]="t().editor.tb.alignLeft"><svg lucideAlignLeft class="icon"></svg></button>
-                <button (click)="setAlign('center')" [class.on]="isActive('paragraph', {textAlign:'center'}) || isActive('heading', {textAlign:'center'})" [title]="t().editor.tb.alignCenter"><svg lucideAlignCenter class="icon"></svg></button>
-                <button (click)="setAlign('right')" [class.on]="isActive('paragraph', {textAlign:'right'}) || isActive('heading', {textAlign:'right'})" [title]="t().editor.tb.alignRight"><svg lucideAlignRight class="icon"></svg></button>
-                <button (click)="setAlign('justify')" [class.on]="isActive('paragraph', {textAlign:'justify'}) || isActive('heading', {textAlign:'justify'})" [title]="t().editor.tb.alignJustify"><svg lucideAlignJustify class="icon"></svg></button>
+                <button (click)="setAlign('left')" [class.on]="isActive('paragraph', {textAlign:'left'}) || isActive('heading', {textAlign:'left'})" [title]="t().editor.tb.alignLeft"><app-icon name="text-align-left" size="sm"></app-icon></button>
+                <button (click)="setAlign('center')" [class.on]="isActive('paragraph', {textAlign:'center'}) || isActive('heading', {textAlign:'center'})" [title]="t().editor.tb.alignCenter"><app-icon name="text-align-center" size="sm"></app-icon></button>
+                <button (click)="setAlign('right')" [class.on]="isActive('paragraph', {textAlign:'right'}) || isActive('heading', {textAlign:'right'})" [title]="t().editor.tb.alignRight"><app-icon name="text-align-right" size="sm"></app-icon></button>
+                <button (click)="setAlign('justify')" [class.on]="isActive('paragraph', {textAlign:'justify'}) || isActive('heading', {textAlign:'justify'})" [title]="t().editor.tb.alignJustify"><app-icon name="text-align-justify" size="sm"></app-icon></button>
                 }
             </div>
             <span class="tb-caption">{{ t().editor.groups.text }}</span>
@@ -538,21 +538,21 @@
             <div class="tb-row">
                 @if (!toolbarLayout.isHidden('link')) {
                 <button (click)="openInsertModal()" [class.on]="isActive('link')" [title]="t().editor.tb.insert">
-                    <svg lucideLink class="icon"></svg>
+                    <app-icon name="link" size="sm"></app-icon>
                 </button>
                 }
 
                 @if (!toolbarLayout.isHidden('emoji')) {
-                <button (click)="emojiOpen.set(true)" [title]="t().editor.tb.emoji"><svg lucideSmile class="icon"></svg></button>
+                <button (click)="emojiOpen.set(true)" [title]="t().editor.tb.emoji"><app-icon name="smiley" size="sm"></app-icon></button>
                 }
 
                 @if (!toolbarLayout.isHidden('datetime')) {
-                <button (click)="datetimeOpen.set(true)" [title]="t().editor.tb.datetime"><svg lucideClock class="icon"></svg></button>
+                <button (click)="datetimeOpen.set(true)" [title]="t().editor.tb.datetime"><app-icon name="clock" size="sm"></app-icon></button>
                 }
 
                 @if (!toolbarLayout.isHidden('footnote')) {
                 <app-popover>
-                    <button trigger [title]="t().editor.tb.footnote"><svg lucideSuperscript class="icon"></svg></button>
+                    <button trigger [title]="t().editor.tb.footnote"><app-icon name="text-superscript" size="sm"></app-icon></button>
                     <div panel class="link-popover">
                         <textarea class="chat-input" rows="3" [placeholder]="t().editor.groups.footnotePlaceholder" [(ngModel)]="footnoteText"></textarea>
                         <button class="export-btn full" style="margin-top:8px" (click)="insertFootnote()" [disabled]="!footnoteText.trim()">{{ t().editor.groups.insert }}</button>
@@ -568,11 +568,11 @@
         <span class="sep"></span>
         <div class="tb-group">
             <div class="tb-row">
-                @if (!toolbarLayout.isHidden('bulletList')) { <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')" [title]="tip(t().editor.tb.bulletList, 'bulletList')"><svg lucideList class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('orderedList')) { <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')" [title]="tip(t().editor.tb.orderedList, 'orderedList')"><svg lucideListOrdered class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('taskList')) { <button (click)="cmd(c => c.toggleTaskList())" [class.on]="isActive('taskList')" [title]="tip(t().editor.tb.taskList, 'taskList')"><svg lucideListTodo class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('indent')) { <button (click)="indent()" [title]="t().editor.tb.indent"><svg lucideIndent class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('outdent')) { <button (click)="outdent()" [title]="t().editor.tb.outdent"><svg lucideOutdent class="icon"></svg></button> }
+                @if (!toolbarLayout.isHidden('bulletList')) { <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')" [title]="tip(t().editor.tb.bulletList, 'bulletList')"><app-icon name="list" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('orderedList')) { <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')" [title]="tip(t().editor.tb.orderedList, 'orderedList')"><app-icon name="list-numbers" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('taskList')) { <button (click)="cmd(c => c.toggleTaskList())" [class.on]="isActive('taskList')" [title]="tip(t().editor.tb.taskList, 'taskList')"><app-icon name="list-checks" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('indent')) { <button (click)="indent()" [title]="t().editor.tb.indent"><app-icon name="text-indent" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('outdent')) { <button (click)="outdent()" [title]="t().editor.tb.outdent"><app-icon name="text-outdent" size="sm"></app-icon></button> }
             </div>
             <span class="tb-caption">{{ t().editor.groups.lists }}</span>
         </div>
@@ -582,8 +582,8 @@
         <span class="sep"></span>
         <div class="tb-group">
             <div class="tb-row">
-                @if (!toolbarLayout.isHidden('inlineCode')) { <button (click)="cmd(c => c.toggleCode())" [class.on]="isActive('code')" [title]="tip(t().editor.tb.inlineCode, 'inlineCode')"><svg lucideCode class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('codeBlock')) { <button (click)="cmd(c => c.toggleCodeBlock())" [class.on]="isActive('codeBlock')" [title]="tip(t().editor.tb.codeBlock, 'codeBlock')"><svg lucideSquareCode class="icon"></svg></button> }
+                @if (!toolbarLayout.isHidden('inlineCode')) { <button (click)="cmd(c => c.toggleCode())" [class.on]="isActive('code')" [title]="tip(t().editor.tb.inlineCode, 'inlineCode')"><app-icon name="code" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('codeBlock')) { <button (click)="cmd(c => c.toggleCodeBlock())" [class.on]="isActive('codeBlock')" [title]="tip(t().editor.tb.codeBlock, 'codeBlock')"><app-icon name="code-block" size="sm"></app-icon></button> }
             </div>
             <span class="tb-caption">{{ t().editor.groups.code }}</span>
         </div>
@@ -594,12 +594,12 @@
         <div class="tb-group">
             <div class="tb-row">
                 @if (!toolbarLayout.isHidden('image')) {
-                <button (click)="fileInput.click()" [title]="t().editor.tb.image"><svg lucideImage class="icon"></svg></button>
+                <button (click)="fileInput.click()" [title]="t().editor.tb.image"><app-icon name="image" size="sm"></app-icon></button>
                 <input #fileInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onFileChosen($event)">
                 }
 
                 @if (!toolbarLayout.isHidden('video')) {
-                <button (click)="videoInput.click()" [title]="t().editor.tb.video"><svg lucideVideo class="icon"></svg></button>
+                <button (click)="videoInput.click()" [title]="t().editor.tb.video"><app-icon name="video-camera" size="sm"></app-icon></button>
                 <input #videoInput type="file" accept="video/mp4" multiple hidden (change)="onVideoChosen($event)">
                 }
 
@@ -609,17 +609,17 @@
                 }
 
                 @if (!toolbarLayout.isHidden('audio')) {
-                <button (click)="audioInput.click()" [title]="t().editor.tb.audio"><svg lucideAudioLines class="icon"></svg></button>
+                <button (click)="audioInput.click()" [title]="t().editor.tb.audio"><app-icon name="waveform" size="sm"></app-icon></button>
                 <input #audioInput type="file" accept="audio/mpeg,audio/ogg" multiple hidden (change)="onAudioChosen($event)">
                 }
 
                 @if (!toolbarLayout.isHidden('carousel')) {
-                <button (click)="carouselInput.click()" [title]="t().editor.tb.carousel"><svg lucideImages class="icon"></svg></button>
+                <button (click)="carouselInput.click()" [title]="t().editor.tb.carousel"><app-icon name="images" size="sm"></app-icon></button>
                 <input #carouselInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCarouselChosen($event)">
                 }
 
                 @if (!toolbarLayout.isHidden('collage')) {
-                <button (click)="collageInput.click()" [title]="t().editor.tb.collage"><svg lucideLayoutGrid class="icon"></svg></button>
+                <button (click)="collageInput.click()" [title]="t().editor.tb.collage"><app-icon name="squares-four" size="sm"></app-icon></button>
                 <input #collageInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCollageChosen($event)">
                 }
 
@@ -639,18 +639,18 @@
             <div class="tb-row">
                 @if (!toolbarLayout.isHidden('table')) {
                 <app-popover>
-                    <button trigger [title]="t().editor.tb.table"><svg lucideTable class="icon"></svg></button>
+                    <button trigger [title]="t().editor.tb.table"><app-icon name="table" size="sm"></app-icon></button>
                     <div panel class="block-menu">
                         @if (isActive('table')) {
-                        <button (click)="cmd(c => c.addRowBefore())"><svg lucidePlus class="icon-xs"></svg> Add row above</button>
-                        <button (click)="cmd(c => c.addRowAfter())"><svg lucidePlus class="icon-xs"></svg> Add row below</button>
-                        <button (click)="cmd(c => c.deleteRow())"><svg lucideX class="icon-xs"></svg> Delete row</button>
-                        <button (click)="cmd(c => c.addColumnBefore())"><svg lucidePlus class="icon-xs"></svg> Add column left</button>
-                        <button (click)="cmd(c => c.addColumnAfter())"><svg lucidePlus class="icon-xs"></svg> Add column right</button>
-                        <button (click)="cmd(c => c.deleteColumn())"><svg lucideX class="icon-xs"></svg> Delete column</button>
-                        <button (click)="cmd(c => c.deleteTable())"><svg lucideTrash2 class="icon-xs"></svg> Delete table</button>
+                        <button (click)="cmd(c => c.addRowBefore())"><app-icon name="plus" size="xs"></app-icon> Add row above</button>
+                        <button (click)="cmd(c => c.addRowAfter())"><app-icon name="plus" size="xs"></app-icon> Add row below</button>
+                        <button (click)="cmd(c => c.deleteRow())"><app-icon name="x" size="xs"></app-icon> Delete row</button>
+                        <button (click)="cmd(c => c.addColumnBefore())"><app-icon name="plus" size="xs"></app-icon> Add column left</button>
+                        <button (click)="cmd(c => c.addColumnAfter())"><app-icon name="plus" size="xs"></app-icon> Add column right</button>
+                        <button (click)="cmd(c => c.deleteColumn())"><app-icon name="x" size="xs"></app-icon> Delete column</button>
+                        <button (click)="cmd(c => c.deleteTable())"><app-icon name="trash" size="xs"></app-icon> Delete table</button>
                         } @else {
-                        <button (click)="insertTable()"><svg lucideTable class="icon-xs"></svg> Insert table</button>
+                        <button (click)="insertTable()"><app-icon name="table" size="xs"></app-icon> Insert table</button>
                         }
                     </div>
                 </app-popover>
@@ -658,18 +658,18 @@
 
                 @if (!toolbarLayout.isHidden('formula')) {
                 <app-popover>
-                    <button trigger [title]="t().editor.tb.formula"><svg lucideSigma class="icon"></svg></button>
+                    <button trigger [title]="t().editor.tb.formula"><app-icon name="sigma" size="sm"></app-icon></button>
                     <div panel class="block-menu">
-                        <button (click)="insertInlineMath()"><svg lucideSigma class="icon-xs"></svg> Inline formula</button>
-                        <button (click)="insertBlockMath()"><svg lucideSigmaSquare class="icon-xs"></svg> Block formula</button>
+                        <button (click)="insertInlineMath()"><app-icon name="sigma" size="xs"></app-icon> Inline formula</button>
+                        <button (click)="insertBlockMath()"><app-icon name="sigma" size="xs"></app-icon> Block formula</button>
                     </div>
                 </app-popover>
                 }
 
-                @if (!toolbarLayout.isHidden('blockquote')) { <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" [title]="tip(t().editor.tb.blockquote, 'blockquote')"><svg lucideQuote class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('toggle')) { <button (click)="insertToggle()" [title]="t().editor.tb.toggleBlock"><svg lucideListCollapse class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('toc')) { <button (click)="insertTableOfContents()" [title]="t().editor.tb.toc"><svg lucideTableOfContents class="icon"></svg></button> }
-                @if (!toolbarLayout.isHidden('divider')) { <button (click)="insertDivider()" [title]="t().editor.tb.divider"><svg lucideSeparatorHorizontal class="icon"></svg></button> }
+                @if (!toolbarLayout.isHidden('blockquote')) { <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" [title]="tip(t().editor.tb.blockquote, 'blockquote')"><app-icon name="quotes" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('toggle')) { <button (click)="insertToggle()" [title]="t().editor.tb.toggleBlock"><app-icon name="list-dashes" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('toc')) { <button (click)="insertTableOfContents()" [title]="t().editor.tb.toc"><app-icon name="list-bullets" size="sm"></app-icon></button> }
+                @if (!toolbarLayout.isHidden('divider')) { <button (click)="insertDivider()" [title]="t().editor.tb.divider"><app-icon name="rows" size="sm"></app-icon></button> }
             </div>
             <span class="tb-caption">{{ t().editor.groups.blocks }}</span>
         </div>
@@ -683,10 +683,10 @@
             <div class="tb-row">
                 @if (!toolbarLayout.isHidden('annotation')) {
                 <button (click)="insertAnnotation()" [disabled]="!canAnnotate()" [title]="t().editor.tb.annotation">
-                    <svg lucideMessageSquare class="icon"></svg>
+                    <app-icon name="chat-teardrop" size="sm"></app-icon>
                 </button>
                 }
-                @if (!toolbarLayout.isHidden('poll')) { <button (click)="insertPoll()" [title]="t().editor.tb.poll"><svg lucideVote class="icon"></svg></button> }
+                @if (!toolbarLayout.isHidden('poll')) { <button (click)="insertPoll()" [title]="t().editor.tb.poll"><app-icon name="check-square" size="sm"></app-icon></button> }
             </div>
             <span class="tb-caption">{{ t().editor.groups.feedback }}</span>
         </div>
@@ -698,7 +698,7 @@
             <app-popover>
                 <button trigger class="block-dropdown">
                     {{ currentBlockLevel() === 0 ? t().editor.blocks.paragraph : t().editor.blocks.heading(currentBlockLevel()) }}
-                    <svg lucideChevronDown class="icon-xs"></svg>
+                    <app-icon name="caret-down" size="xs"></app-icon>
                 </button>
                 <div panel class="block-menu">
                     <button [class.on]="currentBlockLevel() === 0" (click)="setBlockType(0)">{{ t().editor.blocks.paragraph }}</button>
@@ -713,8 +713,8 @@
             <span class="tb-caption">{{ t().editor.groups.block }}</span>
         </div>
         <span class="sep"></span>
-        <button (click)="cmd(c => c.undo())" [disabled]="!canUndo()" [title]="tip(t().editor.tb.undo, 'undo')"><svg lucideUndo2 class="icon"></svg></button>
-        <button (click)="cmd(c => c.redo())" [disabled]="!canRedo()" [title]="tip(t().editor.tb.redo, 'redo')"><svg lucideRedo2 class="icon"></svg></button>
+        <button (click)="cmd(c => c.undo())" [disabled]="!canUndo()" [title]="tip(t().editor.tb.undo, 'undo')"><app-icon name="arrow-u-up-left" size="sm"></app-icon></button>
+        <button (click)="cmd(c => c.redo())" [disabled]="!canRedo()" [title]="tip(t().editor.tb.redo, 'redo')"><app-icon name="arrow-u-up-right" size="sm"></app-icon></button>
 
         <!--Rendered from the stored order, not a fixed chain of @if: reordering groups within a
         row was draggable in the Appearance panel but had nothing reading it here, so it did
@@ -732,7 +732,7 @@
             <div class="tb-row">
                 <app-popover align="right">
                     <button trigger class="ai-chip" [title]="t().editor.tb.ai">
-                        <svg lucideSparkle class="icon-xs"></svg>
+                        <app-icon name="sparkle" size="xs"></app-icon>
                         @if (aiEditBusy()) {
                             {{ aiEditProgress() }}% · {{ aiEditElapsed() }}s
                             <span class="ai-chip-progress-track"><span class="ai-chip-progress-fill" [style.width.%]="aiEditProgress()"></span></span>
@@ -743,14 +743,14 @@
                     <div panel class="block-menu">
                         @if (aiEditBusy()) {
                         <button (click)="cancelAiEdit()">
-                            <svg lucideX class="icon-xs"></svg> Cancel
+                            <app-icon name="x" size="xs"></app-icon> Cancel
                         </button>
                         } @else {
                         <button (click)="askAiEdit('fix-errors')">
-                            <svg lucideSparkle class="icon-xs"></svg> Fix errors
+                            <app-icon name="sparkle" size="xs"></app-icon> Fix errors
                         </button>
                         <button (click)="askAiEdit('schizo')">
-                            <svg lucideSparkle class="icon-xs"></svg> Schizo-izer
+                            <app-icon name="sparkle" size="xs"></app-icon> Schizo-izer
                         </button>
                         }
                     </div>
@@ -789,7 +789,7 @@
     <!--AI confirm dialog (replaces window.confirm)-->
     @if (aiConfirmKind(); as kind) {
     <app-modal (closed)="cancelAiConfirm()">
-        <svg modal-icon lucideSparkle class="icon"></svg>
+        <app-icon modal-icon name="sparkle" size="sm"></app-icon>
         <span modal-title>{{ aiConfirmTitle() }}</span>
         <p>{{ aiConfirmBody() }}</p>
         <button modal-actions class="btn-ghost" (click)="cancelAiConfirm()">{{ t().common.cancel }}</button>
@@ -802,7 +802,7 @@
     it. Same fix ADR-057 already applied to the Appearance panel.-->
     @if (emojiOpen()) {
     <app-modal [width]="320" (closed)="emojiOpen.set(false)">
-        <svg modal-icon lucideSmile class="icon"></svg>
+        <app-icon modal-icon name="smiley" size="sm"></app-icon>
         <span modal-title>{{ t().editor.tb.emoji }}</span>
 
         <div class="emoji-popover">
@@ -821,7 +821,7 @@
     <!--Date/time modal: was app-popover, moved alongside the emoji panel for consistency.-->
     @if (datetimeOpen()) {
     <app-modal [width]="320" (closed)="datetimeOpen.set(false)">
-        <svg modal-icon lucideClock class="icon"></svg>
+        <app-icon modal-icon name="clock" size="sm"></app-icon>
         <span modal-title>{{ t().editor.tb.datetime }}</span>
 
         <input type="datetime-local" class="chat-input" [(ngModel)]="dtValue">
@@ -839,7 +839,7 @@
     <!--Insert modal: unified link/YouTube/email/phone/mention, replaces the separate Link and YouTube popovers-->
     @if (insertOpen()) {
     <app-modal [width]="480" (closed)="closeInsertModal()">
-        <svg modal-icon lucideLink class="icon"></svg>
+        <app-icon modal-icon name="link" size="sm"></app-icon>
         <span modal-title>{{ t().editor.groups.insert }}</span>
 
         <div class="format-toggle insert-type-rail">
@@ -915,7 +915,7 @@
     <!--Re-translate confirm dialog (replaces window.confirm)-->
     @if (translateConfirmOpen()) {
     <app-modal (closed)="cancelTranslateConfirm()">
-        <svg modal-icon lucideRefreshCw class="icon"></svg>
+        <app-icon modal-icon name="arrow-clockwise" size="sm"></app-icon>
         <span modal-title>{{ t().editor.lang.replaceTitle(lang().toUpperCase()) }}</span>
         <p>{{ t().editor.lang.replaceBody }}</p>
         <button modal-actions class="btn-ghost" (click)="cancelTranslateConfirm()">{{ t().common.cancel }}</button>
@@ -926,7 +926,7 @@
     <!--AI success toast-->
     @if (aiToast(); as toast) {
     <div class="ai-toast">
-        <svg lucideCheck class="icon-xs"></svg>
+        <app-icon name="check" size="xs"></app-icon>
         <span>{{ toast }}</span>
     </div>
     }
@@ -956,11 +956,11 @@
             @if (currentId()) {
             <div class="draft-state-row" [style.max-width.px]="sheetMaxWidthPx()">
                 @if (isPrivate()) {
-                <span class="state-chip private"><svg lucideLock class="icon-xs"></svg> {{ t().editor.state.private }}</span>
+                <span class="state-chip private"><app-icon name="lock" size="xs"></app-icon> {{ t().editor.state.private }}</span>
                 <!--I7: the watermark itself is never drawn in the editor — it would fight the
                 text you're writing. The strip just reports that one is configured.-->
                 @if (watermarkText()) {
-                <span class="state-chip" [title]="watermarkText()"><svg lucideDroplets class="icon-xs"></svg> {{ t().editor.state.watermarked }}</span>
+                <span class="state-chip" [title]="watermarkText()"><app-icon name="drop" size="xs"></app-icon> {{ t().editor.state.watermarked }}</span>
                 }
                 } @else {
                 <span class="state-chip">{{ t().editor.state.public }}</span>
@@ -1008,7 +1008,7 @@
                         {{ t().editor.lang.retranslate }}
                     </button>
                 <button class="lang-delete" (click)="deleteVersion()" [disabled]="autoTranslating()" [title]="t().editor.lang.deleteTranslation">
-                    <svg lucideTrash2 class="icon-sm"></svg>
+                    <app-icon name="trash" size="sm"></app-icon>
                 </button>
                 }
                 <app-popover>
@@ -1237,7 +1237,7 @@
         tab's fixed strip covered this bar and swallowed clicks meant for the fullscreen button.-->
         <button class="status-icon-btn console-toggle" [class.active]="debugLog.open()"
                 (click)="debugLog.toggleOpen()" [title]="t().debug.console">
-            <svg lucideTerminal class="icon-xs"></svg>
+            <app-icon name="terminal-window" size="xs"></app-icon>
             <span>{{ t().debug.console }}</span>
             @if (debugLog.inFlightCount() > 0) {
             <span class="console-badge busy">{{ debugLog.inFlightCount() }}</span>
@@ -1250,8 +1250,8 @@
         fullscreen button, and the browser's own is the one Esc already exits.-->
         <button class="status-icon-btn" (click)="toggleFullscreen()"
                 [title]="isFullscreen() ? t().editor.exitFullscreen : t().editor.enterFullscreen">
-            @if (isFullscreen()) { <svg lucideMinimize class="icon-xs"></svg> }
-            @else { <svg lucideMaximize class="icon-xs"></svg> }
+            @if (isFullscreen()) { <app-icon name="arrows-in-simple" size="xs"></app-icon> }
+            @else { <app-icon name="arrows-out-simple" size="xs"></app-icon> }
         </button>
     </div>
 </div>

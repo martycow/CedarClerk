@@ -56,7 +56,7 @@
             </div>
 
             <div class="field-group">
-                <label for="cc-sig">{{ t().settings.profile.signature }} @if (!hasProSignature()) { <span class="pro-lock-badge"><svg lucideLock class="icon-xxs"></svg>PRO</span> }</label>
+                <label for="cc-sig">{{ t().settings.profile.signature }} @if (!hasProSignature()) { <span class="pro-lock-badge"><app-icon name="lock" size="xs"></app-icon>PRO</span> }</label>
                 @if (hasProSignature()) {
                 <p class="field-hint">{{ t().settings.profile.signatureHintPro }}</p>
                 } @else {
@@ -81,7 +81,7 @@
                         {{ signatureBusy() ? '…' : t().settings.profile.saveSignature }}
                     </button>
                     @if (signatureSaved()) {
-                    <span class="saved-check"><svg lucideCheck class="icon-xs"></svg>{{ t().settings.saved }}</span>
+                    <span class="saved-check"><app-icon name="check" size="xs"></app-icon>{{ t().settings.saved }}</span>
                     }
                 </div>
                 @if (signatureError()) { <p class="field-error">{{ signatureError() }}</p> }
@@ -169,7 +169,7 @@
                 </select>
             </div>
             <div class="field-group">
-                <label for="cc-slot-3">{{ t().settings.headerSlots.slot(3) }} @if (!hasProHeaderSlot()) { <span class="pro-lock-badge"><svg lucideLock class="icon-xxs"></svg>PRO</span> }</label>
+                <label for="cc-slot-3">{{ t().settings.headerSlots.slot(3) }} @if (!hasProHeaderSlot()) { <span class="pro-lock-badge"><app-icon name="lock" size="xs"></app-icon>PRO</span> }</label>
                 <select id="cc-slot-3" [(ngModel)]="headerSlot3" [disabled]="!hasProHeaderSlot()"
                         [title]="hasProHeaderSlot() ? '' : t().settings.headerSlots.slotUpgrade">
                     <option [ngValue]="null">{{ t().settings.headerSlots.none }}</option>
@@ -257,7 +257,7 @@
                 {{ profileBusy() ? '…' : t().settings.saveProfile }}
             </button>
             @if (profileSaved()) {
-            <span class="saved-check"><svg lucideCheck class="icon-xs"></svg>{{ t().settings.saved }}</span>
+            <span class="saved-check"><app-icon name="check" size="xs"></app-icon>{{ t().settings.saved }}</span>
             }
             @if (profileError()) { <span class="field-error">{{ profileError() }}</span> }
         </div>
@@ -287,7 +287,7 @@
 
             @if (billingMessage()) {
             <div class="success-banner">
-                <svg lucideCheck class="icon-xs"></svg>
+                <app-icon name="check" size="xs"></app-icon>
                 {{ billingMessage() }}
             </div>
             }
@@ -359,7 +359,7 @@
                     </button>
                 </div>
                 <button class="btn-primary" (click)="confirmUpgrade()" [disabled]="billingBusy()">
-                    <svg lucideSend class="icon-xs"></svg>
+                    <app-icon name="paper-plane-tilt" size="xs"></app-icon>
                     {{ billingBusy() ? '…' : (selectedPlan === 'trial' ? t().settings.subscription.startTrial(priceFor(selectedPlan)) : t().settings.subscription.upgrade(priceFor(selectedPlan))) }}
                 </button>
             </div>

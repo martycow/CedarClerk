@@ -18,15 +18,7 @@ import { PageHeaderComponent } from '../shared/page-header.component';
 import { ModalComponent } from '../shared/modal.component';
 import { PopoverComponent } from '../shared/popover.component';
 import { httpErrorMessage } from '../core/http-error.util';
-import {
-    LucidePlus as Plus,
-    LucideArchive as Archive, LucideArchiveRestore as ArchiveRestore, LucideTrash2 as Trash2,
-    LucideLayoutTemplate as LayoutTemplate,
-    LucideRefreshCw as RefreshCw, LucideLayoutGrid as LayoutGrid, LucideList as List,
-    LucideFolder as Folder,
-    LucideLock as Lock, LucideFileUp as FileUp, LucideUpload as Upload,
-    LucideEye as Eye, LucideHeart as Heart, LucideTriangleAlert as TriangleAlert,
-} from '@lucide/angular';
+import { IconComponent } from '../shared/icon.component';
 
 type FilterKey = 'all' | 'draft' | 'scheduled' | 'published' | 'attention' | 'archived' | 'template';
 export type SortKey = 'title' | 'state' | 'languages' | 'folder' | 'tags' | 'activity' | 'updated' | 'created';
@@ -129,12 +121,7 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
 
 @Component({
     selector: 'app-drafts',
-    imports: [
-        DatePipe, FormsModule, PageHeaderComponent, ModalComponent, PopoverComponent,
-        FolderPickerComponent, TagPickerComponent,
-        Plus, Archive, ArchiveRestore, Trash2, RefreshCw, LayoutGrid, List,
-        Folder, Lock, FileUp, Upload, Eye, Heart, LayoutTemplate, TriangleAlert,
-    ],
+    imports: [IconComponent, DatePipe, FormsModule, PageHeaderComponent, ModalComponent, PopoverComponent, FolderPickerComponent, TagPickerComponent],
     templateUrl: 'drafts.component.html',
     styleUrls: ['drafts.component.css'],
 })

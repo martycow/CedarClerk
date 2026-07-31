@@ -35,7 +35,7 @@ beside them — not a reading surface, so they follow the list's density rather 
                         beside the text. Without this the title was clipped mid-word with no
                         ellipsis at all.-->
                         <span class="post-row-title">
-                            @if (d.isPrivate) { <svg lucideLock class="icon-xs"></svg> }
+                            @if (d.isPrivate) { <app-icon name="lock" size="xs"></app-icon> }
                             <span class="post-row-title-text">{{ d.title || t().drafts.untitled }}</span>
                         </span>
                         <!--FI3.6: at a glance - where it is, what languages exist, and whether
@@ -78,7 +78,7 @@ beside them — not a reading surface, so they follow the list's density rather 
                         <app-tag-picker [tags]="editTags()" (tagsChange)="editTags.set($event)"></app-tag-picker>
                     </div>
                     <button class="btn-accent" (click)="saveMeta()" [disabled]="busy()">
-                        @if (renaming()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+                        @if (renaming()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
                         {{ t().common.save }}
                     </button>
 
@@ -95,19 +95,19 @@ beside them — not a reading surface, so they follow the list's density rather 
 
                     <div class="detail-actions">
                         <button class="btn-ghost" (click)="togglePrivate()" [disabled]="busy()">
-                            <svg lucideLock class="icon-sm"></svg>
+                            <app-icon name="lock" size="sm"></app-icon>
                             {{ d.isPrivate ? t().manager.makePublic : t().manager.makePrivate }}
                         </button>
                         <button class="btn-ghost" (click)="toggleArchive()" [disabled]="busy()">
-                            @if (d.isArchived) { <svg lucideArchiveRestore class="icon-sm"></svg> {{ t().manager.unarchive }} }
-                            @else { <svg lucideArchive class="icon-sm"></svg> {{ t().manager.archive }} }
+                            @if (d.isArchived) { <app-icon name="arrow-counter-clockwise" size="sm"></app-icon> {{ t().manager.unarchive }} }
+                            @else { <app-icon name="archive" size="sm"></app-icon> {{ t().manager.archive }} }
                         </button>
                         <button class="btn-ghost" (click)="openInEditor(d)">
-                            <svg lucidePenLine class="icon-sm"></svg>
+                            <app-icon name="pen" size="sm"></app-icon>
                             {{ t().manager.openInEditor }}
                         </button>
                         <button class="btn-ghost danger" (click)="deleteConfirmId.set(d.id)" [disabled]="busy()">
-                            <svg lucideTrash2 class="icon-sm"></svg>
+                            <app-icon name="trash" size="sm"></app-icon>
                             {{ t().common.delete }}
                         </button>
                     </div>
@@ -133,14 +133,14 @@ beside them — not a reading surface, so they follow the list's density rather 
                         }
                         @if (blogUrl(d); as url) {
                         <a class="detail-link-btn" [href]="url" target="_blank" rel="noopener">
-                            <svg lucideExternalLink class="icon-sm"></svg> {{ t().manager.openBlog }}
+                            <app-icon name="arrow-square-out" size="sm"></app-icon> {{ t().manager.openBlog }}
                         </a>
                         }
                         <!--FI2.1: unpublishing is managing an already-published post, which the
                         Export window explicitly stops doing (FI2.6) — it belongs here.-->
                         @if (d.isBlogPublished) {
                         <button class="btn-ghost danger" (click)="unpublish(d)" [disabled]="busy()">
-                            @if (unpublishing()) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
+                            @if (unpublishing()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
                             {{ t().manager.unpublish }}
                         </button>
                         } @else if (d.blogSlug) {
@@ -152,7 +152,7 @@ beside them — not a reading surface, so they follow the list's density rather 
                     <div class="detail-field">
                         <label>{{ t().manager.telegram }}</label>
                         <a class="detail-link-btn" [href]="url" target="_blank" rel="noopener">
-                            <svg lucideExternalLink class="icon-sm"></svg> {{ t().manager.openTelegram }}
+                            <app-icon name="arrow-square-out" size="sm"></app-icon> {{ t().manager.openTelegram }}
                         </a>
                     </div>
                     }
@@ -183,7 +183,7 @@ beside them — not a reading surface, so they follow the list's density rather 
                             </div>
                             <button class="mini-remove" (click)="cancelScheduled(p.id)"
                                     [title]="p.status === 'Pending' ? t().manager.cancelScheduled : t().manager.removeFromList">
-                                <svg lucideX class="icon-sm"></svg>
+                                <app-icon name="x" size="sm"></app-icon>
                             </button>
                         </div>
                         }
@@ -362,11 +362,11 @@ beside them — not a reading surface, so they follow the list's density rather 
                                     <button class="lang-chip-act" (click)="translatePresetLanguage(l)"
                                             [disabled]="presetTranslating() !== null"
                                             [title]="t().manager.forms.translateLang">
-                                        @if (presetTranslating() === l) { <svg lucideRefreshCw class="icon-sm spin"></svg> }
-                                        @else { <svg lucideRefreshCw class="icon-sm"></svg> }
+                                        @if (presetTranslating() === l) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                                        @else { <app-icon name="arrow-clockwise" size="sm"></app-icon> }
                                     </button>
                                     <button class="lang-chip-act" (click)="removePresetLanguage(l)" [title]="t().manager.forms.removeLang">
-                                        <svg lucideX class="icon-sm"></svg>
+                                        <app-icon name="x" size="sm"></app-icon>
                                     </button>
                                     }
                                 </span>
@@ -388,7 +388,7 @@ beside them — not a reading surface, so they follow the list's density rather 
                             <p class="reg-error-inline">{{ presetTranslateError() }}</p>
                             }
                         </div>
-                        <p class="hint-bubble"><svg lucideInfo class="icon-sm"></svg>{{ t().manager.forms.languageHint }}</p>
+                        <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().manager.forms.languageHint }}</p>
                         @for (l of presetLangs(); track l) {
                         <label class="form-field">
                             <span class="form-field-label">{{ t().manager.forms.introLabel }}
@@ -435,7 +435,7 @@ beside them — not a reading surface, so they follow the list's density rather 
                                     }
                                 </div>
                                 <button class="mini-remove" (click)="removeQuestion(q.id)" [title]="t().manager.forms.removeQuestion">
-                                    <svg lucideX class="icon-sm"></svg>
+                                    <app-icon name="x" size="sm"></app-icon>
                                 </button>
                             </div>
                             <div class="question-card-body">
@@ -463,7 +463,7 @@ beside them — not a reading surface, so they follow the list's density rather 
                                                maxlength="200">
                                         }
                                         <button class="mini-remove" (click)="removeOption(q.id, o.id)" [title]="t().manager.forms.removeOption">
-                                            <svg lucideX class="icon-sm"></svg>
+                                            <app-icon name="x" size="sm"></app-icon>
                                         </button>
                                     </div>
                                     }
@@ -521,7 +521,7 @@ beside them — not a reading surface, so they follow the list's density rather 
 
     @if (deleteConfirmId()) {
     <app-modal (closed)="deleteConfirmId.set(null)">
-        <svg modal-icon lucideTrash2 class="icon"></svg>
+        <app-icon modal-icon name="trash" size="sm"></app-icon>
         <span modal-title>{{ t().manager.deletePostTitle }}</span>
         <p>{{ t().drafts.deleteDraftBody }}</p>
         <button modal-actions class="btn-ghost" (click)="deleteConfirmId.set(null)">{{ t().common.cancel }}</button>
@@ -557,7 +557,7 @@ beside them — not a reading surface, so they follow the list's density rather 
     not linked), but it is still not something to do on a stray click.-->
     @if (deletePresetId()) {
     <app-modal (closed)="deletePresetId.set(null)">
-        <svg modal-icon lucideTrash2 class="icon"></svg>
+        <app-icon modal-icon name="trash" size="sm"></app-icon>
         <span modal-title>{{ t().manager.forms.deletePreset }}</span>
         <p>{{ t().manager.forms.deletePresetBody }}</p>
         <button modal-actions class="btn-ghost" (click)="deletePresetId.set(null)">{{ t().common.cancel }}</button>

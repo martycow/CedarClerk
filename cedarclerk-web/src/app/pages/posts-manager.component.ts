@@ -26,11 +26,7 @@ import { FormRefComponent } from '../shared/form-ref.component';
 import { TagUsageService } from '../core/tag-usage.service';
 import { FoldersService } from '../core/folders.service';
 import { StatsComponent } from './stats.component';
-import {
-    LucideTrash2 as Trash2, LucideArchive as Archive, LucideArchiveRestore as ArchiveRestore,
-    LucidePenLine as PenLine, LucideLock as Lock, LucideExternalLink as ExternalLink,
-    LucideRefreshCw as RefreshCw, LucideX as X, LucideInfo as Info,
-} from '@lucide/angular';
+import { IconComponent } from '../shared/icon.component';
 
 // FI3.5 removed the 'feedback' tab; ?tab=feedback still resolves (to posts, where feedback now
 // lives) because links to it exist in the wild — the account menu, and Marty's own bookmarks.
@@ -44,11 +40,7 @@ const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
 // now — editing, per-question breakdowns and the pie chart are N10, presets are N12.
 @Component({
     selector: 'app-posts-manager',
-    imports: [
-        DatePipe, FormsModule, PageHeaderComponent, ModalComponent, CommentsComponent,
-        StatsComponent, CountBadgeComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent,
-        Trash2, Archive, ArchiveRestore, PenLine, Lock, ExternalLink, RefreshCw, X, Info,
-    ],
+    imports: [IconComponent, DatePipe, FormsModule, PageHeaderComponent, ModalComponent, CommentsComponent, StatsComponent, CountBadgeComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent],
     templateUrl: 'posts-manager.component.html',
     styleUrls: ['posts-manager.component.css'],
 })

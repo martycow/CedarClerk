@@ -1,6 +1,6 @@
 @if (open()) {
 <app-modal [width]="440" (closed)="close()">
-    <svg modal-icon lucidePalette class="icon-sm"></svg>
+    <app-icon modal-icon name="palette" size="sm"></app-icon>
     <span modal-title>{{ t().settings.appearance.title }}</span>
 
     <div class="ap-body">

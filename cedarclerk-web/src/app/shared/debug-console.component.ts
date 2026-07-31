@@ -1,10 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DebugLogService } from '../core/debug-log.service';
 import { LocaleService } from '../core/i18n/locale.service';
-import {
-    LucideTerminal as Terminal, LucideX as X,
-    LucideRefreshCw as RefreshCw, LucideTrash2 as Trash2,
-} from '@lucide/angular';
+import { IconComponent } from './icon.component';
 
 const MAX_BODY_CHARS = 4000;
 
@@ -14,7 +11,7 @@ const MAX_BODY_CHARS = 4000;
 // root app shell (app.html) so it's available on every page, not just the editor.
 @Component({
     selector: 'app-debug-console',
-    imports: [Terminal, X, RefreshCw, Trash2],
+    imports: [IconComponent],
     templateUrl: './debug-console.component.html',
     styleUrl: './debug-console.component.css',
 })

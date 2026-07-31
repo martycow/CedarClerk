@@ -15,10 +15,10 @@
             <button class="folder-menu-item" (click)="pick(f.id)">{{ f.name }}</button>
             <span class="folder-count">{{ f.count }}</span>
             <button class="folder-icon-btn" (click)="startRename(f, $event)" [title]="t().drafts.folders.rename">
-                <svg lucidePencil class="icon-xs"></svg>
+                <app-icon name="pencil-simple" size="xs"></app-icon>
             </button>
             <button class="folder-icon-btn" (click)="askDelete(f, $event)" [title]="t().common.delete">
-                <svg lucideX class="icon-xs"></svg>
+                <app-icon name="x" size="xs"></app-icon>
             </button>
             }
         </div>
@@ -31,7 +31,7 @@
                    [placeholder]="t().drafts.folders.newPlaceholder" (keydown.enter)="add()">
             <button class="folder-icon-btn" (click)="add()" [disabled]="busy() || !newName.trim()"
                     [title]="t().drafts.folders.add">
-                <svg lucidePlus class="icon-xs"></svg>
+                <app-icon name="plus" size="xs"></app-icon>
             </button>
         </div>
     </div>
@@ -44,7 +44,7 @@ modal's own fixed positioning and stacking, which is why the new-draft dialog ne
 } @else {
 <app-popover>
     <button trigger class="folder-trigger" [class.compact]="compact()" (click)="load()" [title]="t().drafts.folders.filter">
-        <svg lucideFolder class="icon-sm"></svg> {{ label() }}
+        <app-icon name="folder" size="sm"></app-icon> {{ label() }}
     </button>
     <ng-container panel [ngTemplateOutlet]="menu"></ng-container>
 </app-popover>
@@ -52,7 +52,7 @@ modal's own fixed positioning and stacking, which is why the new-draft dialog ne
 
 @if (deleteTarget(); as f) {
 <app-modal (closed)="deleteConfirmId.set(null)">
-    <svg modal-icon lucideTrash2 class="icon"></svg>
+    <app-icon modal-icon name="trash" size="sm"></app-icon>
     <span modal-title>{{ t().drafts.folders.deleteTitle(f.name) }}</span>
     <p>
         @if (f.count > 0) { {{ t().drafts.folders.deleteOrphans(f.count) }} }
