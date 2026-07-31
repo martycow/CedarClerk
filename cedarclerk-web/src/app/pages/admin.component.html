@@ -1,4 +1,8 @@
-<div class="admin-page">
+<!--Compact (ADR-071): a user list, an audit log and an invite table. Note that comments.component
+and stats.component need no attribute of their own — they are tab bodies inside the Posts Manager
+and inherit its density through the cascade, which is the point of expressing density as custom
+properties rather than as a class each component has to remember.-->
+<div class="admin-page" data-density="compact">
     <app-page-header page="admin"></app-page-header>
 
     <div class="admin-body">

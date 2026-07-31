@@ -10,17 +10,17 @@
 .admin-body {
     max-width: 1150px;
     margin: 0 auto;
-    padding: 24px 20px 60px;
+    padding: var(--dens-section) var(--space-5) var(--space-6);
 }
 
 .hint {
     color: var(--t3);
-    font-size: 13px;
+    font-size: var(--dens-fs);
 }
 
 .channel-error {
     color: var(--danger);
-    font-size: 13px;
+    font-size: var(--dens-fs);
 }
 
 /* ---------- Summary ---------- */
@@ -43,19 +43,19 @@
 }
 
 .summary-value {
-    font-size: 20px;
+    font-size: var(--fs-20);
     font-weight: 700;
     letter-spacing: -.02em;
 }
 
 .summary-label {
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--t3);
 }
 
 /* ---------- Users ---------- */
 .admin-section-title {
-    font-size: 13px;
+    font-size: var(--dens-fs);
     font-weight: 700;
     letter-spacing: .05em;
     text-transform: uppercase;
@@ -114,9 +114,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
+    font-size: var(--dens-fs);
     font-weight: 700;
-    color: #F4F2EA;
+    color: var(--sheet);
 }
 
 .user-card-body {
@@ -129,11 +129,11 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 6px;
-    font-size: 13.5px;
+    font-size: var(--fs-body);
 }
 
 .user-card-meta {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     margin-top: 3px;
 }
 
@@ -158,7 +158,7 @@
 
 .chip {
     display: inline-block;
-    font-size: 10.5px;
+    font-size: var(--fs-caption);
     font-weight: 600;
     border-radius: 999px;
     padding: 1px 8px;
@@ -172,9 +172,11 @@
     color: var(--accent);
 }
 
+/* Now the same shape as .chip.danger below, instead of a hand-mixed hue plus a theme override
+   sitting eighty lines away from the rule it corrects. */
 .chip.warn {
-    background: color-mix(in srgb, #C9A227 18%, transparent);
-    color: #8A6A10;
+    background: color-mix(in srgb, var(--warn) 18%, transparent);
+    color: var(--warn);
 }
 
 .chip.danger {
@@ -182,12 +184,39 @@
     color: var(--danger);
 }
 
-:root[data-theme="dark"] .chip.warn {
-    color: #E3C35C;
-}
-
 .admin-next {
     margin-top: 18px;
+}
+
+/* T-034 — this screen had no breakpoint at all. Both wide tables (audit, invites) already scroll
+   inside their own container, which is the right behaviour for a log nobody reads on a phone; what
+   needed fixing is the frame and the user cards, which are the part an admin actually taps. */
+@media (max-width: 700px) {
+    .admin-body {
+        padding: var(--space-4) var(--space-3) var(--space-6);
+    }
+
+    .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .user-card {
+        padding: var(--space-3);
+    }
+
+    /* Keeps the negative-margin bleed matching the card's own padding above — they have to move
+       together or the action footer stops lining up with the card edges. */
+    .user-actions {
+        margin: var(--space-3) calc(-1 * var(--space-3)) calc(-1 * var(--space-3));
+        padding: var(--space-3);
+    }
+}
+
+@media (pointer: coarse) {
+    .btn-accent,
+    .btn-ghost {
+        min-height: 44px;
+    }
 }
 
 /* ---------- Step 2: per-user actions ----------
@@ -212,7 +241,7 @@
 }
 
 .action-group > label {
-    font-size: 11px;
+    font-size: var(--fs-caption);
     font-weight: 700;
     letter-spacing: .05em;
     text-transform: uppercase;
@@ -232,24 +261,24 @@
     background: var(--sheet);
     color: var(--text);
     border-radius: var(--radius-md);
-    padding: 5px 8px;
+    padding: var(--dens-control-y) var(--dens-control-x);
     font-family: inherit;
-    font-size: 13px;
+    font-size: var(--dens-fs);
 }
 
 .btn-accent,
 .btn-ghost {
     border-radius: var(--radius-md);
-    padding: 5px 12px;
+    padding: var(--dens-control-y) var(--dens-control-x);
     font-family: inherit;
-    font-size: 13px;
+    font-size: var(--dens-fs);
     cursor: pointer;
 }
 
 .btn-accent {
     border: none;
     background: var(--accent);
-    color: #F4F2EA;
+    color: var(--sheet);
 }
 
 .btn-ghost {
@@ -269,7 +298,7 @@
 }
 
 .field-hint-inline {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--t3);
     margin: 0;
 }
@@ -294,7 +323,7 @@
     align-items: center;
     padding: 8px 16px;
     border-bottom: 1px solid var(--border);
-    font-size: 12.5px;
+    font-size: var(--fs-ui);
     min-width: 860px;
 }
 
@@ -319,9 +348,9 @@
     background: var(--sheet);
     color: var(--text);
     border-radius: var(--radius-md);
-    padding: 6px 10px;
+    padding: var(--dens-control-y) var(--dens-control-x);
     font-family: inherit;
-    font-size: 13px;
+    font-size: var(--dens-fs);
 }
 
 .invite-new input[type="number"] {
@@ -343,7 +372,7 @@
     align-items: center;
     padding: 9px 16px;
     border-bottom: 1px solid var(--border);
-    font-size: 13px;
+    font-size: var(--dens-fs);
     min-width: 780px;
 }
 
@@ -352,7 +381,7 @@
 }
 
 .invite-row.head {
-    font-size: 11px;
+    font-size: var(--fs-caption);
     font-weight: 700;
     letter-spacing: .05em;
     text-transform: uppercase;
@@ -378,7 +407,7 @@
     border: none;
     background: none;
     font-family: inherit;
-    font-size: 13.5px;
+    font-size: var(--fs-body);
     color: var(--t2);
     padding: 7px 14px;
     cursor: pointer;
@@ -402,7 +431,7 @@
     align-items: center;
     padding: 9px 16px;
     border-bottom: 1px solid var(--border);
-    font-size: 13px;
+    font-size: var(--dens-fs);
 }
 
 .post-row { grid-template-columns: minmax(220px, 2fr) minmax(180px, 1.2fr) 160px 170px 130px; min-width: 900px; }
@@ -416,7 +445,7 @@
 .post-row.head,
 .payment-row.head,
 .usage-row.head {
-    font-size: 11px;
+    font-size: var(--fs-caption);
     font-weight: 700;
     letter-spacing: .05em;
     text-transform: uppercase;
@@ -432,7 +461,7 @@
 .post-links a {
     color: var(--accent);
     text-decoration: none;
-    font-size: 12.5px;
+    font-size: var(--fs-ui);
 }
 
 .post-links a:hover { text-decoration: underline; }

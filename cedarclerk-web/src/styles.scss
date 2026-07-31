@@ -11,6 +11,11 @@
     --accent: #5B6E46;
     --danger: #B4452C;
     --ok: #3E7A4E;
+    /* --warn completes the status triad. The app has had three status tones since the admin panel
+       shipped, but only two were tokenized: the third lived as #8A6A10 with a hand-written
+       :root[data-theme="dark"] override to #E3C35C inside admin.component.css. The value existed
+       and was already split by theme by hand — this only gives it a name. */
+    --warn: #8A6A10;
     --shadow: 0 1px 3px rgba(40, 35, 25, .10);
     --shadow-md: 0 8px 24px rgba(40, 35, 25, .12);
     --shadow-lg: 0 24px 64px rgba(0, 0, 0, .30);
@@ -147,6 +152,7 @@
     --accent: color-mix(in srgb, #5B6E46 55%, #E8F0E8 45%);
     --danger: #E2745C;
     --ok: #82BB8C;
+    --warn: #E3C35C;
 
     /* Dark series steps are chosen against the dark chart surface, not derived from the light
        ones — a lightened flip of the light palette lands outside the band this theme needs. */

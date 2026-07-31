@@ -2,6 +2,18 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-07-31 — Phase 11, screens 4–6: admin, comments, stats — and the palette's missing third status
+
+Three screens in one pass because they are the same shape: a list, a log and a set of stat cards, all compact, all wanting identical edits. 58 hardcoded font-sizes and 6 colour literals gone.
+
+**The palette had two status tones and the app had three.** `--danger` and `--ok` were tokens; the third lived in `admin.component.css` as `color-mix(in srgb, #C9A227 18%, transparent)` with `#8A6A10` text — and a hand-written `:root[data-theme="dark"] .chip.warn` override to `#E3C35C` sitting eighty lines below the rule it corrected. The value existed and was already split by theme by hand, so **`--warn` only gives it a name**: light `#8A6A10`, dark `#E3C35C`, and `.chip.warn` is now the same three lines as `.chip.danger` instead of a special case.
+
+**`comments` and `stats` needed no density attribute at all.** They are tab bodies inside the Posts Manager and inherit its `data-density="compact"` through the cascade. That is the whole reason density is expressed as custom properties rather than as a class each component has to remember to carry — a component that moves to a different surface adapts without being edited, and one that appears on two surfaces cannot be wrong on either.
+
+`admin` also had no breakpoint of any kind. Its two wide tables (audit log, invite codes) already scroll inside their own containers, which is right for a log nobody reads on a phone; what needed the work is the user cards, which are the part an admin taps. Their action footer bleeds to the card edges via a negative margin equal to the card's padding, so both had to move together — written as `calc(-1 * var(--space-3))` rather than as two numbers that agree today.
+
+`ng build` clean, smoke **37/37**. **142** hardcoded font-sizes remain, from 314.
+
 ## 2026-07-31 — Phase 11, screen 3: `/settings`, the first comfortable-density screen
 
 The first screen to demonstrate the *other* half of ADR-071: `/settings` is a form, not a table, so it stays **comfortable** and its controls get roomier rather than tighter. Same tokens as `/drafts` and `/posts` — `--dens-control-y/x` — resolving to 7px/14px here instead of 5px/10px, because the page does not carry `data-density="compact"`. Nothing about the components changed; the surface they sit on decides. That is the whole claim of principle 3, and this is the first place it is visible side by side.
