@@ -287,6 +287,25 @@ test('@audit icon inventory', async ({ page }) => {
     await shot(page, '74-icons-inventory');
 });
 
+// T-051 — the long-word pass. Every screen that carries a row of controls, rendered with strings
+// ~30% longer and a German compound welded onto the longest word of each. What these shots are
+// read for: a control that grew past its container, a tab strip that clipped, an ellipsis that
+// swallowed the whole label.
+test('@audit pseudo-locale long words', async ({ page, context }) => {
+    await createDraft(context, 'Langwort', ['Текст.']);
+    await page.goto('/drafts?pseudo=1');
+    await shot(page, '75-pseudo-drafts');
+    await page.goto('/posts');
+    await shot(page, '76-pseudo-posts');
+    await page.goto('/settings');
+    await shot(page, '77-pseudo-settings');
+    await page.goto('/editor');
+    await page.waitForTimeout(800);
+    await shot(page, '78-pseudo-editor');
+    // Leave the flag off: it is stored per browser and would otherwise follow the next test.
+    await page.goto('/drafts?pseudo=0');
+});
+
 test('@audit dark theme spot check', async ({ page, context }) => {
     await createDraft(context, 'Тёмная тема', ['Текст.']);
     await page.goto('/drafts');

@@ -445,6 +445,8 @@
     gap: 1px;
 }
 
+/* The caption names its toolbar group; it must never be what decides the group's width (T-051 —
+   a long word here widened the group and pushed the buttons of the next one off the row). */
 .tb-caption {
     font-size: var(--fs-9);
     letter-spacing: .05em;
@@ -452,6 +454,9 @@
     color: var(--t2);
     font-weight: 600;
     white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .tb-caption.accent {
@@ -1271,9 +1276,22 @@
 }
 
 /* A label that runs out of room must clip, never wrap: a two-line label makes its button taller
-   than the row, which is how "Posts Manager" ended up sitting on top of Export. */
+   than the row, which is how "Posts Manager" ended up sitting on top of Export.
+   T-051 added the second half: nowrap alone only stopped the wrap, it did not stop the button from
+   growing — at German word lengths the topbar pushed the whole editor page 770px wider than the
+   viewport. The label now shrinks and ellipses inside a button that can itself give. */
 .btn-label {
     white-space: nowrap;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.export-btn,
+.nav-btn {
+    flex: 0 1 auto;
+    min-width: 44px;
+    overflow: hidden;
 }
 
 .diff-marker {

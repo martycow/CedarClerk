@@ -73,11 +73,20 @@
     font-size: var(--fs-13);
 }
 
+/* T-051 — the breadcrumb and the nav labels shrink and truncate before the header can push the
+   page wider than the viewport. Found with the pseudo-locale: at German word lengths every screen
+   using this header (settings, posts, glossary, admin) scrolled sideways and clipped the last
+   button, because .nav-btn was `flex: none` and nothing here could give. Each button keeps its
+   title attribute, so a truncated label is still readable on hover, and its icon never shrinks. */
 .crumb-current {
     font-size: var(--fs-13);
     font-weight: 500;
     color: var(--t2);
     white-space: nowrap;
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .spacer {
@@ -90,7 +99,11 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    flex: none;
+    flex: 0 1 auto;
+    /* 44px is the touch-target floor (T-082): a button may shrink to icon-plus-padding, never
+       past the size of a thing you can hit. */
+    min-width: 44px;
+    overflow: hidden;
     border: 1px solid var(--border);
     background: none;
     border-radius: var(--radius-md);
@@ -105,6 +118,12 @@
 
 .nav-btn:hover {
     background: var(--hover-strong);
+}
+
+.btn-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .nav-btn.on {

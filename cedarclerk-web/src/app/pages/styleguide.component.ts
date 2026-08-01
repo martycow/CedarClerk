@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ThemeService } from '../core/theme.service';
+import { LocaleService } from '../core/i18n/locale.service';
 import { IconComponent } from '../shared/icon.component';
 import { IconName, IconWeight } from '../shared/icon-data.generated';
 
@@ -18,8 +19,12 @@ import { IconName, IconWeight } from '../shared/icon-data.generated';
 })
 export class StyleguideComponent {
     private themes = inject(ThemeService);
+    private locale = inject(LocaleService);
 
     theme = this.themes.theme;
+    // T-051 — the pseudo-locale toggle lives here because this is the page that exists to make a
+    // system-wide setting visible in one place. It is per-browser and never touches the profile.
+    pseudo = this.locale.pseudo;
     // Local, not persisted: density is a property of a page (ADR-071), so this toggle stands in
     // for what /posts and /drafts will set on themselves once they migrate. Storing it would
     // imply it is a user preference, which it is not.
@@ -92,6 +97,10 @@ export class StyleguideComponent {
 
     toggleTheme() {
         this.themes.toggle();
+    }
+
+    togglePseudo() {
+        this.locale.setPseudo(!this.pseudo());
     }
 
     replayMotion() {

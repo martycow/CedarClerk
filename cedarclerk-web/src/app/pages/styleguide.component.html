@@ -10,6 +10,11 @@
             <button class="btn-ghost" (click)="compact.set(!compact())">
                 Density: {{ compact() ? 'compact' : 'comfortable' }}
             </button>
+            <button class="btn-ghost" (click)="togglePseudo()" title="Inflates every UI string and
+                    glues a German compound onto its longest word — T-051. Affects the whole app in
+                    this browser until switched off.">
+                Pseudo-locale: {{ pseudo() ? 'on' : 'off' }}
+            </button>
         </div>
     </header>
 

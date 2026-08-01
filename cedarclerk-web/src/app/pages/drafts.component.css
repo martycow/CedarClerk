@@ -236,11 +236,13 @@
 }
 
 /* N1: the header cell is a sort button; the handle inside it resizes the column. */
+/* T-051 — block, not flex, and that is the whole fix: text-overflow does not apply to a flex
+   container (the same trap /posts hit with long titles in T-081). As a flex row these headers
+   could not ellipsize, so at German word lengths LANGUAGES printed straight over FOLDER and
+   ACTIVITY over UPDATED. The resize handle is absolutely positioned and never needed flex. */
 .col-head {
     position: relative;
-    display: flex;
-    align-items: center;
-    gap: 4px;
+    display: block;
     border: none;
     background: none;
     padding: 0;
@@ -251,6 +253,9 @@
     cursor: pointer;
     text-align: left;
     min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .col-head:hover {
@@ -258,11 +263,11 @@
 }
 
 .col-head.right {
-    justify-content: flex-end;
+    text-align: right;
 }
 
 .col-reset {
-    justify-content: flex-end;
+    text-align: right;
     color: var(--t2);
 }
 
