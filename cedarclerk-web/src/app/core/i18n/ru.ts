@@ -646,6 +646,8 @@ export const ru: Dict = {
             unsaved: 'Есть несохранённые изменения',
             submissions: 'Заявки',
             noSubmissions: 'Заявок пока нет.',
+            deleteSubmission: 'Удалить заявку',
+            deleteSubmissionBody: (who: string) => `Удалить заявку «${who}»? Она исчезнет из списка и из графиков, а её ссылка-доступ к посту перестанет работать.`,
             noAnswers: 'На вопросы формы никто не ответил.',
             answerCount: (n: number) => `Ответов: ${n} — открыть`,
             loadingSubmissions: 'Загрузка заявок…',

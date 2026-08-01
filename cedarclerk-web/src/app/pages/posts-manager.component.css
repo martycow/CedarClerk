@@ -375,13 +375,25 @@
 
 /* ---------- Forms tab ---------- */
 /* T-035 — a row opens the submission, so it is a button now. */
+/* The row opens the submission; the trash beside it deletes one (owner's own test answers
+   pollute the charts). A wrapper rather than a button-in-button — nested buttons are invalid
+   HTML and the click targets should not overlap. */
+.registration-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.registration-item .registration-remove { margin-top: 8px; }
+
 .registration-row {
     display: block;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 8px 10px;
-    margin-bottom: 6px;
     background: none;
     color: inherit;
     font: inherit;

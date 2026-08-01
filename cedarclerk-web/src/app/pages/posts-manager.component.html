@@ -357,20 +357,29 @@ beside them — not a reading surface, so they follow the list's density rather 
                     <!--T-035: the row is a summary, the modal is the answer. Inline was fine while
                     every answer was one line; a long answer (T-032) runs to 2000 characters.-->
                     @for (r of registrations(); track r.id) {
-                    <button type="button" class="registration-row" (click)="selectedRegistration.set(r)">
-                        <div class="registration-head">
-                            <span class="invite-email">{{ r.name || r.nickname || r.email || t().manager.forms.anonymous }}</span>
-                            <span class="field-hint-inline">{{ r.createdAt | date:'d MMM, HH:mm' }}</span>
-                        </div>
-                        <div class="field-hint-inline">
-                            @if (r.email) { {{ r.email }} }
-                            @if (r.nickname) { · {{ r.nickname }} }
-                            @if (r.socialLink) { · {{ r.socialLink }} }
-                        </div>
-                        @if (registrationAnswers(r).length; as answered) {
-                        <div class="field-hint-inline">{{ t().manager.forms.answerCount(answered) }}</div>
-                        }
-                    </button>
+                    <div class="registration-item">
+                        <button type="button" class="registration-row" (click)="selectedRegistration.set(r)">
+                            <div class="registration-head">
+                                <span class="invite-email">{{ r.name || r.nickname || r.email || t().manager.forms.anonymous }}</span>
+                                <span class="field-hint-inline">{{ r.createdAt | date:'d MMM, HH:mm' }}</span>
+                            </div>
+                            <div class="field-hint-inline">
+                                @if (r.email) { {{ r.email }} }
+                                @if (r.nickname) { · {{ r.nickname }} }
+                                @if (r.socialLink) { · {{ r.socialLink }} }
+                            </div>
+                            @if (registrationAnswers(r).length; as answered) {
+                            <div class="field-hint-inline">{{ t().manager.forms.answerCount(answered) }}</div>
+                            }
+                        </button>
+                        <!--The owner's own test answers pollute the distribution charts — every
+                        submission is deletable, behind the same confirm pattern as posts/presets.-->
+                        <button type="button" class="mini-remove registration-remove"
+                                (click)="deleteRegistrationTarget.set(r); $event.stopPropagation()"
+                                [title]="t().manager.forms.deleteSubmission" [attr.aria-label]="t().manager.forms.deleteSubmission">
+                            <app-icon name="trash" size="sm"></app-icon>
+                        </button>
+                    </div>
                     } @empty {
                     <p class="hint">{{ t().manager.forms.noSubmissions }}</p>
                     }
@@ -647,7 +656,23 @@ beside them — not a reading surface, so they follow the list's density rather 
             <p class="hint">{{ t().manager.forms.noAnswers }}</p>
             }
         </div>
+        <button modal-actions class="btn-ghost" (click)="deleteRegistrationTarget.set(r)">{{ t().common.delete }}</button>
         <button modal-actions class="btn-ghost" (click)="selectedRegistration.set(null)">{{ t().common.close }}</button>
+    </app-modal>
+    }
+
+    <!--Deleting a submission is also revoking that reader's access — the row carries the grant
+    (ADR-084) — so it gets the same explicit confirm as deleting a post or a preset.-->
+    @if (deleteRegistrationTarget(); as target) {
+    <app-modal (closed)="deleteRegistrationTarget.set(null)">
+        <app-icon modal-icon name="trash" size="sm"></app-icon>
+        <span modal-title>{{ t().manager.forms.deleteSubmission }}</span>
+        <p>{{ t().manager.forms.deleteSubmissionBody(target.name || target.nickname || target.email || t().manager.forms.anonymous) }}</p>
+        <button modal-actions class="btn-ghost" (click)="deleteRegistrationTarget.set(null)">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-accent" (click)="confirmDeleteRegistration()" [disabled]="registrationDeleting()">
+            @if (registrationDeleting()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+            {{ t().common.delete }}
+        </button>
     </app-modal>
     }
 

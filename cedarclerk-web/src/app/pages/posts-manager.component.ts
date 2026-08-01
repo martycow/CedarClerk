@@ -88,6 +88,10 @@ export class PostsManagerComponent implements OnInit {
 
     registrations = signal<PostRegistration[]>([]);
     registrationsLoading = signal(false);
+    // A submission the owner wants gone (their own test answers polluting the charts) — held here
+    // while the confirm modal is up, same shape as deleteConfirmId/deletePresetId.
+    deleteRegistrationTarget = signal<PostRegistration | null>(null);
+    registrationDeleting = signal(false);
 
     // The form attached to the currently selected post. Shown on the POSTS tab (a post is where a
     // form is used), never edited there directly — you pick a preset, and the preset is copied.
@@ -592,6 +596,26 @@ export class PostsManagerComponent implements OnInit {
             this.error.set(httpErrorMessage(e, this.t().manager.errors.loadForm));
         } finally {
             this.registrationsLoading.set(false);
+        }
+    }
+
+    // Deleting a submission also revokes that reader's access — the row carries the grant
+    // (ADR-084), and removing a test account should mean exactly that. The charts recompute from
+    // the updated list on their own: distribution() reads registrations().
+    async confirmDeleteRegistration() {
+        const d = this.selected();
+        const target = this.deleteRegistrationTarget();
+        if (!d || !target || this.registrationDeleting()) return;
+        this.registrationDeleting.set(true);
+        try {
+            await this.draftsApi.deleteRegistration(d.id, target.id);
+            this.registrations.update(list => list.filter(r => r.id !== target.id));
+            this.deleteRegistrationTarget.set(null);
+            if (this.selectedRegistration()?.id === target.id) this.selectedRegistration.set(null);
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.loadForm));
+        } finally {
+            this.registrationDeleting.set(false);
         }
     }
 

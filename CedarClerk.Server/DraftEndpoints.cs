@@ -593,6 +593,24 @@ public static class DraftEndpoints
             return Results.Ok(rows);
         });
 
+        // The owner's own test submissions would otherwise sit in the distribution charts forever.
+        // A hard delete, and deliberately so: the row IS that reader's grant (ADR-084's AccessToken
+        // lives on it), so deleting a submission also closes the door it opened — which is what
+        // removing a test account should mean.
+        groupBuilder.MapDelete("/{id:guid}/registrations/{regId:guid}", async (Guid id, Guid regId, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var owns = await db.Drafts.AnyAsync(d => d.Id == id && d.OwnerId == uid);
+            if (!owns) return Results.NotFound();
+
+            var row = await db.PostRegistrations.FirstOrDefaultAsync(r => r.Id == regId && r.DraftId == id);
+            if (row is null) return Results.NotFound();
+
+            db.PostRegistrations.Remove(row);
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        });
+
         groupBuilder.MapGet("/{id:guid}/invites", async (Guid id, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;

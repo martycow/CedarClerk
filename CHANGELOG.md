@@ -6,6 +6,10 @@ Human-readable, grouped by session/date, derived from `git log` (33 commits, `6a
 
 **v0.9.33, then v0.9.34.** The design doc's first threaded publish sent parts 1–2, collapsed part 1 behind Telegram's "Show more", failed part 3, held back 4–12 — and reported the *held-back* message as the error. One run, four fixes — and the re-run after them taught the fifth. `dotnet test` **571/571**.
 
+### A form submission can be deleted
+
+The owner's own test answers (and any other noise) sat in the registration list and skewed the distribution charts with no way out. Every submission now has a trash button (and a Delete in its detail modal) behind the same confirm pattern as deleting a post or a preset. It is a hard delete, deliberately: the row carries that reader's access grant (ADR-084), so removing a test account also closes the door it opened — and the confirm dialog says so out loud. The charts recompute from the shortened list by themselves.
+
 ### Telegram gets media as uploaded bytes, not URLs (ADR-088, v0.9.34)
 
 The re-run on v0.9.33 failed part 3 again — `failed to get HTTP URL content`, on the first part with nine images. Not flood control (that answers 429, which the queue retries): Telegram's *fetcher* choking on nine concurrent downloads from the Pi, made worse by the fresh cache-buster sending every fetch past Cloudflare's cache to a residential upload link. The fix removes the round-trip instead of tuning it: media that lives in the server's own media directory is now **uploaded as multipart bytes** (`InputFileStream`) — nothing to fetch, nothing to time out, nothing to cache-poison, and the upload limits are better than the fetch limits anyway. External media (YouTube thumbnails) keeps the URL path and the ADR-087 stamp. `Cedar:Telegram:MediaDelivery=url` in the systemd drop-in is the no-redeploy escape hatch; it is deliberately not an author-facing setting — "which bytes should Telegram receive" has one correct answer.

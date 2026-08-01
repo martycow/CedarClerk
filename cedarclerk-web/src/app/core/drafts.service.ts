@@ -382,6 +382,11 @@ export class DraftsService {
         return firstValueFrom(this.http.get<PostRegistration[]>(`/api/drafts/${id}/registrations`));
     }
 
+    /** Deletes one submission — and with it that reader's access, since the row carries the grant. */
+    deleteRegistration(id: string, registrationId: string) {
+        return firstValueFrom(this.http.delete<void>(`/api/drafts/${id}/registrations/${registrationId}`));
+    }
+
     listInvites(id: string) {
         return firstValueFrom(this.http.get<PostInvite[]>(`/api/drafts/${id}/invites`));
     }

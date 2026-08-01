@@ -649,6 +649,8 @@ export const en = {
             unsaved: 'Unsaved changes',
             submissions: 'Submissions',
             noSubmissions: 'No submissions yet.',
+            deleteSubmission: 'Delete submission',
+            deleteSubmissionBody: (who: string) => `Delete the submission from “${who}”? It disappears from the list and the charts, and its access link to the post stops working.`,
             noAnswers: 'No form questions were answered.',
             answerCount: (n: number) => `${n} answers — open`,
             loadingSubmissions: 'Loading submissions…',
