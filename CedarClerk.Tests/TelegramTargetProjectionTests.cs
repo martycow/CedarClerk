@@ -117,16 +117,30 @@ public class TelegramTargetProjectionTests
     [Fact]
     public async Task Backfill_covers_existing_channels_and_is_safe_to_run_again()
     {
-        using var db = NewDb();
-        SeedChannel(db, "owner-1", -100111);
-        SeedChannel(db, "owner-1", -100222, "Second");
+        // A shared connection with a SECOND context for the re-run, because that is what a restart
+        // is: the same database, a change tracker that knows nothing. The first version of this
+        // test reused one context, where an existing row and a new one both look like "tracked",
+        // and it passed against a Backfill that reported every start as if it had projected
+        // everything again (found in production 01.08.2026 — the rows were right, the count lied).
+        var connection = new SqliteConnection("Data Source=:memory:");
+        connection.Open();
+        var opts = new DbContextOptionsBuilder<CedarDbContext>().UseSqlite(connection).Options;
 
-        Assert.Equal(2, await TelegramTargetProjection.BackfillAsync(db));
-        Assert.Equal(2, await db.PublishTargets.CountAsync());
+        using (var db = new CedarDbContext(opts))
+        {
+            db.Database.EnsureCreated();
+            SeedChannel(db, "owner-1", -100111);
+            SeedChannel(db, "owner-1", -100222, "Second");
 
-        // Every subsequent start: nothing new, nothing duplicated, no write.
-        Assert.Equal(0, await TelegramTargetProjection.BackfillAsync(db));
-        Assert.Equal(2, await db.PublishTargets.CountAsync());
+            Assert.Equal(2, await TelegramTargetProjection.BackfillAsync(db));
+            Assert.Equal(2, await db.PublishTargets.CountAsync());
+        }
+
+        using (var restarted = new CedarDbContext(opts))
+        {
+            Assert.Equal(0, await TelegramTargetProjection.BackfillAsync(restarted));
+            Assert.Equal(2, await restarted.PublishTargets.CountAsync());
+        }
     }
 
     [Fact]

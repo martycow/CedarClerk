@@ -83,12 +83,16 @@ public static class TelegramTargetProjection
         var channels = await db.Channels.ToListAsync(ct);
         if (channels.Count == 0) return 0;
 
+        // Counted by entity state, not by how many rows the change tracker holds: EnsureAsync
+        // *loads* an existing row, which makes Local.Count grow whether or not anything was added.
+        // In a test that reuses one context the two are indistinguishable, which is exactly why the
+        // first version of this passed its "safe to run again" test and still logged "projected 2"
+        // on every production start.
         var added = 0;
         foreach (var channel in channels)
         {
-            var before = db.PublishTargets.Local.Count;
-            await EnsureAsync(db, channel, ct);
-            if (db.PublishTargets.Local.Count > before) added++;
+            var target = await EnsureAsync(db, channel, ct);
+            if (db.Entry(target).State == EntityState.Added) added++;
         }
 
         if (added > 0) await db.SaveChangesAsync(ct);
