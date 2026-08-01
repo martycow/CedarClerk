@@ -2,6 +2,31 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-01 (night) — autonomous pass: the backlog went 50 → 37
+
+No deploy in any of this; every item below is committed and green. `dotnet test` **536/536**, smoke **44/44**.
+
+### The blog stopped being a separate product
+
+Three defects on it, all found by reading rather than by clicking. **Dates disagreed with each other on the same page** (T-094): a hardcoded Russian month heading above an English card date, with neither following the language the reader asked for. `BlogDateFormatter` (Core, 6 tests) carries explicit month tables per language — explicit because the Pi runs without ICU data, which is why this codebase formats with `InvariantCulture` and how the two formats came to disagree in the first place. Russian and Ukrainian get the genitive after a day number, because "17 Август" is the kind of wrong that makes a page look machine-made.
+
+**The footer sat wherever the content ended** (T-099) — on a two-post index that is the middle of the screen. **The blog's palette was its own copy** (T-101), which is why the contrast pass fixed the app and left the blog a shade behind, still on the pre-AA values. It is generated from the app's stylesheet now (`DesignTokens.generated.cs`, `npm run tokens:generate`), and a drift test fails the build if the two part ways again. Four colour literals stay by name and by reason — a generated avatar colour, a code block's own dark scheme, white on an accent fill.
+
+### The server speaks Russian now (T-050, closed)
+
+The ~60 inline English literals in the endpoint files are in `ErrorMessages`, which reads the reader's language. **The guard is the point**: a test fails the build when a 61st is written, and it was verified to actually go red by writing one. Server messages were the biggest remaining hole in a UI that has been fully translated since 27.07.
+
+### "Ctrl+B doesn't always fire" was never intermittent (T-100)
+
+It fires exactly as often as the keyboard is in a Latin layout. ProseMirror matches shortcuts by `event.key`, and on a Cyrillic layout Ctrl+B arrives as `Ctrl+и` — bound to nothing. For someone who writes in Russian that is most of the time, which is what "не всегда" was describing. A small extension binds the *physical* key (`event.code`) and stands aside when the layout already produced the right letter, so a Latin layout cannot toggle bold twice. Both directions are covered by tests, and the Cyrillic one was checked red first.
+
+### Also
+
+- **Email confirmation** (T-002) — sent on registration, with a reminder in Settings and a resend. Deliberately not a gate: blocking unconfirmed accounts would lock out every account that predates this, and the gate that matters (public registration) is not open yet.
+- **A reply to whoever fills in a form** (T-033) — per language, and empty means no mail: an owner who has not written one has not agreed to write to their readers.
+- **Reactions and comments can be switched off per post** (T-039) — two flags, not one, because a post can reasonably take likes but not a discussion. Enforced server-side, not by hiding buttons.
+- **File exports say they are working** (T-042) — the plain `<a download>` was silent for as long as the server took to package a hundred images.
+
 ## 2026-08-01 — Second review pass: a CSS regression, a translate button that filled nothing, and terms from the editor
 
 **The card styles I shipped an hour earlier were not applied at all.** The rule that replaced `.post-row` landed *inside* an unclosed `@media (pointer: coarse)` block — `.post-row` had been one member of a two-selector list there, so replacing it swallowed the media query's close and nested every card rule inside it. The Posts and Forms lists rendered as bare buttons. Repaired by lifting the rules back to the top level and restoring the media query; the duplicate `.post-search` rule left over from FI3.10 went with it, since the sticky version is the one that survives.
