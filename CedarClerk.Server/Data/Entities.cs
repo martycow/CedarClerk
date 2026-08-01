@@ -497,6 +497,27 @@ public class ChannelPost
     public DateTime PublishedAt { get; set; } = DateTime.UtcNow;
 }
 
+/// <summary>
+/// Daily per-draft totals — the series behind the growth chart on a post's details (8.6, Marty
+/// 01.08.2026). The counterpart to ChannelStatSnapshot (per channel) and BlogStatSnapshot (per
+/// owner); neither could answer "how did THIS post do", which is why B23's sparkline was dropped
+/// as unbuildable back in ADR-043.
+///
+/// **History starts the day this ships.** Nothing recorded per-draft numbers before, and the
+/// current counters are running totals with no timestamps in them, so there is nothing to
+/// backfill from — the chart is empty until the nightly job has run at least twice.
+/// </summary>
+public class DraftStatSnapshot
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid DraftId { get; set; }
+    public int ViewCount { get; set; }
+    public int LikeCount { get; set; }
+    public int DislikeCount { get; set; }
+    public int CommentCount { get; set; }
+    public DateTime TakenAt { get; set; } = DateTime.UtcNow;
+}
+
 public class Asset
 {
     public Guid Id { get; set; } = Guid.NewGuid();

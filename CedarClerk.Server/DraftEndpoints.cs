@@ -121,6 +121,26 @@ public static class DraftEndpoints
     public static void MapDraftEndpoints(this WebApplication app)
     {
         var groupBuilder = app.MapGroup("/api/drafts").RequireAuthorization();
+
+        // 8.6 — the growth series for one post: views, likes and comments over time, from the
+        // nightly DraftStatSnapshot rows. Nothing recorded these before, so an old post has no
+        // history to show; the client says so rather than drawing a flat line that would read as
+        // "no growth" instead of "not measured".
+        groupBuilder.MapGet("/{id:guid}/stat-history", async (Guid id, ClaimsPrincipal user, CedarDbContext db, int days = 30) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            if (!await db.Drafts.AnyAsync(d => d.Id == id && d.OwnerId == uid))
+                return Results.NotFound();
+
+            var since = DateTime.UtcNow.AddDays(-Math.Clamp(days, 7, 180));
+            var snapshots = await db.DraftStatSnapshots
+                .Where(s => s.DraftId == id && s.TakenAt >= since)
+                .OrderBy(s => s.TakenAt)
+                .Select(s => new { s.ViewCount, s.LikeCount, s.DislikeCount, s.CommentCount, s.TakenAt })
+                .ToListAsync();
+
+            return Results.Ok(new { snapshots });
+        });
         
         groupBuilder.MapGet("/", async (ClaimsPrincipal user, CedarDbContext db) =>
         {

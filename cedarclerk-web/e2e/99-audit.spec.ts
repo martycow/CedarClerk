@@ -132,7 +132,7 @@ test('@audit posts manager tabs', async ({ page, context }) => {
 
     await page.goto('/posts');
     await shot(page, '40-posts');
-    await page.locator('.post-row').first().click();
+    await page.locator('.post-card').first().click();
     await shot(page, '41-posts-selected');
 
     await page.goto('/posts?tab=forms');
@@ -154,7 +154,7 @@ test('@audit posts manager tabs', async ({ page, context }) => {
         },
     });
     await page.goto('/posts?tab=forms');
-    await page.locator('.post-row').first().click();
+    await page.locator('.post-card').first().click();
     await shot(page, '43-forms-editor');
 
     await page.goto('/posts?tab=stats');

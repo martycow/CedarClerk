@@ -34,7 +34,7 @@ test('the forms tab of the Posts Manager renders the preset', async ({ page, con
         data: { name: 'Visible preset', formJson: JSON.stringify(FORM) },
     });
     await page.goto('/posts?tab=forms');
-    await expect(page.locator('.post-row', { hasText: 'Visible preset' })).toBeVisible();
+    await expect(page.locator('.post-card', { hasText: 'Visible preset' })).toBeVisible();
 });
 
 test('a private post shows the gate, and a submission reaches the owner', async ({ page, context }) => {

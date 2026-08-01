@@ -199,6 +199,103 @@ export class PostsManagerComponent implements OnInit {
         return this.scheduled().filter(p => p.draftId === draftId && p.status === 'Sent').length;
     }
 
+    // ─── Detail groups (8.4) and the growth chart (8.6) ───────────────────────────────────────
+    // Which groups are open is a per-browser preference, not per-post: someone who works with
+    // scheduling wants the scheduling group open on every post they touch.
+    private static readonly OPEN_KEY = 'cedar-post-detail-open';
+    private openGroups = signal<Set<string>>(new Set(this.loadOpenGroups()));
+
+    private loadOpenGroups(): string[] {
+        try {
+            const raw = localStorage.getItem(PostsManagerComponent.OPEN_KEY);
+            // Basics and destinations by default: what the post is, and where it went.
+            return raw ? JSON.parse(raw) as string[] : ['basics', 'destinations'];
+        } catch {
+            return ['basics', 'destinations'];
+        }
+    }
+
+    isOpen(group: string): boolean {
+        return this.openGroups().has(group);
+    }
+
+    rememberOpen(group: string, event: Event) {
+        const open = (event.target as HTMLDetailsElement).open;
+        this.openGroups.update(set => {
+            const next = new Set(set);
+            open ? next.add(group) : next.delete(group);
+            localStorage.setItem(PostsManagerComponent.OPEN_KEY, JSON.stringify([...next]));
+            return next;
+        });
+    }
+
+    readonly growthMetrics = [
+        { key: 'viewCount' as const, color: '--series-1', label: () => this.t().manager.groups.views },
+        { key: 'likeCount' as const, color: '--series-2', label: () => this.t().manager.groups.likes },
+        { key: 'commentCount' as const, color: '--series-3', label: () => this.t().manager.groups.comments },
+    ];
+    growthMetric = signal<'viewCount' | 'likeCount' | 'commentCount'>('viewCount');
+    growthColor = () => this.growthMetrics.find(m => m.key === this.growthMetric())!.color;
+
+    historyLoading = signal(false);
+    private historyFor = signal<string | null>(null);
+    private history = signal<{ viewCount: number; likeCount: number; commentCount: number; takenAt: string }[]>([]);
+
+    /** Fetched when the group is first opened, not with the post: most opens never ask for it. */
+    async loadHistory(draftId: string) {
+        if (!this.isOpen('growth') || this.historyFor() === draftId) return;
+        this.historyFor.set(draftId);
+        this.historyLoading.set(true);
+        try {
+            const res = await this.postsApi.statHistory(draftId);
+            this.history.set(res.snapshots);
+        } catch {
+            this.history.set([]);
+        } finally {
+            this.historyLoading.set(false);
+        }
+    }
+
+    /** Null with fewer than two snapshots — one point is not a line, and a flat line would lie. */
+    historyChart(): { linePath: string; areaPath: string; from: string; to: string; last: string } | null {
+        const rows = this.history();
+        if (rows.length < 2) return null;
+
+        const key = this.growthMetric();
+        const values = rows.map(r => r[key]);
+        const top = Math.max(...values, 1);
+        const points = rows.map((r, i) => ({
+            x: 10 + (i / (rows.length - 1)) * 580,
+            y: 150 - (r[key] / top) * 140,
+        }));
+        const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+        const areaPath = `${linePath} L${points[points.length - 1].x.toFixed(1)},150 L${points[0].x.toFixed(1)},150 Z`;
+        const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+
+        return {
+            linePath,
+            areaPath,
+            from: day(rows[0].takenAt),
+            to: day(rows[rows.length - 1].takenAt),
+            last: `${values[values.length - 1]}`,
+        };
+    }
+
+    // One publish state per post, resolved in a fixed order (Marty, 01.08.2026): an archived post
+    // is archived whatever else is true of it, a published one is live, and everything else has
+    // simply not gone out yet. Two chips saying different things about the same post is the
+    // confusion this replaces.
+    publishState(d: { isArchived: boolean; isBlogPublished: boolean }): 'archived' | 'live' | 'draft' {
+        if (d.isArchived) return 'archived';
+        return d.isBlogPublished ? 'live' : 'draft';
+    }
+
+    publishStateLabel(d: { isArchived: boolean; isBlogPublished: boolean }): string {
+        const state = this.publishState(d);
+        if (state === 'archived') return this.t().manager.archived;
+        return state === 'live' ? 'LIVE' : this.t().manager.unpublishedChip;
+    }
+
     hasPendingSchedule(draftId: string): boolean {
         return this.scheduled().some(p => p.draftId === draftId && p.status === 'Pending');
     }
@@ -238,16 +335,25 @@ export class PostsManagerComponent implements OnInit {
     // than three of them plus a count. The full list stays available as the chip's tooltip.
     private static readonly VisibleLanguageChips = 3;
 
+    // DraftMeta.languages holds the TRANSLATIONS only — the primary language is implicit in the
+    // model, which meant a post written in one language showed no language at all on its card.
+    // The card's second line is "which languages does this post exist in", and the answer is never
+    // "none". Primary first, since that is the version the rest of them were made from.
+    private allLanguages(d: DraftMeta): string[] {
+        const primary = d.primaryLanguage || 'ru';
+        return [primary, ...d.languages.filter(l => l !== primary)];
+    }
+
     visibleLanguages(d: DraftMeta): string[] {
-        return d.languages.slice(0, PostsManagerComponent.VisibleLanguageChips);
+        return this.allLanguages(d).slice(0, PostsManagerComponent.VisibleLanguageChips);
     }
 
     extraLanguageCount(d: DraftMeta): number {
-        return Math.max(0, d.languages.length - PostsManagerComponent.VisibleLanguageChips);
+        return Math.max(0, this.allLanguages(d).length - PostsManagerComponent.VisibleLanguageChips);
     }
 
     extraLanguageTitle(d: DraftMeta): string {
-        return d.languages.slice(PostsManagerComponent.VisibleLanguageChips).map(l => l.toUpperCase()).join(', ');
+        return this.allLanguages(d).slice(PostsManagerComponent.VisibleLanguageChips).map(l => l.toUpperCase()).join(', ');
     }
 
     newFeedbackFor(draftId: string): number {

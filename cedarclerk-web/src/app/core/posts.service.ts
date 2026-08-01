@@ -68,4 +68,14 @@ export class PostsService {
     cancelScheduled(id: string) {
         return firstValueFrom(this.http.delete(`/api/posts/scheduled/${id}`));
     }
+
+    /**
+     * The per-post growth series (8.6). Empty until the nightly job has run twice — nothing
+     * recorded these numbers before 01.08.2026, so old posts have no history to show.
+     */
+    statHistory(draftId: string, days = 30) {
+        return firstValueFrom(this.http.get<{
+            snapshots: { viewCount: number; likeCount: number; dislikeCount: number; commentCount: number; takenAt: string }[];
+        }>(`/api/drafts/${draftId}/stat-history?days=${days}`));
+    }
 }

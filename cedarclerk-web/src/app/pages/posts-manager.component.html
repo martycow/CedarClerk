@@ -29,26 +29,33 @@ beside them — not a reading surface, so they follow the list's density rather 
                     <input class="chat-input post-search" [(ngModel)]="search"
                            [placeholder]="t().manager.searchPlaceholder">
                     @for (d of visiblePosts(); track d.id) {
-                    <button class="post-row" [class.on]="selectedId() === d.id" (click)="select(d)">
-                        <!--The title text needs its own element: text-overflow does not apply to a
-                        flex container, and .post-row-title has to be one to sit the lock icon
-                        beside the text. Without this the title was clipped mid-word with no
-                        ellipsis at all.-->
-                        <span class="post-row-title">
-                            @if (d.isPrivate) { <app-icon name="lock" size="xs"></app-icon> }
-                            <span class="post-row-title-text">{{ d.title || t().drafts.untitled }}</span>
+                    <!--A card, not a row (Marty, 01.08.2026): one line for what the post IS —
+                    indicators and title on the left, where it stands on the right — and one line
+                    below for the languages it exists in. The old single wrapping line put a
+                    language chip and a publish state beside each other as equals, which they are
+                    not: one answers "is this out?", the other "in which language?".-->
+                    <button class="post-card" [class.on]="selectedId() === d.id" (click)="select(d)">
+                        <span class="post-card-top">
+                            <!--The title text needs its own element: text-overflow does not apply
+                            to a flex container, and .post-card-title has to be one to sit the lock
+                            icon beside the text.-->
+                            <span class="post-card-title">
+                                @if (d.isPrivate) { <app-icon name="lock" size="xs"></app-icon> }
+                                @if (hasPendingSchedule(d.id)) { <app-icon name="clock" size="xs"></app-icon> }
+                                <span class="post-card-title-text">{{ d.title || t().drafts.untitled }}</span>
+                            </span>
+                            <!--Exactly one publish state per post, never two: archived wins over
+                            live, live over unpublished.-->
+                            <span class="state-chip" [class.live]="publishState(d) === 'live'"
+                                  [class.muted]="publishState(d) !== 'live'">{{ publishStateLabel(d) }}</span>
                         </span>
-                        <!--FI3.6: at a glance - where it is, what languages exist, and whether
-                        anything new arrived.-->
-                        <span class="post-row-meta">
-                            @if (d.isBlogPublished) { <span class="state-chip live">LIVE</span> }
-                            @if (d.isPrivate) { <span class="state-chip private">{{ t().manager.privateChip }}</span> }
+                        <span class="post-card-langs">
                             @for (l of visibleLanguages(d); track l) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
                             @if (extraLanguageCount(d); as extra) {
                             <span class="state-chip lang" [title]="extraLanguageTitle(d)">+{{ extra }}</span>
                             }
-                            @if (d.isArchived) { <span class="state-chip">{{ t().manager.archived }}</span> }
-                            @if (hasPendingSchedule(d.id)) { <span class="state-chip">⏰ {{ t().manager.scheduledChip }}</span> }
+                            @if (d.isPrivate) { <span class="state-chip private">{{ t().manager.privateChip }}</span> }
+                            <span class="spacer"></span>
                             @if (newFeedbackFor(d.id); as n) { <span class="state-chip new">+{{ n }}</span> }
                         </span>
                     </button>
@@ -59,6 +66,14 @@ beside them — not a reading surface, so they follow the list's density rather 
 
                 <div class="post-detail">
                     @if (selected(); as d) {
+                    <!--8.4 — the detail pane used to render every setting a post has at once, which
+                    is a wall of controls for a page whose usual job is "check where this went".
+                    Native <details>, not a hand-rolled accordion: it collapses without JavaScript,
+                    is keyboard- and screen-reader-correct for free, and its <summary> already
+                    counts as a control for the 44px touch rule. Which groups start open is
+                    remembered per browser, so the two anyone keeps open stay open.-->
+                    <details class="detail-group" [open]="isOpen('basics')" (toggle)="rememberOpen('basics', $event)">
+                        <summary>{{ t().manager.groups.basics }}</summary>
                     <div class="detail-field">
                         <label>{{ t().manager.title }}</label>
                         <input class="chat-input" [(ngModel)]="editTitle">
@@ -82,8 +97,10 @@ beside them — not a reading surface, so they follow the list's density rather 
                         {{ t().common.save }}
                     </button>
 
-                    <div class="detail-divider"></div>
+                    </details>
 
+                    <details class="detail-group" [open]="isOpen('placement')" (toggle)="rememberOpen('placement', $event)">
+                        <summary>{{ t().manager.groups.placement }}</summary>
                     <!--FI3.3: folders are picked, created, renamed and deleted from here too now,
                     with the same control every other screen carries.-->
                     <div class="detail-field">
@@ -112,10 +129,13 @@ beside them — not a reading surface, so they follow the list's density rather 
                         </button>
                     </div>
 
+                    </details>
+
                     <!--FI3.1: everything below is per-destination rather than one flat list -
                     the blog and Telegram have genuinely different settings and links.-->
                     @if (d.isBlogPublished || blogUrl(d) || telegramUrl(d)) {
-                    <div class="detail-divider"></div>
+                    <details class="detail-group" [open]="isOpen('destinations')" (toggle)="rememberOpen('destinations', $event)">
+                        <summary>{{ t().manager.groups.destinations }}</summary>
                     <div class="detail-field">
                         <label>{{ t().manager.blog }}</label>
                         @if (d.blogPublishedAt) {
@@ -156,6 +176,7 @@ beside them — not a reading surface, so they follow the list's density rather 
                         </a>
                     </div>
                     }
+                    </details>
                     }
 
                     <!--FI2.8: scheduled posts are managed here, not in the Export window. Kept
@@ -164,9 +185,9 @@ beside them — not a reading surface, so they follow the list's density rather 
                     the row carries a clock chip so a post with a pending send is findable.-->
                     @if (scheduledFor(d.id); as scheduled) {
                     @if (scheduled.length || sentScheduleCount(d.id)) {
-                    <div class="detail-divider"></div>
+                    <details class="detail-group" [open]="isOpen('scheduled')" (toggle)="rememberOpen('scheduled', $event)">
+                        <summary>{{ t().manager.scheduled }}</summary>
                     <div class="detail-field">
-                        <label>{{ t().manager.scheduled }}</label>
                         @if (sentScheduleCount(d.id); as sentCount) {
                         <button class="btn-ghost mini" (click)="showSentSchedules.set(!showSentSchedules())">
                             {{ showSentSchedules() ? t().manager.hideSent : t().manager.showSent(sentCount) }}
@@ -188,23 +209,55 @@ beside them — not a reading surface, so they follow the list's density rather 
                         </div>
                         }
                     </div>
+                    </details>
                     }
                     }
+
+                    <!--8.6 — how this post grew, from the nightly per-draft snapshots. Closed by
+                    default: it is a question you ask about a post, not something you need every
+                    time you open one.-->
+                    <details class="detail-group" [open]="isOpen('growth')" (toggle)="rememberOpen('growth', $event); loadHistory(d.id)">
+                        <summary>{{ t().manager.groups.growth }}</summary>
+                        @if (historyLoading()) {
+                        <p class="field-hint-inline">{{ t().common.loading }}</p>
+                        } @else if (historyChart(); as chart) {
+                        <div class="growth-legend">
+                            @for (m of growthMetrics; track m.key) {
+                            <button [class.on]="growthMetric() === m.key" (click)="growthMetric.set(m.key)">
+                                <span class="growth-dot" [style.background]="'var(' + m.color + ')'"></span>{{ m.label() }}
+                            </button>
+                            }
+                        </div>
+                        <svg class="growth-chart" viewBox="0 0 600 160" preserveAspectRatio="none" role="img"
+                             [attr.aria-label]="t().manager.groups.growth">
+                            <path class="growth-area" [attr.d]="chart.areaPath"
+                                  [style.fill]="'var(' + growthColor() + ')'"></path>
+                            <path class="growth-line" [attr.d]="chart.linePath"
+                                  [style.stroke]="'var(' + growthColor() + ')'"></path>
+                        </svg>
+                        <p class="field-hint-inline">{{ chart.from }} → {{ chart.to }} · {{ chart.last }}</p>
+                        } @else {
+                        <!--Two snapshots are the minimum a line can be drawn from, and the first
+                        one is only taken the night after this shipped: an empty chart here means
+                        "not measured yet", never "no growth".-->
+                        <p class="field-hint-inline">{{ t().manager.groups.growthEmpty }}</p>
+                        }
+                    </details>
 
                     <!--FI3.5: this post's reactions and comments, where "what happened with this
                     post" already lives. One instance filtered by the selected post, so switching
                     posts costs no request — everything was fetched in one call.-->
-                    <div class="detail-divider"></div>
-                    <div class="detail-field">
-                        <label>{{ t().manager.tabs.feedback }}</label>
+                    <details class="detail-group" [open]="isOpen('feedback')" (toggle)="rememberOpen('feedback', $event)">
+                        <summary>{{ t().manager.tabs.feedback }}</summary>
                         <app-comments [onlyDraftId]="d.id"></app-comments>
-                    </div>
+                    </details>
 
                     <!--Item 2: a private post's form is chosen HERE, by picking a preset. The
                     definition itself is authored on the Forms tab; the preset is copied onto the
                     post (N12), so editing it later can't rewrite a post that already used it.-->
                     @if (d.isPrivate) {
-                    <div class="detail-divider"></div>
+                    <details class="detail-group" [open]="isOpen('access')" (toggle)="rememberOpen('access', $event)">
+                        <summary>{{ t().manager.groups.access }}</summary>
 
                     <!--Copy protection — same private-only family as the watermark: a deterrent
                     on the rendered blog page, toggled here and in the editor's Export window.-->
@@ -234,14 +287,16 @@ beside them — not a reading surface, so they follow the list's density rather 
                             (pick)="pickPreset($event)" (manage)="setTab('forms')">
                         </app-form-ref>
                     </div>
+                    </details>
                     }
 
                     <!--I19: form answers and their distribution live here rather than on the forms
-                    tab — this is where "what happened with this post" already is.-->
+                    tab — this is where "what happened with this post" already is. Its own group:
+                    the access settings above are configuration, these are results, and a reader
+                    of one rarely wants the other open at the same time.-->
                     @if (d.isPrivate && regForm()) {
-                    <div class="detail-field">
-                        <label>{{ t().manager.forms.submissions }} <span class="field-hint-inline">{{ registrations().length }}</span></label>
-                    </div>
+                    <details class="detail-group" [open]="isOpen('submissions')" (toggle)="rememberOpen('submissions', $event)">
+                        <summary>{{ t().manager.forms.submissions }} <span class="field-hint-inline">{{ registrations().length }}</span></summary>
 
                     <!--Distribution charts: closed questions only. Free text would produce as many
                     slices as there are submissions.-->
@@ -304,6 +359,7 @@ beside them — not a reading surface, so they follow the list's density rather 
                     } @empty {
                     <p class="hint">{{ t().manager.forms.noSubmissions }}</p>
                     }
+                    </details>
                     }
                     } @else {
                     <p class="hint">{{ t().manager.pickPost }}</p>
@@ -325,10 +381,14 @@ beside them — not a reading surface, so they follow the list's density rather 
                 <div class="post-list">
                     <button class="btn-ghost preset-new" (click)="newPreset()">+ {{ t().manager.forms.newPreset }}</button>
                     @for (p of presets(); track p.id) {
-                    <button class="post-row" [class.on]="selectedPresetId() === p.id" (click)="selectPreset(p)">
-                        <span class="post-row-title">{{ p.name }}</span>
+                    <!--Same card as the posts list: two lists on one screen that behaved and looked
+                    differently was a difference with no meaning behind it.-->
+                    <button class="post-card" [class.on]="selectedPresetId() === p.id" (click)="selectPreset(p)">
+                        <span class="post-card-top">
+                            <span class="post-card-title"><span class="post-card-title-text">{{ p.name }}</span></span>
+                        </span>
                         <!--ADR-060: every language the preset carries text for, first = primary.-->
-                        <span class="post-row-meta">
+                        <span class="post-card-langs">
                             @for (l of presetLanguagesOf(p); track l) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
                         </span>
                     </button>

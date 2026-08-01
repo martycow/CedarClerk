@@ -117,83 +117,109 @@
    viewport, so an iPad in landscape is covered too (T-082). */
 @media (pointer: coarse) {
     .manager-tabs button,
-    .post-row {
-        min-height: 44px;
-    }
-}
-
-/* Priority Fixes 02 (Claude Design, 28.07.2026): radius-md -> radius-lg, matching the same
-   --sheet+--border+--shadow "card" pattern used by Settings/Admin/Stats. */
-.post-list {
+    /* 8.2 — a card with two lines: what the post is, then which languages it exists in. */
+.post-card {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 8px;
-    background: var(--sheet);
-}
-
-.post-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 4px 8px;
+    gap: var(--space-1);
     width: 100%;
     text-align: left;
-    border: none;
+    border: 1px solid transparent;
     background: none;
     color: var(--text);
     font-family: inherit;
     font-size: var(--fs-ui);
-    border-radius: var(--radius-sm);
-    padding: var(--dens-control-y) var(--dens-control-x);
+    border-radius: var(--dens-radius);
+    padding: var(--dens-row-y) var(--dens-control-x);
     cursor: pointer;
 }
 
-.post-row:hover {
+.post-card:hover {
     background: var(--hover);
 }
 
-.post-row.on {
+.post-card.on {
     background: var(--asoft);
-    color: var(--accent);
+    border-color: var(--abord);
+}
+
+.post-card-top {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    min-width: 0;
+}
+
+.post-card-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    flex: 1;
+    min-width: 0;
     font-weight: 600;
 }
 
-.post-row-title {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-    flex: 1;
+.post-card-title-text {
     overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-/* text-overflow needs a block container with inline content — on the flex parent above it was
-   simply ignored, so a long title was clipped mid-word with no ellipsis. */
-.post-row-title-text {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.post-card-langs {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    width: 100%;
 }
 
-/* LIVE + private + archived + scheduled + new + up to six language chips is a long line for a
-   list column. It wraps under the title instead of running past the edge, and the language chips
-   themselves collapse past the third - see visibleLanguages()/extraLanguageCount(). */
-.post-row-meta {
+.post-card-langs .spacer {
+    flex: 1;
+}
+
+.state-chip.muted {
+    color: var(--t2);
+    border-color: var(--border);
+}
+
+}
+
+/* Priority Fixes 02 (Claude Design, 28.07.2026): radius-md -> radius-lg, matching the same
+   --sheet+--border+--shadow "card" pattern used by Settings/Admin/Stats. */
+/* 8.1 — the list scrolls in its own box instead of growing the page. With thirty posts the detail
+   pane's own content used to start below the fold, so picking a post meant scrolling back up to
+   see what you had picked. The search field stays pinned at the top of the scroller. */
+.post-list {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 4px;
-    min-width: 0;
+    flex-direction: column;
+    gap: var(--space-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-2);
+    background: var(--sheet);
+    max-height: calc(100vh - 190px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.post-search {
+    position: sticky;
+    top: calc(var(--space-2) * -1);
+    z-index: 1;
+    margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) var(--space-1);
+    padding: var(--space-2) var(--space-3);
+    border: none;
+    border-bottom: 1px solid var(--border);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: var(--sheet);
+    width: auto;
 }
 
 .post-detail {
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 14px 16px;
+    padding: var(--dens-section) var(--space-4);
     background: var(--sheet);
 }
 
@@ -868,4 +894,152 @@
     flex: none;
     margin-top: 1px;
     color: var(--accent);
+}
+
+/* 8.3 — the remove buttons in the forms editor had no rule on this page at all: `.mini-remove` is
+   declared in editor.component.css, and Angular's view encapsulation keeps it there, so every ✕ in
+   the form editor rendered as a bare browser button. Defined here rather than moved to the global
+   sheet: this is the third page to need it, and a shared icon-button component is a Phase 11
+   cleanup (T-076's mockups decide the shape), not something to invent mid-fix. */
+.mini-remove,
+.mini {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--t2);
+    cursor: pointer;
+    transition: background var(--motion-fast) var(--ease),
+                border-color var(--motion-fast) var(--ease),
+                color var(--motion-fast) var(--ease);
+}
+
+.mini:hover:not(:disabled) {
+    background: var(--hover);
+    color: var(--text);
+}
+
+.mini-remove:hover:not(:disabled) {
+    background: var(--hover-danger);
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.mini:disabled,
+.mini-remove:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+/* 8.4/8.5 — collapsible detail groups. The <details> marker is replaced by our own caret so the
+   summary reads as a section header rather than as a browser widget, and the group's own padding
+   comes from the density tokens instead of the 12/14/16px literals this pane used to mix. */
+.detail-group {
+    border-bottom: 1px solid var(--border);
+    padding: var(--space-1) 0;
+}
+
+.detail-group:last-of-type {
+    border-bottom: none;
+}
+
+.detail-group > summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--dens-row-y) 0;
+    font-size: var(--fs-ui);
+    font-weight: 600;
+    color: var(--t2);
+    cursor: pointer;
+    list-style: none;
+}
+
+.detail-group > summary::-webkit-details-marker {
+    display: none;
+}
+
+.detail-group > summary::before {
+    content: '';
+    width: 0;
+    height: 0;
+    border-left: 5px solid currentColor;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    transition: transform var(--motion-fast) var(--ease);
+}
+
+.detail-group[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+.detail-group[open] > summary {
+    color: var(--text);
+}
+
+/* One rhythm inside a group, replacing the mix of margins each field used to carry. */
+.detail-group > *:not(summary) {
+    margin-bottom: var(--dens-gap);
+}
+
+.detail-group > *:last-child {
+    margin-bottom: var(--space-2);
+}
+
+.growth-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin-bottom: var(--space-2);
+}
+
+.growth-legend button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--t2);
+    border-radius: 999px;
+    padding: var(--space-1) var(--space-3);
+    font: inherit;
+    font-size: var(--fs-caption);
+    cursor: pointer;
+}
+
+.growth-legend button.on {
+    border-color: var(--abord);
+    background: var(--asoft);
+    color: var(--text);
+    font-weight: 600;
+}
+
+.growth-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.growth-chart {
+    width: 100%;
+    height: 160px;
+    display: block;
+}
+
+.growth-line {
+    fill: none;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.growth-area {
+    opacity: .14;
+    stroke: none;
 }

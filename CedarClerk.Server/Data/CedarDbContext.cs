@@ -30,6 +30,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<PostInvite> PostInvites => Set<PostInvite>();
     public DbSet<PostRegistration> PostRegistrations => Set<PostRegistration>();
     public DbSet<PublishTarget> PublishTargets => Set<PublishTarget>();
+    public DbSet<DraftStatSnapshot> DraftStatSnapshots => Set<DraftStatSnapshot>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -58,5 +59,9 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         builder.Entity<PublishTarget>()
             .HasIndex(t => new { t.OwnerId, t.Network, t.RemoteId })
             .IsUnique();
+        // Read as "this draft's series, oldest first" and written once per draft per night —
+        // the same shape as DraftRevision's index, for the same reason.
+        builder.Entity<DraftStatSnapshot>()
+            .HasIndex(s => new { s.DraftId, s.TakenAt });
     }
 }

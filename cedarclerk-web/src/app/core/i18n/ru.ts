@@ -477,6 +477,17 @@ export const ru: Dict = {
         empty: 'Запросов пока нет.',
     },
     manager: {
+        groups: {
+            basics: 'Пост',
+            placement: 'Размещение и действия',
+            destinations: 'Где опубликован',
+            growth: 'Рост',
+            growthEmpty: 'Истории пока нет — цифры записываются раз в сутки, график появится после второй ночи.',
+            access: 'Приватный доступ',
+            views: 'Просмотры',
+            likes: 'Лайки',
+            comments: 'Комментарии',
+        },
         crumb: 'Менеджер постов',
         tabs: {
             posts: 'Посты',
@@ -488,6 +499,7 @@ export const ru: Dict = {
         pickPost: 'Выберите пост слева.',
         noPosts: 'Постов пока нет.',
         archived: 'В архиве',
+        unpublishedChip: 'Не опубликован',
         title: 'Заголовок',
         articleTitle: 'Заголовок статьи',
         articleTitlePlaceholder: 'Совпадает с именем',

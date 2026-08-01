@@ -76,7 +76,45 @@ public class SnapshotChannelStatsJob(CedarDbContext db, TelegramBotService bot, 
             }
         }
 
-        if (channels.Count > 0 || blogOwnerIds.Count > 0)
+        // Per-draft series (8.6). Every draft that is out somewhere — on the blog or in a channel —
+        // gets one row a night. Drafts nobody can see are skipped: a flat line at zero for an
+        // unpublished draft is noise in the table and a chart with nothing in it on screen.
+        var publishedDraftIds = await db.Drafts.Where(d => d.IsBlogPublished).Select(d => d.Id).ToListAsync();
+        var channelDraftIds = await db.ChannelPosts.Select(p => p.DraftId).Distinct().ToListAsync();
+        var trackedIds = publishedDraftIds.Union(channelDraftIds).ToList();
+        if (trackedIds.Count > 0)
+        {
+            try
+            {
+                var views = await db.Drafts.Where(d => trackedIds.Contains(d.Id))
+                    .Select(d => new { d.Id, d.ViewCount }).ToListAsync();
+                var reactions = await db.Reactions.Where(r => trackedIds.Contains(r.DraftId))
+                    .GroupBy(r => new { r.DraftId, r.Kind })
+                    .Select(g => new { g.Key.DraftId, g.Key.Kind, Count = g.Count() }).ToListAsync();
+                var comments = await db.Comments.Where(c => trackedIds.Contains(c.DraftId))
+                    .GroupBy(c => c.DraftId)
+                    .Select(g => new { DraftId = g.Key, Count = g.Count() }).ToListAsync();
+
+                foreach (var draft in views)
+                {
+                    db.DraftStatSnapshots.Add(new DraftStatSnapshot
+                    {
+                        DraftId = draft.Id,
+                        ViewCount = draft.ViewCount,
+                        LikeCount = reactions.FirstOrDefault(r => r.DraftId == draft.Id && r.Kind == "like")?.Count ?? 0,
+                        DislikeCount = reactions.FirstOrDefault(r => r.DraftId == draft.Id && r.Kind == "dislike")?.Count ?? 0,
+                        CommentCount = comments.FirstOrDefault(c => c.DraftId == draft.Id)?.Count ?? 0,
+                        TakenAt = now,
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to snapshot per-draft stats");
+            }
+        }
+
+        if (channels.Count > 0 || blogOwnerIds.Count > 0 || trackedIds.Count > 0)
             await db.SaveChangesAsync();
     }
 }

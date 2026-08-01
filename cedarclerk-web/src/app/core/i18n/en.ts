@@ -480,6 +480,17 @@ export const en = {
         empty: 'No requests yet.',
     },
     manager: {
+        groups: {
+            basics: 'Post',
+            placement: 'Placement and actions',
+            destinations: 'Where it went',
+            growth: 'Growth',
+            growthEmpty: 'No history yet — the numbers are recorded once a night, so a chart appears after the second night.',
+            access: 'Private access',
+            views: 'Views',
+            likes: 'Likes',
+            comments: 'Comments',
+        },
         crumb: 'Posts Manager',
         tabs: {
             posts: 'Posts',
@@ -491,6 +502,7 @@ export const en = {
         pickPost: 'Pick a post on the left.',
         noPosts: 'No posts yet.',
         archived: 'Archived',
+        unpublishedChip: 'Not published',
         title: 'Title',
         articleTitle: 'Article title',
         articleTitlePlaceholder: 'Same as the name',

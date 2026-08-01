@@ -10,7 +10,7 @@ test('the posts list opens and a post can be selected', async ({ page, context }
     await createDraft(context, 'Managed post', ['Body.']);
     await page.goto('/posts');
 
-    const row = page.locator('.post-row', { hasText: 'Managed post' });
+    const row = page.locator('.post-card', { hasText: 'Managed post' });
     await expect(row).toBeVisible();
     await row.click();
     await expect(row).toHaveClass(/on/);
@@ -22,8 +22,8 @@ test('search narrows the post list', async ({ page, context }) => {
     await page.goto('/posts');
 
     await page.locator('.post-search').fill('Searchable');
-    await expect(page.locator('.post-row', { hasText: 'Searchable in manager' })).toBeVisible();
-    await expect(page.locator('.post-row', { hasText: 'Other manager post' })).toHaveCount(0);
+    await expect(page.locator('.post-card', { hasText: 'Searchable in manager' })).toBeVisible();
+    await expect(page.locator('.post-card', { hasText: 'Other manager post' })).toHaveCount(0);
 });
 
 // N7 folded /comments and /stats into this page; the old paths stay as redirects because they are
