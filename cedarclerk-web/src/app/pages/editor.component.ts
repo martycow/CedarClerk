@@ -24,7 +24,7 @@ import { CountBadgeComponent } from '../shared/count-badge.component';
 import { GlossaryTermFormComponent } from '../shared/glossary-term-form.component';
 import { GlossaryService, GlossaryTermInput } from '../core/glossary.service';
 import { AppearancePanelComponent } from '../shared/appearance-panel.component';
-import { NgTemplateOutlet } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, CompressionLevel, UpdatePreview } from '../core/posts.service';
 import { PublishService, PublishAccount, PublishJob } from '../core/publish.service';
 import { DraftRevision, DraftRevisionDetail, RevisionDiff } from '../core/drafts.service';
@@ -187,7 +187,7 @@ interface UploadItem {
 
 @Component({
     selector: 'app-editor',
-    imports: [IconComponent, FormsModule, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent, AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent, CountBadgeComponent, GlossaryTermFormComponent],
+    imports: [IconComponent, FormsModule, DatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent, AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent, CountBadgeComponent, GlossaryTermFormComponent],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
 })

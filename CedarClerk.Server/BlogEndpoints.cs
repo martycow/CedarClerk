@@ -23,9 +23,6 @@ public static class BlogEndpoints
     // Hardcoded rather than CultureInfo("ru-RU") — the Pi's runtime install is bare (no SDK,
     // see .claude/rules/production-environment.md) and the rest of the codebase never reaches
     // for a non-invariant CultureInfo, so avoid depending on ICU data being present for this.
-    private static readonly string[] RuMonthNames =
-        ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-
     private record ReactRequest(string? AnnotationId, string Kind);
     private record PollVoteRequest(string PollId, string Option);
     private record CommentRequest(string? AnnotationId, string? AuthorName, string Text, Guid? ParentCommentId = null);
@@ -855,6 +852,13 @@ public static class BlogEndpoints
 
     private static async Task RenderIndexAsync(HttpContext ctx, CedarDbContext db)
     {
+        // T-094 — the index had no language at all: a hardcoded Russian month heading above an
+        // English card date. It takes the one the reader asked for, and falls back to Russian,
+        // which is what every existing post is written in.
+        var indexLang = ctx.Request.Query["lang"].ToString() is { Length: > 0 } requested
+                        && Languages.IsContentLanguage(requested)
+            ? requested
+            : Languages.Russian;
         // Private posts never appear in the public list (see the ADR following ADR-040,
         // docs/DECISIONS.md) — listing one would leak its existence even though the single-post
         // page itself 404s for anyone not invited.
@@ -923,7 +927,7 @@ public static class BlogEndpoints
                     lastMonthKey = monthKey;
                     if (p.BlogPublishedAt is { } monthDate)
                     {
-                        var monthLabel = $"{RuMonthNames[monthDate.Month - 1]} {monthDate.Year}";
+                        var monthLabel = BlogDateFormatter.MonthHeading(monthDate, indexLang);
                         sb.Append("<div class=\"timeline-month-sep\"><span class=\"sep-line\"></span><span class=\"sep-label\">")
                           .Append(monthLabel).Append("</span><span class=\"sep-line\"></span></div>");
                     }
@@ -941,7 +945,7 @@ public static class BlogEndpoints
                 sb.Append("<a class=\"post-card\" href=\"/").Append(p.BlogSlug).Append("\">");
                 sb.Append("<div class=\"post-card-meta\">");
                 sb.Append("<span class=\"post-card-date\">")
-                  .Append(p.BlogPublishedAt?.ToString("d MMM yyyy", CultureInfo.InvariantCulture) ?? "")
+                  .Append(p.BlogPublishedAt is { } cardDate ? BlogDateFormatter.Date(cardDate, indexLang) : "")
                   .Append("</span>");
 
                 sb.Append("<span class=\"post-card-langs\">RU");
@@ -1176,7 +1180,7 @@ public static class BlogEndpoints
         var glossary = await GlossaryEndpoints.LoadForAsync(db, draft.OwnerId, lang);
         var body = CedarToBlogHtmlRenderer.Render(cedarJson, $"https://{Consts.URLs.BlogHost}", lang, glossary);
         var dateLine = draft.BlogPublishedAt is { } published
-            ? $"<span class=\"post-card-date\">{published.ToString("d MMM yyyy, HH:mm", CultureInfo.InvariantCulture)}</span>"
+            ? $"<span class=\"post-card-date\">{BlogDateFormatter.DateTimeShort(published, lang)}</span>"
             : "";
         // I15 — author's own wording when set; escaped, unlike the built-in defaults which carry
         // their own arrow entity.
@@ -1345,7 +1349,13 @@ public static class BlogEndpoints
             --shadow: 0 1px 3px rgba(0,0,0,.45);
         }
         * { box-sizing: border-box; }
-        body { margin: 0; background: var(--canvas); color: var(--text); font-family: var(--font-sans); line-height: 1.6; }
+        /* T-099 — the footer used to sit wherever the content ended: on a two-post index or a
+           private post's gate that is the middle of the screen, with a wide empty band under it.
+           A column that is at least the viewport tall, with the main area taking the slack. */
+        html { height: 100%; }
+        body { margin: 0; min-height: 100%; display: flex; flex-direction: column; background: var(--canvas); color: var(--text); font-family: var(--font-sans); line-height: 1.6; }
+        .site-main { flex: 1 0 auto; }
+        .site-footer { flex: none; }
         a { color: var(--accent); text-decoration: none; }
         img, video { max-width: 100%; height: auto; }
         .spacer { flex: 1; }

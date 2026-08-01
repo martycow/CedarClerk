@@ -1197,7 +1197,7 @@
             @for (revision of revisions(); track revision.id) {
             <button type="button" class="revision-row" [class.selected]="selectedRevision()?.id === revision.id"
                     (click)="openRevision(revision.id)">
-                <span class="revision-when">{{ utcDate(revision.createdAt).toLocaleString() }}</span>
+                <span class="revision-when">{{ utcDate(revision.createdAt) | date:'d MMM, HH:mm' }}</span>
                 <span class="revision-kind" [class.publish]="revision.kind !== 'save'">{{ revisionKindLabel(revision.kind) }}</span>
                 <span class="revision-lines">{{ t().editor.versions.blocks(revision.lines) }}</span>
             </button>
@@ -1213,7 +1213,7 @@
                         <option value="current">{{ t().editor.versions.currentVersion }}</option>
                         @for (other of revisions(); track other.id) {
                         @if (other.id !== selected.id) {
-                        <option [value]="other.id">{{ utcDate(other.createdAt).toLocaleString() }}</option>
+                        <option [value]="other.id">{{ utcDate(other.createdAt) | date:'d MMM, HH:mm' }}</option>
                         }
                         }
                     </select>
