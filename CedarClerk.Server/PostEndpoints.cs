@@ -65,6 +65,7 @@ public static class PostEndpoints
         string? language = null,
         ILogger? logger = null,
         string compressionLevel = "standard",
+        ThreadPartRef? part = null,
         CancellationToken ct = default)
     {
         var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == draftId && d.OwnerId == ownerId, ct);
@@ -81,7 +82,7 @@ public static class PostEndpoints
         // against. Ensure rather than look up, so a channel connected before this table existed —
         // or one whose backfill has not run — publishes instead of failing on a missing row.
         var target = await TelegramTargetProjection.EnsureAsync(db, targetChannel, ct);
-        return await PublishToTargetAsync(draft, target, ownerId, db, targets, language, logger, compressionLevel, ct);
+        return await PublishToTargetAsync(draft, target, ownerId, db, targets, language, logger, compressionLevel, part: null, ct);
     }
 
     /// <summary>
@@ -98,6 +99,7 @@ public static class PostEndpoints
         string? language = null,
         ILogger? logger = null,
         string compressionLevel = "standard",
+        ThreadPartRef? part = null,
         CancellationToken ct = default)
     {
         var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == draftId && d.OwnerId == ownerId, ct);
@@ -108,7 +110,7 @@ public static class PostEndpoints
         if (target is null)
             return new PublishResult(null, "That account is not connected", StatusCodes.Status403Forbidden);
 
-        return await PublishToTargetAsync(draft, target, ownerId, db, targets, language ?? draft.PrimaryLanguage, logger, compressionLevel, ct);
+        return await PublishToTargetAsync(draft, target, ownerId, db, targets, language ?? draft.PrimaryLanguage, logger, compressionLevel, part, ct);
     }
 
     private static async Task<PublishResult> PublishToTargetAsync(
@@ -120,6 +122,7 @@ public static class PostEndpoints
         string language,
         ILogger? logger,
         string compressionLevel,
+        ThreadPartRef? part,
         CancellationToken ct)
     {
         var draftId = draft.Id;
@@ -148,6 +151,7 @@ public static class PostEndpoints
             CedarJson = cedarJson,
             Target = target,
             AuthorText = authorText,
+            Part = part,
             CompressionLevel = compressionLevel,
         }, ct);
 

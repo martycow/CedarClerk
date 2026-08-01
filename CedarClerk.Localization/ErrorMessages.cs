@@ -86,6 +86,21 @@ public static class ErrorMessages
     public static string BlueskyCredentialsRefused => Ru("Bluesky не принял эти данные — проверьте хэндл и используйте app-пароль, а не пароль от аккаунта.", "Bluesky refused those credentials — check the handle and use an app password, not your account password");
     public static string DraftNotFoundPlain => Ru("Черновик не найден.", "Draft not found");
     public static string ScheduleOnlyToOwnChannels => Ru("Планировать можно только в подключённые каналы — сначала подключите канал (окно «Каналы»).", "You can only schedule posts to your connected channels — connect this channel first (Channels popup)");
+    /// <summary>T-106 — an earlier part of the thread did not go out, so this one must not either.</summary>
+    public static string ThreadPartAbandoned(int index) => Ru(
+        $"Предыдущая часть треда не ушла — часть {index + 1} не отправлена, чтобы в канале не осталось дыры.",
+        $"An earlier part of the thread did not go out — part {index + 1} was held back rather than leaving a gap.");
+
+    public static string UnknownNetwork(string network) => Ru(
+        $"Неизвестная сеть: {network}", $"Unknown network: {network}");
+
+    public static string DraftIsEmpty => Ru("Черновик пуст.", "Draft is empty.");
+
+    /// <summary>T-106 — the document shrank between parts, so the part being sent no longer exists.</summary>
+    public static string ThreadPartGone => Ru(
+        "Документ изменился во время публикации треда — часть больше не существует. Опубликуйте заново.",
+        "The document changed while the thread was being published — this part no longer exists. Publish again.");
+
     public static string BotNotRunning => Ru("Telegram-бот не запущен.", "Telegram bot is not running.");
 
     // T-089 — the one Bluesky failure an author can act on: the stored app password no longer opens

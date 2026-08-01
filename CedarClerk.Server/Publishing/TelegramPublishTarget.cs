@@ -89,12 +89,28 @@ public class TelegramPublishTarget(
         var blocks = CedarToTelegramBlocksRenderer.Render(cedarJson, mainHost).ToList();
 
         if (blocks.Count == 0)
-            return PublishOutcome.Fail("Draft is empty");
+            return PublishOutcome.Fail(ErrorMessages.DraftIsEmpty);
+
+        // T-106 — one part of a thread. The split is recomputed from the document rather than
+        // carried in the job row: the same document and the same limits produce the same parts, so
+        // there is nothing to keep in sync. (Editing the post mid-thread would shift the later
+        // parts — which is what ADR-065's publish guard is for.)
+        if (request.Part is { Count: > 1 } part)
+        {
+            var parts = TelegramThreadSplitter.Split(blocks, Capabilities);
+            if (part.Index >= parts.Count)
+                return PublishOutcome.Fail(ErrorMessages.ThreadPartGone, StatusCodes.Status409Conflict);
+            blocks = parts[part.Index].Blocks.ToList();
+        }
 
         var draft = await db.Drafts.FirstAsync(d => d.Id == request.DraftId, ct);
         var owner = await db.Users.Where(u => u.Id == request.OwnerId)
             .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PostSignatureTranslationsJson, u.PlanTier, u.PlanExpiresAt, u.BlogLinkText, u.BlogLinkTextTranslationsJson })
             .FirstAsync(ct);
+
+        // The signature, the cross-link and the hashtags close the *publication*, not every message
+        // of it — repeated eight times they read as noise rather than as a signature (T-106).
+        var isLastPart = request.Part is not { Count: > 1 } || request.Part.Index == request.Part.Count - 1;
 
         // Free tier always gets the fixed Cedar Clerk attribution; Pro+ can replace it with a
         // custom signature (optionally a clickable link) or clear it entirely. See Phase 8 Step 5,
@@ -103,7 +119,7 @@ public class TelegramPublishTarget(
         // FI5 — this Telegram send is already per-language, so the signature appended to it is too.
         var localizedSignature = LocalizedTextMap.Pick(owner.PostSignature, owner.PostSignatureTranslationsJson, request.Language);
         var resolvedSignature = PlanLimitations.ResolveSignature(currentPlan, localizedSignature, owner.PostSignatureUrl);
-        if (resolvedSignature is { } sig)
+        if (isLastPart && resolvedSignature is { } sig)
         {
             // B17 — bold, so the signature reads as a signature in the channel rather than as one
             // more paragraph of the post. A linked signature is bolded inside the link, since
@@ -117,7 +133,7 @@ public class TelegramPublishTarget(
         }
 
         // Cross-link to the blog at the end of the Telegram post.
-        if (draft.IsBlogPublished && draft.BlogSlug is not null)
+        if (isLastPart && draft.IsBlogPublished && draft.BlogSlug is not null)
         {
             var langSuffix = request.Language == draft.PrimaryLanguage ? "" : $"?lang={request.Language}";
             var blogUrl = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}/{draft.BlogSlug}{langSuffix}";
@@ -130,15 +146,32 @@ public class TelegramPublishTarget(
         }
 
         // Phase 8 Step 6, docs/ROADMAP.md — tags extended to the Telegram export path.
-        if (PostEndpoints.BuildHashtagLine(draft.Tags) is { } hashtagLine)
+        if (isLastPart && PostEndpoints.BuildHashtagLine(draft.Tags) is { } hashtagLine)
             blocks.Add(new RichParagraphBlock(new RichRunText(hashtagLine)));
+
+        // "3/8" as a footer, not a heading: the first message should open with the post, not with
+        // its own bookkeeping — but a reader who arrives mid-thread still needs to know there is more.
+        if (request.Part is { Count: > 1 } counted)
+        {
+            blocks.Add(new RichFooterBlock(new RichRunText($"{counted.Index + 1}/{counted.Count}")));
+        }
 
         var content = new InputRichMessage { Blocks = blocks.Select(ToInputRichBlock).ToList() };
 
         Message msg;
         try
         {
-            msg = await bot.Client.SendRichMessage(new ChatId(chatId), content, cancellationToken: ct);
+            // Each part replies to the one before it, which is what makes Telegram show a thread
+            // rather than eight loose posts. Only the first part rings: eight notifications for one
+            // publication is how a channel loses subscribers.
+            var replyTo = request.Part?.ReplyToRemoteId is { } previous && int.TryParse(previous, out var replyId)
+                ? new ReplyParameters { MessageId = replyId }
+                : null;
+
+            msg = await bot.Client.SendRichMessage(new ChatId(chatId), content,
+                replyParameters: replyTo,
+                disableNotification: request.Part is { Index: > 0 },
+                cancellationToken: ct);
         }
         catch (Telegram.Bot.Exceptions.ApiRequestException ex)
         {
@@ -174,10 +207,13 @@ public class TelegramPublishTarget(
         if (request.Target.ChannelId is { } channelId)
             db.ChannelPosts.Add(new ChannelPost { ChannelId = channelId, DraftId = request.DraftId, TelegramMessageId = msg.MessageId });
 
-        // The document as it was actually sent — see the class comment on why this is the rewritten
-        // one and why that is left alone here.
-        await DraftRevisionService.RecordAsync(db, request.DraftId, request.Language, request.Title, cedarJson,
-            DraftRevisionService.Kinds.Telegram, chatId, ct);
+        // The revision is the baseline for "what would an update overwrite", so it is recorded once
+        // per publication — on the last part, when the whole document has actually gone out.
+        if (isLastPart)
+        {
+            await DraftRevisionService.RecordAsync(db, request.DraftId, request.Language, request.Title, cedarJson,
+                DraftRevisionService.Kinds.Telegram, chatId, ct);
+        }
 
         var publicUrl = username is null ? null : $"https://t.me/{username}/{msg.MessageId}";
         return PublishOutcome.Ok(new PublishReceipt(msg.MessageId.ToString(System.Globalization.CultureInfo.InvariantCulture), publicUrl));

@@ -1,4 +1,5 @@
 using CedarClerk.Core;
+using CedarClerk.Localization;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server.Publishing;
@@ -50,7 +51,7 @@ public class PublishJobRunner(
         {
             try
             {
-                await RunOneAsync(jobId, CancellationToken.None);
+                await RunOneAsync(jobId, kickSuccessor: true, CancellationToken.None);
             }
             catch (Exception ex)
             {
@@ -79,18 +80,23 @@ public class PublishJobRunner(
         }
         if (abandoned.Count > 0) await db.SaveChangesAsync(ct);
 
+        // Ordered by part before age: a thread's parts are created in the same millisecond, and
+        // CreatedAt alone would leave their order to the database.
         var due = await db.PublishJobs
             .Where(j => j.Status == PublishJobStatus.Pending && (j.NextAttemptAt == null || j.NextAttemptAt <= now))
-            .OrderBy(j => j.CreatedAt)
+            .OrderBy(j => j.CreatedAt).ThenBy(j => j.PartIndex)
             .Select(j => j.Id)
-            .Take(10)
+            .Take(20)
             .ToListAsync(ct);
 
+        // Sequentially, and without kicking successors: the loop is already ordered, and a
+        // fire-and-forget kick racing it is how part 3 once went out while part 2 was still being
+        // decided. The sweep is the deterministic path; the kick exists only for immediacy.
         foreach (var id in due)
-            await RunOneAsync(id, ct);
+            await RunOneAsync(id, kickSuccessor: false, ct);
     }
 
-    private async Task RunOneAsync(Guid jobId, CancellationToken ct)
+    private async Task RunOneAsync(Guid jobId, bool kickSuccessor, CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
@@ -98,6 +104,29 @@ public class PublishJobRunner(
 
         var job = await db.PublishJobs.FirstOrDefaultAsync(j => j.Id == jobId, ct);
         if (job is null || job.Status != PublishJobStatus.Pending) return;
+
+        // T-106 — a thread goes out in order, and a part never goes out on its own. Waiting rather
+        // than sending is the whole point: parts 5 and 6 arriving before 4 is worse than late.
+        string? replyTo = null;
+        if (job is { ThreadId: not null, PartIndex: > 0 })
+        {
+            var previous = await db.PublishJobs.FirstOrDefaultAsync(
+                j => j.ThreadId == job.ThreadId && j.PartIndex == job.PartIndex - 1, ct);
+
+            if (previous is null || previous.Status is PublishJobStatus.Failed or PublishJobStatus.Unknown)
+            {
+                // The thread broke earlier. Sending this part would leave a channel with a gap in
+                // the middle of a document and no way to tell what is missing.
+                job.Status = PublishJobStatus.Failed;
+                job.FinishedAt = DateTime.UtcNow;
+                job.Error = ErrorMessages.ThreadPartAbandoned(job.PartIndex);
+                await db.SaveChangesAsync(ct);
+                return;
+            }
+
+            if (previous.Status != PublishJobStatus.Succeeded) return;   // still running — the sweep comes back
+            replyTo = previous.RemoteId;
+        }
 
         // The claim. Concurrency here is one process and SQLite's write lock, so a conditional
         // save is enough — but it IS the thing keeping the kick and the sweeper from both sending.
@@ -113,8 +142,9 @@ public class PublishJobRunner(
             return;
         }
 
+        var part = job.PartCount > 1 ? new ThreadPartRef(job.PartIndex, job.PartCount, replyTo) : null;
         var result = await PostEndpoints.PublishToTargetAsync(
-            job.DraftId, job.TargetId, job.OwnerId, db, targets, job.Language, logger, ct: ct);
+            job.DraftId, job.TargetId, job.OwnerId, db, targets, job.Language, logger, part: part, ct: ct);
 
         job.FinishedAt = DateTime.UtcNow;
         if (result.Success)
@@ -139,5 +169,15 @@ public class PublishJobRunner(
         }
 
         await db.SaveChangesAsync(ct);
+
+        // The next part waits on this one, so it is kicked here rather than left to the sweeper —
+        // otherwise an eight-part thread would take two minutes of doing nothing between messages.
+        if (kickSuccessor && job.Status == PublishJobStatus.Succeeded
+            && job.ThreadId is { } thread && job.PartIndex + 1 < job.PartCount)
+        {
+            var next = await db.PublishJobs.FirstOrDefaultAsync(
+                j => j.ThreadId == thread && j.PartIndex == job.PartIndex + 1 && j.Status == PublishJobStatus.Pending, ct);
+            if (next is not null) Kick(next.Id);
+        }
     }
 }

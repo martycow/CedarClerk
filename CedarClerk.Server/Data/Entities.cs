@@ -660,6 +660,16 @@ public class PublishJob
     /// <summary>Pending → Running → Succeeded | Failed | Unknown. See PublishJobStatus.</summary>
     public string Status { get; set; } = PublishJobStatus.Pending;
 
+    /// <summary>
+    /// T-106 — the thread this part belongs to, and where in it. Null/0/1 is an ordinary single
+    /// message. One job per part rather than one job per thread, because a thread that fails on
+    /// part four must be resumable at part four: retrying the whole thing would send parts one to
+    /// three a second time, and a channel cannot un-see them.
+    /// </summary>
+    public Guid? ThreadId { get; set; }
+    public int PartIndex { get; set; }
+    public int PartCount { get; set; } = 1;
+
     public int Attempts { get; set; }
     public string? Error { get; set; }
     /// <summary>What the network called the thing it created — a message id, an at:// URI.</summary>

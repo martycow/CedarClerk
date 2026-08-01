@@ -240,4 +240,66 @@ public class PublishJobRunnerTests
             Assert.Equal(expectedCalls, target.Calls);
         }
     }
+
+    private static async Task<List<PublishJob>> QueueThreadAsync(ServiceProvider provider, Guid draftId, Guid targetId, int parts)
+    {
+        using var scope = provider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
+        var threadId = Guid.NewGuid();
+        var jobs = Enumerable.Range(0, parts).Select(i => new PublishJob
+        {
+            OwnerId = "owner-1", DraftId = draftId, TargetId = targetId,
+            Network = PublishNetworks.Telegram, Language = Languages.Russian,
+            ThreadId = threadId, PartIndex = i, PartCount = parts,
+        }).ToList();
+        db.PublishJobs.AddRange(jobs);
+        await db.SaveChangesAsync();
+        return jobs;
+    }
+
+    // T-106 — a thread goes out in order, and a part never goes out on its own. The sweep is what
+    // this asserts against: it picks jobs by age, so without the ordering rule part 3 would be
+    // sent while part 2 was still running.
+    [Fact]
+    public async Task Thread_parts_go_out_in_order_and_never_ahead_of_each_other()
+    {
+        var (provider, connection, target) = Build();
+        using var _ = connection;
+        var (draftId, targetId) = await SeedAsync(provider);
+        var jobs = await QueueThreadAsync(provider, draftId, targetId, 3);
+
+        // One sweep sends part 1 and, through the kick, its successors — so drive it explicitly.
+        for (var i = 0; i < 3; i++) await Runner(provider).SweepAsync(CancellationToken.None);
+
+        foreach (var job in jobs)
+            Assert.Equal(PublishJobStatus.Succeeded, (await ReadAsync(provider, job.Id)).Status);
+        Assert.Equal(3, target.Calls);
+    }
+
+    // The case that decides whether one job per part was worth it: part 2 fails, and 3 must not go
+    // out — a channel with parts 1 and 3 of a document is worse than one with part 1 alone.
+    [Fact]
+    public async Task A_broken_thread_holds_back_the_parts_after_it()
+    {
+        var (provider, connection, target) = Build();
+        using var _ = connection;
+        var (draftId, targetId) = await SeedAsync(provider);
+        var jobs = await QueueThreadAsync(provider, draftId, targetId, 3);
+
+        var call = 0;
+        target.Next = () => ++call == 2
+            ? PublishOutcome.Fail("Telegram rejected the post", StatusCodes.Status400BadRequest)
+            : PublishOutcome.Ok(new PublishReceipt(call.ToString(), null));
+
+        for (var i = 0; i < 3; i++) await Runner(provider).SweepAsync(CancellationToken.None);
+
+        Assert.Equal(PublishJobStatus.Succeeded, (await ReadAsync(provider, jobs[0].Id)).Status);
+        Assert.Equal(PublishJobStatus.Failed, (await ReadAsync(provider, jobs[1].Id)).Status);
+
+        var third = await ReadAsync(provider, jobs[2].Id);
+        Assert.Equal(PublishJobStatus.Failed, third.Status);
+        Assert.Contains("gap", third.Error);
+        // Two sends: the successful first part and the failing second. The third never went out.
+        Assert.Equal(2, target.Calls);
+    }
 }

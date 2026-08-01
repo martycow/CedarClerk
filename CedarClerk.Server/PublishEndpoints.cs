@@ -17,7 +17,7 @@ namespace CedarClerk.Server;
 public static class PublishEndpoints
 {
     public record ConnectBlueskyRequest(string Handle, string AppPassword, string? Service);
-    public record QueuePublishRequest(Guid DraftId, List<Guid>? TargetIds, string? Language = null, string? ConfirmedFingerprint = null);
+    public record QueuePublishRequest(Guid DraftId, List<Guid>? TargetIds, string? Language = null, string? ConfirmedFingerprint = null, bool SplitIntoThread = false);
     public record TargetTextRequest(string Network, string Language, string Text);
 
     public static void MapPublishEndpoints(this WebApplication app)
@@ -121,6 +121,40 @@ public static class PublishEndpoints
             return Results.NoContent();
         });
 
+        // T-106 — what the thread would look like, before anything is sent. The author sees the
+        // parts, their sizes and where each one starts; splitting a post into eight messages is a
+        // loud act and must never be a surprise.
+        group.MapGet("/thread-preview", async (Guid draftId, string network, string? language,
+            ClaimsPrincipal user, CedarDbContext db, IEnumerable<IPublishTarget> targets, IConfiguration cfg) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == draftId && d.OwnerId == uid);
+            if (draft is null) return Results.NotFound(new { error = ErrorMessages.DraftNotFound });
+
+            var implementation = targets.FirstOrDefault(t => t.Network == network);
+            if (implementation is null) return Results.BadRequest(new { error = ErrorMessages.UnknownNetwork(network) });
+
+            var lang = language ?? draft.PrimaryLanguage;
+            var document = await DraftRevisionService.ResolveAsync(db, draft, lang);
+            if (document is null) return Results.NotFound(new { error = ErrorMessages.NoVersionInLanguage(lang) });
+
+            var mainHost = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
+            var blocks = CedarToTelegramBlocksRenderer.Render(document.Value.CedarJson, mainHost).ToList();
+            var parts = TelegramThreadSplitter.Split(blocks, implementation.Capabilities);
+
+            return Results.Ok(new
+            {
+                parts = parts.Select((p, i) => new
+                {
+                    index = i,
+                    startsWith = p.StartsWith,
+                    characters = p.Characters,
+                    mediaCount = p.MediaCount,
+                    cutReason = p.CutReason,
+                }),
+            });
+        });
+
         // ── The publish queue (T-090, ADR-081) ───────────────────────────────────────────────
         // Publishing stopped being an HTTP request that waits for a network to finish downloading
         // media from us (ADR-080). The request now queues the work and answers immediately; the
@@ -130,7 +164,8 @@ public static class PublishEndpoints
             ClaimsPrincipal user,
             CedarDbContext db,
             PublishJobRunner runner,
-            IEnumerable<IPublishTarget> publishers) =>
+            IEnumerable<IPublishTarget> publishers,
+            IConfiguration cfg) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == req.DraftId && d.OwnerId == uid);
@@ -179,8 +214,13 @@ public static class PublishEndpoints
                 {
                     var implementation = publishers.FirstOrDefault(p => p.Network == target.Network);
                     if (implementation is null) continue;
+                    // T-106 — splitting is what answers "too long" and "too much media", so those
+                    // stop being blocking when the author has asked for a thread. An oversized
+                    // single image still blocks: no number of messages makes it smaller.
                     var blocking = PublishValidator.Validate(document.Value.CedarJson, implementation.Capabilities, sizes)
                         .Where(i => i.Blocking)
+                        .Where(i => !req.SplitIntoThread
+                                    || (i.Code != PublishIssueCodes.TooLong && i.Code != PublishIssueCodes.TooManyMedia))
                         .ToList();
                     if (blocking.Count > 0)
                         return Results.Json(new { error = ErrorMessages.PublishWontFit(target.Network), issues = blocking, network = target.Network },
@@ -188,24 +228,47 @@ public static class PublishEndpoints
                 }
             }
 
-            // One job per destination: a post that reaches Telegram and fails on Bluesky is a
-            // partial success, and one row per target is what lets it be reported as one.
-            var jobs = targets.Select(target => new PublishJob
+            // One job per destination — a post that reaches Telegram and fails on Bluesky is a
+            // partial success, and one row per target is what lets it be reported as one — and,
+            // when the author asked for a thread, one job per part on top of that (T-106).
+            var jobs = new List<PublishJob>();
+            foreach (var target in targets)
             {
-                OwnerId = uid,
-                DraftId = draft.Id,
-                TargetId = target.Id,
-                Network = target.Network,
-                Language = language,
-            }).ToList();
+                var partCount = 1;
+                if (req.SplitIntoThread && document is not null
+                    && publishers.FirstOrDefault(p => p.Network == target.Network) is { } implementation)
+                {
+                    var mainHost = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
+                    var blocks = CedarToTelegramBlocksRenderer.Render(document.Value.CedarJson, mainHost).ToList();
+                    partCount = Math.Max(1, TelegramThreadSplitter.Split(blocks, implementation.Capabilities).Count);
+                }
+
+                var threadId = partCount > 1 ? Guid.NewGuid() : (Guid?)null;
+                for (var i = 0; i < partCount; i++)
+                {
+                    jobs.Add(new PublishJob
+                    {
+                        OwnerId = uid,
+                        DraftId = draft.Id,
+                        TargetId = target.Id,
+                        Network = target.Network,
+                        Language = language,
+                        ThreadId = threadId,
+                        PartIndex = i,
+                        PartCount = partCount,
+                    });
+                }
+            }
 
             db.PublishJobs.AddRange(jobs);
             await db.SaveChangesAsync();
 
             // Saved before kicked: a runner must never look for a row that is not committed yet.
-            foreach (var job in jobs) runner.Kick(job.Id);
+            // Only the first part of a thread is kicked — each later part is started by the one
+            // before it, which is what keeps them in order.
+            foreach (var job in jobs.Where(j => j.PartIndex == 0)) runner.Kick(job.Id);
 
-            return Results.Ok(new { jobs = jobs.Select(j => new { j.Id, j.Network, j.TargetId, j.Status }) });
+            return Results.Ok(new { jobs = jobs.Select(j => new { j.Id, j.Network, j.TargetId, j.Status, j.PartIndex, j.PartCount }) });
         });
 
         group.MapGet("/jobs", async (Guid draftId, ClaimsPrincipal user, CedarDbContext db) =>
@@ -218,7 +281,7 @@ public static class PublishEndpoints
                 .Take(20)
                 .Select(j => new
                 {
-                    j.Id, j.Network, j.TargetId, j.Language, j.Status, j.Attempts,
+                    j.Id, j.Network, j.TargetId, j.Language, j.Status, j.Attempts, j.PartIndex, j.PartCount,
                     j.Error, j.RemoteId, j.PublicUrl, j.CreatedAt, j.FinishedAt,
                 })
                 .ToListAsync();

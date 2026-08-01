@@ -24,6 +24,12 @@ public record PublishRequest
     public string? AuthorText { get; init; }
 
     /// <summary>
+    /// T-106 — which slice of a threaded publication this is, and what to hang it off. Null for an
+    /// ordinary single message, which is every publication that fits.
+    /// </summary>
+    public ThreadPartRef? Part { get; init; }
+
+    /// <summary>
     /// How hard to compress media before sending: "small" / "standard" / "high". General rather
     /// than a Telegram detail — every network caps image bytes (Telegram ~10MB by URL fetch,
     /// Bluesky 1MB by blob upload), so "how much quality may be traded for fitting" is a choice
@@ -38,6 +44,12 @@ public record PublishRequest
 /// in production, and ADR-065 found code treating its absence as "never published".
 /// </summary>
 public record PublishReceipt(string RemoteId, string? PublicUrl);
+
+/// <param name="ReplyToRemoteId">
+/// The previous part's message id. Telegram renders a reply chain, which is what turns eight
+/// messages into one thread a reader can follow instead of eight posts in a row.
+/// </param>
+public record ThreadPartRef(int Index, int Count, string? ReplyToRemoteId);
 
 /// <summary>
 /// Deliberately the same shape as the `PostEndpoints.PublishResult` it will replace in T-085 —
