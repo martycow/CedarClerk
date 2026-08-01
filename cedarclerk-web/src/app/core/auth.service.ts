@@ -276,6 +276,23 @@ export class AuthService {
         this.appearancePrefsJson.set(res.appearancePrefsJson);
     }
 
+    /**
+     * Fills the signature and both cross-link texts for every chosen language from what is written
+     * in the source one (01.08.2026). Pro Plus, and one AI call for the whole batch — the same
+     * bargain the glossary's translate-all makes.
+     */
+    async translateProfileTexts(sourceLanguage: string, targetLanguages: string[]) {
+        const res = await firstValueFrom(this.http.post<{
+            postSignatureTexts: Record<string, string>;
+            blogLinkTexts: Record<string, string>;
+            telegramLinkTexts: Record<string, string>;
+        }>('/api/auth/profile/translate-texts', { sourceLanguage, targetLanguages }));
+        this.postSignatureTexts.set(res.postSignatureTexts);
+        this.blogLinkTexts.set(res.blogLinkTexts);
+        this.telegramLinkTexts.set(res.telegramLinkTexts);
+        return res;
+    }
+
     async saveNewDraftDefaults(defaultsJson: string | null): Promise<void> {
         const res = await firstValueFrom(this.http.post<{ newDraftDefaultsJson: string | null }>(
             '/api/auth/new-draft-defaults', { defaultsJson }));

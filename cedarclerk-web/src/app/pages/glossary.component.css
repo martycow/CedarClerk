@@ -292,3 +292,107 @@
 @media (max-width: 600px) {
     .form-row-2 { grid-template-columns: 1fr; }
 }
+
+/* ── Inline edit, case flag and preview (01.08.2026) ───────────────────────────────────────── */
+
+/* The form now renders inside the list where the edited card was, so it needs the separation a
+   card has — otherwise it reads as a continuation of the row above it. */
+.term-form {
+    border: 1px solid var(--abord);
+    background: var(--asoft);
+}
+
+.term-card {
+    cursor: pointer;
+}
+
+.term-card:hover {
+    border-color: var(--abord);
+}
+
+/* "Aa" — this term matches only its exact spelling. A flag, not a label: it sits in a row that is
+   already carrying the term and its aliases. */
+.term-flag {
+    font-size: var(--fs-caption);
+    font-weight: 700;
+    letter-spacing: -.02em;
+    color: var(--t2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0 var(--space-1);
+}
+
+.term-case-toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    font-size: var(--fs-ui);
+    cursor: pointer;
+}
+
+.term-case-toggle input {
+    margin-top: 2px;
+    accent-color: var(--accent);
+}
+
+.term-case-toggle .field-hint-inline {
+    display: block;
+    margin-top: var(--space-1);
+}
+
+.preview-langs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin-bottom: var(--space-3);
+}
+
+.preview-langs button {
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--t2);
+    border-radius: 999px;
+    padding: var(--space-1) var(--space-3);
+    font: inherit;
+    font-size: var(--fs-caption);
+    cursor: pointer;
+}
+
+.preview-langs button.on {
+    border-color: var(--abord);
+    background: var(--asoft);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+/* Deliberately mirrors the blog tooltip's own shape (BlogEndpoints' .glossary-tip): a bordered
+   card, the term as a heading, the description under it, the image last. If the blog's tooltip
+   changes, this is the other half to change — a preview that has drifted is worse than none. */
+.glossary-preview-tip {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--sheet);
+    padding: var(--space-3) var(--space-4);
+    box-shadow: var(--shadow);
+}
+
+.glossary-preview-term {
+    display: block;
+    font-weight: 700;
+    font-size: var(--fs-body);
+    margin-bottom: var(--space-1);
+}
+
+.glossary-preview-desc {
+    margin: 0;
+    color: var(--t2);
+    font-size: var(--fs-ui);
+    line-height: 1.5;
+}
+
+.glossary-preview-img {
+    display: block;
+    max-width: 100%;
+    margin-top: var(--space-2);
+    border-radius: var(--radius-sm);
+}

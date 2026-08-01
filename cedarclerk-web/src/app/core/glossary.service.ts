@@ -14,6 +14,10 @@ export interface GlossaryTerm {
     aliases: string;
     imageUrl: string | null;
     language: string;
+    /** Matching ignores case unless this is on — "IT" the industry vs "it" the pronoun. */
+    isCaseSensitive: boolean;
+    /** The root of the translation group: every language version of one idea shares it. */
+    sourceTermId: string | null;
     updatedAt: string;
 }
 
@@ -23,6 +27,7 @@ export interface GlossaryTermInput {
     aliases: string;
     imageUrl: string | null;
     language: string;
+    isCaseSensitive: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

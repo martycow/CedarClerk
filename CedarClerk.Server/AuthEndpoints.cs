@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using CedarClerk.Core;
 using CedarClerk.Localization;
 using CedarClerk.Server.Bot;
+using CedarClerk.Server.Translation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -260,6 +261,114 @@ public static class AuthEndpoints
         })
         .RequireAuthorization();
 
+        // Auto-translate the profile's own texts (Marty, 01.08.2026). The signature and the two
+        // cross-link lines are per-language (FI5/I15) and were the only per-language texts in the
+        // product an author still had to write by hand in every language — the post body, its
+        // title and the glossary all had auto-translate already.
+        //
+        // Deliberately the same shape as the glossary's translate-all (ADR-061): the narrow
+        // ITextsTranslationProvider capability, the plan gate before the provider call, one AI
+        // call charged for the whole batch, and whatever the provider returns empty is left alone
+        // rather than overwritten with a blank.
+        groupBuilder.MapPost("/profile/translate-texts", async (
+            TranslateProfileTextsRequest req,
+            ClaimsPrincipal principal,
+            UserManager<ApplicationUser> users,
+            CedarDbContext db,
+            IConfiguration cfg,
+            IHttpClientFactory httpFactory,
+            CancellationToken ct) =>
+        {
+            var user = await users.GetUserAsync(principal);
+            if (user is null) return Results.Unauthorized();
+
+            var source = Languages.IsContentLanguage(req.SourceLanguage) ? req.SourceLanguage : Languages.Russian;
+            var targets = (req.TargetLanguages ?? [])
+                .Where(l => Languages.IsContentLanguage(l) && l != source)
+                .Distinct()
+                .ToList();
+            if (targets.Count == 0)
+                return Results.BadRequest(new { error = "Pick at least one language to translate into" });
+
+            var tier = await SubscriptionPlan.EffectiveTierAsync(db, user.Id);
+            if (!PlanLimitations.HasAiFeatures(tier))
+                return Results.Json(new { error = ErrorMessages.AutoTranslateProPlus }, statusCode: StatusCodes.Status403Forbidden);
+
+            // The three texts in a fixed order, so the provider's flat result maps back by index.
+            // A blank source stays blank in every language: there is nothing to translate, and
+            // inventing a signature for someone who has none would be worse than leaving it empty.
+            var slots = new (string Key, string? Text)[]
+            {
+                ("signature", LocalizedTextMap.Pick(user.PostSignature, user.PostSignatureTranslationsJson, source)),
+                ("blogLink", LocalizedTextMap.Pick(user.BlogLinkText, user.BlogLinkTextTranslationsJson, source)),
+                ("telegramLink", LocalizedTextMap.Pick(user.TelegramLinkText, user.TelegramLinkTextTranslationsJson, source)),
+            };
+            var filled = slots.Where(s => !string.IsNullOrWhiteSpace(s.Text)).ToList();
+            if (filled.Count == 0)
+                return Results.BadRequest(new { error = "Nothing to translate — write the texts in the source language first" });
+
+            ITranslationProvider? provider;
+            try
+            {
+                provider = TranslationProviderFactory.Create(cfg, httpFactory);
+            }
+            catch (TranslationException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status501NotImplemented);
+            }
+            if (provider is not ITextsTranslationProvider textsProvider)
+                return Results.Json(new { error = ErrorMessages.AutoTranslateNoProvider }, statusCode: StatusCodes.Status501NotImplemented);
+
+            var unsupported = targets.Where(l => !provider.SupportsTargetLanguage(l)).ToList();
+            if (unsupported.Count > 0)
+                return Results.Json(new { error = ErrorMessages.LanguageNotSupportedByProvider(unsupported[0], provider.Name) },
+                    statusCode: StatusCodes.Status501NotImplemented);
+
+            if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, user.Id))
+                return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);
+
+            foreach (var target in targets)
+            {
+                IReadOnlyList<string> translated;
+                try
+                {
+                    translated = await textsProvider.TranslateTextsAsync(filled.Select(f => f.Text!).ToList(), target, ct);
+                }
+                catch (TranslationException ex)
+                {
+                    return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status502BadGateway);
+                }
+
+                for (var i = 0; i < filled.Count && i < translated.Count; i++)
+                {
+                    var value = translated[i].Trim();
+                    if (value.Length == 0) continue;
+                    switch (filled[i].Key)
+                    {
+                        case "signature":
+                            user.PostSignatureTranslationsJson = LocalizedTextMap.Set(user.PostSignatureTranslationsJson, target, value);
+                            break;
+                        case "blogLink":
+                            user.BlogLinkTextTranslationsJson = LocalizedTextMap.Set(user.BlogLinkTextTranslationsJson, target, value);
+                            break;
+                        case "telegramLink":
+                            user.TelegramLinkTextTranslationsJson = LocalizedTextMap.Set(user.TelegramLinkTextTranslationsJson, target, value);
+                            break;
+                    }
+                }
+            }
+
+            await users.UpdateAsync(user);
+
+            return Results.Ok(new
+            {
+                postSignatureTexts = LocalizedTextMap.All(user.PostSignatureTranslationsJson),
+                blogLinkTexts = LocalizedTextMap.All(user.BlogLinkTextTranslationsJson),
+                telegramLinkTexts = LocalizedTextMap.All(user.TelegramLinkTextTranslationsJson),
+            });
+        })
+        .RequireAuthorization();
+
         // IF1 — the file itself goes through POST /api/assets like any other image (same type
         // whitelist, same storage quota, same public /media serving); this only records which one
         // is the avatar. Null clears it back to the initial-letter placeholder.
@@ -414,6 +523,8 @@ public static class AuthEndpoints
 
     // Unknown codes and blanks are dropped rather than rejected: the map is a set of optional
     // labels, and refusing the whole profile save over one stray key would be out of proportion.
+    public record TranslateProfileTextsRequest(string SourceLanguage, List<string>? TargetLanguages);
+
     private static string? BuildLinkTextMap(Dictionary<string, string> texts)
     {
         string? json = null;

@@ -9,7 +9,13 @@ namespace CedarClerk.Core;
 /// "рендерера", "рендереру" — so matching only the canonical form would miss most occurrences of
 /// a term in a Russian post. Listing them beats guessing at stemming rules per language.
 /// </param>
-public sealed record GlossaryEntry(string Term, string Description, string? ImageUrl, IReadOnlyList<string> Aliases);
+/// <param name="IsCaseSensitive">
+/// Off by default, because a term at the start of a sentence is the same term. On when the casing
+/// IS the meaning — "IT" the industry against "it" the pronoun, or a product spelled a fixed way.
+/// Applies to the term and to every alias of it alike: a per-alias switch would be a setting
+/// nobody could hold in their head while writing.
+/// </param>
+public sealed record GlossaryEntry(string Term, string Description, string? ImageUrl, IReadOnlyList<string> Aliases, bool IsCaseSensitive = false);
 
 // Idea #11 — finds glossary terms in already-escaped rendered text and wraps them so the blog page
 // can show a description on hover or tap.
@@ -66,7 +72,7 @@ public static class GlossaryScanner
                 foreach (var (alias, entry) in candidates)
                 {
                     if (alreadyMarked.Contains(entry.Term)) continue;
-                    if (!MatchesAt(escapedText, i, alias)) continue;
+                    if (!MatchesAt(escapedText, i, alias, entry.IsCaseSensitive)) continue;
 
                     alreadyMarked.Add(entry.Term);
                     AppendMarked(sb, escapedText.Substring(i, alias.Length), entry);
@@ -97,10 +103,11 @@ public static class GlossaryScanner
         sb.Append("\">").Append(matchedText).Append("</span>");
     }
 
-    private static bool MatchesAt(string text, int index, string alias)
+    private static bool MatchesAt(string text, int index, string alias, bool caseSensitive)
     {
         if (index + alias.Length > text.Length) return false;
-        if (string.Compare(text, index, alias, 0, alias.Length, StringComparison.OrdinalIgnoreCase) != 0) return false;
+        var comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+        if (string.Compare(text, index, alias, 0, alias.Length, comparison) != 0) return false;
         // A term must not match inside a longer word: "art" in "articles" is not the term.
         var after = index + alias.Length;
         return after >= text.Length || !IsWordChar(text[after]);

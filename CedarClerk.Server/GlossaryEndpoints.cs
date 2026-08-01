@@ -10,7 +10,7 @@ namespace CedarClerk.Server;
 // named entity with its own CRUD file, everything scoped by OwnerId.
 public static class GlossaryEndpoints
 {
-    public record UpsertTermRequest(string Term, string Description, string? Aliases, string? ImageUrl, string? Language);
+    public record UpsertTermRequest(string Term, string Description, string? Aliases, string? ImageUrl, string? Language, bool IsCaseSensitive = false);
 
     private const int TermMaxLength = 80;
     private const int DescriptionMaxLength = 1000;
@@ -25,7 +25,7 @@ public static class GlossaryEndpoints
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var terms = await db.GlossaryTerms.Where(t => t.OwnerId == uid)
                 .OrderBy(t => t.Term)
-                .Select(t => new { t.Id, t.Term, t.Description, t.Aliases, t.ImageUrl, t.Language, t.UpdatedAt })
+                .Select(t => new { t.Id, t.Term, t.Description, t.Aliases, t.ImageUrl, t.Language, t.IsCaseSensitive, t.SourceTermId, t.UpdatedAt })
                 .ToListAsync();
             return Results.Ok(terms);
         });
@@ -41,6 +41,7 @@ public static class GlossaryEndpoints
                 Term = req.Term.Trim(),
                 Description = req.Description.Trim(),
                 Aliases = NormalizeAliases(req.Aliases),
+                IsCaseSensitive = req.IsCaseSensitive,
                 ImageUrl = NormalizeImage(req.ImageUrl),
                 Language = ResolveLanguage(req.Language),
             };
@@ -60,6 +61,7 @@ public static class GlossaryEndpoints
             term.Term = req.Term.Trim();
             term.Description = req.Description.Trim();
             term.Aliases = NormalizeAliases(req.Aliases);
+            term.IsCaseSensitive = req.IsCaseSensitive;
             term.ImageUrl = NormalizeImage(req.ImageUrl);
             term.Language = ResolveLanguage(req.Language);
             term.UpdatedAt = DateTime.UtcNow;
@@ -140,6 +142,7 @@ public static class GlossaryEndpoints
             {
                 existing.Description = newDescription;
                 existing.UpdatedAt = DateTime.UtcNow;
+                existing.SourceTermId ??= source.SourceTermId ?? source.Id;
                 term = existing;
             }
             else
@@ -152,6 +155,8 @@ public static class GlossaryEndpoints
                     Aliases = "",
                     ImageUrl = source.ImageUrl,
                     Language = req.TargetLanguage,
+                    // The group root, so a chain of translations stays one group rather than a tree.
+                    SourceTermId = source.SourceTermId ?? source.Id,
                 };
                 db.GlossaryTerms.Add(term);
             }
@@ -239,6 +244,7 @@ public static class GlossaryEndpoints
                 {
                     existing.Description = newDescription;
                     existing.UpdatedAt = DateTime.UtcNow;
+                    existing.SourceTermId ??= sources[i].SourceTermId ?? sources[i].Id;
                     upserted.Add(existing);
                 }
                 else
@@ -251,6 +257,7 @@ public static class GlossaryEndpoints
                         Aliases = "",
                         ImageUrl = sources[i].ImageUrl,
                         Language = req.TargetLanguage,
+                        SourceTermId = sources[i].SourceTermId ?? sources[i].Id,
                     };
                     db.GlossaryTerms.Add(term);
                     byLowerTerm[newTerm.ToLowerInvariant()] = term;
@@ -260,7 +267,7 @@ public static class GlossaryEndpoints
             await db.SaveChangesAsync(CancellationToken.None); // the work is done — don't let a disconnect discard it
             return Results.Ok(new
             {
-                terms = upserted.Select(t => new { t.Id, t.Term, t.Description, t.Aliases, t.ImageUrl, t.Language, t.UpdatedAt }),
+                terms = upserted.Select(t => new { t.Id, t.Term, t.Description, t.Aliases, t.ImageUrl, t.Language, t.IsCaseSensitive, t.SourceTermId, t.UpdatedAt }),
                 skipped,
             });
         });
@@ -278,14 +285,15 @@ public static class GlossaryEndpoints
     {
         var rows = await db.GlossaryTerms
             .Where(t => t.OwnerId == ownerId && t.Language == language)
-            .Select(t => new { t.Term, t.Description, t.Aliases, t.ImageUrl })
+            .Select(t => new { t.Term, t.Description, t.Aliases, t.ImageUrl, t.IsCaseSensitive })
             .ToListAsync();
 
         return rows.Select(r => new GlossaryEntry(
             r.Term,
             r.Description,
             r.ImageUrl,
-            r.Aliases.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))).ToList();
+            r.Aliases.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+            r.IsCaseSensitive)).ToList();
     }
 
     private static IResult? Validate(UpsertTermRequest req)

@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { NgTemplateOutlet } from '@angular/common';
 import { LocaleService } from '../core/i18n/locale.service';
 import { GlossaryService, GlossaryTerm } from '../core/glossary.service';
 import { AssetsService } from '../core/assets.service';
@@ -13,7 +14,7 @@ import { IconComponent } from '../shared/icon.component';
 // the blog; nothing is scanned or marked in the editor, since the ask was for the published page.
 @Component({
     selector: 'app-glossary',
-    imports: [IconComponent, FormsModule, PageHeaderComponent, ModalComponent],
+    imports: [IconComponent, FormsModule, PageHeaderComponent, ModalComponent, NgTemplateOutlet],
     templateUrl: 'glossary.component.html',
     styleUrls: ['glossary.component.css'],
 })
@@ -43,6 +44,13 @@ export class GlossaryComponent implements OnInit {
     editAliases = '';
     editImageUrl = signal<string | null>(null);
     editLanguage = signal<string>(DEFAULT_PRIMARY_LANGUAGE);
+    editCaseSensitive = signal(false);
+
+    // The term whose tooltip is being previewed, and which language version of it is on screen.
+    // Separate from `selectedId` on purpose: previewing is reading, editing is writing, and the
+    // list has to be able to show one card in each state at the same time.
+    previewId = signal<string | null>(null);
+    previewLanguage = signal<string>(DEFAULT_PRIMARY_LANGUAGE);
 
     // Terms are listed per language, because that is how they are matched.
     languageFilter = signal<string>(DEFAULT_PRIMARY_LANGUAGE);
@@ -73,6 +81,7 @@ export class GlossaryComponent implements OnInit {
         this.editAliases = '';
         this.editImageUrl.set(null);
         this.editLanguage.set(this.languageFilter());
+        this.editCaseSensitive.set(false);
         this.editing.set(true);
         this.error.set('');
     }
@@ -84,6 +93,7 @@ export class GlossaryComponent implements OnInit {
         this.editAliases = term.aliases;
         this.editImageUrl.set(term.imageUrl);
         this.editLanguage.set(term.language || DEFAULT_PRIMARY_LANGUAGE);
+        this.editCaseSensitive.set(term.isCaseSensitive);
         this.editing.set(true);
         this.error.set('');
     }
@@ -107,6 +117,7 @@ export class GlossaryComponent implements OnInit {
             aliases: this.editAliases.trim(),
             imageUrl: this.editImageUrl(),
             language: this.editLanguage(),
+            isCaseSensitive: this.editCaseSensitive(),
         };
         try {
             const id = this.selectedId();
@@ -277,5 +288,39 @@ export class GlossaryComponent implements OnInit {
         }
         this.translatingLang.set(null);
         this.translateAllOpen.set(false);
+    }
+
+    // ─── Preview (Marty, 01.08.2026) ───────────────────────────────────────────
+    // The point is to see the real tooltip, not a description in a form field: the blog renders
+    // the term as a heading, the description under it and an optional image, and that is what this
+    // reproduces. The language switcher walks the translation group rather than the whole list,
+    // which is why GlossaryTerm.sourceTermId exists.
+
+    openPreview(term: GlossaryTerm) {
+        this.previewId.set(term.id);
+        this.previewLanguage.set(term.language || DEFAULT_PRIMARY_LANGUAGE);
+    }
+
+    closePreview() {
+        this.previewId.set(null);
+    }
+
+    /** Every language version of the previewed term, including itself, in content-language order. */
+    previewGroup(): GlossaryTerm[] {
+        const current = this.terms().find(t => t.id === this.previewId());
+        if (!current) return [];
+        const root = current.sourceTermId ?? current.id;
+        const group = this.terms().filter(t => (t.sourceTermId ?? t.id) === root);
+        return this.contentLanguages
+            .map(l => group.find(t => (t.language || DEFAULT_PRIMARY_LANGUAGE) === l))
+            .filter((t): t is GlossaryTerm => !!t);
+    }
+
+    /** What the tooltip shows right now — the group member for the selected language. */
+    previewTerm(): GlossaryTerm | null {
+        const lang = this.previewLanguage();
+        return this.previewGroup().find(t => (t.language || DEFAULT_PRIMARY_LANGUAGE) === lang)
+            ?? this.terms().find(t => t.id === this.previewId())
+            ?? null;
     }
 }

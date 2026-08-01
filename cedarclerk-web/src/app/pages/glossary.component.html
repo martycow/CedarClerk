@@ -32,7 +32,11 @@
         <p class="hint">{{ t().common.loading }}</p>
         } @else {
 
-        @if (editing()) {
+        <!--One form, rendered in two places (Marty, 01.08.2026): at the top when creating, and
+        INSIDE the list in place of the card being edited. It used to live only at the top, so
+        editing the last term of a long glossary meant scrolling up to fields that had no visible
+        connection to the row they belonged to.-->
+        <ng-template #termForm>
         <div class="term-form">
             <div class="form-row-2">
                 <label class="form-field">
@@ -61,6 +65,15 @@
                 <p class="field-hint-inline">{{ t().glossary.aliasesHint }}</p>
             </label>
 
+            <label class="term-case-toggle">
+                <input type="checkbox" [checked]="editCaseSensitive()"
+                       (change)="editCaseSensitive.set($any($event.target).checked)">
+                <span>
+                    {{ t().glossary.caseSensitive }}
+                    <span class="field-hint-inline">{{ t().glossary.caseSensitiveHint }}</span>
+                </span>
+            </label>
+
             <div class="form-field">
                 <span class="form-field-label">{{ t().glossary.image }}</span>
                 @if (editImageUrl(); as url) {
@@ -87,30 +100,39 @@
                 </button>
             </div>
         </div>
+        </ng-template>
+
+        @if (editing() && !selectedId()) {
+        <ng-container *ngTemplateOutlet="termForm"></ng-container>
         }
 
         <div class="term-list">
             @for (term of visibleTerms(); track term.id) {
-            <div class="term-card" [class.on]="selectedId() === term.id">
+            @if (editing() && selectedId() === term.id) {
+            <ng-container *ngTemplateOutlet="termForm"></ng-container>
+            } @else {
+            <div class="term-card" [class.on]="previewId() === term.id" (click)="openPreview(term)">
                 @if (term.imageUrl) { <img class="term-thumb" [src]="term.imageUrl" alt=""> }
                 <div class="term-body">
                     <div class="term-head">
                         <span class="term-name">{{ term.term }}</span>
+                        @if (term.isCaseSensitive) { <span class="term-flag" [title]="t().glossary.caseSensitiveHint">Aa</span> }
                         @for (a of aliasList(term); track a) { <span class="term-alias">{{ a }}</span> }
                         <span class="spacer"></span>
-                        <button class="mini" (click)="startEdit(term)" [title]="t().common.edit" [attr.aria-label]="t().common.edit">
+                        <button class="mini" (click)="startEdit(term); $event.stopPropagation()" [title]="t().common.edit" [attr.aria-label]="t().common.edit">
                             <app-icon name="pencil-simple" size="sm"></app-icon>
                         </button>
-                        <button class="mini" (click)="openTranslate(term)" [title]="t().glossary.translate" [attr.aria-label]="t().glossary.translate">
+                        <button class="mini" (click)="openTranslate(term); $event.stopPropagation()" [title]="t().glossary.translate" [attr.aria-label]="t().glossary.translate">
                             <app-icon name="translate" size="sm"></app-icon>
                         </button>
-                        <button class="mini-remove" (click)="deleteConfirmId.set(term.id)" [title]="t().common.delete" [attr.aria-label]="t().common.delete">
+                        <button class="mini-remove" (click)="deleteConfirmId.set(term.id); $event.stopPropagation()" [title]="t().common.delete" [attr.aria-label]="t().common.delete">
                             <app-icon name="trash" size="sm"></app-icon>
                         </button>
                     </div>
                     <p class="term-desc">{{ term.description }}</p>
                 </div>
             </div>
+            }
             } @empty {
             <p class="hint">{{ t().glossary.empty }}</p>
             }
@@ -165,6 +187,36 @@
             @if (translatingLang()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
             {{ t().glossary.translateRun }}
         </button>
+    </app-modal>
+    }
+
+    <!--Preview: the tooltip exactly as a reader meets it on the blog, with the translation group's
+    languages as a switcher. Reading, not editing — so it opens on a click anywhere on the card.-->
+    @if (previewTerm(); as term) {
+    <app-modal (closed)="closePreview()" [width]="420">
+        <app-icon modal-icon name="book-bookmark" size="sm"></app-icon>
+        <span modal-title>{{ t().glossary.previewTitle }}</span>
+
+        @if (previewGroup().length > 1) {
+        <div class="preview-langs">
+            @for (g of previewGroup(); track g.id) {
+            <button [class.on]="previewLanguage() === (g.language || 'ru')"
+                    (click)="previewLanguage.set(g.language || 'ru')">{{ (g.language || 'ru').toUpperCase() }}</button>
+            }
+        </div>
+        } @else {
+        <p class="field-hint-inline">{{ t().glossary.previewOnlyLanguage }}</p>
+        }
+
+        <!--Same three parts, same order as the blog's tooltip: heading, description, optional image.-->
+        <div class="glossary-preview-tip">
+            <span class="glossary-preview-term">{{ term.term }}</span>
+            <p class="glossary-preview-desc">{{ term.description }}</p>
+            @if (term.imageUrl) { <img class="glossary-preview-img" [src]="term.imageUrl" alt=""> }
+        </div>
+
+        <button modal-actions class="btn-ghost" (click)="closePreview()">{{ t().common.close }}</button>
+        <button modal-actions class="btn-accent" (click)="startEdit(term); closePreview()">{{ t().common.edit }}</button>
     </app-modal>
     }
 

@@ -196,6 +196,33 @@ export class SettingsComponent implements OnInit {
     // Appearance and toolbar customization moved into AppearancePanelComponent, rendered beside
     // the writing sheet (I14/B15) — all of their state and handlers went with them.
 
+    // Auto-translate for the per-language profile texts (Marty, 01.08.2026). Everything else that
+    // is per-language in this product could already be translated in one press; these three could
+    // not, and they are the ones an author sees in every post.
+    translatingTexts = signal(false);
+    translateTextsError = signal('');
+    translateTextsDone = signal(false);
+
+    async translateProfileTexts() {
+        if (this.translatingTexts()) return;
+        this.translatingTexts.set(true);
+        this.translateTextsError.set('');
+        this.translateTextsDone.set(false);
+        try {
+            const source = this.signatureLanguage();
+            const targets = this.contentLanguages.filter(l => l !== source);
+            await this.auth.translateProfileTexts(source, targets);
+            // The open editor still shows the source language's text; re-selecting it refreshes
+            // the bound fields from the maps the server just filled.
+            this.setSignatureLanguage(source);
+            this.translateTextsDone.set(true);
+        } catch (e) {
+            this.translateTextsError.set(httpErrorMessage(e, this.t().settings.profile.translateFailed));
+        } finally {
+            this.translatingTexts.set(false);
+        }
+    }
+
     async saveSignature() {
         this.stashSignatureText();
         this.signatureBusy.set(true);

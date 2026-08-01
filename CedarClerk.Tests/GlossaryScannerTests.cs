@@ -133,6 +133,41 @@ public class GlossaryScannerTests
         }
         return count;
     }
+
+    // Marty, 01.08.2026: a per-term "case sensitive" switch. Off by default, because a term at the
+    // start of a sentence is the same term — which is what the existing tests above assert. On,
+    // the casing IS the meaning: "IT" the industry against "it" the pronoun.
+    private static GlossaryEntry CaseSensitive(string term, params string[] aliases) =>
+        new(term, "A description", null, aliases, IsCaseSensitive: true);
+
+    [Fact]
+    public void A_case_sensitive_term_ignores_a_differently_cased_match()
+    {
+        Assert.DoesNotContain("glossary-term", Mark("we use unity here", CaseSensitive("Unity")));
+    }
+
+    [Fact]
+    public void A_case_sensitive_term_still_matches_its_exact_spelling()
+    {
+        Assert.Contains("glossary-term", Mark("we use Unity here", CaseSensitive("Unity")));
+    }
+
+    [Fact]
+    public void Case_sensitivity_applies_to_aliases_too()
+    {
+        var entry = CaseSensitive("IT", "ИТ");
+        Assert.Contains("glossary-term", Mark("работа в ИТ сегодня", entry));
+        Assert.DoesNotContain("glossary-term", Mark("работа в ит сегодня", entry));
+    }
+
+    [Fact]
+    public void Case_sensitivity_is_per_term_not_global()
+    {
+        // The pronoun must not be marked, the product name must — on the same page.
+        var html = Mark("it is built with unity", CaseSensitive("IT"), Entry("Unity"));
+        Assert.Contains("data-term=\"Unity\"", html);
+        Assert.DoesNotContain("data-term=\"IT\"", html);
+    }
 }
 
 // The renderer half: a term must not be marked where marking it would be wrong.
@@ -181,3 +216,4 @@ public class GlossaryRendererTests
         Assert.DoesNotContain("glossary-term", html);
     }
 }
+

@@ -383,6 +383,20 @@ public class GlossaryTerm
     // same whitelist, same quota, same public serving, no second pipeline.
     public string? ImageUrl { get; set; }
     public string Language { get; set; } = Languages.Russian;
+    /// <summary>
+    /// Off by default — a term at the start of a sentence is the same term. On where the casing is
+    /// the meaning, which is the case Marty asked for: "IT" the industry against "it" the pronoun.
+    /// </summary>
+    public bool IsCaseSensitive { get; set; }
+    /// <summary>
+    /// The term this one was translated from — the *root* of the group, not the immediate source,
+    /// so every language version of one idea shares a single value. Null on a hand-written term,
+    /// which is then its own root. Added 01.08.2026 so the glossary's preview can switch languages:
+    /// translations are separate rows keyed by translated text (ADR-061) and nothing connected them,
+    /// so "show me this term in English" had no answer. Existing translated rows stay unlinked —
+    /// nothing recorded where they came from, and guessing by text would link the wrong pairs.
+    /// </summary>
+    public Guid? SourceTermId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
