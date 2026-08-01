@@ -87,6 +87,8 @@ builder.Services.AddSingleton<ResendEmailProvider>();
 // T-084 — encrypts per-tenant social credentials with the DataProtection key ring that already
 // lives under CEDAR_DATA_DIR (T-074). Singleton: it holds one derived protector and nothing else.
 builder.Services.AddSingleton<PublishTargetSecrets>();
+// T-023/T-064 — signs the private-post access cookie and mints a reader's own link token.
+builder.Services.AddSingleton<PrivateAccess>();
 // T-085 — Telegram is the first IPublishTarget. Scoped, because it writes through the same
 // CedarDbContext as whoever called it: the export endpoint and the Quartz job both save their own
 // rows in the same unit of work, and a second context would split that in half.

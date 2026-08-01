@@ -92,3 +92,43 @@ test('a private post shows the gate, and a submission reaches the owner', async 
     const registrations = await (await context.request.get(`/api/drafts/${id}/registrations`)).json();
     expect(JSON.stringify(registrations)).toContain('Smoke Reader');
 });
+
+// T-064 — the reported incident: a reader filled in the form in Telegram's in-app browser, opened
+// the post in Chrome, and was asked to register again. The access now travels in the link, so a
+// browser that has never seen this post can use it.
+test('the access link from a submission works in another browser', async ({ page, context }) => {
+    const id = await createDraft(context, 'Portable access', ['Text only registered readers see.']);
+    await context.request.post(`/api/drafts/${id}/registration-form`, { data: { formJson: JSON.stringify(FORM) } });
+    await context.request.post(`/api/drafts/${id}/private`, { data: { isPrivate: true } });
+    const publish = await context.request.post(`/api/drafts/${id}/publish-blog`, { data: {} });
+    const { slug } = await publish.json();
+
+    // Browser one: fills in the form and is let in.
+    const first = await page.context().browser()!.newContext();
+    const firstPage = await first.newPage();
+    await firstPage.goto(`${BLOG_ORIGIN}/${slug}`);
+    await firstPage.locator('.reg-input[data-field="name"]').fill('First Browser');
+    await firstPage.locator('.reg-input[data-field="email"]').fill('first@local.test');
+    await firstPage.locator('[data-question="q1"]').fill('From the smoke suite');
+    await firstPage.locator('.reg-submit').click();
+
+    // Asserted on the address bar rather than on the response body: the submit navigates straight
+    // to the access link, so by the time a test could read the body it is gone — and the address
+    // is what the reader can actually copy, which is the whole point of T-064.
+    await firstPage.waitForURL(/\?access=/);
+    const accessUrl = firstPage.url();
+    await expect(firstPage.locator('body')).toContainText('Text only registered readers see');
+
+    // Browser two: never saw this post, has no cookies — and the link is all it needs.
+    const second = await page.context().browser()!.newContext();
+    const secondPage = await second.newPage();
+    await secondPage.goto(accessUrl);
+
+    await expect(secondPage.locator('body')).toContainText('Text only registered readers see');
+
+    // And the gate still stands for a browser without the link.
+    const third = await page.context().browser()!.newContext();
+    const thirdPage = await third.newPage();
+    await thirdPage.goto(`${BLOG_ORIGIN}/${slug}`);
+    await expect(thirdPage.locator('body')).not.toContainText('Text only registered readers see');
+});

@@ -354,8 +354,29 @@ public static class BlogEndpoints
     // PostReactionAsync, PostCommentAsync) — see the ADR following ADR-040, docs/DECISIONS.md.
     // A private draft is only visible once the invite-grant cookie has been set (RenderPostAsync
     // is the only place that sets it, after validating a ?invite= token).
-    private static bool HasPrivateAccess(HttpContext ctx, Draft draft) =>
-        !draft.IsPrivate || ctx.Request.Cookies.ContainsKey(Consts.General.PrivateAccessCookiePrefix + draft.Id);
+    // T-023 — the cookie carries a signed grant now, not the bare "1" it used to. A value that
+    // proves nothing could be forged by anyone who knew a draft's id; this one cannot be written
+    // without the server's key. Cookies issued before this change stop working, and their readers
+    // meet the gate again — which is the honest cost of closing it.
+    private static bool HasPrivateAccess(HttpContext ctx, Draft draft)
+    {
+        if (!draft.IsPrivate) return true;
+
+        var access = ctx.RequestServices.GetRequiredService<PrivateAccess>();
+        return access.IsValid(ctx.Request.Cookies[PrivateAccess.CookieName(draft.Id)], draft.Id, out _);
+    }
+
+    private static void GrantPrivateAccess(HttpContext ctx, Guid draftId, string token)
+    {
+        var access = ctx.RequestServices.GetRequiredService<PrivateAccess>();
+        ctx.Response.Cookies.Append(PrivateAccess.CookieName(draftId), access.Grant(draftId, token), new CookieOptions
+        {
+            MaxAge = TimeSpan.FromDays(90),
+            HttpOnly = true,
+            IsEssential = true,
+            SameSite = SameSiteMode.Lax
+        });
+    }
 
     private static async Task GetAnnotationsAsync(HttpContext ctx, CedarDbContext db, string slug)
     {
@@ -632,8 +653,9 @@ public static class BlogEndpoints
             }
         }
 
-        db.PostRegistrations.Add(new PostRegistration
+        var registration = new PostRegistration
         {
+            AccessToken = PrivateAccess.NewToken(),
             DraftId = draft.Id,
             Name = name,
             Nickname = nickname,
@@ -641,7 +663,8 @@ public static class BlogEndpoints
             SocialLink = social,
             AnswersJson = answers,
             VisitorHash = visitor,
-        });
+        };
+        db.PostRegistrations.Add(registration);
         await db.SaveChangesAsync();
 
         // N11 — same opt-in plumbing as comment/like notifications (ADR-040): a failed or
@@ -674,17 +697,14 @@ public static class BlogEndpoints
             }
         }
 
-        ctx.Response.Cookies.Append(Consts.General.PrivateAccessCookiePrefix + draft.Id, "1", new CookieOptions
-        {
-            MaxAge = TimeSpan.FromDays(90),
-            HttpOnly = true,
-            IsEssential = true,
-            SameSite = SameSiteMode.Lax
-        });
+        GrantPrivateAccess(ctx, draft.Id, registration.AccessToken);
 
         ctx.Response.StatusCode = StatusCodes.Status201Created;
         ctx.Response.ContentType = "application/json";
-        await JsonSerializer.SerializeAsync(ctx.Response.Body, new { ok = true }, JsonOpts);
+        // T-064 — the reader's own link. The cookie covers this browser; the link is what carries
+        // the access to the next one, which is exactly what the reported incident needed.
+        await JsonSerializer.SerializeAsync(ctx.Response.Body,
+            new { ok = true, accessUrl = $"/{slug}?access={registration.AccessToken}" }, JsonOpts);
     }
 
     private static string? Trim(string? s)
@@ -1086,6 +1106,17 @@ public static class BlogEndpoints
             var validInvite = inviteToken is not null
                 && await db.PostInvites.AnyAsync(pi => pi.DraftId == draft.Id && pi.Token == inviteToken);
 
+            // T-064 — a reader's own key from an earlier registration, which is what makes the
+            // link work in a second browser. Revocable per reader, unlike the owner's invites.
+            var accessToken = ctx.Request.Query["access"].FirstOrDefault();
+            var grantToken = inviteToken;
+            if (!validInvite && accessToken is not null
+                && await db.PostRegistrations.AnyAsync(r => r.DraftId == draft.Id && r.AccessToken == accessToken && !r.IsRevoked))
+            {
+                validInvite = true;
+                grantToken = accessToken;
+            }
+
             if (!validInvite)
             {
                 // With a registration form configured the post is "locked", not "hidden" (B3) —
@@ -1119,13 +1150,7 @@ public static class BlogEndpoints
                 return;
             }
 
-            ctx.Response.Cookies.Append(Consts.General.PrivateAccessCookiePrefix + draft.Id, "1", new CookieOptions
-            {
-                MaxAge = TimeSpan.FromDays(90),
-                HttpOnly = true,
-                IsEssential = true,
-                SameSite = SameSiteMode.Lax
-            });
+            GrantPrivateAccess(ctx, draft.Id, grantToken ?? "");
         }
 
         // Atomic UPDATE (not draft.ViewCount++ + SaveChanges) so concurrent page views don't lose
@@ -1805,8 +1830,13 @@ public static class BlogEndpoints
                         if (!r.ok) return r.json().then(function (e) { throw new Error(e.error || 'Something went wrong'); });
                         return r.json();
                     })
-                    // The access cookie comes back on this response — reloading lands on the post.
-                    .then(function () { location.reload(); })
+                    // The cookie comes back on this response, so a reload would already land on
+                    // the post — but T-064 wants the URL to carry the access too, so this browser
+                    // is not the only one that has it. The reader can now send themselves the link.
+                    .then(function (data) {
+                        if (data && data.accessUrl) location.href = data.accessUrl;
+                        else location.reload();
+                    })
                     .catch(function (err) {
                         errEl.textContent = err.message;
                         errEl.hidden = false;

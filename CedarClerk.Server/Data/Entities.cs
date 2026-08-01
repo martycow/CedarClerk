@@ -332,6 +332,21 @@ public class PostRegistration
     // Same IP-derived hash used for reaction dedup — here it only backs the per-post
     // submission throttle, so a public form can't be used to flood the owner's list.
     public string VisitorHash { get; set; } = "";
+
+    /// <summary>
+    /// T-064/T-023 — this reader's own key to the post. Handed back in the redirect after the form
+    /// is submitted, so the access travels with the link instead of living only in the cookie jar
+    /// of the browser that filled it in: the incident behind this row was a reader who opened the
+    /// post in Telegram's in-app browser, then in Chrome, and was asked to register twice.
+    ///
+    /// Per registration rather than per post, which is what makes it revocable without locking out
+    /// everyone else.
+    /// </summary>
+    public string AccessToken { get; set; } = "";
+
+    /// <summary>Set by the owner to withdraw this reader's access; the row stays for the record.</summary>
+    public bool IsRevoked { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
