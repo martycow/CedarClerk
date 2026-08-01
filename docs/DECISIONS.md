@@ -889,3 +889,15 @@ The test that matters is the incident itself: one browser fills in the form, a s
 **An escape hatch, not a setting**: `Cedar:Telegram:MediaDelivery` = `upload` (default) / `url` in server config flips the whole target back to URL delivery — one line in the systemd drop-in if upload misbehaves in the field, no redeploy. It is deliberately NOT an author-facing option: "which bytes should Telegram receive" has one correct answer, and a setting whose right value is always the default is UI debt.
 
 **Resolution rule**: a media URL whose path contains `/media/` and whose trailing filename exists in the data dir's `media/` folder is uploaded; anything else stays a URL. Existence on disk is the test — a foreign URL that merely contains `/media/` falls through to URL delivery.
+
+### ADR-089 — Upload goes through a storage chat, because SendRichMessage is JSON-only (01.08.2026)
+
+**Context**: ADR-088's multipart upload met `can't parse InputRichBlock: media not found` on its first real send. Reflection over Telegram.Bot 22.10.2 shows why: `SendRichMessageRequest` derives from `RequestBase` — a JSON-only request — while `SendPhoto`/`SendMediaGroup` derive from the multipart-capable `FileRequestBase`. An `InputFileStream` inside Blocks serialises to an `attach://…` reference whose bytes never leave the machine. The Bot API also offers no standalone upload call (`UploadStickerFile` is sticker-scoped, as in the real API).
+
+**Decision: pre-upload each local file once through a method that CAN carry bytes, then send Blocks by `file_id`.** The file goes out via `SendPhoto`/`SendVideo`/`SendAudio` to a **storage chat — the owner's own private chat with the bot** (`User.TelegramUserId`), silently, and the buffer message is deleted the moment its `file_id` is captured. `file_id` is bot-scoped and reusable across chats, so the real send is pure JSON — which `SendRichMessage` accepts.
+
+**The `file_id` is cached on the Asset row** — `TelegramFileId` (a column the initial schema carried but no code ever wrote) plus new `TelegramFileIdSourcePath` naming which file (original vs. compressed derivative) the id was minted for, so a changed derivative re-uploads instead of serving stale bytes. A 23-part thread uploads each file once, and a retry — the queue's whole reason to exist — re-sends JSON only.
+
+**Fallbacks, in order**: no linked Telegram account, or a failed upload (e.g. the owner never opened the bot chat, so the bot cannot message them) → that file falls back to ADR-087's stamped URL, logged. `Cedar:Telegram:MediaDelivery=url` still flips the whole target back.
+
+**Accepted costs**: the owner's bot chat briefly hosts a silent, self-deleting message per new file; photos pass through Telegram's own photo re-encode (which channel display applies anyway); ADR-088's `InputFileStream`-in-Blocks path is dead code until the library grows a multipart `SendRichMessage`, at which point this ADR is the one to revisit.

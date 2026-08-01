@@ -157,30 +157,24 @@ public class TelegramPublishTarget(
             blocks.Add(new RichFooterBlock(new RichRunText($"{counted.Index + 1}/{counted.Count}")));
         }
 
-        // ADR-088 — media on this server's own disk is uploaded to Telegram as multipart bytes.
-        // The URL round-trip (Kestrel → tunnel → Cloudflare → Telegram's fetcher, with its
-        // timeout, its concurrency and its negative cache) is what produced both "wrong type of
+        // ADR-088/ADR-089 — media on this server's own disk reaches Telegram as bytes, not as a
+        // URL to fetch. The URL round-trip (Kestrel → tunnel → Cloudflare → Telegram's fetcher,
+        // with its timeout, its concurrency and its negative cache) produced both "wrong type of
         // the web page content" and "failed to get HTTP URL content" on perfectly served files.
-        // External URLs (YouTube thumbnails) still go by URL and keep ADR-087's per-send stamp —
-        // the stamp now applies ONLY to what Telegram fetches itself.
+        // SendRichMessage itself is JSON-only (RequestBase, not FileRequestBase — ADR-089), so
+        // each file is pre-uploaded once through SendPhoto/Video/Audio to the owner's own bot
+        // chat, the buffer message deleted, and Blocks sent by the cached file_id. External URLs
+        // (YouTube thumbnails) still go by URL and keep ADR-087's per-send stamp.
         var deliverByUpload = !string.Equals(cfg[Consts.Telegram.MediaDeliveryCfg],
             Consts.Telegram.MediaDeliveryUrl, StringComparison.OrdinalIgnoreCase);
         var cacheStamp = DateTime.UtcNow.Ticks.ToString("x");
-        var opened = new List<FileStream>();
-        InputFile ResolveMedia(string url)
-        {
-            if (deliverByUpload && TryLocalMediaFileName(url, out var fileName))
-            {
-                var path = Path.Combine(media.Dir, fileName);
-                if (File.Exists(path))
-                {
-                    var stream = File.OpenRead(path);
-                    opened.Add(stream);
-                    return InputFile.FromStream(stream, fileName);
-                }
-            }
-            return StampUrl(url, cacheStamp);
-        }
+        var fileIds = deliverByUpload
+            ? await ResolveFileIdsAsync(blocks, request.OwnerId, ct)
+            : new Dictionary<string, string>();
+        InputFile ResolveMedia(string url) =>
+            TryLocalMediaFileName(url, out var fileName) && fileIds.TryGetValue(fileName, out var fileId)
+                ? InputFile.FromFileId(fileId)
+                : StampUrl(url, cacheStamp);
 
         var content = new InputRichMessage { Blocks = blocks.Select(b => ToInputRichBlock(b, ResolveMedia)).ToList() };
 
@@ -224,11 +218,6 @@ public class TelegramPublishTarget(
             // in the renderer — gets the same readable-error treatment rather than an opaque 500.
             logger.LogError(ex, "Unexpected failure publishing draft {DraftId} to {ChatId}", request.DraftId, chatId);
             return PublishOutcome.Fail($"Publish failed: {ex.GetType().Name}: {ex.Message}", StatusCodes.Status500InternalServerError);
-        }
-        finally
-        {
-            // The multipart request has been fully sent (or abandoned) by here either way.
-            foreach (var stream in opened) stream.Dispose();
         }
 
         var username = await ResolveChannelUsernameAsync(db, chatId, ct);
@@ -281,6 +270,108 @@ public class TelegramPublishTarget(
         RichFooterBlock f => new InputRichBlockFooter { Text = ToRichText(f.Text) },
         RichAnchorBlock an => new InputRichBlockAnchor { Name = an.Name },
         _ => throw new NotSupportedException($"Unmapped RichBlock: {block.GetType().Name}")
+    };
+
+    /// <summary>
+    /// ADR-089 — file_ids for every local media file the blocks reference: cached on the Asset
+    /// where possible, minted by a silent self-deleting upload to the owner's bot chat otherwise.
+    /// A file that cannot be uploaded (no linked Telegram, bot chat never opened) is simply
+    /// absent from the result and falls back to URL delivery.
+    /// </summary>
+    private async Task<Dictionary<string, string>> ResolveFileIdsAsync(
+        IReadOnlyList<CedarRichBlock> blocks, string ownerId, CancellationToken ct)
+    {
+        var fileIds = new Dictionary<string, string>();
+        var refs = blocks.SelectMany(MediaRefs)
+            .Where(r => TryLocalMediaFileName(r.Url, out _))
+            .Select(r => (Name: LocalName(r.Url), r.Kind))
+            .DistinctBy(r => r.Name)
+            .Where(r => File.Exists(Path.Combine(media.Dir, r.Name)))
+            .ToList();
+        if (refs.Count == 0) return fileIds;
+
+        // The storage chat is the owner's own private chat with the bot — the one place the bot
+        // can put a buffer message that belongs to this user and to nobody else's eyes.
+        var storageChat = await db.Users.Where(u => u.Id == ownerId)
+            .Select(u => u.TelegramUserId).FirstOrDefaultAsync(ct);
+        var names = refs.Select(r => r.Name).ToList();
+        var assets = await db.Assets
+            .Where(a => names.Contains(a.LocalPath) || names.Contains(a.TelegramLocalPath!))
+            .ToListAsync(ct);
+        var dirty = false;
+
+        foreach (var (name, kind) in refs)
+        {
+            var asset = assets.FirstOrDefault(a => a.TelegramLocalPath == name || a.LocalPath == name);
+            if (asset is { TelegramFileId: not null } && asset.TelegramFileIdSourcePath == name)
+            {
+                fileIds[name] = asset.TelegramFileId;
+                continue;
+            }
+            if (storageChat is null) continue;   // no linked Telegram — URL fallback for all new files
+
+            try
+            {
+                await using var stream = File.OpenRead(Path.Combine(media.Dir, name));
+                var input = InputFile.FromStream(stream, name);
+                var uploaded = kind switch
+                {
+                    MediaKind.Video => await bot.Client.SendVideo(storageChat, input, disableNotification: true, cancellationToken: ct),
+                    MediaKind.Audio => await bot.Client.SendAudio(storageChat, input, disableNotification: true, cancellationToken: ct),
+                    _ => await bot.Client.SendPhoto(storageChat, input, disableNotification: true, cancellationToken: ct),
+                };
+                var fileId = uploaded.Video?.FileId ?? uploaded.Audio?.FileId ?? uploaded.Document?.FileId
+                    ?? uploaded.Photo?.MaxBy(p => (long)p.Width * p.Height)?.FileId;
+                if (fileId is null)
+                {
+                    logger.LogWarning("Buffer upload of {Name} returned a message with no recognisable media", name);
+                    continue;
+                }
+
+                fileIds[name] = fileId;
+                if (asset is not null)
+                {
+                    asset.TelegramFileId = fileId;
+                    asset.TelegramFileIdSourcePath = name;
+                    dirty = true;
+                }
+
+                // The buffer message has served its purpose the moment the file_id exists.
+                try { await bot.Client.DeleteMessage(storageChat, uploaded.MessageId, ct); }
+                catch (Exception ex) { logger.LogWarning(ex, "Could not delete buffer message for {Name}", name); }
+            }
+            catch (Telegram.Bot.Exceptions.ApiRequestException ex)
+            {
+                // A file that cannot be pre-uploaded is not a reason to refuse the publication —
+                // it falls back to the URL path, which is exactly what every publish did before.
+                logger.LogWarning(ex, "Pre-upload of {Name} failed (code {Code}) — falling back to URL delivery", name, ex.ErrorCode);
+            }
+        }
+
+        // Cached ids are worth keeping even if the send below fails — that is the whole point.
+        if (dirty) await db.SaveChangesAsync(ct);
+        return fileIds;
+    }
+
+    private static string LocalName(string url)
+    {
+        TryLocalMediaFileName(url, out var name);
+        return name;
+    }
+
+    private enum MediaKind { Photo, Video, Audio }
+
+    private static IEnumerable<(string Url, MediaKind Kind)> MediaRefs(CedarRichBlock block) => block switch
+    {
+        RichPhotoBlock p => [(p.Url, MediaKind.Photo)],
+        RichVideoBlock v => [(v.Url, MediaKind.Video)],
+        RichAudioBlock a => [(a.Url, MediaKind.Audio)],
+        RichSlideshowBlock s => s.Urls.Select(u => (u, MediaKind.Photo)),
+        RichCollageBlock c => c.Urls.Select(u => (u, MediaKind.Photo)),
+        RichQuoteBlock q => q.Blocks.SelectMany(MediaRefs),
+        RichDetailsBlock d => d.Blocks.SelectMany(MediaRefs),
+        RichListBlock l => l.Items.SelectMany(i => i.Blocks.SelectMany(MediaRefs)),
+        _ => [],
     };
 
     /// <summary>

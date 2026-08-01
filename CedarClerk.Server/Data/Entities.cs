@@ -548,7 +548,11 @@ public class Asset
     public string ContentType { get; set; } = "";
     public long SizeBytes { get; set; }
     public string LocalPath { get; set; } = "";
+    // ADR-089 — the bot-scoped file_id minted by the pre-upload (a column the initial schema
+    // carried unused until 01.08.2026), plus which file it was minted FOR: the original or a
+    // compressed derivative. A regenerated derivative must re-upload, not serve stale bytes.
     public string? TelegramFileId { get; set; }
+    public string? TelegramFileIdSourcePath { get; set; }
 
     // Filename (bare, same MediaPaths.Dir as LocalPath) of a resized/recompressed JPEG derivative
     // generated at upload time when the original exceeds Consts.FileSizes.TelegramSafeImageBytes —
