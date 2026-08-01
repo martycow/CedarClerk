@@ -13,7 +13,11 @@ const CACHE = new Map<string, SafeHtml>();
 @Component({
     selector: 'app-icon',
     standalone: true,
-    template: `<svg viewBox="0 0 256 256" [style.width]="px()" [style.height]="px()"
+    // fill="currentColor" is NOT decoration: the Phosphor assets carry it on their own <svg>
+    // element, and the generator strips that wrapper to keep only the paths — so without it here
+    // every icon in the app rendered in the SVG default, black, which is nearly invisible on the
+    // dark theme (reported 01.08.2026). It was never inherited from anywhere; it was simply lost.
+    template: `<svg viewBox="0 0 256 256" fill="currentColor" [style.width]="px()" [style.height]="px()"
                     [attr.aria-hidden]="label ? null : true" [attr.role]="label ? 'img' : null"
                     [attr.aria-label]="label || null"
                     [innerHTML]="body()"></svg>`,

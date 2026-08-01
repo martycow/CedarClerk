@@ -122,11 +122,16 @@
        are the palette, these are the meanings. This is what makes a density switch possible at
        all: --fs-ui/--fs-body change value under [data-density="compact"] and every control that
        used the role follows, while anything that hardcoded 13px does not. */
-    --fs-caption: var(--fs-11);
-    --fs-meta: var(--fs-12);
-    --fs-ui: var(--fs-13);
-    --fs-body: var(--fs-14);
-    --fs-title: var(--fs-19);
+    /* Each role moved up one step of the numeric scale 01.08.2026 (Marty: the editor's text is too
+       small). Deliberately the ROLES and not the numbers: the scale stays what it is, and every
+       component that reached for a role — which after T-077 is all of them — follows in one edit.
+       Product-wide rather than editor-only, because ADR-071 principle 2 allows exactly one type
+       scale; the dense screens stay tighter through --dens-fs, which is what density is for. */
+    --fs-caption: var(--fs-12);
+    --fs-meta: var(--fs-13);
+    --fs-ui: var(--fs-14);
+    --fs-body: var(--fs-15);
+    --fs-title: var(--fs-20);
 
     /* Reading surfaces (blog body, editor sheet) — larger and looser than any chrome. */
     --fs-read: var(--fs-17);
@@ -135,10 +140,13 @@
     /* Icon sizes (ADR-072, T-079). These three values are exactly the ones `.icon` is currently
        declared with in 9 different files (15/18/20px) — the inconsistency is the reason for the
        tokens, so they are named rather than reconciled to one number. */
-    --icon-xs: 12px;
-    --icon-sm: 15px;
-    --icon-md: 18px;
-    --icon-lg: 20px;
+    /* Raised one step each 01.08.2026 (Marty: "иконки слишком маленькие"). The old set was
+       reverse-engineered from what components already declared, which is a good way to find a
+       scale and a bad way to judge one — 15px was never chosen, it was inherited. */
+    --icon-xs: 13px;
+    --icon-sm: 17px;
+    --icon-md: 20px;
+    --icon-lg: 24px;
 
     /* Motion. Three durations and one curve; a component picks a duration by intent, not by taste.
        fast = state feedback on something already under the cursor (hover, focus, active),

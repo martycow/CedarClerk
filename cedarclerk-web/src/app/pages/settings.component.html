@@ -110,16 +110,11 @@
         </section>
         }
 
-        <!-- Appearance and toolbar customization moved into the editor's side panel (I14/B15):
-             every control there changes how the writing sheet looks, and judging a type size on a
-             different screen is guesswork. Not duplicated here - one home each, same rule as B6. -->
-        @if (tab() === 'account') {
-        <section class="settings-card">
-            <h2>{{ t().settings.appearance.title }}</h2>
-            <p class="field-hint">{{ t().settings.appearance.movedToEditor }}</p>
-            <a class="anchor-chips-link" routerLink="/editor">{{ t().common.backToEditor }}</a>
-        </section>
-        }
+        <!-- Appearance and toolbar customization live in the editor's side panel (I14/B15): every
+             control there changes how the writing sheet looks, and judging a type size on a
+             different screen is guesswork. The signpost card that used to stand here was removed
+             01.08.2026 at Marty's request — a settings card whose only content is "this setting is
+             somewhere else" is a dead end that has to be read every time to be dismissed. -->
 
         <!-- ============ HEADER SLOTS ============ -->
         @if (tab() === 'profile') {

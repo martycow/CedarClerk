@@ -4,6 +4,7 @@ using CedarClerk.Server.Bot;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 namespace CedarClerk.Server.Publishing;
 
@@ -176,7 +177,7 @@ public class TelegramPublishTarget(
     // CedarToTelegramBlocksRenderer) onto the real Telegram.Bot wire types. Core stays free of a
     // Telegram.Bot dependency on purpose — this is the one place that knows about it, and T-085
     // moved it here from PostEndpoints because "the one place" is this target, not the endpoint.
-    private static InputRichBlock ToInputRichBlock(CedarRichBlock block) => block switch
+    public static InputRichBlock ToInputRichBlock(CedarRichBlock block) => block switch
     {
         RichParagraphBlock p => new InputRichBlockParagraph { Text = ToRichText(p.Text) },
         RichHeadingBlock h => new InputRichBlockSectionHeading { Text = ToRichText(h.Text), Size = h.Level },
@@ -199,18 +200,29 @@ public class TelegramPublishTarget(
         _ => throw new NotSupportedException($"Unmapped RichBlock: {block.GetType().Name}")
     };
 
-    private static RichBlockCaption? ToCaption(RichRun? caption) =>
+    public static RichBlockCaption? ToCaption(RichRun? caption) =>
         caption is null ? null : new RichBlockCaption { Text = ToRichText(caption) };
 
-    private static RichBlockTableCell ToTableCell(RichTableCell cell) => new()
+    // Align and Valign are NOT optional, and their enums start at 1 — leaving them unset makes the
+    // wire value 0, which Telegram.Bot's serializer refuses with "Can't serialize value 0 for enum
+    // RichBlockTableCellAlign". That threw on every post containing a table, i.e. tables have never
+    // once published successfully (found in production 01.08.2026; TASKS.md had them listed as
+    // "implemented but never exercised with a real post", which is exactly what this was).
+    //
+    // Left/Middle rather than something cleverer: CedarClerk.Core's RichTableCell carries no
+    // alignment, because the TipTap table node does not set one either. Inventing centred headers
+    // here would make the channel disagree with the editor.
+    public static RichBlockTableCell ToTableCell(RichTableCell cell) => new()
     {
         Text = ToRichText(cell.Text),
         IsHeader = cell.IsHeader,
         Colspan = cell.Colspan,
-        Rowspan = cell.Rowspan
+        Rowspan = cell.Rowspan,
+        Align = RichBlockTableCellAlign.Left,
+        Valign = RichBlockTableCellValign.Middle,
     };
 
-    private static InputRichBlockListItem ToListItem(RichListItem item) => new()
+    public static InputRichBlockListItem ToListItem(RichListItem item) => new()
     {
         Blocks = item.Blocks.Select(ToInputRichBlock).ToList(),
         HasCheckbox = item.HasCheckbox,
@@ -218,7 +230,7 @@ public class TelegramPublishTarget(
         Value = item.OrderValue
     };
 
-    private static RichText ToRichText(RichRun run) => run switch
+    public static RichText ToRichText(RichRun run) => run switch
     {
         RichRunText t => new RichTextText { Text = t.Text },
         RichRunBold b => new RichTextBold { Text = ToRichText(b.Inner) },
