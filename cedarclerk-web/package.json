@@ -10,7 +10,8 @@
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
     "icons:generate": "node tools/generate-icons.mjs && node tools/generate-icon-usage.mjs",
-    "check:contrast": "node tools/check-contrast.mjs"
+    "check:contrast": "node tools/check-contrast.mjs",
+    "tokens:generate": "node tools/generate-design-tokens.mjs"
   },
   "private": true,
   "packageManager": "npm@11.18.0",

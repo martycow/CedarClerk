@@ -1365,35 +1365,17 @@ public static class BlogEndpoints
         <style>
         :root {
             color-scheme: light dark;
-            --bg: #ECE9E2; --canvas: #E2DED4; --surface: #F7F5EF; --sheet: #FCFBF8; --alt: #EFECE4;
-            --border: #DBD5C8; --text: #26231D; --t2: #6B655A; --t3: #9F988A;
-            --accent: #5B6E46; --danger: #B4452C; --ok: #3E7A4E;
-            --shadow: 0 1px 3px rgba(40,35,25,.10);
-            --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            --font-mono: ui-monospace, Menlo, Consolas, monospace;
-            --asoft: color-mix(in srgb, var(--accent) 13%, var(--surface));
-            --abord: color-mix(in srgb, var(--accent) 38%, var(--border));
+            {{LIGHT_TOKENS}}
         }
+        /* T-101 — one palette for the whole product (ADR-071 principle 6). These values are
+           generated from the app's own stylesheet (CedarClerk.Core.DesignTokens), which is what
+           stops the blog from being a shade behind after every colour change — it already was:
+           the contrast pass fixed the app and left this file on the old values. */
         @media (prefers-color-scheme: dark) {
-            :root {
-                --bg: #1D1B17; --canvas: #171511; --surface: #25221B; --sheet: #211E18; --alt: #2F2C23;
-                --border: #3C382D; --text: #EAE6DB; --t2: #A69F8F; --t3: #776F5F;
-                --accent: color-mix(in srgb, #5B6E46 55%, #E8F0E8 45%); --danger: #E2745C; --ok: #82BB8C;
-                --shadow: 0 1px 3px rgba(0,0,0,.45);
-            }
+            :root { {{DARK_TOKENS}} }
         }
-        :root[data-theme="light"] {
-            --bg: #ECE9E2; --canvas: #E2DED4; --surface: #F7F5EF; --sheet: #FCFBF8; --alt: #EFECE4;
-            --border: #DBD5C8; --text: #26231D; --t2: #6B655A; --t3: #9F988A;
-            --accent: #5B6E46; --danger: #B4452C; --ok: #3E7A4E;
-            --shadow: 0 1px 3px rgba(40,35,25,.10);
-        }
-        :root[data-theme="dark"] {
-            --bg: #1D1B17; --canvas: #171511; --surface: #25221B; --sheet: #211E18; --alt: #2F2C23;
-            --border: #3C382D; --text: #EAE6DB; --t2: #A69F8F; --t3: #776F5F;
-            --accent: color-mix(in srgb, #5B6E46 55%, #E8F0E8 45%); --danger: #E2745C; --ok: #82BB8C;
-            --shadow: 0 1px 3px rgba(0,0,0,.45);
-        }
+        :root[data-theme="light"] { {{LIGHT_TOKENS}} }
+        :root[data-theme="dark"] { {{DARK_TOKENS}} }
         * { box-sizing: border-box; }
         /* T-099 — the footer used to sit wherever the content ended: on a two-post index or a
            private post's gate that is the middle of the screen, with a wide empty band under it.
@@ -1415,6 +1397,9 @@ public static class BlogEndpoints
 
         .site-header { position: sticky; top: 0; z-index: 10; background: var(--surface); border-bottom: 1px solid var(--border); }
         .site-header-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 20px; }
+        /* T-101 — the four colour literals left on this page, kept for the same reason the app kept
+           its two (T-077): a generated avatar colour, a code block's own dark scheme, and white on
+           an accent fill. A theme token would go dark behind each of them and become unreadable. */
         .channel-avatar { width: 30px; height: 30px; border-radius: 50%; background: #C98A3B; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex: none; }
         .channel-avatar.brand { background: var(--asoft); color: var(--accent); }
         .channel-id { min-width: 0; }
@@ -2077,6 +2062,10 @@ public static class BlogEndpoints
     {
         var mathAssets = bodyHtml.Contains("math-tex") ? MathAssets : "";
         return ShellTemplate
+            // T-101 — the palette comes from the app's stylesheet through the generated
+            // DesignTokens, so a colour changed there reaches the blog without anyone copying it.
+            .Replace("{{LIGHT_TOKENS}}", DesignTokens.Declarations(DesignTokens.Light))
+            .Replace("{{DARK_TOKENS}}", DesignTokens.Declarations(DesignTokens.Dark))
             .Replace("{{LANG}}", lang)
             .Replace("{{TITLE}}", System.Net.WebUtility.HtmlEncode(title))
             .Replace("{{MATH_ASSETS}}", mathAssets)
