@@ -110,6 +110,21 @@ beside them — not a reading surface, so they follow the list's density rather 
                         </div>
                     </div>
 
+                    <!--T-039 — reactions and comments, per post. Enforced server-side too: the
+                    controls are markup, and a POST needs no button to be sent.-->
+                    <div class="detail-field">
+                        <label class="field-hint">
+                            <input type="checkbox" [checked]="!d.disableReactions"
+                                   (change)="setEngagement(!d.disableReactions, d.disableComments)" [disabled]="busy()">
+                            {{ t().manager.allowReactions }}
+                        </label>
+                        <label class="field-hint">
+                            <input type="checkbox" [checked]="!d.disableComments"
+                                   (change)="setEngagement(d.disableReactions, !d.disableComments)" [disabled]="busy()">
+                            {{ t().manager.allowComments }}
+                        </label>
+                    </div>
+
                     <div class="detail-actions">
                         <button class="btn-ghost" (click)="togglePrivate()" [disabled]="busy()">
                             <app-icon name="lock" size="sm"></app-icon>

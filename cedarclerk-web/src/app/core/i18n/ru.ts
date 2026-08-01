@@ -544,6 +544,8 @@ export const ru: Dict = {
         makePublic: 'Сделать публичным',
         makePrivate: 'Сделать приватным',
         disableCopy: 'Запретить копирование текста на странице блога',
+        allowReactions: 'Читатели могут реагировать',
+        allowComments: 'Читатели могут комментировать',
         archive: 'В архив',
         unarchive: 'Вернуть из архива',
         openInEditor: 'Открыть в редакторе',

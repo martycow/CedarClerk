@@ -36,6 +36,7 @@ public static class DraftEndpoints
     public record UpdateWatermarkRequest(string? WatermarkText);
     public record UpdateSlugRequest(string? Slug);
     public record UpdateArticleTitleRequest(string? ArticleTitle);
+    public record UpdateEngagementRequest(bool DisableReactions, bool DisableComments);
     public record AddInviteRequest(string Email);
     // FI4.1 — Language names which language slot the form belongs to; absent or primary writes
     // the post's own RegistrationFormJson, anything else goes into the translations object.
@@ -151,7 +152,7 @@ public static class DraftEndpoints
                 {
                     d.Id, d.Title, d.PrimaryLanguage, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
                     d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.IsPrivate, d.IsTemplate,
-                    d.DisableCopy, d.ViewCount,
+                    d.DisableCopy, d.DisableReactions, d.DisableComments, d.ViewCount,
                     Translations = db.DraftTranslations.Where(t => t.DraftId == d.Id)
                         .Select(t => new { t.Language, t.UpdatedAt }).ToList(),
                 })
@@ -219,7 +220,7 @@ public static class DraftEndpoints
             {
                 d.Id, d.Title, d.PrimaryLanguage, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
                 d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.IsPrivate, d.IsTemplate,
-                d.DisableCopy, d.ViewCount,
+                d.DisableCopy, d.DisableReactions, d.DisableComments, d.ViewCount,
                 ReactionCount = reactionCounts.GetValueOrDefault(d.Id),
                 NewViewCount = deltas[d.Id].Views,
                 NewReactionCount = deltas[d.Id].Reactions,
@@ -266,6 +267,7 @@ public static class DraftEndpoints
                 draft.Id, draft.Title, draft.PrimaryLanguage, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug,
                 draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.FolderId, draft.IsPrivate,
                 draft.WatermarkText, draft.ArticleTitle, draft.IsListedWhilePrivate, draft.DisableCopy,
+                draft.DisableReactions, draft.DisableComments,
                 draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson,
                 // FI4.1 — which languages a reader would actually be greeted in.
                 FormLanguages = RegistrationFormSet.LanguagesWithForm(draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson),
@@ -509,6 +511,20 @@ public static class DraftEndpoints
             draft.DisableCopy = req.DisableCopy;
             await db.SaveChangesAsync();
             return Results.Ok(new { draft.DisableCopy });
+        });
+
+        // T-039 — one endpoint for both flags: they are set from the same row of checkboxes and
+        // sending them together keeps "off, then off again" from being two round trips.
+        groupBuilder.MapPost("/{id:guid}/engagement", async (Guid id, UpdateEngagementRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            draft.DisableReactions = req.DisableReactions;
+            draft.DisableComments = req.DisableComments;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.DisableReactions, draft.DisableComments });
         });
 
         groupBuilder.MapPost("/{id:guid}/article-title", async (Guid id, UpdateArticleTitleRequest req, ClaimsPrincipal user, CedarDbContext db) =>

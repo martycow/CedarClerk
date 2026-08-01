@@ -547,6 +547,8 @@ export const en = {
         makePublic: 'Make public',
         makePrivate: 'Make private',
         disableCopy: 'Disable text copying on the blog page',
+        allowReactions: 'Readers can react',
+        allowComments: 'Readers can comment',
         archive: 'Archive',
         unarchive: 'Unarchive',
         openInEditor: 'Open in editor',

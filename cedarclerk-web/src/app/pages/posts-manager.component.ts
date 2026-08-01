@@ -446,6 +446,20 @@ export class PostsManagerComponent implements OnInit {
         }
     }
 
+    async setEngagement(disableReactions: boolean, disableComments: boolean) {
+        const d = this.selected();
+        if (!d || this.busy()) return;
+        this.busy.set(true);
+        try {
+            await this.draftsApi.setEngagement(d.id, disableReactions, disableComments);
+            this.patch(d.id, { disableReactions, disableComments });
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.save));
+        } finally {
+            this.busy.set(false);
+        }
+    }
+
     async toggleDisableCopy() {
         const d = this.selected();
         if (!d || this.busy()) return;

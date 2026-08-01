@@ -443,6 +443,14 @@ public static class BlogEndpoints
             return;
         }
 
+        // T-039 — enforced here, not only by hiding the buttons: the controls are client-side
+        // markup and a POST needs no button to be sent.
+        if (draft.DisableReactions)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return;
+        }
+
         ReactRequest? req;
         try
         {
@@ -699,6 +707,13 @@ public static class BlogEndpoints
         if (draft is null || !HasPrivateAccess(ctx, draft))
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        // T-039 — same reason as reactions above.
+        if (draft.DisableComments)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
             return;
         }
 
@@ -1261,8 +1276,14 @@ public static class BlogEndpoints
             </div>
             """;
 
-        var articleBlock = "<div class=\"annotation article-annotation\" data-annotation-id=\"\">"
-            + CedarToBlogHtmlRenderer.AnnotationControlsHtml(lang, owner.AuthorDisplayName, draft.BlogPublishedAt) + "</div>";
+        // T-039 — an informational post shows nothing to react with. Both off means the block
+        // itself is gone rather than an empty bordered box asking to be filled.
+        var articleBlock = draft.DisableReactions && draft.DisableComments
+            ? ""
+            : "<div class=\"annotation article-annotation\" data-annotation-id=\"\""
+              + (draft.DisableReactions ? " data-no-reactions=\"1\"" : "")
+              + (draft.DisableComments ? " data-no-comments=\"1\"" : "") + ">"
+              + CedarToBlogHtmlRenderer.AnnotationControlsHtml(lang, owner.AuthorDisplayName, draft.BlogPublishedAt) + "</div>";
 
         var backLinkLabel = lang == Languages.English ? "All posts" : "Все посты";
         var backToTopLabel = lang == Languages.English ? "Back to top" : "Наверх";
@@ -1381,6 +1402,13 @@ public static class BlogEndpoints
         body { margin: 0; min-height: 100%; display: flex; flex-direction: column; background: var(--canvas); color: var(--text); font-family: var(--font-sans); line-height: 1.6; }
         .site-main { flex: 1 0 auto; }
         .site-footer { flex: none; }
+        /* T-039 — a post can take likes but no discussion, or the reverse. The block is only
+           removed entirely when both are off; otherwise the half that is off simply is not there. */
+        .annotation[data-no-reactions] .react-btn { display: none; }
+        .annotation[data-no-comments] .comment-count-label,
+        .annotation[data-no-comments] .comment-box { display: none; }
+        /* With reactions gone the control row has nothing left to show but a comment count. */
+        .annotation[data-no-reactions][data-no-comments] .annotation-controls { display: none; }
         a { color: var(--accent); text-decoration: none; }
         img, video { max-width: 100%; height: auto; }
         .spacer { flex: 1; }

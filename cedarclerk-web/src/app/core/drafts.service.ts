@@ -124,6 +124,10 @@ export interface DraftMeta {
     isPrivate: boolean; // blog page gated behind PostInvite tokens — see ADR-041
     isTemplate: boolean; // NF1 — a template, filtered into its own /drafts tab, never published
     disableCopy: boolean; // blocks selection/copy/context menu on the blog page; private posts only
+    // T-039 — an informational post nobody is invited to react to. Two flags, because a post can
+    // reasonably take likes but not a discussion, and the reverse is just as reasonable.
+    disableReactions: boolean;
+    disableComments: boolean;
     // Blog activity (B23). Totals are all-time; new* is what accumulated since the previous
     // session (server-side baseline, see DraftStatSeen) and is 0 the first time a draft is listed.
     viewCount: number;
@@ -496,5 +500,11 @@ export class DraftsService {
 
     unpublishFromBlog(id: string) {
         return firstValueFrom(this.http.post(`/api/drafts/${id}/unpublish-blog`, {}));
+    }
+
+    /** T-039 — both flags travel together: they are set from one row of checkboxes. */
+    setEngagement(id: string, disableReactions: boolean, disableComments: boolean) {
+        return firstValueFrom(this.http.post<{ disableReactions: boolean; disableComments: boolean }>(
+            `/api/drafts/${id}/engagement`, { disableReactions, disableComments }));
     }
 }

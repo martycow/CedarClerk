@@ -283,6 +283,14 @@ public class Draft
     // page source is still one Ctrl+U away) — and like it, only applied to private posts.
     public bool DisableCopy { get; set; }
 
+    /// <summary>
+    /// T-039 — an informational post that nobody is invited to react to. Two flags rather than one
+    /// "engagement off": a post can reasonably take likes but not a discussion, and the reverse is
+    /// just as reasonable. Existing rows default to false, i.e. everything stays as it is.
+    /// </summary>
+    public bool DisableReactions { get; set; }
+    public bool DisableComments { get; set; }
+
     public string? RegistrationFormJson { get; set; }
     // FI4.1 — the same form in the post's other languages: a JSON object keyed by language code,
     // each value a form blob shaped exactly like RegistrationFormJson above. Kept beside the
