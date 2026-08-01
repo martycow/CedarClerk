@@ -53,6 +53,7 @@ import { FootnoteNode } from '../tiptap-extensions/footnote-node';
 import { AnnotationNode } from '../tiptap-extensions/annotation-node';
 import { TableOfContentsNode } from '../tiptap-extensions/table-of-contents-node';
 import { YoutubeNode, extractYouTubeId } from '../tiptap-extensions/youtube-node';
+import { LayoutShortcuts } from '../tiptap-extensions/layout-shortcuts';
 import { PopoverComponent } from '../shared/popover.component';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { ModalComponent } from '../shared/modal.component';
@@ -850,6 +851,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 AnnotationNode,
                 TableOfContentsNode,
                 YoutubeNode,
+                // T-100 — Ctrl+B and friends on a Cyrillic layout, where ProseMirror's own keymap
+                // never sees them. See the extension for why this is not intermittent at all.
+                LayoutShortcuts,
                 Table.configure({ resizable: false }),
                 TableRow,
                 TableHeader,
