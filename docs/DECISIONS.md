@@ -743,3 +743,27 @@ The reason this is the more expensive answer and still the right one: a teaser-a
 **Where the pieces live**: capabilities and the payload model go in `CedarClerk.Core` (pure, no ASP.NET, testable — the same rule the renderers follow); `IPublishTarget` and its implementations go in `CedarClerk.Server/Publishing/`, matching `Translation/ITranslationProvider` and `Ai/IAiEditProvider`, because publishing needs an HTTP client, configuration and the database.
 
 **Consequence and the order that follows from it**: T-084 builds the entity, the interface and the credential storage. **T-085 then moves Telegram onto it before any Bluesky code exists** — ADR-070's rule, and the reason it matters is visible above: three of `PublishAsync`'s steps write Telegram-shaped columns, so an abstraction extracted after a second connector would have been shaped around them. Telegram's `Channel` rows are *projected* into `PublishTarget` in T-085 rather than replaced by it: `ChannelPost`, `ChannelStatSnapshot` and `BotKnownChat` all key off `Channel`, and it remains the Telegram-specific detail table behind a general row.
+
+### ADR-079 — Bluesky ships: the capability matrix, the author's own text, and a session per publish (T-086/T-087/T-089)
+
+**Context** (01.08.2026): with the abstraction in place (ADR-078) and Telegram moved onto it (T-085), the three rows that make a second network possible were built in one pass.
+
+**T-086 — the capability matrix is data, and the check runs before the send.** `PublishCapabilities` describes what a network takes; `PublishValidator` (Core, pure, 9 tests) answers what it will do to a given document. It returns **codes plus numbers, never sentences** — Core has no dictionaries and this app has two languages, so the wording belongs to the client. Issues are split into *blocking* (the network would refuse) and not (it accepts and quietly drops or flattens something), because those are two different things to tell an author and one of them is not a reason to stop.
+
+**T-087 — a cross-post is written, not derived, and the writing is stored per (draft, network, language).** `DraftTargetText`, keyed by *network* rather than by target row: an author writes one Bluesky version of a post, not one per connected handle. An empty text **deletes the row** instead of storing a blank — a blank would read as an intentional empty post to every later reader of that table. Absent means "derive one", which is what keeps publishing from blocking on writing a second version.
+
+**T-089 — Bluesky, with a session per publish.** Credentials are a handle plus an **app password**, encrypted by `PublishTargetSecrets`, and every publish opens a fresh session from them rather than storing and refreshing a JWT. The reason is failure-shaped: AT Protocol refresh tokens rotate on every use, so a rotated token that fails to save locks the account out, while an app password is revocable from Bluesky's own settings — that revocability is what makes holding one defensible at all. The connect flow verifies the credentials by opening a session **before** storing them, and the row is keyed by **DID, not handle**: a handle can be renamed and the account stays the same.
+
+`BlueskyPostBuilder` (Core, 10 tests) builds the fallback teaser and the link facet. Two things there are impossible to notice afterwards and are pinned by tests: **facet offsets are UTF-8 byte indices, not character indices** — on a Cyrillic post every character is two bytes, so a character-based offset produces a link that silently covers the wrong words — and truncation runs on grapheme boundaries, so a family emoji is not cut into a different one.
+
+**Consequence**: `/api/posts/publish-target` is a separate endpoint from `/export` rather than an optional field on it. Folding two different target resolutions into one endpoint is exactly how `chatId` came to mean three things.
+
+### ADR-080 — The publish request that never came back (found 01.08.2026)
+
+**Context**: publishing a post with a 15MB audio and a 15MB video returned Cloudflare's 502 to the browser. The logs answer what happened, and it is not what the error suggests: the request arrived, the draft loaded, and then **nothing** — no exception (the global handler logs those), no error, and the same process kept running its Quartz jobs on schedule. The server did not fail. It did not finish.
+
+**Why**: publishing is synchronous inside one HTTP request, and the slow part is not ours. Telegram downloads every media URL **from our origin** while `SendRichMessage` blocks — 30MB over a home connection behind a tunnel — after we have already spent time compressing 20MB JPEGs into Telegram-safe derivatives. The proxy in front of the origin gives up long before that finishes, and the author is told "bad gateway" about a publish that may well still be in flight.
+
+**What was done now, and what it is not**: T-086's validator warns about it before the send (`slow-media`, non-blocking, fired on total media bytes). That is honest — every file is *within* Telegram's limits, so nothing here is a size violation and a blocking check would be wrong — but a warning is not a fix.
+
+**The fix is T-090** (`PublishJob`: retry, partial failures, idempotency), already scoped in Phase 12: publishing becomes a job the client polls, so the answer stops depending on a proxy's patience. It is the next row in this phase and this incident is the argument for its priority, not a new task.

@@ -31,6 +31,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<PostRegistration> PostRegistrations => Set<PostRegistration>();
     public DbSet<PublishTarget> PublishTargets => Set<PublishTarget>();
     public DbSet<DraftStatSnapshot> DraftStatSnapshots => Set<DraftStatSnapshot>();
+    public DbSet<DraftTargetText> DraftTargetTexts => Set<DraftTargetText>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -63,5 +64,10 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         // the same shape as DraftRevision's index, for the same reason.
         builder.Entity<DraftStatSnapshot>()
             .HasIndex(s => new { s.DraftId, s.TakenAt });
+        // T-087 — one text per draft, network and language. Keyed by network rather than by target
+        // row: an author writes one Bluesky version of a post, not one per connected handle.
+        builder.Entity<DraftTargetText>()
+            .HasIndex(t => new { t.DraftId, t.Network, t.Language })
+            .IsUnique();
     }
 }

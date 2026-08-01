@@ -633,6 +633,25 @@ public class ScheduledPost
 }
 
 /// <summary>
+/// The author's own text for one network (T-087, ADR-077). Per (draft, network, language), because
+/// a cross-post is a standalone post — Marty's answer to Q-14 — and a post written in two languages
+/// needs its own short version in each.
+///
+/// Absent means "derive one": publishing must never block on writing a second version of the post,
+/// so the fallback teaser is what goes out (BlueskyPostBuilder).
+/// </summary>
+public class DraftTargetText
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid DraftId { get; set; }
+    /// <summary>One of <see cref="CedarClerk.Core.PublishNetworks"/> — the network, not one account of it.</summary>
+    public string Network { get; set; } = "";
+    public string Language { get; set; } = Languages.Russian;
+    public string Text { get; set; } = "";
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
 /// A tenant's connected account on one network — the general home for "where a post can go"
 /// (T-084, ADR-078). Telegram channels are projected into this table in T-085; <see cref="Channel"/>
 /// stays as the Telegram-specific detail row behind them, because ChannelPost, ChannelStatSnapshot

@@ -13,6 +13,8 @@ public static class PostEndpoints
     // Language is nullable rather than defaulting to a literal: which language a draft "is" became
     // a per-draft property in ADR-064, so the default has to be resolved against the draft itself.
     public record ExportRequest(Guid DraftId, string ChatId, string Format = Consts.ContentTypes.Markdown, string? Language = null, string CompressionLevel = "standard", string? ConfirmedFingerprint = null);
+    public record PublishTargetRequest(Guid DraftId, Guid TargetId, string? Language = null);
+    public record ValidateRequest(Guid DraftId, string Network, string? Language = null);
     public record UpdatePreviewRequest(Guid DraftId, string Kind, string? ChatId = null, string? Language = null);
 
     // "small"/"standard"/"high" — see the export modal's compression-level control and the ADR
@@ -79,7 +81,48 @@ public static class PostEndpoints
         // against. Ensure rather than look up, so a channel connected before this table existed —
         // or one whose backfill has not run — publishes instead of failing on a missing row.
         var target = await TelegramTargetProjection.EnsureAsync(db, targetChannel, ct);
+        return await PublishToTargetAsync(draft, target, ownerId, db, targets, language, logger, compressionLevel, ct);
+    }
 
+    /// <summary>
+    /// Publishes to a target the caller has already resolved and authorised — the path a network
+    /// without a Telegram-shaped chat id takes (T-089). The Telegram entry point above resolves its
+    /// channel first and then lands here, so both networks share one order of operations.
+    /// </summary>
+    public static async Task<PublishResult> PublishToTargetAsync(
+        Guid draftId,
+        Guid targetId,
+        string ownerId,
+        CedarDbContext db,
+        IEnumerable<IPublishTarget> targets,
+        string? language = null,
+        ILogger? logger = null,
+        string compressionLevel = "standard",
+        CancellationToken ct = default)
+    {
+        var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == draftId && d.OwnerId == ownerId, ct);
+        if (draft is null)
+            return new PublishResult(null, ErrorMessages.DraftNotFound, StatusCodes.Status404NotFound);
+
+        var target = await db.PublishTargets.FirstOrDefaultAsync(t => t.Id == targetId && t.OwnerId == ownerId && t.IsActive, ct);
+        if (target is null)
+            return new PublishResult(null, "That account is not connected", StatusCodes.Status403Forbidden);
+
+        return await PublishToTargetAsync(draft, target, ownerId, db, targets, language ?? draft.PrimaryLanguage, logger, compressionLevel, ct);
+    }
+
+    private static async Task<PublishResult> PublishToTargetAsync(
+        Draft draft,
+        PublishTarget target,
+        string ownerId,
+        CedarDbContext db,
+        IEnumerable<IPublishTarget> targets,
+        string language,
+        ILogger? logger,
+        string compressionLevel,
+        CancellationToken ct)
+    {
+        var draftId = draft.Id;
         var document = await DraftRevisionService.ResolveAsync(db, draft, language, ct);
         if (document is null)
             return new PublishResult(null, ErrorMessages.NoVersionInLanguage(language), StatusCodes.Status404NotFound);
@@ -89,6 +132,13 @@ public static class PostEndpoints
         if (implementation is null)
             return new PublishResult(null, $"No publisher is configured for {target.Network}", StatusCodes.Status501NotImplemented);
 
+        // ADR-077 — the author's own text for this network, when they wrote one. Absent means the
+        // target derives a teaser, which is what keeps publishing from blocking on a second draft.
+        var authorText = await db.DraftTargetTexts
+            .Where(t => t.DraftId == draftId && t.Network == target.Network && t.Language == language)
+            .Select(t => t.Text)
+            .FirstOrDefaultAsync(ct);
+
         var outcome = await implementation.PublishAsync(new PublishRequest
         {
             DraftId = draftId,
@@ -97,6 +147,7 @@ public static class PostEndpoints
             Title = title,
             CedarJson = cedarJson,
             Target = target,
+            AuthorText = authorText,
             CompressionLevel = compressionLevel,
         }, ct);
 
@@ -137,6 +188,53 @@ public static class PostEndpoints
 
             var preview = await DraftRevisionService.PreviewAsync(db, draft, req.Language ?? draft.PrimaryLanguage, kind, destination);
             return preview is null ? Results.NotFound() : Results.Ok(preview);
+        }).RequireAuthorization();
+
+        // T-086 — what this network will do to this document, asked before the send. The editor
+        // shows it next to the destination; the answer is codes plus numbers, and the wording is
+        // the client's, because Core has no dictionaries and the UI has two.
+        // T-089 — publishing to a network that has no Telegram-shaped chat id. Separate from
+        // /export rather than an optional field on it: the guard below is per (draft, language,
+        // target), and folding two different resolutions into one endpoint is how the chatId
+        // parameter ended up meaning three things in the first place.
+        app.MapPost("/api/posts/publish-target", async (PublishTargetRequest req, ClaimsPrincipal user,
+            CedarDbContext db, IEnumerable<IPublishTarget> targets, ILogger<Program> logger, CancellationToken ct) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var result = await PublishToTargetAsync(req.DraftId, req.TargetId, uid, db, targets, req.Language, logger, ct: ct);
+
+            return result.Success
+                ? Results.Ok(new { messageId = result.MessageId })
+                : Results.Json(new { error = result.Error }, statusCode: result.StatusCode);
+        }).RequireAuthorization();
+
+        app.MapPost("/api/posts/validate", async (ValidateRequest req, ClaimsPrincipal user, CedarDbContext db,
+            IEnumerable<IPublishTarget> targets) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == req.DraftId && d.OwnerId == uid);
+            if (draft is null) return Results.NotFound(new { error = ErrorMessages.DraftNotFound });
+
+            var target = targets.FirstOrDefault(t => t.Network == req.Network);
+            if (target is null) return Results.BadRequest(new { error = $"Unknown network: {req.Network}" });
+
+            var language = req.Language ?? draft.PrimaryLanguage;
+            var document = await DraftRevisionService.ResolveAsync(db, draft, language);
+            if (document is null) return Results.NotFound(new { error = ErrorMessages.NoVersionInLanguage(language) });
+
+            // Sizes come from the Assets rows rather than from disk: the check is about what the
+            // network will have to move, and one query answers it for the whole document.
+            var referenced = CedarPackage.FindReferencedMediaPaths(document.Value.CedarJson);
+            var sizes = referenced.Count == 0
+                ? new Dictionary<string, long>()
+                // The stored size, not the Telegram derivative's: Asset carries no size for the
+                // derivative, and the original is what the check is about anyway — an image that
+                // needs compressing is exactly the one worth warning about.
+                : await db.Assets.Where(a => referenced.Contains(a.LocalPath))
+                    .ToDictionaryAsync(a => a.LocalPath, a => a.SizeBytes);
+
+            var issues = PublishValidator.Validate(document.Value.CedarJson, target.Capabilities, sizes);
+            return Results.Ok(new { network = req.Network, capabilities = target.Capabilities, issues });
         }).RequireAuthorization();
 
         app.MapPost("/api/posts/export", async (ExportRequest req, ClaimsPrincipal user, CedarDbContext db, IEnumerable<IPublishTarget> targets, ILogger<Program> logger) =>

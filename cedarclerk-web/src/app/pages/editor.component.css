@@ -2235,3 +2235,76 @@ input[type="datetime-local"]:focus-visible {
 .term-menu button:hover {
     background: var(--hover);
 }
+
+/* Sorting the draft's file list (01.08.2026). Chips rather than table headers: the list is three
+   fields wide and lives inside a modal section, where a header row would read as another table. */
+.asset-sort {
+    display: flex;
+    gap: var(--space-1);
+    margin-bottom: var(--space-2);
+}
+
+.asset-sort button {
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--t2);
+    border-radius: 999px;
+    padding: var(--space-1) var(--space-3);
+    font: inherit;
+    font-size: var(--fs-caption);
+    cursor: pointer;
+}
+
+.asset-sort button.on {
+    border-color: var(--abord);
+    background: var(--asoft);
+    color: var(--text);
+    font-weight: 600;
+}
+
+.asset-type {
+    color: var(--t2);
+    font-size: var(--fs-caption);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+/* T-086 — what the network will do to this post, shown beside the destination. Blocking issues are
+   what it would refuse; the rest are what it accepts and quietly changes. */
+.publish-issues {
+    list-style: none;
+    margin: 0 0 var(--space-2);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.publish-issues li {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    font-size: var(--fs-caption);
+    color: var(--t2);
+    line-height: 1.4;
+}
+
+.publish-issues li app-icon {
+    color: var(--warn);
+    margin-top: 1px;
+}
+
+.publish-issues li.blocking {
+    color: var(--danger);
+}
+
+.publish-issues li.blocking app-icon {
+    color: var(--danger);
+}
+
+/* The Bluesky post is a short standalone text (ADR-077), so the counter is not decoration — it is
+   the difference between a post and a rejection. */
+.field-hint-inline.over-limit {
+    color: var(--danger);
+    font-weight: 600;
+}

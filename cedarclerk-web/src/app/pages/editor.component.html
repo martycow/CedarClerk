@@ -189,6 +189,19 @@
                     @if (telegramPostUrl()) { <span class="state-chip live">LIVE</span> }
                 </label>
                 @if (destTelegram()) {
+                <!--T-086: what Telegram will do to this document, asked before the send instead of
+                read off its error message afterwards. Blocking issues are what it would refuse;
+                the rest are what it would accept and quietly change.-->
+                @if (publishIssues().length) {
+                <ul class="publish-issues">
+                    @for (issue of publishIssues(); track issue.code) {
+                    <li [class.blocking]="issue.blocking">
+                        <app-icon [name]="issue.blocking ? 'warning' : 'info'" size="sm"></app-icon>
+                        {{ publishIssueText(issue) }}
+                    </li>
+                    }
+                </ul>
+                }
                 @if (selectedChannel(); as sc) {
                 <div class="channel-chosen">
                     <span class="channel-avatar" [style.background]="channelColor(sc.id)">{{ channelInitial(sc.title) }}</span>
@@ -353,6 +366,66 @@
                 }
                 }
             </div>
+
+            <!--T-089/T-087 — Bluesky. A short standalone post (ADR-077), so this section is mostly
+            the text field: what the author writes here IS the post, and an empty field falls back
+            to a teaser built from the opening paragraphs plus the blog link.-->
+            <div class="export-section" [class.dest-off]="!destBluesky()">
+                <label class="dest-head">
+                    <input type="checkbox" [checked]="destBluesky()" (change)="destBluesky.set(!destBluesky())"
+                           [disabled]="!blueskyAccount()">
+                    <span class="export-section-title" style="margin:0">Bluesky</span>
+                </label>
+                @if (blueskyAccount(); as account) {
+                <div class="channel-chosen">
+                    <span class="channel-chosen-title">&#64;{{ account.displayName }}</span>
+                    <button class="mini-remove" (click)="disconnectBluesky(account.id)"
+                            [title]="t().editor.exportModal.disconnect" [attr.aria-label]="t().editor.exportModal.disconnect">
+                        <app-icon name="x" size="sm"></app-icon>
+                    </button>
+                </div>
+                @if (destBluesky()) {
+                <label class="form-field">
+                    <span class="form-field-label">{{ t().editor.exportModal.blueskyText }}</span>
+                    <textarea class="chat-input" rows="4" [(ngModel)]="blueskyText"
+                              (ngModelChange)="blueskyTextDirty.set(true)"
+                              [placeholder]="t().editor.exportModal.blueskyTextPlaceholder"></textarea>
+                    <p class="field-hint-inline"
+                       [class.over-limit]="blueskyGraphemes() > blueskyLimit">
+                        {{ blueskyGraphemes() }} / {{ blueskyLimit }}
+                        @if (!blueskyText.trim()) { · {{ t().editor.exportModal.blueskyFallback }} }
+                    </p>
+                </label>
+                <div class="publish-actions">
+                    <button class="export-btn full" (click)="publishBluesky()"
+                            [disabled]="blueskyBusy() || blueskyGraphemes() > blueskyLimit">
+                        @if (blueskyBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                        {{ t().editor.exportModal.publishTo }} Bluesky
+                    </button>
+                </div>
+                @if (blueskyError()) { <p class="channel-error">{{ blueskyError() }}</p> }
+                @if (blueskyPostUrl(); as url) {
+                <a class="detail-link-btn" [href]="url" target="_blank" rel="noopener">
+                    <app-icon name="arrow-square-out" size="sm"></app-icon> {{ t().editor.exportModal.openPost }}
+                </a>
+                }
+                }
+                } @else {
+                <!--Connecting lives here rather than in Settings for the same reason the Telegram
+                channel picker does (N4): the moment you need an account is the moment you are
+                trying to publish to it.-->
+                <p class="field-hint-inline">{{ t().editor.exportModal.blueskyConnectHint }}</p>
+                <input class="chat-input" [(ngModel)]="blueskyHandle" placeholder="handle.bsky.social">
+                <input class="chat-input" type="password" [(ngModel)]="blueskyAppPassword"
+                       [placeholder]="t().editor.exportModal.blueskyAppPassword">
+                <button class="btn-ghost" (click)="connectBluesky()"
+                        [disabled]="blueskyBusy() || !blueskyHandle.trim() || !blueskyAppPassword.trim()">
+                    @if (blueskyBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                    {{ t().editor.exportModal.connect }}
+                </button>
+                @if (blueskyError()) { <p class="channel-error">{{ blueskyError() }}</p> }
+                }
+            </div>
             </div>
             <!-- /export-row-primary -->
 
@@ -466,10 +539,22 @@
                 } @else if (!draftAssets().length) {
                 <p class="field-hint-inline">{{ t().editor.exportModal.noMedia }}</p>
                 } @else {
+                <div class="asset-sort">
+                    <button (click)="sortAssetsBy('name')" [class.on]="assetSort().key === 'name'">
+                        {{ t().editor.exportModal.sortName }} {{ assetSortMark('name') }}
+                    </button>
+                    <button (click)="sortAssetsBy('type')" [class.on]="assetSort().key === 'type'">
+                        {{ t().editor.exportModal.sortType }} {{ assetSortMark('type') }}
+                    </button>
+                    <button (click)="sortAssetsBy('size')" [class.on]="assetSort().key === 'size'">
+                        {{ t().editor.exportModal.sortSize }} {{ assetSortMark('size') }}
+                    </button>
+                </div>
                 <div class="asset-list">
-                    @for (a of draftAssets(); track a.id) {
+                    @for (a of sortedDraftAssets(); track a.id) {
                     <div class="asset-row">
                         <a class="asset-name" [href]="'/media/' + a.localPath" target="_blank" rel="noopener" [title]="a.fileName">{{ a.fileName }}</a>
+                        <span class="asset-type">{{ a.contentType.split('/')[1] || a.contentType }}</span>
                         <span class="asset-size">{{ formatFileSize(a.sizeBytes) }}</span>
                         @if (a.hasTelegramDerivative && a.telegramSizeBytes) {
                         <span class="asset-tg-badge" [title]="t().editor.exportModal.telegramDerivative">TG {{ formatFileSize(a.telegramSizeBytes) }}</span>

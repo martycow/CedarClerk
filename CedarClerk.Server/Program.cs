@@ -92,6 +92,10 @@ builder.Services.AddSingleton<PublishTargetSecrets>();
 // rows in the same unit of work, and a second context would split that in half.
 builder.Services.AddScoped<TelegramPublishTarget>();
 builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<TelegramPublishTarget>());
+// T-089 — Bluesky. Registered unconditionally: it needs no application-level key of ours (each
+// tenant brings their own app password), so there is nothing to be configured before it works.
+builder.Services.AddScoped<BlueskyPublishTarget>();
+builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<BlueskyPublishTarget>());
 
 builder.Services.AddQuartz(q =>
 {
@@ -188,6 +192,7 @@ app.MapFormPresetEndpoints();
 app.MapGlossaryEndpoints();
 app.MapBlogEndpoints();
 app.MapPostEndpoints();
+app.MapPublishEndpoints();
 app.MapAssetEndpoints();
 app.MapChannelEndpoints();
 app.MapScheduledPostEndpoints();

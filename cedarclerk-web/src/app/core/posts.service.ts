@@ -78,4 +78,15 @@ export class PostsService {
             snapshots: { viewCount: number; likeCount: number; dislikeCount: number; commentCount: number; takenAt: string }[];
         }>(`/api/drafts/${draftId}/stat-history?days=${days}`));
     }
+
+    /**
+     * T-086 — what a network will do to this document, before it is sent. Codes plus numbers; the
+     * wording is the caller's, because Core has no dictionaries and this app has two.
+     */
+    validate(draftId: string, network: string, language?: string) {
+        return firstValueFrom(this.http.post<{
+            network: string;
+            issues: { code: string; blocking: boolean; actual: number; limit: number }[];
+        }>('/api/posts/validate', { draftId, network, language }));
+    }
 }

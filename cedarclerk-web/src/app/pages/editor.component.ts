@@ -26,6 +26,7 @@ import { GlossaryService, GlossaryTermInput } from '../core/glossary.service';
 import { AppearancePanelComponent } from '../shared/appearance-panel.component';
 import { NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, CompressionLevel, UpdatePreview } from '../core/posts.service';
+import { PublishService, PublishAccount } from '../core/publish.service';
 import { DraftRevision, DraftRevisionDetail, RevisionDiff } from '../core/drafts.service';
 import { plainTextOf } from '../core/cedar-text.util';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES, endonymOf } from '../core/languages';
@@ -215,6 +216,138 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     @ViewChild('editorHost') editorHost!: ElementRef<HTMLElement>;
     private editor?: Editor;
 
+    // ─── Bluesky (T-087/T-089) ────────────────────────────────────────────────────────────────
+    private publishApi = inject(PublishService);
+    readonly blueskyLimit = 300;
+    destBluesky = signal(false);
+    blueskyAccount = signal<PublishAccount | null>(null);
+    blueskyText = '';
+    blueskyTextDirty = signal(false);
+    blueskyBusy = signal(false);
+    blueskyError = signal('');
+    blueskyPostUrl = signal<string | null>(null);
+    blueskyHandle = '';
+    blueskyAppPassword = '';
+
+    /**
+     * Bluesky counts graphemes, not UTF-16 units — an emoji is one character to it. Intl.Segmenter
+     * is what the browser has for that; without it the count would be wrong in exactly the posts
+     * people care about.
+     */
+    blueskyGraphemes(): number {
+        const text = this.blueskyText ?? '';
+        if (!text) return 0;
+        const segmenter = (Intl as unknown as { Segmenter?: new (l?: string, o?: object) => { segment(s: string): Iterable<unknown> } }).Segmenter;
+        if (!segmenter) return [...text].length;
+        return [...new segmenter(undefined, { granularity: 'grapheme' }).segment(text)].length;
+    }
+
+    private async loadBluesky() {
+        try {
+            const networks = await this.publishApi.networks();
+            const bluesky = networks.find(n => n.network === 'bluesky');
+            this.blueskyAccount.set(bluesky?.accounts[0] ?? null);
+        } catch {
+            this.blueskyAccount.set(null);
+        }
+
+        const id = this.currentId();
+        if (!id) return;
+        try {
+            const { texts } = await this.publishApi.texts(id);
+            this.blueskyText = texts.find(t => t.network === 'bluesky' && t.language === this.lang())?.text ?? '';
+            this.blueskyTextDirty.set(false);
+        } catch {
+            this.blueskyText = '';
+        }
+    }
+
+    async connectBluesky() {
+        this.blueskyBusy.set(true);
+        this.blueskyError.set('');
+        try {
+            await this.publishApi.connectBluesky(this.blueskyHandle.trim(), this.blueskyAppPassword.trim());
+            this.blueskyAppPassword = '';
+            await this.loadBluesky();
+            this.destBluesky.set(true);
+        } catch (e) {
+            this.blueskyError.set(httpErrorMessage(e, this.t().editor.errors.connectChannel));
+        } finally {
+            this.blueskyBusy.set(false);
+        }
+    }
+
+    async disconnectBluesky(targetId: string) {
+        this.blueskyBusy.set(true);
+        try {
+            await this.publishApi.disconnect(targetId);
+            this.blueskyAccount.set(null);
+            this.destBluesky.set(false);
+        } catch (e) {
+            this.blueskyError.set(httpErrorMessage(e, this.t().editor.errors.publish));
+        } finally {
+            this.blueskyBusy.set(false);
+        }
+    }
+
+    async publishBluesky() {
+        const id = this.currentId();
+        const account = this.blueskyAccount();
+        if (!id || !account) return;
+        this.blueskyBusy.set(true);
+        this.blueskyError.set('');
+        try {
+            // The override is saved first: what goes out must be what the field shows, and a send
+            // that used the previous text because the save had not landed would be its own bug.
+            if (this.blueskyTextDirty()) {
+                await this.publishApi.saveText(id, 'bluesky', this.lang(), this.blueskyText);
+                this.blueskyTextDirty.set(false);
+            }
+            await this.publishApi.publishToTarget(id, account.id, this.lang());
+            this.blueskyPostUrl.set(null);
+            await this.loadBluesky();
+        } catch (e) {
+            this.blueskyError.set(httpErrorMessage(e, this.t().editor.errors.publish));
+        } finally {
+            this.blueskyBusy.set(false);
+        }
+    }
+
+    // ─── Pre-send validation (T-086) ──────────────────────────────────────────────────────────
+    publishIssues = signal<{ code: string; blocking: boolean; actual: number; limit: number }[]>([]);
+
+    /** Asked when the export window opens and whenever the language changes — not per keystroke. */
+    async refreshPublishIssues() {
+        const id = this.currentId();
+        if (!id) { this.publishIssues.set([]); return; }
+        try {
+            const res = await this.posts.validate(id, 'telegram', this.lang());
+            this.publishIssues.set(res.issues);
+        } catch {
+            // A failed check must never stand between the author and publishing: the network's own
+            // refusal is still there as the backstop.
+            this.publishIssues.set([]);
+        }
+    }
+
+    publishIssueText(issue: { code: string; actual: number; limit: number }): string {
+        const texts = this.t().editor.exportModal.issues as Record<string, unknown>;
+        const entry = texts[issue.code];
+        if (typeof entry === 'function') {
+            return (entry as (a: string, b: string) => string)(
+                this.formatIssueNumber(issue.code, issue.actual),
+                this.formatIssueNumber(issue.code, issue.limit));
+        }
+        return typeof entry === 'string' ? entry : issue.code;
+    }
+
+    private formatIssueNumber(code: string, value: number): string {
+        // Byte-shaped codes read as sizes, the rest as plain counts.
+        return code === 'image-too-large' || code === 'slow-media'
+            ? this.formatFileSize(value)
+            : value.toLocaleString();
+    }
+
     // ─── Glossary term from a selection (Marty, 01.08.2026) ───────────────────────────────────
     private glossaryApi = inject(GlossaryService);
     termMenu = signal<{ x: number; y: number } | null>(null);
@@ -341,6 +474,37 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     translateConfirmOpen = signal(false);
     exportModalOpen = signal(false);
     draftAssets = signal<DraftAsset[]>([]);
+    // Sorting the file list (Marty, 01.08.2026). Kept in the component rather than sorting the
+    // fetched array in place: the order is a view preference, and re-fetching must not silently
+    // reset it. Size descending is the default because the question anyone actually brings to this
+    // list is "what is making this post heavy".
+    assetSort = signal<{ key: 'name' | 'type' | 'size'; desc: boolean }>({ key: 'size', desc: true });
+
+    sortAssetsBy(key: 'name' | 'type' | 'size') {
+        this.assetSort.update(current => current.key === key
+            ? { key, desc: !current.desc }
+            : { key, desc: key === 'size' });
+    }
+
+    sortedDraftAssets(): DraftAsset[] {
+        const { key, desc } = this.assetSort();
+        const direction = desc ? -1 : 1;
+        return [...this.draftAssets()].sort((a, b) => {
+            const compared = key === 'size'
+                ? a.sizeBytes - b.sizeBytes
+                // localeCompare, not <: file names are routinely Cyrillic here, and codepoint
+                // order puts every one of them after every Latin name.
+                : (key === 'type' ? a.contentType.localeCompare(b.contentType) : 0)
+                    || a.fileName.localeCompare(b.fileName);
+            return compared * direction;
+        });
+    }
+
+    assetSortMark(key: 'name' | 'type' | 'size'): string {
+        const { key: active, desc } = this.assetSort();
+        return active === key ? (desc ? '↓' : '↑') : '';
+    }
+
     draftAssetsLoading = signal(false);
 
     // Export destinations (B5) — tick a destination to unfold its settings; one Publish button
@@ -1636,6 +1800,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         // Presets are the only form control left in this modal (N12) — a failed load just means
         // no preset chips, never a blocked export.
         this.presetsApi.list().then(p => this.formPresets.set(p)).catch(() => this.formPresets.set([]));
+        // T-086 — asked once per opening, not per keystroke: it reads the stored document, which is
+        // what would be sent anyway.
+        this.refreshPublishIssues();
+        this.loadBluesky();
         const id = this.currentId();
         if (!id) return;
         this.draftAssetsLoading.set(true);

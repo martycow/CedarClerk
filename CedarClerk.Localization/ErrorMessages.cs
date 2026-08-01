@@ -22,6 +22,13 @@ public static class ErrorMessages
     public static string DraftNotFound => Ru("Черновик не найден.", "Draft not found.");
     public static string InvalidToken => Ru("Недействительный токен.", "Invalid token.");
     public static string BotNotRunning => Ru("Telegram-бот не запущен.", "Telegram bot is not running.");
+
+    // T-089 — the one Bluesky failure an author can act on: the stored app password no longer opens
+    // a session (revoked in Bluesky's settings, or unreadable because the DataProtection key ring
+    // and the database were separated — see PublishTargetSecrets).
+    public static string BlueskyReconnect => Ru(
+        "Не удалось войти в Bluesky — переподключите аккаунт в настройках.",
+        "Could not sign in to Bluesky — reconnect the account in settings.");
     public static string LinkYouTelegram => Ru("Сначала привяжите аккаунт Telegram.", "Link your Telegram account first.");
     public static string TelegramBillingNotConfigured =>
         Ru("Оплата через Telegram Stars не настроена!", "Telegram Stars billing is not configured!");
