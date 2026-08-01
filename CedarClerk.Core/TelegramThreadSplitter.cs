@@ -57,7 +57,9 @@ public static class TelegramThreadSplitter
 
     public static IReadOnlyList<ThreadPart> Split(IEnumerable<CedarRichBlock> blocks, PublishCapabilities capabilities)
     {
-        var maxChars = capabilities.MaxCharacters ?? int.MaxValue;
+        // ADR-086 — the part budget, not the message limit: a part must stay readable as one
+        // message, which on Telegram means staying under the client's "Show more" collapse.
+        var maxChars = capabilities.ThreadPartCharacters ?? capabilities.MaxCharacters ?? int.MaxValue;
         var maxMedia = Math.Max(1, capabilities.MaxMediaItems);
 
         var parts = new List<ThreadPart>();

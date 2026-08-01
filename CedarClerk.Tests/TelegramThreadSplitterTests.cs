@@ -111,6 +111,27 @@ public class TelegramThreadSplitterTests
         Assert.Equal("Mechanics", parts[1].StartsWith);
     }
 
+    // ADR-086 — the part budget is NOT the message limit. Telegram accepts 32,768 characters but
+    // collapses a channel post behind "Show more" long before that; a thread must stay readable.
+    [Fact]
+    public void The_thread_part_budget_wins_over_the_message_limit()
+    {
+        var caps = Caps(chars: 100_000) with { ThreadPartCharacters = 1000 };
+
+        var parts = TelegramThreadSplitter.Split([Para(600), Para(600), Para(600)], caps);
+
+        Assert.Equal(3, parts.Count);
+        Assert.All(parts, p => Assert.True(p.Characters <= 1000));
+    }
+
+    [Fact]
+    public void Without_a_thread_part_budget_the_message_limit_still_applies()
+    {
+        var parts = TelegramThreadSplitter.Split([Para(600), Para(600)], Caps(chars: 1000));
+
+        Assert.Equal(2, parts.Count);
+    }
+
     [Fact]
     public void No_part_is_ever_empty()
     {

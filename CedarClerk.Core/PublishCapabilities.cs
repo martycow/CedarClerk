@@ -30,6 +30,14 @@ public record PublishCapabilities
     /// <summary>Characters of body text the network accepts; null = no practical ceiling.</summary>
     public int? MaxCharacters { get; init; }
 
+    /// <summary>
+    /// Character budget for one part of a thread (ADR-086); null = use <see cref="MaxCharacters"/>.
+    /// Distinct from it on purpose: "what the network refuses" and "what a subscriber reads as one
+    /// message" are different numbers — Telegram accepts 32,768 but collapses a post behind
+    /// "Show more" long before that.
+    /// </summary>
+    public int? ThreadPartCharacters { get; init; }
+
     /// <summary>Media items in one post; 0 = the network takes no media at all.</summary>
     public int MaxMediaItems { get; init; }
 

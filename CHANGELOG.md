@@ -2,6 +2,26 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-01 (evening) — the first real thread run, and what it taught
+
+**v0.9.33.** The design doc's first threaded publish sent parts 1–2, collapsed part 1 behind Telegram's "Show more", failed part 3, held back 4–12 — and reported the *held-back* message as the error. One run, four fixes. `dotnet test` **567/567**.
+
+### A thread part gets its own character budget (ADR-086)
+
+The splitter budgeted parts against `MaxPostChars = 32,768` — the most a message *can* carry, not the most a subscriber will read as one message. In a media-heavy document every cut came from the 10-media limit and the character rule never fired: part 1 went out at 6,412 characters and Telegram collapsed it. `PublishCapabilities.ThreadPartCharacters` (Telegram: **3,000** — a 1,787-char part rendered fully, 6,412 collapsed, so the threshold sits between) now drives the split. The same doc goes from 12 parts to 23, nearly all cut at headings, none above 2,967 characters.
+
+### Telegram media URLs carry a per-send cache-buster (ADR-087)
+
+Part 3 failed with `wrong type of the web page content` while all ten of its images served `200 image/*` through Cloudflare. Telegram had cached the *failed* fetches from the morning's whole-document attempts and kept refusing those exact URLs — the second such incident (first: 16.07, then judged not worth a code change; a thread raising the cost to ten held-back messages changed the verdict). Every media URL sent to Telegram now gets a per-send `?v=` stamp, so a cached failure cannot outlive its incident. The stored document, blog and `.cedar` export never see it.
+
+### The publish checklist modal
+
+Publishing now opens a checklist that runs like a test suite: one row per phase (save → blog → each Telegram language), live statuses, a thread unfolding into numbered part chips that fill green as messages land, links on the successful rows, and the error pinned to the step that broke. Critically it is the **first** failed part's error — the root cause — where the export window used to overwrite it with each later "held back" message and report part 12 instead of part 3.
+
+### Two queue-watching fixes the thread exposed
+
+`GET /api/publish/jobs` returned the 20 most recent rows — fewer than a 23-part thread, so the client could wait forever on jobs it would never see finish; now 100, ordered stably within a thread. And the export flow's per-job loop no longer clobbers `exportError` with the last failure it meets.
+
 ## 2026-08-01 — threads, portable access, and word forms
 
 **v0.9.29 deployed** (the night pass). Everything below is committed on top and not deployed. `dotnet test` **560/560**, smoke **47/47**.

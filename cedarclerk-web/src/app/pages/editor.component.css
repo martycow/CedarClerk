@@ -2381,3 +2381,142 @@ input[type="datetime-local"]:focus-visible {
     gap: var(--space-1);
     font-variant-numeric: tabular-nums;
 }
+
+/* ---------- Publish progress checklist ---------- */
+/* The publication as a test run: one row per phase, part chips for a thread, the error pinned
+   to the step that broke. Statuses colour the leading icon and the chips, nothing else — the
+   list should read as a list, not as a traffic light. */
+.publish-run {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pr-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.pr-status {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+}
+
+.pr-status.pr-done { color: var(--ok); }
+.pr-status.pr-failed { color: var(--danger); }
+.pr-status.pr-running { color: var(--accent); }
+
+.pr-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--border);
+}
+
+.pr-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.pr-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.pr-label {
+    font-size: var(--fs-ui);
+    font-weight: 500;
+    color: var(--text);
+}
+
+.pr-count {
+    font-size: var(--fs-meta);
+    color: var(--alt);
+    font-variant-numeric: tabular-nums;
+}
+
+.pr-link {
+    font-size: var(--fs-meta);
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.pr-link:hover { text-decoration: underline; }
+
+/* Numbered chips, one per thread message — the row of green filling up IS the progress bar. */
+.pr-parts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.pr-part {
+    min-width: 22px;
+    height: 20px;
+    padding: 0 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    font-size: var(--fs-caption);
+    font-variant-numeric: tabular-nums;
+    color: var(--alt);
+    background: var(--sheet);
+}
+
+.pr-part.pr-running {
+    border-color: var(--abord);
+    color: var(--accent);
+    background: var(--asoft);
+}
+
+.pr-part.pr-done {
+    border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
+    color: var(--ok);
+    background: color-mix(in srgb, var(--ok) 12%, var(--sheet));
+}
+
+.pr-part.pr-failed {
+    border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+    color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 10%, var(--sheet));
+}
+
+.pr-error {
+    margin: 0;
+    font-size: var(--fs-meta);
+    color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 8%, var(--sheet));
+    border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border));
+    border-radius: var(--radius-sm);
+    padding: 6px 9px;
+    overflow-wrap: anywhere;
+}
+
+.pr-summary {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 14px 0 0;
+    font-size: var(--fs-ui);
+    font-weight: 500;
+    color: var(--ok);
+}
+
+.pr-summary.failed { color: var(--danger); }
+.pr-summary.running { color: var(--alt); font-weight: 400; }

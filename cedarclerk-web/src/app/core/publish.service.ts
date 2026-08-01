@@ -46,6 +46,9 @@ export interface PublishJob {
     language?: string;
     status: PublishJobStatus;
     attempts?: number;
+    /** T-106 — which message of a thread this job sends; 0 for a single-message publish. */
+    partIndex?: number;
+    partCount?: number;
     error?: string | null;
     remoteId?: string | null;
     publicUrl?: string | null;

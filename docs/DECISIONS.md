@@ -859,3 +859,21 @@ The test that matters is the incident itself: one browser fills in the form, a s
 **A regression this shipped with, caught by the smoke suite within the hour**: the first version matched `/` on *every* host, so the blog's own index — its homepage — was quietly replaced by the marketing page. The blog host is excluded by name now, and a test asserts it. This is exactly the class of mistake that made Phase 10 build the suite.
 
 **Not built**: an editor screenshot (its chrome is account-specific), testimonials (there are none), and a feature list longer than four items. The page says what the product does, what it costs and who makes it, and stops.
+
+### ADR-086 — A thread part has its own character budget, far below the message limit (01.08.2026)
+
+**Context**: the first real threaded publish of the design doc (ADR-083) produced a first message of 6,412 characters, and Telegram's client collapsed it behind a "Show more" button. The splitter's character budget was `MaxPostChars = 32,768` — the most a message *can* carry — so in practice every cut in a media-heavy document came from the 10-media limit and the character rule never fired at all. "The most Telegram accepts" and "the most a subscriber will read as one message" are two different numbers, and the splitter was using the wrong one.
+
+**Decision: `PublishCapabilities` gains `ThreadPartCharacters`, and the splitter budgets against it** (falling back to `MaxCharacters` where a network does not set one). Telegram sets it to `Consts.Telegram.ThreadPartChars = 3,000` — chosen empirically from this incident: a 1,787-character part rendered fully, a 6,412-character one collapsed, so the threshold sits somewhere between and 3,000 leaves margin under it while still beating the old behaviour by an order of magnitude. The value is a named constant precisely so the next @testingandfun session can tune it in one place.
+
+**What does not change**: `MaxCharacters` keeps meaning "what the network refuses" — validation (T-086) and the single-message path still use it. A single unsplit message may still exceed the comfortable size; that is the author declining to split, which ADR-083 made their call.
+
+### ADR-087 — Telegram media URLs carry a per-send cache-buster (01.08.2026)
+
+**Context**: the same threaded publish failed on part 3 with `wrong type of the web page content` — while every one of that part's ten images served `200 image/*` over the public URL. This is the negative-cache failure `.claude/rules/telegram-bot.md` documented on 16.07.2026: Telegram caches a *failed* fetch per URL and keeps refusing that exact URL after the origin recovers. The morning's failed whole-document attempts (ADR-082's 3×-retry, 104 media each) had poisoned some of the URLs; the afternoon's thread then died on the first poisoned one it met. The 16.07 note concluded a permanent cache-buster was "not warranted for one transient incident" — this is the second incident, and threads raise the stakes: one poisoned URL now holds back every later part of a publication.
+
+**Decision: every media URL sent to Telegram gets a `?v=<per-send stamp>` appended** (`TelegramPublishTarget`, at the block-mapping boundary — the stored document, the blog and the `.cedar` export never see it). Each send is a URL Telegram has never fetched, so a cached failure cannot outlive the incident that caused it, and a retry after a fixed origin actually retries.
+
+**Cost, accepted**: Telegram's fetch now always misses Cloudflare's cache and hits the Pi. Publishes are a handful of requests a few times a week against media Cloudflare still caches for every reader; the origin can carry the author's own publishes.
+
+**Superseded**: the 16.07 "don't add a cache-buster" conclusion in `telegram-bot.md` — updated to point here.

@@ -501,6 +501,18 @@ export const en = {
             publishing: 'Publishing…',
             open: 'Open →',
         },
+        // The publish checklist — the modal walks a publication like a test run: step by step,
+        // with checkmarks, errors pinned to the failed step and links on the successful ones.
+        publishRun: {
+            title: 'Publishing',
+            saving: 'Saving the draft',
+            blog: 'Blog',
+            scheduling: 'Scheduling',
+            telegram: (lang: string) => `Telegram · ${lang}`,
+            allDone: 'Done — everything went out.',
+            withErrors: 'Not everything went out — details on the steps above.',
+            working: 'Publishing…',
+        },
     },
     debug: {
         console: 'Console',

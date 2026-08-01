@@ -632,6 +632,66 @@
     </app-modal>
     }
 
+    <!--The publish checklist — a publication runs like a test suite: one row per phase, a thread
+    unfolds into numbered part chips, an error is pinned to the step that broke (and it is the
+    FIRST failed part's error — the root cause, not the held-back cascade). Stacks over the export
+    modal; closing it never cancels anything, the queue owns the jobs (T-090).-->
+    @if (publishRun(); as run) {
+    <app-modal [width]="460" (closed)="closePublishRun()">
+        <app-icon modal-icon name="paper-plane-tilt" size="sm"></app-icon>
+        <span modal-title>{{ t().editor.publishRun.title }}</span>
+
+        <ul class="publish-run">
+            @for (step of run.steps; track step.id) {
+            <li class="pr-step">
+                <span class="pr-status" [class]="'pr-' + step.status">
+                    @switch (step.status) {
+                        @case ('waiting') { <span class="pr-dot"></span> }
+                        @case ('running') { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                        @case ('done') { <app-icon name="check" size="sm"></app-icon> }
+                        @case ('failed') { <app-icon name="x" size="sm"></app-icon> }
+                    }
+                </span>
+                <div class="pr-body">
+                    <div class="pr-row">
+                        <span class="pr-label">{{ step.label }}</span>
+                        @if (step.parts?.length) {
+                        <span class="pr-count">{{ runDoneParts(step) }}/{{ step.parts!.length }}</span>
+                        }
+                        @if (step.link; as link) {
+                        <a class="pr-link" [href]="link.url" target="_blank" rel="noopener">{{ link.label }} →</a>
+                        }
+                    </div>
+                    @if (step.parts?.length) {
+                    <div class="pr-parts">
+                        @for (part of step.parts; track part.index) {
+                        <span class="pr-part" [class]="'pr-' + part.status">{{ part.index + 1 }}</span>
+                        }
+                    </div>
+                    }
+                    @if (step.error) { <p class="pr-error">{{ step.error }}</p> }
+                </div>
+            </li>
+            }
+        </ul>
+
+        @if (run.finished) {
+        <p class="pr-summary" [class.failed]="runHasFailure(run)">
+            @if (runHasFailure(run)) { <app-icon name="x" size="sm"></app-icon> {{ t().editor.publishRun.withErrors }} }
+            @else { <app-icon name="check" size="sm"></app-icon> {{ t().editor.publishRun.allDone }} }
+        </p>
+        } @else {
+        <p class="pr-summary running">
+            <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> {{ t().editor.publishRun.working }}
+        </p>
+        }
+
+        <button modal-actions [class]="run.finished ? 'btn-accent' : 'btn-ghost'" (click)="closePublishRun()">
+            {{ t().common.close }}
+        </button>
+    </app-modal>
+    }
+
     <!--Toolbar row 1: block type, undo/redo, text, insert, lists, then AI + customize-->
     <!--Movable groups (Settings → Toolbar): each rendered once, via ngTemplateOutlet, into
     whichever row toolbarLayout currently assigns it to — see core/toolbar-layout.ts.-->

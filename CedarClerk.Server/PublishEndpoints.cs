@@ -275,10 +275,13 @@ public static class PublishEndpoints
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             // Only this draft's recent jobs: the client polls this while a publish is in flight.
+            // 100, not 20 — a threaded publish is one job per part (the design doc splits into 23),
+            // and a window smaller than the thread leaves the client waiting on jobs it can never
+            // see finish. ThenBy keeps a thread's same-millisecond parts in a stable order.
             var jobs = await db.PublishJobs
                 .Where(j => j.DraftId == draftId && j.OwnerId == uid)
-                .OrderByDescending(j => j.CreatedAt)
-                .Take(20)
+                .OrderByDescending(j => j.CreatedAt).ThenBy(j => j.PartIndex)
+                .Take(100)
                 .Select(j => new
                 {
                     j.Id, j.Network, j.TargetId, j.Language, j.Status, j.Attempts, j.PartIndex, j.PartCount,

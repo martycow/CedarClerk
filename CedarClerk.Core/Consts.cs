@@ -2,7 +2,7 @@
 
 public static class Consts
 {
-    public const string CurrentVersion = "0.9.32";
+    public const string CurrentVersion = "0.9.33";
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
 
@@ -137,6 +137,14 @@ public static class Consts
         /// ("6 / 32,768"), which predates this constant and is not worth an i18n change to unify.
         /// </summary>
         public const int MaxPostChars = 32_768;
+
+        /// <summary>
+        /// Character budget for one part of a thread (ADR-086). Far below <see cref="MaxPostChars"/>:
+        /// past roughly this size Telegram's client collapses a channel post behind "Show more"
+        /// (6,412 chars collapsed, 1,787 did not — measured 01.08.2026). Tune here if @testingandfun
+        /// shows the threshold sits elsewhere.
+        /// </summary>
+        public const int ThreadPartChars = 3_000;
     }
 
     public static class Anthropic

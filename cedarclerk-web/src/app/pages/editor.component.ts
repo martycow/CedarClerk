@@ -93,6 +93,27 @@ function toDatetimeLocalValue(date: Date): string {
 
 type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
 
+// ─── The publish progress checklist ───────────────────────────────────────────────────────────
+// One modal that watches a publication like a test run: every step (save, blog, each Telegram
+// language) is a row with a live status, a thread unfolds into numbered part chips, a failure
+// shows the FIRST broken part's error — the root cause — rather than the last cascade message.
+type PublishRunStatus = 'waiting' | 'running' | 'done' | 'failed';
+
+interface PublishRunPart {
+    index: number;
+    status: PublishRunStatus;
+}
+
+interface PublishRunStep {
+    id: string;
+    label: string;
+    status: PublishRunStatus;
+    error?: string;
+    link?: { label: string; url: string };
+    /** Thread parts (T-106), present only when this step sends more than one message. */
+    parts?: PublishRunPart[];
+}
+
 const AUTOSAVE_DEBOUNCE_MS = 1200;
 // T-018.6 — widening gaps, then the manual "retry" button takes over rather than hammering on.
 const SAVE_RETRY_DELAYS_MS = [2000, 5000, 15000];
@@ -223,13 +244,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
      * waits for a network to download media from us (ADR-080), so "is it done" is a question with
      * its own answer now — and one the browser can stop asking without cancelling anything.
      */
-    private async awaitJobs(draftId: string, jobIds: string[]): Promise<PublishJob[]> {
+    private async awaitJobs(draftId: string, jobIds: string[],
+                            onProgress?: (jobs: PublishJob[]) => void): Promise<PublishJob[]> {
         const pending = new Set(jobIds);
         const finished: PublishJob[] = [];
         // Ten minutes of polling: past that the sweeper owns the job, and the answer is on /posts.
         for (let i = 0; i < 400 && pending.size > 0; i++) {
             await new Promise(resolve => setTimeout(resolve, 1500));
             const { jobs } = await this.publishApi.jobs(draftId);
+            // Every poll, not just the finishes — the progress checklist shows a thread's parts
+            // ticking over one by one, which is the whole point of watching.
+            onProgress?.(jobs);
             for (const job of jobs) {
                 if (!pending.has(job.id)) continue;
                 if (job.status === 'Pending' || job.status === 'Running') continue;
@@ -238,6 +263,34 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             }
         }
         return finished;
+    }
+
+    // ─── The publish progress checklist ───────────────────────────────────────────────────────
+    // Opened by publishAllConfirmed(), fed by exportDraft()/awaitJobs() as jobs move. Null-safe on
+    // purpose: every updater is a no-op when the modal is not up.
+    publishRun = signal<{ steps: PublishRunStep[]; finished: boolean } | null>(null);
+
+    private runStart(steps: PublishRunStep[]) {
+        this.publishRun.set({ steps, finished: false });
+    }
+
+    private runUpdate(id: string, patch: Partial<PublishRunStep>) {
+        this.publishRun.update(run => run && {
+            ...run,
+            steps: run.steps.map(s => s.id === id ? { ...s, ...patch } : s),
+        });
+    }
+
+    private runFinish() {
+        this.publishRun.update(run => run && { ...run, finished: true });
+    }
+
+    runHasFailure(run: { steps: PublishRunStep[] }): boolean {
+        return run.steps.some(s => s.status === 'failed');
+    }
+
+    runDoneParts(step: PublishRunStep): number {
+        return step.parts?.filter(p => p.status === 'done').length ?? 0;
     }
 
     /** The Telegram account row behind the chat id the export window has selected. */
@@ -2243,22 +2296,68 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.publishingAll.set(true);
         this.publishSuccess.set(null);
         clearTimeout(this.publishToastTimer);
+
+        // The checklist mirrors what pressing the button will actually do — one row per phase,
+        // built before anything runs so the author sees the whole plan tick over.
+        const pr = this.t().editor.publishRun;
+        const steps: PublishRunStep[] = [{ id: 'save', label: pr.saving, status: 'waiting' }];
+        if (this.destBlog()) steps.push({ id: 'blog', label: pr.blog, status: 'waiting' });
+        if (this.destTelegram()) {
+            if (this.scheduledAt) steps.push({ id: 'schedule', label: pr.scheduling, status: 'waiting' });
+            else for (const lang of this.exportLangs())
+                steps.push({ id: 'tg-' + lang, label: pr.telegram(lang.toUpperCase()), status: 'waiting' });
+        }
+        this.runStart(steps);
+
         const links: { label: string; url: string }[] = [];
         try {
+            this.runUpdate('save', { status: 'running' });
+            clearTimeout(this.saveTimer);
+            if (this.saveState() !== 'saved') await this.save();
+            if (this.saveState() !== 'saved') {
+                // Publishing an unsaved sheet would send yesterday's text; stop at the first row.
+                this.runUpdate('save', { status: 'failed', error: this.t().editor.syncFailed });
+                return;
+            }
+            this.runUpdate('save', { status: 'done' });
+
             if (this.destBlog()) {
+                this.runUpdate('blog', { status: 'running' });
                 await this.publishToBlog();
+                // A 409 reopened the update-confirmation — that dialog takes over; this run is void.
+                if (this.updateConfirm()) { this.publishRun.set(null); return; }
                 const url = this.blogUrl();
-                if (url && !this.blogError()) links.push({ label: this.t().editor.exportModal.openBlog, url });
+                const blogErr = this.blogError();
+                if (blogErr) this.runUpdate('blog', { status: 'failed', error: blogErr });
+                else {
+                    const link = url ? { label: this.t().editor.exportModal.openBlog, url } : undefined;
+                    this.runUpdate('blog', { status: 'done', link });
+                    if (link) links.push(link);
+                }
             }
             if (this.destTelegram()) {
                 // FI2.7 — a set time makes this the same button, scheduling rather than sending.
-                if (this.scheduledAt) await this.schedulePost();
-                else links.push(...await this.exportDraft());
+                if (this.scheduledAt) {
+                    this.runUpdate('schedule', { status: 'running' });
+                    await this.schedulePost();
+                    const ok = this.scheduleResult().startsWith('✓');
+                    this.runUpdate('schedule', ok
+                        ? { status: 'done' }
+                        : { status: 'failed', error: this.scheduleResult() });
+                } else {
+                    links.push(...await this.exportDraft());
+                    if (this.updateConfirm()) { this.publishRun.set(null); return; }
+                }
             }
         } finally {
             this.publishingAll.set(false);
+            this.runFinish();
         }
         if (!this.blogError() && !this.exportError()) this.showPublishSuccess(links);
+    }
+
+    closePublishRun() {
+        this.publishRun.set(null);
     }
 
     private showPublishSuccess(links: { label: string; url: string }[]) {
@@ -2287,37 +2386,55 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             const targetId = await this.telegramTargetId(this.chatId);
             if (!targetId) {
                 this.exportError.set({ code: 403, message: this.t().editor.errors.connectChannel });
+                this.failTelegramSteps(this.t().editor.errors.connectChannel);
                 return links;
             }
 
             // One job per ticked language (FI2.2): a failure part-way through still leaves the
             // languages already sent visibly sent, and now says so per language rather than
             // stopping at the first one.
-            const queued: { lang: string; jobId: string }[] = [];
+            const queuedByLang = new Map<string, PublishJob[]>();
             for (const lang of this.exportLangs()) {
                 const { jobs } = await this.publishApi.queue(id, [targetId], lang, this.confirmedFingerprints[lang], this.splitIntoThread());
-                for (const job of jobs) queued.push({ lang, jobId: job.id });
+                queuedByLang.set(lang, jobs);
+                // A thread unfolds into its part chips the moment it is queued (T-106).
+                const parts = jobs.length > 1
+                    ? this.sortedByPart(jobs).map(j => ({ index: j.partIndex ?? 0, status: 'waiting' as PublishRunStatus }))
+                    : undefined;
+                this.runUpdate('tg-' + lang, { status: 'running', parts });
             }
 
             this.exportResult.set(this.t().editor.exportModal.queued);
-            const finished = await this.awaitJobs(id, queued.map(q => q.jobId));
+            const allIds = [...queuedByLang.values()].flat().map(j => j.id);
+            const finished = await this.awaitJobs(id, allIds, polled => this.reflectJobs(queuedByLang, polled));
 
-            for (const { lang, jobId } of queued) {
-                const job = finished.find(j => j.id === jobId);
-                if (!job) {
+            for (const [lang, queuedJobs] of queuedByLang) {
+                const byId = new Map(finished.map(j => [j.id, j]));
+                const jobs = this.sortedByPart(queuedJobs).map(q => byId.get(q.id)).filter((j): j is PublishJob => !!j);
+                if (jobs.length < queuedJobs.length) {
                     // Still running after the polling window — the sweeper owns it now, and the
                     // Posts Manager is where its outcome shows up.
                     this.exportResult.set(this.t().editor.exportModal.stillRunning);
+                    this.runUpdate('tg-' + lang, { error: this.t().editor.exportModal.stillRunning });
                     continue;
                 }
-                if (job.status !== 'Succeeded') {
-                    this.exportError.set({ code: undefined, message: job.error ?? job.status });
+                // The FIRST failed part carries the root cause; the later ones only say they were
+                // held back because of it. Reporting the last one buried the actual error.
+                const firstFailed = jobs.find(j => j.status !== 'Succeeded');
+                if (firstFailed) {
+                    const message = firstFailed.error ?? firstFailed.status;
+                    if (!this.exportError()) this.exportError.set({ code: undefined, message });
+                    this.runUpdate('tg-' + lang, { status: 'failed', error: message });
                     continue;
                 }
-                this.exportResult.set(`✓ Published (message #${job.remoteId})`);
-                const url = job.publicUrl ?? this.buildTelegramLink(this.chatId.trim(), Number(job.remoteId));
+                // A thread's public link is its head — every later part is a reply hanging off it.
+                const head = jobs[0];
+                this.exportResult.set(`✓ Published (message #${head.remoteId})`);
+                const url = head.publicUrl ?? this.buildTelegramLink(this.chatId.trim(), Number(head.remoteId));
                 this.exportLink.set(url);
-                if (url) links.push({ label: `${this.t().editor.exportModal.openTelegram} ${lang.toUpperCase()}`, url });
+                const link = url ? { label: `${this.t().editor.exportModal.openTelegram} ${lang.toUpperCase()}`, url } : undefined;
+                this.runUpdate('tg-' + lang, { status: 'done', link });
+                if (link) links.push(link);
             }
         } catch (e) {
             const status = e instanceof HttpErrorResponse ? e.status : undefined;
@@ -2330,11 +2447,39 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 ? `The barn door seems closed — Telegram Bot API didn't respond. Your draft is safe; nothing was published.${serverMessage ? ` (${serverMessage})` : ''}`
                 : serverMessage || 'Error — check the browser console / server logs';
             this.exportError.set({ code: status, message });
+            this.failTelegramSteps(message);
         } finally {
             this.exporting.set(false);
             clearInterval(this.exportTicker);
         }
         return links;
+    }
+
+    private sortedByPart(jobs: PublishJob[]): PublishJob[] {
+        return [...jobs].sort((a, b) => (a.partIndex ?? 0) - (b.partIndex ?? 0));
+    }
+
+    /** Every poll of the queue repaints the checklist's part chips — the "test run" effect. */
+    private reflectJobs(queuedByLang: Map<string, PublishJob[]>, polled: PublishJob[]) {
+        const byId = new Map(polled.map(j => [j.id, j]));
+        for (const [lang, queuedJobs] of queuedByLang) {
+            if (queuedJobs.length <= 1) continue;
+            const parts = this.sortedByPart(queuedJobs).map(q => {
+                const now = byId.get(q.id);
+                const status: PublishRunStatus =
+                    !now || now.status === 'Pending' ? 'waiting'
+                    : now.status === 'Running' ? 'running'
+                    : now.status === 'Succeeded' ? 'done' : 'failed';
+                return { index: q.partIndex ?? 0, status };
+            });
+            this.runUpdate('tg-' + lang, { parts });
+        }
+    }
+
+    /** One error before any job was queued fails every Telegram row at once. */
+    private failTelegramSteps(message: string) {
+        for (const lang of this.exportLangs())
+            this.runUpdate('tg-' + lang, { status: 'failed', error: message });
     }
 
     private buildTelegramLink(chatId: string, messageId: number): string | null {

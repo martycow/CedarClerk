@@ -38,6 +38,7 @@ public class TelegramPublishTarget(
     {
         Network = PublishNetworks.Telegram,
         MaxCharacters = Consts.Telegram.MaxPostChars,
+        ThreadPartCharacters = Consts.Telegram.ThreadPartChars,
         MaxMediaItems = 10,
         MaxImageBytes = Consts.FileSizes.TelegramSafeImageBytes,
         SupportsVideo = true,
@@ -156,6 +157,14 @@ public class TelegramPublishTarget(
             blocks.Add(new RichFooterBlock(new RichRunText($"{counted.Index + 1}/{counted.Count}")));
         }
 
+        // ADR-087 — a per-send cache-buster on every media URL. Telegram caches a *failed* fetch
+        // per URL and keeps refusing it after the origin recovers (second incident 01.08.2026:
+        // one poisoned URL killed part 3 of a thread and held back parts 4–12). A fresh `?v=`
+        // makes each send a URL Telegram has never fetched. The stored document, the blog and the
+        // .cedar export never see the stamp — it exists only on this wire.
+        var cacheStamp = DateTime.UtcNow.Ticks.ToString("x");
+        blocks = blocks.Select(b => WithMediaCacheBuster(b, cacheStamp)).ToList();
+
         var content = new InputRichMessage { Blocks = blocks.Select(ToInputRichBlock).ToList() };
 
         Message msg;
@@ -245,6 +254,26 @@ public class TelegramPublishTarget(
         RichAnchorBlock an => new InputRichBlockAnchor { Name = an.Name },
         _ => throw new NotSupportedException($"Unmapped RichBlock: {block.GetType().Name}")
     };
+
+    /// <summary>ADR-087 — clones a block with the cache-buster stamp on every media URL in it.</summary>
+    public static CedarRichBlock WithMediaCacheBuster(CedarRichBlock block, string stamp) => block switch
+    {
+        RichPhotoBlock p => p with { Url = StampUrl(p.Url, stamp) },
+        RichVideoBlock v => v with { Url = StampUrl(v.Url, stamp) },
+        RichAudioBlock a => a with { Url = StampUrl(a.Url, stamp) },
+        RichSlideshowBlock s => s with { Urls = s.Urls.Select(u => StampUrl(u, stamp)).ToList() },
+        RichCollageBlock c => c with { Urls = c.Urls.Select(u => StampUrl(u, stamp)).ToList() },
+        RichQuoteBlock q => q with { Blocks = q.Blocks.Select(b => WithMediaCacheBuster(b, stamp)).ToList() },
+        RichDetailsBlock d => d with { Blocks = d.Blocks.Select(b => WithMediaCacheBuster(b, stamp)).ToList() },
+        RichListBlock l => l with
+        {
+            Items = l.Items.Select(i => i with { Blocks = i.Blocks.Select(b => WithMediaCacheBuster(b, stamp)).ToList() }).ToList(),
+        },
+        _ => block,
+    };
+
+    private static string StampUrl(string url, string stamp) =>
+        url.Contains('?') ? $"{url}&v={stamp}" : $"{url}?v={stamp}";
 
     public static RichBlockCaption? ToCaption(RichRun? caption) =>
         caption is null ? null : new RichBlockCaption { Text = ToRichText(caption) };
