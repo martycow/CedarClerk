@@ -7,6 +7,8 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
+using CedarClerk.Localization;
+
 namespace CedarClerk.Server;
 
 public static class ChannelEndpoints
@@ -29,7 +31,7 @@ public static class ChannelEndpoints
         group.MapPost("/", async (ConnectChannelRequest req, ClaimsPrincipal user, CedarDbContext db, TelegramBotService bot, ILogger<Channel> logger) =>
         {
             if (!bot.IsRunning)
-                return Results.Json(new { error = "Telegram bot is not running (no token configured)" }, statusCode: StatusCodes.Status503ServiceUnavailable);
+                return Results.Json(new { error = ErrorMessages.BotNotRunningNoToken }, statusCode: StatusCodes.Status503ServiceUnavailable);
 
             ChatFullInfo chat;
             try
@@ -38,13 +40,13 @@ public static class ChannelEndpoints
             }
             catch (Exception)
             {
-                return Results.BadRequest(new { error = "No TG-channel was found or no access to that channel" });
+                return Results.BadRequest(new { error = ErrorMessages.ChannelNotFoundOrNoAccess });
             }
 
             var member = await bot.Client.GetChatMember(chat.Id, bot.Me.Id);
 
             if (chat.Type is not (ChatType.Channel or ChatType.Group or ChatType.Supergroup))
-                return Results.BadRequest(new { error = "Unsupported chat type" });
+                return Results.BadRequest(new { error = ErrorMessages.UnsupportedChatType });
 
             if (!BotChatAccess.CanPost(chat.Type, member))
                 return Results.BadRequest(new { error = chat.Type == ChatType.Channel
@@ -182,7 +184,7 @@ public static class ChannelEndpoints
         group.MapPost("/refresh-known-chats", async (CedarDbContext db, TelegramBotService bot, ILogger<Channel> logger) =>
         {
             if (!bot.IsRunning)
-                return Results.Json(new { error = "Telegram bot is not running (no token configured)" }, statusCode: StatusCodes.Status503ServiceUnavailable);
+                return Results.Json(new { error = ErrorMessages.BotNotRunningNoToken }, statusCode: StatusCodes.Status503ServiceUnavailable);
 
             var known = await db.BotKnownChats.ToListAsync();
             foreach (var chat in known)

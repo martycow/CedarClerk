@@ -48,10 +48,10 @@ public static class ScheduledPostEndpoints
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == req.DraftId && d.OwnerId == uid);
             if (draft is null)
-                return Results.NotFound(new { error = "Draft not found" });
+                return Results.NotFound(new { error = ErrorMessages.DraftNotFoundPlain });
             
             if (await SubscriptionPlan.ResolveOwnedChannelAsync(db, uid, req.ChatId) is null)
-                return Results.Json(new { error = "You can only schedule posts to your connected channels — connect this channel first (Channels popup)" }, statusCode: StatusCodes.Status403Forbidden);
+                return Results.Json(new { error = ErrorMessages.ScheduleOnlyToOwnChannels }, statusCode: StatusCodes.Status403Forbidden);
 
             var language = req.Language ?? draft.PrimaryLanguage;
             if (language != draft.PrimaryLanguage)

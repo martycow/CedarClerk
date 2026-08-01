@@ -55,11 +55,11 @@ public static class PublishEndpoints
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var handle = req.Handle?.Trim().TrimStart('@');
             if (string.IsNullOrWhiteSpace(handle) || string.IsNullOrWhiteSpace(req.AppPassword))
-                return Results.BadRequest(new { error = "A handle and an app password are required" });
+                return Results.BadRequest(new { error = ErrorMessages.HandleAndAppPasswordRequired });
 
             var service = string.IsNullOrWhiteSpace(req.Service) ? BlueskyPublishTarget.DefaultService : req.Service.Trim();
             if (!Uri.TryCreate(service, UriKind.Absolute, out var serviceUri) || serviceUri.Scheme != Uri.UriSchemeHttps)
-                return Results.BadRequest(new { error = "The service address must be an https:// URL" });
+                return Results.BadRequest(new { error = ErrorMessages.ServiceMustBeHttps });
 
             var credentials = new BlueskyCredentials(handle, req.AppPassword, service);
             var http = httpFactory.CreateClient();
@@ -76,7 +76,7 @@ public static class PublishEndpoints
             }
 
             if (session is null)
-                return Results.Json(new { error = "Bluesky refused those credentials — check the handle and use an app password, not your account password" },
+                return Results.Json(new { error = ErrorMessages.BlueskyCredentialsRefused },
                     statusCode: StatusCodes.Status401Unauthorized);
 
             // Keyed by DID, not by handle: a handle can be renamed and the account stays the same.
@@ -136,14 +136,14 @@ public static class PublishEndpoints
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == req.DraftId && d.OwnerId == uid);
             if (draft is null) return Results.NotFound(new { error = ErrorMessages.DraftNotFound });
             if (req.TargetIds is null || req.TargetIds.Count == 0)
-                return Results.BadRequest(new { error = "Pick at least one destination" });
+                return Results.BadRequest(new { error = ErrorMessages.PickADestination });
 
             var language = req.Language ?? draft.PrimaryLanguage;
             var targets = await db.PublishTargets
                 .Where(t => req.TargetIds.Contains(t.Id) && t.OwnerId == uid && t.IsActive)
                 .ToListAsync();
             if (targets.Count != req.TargetIds.Count)
-                return Results.Json(new { error = "One of those destinations is not connected" }, statusCode: StatusCodes.Status403Forbidden);
+                return Results.Json(new { error = ErrorMessages.DestinationNotConnected }, statusCode: StatusCodes.Status403Forbidden);
 
             // ADR-065's guard, unchanged in meaning and moved to where publishing now starts:
             // re-sending over a live post still requires naming the version that was previewed.

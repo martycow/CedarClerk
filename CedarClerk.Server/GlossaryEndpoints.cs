@@ -90,7 +90,7 @@ public static class GlossaryEndpoints
             var source = await db.GlossaryTerms.FirstOrDefaultAsync(t => t.Id == id && t.OwnerId == uid, ct);
             if (source is null) return Results.NotFound();
             if (source.Language == req.TargetLanguage)
-                return Results.BadRequest(new { error = "The term is already in this language" });
+                return Results.BadRequest(new { error = ErrorMessages.TermAlreadyInLanguage });
 
             var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
             if (!PlanLimitations.HasAiFeatures(tier))
@@ -129,7 +129,7 @@ public static class GlossaryEndpoints
             var newTerm = translated[0].Trim();
             var newDescription = translated[1].Trim();
             if (newTerm.Length == 0 || newTerm.Length > TermMaxLength || newDescription.Length == 0)
-                return Results.Json(new { error = "The translation came back unusable — try again" }, statusCode: StatusCodes.Status502BadGateway);
+                return Results.Json(new { error = ErrorMessages.TranslationUnusable }, statusCode: StatusCodes.Status502BadGateway);
             if (newDescription.Length > DescriptionMaxLength)
                 newDescription = newDescription[..DescriptionMaxLength];
 
@@ -174,7 +174,7 @@ public static class GlossaryEndpoints
             if (req.TargetLanguage is null || !Languages.ContentLanguages.Contains(req.TargetLanguage))
                 return Results.BadRequest(new { error = $"Unsupported language: {req.TargetLanguage}" });
             if (req.SourceLanguage == req.TargetLanguage)
-                return Results.BadRequest(new { error = "Source and target language are the same" });
+                return Results.BadRequest(new { error = ErrorMessages.SameSourceAndTarget });
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var sources = await db.GlossaryTerms
@@ -182,7 +182,7 @@ public static class GlossaryEndpoints
                 .OrderBy(t => t.Term)
                 .ToListAsync(ct);
             if (sources.Count == 0)
-                return Results.BadRequest(new { error = "No terms in this language" });
+                return Results.BadRequest(new { error = ErrorMessages.NoTermsInLanguage });
 
             var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
             if (!PlanLimitations.HasAiFeatures(tier))
@@ -299,11 +299,11 @@ public static class GlossaryEndpoints
     private static IResult? Validate(UpsertTermRequest req)
     {
         if (string.IsNullOrWhiteSpace(req.Term))
-            return Results.BadRequest(new { error = "A term is required" });
+            return Results.BadRequest(new { error = ErrorMessages.TermRequired });
         if (req.Term.Trim().Length > TermMaxLength)
             return Results.BadRequest(new { error = $"Term is too long ({TermMaxLength} characters maximum)" });
         if (string.IsNullOrWhiteSpace(req.Description))
-            return Results.BadRequest(new { error = "A description is required" });
+            return Results.BadRequest(new { error = ErrorMessages.DescriptionRequired });
         if (req.Description.Trim().Length > DescriptionMaxLength)
             return Results.BadRequest(new { error = $"Description is too long ({DescriptionMaxLength} characters maximum)" });
         if (req.Aliases is { Length: > AliasesMaxLength })

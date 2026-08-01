@@ -69,7 +69,7 @@ public static class AuthEndpoints
             var configMatches = !string.IsNullOrEmpty(configInvite) && submitted == configInvite;
 
             if (!codeUsable && !configMatches)
-                return Results.BadRequest(new { error = "Invalid invite code" });
+                return Results.BadRequest(new { error = ErrorMessages.InvalidInviteCode });
 
             var user = new ApplicationUser
             {
@@ -177,7 +177,7 @@ public static class AuthEndpoints
         groupBuilder.MapPost("/toolbar-layout", async (ToolbarLayoutRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users) =>
         {
             if (req.LayoutJson is { Length: > PreferenceJsonMaxChars })
-                return Results.BadRequest(new { error = "Toolbar layout is too large" });
+                return Results.BadRequest(new { error = ErrorMessages.ToolbarLayoutTooLarge });
 
             var user = await users.GetUserAsync(principal);
             if (user is null) return Results.Unauthorized();
@@ -191,7 +191,7 @@ public static class AuthEndpoints
         groupBuilder.MapPost("/appearance", async (AppearanceRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users) =>
         {
             if (req.PrefsJson is { Length: > PreferenceJsonMaxChars })
-                return Results.BadRequest(new { error = "Appearance preferences are too large" });
+                return Results.BadRequest(new { error = ErrorMessages.AppearancePrefsTooLarge });
 
             var user = await users.GetUserAsync(principal);
             if (user is null) return Results.Unauthorized();
@@ -205,7 +205,7 @@ public static class AuthEndpoints
         groupBuilder.MapPost("/new-draft-defaults", async (NewDraftDefaultsRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users) =>
         {
             if (req.DefaultsJson is { Length: > PreferenceJsonMaxChars })
-                return Results.BadRequest(new { error = "New-draft defaults are too large" });
+                return Results.BadRequest(new { error = ErrorMessages.NewDraftDefaultsTooLarge });
 
             var user = await users.GetUserAsync(principal);
             if (user is null) return Results.Unauthorized();
@@ -221,7 +221,7 @@ public static class AuthEndpoints
         groupBuilder.MapPost("/ui-language", async (UiLanguageRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users) =>
         {
             if (req.UiLanguage is not null && !Languages.IsUiLanguage(req.UiLanguage))
-                return Results.BadRequest(new { error = "Unsupported interface language" });
+                return Results.BadRequest(new { error = ErrorMessages.UnsupportedUiLanguage });
 
             var user = await users.GetUserAsync(principal);
             if (user is null) return Results.Unauthorized();
@@ -244,7 +244,7 @@ public static class AuthEndpoints
             if ((!string.IsNullOrWhiteSpace(req.Signature) || !string.IsNullOrWhiteSpace(req.SignatureUrl) || hasAnyTranslatedText)
                 && !PlanLimitations.HasCustomSignature(currentPlan))
             {
-                return Results.Json(new { error = "Post signature is a Pro feature. Upgrade to use it." },
+                return Results.Json(new { error = ErrorMessages.SignatureIsPro },
                     statusCode: StatusCodes.Status403Forbidden);
             }
 
@@ -288,7 +288,7 @@ public static class AuthEndpoints
                 .Distinct()
                 .ToList();
             if (targets.Count == 0)
-                return Results.BadRequest(new { error = "Pick at least one language to translate into" });
+                return Results.BadRequest(new { error = ErrorMessages.PickALanguage });
 
             var tier = await SubscriptionPlan.EffectiveTierAsync(db, user.Id);
             if (!PlanLimitations.HasAiFeatures(tier))
@@ -305,7 +305,7 @@ public static class AuthEndpoints
             };
             var filled = slots.Where(s => !string.IsNullOrWhiteSpace(s.Text)).ToList();
             if (filled.Count == 0)
-                return Results.BadRequest(new { error = "Nothing to translate — write the texts in the source language first" });
+                return Results.BadRequest(new { error = ErrorMessages.NothingToTranslate });
 
             ITranslationProvider? provider;
             try
@@ -381,7 +381,7 @@ public static class AuthEndpoints
             // Only ever a path we serve ourselves: accepting an arbitrary URL here would let a
             // profile point the app's own chrome at someone else's server.
             if (!string.IsNullOrEmpty(url) && !url.StartsWith("/media/", StringComparison.Ordinal))
-                return Results.BadRequest(new { error = "Avatar must be an uploaded image" });
+                return Results.BadRequest(new { error = ErrorMessages.AvatarMustBeUploaded });
 
             user.AvatarUrl = string.IsNullOrEmpty(url) ? null : url;
             await users.UpdateAsync(user);
@@ -409,7 +409,7 @@ public static class AuthEndpoints
             var slot3Unchanged = slot3 == user.HeaderSlot3Type;
             if (slot3 is not null && !slot3Unchanged && PlanLimitations.MaxHeaderSlots(currentPlan) < 3)
             {
-                return Results.Json(new { error = "The third header slot is a Pro feature. Upgrade to use it." },
+                return Results.Json(new { error = ErrorMessages.ThirdSlotIsPro },
                     statusCode: StatusCodes.Status403Forbidden);
             }
 
@@ -467,7 +467,7 @@ public static class AuthEndpoints
                         botUsername = bot.Me.Username, 
                         botId = bot.Me.Id
                     })
-                    : Results.Json(new { error = "Telegram bot is not running (no token configured)" },
+                    : Results.Json(new { error = ErrorMessages.BotNotRunningNoToken },
                         statusCode: StatusCodes.Status503ServiceUnavailable);
         })
         .RequireAuthorization();
@@ -476,11 +476,11 @@ public static class AuthEndpoints
         {
             var botToken = cfg[Consts.Telegram.BotTokenCfg];
             if (string.IsNullOrEmpty(botToken))
-                return Results.Json(new { error = "Telegram bot is not running (no token configured)" }, statusCode: StatusCodes.Status503ServiceUnavailable);
+                return Results.Json(new { error = ErrorMessages.BotNotRunningNoToken }, statusCode: StatusCodes.Status503ServiceUnavailable);
 
             var data = new TelegramLoginData(req.Id, req.FirstName, req.LastName, req.Username, req.PhotoUrl, req.AuthDate, req.Hash);
             if (!TelegramLoginVerifier.Verify(data, botToken, DateTimeOffset.UtcNow))
-                return Results.BadRequest(new { error = "Invalid or expired Telegram login signature" });
+                return Results.BadRequest(new { error = ErrorMessages.InvalidTelegramSignature });
 
             var user = await users.GetUserAsync(principal);
             if (user is null) 
@@ -488,7 +488,7 @@ public static class AuthEndpoints
 
             var alreadyLinkedToOther = await db.Users.AnyAsync(u => u.TelegramUserId == req.Id && u.Id != user.Id);
             if (alreadyLinkedToOther)
-                return Results.Conflict(new { error = "This Telegram account is already linked to another Cedar Clerk account" });
+                return Results.Conflict(new { error = ErrorMessages.TelegramAlreadyLinked });
 
             user.TelegramUserId = req.Id;
             user.TelegramUsername = req.Username;

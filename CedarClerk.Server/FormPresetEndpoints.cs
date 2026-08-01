@@ -113,11 +113,11 @@ public static class FormPresetEndpoints
             var upgraded = RegistrationFormTexts.UpgradeToV2(preset.FormJson, preset.Language);
             var sourceLang = RegistrationFormSet.LanguagesWithForm(upgraded, null).FirstOrDefault() ?? Languages.Russian;
             if (sourceLang == req.TargetLanguage)
-                return Results.BadRequest(new { error = "The form is already written in this language" });
+                return Results.BadRequest(new { error = ErrorMessages.FormAlreadyInLanguage });
 
             var texts = RegistrationFormTexts.ExtractTexts(upgraded, sourceLang);
             if (texts.All(string.IsNullOrWhiteSpace))
-                return Results.BadRequest(new { error = "The form has no text to translate yet" });
+                return Results.BadRequest(new { error = ErrorMessages.FormHasNoText });
 
             if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
                 return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);
@@ -147,10 +147,10 @@ public static class FormPresetEndpoints
             return Results.Json(new { error = $"Preset name must be 1-{PresetNameMaxLength} characters" }, statusCode: StatusCodes.Status400BadRequest);
 
         if (string.IsNullOrWhiteSpace(req.FormJson))
-            return Results.Json(new { error = "Preset has no form" }, statusCode: StatusCodes.Status400BadRequest);
+            return Results.Json(new { error = ErrorMessages.PresetHasNoForm }, statusCode: StatusCodes.Status400BadRequest);
 
         if (req.FormJson.Length > Consts.RegistrationForm.FormJsonMaxChars)
-            return Results.Json(new { error = "Form is too large" }, statusCode: StatusCodes.Status400BadRequest);
+            return Results.Json(new { error = ErrorMessages.FormTooLarge }, statusCode: StatusCodes.Status400BadRequest);
 
         return null;
     }

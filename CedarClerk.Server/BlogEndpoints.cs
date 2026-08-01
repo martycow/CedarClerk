@@ -709,7 +709,7 @@ public static class BlogEndpoints
         {
             ctx.Response.StatusCode = StatusCodes.Status409Conflict;
             ctx.Response.ContentType = "application/json";
-            await JsonSerializer.SerializeAsync(ctx.Response.Body, new { error = "That name is reserved for the post's author." }, JsonOpts);
+            await JsonSerializer.SerializeAsync(ctx.Response.Body, new { error = ErrorMessages.NameReservedForAuthor }, JsonOpts);
             return;
         }
 

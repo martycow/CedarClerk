@@ -332,7 +332,7 @@ public static class DraftEndpoints
             var from = req.From?.Trim().ToLowerInvariant();
             var to = req.To?.Trim().ToLowerInvariant().Replace(",", "");
             if (string.IsNullOrEmpty(from) || string.IsNullOrEmpty(to))
-                return Results.BadRequest(new { error = "Both the old and the new tag are required" });
+                return Results.BadRequest(new { error = ErrorMessages.BothTagsRequired });
             if (to.Length > TagMaxLength)
                 return Results.BadRequest(new { error = $"Tag is too long ({TagMaxLength} characters maximum)" });
 
@@ -356,7 +356,7 @@ public static class DraftEndpoints
         groupBuilder.MapDelete("/tags/{tag}", async (string tag, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var target = tag.Trim().ToLowerInvariant();
-            if (target.Length == 0) return Results.BadRequest(new { error = "Tag is required" });
+            if (target.Length == 0) return Results.BadRequest(new { error = ErrorMessages.TagRequired });
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var drafts = await db.Drafts.Where(d => d.OwnerId == uid && d.Tags != "").ToListAsync();
@@ -446,18 +446,18 @@ public static class DraftEndpoints
             var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
             if (draft is null) return Results.NotFound();
             if (draft.BlogSlug is null)
-                return Results.BadRequest(new { error = "Publish this draft to the blog first" });
+                return Results.BadRequest(new { error = ErrorMessages.PublishToBlogFirst });
 
             // Run the author's text through the same slugifier the automatic path uses, so a URL
             // typed by hand can't be something the blog router won't match.
             var slug = SlugGenerator.Slugify(req.Slug ?? "");
             if (slug.Length == 0)
-                return Results.BadRequest(new { error = "That URL has no usable characters" });
+                return Results.BadRequest(new { error = ErrorMessages.SlugHasNoUsableCharacters });
 
             // Blog lookup is by slug across all owners, so uniqueness has to be global — not
             // per-owner like most things here.
             if (await db.Drafts.AnyAsync(d => d.Id != id && d.BlogSlug == slug))
-                return Results.BadRequest(new { error = "That URL is already taken" });
+                return Results.BadRequest(new { error = ErrorMessages.SlugTaken });
 
             draft.BlogSlug = slug;
             await db.SaveChangesAsync();
@@ -468,7 +468,7 @@ public static class DraftEndpoints
         {
             var text = req.WatermarkText?.Trim();
             if (text is { Length: > Consts.Watermark.MaxLength })
-                return Results.BadRequest(new { error = "Watermark text is too long" });
+                return Results.BadRequest(new { error = ErrorMessages.WatermarkTooLong });
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
@@ -529,7 +529,7 @@ public static class DraftEndpoints
         groupBuilder.MapPost("/{id:guid}/registration-form", async (Guid id, UpdateRegistrationFormRequest req, ClaimsPrincipal user, CedarDbContext db) =>
         {
             if (req.FormJson is { Length: > Consts.RegistrationForm.FormJsonMaxChars })
-                return Results.BadRequest(new { error = "Registration form is too large" });
+                return Results.BadRequest(new { error = ErrorMessages.RegistrationFormTooLarge });
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
@@ -594,13 +594,13 @@ public static class DraftEndpoints
         {
             var emailAddr = req.Email.Trim();
             if (emailAddr.Length == 0 || emailAddr.Length > InviteEmailMaxLength || !emailAddr.Contains('@'))
-                return Results.Json(new { error = "Enter a valid email address" }, statusCode: StatusCodes.Status400BadRequest);
+                return Results.Json(new { error = ErrorMessages.InvalidEmail }, statusCode: StatusCodes.Status400BadRequest);
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
             if (draft is null) return Results.NotFound();
             if (draft.BlogSlug is null)
-                return Results.Json(new { error = "Publish this draft to the blog first" }, statusCode: StatusCodes.Status400BadRequest);
+                return Results.Json(new { error = ErrorMessages.PublishToBlogFirst }, statusCode: StatusCodes.Status400BadRequest);
 
             var invite = new PostInvite { DraftId = id, Email = emailAddr, Token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)) };
             db.PostInvites.Add(invite);
@@ -742,7 +742,7 @@ public static class DraftEndpoints
                 return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status501NotImplemented);
             }
             if (provider is null)
-                return Results.Json(new { error = "Auto-translate is not configured" }, statusCode: StatusCodes.Status501NotImplemented);
+                return Results.Json(new { error = ErrorMessages.AutoTranslateNotConfigured }, statusCode: StatusCodes.Status501NotImplemented);
             if (!provider.SupportsTargetLanguage(lang))
                 return Results.Json(new { error = ErrorMessages.LanguageNotSupportedByProvider(lang, provider.Name) },
                     statusCode: StatusCodes.Status501NotImplemented);
@@ -860,7 +860,7 @@ public static class DraftEndpoints
             // AI features are Pro Plus; each call counts against the per-day AI quota
             var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
             if (!PlanLimitations.HasAiFeatures(tier))
-                return Results.Json(new { error = "AI editing is a Pro Plus feature. Upgrade to use it." }, statusCode: StatusCodes.Status403Forbidden);
+                return Results.Json(new { error = ErrorMessages.AiEditProPlus }, statusCode: StatusCodes.Status403Forbidden);
 
             // ADR-065 — which slot holds this language is a per-draft question; comparing against a
             // literal "ru" made every AI edit on a non-Russian-primary draft a guaranteed 404.
@@ -894,7 +894,7 @@ public static class DraftEndpoints
                 return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status501NotImplemented);
             }
             if (provider is null)
-                return Results.Json(new { error = "AI editing is not configured" }, statusCode: StatusCodes.Status501NotImplemented);
+                return Results.Json(new { error = ErrorMessages.AiEditNotConfigured }, statusCode: StatusCodes.Status501NotImplemented);
 
             var jobId = jobs.Start(uid, async ct =>
             {
@@ -1315,7 +1315,7 @@ public static class DraftEndpoints
                     && root.TryGetProperty("type", out var typeProp) && typeProp.GetString() == "doc"
                     && root.TryGetProperty("content", out var contentProp) && contentProp.ValueKind == JsonValueKind.Array;
                 if (!looksLikeTiptapDoc)
-                    return Results.BadRequest(new { error = "Invalid document structure." });
+                    return Results.BadRequest(new { error = ErrorMessages.InvalidDocumentStructure });
             }
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -1387,10 +1387,10 @@ public static class DraftEndpoints
                 return Results.NotFound(); // 404, not 403 — same instinct as AdminEndpoints' admin gate
 
             if (!TryResolveImportTmpFile(importTmp.Dir, req.ZipFileName, out var fullPath))
-                return Results.BadRequest(new { error = "Invalid file name." });
+                return Results.BadRequest(new { error = ErrorMessages.InvalidFileName });
 
             if (!File.Exists(fullPath))
-                return Results.BadRequest(new { error = "File not found in import-tmp directory." });
+                return Results.BadRequest(new { error = ErrorMessages.ImportFileNotFound });
 
             var fileInfo = new FileInfo(fullPath);
             if (fileInfo.Length == 0 || fileInfo.Length > MarkdownZipMaxBytes)
@@ -1398,7 +1398,7 @@ public static class DraftEndpoints
 
             var owner = await users.FindByEmailAsync(req.OwnerEmail);
             if (owner is null)
-                return Results.BadRequest(new { error = "No account with that email." });
+                return Results.BadRequest(new { error = ErrorMessages.NoAccountWithEmail });
 
             await using var zipStream = File.OpenRead(fullPath); // FileStream is already seekable
             return await ImportMarkdownZipAsync(zipStream, owner.Id, db, media);
@@ -1417,14 +1417,14 @@ public static class DraftEndpoints
         }
         catch (InvalidDataException)
         {
-            return Results.BadRequest(new { error = "The file is not a valid .zip archive." });
+            return Results.BadRequest(new { error = ErrorMessages.NotAZipArchive });
         }
 
         using (archive)
         {
             var mdEntry = archive.Entries.FirstOrDefault(e => e.FullName.EndsWith(".md", StringComparison.OrdinalIgnoreCase));
             if (mdEntry is null)
-                return Results.BadRequest(new { error = "No .md file found inside the zip." });
+                return Results.BadRequest(new { error = ErrorMessages.NoMarkdownInZip });
 
             string markdownText;
             using (var mdStream = mdEntry.Open())

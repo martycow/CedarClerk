@@ -3,6 +3,8 @@ using CedarClerk.Core;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
+using CedarClerk.Localization;
+
 namespace CedarClerk.Server;
 
 // Admin panel (IF2) — see docs/admin-panel-scope.md for the scoping this follows.
@@ -163,7 +165,7 @@ public static class AdminEndpoints
             var actor = (await users.GetUserAsync(principal))!;
             // Locking yourself out is not a decision worth honouring — there is no second admin
             // to undo it, and the fix would be hand-editing the database on the Pi.
-            if (actor.Id == id) return Results.BadRequest(new { error = "You cannot lock your own account" });
+            if (actor.Id == id) return Results.BadRequest(new { error = ErrorMessages.CannotLockOwnAccount });
 
             var target = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
             if (target is null) return Results.NotFound();
@@ -182,7 +184,7 @@ public static class AdminEndpoints
         {
             var actor = (await users.GetUserAsync(principal))!;
             // Same reasoning as lock: demoting yourself is a one-way door out of the panel.
-            if (actor.Id == id) return Results.BadRequest(new { error = "You cannot change your own admin rights" });
+            if (actor.Id == id) return Results.BadRequest(new { error = ErrorMessages.CannotChangeOwnAdmin });
 
             var target = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
             if (target is null) return Results.NotFound();
@@ -223,7 +225,7 @@ public static class AdminEndpoints
             if (value.Length < Consts.Admin.MinInviteCodeLength)
                 return Results.BadRequest(new { error = $"Code must be at least {Consts.Admin.MinInviteCodeLength} characters" });
             if (await db.InviteCodes.AnyAsync(c => c.Code.ToLower() == value.ToLower()))
-                return Results.BadRequest(new { error = "That code already exists" });
+                return Results.BadRequest(new { error = ErrorMessages.InviteCodeExists });
 
             var actor = (await users.GetUserAsync(principal))!;
             var code = new InviteCode
@@ -268,7 +270,7 @@ public static class AdminEndpoints
             if (req.InviteCodeId is { } codeId)
             {
                 var code = await db.InviteCodes.FirstOrDefaultAsync(c => c.Id == codeId);
-                if (code is null) return Results.BadRequest(new { error = "No such invite code" });
+                if (code is null) return Results.BadRequest(new { error = ErrorMessages.NoSuchInviteCode });
                 detail = code.Code;
             }
 

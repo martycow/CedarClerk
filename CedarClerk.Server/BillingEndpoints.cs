@@ -69,12 +69,12 @@ public static class BillingEndpoints
                 _ => null, // trial uses inline price_data below — no dashboard price required
             };
             if (string.IsNullOrEmpty(secretKey) || (req.Plan != Consts.Plans.Trial && string.IsNullOrEmpty(priceId)))
-                return Results.Json(new { error = "Stripe is not configured for this plan — see docs/integrations-setup.md" }, statusCode: StatusCodes.Status501NotImplemented);
+                return Results.Json(new { error = ErrorMessages.StripePlanNotConfigured }, statusCode: StatusCodes.Status501NotImplemented);
 
             var user = await users.GetUserAsync(principal);
             if (user is null) return Results.Unauthorized();
             if (req.Plan == Consts.Plans.Trial && user.TrialUsedAt is not null)
-                return Results.BadRequest(new { error = "Trial has already been used on this account" });
+                return Results.BadRequest(new { error = ErrorMessages.TrialAlreadyUsed });
 
             var mainHost = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
             
@@ -245,12 +245,12 @@ public static class BillingEndpoints
         {
             var secretKey = cfg[Consts.Stripe.SecretKeyCfg];
             if (string.IsNullOrEmpty(secretKey))
-                return Results.Json(new { error = "Stripe is not configured — see docs/integrations-setup.md" }, statusCode: StatusCodes.Status501NotImplemented);
+                return Results.Json(new { error = ErrorMessages.StripeNotConfigured }, statusCode: StatusCodes.Status501NotImplemented);
 
             var user = await users.GetUserAsync(principal);
             if (user is null) return Results.Unauthorized();
             if (string.IsNullOrEmpty(user.StripeCustomerId))
-                return Results.BadRequest(new { error = "No Stripe subscription on this account" });
+                return Results.BadRequest(new { error = ErrorMessages.NoStripeSubscription });
 
             var mainHost = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
 
@@ -292,7 +292,7 @@ public static class BillingEndpoints
                 return Results.BadRequest(new { error = ErrorMessages.LinkYouTelegram });
             
             if (req.Plan == Consts.Plans.Trial && user.TrialUsedAt is not null)
-                return Results.BadRequest(new { error = "Trial has already been used on this account" });
+                return Results.BadRequest(new { error = ErrorMessages.TrialAlreadyUsed });
 
             var (title, stars) = req.Plan switch
             {
@@ -338,13 +338,13 @@ public static class BillingEndpoints
             var user = await users.GetUserAsync(principal);
             if (user is null) return Results.Unauthorized();
             if (req.Plan == Consts.Plans.Trial && user.TrialUsedAt is not null)
-                return Results.BadRequest(new { error = "Trial has already been used on this account" });
+                return Results.BadRequest(new { error = ErrorMessages.TrialAlreadyUsed });
 
             var http = httpFactory.CreateClient("billing");
             var payPalBase = PayPalBaseUrl(cfg);
             var accessToken = await GetPayPalTokenAsync(http, payPalBase, clientId, secret);
             if (accessToken is null)
-                return Results.Json(new { error = "PayPal auth failed — check ClientId/Secret (and Cedar:PayPal:Mode: live vs sandbox)" }, statusCode: StatusCodes.Status502BadGateway);
+                return Results.Json(new { error = ErrorMessages.PayPalAuthFailed }, statusCode: StatusCodes.Status502BadGateway);
 
             var mainUrl = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
             var orderBody = JsonSerializer.Serialize(new
@@ -385,7 +385,7 @@ public static class BillingEndpoints
                 .TryGetProperty("href", out var href) ? href.GetString() : null;
             
             if (approveUrl is null)
-                return Results.Json(new { error = "PayPal did not return an approval link" }, statusCode: StatusCodes.Status502BadGateway);
+                return Results.Json(new { error = ErrorMessages.PayPalNoApprovalLink }, statusCode: StatusCodes.Status502BadGateway);
 
             return Results.Ok(new { url = approveUrl });
         }).RequireAuthorization();
