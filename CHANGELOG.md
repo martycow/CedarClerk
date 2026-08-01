@@ -2,6 +2,32 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-01 — threads, portable access, and word forms
+
+**v0.9.29 deployed** (the night pass). Everything below is committed on top and not deployed. `dotnet test` **560/560**, smoke **47/47**.
+
+### A long document can go out as a thread (T-106, ADR-083)
+
+The design doc is 44,474 characters and 105 media against limits of 32,768 and ~10. It is not a Telegram post; now it can be eight of them.
+
+**Splitting is offered, never applied.** The switch appears only when the post genuinely does not fit, is off by default, and shows the parts before anything is sent — number, what each opens with, its size, its media. Turning one post into eight messages is a loud act in someone's channel, and the difference between a tool and a liability is whether the author saw it coming.
+
+**Where the cuts land is the whole feature.** A part is closed at the next heading once it is 60% full, rather than filled to the brim and cut mid-sentence: a message that ends where a section ends reads like a chapter, one that ends mid-section reads like a transmission error. Blocks are never split. Both limits count. Each part replies to the previous one so Telegram renders a thread, **only the first part notifies**, and the signature, cross-link and hashtags go on the last part alone.
+
+**One job per part**, extending the queue: a thread that fails on part four is resumable at part four, because retrying the publication would send parts one to three again and a channel cannot un-see them. A part runs only after its predecessor succeeded; if an earlier part failed, the rest are held back rather than leaving parts 1 and 3 of a document in a channel.
+
+That work exposed a race in the queue shipped hours earlier: `Kick` is fire-and-forget and competed with the sweep's own loop, so part 3 could be decided while part 2 was still running. The sweep is sequential now and does not kick successors.
+
+### A reader's access travels in the link (T-064/T-023, ADR-084)
+
+The reported incident: a friend filled in a private post's form in Telegram's in-app browser, opened the post in Chrome, and was asked to register again. Reading the code for it found the second half: the access cookie's value was the string `"1"` — it proved nothing, and anyone who knew a draft's id could write it by hand.
+
+Both are one mistake seen twice. The cookie is signed now, and a successful registration mints a per-reader token that comes back in the redirect, so the link works in any browser. **Cookies issued before today stop working** — a reader already through the gate meets it once more. Keeping them working would have meant keeping the forgery open.
+
+### Word forms for the glossary (T-040)
+
+Russian inflects, so a term entered as "рендерер" never matched "рендерера". A button proposes the forms into the alias field — **suggestions, not silent generation**: Russian declension has more exceptions than rules, and a wrong form would mark the wrong word in someone's post with no way to notice. Fleeting vowels are handled (уровень → уровня, not уровеня), and anything the rule is not confident about suggests nothing rather than something wrong.
+
 ## 2026-08-01 (night) — autonomous pass: the backlog went 50 → 37
 
 No deploy in any of this; every item below is committed and green. `dotnet test` **536/536**, smoke **44/44**.
