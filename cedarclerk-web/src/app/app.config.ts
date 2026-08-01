@@ -1,5 +1,5 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { PreloadAllModules, provideRouter, withPreloading } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
 import { debugLogInterceptor } from './core/debug-log.interceptor';
@@ -12,7 +12,11 @@ import { debugLogInterceptor } from './core/debug-log.interceptor';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+    // T-092: every route is lazy, and PreloadAllModules fetches the rest in the background as soon
+    // as the first one has rendered. Without it the split would trade a smaller first load for a
+    // pause on every navigation, which on this app would be felt most opening the editor — the
+    // heaviest chunk and the one people go to. With it, the chunk is usually already there.
+    provideRouter(routes, withPreloading(PreloadAllModules)),
     provideHttpClient(withInterceptors([debugLogInterceptor])),
   ]
 };

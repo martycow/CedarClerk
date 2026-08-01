@@ -2,35 +2,61 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/auth.guard';
 import { adminGuard } from './core/admin.guard';
 import { guestGuard } from './core/guest.guard';
-import { LoginComponent } from './pages/login.component';
-import { RegisterComponent } from './pages/register.component';
-import { EditorComponent } from './pages/editor.component';
-import { DraftsPageComponent } from './pages/drafts.component';
-import { SettingsComponent } from './pages/settings.component';
-import { PostsManagerComponent } from './pages/posts-manager.component';
-import { TermsComponent } from './pages/terms.component';
-import { PrivacyComponent } from './pages/privacy.component';
-import { AdminComponent } from './pages/admin.component';
-import { GlossaryComponent } from './pages/glossary.component';
 
+// T-092 — every route is lazy (`loadComponent`), and the router preloads them all in the
+// background once the app has booted (see app.config.ts). The measurement behind that: with the
+// pages imported eagerly, the initial bundle was 1.87 MB raw, and the single largest contributor
+// was the editor — TipTap, ProseMirror and KaTeX — loaded in full before /drafts, the landing
+// screen, could paint. Preloading is what keeps the split from costing anything: opening the
+// editor still finds its chunk in cache, because the fetch started while the drafts list rendered.
 export const routes: Routes = [
     // guestGuard, not none: a live session means you are already past these two pages.
-    { path: 'login', component: LoginComponent, canActivate: [guestGuard] },
-    { path: 'register', component: RegisterComponent, canActivate: [guestGuard] },
-    { path: 'terms', component: TermsComponent },
-    { path: 'privacy', component: PrivacyComponent },
-    { path: 'editor', component: EditorComponent, canActivate: [authGuard] },
-    { path: 'drafts', component: DraftsPageComponent, canActivate: [authGuard] },
-    { path: 'settings', component: SettingsComponent, canActivate: [authGuard] },
-    { path: 'posts', component: PostsManagerComponent, canActivate: [authGuard] },
-    { path: 'glossary', component: GlossaryComponent, canActivate: [authGuard] },
+    {
+        path: 'login',
+        loadComponent: () => import('./pages/login.component').then(m => m.LoginComponent),
+        canActivate: [guestGuard],
+    },
+    {
+        path: 'register',
+        loadComponent: () => import('./pages/register.component').then(m => m.RegisterComponent),
+        canActivate: [guestGuard],
+    },
+    { path: 'terms', loadComponent: () => import('./pages/terms.component').then(m => m.TermsComponent) },
+    { path: 'privacy', loadComponent: () => import('./pages/privacy.component').then(m => m.PrivacyComponent) },
+    {
+        path: 'editor',
+        loadComponent: () => import('./pages/editor.component').then(m => m.EditorComponent),
+        canActivate: [authGuard],
+    },
+    {
+        path: 'drafts',
+        loadComponent: () => import('./pages/drafts.component').then(m => m.DraftsPageComponent),
+        canActivate: [authGuard],
+    },
+    {
+        path: 'settings',
+        loadComponent: () => import('./pages/settings.component').then(m => m.SettingsComponent),
+        canActivate: [authGuard],
+    },
+    {
+        path: 'posts',
+        loadComponent: () => import('./pages/posts-manager.component').then(m => m.PostsManagerComponent),
+        canActivate: [authGuard],
+    },
+    {
+        path: 'glossary',
+        loadComponent: () => import('./pages/glossary.component').then(m => m.GlossaryComponent),
+        canActivate: [authGuard],
+    },
     // adminGuard already covers signed-in — it redirects to /login itself (IF2).
-    { path: 'admin', component: AdminComponent, canActivate: [adminGuard] },
+    {
+        path: 'admin',
+        loadComponent: () => import('./pages/admin.component').then(m => m.AdminComponent),
+        canActivate: [adminGuard],
+    },
     // T-078 / T-080 — the design-system reference and the icon inventory (ADR-071/072). Behind
     // authGuard rather than open: development surfaces, with no reason to be part of the public
-    // site. Lazy, unlike every route above them: they carry reference data (the generated icon
-    // usage table among it) that no product screen needs, and the initial bundle is already over
-    // its budget (T-092).
+    // site.
     {
         path: 'dev/styleguide',
         loadComponent: () => import('./pages/styleguide.component').then(m => m.StyleguideComponent),
