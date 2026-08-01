@@ -448,6 +448,7 @@ export const en = {
             otherPlatformsSummary: 'Also planned: Twitter/X, Facebook, Bluesky, Threads, Medium, Patreon, Notion, Google Docs',
             fileExports: 'File exports',
             downloadCedar: 'Download .cedar',
+            preparing: 'Packaging the file…',
             staticHtml: 'Static HTML page',
             draftFiles: 'Files in this draft',
             queued: 'Queued — publishing…',

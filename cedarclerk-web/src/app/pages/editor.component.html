@@ -492,14 +492,22 @@
             whose images all pointed back at the blog — a saved page only while the blog is up.-->
             <div class="export-section">
                 <div class="export-section-title">{{ t().editor.exportModal.fileExports }}</div>
-                <a class="export-btn" [href]="'/api/drafts/' + id + '/cedar'" download>
-                    <app-icon name="download-simple" size="sm"></app-icon>
+                <!--T-042 — buttons rather than plain download links: the server packages the media
+                before it answers, which on a heavy post is tens of seconds of a browser doing
+                nothing visible. Fetching it ourselves is what makes "working" and "failed"
+                sayable at all.-->
+                <button class="export-btn" (click)="downloadExport('cedar')" [disabled]="!!downloading()">
+                    @if (downloading() === 'cedar') { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                    @else { <app-icon name="download-simple" size="sm"></app-icon> }
                     {{ t().editor.exportModal.downloadCedar }}
-                </a>
-                <a class="export-btn" [href]="'/api/drafts/' + id + '/export-zip'" download>
-                    <app-icon name="download-simple" size="sm"></app-icon>
+                </button>
+                <button class="export-btn" (click)="downloadExport('zip')" [disabled]="!!downloading()">
+                    @if (downloading() === 'zip') { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                    @else { <app-icon name="download-simple" size="sm"></app-icon> }
                     {{ t().editor.exportModal.downloadZip }}
-                </a>
+                </button>
+                @if (downloading()) { <p class="field-hint-inline">{{ t().editor.exportModal.preparing }}</p> }
+                @if (downloadError()) { <p class="channel-error">{{ downloadError() }}</p> }
                 <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.zipHint }}</p>
             </div>
             </div>

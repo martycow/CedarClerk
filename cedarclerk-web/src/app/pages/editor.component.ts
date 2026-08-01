@@ -356,6 +356,48 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
+    // ─── File exports (T-042) ─────────────────────────────────────────────────────────────────
+    downloading = signal<'cedar' | 'zip' | null>(null);
+    downloadError = signal('');
+
+    /**
+     * Fetches the export, then hands the browser a finished blob. The plain <a download> this
+     * replaces was silent for as long as the server took to package the media — which for a post
+     * with a hundred images is not a moment. The whole file passes through memory, which is the
+     * price of knowing when it is ready; the alternative is a link that cannot say anything.
+     */
+    async downloadExport(kind: 'cedar' | 'zip') {
+        const id = this.currentId();
+        if (!id || this.downloading()) return;
+        this.downloading.set(kind);
+        this.downloadError.set('');
+        try {
+            const response = await fetch(`/api/drafts/${id}/${kind === 'cedar' ? 'cedar' : 'export-zip'}`);
+            if (!response.ok) throw new Error(String(response.status));
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            // The server names the file in Content-Disposition; falling back to the draft title
+            // keeps a download from landing as "download".
+            link.download = this.fileNameFrom(response.headers.get('content-disposition'))
+                ?? `${this.title || 'draft'}.${kind === 'cedar' ? 'cedar' : 'zip'}`;
+            link.click();
+            // Revoked on the next tick: revoking synchronously can cancel the download in Safari.
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch {
+            this.downloadError.set(this.t().editor.errors.publish);
+        } finally {
+            this.downloading.set(null);
+        }
+    }
+
+    private fileNameFrom(header: string | null): string | null {
+        const match = header?.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+        return match ? decodeURIComponent(match[1]) : null;
+    }
+
     // ─── Pre-send validation (T-086) ──────────────────────────────────────────────────────────
     publishIssues = signal<{ code: string; blocking: boolean; actual: number; limit: number }[]>([]);
 

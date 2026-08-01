@@ -445,6 +445,7 @@ export const ru: Dict = {
             otherPlatformsSummary: 'Также в планах: Twitter/X, Facebook, Bluesky, Threads, Medium, Patreon, Notion, Google Docs',
             fileExports: 'Экспорт файлов',
             downloadCedar: 'Скачать .cedar',
+            preparing: 'Собираем файл…',
             staticHtml: 'Статическая HTML-страница',
             draftFiles: 'Файлы в черновике',
             queued: 'В очереди — публикуется…',
