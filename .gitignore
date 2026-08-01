@@ -50,3 +50,13 @@ cedarclerk-web/.playwright/
 .e2e-server.log
 .e2e-server.log.err
 .e2e-audit/
+
+# A local `dotnet run` with no CEDAR_DATA_DIR set puts its data dir inside the project — the SQLite
+# file, uploaded media, and the DataProtection key ring that signs cookies and encrypts publish
+# credentials. None of it belongs in the repo; production's lives on the Pi under CEDAR_DATA_DIR.
+CedarClerk.Server/Data/dataprotection-keys/
+CedarClerk.Server/Data/cedar.db
+CedarClerk.Server/Data/cedar.db-shm
+CedarClerk.Server/Data/cedar.db-wal
+CedarClerk.Server/Data/media/
+CedarClerk.Server/Data/import-tmp/
