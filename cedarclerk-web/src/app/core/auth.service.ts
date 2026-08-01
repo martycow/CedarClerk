@@ -5,7 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { LocaleService, UiLang } from './i18n/locale.service';
 
 interface MeResponse {
-    email: string; createdAt: string | null; isAdmin: boolean; planTier: string | null; planExpiresAt: string | null; trialUsed: boolean;
+    email: string; createdAt: string | null; emailConfirmed?: boolean; isAdmin: boolean; planTier: string | null; planExpiresAt: string | null; trialUsed: boolean;
     telegramLinked: boolean; telegramUsername: string | null; telegramLinkedAt: string | null;
     notifyOnEngagement: boolean;
     postSignature: string | null; postSignatureUrl: string | null; postSignatureTexts?: Record<string, string>;
@@ -48,6 +48,8 @@ export class AuthService {
     // FI5 — the same signature in the other content languages, keyed by language code; a
     // signature is read at the bottom of whichever language's post it is, same reasoning as the
     // cross-link labels below.
+    /** T-002 — false until the address has been confirmed from the mail. */
+    readonly emailConfirmed = signal(true);
     readonly postSignatureTexts = signal<Record<string, string>>({});
     readonly authorDisplayName = signal<string | null>(null);
     readonly profileUrl = signal<string | null>(null);
@@ -136,6 +138,7 @@ export class AuthService {
 
     private applyMe(me: MeResponse): void {
         this.userEmail.set(me.email);
+        this.emailConfirmed.set(me.emailConfirmed ?? true);
         this.createdAt.set(me.createdAt);
         this.isAdmin.set(me.isAdmin);
         this.planTier.set(me.planTier);
@@ -312,5 +315,10 @@ export class AuthService {
         this.clearSession();
         this.serverUnreachable.set(false);
         this.router.navigateByUrl('/login');
+    }
+
+    /** T-002 — asks for another confirmation mail. Answers the same way whether one was needed. */
+    async resendConfirmation() {
+        await firstValueFrom(this.http.post<{ sent: boolean }>('/api/auth/resend-confirmation', {}));
     }
 }

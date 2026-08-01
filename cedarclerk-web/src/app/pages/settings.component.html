@@ -12,7 +12,24 @@
         </nav>
 
         <nav class="anchor-chips">
-            @if (tab() === 'profile') {
+            <!--T-002 — a reminder, not a wall: the account works unconfirmed, and blocking one would
+        lock out every account that predates this. It disappears the moment the address is confirmed.-->
+        @if (!auth.emailConfirmed()) {
+        <section class="settings-card confirm-card">
+            <h2>{{ t().settings.confirmEmail.title }}</h2>
+            <p class="field-hint">{{ t().settings.confirmEmail.hint(auth.userEmail() ?? '') }}</p>
+            <div class="field-actions">
+                <button class="btn-primary" (click)="resendConfirmation()" [disabled]="confirmBusy()">
+                    {{ confirmBusy() ? '…' : t().settings.confirmEmail.resend }}
+                </button>
+                @if (confirmSent()) {
+                <span class="saved-check"><app-icon name="check" size="xs"></app-icon>{{ t().settings.confirmEmail.sent }}</span>
+                }
+            </div>
+        </section>
+        }
+
+        @if (tab() === 'profile') {
             <button (click)="jump('sec-profile')">{{ t().settings.profile.nav }}</button>
             <button (click)="jump('sec-cross-links')">{{ t().settings.crossLinks.nav }}</button>
             <button (click)="jump('sec-header-slots')">{{ t().settings.headerSlots.nav }}</button>

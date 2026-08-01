@@ -2,7 +2,10 @@
 using System.Text.Json.Serialization;
 using CedarClerk.Core;
 using CedarClerk.Localization;
+using System.Text;
 using CedarClerk.Server.Bot;
+using CedarClerk.Server.Email;
+using Microsoft.AspNetCore.WebUtilities;
 using CedarClerk.Server.Translation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -54,7 +57,8 @@ public static class AuthEndpoints
 
         #region Register
         groupBuilder.MapPost("/register", async (RegisterRequest req, UserManager<ApplicationUser> users,
-            SignInManager<ApplicationUser> signIn, IConfiguration cfg, CedarDbContext db) =>
+            SignInManager<ApplicationUser> signIn, IConfiguration cfg, CedarDbContext db,
+            ResendEmailProvider email, ILogger<Program> logger) =>
         {
             var submitted = req.InviteCode?.Trim() ?? "";
 
@@ -97,8 +101,52 @@ public static class AuthEndpoints
             // every signup looked broken while having actually worked, and on a single-use invite
             // code the retry then genuinely failed. isPersistent matches the login endpoint.
             await signIn.SignInAsync(user, isPersistent: true);
+
+            // T-002 — the confirmation mail is sent, and the account works either way. Blocking an
+            // unconfirmed account would lock out every account that predates this feature, and the
+            // gate that actually matters (public registration, T-052) is not open yet. What this
+            // buys today is a real address on file and a visible reminder until it is confirmed.
+            await SendConfirmationEmailAsync(user, users, email, cfg, logger);
+
             return Results.Ok(new { message = "Registered" });
         });
+
+        // Opened from the mail. Redirects rather than answering JSON: this URL is clicked in a mail
+        // client, so what has to come back is a page, not a payload.
+        groupBuilder.MapGet("/confirm-email", async (string userId, string token,
+            UserManager<ApplicationUser> users, IConfiguration cfg) =>
+        {
+            var mainHost = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
+            var user = await users.FindByIdAsync(userId);
+            if (user is null) return Results.Redirect($"{mainHost}/settings?confirmed=unknown");
+
+            // The token arrives through a URL, so it was Base64Url-encoded on the way out.
+            string decoded;
+            try
+            {
+                decoded = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(token));
+            }
+            catch (FormatException)
+            {
+                return Results.Redirect($"{mainHost}/settings?confirmed=invalid");
+            }
+
+            var result = await users.ConfirmEmailAsync(user, decoded);
+            return Results.Redirect($"{mainHost}/settings?confirmed={(result.Succeeded ? "yes" : "invalid")}");
+        }).AllowAnonymous();
+
+        // Re-sends it. Deliberately answers the same way whether or not the address needed one:
+        // this endpoint is reachable by anyone signed in, and "that address is already confirmed"
+        // is not information worth handing out per request.
+        groupBuilder.MapPost("/resend-confirmation", async (ClaimsPrincipal principal,
+            UserManager<ApplicationUser> users, IConfiguration cfg, ResendEmailProvider email, ILogger<Program> logger) =>
+        {
+            var user = await users.GetUserAsync(principal);
+            if (user is null) return Results.Unauthorized();
+            if (!user.EmailConfirmed && user.Email is not null)
+                await SendConfirmationEmailAsync(user, users, email, cfg, logger);
+            return Results.Ok(new { sent = true });
+        }).RequireAuthorization();
         #endregion
 
         groupBuilder.MapPost("/login", async (LoginRequest req, SignInManager<ApplicationUser> signIn, UserManager<ApplicationUser> users) =>
@@ -126,6 +174,9 @@ public static class AuthEndpoints
             {
                 email = user.FindFirstValue(ClaimTypes.Email) ?? user.Identity!.Name,
                 createdAt = appUser?.CreatedAt,
+                // T-002 — drives the reminder in Settings. Not a gate: an unconfirmed account
+                // works exactly like a confirmed one today.
+                emailConfirmed = appUser?.EmailConfirmed ?? false,
                 // Hides the /admin entry point for everyone else. Not a security boundary —
                 // that lives on the server, on the /api/admin group (IF2).
                 isAdmin = appUser?.IsAdmin ?? false,
@@ -524,6 +575,33 @@ public static class AuthEndpoints
     // Unknown codes and blanks are dropped rather than rejected: the map is a set of optional
     // labels, and refusing the whole profile save over one stray key would be out of proportion.
     public record TranslateProfileTextsRequest(string SourceLanguage, List<string>? TargetLanguages);
+
+    /// <summary>
+    /// Sends the confirmation mail, and never lets a mail failure break the flow it is part of:
+    /// registration has already succeeded by this point, and a Resend outage must not undo it.
+    /// The link carries a Base64Url-encoded token because Identity's own tokens contain characters
+    /// a query string mangles.
+    /// </summary>
+    private static async Task SendConfirmationEmailAsync(
+        ApplicationUser user, UserManager<ApplicationUser> users, ResendEmailProvider email,
+        IConfiguration cfg, ILogger logger)
+    {
+        if (!email.IsConfigured || string.IsNullOrWhiteSpace(user.Email)) return;
+
+        try
+        {
+            var token = await users.GenerateEmailConfirmationTokenAsync(user);
+            var encoded = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+            var mainHost = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
+            var link = $"{mainHost}/api/auth/confirm-email?userId={Uri.EscapeDataString(user.Id)}&token={encoded}";
+
+            await email.SendAsync(user.Email, EmailTexts.ConfirmSubject, EmailTexts.ConfirmBody(link));
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not send the confirmation email to {Email}", user.Email);
+        }
+    }
 
     private static string? BuildLinkTextMap(Dictionary<string, string> texts)
     {

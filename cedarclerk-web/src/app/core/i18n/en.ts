@@ -844,6 +844,12 @@ export const en = {
             doneForToday: 'Done for the day?',
             logout: 'Log out',
         },
+        confirmEmail: {
+            title: 'Confirm your email',
+            hint: (email: string) => `We sent a confirmation link to ${email}. Confirming it is what lets you recover the account later.`,
+            resend: 'Send it again',
+            sent: 'Sent',
+        },
         appearance: {
             nav: 'Appearance',
             title: 'Appearance',

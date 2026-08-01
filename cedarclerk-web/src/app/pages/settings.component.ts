@@ -97,10 +97,28 @@ export class SettingsComponent implements OnInit {
     botStatus = signal<{ reachable: boolean; botUsername: string | null } | null>(null);
     channels = signal<Channel[]>([]);
 
+    // T-002
+    confirmBusy = signal(false);
+    confirmSent = signal(false);
+
+    async resendConfirmation() {
+        this.confirmBusy.set(true);
+        try {
+            await this.auth.resendConfirmation();
+            this.confirmSent.set(true);
+            setTimeout(() => this.confirmSent.set(false), 4000);
+        } catch { /* the banner stays; there is nothing else to say */ }
+        finally { this.confirmBusy.set(false); }
+    }
+
     async ngOnInit() {
         // The account menu links to /settings?tab=profile (I12).
         const requested = this.route.snapshot.queryParamMap.get('tab');
         if (requested === 'profile' || requested === 'account') this.tab.set(requested);
+
+        // Coming back from the confirmation link: refresh so the banner disappears rather than
+        // waiting for the next full load to notice.
+        if (this.route.snapshot.queryParamMap.get('confirmed') === 'yes') await this.auth.refresh();
 
         this.signatureUrlText = this.auth.postSignatureUrl() ?? '';
         this.loadSignatureTexts();
