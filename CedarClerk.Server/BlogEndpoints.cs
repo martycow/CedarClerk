@@ -641,6 +641,31 @@ public static class BlogEndpoints
         var who = name ?? nickname ?? email ?? "Someone";
         await NotifyOwnerAsync(ctx, db, draft.OwnerId, slug, $"📝 {who} filled in the form for \"{draft.Title}\"");
 
+        // T-033 — the respondent's copy, when they left an address and the owner wrote something
+        // to send. Same rule as the owner's DM above: a mail failure never turns a successful
+        // registration into an error, because the registration is what the reader is waiting on.
+        if (!string.IsNullOrWhiteSpace(email) && form?.ResponseEmailBody is { Length: > 0 } responseBody)
+        {
+            var mailer = ctx.RequestServices.GetRequiredService<Email.ResendEmailProvider>();
+            var subject = string.IsNullOrWhiteSpace(form.ResponseEmailSubject)
+                ? draft.Title
+                : form.ResponseEmailSubject!;
+            try
+            {
+                // The owner's own words, escaped and line-broken — never rendered as HTML they
+                // authored, because this is a form field, not a template editor.
+                var html = "<p>" + System.Net.WebUtility.HtmlEncode(responseBody)
+                    .Replace("\r\n", "<br>").Replace("\n", "<br>") + "</p>";
+                await mailer.SendAsync(email!, subject, html);
+            }
+            catch (Exception ex)
+            {
+                ctx.RequestServices.GetRequiredService<ILoggerFactory>()
+                    .CreateLogger("FormResponseEmail")
+                    .LogWarning(ex, "Could not send the form response email to {Email}", email);
+            }
+        }
+
         ctx.Response.Cookies.Append(Consts.General.PrivateAccessCookiePrefix + draft.Id, "1", new CookieOptions
         {
             MaxAge = TimeSpan.FromDays(90),

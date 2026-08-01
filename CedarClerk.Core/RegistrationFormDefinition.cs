@@ -54,7 +54,13 @@ public record RegistrationFormDefinition(
     bool RequireNickname,
     bool RequireEmail,
     bool RequireSocial,
-    IReadOnlyList<RegistrationQuestion> Questions)
+    IReadOnlyList<RegistrationQuestion> Questions,
+    // T-033 — what the respondent is sent after submitting, when they left an address. Null means
+    // no mail: an owner who has not written one has not agreed to write to their readers, and a
+    // generated "thanks" in the owner's voice would be words they never chose. Part of the form's
+    // JSON blob rather than a column, like every other per-form setting.
+    string? ResponseEmailSubject = null,
+    string? ResponseEmailBody = null)
 {
     // A form with no fields at all would be a submit button that collects nothing — treat the
     // built-in name+email pair as the floor so there's always something to identify a visitor by.
@@ -144,7 +150,9 @@ public record RegistrationFormDefinition(
             RequireNickname: AsBool(obj["requireNickname"]),
             RequireEmail: AsBool(obj["requireEmail"]),
             RequireSocial: AsBool(obj["requireSocial"]),
-            Questions: questions);
+            Questions: questions,
+            ResponseEmailSubject: AsString(obj["responseEmailSubject"]),
+            ResponseEmailBody: AsString(obj["responseEmailBody"]));
     }
 
     internal static string? AsString(JsonNode? node) =>

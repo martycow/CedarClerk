@@ -164,7 +164,12 @@ public static class RegistrationFormSet
             RequireNickname: RegistrationFormDefinition.AsBool(obj["requireNickname"]),
             RequireEmail: RegistrationFormDefinition.AsBool(obj["requireEmail"]),
             RequireSocial: RegistrationFormDefinition.AsBool(obj["requireSocial"]),
-            Questions: questions);
+            Questions: questions,
+            // T-033 — per language like the intro: a form shown in German must not answer in
+            // Russian. PickText falls back the same way, so a reply written in one language still
+            // reaches a reader who saw the form in another rather than nothing reaching them.
+            ResponseEmailSubject: PickText(obj["responseEmailSubject"], lang, languages),
+            ResponseEmailBody: PickText(obj["responseEmailBody"], lang, languages));
     }
 
     private static IReadOnlyList<string> V2Languages(string json)

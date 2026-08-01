@@ -460,6 +460,29 @@ beside them — not a reading surface, so they follow the list's density rather 
                         }
                     </div>
 
+                    <!--T-033 — the reply the respondent gets. Empty body = no mail: an owner who has
+                    not written one has not agreed to write to their readers.-->
+                    <div class="form-block">
+                        <span class="form-block-title">{{ t().manager.forms.blockReply }}</span>
+                        <p class="field-hint-inline">{{ t().manager.forms.replyHint }}</p>
+                        @for (l of presetLangs(); track l) {
+                        <label class="form-field">
+                            <span class="form-field-label">{{ t().manager.forms.replySubject }}
+                                @if (presetLangs().length > 1) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
+                            </span>
+                            <input class="chat-input" [value]="form.responseEmailSubject[l] || ''"
+                                   (change)="setReplySubject(l, $any($event.target).value)"
+                                   [placeholder]="t().manager.forms.replySubjectPlaceholder" maxlength="200">
+                        </label>
+                        <label class="form-field">
+                            <span class="form-field-label">{{ t().manager.forms.replyBody }}</span>
+                            <textarea class="chat-input" rows="4" [value]="form.responseEmailBody[l] || ''"
+                                      (change)="setReplyBody(l, $any($event.target).value)"
+                                      [placeholder]="t().manager.forms.replyBodyPlaceholder" maxlength="2000"></textarea>
+                        </label>
+                        }
+                    </div>
+
                     <div class="form-block">
                         <span class="form-block-title">{{ t().manager.forms.blockFields }}</span>
                         <p class="field-hint-inline">{{ t().manager.forms.fieldsHint }}</p>

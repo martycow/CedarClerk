@@ -723,6 +723,8 @@ export class PostsManagerComponent implements OnInit {
             ...form,
             languages: form.languages.filter(l => l !== lang),
             intro: strip(form.intro),
+            responseEmailSubject: strip(form.responseEmailSubject),
+            responseEmailBody: strip(form.responseEmailBody),
             questions: form.questions.map(q => ({
                 ...q,
                 label: strip(q.label),
@@ -779,6 +781,23 @@ export class PostsManagerComponent implements OnInit {
         const form = this.presetForm();
         if (!form) return;
         this.editPreset({ ...form, [field]: !form[field] });
+    }
+
+    setReplySubject(lang: string, value: string) {
+        this.setFormTextMap('responseEmailSubject', lang, value);
+    }
+
+    setReplyBody(lang: string, value: string) {
+        this.setFormTextMap('responseEmailBody', lang, value);
+    }
+
+    /** Shared by both reply fields: a blank clears the entry rather than storing an empty string. */
+    private setFormTextMap(key: 'responseEmailSubject' | 'responseEmailBody', lang: string, value: string) {
+        const form = this.presetForm();
+        if (!form) return;
+        const next = { ...form[key] };
+        if (value.trim()) next[lang] = value.trim(); else delete next[lang];
+        this.editPreset({ ...form, [key]: next });
     }
 
     setIntro(lang: string, intro: string) {

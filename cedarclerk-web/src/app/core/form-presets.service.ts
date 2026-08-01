@@ -35,10 +35,14 @@ export interface RegistrationFormEdit {
     intro: Record<string, string>;
     requireName: boolean; requireNickname: boolean; requireEmail: boolean; requireSocial: boolean;
     questions: FormQuestionEdit[];
+    // T-033 — what the respondent is sent after submitting. Per language, like the intro: a form
+    // shown in German should not answer in Russian. Empty means no mail is sent at all.
+    responseEmailSubject: Record<string, string>;
+    responseEmailBody: Record<string, string>;
 }
 
 export function blankFormEdit(lang: string): RegistrationFormEdit {
-    return { v: 2, languages: [lang], intro: {}, requireName: true, requireNickname: false, requireEmail: true, requireSocial: false, questions: [] };
+    return { v: 2, languages: [lang], intro: {}, requireName: true, requireNickname: false, requireEmail: true, requireSocial: false, questions: [], responseEmailSubject: {}, responseEmailBody: {} };
 }
 
 // Loads either blob shape into the edit model, upgrading a v1 single-language preset to v2 with
@@ -101,6 +105,8 @@ export function normalizeFormForEdit(json: string | null | undefined, fallbackLa
             requireEmail: !!raw['requireEmail'],
             requireSocial: !!raw['requireSocial'],
             questions,
+            responseEmailSubject: textMap(raw['responseEmailSubject']),
+            responseEmailBody: textMap(raw['responseEmailBody']),
         };
     } catch {
         return blankFormEdit(fallbackLang);
