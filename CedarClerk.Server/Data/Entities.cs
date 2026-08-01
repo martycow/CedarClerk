@@ -596,3 +596,54 @@ public class ScheduledPost
     public string Format { get; set; } = Consts.ContentTypes.Markdown;
     public string Language { get; set; } = Languages.Russian;
 }
+
+/// <summary>
+/// A tenant's connected account on one network — the general home for "where a post can go"
+/// (T-084, ADR-078). Telegram channels are projected into this table in T-085; <see cref="Channel"/>
+/// stays as the Telegram-specific detail row behind them, because ChannelPost, ChannelStatSnapshot
+/// and BotKnownChat all key off it and none of them generalise.
+/// </summary>
+public class PublishTarget
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public ApplicationUser? Owner { get; set; }
+
+    /// <summary>One of <see cref="CedarClerk.Core.PublishNetworks"/>.</summary>
+    public string Network { get; set; } = "";
+
+    /// <summary>What the author sees in a picker: a channel title, a @handle.</summary>
+    public string DisplayName { get; set; } = "";
+
+    /// <summary>
+    /// The network's own stable identity for the account — a Telegram chat id, a Bluesky DID.
+    /// A DID rather than a handle on purpose: handles are renameable and the identity must not be.
+    /// </summary>
+    public string RemoteId { get; set; } = "";
+
+    /// <summary>
+    /// Credentials, encrypted by <c>PublishTargetSecrets</c>. Null where a network needs none —
+    /// Telegram posts through Cedar Clerk's own bot, so there is nothing of the tenant's to keep.
+    /// The shape inside is the network's business; each target parses its own.
+    /// </summary>
+    public string? CredentialsProtected { get; set; }
+
+    /// <summary>
+    /// False keeps the row (and its history) while stopping it being offered or published to —
+    /// same deactivate-don't-delete choice InviteCode made, and for the same reason: a deleted row
+    /// takes the answer to "where did this post go" with it.
+    /// </summary>
+    public bool IsActive { get; set; } = true;
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? LastPublishedAt { get; set; }
+
+    /// <summary>
+    /// Why the last publish failed, kept so a broken connection is visible in the UI before the
+    /// next send rather than after it. Cleared on success.
+    /// </summary>
+    public string? LastError { get; set; }
+
+    /// <summary>Set for Telegram rows only — the detail table described above.</summary>
+    public Guid? ChannelId { get; set; }
+}

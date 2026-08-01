@@ -29,6 +29,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<FormPreset> FormPresets => Set<FormPreset>();
     public DbSet<PostInvite> PostInvites => Set<PostInvite>();
     public DbSet<PostRegistration> PostRegistrations => Set<PostRegistration>();
+    public DbSet<PublishTarget> PublishTargets => Set<PublishTarget>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -50,6 +51,12 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
             .HasIndex(r => new { r.DraftId, r.Language, r.Kind, r.Destination, r.CreatedAt });
         builder.Entity<AiUsage>()
             .HasIndex(a => new { a.OwnerId, a.Day })
+            .IsUnique();
+        // T-084 — one row per (tenant, network, remote account). Connecting the same account twice
+        // must be an update, not a second row: two rows would mean two credential blobs for one
+        // account, and nothing could say which is current.
+        builder.Entity<PublishTarget>()
+            .HasIndex(t => new { t.OwnerId, t.Network, t.RemoteId })
             .IsUnique();
     }
 }

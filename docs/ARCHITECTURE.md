@@ -32,6 +32,8 @@ Renderers, all in `CedarClerk.Core` (pure C#, no ASP.NET dependency, unit-tested
 - `CedarToBlogHtmlRenderer` — blog HTML pages, including anchor nodes for reactions/comments on specific fragments.
 - `CedarPackage` — `.cedar` file format (see below).
 
+Publishing targets (Phase 12, ADR-078): `IPublishTarget` in `CedarClerk.Server/Publishing/` is what a network must implement — name itself, describe its limits as data (`CedarClerk.Core.PublishCapabilities`, so the editor can warn before a send), and publish returning a receipt. It does **not** fetch statistics, delete/edit, or run its own connect flow. Credentials live on the `PublishTarget` entity, encrypted by `PublishTargetSecrets` with the DataProtection key ring under `CEDAR_DATA_DIR` — which makes the key ring and `cedar.db` a pair: restoring one without the other leaves credentials unreadable (by design; the owner reconnects). The blog is deliberately not a publish target.
+
 Going the other direction — external format *into* Cedar JSON — `CedarClerk.Core.MarkdownToCedarConverter` (a scoped, hand-rolled Markdown parser, not a dependency) turns a Notion-shaped Markdown export into a TipTap doc; see ADR-026, `docs/DECISIONS.md`.
 
 ## Solution layout
@@ -50,6 +52,7 @@ Going the other direction — external format *into* Cedar JSON — `CedarClerk.
 - `Bot/` — `TelegramBotService`, `BotChatAccess` (pure permission logic), `BotKnownChatSync`, Quartz job classes
 - `Data/` — `CedarDbContext`, `Entities.cs` (all entities in one flat file)
 - `Migrations/` — EF Core migrations
+- `Publishing/` — `IPublishTarget` (ADR-078) + `PublishTargetSecrets` (per-tenant credential encryption)
 - `Translation/` — `ITranslationProvider` + Anthropic/OpenAI/DeepL implementations for auto-translate
 - Top-level: one `XxxEndpoints.cs` static class per feature area (`AuthEndpoints`, `DraftEndpoints`, `BlogEndpoints`, `PostEndpoints`, `AssetEndpoints`, `ChannelEndpoints`, `ScheduledPostEndpoints`, `BillingEndpoints`), plus `SubscriptionPlan.cs` and `Program.cs`
 
@@ -78,7 +81,7 @@ Blog requests are routed separately, by hostname, before the rest: `app.MapWhen(
 
 `CedarDbContext : IdentityDbContext<ApplicationUser>` (SQLite). Every entity lives in one flat `CedarClerk.Server/Data/Entities.cs` (not one file per entity), uses a client-generated `Guid Id`, and owner-scoped rows carry a plain `string OwnerId` (+ optional `ApplicationUser? Owner` nav) rather than a strict FK-only model.
 
-Entities: `ApplicationUser` (extends `IdentityUser`; `PlanTier`, `PlanExpiresAt`, `TrialUsedAt`, `FreeChannelCooldownUntil`, Telegram link fields, `PostSignature`, `StripeCustomerId`), `Payment` (audit of all billing events across providers), `AiUsage` (per-user per-UTC-day AI call counter), `Draft` (+ `DraftTranslation` for RU/EN), `Channel` (+ `ChannelStatSnapshot`, `ChannelPost` — see ADR-025), `Asset`, `Reaction`, `Comment`, `BotKnownChat` (+ `BotKnownChatAdmin`), `ScheduledPost`.
+Entities (`PublishTarget` added 01.08.2026, T-084): `ApplicationUser` (extends `IdentityUser`; `PlanTier`, `PlanExpiresAt`, `TrialUsedAt`, `FreeChannelCooldownUntil`, Telegram link fields, `PostSignature`, `StripeCustomerId`), `Payment` (audit of all billing events across providers), `AiUsage` (per-user per-UTC-day AI call counter), `Draft` (+ `DraftTranslation` for RU/EN), `Channel` (+ `ChannelStatSnapshot`, `ChannelPost` — see ADR-025), `Asset`, `Reaction`, `Comment`, `BotKnownChat` (+ `BotKnownChatAdmin`), `ScheduledPost`.
 
 Ownership: nearly every table has an `OwnerId` and every endpoint filters by it — see the ownership-audit table in `docs/DECISIONS.md`. Public blog endpoints are the deliberate exception (filtered by `IsBlogPublished` instead, since blog visitors aren't authenticated users).
 

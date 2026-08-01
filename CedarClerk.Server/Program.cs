@@ -3,6 +3,7 @@ using CedarClerk.Core;
 using CedarClerk.Server;
 using CedarClerk.Server.Bot;
 using CedarClerk.Server.Email;
+using CedarClerk.Server.Publishing;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
@@ -83,6 +84,9 @@ builder.Services.AddSingleton<AiJobService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramBotService>());
 builder.Services.AddHttpClient(); // named clients used by billing (Stripe), translation providers, and email
 builder.Services.AddSingleton<ResendEmailProvider>();
+// T-084 — encrypts per-tenant social credentials with the DataProtection key ring that already
+// lives under CEDAR_DATA_DIR (T-074). Singleton: it holds one derived protector and nothing else.
+builder.Services.AddSingleton<PublishTargetSecrets>();
 
 builder.Services.AddQuartz(q =>
 {
