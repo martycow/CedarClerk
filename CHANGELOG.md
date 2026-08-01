@@ -2,6 +2,42 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-01 — Marty's review pass: tables could never publish, icons were black, and the Posts Manager became cards
+
+### The bug: a post with a table has never once published
+
+`Publish failed: JsonException: Can't serialize value 0 for enum RichBlockTableCellAlign`. `RichBlockTableCell.Align` and `.Valign` are non-nullable enums whose members start at **1**, and the mapping never set them — so the wire value was 0 and the client refused to send before the request left the machine. Any post containing a table failed. TASKS.md had listed tables as "implemented against the documented type shapes but not yet exercised with a real post" since 16.07; this is what that meant.
+
+The fix is two lines. The part worth keeping is the test: **every block type is now serialized with the client's own `JsonBotAPI.Options`** — the renderers had unit tests for the Core tree (renderers.md invariant 2) and nothing at all for the step after it, the mapping onto Telegram's wire types. 19 new tests, and they would have caught this the day the renderer was written.
+
+### Icons were black, and it was never a theme bug
+
+Phosphor's assets carry `fill="currentColor"` on their own `<svg>` element, and the generator strips that wrapper to keep only the paths. So `app-icon`'s `<svg>` had no fill and every icon in the app painted in the SVG default — black. On the light theme that reads as "a bit heavy"; on dark it is nearly invisible. It was never inherited from anywhere and never a `--text` problem: it was simply lost in generation.
+
+Sizes went up a step each (`--icon-sm` 15→17px and the rest with it) and so did every semantic type role (`--fs-ui` 13→14, `--fs-body` 14→15, and so on). Deliberately the roles, not the numbers: the scale is unchanged, and after T-077 every component reaches for a role, so it is one edit. Product-wide rather than editor-only — ADR-071 principle 2 allows exactly one type scale, and the dense screens stay tighter through `--dens-fs`, which is what density is for.
+
+### Glossary
+
+- **The edit form now opens where the term is.** It used to live only at the top of the page, so editing the last term of a long glossary meant scrolling up to fields with no visible connection to the row they belonged to. One template, rendered in two places.
+- **Click a term to see its real tooltip**, with a language switcher across the translation group. That group needed a link that did not exist: translated terms are separate rows keyed by translated text (ADR-061) and nothing recorded where they came from, so `GlossaryTerm.SourceTermId` now holds the group root. Rows translated before today stay unlinked — guessing by text would pair the wrong terms.
+- **"Case-sensitive" per term.** Off by default, because a term at the start of a sentence is the same term; on where the casing *is* the meaning — "IT" the industry against "it" the pronoun. Applies to the term and its aliases alike.
+
+### Signature and cross-links translate themselves
+
+The last per-language texts anyone still had to write by hand in every language — the post signature and both cross-link lines. One press fills every other content language from the one selected, with the same bargain the glossary's translate-all makes: the narrow `ITextsTranslationProvider` capability, the plan gate before the provider call, one AI call for the batch, and a blank result left alone rather than written over the existing text.
+
+### Posts Manager
+
+- **Each post is a card**: indicators and title on one line with a single publish state on the right, the languages it exists in on the next. Exactly one state chip per post now — archived beats live, live beats unpublished — instead of a wrapping line where a language chip and a publish state sat as equals. The card also fixed a quiet omission: `DraftMeta.languages` holds only *translations*, so a post written in one language used to show no language at all.
+- **The list scrolls in its own box** with the search field pinned, instead of growing the page until the detail pane started below the fold.
+- **The details pane collapses into groups** — Post, Placement, Where it went, Growth, Reactions, Private access, Submissions. Native `<details>`, not a hand-rolled accordion: it collapses without JavaScript, is keyboard- and screen-reader-correct for free, and its `<summary>` already counts as a control for the 44px touch rule. Which groups are open is remembered per browser.
+- **The forms editor's ✕ buttons had no styling at all** — `.mini-remove` is declared in `editor.component.css` and Angular's view encapsulation keeps it there, so every one of them rendered as a bare browser button.
+- **Per-post growth chart** (views / likes / comments). This needed a data layer that did not exist: `DraftStatSnapshot`, written nightly by the existing snapshot job. **History starts today** — the counters are running totals with no timestamps in them, so there is nothing to backfill from, and a post's chart stays empty until the job has run twice. The empty state says "not measured yet" rather than drawing a flat line that would read as "no growth" (T-105).
+
+Removed: the Settings → Account card whose only content was "Appearance moved to the editor". A settings card that exists to say a setting is elsewhere is a dead end that has to be read every time to be dismissed.
+
+**Verified**: `dotnet test` **484/484**, smoke **42/42**, `ng build` clean.
+
 ## 2026-08-01 — Phase 12 starts: what a publish target is, and Telegram becomes one
 
 Marty answered the two questions that had Phase 12 blocked (ADR-077): **Bluesky first** — the only candidate needing neither app review nor payment, so the abstraction can be proved without anyone else's approval in the way — and **a cross-post is a standalone post with a manual per-target override**, not a teaser with a link. The second is the more expensive answer and the right one: ADR-021 already decided every destination is co-equal, and a network that only ever receives "read this elsewhere" is a billboard, not a destination. It also reshapes T-087 from "truncation rules" into per-target text storage plus a target tab in the editor.
