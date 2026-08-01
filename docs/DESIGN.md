@@ -17,11 +17,13 @@ The visual direction, decided by Marty as the answer to Q-11 and binding on Phas
 ## Tokens
 
 ### Color — light (`:root`)
+Values updated 31.07.2026 by the contrast pass (T-082/ADR-074) — see "Accessibility" below for the contract each one carries:
 ```
 --bg: #ECE9E2;       --canvas: #E2DED4;    --surface: #F7F5EF;
 --sheet: #FCFBF8;    --alt: #EFECE4;       --border: #DBD5C8;
---text: #26231D;     --t2: #6B655A;        --t3: #9F988A;
---accent: #5B6E46;   --danger: #B4452C;    --ok: #3E7A4E;
+--text: #26231D;     --t2: #686257;        --t3: #847E72;
+--accent: #566842;   --danger: #A84129;    --ok: #386D46;
+--warn: #7B5E0E;     --border-strong: #857D6F;
 --shadow: 0 1px 3px rgba(40, 35, 25, .10);
 --shadow-md: 0 8px 24px rgba(40, 35, 25, .12);
 --asoft: color-mix(in srgb, var(--accent) 13%, var(--surface));
@@ -33,9 +35,10 @@ Overrides only the listed properties; everything else (`--shadow-md`, `--asoft`,
 ```
 --bg: #1D1B17;        --canvas: #171511;    --surface: #25221B;
 --sheet: #2B2820;     --alt: #2F2C23;       --border: #3C382D;
---text: #EAE6DB;      --t2: #A69F8F;        --t3: #776F5F;
+--text: #EAE6DB;      --t2: #A69F8F;        --t3: #8B8477;
 --accent: color-mix(in srgb, #5B6E46 55%, #E8F0E8 45%);
---danger: #E2745C;    --ok: #82BB8C;
+--danger: #E2745C;    --ok: #82BB8C;        --warn: #E3C35C;
+--border-strong: #7B7465;
 --shadow: 0 1px 3px rgba(0, 0, 0, .45);
 ```
 
@@ -92,7 +95,7 @@ Semantic roles sit on top, and components reach for **these**, not the numbers �
 ```
 --icon-sm: 15px;   --icon-md: 18px;   --icon-lg: 20px;
 ```
-These are exactly the three values `.icon` is currently declared with across 9 files — the inconsistency is why they became tokens. Set: **Phosphor**, delivered as inlined SVG behind one `app-icon` component (T-079 not yet done; Lucide is still what renders).
+These are exactly the three values `.icon` was declared with across 9 files — the inconsistency is why they became tokens. Set: **Phosphor**, inlined SVG behind one `app-icon` component (T-079 done 31.07.2026; `@lucide/angular` is gone). `--icon-xs: 12px` was added by the `/drafts` migration. What each icon *means* in this app, and where a meaning has two glyphs, is on `/dev/icons` — generated from the call sites by `npm run icons:generate`, never hand-kept (ADR-075).
 
 ### Motion
 ```
@@ -102,6 +105,29 @@ These are exactly the three values `.icon` is currently declared with across 9 f
 --ease: cubic-bezier(.2, .6, .3, 1);
 ```
 All three drop to 1ms under `prefers-reduced-motion: reduce`, which also clamps every animation/transition globally — 1ms rather than 0 so `transitionend` listeners still fire.
+
+## Accessibility (T-082, ADR-074)
+
+The rules below are checked, not remembered: `cedarclerk-web/e2e/12-a11y.spec.ts` fails the smoke suite if any of them regresses.
+
+**Contrast.** `npm run check:contrast` reads the tokens straight out of `styles.scss`, resolves the `color-mix()` derivations and scores every pair the app actually renders, in both themes. `SUGGEST=1` prints the nearest passing value for a failure; `VERBOSE=1` prints the passing pairs too. The thresholds are per token, and this is the contract:
+
+| Token | Contract |
+|---|---|
+| `--text`, `--t2` | text — 4.5:1 against every surface |
+| `--accent`, `--danger`, `--ok`, `--warn` | text — 4.5:1 against every surface |
+| `--t3` | **not text.** Placeholder, disabled, decoration — 3:1 |
+| `--border-strong` | the boundary of a field/select/toggle — 3:1 |
+| `--border`, `--abord` | decorative hairline — no threshold, deliberately |
+| `--series-1…6` | graphical object — 3:1 on `--surface` |
+
+The one that matters when writing CSS: **`--t3` never carries information.** If text is quiet because it is secondary, that is `--t2` plus a smaller `--fs-*` role.
+
+**Focus.** One global `:focus-visible` ring in `--accent` at 2px with 2px offset. The editor sheet (`.tiptap`) is the only exclusion — the caret is the indicator there. A component that removes an outline owes a replacement.
+
+**Touch targets.** `@media (pointer: coarse)` gives every `button`, `[role="button"]`, `summary`, `select` and `a.icon-btn` a 44px minimum in both axes — keyed on pointer type, not viewport width, because an iPad in landscape is 1024px wide and entirely touch-driven. Written as `min-height`/`min-width` so it beats a component's fixed `width` by property rather than by specificity. Inline links, checkboxes and radios are exempt.
+
+**Long words (T-051).** A dev-only pseudo-locale inflates every UI string ~30% and welds a German compound onto its longest word, wrapping the result in `⟦ ⟧` so a screenshot can never be mistaken for a translation. Switch it on with `?pseudo=1` on any URL, or the toggle on `/dev/styleguide`; it is per-browser and never touches the profile. Captured by `AUDIT=1 npx playwright test 99-audit -g pseudo` into `.e2e-audit/75…78`. The rule it enforces: **a label shrinks and ellipses; it never widens its container.** Every truncating control keeps a `title`, so the full text stays one hover away.
 
 ## Component patterns (convention, not enforced)
 

@@ -279,7 +279,11 @@ Not Angular: these are strings built on the server and host-routed by `Program.c
 
 ## Icon inventory
 
-Measured against the templates on 30.07.2026, not recalled. Input for `T-079` (one icon set + size tokens) and `T-080` (icon semantics).
+**Superseded 01.08.2026 by `/dev/icons`** — the live inventory is now generated from the call sites by `npm run icons:generate` (`tools/generate-icon-usage.mjs` → `icon-usage.generated.ts`, ADR-075) and rendered on that page: every icon, what it means here, where it is drawn, and any meaning drawn twice. Prefer it over the table below, which is a snapshot of the pre-migration state kept for the record.
+
+Numbers as of 01.08.2026: **80 icons, 206 call sites, 0 unused, 0 bound at runtime.** All 58 icon-only controls now carry an `aria-label` beside their `title` (T-080), and the four screens are asserted for it by `e2e/12-a11y.spec.ts`. No meaning is drawn with two icons; `x` (12 labels), `trash` (5) and `plus` (5) remain overloaded, which is what universal actions do.
+
+The 30.07.2026 snapshot, measured against the templates before T-079/T-080, retained because it is what the two tasks were scoped from:
 
 | Fact | Number | What it means for Phase 11 |
 |---|---|---|
@@ -293,6 +297,16 @@ Measured against the templates on 30.07.2026, not recalled. Input for `T-079` (o
 | `.icon-xs` size definitions | 7 files, 12px everywhere | Consistent today — by luck, not by construction |
 
 Icons appearing in more than one component (`Trash2`, `X`, `Plus`, `Pencil`, `RefreshCw`, `Archive`/`ArchiveRestore`, `Folder`, `Settings`, `Newspaper`, `BookMarked`, `ShieldCheck`, `Terminal`, `Send`, `List`/`LayoutGrid`) are used **consistently** — the same glyph means the same thing on every screen, and no duplicate meanings were found. `RefreshCw` carries two roles (busy spinner with `.spin`, refresh action without), which is conventional and not worth splitting.
+
+## Development surfaces (`/dev/*`, authGuard'd, lazy)
+
+Neither is a product screen: both are excluded from localization on purpose, and neither is in the initial bundle (ADR-076).
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Styleguide | `pages/styleguide.component.{ts,html,css}` → `/dev/styleguide` | page | Every token and control state on one screen, with live theme and density toggles (T-078) | n/a — no async | Captured by the audit run into `.e2e-audit/70…73`, all four theme×density combinations |
+| Pseudo-locale toggle | `styleguide.component.html`, `.sg-controls` | button | Switches the whole app in this browser onto the inflated long-word strings (T-051) | n/a | Per-browser (`localStorage: cedar-pseudo`), never reaches the profile. `?pseudo=1` on any URL does the same |
+| Icon inventory | `pages/icons.component.{ts,html,css}` → `/dev/icons` | page | What each icon means in this app, from the generated call-site table: duplicates of meaning, overloaded glyphs, unused icons, full grid with search and weight/size toggles (T-080) | n/a — generated data, no fetch | Regenerate with `npm run icons:generate` after moving icons, or it describes the previous commit. Captured as `.e2e-audit/74` |
 
 ## Screens and flows never opened in a browser
 

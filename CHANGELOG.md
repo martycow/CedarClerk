@@ -2,6 +2,50 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-01 — Phase 11: accessibility, the icon inventory, long words, and a bundle that is a third of what it was
+
+**v0.9.21 went to production first** (health green, no migrations applied, no `warn:`/`fail:` in the startup log, bot running, `/` + `blog.mooexe.dev` + `/rss.xml` all 200) — that shipped the whole token migration and the Phosphor icons. Everything below is committed on top and **not deployed yet**.
+
+### The initial bundle: 1.87 MB → 531 kB (T-092, ADR-076)
+
+The two build warnings had been scenery for long enough that the backlog row asked for the threshold to become a decision rather than a number that gets raised whenever it breaks. Measuring first turned out to answer a different question: all thirteen page components were imported eagerly, so **TipTap, ProseMirror and KaTeX downloaded in full before `/drafts` — the landing screen — could paint**, on an app served entirely by one Raspberry Pi behind a tunnel.
+
+Every route became `loadComponent`, with `withPreloading(PreloadAllModules)` so the split costs nothing on navigation: the chunks are fetched in the background once the first screen renders, and the editor's 996 kB is usually already in cache by the time anyone opens it. Transferred bytes on first load: **410 kB → 127 kB**. Only then were the budgets set against the new measurement — 650 kB warning / 800 kB error, 30/36 kB for component styles. **`ng build` is warning-free for the first time.**
+
+### `--t3` is no longer a text colour (T-082, ADR-074)
+
+The contrast pass started with a measurement — `tools/check-contrast.mjs`, which reads the tokens out of `styles.scss` and resolves the `color-mix()` derivations the way a browser does — and found **32 failing pairs** across both themes. One of them forced a decision rather than a fix: raising `--t3` to 4.5:1 lands it on `#676259` while `--t2` is `#6B655A`. **At AA this palette has room for two muted text tiers, not three.**
+
+So `--t3` stopped being a text colour. Its job is now placeholder, disabled and decoration, where 3:1 applies, and the 91 declarations that used it to say something moved to `--t2`. The visible consequence, stated plainly: **meta text across the app is darker now** — timestamps, counts, column headers, hints. The type scale still carries the hierarchy; colour no longer carries it twice. It is one token away from being reverted.
+
+`--t2`, `--accent`, `--danger`, `--ok` and `--warn` each moved one step towards black in the light theme — the smallest step that clears 4.5:1 on `--canvas`, which is the binding surface because contrast falls as the background darkens. Hue untouched. **`--border` is deliberately exempt**: it is a hairline between cards, never the only way to identify a control, and at 3:1 the whole warm-paper surface reads as a wireframe. The boundary that *is* an affordance got its own token, `--border-strong`.
+
+Also: the app's **first global focus ring** (it had exactly two `:focus-visible` rules before, both on surfaces only a developer opens), and 44px touch targets keyed on `pointer: coarse` rather than viewport width — the device this broke on is an iPad in landscape, 1024px wide and entirely touch-driven. All of it is asserted by `e2e/12-a11y.spec.ts`, so the smoke suite went **37 → 42**.
+
+### The icon inventory, generated rather than kept (T-080, ADR-075)
+
+All 58 icon-only controls already had a tooltip and none had an `aria-label`; that sweep was mechanical. The interesting half is `/dev/icons`, whose data is **generated from the call sites** — a hand-kept inventory answers "which icon means what here" only until the next commit.
+
+Its first run reported six meanings drawn with two icons each. **All six were false**: a busy button swaps its icon for `arrow-clockwise` with `class="spin"`, and the analyser was reading the spinner as if it meant what the button means. Teaching it that a spinner is a state dropped `arrow-clockwise` from 11 meanings to 3 and emptied the duplicate list entirely — the app is consistent here, and the tool that says so is only worth having because it was wrong first. What remains overloaded is `x` (12 labels), `trash` (5) and `plus` (5), the universal actions that legitimately repeat.
+
+Two hardcoded English strings fell out on the way: the shared modal's close button — the last one in the app's chrome, and it appears in every modal — and the editor's AI menu.
+
+### Long words (T-051, ADR-076)
+
+A dev-only pseudo-locale (`?pseudo=1`, or a toggle on `/dev/styleguide`) inflates every UI string ~30% and welds a real German compound onto its longest word, wrapped in `⟦ ⟧` so no screenshot can be mistaken for a translation. Three defects on the first run, none visible in English or Russian and all the same family:
+
+- **The page header could not shrink** (`flex: none` + `nowrap`), so every screen using it scrolled sideways and clipped its last button — the editor by 770px.
+- **The `/drafts` column headers could not ellipsize**, because `text-overflow` does not apply to a flex container. LANGUAGES printed straight over FOLDER. (The same trap `/posts` hit with long titles a day earlier — worth remembering as a class, not an incident.)
+- A toolbar group caption could widen its group and push the next group off the row.
+
+The rule that came out of it: a label shrinks and ellipses, it never widens its container, and it keeps its `title` so the full text stays one hover away.
+
+### Fixed on the way
+
+A flaky smoke test: the UI-language test reloaded the page while the profile POST was still in flight, so `/api/auth/me` answered with the old language and `adoptProfileLanguage` put the UI back — which looks exactly like a persistence bug. It now waits for the write, not just for the UI.
+
+**Verified**: `dotnet test` 442/442, smoke **42/42**, contrast 0 failing pairs in both themes, `ng build` warning-free.
+
 ## 2026-07-31 — Phase 11, T-079: the icon set is Phosphor, behind one component
 
 **206 call sites, 80 icons, 15 TypeScript files — and `@lucide/angular` is gone from `package.json`.**

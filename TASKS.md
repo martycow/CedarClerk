@@ -2,23 +2,30 @@
 
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
-## Now (31.07.2026): Phase 11 is unblocked — Q-12 next, then the token sweep
+## Now (01.08.2026): Phase 11 — the code-side work is done, the mockups are not
 
-Phase 10 closed (ADR-070). **v0.9.20 is in production** — 0.9.18 plus the two iPad fixes; health
-check green, and Marty verified both fixes on the device.
+**v0.9.21 is in production** (deployed 31.07): the whole token migration, all 12 screens, the type
+sweep, and Phosphor icons. Health green, zero migrations applied, bot running, blog and RSS 200.
 
-**Q-11 answered 31.07** — warm editorial base, density borrowed on the table screens, one palette
-and one type scale, two density modes. Recorded as **ADR-071** and as the Principles section at the
-top of `docs/DESIGN.md`; **T-075 is closed**. Phase 11 can start.
+**Since that deploy, four more Phase 11 rows closed and are committed but NOT deployed** — T-080
+(icon semantics + `/dev/icons`), T-082 (accessibility), T-051 (long words), T-092 (build budgets).
+Details in `docs/ROADMAP.md` Phase 11 and `CHANGELOG.md`; the decisions are ADR-074/075/076.
+`dotnet test` 442/442, smoke **42/42** (was 37), `ng build` warning-free for the first time.
 
-**Q-12 answered 31.07 — Phosphor** (ADR-072), as inlined SVG behind one `app-icon` component.
-**Tokens v2 and `/dev/styleguide` shipped the same day** — see `docs/ROADMAP.md` Phase 11.
+**What Marty should look at before the next deploy** — one of these is a deliberate visible change:
+- [ ] **Meta text is darker across the whole app** (ADR-074). At AA this palette had room for two
+  muted text tiers, not three, so `--t3` stopped being a text colour and 91 declarations moved to
+  `--t2`. If it reads as flat rather than as legible, it is one token away from being reverted.
+- [ ] **The editor now loads as a lazy chunk** (ADR-076). Preloaded in the background, so it should
+  feel identical — but it is the app's core screen and worth opening once on a real connection.
+- [ ] `/dev/icons` — the icon inventory, and `/dev/styleguide` — now with a pseudo-locale toggle.
 
+**Still open in Phase 11:**
 - [ ] **T-076 — mockups**, starting from `_Documents_/CedarClerk/Design-Handoff-2026-07-28/`.
-  Marty's tool, not Claude Code's.
-- [ ] **T-079 — the icon migration.** 79 icons in 203 places, `<svg lucideX>` → `app-icon`.
-- [ ] **T-081 + the T-077 tail** — screen by screen, each one moving its own hardcoded values onto
-  the tokens (314 `font-size` declarations, 44 hex literals) with the smoke suite green after each.
+  Marty's tool, not Claude Code's. **Spacing literals (9/11/14/18px) wait on it** — the scale has no
+  such steps and picking one is a mockup decision, not a sweep decision.
+- [ ] **T-101 — the blog's server-rendered surfaces** are still on the old token set (its own
+  `:root`, 21 hex in `BlogEndpoints.cs` + 6 in the renderer). ADR-071 principle 6, not yet done.
 - [x] ~~Stripe Customer Portal (T-073)~~ — **already active**, confirmed by Marty 31.07.
 - [ ] **T-052 (Terms/Privacy)** — Marty says he doesn't know what to put in the `[BRACKETED]` blanks,
   so the next step is not "fill them in" but sorting them: which need a legal entity/jurisdiction
@@ -32,7 +39,13 @@ top of `docs/DESIGN.md`; **T-075 is closed**. Phase 11 can start.
 Phase 11 screen migration rather than becoming a hotfix.
 
 ### Run the tests
-- `Scripts/e2e.ps1` — 37 smoke scenarios against an isolated scratch database, no bot token, ~45s.
+- `Scripts/e2e.ps1` — **42** smoke scenarios against an isolated scratch database, no bot token, ~45s.
+- `npm run check:contrast` (in `cedarclerk-web`) — every token pair against its WCAG threshold, both
+  themes. `SUGGEST=1` prints the nearest passing value, `VERBOSE=1` the passing pairs too. Also run
+  as part of the smoke suite, so it cannot rot.
+- `npm run icons:generate` — regenerates the icon data **and** the `/dev/icons` usage table. Run it
+  after moving or renaming icons, or the inventory quietly describes the previous commit.
+- `AUDIT=1 npx playwright test 99-audit -g pseudo` — the long-word screenshots (`.e2e-audit/75…78`).
 - `Scripts/e2e.ps1 -Serve` — the same seeded environment left running, for clicking through by hand.
 - `AUDIT=1 npx playwright test 99-audit` (in `cedarclerk-web`) — re-captures the audit screenshots
   into `.e2e-audit/`.
