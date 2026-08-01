@@ -2,6 +2,38 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-01 — Phase 12 starts: what a publish target is, and Telegram becomes one
+
+Marty answered the two questions that had Phase 12 blocked (ADR-077): **Bluesky first** — the only candidate needing neither app review nor payment, so the abstraction can be proved without anyone else's approval in the way — and **a cross-post is a standalone post with a manual per-target override**, not a teaser with a link. The second is the more expensive answer and the right one: ADR-021 already decided every destination is co-equal, and a network that only ever receives "read this elsewhere" is a billboard, not a destination. It also reshapes T-087 from "truncation rules" into per-target text storage plus a target tab in the editor.
+
+### T-083 — the abstraction, decided before it was written (ADR-078)
+
+A publish target is a **(tenant, network, remote account)** triple that owns credentials and can name what it created. Its obligations are three: name its network, describe its limits **as data** (an editor cannot display a method call, and the whole point of the capability matrix is warning the author before the send), and publish returning a receipt.
+
+What it is explicitly *not* asked to do is the more useful half, because each one is a plausible extension that would have leaked Telegram's model into every other network: it does not fetch statistics (member counts come from the bot, and most networks have no equivalent), it does not delete or edit (nothing in the product offers it, so `UnpublishAsync` would have been designed around `deleteMessage` and hope), and it does not run its own connect flow (bot-membership discovery, a handle plus an app password, and a review-gated OAuth have nothing in common).
+
+**The blog is deliberately not a publish target**: no credentials, no remote account, one destination per draft, and its publish action is a flag on a row this server already owns. Modelling it as one would mean an implementation whose credential is empty and whose "send" is a local UPDATE — uniformity bought by making the abstraction describe something it doesn't.
+
+### T-084 — and the first third-party credentials in the product
+
+`PublishCapabilities`/`PublishNetworks` in Core, `IPublishTarget`/`PublishRequest`/`PublishOutcome` in `Server/Publishing/`, the `PublishTarget` entity, and `PublishTargetSecrets`.
+
+`PublishOutcome` is deliberately the same shape as the `PublishResult` it replaces, so the refactor that followed stayed a move rather than a redesign. Failure is returned, not thrown: both callers (an endpoint and a Quartz job) have to turn it into a response or a stored error, and a job that dies on an unhandled exception loses the reason.
+
+The credentials are the part worth being careful about — a tenant's own social account, sitting in a database that is copied to a microSD card every night. They are encrypted with the DataProtection key ring that T-074 had already moved under `CEDAR_DATA_DIR` and into the backup. **The consequence is now written down rather than discovered later**: the key ring and `cedar.db` are a pair, so a database restored beside a lost ring leaves credentials unreadable — which is why `TryUnprotect` returns null and the owner is asked to reconnect, instead of a publish job crashing. Twelve tests, including that a different key ring cannot read the payload and that a flipped character reads as null.
+
+### T-085 — Telegram moved onto it, before any Bluesky code exists
+
+The order is the whole argument (ADR-070), and the code showed why: `PublishAsync` wrote `Draft.LastTelegramChatId/MessageId/Username` and a `ChannelPost` row, so an abstraction extracted after a second connector would have been shaped around those three columns.
+
+`TelegramPublishTarget` now holds the bot check, the media compression, the Blocks renderer, the entire `RichBlock`→wire mapping (moved out of `PostEndpoints` — "the one place that knows about Telegram.Bot" is the target, not an endpoint file), the send with both of its catch blocks, and the Telegram-shaped bookkeeping. What remains in `PostEndpoints.PublishAsync` mentions no network at all.
+
+`Channel` is **projected** into `PublishTarget`, not replaced: `ChannelPost`, `ChannelStatSnapshot` and `BotKnownChat` all key off it and none generalise. The projection is idempotent C# with 7 tests — including the sequence that would otherwise hit the unique index, disconnect and reconnect the same channel — rather than a one-shot `INSERT…SELECT` in the migration, because a data migration that runs against the production database deserves to be runnable twice and provable in a test.
+
+**No behaviour change** was the requirement: same order of operations, same error strings, same status codes, same rows written. `dotnet test` **461/461**, smoke **42/42**. Honest limit on that claim: the suite covers the refusal path (publishing to a channel the account does not own still 403s with the same wording); the successful send has no automated coverage without a bot token and wants a real post to `@testingandfun`.
+
+One inherited oddity was preserved rather than fixed, and recorded as **T-104**: the revision written after a send holds the document with media paths already rewritten to their Telegram-safe derivatives. It does not affect the publish guard, but it does make the next publish's diff show every compressed image as changed. Fixing it is a behaviour change, which is exactly what this refactor promised not to be.
+
 ## 2026-08-01 — Phase 11: accessibility, the icon inventory, long words, and a bundle that is a third of what it was
 
 **v0.9.21 went to production first** (health green, no migrations applied, no `warn:`/`fail:` in the startup log, bot running, `/` + `blog.mooexe.dev` + `/rss.xml` all 200) — that shipped the whole token migration and the Phosphor icons. Everything below is committed on top and **not deployed yet**.

@@ -1,4 +1,4 @@
-using CedarClerk.Server.Bot;
+using CedarClerk.Server.Publishing;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
 
@@ -8,7 +8,7 @@ namespace CedarClerk.Server;
 /// A job that checks if schedule posts should be posted
 /// </summary>
 [DisallowConcurrentExecution]
-public class PublishDueScheduledPostsJob(CedarDbContext db, TelegramBotService bot, IConfiguration cfg, MediaPaths media, ILogger<PublishDueScheduledPostsJob> logger) : IJob
+public class PublishDueScheduledPostsJob(CedarDbContext db, IEnumerable<IPublishTarget> targets, ILogger<PublishDueScheduledPostsJob> logger) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -19,7 +19,7 @@ public class PublishDueScheduledPostsJob(CedarDbContext db, TelegramBotService b
 
         foreach (var post in due)
         {
-            var result = await PostEndpoints.PublishAsync(post.DraftId, post.ChatId, post.OwnerId, db, bot, cfg, media, post.Format, post.Language, logger);
+            var result = await PostEndpoints.PublishAsync(post.DraftId, post.ChatId, post.OwnerId, db, targets, post.Format, post.Language, logger);
             if (result.Success)
             {
                 post.Status = "Sent";

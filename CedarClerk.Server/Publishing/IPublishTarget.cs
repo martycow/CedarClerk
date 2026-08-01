@@ -22,6 +22,14 @@ public record PublishRequest
     /// target derives one — that fallback is what keeps publishing from blocking on a second draft.
     /// </summary>
     public string? AuthorText { get; init; }
+
+    /// <summary>
+    /// How hard to compress media before sending: "small" / "standard" / "high". General rather
+    /// than a Telegram detail — every network caps image bytes (Telegram ~10MB by URL fetch,
+    /// Bluesky 1MB by blob upload), so "how much quality may be traded for fitting" is a choice
+    /// the author makes once and every target honours in its own units.
+    /// </summary>
+    public string CompressionLevel { get; init; } = "standard";
 }
 
 /// <summary>

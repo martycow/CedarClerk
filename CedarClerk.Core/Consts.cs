@@ -2,7 +2,7 @@
 
 public static class Consts
 {
-    public const string CurrentVersion = "0.9.22";
+    public const string CurrentVersion = "0.9.23";
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
 
@@ -130,6 +130,13 @@ public static class Consts
         public const int DefaultProStarsPrice = 150; // ~ $3.00
         public const int DefaultProPlusStarsPrice = 250; // ~ $5.00
         public const int DefaultTrialStarsPrice = 50; // ~ $1.00
+
+        /// <summary>
+        /// Characters a rich message accepts. Declared here for the capability matrix (T-086); the
+        /// editor's status bar carries its own copy of the number inside a localized string
+        /// ("6 / 32,768"), which predates this constant and is not worth an i18n change to unify.
+        /// </summary>
+        public const int MaxPostChars = 32_768;
     }
 
     public static class Anthropic

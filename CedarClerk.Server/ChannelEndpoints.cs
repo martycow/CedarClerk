@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using CedarClerk.Server.Publishing;
 using CedarClerk.Core;
 using CedarClerk.Server.Bot;
 using Microsoft.EntityFrameworkCore;
@@ -72,6 +73,9 @@ public static class ChannelEndpoints
                 OwnerId = uid,
             };
             db.Channels.Add(channel);
+            // T-085 — the general row publishing runs against, kept in step with the channel here
+            // rather than only at startup, so a channel connected today is publishable today.
+            await TelegramTargetProjection.EnsureAsync(db, channel);
 
             // Take the first snapshot right away so the stats UI isn't empty until the next 4 AM job run.
             try
@@ -103,6 +107,9 @@ public static class ChannelEndpoints
                 account.LastDeletedTelegramChatId = channel.TelegramChatId;
             }
 
+            // Deactivated, not deleted (T-085): the target row carries LastPublishedAt and is the
+            // remaining answer to "where did this post go" once the channel row is gone.
+            await TelegramTargetProjection.DeactivateAsync(db, channel);
             db.Channels.Remove(channel);
             await db.SaveChangesAsync();
             return Results.NoContent();
