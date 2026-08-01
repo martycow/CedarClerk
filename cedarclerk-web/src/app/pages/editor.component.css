@@ -2308,3 +2308,76 @@ input[type="datetime-local"]:focus-visible {
     color: var(--danger);
     font-weight: 600;
 }
+
+/* T-106 — the thread offer sits with the problem it answers, inside the destination section. */
+.thread-offer {
+    border: 1px solid var(--abord);
+    background: var(--asoft);
+    border-radius: var(--dens-radius);
+    padding: var(--dens-control-y) var(--dens-control-x);
+    margin-bottom: var(--space-2);
+}
+
+.thread-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--fs-ui);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.thread-toggle input {
+    accent-color: var(--accent);
+}
+
+/* The list is what makes the split checkable rather than a promise: a number, what the part opens
+   with, and how heavy it is. */
+.thread-parts {
+    list-style: none;
+    margin: var(--space-2) 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.thread-parts li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--fs-caption);
+    color: var(--t2);
+}
+
+.thread-part-no {
+    flex: none;
+    min-width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+}
+
+.thread-part-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+}
+
+.thread-part-meta {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-variant-numeric: tabular-nums;
+}

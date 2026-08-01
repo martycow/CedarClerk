@@ -192,9 +192,9 @@
                 <!--T-086: what Telegram will do to this document, asked before the send instead of
                 read off its error message afterwards. Blocking issues are what it would refuse;
                 the rest are what it would accept and quietly change.-->
-                @if (publishIssues().length) {
+                @if (visiblePublishIssues().length) {
                 <ul class="publish-issues">
-                    @for (issue of publishIssues(); track issue.code) {
+                    @for (issue of visiblePublishIssues(); track issue.code) {
                     <li [class.blocking]="issue.blocking">
                         <app-icon [name]="issue.blocking ? 'warning' : 'info'" size="sm"></app-icon>
                         {{ publishIssueText(issue) }}
@@ -202,6 +202,37 @@
                     }
                 </ul>
                 }
+                <!--T-106 — the remedy sits with the problem. Off by default and never automatic:
+                turning one post into eight messages is a loud act, and the author sees exactly
+                where the cuts land before agreeing to it.-->
+                @if (canSplitIntoThread()) {
+                <div class="thread-offer">
+                    <label class="thread-toggle">
+                        <input type="checkbox" [checked]="splitIntoThread()"
+                               (change)="toggleThread($any($event.target).checked)">
+                        <span>{{ t().editor.exportModal.splitIntoThread }}</span>
+                    </label>
+                    @if (splitIntoThread() && threadParts().length) {
+                    <p class="field-hint-inline">
+                        {{ t().editor.exportModal.threadSummary(threadParts().length) }}
+                        · {{ t().editor.exportModal.threadNotifyOnce }}
+                    </p>
+                    <ol class="thread-parts">
+                        @for (part of threadParts(); track part.index) {
+                        <li>
+                            <span class="thread-part-no">{{ part.index + 1 }}</span>
+                            <span class="thread-part-label">{{ threadPartLabel(part) }}</span>
+                            <span class="thread-part-meta">
+                                {{ part.characters.toLocaleString() }}
+                                @if (part.mediaCount) { · {{ part.mediaCount }} <app-icon name="image" size="xs"></app-icon> }
+                            </span>
+                        </li>
+                        }
+                    </ol>
+                    }
+                </div>
+                }
+
                 @if (selectedChannel(); as sc) {
                 <div class="channel-chosen">
                     <span class="channel-avatar" [style.background]="channelColor(sc.id)">{{ channelInitial(sc.title) }}</span>

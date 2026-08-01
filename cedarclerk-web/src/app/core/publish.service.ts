@@ -51,6 +51,15 @@ export interface PublishJob {
     publicUrl?: string | null;
 }
 
+/** One message of a thread, as the preview describes it (T-106). */
+export interface ThreadPart {
+    index: number;
+    startsWith: string | null;
+    characters: number;
+    mediaCount: number;
+    cutReason: 'heading' | 'size' | 'media' | 'end';
+}
+
 /** The author's own text for one network and language (T-087, ADR-077). */
 export interface TargetText { network: string; language: string; text: string; }
 
@@ -94,12 +103,19 @@ export class PublishService {
      * rows exist; what the networks do afterwards is read from `jobs()`. This is what stopped a
      * heavy post from timing out at the proxy while Telegram downloaded 30MB from us (ADR-080/081).
      */
-    queue(draftId: string, targetIds: string[], language?: string, confirmedFingerprint?: string) {
+    queue(draftId: string, targetIds: string[], language?: string, confirmedFingerprint?: string, splitIntoThread = false) {
         return firstValueFrom(this.http.post<{ jobs: PublishJob[] }>(
-            '/api/publish/jobs', { draftId, targetIds, language, confirmedFingerprint }));
+            '/api/publish/jobs', { draftId, targetIds, language, confirmedFingerprint, splitIntoThread }));
     }
 
     jobs(draftId: string) {
         return firstValueFrom(this.http.get<{ jobs: PublishJob[] }>(`/api/publish/jobs?draftId=${draftId}`));
+    }
+
+    /** T-106 — what the thread would look like, before anything is sent. */
+    threadPreview(draftId: string, network: string, language?: string) {
+        const lang = language ? `&language=${language}` : '';
+        return firstValueFrom(this.http.get<{ parts: ThreadPart[] }>(
+            `/api/publish/thread-preview?draftId=${draftId}&network=${network}${lang}`));
     }
 }

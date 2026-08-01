@@ -306,6 +306,18 @@ test('@audit pseudo-locale long words', async ({ page, context }) => {
     await page.goto('/drafts?pseudo=0');
 });
 
+test('@audit thread offer', async ({ page, context }) => {
+    const long = Array.from({ length: 8 }, (_, i) => `Часть ${i + 1}. ` + 'я'.repeat(5000));
+    const id = await createDraft(context, 'Длинный документ', long);
+    await page.goto(`/editor?draft=${id}`);
+    await expect(page.locator('.tiptap')).toBeVisible();
+    await page.locator('.export-trigger').click();
+    await page.locator('.dest-head input[type=checkbox]').nth(1).check();
+    await page.locator('.thread-toggle input').check();
+    await expect(page.locator('.thread-parts li').first()).toBeVisible();
+    await shot(page, '79-thread-offer');
+});
+
 test('@audit dark theme spot check', async ({ page, context }) => {
     await createDraft(context, 'Тёмная тема', ['Текст.']);
     await page.goto('/drafts');

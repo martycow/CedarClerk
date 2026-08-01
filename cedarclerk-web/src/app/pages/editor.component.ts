@@ -26,7 +26,7 @@ import { GlossaryService, GlossaryTermInput } from '../core/glossary.service';
 import { AppearancePanelComponent } from '../shared/appearance-panel.component';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, CompressionLevel, UpdatePreview } from '../core/posts.service';
-import { PublishService, PublishAccount, PublishJob } from '../core/publish.service';
+import { PublishService, PublishAccount, PublishJob, ThreadPart } from '../core/publish.service';
 import { DraftRevision, DraftRevisionDetail, RevisionDiff } from '../core/drafts.service';
 import { plainTextOf } from '../core/cedar-text.util';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES, endonymOf } from '../core/languages';
@@ -408,11 +408,50 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         try {
             const res = await this.posts.validate(id, 'telegram', this.lang());
             this.publishIssues.set(res.issues);
+            // The document may have changed since the last look — the parts are recomputed on demand.
+            this.threadParts.set([]);
         } catch {
             // A failed check must never stand between the author and publishing: the network's own
             // refusal is still there as the backstop.
             this.publishIssues.set([]);
         }
+    }
+
+    // ─── Publishing as a thread (T-106) ───────────────────────────────────────────────────────
+    // Never automatic: eight messages to a channel is a loud act, and the author has to ask for it
+    // and see where the cuts land first.
+    splitIntoThread = signal(false);
+    threadParts = signal<ThreadPart[]>([]);
+
+    /** True when the post is too big for one message in a way that splitting actually solves. */
+    canSplitIntoThread(): boolean {
+        return this.publishIssues().some(i => i.blocking && (i.code === 'too-long' || i.code === 'too-many-media'));
+    }
+
+    /** The issues left once the thread has answered the ones it answers. */
+    visiblePublishIssues() {
+        if (!this.splitIntoThread()) return this.publishIssues();
+        return this.publishIssues().filter(i => i.code !== 'too-long' && i.code !== 'too-many-media');
+    }
+
+    async toggleThread(on: boolean) {
+        this.splitIntoThread.set(on);
+        if (!on || this.threadParts().length > 0) return;
+
+        const id = this.currentId();
+        if (!id) return;
+        try {
+            const { parts } = await this.publishApi.threadPreview(id, 'telegram', this.lang());
+            this.threadParts.set(parts);
+        } catch {
+            // Without a preview the switch is a promise nobody can check — so it goes back off.
+            this.threadParts.set([]);
+            this.splitIntoThread.set(false);
+        }
+    }
+
+    threadPartLabel(part: ThreadPart): string {
+        return part.startsWith?.trim() || this.t().editor.exportModal.threadPartUntitled;
     }
 
     publishIssueText(issue: { code: string; actual: number; limit: number }): string {
@@ -2256,7 +2295,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             // stopping at the first one.
             const queued: { lang: string; jobId: string }[] = [];
             for (const lang of this.exportLangs()) {
-                const { jobs } = await this.publishApi.queue(id, [targetId], lang, this.confirmedFingerprints[lang]);
+                const { jobs } = await this.publishApi.queue(id, [targetId], lang, this.confirmedFingerprints[lang], this.splitIntoThread());
                 for (const job of jobs) queued.push({ lang, jobId: job.id });
             }
 
