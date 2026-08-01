@@ -38,7 +38,10 @@ public class PublishJobRunner(
     private static bool IsRetryable(int statusCode) =>
         statusCode is StatusCodes.Status502BadGateway
                    or StatusCodes.Status503ServiceUnavailable
-                   or StatusCodes.Status504GatewayTimeout;
+                   or StatusCodes.Status504GatewayTimeout
+                   // A rate limit is the one 4xx that means "the same request, later" rather than
+                   // "not this request".
+                   or StatusCodes.Status429TooManyRequests;
 
     /// <summary>Kicks a job off now, without waiting for the sweeper — what makes publishing feel immediate.</summary>
     public void Kick(Guid jobId)

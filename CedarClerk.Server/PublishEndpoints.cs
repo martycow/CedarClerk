@@ -129,7 +129,8 @@ public static class PublishEndpoints
             QueuePublishRequest req,
             ClaimsPrincipal user,
             CedarDbContext db,
-            PublishJobRunner runner) =>
+            PublishJobRunner runner,
+            IEnumerable<IPublishTarget> publishers) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == req.DraftId && d.OwnerId == uid);
@@ -157,6 +158,33 @@ public static class PublishEndpoints
                     var fresh = await DraftRevisionService.PreviewAsync(db, draft, language, kind, destination);
                     return Results.Json(new { error = ErrorMessages.PublishConfirmationStale, preview = fresh },
                         statusCode: StatusCodes.Status409Conflict);
+                }
+            }
+
+            // T-086's check, enforced rather than merely displayed (01.08.2026). It was advisory,
+            // shown in the export window — so a document 36% over Telegram's character limit with
+            // ten times the media it takes was still queued, refused by the network, and reported
+            // as "wrong type of the web page content", which says nothing about either. A blocking
+            // issue is the network's own verdict known in advance; queuing anyway only delays it.
+            var document = await DraftRevisionService.ResolveAsync(db, draft, language);
+            if (document is not null)
+            {
+                var referenced = CedarPackage.FindReferencedMediaPaths(document.Value.CedarJson);
+                var sizes = referenced.Count == 0
+                    ? new Dictionary<string, long>()
+                    : await db.Assets.Where(a => referenced.Contains(a.LocalPath))
+                        .ToDictionaryAsync(a => a.LocalPath, a => a.SizeBytes);
+
+                foreach (var target in targets)
+                {
+                    var implementation = publishers.FirstOrDefault(p => p.Network == target.Network);
+                    if (implementation is null) continue;
+                    var blocking = PublishValidator.Validate(document.Value.CedarJson, implementation.Capabilities, sizes)
+                        .Where(i => i.Blocking)
+                        .ToList();
+                    if (blocking.Count > 0)
+                        return Results.Json(new { error = ErrorMessages.PublishWontFit(target.Network), issues = blocking, network = target.Network },
+                            statusCode: StatusCodes.Status422UnprocessableEntity);
                 }
             }
 

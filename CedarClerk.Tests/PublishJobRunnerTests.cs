@@ -214,4 +214,30 @@ public class PublishJobRunnerTests
         Assert.Equal(0, target.Calls);
         Assert.Contains("check the destination", stored.Error);
     }
+
+    // Found in production 01.08.2026: a document Telegram had *refused* (400) was sent three times.
+    // TelegramPublishTarget mapped every ApiRequestException to 502, and 502 reads as "could not
+    // have posted". The status a network returns has to be the network's own verdict.
+    [Fact]
+    public async Task A_rate_limit_is_retried_but_a_content_refusal_is_not()
+    {
+        foreach (var (status, expected, expectedCalls) in new[]
+                 {
+                     (StatusCodes.Status429TooManyRequests, PublishJobStatus.Pending, 1),
+                     (StatusCodes.Status400BadRequest, PublishJobStatus.Failed, 1),
+                 })
+        {
+            var (provider, connection, target) = Build();
+            using var _ = connection;
+            var (draftId, targetId) = await SeedAsync(provider);
+            var job = await QueueAsync(provider, draftId, targetId);
+            target.Next = () => PublishOutcome.Fail("refused", status);
+
+            await Runner(provider).SweepAsync(CancellationToken.None);
+
+            var stored = await ReadAsync(provider, job.Id);
+            Assert.Equal(expected, stored.Status);
+            Assert.Equal(expectedCalls, target.Calls);
+        }
+    }
 }

@@ -26,6 +26,14 @@ public static class ErrorMessages
     // T-089 — the one Bluesky failure an author can act on: the stored app password no longer opens
     // a session (revoked in Bluesky's settings, or unreadable because the DataProtection key ring
     // and the database were separated — see PublishTargetSecrets).
+    /// <summary>
+    /// A document the network would refuse, known before sending (T-086). The issue list travels
+    /// beside this so the client can say WHICH limit — this line only says whose verdict it is.
+    /// </summary>
+    public static string PublishWontFit(string network) => Ru(
+        $"Пост не помещается в ограничения сети {network} — исправьте отмеченное и попробуйте снова.",
+        $"This post does not fit {network}'s limits — fix what is listed and try again.");
+
     public static string BlueskyReconnect => Ru(
         "Не удалось войти в Bluesky — переподключите аккаунт в настройках.",
         "Could not sign in to Bluesky — reconnect the account in settings.");

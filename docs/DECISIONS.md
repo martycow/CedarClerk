@@ -786,3 +786,22 @@ The reason this is the more expensive answer and still the right one: a teaser-a
 ADR-065's overwrite guard moved with the flow rather than being dropped: the queue endpoint still refuses to re-send over a live post without the fingerprint that was previewed, now per destination, and Bluesky records its own revision so the guard has a baseline there too.
 
 **Consequence**: `/api/posts/export` still exists and still works — the scheduled-post job publishes through the same `PublishAsync` — but the editor no longer uses it. Six tests cover the runner, and the two that earn their place are the ones asserting that three sweeps produce one post and that an abandoned job produces none.
+
+### ADR-082 — "Wrong type of the web page content" meant the post was too big for Telegram (01.08.2026)
+
+**Context**: with the queue in place (ADR-081), publishing the design doc stopped timing out and started reporting what Telegram actually says: `Bad Request: wrong type of the web page content (code 400)`. `.claude/rules/telegram-bot.md` already records that this string means at least three different things; this adds a fourth, and it is the one nobody would guess from the wording.
+
+**What was measured, not assumed** — every candidate was tested against the live Bot API with the real URLs:
+- The 15MB audio the post carries: **sends fine**. The 15MB video: fine. Every YouTube thumbnail the renderer generates: fine.
+- All 105 referenced files return real media content types over the public URL, all exist on disk, none is a 404 falling through to the SPA's `index.html`.
+- A 20MB JPEG *without* a Telegram-safe derivative does fail — but with a different message (`failed to get HTTP URL content`), and no such file is referenced by this post.
+
+**The answer came from our own check.** Running `PublishValidator` (T-086) against the real document: **44,474 characters against Telegram's 32,768 limit, and 105 media items against a limit of 10.** The document is a game design document; it is not a Telegram post and cannot become one. Telegram's error names neither fact.
+
+**Two defects this exposed, both ours:**
+
+1. **A refusal was retried three times.** `TelegramPublishTarget` mapped *every* `ApiRequestException` to HTTP 502, and the queue reads 502 as "could not have posted, try again". So a document Telegram had already judged was sent again twice. Telegram's own code is now what travels: 400/401/403/404 are verdicts and are final, 429 is a rate limit and is the one 4xx worth repeating, everything else stays 502.
+
+2. **The pre-send check was advisory.** T-086 shipped hours earlier and flags exactly this document as blocking — but only in the export window, where it can be scrolled past. The queue now enforces it: a blocking issue is the network's own verdict known in advance, and queueing anyway just delays the same answer by three attempts and two minutes. `POST /api/publish/jobs` answers 422 with the issue list.
+
+**What is not being done about it**: nothing that would make a 44k-character, 105-image document into a Telegram post. Splitting a document into a thread is real work with real decisions behind it (where to cut, how numbering reads, what happens to a table that spans a cut) and belongs to whoever wants that feature, not to a bug fix. The blog already holds documents this size, and the cross-link exists to point Telegram at them.

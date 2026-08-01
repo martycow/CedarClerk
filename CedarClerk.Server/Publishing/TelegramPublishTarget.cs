@@ -147,7 +147,17 @@ public class TelegramPublishTarget(
             // instead of letting this bubble up into a bare unhandled-exception 500.
             logger.LogError(ex, "Telegram rejected publish of draft {DraftId} to {ChatId} (code {ErrorCode})", request.DraftId, chatId, ex.ErrorCode);
             var retryHint = ex.Parameters?.RetryAfter is { } retryAfter ? $" — retry after {retryAfter}s" : "";
-            return PublishOutcome.Fail($"Telegram rejected the post: {ex.Message} (code {ex.ErrorCode}){retryHint}", StatusCodes.Status502BadGateway);
+            // Telegram's own code, not a blanket 502 (fixed 01.08.2026). Everything used to come
+            // back as 502, which T-090's queue reads as "could not have posted, try again" — so a
+            // document Telegram had *refused* was sent three times before being reported. A 400 is
+            // the network's verdict on the content and repeating it only wastes two more minutes.
+            var status = ex.ErrorCode switch
+            {
+                400 or 401 or 403 or 404 => ex.ErrorCode,
+                429 => StatusCodes.Status429TooManyRequests,
+                _ => StatusCodes.Status502BadGateway,
+            };
+            return PublishOutcome.Fail($"Telegram rejected the post: {ex.Message} (code {ex.ErrorCode}){retryHint}", status);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
