@@ -30,6 +30,18 @@ public static class GlossaryEndpoints
             return Results.Ok(terms);
         });
 
+        // T-040 — the Russian forms of a term, proposed rather than applied. Russian inflects, so
+        // "рендерер" misses "рендерера"; the author reads the suggestions into the alias field and
+        // deletes what is wrong, which is the only safe way to let a suffix rule near morphology.
+        group.MapPost("/suggest-forms", (SuggestFormsRequest req) =>
+        {
+            var language = req.Language ?? Languages.Russian;
+            var forms = language == Languages.Russian
+                ? RussianDeclensions.Suggest(req.Term ?? "")
+                : [];
+            return Results.Ok(new { forms });
+        });
+
         group.MapPost("/", async (UpsertTermRequest req, ClaimsPrincipal user, CedarDbContext db) =>
         {
             if (Validate(req) is { } error) return error;
@@ -295,6 +307,8 @@ public static class GlossaryEndpoints
             r.Aliases.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
             r.IsCaseSensitive)).ToList();
     }
+
+    public record SuggestFormsRequest(string Term, string? Language);
 
     private static IResult? Validate(UpsertTermRequest req)
     {

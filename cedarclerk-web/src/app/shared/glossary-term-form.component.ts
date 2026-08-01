@@ -2,7 +2,7 @@ import { Component, Input, OnInit, computed, inject, output, signal } from '@ang
 import { FormsModule } from '@angular/forms';
 import { LocaleService } from '../core/i18n/locale.service';
 import { AssetsService } from '../core/assets.service';
-import { GlossaryTermInput } from '../core/glossary.service';
+import { GlossaryService, GlossaryTermInput } from '../core/glossary.service';
 import { CONTENT_LANGUAGES, DEFAULT_PRIMARY_LANGUAGE } from '../core/languages';
 import { IconComponent } from './icon.component';
 
@@ -45,6 +45,17 @@ import { IconComponent } from './icon.component';
             <p class="field-hint-inline">{{ t().glossary.aliasesHint }}</p>
         </label>
 
+        <!--T-040 — proposes the Russian forms of the term. They land in the field above, where the
+        author reads them and deletes what is wrong: a suffix rule may suggest, never decide.-->
+        @if (canSuggest()) {
+        <button type="button" class="btn-ghost" (click)="suggestForms()" [disabled]="suggesting()">
+            @if (suggesting()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+            @else { <app-icon name="sparkle" size="sm"></app-icon> }
+            {{ t().glossary.suggestForms }}
+        </button>
+        @if (suggestedNothing()) { <p class="field-hint-inline">{{ t().glossary.suggestNothing }}</p> }
+        }
+
         <label class="term-case-toggle">
             <input type="checkbox" [checked]="caseSensitive()"
                    (change)="caseSensitive.set($any($event.target).checked)">
@@ -79,6 +90,7 @@ import { IconComponent } from './icon.component';
 export class GlossaryTermFormComponent implements OnInit {
     private locale = inject(LocaleService);
     private assets = inject(AssetsService);
+    private glossary = inject(GlossaryService);
     t = this.locale.t;
     readonly contentLanguages = CONTENT_LANGUAGES;
 
@@ -126,6 +138,35 @@ export class GlossaryTermFormComponent implements OnInit {
 
     canSave(): boolean {
         return this.term.trim().length > 0 && this.description.trim().length > 0;
+    }
+
+    suggesting = signal(false);
+    suggestedNothing = signal(false);
+
+    /** Russian only: the other content languages either do not inflect this way or need real morphology. */
+    canSuggest(): boolean {
+        return this.language() === 'ru' && this.term.trim().length > 2;
+    }
+
+    async suggestForms() {
+        this.suggesting.set(true);
+        this.suggestedNothing.set(false);
+        try {
+            const { forms } = await this.glossary.suggestForms(this.term.trim(), this.language());
+            if (forms.length === 0) { this.suggestedNothing.set(true); return; }
+
+            // Merged, not replaced: whatever the author already wrote is theirs.
+            const existing = this.aliases.split(',').map(a => a.trim()).filter(Boolean);
+            const merged = [...existing];
+            for (const form of forms) {
+                if (!merged.some(a => a.toLowerCase() === form.toLowerCase())) merged.push(form);
+            }
+            this.aliases = merged.join(', ');
+        } catch {
+            this.suggestedNothing.set(true);
+        } finally {
+            this.suggesting.set(false);
+        }
     }
 
     // The image goes through the ordinary asset upload, like the avatar (IF1): same whitelist,

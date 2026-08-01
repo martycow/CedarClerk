@@ -674,6 +674,8 @@ export const en = {
         aliases: 'Other spellings',
         aliasesPlaceholder: 'comma, separated, forms',
         aliasesHint: 'Matched as well as the term itself. Useful for inflected languages — "рендерер, рендерера, рендереру".',
+        suggestForms: 'Suggest word forms',
+        suggestNothing: 'No forms suggested — this word does not fit a pattern worth guessing at.',
         caseSensitive: 'Case-sensitive',
         caseSensitiveHint: 'Match only this exact spelling — for terms where the casing is the meaning (IT vs it)',
         previewTitle: 'Preview',

@@ -62,4 +62,9 @@ export class GlossaryService {
         return firstValueFrom(this.http.post<{ terms: GlossaryTerm[]; skipped: number }>(
             '/api/glossary/translate-all', { sourceLanguage, targetLanguage }));
     }
+
+    /** T-040 — proposed Russian forms for a term; the author accepts them into the alias field. */
+    suggestForms(term: string, language: string) {
+        return firstValueFrom(this.http.post<{ forms: string[] }>('/api/glossary/suggest-forms', { term, language }));
+    }
 }
