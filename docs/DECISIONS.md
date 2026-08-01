@@ -877,3 +877,15 @@ The test that matters is the incident itself: one browser fills in the form, a s
 **Cost, accepted**: Telegram's fetch now always misses Cloudflare's cache and hits the Pi. Publishes are a handful of requests a few times a week against media Cloudflare still caches for every reader; the origin can carry the author's own publishes.
 
 **Superseded**: the 16.07 "don't add a cache-buster" conclusion in `telegram-bot.md` — updated to point here.
+
+### ADR-088 — Telegram gets media as uploaded bytes, not as URLs to fetch (01.08.2026)
+
+**Context**: the evening's re-run of the threaded design doc (v0.9.33, with ADR-087's cache-buster live) reproduced the same failure shape with a new name: parts 1–2 (one media between them) sent, part 3 — the first part with nine images — died with `failed to get HTTP URL content`, parts 4–23 held back. Not flood control: Telegram's anti-flood answers 429 with `retry_after`, which the queue already retries. This is Telegram's *fetcher* failing to download nine files at once — and ADR-087 is complicit: the `?v=` stamp makes every fetch miss Cloudflare's cache and go straight to the Pi, whose residential upload cannot serve ~10–15MB inside the fetcher's patience. The morning's "wrong type of the web page content" was the same storm wearing its cached aftermath.
+
+**Decision: media that lives in this server's own media directory is uploaded to Telegram as multipart bytes** (`InputFileStream`), not referenced by URL. The URL round-trip — Kestrel → tunnel → Cloudflare → Telegram's fetcher, with its timeout, its concurrency and its negative cache — existed only because the send *started* as "give Telegram a link". The files sit on the same disk as the process; handing Telegram the bytes removes the whole failure class: nothing to fetch, nothing to time out, nothing to cache-poison. Upload limits are also simply better (photos 10MB vs ~5 by URL, video/audio 50MB), and the app's own `TelegramSafeImageBytes` derivatives already sit under them.
+
+**External media keeps the URL path** — YouTube thumbnails are the current case: tiny files on Google's CDN, exactly what URL fetch is good at. They also keep ADR-087's per-send stamp, which now applies *only* to URL-delivered media (that ADR is narrowed, not repealed: its diagnosis of Telegram's negative cache stands, and the stamp is still the defence for anything Telegram fetches itself).
+
+**An escape hatch, not a setting**: `Cedar:Telegram:MediaDelivery` = `upload` (default) / `url` in server config flips the whole target back to URL delivery — one line in the systemd drop-in if upload misbehaves in the field, no redeploy. It is deliberately NOT an author-facing option: "which bytes should Telegram receive" has one correct answer, and a setting whose right value is always the default is UI debt.
+
+**Resolution rule**: a media URL whose path contains `/media/` and whose trailing filename exists in the data dir's `media/` folder is uploaded; anything else stays a URL. Existence on disk is the test — a foreign URL that merely contains `/media/` falls through to URL delivery.

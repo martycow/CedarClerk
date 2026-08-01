@@ -4,7 +4,11 @@ Human-readable, grouped by session/date, derived from `git log` (33 commits, `6a
 
 ## 2026-08-01 (evening) — the first real thread run, and what it taught
 
-**v0.9.33.** The design doc's first threaded publish sent parts 1–2, collapsed part 1 behind Telegram's "Show more", failed part 3, held back 4–12 — and reported the *held-back* message as the error. One run, four fixes. `dotnet test` **567/567**.
+**v0.9.33, then v0.9.34.** The design doc's first threaded publish sent parts 1–2, collapsed part 1 behind Telegram's "Show more", failed part 3, held back 4–12 — and reported the *held-back* message as the error. One run, four fixes — and the re-run after them taught the fifth. `dotnet test` **571/571**.
+
+### Telegram gets media as uploaded bytes, not URLs (ADR-088, v0.9.34)
+
+The re-run on v0.9.33 failed part 3 again — `failed to get HTTP URL content`, on the first part with nine images. Not flood control (that answers 429, which the queue retries): Telegram's *fetcher* choking on nine concurrent downloads from the Pi, made worse by the fresh cache-buster sending every fetch past Cloudflare's cache to a residential upload link. The fix removes the round-trip instead of tuning it: media that lives in the server's own media directory is now **uploaded as multipart bytes** (`InputFileStream`) — nothing to fetch, nothing to time out, nothing to cache-poison, and the upload limits are better than the fetch limits anyway. External media (YouTube thumbnails) keeps the URL path and the ADR-087 stamp. `Cedar:Telegram:MediaDelivery=url` in the systemd drop-in is the no-redeploy escape hatch; it is deliberately not an author-facing setting — "which bytes should Telegram receive" has one correct answer.
 
 ### A thread part gets its own character budget (ADR-086)
 

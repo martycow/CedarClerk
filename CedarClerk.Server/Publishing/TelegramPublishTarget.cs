@@ -157,15 +157,32 @@ public class TelegramPublishTarget(
             blocks.Add(new RichFooterBlock(new RichRunText($"{counted.Index + 1}/{counted.Count}")));
         }
 
-        // ADR-087 — a per-send cache-buster on every media URL. Telegram caches a *failed* fetch
-        // per URL and keeps refusing it after the origin recovers (second incident 01.08.2026:
-        // one poisoned URL killed part 3 of a thread and held back parts 4–12). A fresh `?v=`
-        // makes each send a URL Telegram has never fetched. The stored document, the blog and the
-        // .cedar export never see the stamp — it exists only on this wire.
+        // ADR-088 — media on this server's own disk is uploaded to Telegram as multipart bytes.
+        // The URL round-trip (Kestrel → tunnel → Cloudflare → Telegram's fetcher, with its
+        // timeout, its concurrency and its negative cache) is what produced both "wrong type of
+        // the web page content" and "failed to get HTTP URL content" on perfectly served files.
+        // External URLs (YouTube thumbnails) still go by URL and keep ADR-087's per-send stamp —
+        // the stamp now applies ONLY to what Telegram fetches itself.
+        var deliverByUpload = !string.Equals(cfg[Consts.Telegram.MediaDeliveryCfg],
+            Consts.Telegram.MediaDeliveryUrl, StringComparison.OrdinalIgnoreCase);
         var cacheStamp = DateTime.UtcNow.Ticks.ToString("x");
-        blocks = blocks.Select(b => WithMediaCacheBuster(b, cacheStamp)).ToList();
+        var opened = new List<FileStream>();
+        InputFile ResolveMedia(string url)
+        {
+            if (deliverByUpload && TryLocalMediaFileName(url, out var fileName))
+            {
+                var path = Path.Combine(media.Dir, fileName);
+                if (File.Exists(path))
+                {
+                    var stream = File.OpenRead(path);
+                    opened.Add(stream);
+                    return InputFile.FromStream(stream, fileName);
+                }
+            }
+            return StampUrl(url, cacheStamp);
+        }
 
-        var content = new InputRichMessage { Blocks = blocks.Select(ToInputRichBlock).ToList() };
+        var content = new InputRichMessage { Blocks = blocks.Select(b => ToInputRichBlock(b, ResolveMedia)).ToList() };
 
         Message msg;
         try
@@ -208,6 +225,11 @@ public class TelegramPublishTarget(
             logger.LogError(ex, "Unexpected failure publishing draft {DraftId} to {ChatId}", request.DraftId, chatId);
             return PublishOutcome.Fail($"Publish failed: {ex.GetType().Name}: {ex.Message}", StatusCodes.Status500InternalServerError);
         }
+        finally
+        {
+            // The multipart request has been fully sent (or abandoned) by here either way.
+            foreach (var stream in opened) stream.Dispose();
+        }
 
         var username = await ResolveChannelUsernameAsync(db, chatId, ct);
         draft.LastTelegramChatId = chatId;
@@ -232,47 +254,56 @@ public class TelegramPublishTarget(
     // CedarToTelegramBlocksRenderer) onto the real Telegram.Bot wire types. Core stays free of a
     // Telegram.Bot dependency on purpose — this is the one place that knows about it, and T-085
     // moved it here from PostEndpoints because "the one place" is this target, not the endpoint.
-    public static InputRichBlock ToInputRichBlock(CedarRichBlock block) => block switch
+    //
+    // `media` decides what Telegram receives for a media URL — the bytes of a local file (ADR-088)
+    // or the URL itself. The resolver-free overload keeps URL delivery for tests and callers that
+    // have no disk to read from.
+    public static InputRichBlock ToInputRichBlock(CedarRichBlock block) => ToInputRichBlock(block, url => url);
+
+    public static InputRichBlock ToInputRichBlock(CedarRichBlock block, Func<string, InputFile> media) => block switch
     {
         RichParagraphBlock p => new InputRichBlockParagraph { Text = ToRichText(p.Text) },
         RichHeadingBlock h => new InputRichBlockSectionHeading { Text = ToRichText(h.Text), Size = h.Level },
-        RichListBlock l => new InputRichBlockList { Items = l.Items.Select(ToListItem).ToList() },
+        RichListBlock l => new InputRichBlockList { Items = l.Items.Select(i => ToListItem(i, media)).ToList() },
         RichCodeBlock c => new InputRichBlockPreformatted { Text = new RichTextText { Text = c.Code }, Language = c.Language },
-        RichQuoteBlock q => new InputRichBlockBlockQuotation { Blocks = q.Blocks.Select(ToInputRichBlock).ToList() },
+        RichQuoteBlock q => new InputRichBlockBlockQuotation { Blocks = q.Blocks.Select(b => ToInputRichBlock(b, media)).ToList() },
         RichDividerBlock => new InputRichBlockDivider(),
-        RichPhotoBlock ph => new InputRichBlockPhoto { Photo = new InputMediaPhoto(ph.Url), Caption = ToCaption(ph.Caption) },
-        RichVideoBlock v => new InputRichBlockVideo { Video = new InputMediaVideo(v.Url), Caption = ToCaption(v.Caption) },
+        RichPhotoBlock ph => new InputRichBlockPhoto { Photo = new InputMediaPhoto(media(ph.Url)), Caption = ToCaption(ph.Caption) },
+        RichVideoBlock v => new InputRichBlockVideo { Video = new InputMediaVideo(media(v.Url)), Caption = ToCaption(v.Caption) },
         // Title is what Telegram labels the clip with; without it the player shows the generated
         // asset_<guid>.mp3 filename from the URL (I16).
-        RichAudioBlock a => new InputRichBlockAudio { Audio = new InputMediaAudio(a.Url) { Title = a.Title }, Caption = ToCaption(a.Caption) },
-        RichSlideshowBlock s => new InputRichBlockSlideshow { Blocks = s.Urls.Select(u => (InputRichBlock)new InputRichBlockPhoto { Photo = new InputMediaPhoto(u) }).ToList() },
-        RichCollageBlock co => new InputRichBlockCollage { Blocks = co.Urls.Select(u => (InputRichBlock)new InputRichBlockPhoto { Photo = new InputMediaPhoto(u) }).ToList() },
+        RichAudioBlock a => new InputRichBlockAudio { Audio = new InputMediaAudio(media(a.Url)) { Title = a.Title }, Caption = ToCaption(a.Caption) },
+        RichSlideshowBlock s => new InputRichBlockSlideshow { Blocks = s.Urls.Select(u => (InputRichBlock)new InputRichBlockPhoto { Photo = new InputMediaPhoto(media(u)) }).ToList() },
+        RichCollageBlock co => new InputRichBlockCollage { Blocks = co.Urls.Select(u => (InputRichBlock)new InputRichBlockPhoto { Photo = new InputMediaPhoto(media(u)) }).ToList() },
         RichTableBlock t => new InputRichBlockTable { Cells = t.Rows.Select(row => row.Select(ToTableCell).ToList()).ToList(), IsBordered = true },
         RichMathBlock m => new InputRichBlockMathematicalExpression { Expression = m.Latex },
-        RichDetailsBlock d => new InputRichBlockDetails { Summary = ToRichText(d.Summary), Blocks = d.Blocks.Select(ToInputRichBlock).ToList(), IsOpen = d.IsOpen },
+        RichDetailsBlock d => new InputRichBlockDetails { Summary = ToRichText(d.Summary), Blocks = d.Blocks.Select(b => ToInputRichBlock(b, media)).ToList(), IsOpen = d.IsOpen },
         RichFooterBlock f => new InputRichBlockFooter { Text = ToRichText(f.Text) },
         RichAnchorBlock an => new InputRichBlockAnchor { Name = an.Name },
         _ => throw new NotSupportedException($"Unmapped RichBlock: {block.GetType().Name}")
     };
 
-    /// <summary>ADR-087 — clones a block with the cache-buster stamp on every media URL in it.</summary>
-    public static CedarRichBlock WithMediaCacheBuster(CedarRichBlock block, string stamp) => block switch
+    /// <summary>
+    /// ADR-088 — the trailing filename of a URL that points into this server's own /media/, or
+    /// false for anything foreign. Existence on disk is the caller's check, not this one's.
+    /// </summary>
+    public static bool TryLocalMediaFileName(string url, out string fileName)
     {
-        RichPhotoBlock p => p with { Url = StampUrl(p.Url, stamp) },
-        RichVideoBlock v => v with { Url = StampUrl(v.Url, stamp) },
-        RichAudioBlock a => a with { Url = StampUrl(a.Url, stamp) },
-        RichSlideshowBlock s => s with { Urls = s.Urls.Select(u => StampUrl(u, stamp)).ToList() },
-        RichCollageBlock c => c with { Urls = c.Urls.Select(u => StampUrl(u, stamp)).ToList() },
-        RichQuoteBlock q => q with { Blocks = q.Blocks.Select(b => WithMediaCacheBuster(b, stamp)).ToList() },
-        RichDetailsBlock d => d with { Blocks = d.Blocks.Select(b => WithMediaCacheBuster(b, stamp)).ToList() },
-        RichListBlock l => l with
-        {
-            Items = l.Items.Select(i => i with { Blocks = i.Blocks.Select(b => WithMediaCacheBuster(b, stamp)).ToList() }).ToList(),
-        },
-        _ => block,
-    };
+        fileName = "";
+        var idx = url.LastIndexOf("/media/", StringComparison.Ordinal);
+        if (idx < 0) return false;
+        var name = url[(idx + "/media/".Length)..];
+        var query = name.IndexOf('?');
+        if (query >= 0) name = name[..query];
+        // A name with path separators is not one of our generated asset names — refuse rather
+        // than let a crafted URL reach outside the media directory.
+        if (name.Length == 0 || name.Contains('/') || name.Contains('\\') || name.Contains("..")) return false;
+        fileName = name;
+        return true;
+    }
 
-    private static string StampUrl(string url, string stamp) =>
+    /// <summary>ADR-087 — the per-send cache-buster, now for URL-delivered media only.</summary>
+    public static string StampUrl(string url, string stamp) =>
         url.Contains('?') ? $"{url}&v={stamp}" : $"{url}?v={stamp}";
 
     public static RichBlockCaption? ToCaption(RichRun? caption) =>
@@ -297,9 +328,11 @@ public class TelegramPublishTarget(
         Valign = RichBlockTableCellValign.Middle,
     };
 
-    public static InputRichBlockListItem ToListItem(RichListItem item) => new()
+    public static InputRichBlockListItem ToListItem(RichListItem item) => ToListItem(item, url => url);
+
+    public static InputRichBlockListItem ToListItem(RichListItem item, Func<string, InputFile> media) => new()
     {
-        Blocks = item.Blocks.Select(ToInputRichBlock).ToList(),
+        Blocks = item.Blocks.Select(b => ToInputRichBlock(b, media)).ToList(),
         HasCheckbox = item.HasCheckbox,
         IsChecked = item.IsChecked,
         Value = item.OrderValue

@@ -2,7 +2,7 @@
 
 public static class Consts
 {
-    public const string CurrentVersion = "0.9.33";
+    public const string CurrentVersion = "0.9.34";
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
 
@@ -145,6 +145,13 @@ public static class Consts
         /// shows the threshold sits elsewhere.
         /// </summary>
         public const int ThreadPartChars = 3_000;
+
+        /// <summary>
+        /// ADR-088 escape hatch: "upload" (default) sends own media as multipart bytes; "url"
+        /// flips the target back to URL delivery. Server config only, never author-facing.
+        /// </summary>
+        public const string MediaDeliveryCfg = "Cedar:Telegram:MediaDelivery";
+        public const string MediaDeliveryUrl = "url";
     }
 
     public static class Anthropic
