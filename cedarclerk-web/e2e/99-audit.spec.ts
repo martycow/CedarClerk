@@ -318,6 +318,38 @@ test('@audit thread offer', async ({ page, context }) => {
     await shot(page, '79-thread-offer');
 });
 
+// T-009 — the screenshot the landing shows. Seeded with text worth reading rather than the smoke
+// suite's filler: this one is looked at by strangers, and "Первый абзац" tells them nothing.
+// The blog page is chosen over the editor on purpose — it carries no account email in its chrome.
+test('@audit landing screenshot source', async ({ page, context }) => {
+    const id = await createDraft(context, 'Станция Кедр — девлог', [
+        'Первую неделю я потратил на то, чтобы станция не выглядела как коробка. Оказалось, что дело не в текстурах, а в том, куда падает свет: одна лампа под потолком превращает отсек в интерьер, а четыре — в чертёж.',
+        'Дальше был звук. Гул вентиляции пишется одним слоем, но слышно его только тогда, когда он иногда замолкает — тишина в этой игре работает лучше любого эмбиента.',
+        'На следующей неделе — двери. Они кажутся мелочью ровно до момента, когда через них проходит игрок.',
+    ]);
+    await context.request.post(`/api/drafts/${id}/publish-blog`, { data: {} });
+    const meta = await (await context.request.get(`/api/drafts/${id}`)).json();
+
+    const shots = await page.context().browser()!.newContext({ viewport: { width: 1120, height: 760 } });
+    const p2 = await shots.newPage();
+    await p2.goto(`${BLOG_ORIGIN}/${meta.blogSlug}`);
+    await p2.waitForTimeout(400);
+    await p2.screenshot({ path: path.join(OUT, '91-landing-blog.png') });
+    await shots.close();
+});
+
+// T-009 — the page a stranger sees. Captured in both themes because it follows the visitor's
+// system setting rather than the app's toggle: nobody is signed in to have a preference stored.
+test('@audit landing', async ({ browser }) => {
+    for (const scheme of ['light', 'dark'] as const) {
+        const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width: 1440, height: 900 } });
+        const p = await ctx.newPage();
+        await p.goto('http://localhost:8080/');
+        await shot(p, `90-landing-${scheme}`);
+        await ctx.close();
+    }
+});
+
 test('@audit dark theme spot check', async ({ page, context }) => {
     await createDraft(context, 'Тёмная тема', ['Текст.']);
     await page.goto('/drafts');

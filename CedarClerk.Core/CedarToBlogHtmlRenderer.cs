@@ -260,7 +260,7 @@ public static class CedarToBlogHtmlRenderer
                 var unix = (long?)node["attrs"]?["unix"] ?? 0;
                 var format = (string?)node["attrs"]?["format"] ?? "wDT";
                 var dt = DateTimeOffset.FromUnixTimeSeconds(unix).UtcDateTime;
-                sb.Append($"<time datetime=\"{dt:yyyy-MM-ddTHH:mm:ssZ}\">{Escape(FormatDateTime(dt, format))}</time>");
+                sb.Append($"<time datetime=\"{dt:yyyy-MM-ddTHH:mm:ssZ}\">{Escape(FormatDateTime(dt, format, ctx.Lang))}</time>");
                 break;
 
             case "footnote":
@@ -327,7 +327,9 @@ public static class CedarToBlogHtmlRenderer
 
         var ownerAttr = string.IsNullOrEmpty(ownerName) ? "" : $" data-owner-name=\"{EscapeAttr(ownerName)}\"";
         var publishedLine = publishedAt is { } p
-            ? $"<div class=\"comment-published-line\">{(lang == "en" ? "Post published" : "Пост опубликован")}: {p.ToString("d MMM yyyy, HH:mm", CultureInfo.InvariantCulture)}</div>"
+            // T-094 — the third date on this page, missed when the other two were fixed: it printed
+            // "1 Aug 2026" under a Russian post. Same formatter as the rest of the blog now.
+            ? $"<div class=\"comment-published-line\">{(lang == "en" ? "Post published" : "Пост опубликован")}: {BlogDateFormatter.DateTimeShort(p, lang)}</div>"
             : "";
 
         return $"""
@@ -531,13 +533,17 @@ public static class CedarToBlogHtmlRenderer
         return sb.ToString();
     }
 
-    private static string FormatDateTime(DateTime dt, string format)
+    // The date pill an author inserts into a post (T-094 swept the page's own dates; this is the
+    // one inside the text, and it follows the page's language for the same reason). The weekday
+    // stays invariant: it is three letters and adding nine more month tables for it is not the
+    // trade this needs.
+    private static string FormatDateTime(DateTime dt, string format, string lang = "ru")
     {
         var parts = new List<string>();
         if (format.Contains('w')) parts.Add(dt.ToString("ddd", CultureInfo.InvariantCulture));
-        if (format.Contains('D')) parts.Add(dt.ToString("d MMM yyyy", CultureInfo.InvariantCulture));
+        if (format.Contains('D')) parts.Add(BlogDateFormatter.Date(dt, lang));
         if (format.Contains('T')) parts.Add(dt.ToString("HH:mm", CultureInfo.InvariantCulture));
-        return parts.Count > 0 ? string.Join(' ', parts) : dt.ToString("g", CultureInfo.InvariantCulture);
+        return parts.Count > 0 ? string.Join(' ', parts) : BlogDateFormatter.DateTimeShort(dt, lang);
     }
 
     private static bool IsGifSrc(string src) =>

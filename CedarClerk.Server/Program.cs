@@ -165,6 +165,12 @@ var indexNoCache = new StaticFileOptions
     }
 };
 
+// T-009 — the landing answers "/" for visitors who are not signed in; a signed-in request falls
+// straight through to the SPA below, which is why this is middleware and not a mapped endpoint.
+// The blog host is excluded by name: it has its own "/" — its index — and the first version of
+// this middleware quietly replaced it with a marketing page.
+app.UseLanding(builder.Configuration[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost);
+
 app.UseDefaultFiles();
 app.UseStaticFiles(indexNoCache);
 app.UseStaticFiles(new StaticFileOptions

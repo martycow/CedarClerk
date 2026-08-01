@@ -428,9 +428,14 @@ public class BlogHtmlRendererTests
                        {"type":"datetime","attrs":{"unix":1700000000,"format":"D"}}
                    ]}]}
                    """;
+        // The machine-readable attribute stays invariant — that one is for parsers. The visible
+        // text follows the page's language (T-094): this used to print "14 Nov 2023" under a
+        // Russian post, which is what the whole date sweep was about.
         var result = CedarToBlogHtmlRenderer.Render(json, Base);
         Assert.Contains("<time datetime=\"2023-11-14T22:13:20Z\">", result);
-        Assert.Contains("14 Nov 2023", result);
+        Assert.Contains("14 ноября 2023", result);
+
+        Assert.Contains("14 November 2023", CedarToBlogHtmlRenderer.Render(json, Base, "en"));
     }
 
     [Fact]
