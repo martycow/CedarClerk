@@ -2192,3 +2192,46 @@ input[type="datetime-local"]:focus-visible {
 
 .publish-diff-line.added { color: var(--ok); }
 .publish-diff-line.removed { color: var(--danger); }
+
+/* Right-click menu over a selection (create a glossary term). Positioned at the pointer, with a
+   full-screen invisible button behind it so a click anywhere — or Escape via the button's own
+   focus handling — dismisses it. */
+.term-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    border: none;
+    background: none;
+    cursor: default;
+}
+
+.term-menu {
+    position: fixed;
+    z-index: 61;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--dens-radius);
+    box-shadow: var(--shadow-md);
+    padding: var(--space-1);
+    min-width: 220px;
+}
+
+.term-menu button {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    border: none;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: var(--fs-ui);
+    text-align: left;
+    padding: var(--dens-control-y) var(--dens-control-x);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.term-menu button:hover {
+    background: var(--hover);
+}

@@ -1,0 +1,71 @@
+/* Copied from glossary.component.css so the shared form renders identically wherever it is
+   used (Marty: "the menu must be exactly the one in Glossary"). Angular's view encapsulation
+   means a component cannot inherit another's scoped rules; this is the price of that. */
+
+.chat-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-ui);
+    font-family: inherit;
+    background: var(--sheet);
+    color: var(--text);
+}
+
+.form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 140px;
+    gap: 10px;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.form-field-label { font-size: var(--fs-meta); color: var(--t2); }
+
+.image-pick {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    cursor: pointer;
+}
+
+.term-image-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.term-image-row img {
+    max-width: 180px;
+    max-height: 120px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+    .form-row-2 { grid-template-columns: 1fr; }
+
+.term-case-toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    font-size: var(--fs-ui);
+    cursor: pointer;
+}
+
+.term-case-toggle input {
+    margin-top: 2px;
+    accent-color: var(--accent);
+}
+
+.term-case-toggle .field-hint-inline {
+    display: block;
+    margin-top: var(--space-1);
+}

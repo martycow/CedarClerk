@@ -36,70 +36,26 @@
         INSIDE the list in place of the card being edited. It used to live only at the top, so
         editing the last term of a long glossary meant scrolling up to fields that had no visible
         connection to the row they belonged to.-->
+        <!--One form, rendered in two places (Marty, 01.08.2026): at the top when creating, and
+        INSIDE the list in place of the card being edited. It used to live only at the top, so
+        editing the last term of a long glossary meant scrolling up to fields that had no visible
+        connection to the row they belonged to. The fields themselves are the shared
+        app-glossary-term-form, which the editor's create-from-selection modal uses too.-->
         <ng-template #termForm>
-        <div class="term-form">
-            <div class="form-row-2">
-                <label class="form-field">
-                    <span class="form-field-label">{{ t().glossary.term }}</span>
-                    <input class="chat-input" [(ngModel)]="editTerm" maxlength="80"
-                           [placeholder]="t().glossary.termPlaceholder">
-                </label>
-                <label class="form-field">
-                    <span class="form-field-label">{{ t().glossary.language }}</span>
-                    <select class="chat-input" [value]="editLanguage()" (change)="editLanguage.set($any($event.target).value)">
-                        @for (l of contentLanguages; track l) { <option [value]="l">{{ l.toUpperCase() }}</option> }
-                    </select>
-                </label>
-            </div>
-
-            <label class="form-field">
-                <span class="form-field-label">{{ t().glossary.description }}</span>
-                <textarea class="chat-input" rows="3" [(ngModel)]="editDescription" maxlength="1000"
-                          [placeholder]="t().glossary.descriptionPlaceholder"></textarea>
-            </label>
-
-            <label class="form-field">
-                <span class="form-field-label">{{ t().glossary.aliases }}</span>
-                <input class="chat-input" [(ngModel)]="editAliases" maxlength="400"
-                       [placeholder]="t().glossary.aliasesPlaceholder">
-                <p class="field-hint-inline">{{ t().glossary.aliasesHint }}</p>
-            </label>
-
-            <label class="term-case-toggle">
-                <input type="checkbox" [checked]="editCaseSensitive()"
-                       (change)="editCaseSensitive.set($any($event.target).checked)">
-                <span>
-                    {{ t().glossary.caseSensitive }}
-                    <span class="field-hint-inline">{{ t().glossary.caseSensitiveHint }}</span>
-                </span>
-            </label>
-
-            <div class="form-field">
-                <span class="form-field-label">{{ t().glossary.image }}</span>
-                @if (editImageUrl(); as url) {
-                <div class="term-image-row">
-                    <img [src]="url" alt="">
-                    <button class="mini-remove" (click)="clearImage()" [title]="t().common.delete" [attr.aria-label]="t().common.delete">
-                        <app-icon name="x" size="sm"></app-icon>
+            <div class="term-form">
+                <app-glossary-term-form #form
+                    [initialTerm]="editTerm" [initialDescription]="editDescription"
+                    [initialAliases]="editAliases" [initialImageUrl]="editImageUrl()"
+                    [initialLanguage]="editLanguage()" [initialCaseSensitive]="editCaseSensitive()">
+                </app-glossary-term-form>
+                <div class="form-actions">
+                    <button class="btn-ghost" (click)="cancelEdit()">{{ t().common.cancel }}</button>
+                    <button class="btn-accent" (click)="save(form.value())" [disabled]="busy() || !form.canSave()">
+                        @if (busy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                        {{ t().common.save }}
                     </button>
                 </div>
-                }
-                <label class="btn-ghost image-pick">
-                    @if (uploading()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                    @else { <app-icon name="image" size="sm"></app-icon> }
-                    {{ editImageUrl() ? t().glossary.replaceImage : t().glossary.addImage }}
-                    <input type="file" accept="image/*" hidden (change)="onImageChosen($event)">
-                </label>
             </div>
-
-            <div class="form-actions">
-                <button class="btn-ghost" (click)="cancelEdit()">{{ t().common.cancel }}</button>
-                <button class="btn-accent" (click)="save()" [disabled]="!canSave()">
-                    @if (busy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                    {{ t().common.save }}
-                </button>
-            </div>
-        </div>
         </ng-template>
 
         @if (editing() && !selectedId()) {

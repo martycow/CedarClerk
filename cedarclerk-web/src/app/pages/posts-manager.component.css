@@ -117,7 +117,15 @@
    viewport, so an iPad in landscape is covered too (T-082). */
 @media (pointer: coarse) {
     .manager-tabs button,
-    /* 8.2 — a card with two lines: what the post is, then which languages it exists in. */
+    .post-card {
+        min-height: 44px;
+    }
+}
+
+
+/* Priority Fixes 02 (Claude Design, 28.07.2026): radius-md -> radius-lg, matching the same
+   --sheet+--border+--shadow "card" pattern used by Settings/Admin/Stats. */
+/* 8.2 — a card with two lines: what the post is, then which languages it exists in. */
 .post-card {
     display: flex;
     flex-direction: column;
@@ -183,10 +191,6 @@
     border-color: var(--border);
 }
 
-}
-
-/* Priority Fixes 02 (Claude Design, 28.07.2026): radius-md -> radius-lg, matching the same
-   --sheet+--border+--shadow "card" pattern used by Settings/Admin/Stats. */
 /* 8.1 — the list scrolls in its own box instead of growing the page. With thirty posts the detail
    pane's own content used to start below the fold, so picking a post meant scrolling back up to
    see what you had picked. The search field stays pinned at the top of the scroller. */
@@ -586,11 +590,6 @@
 
 @keyframes spin {
     to { transform: rotate(360deg); }
-}
-
-/* FI3.10 — search sits above the list rather than in the page header: it filters this list only. */
-.post-search {
-    margin-bottom: 8px;
 }
 
 /* FI3.6 — status chips in the list row. */

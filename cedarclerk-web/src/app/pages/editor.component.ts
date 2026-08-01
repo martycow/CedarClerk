@@ -21,6 +21,8 @@ import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { AccountMenuComponent } from '../shared/account-menu.component';
 import { CountBadgeComponent } from '../shared/count-badge.component';
+import { GlossaryTermFormComponent } from '../shared/glossary-term-form.component';
+import { GlossaryService, GlossaryTermInput } from '../core/glossary.service';
 import { AppearancePanelComponent } from '../shared/appearance-panel.component';
 import { NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, CompressionLevel, UpdatePreview } from '../core/posts.service';
@@ -184,7 +186,7 @@ interface UploadItem {
 
 @Component({
     selector: 'app-editor',
-    imports: [IconComponent, FormsModule, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent, AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent, CountBadgeComponent],
+    imports: [IconComponent, FormsModule, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent, AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent, CountBadgeComponent, GlossaryTermFormComponent],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
 })
@@ -212,6 +214,52 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     @ViewChild('editorHost') editorHost!: ElementRef<HTMLElement>;
     private editor?: Editor;
+
+    // ─── Glossary term from a selection (Marty, 01.08.2026) ───────────────────────────────────
+    private glossaryApi = inject(GlossaryService);
+    termMenu = signal<{ x: number; y: number } | null>(null);
+    termDraft = signal<{ term: string; language: string } | null>(null);
+    termBusy = signal(false);
+    termError = signal('');
+
+    onSheetContextMenu(event: MouseEvent) {
+        const selected = this.selectedText();
+        // No selection: leave the browser's own menu alone. Replacing it with one disabled item
+        // would take away spellcheck, copy and paste to offer nothing.
+        if (!selected) return;
+        event.preventDefault();
+        this.termMenu.set({ x: event.clientX, y: event.clientY });
+    }
+
+    private selectedText(): string {
+        const state = this.editor?.state;
+        if (!state || state.selection.empty) return '';
+        return state.doc.textBetween(state.selection.from, state.selection.to, ' ').trim();
+    }
+
+    openTermFromSelection() {
+        const term = this.selectedText();
+        this.termMenu.set(null);
+        if (!term) return;
+        this.termError.set('');
+        // The term belongs to the language being written, which is what the blog will scan it
+        // against — not to the UI language, and not to the draft's primary one.
+        this.termDraft.set({ term, language: this.lang() });
+    }
+
+    async saveTerm(input: GlossaryTermInput) {
+        if (this.termBusy()) return;
+        this.termBusy.set(true);
+        this.termError.set('');
+        try {
+            await this.glossaryApi.create(input);
+            this.termDraft.set(null);
+        } catch (e) {
+            this.termError.set(httpErrorMessage(e, this.t().glossary.saveFailed));
+        } finally {
+            this.termBusy.set(false);
+        }
+    }
     private tick = signal(0);
 
     drafts = signal<DraftMeta[]>([]);

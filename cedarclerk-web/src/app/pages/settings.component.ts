@@ -10,6 +10,7 @@ import { TelegramLinkService } from '../core/telegram-link.service';
 import { ChannelsService, Channel } from '../core/channels.service';
 import { AssetsService } from '../core/assets.service';
 import { httpErrorMessage } from '../core/http-error.util';
+import { pseudoProgress } from '../core/pseudo-progress.util';
 import { PageHeaderComponent } from '../shared/page-header.component';
 import { IconComponent } from '../shared/icon.component';
 import { BrandIconComponent } from '../shared/brand-icon.component';
@@ -202,25 +203,67 @@ export class SettingsComponent implements OnInit {
     translatingTexts = signal(false);
     translateTextsError = signal('');
     translateTextsDone = signal(false);
+    // Same asymptotic pseudo-progress every other AI operation in the app uses (ADR-038): neither
+    // provider streams, so there is no real progress to report, and a curve that slows down reads
+    // as alive where a spinner reads as stuck. Capped at 90 until the response actually lands.
+    translateProgress = signal(0);
+    translateElapsed = signal(0);
+    private translateTimer: ReturnType<typeof setInterval> | null = null;
 
-    async translateProfileTexts() {
+    /**
+     * @param targets which languages to fill. Defaults to every other content language; the
+     * per-language button passes exactly one, which is the common case when one translation came
+     * back wrong and only it needs redoing.
+     */
+    async translateProfileTexts(targets?: string[], sourceOverride?: string) {
         if (this.translatingTexts()) return;
+        const source = sourceOverride ?? this.signatureLanguage();
+        const chosen = (targets ?? this.contentLanguages.filter(l => l !== source)).filter(l => l !== source);
+        if (chosen.length === 0) return;
+
         this.translatingTexts.set(true);
         this.translateTextsError.set('');
         this.translateTextsDone.set(false);
+        this.translateProgress.set(0);
+        this.translateElapsed.set(0);
+        const startedAt = Date.now();
+        this.translateTimer = setInterval(() => {
+            const elapsed = (Date.now() - startedAt) / 1000;
+            this.translateElapsed.set(Math.round(elapsed));
+            this.translateProgress.set(pseudoProgress(elapsed));
+        }, 250);
+
         try {
-            const source = this.signatureLanguage();
-            const targets = this.contentLanguages.filter(l => l !== source);
-            await this.auth.translateProfileTexts(source, targets);
-            // The open editor still shows the source language's text; re-selecting it refreshes
-            // the bound fields from the maps the server just filled.
-            this.setSignatureLanguage(source);
+            await this.auth.translateProfileTexts(source, chosen);
+            this.translateProgress.set(100);
+            // Reload both maps from the signals the service just refreshed. The previous version
+            // called setSignatureLanguage(source), which returns immediately when the language has
+            // not changed — so the request succeeded and the fields never moved.
+            this.loadSignatureTexts();
+            this.loadLinkTexts();
             this.translateTextsDone.set(true);
+            setTimeout(() => this.translateTextsDone.set(false), 2500);
         } catch (e) {
             this.translateTextsError.set(httpErrorMessage(e, this.t().settings.profile.translateFailed));
         } finally {
+            if (this.translateTimer) clearInterval(this.translateTimer);
+            this.translateTimer = null;
             this.translatingTexts.set(false);
         }
+    }
+
+    /**
+     * "Translate into the language I am looking at", always FROM the primary one. Without a fixed
+     * source this button would have to translate the selected language into itself, and picking a
+     * source silently would be the kind of guess that produces a wrong translation nobody ordered.
+     * Hidden while the primary language is selected: there is nothing to translate into it.
+     */
+    canTranslateCurrent(): boolean {
+        return this.signatureLanguage() !== DEFAULT_PRIMARY_LANGUAGE;
+    }
+
+    translateCurrentLanguage() {
+        return this.translateProfileTexts([this.signatureLanguage()], DEFAULT_PRIMARY_LANGUAGE);
     }
 
     async saveSignature() {

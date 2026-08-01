@@ -80,15 +80,22 @@
                     <button class="btn-primary" (click)="saveSignature()" [disabled]="signatureBusy() || !hasProSignature()">
                         {{ signatureBusy() ? '…' : t().settings.profile.saveSignature }}
                     </button>
-                    <!--One press fills the signature AND both cross-link texts in every other
-                    language from the one selected above — they are written together and read
-                    together, so translating them apart would be three presses for one thought.-->
+                    <!--One press fills the signature AND both cross-link texts — they are written
+                    together and read together, so translating them apart would be three presses for
+                    one thought. Two buttons because there are two real cases: fill everything, or
+                    redo the one language that came back wrong.-->
                     <button class="btn-ghost" (click)="translateProfileTexts()"
                             [disabled]="translatingTexts() || !hasProSignature()">
-                        @if (translatingTexts()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                        @else { <app-icon name="translate" size="sm"></app-icon> }
+                        <app-icon name="translate" size="sm"></app-icon>
                         {{ t().settings.profile.translateTexts }}
                     </button>
+                    @if (canTranslateCurrent()) {
+                    <button class="btn-ghost" (click)="translateCurrentLanguage()"
+                            [disabled]="translatingTexts() || !hasProSignature()">
+                        <app-icon name="translate" size="sm"></app-icon>
+                        {{ t().settings.profile.translateInto(signatureLanguage().toUpperCase()) }}
+                    </button>
+                    }
                     @if (signatureSaved()) {
                     <span class="saved-check"><app-icon name="check" size="xs"></app-icon>{{ t().settings.saved }}</span>
                     }
@@ -96,6 +103,14 @@
                     <span class="saved-check"><app-icon name="check" size="xs"></app-icon>{{ t().settings.saved }}</span>
                     }
                 </div>
+                @if (translatingTexts()) {
+                <div class="translate-progress">
+                    <span class="translate-progress-track">
+                        <span class="translate-progress-fill" [style.width.%]="translateProgress()"></span>
+                    </span>
+                    <span class="field-hint-inline">{{ translateProgress() }}% · {{ translateElapsed() }}s</span>
+                </div>
+                }
                 <p class="field-hint">{{ t().settings.profile.translateTextsHint }}</p>
                 @if (signatureError()) { <p class="field-error">{{ signatureError() }}</p> }
                 @if (translateTextsError()) { <p class="field-error">{{ translateTextsError() }}</p> }

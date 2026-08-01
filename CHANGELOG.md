@@ -2,6 +2,18 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-01 — Second review pass: a CSS regression, a translate button that filled nothing, and terms from the editor
+
+**The card styles I shipped an hour earlier were not applied at all.** The rule that replaced `.post-row` landed *inside* an unclosed `@media (pointer: coarse)` block — `.post-row` had been one member of a two-selector list there, so replacing it swallowed the media query's close and nested every card rule inside it. The Posts and Forms lists rendered as bare buttons. Repaired by lifting the rules back to the top level and restoring the media query; the duplicate `.post-search` rule left over from FI3.10 went with it, since the sticky version is the one that survives.
+
+**Auto-translate ran and then appeared to do nothing.** It called `setSignatureLanguage(source)` to refresh the fields — and that method returns immediately when the language has not changed, which it never had. The request succeeded, the maps filled, the inputs kept showing what was there before. It now reloads both draft maps directly.
+
+It also had no progress indication, unlike every other AI operation in the app. It now uses the same asymptotic pseudo-progress (ADR-038) with an elapsed-seconds counter: neither provider streams, so there is nothing real to report, but a bar that keeps moving is the honest way to say "still working" without claiming to know how far along it is.
+
+**A per-language translate button**, beside the translate-everything one, for the case where one language came back wrong and only it needs redoing. It always translates *from* the primary language into the selected one, and is hidden while the primary language is the one on screen — without a fixed source the button would have to translate a language into itself, and choosing one silently is how you get a translation nobody ordered.
+
+**A glossary term can be created from the editor.** Right-click over a selection offers it; with nothing selected the browser's own menu is left alone, because replacing spellcheck, copy and paste with one disabled item is a worse trade. The form is `app-glossary-term-form`, now shared with `/glossary` rather than copied from it — "exactly the menu in Glossary" is only true if there is one of it. The new term takes the *content* language being written, not the UI language and not the draft's primary one, because that is what the blog will scan it against.
+
 ## 2026-08-01 — Marty's review pass: tables could never publish, icons were black, and the Posts Manager became cards
 
 ### The bug: a post with a table has never once published

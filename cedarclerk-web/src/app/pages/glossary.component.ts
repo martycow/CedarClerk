@@ -2,19 +2,20 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { LocaleService } from '../core/i18n/locale.service';
-import { GlossaryService, GlossaryTerm } from '../core/glossary.service';
+import { GlossaryService, GlossaryTerm, GlossaryTermInput } from '../core/glossary.service';
 import { AssetsService } from '../core/assets.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES, endonymOf } from '../core/languages';
 import { PageHeaderComponent } from '../shared/page-header.component';
 import { ModalComponent } from '../shared/modal.component';
 import { IconComponent } from '../shared/icon.component';
+import { GlossaryTermFormComponent } from '../shared/glossary-term-form.component';
 
 // Idea #11 — the glossary page. A term is defined once here and explained wherever it turns up on
 // the blog; nothing is scanned or marked in the editor, since the ask was for the published page.
 @Component({
     selector: 'app-glossary',
-    imports: [IconComponent, FormsModule, PageHeaderComponent, ModalComponent, NgTemplateOutlet],
+    imports: [IconComponent, FormsModule, PageHeaderComponent, ModalComponent, NgTemplateOutlet, GlossaryTermFormComponent],
     templateUrl: 'glossary.component.html',
     styleUrls: ['glossary.component.css'],
 })
@@ -107,18 +108,12 @@ export class GlossaryComponent implements OnInit {
         return !this.busy() && this.editTerm.trim().length > 0 && this.editDescription.trim().length > 0;
     }
 
-    async save() {
-        if (!this.canSave()) return;
+    // The values come from the shared form component rather than from fields on this page —
+    // the page still owns which row is being written and what happens after.
+    async save(input: GlossaryTermInput) {
+        if (this.busy() || !input.term || !input.description) return;
         this.busy.set(true);
         this.error.set('');
-        const input = {
-            term: this.editTerm.trim(),
-            description: this.editDescription.trim(),
-            aliases: this.editAliases.trim(),
-            imageUrl: this.editImageUrl(),
-            language: this.editLanguage(),
-            isCaseSensitive: this.editCaseSensitive(),
-        };
         try {
             const id = this.selectedId();
             if (id) {
