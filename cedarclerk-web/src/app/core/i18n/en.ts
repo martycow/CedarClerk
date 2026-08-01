@@ -450,6 +450,8 @@ export const en = {
             downloadCedar: 'Download .cedar',
             staticHtml: 'Static HTML page',
             draftFiles: 'Files in this draft',
+            queued: 'Queued — publishing…',
+            stillRunning: 'Still publishing — it will finish on its own; the result is in the Posts Manager.',
             blueskyText: 'Bluesky post',
             blueskyTextPlaceholder: 'What this post says on Bluesky. Leave empty to send the opening paragraphs plus a link.',
             blueskyFallback: 'empty: a teaser will be built from the post',

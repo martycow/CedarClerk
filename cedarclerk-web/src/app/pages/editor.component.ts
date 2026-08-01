@@ -26,7 +26,7 @@ import { GlossaryService, GlossaryTermInput } from '../core/glossary.service';
 import { AppearancePanelComponent } from '../shared/appearance-panel.component';
 import { NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, CompressionLevel, UpdatePreview } from '../core/posts.service';
-import { PublishService, PublishAccount } from '../core/publish.service';
+import { PublishService, PublishAccount, PublishJob } from '../core/publish.service';
 import { DraftRevision, DraftRevisionDetail, RevisionDiff } from '../core/drafts.service';
 import { plainTextOf } from '../core/cedar-text.util';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES, endonymOf } from '../core/languages';
@@ -216,6 +216,43 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     @ViewChild('editorHost') editorHost!: ElementRef<HTMLElement>;
     private editor?: Editor;
 
+    // ─── Waiting on the publish queue (T-090) ─────────────────────────────────────────────────
+    /**
+     * Polls until every queued job has finished. A publish is no longer one HTTP request that
+     * waits for a network to download media from us (ADR-080), so "is it done" is a question with
+     * its own answer now — and one the browser can stop asking without cancelling anything.
+     */
+    private async awaitJobs(draftId: string, jobIds: string[]): Promise<PublishJob[]> {
+        const pending = new Set(jobIds);
+        const finished: PublishJob[] = [];
+        // Ten minutes of polling: past that the sweeper owns the job, and the answer is on /posts.
+        for (let i = 0; i < 400 && pending.size > 0; i++) {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            const { jobs } = await this.publishApi.jobs(draftId);
+            for (const job of jobs) {
+                if (!pending.has(job.id)) continue;
+                if (job.status === 'Pending' || job.status === 'Running') continue;
+                pending.delete(job.id);
+                finished.push(job);
+            }
+        }
+        return finished;
+    }
+
+    /** The Telegram account row behind the chat id the export window has selected. */
+    private async telegramTargetId(chatId: string): Promise<string | null> {
+        const networks = await this.publishApi.networks();
+        const telegram = networks.find(n => n.network === 'telegram');
+        const trimmed = chatId.trim();
+        const byRemoteId = telegram?.accounts.find(a => a.remoteId === trimmed);
+        if (byRemoteId) return byRemoteId.id;
+        // The window also accepts "@name", while a target row is keyed by the numeric chat id.
+        const channel = this.channels().find(c => '@' + (c.username ?? '') === trimmed);
+        return channel
+            ? telegram?.accounts.find(a => a.remoteId === String(channel.telegramChatId))?.id ?? null
+            : null;
+    }
+
     // ─── Bluesky (T-087/T-089) ────────────────────────────────────────────────────────────────
     private publishApi = inject(PublishService);
     readonly blueskyLimit = 300;
@@ -303,8 +340,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 await this.publishApi.saveText(id, 'bluesky', this.lang(), this.blueskyText);
                 this.blueskyTextDirty.set(false);
             }
-            await this.publishApi.publishToTarget(id, account.id, this.lang());
-            this.blueskyPostUrl.set(null);
+            const { jobs } = await this.publishApi.queue(id, [account.id], this.lang());
+            const [job] = await this.awaitJobs(id, jobs.map(j => j.id));
+            if (job && job.status !== 'Succeeded') {
+                this.blueskyError.set(job.error ?? job.status);
+            } else {
+                this.blueskyPostUrl.set(job?.publicUrl ?? null);
+            }
             await this.loadBluesky();
         } catch (e) {
             this.blueskyError.set(httpErrorMessage(e, this.t().editor.errors.publish));
@@ -2153,13 +2195,41 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.exportError.set(null);
         const links: { label: string; url: string }[] = [];
         try {
-            // One message per ticked language (FI2.2), sequentially — Telegram rate-limits, and a
-            // failure part-way through should leave the languages already sent visibly sent.
+            // T-090 — queued, not awaited over HTTP. The old shape held one request open while
+            // Telegram downloaded every media file from this server, which is how a 30MB post
+            // returned a proxy's 502 about a publish that was still running (ADR-080).
+            const targetId = await this.telegramTargetId(this.chatId);
+            if (!targetId) {
+                this.exportError.set({ code: 403, message: this.t().editor.errors.connectChannel });
+                return links;
+            }
+
+            // One job per ticked language (FI2.2): a failure part-way through still leaves the
+            // languages already sent visibly sent, and now says so per language rather than
+            // stopping at the first one.
+            const queued: { lang: string; jobId: string }[] = [];
             for (const lang of this.exportLangs()) {
-                const res = await this.posts.export(id, this.chatId.trim(), this.format, lang, this.compressionLevel,
-                    this.confirmedFingerprints[lang]);
-                this.exportResult.set(`✓ Published (message #${res.messageId})`);
-                const url = this.buildTelegramLink(res.chatId, res.messageId);
+                const { jobs } = await this.publishApi.queue(id, [targetId], lang, this.confirmedFingerprints[lang]);
+                for (const job of jobs) queued.push({ lang, jobId: job.id });
+            }
+
+            this.exportResult.set(this.t().editor.exportModal.queued);
+            const finished = await this.awaitJobs(id, queued.map(q => q.jobId));
+
+            for (const { lang, jobId } of queued) {
+                const job = finished.find(j => j.id === jobId);
+                if (!job) {
+                    // Still running after the polling window — the sweeper owns it now, and the
+                    // Posts Manager is where its outcome shows up.
+                    this.exportResult.set(this.t().editor.exportModal.stillRunning);
+                    continue;
+                }
+                if (job.status !== 'Succeeded') {
+                    this.exportError.set({ code: undefined, message: job.error ?? job.status });
+                    continue;
+                }
+                this.exportResult.set(`✓ Published (message #${job.remoteId})`);
+                const url = job.publicUrl ?? this.buildTelegramLink(this.chatId.trim(), Number(job.remoteId));
                 this.exportLink.set(url);
                 if (url) links.push({ label: `${this.t().editor.exportModal.openTelegram} ${lang.toUpperCase()}`, url });
             }

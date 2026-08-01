@@ -32,6 +32,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<PublishTarget> PublishTargets => Set<PublishTarget>();
     public DbSet<DraftStatSnapshot> DraftStatSnapshots => Set<DraftStatSnapshot>();
     public DbSet<DraftTargetText> DraftTargetTexts => Set<DraftTargetText>();
+    public DbSet<PublishJob> PublishJobs => Set<PublishJob>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -69,5 +70,8 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         builder.Entity<DraftTargetText>()
             .HasIndex(t => new { t.DraftId, t.Network, t.Language })
             .IsUnique();
+        // The runner's query is "what is waiting", and the client's is "how is this draft doing".
+        builder.Entity<PublishJob>().HasIndex(j => new { j.Status, j.NextAttemptAt });
+        builder.Entity<PublishJob>().HasIndex(j => new { j.DraftId, j.CreatedAt });
     }
 }

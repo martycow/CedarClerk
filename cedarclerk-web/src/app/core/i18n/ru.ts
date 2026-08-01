@@ -447,6 +447,8 @@ export const ru: Dict = {
             downloadCedar: 'Скачать .cedar',
             staticHtml: 'Статическая HTML-страница',
             draftFiles: 'Файлы в черновике',
+            queued: 'В очереди — публикуется…',
+            stillRunning: 'Ещё публикуется — дойдёт само, результат будет в Posts Manager.',
             blueskyText: 'Пост для Bluesky',
             blueskyTextPlaceholder: 'Что этот пост говорит в Bluesky. Пусто — уйдут первые абзацы и ссылка.',
             blueskyFallback: 'пусто: тизер соберётся из поста',

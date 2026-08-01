@@ -17,6 +17,7 @@ namespace CedarClerk.Server;
 public static class PublishEndpoints
 {
     public record ConnectBlueskyRequest(string Handle, string AppPassword, string? Service);
+    public record QueuePublishRequest(Guid DraftId, List<Guid>? TargetIds, string? Language = null, string? ConfirmedFingerprint = null);
     public record TargetTextRequest(string Network, string Language, string Text);
 
     public static void MapPublishEndpoints(this WebApplication app)
@@ -118,6 +119,82 @@ public static class PublishEndpoints
             target.CredentialsProtected = null;
             await db.SaveChangesAsync();
             return Results.NoContent();
+        });
+
+        // ── The publish queue (T-090, ADR-081) ───────────────────────────────────────────────
+        // Publishing stopped being an HTTP request that waits for a network to finish downloading
+        // media from us (ADR-080). The request now queues the work and answers immediately; the
+        // client watches the rows below.
+        group.MapPost("/jobs", async (
+            QueuePublishRequest req,
+            ClaimsPrincipal user,
+            CedarDbContext db,
+            PublishJobRunner runner) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == req.DraftId && d.OwnerId == uid);
+            if (draft is null) return Results.NotFound(new { error = ErrorMessages.DraftNotFound });
+            if (req.TargetIds is null || req.TargetIds.Count == 0)
+                return Results.BadRequest(new { error = "Pick at least one destination" });
+
+            var language = req.Language ?? draft.PrimaryLanguage;
+            var targets = await db.PublishTargets
+                .Where(t => req.TargetIds.Contains(t.Id) && t.OwnerId == uid && t.IsActive)
+                .ToListAsync();
+            if (targets.Count != req.TargetIds.Count)
+                return Results.Json(new { error = "One of those destinations is not connected" }, statusCode: StatusCodes.Status403Forbidden);
+
+            // ADR-065's guard, unchanged in meaning and moved to where publishing now starts:
+            // re-sending over a live post still requires naming the version that was previewed.
+            foreach (var target in targets)
+            {
+                var destination = target.Network == PublishNetworks.Telegram ? target.RemoteId : target.Id.ToString();
+                var kind = target.Network == PublishNetworks.Telegram
+                    ? DraftRevisionService.Kinds.Telegram
+                    : target.Network;
+                if (!await DraftRevisionService.ConfirmationSatisfiedAsync(db, draft, language, kind, destination, req.ConfirmedFingerprint))
+                {
+                    var fresh = await DraftRevisionService.PreviewAsync(db, draft, language, kind, destination);
+                    return Results.Json(new { error = ErrorMessages.PublishConfirmationStale, preview = fresh },
+                        statusCode: StatusCodes.Status409Conflict);
+                }
+            }
+
+            // One job per destination: a post that reaches Telegram and fails on Bluesky is a
+            // partial success, and one row per target is what lets it be reported as one.
+            var jobs = targets.Select(target => new PublishJob
+            {
+                OwnerId = uid,
+                DraftId = draft.Id,
+                TargetId = target.Id,
+                Network = target.Network,
+                Language = language,
+            }).ToList();
+
+            db.PublishJobs.AddRange(jobs);
+            await db.SaveChangesAsync();
+
+            // Saved before kicked: a runner must never look for a row that is not committed yet.
+            foreach (var job in jobs) runner.Kick(job.Id);
+
+            return Results.Ok(new { jobs = jobs.Select(j => new { j.Id, j.Network, j.TargetId, j.Status }) });
+        });
+
+        group.MapGet("/jobs", async (Guid draftId, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            // Only this draft's recent jobs: the client polls this while a publish is in flight.
+            var jobs = await db.PublishJobs
+                .Where(j => j.DraftId == draftId && j.OwnerId == uid)
+                .OrderByDescending(j => j.CreatedAt)
+                .Take(20)
+                .Select(j => new
+                {
+                    j.Id, j.Network, j.TargetId, j.Language, j.Status, j.Attempts,
+                    j.Error, j.RemoteId, j.PublicUrl, j.CreatedAt, j.FinishedAt,
+                })
+                .ToListAsync();
+            return Results.Ok(new { jobs });
         });
 
         // ── The author's own text per network and language (T-087, ADR-077) ──────────────────

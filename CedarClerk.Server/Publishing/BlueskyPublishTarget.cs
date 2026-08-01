@@ -128,6 +128,14 @@ public class BlueskyPublishTarget(
             // at://did:plc:xxx/app.bsky.feed.post/RKEY — the last segment is what a public URL needs.
             var rkey = created.Uri.Split('/').LastOrDefault();
             var publicUrl = rkey is null ? null : $"https://bsky.app/profile/{credentials.Handle}/post/{rkey}";
+
+            // The same baseline Telegram writes, so ADR-065's "this would overwrite a live post"
+            // guard has something to compare against here too. Keyed by target id rather than by
+            // handle: the handle is renameable, the row is not.
+            await DraftRevisionService.RecordAsync(db, request.DraftId, request.Language, request.Title,
+                request.CedarJson, PublishNetworks.Bluesky, request.Target.Id.ToString(), ct);
+            await db.SaveChangesAsync(ct);
+
             return PublishOutcome.Ok(new PublishReceipt(created.Uri, publicUrl));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

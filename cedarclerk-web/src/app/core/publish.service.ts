@@ -37,6 +37,20 @@ export interface PublishNetwork {
     accounts: PublishAccount[];
 }
 
+export type PublishJobStatus = 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Unknown';
+
+export interface PublishJob {
+    id: string;
+    network: string;
+    targetId: string;
+    language?: string;
+    status: PublishJobStatus;
+    attempts?: number;
+    error?: string | null;
+    remoteId?: string | null;
+    publicUrl?: string | null;
+}
+
 /** The author's own text for one network and language (T-087, ADR-077). */
 export interface TargetText { network: string; language: string; text: string; }
 
@@ -73,5 +87,19 @@ export class PublishService {
     publishToTarget(draftId: string, targetId: string, language?: string) {
         return firstValueFrom(this.http.post<{ messageId: number | null }>(
             '/api/posts/publish-target', { draftId, targetId, language }));
+    }
+
+    /**
+     * T-090 — queues a publication instead of waiting for one. The request returns as soon as the
+     * rows exist; what the networks do afterwards is read from `jobs()`. This is what stopped a
+     * heavy post from timing out at the proxy while Telegram downloaded 30MB from us (ADR-080/081).
+     */
+    queue(draftId: string, targetIds: string[], language?: string, confirmedFingerprint?: string) {
+        return firstValueFrom(this.http.post<{ jobs: PublishJob[] }>(
+            '/api/publish/jobs', { draftId, targetIds, language, confirmedFingerprint }));
+    }
+
+    jobs(draftId: string) {
+        return firstValueFrom(this.http.get<{ jobs: PublishJob[] }>(`/api/publish/jobs?draftId=${draftId}`));
     }
 }

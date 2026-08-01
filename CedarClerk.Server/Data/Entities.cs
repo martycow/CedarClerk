@@ -633,6 +633,55 @@ public class ScheduledPost
 }
 
 /// <summary>
+/// One publication of one draft to one target, as a durable row (T-090, ADR-081).
+///
+/// A table rather than <c>AiJobService</c>'s in-memory dictionary, and the difference is the point:
+/// an AI job lost to a restart costs a retry, while a publish lost to a restart is a post that may
+/// or may not exist on someone's channel. Durability here is not about convenience — it is what
+/// makes "did this go out?" answerable at all.
+/// </summary>
+public class PublishJob
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public Guid DraftId { get; set; }
+    public Guid TargetId { get; set; }
+    public string Network { get; set; } = "";
+    public string Language { get; set; } = Languages.Russian;
+
+    /// <summary>Pending → Running → Succeeded | Failed | Unknown. See PublishJobStatus.</summary>
+    public string Status { get; set; } = PublishJobStatus.Pending;
+
+    public int Attempts { get; set; }
+    public string? Error { get; set; }
+    /// <summary>What the network called the thing it created — a message id, an at:// URI.</summary>
+    public string? RemoteId { get; set; }
+    public string? PublicUrl { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    /// <summary>When a runner claimed it. Also what decides that a Running job has been abandoned.</summary>
+    public DateTime? StartedAt { get; set; }
+    public DateTime? FinishedAt { get; set; }
+    /// <summary>Earliest a failed-but-retryable job may be tried again (backoff).</summary>
+    public DateTime? NextAttemptAt { get; set; }
+}
+
+public static class PublishJobStatus
+{
+    public const string Pending = "Pending";
+    public const string Running = "Running";
+    public const string Succeeded = "Succeeded";
+    public const string Failed = "Failed";
+
+    /// <summary>
+    /// The honest status for a job that was sending when the process died: the request left, and
+    /// nothing here knows whether the network accepted it. It is NOT retried — a blind retry is how
+    /// one post becomes two — and the owner is told to look.
+    /// </summary>
+    public const string Unknown = "Unknown";
+}
+
+/// <summary>
 /// The author's own text for one network (T-087, ADR-077). Per (draft, network, language), because
 /// a cross-post is a standalone post — Marty's answer to Q-14 — and a post written in two languages
 /// needs its own short version in each.

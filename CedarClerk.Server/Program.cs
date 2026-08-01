@@ -96,6 +96,9 @@ builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<TelegramP
 // tenant brings their own app password), so there is nothing to be configured before it works.
 builder.Services.AddScoped<BlueskyPublishTarget>();
 builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<BlueskyPublishTarget>());
+// T-090 — singleton because it outlives any one request: an author's browser can close the moment
+// after pressing Publish, and the send has to carry on without it.
+builder.Services.AddSingleton<PublishJobRunner>();
 
 builder.Services.AddQuartz(q =>
 {
@@ -107,6 +110,11 @@ builder.Services.AddQuartz(q =>
     var statsJobKey = new JobKey("SnapshotChannelStats");
     q.AddJob<SnapshotChannelStatsJob>(opts => opts.WithIdentity(statsJobKey));
     q.AddTrigger(t => t.ForJob(statsJobKey).WithCronSchedule("0 0 4 * * ?"));
+
+    // T-090 — the durable publish queue's backstop.
+    var publishJobKey = new JobKey("RunPublishJobs");
+    q.AddJob<RunPublishJobsJob>(opts => opts.WithIdentity(publishJobKey));
+    q.AddTrigger(t => t.ForJob(publishJobKey).WithSimpleSchedule(s => s.WithIntervalInSeconds(15).RepeatForever()));
 
     // Hourly check if the paid plan is lapsed
     var downgradeJobKey = new JobKey("DowngradeExpiredPlans");
