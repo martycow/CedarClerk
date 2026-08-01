@@ -6,6 +6,10 @@ Human-readable, grouped by session/date, derived from `git log` (33 commits, `6a
 
 **v0.9.33, then v0.9.34.** The design doc's first threaded publish sent parts 1–2, collapsed part 1 behind Telegram's "Show more", failed part 3, held back 4–12 — and reported the *held-back* message as the error. One run, four fixes — and the re-run after them taught the fifth. `dotnet test` **571/571**.
 
+### Flags in the emoji picker
+
+A Flags group (50 country and generic flags, 🇺🇦/🇬🇪 up front) and a Flag-sequences group for the flags Unicode never encoded: ⚪️🔴⚪️ and 🤍❤️🤍 for the white-red-white, 🤍💙❤️ for the 1991–1993 Russian tricolour with its lighter blue, 💙💛 — each a single button inserting a colour run, plain text end to end (editor → Telegram → blog). No codepoint exists for those flags and how 🇷🇺 renders is the reader's platform font's decision, so the sequences are the honest representation — and, unlike regional-indicator flags (which Windows still draws as letter pairs, the DB3.1 fact), they render everywhere.
+
 ### A form submission can be deleted
 
 The owner's own test answers (and any other noise) sat in the registration list and skewed the distribution charts with no way out. Every submission now has a trash button (and a Delete in its detail modal) behind the same confirm pattern as deleting a post or a preset. It is a hard delete, deliberately: the row carries that reader's access grant (ADR-084), so removing a test account also closes the door it opened — and the confirm dialog says so out loud. The charts recompute from the shortened list by themselves.

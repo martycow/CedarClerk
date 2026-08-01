@@ -36,7 +36,7 @@ The main writing surface — by far the most complex page. Topbar + two toolbar 
 | Block-type dropdown | toolbar row 1, `.block-dropdown` | dropdown | Paragraph / Heading 1–6 | N/A | One of the popups broken by the Bug 2 `backdrop-filter` regression (fixed 25.07.2026) |
 | Undo/Redo | toolbar row 1 | button | TipTap history | N/A | |
 | Text group (`tplText`) | toolbar, movable via Settings → Toolbar | buttons | Bold/italic/underline/strike/spoiler | N/A | |
-| Insert group (`tplInsert`) | toolbar, movable | dropdown/popovers | Insert modal (link/YouTube/email/phone/mention), emoji popover, date/time popover, footnote popover | N/A — instant inserts | |
+| Insert group (`tplInsert`) | toolbar, movable | dropdown/popovers | Insert modal (link/YouTube/email/phone/mention), emoji popover, date/time popover, footnote popover | N/A — instant inserts | Emoji popover gained Flags (50 country/generic flags) + Flag sequences (01.08.2026) — multi-emoji colour runs (⚪️🔴⚪️, 🤍💙❤️, …) for flags Unicode never encoded, rendered as wide pills (`.emoji-grid-wide`). Windows caveat (same fact as DB3.1): country flags render as letter pairs in the editor on Windows — no regional-indicator glyphs in Segoe — but correctly in Telegram and on readers' phones; the sequences render everywhere |
 | Lists group (`tplLists`) | toolbar, movable | buttons | Bullet/numbered/task list, indent/outdent | N/A | |
 | Code group (`tplCode`) | toolbar, movable | buttons | Inline code, code block | N/A | |
 | Media group (`tplMedia`) | toolbar, movable | buttons + file pickers | Image/video/GIF/audio/carousel/collage upload, YouTube insert | Needed & present — see Upload-progress panel below | |

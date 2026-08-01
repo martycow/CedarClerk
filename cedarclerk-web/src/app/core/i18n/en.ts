@@ -160,6 +160,9 @@ export const en = {
             gestures: 'Gestures',
             symbols: 'Symbols',
             objects: 'Objects',
+            flags: 'Flags',
+            // No Unicode emoji exists for these flags — inserted as colour sequences.
+            flagSequences: 'Flag sequences',
         } as Record<string, string>,
         account: 'Account',
         postsManager: 'Posts Manager',

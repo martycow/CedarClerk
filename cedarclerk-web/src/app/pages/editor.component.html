@@ -992,7 +992,7 @@
         <div class="emoji-popover">
             @for (g of emojiGroups; track g.key) {
             <span class="tb-caption">{{ t().editor.emoji[g.key] }}</span>
-            <div class="emoji-grid">
+            <div class="emoji-grid" [class.emoji-grid-wide]="g.wide">
                 @for (e of g.emoji; track e) {
                 <button class="emoji-btn" (click)="insertEmoji(e)">{{ e }}</button>
                 }

@@ -160,6 +160,9 @@ export const ru: Dict = {
             gestures: 'Жесты',
             symbols: 'Символы',
             objects: 'Объекты',
+            flags: 'Флаги',
+            // У этих флагов нет Unicode-эмодзи — вставляются как последовательности цветов.
+            flagSequences: 'Флаги-сочетания',
         } as Record<string, string>,
         account: 'Аккаунт',
         postsManager: 'Менеджер постов',

@@ -2047,6 +2047,19 @@ input[type="datetime-local"]:focus-visible {
     margin-bottom: 6px;
 }
 
+/* Multi-emoji sequences (the flags Unicode never got — ⚪️🔴⚪️ and friends) are three glyphs
+   wide; a 10-column cell would clip them, so their group flows as pills instead. */
+.emoji-grid-wide {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.emoji-grid-wide .emoji-btn {
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+}
+
 /* B13 - reveal where a block actually ends. Rendered as ::after decoration so the document stays
    exactly as written; a real pilcrow character would end up in the exported text. Spaces and tabs
    are deliberately NOT marked for the same reason: in a contenteditable there is no way to draw

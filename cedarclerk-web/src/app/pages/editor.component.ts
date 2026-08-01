@@ -165,7 +165,7 @@ const BLOG_STATUS_MESSAGES = [
 // rather than growing, and each group is captioned so scanning has something to aim at.
 // Deliberately a hand-picked set rather than a full Unicode table: a picker with every emoji in
 // it needs search, and search needs names in six UI languages.
-const EMOJI_GROUPS: { key: string; emoji: string[] }[] = [
+const EMOJI_GROUPS: { key: string; emoji: string[]; wide?: boolean }[] = [
     {
         key: 'faces',
         emoji: [
@@ -197,6 +197,26 @@ const EMOJI_GROUPS: { key: string; emoji: string[] }[] = [
             '💻', '🖱️', '⌨️', '🗂️', '📦', '🛠️', '🧪', '🧭', '☕', '🍺',
             '🐮', '🌲', '🏔️', '🌊', '🌧️', '❄️', '🌙', '☀️', '🕹️', '🎲',
         ],
+    },
+    {
+        key: 'flags',
+        emoji: [
+            '🇺🇦', '🇧🇾', '🇬🇪', '🇷🇺', '🇦🇲', '🇦🇿', '🇰🇿', '🇰🇬', '🇺🇿', '🇹🇯',
+            '🇹🇲', '🇲🇩', '🇱🇻', '🇱🇹', '🇪🇪', '🇵🇱', '🇩🇪', '🇫🇷', '🇬🇧', '🇺🇸',
+            '🇮🇹', '🇪🇸', '🇵🇹', '🇳🇱', '🇨🇿', '🇸🇰', '🇷🇸', '🇹🇷', '🇮🇱', '🇬🇷',
+            '🇫🇮', '🇸🇪', '🇳🇴', '🇩🇰', '🇨🇭', '🇨🇳', '🇯🇵', '🇰🇷', '🇮🇳', '🇧🇷',
+            '🇨🇦', '🇦🇺', '🇪🇺', '🇺🇳', '🏳️', '🏴', '🏁', '🚩', '🏳️‍🌈', '🏴‍☠️',
+        ],
+    },
+    // Flags Unicode never got: the white-red-white flag and the 1991–1993 Russian tricolour with
+    // its lighter blue. No codepoint exists for either, and how 🇷🇺 renders is the READER'S
+    // platform font's choice, not ours — so these are the colour sequences people actually use in
+    // Telegram, inserted as one button. Plain text end to end: editor, Telegram and blog all pass
+    // them through untouched.
+    {
+        key: 'flagSequences',
+        wide: true,
+        emoji: ['⚪️🔴⚪️', '🤍❤️🤍', '🤍💙❤️', '💙💛'],
     },
 ];
 
