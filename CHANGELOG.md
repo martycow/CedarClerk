@@ -2,6 +2,10 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-01 (late) — T-101 closed end to end
+
+The night pass put the blog on the generated tokens; this closes the tail. The single-file HTML export (`DraftEndpoints.StaticExportHtml`) was the last hand-copied palette — still on the pre-ADR-074 values — and now inlines `DesignTokens.Declarations()` like the blog and the landing page, staying self-contained without owning its colours. And ADR-074's "`--t3` is not a text colour" sweep, which had stopped at the app's edge, now covers the public surfaces: 15 blog declarations and 2 export ones moved to `--t2`; the spoiler background and a hover border stay on `--t3` — decoration, which is the token's contract. `dotnet test` **571/571**. Recorded as ADR-090; the stale "still open" note in ADR-074 and the T-101 row in `TASKS.md` corrected with it.
+
 ## 2026-08-01 (evening) — the first real thread run, and what it taught
 
 **v0.9.33, then v0.9.34.** The design doc's first threaded publish sent parts 1–2, collapsed part 1 behind Telegram's "Show more", failed part 3, held back 4–12 — and reported the *held-back* message as the error. One run, four fixes — and the re-run after them taught the fifth. `dotnet test` **571/571**.

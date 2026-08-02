@@ -1602,7 +1602,9 @@ public static class DraftEndpoints
     // carousel, spoiler, math, footnotes, TOC) plus a minimal title/date/signature header.
     // Duplicated rather than shared (docs/DESIGN.md already notes CSS is duplicated per-component
     // in this codebase, not centralized) because this needs to be fully self-contained in one
-    // file with no external <link>/fetch of any kind.
+    // file with no external <link>/fetch of any kind. The palette itself is not duplicated:
+    // it is inlined from DesignTokens (T-101), so the export stays self-contained without
+    // carrying its own copy of the colours.
     private static string StaticExportHtml(string title, string bodyHtml, string lang, ResolvedSignature? signature, DateTime publishedAt, string cedarJson)
     {
         var mathAssets = bodyHtml.Contains("math-tex")
@@ -1623,21 +1625,9 @@ public static class DraftEndpoints
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <title>{{System.Net.WebUtility.HtmlEncode(title)}}</title>
             <style>
-            :root {
-                color-scheme: light dark;
-                --bg: #ECE9E2; --sheet: #FCFBF8; --alt: #EFECE4; --border: #DBD5C8;
-                --text: #26231D; --t2: #6B655A; --t3: #9F988A; --accent: #5B6E46;
-                --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                --font-mono: ui-monospace, Menlo, Consolas, monospace;
-                --asoft: color-mix(in srgb, var(--accent) 13%, var(--sheet));
-                --abord: color-mix(in srgb, var(--accent) 38%, var(--border));
-            }
+            :root { color-scheme: light dark; {{DesignTokens.Declarations(DesignTokens.Light)}} }
             @media (prefers-color-scheme: dark) {
-                :root {
-                    --bg: #171511; --sheet: #211E18; --alt: #2F2C23; --border: #3C382D;
-                    --text: #EAE6DB; --t2: #A69F8F; --t3: #776F5F;
-                    --accent: color-mix(in srgb, #5B6E46 55%, #E8F0E8 45%);
-                }
+                :root { {{DesignTokens.Declarations(DesignTokens.Dark)}} }
             }
             * { box-sizing: border-box; }
             body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-sans); line-height: 1.6; }
@@ -1646,7 +1636,7 @@ public static class DraftEndpoints
             .page { max-width: 720px; margin: 0 auto; padding: 40px 20px 60px; }
             .post-sheet { background: var(--sheet); border-radius: 12px; box-shadow: 0 1px 3px rgba(40,35,25,.10); padding: 32px 40px 28px; }
             .post-sheet h1 { font-size: 27px; font-weight: 700; letter-spacing: -.015em; line-height: 1.22; margin: 0 0 6px; text-align: center; }
-            .post-meta { font-size: 12px; color: var(--t3); text-align: center; margin: 0 0 22px; }
+            .post-meta { font-size: 12px; color: var(--t2); text-align: center; margin: 0 0 22px; }
             .post-sheet h2 { font-size: 20px; font-weight: 600; letter-spacing: -.01em; margin: 24px 0 8px; }
             .post-sheet p { font-size: 16px; line-height: 1.65; margin: 0 0 14px; }
             .toc { background: var(--asoft); border: 1px solid var(--abord); border-radius: 10px; padding: 14px 18px; margin: 0 0 18px; }
@@ -1682,7 +1672,7 @@ public static class DraftEndpoints
             .footnotes { font-size: 12.5px; color: var(--t2); border-top: 1px solid var(--border); padding: 10px 0 0; margin: 0 0 4px; }
             .footnotes sup, .post-sheet sup { color: var(--accent); font-weight: 600; }
             .post-signature { font-size: 13.5px; font-style: italic; color: var(--t2); white-space: pre-line; border-top: 1px solid var(--border); padding-top: 14px; margin-top: 18px; }
-            .made-with { text-align: center; font-size: 11.5px; color: var(--t3); margin-top: 18px; }
+            .made-with { text-align: center; font-size: 11.5px; color: var(--t2); margin-top: 18px; }
             {{mathAssets}}
             </style>
             </head>

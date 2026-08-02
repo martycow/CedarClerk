@@ -24,8 +24,10 @@ Details in `docs/ROADMAP.md` Phase 11 and `CHANGELOG.md`; the decisions are ADR-
 - [ ] **T-076 — mockups**, starting from `_Documents_/CedarClerk/Design-Handoff-2026-07-28/`.
   Marty's tool, not Claude Code's. **Spacing literals (9/11/14/18px) wait on it** — the scale has no
   such steps and picking one is a mockup decision, not a sweep decision.
-- [ ] **T-101 — the blog's server-rendered surfaces** are still on the old token set (its own
-  `:root`, 21 hex in `BlogEndpoints.cs` + 6 in the renderer). ADR-071 principle 6, not yet done.
+- [x] ~~T-101 — the blog's server-rendered surfaces~~ — **done 01.08** (ADR-090): tokens are
+  generated from `styles.scss` (`DesignTokens.generated.cs`) and inlined by `BlogEndpoints`,
+  `LandingEndpoints` and the single-file HTML export (`DraftEndpoints.StaticExportHtml`);
+  the ADR-074 `--t3` sweep now covers the blog and the export too.
 - [x] ~~Stripe Customer Portal (T-073)~~ — **already active**, confirmed by Marty 31.07.
 - [ ] **T-052 (Terms/Privacy)** — Marty says he doesn't know what to put in the `[BRACKETED]` blanks,
   so the next step is not "fill them in" but sorting them: which need a legal entity/jurisdiction
@@ -33,8 +35,7 @@ Details in `docs/ROADMAP.md` Phase 11 and `CHANGELOG.md`; the decisions are ADR-
   Claude can draft. Hard prerequisite before public registration opens.
 
 ### The small defects, none of them blocking
-`T-094` (blog dates: month header always Russian, card date always English, on one page),
-`T-100` (Ctrl+B doesn't always fire — needs a human to try reproducing it), `T-098`, `T-099`.
+`T-094`, `T-099`, `T-100` — fixed in the 01.08 night pass (see `CHANGELOG.md`). Still open: `T-098`.
 `T-034`: iPhone is still wider than the viewport — Marty called it minor, so it rides along with the
 Phase 11 screen migration rather than becoming a hotfix.
 

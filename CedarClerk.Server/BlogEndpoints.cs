@@ -1429,7 +1429,7 @@ public static class BlogEndpoints
         .channel-avatar.brand { background: var(--asoft); color: var(--accent); }
         .channel-id { min-width: 0; }
         .channel-name { font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .channel-meta { font-size: 11px; color: var(--t3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .channel-meta { font-size: 11px; color: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .tg-open-btn { display: flex; align-items: center; gap: 6px; border: 1px solid var(--abord); background: var(--asoft); border-radius: 8px; padding: 5px 12px; font-size: 12.5px; font-weight: 500; color: var(--text); white-space: nowrap; flex: none; }
         .tg-open-btn:hover { filter: brightness(.97); }
         .theme-toggle-btn { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: none; background: none; border-radius: 8px; color: var(--t2); cursor: pointer; font-size: 15px; }
@@ -1454,11 +1454,11 @@ public static class BlogEndpoints
         .timeline-dot { position: absolute; left: -24px; top: 24px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--abord); z-index: 1; }
         .post-card { display: block; background: var(--sheet); border-radius: 12px; box-shadow: var(--shadow); padding: 20px 24px; border: 1px solid transparent; color: var(--text); }
         .post-card:hover { border-color: var(--abord); }
-        .post-card-meta { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 11.5px; color: var(--t3); }
+        .post-card-meta { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 11.5px; color: var(--t2); }
         .post-card-langs { font-size: 10px; font-weight: 600; letter-spacing: .04em; color: var(--accent); background: var(--asoft); border-radius: 4px; padding: 2px 6px; }
         .post-card-title { font-size: 19px; font-weight: 700; letter-spacing: -.01em; line-height: 1.3; margin: 0 0 6px; }
         .post-card-excerpt { font-size: 14px; color: var(--t2); line-height: 1.55; margin: 0 0 10px; }
-        .post-card-stats { font-size: 12px; color: var(--t3); }
+        .post-card-stats { font-size: 12px; color: var(--t2); }
 
         .back-link { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; padding: 4px 0; margin: 0 0 12px; }
         .back-link:hover { text-decoration: underline; }
@@ -1468,7 +1468,7 @@ public static class BlogEndpoints
            tile itself (an SVG data URI) comes from WatermarkRenderer as an inline style. */
         .watermark-overlay { position: absolute; inset: 0; z-index: 2; pointer-events: none; user-select: none; border-radius: 12px; background-repeat: repeat; }
         .post-sheet h1 { font-size: 27px; font-weight: 700; letter-spacing: -.015em; line-height: 1.22; margin: 0 0 12px; text-align: center; }
-        .post-header-slots { font-size: 13px; color: var(--t3); margin: 0 0 18px; text-align: center; }
+        .post-header-slots { font-size: 13px; color: var(--t2); margin: 0 0 18px; text-align: center; }
         .post-header-slots a { color: var(--accent); text-decoration: none; }
         .post-header-slots a:hover { text-decoration: underline; }
         .post-title-divider { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 0 28px; }
@@ -1494,7 +1494,7 @@ public static class BlogEndpoints
         .floating-nav.visible { opacity: 1; pointer-events: auto; }
         .floating-nav-btn { width: 38px; height: 38px; border-radius: 50%; background: var(--sheet); border: 1px solid var(--border); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; color: var(--text); text-decoration: none; cursor: pointer; font-size: 16px; }
         .floating-nav-btn:hover { background: var(--alt); }
-        .post-meta-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; font-size: 12px; color: var(--t3); }
+        .post-meta-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; font-size: 12px; color: var(--t2); }
         .lang-switch-track { display: flex; gap: 2px; background: var(--alt); border-radius: 7px; padding: 2px; }
         .lang-switch-btn { border: none; background: none; border-radius: 5px; padding: 3px 11px; font-size: 11.5px; font-weight: 600; color: var(--t2); }
         .lang-switch-btn.current { background: var(--sheet); box-shadow: var(--shadow); color: var(--text); }
@@ -1543,8 +1543,8 @@ public static class BlogEndpoints
         .poll-option-label { position: relative; z-index: 1; flex: 1; }
         .poll-option-bar { position: absolute; inset: 0; z-index: 0; }
         .poll-option-fill { display: block; height: 100%; width: 0%; background: var(--asoft); transition: width .3s ease; }
-        .poll-option-pct { position: relative; z-index: 1; font-size: 12px; color: var(--t3); font-variant-numeric: tabular-nums; }
-        .poll-total { font-size: 11.5px; color: var(--t3); margin-top: 8px; }
+        .poll-option-pct { position: relative; z-index: 1; font-size: 12px; color: var(--t2); font-variant-numeric: tabular-nums; }
+        .poll-total { font-size: 11.5px; color: var(--t2); margin-top: 8px; }
 
         .annotation { border-left: 3px solid var(--abord); background: var(--asoft); padding: 10px 14px; margin: 16px 0; border-radius: 4px; }
         .article-annotation { border-left: none; background: none; padding: 0; margin: 16px 0 0; }
@@ -1554,10 +1554,10 @@ public static class BlogEndpoints
         .react-btn:hover { border-color: var(--abord); }
         .react-btn.active { border-color: var(--abord); background: var(--asoft); }
         .react-btn .count { font-weight: 600; font-variant-numeric: tabular-nums; }
-        .comment-count-label { font-size: 13px; color: var(--t3); }
+        .comment-count-label { font-size: 13px; color: var(--t2); }
         .comment-box { background: var(--sheet); border-radius: 12px; box-shadow: var(--shadow); padding: 20px 24px; }
-        .comment-box-label { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; font-weight: 600; color: var(--t3); margin: 0 0 12px; }
-        .comment-published-line { font-size: 11.5px; color: var(--t3); margin: -8px 0 12px; }
+        .comment-box-label { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; font-weight: 600; color: var(--t2); margin: 0 0 12px; }
+        .comment-published-line { font-size: 11.5px; color: var(--t2); margin: -8px 0 12px; }
         .comment-list { display: flex; flex-direction: column; gap: 4px; margin: 0 0 14px; }
         .comment-item { display: flex; gap: 10px; padding: 8px 10px; border-radius: 9px; transition: background .25s; }
         .comment-item.glow { background: var(--asoft); }
@@ -1569,10 +1569,10 @@ public static class BlogEndpoints
         .comment-item.comment-reply .comment-text { font-size: 13px; }
         .comment-avatar { width: 28px; height: 28px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex: none; }
         .comment-meta { display: flex; align-items: baseline; gap: 7px; font-size: 13px; font-weight: 600; }
-        .comment-meta time { font-size: 11px; font-weight: 400; color: var(--t3); }
+        .comment-meta time { font-size: 11px; font-weight: 400; color: var(--t2); }
         .comment-anchor { font-size: 11px; color: var(--accent); background: var(--asoft); border-radius: 5px; padding: 2px 7px; display: inline-block; margin: 3px 0 1px; }
         .comment-text { font-size: 14px; line-height: 1.5; }
-        .reply-btn { align-self: flex-start; margin-top: 4px; background: none; border: none; color: var(--t3); font-size: 12px; font-family: inherit; cursor: pointer; padding: 0; }
+        .reply-btn { align-self: flex-start; margin-top: 4px; background: none; border: none; color: var(--t2); font-size: 12px; font-family: inherit; cursor: pointer; padding: 0; }
         .reply-btn:hover { color: var(--accent); text-decoration: underline; }
         /* IB5: a `display` rule beats the [hidden] attribute's default `display: none`, so both
            the reply indicator and the load-more button below stayed on screen no matter what the
@@ -1592,7 +1592,7 @@ public static class BlogEndpoints
         .glossary-pop-desc { margin: 0; color: var(--t2); }
         .glossary-pop img { display: block; width: 100%; border-radius: 6px; margin: 0 0 8px; }
         [hidden] { display: none !important; }
-        .comment-reply-indicator { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--t3); margin: 0 0 8px; }
+        .comment-reply-indicator { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--t2); margin: 0 0 8px; }
         .comment-reply-indicator .reply-target-name { font-weight: 600; color: var(--text); }
         .comment-reply-indicator .cancel-reply { background: none; border: 1px solid var(--border); border-radius: 999px; padding: 1px 9px; font-size: 11.5px; color: var(--t2); cursor: pointer; font-family: inherit; }
         .comment-load-more { display: block; margin: 0 0 10px; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: var(--text); font: inherit; font-size: 12.5px; }
@@ -1600,7 +1600,7 @@ public static class BlogEndpoints
         .reg-gate { display: flex; justify-content: center; padding: 8px 0 40px; }
         .reg-card { background: var(--sheet); border-radius: 12px; box-shadow: var(--shadow); padding: 28px 30px; max-width: 460px; width: 100%; }
         .reg-title { font-size: 22px; margin: 0 0 10px; }
-        .reg-lock { font-size: 12px; letter-spacing: .05em; text-transform: uppercase; font-weight: 600; color: var(--t3); margin-bottom: 10px; }
+        .reg-lock { font-size: 12px; letter-spacing: .05em; text-transform: uppercase; font-weight: 600; color: var(--t2); margin-bottom: 10px; }
         .reg-blurb { font-size: 14px; color: var(--t2); margin: 0 0 6px; }
         .reg-intro { font-size: 14px; line-height: 1.5; margin: 0 0 16px; }
         .post-card-locked { font-size: 11px; opacity: .75; }
@@ -1640,7 +1640,7 @@ public static class BlogEndpoints
         .comment-form button:hover { filter: brightness(1.08); }
 
         .site-footer { border-top: 1px solid var(--border); background: var(--surface); }
-        .site-footer-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 16px 20px; font-size: 12px; color: var(--t3); }
+        .site-footer-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 16px 20px; font-size: 12px; color: var(--t2); }
 
         @media (max-width: 480px) {
             .post-sheet { padding: 22px 16px 20px; }
