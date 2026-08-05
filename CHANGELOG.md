@@ -2,6 +2,12 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-04 — production down: disk full, and the log flood that caused it
+
+The deploy of the 01–02.08 work (v0.9.35) failed its health check because the Pi's root filesystem was at 100% — SQLite answered `disk I/O error` on the first query and the service crash-looped. The culprit: the Pi lost connectivity to `api.telegram.org` around 02.08, and the bot's polling error handler logged a full stack trace per retry with no delay between retries — `syslog` + `daemon.log` grew to 5.5 GB *each* in two days. Recovery: truncated both logs, `apt clean`, journal vacuum (13 GB freed), service restarted — v0.9.35 healthy, bot reconnected on its own, app/blog/RSS all 200.
+
+The root-cause fix in `TelegramBotService.OnError`: consecutive polling errors now back off exponentially (2s → 60s cap; the Telegram.Bot 22.10.2 polling loop awaits the handler before retrying, verified against its source) and the full stack trace is logged once per streak, then one summary line per 100 errors. A two-minute quiet gap resets the streak. Worst case is now ~1.4k retries/day and a handful of log lines instead of millions.
+
 ## 2026-08-01 (late) — T-101 closed end to end
 
 The night pass put the blog on the generated tokens; this closes the tail. The single-file HTML export (`DraftEndpoints.StaticExportHtml`) was the last hand-copied palette — still on the pre-ADR-074 values — and now inlines `DesignTokens.Declarations()` like the blog and the landing page, staying self-contained without owning its colours. And ADR-074's "`--t3` is not a text colour" sweep, which had stopped at the app's edge, now covers the public surfaces: 15 blog declarations and 2 export ones moved to `--t2`; the spoiler background and a hover border stay on `--t3` — decoration, which is the token's contract. `dotnet test` **571/571**. Recorded as ADR-090; the stale "still open" note in ADR-074 and the T-101 row in `TASKS.md` corrected with it.

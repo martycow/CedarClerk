@@ -16,9 +16,13 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
     
     private TelegramBotClient? _client;
     private Stopwatch _sw = new();
+    private CancellationToken _stopToken;
+    private DateTime _lastPollErrorAt = DateTime.MinValue;
+    private int _pollErrorStreak;
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
+        _stopToken = ct;
         var token = cfg[Consts.Telegram.BotTokenCfg];
         if (string.IsNullOrEmpty(token))
         {
@@ -63,10 +67,32 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
         return base.StopAsync(cancellationToken);
     }
 
-    private Task OnError(Exception exception, HandleErrorSource source)
+    private async Task OnError(Exception exception, HandleErrorSource source)
     {
-        logger.LogError(exception, "Bot error from {Source}", source);
-        return Task.CompletedTask;
+        if (source != HandleErrorSource.PollingError)
+        {
+            logger.LogError(exception, "Bot error from {Source}", source);
+            return;
+        }
+
+        // The polling loop awaits this handler before retrying getUpdates, so the delay below is the retry backoff.
+        // Without it a dead network floods the logs with a full stack trace per instant retry (11 GB in two days, 02-04.08.2026).
+        _pollErrorStreak = DateTime.UtcNow - _lastPollErrorAt > TimeSpan.FromMinutes(2) ? 1 : _pollErrorStreak + 1;
+        _lastPollErrorAt = DateTime.UtcNow;
+
+        if (_pollErrorStreak == 1)
+            logger.LogError(exception, "Bot error from {Source}", source);
+        else if (_pollErrorStreak % 100 == 0)
+            logger.LogError("Polling still failing ({Count} in a row): {Message}", _pollErrorStreak, exception.Message);
+
+        var seconds = Math.Min(60, 1 << Math.Min(6, _pollErrorStreak));
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(seconds), _stopToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
     
     private Task OnMessageReceived(Message message, UpdateType type)
