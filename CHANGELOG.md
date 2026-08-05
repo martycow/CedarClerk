@@ -12,6 +12,10 @@ Frontend: a Credits section on Settings → Account between Subscription and Int
 
 Next: T-109 live-verify (Stripe test mode), then T-110 — the X connector itself, blocked on Marty registering the X developer app.
 
+### XPostBuilder — the part of T-110 that needs no API keys
+
+Same contract as `BlueskyPostBuilder` (override wins, teaser falls back, the blog link survives body truncation — ADR-077), but X's counting rules, which are the whole reason this is its own class: 280 **weighted** units (twitter-text config v3 ranges — Latin/Cyrillic weigh 1, CJK 2), an emoji ZWJ sequence is one element of 2 however many codepoints compose it, **every URL is exactly 23** after the t.co rewrite, and the count runs on the NFC form. The paragraph extraction both builders share moved to `CedarPlainText` instead of being copied. 11 tests pinning each rule separately (a Russian post at exactly 280, CJK at 140/141, a 130-character URL costing 23); `dotnet test` 588/588.
+
 ## 2026-08-04 — production down: disk full, and the log flood that caused it
 
 The deploy of the 01–02.08 work (v0.9.35) failed its health check because the Pi's root filesystem was at 100% — SQLite answered `disk I/O error` on the first query and the service crash-looped. The culprit: the Pi lost connectivity to `api.telegram.org` around 02.08, and the bot's polling error handler logged a full stack trace per retry with no delay between retries — `syslog` + `daemon.log` grew to 5.5 GB *each* in two days. Recovery: truncated both logs, `apt clean`, journal vacuum (13 GB freed), service restarted — v0.9.35 healthy, bot reconnected on its own, app/blog/RSS all 200.

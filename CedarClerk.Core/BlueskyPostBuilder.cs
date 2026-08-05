@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using System.Text.Json.Nodes;
 
 namespace CedarClerk.Core;
 
@@ -59,18 +58,7 @@ public static class BlueskyPostBuilder
     /// </summary>
     public static string Teaser(string cedarJson)
     {
-        JsonNode? doc;
-        try
-        {
-            doc = JsonNode.Parse(cedarJson);
-        }
-        catch (System.Text.Json.JsonException)
-        {
-            return "";
-        }
-
-        var paragraphs = new List<string>();
-        Collect(doc, paragraphs);
+        var paragraphs = CedarPlainText.Paragraphs(cedarJson);
 
         var builder = new StringBuilder();
         foreach (var paragraph in paragraphs)
@@ -84,39 +72,6 @@ public static class BlueskyPostBuilder
 
         // Nothing fit whole: fall back to a truncated first paragraph rather than an empty post.
         return builder.Length > 0 ? builder.ToString() : Truncate(paragraphs.FirstOrDefault() ?? "", MaxGraphemes);
-    }
-
-    private static void Collect(JsonNode? node, List<string> paragraphs)
-    {
-        switch (node)
-        {
-            case JsonArray array:
-                foreach (var child in array) Collect(child, paragraphs);
-                return;
-            case JsonObject obj:
-                var type = (string?)obj["type"];
-                if (type is "paragraph" or "heading")
-                {
-                    var text = PlainText(obj["content"]);
-                    if (text.Length > 0) paragraphs.Add(text);
-                    return;
-                }
-                foreach (var (_, value) in obj) Collect(value, paragraphs);
-                return;
-        }
-    }
-
-    private static string PlainText(JsonNode? content)
-    {
-        if (content is not JsonArray array) return "";
-        var builder = new StringBuilder();
-        foreach (var child in array)
-        {
-            if (child is not JsonObject obj) continue;
-            if ((string?)obj["type"] == "text") builder.Append((string?)obj["text"]);
-            else builder.Append(PlainText(obj["content"]));
-        }
-        return builder.ToString().Trim();
     }
 
     /// <summary>Truncates on a grapheme boundary and marks the cut, never mid-codepoint.</summary>
