@@ -171,10 +171,13 @@ public class TelegramPublishTarget(
         var fileIds = deliverByUpload
             ? await ResolveFileIdsAsync(blocks, request.OwnerId, ct)
             : new Dictionary<string, string>();
+        // ADR-091 — the stamp busts Telegram's negative cache of OUR origin; a foreign host may
+        // refuse unknown query strings outright (img.youtube.com answers 404), so external URLs
+        // go out exactly as rendered.
         InputFile ResolveMedia(string url) =>
-            TryLocalMediaFileName(url, out var fileName) && fileIds.TryGetValue(fileName, out var fileId)
-                ? InputFile.FromFileId(fileId)
-                : StampUrl(url, cacheStamp);
+            !TryLocalMediaFileName(url, out var fileName) ? new InputFileUrl(url)
+            : fileIds.TryGetValue(fileName, out var fileId) ? InputFile.FromFileId(fileId)
+            : StampUrl(url, cacheStamp);
 
         var content = new InputRichMessage { Blocks = blocks.Select(b => ToInputRichBlock(b, ResolveMedia)).ToList() };
 

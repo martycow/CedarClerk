@@ -8,6 +8,10 @@ The deploy of the 01–02.08 work (v0.9.35) failed its health check because the 
 
 The root-cause fix in `TelegramBotService.OnError`: consecutive polling errors now back off exponentially (2s → 60s cap; the Telegram.Bot 22.10.2 polling loop awaits the handler before retrying, verified against its source) and the full stack trace is logged once per streak, then one summary line per 100 errors. A two-minute quiet gap resets the streak. Worst case is now ~1.4k retries/day and a handful of log lines instead of millions.
 
+### The cache-buster broke YouTube embeds (ADR-091)
+
+The first post after recovery — text plus one YouTube embed, no local media — failed with `failed to get HTTP URL content`. `img.youtube.com` serves the thumbnail at 200 but answers **404 the moment ADR-087's `?v=<stamp>` is appended**: Google's thumbnail host refuses unknown query strings instead of ignoring them. The stamp exists to bust Telegram's negative cache of *our* origin, so it now applies only to URLs that point into our own `/media/` (the same `TryLocalMediaFileName` test that gates upload eligibility); external URLs go out byte-for-byte as rendered. `dotnet test` 571/571.
+
 ## 2026-08-01 (late) — T-101 closed end to end
 
 The night pass put the blog on the generated tokens; this closes the tail. The single-file HTML export (`DraftEndpoints.StaticExportHtml`) was the last hand-copied palette — still on the pre-ADR-074 values — and now inlines `DesignTokens.Declarations()` like the blog and the landing page, staying self-contained without owning its colours. And ADR-074's "`--t3` is not a text colour" sweep, which had stopped at the app's edge, now covers the public surfaces: 15 blog declarations and 2 export ones moved to `--t2`; the spoiler background and a hover border stay on `--t3` — decoration, which is the token's contract. `dotnet test` **571/571**. Recorded as ADR-090; the stale "still open" note in ADR-074 and the T-101 row in `TASKS.md` corrected with it.
