@@ -994,3 +994,48 @@
     background: var(--accent);
     transition: width var(--motion-base) var(--ease);
 }
+
+/* Credits (ADR-092) */
+.ledger-title {
+    margin: var(--space-4) 0 var(--space-2);
+    font-size: var(--fs-ui);
+}
+
+.credit-ledger {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.credit-ledger li {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    padding: var(--space-1) 0;
+    border-bottom: 1px solid var(--border);
+    font-size: var(--fs-meta);
+}
+
+.credit-ledger li:last-child {
+    border-bottom: none;
+}
+
+.ledger-delta {
+    min-width: 3ch;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--t2);
+}
+
+.ledger-delta.positive {
+    color: var(--ok);
+}
+
+.ledger-reason {
+    flex: 1;
+    color: var(--text);
+}
+
+.ledger-date {
+    color: var(--t2);
+}

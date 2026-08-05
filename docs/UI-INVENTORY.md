@@ -99,7 +99,7 @@ Profile, Appearance, Toolbar customization, Header slots, Social links, Subscrip
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|
 | Header | `<app-page-header page="settings">` | header | **27.07.2026 (ADR-052)**: moved into the shared `app-page-header` — gained the glass material it didn't have before (was a solid `--surface` fill) and a Posts/Glossary/Settings/Admin nav row | N/A | See Shared components |
-| Anchor chip nav | `:18-26` | chip-row | Jumps to each section | N/A | 7 chips |
+| Anchor chip nav | `:18-26` | chip-row | Jumps to each section | N/A | 8 chips (Credits added 05.08.2026) |
 | Post signature + URL fields | `:48-56` | panel + button | Pro-gated custom signature | Needed & present — `signatureBusy()`/`signatureSaved()` | Free users see static attribution instead |
 | Theme mode toggle | `:78-79` | tab | Which palette is being edited (local UI state) | N/A | |
 | Accent preset swatches | `:84-89` | chip-row | `pickAccentPreset()`, saves instantly | **Needed but missing** — fire-and-forget save, only `appearanceError()` on failure | "Applies instantly" by design, but a failed save is silent otherwise |
@@ -117,6 +117,10 @@ Profile, Appearance, Toolbar customization, Header slots, Social links, Subscrip
 | Plan cards (Free/Pro/Pro Plus) + trial link | `:333-365` | panel | `pickPlan()`, 7-day trial start | N/A | |
 | Pay-method radios (Stripe/PayPal/Telegram Stars) | `:372-397` | chip-row | Selects payment provider; disabled per-method if unconfigured/unlinked | N/A | Good gating with explanatory tooltips |
 | Confirm upgrade/pay button | `:399-402` | button | Redirects to hosted checkout / sends Stars invoice | Needed & present — `billingBusy()` | |
+| Credits balance banner | `sec-credits` | panel | ADR-092 — wallet balance (`GET /api/billing/credits`) | N/A | **Added 05.08.2026** |
+| Credit pack cards (10/50/100) | `sec-credits` | panel | `pickPack()` → pay-method step (Stripe/Stars, no PayPal yet) | N/A | Reuses `plan-card`/`pay-method` markup and gating |
+| Buy credits button | `sec-credits` | button | Stripe hosted checkout redirect / Stars invoice to bot chat | Needed & present — `creditsBusy()` | `creditsError()` inline on failure |
+| Credit ledger list | `sec-credits` | panel | Last 50 wallet movements, reason + signed delta | N/A | Empty state when no activity |
 | Telegram link/unlink row | `:412-441` | panel | `linkTelegram()` / inline unlink confirm | Needed & present — `telegramBusy()` ("Waiting for Telegram…") | Unlink uses an inline "Sure?" chip, not a modal |
 | Bot status row | `:445-459` | panel | Reachable/unreachable status dot + external link | N/A | Read-only |
 | Channels row | `:461-472` | panel | Connected-channel summary, links to editor | N/A | Actual channel CRUD lives in the editor's Channels popover |

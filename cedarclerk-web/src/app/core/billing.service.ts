@@ -16,6 +16,17 @@ export interface BillingStatus {
     };
 }
 
+// ADR-092 — the prepaid credit wallet
+export interface CreditPack { id: string; credits: number; priceUsdCents: number; priceStars: number }
+export interface CreditLedgerEntry { delta: number; reason: string; createdAt: string }
+export interface CreditsStatus {
+    balance: number;
+    xPostCost: number;
+    packs: CreditPack[];
+    providers: { stripe: boolean; telegramStars: boolean };
+    ledger: CreditLedgerEntry[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class BillingService {
     private http = inject(HttpClient);
@@ -41,5 +52,18 @@ export class BillingService {
     // URL to redirect the browser to (Stripe-hosted subscription management)
     stripePortal() {
         return firstValueFrom(this.http.post<{ url: string }>('/api/billing/stripe/portal', {}));
+    }
+
+    // ADR-092 — credits
+    credits() {
+        return firstValueFrom(this.http.get<CreditsStatus>('/api/billing/credits'));
+    }
+
+    creditsStripeCheckout(packId: string) {
+        return firstValueFrom(this.http.post<{ url: string }>('/api/billing/credits/stripe/checkout', { packId }));
+    }
+
+    creditsStarsInvoice(packId: string) {
+        return firstValueFrom(this.http.post<{ sent: boolean }>('/api/billing/credits/telegram-stars/invoice', { packId }));
     }
 }

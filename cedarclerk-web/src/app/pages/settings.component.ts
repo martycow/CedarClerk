@@ -4,7 +4,7 @@ import { DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { LocaleService, UiLang } from '../core/i18n/locale.service';
-import { BillingService, BillingStatus, PlanId } from '../core/billing.service';
+import { BillingService, BillingStatus, CreditsStatus, PlanId } from '../core/billing.service';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES } from '../core/languages';
 import { TelegramLinkService } from '../core/telegram-link.service';
 import { ChannelsService, Channel } from '../core/channels.service';
@@ -89,6 +89,15 @@ export class SettingsComponent implements OnInit {
     selectedPlan: PlanId | null = null;
     payMethod: PayMethod = 'stripe';
 
+    // ADR-092 — the credit wallet. Same shape as the plan purchase above: pick a pack, pick a
+    // method, go. Stars has no redirect, so its confirmation is a message rather than a page.
+    credits = signal<CreditsStatus | null>(null);
+    creditsBusy = signal(false);
+    creditsMessage = signal<string | null>(null);
+    creditsError = signal<string | null>(null);
+    selectedPackId: string | null = null;
+    creditsPayMethod: 'stripe' | 'stars' = 'stripe';
+
     telegramBusy = signal(false);
     notifyBusy = signal(false);
     telegramError = signal<string | null>(null);
@@ -135,6 +144,7 @@ export class SettingsComponent implements OnInit {
         this.socialYoutubeUrlText = this.auth.socialYoutubeUrl() ?? '';
         this.socialGithubUrlText = this.auth.socialGithubUrl() ?? '';
         try { this.billing.set(await this.billingApi.status()); } catch { /* non-critical */ }
+        try { this.credits.set(await this.billingApi.credits()); } catch { /* non-critical */ }
         try { this.botStatus.set(await this.telegramLink.botStatus()); } catch { /* non-critical */ }
         try { this.channels.set(await this.channelsApi.list()); } catch { /* non-critical */ }
     }
@@ -474,6 +484,47 @@ export class SettingsComponent implements OnInit {
         } finally {
             this.billingBusy.set(false);
         }
+    }
+
+    pickPack(id: string) {
+        this.selectedPackId = id;
+        this.creditsMessage.set(null);
+        this.creditsError.set(null);
+    }
+
+    packPriceUsd(cents: number): string {
+        return `$${(cents / 100).toFixed(cents % 100 === 0 ? 0 : 2)}`;
+    }
+
+    selectedPackPriceCents(): number {
+        return this.credits()?.packs.find(p => p.id === this.selectedPackId)?.priceUsdCents ?? 0;
+    }
+
+    async buyCredits() {
+        const packId = this.selectedPackId;
+        if (!packId) return;
+
+        this.creditsBusy.set(true);
+        this.creditsMessage.set(null);
+        this.creditsError.set(null);
+        try {
+            if (this.creditsPayMethod === 'stripe') {
+                const res = await this.billingApi.creditsStripeCheckout(packId);
+                window.location.href = res.url; // Stripe hosted checkout page
+            } else {
+                await this.billingApi.creditsStarsInvoice(packId);
+                this.creditsMessage.set(this.t().settings.credits.invoiceSent);
+                this.selectedPackId = null;
+            }
+        } catch (e) {
+            this.creditsError.set(httpErrorMessage(e, this.t().settings.errors.checkout));
+        } finally {
+            this.creditsBusy.set(false);
+        }
+    }
+
+    creditReasonLabel(reason: string): string {
+        return this.t().settings.credits.reasons[reason] ?? reason;
     }
 
     async manageStripeBilling() {

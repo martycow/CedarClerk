@@ -2,6 +2,16 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-05 — the credit wallet (T-109, ADR-092)
+
+X posting will be paid by the author, so the wallet came before the connector. Marty's three decisions (04.08): one **universal** credit wallet rather than an X-only counter, ~2× markup (1 credit = 1 X post = $0.40; packs 10/$4, 50/$18, 100/$30, Stars 200/900/1500 ⭐), and no credits bundled into plans.
+
+Backend: `CreditEntry` is a ledger — the balance is `SUM(Delta)`, so every number has an audit trail — and both directions are idempotent by `(Reason, Ref)`: a replayed Stripe webhook or a retried publish job cannot double-move the wallet (that's the unique index, not application luck). A charge refuses rather than overdrawing. Purchases ride the existing plan flows: Stripe one-time Checkout with a `credits_pack` metadata branch in the webhook, Stars invoice with a `credits-{pack}:{user}` payload branch in the bot. 6 tests; `dotnet test` 577/577.
+
+Frontend: a Credits section on Settings → Account between Subscription and Integrations — balance banner, three pack cards reusing the plan-card/pay-method markup (Stripe redirect / Stars invoice, same per-method gating and tooltips), inline error, and the last 50 ledger rows with localized reasons (RU plural forms via the existing `plural()` helper). `ng build` warning-free, frontend 11/11, smoke 51/51.
+
+Next: T-109 live-verify (Stripe test mode), then T-110 — the X connector itself, blocked on Marty registering the X developer app.
+
 ## 2026-08-04 — production down: disk full, and the log flood that caused it
 
 The deploy of the 01–02.08 work (v0.9.35) failed its health check because the Pi's root filesystem was at 100% — SQLite answered `disk I/O error` on the first query and the service crash-looped. The culprit: the Pi lost connectivity to `api.telegram.org` around 02.08, and the bot's polling error handler logged a full stack trace per retry with no delay between retries — `syslog` + `daemon.log` grew to 5.5 GB *each* in two days. Recovery: truncated both logs, `apt clean`, journal vacuum (13 GB freed), service restarted — v0.9.35 healthy, bot reconnected on its own, app/blog/RSS all 200.

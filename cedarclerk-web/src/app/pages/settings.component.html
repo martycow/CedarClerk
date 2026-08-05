@@ -37,6 +37,7 @@
             } @else {
             <button (click)="jump('sec-language')">{{ t().settings.language.nav }}</button>
             <button (click)="jump('sec-subscription')">{{ t().settings.subscription.nav }}</button>
+            <button (click)="jump('sec-credits')">{{ t().settings.credits.nav }}</button>
             <button (click)="jump('sec-integrations')">{{ t().settings.integrations.nav }}</button>
             }
         </nav>
@@ -404,6 +405,89 @@
                     {{ billingBusy() ? '…' : (selectedPlan === 'trial' ? t().settings.subscription.startTrial(priceFor(selectedPlan)) : t().settings.subscription.upgrade(priceFor(selectedPlan))) }}
                 </button>
             </div>
+            }
+            }
+        </section>
+        }
+
+        <!-- ============ CREDITS (ADR-092) ============ -->
+        @if (tab() === 'account') {
+        <section id="sec-credits" class="settings-card">
+            <h2>{{ t().settings.credits.title }}</h2>
+            <p class="field-hint">{{ t().settings.credits.hint }}</p>
+
+            @if (credits(); as c) {
+            <div class="plan-banner">
+                <span class="status-dot"></span>
+                <div>
+                    <div class="plan-banner-title">{{ t().settings.credits.balance(c.balance) }}</div>
+                    <div class="plan-banner-meta">{{ t().settings.credits.balanceLabel }}</div>
+                </div>
+            </div>
+
+            @if (creditsMessage()) {
+            <div class="success-banner">
+                <app-icon name="check" size="xs"></app-icon>
+                {{ creditsMessage() }}
+            </div>
+            }
+
+            <div class="plan-grid">
+                @for (pack of c.packs; track pack.id) {
+                <div class="plan-card" [class.current]="selectedPackId === pack.id">
+                    <div class="plan-card-name">{{ t().settings.credits.packCredits(pack.credits) }}</div>
+                    <div class="plan-card-price">{{ packPriceUsd(pack.priceUsdCents) }}</div>
+                    <button class="plan-card-btn" (click)="pickPack(pack.id)">
+                        {{ t().settings.credits.buy(packPriceUsd(pack.priceUsdCents)) }}
+                    </button>
+                </div>
+                }
+            </div>
+
+            @if (selectedPackId) {
+            <div class="payment-step">
+                <div class="field-hint">{{ t().settings.credits.payWith }}</div>
+                <div class="pay-methods">
+                    <button class="pay-method" [class.selected]="creditsPayMethod === 'stripe'" [disabled]="!c.providers.stripe"
+                            [title]="c.providers.stripe ? '' : t().settings.subscription.stripeUnavailable" (click)="creditsPayMethod = 'stripe'">
+                        <span class="radio-dot"></span>
+                        <span>
+                            <span class="pay-method-label">{{ t().settings.subscription.stripeLabel }}</span>
+                            <span class="pay-method-desc">{{ t().settings.subscription.stripeDesc }}</span>
+                        </span>
+                    </button>
+                    <button class="pay-method" [class.selected]="creditsPayMethod === 'stars'"
+                            [disabled]="!c.providers.telegramStars || !auth.telegramLinked()"
+                            [title]="!c.providers.telegramStars ? t().settings.subscription.starsUnavailable : (!auth.telegramLinked() ? t().settings.subscription.starsNeedsLink : '')"
+                            (click)="creditsPayMethod = 'stars'">
+                        <span class="radio-dot"></span>
+                        <span>
+                            <span class="pay-method-label">{{ t().settings.subscription.starsLabel }}</span>
+                            <span class="pay-method-desc">{{ t().settings.subscription.starsDesc }}</span>
+                        </span>
+                    </button>
+                </div>
+                <button class="btn-primary" (click)="buyCredits()" [disabled]="creditsBusy()">
+                    <app-icon name="paper-plane-tilt" size="xs"></app-icon>
+                    {{ creditsBusy() ? '…' : t().settings.credits.buy(packPriceUsd(selectedPackPriceCents())) }}
+                </button>
+                @if (creditsError()) { <span class="field-error">{{ creditsError() }}</span> }
+            </div>
+            }
+
+            @if (c.ledger.length > 0) {
+            <h3 class="ledger-title">{{ t().settings.credits.ledgerTitle }}</h3>
+            <ul class="credit-ledger">
+                @for (entry of c.ledger; track $index) {
+                <li>
+                    <span class="ledger-delta" [class.positive]="entry.delta > 0">{{ entry.delta > 0 ? '+' : '' }}{{ entry.delta }}</span>
+                    <span class="ledger-reason">{{ creditReasonLabel(entry.reason) }}</span>
+                    <span class="ledger-date">{{ entry.createdAt | date:'d MMM yyyy, HH:mm' }}</span>
+                </li>
+                }
+            </ul>
+            } @else {
+            <p class="field-hint">{{ t().settings.credits.ledgerEmpty }}</p>
             }
             }
         </section>
