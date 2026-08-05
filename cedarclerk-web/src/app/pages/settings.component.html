@@ -11,9 +11,10 @@
             <button [class.active]="tab() === 'account'" (click)="setTab('account')">{{ t().settings.tabs.account }}</button>
         </nav>
 
-        <nav class="anchor-chips">
-            <!--T-002 — a reminder, not a wall: the account works unconfirmed, and blocking one would
-        lock out every account that predates this. It disappears the moment the address is confirmed.-->
+        <!--T-002 — a reminder, not a wall: the account works unconfirmed, and blocking one would
+        lock out every account that predates this. It disappears the moment the address is confirmed.
+        (Sat INSIDE the anchor-chips nav until 05.08.2026 — the flex row stretched every chip to the
+        card's height, which is what "the buttons look like tall pills" was.)-->
         @if (!auth.emailConfirmed()) {
         <section class="settings-card confirm-card">
             <h2>{{ t().settings.confirmEmail.title }}</h2>
@@ -29,7 +30,8 @@
         </section>
         }
 
-        @if (tab() === 'profile') {
+        <nav class="anchor-chips">
+            @if (tab() === 'profile') {
             <button (click)="jump('sec-profile')">{{ t().settings.profile.nav }}</button>
             <button (click)="jump('sec-cross-links')">{{ t().settings.crossLinks.nav }}</button>
             <button (click)="jump('sec-header-slots')">{{ t().settings.headerSlots.nav }}</button>
