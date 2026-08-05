@@ -139,6 +139,26 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
                 return;
             }
 
+            // ADR-092 — a credit-pack purchase, not a plan
+            if (plan.StartsWith(Consts.Plans.CreditPackPrefix, StringComparison.Ordinal)
+                && CreditPacks.Find(plan[Consts.Plans.CreditPackPrefix.Length..]) is { } pack)
+            {
+                await CreditWallet.GrantAsync(db, user.Id, pack.Credits, CreditReasons.Purchase, payment.TelegramPaymentChargeId);
+                db.Payments.Add(new Payment
+                {
+                    OwnerId = user.Id,
+                    Provider = "telegram-stars",
+                    Plan = plan,
+                    ExternalId = payment.TelegramPaymentChargeId,
+                    Amount = payment.TotalAmount,
+                    Currency = payment.Currency, // "XTR"
+                });
+                await db.SaveChangesAsync();
+                logger.LogInformation("Telegram Stars credits purchase — user {UserId}, pack {PackId}", user.Id, pack.Id);
+                await Client.SendMessage(message.Chat, $"Payment received — {pack.Credits} credits added to your Cedar Clerk balance.");
+                return;
+            }
+
             var error = SubscriptionPlan.ApplyPurchase(user, plan, DateTime.UtcNow);
             if (error is not null)
             {

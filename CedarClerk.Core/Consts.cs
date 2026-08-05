@@ -35,6 +35,12 @@ public static class Consts
         
         public const string Trial = "trial";
         public const int TrialPrice = 1;
+
+        /// <summary>
+        /// ADR-092 — a Stars invoice payload for a credit pack is "credits-{packId}:{userId}",
+        /// keeping the same "{what}:{who}" shape the plan payloads already use.
+        /// </summary>
+        public const string CreditPackPrefix = "credits-";
     }
 
     public static class Signatures

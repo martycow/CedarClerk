@@ -2,6 +2,19 @@
 
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
+## Now (04.08.2026): X/Twitter — credits first, connector second (ADR-092)
+
+Marty decided 04.08: X posting is paid by the author via a **universal prepaid credit wallet**
+(1 credit = 1 X post = $0.40; packs 10/$4, 50/$18, 100/$30; nothing included in plans).
+
+- [x] **T-109 backend** — `CreditEntry` ledger + `AddCreditLedger` migration, `CreditWallet`
+  (grant/charge, idempotent by (Reason, Ref)), `GET /api/billing/credits`, Stripe one-time
+  checkout + webhook branch, Stars invoice + bot payment branch. 6 tests; `dotnet test` 577/577.
+- [ ] **T-109 frontend** — balance + pack purchase in Settings → Billing; ledger list.
+- [ ] **T-110 — X connector** (`XPublishTarget`, OAuth 2.0 PKCE, `XPostBuilder`, media as bytes,
+  credit charge on success). **Blocked on Marty: X developer account + app + billing.**
+- [ ] Live-verify a credit purchase end to end (Stripe test mode, then Stars).
+
 ## Now (01.08.2026): Phase 11 — the code-side work is done, the mockups are not
 
 **v0.9.21 is in production** (deployed 31.07): the whole token migration, all 12 screens, the type

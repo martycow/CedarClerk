@@ -20,10 +20,107 @@ namespace CedarClerk.Server;
 public static class BillingEndpoints
 {
     public record CheckoutRequest(string Plan);
+    public record CreditCheckoutRequest(string PackId);
 
     public static void MapBillingEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/billing");
+
+        #region Credits (ADR-092)
+
+        group.MapGet("/credits", async (ClaimsPrincipal principal, UserManager<ApplicationUser> users, CedarDbContext db, IConfiguration cfg, TelegramBotService bot) =>
+        {
+            var user = await users.GetUserAsync(principal);
+            if (user is null) return Results.Unauthorized();
+
+            var ledger = await db.CreditEntries
+                .Where(c => c.OwnerId == user.Id)
+                .OrderByDescending(c => c.CreatedAt)
+                .Take(50)
+                .Select(c => new { c.Delta, c.Reason, c.CreatedAt })
+                .ToListAsync();
+
+            return Results.Ok(new
+            {
+                balance = await CreditWallet.BalanceAsync(db, user.Id),
+                xPostCost = CreditPacks.XPostCost,
+                packs = CreditPacks.All.Select(p => new { p.Id, p.Credits, p.PriceUsdCents, p.PriceStars }),
+                providers = new
+                {
+                    stripe = !string.IsNullOrEmpty(cfg[Consts.Stripe.SecretKeyCfg]),
+                    telegramStars = bot.IsRunning,
+                },
+                ledger,
+            });
+        }).RequireAuthorization();
+
+        group.MapPost("/credits/stripe/checkout", async (CreditCheckoutRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users, IConfiguration cfg, IHttpClientFactory httpFactory) =>
+        {
+            var secretKey = cfg[Consts.Stripe.SecretKeyCfg];
+            if (string.IsNullOrEmpty(secretKey))
+                return Results.Json(new { error = ErrorMessages.StripeNotConfigured }, statusCode: StatusCodes.Status501NotImplemented);
+            if (CreditPacks.Find(req.PackId) is not { } pack)
+                return Results.BadRequest(new { error = $"Unknown credit pack '{req.PackId}'" });
+
+            var user = await users.GetUserAsync(principal);
+            if (user is null) return Results.Unauthorized();
+
+            var mainHost = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
+            var form = new Dictionary<string, string>
+            {
+                ["mode"] = "payment",
+                ["line_items[0][quantity]"] = "1",
+                ["line_items[0][price_data][currency]"] = "usd",
+                ["line_items[0][price_data][unit_amount]"] = pack.PriceUsdCents.ToString(),
+                ["line_items[0][price_data][product_data][name]"] = $"Cedar Clerk — {pack.Credits} credits",
+                ["success_url"] = $"{mainHost}/?billing=credits-success",
+                ["cancel_url"] = $"{mainHost}/?billing=cancelled",
+                ["client_reference_id"] = user.Id,
+                ["metadata[credits_pack]"] = pack.Id,
+            };
+            if (!string.IsNullOrEmpty(user.Email))
+                form["customer_email"] = user.Email;
+
+            var http = httpFactory.CreateClient("billing");
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.stripe.com/v1/checkout/sessions");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {secretKey}");
+            request.Content = new FormUrlEncodedContent(form);
+
+            var response = await http.SendAsync(request);
+            var json = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+                return Results.Json(new { error = $"Stripe API error ({(int)response.StatusCode}) — check server logs" }, statusCode: StatusCodes.Status502BadGateway);
+
+            using var doc = JsonDocument.Parse(json);
+            return Results.Ok(new { url = doc.RootElement.GetProperty("url").GetString() });
+        }).RequireAuthorization();
+
+        group.MapPost("/credits/telegram-stars/invoice", async (CreditCheckoutRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users, TelegramBotService bot) =>
+        {
+            if (CreditPacks.Find(req.PackId) is not { } pack)
+                return Results.BadRequest(new { error = $"Unknown credit pack '{req.PackId}'" });
+            if (!bot.IsRunning)
+                return Results.Json(new { error = ErrorMessages.BotNotRunning }, statusCode: StatusCodes.Status503ServiceUnavailable);
+
+            var user = await users.GetUserAsync(principal);
+            if (user is null) return Results.Unauthorized();
+            if (user.TelegramUserId is null)
+                return Results.BadRequest(new { error = ErrorMessages.LinkYouTelegram });
+
+            var title = $"Cedar Clerk — {pack.Credits} credits";
+            var invoiceLink = await bot.Client.CreateInvoiceLink(
+                title: title,
+                description: $"{pack.Credits} publishing credits, one-time purchase.",
+                payload: $"{Consts.Plans.CreditPackPrefix}{pack.Id}:{user.Id}",
+                currency: "XTR",
+                prices: [new LabeledPrice(title, pack.PriceStars)]);
+
+            await bot.Client.SendMessage(user.TelegramUserId.Value, $"{title} — {pack.PriceStars} ⭐\nTap to pay: {invoiceLink}");
+
+            return Results.Ok(new { sent = true });
+        }).RequireAuthorization();
+
+        #endregion
 
         group.MapGet("/status", async (ClaimsPrincipal principal, UserManager<ApplicationUser> users, IConfiguration cfg, TelegramBotService bot) =>
         {
@@ -146,6 +243,28 @@ public static class BillingEndpoints
                     var userId = obj.TryGetProperty("client_reference_id", out var refId) ? refId.GetString() : null;
                     var plan = obj.TryGetProperty("metadata", out var meta) && meta.TryGetProperty("plan", out var p) ? p.GetString() : null;
                     var sessionId = obj.TryGetProperty("id", out var sid) ? sid.GetString() : null;
+
+                    // ADR-092 — a credit-pack purchase, not a plan
+                    var packId = obj.TryGetProperty("metadata", out var meta2) && meta2.TryGetProperty("credits_pack", out var cp) ? cp.GetString() : null;
+                    if (userId is not null && CreditPacks.Find(packId) is { } pack)
+                    {
+                        if (sessionId is not null && await db.Payments.AnyAsync(x => x.ExternalId == sessionId))
+                            break;
+                        await CreditWallet.GrantAsync(db, userId, pack.Credits, CreditReasons.Purchase, sessionId);
+                        db.Payments.Add(new Payment
+                        {
+                            OwnerId = userId,
+                            Provider = "stripe",
+                            Plan = $"{Consts.Plans.CreditPackPrefix}{pack.Id}",
+                            ExternalId = sessionId,
+                            Amount = obj.TryGetProperty("amount_total", out var amt2) && amt2.ValueKind == JsonValueKind.Number ? amt2.GetInt64() : 0,
+                            Currency = obj.TryGetProperty("currency", out var cur3) ? cur3.GetString() ?? "" : "",
+                        });
+                        await db.SaveChangesAsync();
+                        logger.LogInformation("Stripe credits purchase — user {UserId}, pack {PackId}", userId, pack.Id);
+                        break;
+                    }
+
                     if (userId is null || plan is null) break;
 
                     if (sessionId is not null && await db.Payments.AnyAsync(x => x.ExternalId == sessionId))

@@ -33,6 +33,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<DraftStatSnapshot> DraftStatSnapshots => Set<DraftStatSnapshot>();
     public DbSet<DraftTargetText> DraftTargetTexts => Set<DraftTargetText>();
     public DbSet<PublishJob> PublishJobs => Set<PublishJob>();
+    public DbSet<CreditEntry> CreditEntries => Set<CreditEntry>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -73,5 +74,11 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         // The runner's query is "what is waiting", and the client's is "how is this draft doing".
         builder.Entity<PublishJob>().HasIndex(j => new { j.Status, j.NextAttemptAt });
         builder.Entity<PublishJob>().HasIndex(j => new { j.DraftId, j.CreatedAt });
+        // ADR-092 — the balance query, and the idempotency anchor (SQLite treats NULLs as distinct
+        // in a unique index, so unanchored rows are unconstrained).
+        builder.Entity<CreditEntry>().HasIndex(c => new { c.OwnerId, c.CreatedAt });
+        builder.Entity<CreditEntry>()
+            .HasIndex(c => new { c.Reason, c.Ref })
+            .IsUnique();
     }
 }

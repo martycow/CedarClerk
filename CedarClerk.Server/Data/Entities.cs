@@ -203,6 +203,29 @@ public class Payment
 }
 
 /// <summary>
+/// ADR-092 — one movement of the prepaid credit wallet: +Delta on a pack purchase, -Delta on a
+/// paid publish. The balance is SUM(Delta) per owner — a ledger, not a mutable counter, so every
+/// balance has an audit trail and a charge can be made idempotent by (Reason, Ref).
+/// </summary>
+public class CreditEntry
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public int Delta { get; set; }
+
+    /// <summary>purchase, x-post, admin-grant — see CedarClerk.Core.CreditReasons</summary>
+    public string Reason { get; set; } = "";
+
+    /// <summary>
+    /// What this movement is anchored to: the payment's ExternalId for a purchase, the PublishJob
+    /// id for a charge. (Reason, Ref) is unique, which is what makes a retried charge a no-op.
+    /// </summary>
+    public string? Ref { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
 /// Per-user, per-UTC-day counter of AI calls (auto-translate etc.) enforcing PlanQuotas.AiDailyLimit.
 /// </summary>
 public class AiUsage
