@@ -27,6 +27,7 @@ import { AppearancePanelComponent } from '../shared/appearance-panel.component';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, CompressionLevel, UpdatePreview } from '../core/posts.service';
 import { PublishService, PublishAccount, PublishJob, ThreadPart } from '../core/publish.service';
+import { BillingService } from '../core/billing.service';
 import { DraftRevision, DraftRevisionDetail, RevisionDiff } from '../core/drafts.service';
 import { plainTextOf } from '../core/cedar-text.util';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES, endonymOf } from '../core/languages';
@@ -353,14 +354,18 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return [...new segmenter(undefined, { granularity: 'grapheme' }).segment(text)].length;
     }
 
-    private async loadBluesky() {
+    private async loadShortPostTargets() {
         try {
             const networks = await this.publishApi.networks();
-            const bluesky = networks.find(n => n.network === 'bluesky');
-            this.blueskyAccount.set(bluesky?.accounts[0] ?? null);
+            this.blueskyAccount.set(networks.find(n => n.network === 'bluesky')?.accounts[0] ?? null);
+            this.xAccount.set(networks.find(n => n.network === 'x')?.accounts[0] ?? null);
         } catch {
             this.blueskyAccount.set(null);
+            this.xAccount.set(null);
         }
+        try {
+            this.xCredits.set((await this.billingApi.credits()).balance);
+        } catch { /* the note simply doesn't render */ }
 
         const id = this.currentId();
         if (!id) return;
@@ -368,8 +373,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             const { texts } = await this.publishApi.texts(id);
             this.blueskyText = texts.find(t => t.network === 'bluesky' && t.language === this.lang())?.text ?? '';
             this.blueskyTextDirty.set(false);
+            this.xText = texts.find(t => t.network === 'x' && t.language === this.lang())?.text ?? '';
+            this.xTextDirty.set(false);
         } catch {
             this.blueskyText = '';
+            this.xText = '';
         }
     }
 
@@ -379,7 +387,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         try {
             await this.publishApi.connectBluesky(this.blueskyHandle.trim(), this.blueskyAppPassword.trim());
             this.blueskyAppPassword = '';
-            await this.loadBluesky();
+            await this.loadShortPostTargets();
             this.destBluesky.set(true);
         } catch (e) {
             this.blueskyError.set(httpErrorMessage(e, this.t().editor.errors.connectChannel));
@@ -421,11 +429,105 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             } else {
                 this.blueskyPostUrl.set(job?.publicUrl ?? null);
             }
-            await this.loadBluesky();
+            await this.loadShortPostTargets();
         } catch (e) {
             this.blueskyError.set(httpErrorMessage(e, this.t().editor.errors.publish));
         } finally {
             this.blueskyBusy.set(false);
+        }
+    }
+
+    // ─── X (T-110, ADR-093) ───────────────────────────────────────────────────────────────────
+    private billingApi = inject(BillingService);
+    readonly xLimit = 280;
+    destX = signal(false);
+    xAccount = signal<PublishAccount | null>(null);
+    xText = '';
+    xTextDirty = signal(false);
+    xBusy = signal(false);
+    xError = signal('');
+    xPostUrl = signal<string | null>(null);
+    xCredits = signal<number | null>(null);
+
+    /**
+     * X counts weighted units, not characters — mirrors XPostBuilder (Core): any URL is 23 after
+     * the t.co rewrite, Latin/Cyrillic/general punctuation weigh 1, everything else 2, and an
+     * emoji sequence is one element of 2. The two counters must agree, or the field would refuse
+     * a post the server happily sends (or the reverse).
+     */
+    xWeighted(): number {
+        let text = (this.xText ?? '').normalize('NFC');
+        if (!text) return 0;
+        let total = 0;
+        text = text.replace(/https?:\/\/\S+/g, () => { total += 23; return ''; });
+
+        const segmenter = (Intl as unknown as { Segmenter?: new (l?: string, o?: object) => { segment(s: string): Iterable<{ segment: string }> } }).Segmenter;
+        const graphemes = segmenter
+            ? [...new segmenter(undefined, { granularity: 'grapheme' }).segment(text)].map(s => s.segment)
+            : [...text];
+        for (const grapheme of graphemes) {
+            let weight = 0;
+            let emoji = false;
+            for (const ch of grapheme) {
+                const cp = ch.codePointAt(0)!;
+                if (cp >= 0x1F000 || (cp >= 0x2600 && cp <= 0x27BF) || cp === 0xFE0F || cp === 0x200D) { emoji = true; break; }
+                weight += (cp <= 4351 || (cp >= 8192 && cp <= 8205) || (cp >= 8208 && cp <= 8223) || (cp >= 8242 && cp <= 8247)) ? 1 : 2;
+            }
+            total += emoji ? 2 : weight;
+        }
+        return total;
+    }
+
+    // OAuth, not credentials: the browser leaves for x.com and comes back through the server's
+    // callback — so busy is deliberately not reset on success, the page is navigating away.
+    async connectX() {
+        this.xBusy.set(true);
+        this.xError.set('');
+        try {
+            const { url } = await this.publishApi.connectX();
+            window.location.href = url;
+        } catch (e) {
+            this.xError.set(httpErrorMessage(e, this.t().editor.errors.connectChannel));
+            this.xBusy.set(false);
+        }
+    }
+
+    async disconnectX(targetId: string) {
+        this.xBusy.set(true);
+        try {
+            await this.publishApi.disconnect(targetId);
+            this.xAccount.set(null);
+            this.destX.set(false);
+        } catch (e) {
+            this.xError.set(httpErrorMessage(e, this.t().editor.errors.publish));
+        } finally {
+            this.xBusy.set(false);
+        }
+    }
+
+    async publishX() {
+        const id = this.currentId();
+        const account = this.xAccount();
+        if (!id || !account) return;
+        this.xBusy.set(true);
+        this.xError.set('');
+        try {
+            if (this.xTextDirty()) {
+                await this.publishApi.saveText(id, 'x', this.lang(), this.xText);
+                this.xTextDirty.set(false);
+            }
+            const { jobs } = await this.publishApi.queue(id, [account.id], this.lang());
+            const [job] = await this.awaitJobs(id, jobs.map(j => j.id));
+            if (job && job.status !== 'Succeeded') {
+                this.xError.set(job.error ?? job.status);
+            } else {
+                this.xPostUrl.set(job?.publicUrl ?? null);
+            }
+            await this.loadShortPostTargets();
+        } catch (e) {
+            this.xError.set(httpErrorMessage(e, this.t().editor.errors.publish));
+        } finally {
+            this.xBusy.set(false);
         }
     }
 
@@ -2004,7 +2106,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         // T-086 — asked once per opening, not per keystroke: it reads the stored document, which is
         // what would be sent anyway.
         this.refreshPublishIssues();
-        this.loadBluesky();
+        this.loadShortPostTargets();
         const id = this.currentId();
         if (!id) return;
         this.draftAssetsLoading.set(true);

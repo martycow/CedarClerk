@@ -83,6 +83,14 @@ export class PublishService {
             '/api/publish/bluesky/connect', { handle, appPassword, service }));
     }
 
+    /**
+     * T-110 — X connects over OAuth: the server answers with x.com's authorize URL and the browser
+     * goes there; the callback lands the user back in the app with the target row created.
+     */
+    connectX() {
+        return firstValueFrom(this.http.post<{ url: string }>('/api/publish/x/connect', {}));
+    }
+
     disconnect(targetId: string) {
         return firstValueFrom(this.http.delete<void>(`/api/publish/targets/${targetId}`));
     }

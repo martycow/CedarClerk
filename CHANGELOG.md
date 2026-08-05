@@ -20,6 +20,10 @@ The build surfaced a latent Bluesky bug: `PublishValidator` blocked "too long" o
 
 Still to do on T-110: the connect button + X row in the export modal (frontend), and a live end-to-end post once Marty finishes the portal's User authentication settings (OAuth 2.0 Client ID/Secret → Pi drop-in).
 
+### …and its frontend (v0.9.36)
+
+The X section in the export modal, mirroring Bluesky's: the override textarea with a live weighted counter (a TS mirror of `XPostBuilder`'s rules — the two counters must agree or the field would refuse posts the server sends), publish button, post link on success. Connecting is one button — the browser goes to x.com and comes back through the server's callback. Under the publish button: "1 credit per post · balance: N" (ADR-092). Marty put the OAuth 2.0 client keys into the Pi drop-in (key names verified, values untouched); "Twitter / X" left the planned-platforms mock list. `ng build` warning-free, frontend 11/11, smoke 51/51.
+
 ### XPostBuilder — the part of T-110 that needs no API keys
 
 Same contract as `BlueskyPostBuilder` (override wins, teaser falls back, the blog link survives body truncation — ADR-077), but X's counting rules, which are the whole reason this is its own class: 280 **weighted** units (twitter-text config v3 ranges — Latin/Cyrillic weigh 1, CJK 2), an emoji ZWJ sequence is one element of 2 however many codepoints compose it, **every URL is exactly 23** after the t.co rewrite, and the count runs on the NFC form. The paragraph extraction both builders share moved to `CedarPlainText` instead of being copied. 11 tests pinning each rule separately (a Russian post at exactly 280, CJK at 140/141, a 130-character URL costing 23); `dotnet test` 588/588.

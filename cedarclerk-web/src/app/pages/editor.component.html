@@ -457,6 +457,62 @@
                 @if (blueskyError()) { <p class="channel-error">{{ blueskyError() }}</p> }
                 }
             </div>
+
+            <!--T-110/ADR-093 — X. Same shape as Bluesky above (a short standalone post, ADR-077),
+            but the account connects over OAuth (one button, x.com and back) and each post costs a
+            credit (ADR-092) — the note under the button says so with the current balance.-->
+            <div class="export-section" [class.dest-off]="!destX()">
+                <label class="dest-head">
+                    <input type="checkbox" [checked]="destX()" (change)="destX.set(!destX())"
+                           [disabled]="!xAccount()">
+                    <span class="export-section-title" style="margin:0">X (Twitter)</span>
+                </label>
+                @if (xAccount(); as account) {
+                <div class="channel-chosen">
+                    <span class="channel-chosen-title">{{ account.displayName }}</span>
+                    <button class="mini-remove" (click)="disconnectX(account.id)"
+                            [title]="t().editor.exportModal.disconnect" [attr.aria-label]="t().editor.exportModal.disconnect">
+                        <app-icon name="x" size="sm"></app-icon>
+                    </button>
+                </div>
+                @if (destX()) {
+                <label class="form-field">
+                    <span class="form-field-label">{{ t().editor.exportModal.xText }}</span>
+                    <textarea class="chat-input" rows="4" [(ngModel)]="xText"
+                              (ngModelChange)="xTextDirty.set(true)"
+                              [placeholder]="t().editor.exportModal.xTextPlaceholder"></textarea>
+                    <p class="field-hint-inline"
+                       [class.over-limit]="xWeighted() > xLimit">
+                        {{ xWeighted() }} / {{ xLimit }}
+                        @if (!xText.trim()) { · {{ t().editor.exportModal.blueskyFallback }} }
+                    </p>
+                </label>
+                <div class="publish-actions">
+                    <button class="export-btn full" (click)="publishX()"
+                            [disabled]="xBusy() || xWeighted() > xLimit">
+                        @if (xBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                        {{ t().editor.exportModal.publishTo }} X
+                    </button>
+                </div>
+                @if (xCredits() !== null) {
+                <p class="field-hint-inline">{{ t().editor.exportModal.xCreditNote(xCredits()!) }}</p>
+                }
+                @if (xError()) { <p class="channel-error">{{ xError() }}</p> }
+                @if (xPostUrl(); as url) {
+                <a class="detail-link-btn" [href]="url" target="_blank" rel="noopener">
+                    <app-icon name="arrow-square-out" size="sm"></app-icon> {{ t().editor.exportModal.openPost }}
+                </a>
+                }
+                }
+                } @else {
+                <p class="field-hint-inline">{{ t().editor.exportModal.xConnectHint }}</p>
+                <button class="btn-ghost" (click)="connectX()" [disabled]="xBusy()">
+                    @if (xBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                    {{ t().editor.exportModal.xConnect }}
+                </button>
+                @if (xError()) { <p class="channel-error">{{ xError() }}</p> }
+                }
+            </div>
             </div>
             <!-- /export-row-primary -->
 
@@ -554,9 +610,7 @@
                 </button>
                 @if (otherPlatformsOpen()) {
                 <div class="export-mock-list">
-                    <div class="export-mock-row"><app-icon name="at" size="sm"></app-icon><span>Twitter / X</span></div>
                     <div class="export-mock-row"><app-icon name="thumbs-up" size="sm"></app-icon><span>Facebook</span></div>
-                    <div class="export-mock-row"><app-icon name="cloud" size="sm"></app-icon><span>Bluesky</span></div>
                     <div class="export-mock-row"><app-icon name="chat-teardrop-dots" size="sm"></app-icon><span>Threads</span></div>
                     <div class="export-mock-row"><app-icon name="file-text" size="sm"></app-icon><span>Medium</span></div>
                     <div class="export-mock-row"><app-icon name="heart" size="sm"></app-icon><span>Patreon</span></div>
