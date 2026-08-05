@@ -99,10 +99,25 @@ public class XPublishTarget(
             {
                 var body = await response.Content.ReadAsStringAsync(ct);
                 logger.LogError("X rejected a post for draft {DraftId}: {Status} {Body}", request.DraftId, (int)response.StatusCode, body);
+
+                // The X app's own pay-per-use balance ran dry (found live 05.08.2026: "credits
+                // depleted", which the old catch-all mapped to 502 — so the queue retried a bill
+                // three times and the author watched a spinner instead of the reason). Named apart
+                // from every other refusal because the author's first read of "credits" is the
+                // Cedar wallet, which is a different pocket entirely.
+                if (body.Contains("credits depleted", StringComparison.OrdinalIgnoreCase)
+                    || body.Contains("UsageCapExceeded", StringComparison.OrdinalIgnoreCase))
+                {
+                    return PublishOutcome.Fail(ErrorMessages.XApiCreditsDepleted, StatusCodes.Status402PaymentRequired);
+                }
+
+                // Every 4xx except a plain rate limit is X's verdict on this request — retrying
+                // resends the same refused thing (and each retry is a real, billable API call).
                 var status = (int)response.StatusCode switch
                 {
                     401 or 403 => StatusCodes.Status401Unauthorized,
                     429 => StatusCodes.Status429TooManyRequests,
+                    >= 400 and < 500 => StatusCodes.Status400BadRequest,
                     _ => StatusCodes.Status502BadGateway,
                 };
                 return PublishOutcome.Fail($"X rejected the post: {Describe(body)}", status);

@@ -123,6 +123,9 @@ public static class ErrorMessages
     public static string NotEnoughCredits => Ru(
         "Недостаточно кредитов — пополните баланс в Настройках → Кредиты.",
         "Not enough credits — top up your balance in Settings → Credits.");
+    public static string XApiCreditsDepleted => Ru(
+        "У X-приложения кончились API-кредиты — пополните pay-per-use баланс в X Developer Portal (это не кредиты Cedar Clerk).",
+        "The X app is out of API credits — top up pay-per-use billing in the X Developer Portal (this is not your Cedar Clerk credits).");
     public static string BlueskyReconnect => Ru(
         "Не удалось войти в Bluesky — переподключите аккаунт в настройках.",
         "Could not sign in to Bluesky — reconnect the account in settings.");
