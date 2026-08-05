@@ -114,6 +114,15 @@ public static class ErrorMessages
         $"Пост не помещается в ограничения сети {network} — исправьте отмеченное и попробуйте снова.",
         $"This post does not fit {network}'s limits — fix what is listed and try again.");
 
+    public static string XReconnect => Ru(
+        "Подключение X недействительно — переподключите аккаунт в настройках публикации.",
+        "The X connection is no longer valid — reconnect the account in publishing settings.");
+    public static string XNotConfigured => Ru(
+        "Публикация в X не настроена на сервере.",
+        "X publishing is not configured on the server.");
+    public static string NotEnoughCredits => Ru(
+        "Недостаточно кредитов — пополните баланс в Настройках → Кредиты.",
+        "Not enough credits — top up your balance in Settings → Credits.");
     public static string BlueskyReconnect => Ru(
         "Не удалось войти в Bluesky — переподключите аккаунт в настройках.",
         "Could not sign in to Bluesky — reconnect the account in settings.");

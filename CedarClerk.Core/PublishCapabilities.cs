@@ -9,8 +9,9 @@ public static class PublishNetworks
 {
     public const string Telegram = "telegram";
     public const string Bluesky = "bluesky";
+    public const string X = "x";
 
-    public static readonly IReadOnlyList<string> All = [Telegram, Bluesky];
+    public static readonly IReadOnlyList<string> All = [Telegram, Bluesky, X];
 
     public static bool IsKnown(string? network) => network is not null && All.Contains(network);
 }
@@ -71,4 +72,12 @@ public record PublishCapabilities
     /// so it is stated here rather than assumed by every caller.
     /// </summary>
     public bool PostsHavePublicUrls { get; init; }
+
+    /// <summary>
+    /// ADR-093 — the network gets a short post the target derives itself (override or teaser,
+    /// ADR-077), never the whole document. For such a network "the document is too long / has too
+    /// much media" is information about what the teaser will omit, not a reason to refuse the
+    /// publish — the builder guarantees what it sends fits.
+    /// </summary>
+    public bool DerivesShortPost { get; init; }
 }

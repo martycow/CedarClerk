@@ -107,6 +107,12 @@ public static class Consts
         public const long TelegramCompressHighBytes = 6L * 1024 * 1024;
     }
 
+    public static class X
+    {
+        public const string ClientIdCfg = "Cedar:X:ClientId";
+        public const string ClientSecretCfg = "Cedar:X:ClientSecret";
+    }
+
     public static class Stripe
     {
         public const string SecretKeyCfg = "Cedar:Stripe:SecretKey";

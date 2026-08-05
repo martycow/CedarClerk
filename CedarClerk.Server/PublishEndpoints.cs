@@ -1,4 +1,9 @@
+using System.Collections.Concurrent;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using CedarClerk.Core;
 using CedarClerk.Localization;
@@ -19,6 +24,16 @@ public static class PublishEndpoints
     public record ConnectBlueskyRequest(string Handle, string AppPassword, string? Service);
     public record QueuePublishRequest(Guid DraftId, List<Guid>? TargetIds, string? Language = null, string? ConfirmedFingerprint = null, bool SplitIntoThread = false);
     public record TargetTextRequest(string Network, string Language, string Text);
+
+    private sealed record XConnectState(string OwnerId, string Verifier, DateTime CreatedAt);
+    private static readonly ConcurrentDictionary<string, XConnectState> PendingXConnects = new();
+    private static readonly TimeSpan XConnectTtl = TimeSpan.FromMinutes(10);
+
+    private static string XRedirectUri(IConfiguration cfg) =>
+        $"{cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost}/api/targets/x/callback";
+
+    private static string Base64Url(byte[] bytes) =>
+        Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
     public static void MapPublishEndpoints(this WebApplication app)
     {
@@ -106,6 +121,124 @@ public static class PublishEndpoints
             await db.SaveChangesAsync(ct);
             return Results.Ok(new { handle = session.Handle, did = session.Did });
         });
+
+        // ── X: OAuth 2.0 Authorization Code + PKCE (T-110, ADR-093) ──────────────────────────
+        // Step 1: mint state + verifier, hand the browser X's authorize URL. The verifier never
+        // leaves the server — it waits in memory for the callback (10 minutes, one process; a
+        // restart only drops not-yet-finished connects).
+        group.MapPost("/x/connect", (ClaimsPrincipal user, IConfiguration cfg) =>
+        {
+            var clientId = cfg[Consts.X.ClientIdCfg];
+            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(cfg[Consts.X.ClientSecretCfg]))
+                return Results.Json(new { error = ErrorMessages.XNotConfigured }, statusCode: StatusCodes.Status501NotImplemented);
+
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var state = Base64Url(RandomNumberGenerator.GetBytes(32));
+            var verifier = Base64Url(RandomNumberGenerator.GetBytes(64));
+            var challenge = Base64Url(SHA256.HashData(Encoding.ASCII.GetBytes(verifier)));
+
+            foreach (var (key, entry) in PendingXConnects)
+                if (entry.CreatedAt < DateTime.UtcNow - XConnectTtl) PendingXConnects.TryRemove(key, out _);
+            PendingXConnects[state] = new XConnectState(uid, verifier, DateTime.UtcNow);
+
+            var url = "https://x.com/i/oauth2/authorize?response_type=code"
+                + $"&client_id={Uri.EscapeDataString(clientId)}"
+                + $"&redirect_uri={Uri.EscapeDataString(XRedirectUri(cfg))}"
+                + $"&scope={Uri.EscapeDataString("tweet.read tweet.write users.read offline.access")}"
+                + $"&state={state}&code_challenge={challenge}&code_challenge_method=S256";
+            return Results.Ok(new { url });
+        });
+
+        // Step 2: X sends the browser back here. Registered at the exact URI the developer portal
+        // holds; a top-level navigation carries the auth cookie, and the state must belong to the
+        // signed-in account — a mismatch means someone else's connect landed in this session.
+        app.MapGet("/api/targets/x/callback", async (
+            string? code, string? state, string? error,
+            ClaimsPrincipal user,
+            CedarDbContext db,
+            PublishTargetSecrets secrets,
+            IHttpClientFactory httpFactory,
+            IConfiguration cfg,
+            ILogger<XPublishTarget> logger,
+            CancellationToken ct) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            if (error is not null || code is null || state is null
+                || !PendingXConnects.TryRemove(state, out var pending)
+                || pending.OwnerId != uid
+                || pending.CreatedAt < DateTime.UtcNow - XConnectTtl)
+            {
+                return Results.Redirect("/?x=error");
+            }
+
+            var clientId = cfg[Consts.X.ClientIdCfg];
+            var clientSecret = cfg[Consts.X.ClientSecretCfg];
+            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+                return Results.Redirect("/?x=error");
+
+            var http = httpFactory.CreateClient();
+            using var tokenRequest = new HttpRequestMessage(HttpMethod.Post, $"{XPublishTarget.ApiBase}/2/oauth2/token");
+            tokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic",
+                Convert.ToBase64String(Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}")));
+            tokenRequest.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["grant_type"] = "authorization_code",
+                ["code"] = code,
+                ["redirect_uri"] = XRedirectUri(cfg),
+                ["code_verifier"] = pending.Verifier,
+            });
+
+            var tokenResponse = await http.SendAsync(tokenRequest, ct);
+            if (!tokenResponse.IsSuccessStatusCode)
+            {
+                logger.LogWarning("X refused the code exchange: {Status} {Body}",
+                    (int)tokenResponse.StatusCode, await tokenResponse.Content.ReadAsStringAsync(ct));
+                return Results.Redirect("/?x=error");
+            }
+
+            var tokens = await tokenResponse.Content.ReadFromJsonAsync<XPublishTarget.TokenResponse>(cancellationToken: ct);
+            if (tokens?.AccessToken is null || tokens.RefreshToken is null)
+                return Results.Redirect("/?x=error");
+
+            using var meRequest = new HttpRequestMessage(HttpMethod.Get, $"{XPublishTarget.ApiBase}/2/users/me");
+            meRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
+            var meResponse = await http.SendAsync(meRequest, ct);
+            if (!meResponse.IsSuccessStatusCode) return Results.Redirect("/?x=error");
+
+            var me = JsonSerializer.Deserialize<JsonElement>(await meResponse.Content.ReadAsStringAsync(ct));
+            var xUserId = me.GetProperty("data").GetProperty("id").GetString();
+            var username = me.GetProperty("data").GetProperty("username").GetString();
+            if (xUserId is null || username is null) return Results.Redirect("/?x=error");
+
+            var credentials = new XCredentials(xUserId, username, tokens.AccessToken, tokens.RefreshToken,
+                DateTime.UtcNow.AddSeconds(tokens.ExpiresIn));
+            var stored = secrets.Protect(JsonSerializer.Serialize(credentials));
+
+            // Keyed by the numeric user id — the @username is renameable, the account is not.
+            var existing = await db.PublishTargets.FirstOrDefaultAsync(
+                t => t.OwnerId == uid && t.Network == PublishNetworks.X && t.RemoteId == xUserId, ct);
+            if (existing is not null)
+            {
+                existing.DisplayName = $"@{username}";
+                existing.CredentialsProtected = stored;
+                existing.IsActive = true;
+                existing.LastError = null;
+            }
+            else
+            {
+                db.PublishTargets.Add(new PublishTarget
+                {
+                    OwnerId = uid,
+                    Network = PublishNetworks.X,
+                    DisplayName = $"@{username}",
+                    RemoteId = xUserId,
+                    CredentialsProtected = stored,
+                });
+            }
+
+            await db.SaveChangesAsync(ct);
+            return Results.Redirect("/?x=connected");
+        }).RequireAuthorization();
 
         // Deactivate and forget the credentials, but keep the row: it is what "this post went there"
         // still points at. Same choice as a disconnected Telegram channel.

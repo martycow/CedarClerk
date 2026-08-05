@@ -98,6 +98,10 @@ builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<TelegramP
 // tenant brings their own app password), so there is nothing to be configured before it works.
 builder.Services.AddScoped<BlueskyPublishTarget>();
 builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<BlueskyPublishTarget>());
+// T-110 — X. Also unconditional: with no Cedar:X:ClientId configured the connect endpoint answers
+// 501 and no target row can exist, so PublishAsync is unreachable rather than broken.
+builder.Services.AddScoped<XPublishTarget>();
+builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<XPublishTarget>());
 // T-090 — singleton because it outlives any one request: an author's browser can close the moment
 // after pressing Publish, and the send has to carry on without it.
 builder.Services.AddSingleton<PublishJobRunner>();

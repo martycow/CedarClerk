@@ -66,11 +66,16 @@ public static class PublishValidator
 
         var stats = Collect(doc);
 
+        // ADR-093 — a network that derives its own short post (Bluesky, X) never receives the
+        // whole document, so overflow is "know this", not "fix this": the teaser fits by
+        // construction and blocking here refused every real document (the latent Bluesky bug).
+        var blocksOnSize = !capabilities.DerivesShortPost;
+
         if (capabilities.MaxCharacters is { } maxChars && stats.Characters > maxChars)
-            issues.Add(new PublishIssue(PublishIssueCodes.TooLong, true, stats.Characters, maxChars));
+            issues.Add(new PublishIssue(PublishIssueCodes.TooLong, blocksOnSize, stats.Characters, maxChars));
 
         if (stats.MediaCount > capabilities.MaxMediaItems)
-            issues.Add(new PublishIssue(PublishIssueCodes.TooManyMedia, true, stats.MediaCount, capabilities.MaxMediaItems));
+            issues.Add(new PublishIssue(PublishIssueCodes.TooManyMedia, blocksOnSize, stats.MediaCount, capabilities.MaxMediaItems));
 
         if (stats.HasVideo && !capabilities.SupportsVideo)
             issues.Add(new PublishIssue(PublishIssueCodes.NoVideo, false));

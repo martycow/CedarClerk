@@ -11,9 +11,14 @@ Marty decided 04.08: X posting is paid by the author via a **universal prepaid c
   (grant/charge, idempotent by (Reason, Ref)), `GET /api/billing/credits`, Stripe one-time
   checkout + webhook branch, Stars invoice + bot payment branch. 6 tests; `dotnet test` 577/577.
 - [ ] **T-109 frontend** — balance + pack purchase in Settings → Billing; ledger list.
-- [ ] **T-110 — X connector** (`XPublishTarget`, OAuth 2.0 PKCE, media as bytes, credit charge on
-  success). **Blocked on Marty: X developer account + app + billing.** `XPostBuilder` is done
-  (05.08, 11 tests) — weighted counting, URL=23, teaser/override per ADR-077.
+- [~] **T-110 — X connector backend done 05.08** (ADR-093): `XPublishTarget` (text+link v1),
+  OAuth 2.0 PKCE connect flow, refresh-token rotation with save-before-use, credit charge on
+  success, `DerivesShortPost` validator fix (also fixes latent Bluesky 422). `XPostBuilder` done
+  (11 tests). **Remaining**: frontend connect button + X in the export modal; live e2e post.
+  **Still on Marty**: finish the portal's User authentication settings (callback
+  `https://cedarclerk.mooexe.dev/api/targets/x/callback`) → OAuth 2.0 Client ID/Secret →
+  `Cedar__X__ClientId`/`Cedar__X__ClientSecret` in the Pi drop-in; regenerate the keys pasted
+  into chat 05.08.
 - [ ] Live-verify a credit purchase end to end (Stripe test mode, then Stars).
 
 ## Now (01.08.2026): Phase 11 — the code-side work is done, the mockups are not

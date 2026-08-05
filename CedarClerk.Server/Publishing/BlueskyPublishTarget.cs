@@ -51,6 +51,9 @@ public class BlueskyPublishTarget(
         SupportsAltText = true,
         SupportsThreads = true,
         PostsHavePublicUrls = true,
+        // ADR-093 — the post is BlueskyPostBuilder's teaser/override, never the document, so
+        // document overflow informs rather than blocks. Without this every real document 422'd.
+        DerivesShortPost = true,
     };
 
     public async Task<PublishOutcome> PublishAsync(PublishRequest request, CancellationToken ct = default)

@@ -12,6 +12,14 @@ Frontend: a Credits section on Settings → Account between Subscription and Int
 
 Next: T-109 live-verify (Stripe test mode), then T-110 — the X connector itself, blocked on Marty registering the X developer app.
 
+### The X connector backend (T-110, ADR-093)
+
+`XPublishTarget` — the third `IPublishTarget`. v1 posts text plus the blog link (media and threads are follow-up rows; the post is a teaser by design, ADR-077). The OAuth 2.0 PKCE connect flow lives in `PublishEndpoints` (`POST /api/publish/x/connect` → authorize URL; `GET /api/targets/x/callback` — the exact URI registered in the developer portal); state and verifier wait in process memory for ten minutes. The rotation rule ADR-079 dodged for Bluesky is faced here: X kills the old refresh token on every refresh, so the new pair is **saved to the database before the access token is first used** — a failed save aborts the publish. One credit is checked before the send (402, which the queue never retries) and charged after success, anchored to the created post id.
+
+The build surfaced a latent Bluesky bug: `PublishValidator` blocked "too long" on the whole document even for networks that post a derived teaser — every real document queued to Bluesky would have 422'd. `PublishCapabilities.DerivesShortPost` (true for Bluesky and X) downgrades `too-long`/`too-many-media` to informational. `dotnet test` 590/590.
+
+Still to do on T-110: the connect button + X row in the export modal (frontend), and a live end-to-end post once Marty finishes the portal's User authentication settings (OAuth 2.0 Client ID/Secret → Pi drop-in).
+
 ### XPostBuilder — the part of T-110 that needs no API keys
 
 Same contract as `BlueskyPostBuilder` (override wins, teaser falls back, the blog link survives body truncation — ADR-077), but X's counting rules, which are the whole reason this is its own class: 280 **weighted** units (twitter-text config v3 ranges — Latin/Cyrillic weigh 1, CJK 2), an emoji ZWJ sequence is one element of 2 however many codepoints compose it, **every URL is exactly 23** after the t.co rewrite, and the count runs on the NFC form. The paragraph extraction both builders share moved to `CedarPlainText` instead of being copied. 11 tests pinning each rule separately (a Russian post at exactly 280, CJK at 140/141, a 130-character URL costing 23); `dotnet test` 588/588.

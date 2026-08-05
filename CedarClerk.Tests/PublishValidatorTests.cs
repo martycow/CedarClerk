@@ -9,7 +9,7 @@ public class PublishValidatorTests
 {
     private static PublishCapabilities Caps(int? maxChars = null, int maxMedia = 10, long? maxImage = null,
         bool video = true, bool audio = true, bool rich = true, bool tables = true, bool math = true,
-        bool code = true, bool headings = true, bool lists = true) => new()
+        bool code = true, bool headings = true, bool lists = true, bool derivesShortPost = false) => new()
     {
         Network = "test",
         MaxCharacters = maxChars,
@@ -23,6 +23,7 @@ public class PublishValidatorTests
         SupportsCodeBlocks = code,
         SupportsHeadings = headings,
         SupportsLists = lists,
+        DerivesShortPost = derivesShortPost,
     };
 
     private static string Doc(string content) => $$"""{"type":"doc","content":[{{content}}]}""";
@@ -44,6 +45,29 @@ public class PublishValidatorTests
         Assert.True(issue.Blocking);
         Assert.Equal(400, issue.Actual);
         Assert.Equal(300, issue.Limit);
+    }
+
+    // ADR-093 — for a network that derives its own short post (Bluesky, X), the document being
+    // bigger than one post is the normal case, not an error: the teaser fits by construction.
+    // Blocking here was the latent bug that would have 422'd every real document queued to Bluesky.
+    [Fact]
+    public void Overflow_merely_informs_when_the_network_derives_a_short_post()
+    {
+        var doc = Doc(Paragraph(new string('a', 400)));
+
+        var issue = Assert.Single(PublishValidator.Validate(doc, Caps(maxChars: 300, derivesShortPost: true)));
+        Assert.Equal(PublishIssueCodes.TooLong, issue.Code);
+        Assert.False(issue.Blocking);
+    }
+
+    [Fact]
+    public void Too_much_media_merely_informs_when_the_network_derives_a_short_post()
+    {
+        var doc = Doc("""{"type":"image","attrs":{"src":"/media/a.jpg"}},{"type":"image","attrs":{"src":"/media/b.jpg"}}""");
+
+        var issue = Assert.Single(PublishValidator.Validate(doc, Caps(maxMedia: 0, derivesShortPost: true)));
+        Assert.Equal(PublishIssueCodes.TooManyMedia, issue.Code);
+        Assert.False(issue.Blocking);
     }
 
     [Fact]
