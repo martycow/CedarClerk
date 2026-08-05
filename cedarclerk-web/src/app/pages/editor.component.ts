@@ -409,6 +409,26 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
+    // ADR-094 — the whole document as a reply chain instead of a single teaser. The toggle
+    // fetches the part plan so the author sees "N posts" (and, on X, "N credits") before sending.
+    blueskyThread = signal(false);
+    blueskyThreadParts = signal(0);
+    xThread = signal(false);
+    xThreadParts = signal(0);
+
+    async toggleMicroThread(network: 'x' | 'bluesky', on: boolean) {
+        const thread = network === 'x' ? this.xThread : this.blueskyThread;
+        const parts = network === 'x' ? this.xThreadParts : this.blueskyThreadParts;
+        thread.set(on);
+        parts.set(0);
+        const id = this.currentId();
+        if (!on || !id) return;
+        try {
+            const preview = await this.publishApi.threadPreview(id, network, this.lang());
+            parts.set(preview.parts.length);
+        } catch { /* the summary line simply doesn't render */ }
+    }
+
     async publishBluesky() {
         const id = this.currentId();
         const account = this.blueskyAccount();
@@ -422,12 +442,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 await this.publishApi.saveText(id, 'bluesky', this.lang(), this.blueskyText);
                 this.blueskyTextDirty.set(false);
             }
-            const { jobs } = await this.publishApi.queue(id, [account.id], this.lang());
-            const [job] = await this.awaitJobs(id, jobs.map(j => j.id));
-            if (job && job.status !== 'Succeeded') {
-                this.blueskyError.set(job.error ?? job.status);
+            const { jobs } = await this.publishApi.queue(id, [account.id], this.lang(), undefined, this.blueskyThread());
+            const finished = await this.awaitJobs(id, jobs.map(j => j.id));
+            const failed = finished.find(j => j.status !== 'Succeeded');
+            if (failed) {
+                this.blueskyError.set(failed.error ?? failed.status);
             } else {
-                this.blueskyPostUrl.set(job?.publicUrl ?? null);
+                this.blueskyPostUrl.set(finished.find(j => j.partIndex === 0)?.publicUrl ?? finished[0]?.publicUrl ?? null);
             }
             await this.loadShortPostTargets();
         } catch (e) {
@@ -516,12 +537,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 await this.publishApi.saveText(id, 'x', this.lang(), this.xText);
                 this.xTextDirty.set(false);
             }
-            const { jobs } = await this.publishApi.queue(id, [account.id], this.lang());
-            const [job] = await this.awaitJobs(id, jobs.map(j => j.id));
-            if (job && job.status !== 'Succeeded') {
-                this.xError.set(job.error ?? job.status);
+            const { jobs } = await this.publishApi.queue(id, [account.id], this.lang(), undefined, this.xThread());
+            const finished = await this.awaitJobs(id, jobs.map(j => j.id));
+            const failed = finished.find(j => j.status !== 'Succeeded');
+            if (failed) {
+                this.xError.set(failed.error ?? failed.status);
             } else {
-                this.xPostUrl.set(job?.publicUrl ?? null);
+                this.xPostUrl.set(finished.find(j => j.partIndex === 0)?.publicUrl ?? finished[0]?.publicUrl ?? null);
             }
             await this.loadShortPostTargets();
         } catch (e) {

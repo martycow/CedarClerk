@@ -37,6 +37,7 @@ public class BlueskyPublishTarget(
     {
         Network = PublishNetworks.Bluesky,
         MaxCharacters = BlueskyPostBuilder.MaxGraphemes,
+        ThreadPartCharacters = BlueskyPostBuilder.MaxGraphemes,
         MaxMediaItems = 4,
         MaxImageBytes = 1_000_000,
         SupportsVideo = false,
@@ -63,12 +64,34 @@ public class BlueskyPublishTarget(
             return PublishOutcome.Fail(ErrorMessages.BlueskyReconnect, StatusCodes.Status401Unauthorized);
 
         var draft = await db.Drafts.FirstAsync(d => d.Id == request.DraftId, ct);
-        var blogUrl = draft.IsBlogPublished && draft.BlogSlug is not null
-            ? $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}/{draft.BlogSlug}"
-              + (request.Language == draft.PrimaryLanguage ? "" : $"?lang={request.Language}")
-            : null;
+        var blogUrl = MicroThreadPlan.BlogUrl(draft, request.Language, cfg);
 
-        var post = BlueskyPostBuilder.Build(request.AuthorText, request.CedarJson, blogUrl);
+        // ADR-094 — a thread carries the document itself (recomputed, T-106's principle); a
+        // single post carries the author's override or the teaser (ADR-077).
+        BlueskyPost post;
+        if (request.Part is { Count: > 1 } threadPart)
+        {
+            var parts = MicroThreadPlan.Parts(request.CedarJson, PublishNetworks.Bluesky, blogUrl);
+            if (threadPart.Index >= parts.Count)
+                return PublishOutcome.Fail(ErrorMessages.ThreadPartGone, StatusCodes.Status409Conflict);
+            var text = parts[threadPart.Index];
+            if (threadPart.Index == threadPart.Count - 1 && blogUrl is not null)
+            {
+                text = $"{text}\n\n{blogUrl}";
+                var byteLength = System.Text.Encoding.UTF8.GetByteCount(text);
+                post = new BlueskyPost(text,
+                    [new BlueskyFacet(byteLength - System.Text.Encoding.UTF8.GetByteCount(blogUrl), byteLength, blogUrl)]);
+            }
+            else
+            {
+                post = new BlueskyPost(text, []);
+            }
+        }
+        else
+        {
+            post = BlueskyPostBuilder.Build(request.AuthorText, request.CedarJson, blogUrl);
+        }
+
         if (post.Text.Trim().Length == 0)
             return PublishOutcome.Fail("Nothing to post — write a Bluesky version or some body text");
 
@@ -110,6 +133,19 @@ public class BlueskyPublishTarget(
                 record["facets"] = facets;
             }
 
+            // ADR-094 — the reply record wants both the thread root and the parent, each as
+            // uri+cid; that pair is exactly what this target's RemoteId carries since threads.
+            if (request.Part is { ReplyToRemoteId: not null } reply
+                && ParseRef(reply.ReplyToRemoteId) is { } parent
+                && ParseRef(reply.RootRemoteId ?? reply.ReplyToRemoteId) is { } root)
+            {
+                record["reply"] = new JsonObject
+                {
+                    ["root"] = new JsonObject { ["uri"] = root.Uri, ["cid"] = root.Cid },
+                    ["parent"] = new JsonObject { ["uri"] = parent.Uri, ["cid"] = parent.Cid },
+                };
+            }
+
             var response = await http.PostAsJsonAsync("/xrpc/com.atproto.repo.createRecord", new
             {
                 repo = session.Did,
@@ -132,14 +168,23 @@ public class BlueskyPublishTarget(
             var rkey = created.Uri.Split('/').LastOrDefault();
             var publicUrl = rkey is null ? null : $"https://bsky.app/profile/{credentials.Handle}/post/{rkey}";
 
+            // "uri|cid", because a reply reference needs both halves and RemoteId is the one
+            // field a later part gets to see (ADR-094). The public URL above still comes from
+            // the uri alone, so nothing user-facing changes shape.
+            var remoteId = created.Cid is null ? created.Uri : $"{created.Uri}|{created.Cid}";
+
             // The same baseline Telegram writes, so ADR-065's "this would overwrite a live post"
             // guard has something to compare against here too. Keyed by target id rather than by
-            // handle: the handle is renameable, the row is not.
-            await DraftRevisionService.RecordAsync(db, request.DraftId, request.Language, request.Title,
-                request.CedarJson, PublishNetworks.Bluesky, request.Target.Id.ToString(), ct);
+            // handle: the handle is renameable, the row is not. Once per publication — on the
+            // last part for a thread.
+            if (request.Part is not { Count: > 1 } || request.Part.Index == request.Part.Count - 1)
+            {
+                await DraftRevisionService.RecordAsync(db, request.DraftId, request.Language, request.Title,
+                    request.CedarJson, PublishNetworks.Bluesky, request.Target.Id.ToString(), ct);
+            }
             await db.SaveChangesAsync(ct);
 
-            return PublishOutcome.Ok(new PublishReceipt(created.Uri, publicUrl));
+            return PublishOutcome.Ok(new PublishReceipt(remoteId, publicUrl));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -174,6 +219,15 @@ public class BlueskyPublishTarget(
         {
             return null;
         }
+    }
+
+    /// <summary>The two halves of a stored "uri|cid" RemoteId; null when the cid half is missing.</summary>
+    private static (string Uri, string Cid)? ParseRef(string remoteId)
+    {
+        var split = remoteId.IndexOf('|');
+        return split > 0 && split < remoteId.Length - 1
+            ? (remoteId[..split], remoteId[(split + 1)..])
+            : null;
     }
 
     /// <summary>Bluesky's errors are JSON; its `message` is the part worth showing an author.</summary>

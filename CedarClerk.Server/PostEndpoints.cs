@@ -39,7 +39,14 @@ public static class PostEndpoints
         return string.Join(" ", list.Select(t => "#" + t.Replace(" ", "")));
     }
 
-    public record PublishResult(int? MessageId, string? Error, int StatusCode = StatusCodes.Status400BadRequest)
+    /// <param name="RemoteId">
+    /// The receipt's id as the network gave it (ADR-094). MessageId kept an int for its
+    /// Telegram-shaped callers, which silently dropped every non-int id — an X tweet id is an
+    /// int64 and a Bluesky id is an at:// URI, so thread reply-chaining and the post link both
+    /// need the string.
+    /// </param>
+    public record PublishResult(int? MessageId, string? Error, int StatusCode = StatusCodes.Status400BadRequest,
+        string? RemoteId = null, string? PublicUrl = null)
     {
         public bool Success => Error is null;
     }
@@ -167,7 +174,8 @@ public static class PostEndpoints
 
         // int, because every existing caller (the export endpoint's response and ScheduledPost
         // .MessageId) is Telegram-shaped and generalising them is T-090's job, not this refactor's.
-        return new PublishResult(int.TryParse(outcome.Receipt!.RemoteId, out var id) ? id : null, null);
+        return new PublishResult(int.TryParse(outcome.Receipt!.RemoteId, out var id) ? id : null, null,
+            RemoteId: outcome.Receipt.RemoteId, PublicUrl: outcome.Receipt.PublicUrl);
     }
 
     public static void MapPostEndpoints(this WebApplication app)

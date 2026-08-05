@@ -108,6 +108,7 @@ public class PublishJobRunner(
         // T-106 — a thread goes out in order, and a part never goes out on its own. Waiting rather
         // than sending is the whole point: parts 5 and 6 arriving before 4 is worse than late.
         string? replyTo = null;
+        string? rootRemoteId = null;
         if (job is { ThreadId: not null, PartIndex: > 0 })
         {
             var previous = await db.PublishJobs.FirstOrDefaultAsync(
@@ -126,6 +127,12 @@ public class PublishJobRunner(
 
             if (previous.Status != PublishJobStatus.Succeeded) return;   // still running — the sweep comes back
             replyTo = previous.RemoteId;
+
+            // ADR-094 — Bluesky's reply record wants the thread ROOT beside the parent.
+            rootRemoteId = job.PartIndex == 1
+                ? previous.RemoteId
+                : (await db.PublishJobs.FirstOrDefaultAsync(
+                    j => j.ThreadId == job.ThreadId && j.PartIndex == 0, ct))?.RemoteId;
         }
 
         // The claim. Concurrency here is one process and SQLite's write lock, so a conditional
@@ -142,7 +149,7 @@ public class PublishJobRunner(
             return;
         }
 
-        var part = job.PartCount > 1 ? new ThreadPartRef(job.PartIndex, job.PartCount, replyTo) : null;
+        var part = job.PartCount > 1 ? new ThreadPartRef(job.PartIndex, job.PartCount, replyTo, rootRemoteId) : null;
         var result = await PostEndpoints.PublishToTargetAsync(
             job.DraftId, job.TargetId, job.OwnerId, db, targets, job.Language, logger, part: part, ct: ct);
 
@@ -151,7 +158,11 @@ public class PublishJobRunner(
         {
             job.Status = PublishJobStatus.Succeeded;
             job.Error = null;
-            job.RemoteId = result.MessageId?.ToString();
+            // The string id, not the int: an X tweet id overflows int and a Bluesky id is an
+            // at:// URI — both parsed to null here until ADR-094, which also left PublicUrl
+            // permanently empty and the "open the post" link permanently hidden.
+            job.RemoteId = result.RemoteId ?? result.MessageId?.ToString();
+            job.PublicUrl = result.PublicUrl;
         }
         else if (IsRetryable(result.StatusCode) && job.Attempts < MaxAttempts)
         {

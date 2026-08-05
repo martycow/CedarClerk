@@ -467,6 +467,7 @@ export const ru: Dict = {
             xConnectHint: 'Подключите аккаунт X — вас отправит на x.com авторизоваться и вернёт обратно.',
             xConnect: 'Подключить X',
             xCreditNote: (n: number) => `1 кредит за пост · баланс: ${n}`,
+            xThreadCost: (n: number) => `${n} ${plural(n, 'кредит', 'кредита', 'кредитов')} за этот тред`,
             publishTo: 'Опубликовать в',
             openPost: 'Открыть пост',
             issues: {

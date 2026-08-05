@@ -427,9 +427,17 @@
                         @if (!blueskyText.trim()) { · {{ t().editor.exportModal.blueskyFallback }} }
                     </p>
                 </label>
+                <label class="thread-toggle">
+                    <input type="checkbox" [checked]="blueskyThread()"
+                           (change)="toggleMicroThread('bluesky', $any($event.target).checked)">
+                    <span>{{ t().editor.exportModal.splitIntoThread }}</span>
+                </label>
+                @if (blueskyThread() && blueskyThreadParts() > 0) {
+                <p class="field-hint-inline">{{ t().editor.exportModal.threadSummary(blueskyThreadParts()) }}</p>
+                }
                 <div class="publish-actions">
                     <button class="export-btn full" (click)="publishBluesky()"
-                            [disabled]="blueskyBusy() || blueskyGraphemes() > blueskyLimit">
+                            [disabled]="blueskyBusy() || (!blueskyThread() && blueskyGraphemes() > blueskyLimit)">
                         @if (blueskyBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
                         {{ t().editor.exportModal.publishTo }} Bluesky
                     </button>
@@ -487,9 +495,20 @@
                         @if (!xText.trim()) { · {{ t().editor.exportModal.blueskyFallback }} }
                     </p>
                 </label>
+                <label class="thread-toggle">
+                    <input type="checkbox" [checked]="xThread()"
+                           (change)="toggleMicroThread('x', $any($event.target).checked)">
+                    <span>{{ t().editor.exportModal.splitIntoThread }}</span>
+                </label>
+                @if (xThread() && xThreadParts() > 0) {
+                <p class="field-hint-inline">
+                    {{ t().editor.exportModal.threadSummary(xThreadParts()) }}
+                    · {{ t().editor.exportModal.xThreadCost(xThreadParts()) }}
+                </p>
+                }
                 <div class="publish-actions">
                     <button class="export-btn full" (click)="publishX()"
-                            [disabled]="xBusy() || xWeighted() > xLimit">
+                            [disabled]="xBusy() || (!xThread() && xWeighted() > xLimit)">
                         @if (xBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
                         {{ t().editor.exportModal.publishTo }} X
                     </button>

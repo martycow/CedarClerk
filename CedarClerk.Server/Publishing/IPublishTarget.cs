@@ -49,7 +49,12 @@ public record PublishReceipt(string RemoteId, string? PublicUrl);
 /// The previous part's message id. Telegram renders a reply chain, which is what turns eight
 /// messages into one thread a reader can follow instead of eight posts in a row.
 /// </param>
-public record ThreadPartRef(int Index, int Count, string? ReplyToRemoteId);
+/// <param name="RootRemoteId">
+/// The FIRST part's id (ADR-094) — Bluesky's reply record wants the thread root beside the
+/// parent, not just the message being replied to. Null on part 0 and on networks that chain by
+/// parent alone.
+/// </param>
+public record ThreadPartRef(int Index, int Count, string? ReplyToRemoteId, string? RootRemoteId = null);
 
 /// <summary>
 /// Deliberately the same shape as the `PostEndpoints.PublishResult` it will replace in T-085 —

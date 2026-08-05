@@ -2,7 +2,15 @@
 
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
-## Now (04.08.2026): X/Twitter — credits first, connector second (ADR-092)
+## Now (05.08.2026, evening): Marty's three requests after the first live X post
+
+1. [x] **T-111 — microblog threads for X/Bluesky** (ADR-094, v0.9.37) — done, deployed; live-verify
+   a real X thread (costs parts × 1 credit) and a Bluesky thread.
+2. [ ] **T-091 — Threads connector** — Marty must first create the Meta app + Tech Provider
+   Verification (weeks of review); connector gets built once the app exists.
+3. [ ] **T-112 — language switcher on the blog homepage** — next up.
+
+## Previous (04.08.2026): X/Twitter — credits first, connector second (ADR-092)
 
 Marty decided 04.08: X posting is paid by the author via a **universal prepaid credit wallet**
 (1 credit = 1 X post = $0.40; packs 10/$4, 50/$18, 100/$30; nothing included in plans).

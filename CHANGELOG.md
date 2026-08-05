@@ -2,6 +2,12 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-05 (later) — microblog threads for X and Bluesky (T-111, ADR-094, v0.9.37)
+
+The whole document as a reply chain, not just a teaser. `MicroThreadSplitter` (Core, 8 tests) packs paragraphs into parts measured the way each network measures — X's weighted units, Bluesky's graphemes — breaking an oversized paragraph on sentences, then words; every part is numbered "N/M" inside a reserved budget and the blog link rides the last part (spilling into its own closing part when full). The queue and the targets recompute the same plan from the same inputs (T-106's principle); X replies by `in_reply_to_tweet_id`, Bluesky by a reply record whose root+parent each need uri **and** cid — so a Bluesky job's `RemoteId` now stores `uri|cid`. An X thread costs one credit per part, checked up front for all the parts still ahead so a thread never stops halfway for money; the export modal shows "N messages · N credits" before the send.
+
+Fixed on the way, because threads forced it into the light: `PublishResult.MessageId` is an `int`, so an X tweet id (int64) and a Bluesky at:// URI both parsed to null — `job.RemoteId` was empty for every non-Telegram publish, and `job.PublicUrl` was **never assigned at all**, which is why "open the post" никогда не появлялась. The receipt's string id and URL now flow through. `dotnet test` 598/598, smoke 51/51.
+
 ## 2026-08-05 — the credit wallet (T-109, ADR-092)
 
 X posting will be paid by the author, so the wallet came before the connector. Marty's three decisions (04.08): one **universal** credit wallet rather than an X-only counter, ~2× markup (1 credit = 1 X post = $0.40; packs 10/$4, 50/$18, 100/$30, Stars 200/900/1500 ⭐), and no credits bundled into plans.

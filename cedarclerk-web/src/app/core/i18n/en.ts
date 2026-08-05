@@ -470,6 +470,7 @@ export const en = {
             xConnectHint: 'Connect your X account — you will be sent to x.com to authorize and brought back.',
             xConnect: 'Connect X',
             xCreditNote: (n: number) => `1 credit per post · balance: ${n}`,
+            xThreadCost: (n: number) => `${n} credit${n === 1 ? '' : 's'} for this thread`,
             publishTo: 'Publish to',
             openPost: 'Open the post',
             issues: {

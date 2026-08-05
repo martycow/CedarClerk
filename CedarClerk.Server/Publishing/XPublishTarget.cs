@@ -55,7 +55,8 @@ public class XPublishTarget(
         SupportsMath = false,
         SupportsLinkPreview = true,
         SupportsAltText = false,
-        SupportsThreads = false,
+        SupportsThreads = true,
+        ThreadPartCharacters = XPostBuilder.MaxWeightedChars,
         PostsHavePublicUrls = true,
         DerivesShortPost = true,
     };
@@ -68,17 +69,33 @@ public class XPublishTarget(
 
         // The refusal happens before anything reaches the network: a post X accepted is a post
         // Marty already paid for, so "not enough credits" must never be discovered afterwards.
-        if (await CreditWallet.BalanceAsync(db, request.OwnerId, ct) < CreditPacks.XPostCost)
+        // A thread checks for every part still ahead (ADR-094) — a thread that stops halfway for
+        // money is worse than one that never starts.
+        var partsAhead = request.Part is { Count: > 1 } p ? p.Count - p.Index : 1;
+        if (await CreditWallet.BalanceAsync(db, request.OwnerId, ct) < partsAhead * CreditPacks.XPostCost)
             return PublishOutcome.Fail(ErrorMessages.NotEnoughCredits, StatusCodes.Status402PaymentRequired);
 
         var draft = await db.Drafts.FirstAsync(d => d.Id == request.DraftId, ct);
-        var blogUrl = draft.IsBlogPublished && draft.BlogSlug is not null
-            ? $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}/{draft.BlogSlug}"
-              + (request.Language == draft.PrimaryLanguage ? "" : $"?lang={request.Language}")
-            : null;
+        var blogUrl = MicroThreadPlan.BlogUrl(draft, request.Language, cfg);
 
-        var post = XPostBuilder.Build(request.AuthorText, request.CedarJson, blogUrl);
-        if (post.Text.Trim().Length == 0)
+        // ADR-094 — a thread carries the document itself, recomputed from it (T-106's principle);
+        // a single post carries the author's override or the teaser (ADR-077).
+        string text;
+        if (request.Part is { Count: > 1 } part)
+        {
+            var parts = MicroThreadPlan.Parts(request.CedarJson, PublishNetworks.X, blogUrl);
+            if (part.Index >= parts.Count)
+                return PublishOutcome.Fail(ErrorMessages.ThreadPartGone, StatusCodes.Status409Conflict);
+            text = parts[part.Index];
+            if (part.Index == part.Count - 1 && blogUrl is not null)
+                text = $"{text}\n\n{blogUrl}";
+        }
+        else
+        {
+            text = XPostBuilder.Build(request.AuthorText, request.CedarJson, blogUrl).Text;
+        }
+
+        if (text.Trim().Length == 0)
             return PublishOutcome.Fail("Nothing to post — write an X version or some body text");
 
         try
@@ -94,7 +111,12 @@ public class XPublishTarget(
             http.BaseAddress = new Uri(ApiBase);
             http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", credentials.AccessToken);
 
-            var response = await http.PostAsJsonAsync("/2/tweets", new { text = post.Text }, ct);
+            // ADR-094 — a thread part replies to the one before it, which is what makes X render
+            // a thread rather than a scatter of posts.
+            object payload = request.Part?.ReplyToRemoteId is { } replyTo
+                ? new { text, reply = new { in_reply_to_tweet_id = replyTo } }
+                : new { text };
+            var response = await http.PostAsJsonAsync("/2/tweets", payload, ct);
             if (!response.IsSuccessStatusCode)
             {
                 var body = await response.Content.ReadAsStringAsync(ct);
@@ -130,8 +152,13 @@ public class XPublishTarget(
 
             await CreditWallet.TryChargeAsync(db, request.OwnerId, CreditPacks.XPostCost, CreditReasons.XPost, tweetId, ct);
 
-            await DraftRevisionService.RecordAsync(db, request.DraftId, request.Language, request.Title,
-                request.CedarJson, PublishNetworks.X, request.Target.Id.ToString(), ct);
+            // The revision is the publication's baseline, recorded once — on the last part, when
+            // the whole document has actually gone out (same rule as Telegram's threads).
+            if (request.Part is not { Count: > 1 } || request.Part.Index == request.Part.Count - 1)
+            {
+                await DraftRevisionService.RecordAsync(db, request.DraftId, request.Language, request.Title,
+                    request.CedarJson, PublishNetworks.X, request.Target.Id.ToString(), ct);
+            }
             await db.SaveChangesAsync(ct);
 
             return PublishOutcome.Ok(new PublishReceipt(tweetId, $"https://x.com/{credentials.Username}/status/{tweetId}"));

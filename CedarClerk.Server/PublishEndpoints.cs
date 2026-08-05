@@ -271,6 +271,26 @@ public static class PublishEndpoints
             var document = await DraftRevisionService.ResolveAsync(db, draft, lang);
             if (document is null) return Results.NotFound(new { error = ErrorMessages.NoVersionInLanguage(lang) });
 
+            // ADR-094 — a short-post network's thread is text parts from the micro splitter, not
+            // Telegram-shaped blocks.
+            if (implementation.Capabilities.DerivesShortPost)
+            {
+                var (measure, _) = MicroThreadSplitter.ForNetwork(network);
+                var microParts = MicroThreadPlan.Parts(document.Value.CedarJson, network,
+                    MicroThreadPlan.BlogUrl(draft, lang, cfg));
+                return Results.Ok(new
+                {
+                    parts = microParts.Select((p, i) => new
+                    {
+                        index = i,
+                        startsWith = (string?)p[..Math.Min(60, p.Length)],
+                        characters = (long)measure(p),
+                        mediaCount = 0,
+                        cutReason = i == microParts.Count - 1 ? "end" : "size",
+                    }),
+                });
+            }
+
             var mainHost = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
             var blocks = CedarToTelegramBlocksRenderer.Render(document.Value.CedarJson, mainHost).ToList();
             var parts = TelegramThreadSplitter.Split(blocks, implementation.Capabilities);
@@ -371,9 +391,19 @@ public static class PublishEndpoints
                 if (req.SplitIntoThread && document is not null
                     && publishers.FirstOrDefault(p => p.Network == target.Network) is { } implementation)
                 {
-                    var mainHost = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
-                    var blocks = CedarToTelegramBlocksRenderer.Render(document.Value.CedarJson, mainHost).ToList();
-                    partCount = Math.Max(1, TelegramThreadSplitter.Split(blocks, implementation.Capabilities).Count);
+                    // ADR-094 — the same split the target will recompute: micro parts for a
+                    // short-post network, Telegram blocks otherwise.
+                    if (implementation.Capabilities.DerivesShortPost)
+                    {
+                        partCount = MicroThreadSplitter.CountParts(document.Value.CedarJson, target.Network,
+                            MicroThreadPlan.LinkReserve(target.Network, MicroThreadPlan.BlogUrl(draft, language, cfg)));
+                    }
+                    else
+                    {
+                        var mainHost = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
+                        var blocks = CedarToTelegramBlocksRenderer.Render(document.Value.CedarJson, mainHost).ToList();
+                        partCount = Math.Max(1, TelegramThreadSplitter.Split(blocks, implementation.Capabilities).Count);
+                    }
                 }
 
                 var threadId = partCount > 1 ? Guid.NewGuid() : (Guid?)null;
