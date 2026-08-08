@@ -7,10 +7,14 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
 1. [x] **T-115 — views by country and by reader language on the stats page** (ADR-097, v0.9.39).
    `BlogViewGeoDaily` daily rollup fed from `CF-IPCountry` + `Accept-Language`; two breakdown
    cards on the Blog tab. Blog only — the Bot API reports no geography per channel.
-2. [ ] **Deploy and wait a day.** The table starts empty by construction: there is nothing to
-   backfill from, so the breakdown stays blank until real readers arrive. Worth checking on
-   production specifically that `CF-IPCountry` actually reaches Kestrel through the tunnel — the
-   smoke test proves the app reads the header, not that Cloudflare sends it.
+2. [x] **Deployed 08.08.2026, v0.9.39** — migration applied cleanly (`Applying migration
+   '20260808083215_AddBlogViewGeoDaily'`, one `CREATE TABLE`, no warnings), and the open question
+   is answered: **`CF-IPCountry` does reach Kestrel through the Cloudflare tunnel.** Verified by a
+   real fetch of `/full-moon` with a German `Accept-Language`, which landed as `US|de|1` — the
+   smoke test only proved the app reads the header, not that Cloudflare sends it. That one row is
+   a test view and can be deleted if it bothers anyone.
+3. [ ] **Wait a day and look.** The table starts empty by construction — nothing to backfill from,
+   so the breakdown fills in only as real readers arrive.
 
 ## Now (07.08.2026): Marty's two requests — connections, and the export window
 
