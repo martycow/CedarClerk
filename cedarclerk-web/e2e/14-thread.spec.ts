@@ -17,9 +17,9 @@ test('a post that does not fit offers a thread, with its parts listed', async ({
     await page.goto(`/editor?draft=${id}`);
     await expect(page.locator('.tiptap')).toBeVisible();
     await page.locator('.export-trigger').click();
-    // The destination sections fold when unticked (N5), so the checks below live behind Telegram
-    // being chosen — which is also when its limits start to matter.
-    await page.locator('.dest-head input[type=checkbox]').nth(1).check();
+    // A destination's settings panel only exists once it is ticked (ADR-096), so the checks below
+    // live behind Telegram being chosen — which is also when its limits start to matter.
+    await page.locator('.dest-card input[type=checkbox]').nth(1).check();
 
     // The problem is stated before the remedy is offered.
     await expect(page.locator('.publish-issues li.blocking')).toHaveCount(1);
@@ -45,7 +45,55 @@ test('a post that fits is never offered a thread', async ({ page, context }) => 
     await page.goto(`/editor?draft=${id}`);
     await expect(page.locator('.tiptap')).toBeVisible();
     await page.locator('.export-trigger').click();
-    await page.locator('.dest-head input[type=checkbox]').nth(1).check();
+    await page.locator('.dest-card input[type=checkbox]').nth(1).check();
 
     await expect(page.locator('.thread-toggle')).toHaveCount(0);
+});
+
+// ADR-096. A short-post network offers two publications, not one with an option: an announcement
+// carrying a link, or the document itself as a reply chain. The panel must show only the fields the
+// chosen one uses — the old checkbox sat next to a text field the thread mode never reads.
+//
+// The account is stubbed rather than connected: both connect flows leave the machine (Bluesky
+// verifies the app password against bsky.social, X is an OAuth round trip), and neither belongs in
+// a suite that must run offline and touch nothing real.
+test('a connected short-post network offers link and thread as two modes', async ({ page, context }) => {
+    await page.route('**/api/publish/networks', route => route.fulfill({
+        json: [{
+            network: 'bluesky',
+            capabilities: { network: 'bluesky', maxCharacters: 300, derivesShortPost: true },
+            accounts: [{
+                id: '11111111-1111-1111-1111-111111111111',
+                network: 'bluesky', displayName: 'cedar.bsky.social', remoteId: 'did:plc:test',
+                lastPublishedAt: null, lastError: null,
+            }],
+        }],
+    }));
+    await page.route('**/api/publish/thread-preview*', route => route.fulfill({
+        json: { parts: [{ index: 0 }, { index: 1 }, { index: 2 }] },
+    }));
+
+    const id = await createDraft(context, 'Короткий пост', ['Тело поста.']);
+    await page.goto(`/editor?draft=${id}`);
+    await expect(page.locator('.tiptap')).toBeVisible();
+    await page.locator('.export-trigger').click();
+
+    // Blog, Telegram, then the connected network — an unconnected one renders no checkbox at all.
+    const bluesky = page.locator('.dest-card input[type=checkbox]').nth(2);
+    await bluesky.check();
+
+    const modes = page.locator('.mode-toggle button');
+    await expect(modes).toHaveCount(2);
+    // Link mode is the default, and it is the one with a text field.
+    await expect(modes.nth(0)).toHaveClass(/on/);
+    await expect(page.locator('.export-section textarea')).toBeVisible();
+
+    await modes.nth(1).click();
+    await expect(modes.nth(1)).toHaveClass(/on/);
+    // The thread does not read the override, so the field it would edit is gone — and the count
+    // that replaces it is what makes the choice checkable before anything is sent.
+    await expect(page.locator('.export-section textarea')).toHaveCount(0);
+    // The number, not the sentence around it: this suite does not pin the account's UI language,
+    // and "3 posts on Bluesky" is "3 постов в Bluesky" half the time.
+    await expect(page.locator('.export-section').filter({ hasText: 'Bluesky' })).toContainText('3');
 });

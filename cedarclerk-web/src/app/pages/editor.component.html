@@ -94,171 +94,21 @@
             <app-icon modal-icon name="paper-plane-tilt" size="sm"></app-icon>
             <span modal-title>{{ t().editor.export }}</span>
 
+            <!--ADR-096 — the window reads top to bottom as three questions: which version, where,
+            and with what. It replaces a column layout in which the language lived inside Telegram,
+            Bluesky and X each carried their own Publish button, and the big button at the bottom
+            only ever meant Blog+Telegram.-->
             <div class="export-grid">
             @if (currentId(); as id) {
-            <!--Priority Fixes 04 (Claude Design, 28.07.2026): Site/Blog and Telegram are the two
-            sections whose content length actually varies a lot (Telegram in particular can run
-            close to the modal's full height), so they anchor their own column each rather than
-            flowing through a width-only auto-fit grid that was blind to that difference.-->
-            <div class="export-row-primary">
-            <!--N5: an unticked destination folds down to its header so it stops competing for
-            attention. The LIVE chip stays visible while folded — that's state, not settings.-->
-            <div class="export-section" [class.dest-off]="!destBlog()">
-                <label class="dest-head">
-                    <input type="checkbox" [checked]="destBlog()" (change)="destBlog.set(!destBlog())">
-                    <span class="export-section-title" style="margin:0">{{ t().editor.exportModal.siteBlog }}</span>
-                    @if (currentBlog()?.isPublished) { <span class="state-chip live">LIVE</span> }
-                </label>
-                @if (destBlog()) {
-                @if (currentBlog(); as blog) {
-                    @if (blog.isPublished) {
-                    <div class="blog-lang-badges">
-                        <a class="blog-lang-badge" [href]="blogUrl()" target="_blank" rel="noopener">{{ primaryLanguage.toUpperCase() }}</a>
-                        @for (l of existingLanguages(); track l) {
-                        <a class="blog-lang-badge" [href]="blogUrl() + '?lang=' + l" target="_blank" rel="noopener">{{ l.toUpperCase() }}</a>
-                        }
-                    </div>
-                    <p class="export-result"><a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
-                    <!--FI2.6: already live, so publishing again means rewriting the page. The
-                    Unpublish button that used to sit here moved to the Posts Manager (FI2.1).-->
-                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.updateHint }}</p>
-                    <a class="state-link" routerLink="/posts">{{ t().editor.exportModal.manageInManager }}</a>
-                    } @else {
-                    <p class="export-result">{{ t().editor.exportModal.unpublishedLinkStays }} <a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
-                    }
-                }
-                @if (blogBusy()) {
-                <div class="inline-progress">
-                    <div class="indeterminate-bar"><div class="indeterminate-fill"></div></div>
-                    <p class="translate-status">{{ blogStatusMessage() }}</p>
+
+            <!-- ============ 1 · VERSION ============ -->
+            <section class="export-step">
+                <div class="export-step-head">
+                    <span class="export-step-no">1</span>
+                    <h3 class="export-step-title">{{ t().editor.exportModal.stepVersion }}</h3>
                 </div>
-                }
-                @if (blogError()) { <p class="channel-error">{{ blogError() }}</p> }
-
-                <!--Privacy is settable before publishing too, so a post can go live already
-                gated (nobody sees it in the window between publish and flipping the switch).-->
-                <div class="popover-divider"></div>
-                <label class="field-hint">
-                    <input type="checkbox" [checked]="isPrivate()" (change)="togglePrivate()">
-                    {{ t().editor.exportModal.privatePost }}
-                </label>
-                <!--Semi-public: the post is listed and filterable on the blog index with a lock
-                on its card, and still opens the registration form rather than the article. What
-                is advertised changes; what is readable does not.-->
-                @if (isPrivate()) {
-                <label class="field-hint">
-                    <input type="checkbox" [checked]="isListedWhilePrivate()" (change)="toggleListedWhilePrivate()">
-                    {{ t().editor.exportModal.listedWhilePrivate }}
-                </label>
-                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.listedWhilePrivateHint }}</p>
-                <label class="field-hint">
-                    <input type="checkbox" [checked]="disableCopy()" (change)="toggleDisableCopy()">
-                    {{ t().editor.exportModal.disableCopy }}
-                </label>
-                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.disableCopyHint }}</p>
-                }
-
-                <!--Design review (Claude Design, 28.07.2026) — "the form lives in three places at
-                once" (Forms defines it, Posts assigns it, here re-picks it). app-form-ref is the
-                same shared shape used on the Posts tab, always pointing back to Forms — same
-                component, this page's own already-translated wording.-->
-                @if (isPrivate()) {
-                <app-form-ref
-                    [regForm]="regForm()" [presets]="formPresets()" [languages]="formLanguages()"
-                    [primaryLanguage]="primaryLanguage" [busy]="regBusy()"
-                    [onLabel]="t().editor.exportModal.formOn" [offLabel]="t().editor.exportModal.formOff"
-                    [changeLabel]="t().manager.forms.changeForm" [noFormLabel]="t().manager.forms.noFormChosen"
-                    [clearLabel]="t().manager.forms.clearForm" [languagesLabel]="t().manager.forms.formLanguages"
-                    [noPresetsLabel]="t().editor.exportModal.noPresets"
-                    [noPresetsSavedLabel]="t().editor.exportModal.noPresetsSaved"
-                    [createLabel]="t().editor.exportModal.createPreset" [manageLabel]="t().editor.exportModal.editInManager"
-                    [manageRoute]="['/posts']" [manageQueryParams]="{ tab: 'forms' }"
-                    (pick)="pickFormPreset($event)">
-                </app-form-ref>
-                }
-                }
-            </div>
-
-            <!--FI2.9: channels only ever meant Telegram, so the separate Channels section that
-            used to head the window is folded in here, behind a disclosure — connecting a channel
-            is a rare act next to picking one.-->
-            <div class="export-section" [class.dest-off]="!destTelegram()">
-                <label class="dest-head">
-                    <input type="checkbox" [checked]="destTelegram()" (change)="destTelegram.set(!destTelegram())">
-                    <span class="export-section-title" style="margin:0">Telegram</span>
-                    @if (telegramPostUrl()) { <span class="state-chip live">LIVE</span> }
-                </label>
-                @if (destTelegram()) {
-                <!--T-086: what Telegram will do to this document, asked before the send instead of
-                read off its error message afterwards. Blocking issues are what it would refuse;
-                the rest are what it would accept and quietly change.-->
-                @if (visiblePublishIssues().length) {
-                <ul class="publish-issues">
-                    @for (issue of visiblePublishIssues(); track issue.code) {
-                    <li [class.blocking]="issue.blocking">
-                        <app-icon [name]="issue.blocking ? 'warning' : 'info'" size="sm"></app-icon>
-                        {{ publishIssueText(issue) }}
-                    </li>
-                    }
-                </ul>
-                }
-                <!--T-106 — the remedy sits with the problem. Off by default and never automatic:
-                turning one post into eight messages is a loud act, and the author sees exactly
-                where the cuts land before agreeing to it.-->
-                @if (canSplitIntoThread()) {
-                <div class="thread-offer">
-                    <label class="thread-toggle">
-                        <input type="checkbox" [checked]="splitIntoThread()"
-                               (change)="toggleThread($any($event.target).checked)">
-                        <span>{{ t().editor.exportModal.splitIntoThread }}</span>
-                    </label>
-                    @if (splitIntoThread() && threadParts().length) {
-                    <p class="field-hint-inline">
-                        {{ t().editor.exportModal.threadSummary(threadParts().length) }}
-                        · {{ t().editor.exportModal.threadNotifyOnce }}
-                    </p>
-                    <ol class="thread-parts">
-                        @for (part of threadParts(); track part.index) {
-                        <li>
-                            <span class="thread-part-no">{{ part.index + 1 }}</span>
-                            <span class="thread-part-label">{{ threadPartLabel(part) }}</span>
-                            <span class="thread-part-meta">
-                                {{ part.characters.toLocaleString() }}
-                                @if (part.mediaCount) { · {{ part.mediaCount }} <app-icon name="image" size="xs"></app-icon> }
-                            </span>
-                        </li>
-                        }
-                    </ol>
-                    }
-                </div>
-                }
-
-                @if (selectedChannel(); as sc) {
-                <div class="channel-chosen">
-                    <span class="channel-avatar" [style.background]="channelColor(sc.id)">{{ channelInitial(sc.title) }}</span>
-                    <span class="channel-chosen-title">{{ sc.title }}</span>
-                    <button class="mini-remove" (click)="chatId = ''" [title]="t().editor.exportModal.changeChannel" [attr.aria-label]="t().editor.exportModal.changeChannel"><app-icon name="x" size="sm"></app-icon></button>
-                </div>
-                }
-                <!--N4: no free-text target. Picking a connected channel is the only way to set one.-->
-                @if (channels().length) {
-                <div class="channel-pick-row">
-                    @for (c of channels(); track c.id) {
-                    <button class="channel-pick" [class.on]="isSelectedChannel(c)" (click)="selectChannel(c)">
-                        <span class="channel-avatar" [style.background]="channelColor(c.id)">{{ channelInitial(c.title) }}</span>
-                        <span class="channel-pick-title">{{ c.title }}</span>
-                    </button>
-                    }
-                </div>
-                } @else {
-                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.pickChannelFirst }}</p>
-                }
-
-                <!--FI2.2: languages are checkboxes — a post can go out in several at once, each
-                as its own Telegram message.-->
-                <div class="panel-label" style="margin-top:12px">{{ t().editor.exportModal.languages }}</div>
                 <div class="lang-check-row">
-                    <label class="lang-check">
+                    <label class="lang-check" [title]="endonym(primaryLanguage)">
                         <input type="checkbox" [checked]="isExportLang(primaryLanguage)" (change)="toggleExportLang(primaryLanguage)">
                         {{ primaryLanguage.toUpperCase() }}
                     </label>
@@ -269,416 +119,471 @@
                     </label>
                     }
                 </div>
-                @if (exportLangs().length > 1) {
-                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.languagesHint }}</p>
+                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.versionHint }}</p>
+                @if (missingLanguages().length) {
+                <p class="field-hint-inline">{{ t().editor.exportModal.versionMissing(missingLanguagesLabel()) }}</p>
                 }
+            </section>
 
-                <div class="panel-label" style="margin-top:12px">{{ t().editor.exportModal.compression }} <span class="field-hint-inline">{{ t().editor.exportModal.compressionHint }}</span></div>
-                <div class="format-toggle">
-                    <button [class.on]="compressionLevel === 'small'" (click)="compressionLevel = 'small'" [title]="t().editor.exportModal.compressionSmallHint">{{ t().editor.exportModal.compressionSmall }}</button>
-                    <button [class.on]="compressionLevel === 'standard'" (click)="compressionLevel = 'standard'" [title]="t().editor.exportModal.compressionStandardHint">{{ t().editor.exportModal.compressionStandard }}</button>
-                    <button [class.on]="compressionLevel === 'high'" (click)="compressionLevel = 'high'" [title]="t().editor.exportModal.compressionHighHint">{{ t().editor.exportModal.compressionHigh }}</button>
+            <!-- ============ 2 · DESTINATIONS ============ -->
+            <section class="export-step">
+                <div class="export-step-head">
+                    <span class="export-step-no">2</span>
+                    <h3 class="export-step-title">{{ t().editor.exportModal.stepWhere }}</h3>
                 </div>
+                <!--A network with no account stays visible and stays honest: it is not hidden, not
+                silently tickable, and the way out is the one place that can fix it (ADR-095).-->
+                <div class="dest-cards">
+                    <label class="dest-card" [class.on]="destBlog()">
+                        <input type="checkbox" [checked]="destBlog()" (change)="destBlog.set(!destBlog())">
+                        <app-icon name="newspaper" size="sm"></app-icon>
+                        <span class="dest-card-name">{{ t().editor.exportModal.destinationBlog }}</span>
+                        @if (currentBlog()?.isPublished) { <span class="state-chip live">LIVE</span> }
+                    </label>
 
-                <!--FI2.7: scheduling is not a second publish button. Setting a time changes what
-                the one Publish button does; the list of what is already scheduled lives in the
-                Posts Manager (FI2.8).-->
-                <div class="popover-divider"></div>
-                <div class="panel-label">{{ t().editor.exportModal.scheduleExport }}</div>
-                <div class="quick-schedule">
-                    <button (click)="quickSchedule('1m')">{{ t().editor.exportModal.in1m }}</button>
-                    <button (click)="quickSchedule('5m')">{{ t().editor.exportModal.in5m }}</button>
-                    <button (click)="quickSchedule('1h')">{{ t().editor.exportModal.in1h }}</button>
-                    <button (click)="quickSchedule('6h')">{{ t().editor.exportModal.in6h }}</button>
-                    <button (click)="quickSchedule('12h')">{{ t().editor.exportModal.in12h }}</button>
-                    <button (click)="quickSchedule('tomorrow')">{{ t().editor.exportModal.tomorrow }}</button>
-                </div>
-                <div class="schedule-row">
-                    <input type="datetime-local" [(ngModel)]="scheduledAt">
-                    @if (scheduledAt) {
-                    <button class="mini-remove" (click)="scheduledAt = ''" [title]="t().common.cancel" [attr.aria-label]="t().common.cancel"><app-icon name="x" size="sm"></app-icon></button>
-                    }
-                </div>
-                @if (pickerZonesHint()) { <p class="tz-hint">{{ pickerZonesHint() }}</p> }
-                @if (scheduledAt) {
-                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.scheduleHint }}</p>
-                <a class="state-link" routerLink="/posts">{{ t().editor.exportModal.manageInManager }}</a>
-                }
-                @if (scheduleResult()) { <p class="export-result">{{ scheduleResult() }}</p> }
+                    <label class="dest-card" [class.on]="destTelegram()">
+                        <input type="checkbox" [checked]="destTelegram()" (change)="destTelegram.set(!destTelegram())">
+                        <app-brand-icon name="telegram" [size]="15"></app-brand-icon>
+                        <span class="dest-card-name">{{ t().editor.exportModal.destinationTelegram }}</span>
+                        @if (telegramPostUrl()) { <span class="state-chip live">LIVE</span> }
+                    </label>
 
-                @if (exporting()) {
-                <div class="inline-progress">
-                    <div class="indeterminate-bar"><div class="indeterminate-fill"></div></div>
-                    <p class="translate-status">{{ exportStatusMessage() }}</p>
-                </div>
-                }
-                @if (exportError()) {
-                <p class="channel-error">{{ exportError()!.message }}</p>
-                }
-
-                <div class="popover-divider"></div>
-                <button class="manual-channel-toggle" (click)="manualChannelOpen.set(!manualChannelOpen())">
-                    {{ manualChannelOpen() ? t().editor.exportModal.manualToggleOpen : t().editor.exportModal.channels }}
-                </button>
-                @if (manualChannelOpen()) {
-                <div class="channel-add">
-                    <input class="chat-input" [(ngModel)]="newChannelChatId" [disabled]="channelBusy()" [placeholder]="t().editor.exportModal.manualPlaceholder" (keyup.enter)="connectChannel()">
-                    <button class="mini" (click)="connectChannel()" [disabled]="channelBusy()" [title]="t().editor.exportModal.connect">
-                        @if (channelBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> } @else { <app-icon name="plus" size="sm"></app-icon> }
-                    </button>
-                </div>
-                @if (channelError()) { <p class="channel-error">{{ channelError() }}</p> }
-
-                <div class="panel-head">
-                    <span class="panel-label">{{ t().editor.exportModal.available }}</span>
-                    <button class="mini" (click)="refreshKnownChats(); $event.stopPropagation()" [disabled]="knownChatsRefreshing()" [title]="t().editor.exportModal.refresh" [attr.aria-label]="t().editor.exportModal.refresh">
-                        <app-icon name="arrow-clockwise" size="sm" [class.spin]="knownChatsRefreshing()"></app-icon>
-                    </button>
-                </div>
-                @if (knownChats().length) {
-                    @for (k of knownChats(); track k.telegramChatId) {
-                    <div class="channel-item">
-                        <span class="channel-avatar" [style.background]="channelColor(k.title)">{{ channelInitial(k.title) }}</span>
-                        <div class="channel-body">
-                            <div class="channel-row-top">
-                                <div class="channel-title">{{ k.title }}</div>
-                                <button class="mini" (click)="connectChannel(k.telegramChatId + ''); $event.stopPropagation()" [disabled]="channelBusy()" [title]="t().editor.exportModal.connect">
-                                    @if (channelBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> } @else { <app-icon name="plus" size="sm"></app-icon> }
-                                </button>
-                            </div>
+                    @for (network of microNetworks; track network) {
+                        @if (account(network); as acc) {
+                        <label class="dest-card" [class.on]="destination(network)()">
+                            <input type="checkbox" [checked]="destination(network)()"
+                                   (change)="destination(network).set(!destination(network)())">
+                            <app-brand-icon [name]="network === 'x' ? 'twitter' : 'bluesky'" [size]="14"></app-brand-icon>
+                            <span class="dest-card-name">{{ microLabels[network] }}</span>
+                            <span class="dest-card-meta">{{ acc.displayName }}</span>
+                        </label>
+                        } @else {
+                        <div class="dest-card off">
+                            <app-brand-icon [name]="network === 'x' ? 'twitter' : 'bluesky'" [size]="14"></app-brand-icon>
+                            <span class="dest-card-name">{{ microLabels[network] }}</span>
+                            <span class="dest-card-meta">{{ t().editor.exportModal.notConnected }}</span>
+                            <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'account' }">
+                                {{ t().editor.exportModal.connectInSettings }}
+                            </a>
                         </div>
-                    </div>
+                        }
                     }
-                } @else if (auth.telegramLinked()) {
-                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.nothingNew }}</p>
-                } @else {
-                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.linkTelegramFirst }}</p>
-                }
-
-                <div class="panel-head">
-                    <span class="panel-label">{{ t().editor.exportModal.connected }}</span>
                 </div>
-                @if (channels().length) {
-                    @for (c of channels(); track c.id) {
-                    <div class="channel-item" [class.active]="isSelectedChannel(c)" (click)="selectChannel(c)">
-                        <span class="channel-avatar" [style.background]="channelColor(c.id)">{{ channelInitial(c.title) }}</span>
-                        <div class="channel-body">
-                            <div class="channel-row-top">
-                                <div class="channel-title">{{ c.title }}</div>
-                                <button class="mini-remove" (click)="removeChannel(c.id); $event.stopPropagation()" [disabled]="channelBusy()" [title]="t().editor.exportModal.disconnect">
-                                    @if (channelBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> } @else { <app-icon name="x" size="sm"></app-icon> }
-                                </button>
-                            </div>
-                            @if (channelStats()[c.id]; as stats) {
-                            <div class="channel-stat-row">
-                                <span class="channel-count">{{ stats.current ?? '—' }}</span>
-                                @if (stats.deltaWeek !== null) {
-                                <span class="channel-delta" [class.up]="stats.deltaWeek! > 0" [class.down]="stats.deltaWeek! < 0">
-                                    {{ stats.deltaWeek! > 0 ? '▲' : stats.deltaWeek! < 0 ? '▼' : '·' }}{{ stats.deltaWeek! > 0 ? '+' : '' }}{{ stats.deltaWeek }}
-                                </span>
-                                }
-                                @if (stats.snapshots.length > 1) {
-                                <svg class="sparkline" viewBox="0 0 60 20" preserveAspectRatio="none">
-                                    <polyline [attr.points]="sparklinePoints(stats.snapshots)" fill="none" stroke="var(--accent)" stroke-width="1.5"></polyline>
-                                </svg>
-                                }
-                            </div>
+                @if (!anyDestination()) {
+                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.noDestination }}</p>
+                }
+            </section>
+
+            <!-- ============ 3 · PER-DESTINATION SETTINGS ============ -->
+            @if (anyDestination()) {
+            <section class="export-step">
+                <div class="export-step-head">
+                    <span class="export-step-no">3</span>
+                    <h3 class="export-step-title">{{ t().editor.exportModal.stepParams }}</h3>
+                </div>
+                <div class="export-panels">
+
+                @if (destBlog()) {
+                <div class="export-section">
+                    <div class="export-section-title">
+                        <app-icon name="newspaper" size="sm"></app-icon>{{ t().editor.exportModal.siteBlog }}
+                    </div>
+                    @if (currentBlog(); as blog) {
+                        @if (blog.isPublished) {
+                        <div class="blog-lang-badges">
+                            <a class="blog-lang-badge" [href]="blogUrl()" target="_blank" rel="noopener">{{ primaryLanguage.toUpperCase() }}</a>
+                            @for (l of existingLanguages(); track l) {
+                            <a class="blog-lang-badge" [href]="blogUrl() + '?lang=' + l" target="_blank" rel="noopener">{{ l.toUpperCase() }}</a>
                             }
                         </div>
+                        <p class="export-result"><a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
+                        <!--FI2.6: already live, so publishing again means rewriting the page. The
+                        Unpublish button that used to sit here moved to the Posts Manager (FI2.1).-->
+                        <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.updateHint }}</p>
+                        <a class="state-link" routerLink="/posts">{{ t().editor.exportModal.manageInManager }}</a>
+                        } @else {
+                        <p class="export-result">{{ t().editor.exportModal.unpublishedLinkStays }} <a [href]="blogUrl()" target="_blank" rel="noopener">{{ blogUrl() }}</a></p>
+                        }
+                    }
+                    @if (blogBusy()) {
+                    <div class="inline-progress">
+                        <div class="indeterminate-bar"><div class="indeterminate-fill"></div></div>
+                        <p class="translate-status">{{ blogStatusMessage() }}</p>
                     </div>
                     }
-                } @else {
-                    <div class="empty-channels">
-                        <div class="empty-cow">🐮</div>
-                        <div class="empty-line1">{{ t().editor.exportModal.noChannels }}<br>{{ t().editor.exportModal.cowWaiting }}</div>
-                        <div class="empty-line2">{{ t().editor.exportModal.connectVia }} <span class="mono-accent">&#64;CedarClerkBot</span></div>
+                    @if (blogError()) { <p class="channel-error">{{ blogError() }}</p> }
+
+                    <!--Privacy is settable before publishing too, so a post can go live already
+                    gated (nobody sees it in the window between publish and flipping the switch).-->
+                    <div class="popover-divider"></div>
+                    <label class="field-hint">
+                        <input type="checkbox" [checked]="isPrivate()" (change)="togglePrivate()">
+                        {{ t().editor.exportModal.privatePost }}
+                    </label>
+                    <!--Semi-public: the post is listed and filterable on the blog index with a lock
+                    on its card, and still opens the registration form rather than the article. What
+                    is advertised changes; what is readable does not.-->
+                    @if (isPrivate()) {
+                    <label class="field-hint">
+                        <input type="checkbox" [checked]="isListedWhilePrivate()" (change)="toggleListedWhilePrivate()">
+                        {{ t().editor.exportModal.listedWhilePrivate }}
+                    </label>
+                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.listedWhilePrivateHint }}</p>
+                    <label class="field-hint">
+                        <input type="checkbox" [checked]="disableCopy()" (change)="toggleDisableCopy()">
+                        {{ t().editor.exportModal.disableCopy }}
+                    </label>
+                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.disableCopyHint }}</p>
+
+                    <!--Design review (Claude Design, 28.07.2026) — "the form lives in three places at
+                    once" (Forms defines it, Posts assigns it, here re-picks it). app-form-ref is the
+                    same shared shape used on the Posts tab, always pointing back to Forms — same
+                    component, this page's own already-translated wording.-->
+                    <app-form-ref
+                        [regForm]="regForm()" [presets]="formPresets()" [languages]="formLanguages()"
+                        [primaryLanguage]="primaryLanguage" [busy]="regBusy()"
+                        [onLabel]="t().editor.exportModal.formOn" [offLabel]="t().editor.exportModal.formOff"
+                        [changeLabel]="t().manager.forms.changeForm" [noFormLabel]="t().manager.forms.noFormChosen"
+                        [clearLabel]="t().manager.forms.clearForm" [languagesLabel]="t().manager.forms.formLanguages"
+                        [noPresetsLabel]="t().editor.exportModal.noPresets"
+                        [noPresetsSavedLabel]="t().editor.exportModal.noPresetsSaved"
+                        [createLabel]="t().editor.exportModal.createPreset" [manageLabel]="t().editor.exportModal.editInManager"
+                        [manageRoute]="['/posts']" [manageQueryParams]="{ tab: 'forms' }"
+                        (pick)="pickFormPreset($event)">
+                    </app-form-ref>
+
+                    }
+                </div>
+                }
+
+                @if (destTelegram()) {
+                <div class="export-section">
+                    <div class="export-section-title">
+                        <app-brand-icon name="telegram" [size]="15"></app-brand-icon>Telegram
                     </div>
-                }
-                }
-                }
-            </div>
+                    <!--T-086: what Telegram will do to this document, asked before the send instead of
+                    read off its error message afterwards. Blocking issues are what it would refuse;
+                    the rest are what it would accept and quietly change.-->
+                    @if (visiblePublishIssues().length) {
+                    <ul class="publish-issues">
+                        @for (issue of visiblePublishIssues(); track issue.code) {
+                        <li [class.blocking]="issue.blocking">
+                            <app-icon [name]="issue.blocking ? 'warning' : 'info'" size="sm"></app-icon>
+                            {{ publishIssueText(issue) }}
+                        </li>
+                        }
+                    </ul>
+                    }
 
-            <!--T-089/T-087 — Bluesky. A short standalone post (ADR-077), so this section is mostly
-            the text field: what the author writes here IS the post, and an empty field falls back
-            to a teaser built from the opening paragraphs plus the blog link.-->
-            <div class="export-section" [class.dest-off]="!destBluesky()">
-                <label class="dest-head">
-                    <input type="checkbox" [checked]="destBluesky()" (change)="destBluesky.set(!destBluesky())"
-                           [disabled]="!blueskyAccount()">
-                    <span class="export-section-title" style="margin:0">Bluesky</span>
-                </label>
-                @if (blueskyAccount(); as account) {
-                <div class="channel-chosen">
-                    <span class="channel-chosen-title">&#64;{{ account.displayName }}</span>
-                    <button class="mini-remove" (click)="disconnectBluesky(account.id)"
-                            [title]="t().editor.exportModal.disconnect" [attr.aria-label]="t().editor.exportModal.disconnect">
-                        <app-icon name="x" size="sm"></app-icon>
-                    </button>
-                </div>
-                @if (destBluesky()) {
-                <label class="form-field">
-                    <span class="form-field-label">{{ t().editor.exportModal.blueskyText }}</span>
-                    <textarea class="chat-input" rows="4" [(ngModel)]="blueskyText"
-                              (ngModelChange)="blueskyTextDirty.set(true)"
-                              [placeholder]="t().editor.exportModal.blueskyTextPlaceholder"></textarea>
-                    <p class="field-hint-inline"
-                       [class.over-limit]="blueskyGraphemes() > blueskyLimit">
-                        {{ blueskyGraphemes() }} / {{ blueskyLimit }}
-                        @if (!blueskyText.trim()) { · {{ t().editor.exportModal.blueskyFallback }} }
-                    </p>
-                </label>
-                <label class="thread-toggle">
-                    <input type="checkbox" [checked]="blueskyThread()"
-                           (change)="toggleMicroThread('bluesky', $any($event.target).checked)">
-                    <span>{{ t().editor.exportModal.splitIntoThread }}</span>
-                </label>
-                @if (blueskyThread() && blueskyThreadParts() > 0) {
-                <p class="field-hint-inline">{{ t().editor.exportModal.threadSummary(blueskyThreadParts()) }}</p>
-                }
-                <div class="publish-actions">
-                    <button class="export-btn full" (click)="publishBluesky()"
-                            [disabled]="blueskyBusy() || (!blueskyThread() && blueskyGraphemes() > blueskyLimit)">
-                        @if (blueskyBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                        {{ t().editor.exportModal.publishTo }} Bluesky
-                    </button>
-                </div>
-                @if (blueskyError()) { <p class="channel-error">{{ blueskyError() }}</p> }
-                @if (blueskyPostUrl(); as url) {
-                <a class="detail-link-btn" [href]="url" target="_blank" rel="noopener">
-                    <app-icon name="arrow-square-out" size="sm"></app-icon> {{ t().editor.exportModal.openPost }}
-                </a>
-                }
-                }
-                } @else {
-                <!--Connecting lives here rather than in Settings for the same reason the Telegram
-                channel picker does (N4): the moment you need an account is the moment you are
-                trying to publish to it.-->
-                <p class="field-hint-inline">{{ t().editor.exportModal.blueskyConnectHint }}</p>
-                <input class="chat-input" [(ngModel)]="blueskyHandle" placeholder="handle.bsky.social">
-                <input class="chat-input" type="password" [(ngModel)]="blueskyAppPassword"
-                       [placeholder]="t().editor.exportModal.blueskyAppPassword">
-                <button class="btn-ghost" (click)="connectBluesky()"
-                        [disabled]="blueskyBusy() || !blueskyHandle.trim() || !blueskyAppPassword.trim()">
-                    @if (blueskyBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                    {{ t().editor.exportModal.connect }}
-                </button>
-                @if (blueskyError()) { <p class="channel-error">{{ blueskyError() }}</p> }
-                }
-            </div>
-
-            <!--T-110/ADR-093 — X. Same shape as Bluesky above (a short standalone post, ADR-077),
-            but the account connects over OAuth (one button, x.com and back) and each post costs a
-            credit (ADR-092) — the note under the button says so with the current balance.-->
-            <div class="export-section" [class.dest-off]="!destX()">
-                <label class="dest-head">
-                    <input type="checkbox" [checked]="destX()" (change)="destX.set(!destX())"
-                           [disabled]="!xAccount()">
-                    <span class="export-section-title" style="margin:0">X (Twitter)</span>
-                </label>
-                @if (xAccount(); as account) {
-                <div class="channel-chosen">
-                    <span class="channel-chosen-title">{{ account.displayName }}</span>
-                    <button class="mini-remove" (click)="disconnectX(account.id)"
-                            [title]="t().editor.exportModal.disconnect" [attr.aria-label]="t().editor.exportModal.disconnect">
-                        <app-icon name="x" size="sm"></app-icon>
-                    </button>
-                </div>
-                @if (destX()) {
-                <label class="form-field">
-                    <span class="form-field-label">{{ t().editor.exportModal.xText }}</span>
-                    <textarea class="chat-input" rows="4" [(ngModel)]="xText"
-                              (ngModelChange)="xTextDirty.set(true)"
-                              [placeholder]="t().editor.exportModal.xTextPlaceholder"></textarea>
-                    <p class="field-hint-inline"
-                       [class.over-limit]="xWeighted() > xLimit">
-                        {{ xWeighted() }} / {{ xLimit }}
-                        @if (!xText.trim()) { · {{ t().editor.exportModal.blueskyFallback }} }
-                    </p>
-                </label>
-                <label class="thread-toggle">
-                    <input type="checkbox" [checked]="xThread()"
-                           (change)="toggleMicroThread('x', $any($event.target).checked)">
-                    <span>{{ t().editor.exportModal.splitIntoThread }}</span>
-                </label>
-                @if (xThread() && xThreadParts() > 0) {
-                <p class="field-hint-inline">
-                    {{ t().editor.exportModal.threadSummary(xThreadParts()) }}
-                    · {{ t().editor.exportModal.xThreadCost(xThreadParts()) }}
-                </p>
-                }
-                <div class="publish-actions">
-                    <button class="export-btn full" (click)="publishX()"
-                            [disabled]="xBusy() || (!xThread() && xWeighted() > xLimit)">
-                        @if (xBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                        {{ t().editor.exportModal.publishTo }} X
-                    </button>
-                </div>
-                @if (xCredits() !== null) {
-                <p class="field-hint-inline">{{ t().editor.exportModal.xCreditNote(xCredits()!) }}</p>
-                }
-                @if (xError()) { <p class="channel-error">{{ xError() }}</p> }
-                @if (xPostUrl(); as url) {
-                <a class="detail-link-btn" [href]="url" target="_blank" rel="noopener">
-                    <app-icon name="arrow-square-out" size="sm"></app-icon> {{ t().editor.exportModal.openPost }}
-                </a>
-                }
-                }
-                } @else {
-                <p class="field-hint-inline">{{ t().editor.exportModal.xConnectHint }}</p>
-                <button class="btn-ghost" (click)="connectX()" [disabled]="xBusy()">
-                    @if (xBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                    {{ t().editor.exportModal.xConnect }}
-                </button>
-                @if (xError()) { <p class="channel-error">{{ xError() }}</p> }
-                }
-            </div>
-            </div>
-            <!-- /export-row-primary -->
-
-            <!--Priority Fixes 04 (Claude Design, 28.07.2026): Invitations/Watermark/File exports
-            are all short, fixed-height utility panels — grouped into their own row so they form a
-            balanced line instead of one auto-fit column stretching far past its own content while
-            sitting next to Telegram's much taller column.-->
-            <div class="export-row-utility">
-            <!--FI2.4: invitations are their own section rather than a block nested inside the
-            blog destination — who may read the post is not a property of publishing it.-->
-            @if (isPrivate()) {
-            <div class="export-section">
-                <div class="export-section-title">{{ t().editor.exportModal.invitations }}</div>
-                <div class="invite-list">
-                    @if (!currentBlog()) {
-                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.publishFirst }}</p>
-                    } @else if (invitesLoading()) {
-                    <p class="field-hint-inline">{{ t().editor.exportModal.loadingInvites }}</p>
+                    <div class="panel-label">{{ t().editor.exportModal.channelLabel }}</div>
+                    @if (selectedChannel(); as sc) {
+                    <div class="channel-chosen">
+                        <span class="channel-avatar" [style.background]="channelColor(sc.id)">{{ channelInitial(sc.title) }}</span>
+                        <span class="channel-chosen-title">{{ sc.title }}</span>
+                        <button class="mini-remove" (click)="chatId = ''" [title]="t().editor.exportModal.changeChannel" [attr.aria-label]="t().editor.exportModal.changeChannel"><app-icon name="x" size="sm"></app-icon></button>
+                    </div>
+                    }
+                    <!--N4 is retired (ADR-095): connecting a channel is a setting, so this only ever
+                    picks between what Settings has already connected.-->
+                    @if (channels().length) {
+                    <div class="channel-pick-row">
+                        @for (c of channels(); track c.id) {
+                        <button class="channel-pick" [class.on]="isSelectedChannel(c)" (click)="selectChannel(c)">
+                            <span class="channel-avatar" [style.background]="channelColor(c.id)">{{ channelInitial(c.title) }}</span>
+                            <span class="channel-pick-title">{{ c.title }}</span>
+                        </button>
+                        }
+                    </div>
                     } @else {
-                        @for (inv of invites(); track inv.id) {
-                        <div class="invite-row">
-                            <span class="invite-email">{{ inv.email }}</span>
-                            <button class="mini" (click)="copyInviteLink(inv.url)" [title]="t().editor.exportModal.copyInvite" [attr.aria-label]="t().editor.exportModal.copyInvite">
-                                <app-icon name="link" size="sm"></app-icon>
+                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.telegramNoChannel }}</p>
+                    <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'account' }">{{ t().editor.exportModal.openSettings }}</a>
+                    }
+
+                    <!--T-106 — the remedy sits with the problem. Off by default and never automatic:
+                    turning one post into eight messages is a loud act, and the author sees exactly
+                    where the cuts land before agreeing to it.-->
+                    @if (canSplitIntoThread()) {
+                    <div class="thread-offer">
+                        <label class="thread-toggle">
+                            <input type="checkbox" [checked]="splitIntoThread()"
+                                   (change)="toggleThread($any($event.target).checked)">
+                            <span>{{ t().editor.exportModal.splitIntoThread }}</span>
+                        </label>
+                        @if (splitIntoThread() && threadParts().length) {
+                        <p class="field-hint-inline">
+                            {{ t().editor.exportModal.threadSummary(threadParts().length) }}
+                            · {{ t().editor.exportModal.threadNotifyOnce }}
+                        </p>
+                        <ol class="thread-parts">
+                            @for (part of threadParts(); track part.index) {
+                            <li>
+                                <span class="thread-part-no">{{ part.index + 1 }}</span>
+                                <span class="thread-part-label">{{ threadPartLabel(part) }}</span>
+                                <span class="thread-part-meta">
+                                    {{ part.characters.toLocaleString() }}
+                                    @if (part.mediaCount) { · {{ part.mediaCount }} <app-icon name="image" size="xs"></app-icon> }
+                                </span>
+                            </li>
+                            }
+                        </ol>
+                        }
+                    </div>
+                    }
+
+                    <div class="panel-label" style="margin-top:12px">{{ t().editor.exportModal.compression }} <span class="field-hint-inline">{{ t().editor.exportModal.compressionHint }}</span></div>
+                    <div class="format-toggle">
+                        <button [class.on]="compressionLevel === 'small'" (click)="compressionLevel = 'small'" [title]="t().editor.exportModal.compressionSmallHint">{{ t().editor.exportModal.compressionSmall }}</button>
+                        <button [class.on]="compressionLevel === 'standard'" (click)="compressionLevel = 'standard'" [title]="t().editor.exportModal.compressionStandardHint">{{ t().editor.exportModal.compressionStandard }}</button>
+                        <button [class.on]="compressionLevel === 'high'" (click)="compressionLevel = 'high'" [title]="t().editor.exportModal.compressionHighHint">{{ t().editor.exportModal.compressionHigh }}</button>
+                    </div>
+
+                    <!--FI2.7: scheduling is not a second publish button. Setting a time changes what
+                    the one Publish button does; the list of what is already scheduled lives in the
+                    Posts Manager (FI2.8).-->
+                    <div class="popover-divider"></div>
+                    <div class="panel-label">{{ t().editor.exportModal.scheduleExport }}</div>
+                    <div class="quick-schedule">
+                        <button (click)="quickSchedule('1m')">{{ t().editor.exportModal.in1m }}</button>
+                        <button (click)="quickSchedule('5m')">{{ t().editor.exportModal.in5m }}</button>
+                        <button (click)="quickSchedule('1h')">{{ t().editor.exportModal.in1h }}</button>
+                        <button (click)="quickSchedule('6h')">{{ t().editor.exportModal.in6h }}</button>
+                        <button (click)="quickSchedule('12h')">{{ t().editor.exportModal.in12h }}</button>
+                        <button (click)="quickSchedule('tomorrow')">{{ t().editor.exportModal.tomorrow }}</button>
+                    </div>
+                    <div class="schedule-row">
+                        <input type="datetime-local" [(ngModel)]="scheduledAt">
+                        @if (scheduledAt) {
+                        <button class="mini-remove" (click)="scheduledAt = ''" [title]="t().common.cancel" [attr.aria-label]="t().common.cancel"><app-icon name="x" size="sm"></app-icon></button>
+                        }
+                    </div>
+                    @if (pickerZonesHint()) { <p class="tz-hint">{{ pickerZonesHint() }}</p> }
+                    @if (scheduledAt) {
+                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.scheduleHint }}</p>
+                    <a class="state-link" routerLink="/posts">{{ t().editor.exportModal.manageInManager }}</a>
+                    }
+                    @if (scheduleResult()) { <p class="export-result">{{ scheduleResult() }}</p> }
+
+                    @if (exporting()) {
+                    <div class="inline-progress">
+                        <div class="indeterminate-bar"><div class="indeterminate-fill"></div></div>
+                        <p class="translate-status">{{ exportStatusMessage() }}</p>
+                    </div>
+                    }
+                    @if (exportError()) {
+                    <p class="channel-error">{{ exportError()!.message }}</p>
+                    }
+                </div>
+                }
+
+                <!--ADR-096 — X and Bluesky are one panel with the network as a parameter: an
+                account, a mode, and the fields that mode actually uses.-->
+                @for (network of microNetworks; track network) {
+                    @if (destination(network)() && account(network); as acc) {
+                    <div class="export-section">
+                        <div class="export-section-title">
+                            <app-brand-icon [name]="network === 'x' ? 'twitter' : 'bluesky'" [size]="14"></app-brand-icon>
+                            {{ microLabels[network] }}
+                            <span class="field-hint-inline">{{ acc.displayName }}</span>
+                        </div>
+
+                        <div class="panel-label">{{ t().editor.exportModal.modeLabel }}</div>
+                        <div class="mode-toggle">
+                            <button [class.on]="microMode()[network] === 'link'" (click)="setMicroMode(network, 'link')">
+                                <span class="mode-name">{{ t().editor.exportModal.modeLink }}</span>
+                                <span class="mode-desc">{{ t().editor.exportModal.modeLinkHint }}</span>
                             </button>
-                            <button class="mini" (click)="resendInvite(inv.id)" [disabled]="inviteBusy()" [title]="t().editor.exportModal.resend" [attr.aria-label]="t().editor.exportModal.resend">
-                                <app-icon name="arrow-clockwise" size="sm"></app-icon>
+                            <button [class.on]="microMode()[network] === 'thread'" (click)="setMicroMode(network, 'thread')">
+                                <span class="mode-name">{{ t().editor.exportModal.modeThread }}</span>
+                                <span class="mode-desc">{{ t().editor.exportModal.modeThreadHint }}</span>
                             </button>
-                            <button class="mini-remove" (click)="revokeInvite(inv.id)" [disabled]="inviteBusy()" [title]="t().editor.exportModal.revoke" [attr.aria-label]="t().editor.exportModal.revoke">
+                        </div>
+
+                        @if (microMode()[network] === 'link') {
+                        <!--One field per version: a single field wrote the same override into every
+                        ticked language, which is the one thing a per-language text must not do.-->
+                        @if (exportLangs().length > 1) {
+                        <div class="lang-pick-row">
+                            @for (l of exportLangs(); track l) {
+                            <button class="pill" [class.on]="microTextLang()[network] === l" (click)="setMicroTextLang(network, l)">
+                                {{ l.toUpperCase() }}
+                            </button>
+                            }
+                        </div>
+                        }
+                        <label class="form-field">
+                            <span class="form-field-label">{{ t().editor.exportModal.textForLanguage(microTextLang()[network].toUpperCase()) }}</span>
+                            <textarea class="chat-input" rows="4"
+                                      [ngModel]="microText(network)" (ngModelChange)="setMicroText(network, $event)"
+                                      [placeholder]="network === 'x' ? t().editor.exportModal.xTextPlaceholder : t().editor.exportModal.blueskyTextPlaceholder"></textarea>
+                            <p class="field-hint-inline" [class.over-limit]="microOverLimit(network)">
+                                {{ microLength(network) }} / {{ microLimits[network] }}
+                                @if (!microText(network).trim()) { · {{ t().editor.exportModal.blueskyFallback }} }
+                            </p>
+                        </label>
+                        } @else {
+                        @if (microCounting()[network]) {
+                        <p class="field-hint-inline">{{ t().editor.exportModal.threadCounting }}</p>
+                        } @else if (microParts()[network]) {
+                        <!--Counted for the first ticked version: a translation splits into a few
+                        more or fewer parts, and a number per language is a table nobody reads.-->
+                        <p class="field-hint-inline">
+                            {{ t().editor.exportModal.threadPartsFor(microParts()[network], microLabels[network]) }}
+                            @if (exportLangs().length > 1) { · {{ exportLangs()[0].toUpperCase() }} }
+                        </p>
+                        }
+                        }
+
+                        @if (network === 'x' && xCredits() !== null) {
+                        <p class="hint-bubble" [class.blocking]="xCreditsShort()">
+                            <app-icon [name]="xCreditsShort() ? 'warning' : 'info'" size="sm"></app-icon>
+                            @if (xCreditsShort()) {
+                            {{ t().editor.exportModal.creditsShort(xCreditCost(), xCredits()!) }}
+                            } @else {
+                            {{ t().editor.exportModal.creditsTotal(xCreditCost()) }} · {{ t().editor.exportModal.xCreditNote(xCredits()!) }}
+                            }
+                        </p>
+                        }
+                    </div>
+                    }
+                }
+                </div>
+            </section>
+            }
+
+            <!--ADR-096 — who may open this post, and what their copy looks like. Not a destination:
+            it is true of the private page whether or not this window is publishing anywhere, so it
+            is not gated behind ticking the blog.-->
+            @if (isPrivate()) {
+            <section class="export-step">
+                <div class="export-step-head">
+                    <app-icon name="lock" size="sm"></app-icon>
+                    <h3 class="export-step-title">{{ t().editor.exportModal.privateAccess }}</h3>
+                    <span class="field-hint-inline">{{ t().editor.exportModal.privateAccessHint }}</span>
+                </div>
+                <div class="export-panels">
+                <div class="export-section">
+                    <div class="export-section-title">{{ t().editor.exportModal.invitations }}</div>
+                    <div class="invite-list">
+                        @if (!currentBlog()) {
+                        <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.publishFirst }}</p>
+                        } @else if (invitesLoading()) {
+                        <p class="field-hint-inline">{{ t().editor.exportModal.loadingInvites }}</p>
+                        } @else {
+                            @for (inv of invites(); track inv.id) {
+                            <div class="invite-row">
+                                <span class="invite-email">{{ inv.email }}</span>
+                                <button class="mini" (click)="copyInviteLink(inv.url)" [title]="t().editor.exportModal.copyInvite" [attr.aria-label]="t().editor.exportModal.copyInvite">
+                                    <app-icon name="link" size="sm"></app-icon>
+                                </button>
+                                <button class="mini" (click)="resendInvite(inv.id)" [disabled]="inviteBusy()" [title]="t().editor.exportModal.resend" [attr.aria-label]="t().editor.exportModal.resend">
+                                    <app-icon name="arrow-clockwise" size="sm"></app-icon>
+                                </button>
+                                <button class="mini-remove" (click)="revokeInvite(inv.id)" [disabled]="inviteBusy()" [title]="t().editor.exportModal.revoke" [attr.aria-label]="t().editor.exportModal.revoke">
+                                    <app-icon name="x" size="sm"></app-icon>
+                                </button>
+                            </div>
+                            }
+                            <div class="invite-add-row">
+                                <input class="chat-input" [(ngModel)]="inviteEmailInput" (keydown.enter)="addInvite()"
+                                    [placeholder]="t().editor.exportModal.invitePlaceholder" type="email">
+                                <button class="mini" (click)="addInvite()" [disabled]="inviteBusy() || !inviteEmailInput.trim()" [title]="t().editor.exportModal.invite" [attr.aria-label]="t().editor.exportModal.invite">
+                                    <app-icon name="plus" size="sm"></app-icon>
+                                </button>
+                            </div>
+                        }
+                        @if (inviteError()) { <p class="channel-error">{{ inviteError() }}</p> }
+                    </div>
+
+                </div>
+
+                <div class="export-section">
+                    <div class="export-section-title">{{ t().editor.exportModal.watermark }}</div>
+                    <div class="invite-add-row">
+                        <input class="chat-input" [(ngModel)]="watermarkInput" (keydown.enter)="saveWatermark()"
+                            [maxlength]="watermarkMaxLength" [placeholder]="t().editor.exportModal.watermarkPlaceholder">
+                        <button class="mini" (click)="saveWatermark()" [disabled]="watermarkBusy()" [title]="t().common.save" [attr.aria-label]="t().common.save">
+                            <app-icon name="check" size="sm"></app-icon>
+                        </button>
+                    </div>
+                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.watermarkHint }}</p>
+                </div>
+                </div>
+            </section>
+            }
+
+            <!-- ============ FILES ============ -->
+            <section class="export-step">
+                <div class="export-step-head">
+                    <app-icon name="download-simple" size="sm"></app-icon>
+                    <h3 class="export-step-title">{{ t().editor.exportModal.filesPanel }}</h3>
+                    <span class="field-hint-inline">{{ t().editor.exportModal.filesPanelHint }}</span>
+                </div>
+                <div class="export-panels">
+                <!--FI2.10: two buttons. The per-language .html links they replace produced a page
+                whose images all pointed back at the blog — a saved page only while the blog is up.-->
+                <div class="export-section">
+                    <div class="export-section-title">{{ t().editor.exportModal.fileExports }}</div>
+                    <!--T-042 — buttons rather than plain download links: the server packages the media
+                    before it answers, which on a heavy post is tens of seconds of a browser doing
+                    nothing visible. Fetching it ourselves is what makes "working" and "failed"
+                    sayable at all.-->
+                    <button class="export-btn" (click)="downloadExport('cedar')" [disabled]="!!downloading()">
+                        @if (downloading() === 'cedar') { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                        @else { <app-icon name="download-simple" size="sm"></app-icon> }
+                        {{ t().editor.exportModal.downloadCedar }}
+                    </button>
+                    <button class="export-btn" (click)="downloadExport('zip')" [disabled]="!!downloading()">
+                        @if (downloading() === 'zip') { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                        @else { <app-icon name="download-simple" size="sm"></app-icon> }
+                        {{ t().editor.exportModal.downloadZip }}
+                    </button>
+                    @if (downloading()) { <p class="field-hint-inline">{{ t().editor.exportModal.preparing }}</p> }
+                    @if (downloadError()) { <p class="channel-error">{{ downloadError() }}</p> }
+                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.zipHint }}</p>
+                </div>
+
+                <div class="export-section">
+                    <div class="export-section-title">
+                        {{ t().editor.exportModal.draftFiles }}
+                        @if (draftAssets().length) {
+                        <span class="field-hint-inline">· {{ draftAssets().length }} · {{ formatFileSize(totalAssetsBytes()) }}</span>
+                        }
+                    </div>
+                    @if (draftAssetsLoading()) {
+                    <p class="field-hint-inline">{{ t().common.loading }}</p>
+                    } @else if (!draftAssets().length) {
+                    <p class="field-hint-inline">{{ t().editor.exportModal.noMedia }}</p>
+                    } @else {
+                    <div class="asset-sort">
+                        <button (click)="sortAssetsBy('name')" [class.on]="assetSort().key === 'name'">
+                            {{ t().editor.exportModal.sortName }} {{ assetSortMark('name') }}
+                        </button>
+                        <button (click)="sortAssetsBy('type')" [class.on]="assetSort().key === 'type'">
+                            {{ t().editor.exportModal.sortType }} {{ assetSortMark('type') }}
+                        </button>
+                        <button (click)="sortAssetsBy('size')" [class.on]="assetSort().key === 'size'">
+                            {{ t().editor.exportModal.sortSize }} {{ assetSortMark('size') }}
+                        </button>
+                    </div>
+                    <div class="asset-list">
+                        @for (a of sortedDraftAssets(); track a.id) {
+                        <div class="asset-row">
+                            <a class="asset-name" [href]="'/media/' + a.localPath" target="_blank" rel="noopener" [title]="a.fileName">{{ a.fileName }}</a>
+                            <span class="asset-type">{{ a.contentType.split('/')[1] || a.contentType }}</span>
+                            <span class="asset-size">{{ formatFileSize(a.sizeBytes) }}</span>
+                            @if (a.hasTelegramDerivative && a.telegramSizeBytes) {
+                            <span class="asset-tg-badge" [title]="t().editor.exportModal.telegramDerivative">TG {{ formatFileSize(a.telegramSizeBytes) }}</span>
+                            }
+                            <button class="mini-remove" (click)="removeAssetFromDraft(a)" [title]="t().editor.exportModal.detachAsset" [attr.aria-label]="t().editor.exportModal.detachAsset">
                                 <app-icon name="x" size="sm"></app-icon>
                             </button>
                         </div>
                         }
-                        <div class="invite-add-row">
-                            <input class="chat-input" [(ngModel)]="inviteEmailInput" (keydown.enter)="addInvite()"
-                                [placeholder]="t().editor.exportModal.invitePlaceholder" type="email">
-                            <button class="mini" (click)="addInvite()" [disabled]="inviteBusy() || !inviteEmailInput.trim()" [title]="t().editor.exportModal.invite" [attr.aria-label]="t().editor.exportModal.invite">
-                                <app-icon name="plus" size="sm"></app-icon>
-                            </button>
-                        </div>
-                    }
-                    @if (inviteError()) { <p class="channel-error">{{ inviteError() }}</p> }
-                </div>
-            </div>
-
-            <!--Watermark (I7): private-only, because its job is discouraging redistribution of
-            something handed out per invite. Its own section since FI2.4, directly under
-            Invitations — the two describe the same handed-out copy.-->
-            <div class="export-section">
-                <div class="export-section-title">{{ t().editor.exportModal.watermark }}</div>
-                <div class="invite-add-row">
-                    <input class="chat-input" [(ngModel)]="watermarkInput" (keydown.enter)="saveWatermark()"
-                        [maxlength]="watermarkMaxLength" [placeholder]="t().editor.exportModal.watermarkPlaceholder">
-                    <button class="mini" (click)="saveWatermark()" [disabled]="watermarkBusy()" [title]="t().common.save" [attr.aria-label]="t().common.save">
-                        <app-icon name="check" size="sm"></app-icon>
-                    </button>
-                </div>
-                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.watermarkHint }}</p>
-                @if (watermarkError()) { <p class="channel-error">{{ watermarkError() }}</p> }
-            </div>
-            }
-
-            <!--FI2.10: two buttons. The per-language .html links they replace produced a page
-            whose images all pointed back at the blog — a saved page only while the blog is up.-->
-            <div class="export-section">
-                <div class="export-section-title">{{ t().editor.exportModal.fileExports }}</div>
-                <!--T-042 — buttons rather than plain download links: the server packages the media
-                before it answers, which on a heavy post is tens of seconds of a browser doing
-                nothing visible. Fetching it ourselves is what makes "working" and "failed"
-                sayable at all.-->
-                <button class="export-btn" (click)="downloadExport('cedar')" [disabled]="!!downloading()">
-                    @if (downloading() === 'cedar') { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                    @else { <app-icon name="download-simple" size="sm"></app-icon> }
-                    {{ t().editor.exportModal.downloadCedar }}
-                </button>
-                <button class="export-btn" (click)="downloadExport('zip')" [disabled]="!!downloading()">
-                    @if (downloading() === 'zip') { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                    @else { <app-icon name="download-simple" size="sm"></app-icon> }
-                    {{ t().editor.exportModal.downloadZip }}
-                </button>
-                @if (downloading()) { <p class="field-hint-inline">{{ t().editor.exportModal.preparing }}</p> }
-                @if (downloadError()) { <p class="channel-error">{{ downloadError() }}</p> }
-                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.zipHint }}</p>
-            </div>
-            </div>
-            <!-- /export-row-utility -->
-
-            <!--Priority Fixes 03 (Claude Design, 28.07.2026): eight full-weight "Coming soon" rows
-            for platforms that don't exist yet, right next to the live Telegram/Blog sections,
-            collapse to one low-emphasis, expandable line.-->
-            <div class="export-section">
-                <button class="other-platforms-toggle" (click)="otherPlatformsOpen.set(!otherPlatformsOpen())">
-                    <span class="field-hint-inline">{{ t().editor.exportModal.otherPlatformsSummary }}</span>
-                    <app-icon name="caret-down" size="sm" [class.rotated]="otherPlatformsOpen()"></app-icon>
-                </button>
-                @if (otherPlatformsOpen()) {
-                <div class="export-mock-list">
-                    <div class="export-mock-row"><app-icon name="thumbs-up" size="sm"></app-icon><span>Facebook</span></div>
-                    <div class="export-mock-row"><app-icon name="chat-teardrop-dots" size="sm"></app-icon><span>Threads</span></div>
-                    <div class="export-mock-row"><app-icon name="file-text" size="sm"></app-icon><span>Medium</span></div>
-                    <div class="export-mock-row"><app-icon name="heart" size="sm"></app-icon><span>Patreon</span></div>
-                    <div class="export-mock-row"><app-icon name="notebook" size="sm"></app-icon><span>Notion</span></div>
-                    <div class="export-mock-row"><app-icon name="file" size="sm"></app-icon><span>Google Docs</span></div>
-                </div>
-                }
-            </div>
-
-            <div class="export-section">
-                <div class="export-section-title">
-                    {{ t().editor.exportModal.draftFiles }}
-                    @if (draftAssets().length) {
-                    <span class="field-hint-inline">· {{ draftAssets().length }} · {{ formatFileSize(totalAssetsBytes()) }}</span>
-                    }
-                </div>
-                @if (draftAssetsLoading()) {
-                <p class="field-hint-inline">{{ t().common.loading }}</p>
-                } @else if (!draftAssets().length) {
-                <p class="field-hint-inline">{{ t().editor.exportModal.noMedia }}</p>
-                } @else {
-                <div class="asset-sort">
-                    <button (click)="sortAssetsBy('name')" [class.on]="assetSort().key === 'name'">
-                        {{ t().editor.exportModal.sortName }} {{ assetSortMark('name') }}
-                    </button>
-                    <button (click)="sortAssetsBy('type')" [class.on]="assetSort().key === 'type'">
-                        {{ t().editor.exportModal.sortType }} {{ assetSortMark('type') }}
-                    </button>
-                    <button (click)="sortAssetsBy('size')" [class.on]="assetSort().key === 'size'">
-                        {{ t().editor.exportModal.sortSize }} {{ assetSortMark('size') }}
-                    </button>
-                </div>
-                <div class="asset-list">
-                    @for (a of sortedDraftAssets(); track a.id) {
-                    <div class="asset-row">
-                        <a class="asset-name" [href]="'/media/' + a.localPath" target="_blank" rel="noopener" [title]="a.fileName">{{ a.fileName }}</a>
-                        <span class="asset-type">{{ a.contentType.split('/')[1] || a.contentType }}</span>
-                        <span class="asset-size">{{ formatFileSize(a.sizeBytes) }}</span>
-                        @if (a.hasTelegramDerivative && a.telegramSizeBytes) {
-                        <span class="asset-tg-badge" [title]="t().editor.exportModal.telegramDerivative">TG {{ formatFileSize(a.telegramSizeBytes) }}</span>
-                        }
-                        <button class="mini-remove" (click)="removeAssetFromDraft(a)" [title]="t().editor.exportModal.detachAsset" [attr.aria-label]="t().editor.exportModal.detachAsset">
-                            <app-icon name="x" size="sm"></app-icon>
-                        </button>
                     </div>
                     }
                 </div>
-                }
-            </div>
+                </div>
+            </section>
             }
             </div>
 

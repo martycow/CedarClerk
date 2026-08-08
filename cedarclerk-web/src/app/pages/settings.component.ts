@@ -1,13 +1,14 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { LocaleService, UiLang } from '../core/i18n/locale.service';
 import { BillingService, BillingStatus, CreditsStatus, PlanId } from '../core/billing.service';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES } from '../core/languages';
 import { TelegramLinkService } from '../core/telegram-link.service';
-import { ChannelsService, Channel } from '../core/channels.service';
+import { ChannelsService, Channel, KnownChat } from '../core/channels.service';
+import { PublishService, PublishAccount } from '../core/publish.service';
 import { AssetsService } from '../core/assets.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { pseudoProgress } from '../core/pseudo-progress.util';
@@ -20,7 +21,7 @@ export type SettingsTab = 'profile' | 'account';
 
 @Component({
     selector: 'app-settings',
-    imports: [IconComponent, FormsModule, DatePipe, RouterLink, PageHeaderComponent, BrandIconComponent],
+    imports: [IconComponent, FormsModule, DatePipe, PageHeaderComponent, BrandIconComponent],
     templateUrl: 'settings.component.html',
     styleUrls: ['settings.component.css']
 })
@@ -106,6 +107,34 @@ export class SettingsComponent implements OnInit {
     botStatus = signal<{ reachable: boolean; botUsername: string | null } | null>(null);
     channels = signal<Channel[]>([]);
 
+    // ─── ADR-095: every publishing account connects here ──────────────────────────────────────
+    // The export window used to own all three connect flows. It now only picks between what this
+    // section has connected, so everything below moved in from `editor.component.ts` unchanged in
+    // behaviour — the same endpoints, the same errors, a different screen.
+    private publishApi = inject(PublishService);
+    knownChats = signal<KnownChat[]>([]);
+    knownChatsRefreshing = signal(false);
+    manualChannelOpen = signal(false);
+    newChannelChatId = '';
+    channelBusy = signal(false);
+    channelError = signal<string | null>(null);
+
+    blueskyAccount = signal<PublishAccount | null>(null);
+    blueskyHandle = '';
+    blueskyAppPassword = '';
+    blueskyBusy = signal(false);
+    blueskyError = signal<string | null>(null);
+
+    xAccount = signal<PublishAccount | null>(null);
+    xBusy = signal(false);
+    xError = signal<string | null>(null);
+    /** Set by the OAuth callback's `?x=` (ADR-095) — the only sign the round trip finished. */
+    xNotice = signal<'connected' | 'error' | null>(null);
+
+    // Not connectable yet, and named rather than hidden: "planned" is an answer, an empty screen
+    // is not. Moved out of the export window, where six greyed-out rows sat beside live ones.
+    readonly plannedNetworks = ['Threads', 'Facebook', 'Medium', 'Patreon', 'Notion', 'Google Docs'];
+
     // T-002
     confirmBusy = signal(false);
     confirmSent = signal(false);
@@ -147,6 +176,135 @@ export class SettingsComponent implements OnInit {
         try { this.credits.set(await this.billingApi.credits()); } catch { /* non-critical */ }
         try { this.botStatus.set(await this.telegramLink.botStatus()); } catch { /* non-critical */ }
         try { this.channels.set(await this.channelsApi.list()); } catch { /* non-critical */ }
+        try { this.knownChats.set(await this.channelsApi.listKnown()); } catch { /* non-critical */ }
+        await this.loadPublishAccounts();
+
+        // X's OAuth callback lands here (ADR-095). Landing silently on the editor is what made the
+        // previous round trip look like it had done nothing at all.
+        const x = this.route.snapshot.queryParamMap.get('x');
+        if (x === 'connected' || x === 'error') {
+            this.tab.set('account');
+            this.xNotice.set(x);
+            setTimeout(() => this.jump('sec-integrations'));
+        }
+    }
+
+    private async loadPublishAccounts() {
+        try {
+            const networks = await this.publishApi.networks();
+            this.blueskyAccount.set(networks.find(n => n.network === 'bluesky')?.accounts[0] ?? null);
+            this.xAccount.set(networks.find(n => n.network === 'x')?.accounts[0] ?? null);
+        } catch {
+            this.blueskyAccount.set(null);
+            this.xAccount.set(null);
+        }
+    }
+
+    /** Called with an id from the "chats the bot is in" list, or without one for the manual field. */
+    async connectChannel(chatId?: string) {
+        const id = (chatId ?? this.newChannelChatId).trim();
+        if (!id) return;
+        this.channelBusy.set(true);
+        this.channelError.set(null);
+        try {
+            await this.channelsApi.connect(id);
+            this.channels.set(await this.channelsApi.list());
+            this.newChannelChatId = '';
+        } catch (e) {
+            this.channelError.set(httpErrorMessage(e, this.t().settings.errors.connectChannel));
+        } finally {
+            this.channelBusy.set(false);
+        }
+    }
+
+    // Disconnecting a channel does not touch anything already published to it — the posts stay,
+    // the bot simply stops being able to send new ones from here.
+    async removeChannel(id: string) {
+        this.channelBusy.set(true);
+        this.channelError.set(null);
+        try {
+            await this.channelsApi.remove(id);
+            this.channels.set(await this.channelsApi.list());
+        } catch (e) {
+            this.channelError.set(httpErrorMessage(e, this.t().settings.errors.connectChannel));
+        } finally {
+            this.channelBusy.set(false);
+        }
+    }
+
+    // There is no "list my chats" Bot API call — the cache is built from `my_chat_member` updates,
+    // so this asks the server to re-read what the bot has been told (see .claude/rules).
+    async refreshKnownChats() {
+        this.knownChatsRefreshing.set(true);
+        try {
+            await this.channelsApi.refreshKnown();
+            this.knownChats.set(await this.channelsApi.listKnown());
+        } catch (e) {
+            this.channelError.set(httpErrorMessage(e, this.t().settings.errors.connectChannel));
+        } finally {
+            this.knownChatsRefreshing.set(false);
+        }
+    }
+
+    /** Chats the bot knows about that are not already connected — the rest would be duplicates. */
+    connectableChats(): KnownChat[] {
+        const taken = new Set(this.channels().map(c => c.telegramChatId));
+        return this.knownChats().filter(k => !taken.has(k.telegramChatId));
+    }
+
+    async connectBluesky() {
+        this.blueskyBusy.set(true);
+        this.blueskyError.set(null);
+        try {
+            await this.publishApi.connectBluesky(this.blueskyHandle.trim(), this.blueskyAppPassword.trim());
+            // Cleared on success only: a wrong password should stay in the field to be corrected.
+            this.blueskyAppPassword = '';
+            await this.loadPublishAccounts();
+        } catch (e) {
+            this.blueskyError.set(httpErrorMessage(e, this.t().settings.errors.connectChannel));
+        } finally {
+            this.blueskyBusy.set(false);
+        }
+    }
+
+    async disconnectBluesky(targetId: string) {
+        this.blueskyBusy.set(true);
+        try {
+            await this.publishApi.disconnect(targetId);
+            this.blueskyAccount.set(null);
+        } catch (e) {
+            this.blueskyError.set(httpErrorMessage(e, this.t().settings.errors.connectChannel));
+        } finally {
+            this.blueskyBusy.set(false);
+        }
+    }
+
+    // OAuth, not credentials: the browser leaves for x.com and comes back through the server's
+    // callback — so busy is deliberately not reset on success, the page is navigating away.
+    async connectX() {
+        this.xBusy.set(true);
+        this.xError.set(null);
+        this.xNotice.set(null);
+        try {
+            const { url } = await this.publishApi.connectX();
+            window.location.href = url;
+        } catch (e) {
+            this.xError.set(httpErrorMessage(e, this.t().settings.errors.connectChannel));
+            this.xBusy.set(false);
+        }
+    }
+
+    async disconnectX(targetId: string) {
+        this.xBusy.set(true);
+        try {
+            await this.publishApi.disconnect(targetId);
+            this.xAccount.set(null);
+            this.xNotice.set(null);
+        } catch (e) {
+            this.xError.set(httpErrorMessage(e, this.t().settings.errors.connectChannel));
+        } finally {
+            this.xBusy.set(false);
+        }
     }
 
     hasProHeaderSlot(): boolean {

@@ -168,13 +168,13 @@ public static class PublishEndpoints
                 || pending.OwnerId != uid
                 || pending.CreatedAt < DateTime.UtcNow - XConnectTtl)
             {
-                return Results.Redirect("/?x=error");
+                return Results.Redirect("/settings?tab=account&x=error");
             }
 
             var clientId = cfg[Consts.X.ClientIdCfg];
             var clientSecret = cfg[Consts.X.ClientSecretCfg];
             if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
-                return Results.Redirect("/?x=error");
+                return Results.Redirect("/settings?tab=account&x=error");
 
             var http = httpFactory.CreateClient();
             using var tokenRequest = new HttpRequestMessage(HttpMethod.Post, $"{XPublishTarget.ApiBase}/2/oauth2/token");
@@ -193,22 +193,22 @@ public static class PublishEndpoints
             {
                 logger.LogWarning("X refused the code exchange: {Status} {Body}",
                     (int)tokenResponse.StatusCode, await tokenResponse.Content.ReadAsStringAsync(ct));
-                return Results.Redirect("/?x=error");
+                return Results.Redirect("/settings?tab=account&x=error");
             }
 
             var tokens = await tokenResponse.Content.ReadFromJsonAsync<XPublishTarget.TokenResponse>(cancellationToken: ct);
             if (tokens?.AccessToken is null || tokens.RefreshToken is null)
-                return Results.Redirect("/?x=error");
+                return Results.Redirect("/settings?tab=account&x=error");
 
             using var meRequest = new HttpRequestMessage(HttpMethod.Get, $"{XPublishTarget.ApiBase}/2/users/me");
             meRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
             var meResponse = await http.SendAsync(meRequest, ct);
-            if (!meResponse.IsSuccessStatusCode) return Results.Redirect("/?x=error");
+            if (!meResponse.IsSuccessStatusCode) return Results.Redirect("/settings?tab=account&x=error");
 
             var me = JsonSerializer.Deserialize<JsonElement>(await meResponse.Content.ReadAsStringAsync(ct));
             var xUserId = me.GetProperty("data").GetProperty("id").GetString();
             var username = me.GetProperty("data").GetProperty("username").GetString();
-            if (xUserId is null || username is null) return Results.Redirect("/?x=error");
+            if (xUserId is null || username is null) return Results.Redirect("/settings?tab=account&x=error");
 
             var credentials = new XCredentials(xUserId, username, tokens.AccessToken, tokens.RefreshToken,
                 DateTime.UtcNow.AddSeconds(tokens.ExpiresIn));
@@ -237,7 +237,7 @@ public static class PublishEndpoints
             }
 
             await db.SaveChangesAsync(ct);
-            return Results.Redirect("/?x=connected");
+            return Results.Redirect("/settings?tab=account&x=connected");
         }).RequireAuthorization();
 
         // Deactivate and forget the credentials, but keep the row: it is what "this post went there"

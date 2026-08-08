@@ -499,10 +499,11 @@
         @if (tab() === 'account') {
         <section id="sec-integrations" class="settings-card">
             <h2>{{ t().settings.integrations.title }}</h2>
+            <p class="field-hint">{{ t().settings.integrations.hint }}</p>
 
             <div class="integration-row">
                 <span class="integration-icon telegram">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg>
+                    <app-brand-icon name="telegram" [size]="16"></app-brand-icon>
                 </span>
                 @if (auth.telegramLinked()) {
                 <div class="integration-body">
@@ -558,17 +559,159 @@
                 <a class="link-btn" href="https://t.me/CedarClerkBot" target="_blank" rel="noopener">{{ t().settings.integrations.openBot }}</a>
             </div>
 
-            <div class="integration-row dashed">
-                <span class="integration-icon alt">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"></circle><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"></path><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"></path><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"></path><path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"></path></svg>
-                </span>
-                <div class="integration-body">
-                    <div class="integration-title">{{ t().settings.integrations.channels }}</div>
-                    <div class="integration-meta">
-                        @if (channels().length) { {{ t().settings.integrations.channelsConnected(channels().length) }} — {{ channelsSummary() }} } @else { {{ t().settings.integrations.noChannels }} }
+            <!--ADR-095: channels are managed here now, not behind a disclosure in the export
+            window. The list is the section — a count with "manage elsewhere" was a signpost to a
+            place that no longer exists.-->
+            <div class="integration-block">
+                <div class="integration-block-head">
+                    <span class="integration-icon telegram"><app-brand-icon name="telegram" [size]="16"></app-brand-icon></span>
+                    <div class="integration-body">
+                        <div class="integration-title">{{ t().settings.integrations.channels }}</div>
+                        <div class="integration-meta">
+                            @if (channels().length) { {{ t().settings.integrations.channelsConnected(channels().length) }} } @else { {{ t().settings.integrations.noChannels }} }
+                        </div>
                     </div>
+                    <button class="mini" (click)="refreshKnownChats()" [disabled]="knownChatsRefreshing()"
+                            [title]="t().settings.integrations.refresh" [attr.aria-label]="t().settings.integrations.refresh">
+                        <app-icon name="arrow-clockwise" size="sm" [class.spin]="knownChatsRefreshing()"></app-icon>
+                    </button>
                 </div>
-                <a class="link-btn" routerLink="/editor">{{ t().settings.integrations.manageInEditor }}</a>
+
+                @if (channels().length) {
+                <ul class="target-list">
+                    @for (c of channels(); track c.id) {
+                    <li class="target-row">
+                        <span class="target-name">{{ c.title }}</span>
+                        @if (c.username) { <span class="target-handle">&#64;{{ c.username }}</span> }
+                        <button class="btn-danger-ghost sm" (click)="removeChannel(c.id)" [disabled]="channelBusy()">
+                            {{ t().settings.integrations.disconnect }}
+                        </button>
+                    </li>
+                    }
+                </ul>
+                }
+
+                @if (connectableChats().length) {
+                <div class="panel-label">{{ t().settings.integrations.available }}</div>
+                <ul class="target-list">
+                    @for (k of connectableChats(); track k.telegramChatId) {
+                    <li class="target-row">
+                        <span class="target-name">{{ k.title }}</span>
+                        @if (k.username) { <span class="target-handle">&#64;{{ k.username }}</span> }
+                        <button class="btn-primary sm" (click)="connectChannel(k.telegramChatId + '')" [disabled]="channelBusy()">
+                            {{ t().settings.integrations.connect }}
+                        </button>
+                    </li>
+                    }
+                </ul>
+                } @else if (!channels().length) {
+                <p class="field-hint">
+                    {{ auth.telegramLinked() ? t().settings.integrations.noChannelsYet : t().settings.integrations.linkTelegramFirst }}
+                </p>
+                } @else {
+                <p class="field-hint">{{ t().settings.integrations.nothingNew }}</p>
+                }
+
+                <button class="link-btn" (click)="manualChannelOpen.set(!manualChannelOpen())">
+                    {{ manualChannelOpen() ? t().settings.integrations.manualHide : t().settings.integrations.manualAdd }}
+                </button>
+                @if (manualChannelOpen()) {
+                <div class="connect-row">
+                    <input [(ngModel)]="newChannelChatId" [disabled]="channelBusy()"
+                           [placeholder]="t().settings.integrations.manualPlaceholder" (keyup.enter)="connectChannel()">
+                    <button class="btn-primary sm" (click)="connectChannel()" [disabled]="channelBusy() || !newChannelChatId.trim()">
+                        {{ t().settings.integrations.connect }}
+                    </button>
+                </div>
+                }
+                @if (channelError()) { <p class="field-error">{{ channelError() }}</p> }
+            </div>
+
+            <!--Bluesky: an app password, never the account password — it is revocable from Bluesky
+            itself, which is the whole reason storing one is defensible (ADR-079).-->
+            <div class="integration-block">
+                <div class="integration-block-head">
+                    <span class="integration-icon bluesky"><app-brand-icon name="bluesky" [size]="16"></app-brand-icon></span>
+                    <div class="integration-body">
+                        <div class="integration-title">{{ t().settings.integrations.bluesky }}</div>
+                        @if (blueskyAccount(); as account) {
+                        <div class="integration-meta">
+                            {{ t().settings.integrations.linkedTo }} <span class="strong">&#64;{{ account.displayName }}</span>
+                            @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | date:'d MMM yyyy' }} }
+                        </div>
+                        } @else {
+                        <div class="integration-meta muted">{{ t().settings.integrations.notConnected }}</div>
+                        }
+                    </div>
+                    @if (blueskyAccount(); as account) {
+                    <button class="btn-danger-ghost sm" (click)="disconnectBluesky(account.id)" [disabled]="blueskyBusy()">
+                        {{ t().settings.integrations.disconnect }}
+                    </button>
+                    }
+                </div>
+                @if (!blueskyAccount()) {
+                <p class="field-hint">{{ t().settings.integrations.blueskyConnectHint }}</p>
+                <div class="connect-row">
+                    <input [(ngModel)]="blueskyHandle" [placeholder]="t().settings.integrations.blueskyHandle">
+                    <input type="password" [(ngModel)]="blueskyAppPassword" [placeholder]="t().settings.integrations.blueskyAppPassword">
+                    <button class="btn-primary sm" (click)="connectBluesky()"
+                            [disabled]="blueskyBusy() || !blueskyHandle.trim() || !blueskyAppPassword.trim()">
+                        {{ blueskyBusy() ? '…' : t().settings.integrations.connect }}
+                    </button>
+                </div>
+                }
+                @if (blueskyError()) { <p class="field-error">{{ blueskyError() }}</p> }
+            </div>
+
+            <!--X: one button out to x.com and back (ADR-093). The callback returns to this section
+            with ?x=, which is the only sign the round trip finished at all.-->
+            <div class="integration-block">
+                <div class="integration-block-head">
+                    <span class="integration-icon x"><app-brand-icon name="twitter" [size]="14"></app-brand-icon></span>
+                    <div class="integration-body">
+                        <div class="integration-title">{{ t().settings.integrations.x }}</div>
+                        @if (xAccount(); as account) {
+                        <div class="integration-meta">
+                            {{ t().settings.integrations.linkedTo }} <span class="strong">{{ account.displayName }}</span>
+                            @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | date:'d MMM yyyy' }} }
+                        </div>
+                        } @else {
+                        <div class="integration-meta muted">{{ t().settings.integrations.notConnected }}</div>
+                        }
+                    </div>
+                    @if (xAccount(); as account) {
+                    <button class="btn-danger-ghost sm" (click)="disconnectX(account.id)" [disabled]="xBusy()">
+                        {{ t().settings.integrations.disconnect }}
+                    </button>
+                    } @else {
+                    <button class="btn-primary sm" (click)="connectX()" [disabled]="xBusy()">
+                        {{ xBusy() ? '…' : t().settings.integrations.xConnect }}
+                    </button>
+                    }
+                </div>
+                @if (xNotice() === 'connected') {
+                <div class="success-banner"><app-icon name="check" size="xs"></app-icon>{{ t().settings.integrations.xConnected }}</div>
+                } @else if (xNotice() === 'error') {
+                <p class="field-error">{{ t().settings.integrations.xFailed }}</p>
+                }
+                @if (!xAccount()) { <p class="field-hint">{{ t().settings.integrations.xConnectHint }}</p> }
+                @if (credits(); as c) {
+                <p class="field-hint">
+                    {{ t().settings.integrations.xCreditNote(c.balance) }}
+                    <button class="link-btn" (click)="jump('sec-credits')">{{ t().settings.integrations.xCreditsLink }}</button>
+                </p>
+                }
+                @if (xError()) { <p class="field-error">{{ xError() }}</p> }
+            </div>
+
+            <div class="integration-block dashed">
+                <div class="panel-label">{{ t().settings.integrations.planned }}</div>
+                <div class="planned-row">
+                    @for (name of plannedNetworks; track name) {
+                    <span class="planned-chip">{{ name }}</span>
+                    }
+                </div>
+                <p class="field-hint">{{ t().settings.integrations.plannedHint }}</p>
             </div>
         </section>
         }

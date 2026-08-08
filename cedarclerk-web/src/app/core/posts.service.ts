@@ -40,7 +40,9 @@ export interface UpdatePreview {
     diff: PublishDiff | null;
 }
 
-export type PublishTarget = 'telegram' | 'blog';
+// ADR-096 — 'telegram' | 'blog' plus any network name: every destination the export window offers
+// now asks the same "you are about to overwrite a live post" question before it sends.
+export type PublishTarget = 'telegram' | 'blog' | 'bluesky' | 'x';
 
 @Injectable({ providedIn: 'root' })
 export class PostsService {

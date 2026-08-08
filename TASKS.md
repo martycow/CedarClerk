@@ -2,6 +2,19 @@
 
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
+## Now (07.08.2026): Marty's two requests — connections, and the export window
+
+1. [x] **T-113 — every connection lives in Settings → Integrations** (ADR-095, v0.9.38). Telegram
+   channels, Bluesky and X connect and disconnect there; the export window only picks. X's OAuth
+   callback returns to that section instead of `/`.
+2. [x] **T-114 — the export window rebuilt as version → where → per-destination settings**
+   (ADR-096, v0.9.38). One Publish for all four networks; X/Bluesky get a two-way mode toggle
+   (announcement+link vs the whole post as a thread) and per-language override text.
+3. [ ] **Live-verify both** — Marty's pass. Worth checking specifically: connecting X from Settings
+   end to end (the callback lands on the right screen), a thread to Bluesky from the new window,
+   and that republishing to a network already published to asks for confirmation once, not per
+   destination.
+
 ## Now (05.08.2026, evening): Marty's three requests after the first live X post
 
 1. [x] **T-111 — microblog threads for X/Bluesky** (ADR-094, v0.9.37) — done, deployed; live-verify

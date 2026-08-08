@@ -194,9 +194,16 @@ public static class PostEndpoints
             // The blog has exactly one destination per draft, so its revisions carry no destination
             // at all — keying them to the slug would silently lose the baseline the moment the
             // owner edits the post's URL (FI3.4), which is precisely when a diff matters.
-            var (kind, destination) = req.Kind == DraftRevisionService.Kinds.Blog
-                ? (DraftRevisionService.Kinds.Blog, (string?)null)
-                : (DraftRevisionService.Kinds.Telegram, req.ChatId);
+            // ADR-096 — one pre-flight confirmation for every destination in the export window, not
+            // just the two it started with. A short-post network keys its revisions by the target
+            // row's id, exactly as the publish queue does, and passes it in the same field: this is
+            // "the destination string", and has been since Telegram was the only one with a name.
+            var (kind, destination) = req.Kind switch
+            {
+                DraftRevisionService.Kinds.Blog => (DraftRevisionService.Kinds.Blog, (string?)null),
+                PublishNetworks.Bluesky or PublishNetworks.X => (req.Kind, req.ChatId),
+                _ => (DraftRevisionService.Kinds.Telegram, req.ChatId),
+            };
 
             var preview = await DraftRevisionService.PreviewAsync(db, draft, req.Language ?? draft.PrimaryLanguage, kind, destination);
             return preview is null ? Results.NotFound() : Results.Ok(preview);

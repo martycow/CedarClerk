@@ -31,7 +31,7 @@ import { BillingService } from '../core/billing.service';
 import { DraftRevision, DraftRevisionDetail, RevisionDiff } from '../core/drafts.service';
 import { plainTextOf } from '../core/cedar-text.util';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES, endonymOf } from '../core/languages';
-import { ChannelsService, Channel, ChannelStats, KnownChat } from '../core/channels.service';
+import { ChannelsService, Channel } from '../core/channels.service';
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableHeader } from '@tiptap/extension-table-header';
@@ -69,6 +69,7 @@ import { FolderPickerComponent } from '../shared/folder-picker.component';
 import { FormRefComponent } from '../shared/form-ref.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import { pseudoProgress } from '../core/pseudo-progress.util';
+import { BrandIconComponent } from '../shared/brand-icon.component';
 import { IconComponent } from '../shared/icon.component';
 
 const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
@@ -99,6 +100,11 @@ type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
 // language) is a row with a live status, a thread unfolds into numbered part chips, a failure
 // shows the FIRST broken part's error — the root cause — rather than the last cascade message.
 type PublishRunStatus = 'waiting' | 'running' | 'done' | 'failed';
+
+/** The networks that derive a short post rather than taking the document (ADR-077). */
+type MicroNetwork = 'bluesky' | 'x';
+/** ADR-096 — an announcement carrying a link, or the document itself as a reply chain. */
+type MicroMode = 'link' | 'thread';
 
 interface PublishRunPart {
     index: number;
@@ -230,7 +236,7 @@ interface UploadItem {
 
 @Component({
     selector: 'app-editor',
-    imports: [IconComponent, FormsModule, DatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent, AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent, CountBadgeComponent, GlossaryTermFormComponent],
+    imports: [IconComponent, BrandIconComponent, FormsModule, DatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent, AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent, CountBadgeComponent, GlossaryTermFormComponent],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
 })
@@ -328,18 +334,113 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             : null;
     }
 
-    // ─── Bluesky (T-087/T-089) ────────────────────────────────────────────────────────────────
+    // ─── Short-post networks: X and Bluesky (T-087/T-089/T-110, ADR-077/093/094/096) ──────────
+    // The two behave identically from this window's side — an account, a mode, and per-language
+    // text — so they are one block with the network as a parameter rather than two near-copies.
+    // Connecting is not here at all any more: it lives in Settings → Integrations (ADR-095).
     private publishApi = inject(PublishService);
-    readonly blueskyLimit = 300;
+    private billingApi = inject(BillingService);
+    readonly microNetworks: MicroNetwork[] = ['bluesky', 'x'];
+    readonly microLimits: Record<MicroNetwork, number> = { bluesky: 300, x: 280 };
+    readonly microLabels: Record<MicroNetwork, string> = { bluesky: 'Bluesky', x: 'X' };
+
     destBluesky = signal(false);
+    destX = signal(false);
+    /** The last short-post failure, so the success toast stays honest about a partial publish. */
+    microError = signal('');
     blueskyAccount = signal<PublishAccount | null>(null);
-    blueskyText = '';
-    blueskyTextDirty = signal(false);
-    blueskyBusy = signal(false);
-    blueskyError = signal('');
-    blueskyPostUrl = signal<string | null>(null);
-    blueskyHandle = '';
-    blueskyAppPassword = '';
+    xAccount = signal<PublishAccount | null>(null);
+    xCredits = signal<number | null>(null);
+
+    /**
+     * ADR-096 — "announcement plus a link" and "the whole post as a thread" are two different
+     * publications, not one with an option, so the window asks which rather than offering a
+     * checkbox beside a text field the thread mode does not even read.
+     */
+    microMode = signal<Record<MicroNetwork, MicroMode>>({ bluesky: 'link', x: 'link' });
+    /** Parts per network for the currently previewed language; 0 while unknown. */
+    microParts = signal<Record<MicroNetwork, number>>({ bluesky: 0, x: 0 });
+    microCounting = signal<Record<MicroNetwork, boolean>>({ bluesky: false, x: false });
+
+    // Per network, per language. One field for "the current language" silently sent the same text
+    // to every ticked version, which is the one thing a per-language override must not do.
+    private microTexts: Record<MicroNetwork, Record<string, string>> = { bluesky: {}, x: {} };
+    private microDirty: Record<MicroNetwork, Set<string>> = { bluesky: new Set(), x: new Set() };
+    /** Which language's text the panel is editing — its own tab row, shown only when >1 is ticked. */
+    microTextLang = signal<Record<MicroNetwork, string>>({ bluesky: DEFAULT_PRIMARY_LANGUAGE, x: DEFAULT_PRIMARY_LANGUAGE });
+
+    anyDestination(): boolean {
+        return this.destBlog() || this.destTelegram() || this.destBluesky() || this.destX();
+    }
+
+    account(network: MicroNetwork): PublishAccount | null {
+        return network === 'x' ? this.xAccount() : this.blueskyAccount();
+    }
+
+    destination(network: MicroNetwork) {
+        return network === 'x' ? this.destX : this.destBluesky;
+    }
+
+    microText(network: MicroNetwork): string {
+        return this.microTexts[network][this.microTextLang()[network]] ?? '';
+    }
+
+    setMicroText(network: MicroNetwork, text: string) {
+        const lang = this.microTextLang()[network];
+        this.microTexts[network][lang] = text;
+        this.microDirty[network].add(lang);
+    }
+
+    setMicroTextLang(network: MicroNetwork, lang: string) {
+        this.microTextLang.update(map => ({ ...map, [network]: lang }));
+    }
+
+    setMicroMode(network: MicroNetwork, mode: MicroMode) {
+        this.microMode.update(map => ({ ...map, [network]: mode }));
+        if (mode === 'thread') this.countMicroParts(network);
+    }
+
+    /**
+     * How many messages the thread would be. Counted for the first ticked version: the parts of a
+     * translation differ by a few, and quoting a number per language would turn a cost estimate
+     * into a table nobody reads.
+     */
+    private async countMicroParts(network: MicroNetwork) {
+        const id = this.currentId();
+        if (!id) return;
+        this.microCounting.update(map => ({ ...map, [network]: true }));
+        try {
+            const preview = await this.publishApi.threadPreview(id, network, this.exportLangs()[0]);
+            this.microParts.update(map => ({ ...map, [network]: preview.parts.length }));
+        } catch {
+            // Without a count the mode is still valid — the server splits it either way; only the
+            // "N posts, N credits" line goes missing.
+            this.microParts.update(map => ({ ...map, [network]: 0 }));
+        } finally {
+            this.microCounting.update(map => ({ ...map, [network]: false }));
+        }
+    }
+
+    /** Graphemes for Bluesky, t.co-weighted units for X — each network's own count (see below). */
+    microLength(network: MicroNetwork): number {
+        return network === 'x' ? this.xWeighted() : this.blueskyGraphemes();
+    }
+
+    microOverLimit(network: MicroNetwork): boolean {
+        return this.microMode()[network] === 'link' && this.microLength(network) > this.microLimits[network];
+    }
+
+    /** Credits an X publication would cost: one per post, per ticked version (ADR-092/094). */
+    xCreditCost(): number {
+        if (!this.destX()) return 0;
+        const perLanguage = this.microMode()['x'] === 'thread' ? Math.max(1, this.microParts()['x']) : 1;
+        return perLanguage * this.exportLangs().length;
+    }
+
+    xCreditsShort(): boolean {
+        const have = this.xCredits();
+        return have !== null && this.xCreditCost() > have;
+    }
 
     /**
      * Bluesky counts graphemes, not UTF-16 units — an emoji is one character to it. Intl.Segmenter
@@ -347,7 +448,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
      * people care about.
      */
     blueskyGraphemes(): number {
-        const text = this.blueskyText ?? '';
+        const text = this.microText('bluesky');
         if (!text) return 0;
         const segmenter = (Intl as unknown as { Segmenter?: new (l?: string, o?: object) => { segment(s: string): Iterable<unknown> } }).Segmenter;
         if (!segmenter) return [...text].length;
@@ -363,112 +464,46 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.blueskyAccount.set(null);
             this.xAccount.set(null);
         }
+        // A network that is no longer connected must not stay ticked — Publish would queue against
+        // an account that is gone and report it as a failure of the post rather than of the setup.
+        if (!this.blueskyAccount()) this.destBluesky.set(false);
+        if (!this.xAccount()) this.destX.set(false);
+
         try {
             this.xCredits.set((await this.billingApi.credits()).balance);
         } catch { /* the note simply doesn't render */ }
 
         const id = this.currentId();
         if (!id) return;
+        this.microTexts = { bluesky: {}, x: {} };
+        this.microDirty = { bluesky: new Set(), x: new Set() };
         try {
             const { texts } = await this.publishApi.texts(id);
-            this.blueskyText = texts.find(t => t.network === 'bluesky' && t.language === this.lang())?.text ?? '';
-            this.blueskyTextDirty.set(false);
-            this.xText = texts.find(t => t.network === 'x' && t.language === this.lang())?.text ?? '';
-            this.xTextDirty.set(false);
-        } catch {
-            this.blueskyText = '';
-            this.xText = '';
-        }
-    }
-
-    async connectBluesky() {
-        this.blueskyBusy.set(true);
-        this.blueskyError.set('');
-        try {
-            await this.publishApi.connectBluesky(this.blueskyHandle.trim(), this.blueskyAppPassword.trim());
-            this.blueskyAppPassword = '';
-            await this.loadShortPostTargets();
-            this.destBluesky.set(true);
-        } catch (e) {
-            this.blueskyError.set(httpErrorMessage(e, this.t().editor.errors.connectChannel));
-        } finally {
-            this.blueskyBusy.set(false);
-        }
-    }
-
-    async disconnectBluesky(targetId: string) {
-        this.blueskyBusy.set(true);
-        try {
-            await this.publishApi.disconnect(targetId);
-            this.blueskyAccount.set(null);
-            this.destBluesky.set(false);
-        } catch (e) {
-            this.blueskyError.set(httpErrorMessage(e, this.t().editor.errors.publish));
-        } finally {
-            this.blueskyBusy.set(false);
-        }
-    }
-
-    // ADR-094 — the whole document as a reply chain instead of a single teaser. The toggle
-    // fetches the part plan so the author sees "N posts" (and, on X, "N credits") before sending.
-    blueskyThread = signal(false);
-    blueskyThreadParts = signal(0);
-    xThread = signal(false);
-    xThreadParts = signal(0);
-
-    async toggleMicroThread(network: 'x' | 'bluesky', on: boolean) {
-        const thread = network === 'x' ? this.xThread : this.blueskyThread;
-        const parts = network === 'x' ? this.xThreadParts : this.blueskyThreadParts;
-        thread.set(on);
-        parts.set(0);
-        const id = this.currentId();
-        if (!on || !id) return;
-        try {
-            const preview = await this.publishApi.threadPreview(id, network, this.lang());
-            parts.set(preview.parts.length);
-        } catch { /* the summary line simply doesn't render */ }
-    }
-
-    async publishBluesky() {
-        const id = this.currentId();
-        const account = this.blueskyAccount();
-        if (!id || !account) return;
-        this.blueskyBusy.set(true);
-        this.blueskyError.set('');
-        try {
-            // The override is saved first: what goes out must be what the field shows, and a send
-            // that used the previous text because the save had not landed would be its own bug.
-            if (this.blueskyTextDirty()) {
-                await this.publishApi.saveText(id, 'bluesky', this.lang(), this.blueskyText);
-                this.blueskyTextDirty.set(false);
+            for (const entry of texts) {
+                if (entry.network === 'x' || entry.network === 'bluesky')
+                    this.microTexts[entry.network][entry.language] = entry.text;
             }
-            const { jobs } = await this.publishApi.queue(id, [account.id], this.lang(), undefined, this.blueskyThread());
-            const finished = await this.awaitJobs(id, jobs.map(j => j.id));
-            const failed = finished.find(j => j.status !== 'Succeeded');
-            if (failed) {
-                this.blueskyError.set(failed.error ?? failed.status);
-            } else {
-                this.blueskyPostUrl.set(finished.find(j => j.partIndex === 0)?.publicUrl ?? finished[0]?.publicUrl ?? null);
-            }
-            await this.loadShortPostTargets();
-        } catch (e) {
-            this.blueskyError.set(httpErrorMessage(e, this.t().editor.errors.publish));
-        } finally {
-            this.blueskyBusy.set(false);
-        }
+        } catch { /* no overrides loaded means every version falls back to its teaser */ }
+        // The tabs follow the ticked versions, so the field cannot be left editing a language the
+        // author has just unticked.
+        for (const network of this.microNetworks) this.syncMicroTextLang(network);
     }
 
-    // ─── X (T-110, ADR-093) ───────────────────────────────────────────────────────────────────
-    private billingApi = inject(BillingService);
-    readonly xLimit = 280;
-    destX = signal(false);
-    xAccount = signal<PublishAccount | null>(null);
-    xText = '';
-    xTextDirty = signal(false);
-    xBusy = signal(false);
-    xError = signal('');
-    xPostUrl = signal<string | null>(null);
-    xCredits = signal<number | null>(null);
+    private syncMicroTextLang(network: MicroNetwork) {
+        const langs = this.exportLangs();
+        if (!langs.includes(this.microTextLang()[network]))
+            this.setMicroTextLang(network, langs[0] ?? DEFAULT_PRIMARY_LANGUAGE);
+    }
+
+    /** Saves whatever the author typed before anything is queued (ADR-077's override contract). */
+    private async saveMicroTexts(network: MicroNetwork) {
+        const id = this.currentId();
+        if (!id) return;
+        for (const lang of [...this.microDirty[network]]) {
+            await this.publishApi.saveText(id, network, lang, this.microTexts[network][lang] ?? '');
+            this.microDirty[network].delete(lang);
+        }
+    }
 
     /**
      * X counts weighted units, not characters — mirrors XPostBuilder (Core): any URL is 23 after
@@ -477,7 +512,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
      * a post the server happily sends (or the reverse).
      */
     xWeighted(): number {
-        let text = (this.xText ?? '').normalize('NFC');
+        let text = this.microText('x').normalize('NFC');
         if (!text) return 0;
         let total = 0;
         text = text.replace(/https?:\/\/\S+/g, () => { total += 23; return ''; });
@@ -497,60 +532,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             total += emoji ? 2 : weight;
         }
         return total;
-    }
-
-    // OAuth, not credentials: the browser leaves for x.com and comes back through the server's
-    // callback — so busy is deliberately not reset on success, the page is navigating away.
-    async connectX() {
-        this.xBusy.set(true);
-        this.xError.set('');
-        try {
-            const { url } = await this.publishApi.connectX();
-            window.location.href = url;
-        } catch (e) {
-            this.xError.set(httpErrorMessage(e, this.t().editor.errors.connectChannel));
-            this.xBusy.set(false);
-        }
-    }
-
-    async disconnectX(targetId: string) {
-        this.xBusy.set(true);
-        try {
-            await this.publishApi.disconnect(targetId);
-            this.xAccount.set(null);
-            this.destX.set(false);
-        } catch (e) {
-            this.xError.set(httpErrorMessage(e, this.t().editor.errors.publish));
-        } finally {
-            this.xBusy.set(false);
-        }
-    }
-
-    async publishX() {
-        const id = this.currentId();
-        const account = this.xAccount();
-        if (!id || !account) return;
-        this.xBusy.set(true);
-        this.xError.set('');
-        try {
-            if (this.xTextDirty()) {
-                await this.publishApi.saveText(id, 'x', this.lang(), this.xText);
-                this.xTextDirty.set(false);
-            }
-            const { jobs } = await this.publishApi.queue(id, [account.id], this.lang(), undefined, this.xThread());
-            const finished = await this.awaitJobs(id, jobs.map(j => j.id));
-            const failed = finished.find(j => j.status !== 'Succeeded');
-            if (failed) {
-                this.xError.set(failed.error ?? failed.status);
-            } else {
-                this.xPostUrl.set(finished.find(j => j.partIndex === 0)?.publicUrl ?? finished[0]?.publicUrl ?? null);
-            }
-            await this.loadShortPostTargets();
-        } catch (e) {
-            this.xError.set(httpErrorMessage(e, this.t().editor.errors.publish));
-        } finally {
-            this.xBusy.set(false);
-        }
     }
 
     // ─── File exports (T-042) ─────────────────────────────────────────────────────────────────
@@ -884,26 +865,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     uploads = signal<UploadItem[]>([]);
     private uploadSeq = 0;
 
+    // Connecting, disconnecting and the discovered-chats list moved to Settings → Integrations
+    // (ADR-095). What the editor still needs is the list itself, to pick one from.
     channels = signal<Channel[]>([]);
-    channelStats = signal<Record<string, ChannelStats>>({});
-    newChannelChatId = '';
-    // N4 — manual @username/id entry is a fallback behind a disclosure, not part of the normal
-    // flow: the discovered-chats list is empty for an account with no linked Telegram.
-    manualChannelOpen = signal(false);
-    channelError = signal('');
-
-    // Priority Fixes 03 (Claude Design, 28.07.2026) — the 8-row "coming soon" stack collapses to
-    // one low-emphasis line, expandable on click rather than always drawing full attention next
-    // to the live Telegram/Blog sections.
-    otherPlatformsOpen = signal(false);
-
-    knownChats = signal<KnownChat[]>([]);
-    knownChatsRefreshing = signal(false);
 
     // Guards openDraft/newDraft — both mutate `currentId`/`drafts` and must not race each other
     // (e.g. a double-click while a draft is still loading). Deletion lives on /drafts now.
     draftsBusy = signal(false);
-    channelBusy = signal(false);
 
     // New Draft dialog (ADR-035) — minimal title+Enter, expandable to languages/tags/template.
     // The New Draft dialog itself now lives on /drafts (28.07.2026) — creating used to navigate
@@ -1165,31 +1133,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         else await this.newDraft();
 
         this.channels.set(await this.channelsApi.list());
-        await this.refreshChannelStats();
-        this.knownChats.set(await this.channelsApi.listKnown());
-    }
-
-    private async refreshChannelStats() {
-        const entries = await Promise.all(this.channels().map(async c => {
-            try {
-                return [c.id, await this.channelsApi.getStats(c.id)] as const;
-            } catch {
-                return [c.id, null] as const;
-            }
-        }));
-        this.channelStats.set(Object.fromEntries(entries.filter((e): e is [string, ChannelStats] => e[1] !== null)));
-    }
-
-    sparklinePoints(snapshots: { takenAt: string; memberCount: number }[]): string {
-        if (snapshots.length < 2) return '';
-        const values = snapshots.map(s => s.memberCount);
-        const min = Math.min(...values);
-        const max = Math.max(...values);
-        const range = max - min || 1;
-        const w = 60, h = 20;
-        return values
-            .map((v, i) => `${(i / (values.length - 1) * w).toFixed(1)},${(h - (v - min) / range * h).toFixed(1)}`)
-            .join(' ');
     }
 
     ngOnDestroy() {
@@ -1401,6 +1344,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     missingLanguages(): string[] {
         const have = this.translations();
         return CONTENT_LANGUAGES.filter(l => l !== this.primaryLanguage && !have[l]);
+    }
+
+    /** For the export window's one-line note — nine of these as chips drowned the two real ones. */
+    missingLanguagesLabel(): string {
+        return this.missingLanguages().map(l => l.toUpperCase()).join(', ');
     }
 
     // The primary version was edited after this translation was last touched - probably needs
@@ -2357,6 +2305,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             // Unticking the last one would leave Publish with nothing to send.
             return next.length ? next : list;
         });
+        // ADR-096 — the version choice is the window's, so everything keyed off it follows: which
+        // language each short-post panel is editing, and how many parts a thread would be.
+        for (const network of this.microNetworks) {
+            this.syncMicroTextLang(network);
+            if (this.microMode()[network] === 'thread') this.countMicroParts(network);
+        }
     }
 
     // FI2.6/FI2.7 — the button says what pressing it does: schedule if a time is set, update if
@@ -2371,9 +2325,16 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     canPublishAll(): boolean {
         if (this.publishingAll() || this.blogBusy() || this.exporting()) return false;
-        if (!this.destBlog() && !this.destTelegram()) return false;
-        // Telegram needs a target channel; the blog doesn't need anything extra.
-        return !this.destTelegram() || this.chatId.trim().length > 0;
+        if (!this.destBlog() && !this.destTelegram() && !this.destBluesky() && !this.destX()) return false;
+        // Each ticked destination must be able to run. The blog needs nothing extra; Telegram needs
+        // a chosen channel; a short-post network needs a connected account, a post that fits when
+        // it is being sent as one, and — for X — the credits it will cost (ADR-092).
+        if (this.destTelegram() && !this.chatId.trim()) return false;
+        for (const network of this.microNetworks) {
+            if (!this.destination(network)()) continue;
+            if (!this.account(network) || this.microOverLimit(network)) return false;
+        }
+        return !this.destX() || !this.xCreditsShort();
     }
 
     // One Publish for every ticked destination (B5). Run sequentially rather than in parallel so
@@ -2404,12 +2365,23 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 for (const language of this.exportLangs())
                     previews.push(await this.posts.updatePreview(id, 'telegram', language, this.chatId.trim()));
             }
+            // A short-post network keys its revisions by the target row's id — the same string the
+            // publish queue uses as the destination, so the two ask about the same thing.
+            for (const network of this.microNetworks) {
+                const account = this.account(network);
+                if (!this.destination(network)() || !account) continue;
+                for (const language of this.exportLangs())
+                    previews.push(await this.posts.updatePreview(id, network, language, account.id));
+            }
         } catch {
             // A preview that can't be fetched must not block publishing outright — the server
             // enforces the same rule again and answers 409 if this really was an unseen overwrite.
         }
 
-        const live = previews.filter(p => p.publishedBefore);
+        // One row per language, not per destination-and-language: the diff being confirmed is the
+        // document's, and with four destinations ticked the same diff was listed four times over.
+        const live = previews.filter(p => p.publishedBefore)
+            .filter((p, i, all) => all.findIndex(o => o.language === p.language) === i);
         if (live.length > 0) {
             this.updateConfirm.set(live);
             this.confirmedFingerprints = Object.fromEntries(previews.map(p => [p.language, p.fingerprint]));
@@ -2439,6 +2411,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.updateConfirm.set(null);
         this.publishingAll.set(true);
         this.publishSuccess.set(null);
+        this.microError.set('');
         clearTimeout(this.publishToastTimer);
 
         // The checklist mirrors what pressing the button will actually do — one row per phase,
@@ -2450,6 +2423,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             if (this.scheduledAt) steps.push({ id: 'schedule', label: pr.scheduling, status: 'waiting' });
             else for (const lang of this.exportLangs())
                 steps.push({ id: 'tg-' + lang, label: pr.telegram(lang.toUpperCase()), status: 'waiting' });
+        }
+        // ADR-096 — X and Bluesky lost their own Publish buttons; the checklist is where four
+        // networks going out at once becomes readable, one row per network per version.
+        for (const network of this.microNetworks) {
+            if (!this.destination(network)()) continue;
+            for (const lang of this.exportLangs())
+                steps.push({
+                    id: `${network}-${lang}`,
+                    label: pr.network(this.microLabels[network], lang.toUpperCase()),
+                    status: 'waiting',
+                });
         }
         this.runStart(steps);
 
@@ -2493,11 +2477,16 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                     if (this.updateConfirm()) { this.publishRun.set(null); return; }
                 }
             }
+            for (const network of this.microNetworks) {
+                if (!this.destination(network)()) continue;
+                links.push(...await this.publishMicroNetwork(network));
+                if (this.updateConfirm()) { this.publishRun.set(null); return; }
+            }
         } finally {
             this.publishingAll.set(false);
             this.runFinish();
         }
-        if (!this.blogError() && !this.exportError()) this.showPublishSuccess(links);
+        if (!this.blogError() && !this.exportError() && !this.microError()) this.showPublishSuccess(links);
     }
 
     closePublishRun() {
@@ -2599,6 +2588,68 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return links;
     }
 
+    /**
+     * One short-post network, every ticked version (ADR-096). Same queue as Telegram — the author's
+     * override is saved first so what goes out is what the field shows, and a thread is the same
+     * `splitIntoThread` flag the queue already understands (ADR-094).
+     */
+    private async publishMicroNetwork(network: MicroNetwork): Promise<{ label: string; url: string }[]> {
+        const id = this.currentId();
+        const account = this.account(network);
+        const links: { label: string; url: string }[] = [];
+        if (!id || !account) return links;
+
+        const asThread = this.microMode()[network] === 'thread';
+        for (const lang of this.exportLangs()) {
+            const step = `${network}-${lang}`;
+            this.runUpdate(step, { status: 'running' });
+            try {
+                // Only in link mode: a thread reads the document, never the override, so saving the
+                // field here would write a text nothing is going to send.
+                if (!asThread) await this.saveMicroTexts(network);
+
+                const { jobs } = await this.publishApi.queue(
+                    id, [account.id], lang, this.confirmedFingerprints[lang], asThread);
+                const parts = jobs.length > 1
+                    ? this.sortedByPart(jobs).map(j => ({ index: j.partIndex ?? 0, status: 'waiting' as PublishRunStatus }))
+                    : undefined;
+                if (parts) this.runUpdate(step, { parts });
+
+                const finished = await this.awaitJobs(id, jobs.map(j => j.id));
+                if (finished.length < jobs.length) {
+                    this.runUpdate(step, { error: this.t().editor.exportModal.stillRunning });
+                    this.microError.set(this.t().editor.exportModal.stillRunning);
+                    continue;
+                }
+                // The first failed part carries the root cause; the ones after it were only held
+                // back by it — same rule as the Telegram path above.
+                const firstFailed = this.sortedByPart(finished).find(j => j.status !== 'Succeeded');
+                if (firstFailed) {
+                    const message = firstFailed.error ?? firstFailed.status;
+                    this.runUpdate(step, { status: 'failed', error: message });
+                    this.microError.set(message);
+                    continue;
+                }
+                const url = this.sortedByPart(finished)[0]?.publicUrl ?? null;
+                const link = url
+                    ? { label: `${this.microLabels[network]} ${lang.toUpperCase()}`, url }
+                    : undefined;
+                this.runUpdate(step, { status: 'done', link });
+                if (link) links.push(link);
+            } catch (e) {
+                // ADR-065 — the document moved since the diff was shown. The confirmation dialog
+                // takes over; this run is void, exactly as on the Telegram path.
+                if (e instanceof HttpErrorResponse && e.status === 409 && this.reopenConfirmFrom(e)) return links;
+                const message = httpErrorMessage(e, this.t().editor.errors.publish);
+                this.runUpdate(step, { status: 'failed', error: message });
+                this.microError.set(message);
+            }
+        }
+        // Balance and "last published" both moved; re-reading is cheaper than tracking them.
+        await this.loadShortPostTargets();
+        return links;
+    }
+
     private sortedByPart(jobs: PublishJob[]): PublishJob[] {
         return [...jobs].sort((a, b) => (a.partIndex ?? 0) - (b.partIndex ?? 0));
     }
@@ -2633,53 +2684,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return username ? `https://t.me/${username}/${messageId}` : null;
     }
 
-    async connectChannel(chatId = this.newChannelChatId.trim()) {
-        if (!chatId || this.channelBusy()) return;
-        this.channelError.set('');
-        this.channelBusy.set(true);
-        try {
-            const channel = await this.channelsApi.connect(chatId);
-            this.channels.update(list => [...list, channel]);
-            this.newChannelChatId = '';
-            this.knownChats.update(list => list.filter(k => String(k.telegramChatId) !== chatId));
-            await this.refreshChannelStats();
-        } catch (e: any) {
-            this.channelError.set(e?.error?.error ?? this.t().editor.errors.connectChannel);
-        } finally {
-            this.channelBusy.set(false);
-        }
-    }
-
-    async refreshKnownChats() {
-        this.knownChatsRefreshing.set(true);
-        this.channelError.set('');
-        try {
-            await this.channelsApi.refreshKnown();
-            this.knownChats.set(await this.channelsApi.listKnown());
-        } catch {
-            this.channelError.set(this.t().editor.errors.refreshChats);
-        } finally {
-            this.knownChatsRefreshing.set(false);
-        }
-    }
-
     selectChannel(c: Channel) {
         this.chatId = String(c.telegramChatId);
-    }
-
-    async removeChannel(id: string) {
-        if (this.channelBusy()) return;
-        this.channelBusy.set(true);
-        try {
-            await this.channelsApi.remove(id);
-            this.channels.update(list => list.filter(c => c.id !== id));
-            this.channelStats.update(map => {
-                const { [id]: _removed, ...rest } = map;
-                return rest;
-            });
-        } finally {
-            this.channelBusy.set(false);
-        }
     }
 
     async schedulePost() {

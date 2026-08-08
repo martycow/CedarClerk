@@ -75,8 +75,8 @@ test('@audit editor and its modals', async ({ page, context }) => {
     await shot(page, '21-export-collapsed');
 
     // Both destinations ticked — the state the export window is actually used in.
-    await page.locator('.dest-head input[type=checkbox]').nth(0).check();
-    await page.locator('.dest-head input[type=checkbox]').nth(1).check();
+    await page.locator('.dest-card input[type=checkbox]').nth(0).check();
+    await page.locator('.dest-card input[type=checkbox]').nth(1).check();
     await shot(page, '22-export-expanded');
     await page.keyboard.press('Escape');
 
@@ -312,7 +312,7 @@ test('@audit thread offer', async ({ page, context }) => {
     await page.goto(`/editor?draft=${id}`);
     await expect(page.locator('.tiptap')).toBeVisible();
     await page.locator('.export-trigger').click();
-    await page.locator('.dest-head input[type=checkbox]').nth(1).check();
+    await page.locator('.dest-card input[type=checkbox]').nth(1).check();
     await page.locator('.thread-toggle input').check();
     await expect(page.locator('.thread-parts li').first()).toBeVisible();
     await shot(page, '79-thread-offer');

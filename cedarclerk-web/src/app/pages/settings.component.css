@@ -827,6 +827,141 @@
     color: var(--t2);
 }
 
+/* ADR-095 — a connection that owns a list (channels, an account plus its state) needs room a
+   single .integration-row cannot give it: same frame, but stacking instead of one line. */
+.integration-block {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 13px 14px;
+    margin: 0 0 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.integration-block > .link-btn {
+    align-self: flex-start;
+}
+
+.integration-block.dashed {
+    border-style: dashed;
+    margin-bottom: 0;
+}
+
+.integration-block-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Brand colours, same rule as .integration-icon.telegram above: a mark that shifts hue between
+   themes stops being the mark. #0085FF is Bluesky's blue; X's is black on both themes, so its
+   foreground is the one that flips. */
+.integration-icon.bluesky {
+    background: #0085FF;
+}
+
+.integration-icon.x {
+    background: var(--text);
+    color: var(--sheet);
+}
+
+.target-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.target-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--alt);
+    border-radius: var(--radius-sm);
+    padding: 7px 10px;
+    font-size: var(--fs-meta);
+}
+
+.target-name {
+    font-weight: 500;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.target-handle {
+    color: var(--t2);
+    min-width: 0;
+}
+
+/* The button goes right whether or not the row has a handle — the alternative is making one of two
+   optional text spans carry the flex, which breaks the moment the optional one is missing. */
+.target-row > button {
+    margin-left: auto;
+    flex: none;
+}
+
+.connect-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.connect-row input {
+    flex: 1;
+    min-width: 160px;
+}
+
+.planned-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.planned-chip {
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-sm);
+    padding: 4px 9px;
+    font-size: var(--fs-caption);
+    color: var(--t2);
+}
+
+.panel-label {
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--t2);
+}
+
+.mini {
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--t2);
+    border-radius: var(--radius-sm);
+    padding: 5px 7px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.mini:hover {
+    color: var(--text);
+}
+
+.spin {
+    animation: settings-spin 1s linear infinite;
+}
+
+@keyframes settings-spin {
+    to { transform: rotate(360deg); }
+}
+
 @media (max-width: 640px) {
     .plan-grid {
         grid-template-columns: 1fr;
