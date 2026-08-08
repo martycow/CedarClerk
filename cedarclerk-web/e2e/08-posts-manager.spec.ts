@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createDraft, pinEnglish, signIn } from './helpers';
+import { BLOG_API, BLOG_HEADERS, createDraft, pinEnglish, signIn } from './helpers';
 
 test.beforeEach(async ({ context }) => {
     await pinEnglish(context);
@@ -33,4 +33,27 @@ test('the retired /stats and /comments routes still resolve', async ({ page }) =
     await expect(page).toHaveURL(/\/posts/);
     await page.goto('/comments');
     await expect(page).toHaveURL(/\/posts/);
+});
+
+// ADR-097 — the audience split. Reads through the whole path on purpose: a blog page fetched with
+// Cloudflare's country header has to become a row on the stats tab, which is the only thing that
+// proves the header is being read at all (nothing else in the app touches CF-IPCountry).
+test('a blog view with a country header shows up in the audience breakdown', async ({ page, context }) => {
+    const id = await createDraft(context, 'Audience post', ['Read from somewhere.']);
+    const published = await context.request.post(`/api/drafts/${id}/publish-blog`, { data: {} });
+    expect(published.ok(), `publish failed: ${published.status()}`).toBeTruthy();
+    const { slug } = await published.json();
+
+    const view = await context.request.get(`${BLOG_API}/${slug}`, {
+        headers: { ...BLOG_HEADERS, 'CF-IPCountry': 'DE', 'Accept-Language': 'de-DE,de;q=0.9' },
+    });
+    expect(view.ok(), `blog view failed: ${view.status()}`).toBeTruthy();
+
+    await page.goto('/posts');
+    await page.locator('.manager-tabs button', { hasText: 'Stats' }).click();
+
+    const countries = page.locator('.stat-card', { hasText: 'Views by country' });
+    await expect(countries.locator('.audience-row', { hasText: 'Germany' })).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.stat-card', { hasText: 'reader language' })
+        .locator('.audience-row', { hasText: 'German' })).toBeVisible();
 });

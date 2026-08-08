@@ -11,6 +11,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<ScheduledPost> ScheduledPosts => Set<ScheduledPost>();
     public DbSet<ChannelStatSnapshot> ChannelStatSnapshots => Set<ChannelStatSnapshot>();
     public DbSet<BlogStatSnapshot> BlogStatSnapshots => Set<BlogStatSnapshot>();
+    public DbSet<BlogViewGeoDaily> BlogViewGeoDailies => Set<BlogViewGeoDaily>();
     public DbSet<ChannelPost> ChannelPosts => Set<ChannelPost>();
     public DbSet<Reaction> Reactions => Set<Reaction>();
     public DbSet<PollVote> PollVotes => Set<PollVote>();
@@ -70,6 +71,10 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         // row: an author writes one Bluesky version of a post, not one per connected handle.
         builder.Entity<DraftTargetText>()
             .HasIndex(t => new { t.DraftId, t.Network, t.Language })
+            .IsUnique();
+        // The upsert key: a view either finds today's (country, language) bucket or creates it.
+        builder.Entity<BlogViewGeoDaily>()
+            .HasIndex(v => new { v.OwnerId, v.Day, v.Country, v.Language })
             .IsUnique();
         // The runner's query is "what is waiting", and the client's is "how is this draft doing".
         builder.Entity<PublishJob>().HasIndex(j => new { j.Status, j.NextAttemptAt });

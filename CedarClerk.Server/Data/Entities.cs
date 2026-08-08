@@ -531,6 +531,29 @@ public class BlogStatSnapshot
     public DateTime TakenAt { get; set; } = DateTime.UtcNow;
 }
 
+/// <summary>
+/// Daily rollup of blog views split by reader country and reader language (Marty, 08.08.2026).
+/// One row per (owner, UTC day, country, language) — an aggregate, never a per-visit log: the
+/// page only ever asks "how many", so storing individual visits would buy nothing and turn a
+/// counter into a visitor trail. Country comes from Cloudflare's CF-IPCountry header (the tunnel
+/// is the only way in, see .claude/rules/production-environment.md), language from the primary
+/// subtag of Accept-Language — the reader's own language, not which translation was served.
+///
+/// **History starts the day this ships** — same as DraftStatSnapshot, and for the same reason:
+/// ViewCount is a running total with no dimensions in it, so there is nothing to backfill from.
+/// </summary>
+public class BlogViewGeoDaily
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = "";
+    public DateTime Day { get; set; }
+    // ISO-3166-1 alpha-2, uppercase. Consts.General.UnknownGeo when Cloudflare didn't say.
+    public string Country { get; set; } = "";
+    // Primary subtag, lowercase ("ru", "en", "de"). Consts.General.UnknownGeo when absent.
+    public string Language { get; set; } = "";
+    public int ViewCount { get; set; }
+}
+
 // Append-only log of every successful send, written by PostEndpoints.PublishAsync. Lets the
 // stats snapshot job know which drafts (and therefore which views/likes/comments) belong to
 // which channel — Draft only tracks its single *most recent* Telegram send otherwise.

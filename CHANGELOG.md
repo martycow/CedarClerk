@@ -2,6 +2,18 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-08 — who is reading (T-115, ADR-097, v0.9.39)
+
+Marty's request: views by country, by language, on the stats page. The blocker was that nothing had ever been recorded — a view was one increment of `Draft.ViewCount` with no dimension attached to it, so no query could have answered this.
+
+**`BlogViewGeoDaily`** is a daily rollup, one row per (owner, UTC day, country, language), not a log of visits: the page only ever asks "how many", so a row per reader would buy nothing except a trail. Country comes from Cloudflare's `CF-IPCountry` (the tunnel is the only way in), language from the top primary subtag of `Accept-Language` — the reader's own language, which is what answers "is this worth translating", rather than which version was served, which would just re-report the post's primary language. Both normalize through `CedarClerk.Core.ReaderGeo` (19 tests): anything that isn't a well-formed code — a missing header on a local run, Cloudflare's own `XX`, a Tor exit's `T1`, junk — lands in one honest "unknown" bucket instead of minting rows. The upsert is by hand because EF has no `ON CONFLICT`; two first views of a day race into the insert, and the unique index makes the loser bump the winner's row rather than drop the view.
+
+**On the page**, two cards under the metric charts on the Blog tab: bars scaled to the leader, the count, and the share of the period. Country names and language names come from `Intl.DisplayNames` in the UI language, flags from the alpha-2 code itself — no icon set, no name table to maintain. The long tail folds after eight rows. Telegram tabs show nothing here, because the Bot API reports no geography and an empty card would be a promise the data can't keep.
+
+**History starts today** — same as `DraftStatSnapshot` and for the same reason, and the empty state says so instead of showing zeroes.
+
+`dotnet test` 617/617, `ng build` warning-free, smoke **53/53** — one new, and it reads the whole path rather than the unit: a blog page fetched with `CF-IPCountry: DE` has to become a "Germany" row on the stats tab, which is the only assertion that proves the header is being read at all.
+
 ## 2026-08-07 — where you connect, and where you publish (T-113/T-114, ADR-095/096, v0.9.38)
 
 Two of Marty's observations, and they turn out to be one problem: the export window had quietly become the place where accounts are set up, and the place where posts are sent, at the same time.

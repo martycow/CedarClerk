@@ -19,7 +19,7 @@
         <li><strong>Billing metadata:</strong> your plan tier and a customer reference ID with our payment processor(s). We never see or store full card numbers — that's handled entirely by
             <span class="placeholder">[Stripe / PayPal / Telegram Stars — list active processors]</span>.
         </li>
-        <li><strong>Blog visitor data:</strong> for reactions on public blog posts, we store a one-way salted hash of your IP address (not the IP itself) so the same visitor can't react twice to the same post — we can't reverse this back to an IP.</li>
+        <li><strong>Blog visitor data:</strong> for reactions on public blog posts, we store a one-way salted hash of your IP address (not the IP itself) so the same visitor can't react twice to the same post — we can't reverse this back to an IP. We also keep a daily count of page views per country and per browser language, so an author can see where their readers are; it is a running total only — no row, cookie or identifier ties any view back to you, and we never store the IP a country was derived from.</li>
         <li><strong>Local preferences:</strong> your light/dark theme choice, stored in your browser's local storage, never sent to us.</li>
     </ul>
 

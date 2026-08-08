@@ -278,6 +278,93 @@
     text-align: center;
 }
 
+/* ---------- Audience breakdown (countries / languages) ---------- */
+.audience-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+}
+
+@media (max-width: 720px) {
+    .audience-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.audience-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+/* Label column is fixed so the bars start on one line down the list — a bar chart whose
+   baseline moves per row can't be read by length, which is the only thing it's for. */
+.audience-row {
+    display: grid;
+    grid-template-columns: auto 116px 1fr 42px 34px;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--fs-ui);
+}
+
+.audience-flag {
+    font-size: var(--fs-15);
+    line-height: 1;
+}
+
+.audience-label {
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.audience-bar {
+    height: 7px;
+    background: var(--hover-strong);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.audience-bar-fill {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    border-radius: 4px;
+}
+
+.audience-views {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    font-weight: 600;
+}
+
+.audience-share {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--t2);
+    font-size: var(--fs-meta);
+}
+
+.audience-more {
+    margin-top: 10px;
+    border: none;
+    background: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: var(--fs-meta);
+    color: var(--t2);
+    cursor: pointer;
+}
+
+.audience-more:hover {
+    color: var(--text);
+}
+
 /* ---------- Chart ---------- */
 .chart-wrap {
     position: relative;

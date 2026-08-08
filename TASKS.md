@@ -2,6 +2,16 @@
 
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
+## Now (08.08.2026): Marty's request — who is reading
+
+1. [x] **T-115 — views by country and by reader language on the stats page** (ADR-097, v0.9.39).
+   `BlogViewGeoDaily` daily rollup fed from `CF-IPCountry` + `Accept-Language`; two breakdown
+   cards on the Blog tab. Blog only — the Bot API reports no geography per channel.
+2. [ ] **Deploy and wait a day.** The table starts empty by construction: there is nothing to
+   backfill from, so the breakdown stays blank until real readers arrive. Worth checking on
+   production specifically that `CF-IPCountry` actually reaches Kestrel through the tunnel — the
+   smoke test proves the app reads the header, not that Cloudflare sends it.
+
 ## Now (07.08.2026): Marty's two requests — connections, and the export window
 
 1. [x] **T-113 — every connection lives in Settings → Integrations** (ADR-095, v0.9.38). Telegram

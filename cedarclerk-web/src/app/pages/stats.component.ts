@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { ChannelsService, Channel, ChannelStats, ChannelStatSnapshotDto, BlogStats, BlogStatSnapshotDto } from '../core/channels.service';
+import { ChannelsService, Channel, ChannelStats, ChannelStatSnapshotDto, BlogStats, BlogStatSnapshotDto, AudienceSlice } from '../core/channels.service';
 import { LocaleService } from '../core/i18n/locale.service';
 
 type MetricKey = 'memberCount' | 'viewCount' | 'likeCount' | 'commentCount';
@@ -33,6 +33,29 @@ interface MetricCard {
     chart: ChartLayout;
 }
 
+interface AudienceRow {
+    code: string;
+    label: string;
+    flag: string;
+    views: number;
+    share: number;
+    bar: number;
+}
+
+// How many rows a breakdown shows before the "show all" toggle — a long tail of one-view
+// countries is noise on first read, but it's real data, so it folds rather than disappears.
+const AUDIENCE_VISIBLE = 8;
+
+// The server's bucket for a view Cloudflare or the browser didn't identify (Consts.General.UnknownGeo).
+const UNKNOWN_GEO = '??';
+
+// 'DE' -> 🇩🇪. Regional indicators are just the letters offset into their own block, so any
+// alpha-2 gets a flag without a sprite sheet or an icon dependency.
+function flagOf(code: string): string {
+    if (code === UNKNOWN_GEO) return '🌐';
+    return String.fromCodePoint(...[...code.toUpperCase()].map(c => 0x1f1a5 + c.charCodeAt(0)));
+}
+
 // Stats range (N9): a week to half a year, with the ranges people actually ask for as magnets.
 const RANGE_MIN = 7;
 const RANGE_MAX = 180;
@@ -61,7 +84,8 @@ const PAD_BOTTOM = 4;
 // Rendered as the Posts Manager's statistics tab (N7) — no page chrome of its own any more.
 export class StatsComponent implements OnInit {
     private channelsApi = inject(ChannelsService);
-    t = inject(LocaleService).t;
+    private locale = inject(LocaleService);
+    t = this.locale.t;
 
     loading = signal(true);
     channels = signal<Channel[]>([]);
@@ -72,6 +96,14 @@ export class StatsComponent implements OnInit {
     rangeDays = signal(90);
 
     hover = signal<{ key: MetricKey; index: number } | null>(null);
+    countriesExpanded = signal(false);
+    languagesExpanded = signal(false);
+
+    // Geography only exists for the blog: Telegram's Bot API reports no per-country breakdown,
+    // so a channel tab would have nothing to put here (see ADR-097).
+    countryRows = computed(() => this.audienceRows(this.blogStats()?.countries ?? [], 'region'));
+    languageRows = computed(() => this.audienceRows(this.blogStats()?.languages ?? [], 'language'));
+    hasAudience = computed(() => this.countryRows().length > 0);
 
     metricCards = computed<MetricCard[]>(() => {
         if (this.selectedView() === 'blog') {
@@ -170,6 +202,53 @@ export class StatsComponent implements OnInit {
         const h = this.hover();
         if (!h || h.key !== card.key) return null;
         return card.chart.points[h.index] ?? null;
+    }
+
+    visibleCountries = computed(() => this.slice(this.countryRows(), this.countriesExpanded()));
+    visibleLanguages = computed(() => this.slice(this.languageRows(), this.languagesExpanded()));
+
+    private slice(rows: AudienceRow[], expanded: boolean): AudienceRow[] {
+        return expanded ? rows : rows.slice(0, AUDIENCE_VISIBLE);
+    }
+
+    hiddenCount(rows: AudienceRow[]): number {
+        return Math.max(0, rows.length - AUDIENCE_VISIBLE);
+    }
+
+    // Built per (UI language, kind) rather than per row: the list re-renders on every change
+    // detection pass, and constructing an Intl formatter is not free.
+    private displayNamesCache = new Map<string, Intl.DisplayNames | null>();
+
+    private displayName(code: string, type: 'region' | 'language'): string {
+        const key = `${this.locale.uiLang()}:${type}`;
+        if (!this.displayNamesCache.has(key)) {
+            try {
+                this.displayNamesCache.set(key, new Intl.DisplayNames([this.locale.uiLang()], { type }));
+            } catch {
+                this.displayNamesCache.set(key, null);
+            }
+        }
+        try {
+            return this.displayNamesCache.get(key)?.of(type === 'region' ? code.toUpperCase() : code) ?? code;
+        } catch {
+            return code;
+        }
+    }
+
+    // Shares are of the period's total views, so the two lists each add up to ~100% on their own.
+    // Bars are scaled to the leader instead, otherwise everything below the top country is a stub.
+    private audienceRows(slices: AudienceSlice[], type: 'region' | 'language'): AudienceRow[] {
+        const total = slices.reduce((sum, s) => sum + s.views, 0);
+        if (total === 0) return [];
+        const top = Math.max(...slices.map(s => s.views));
+        return slices.map(s => ({
+            code: s.code,
+            label: s.code === UNKNOWN_GEO ? this.t().stats.audience.unknown : this.displayName(s.code, type),
+            flag: type === 'region' ? flagOf(s.code) : '',
+            views: s.views,
+            share: Math.round((s.views / total) * 100),
+            bar: Math.max(2, Math.round((s.views / top) * 100)),
+        }));
     }
 
     private niceMax(max: number): number {

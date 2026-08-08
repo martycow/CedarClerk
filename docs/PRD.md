@@ -14,7 +14,7 @@ This is a living requirements skeleton, not a spec written up-front — Cedar Cl
 - `.cedar` file export/import (round-trippable, media included)
 - Markdown (`.zip`) import for Notion-shaped exports — scoped parser (text/headings/lists/images/basic inline marks); complex Notion blocks (tables, toggles, embeds) degrade to plain text rather than being lost or crashing the import (see ADR-026)
 - Multiple connected Telegram channels per (paid) account; auto-discovery of chats the bot is already in
-- `/stats` page: per-channel growth charts (subscribers, blog views, likes, comments) — daily snapshots, see ADR-025 for the attribution approximation and no-backfill caveat; plus a channel-agnostic "Blog" tab showing the same views/likes/comments growth totalled across all of the owner's blog-published drafts, see ADR-030 in `docs/DECISIONS.md`
+- `/stats` page: per-channel growth charts (subscribers, blog views, likes, comments) — daily snapshots, see ADR-025 for the attribution approximation and no-backfill caveat; plus a channel-agnostic "Blog" tab showing the same views/likes/comments growth totalled across all of the owner's blog-published drafts, see ADR-030 in `docs/DECISIONS.md`. The Blog tab also splits the period's views by reader country and reader language (`CF-IPCountry` + `Accept-Language` into a daily rollup, ADR-097) — blog only, since the Bot API reports no geography per channel, and with the same no-backfill caveat
 - Bottom collapsible debug console (request/response log, available on every page) so a stuck-looking action or a failed request can be inspected without SSH-ing into the Pi (see ADR-027/028)
 
 **Bilingual content**

@@ -2,7 +2,7 @@
 
 public static class Consts
 {
-    public const string CurrentVersion = "0.9.38";
+    public const string CurrentVersion = "0.9.39";
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
 
@@ -85,6 +85,10 @@ public static class Consts
         // longer-lived than ViewedCookiePrefix, which is a same-visit view-count dedup, not an
         // access grant. See the ADR following ADR-040, docs/DECISIONS.md.
         public const string PrivateAccessCookiePrefix = "cedar_access_";
+
+        // Country/language bucket for a view Cloudflare or the browser didn't identify. A real
+        // bucket, not a null: "unknown" is an honest share of the audience, not a missing row.
+        public const string UnknownGeo = "??";
     }
 
     public static class FileSizes

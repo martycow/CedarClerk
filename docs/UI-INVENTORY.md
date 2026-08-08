@@ -161,6 +161,8 @@ The `/posts` page (N7, ADR-046). `/comments` and `/stats` now redirect here; the
 | Date-range tabs (30/90/180d) | `:34-36` | tab | `selectRange(days)` re-fetches at new range | Same gap as above | |
 | Metric stat cards (Subscribers/Views/Likes/Comments) | `:41-84` | panel | Current value + week-over-week delta | Needed & present — page-level `loading()` gates first render | Blog view omits Subscribers |
 | Line/area chart + hover tooltip | `:53-79` | panel/popover | SVG sparkline, crosshair tooltip on hover | N/A | Falls back to "Not enough history yet" under 2 snapshots |
+| Audience breakdown cards (Views by country / by reader language) | `:93-146` | panel | Views summed over the selected range, split by `CF-IPCountry` and `Accept-Language` (ADR-097) | Needed & present — page-level `loading()`, same fetch as the cards above | Blog tab only (Telegram reports no geography). Flag emoji from the alpha-2 code, names via `Intl.DisplayNames` in the UI language; `??` renders as 🌐 "Unknown" |
+| Show all / Collapse (per breakdown) | `:113-117`, `:137-141` | button | Folds the long tail past the first 8 rows | N/A | Purely client-side — the endpoint returns every bucket |
 
 ## `comments.component` (`cedarclerk-web/src/app/pages/comments.component.{ts,html}`) — embedded under the selected post in the Posts Manager (FI3.5); `onlyDraftId` scopes it, unscoped still renders every post
 

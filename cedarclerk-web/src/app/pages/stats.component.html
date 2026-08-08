@@ -88,6 +88,64 @@
                 </div>
                 }
             </div>
+
+            <!--Audience split (Marty, 08.08.2026). Blog only: Telegram reports no per-country
+            numbers, so a channel tab has nothing to show here — see ADR-097.-->
+            @if (selectedView() === 'blog') {
+            <div class="audience-grid">
+                @if (hasAudience()) {
+                <div class="stat-card">
+                    <div class="stat-head">
+                        <span class="stat-label">{{ t().stats.audience.countries }}</span>
+                    </div>
+                    <ul class="audience-list">
+                        @for (row of visibleCountries(); track row.code) {
+                        <li class="audience-row">
+                            <span class="audience-flag">{{ row.flag }}</span>
+                            <span class="audience-label" [title]="row.label">{{ row.label }}</span>
+                            <span class="audience-bar"><span class="audience-bar-fill" [style.width.%]="row.bar"></span></span>
+                            <span class="audience-views">{{ row.views }}</span>
+                            <span class="audience-share">{{ row.share }}%</span>
+                        </li>
+                        }
+                    </ul>
+                    @if (hiddenCount(countryRows()) > 0) {
+                    <button class="audience-more" (click)="countriesExpanded.set(!countriesExpanded())">
+                        {{ countriesExpanded() ? t().stats.audience.showLess : t().stats.audience.showAll(hiddenCount(countryRows())) }}
+                    </button>
+                    }
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-head">
+                        <span class="stat-label">{{ t().stats.audience.languages }}</span>
+                    </div>
+                    <ul class="audience-list">
+                        @for (row of visibleLanguages(); track row.code) {
+                        <li class="audience-row">
+                            <span class="audience-label" [title]="row.label">{{ row.label }}</span>
+                            <span class="audience-bar"><span class="audience-bar-fill" [style.width.%]="row.bar"></span></span>
+                            <span class="audience-views">{{ row.views }}</span>
+                            <span class="audience-share">{{ row.share }}%</span>
+                        </li>
+                        }
+                    </ul>
+                    @if (hiddenCount(languageRows()) > 0) {
+                    <button class="audience-more" (click)="languagesExpanded.set(!languagesExpanded())">
+                        {{ languagesExpanded() ? t().stats.audience.showLess : t().stats.audience.showAll(hiddenCount(languageRows())) }}
+                    </button>
+                    }
+                </div>
+                } @else {
+                <div class="stat-card">
+                    <div class="stat-head">
+                        <span class="stat-label">{{ t().stats.audience.countries }}</span>
+                    </div>
+                    <p class="chart-empty">{{ t().stats.audience.empty }}</p>
+                </div>
+                }
+            </div>
+            }
         }
     </div>
 </div>

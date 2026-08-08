@@ -850,6 +850,14 @@ export const en = {
             likeCount: 'Likes',
             commentCount: 'Comments',
         },
+        audience: {
+            countries: 'Views by country',
+            languages: 'Views by reader language',
+            unknown: 'Unknown',
+            empty: 'No blog views in this period yet. The breakdown starts filling in from the day this feature shipped.',
+            showAll: (n: number) => `Show all (${n} more)`,
+            showLess: 'Collapse',
+        },
     },
     settings: {
         crumb: 'Settings',

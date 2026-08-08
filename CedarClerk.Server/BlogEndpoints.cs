@@ -157,12 +157,32 @@ public static class BlogEndpoints
             var deltaWeekLikes = ChannelStatsCalculator.DeltaOverDays(snapshots.Select(s => new ChannelStatPoint(s.TakenAt, s.LikeCount)).ToList(), 7, now);
             var deltaWeekComments = ChannelStatsCalculator.DeltaOverDays(snapshots.Select(s => new ChannelStatPoint(s.TakenAt, s.CommentCount)).ToList(), 7, now);
 
+            // Audience split over the same window (Marty, 08.08.2026). Unlike the series above it
+            // is a sum over the period, not a running total: "who read me this month", not "how
+            // many readers do I have". Rows are few (countries x languages x days), so the grouping
+            // happens in memory rather than as two more SQLite round trips.
+            var since = DateTime.UtcNow.Date.AddDays(-(days - 1));
+            var geoRows = await db.BlogViewGeoDailies
+                .Where(v => v.OwnerId == uid && v.Day >= since)
+                .Select(v => new { v.Country, v.Language, v.ViewCount })
+                .ToListAsync();
+
+            var countries = geoRows.GroupBy(r => r.Country)
+                .Select(g => new { code = g.Key, views = g.Sum(r => r.ViewCount) })
+                .OrderByDescending(c => c.views).ThenBy(c => c.code)
+                .ToList();
+            var languages = geoRows.GroupBy(r => r.Language)
+                .Select(g => new { code = g.Key, views = g.Sum(r => r.ViewCount) })
+                .OrderByDescending(l => l.views).ThenBy(l => l.code)
+                .ToList();
+
             return Results.Ok(new
             {
                 currentViews, deltaWeekViews,
                 currentLikes, deltaWeekLikes,
                 currentComments, deltaWeekComments,
                 snapshots,
+                countries, languages,
             });
         });
 
@@ -376,6 +396,35 @@ public static class BlogEndpoints
             IsEssential = true,
             SameSite = SameSiteMode.Lax
         });
+    }
+
+    // Folds one counted view into today's (country, language) bucket. Hand-rolled upsert: EF has
+    // no INSERT..ON CONFLICT, so bump first and insert only when no bucket existed yet. Two first
+    // views of the same day can race into the insert — the unique index rejects the loser, which
+    // then bumps the winner's row instead of dropping the view.
+    private static async Task RecordViewGeoAsync(CedarDbContext db, HttpContext ctx, string ownerId)
+    {
+        var day = DateTime.UtcNow.Date;
+        var country = ReaderGeo.NormalizeCountry(ctx.Request.Headers["CF-IPCountry"].FirstOrDefault());
+        var language = ReaderGeo.NormalizeLanguage(ctx.Request.Headers.AcceptLanguage.FirstOrDefault());
+
+        Task<int> BumpAsync() => db.BlogViewGeoDailies
+            .Where(v => v.OwnerId == ownerId && v.Day == day && v.Country == country && v.Language == language)
+            .ExecuteUpdateAsync(s => s.SetProperty(v => v.ViewCount, v => v.ViewCount + 1));
+
+        if (await BumpAsync() > 0) return;
+
+        var row = new BlogViewGeoDaily { OwnerId = ownerId, Day = day, Country = country, Language = language, ViewCount = 1 };
+        db.BlogViewGeoDailies.Add(row);
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            db.Entry(row).State = EntityState.Detached;
+            await BumpAsync();
+        }
     }
 
     private static async Task GetAnnotationsAsync(HttpContext ctx, CedarDbContext db, string slug)
@@ -1171,6 +1220,7 @@ public static class BlogEndpoints
                 IsEssential = true,
                 SameSite = SameSiteMode.Lax
             });
+            await RecordViewGeoAsync(db, ctx, draft.OwnerId);
         }
 
         var availableLanguages = await db.DraftTranslations.Where(t => t.DraftId == draft.Id)

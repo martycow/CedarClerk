@@ -36,6 +36,13 @@ export interface BlogStatSnapshotDto {
     commentCount: number;
 }
 
+// Views summed over the selected range, split by reader country / reader language. '??' is the
+// server's bucket for "couldn't tell" — a real share of the audience, not a missing row.
+export interface AudienceSlice {
+    code: string;
+    views: number;
+}
+
 export interface BlogStats {
     currentViews: number | null;
     deltaWeekViews: number | null;
@@ -44,6 +51,8 @@ export interface BlogStats {
     currentComments: number | null;
     deltaWeekComments: number | null;
     snapshots: BlogStatSnapshotDto[];
+    countries: AudienceSlice[];
+    languages: AudienceSlice[];
 }
 
 export interface KnownChat {
