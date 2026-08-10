@@ -32,6 +32,12 @@ flowchart TB
         UIINV["docs/UI-INVENTORY.md<br/>инвентарь элементов UI"]
     end
 
+    subgraph MOD["Модуль инди-геймдева — Phase 13"]
+        INDIE["docs/INDIEDEV.md<br/><b>скоуп модуля</b><br/>MUST / MIGHT, модель данных"]
+        DESKTOP["docs/DESKTOP.md<br/>устройство десктоп-сборки"]
+        DPROMPT["docs/indiedev-design-prompt.md<br/>бриф для Claude Design"]
+    end
+
     CHANGELOG["CHANGELOG.md<br/><b>история сессий</b><br/>человекочитаемо, по датам"]
 
     MARTY -->|"пишет сам"| INPUT
@@ -60,14 +66,22 @@ flowchart TB
     CODE -->|"меняли UI →<br/>обновить"| UIINV
     CODE -->|"поменяли устройство"| ARCH
 
+    DECISIONS -->|"ADR-101…107<br/>решения модуля"| INDIE
+    INDIE -->|"строки T-120…T-137"| BACKLOG
+    INDIE --> DESKTOP
+    DESIGN -->|"токены копируются<br/>в бриф дословно"| DPROMPT
+    INDIE -->|"какие экраны нужны"| DPROMPT
+
     classDef source fill:#5B6E46,stroke:#3E4A2F,color:#fff
     classDef plan fill:#E8E3D6,stroke:#B8B0A0,color:#26231D
     classDef why fill:#B4452C,stroke:#8A331F,color:#fff
     classDef ref fill:#F7F5EF,stroke:#DBD5C8,color:#26231D
+    classDef mod fill:#C98A3B,stroke:#8A5D1F,color:#fff
     class MARTY,INPUT,CODE source
     class BACKLOG,ROADMAP,TASKS,CHANGELOG plan
     class DECISIONS,RULES,CLAUDE why
     class PRODUCT,PRD,ARCH,DESIGN,UIINV ref
+    class INDIE,DESKTOP,DPROMPT mod
 ```
 
 ## Первоисточники (истина рождается только здесь)
@@ -100,8 +114,19 @@ flowchart TB
 2. **Перед реализацией — ARCHITECTURE и PRD; при смене решения — сперва DECISIONS.**
 3. **Не доверять доку про статус — сверить с кодом.** Так нашлись: админ-панель, месяцами числившаяся «не начатой» при готовности с 27.07; `I15`, закрытый, но висевший открытым; `N6`/`N11`, сделанные до того, как их завели.
 
+## Модуль инди-геймдева (Phase 13, с 10.08.2026)
+
+Три новых документа не меняют правила выше, а занимают в них конкретные места:
+
+- **`docs/INDIEDEV.md`** — справочник по модулю: скоуп, модель данных, MUST/MIGHT. Читается **перед** реализацией любой строки `T-120…T-137`, ровно как `ARCHITECTURE.md` и `PRD.md` по правилу 2.
+- **`docs/DESKTOP.md`** — устройство десктоп-сборки. Отдельный файл, а не раздел `ARCHITECTURE.md`, потому что описывает вторую среду исполнения со своими рисками; `ARCHITECTURE.md` ссылается на него.
+- **`docs/indiedev-design-prompt.md`** — бриф для Claude Design. Односторонний потребитель: токены копируются в него из `DESIGN.md` дословно, обратно ничего не течёт. **Значит он протухает молча** — при изменении `styles.scss` сверять перед запуском.
+
+Правило «задача живёт ровно в одном месте» действует и здесь: MUST/MIGHT-списки в `INDIEDEV.md` — это *состав* модуля, а строки задач живут в `BACKLOG.md`. Список в `INDIEDEV.md` не вычёркивается по мере работы — статус ведёт `ROADMAP.md`.
+
 ## Известные слабые места
 
-- **`docs/PRD.md` устарел** — всё ещё описывает модель «RU основной + EN перевод», хотя языков шесть и основной язык теперь per-draft (ADR-064/065).
-- **`docs/UI-INVENTORY.md`** обновляется вручную и отстаёт сильнее прочих.
-- **`Input.md` вне репозитория** — не виден в git-истории; момент перезаписи восстанавливается только по mtime.
+- ~~**`docs/PRD.md` устарел**~~ — **починено 10.08.2026**: раздел про языки переписан на шесть языков с per-draft основным (ADR-064/065). Отставание держалось около двух недель после смены модели.
+- **`docs/UI-INVENTORY.md`** обновляется вручную и отстаёт сильнее прочих. Экраны модуля в нём ещё не заведены.
+- **`Input.md` вне репозитория** — не виден в git-истории; момент перезаписи восстанавливается только по mtime. То же и с брифом `Gamedev_Focused_Rework.md`, который лежит рядом с ним и породил Phase 13.
+- **`docs/indiedev-design-prompt.md` дублирует токены** — сознательно (бриф должен копироваться целиком), но это второй экземпляр значений, и он не проверяется ничем.

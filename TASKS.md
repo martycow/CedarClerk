@@ -2,6 +2,36 @@
 
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
+## Now (10.08.2026): the indie-gamedev turn — decisions written, no code yet
+
+Marty's brief (`_Documents_/CedarClerk/Gamedev_Focused_Rework.md`) turns the product towards indie game
+developers. This session was deliberately **documents only** — the CLAUDE.md rule is decisions before
+code, and a turn this size deserves to be written down before the first migration makes part of it
+irreversible.
+
+1. [x] **Research of the shipped state, against the code.** Reusable base is bigger than expected:
+   `IPublishTarget` already generalises publishing, `Folder`/`Draft.FolderId` already model grouping,
+   `Draft.IsTemplate` is already the precedent for "a document kind as a column", `CEDAR_DATA_DIR`
+   already makes a local server a config change. Genuinely new: five entities, two columns, a shell.
+2. [x] **ADR-101…107** in `docs/DECISIONS.md`.
+3. [x] **`docs/INDIEDEV.md`** (scope, data model, MUST/MIGHT), **`docs/DESKTOP.md`** (Electron +
+   sidecar), **`docs/indiedev-design-prompt.md`** (brief for Claude Design).
+4. [x] **Existing docs updated** — `PRODUCT.md`, `PRD.md`, `ARCHITECTURE.md`, `ROADMAP.md` (Phase 13),
+   `BACKLOG.md` (`T-120…T-137`, `Q-17`), `DOCS-FLOW.md`, `CLAUDE.md` (branch rules).
+5. [x] **`Q-1` closed** — the audience question, open since 30.07: indie game developers.
+6. [x] **`dotnet test` 617/617** — the `indiedev_module` branch has not drifted from `dev`.
+
+**One code finding worth carrying forward**: the server's listening address is a literal in
+`app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` cannot move it. The desktop shell needs a free
+port, so that single line has to become configurable — the only server change the desktop requires.
+
+**Next, in order** (`docs/ROADMAP.md` Phase 13): `T-120` (`Project` + `DocumentType`) → `T-121`
+(desktop) → `T-122` (Asset Manager) → `T-123`/`T-124` (tasks, sprints).
+
+**Two things Marty decides before the code starts:**
+- [ ] Read `docs/INDIEDEV.md` and `docs/indiedev-design-prompt.md` — do they describe what he meant?
+- [ ] `Q-17` — the product name. Recommendation: keep `Cedar Clerk`, express the focus in a subtitle.
+
 ## Now (09.08.2026): Marty's four requests — one post, several destinations
 
 1. [x] **T-116 — a Telegram channel per version** (ADR-098, v0.9.40). Marty created an English

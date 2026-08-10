@@ -8,7 +8,7 @@ This is a living requirements skeleton, not a spec written up-front — Cedar Cl
 - Rich-text editor (TipTap) with tables, formulas (KaTeX), images/video/audio, spoilers, toggles, footnotes, collages, carousels, date/time inserts, YouTube embeds (thumbnail preview in-editor, real `<iframe>` on the blog, thumbnail+clickable-link on Telegram — see ADR-033)
 - Autosave with saved/saving/dirty state, draft list, undo/redo, rename without requiring a page reload
 - Editor redesign: customizable two-row toolbar (presets, per-button visibility, drag-and-drop group placement), Appearance settings (accent presets, sheet width/typeface/font size/line height, ruler/paragraph-numbers/focus-mode toggles), full-screen `/drafts` table (filters, archive, search), New Draft dialog, unified Insert modal with clipboard type auto-detection, tag "cloud" picker with autocomplete from previously used tags — see ADR-035
-- RU/EN structural diff gutter — colored bars beside the RU editor showing which top-level blocks changed since the English translation was last synced (see ADR-029)
+- Structural diff gutter — colored bars beside the primary-language editor showing which top-level blocks changed since a translation was last synced (see ADR-029)
 - Export a draft to a connected Telegram channel (immediate or scheduled via Quartz), with a working post link in the result (not a raw message ID); export UI redesigned as a categorized modal (Site/Blog, Telegram, other-platform placeholders, file exports) plus a standalone static single-file HTML export (see ADR-028)
 - One post to several destinations at once: a **Telegram channel chosen per language version** so a translation reaches its own channel in the same publish (ADR-098); **scheduling as a step of the export window covering every network**, not Telegram only (ADR-099 — threads are excluded and said so, the blog publishes immediately); **X/Bluesky picking which versions they post**, with the X credit estimate following that choice (ADR-100)
 - Export-time photo compression control (small/standard/high) on top of automatic Telegram-safe compression for large camera originals, plus a per-draft "files in this draft" list with detach-not-delete management (see ADR-031/032)
@@ -18,8 +18,11 @@ This is a living requirements skeleton, not a spec written up-front — Cedar Cl
 - `/stats` page: per-channel growth charts (subscribers, blog views, likes, comments) — daily snapshots, see ADR-025 for the attribution approximation and no-backfill caveat; plus a channel-agnostic "Blog" tab showing the same views/likes/comments growth totalled across all of the owner's blog-published drafts, see ADR-030 in `docs/DECISIONS.md`. The Blog tab also splits the period's views by reader country and reader language (`CF-IPCountry` + `Accept-Language` into a daily rollup, ADR-097) — blog only, since the Bot API reports no geography per channel, and with the same no-backfill caveat
 - Bottom collapsible debug console (request/response log, available on every page) so a stuck-looking action or a failed request can be inspected without SSH-ing into the Pi (see ADR-027/028)
 
-**Bilingual content**
-- RU (primary) + EN translation per draft, manual or AI-assisted (auto-translate / re-translate), stale-translation indicator, empty-state guidance
+**Multilingual content**
+- **Six content languages** — RU, EN, DE, FR, ES, JA (`CedarClerk.Localization/Languages.cs`), and the primary language is **chosen per draft**, not fixed to Russian (ADR-064/065). `Draft.CedarJson` is the primary version; every other language is a `DraftTranslation` row.
+- Translations are manual or AI-assisted (auto-translate / re-translate), with a stale-translation indicator and empty-state guidance. Re-translation is incremental: hand-corrected paragraphs survive a resync, because `DraftTranslation.SourceSnapshotJson` records what the source looked like when the translation was last in sync.
+- Per-language surfaces all the way out: the blog's `?lang=`, a Telegram channel chosen per language version (ADR-098), a registration form per language, cross-link labels and the post signature per language.
+- *(This section described "RU primary + EN translation" until 10.08.2026 — the known staleness flagged in `docs/DOCS-FLOW.md`, fixed here.)*
 
 **Blog**
 - Public blog mirror of published posts (`blog.mooexe.dev`), anchor-based reactions (like/dislike) and comments on specific text fragments, anonymous with abuse-resistant visitor hashing
@@ -40,6 +43,20 @@ This is a living requirements skeleton, not a spec written up-front — Cedar Cl
 **AI features**
 - In-editor AI edit (fix errors / "schizo-izer" rewrite), gated to Pro Plus, daily quota enforced
 - AI operations (AI-edit, auto-translate) show an asymptotic pseudo-progress estimate (not real token streaming — neither provider streams today) alongside elapsed time, a 3-minute client-side timeout, and a Cancel button that genuinely aborts the request (see ADR-038)
+
+## Open requirements — indie-gamedev module (Phase 13, branch `indiedev_module`)
+
+Decided 10.08.2026 from Marty's brief; full scope in `docs/INDIEDEV.md`, decisions in ADR-101…107. The product stops being "an editor that publishes posts" and becomes a toolkit where a post is one document type among several, living inside a **project** (a game).
+
+Must be in the module's v1, in build order:
+- `Project` as a container, `Draft.DocumentType`, documents attached to a project
+- A desktop application — Electron shell around the existing server (`docs/DESKTOP.md`). A prerequisite of the next line, not a separate wish: only a local process can index a folder on the developer's disk
+- Asset Manager — an index of local asset paths, files never copied (ADR-107)
+- Task Tracker — name / status / priority / description / assignee, linked to documents
+- Development Planner — sprints and deadlines on top of tasks
+- A project-scoped glossary, and build/version tagging
+
+May follow: Press Kit, references board, brainstorm sessions, script and plot writing tools, game-design helpers, workflow planner, code documentation, budget maths, and new publishing targets (itch.io, Steam, IndieDB, LinkedIn — each blocked on verifying the third party actually offers a write API).
 
 ## Open requirements — Phase 7 (after Phase 6 closes)
 - Interactive posts: polls / A-B choice blocks for subscribers

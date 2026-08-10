@@ -62,6 +62,18 @@ Going the other direction — external format *into* Cedar JSON — `CedarClerk.
 - `shared/` — `PopoverComponent`, `CedarLogoComponent` (the only genuinely reusable components — see `docs/DESIGN.md` for the gap around buttons/modals)
 - `tiptap-extensions/` — custom TipTap nodes/marks whose HTML output is the shared contract with the backend renderers (e.g. `spoiler-mark.ts` ↔ `<tg-spoiler>` in `CedarToTelegramHtmlRenderer`)
 
+## Modules (ADR-101, 10.08.2026)
+
+A **module** is a set of endpoints and screens behind a config flag — not a separate project, process, database or `DbContext`. The first one is the indie-gamedev toolkit (`docs/INDIEDEV.md`); the shape is meant to be reusable if a second appears.
+
+- Backend: `CedarClerk.Server/Modules/<Name>/` holding the same `static class XxxEndpoints` convention as the top-level feature areas, registered in `Program.cs` behind `Cedar:Modules:<Name>`.
+- Frontend: `cedarclerk-web/src/app/modules/<name>/` with lazy routes. This costs nothing because every route is already `loadComponent` with background preloading (T-092/ADR-076) — a disabled module simply never fetches its chunks.
+- The flag reaches the client in the `/api/me` response; a guard hides the menu entries, not only the pages.
+- **The schema is shared.** A second `DbContext` over the same SQLite file would mean two independent `Database.Migrate()` calls on startup, which `.claude/rules/ef-migrations.md` does not survive — and the module's entities reference `Draft` and `ApplicationUser` directly, so a context boundary would fall exactly across the links the module exists for.
+- Module entities live in their own `Data/Entities.<Name>.cs`. The "one flat `Entities.cs`" convention exists to avoid a file per entity, and a file per module does not violate it.
+
+A module **adds**; it never replaces an existing screen. That is what makes it reversible: turning the flag off restores today's application whole.
+
 ## API style
 
 Minimal APIs only, no MVC controllers. Each feature area is `public static class XxxEndpoints` with a single `MapXxxEndpoints(this WebApplication app)` extension method, wired flatly in `Program.cs`:
@@ -84,6 +96,8 @@ Blog requests are routed separately, by hostname, before the rest: `app.MapWhen(
 Entities (`PublishTarget` added 01.08.2026, T-084): `ApplicationUser` (extends `IdentityUser`; `PlanTier`, `PlanExpiresAt`, `TrialUsedAt`, `FreeChannelCooldownUntil`, Telegram link fields, `PostSignature`, `StripeCustomerId`), `Payment` (audit of all billing events across providers), `AiUsage` (per-user per-UTC-day AI call counter), `Draft` (+ `DraftTranslation` for RU/EN), `Channel` (+ `ChannelStatSnapshot`, `ChannelPost` — see ADR-025), `Asset`, `Reaction`, `Comment`, `BotKnownChat` (+ `BotKnownChatAdmin`), `ScheduledPost`.
 
 Ownership: nearly every table has an `OwnerId` and every endpoint filters by it — see the ownership-audit table in `docs/DECISIONS.md`. Public blog endpoints are the deliberate exception (filtered by `IsBlogPublished` instead, since blog visitors aren't authenticated users).
+
+**A `Draft` is a document, not specifically a post** (ADR-102, planned in Phase 13): `Draft.DocumentType` (default `post`, so every existing row is already correct) and `Draft.ProjectId` turn the same entity into a game-design doc, a script or a changelog. The reason it is a column rather than a new entity: `Draft` is really "a TipTap document with autosave, revision history, translations, tags and a folder", and every one of those is needed verbatim by the other document types — a parallel entity would mean duplicating the most safety-critical code in the project (the ADR-065/066/067 save guards). The cost is that publishing columns (`BlogSlug`, `WatermarkText`, `LastTelegram*`…) sit unused on non-post documents; that is tracked as `T-136`, not pretended away.
 
 ## Auth
 
@@ -114,6 +128,14 @@ Deploy (`Scripts/deploy.ps1`, from repo root):
 7. Health-check loop against `https://cedarclerk.mooexe.dev/api/health` (10 tries, 3s apart)
 
 `Migrate()` and `PRAGMA journal_mode=WAL;` run automatically on server startup (`Program.cs`), so a deploy applies pending migrations without a separate step — which is exactly why `.claude/rules/ef-migrations.md`'s "migrate immediately after any entity change" rule matters.
+
+## Desktop distribution (ADR-104/105, planned)
+
+A second way to run the same thing, not a second application: an Electron shell starts the published `CedarClerk.Server` as a local sidecar process on a free port and opens the same Angular SPA against it. Neither the server nor the frontend is forked.
+
+It works because `CEDAR_DATA_DIR` already decides where SQLite and media live — the desktop points it at `%APPDATA%/CedarClerk` and the server code is unchanged, exactly as the Pi points it at `/home/martycow/cedarclerk/data`. One exception, found while writing ADR-104: the listening address is a literal in `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` cannot override it and that single line has to become configurable.
+
+The reason it exists is the asset index (ADR-107) — only a process on the developer's own machine can walk a game project's folder. Mechanics, risks and the two run modes: `docs/DESKTOP.md`.
 
 ## Local development
 

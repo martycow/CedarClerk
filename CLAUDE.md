@@ -15,6 +15,8 @@ Cedar Clerk — self-hosted personal publishing SaaS. A web rich-text editor who
 
 Document model: TipTap JSON stored in SQLite (`Draft.CedarJson`). One document → many renderers (Telegram HTML, blog HTML, `.cedar` export) is the core architectural idea — see `docs/ARCHITECTURE.md`.
 
+**Since 10.08.2026 the product is turning towards indie game developers** (Phase 13, branch `indiedev_module`): a post becomes one document type among several, living inside a `Project`, alongside tasks, sprints and an asset index. It is a **module inside the same codebase, not a fork** (ADR-101) — read `docs/INDIEDEV.md` before touching anything in that area.
+
 ## Anti-desynchronization mechanism
 Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTURE.md. If you change ANY of your decisions, you must update docs/DECISIONS.md first, then write code.
 
@@ -44,11 +46,20 @@ Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTUR
 - `docs/UI-INVENTORY.md` — per-element inventory of the frontend UI (location, type, purpose, loading-state check) — update it when adding/changing a UI element
 - `docs/integrations-setup.md` — payment/translation provider setup runbook
 - `docs/admin-panel-scope.md` — scoping for the admin panel (IF2): what exists, what must be decided, build order
+- `docs/INDIEDEV.md` — the indie-gamedev module (Phase 13): scope, data model, MUST/MIGHT. **Read before implementing any `T-120…T-137` row**
+- `docs/DESKTOP.md` — how the desktop build works (Electron + the existing server as a sidecar)
+- `docs/indiedev-design-prompt.md` — the brief handed to Claude Design for the module's screens. Copies design tokens verbatim, so **re-check it against `styles.scss` before each use**
 - `TASKS.md` — short-horizon "what's next" list
 - `CHANGELOG.md` — human-readable history by session/date
 
 ## Conventions
 Backend: static `XxxEndpoints` classes (minimal APIs, no MVC), entities in one flat `Entities.cs`, GUID PKs, `Consts`/`ErrorMessages` for reused strings only. Frontend: standalone components, `inject()`, signals, thin RxJS→Promise services, `kebab-case.*.ts` naming. Full detail and rationale: `docs/ARCHITECTURE.md`, `docs/DESIGN.md`.
+
+## Branches (Marty's rule, 10.08.2026)
+- **`master` — only the latest stable version.** Every commit on it is tagged with a version, and **every deploy is run from `master` and only from `master`.**
+- **`dev` — general development.**
+- **`indiedev_module`** — branched from `dev` for the indie-gamedev work, because the business model is not yet proven. May be deleted outright if it doesn't work out; keep the module reversible (ADR-101).
+- `Scripts/deploy.ps1` does **not** currently check the branch it runs from — that guard is unwritten, so the rule is currently enforced by remembering it.
 
 ## Commits and versioning
 - **Commit each substantial chunk of work** — a chunk can be several features or several bugs together, it does not have to be one item per commit. Don't leave a finished chunk uncommitted.

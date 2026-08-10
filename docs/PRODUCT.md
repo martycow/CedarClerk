@@ -1,5 +1,17 @@
 # Product
 
+> **Turning point, 10.08.2026 — the audience is now indie game developers.** Marty's brief (`_Documents_/CedarClerk/Gamedev_Focused_Rework.md`) narrows the target audience from "creators publishing across channels" to one: the indie game developer. A post becomes one document type among several, living inside a **project**; around it grow tasks, sprints, an asset index, and game-design tooling. This answers `Q-1`, open since 30.07.2026.
+>
+> The sections below still describe the product **as it is today**, and they stay accurate — the module adds, it does not replace (ADR-101). What the module changes is in `docs/INDIEDEV.md`; the work is Phase 13 on the `indiedev_module` branch, and the brief explicitly allows deleting that branch if the business model doesn't hold.
+
+## Who it's for after the turn
+
+An indie game developer who is also, by necessity, everything else: programmer, game designer, producer, writer, sound designer, composer, filmmaker, marketer and analyst. That list is Marty's own, and it is the point — the toolkit addresses a set of roles held by one person, not a job title.
+
+Why this audience and not one of the four floated in `Q-1` (bloggers, photo/video makers, writers, indie devs): it is the one whose needs are verified by doing the work rather than by guessing. Marty is the first user, and the only one so far.
+
+Product name is still open (`Q-17`, `docs/BACKLOG.md`). The brief's working title is *Cedar Clerk For Indie Developers*; the standing recommendation is to keep `Cedar Clerk` as the platform name, since a rename drags the domain, the bot handle, the `.cedar` extension and a hundred ADRs behind it.
+
 ## What Cedar Clerk is
 
 A self-hosted, write-once-publish-everywhere SaaS for creators who maintain a presence across multiple channels (see ADR-021, `docs/DECISIONS.md`). A web rich-text editor (TipTap) is the spine — a post is written once and published to co-equal destinations: a Telegram channel via a shared bot, a hosted blog page with anchor-based reactions and comments on specific fragments, and (planned) Twitter/Bluesky cross-posting. The blog is not a "Telegram mirror" — it's a first-class output in its own right. Bilingual (RU/EN) posts are a first-class feature, not a bolt-on.
@@ -36,7 +48,8 @@ Three payment providers, all code-complete but not yet live in production (waiti
 Carried forward from planning sessions — genuine unknowns, not implementation gaps:
 > TODO (Marty): name for the shared Telegram bot (public-facing, used for onboarding every new user's channel).
 > TODO (Marty): domain strategy — direction now resolved (ADR-020: separate dedicated domain for tenant blogs, working name `cedarclerk.app`), but three sub-questions remain open: exact domain name; whether `blog.mooexe.dev` migrates or stays Marty's personal blog; subdomain vs. path scheme for tenants.
-> TODO (Marty): target market positioning / competitors / success metrics — not yet articulated anywhere in the project's docs or history.
-> TODO (Marty): long-term vision beyond the currently-planned Phase 7 (Entertainer role — interactive posts/polls) and Phase 8 (v0.8.0 feature set in `docs/ROADMAP.md`).
+> ~~TODO (Marty): target market positioning~~ — **answered 10.08.2026**: indie game developers, see the top of this file and `docs/INDIEDEV.md`. Competitors and success metrics remain unarticulated.
+> ~~TODO (Marty): long-term vision beyond Phase 7/8~~ — **answered 10.08.2026**: the indie-gamedev toolkit is the long-term direction (Phase 13). Phase 7 (Entertainer role) is not cancelled, just no longer the horizon.
+> TODO (Marty): product name — see `Q-17`.
 
 Lifetime-deal pricing is resolved: yes, via the Founder/Lifetime invite-code plan (ADR-022, `docs/DECISIONS.md`) — the only open piece is the invite code's actual value.

@@ -2,7 +2,9 @@
 
 Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-saas-plan.md` (v1.7, 15.07.2026) and `Plans/session-brief-v0.8.0-planning.md`, which are now archived under `Plans/OLD/`. **This file is the one live roadmap going forward** — update it when a phase item closes, don't recreate a parallel plan doc. Architectural/product decisions referenced below (why something was built a certain way) live in `docs/DECISIONS.md`, not here — this file tracks *status*, DECISIONS tracks *rationale*.
 
-## Status summary (as of 31.07.2026)
+## Status summary (as of 10.08.2026)
+
+**Phase 13 — IndieDev Module — scoped 10.08.2026, no code yet.** Marty's brief turns the product towards indie game developers: a post becomes one document type among several, living inside a project. Seven decisions written first (ADR-101…107), scope in `docs/INDIEDEV.md`, desktop mechanics in `docs/DESKTOP.md`, design brief in `docs/indiedev-design-prompt.md`. **This also closes `Q-1`**, open since 30.07.2026 — the product has one audience now instead of four. Work happens on the `indiedev_module` branch, which the brief explicitly allows deleting if the business model doesn't hold.
 
 **Phase 10 — UI Verification Sweep — closed 31.07.2026.** The frontend has a 37-scenario Playwright smoke suite where it had nothing, the UI inventory covers the screens and the blog, and 7 defects were found of which 4 are fixed. The audit-before-redesign ordering is ADR-070. **Deployed: production is on v0.9.20** (health check 31.07) — 0.9.18 plus the two iPad fixes that followed it, both verified live by Marty.
 
@@ -428,6 +430,30 @@ Rows: `T-075…T-082` in `docs/BACKLOG.md`, plus the existing `T-034` and `T-051
 Scope: an ADR for the publishing-target abstraction → `IPublishTarget` + a `PublishTarget` entity with encrypted per-tenant credentials → **refactor the Telegram export onto the abstraction with no behaviour change, before any second network exists** → capability matrix (character limits, media, formatting) with editor-side validation → degradation rules with per-target override and preview (Q-14) → resolve the public-media-endpoint conflict with private posts, watermark and copy protection (Q-15, overlaps Q-8) → Bluesky connector → `PublishJob` with retry, partial-failure handling and idempotency → Threads connector.
 
 API integration is roughly 20% of this phase; the rest is the degradation model, the capability matrix, the media endpoint and partial failures. Rows: `T-083…T-091` in `docs/BACKLOG.md`; the older umbrella row `T-001` is superseded by them.
+
+### Phase 13 — IndieDev Module — scoped 10.08.2026, implementation not started
+
+Branch `indiedev_module` (from `dev`). Source of the turn: `_Documents_/CedarClerk/Gamedev_Focused_Rework.md`. Full scope: `docs/INDIEDEV.md`.
+
+**Done in the scoping session (10.08.2026) — documents only, deliberately no code:**
+- [x] **Research of the shipped state**, against the code rather than the docs. The reusable base is larger than expected: `IPublishTarget` already generalises publishing, `Folder`+`Draft.FolderId` already model unowned grouping, `IsTemplate` is already the precedent for "a document kind as a column", and `CEDAR_DATA_DIR` already makes a local server a configuration change rather than a port. What is genuinely new is five entities, two columns and an Electron shell.
+- [x] **ADR-101…107 written before any code**, per the CLAUDE.md rule: module-not-fork; document type as a column on `Draft`; "a project always has a document" as a UI rule rather than a constraint; Electron over the existing server as a sidecar; no cloud sync in v1; a task as its own entity; the asset index storing paths, not bytes.
+- [x] **`docs/INDIEDEV.md`, `docs/DESKTOP.md`, `docs/indiedev-design-prompt.md`** created; `PRODUCT.md`, `PRD.md`, `ARCHITECTURE.md`, `BACKLOG.md`, `DOCS-FLOW.md`, `CLAUDE.md` updated.
+- [x] **`Q-1` closed** — the audience is indie game developers.
+- [x] **A finding that changes one line of server code**: the listening address is a literal in `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` cannot move it and the desktop shell cannot pick a free port until it becomes configurable. Recorded in ADR-104 and `docs/DESKTOP.md`; it is the only server change the desktop needs.
+
+**MUST, in build order** — rows `T-120…T-126` in `docs/BACKLOG.md`:
+1. `Project` + `Draft.DocumentType` + `Draft.ProjectId` — the foundation
+2. Desktop shell — a prerequisite of 3, not a parallel wish
+3. Asset Manager (`AssetEntry`, path indexing)
+4. Task Tracker (`GameTask`, `TaskLink`)
+5. Development Planner (`Sprint`, deadlines)
+6. Project-scoped glossary
+7. Build/version tagging
+
+**MIGHT**, after v1: Press Kit, references board, brainstorm sessions, script/plot writers, game-design helpers, workflow planner, code documentation, budget maths.
+
+**Blocked on somebody else's API, not on us** — `T-127`: itch.io, Steam, IndieDB and LinkedIn are each an `IPublishTarget` implementation (cheap), but whether each even offers a write endpoint is unverified. Research before scoping; the precedent is `Q-13`, where the network order had to be redone once X turned out to charge per post.
 
 ---
 

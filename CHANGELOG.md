@@ -2,6 +2,22 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-10 — the indie-gamedev turn, on paper (ADR-101…107, Phase 13, no version bump)
+
+Marty's brief redirects the product: Cedar Clerk stops being "an editor that publishes posts" and becomes a toolkit for an indie game developer, where a post is one document type among several living inside a **project**. Around it: tasks, sprints, an asset index, a press kit, script and design tooling; and new publishing targets aimed at that audience (itch.io, Steam, IndieDB, LinkedIn). The brief is explicit that this is a **module inside one codebase, not a fork**.
+
+**Deliberately documents only.** No code, no migrations. The CLAUDE.md rule is decisions before code, and a turn this size deserves writing down before the first migration makes part of it irreversible — particularly since the brief allows deleting the `indiedev_module` branch outright if the business model doesn't hold, which makes reversibility a requirement rather than a nicety.
+
+**The research changed the plan.** Checked against the code rather than the docs, the reusable base is larger than it looked: `IPublishTarget` already generalises publishing across networks, `Folder` + `Draft.FolderId` already model grouping without foreign keys, `Draft.IsTemplate` is already the precedent for expressing a document *kind* as a column, and `CEDAR_DATA_DIR` already makes running a local server a configuration change rather than a port. What is genuinely new is five entities, two columns and an Electron shell — not a second application.
+
+**Seven decisions (ADR-101…107).** The module is endpoints and screens behind a flag, over one shared schema — a second `DbContext` would mean two `Database.Migrate()` calls against one SQLite file, and the boundary would fall exactly across the links the module exists for. Document type is a column on `Draft`, not a new entity, because `Draft` is really "a TipTap document with autosave, revision history, translations, tags and a folder" and a parallel entity would duplicate the most safety-critical code in the project. "A project always has a document" is a rule of the create endpoint, not a schema constraint — as a constraint it would be violated by its own first `INSERT`. A task is its own entity even though a document type would have been cheaper, because "what's overdue" must be a query rather than a scan of parsed JSON. The asset index stores paths and never bytes, which is the whole reason the desktop app is a prerequisite rather than a preference. And the desktop does not sync in v1, said out loud, because merging offline edits to a TipTap document is either a CRDT or silent data loss, and this project already has one text-loss incident behind it.
+
+**One finding that costs a line of code.** The server's listening address is a literal — `app.Run(Consts.URLs.Localhost)`, i.e. `http://localhost:8080` — which means `ASPNETCORE_URLS` cannot override it and a desktop shell cannot ask the OS for a free port. That single line becoming configurable is the only server change the desktop needs, and it was found by reading the code rather than by assuming, which is exactly what `docs/DOCS-FLOW.md`'s "the code is the arbiter" rule is for.
+
+**`Q-1` is closed** — the audience question, open since 30.07 with four candidate focuses and a fifth whose wording had been lost. There is one audience now, and it is the one whose needs get verified by doing the work instead of by guessing.
+
+New: `docs/INDIEDEV.md` (scope, data model, MUST/MIGHT), `docs/DESKTOP.md` (Electron over the existing server, two run modes, risks), `docs/indiedev-design-prompt.md` (a design brief carrying the token set verbatim). Updated: `PRODUCT.md`, `PRD.md` — whose "RU primary + EN translation" section had been stale for two weeks and is now six languages with a per-draft primary — `ARCHITECTURE.md`, `ROADMAP.md` (Phase 13), `BACKLOG.md` (`T-120…T-138`, `Q-17`), `DOCS-FLOW.md`, `CLAUDE.md`. `dotnet test` 617/617: the branch has not drifted.
+
 ## 2026-08-09 — one post, several destinations (T-116…T-119, ADR-098/099/100, v0.9.40)
 
 Four requests from Marty, and three of them are the same shape: the export window still assumed one post goes to one place.
