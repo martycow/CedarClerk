@@ -276,24 +276,37 @@
                     }
 
                     <div class="panel-label">{{ t().editor.exportModal.channelLabel }}</div>
-                    @if (selectedChannel(); as sc) {
-                    <div class="channel-chosen">
-                        <span class="channel-avatar" [style.background]="channelColor(sc.id)">{{ channelInitial(sc.title) }}</span>
-                        <span class="channel-chosen-title">{{ sc.title }}</span>
-                        <button class="mini-remove" (click)="chatId = ''" [title]="t().editor.exportModal.changeChannel" [attr.aria-label]="t().editor.exportModal.changeChannel"><app-icon name="x" size="sm"></app-icon></button>
-                    </div>
-                    }
                     <!--N4 is retired (ADR-095): connecting a channel is a setting, so this only ever
-                    picks between what Settings has already connected.-->
+                    picks between what Settings has already connected.
+                    ADR-098 — one row per ticked version: a translation goes to its own channel in
+                    the same publish. With a single version this is the one picker it always was.-->
                     @if (channels().length) {
-                    <div class="channel-pick-row">
-                        @for (c of channels(); track c.id) {
-                        <button class="channel-pick" [class.on]="isSelectedChannel(c)" (click)="selectChannel(c)">
-                            <span class="channel-avatar" [style.background]="channelColor(c.id)">{{ channelInitial(c.title) }}</span>
-                            <span class="channel-pick-title">{{ c.title }}</span>
-                        </button>
+                    @for (lang of exportLangs(); track lang) {
+                    <div class="channel-lang-row">
+                        @if (exportLangs().length > 1) {
+                        <span class="channel-lang-badge" [title]="endonym(lang)">{{ lang.toUpperCase() }}</span>
+                        }
+                        @if (selectedChannelFor(lang); as sc) {
+                        <div class="channel-chosen">
+                            <span class="channel-avatar" [style.background]="channelColor(sc.id)">{{ channelInitial(sc.title) }}</span>
+                            <span class="channel-chosen-title">{{ sc.title }}</span>
+                            <button class="mini-remove" (click)="clearChannel(lang)" [title]="t().editor.exportModal.changeChannel" [attr.aria-label]="t().editor.exportModal.changeChannel"><app-icon name="x" size="sm"></app-icon></button>
+                        </div>
+                        } @else {
+                        <div class="channel-pick-row">
+                            @for (c of channels(); track c.id) {
+                            <button class="channel-pick" [class.on]="isSelectedChannel(lang, c)" (click)="selectChannel(lang, c)">
+                                <span class="channel-avatar" [style.background]="channelColor(c.id)">{{ channelInitial(c.title) }}</span>
+                                <span class="channel-pick-title">{{ c.title }}</span>
+                            </button>
+                            }
+                        </div>
                         }
                     </div>
+                    }
+                    @if (langsMissingChannel().length) {
+                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.channelMissingFor(missingChannelLabel()) }}</p>
+                    }
                     } @else {
                     <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.telegramNoChannel }}</p>
                     <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'account' }">{{ t().editor.exportModal.openSettings }}</a>
@@ -304,11 +317,16 @@
                     where the cuts land before agreeing to it.-->
                     @if (canSplitIntoThread()) {
                     <div class="thread-offer">
-                        <label class="thread-toggle">
-                            <input type="checkbox" [checked]="splitIntoThread()"
+                        <!--ADR-099 — a scheduled send has no thread support, so the switch is
+                        disabled rather than ticked and quietly ignored, which is what it was.-->
+                        <label class="thread-toggle" [class.disabled]="!!scheduledAt">
+                            <input type="checkbox" [checked]="splitIntoThread()" [disabled]="!!scheduledAt"
                                    (change)="toggleThread($any($event.target).checked)">
                             <span>{{ t().editor.exportModal.splitIntoThread }}</span>
                         </label>
+                        @if (scheduledAt) {
+                        <p class="field-hint-inline">{{ t().editor.exportModal.threadsNotScheduled }}</p>
+                        }
                         @if (splitIntoThread() && threadParts().length) {
                         <p class="field-hint-inline">
                             {{ t().editor.exportModal.threadSummary(threadParts().length) }}
@@ -337,32 +355,8 @@
                         <button [class.on]="compressionLevel === 'high'" (click)="compressionLevel = 'high'" [title]="t().editor.exportModal.compressionHighHint">{{ t().editor.exportModal.compressionHigh }}</button>
                     </div>
 
-                    <!--FI2.7: scheduling is not a second publish button. Setting a time changes what
-                    the one Publish button does; the list of what is already scheduled lives in the
-                    Posts Manager (FI2.8).-->
-                    <div class="popover-divider"></div>
-                    <div class="panel-label">{{ t().editor.exportModal.scheduleExport }}</div>
-                    <div class="quick-schedule">
-                        <button (click)="quickSchedule('1m')">{{ t().editor.exportModal.in1m }}</button>
-                        <button (click)="quickSchedule('5m')">{{ t().editor.exportModal.in5m }}</button>
-                        <button (click)="quickSchedule('1h')">{{ t().editor.exportModal.in1h }}</button>
-                        <button (click)="quickSchedule('6h')">{{ t().editor.exportModal.in6h }}</button>
-                        <button (click)="quickSchedule('12h')">{{ t().editor.exportModal.in12h }}</button>
-                        <button (click)="quickSchedule('tomorrow')">{{ t().editor.exportModal.tomorrow }}</button>
-                    </div>
-                    <div class="schedule-row">
-                        <input type="datetime-local" [(ngModel)]="scheduledAt">
-                        @if (scheduledAt) {
-                        <button class="mini-remove" (click)="scheduledAt = ''" [title]="t().common.cancel" [attr.aria-label]="t().common.cancel"><app-icon name="x" size="sm"></app-icon></button>
-                        }
-                    </div>
-                    @if (pickerZonesHint()) { <p class="tz-hint">{{ pickerZonesHint() }}</p> }
-                    @if (scheduledAt) {
-                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.scheduleHint }}</p>
-                    <a class="state-link" routerLink="/posts">{{ t().editor.exportModal.manageInManager }}</a>
-                    }
-                    @if (scheduleResult()) { <p class="export-result">{{ scheduleResult() }}</p> }
-
+                    <!--ADR-099: the schedule block moved out of this panel into its own step —
+                    a time applies to every ticked network, not to Telegram alone.-->
                     @if (exporting()) {
                     <div class="inline-progress">
                         <div class="indeterminate-bar"><div class="indeterminate-fill"></div></div>
@@ -386,24 +380,40 @@
                             <span class="field-hint-inline">{{ acc.displayName }}</span>
                         </div>
 
+                        <!--ADR-100 — which versions this account actually posts. A subset of the
+                        window's ticked ones, all of them by default; one account rarely wants both.-->
+                        @if (exportLangs().length > 1) {
+                        <div class="panel-label">{{ t().editor.exportModal.microLangsLabel }}</div>
+                        <div class="lang-pick-row">
+                            @for (l of exportLangs(); track l) {
+                            <button class="pill" [class.on]="isMicroLang(network, l)" (click)="toggleMicroLang(network, l)"
+                                    [title]="endonym(l)">
+                                {{ l.toUpperCase() }}
+                            </button>
+                            }
+                        </div>
+                        }
+
                         <div class="panel-label">{{ t().editor.exportModal.modeLabel }}</div>
                         <div class="mode-toggle">
                             <button [class.on]="microMode()[network] === 'link'" (click)="setMicroMode(network, 'link')">
                                 <span class="mode-name">{{ t().editor.exportModal.modeLink }}</span>
                                 <span class="mode-desc">{{ t().editor.exportModal.modeLinkHint }}</span>
                             </button>
-                            <button [class.on]="microMode()[network] === 'thread'" (click)="setMicroMode(network, 'thread')">
+                            <!--ADR-099 — threads are not schedulable; disabled beats ignored.-->
+                            <button [class.on]="microMode()[network] === 'thread'" [disabled]="!!scheduledAt"
+                                    (click)="setMicroMode(network, 'thread')">
                                 <span class="mode-name">{{ t().editor.exportModal.modeThread }}</span>
-                                <span class="mode-desc">{{ t().editor.exportModal.modeThreadHint }}</span>
+                                <span class="mode-desc">{{ scheduledAt ? t().editor.exportModal.threadsNotScheduled : t().editor.exportModal.modeThreadHint }}</span>
                             </button>
                         </div>
 
                         @if (microMode()[network] === 'link') {
                         <!--One field per version: a single field wrote the same override into every
                         ticked language, which is the one thing a per-language text must not do.-->
-                        @if (exportLangs().length > 1) {
+                        @if (microLangsOf(network).length > 1) {
                         <div class="lang-pick-row">
-                            @for (l of exportLangs(); track l) {
+                            @for (l of microLangsOf(network); track l) {
                             <button class="pill" [class.on]="microTextLang()[network] === l" (click)="setMicroTextLang(network, l)">
                                 {{ l.toUpperCase() }}
                             </button>
@@ -428,7 +438,7 @@
                         more or fewer parts, and a number per language is a table nobody reads.-->
                         <p class="field-hint-inline">
                             {{ t().editor.exportModal.threadPartsFor(microParts()[network], microLabels[network]) }}
-                            @if (exportLangs().length > 1) { · {{ exportLangs()[0].toUpperCase() }} }
+                            @if (microLangsOf(network).length > 1) { · {{ microLangsOf(network)[0].toUpperCase() }} }
                         </p>
                         }
                         }
@@ -447,6 +457,45 @@
                     }
                 }
                 </div>
+            </section>
+            }
+
+            <!-- ============ 4 · WHEN ============ -->
+            <!--ADR-099 — scheduling is a property of the publication, not of Telegram. It lived
+            inside the Telegram panel while Telegram was the only network that could be scheduled;
+            with four destinations that stopped being true. Shown only when something schedulable
+            is ticked — the blog is not a publish target and has nothing to postpone.-->
+            @if (anyNetworkDestination()) {
+            <section class="export-step">
+                <div class="export-step-head">
+                    <app-icon name="clock" size="sm"></app-icon>
+                    <h3 class="export-step-title">{{ t().editor.exportModal.stepWhen }}</h3>
+                    <span class="field-hint-inline">{{ t().editor.exportModal.stepWhenHint }}</span>
+                </div>
+                <div class="quick-schedule">
+                    <button (click)="quickSchedule('1m')">{{ t().editor.exportModal.in1m }}</button>
+                    <button (click)="quickSchedule('5m')">{{ t().editor.exportModal.in5m }}</button>
+                    <button (click)="quickSchedule('1h')">{{ t().editor.exportModal.in1h }}</button>
+                    <button (click)="quickSchedule('6h')">{{ t().editor.exportModal.in6h }}</button>
+                    <button (click)="quickSchedule('12h')">{{ t().editor.exportModal.in12h }}</button>
+                    <button (click)="quickSchedule('tomorrow')">{{ t().editor.exportModal.tomorrow }}</button>
+                </div>
+                <div class="schedule-row">
+                    <input type="datetime-local" [ngModel]="scheduledAt" (ngModelChange)="onScheduledAtChange($event)">
+                    @if (scheduledAt) {
+                    <button class="mini-remove" (click)="scheduledAt = ''" [title]="t().common.cancel" [attr.aria-label]="t().common.cancel"><app-icon name="x" size="sm"></app-icon></button>
+                    }
+                </div>
+                @if (pickerZonesHint()) { <p class="tz-hint">{{ pickerZonesHint() }}</p> }
+                @if (scheduledAt) {
+                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.scheduleHint }}</p>
+                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.threadsNotScheduled }}</p>
+                @if (destBlog()) {
+                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.scheduleBlogNow }}</p>
+                }
+                <a class="state-link" routerLink="/posts">{{ t().editor.exportModal.manageInManager }}</a>
+                }
+                @if (scheduleResult()) { <p class="export-result">{{ scheduleResult() }}</p> }
             </section>
             }
 

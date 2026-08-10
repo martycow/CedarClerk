@@ -1368,6 +1368,16 @@
     background: var(--asoft);
 }
 
+/* ADR-099: threads are not schedulable, so the mode is refused visibly rather than ignored. */
+.mode-toggle button:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.thread-toggle.disabled {
+    opacity: .55;
+}
+
 .mode-name {
     font-size: var(--fs-ui);
     font-weight: 600;
@@ -1391,6 +1401,34 @@
     border-radius: var(--radius-md);
     padding: 12px 14px;
     margin-bottom: 0;
+}
+
+/* ADR-098: one row per ticked version, each with its own channel. The badge only appears when
+   there is more than one version — with a single one the row is the picker it has always been. */
+.channel-lang-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.channel-lang-row > :not(.channel-lang-badge) {
+    flex: 1;
+    min-width: 0;
+    margin-top: 0;
+}
+
+.channel-lang-badge {
+    flex: none;
+    min-width: 30px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    background: var(--alt);
+    color: var(--t2);
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: .03em;
 }
 
 /* N4: connected channels are picked by clicking one of these, never by typing an id. */

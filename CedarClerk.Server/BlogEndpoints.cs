@@ -949,10 +949,21 @@ public static class BlogEndpoints
             }
         }
 
+        // The feed already existed (ADR-024) and was reachable only by the <link rel="alternate">
+        // in <head> — i.e. by a reader that already knew to look. A visible button is the whole
+        // difference between "there is a feed" and "you can subscribe".
+        const string rssButton = """
+            <a class="tg-open-btn rss-btn" href="/rss.xml" title="RSS feed">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="6.2" cy="17.8" r="2.2"></circle><path d="M4 10.2v3.1a6.7 6.7 0 0 1 6.7 6.7h3.1A9.8 9.8 0 0 0 4 10.2Z"></path><path d="M4 4v3.1A12.9 12.9 0 0 1 16.9 20H20A16 16 0 0 0 4 4Z"></path></svg>
+            <span class="tg-open-label">RSS</span>
+            </a>
+            """;
+
         return $"""
             <div class="site-header"><div class="site-header-inner">
             {identity}
             <div class="spacer"></div>
+            {rssButton}
             {openInTelegram}
             <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Toggle theme">&#9789;</button>
             </div></div>
@@ -1482,6 +1493,10 @@ public static class BlogEndpoints
         .channel-meta { font-size: 11px; color: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .tg-open-btn { display: flex; align-items: center; gap: 6px; border: 1px solid var(--abord); background: var(--asoft); border-radius: 8px; padding: 5px 12px; font-size: 12.5px; font-weight: 500; color: var(--text); white-space: nowrap; flex: none; }
         .tg-open-btn:hover { filter: brightness(.97); }
+        /* Secondary next to "Open in Telegram": subscribing to the feed is an offer, not the
+           header's main action, and two filled buttons side by side read as two main actions. */
+        .rss-btn { background: none; border-color: var(--border); color: var(--t2); }
+        .rss-btn:hover { background: var(--alt); color: var(--text); }
         .theme-toggle-btn { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: none; background: none; border-radius: 8px; color: var(--t2); cursor: pointer; font-size: 15px; }
         .theme-toggle-btn:hover { background: rgba(128,120,100,.14); }
 

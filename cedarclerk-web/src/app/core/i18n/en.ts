@@ -511,6 +511,17 @@ export const en = {
             channelLabel: 'Channel',
             telegramNoChannel: 'Pick a channel — connect one in Settings → Integrations.',
             openSettings: 'Settings → Integrations →',
+            // ADR-098 — a channel is picked per ticked version.
+            channelMissingFor: (langs: string) => `No channel picked for: ${langs}.`,
+            // ADR-100 — which versions this short-post account actually sends.
+            microLangsLabel: 'Versions to post',
+            // ADR-099 — one schedule for every network, as its own step.
+            stepWhen: 'When to send',
+            stepWhenHint: 'Empty sends now. A time queues every ticked network for later.',
+            threadsNotScheduled: 'A scheduled send has no threads — it goes out as one message.',
+            scheduleBlogNow: 'The blog cannot be scheduled: it publishes now, only the networks wait.',
+            scheduledCount: (n: number) => `Scheduled ${n} send${n === 1 ? '' : 's'}`,
+            scheduleFailed: 'could not be scheduled',
             creditsShort: (need: number, have: number) => `Needs ${need} credits, you have ${have}`,
             creditsTotal: (n: number) => `${n} credit${n === 1 ? '' : 's'} in total`,
         },

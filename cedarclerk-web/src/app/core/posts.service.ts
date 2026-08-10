@@ -20,6 +20,11 @@ export interface ScheduledPost {
     format: PostFormat;
     language: PostLanguage;
     channelTitle: string | null;
+    // ADR-099 — a schedule addresses a publish target now, so a row can be any network. `network`
+    // is denormalised on the row; `targetName` is the channel title or the @handle behind it.
+    targetId: string | null;
+    network: string;
+    targetName: string | null;
 }
 
 export interface PublishDiff {
@@ -58,9 +63,14 @@ export class PostsService {
         return firstValueFrom(this.http.post<UpdatePreview>('/api/posts/update-preview', { draftId, kind, language, chatId }));
     }
 
-    schedule(draftId: string, chatId: string, scheduledAtUtc: string, format: PostFormat, language: PostLanguage) {
+    /**
+     * ADR-099 — one destination, named the way the caller can name it: `targetId` for any network,
+     * `chatId` for the Telegram-shaped call. The server resolves either into a stored target.
+     */
+    schedule(draftId: string, scheduledAtUtc: string, language: PostLanguage,
+             dest: { chatId?: string; targetId?: string }, format: PostFormat = 'Markdown') {
         return firstValueFrom(this.http.post<{ id: string }>(
-            '/api/posts/schedule', { draftId, chatId, scheduledAtUtc, format, language }));
+            '/api/posts/schedule', { draftId, scheduledAtUtc, language, format, ...dest }));
     }
 
     listScheduled() {

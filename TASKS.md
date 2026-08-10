@@ -2,6 +2,25 @@
 
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
+## Now (09.08.2026): Marty's four requests — one post, several destinations
+
+1. [x] **T-116 — a Telegram channel per version** (ADR-098, v0.9.40). Marty created an English
+   copy of the main channel; the export window now picks a channel for each ticked version and
+   sends both in one publish. Publish stays disabled until every ticked version has one.
+2. [x] **T-117 — scheduling is its own step, for every network** (ADR-099, v0.9.40).
+   `ScheduledPost` carries a `TargetId`, so X and Bluesky can be scheduled too; the due job
+   publishes through `PublishToTargetAsync`. Threads are not schedulable and the window now says
+   so instead of ignoring the toggle.
+3. [x] **T-118 — X/Bluesky choose their own versions** (ADR-100, v0.9.40). A subset of the
+   window's ticked versions, all of them by default. The X credit estimate follows it.
+4. [x] **T-119 — RSS button in the blog header.** The feed existed since ADR-024 and was
+   reachable only through `<link rel="alternate">`.
+5. [ ] **Live-verify** — Marty's pass. Worth checking specifically: RU and EN going to two
+   different channels in one publish, a scheduled Bluesky post actually firing, and the Posts
+   Manager naming the network on a scheduled row.
+6. [ ] **Not deployed yet** — `dotnet test` 617/617 and `ng build` are green locally; the blog
+   header and `/rss.xml` were verified against a local run.
+
 ## Now (08.08.2026): Marty's request — who is reading
 
 1. [x] **T-115 — views by country and by reader language on the stats page** (ADR-097, v0.9.39).

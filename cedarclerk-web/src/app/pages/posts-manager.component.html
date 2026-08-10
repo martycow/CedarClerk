@@ -211,9 +211,12 @@ beside them — not a reading surface, so they follow the list's density rather 
                         @for (p of scheduled; track p.id) {
                         <div class="scheduled-item">
                             <div class="scheduled-info">
+                                <!--ADR-099: a schedule can be any network now, so the row names it —
+                                "Bluesky · EN" and "Telegram · EN" are otherwise indistinguishable.-->
                                 <div class="field-hint-inline">
                                     {{ utcDate(p.scheduledAtUtc) | date:'d MMM yyyy, HH:mm' }} ·
-                                    {{ p.channelTitle || p.chatId }} · {{ p.language.toUpperCase() }} · {{ p.status }}
+                                    {{ scheduledNetworkLabel(p) }} · {{ p.targetName || p.chatId }} ·
+                                    {{ p.language.toUpperCase() }} · {{ p.status }}
                                 </div>
                                 @if (p.status === 'Failed') { <p class="channel-error">{{ p.error }}</p> }
                             </div>

@@ -203,6 +203,13 @@ export class PostsManagerComponent implements OnInit {
         return this.scheduled().filter(p => p.draftId === draftId && p.status === 'Sent').length;
     }
 
+    /** ADR-099 — network names are display strings, not translated: "Bluesky" is "Bluesky". */
+    private readonly networkLabels: Record<string, string> = { telegram: 'Telegram', bluesky: 'Bluesky', x: 'X' };
+
+    scheduledNetworkLabel(post: ScheduledPost): string {
+        return this.networkLabels[post.network] ?? post.network;
+    }
+
     // ─── Detail groups (8.4) and the growth chart (8.6) ───────────────────────────────────────
     // Which groups are open is a per-browser preference, not per-post: someone who works with
     // scheduling wants the scheduling group open on every post they touch.

@@ -19,7 +19,13 @@ public class PublishDueScheduledPostsJob(CedarDbContext db, IEnumerable<IPublish
 
         foreach (var post in due)
         {
-            var result = await PostEndpoints.PublishAsync(post.DraftId, post.ChatId, post.OwnerId, db, targets, post.Format, post.Language, logger);
+            // ADR-099 — a target id addresses any network; a row without one predates the column
+            // and can only be a Telegram chat. Published inline rather than through the publish
+            // queue on purpose: nothing here is waiting on an HTTP request, and a direct call is
+            // what keeps this row's Sent/Failed status the network's real answer.
+            var result = post.TargetId is { } targetId
+                ? await PostEndpoints.PublishToTargetAsync(post.DraftId, targetId, post.OwnerId, db, targets, post.Language, logger)
+                : await PostEndpoints.PublishAsync(post.DraftId, post.ChatId, post.OwnerId, db, targets, post.Format, post.Language, logger);
             if (result.Success)
             {
                 post.Status = "Sent";

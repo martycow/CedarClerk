@@ -2,6 +2,20 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-09 — one post, several destinations (T-116…T-119, ADR-098/099/100, v0.9.40)
+
+Four requests from Marty, and three of them are the same shape: the export window still assumed one post goes to one place.
+
+**A Telegram channel per version (ADR-098).** Marty created an English copy of the main channel and immediately hit the wall: the window could tick two versions but held one chat id, so RU and EN went to the same channel and the translation needed a second trip through the whole window. The Telegram panel now shows a row per ticked version, each with its own channel; with one version it looks exactly as it did. Publish stays disabled while any ticked version has no channel — "RU picked, EN not" is an incomplete request, not one with a default. Two follow-on fixes fell out of it: the post link is built from the channel that actually produced it, and the "you are about to overwrite a live post" check (ADR-065) now asks about each version's own channel instead of asking the EN question about the RU channel. The mapping is remembered in the browser, because sending EN to the EN channel is a habit, not a property of the draft.
+
+**Scheduling became its own step, for every network (ADR-099).** It had been living inside the Telegram panel, which was true while Telegram was the only schedulable network. `ScheduledPost` now carries a `TargetId` (`PublishTarget`, ADR-078) and a `Network`; rows written before the column still publish through their chat id, which is all they have. The due job publishes through `PublishToTargetAsync` rather than the publish queue — nothing is waiting on an HTTP request here, and a direct call keeps the row's `Sent`/`Failed` the network's real answer instead of "handed to a queue". **Threads are not schedulable, and the window now says so**: the toggle used to stay ticked and be silently dropped, since the scheduled path never had thread support at all. The blog is not a publish target, so a ticked blog publishes now while the networks wait — also said out loud rather than left to be discovered.
+
+**X and Bluesky pick their own versions (ADR-100).** Ticking two versions meant two tweets from one account and two credits. The panel now carries its own language pills — a subset of the window's, all of them by default, so nothing changed for anyone who wants both. The X credit estimate follows the network's own set, which is the same situation in which it used to be wrong.
+
+**An RSS button in the blog header.** The feed has existed since ADR-024 and was discoverable only by a reader who already knew to look for `<link rel="alternate">`. Styled secondary next to "Open in Telegram" — subscribing is an offer, not the header's main action.
+
+`dotnet test` 617/617, `ng build` warning-free, and the blog header plus `/rss.xml` verified against a local run (bot disabled, scratch database) rather than by reading the template.
+
 ## 2026-08-08 — who is reading (T-115, ADR-097, v0.9.39)
 
 Marty's request: views by country, by language, on the stats page. The blocker was that nothing had ever been recorded — a view was one increment of `Draft.ViewCount` with no dimension attached to it, so no query could have answered this.

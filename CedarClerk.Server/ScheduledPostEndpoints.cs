@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using CedarClerk.Core;
 using CedarClerk.Localization;
+using CedarClerk.Server.Publishing;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
@@ -9,7 +10,12 @@ public static class ScheduledPostEndpoints
 {
     // Language nullable rather than a literal default — it resolves against the draft's own
     // primary language (ADR-064), which is not Russian for every draft any more.
-    public record ScheduleRequest(Guid DraftId, string ChatId, DateTime ScheduledAtUtc, string Format = Consts.ContentTypes.Markdown, string? Language = null);
+    //
+    // TargetId is how a non-Telegram network is scheduled (ADR-099); ChatId is what a Telegram
+    // caller still sends. Exactly one of the two identifies the destination, and either way the
+    // stored row ends up carrying a TargetId.
+    public record ScheduleRequest(Guid DraftId, DateTime ScheduledAtUtc, string? ChatId = null,
+        Guid? TargetId = null, string Format = Consts.ContentTypes.Markdown, string? Language = null);
 
     public static void MapScheduledPostEndpoints(this WebApplication app)
     {
@@ -22,12 +28,15 @@ public static class ScheduledPostEndpoints
                 .OrderBy(p => p.ScheduledAtUtc)
                 .Join(db.Drafts, p => p.DraftId, d => d.Id, (p, d) => new
                 {
-                    p.Id, p.DraftId, DraftTitle = d.Title, p.ChatId, p.ScheduledAtUtc,
+                    p.Id, p.DraftId, DraftTitle = d.Title, p.ChatId, p.TargetId, p.Network, p.ScheduledAtUtc,
                     p.Status, p.Error, p.MessageId, p.Format, p.Language,
                 })
                 .ToListAsync();
-            
+
             var channels = await db.Channels.Where(c => c.OwnerId == uid).ToListAsync();
+            // The name of a non-Telegram destination, which has no Channel row to read it from.
+            var targetNames = await db.PublishTargets.Where(t => t.OwnerId == uid)
+                .ToDictionaryAsync(t => t.Id, t => t.DisplayName);
             return Results.Ok(posts.Select(p =>
             {
                 var trimmed = p.ChatId.Trim();
@@ -36,9 +45,11 @@ public static class ScheduledPostEndpoints
                     : long.TryParse(trimmed, out var numId) ? channels.FirstOrDefault(c => c.TelegramChatId == numId) : null;
                 return new
                 {
-                    p.Id, p.DraftId, p.DraftTitle, p.ChatId, p.ScheduledAtUtc,
+                    p.Id, p.DraftId, p.DraftTitle, p.ChatId, p.TargetId, p.Network, p.ScheduledAtUtc,
                     p.Status, p.Error, p.MessageId, p.Format, p.Language,
                     ChannelTitle = channel?.Title,
+                    TargetName = channel?.Title
+                        ?? (p.TargetId is { } tid && targetNames.TryGetValue(tid, out var name) ? name : null),
                 };
             }));
         });
@@ -50,8 +61,35 @@ public static class ScheduledPostEndpoints
             if (draft is null)
                 return Results.NotFound(new { error = ErrorMessages.DraftNotFoundPlain });
             
-            if (await SubscriptionPlan.ResolveOwnedChannelAsync(db, uid, req.ChatId) is null)
-                return Results.Json(new { error = ErrorMessages.ScheduleOnlyToOwnChannels }, statusCode: StatusCodes.Status403Forbidden);
+            // ADR-099 — one destination, named either way it can be named. A target id comes from
+            // the export window for any network; a chat id is the Telegram-shaped call that predates
+            // it, and it is resolved to a target here so every stored row carries one.
+            string network;
+            Guid targetId;
+            var chatId = "";
+            if (req.TargetId is { } requested)
+            {
+                var target = await db.PublishTargets.FirstOrDefaultAsync(
+                    t => t.Id == requested && t.OwnerId == uid && t.IsActive);
+                if (target is null)
+                    return Results.Json(new { error = ErrorMessages.DestinationNotConnected }, statusCode: StatusCodes.Status403Forbidden);
+                network = target.Network;
+                targetId = target.Id;
+                if (network == PublishNetworks.Telegram) chatId = target.RemoteId;
+            }
+            else if (!string.IsNullOrWhiteSpace(req.ChatId))
+            {
+                var channel = await SubscriptionPlan.ResolveOwnedChannelAsync(db, uid, req.ChatId);
+                if (channel is null)
+                    return Results.Json(new { error = ErrorMessages.ScheduleOnlyToOwnChannels }, statusCode: StatusCodes.Status403Forbidden);
+                network = PublishNetworks.Telegram;
+                targetId = (await TelegramTargetProjection.EnsureAsync(db, channel)).Id;
+                chatId = req.ChatId;
+            }
+            else
+            {
+                return Results.BadRequest(new { error = ErrorMessages.PickADestination });
+            }
 
             var language = req.Language ?? draft.PrimaryLanguage;
             if (language != draft.PrimaryLanguage)
@@ -64,7 +102,9 @@ public static class ScheduledPostEndpoints
             var post = new ScheduledPost
             {
                 DraftId = req.DraftId,
-                ChatId = req.ChatId,
+                ChatId = chatId,
+                TargetId = targetId,
+                Network = network,
                 ScheduledAtUtc = req.ScheduledAtUtc,
                 OwnerId = uid,
                 Format = req.Format,

@@ -93,6 +93,28 @@ function toDatetimeLocalValue(date: Date): string {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+// ADR-098 — which channel each language was last sent to. A browser preference, not draft state:
+// it saves re-picking the same two channels on every post, and a stale entry costs nothing because
+// a channel that is no longer in the connected list simply doesn't match any picker button.
+const TELEGRAM_CHANNEL_PREFS_KEY = 'cedar.tgChannelByLang';
+
+function loadTelegramChannelPrefs(): Record<string, string> {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(TELEGRAM_CHANNEL_PREFS_KEY) ?? 'null');
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+        return Object.fromEntries(
+            Object.entries(parsed as Record<string, unknown>).filter(([, v]) => typeof v === 'string')) as Record<string, string>;
+    } catch {
+        return {};
+    }
+}
+
+function saveTelegramChannelPrefs(map: Record<string, string>) {
+    try {
+        localStorage.setItem(TELEGRAM_CHANNEL_PREFS_KEY, JSON.stringify(map));
+    } catch { /* private mode / quota — the mapping just doesn't survive the tab */ }
+}
+
 type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
 
 // ─── The publish progress checklist ───────────────────────────────────────────────────────────
@@ -320,18 +342,23 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return step.parts?.filter(p => p.status === 'done').length ?? 0;
     }
 
-    /** The Telegram account row behind the chat id the export window has selected. */
-    private async telegramTargetId(chatId: string): Promise<string | null> {
+    /**
+     * The Telegram account row behind each ticked version's chosen chat (ADR-098). One networks
+     * fetch for the whole publish rather than one per language — the answer is the same either way.
+     */
+    private async telegramTargetIds(langs: string[]): Promise<Record<string, string | null>> {
         const networks = await this.publishApi.networks();
         const telegram = networks.find(n => n.network === 'telegram');
-        const trimmed = chatId.trim();
-        const byRemoteId = telegram?.accounts.find(a => a.remoteId === trimmed);
-        if (byRemoteId) return byRemoteId.id;
-        // The window also accepts "@name", while a target row is keyed by the numeric chat id.
-        const channel = this.channels().find(c => '@' + (c.username ?? '') === trimmed);
-        return channel
-            ? telegram?.accounts.find(a => a.remoteId === String(channel.telegramChatId))?.id ?? null
-            : null;
+        const resolve = (chatId: string): string | null => {
+            const byRemoteId = telegram?.accounts.find(a => a.remoteId === chatId);
+            if (byRemoteId) return byRemoteId.id;
+            // The window also accepts "@name", while a target row is keyed by the numeric chat id.
+            const channel = this.channels().find(c => '@' + (c.username ?? '') === chatId);
+            return channel
+                ? telegram?.accounts.find(a => a.remoteId === String(channel.telegramChatId))?.id ?? null
+                : null;
+        };
+        return Object.fromEntries(langs.map(l => [l, resolve(this.chatIdFor(l))]));
     }
 
     // ─── Short-post networks: X and Bluesky (T-087/T-089/T-110, ADR-077/093/094/096) ──────────
@@ -368,6 +395,32 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private microDirty: Record<MicroNetwork, Set<string>> = { bluesky: new Set(), x: new Set() };
     /** Which language's text the panel is editing — its own tab row, shown only when >1 is ticked. */
     microTextLang = signal<Record<MicroNetwork, string>>({ bluesky: DEFAULT_PRIMARY_LANGUAGE, x: DEFAULT_PRIMARY_LANGUAGE });
+
+    /**
+     * ADR-100 — which versions actually go out on this network, a subset of the window's ticked
+     * ones. Empty means "all of them", which is both the default and what the window did before:
+     * one account with a bilingual audience is a real case, two tweets nobody asked for is not.
+     */
+    microLangs = signal<Record<MicroNetwork, string[]>>({ bluesky: [], x: [] });
+
+    microLangsOf(network: MicroNetwork): string[] {
+        const picked = this.microLangs()[network].filter(l => this.exportLangs().includes(l));
+        return picked.length ? picked : this.exportLangs();
+    }
+
+    isMicroLang(network: MicroNetwork, lang: string): boolean {
+        return this.microLangsOf(network).includes(lang);
+    }
+
+    toggleMicroLang(network: MicroNetwork, lang: string) {
+        const current = this.microLangsOf(network);
+        const next = current.includes(lang) ? current.filter(l => l !== lang) : [...current, lang];
+        // A ticked destination that sends nothing is not a choice the window can act on.
+        if (!next.length) return;
+        this.microLangs.update(map => ({ ...map, [network]: next }));
+        this.syncMicroTextLang(network);
+        if (this.microMode()[network] === 'thread') this.countMicroParts(network);
+    }
 
     anyDestination(): boolean {
         return this.destBlog() || this.destTelegram() || this.destBluesky() || this.destX();
@@ -410,7 +463,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (!id) return;
         this.microCounting.update(map => ({ ...map, [network]: true }));
         try {
-            const preview = await this.publishApi.threadPreview(id, network, this.exportLangs()[0]);
+            const preview = await this.publishApi.threadPreview(id, network, this.microLangsOf(network)[0]);
             this.microParts.update(map => ({ ...map, [network]: preview.parts.length }));
         } catch {
             // Without a count the mode is still valid — the server splits it either way; only the
@@ -430,11 +483,15 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return this.microMode()[network] === 'link' && this.microLength(network) > this.microLimits[network];
     }
 
-    /** Credits an X publication would cost: one per post, per ticked version (ADR-092/094). */
+    /**
+     * Credits an X publication would cost: one per post, per version X is actually sending
+     * (ADR-092/094). Counted off this network's own language set, not the window's — before
+     * ADR-100 the two were the same number and the estimate was wrong whenever they shouldn't be.
+     */
     xCreditCost(): number {
         if (!this.destX()) return 0;
         const perLanguage = this.microMode()['x'] === 'thread' ? Math.max(1, this.microParts()['x']) : 1;
-        return perLanguage * this.exportLangs().length;
+        return perLanguage * this.microLangsOf('x').length;
     }
 
     xCreditsShort(): boolean {
@@ -490,7 +547,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     private syncMicroTextLang(network: MicroNetwork) {
-        const langs = this.exportLangs();
+        const langs = this.microLangsOf(network);
         if (!langs.includes(this.microTextLang()[network]))
             this.setMicroTextLang(network, langs[0] ?? DEFAULT_PRIMARY_LANGUAGE);
     }
@@ -711,7 +768,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private posts = inject(PostsService); // + import сверху
     private channelsApi = inject(ChannelsService);
 
-    chatId = '';
+    // ADR-098 — the Telegram destination is a (language, channel) pair, not a channel: a post with
+    // an English translation goes to the English channel in the same publish, not in a second one.
+    // Seeded from the browser's remembered mapping, which is a preference of the author's and not
+    // a property of the draft (a channel that is no longer connected simply doesn't preselect).
+    telegramChatIds = signal<Record<string, string>>(loadTelegramChannelPrefs());
     // Telegram export is Markdown-only — the Rich Message HTML mode needs exact custom tag
     // names (<photo>, <tg-slideshow>, ...) and has repeatedly broken in practice; Markdown uses
     // plain, well-tested syntax for the same underlying rich-block output. HTML stays in use for
@@ -973,8 +1034,40 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return (title?.[0] ?? '?').toUpperCase();
     }
 
-    isSelectedChannel(c: Channel): boolean {
-        return this.chatId.trim() === String(c.telegramChatId);
+    // ─── Telegram: a channel per version (ADR-098) ────────────────────────────────────────────
+    chatIdFor(lang: string): string {
+        return (this.telegramChatIds()[lang] ?? '').trim();
+    }
+
+    isSelectedChannel(lang: string, c: Channel): boolean {
+        return this.chatIdFor(lang) === String(c.telegramChatId);
+    }
+
+    selectedChannelFor(lang: string): Channel | undefined {
+        const chatId = this.chatIdFor(lang);
+        return chatId ? this.channels().find(c => String(c.telegramChatId) === chatId) : undefined;
+    }
+
+    selectChannel(lang: string, c: Channel) {
+        this.setChatId(lang, String(c.telegramChatId));
+    }
+
+    clearChannel(lang: string) {
+        this.setChatId(lang, '');
+    }
+
+    private setChatId(lang: string, chatId: string) {
+        this.telegramChatIds.update(map => ({ ...map, [lang]: chatId }));
+        saveTelegramChannelPrefs(this.telegramChatIds());
+    }
+
+    /** Ticked versions with no channel behind them — what Publish is waiting on. */
+    langsMissingChannel(): string[] {
+        return this.exportLangs().filter(l => !this.chatIdFor(l));
+    }
+
+    missingChannelLabel(): string {
+        return this.langsMissingChannel().map(l => l.toUpperCase()).join(', ');
     }
 
     // I3 — the shortcut a button also answers to, appended to its tooltip. Every entry was read
@@ -2313,12 +2406,22 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
+    /** Everything a schedule can apply to — the blog is not a publish target (ADR-099). */
+    anyNetworkDestination(): boolean {
+        return this.destTelegram() || this.destBluesky() || this.destX();
+    }
+
+    /** True when pressing Publish will schedule the networks rather than send them now. */
+    schedulingActive(): boolean {
+        return !!this.scheduledAt && this.anyNetworkDestination();
+    }
+
     // FI2.6/FI2.7 — the button says what pressing it does: schedule if a time is set, update if
     // the blog page is already live, publish otherwise.
     publishButtonLabel(): string {
         const tx = this.t().editor.exportModal;
         if (this.publishingAll()) return tx.publishing;
-        if (this.destTelegram() && this.scheduledAt) return tx.scheduleAndPublish;
+        if (this.schedulingActive()) return tx.scheduleAndPublish;
         if (this.destBlog() && this.currentBlog()?.isPublished) return tx.update;
         return tx.publish;
     }
@@ -2327,9 +2430,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (this.publishingAll() || this.blogBusy() || this.exporting()) return false;
         if (!this.destBlog() && !this.destTelegram() && !this.destBluesky() && !this.destX()) return false;
         // Each ticked destination must be able to run. The blog needs nothing extra; Telegram needs
-        // a chosen channel; a short-post network needs a connected account, a post that fits when
-        // it is being sent as one, and — for X — the credits it will cost (ADR-092).
-        if (this.destTelegram() && !this.chatId.trim()) return false;
+        // a chosen channel for EVERY ticked version (ADR-098) — "RU picked, EN not" is an
+        // incomplete request, not one with a default; a short-post network needs a connected
+        // account, a post that fits when it is being sent as one, and — for X — its credits.
+        if (this.destTelegram() && this.langsMissingChannel().length) return false;
         for (const network of this.microNetworks) {
             if (!this.destination(network)()) continue;
             if (!this.account(network) || this.microOverLimit(network)) return false;
@@ -2361,16 +2465,22 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 for (const language of this.blogLanguages())
                     previews.push(await this.posts.updatePreview(id, 'blog', language));
             }
-            if (this.destTelegram() && !this.scheduledAt && this.chatId.trim()) {
-                for (const language of this.exportLangs())
-                    previews.push(await this.posts.updatePreview(id, 'telegram', language, this.chatId.trim()));
+            if (this.destTelegram() && !this.scheduledAt) {
+                // ADR-098 — asked per version about ITS channel. One chat id for the whole window
+                // meant the EN question was answered about the RU channel.
+                for (const language of this.exportLangs()) {
+                    const chatId = this.chatIdFor(language);
+                    if (chatId) previews.push(await this.posts.updatePreview(id, 'telegram', language, chatId));
+                }
             }
             // A short-post network keys its revisions by the target row's id — the same string the
             // publish queue uses as the destination, so the two ask about the same thing.
+            // Skipped while scheduling, same as Telegram above: nothing is being overwritten yet,
+            // and the confirmation belongs to the send, which happens later.
             for (const network of this.microNetworks) {
                 const account = this.account(network);
-                if (!this.destination(network)() || !account) continue;
-                for (const language of this.exportLangs())
+                if (this.scheduledAt || !this.destination(network)() || !account) continue;
+                for (const language of this.microLangsOf(network))
                     previews.push(await this.posts.updatePreview(id, network, language, account.id));
             }
         } catch {
@@ -2417,23 +2527,30 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         // The checklist mirrors what pressing the button will actually do — one row per phase,
         // built before anything runs so the author sees the whole plan tick over.
         const pr = this.t().editor.publishRun;
+        const scheduling = this.schedulingActive();
         const steps: PublishRunStep[] = [{ id: 'save', label: pr.saving, status: 'waiting' }];
+        // The blog is never scheduled (ADR-099) — it is not a publish target, so a ticked blog
+        // goes out now even when the networks are being queued for later.
         if (this.destBlog()) steps.push({ id: 'blog', label: pr.blog, status: 'waiting' });
-        if (this.destTelegram()) {
-            if (this.scheduledAt) steps.push({ id: 'schedule', label: pr.scheduling, status: 'waiting' });
-            else for (const lang of this.exportLangs())
-                steps.push({ id: 'tg-' + lang, label: pr.telegram(lang.toUpperCase()), status: 'waiting' });
-        }
-        // ADR-096 — X and Bluesky lost their own Publish buttons; the checklist is where four
-        // networks going out at once becomes readable, one row per network per version.
-        for (const network of this.microNetworks) {
-            if (!this.destination(network)()) continue;
-            for (const lang of this.exportLangs())
-                steps.push({
-                    id: `${network}-${lang}`,
-                    label: pr.network(this.microLabels[network], lang.toUpperCase()),
-                    status: 'waiting',
-                });
+        if (scheduling) {
+            // One row for the whole schedule: nothing is sent, so a row per network per language
+            // would be a list of identical "queued" lines.
+            steps.push({ id: 'schedule', label: pr.scheduling, status: 'waiting' });
+        } else {
+            if (this.destTelegram())
+                for (const lang of this.exportLangs())
+                    steps.push({ id: 'tg-' + lang, label: pr.telegram(lang.toUpperCase()), status: 'waiting' });
+            // ADR-096 — X and Bluesky lost their own Publish buttons; the checklist is where four
+            // networks going out at once becomes readable, one row per network per version.
+            for (const network of this.microNetworks) {
+                if (!this.destination(network)()) continue;
+                for (const lang of this.microLangsOf(network))
+                    steps.push({
+                        id: `${network}-${lang}`,
+                        label: pr.network(this.microLabels[network], lang.toUpperCase()),
+                        status: 'waiting',
+                    });
+            }
         }
         this.runStart(steps);
 
@@ -2463,24 +2580,25 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                     if (link) links.push(link);
                 }
             }
-            if (this.destTelegram()) {
-                // FI2.7 — a set time makes this the same button, scheduling rather than sending.
-                if (this.scheduledAt) {
-                    this.runUpdate('schedule', { status: 'running' });
-                    await this.schedulePost();
-                    const ok = this.scheduleResult().startsWith('✓');
-                    this.runUpdate('schedule', ok
-                        ? { status: 'done' }
-                        : { status: 'failed', error: this.scheduleResult() });
-                } else {
+            // FI2.7/ADR-099 — a set time makes this the same button, scheduling rather than
+            // sending, and now for every ticked network at once rather than Telegram alone.
+            if (scheduling) {
+                this.runUpdate('schedule', { status: 'running' });
+                await this.schedulePost();
+                const ok = this.scheduleResult().startsWith('✓');
+                this.runUpdate('schedule', ok
+                    ? { status: 'done' }
+                    : { status: 'failed', error: this.scheduleResult() });
+            } else {
+                if (this.destTelegram()) {
                     links.push(...await this.exportDraft());
                     if (this.updateConfirm()) { this.publishRun.set(null); return; }
                 }
-            }
-            for (const network of this.microNetworks) {
-                if (!this.destination(network)()) continue;
-                links.push(...await this.publishMicroNetwork(network));
-                if (this.updateConfirm()) { this.publishRun.set(null); return; }
+                for (const network of this.microNetworks) {
+                    if (!this.destination(network)()) continue;
+                    links.push(...await this.publishMicroNetwork(network));
+                    if (this.updateConfirm()) { this.publishRun.set(null); return; }
+                }
             }
         } finally {
             this.publishingAll.set(false);
@@ -2516,8 +2634,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             // T-090 — queued, not awaited over HTTP. The old shape held one request open while
             // Telegram downloaded every media file from this server, which is how a 30MB post
             // returned a proxy's 502 about a publish that was still running (ADR-080).
-            const targetId = await this.telegramTargetId(this.chatId);
-            if (!targetId) {
+            // ADR-098 — one target per version, resolved from that version's own channel.
+            const targetIds = await this.telegramTargetIds(this.exportLangs());
+            if (this.exportLangs().every(l => !targetIds[l])) {
                 this.exportError.set({ code: 403, message: this.t().editor.errors.connectChannel });
                 this.failTelegramSteps(this.t().editor.errors.connectChannel);
                 return links;
@@ -2528,6 +2647,15 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             // stopping at the first one.
             const queuedByLang = new Map<string, PublishJob[]>();
             for (const lang of this.exportLangs()) {
+                const targetId = targetIds[lang];
+                // A version whose channel could not be resolved fails on its own row — the others
+                // still go out, which is the whole reason these are separate jobs.
+                if (!targetId) {
+                    const message = this.t().editor.errors.connectChannel;
+                    if (!this.exportError()) this.exportError.set({ code: 403, message });
+                    this.runUpdate('tg-' + lang, { status: 'failed', error: message });
+                    continue;
+                }
                 const { jobs } = await this.publishApi.queue(id, [targetId], lang, this.confirmedFingerprints[lang], this.splitIntoThread());
                 queuedByLang.set(lang, jobs);
                 // A thread unfolds into its part chips the moment it is queued (T-106).
@@ -2563,7 +2691,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 // A thread's public link is its head — every later part is a reply hanging off it.
                 const head = jobs[0];
                 this.exportResult.set(`✓ Published (message #${head.remoteId})`);
-                const url = head.publicUrl ?? this.buildTelegramLink(this.chatId.trim(), Number(head.remoteId));
+                const url = head.publicUrl ?? this.buildTelegramLink(this.chatIdFor(lang), Number(head.remoteId));
                 this.exportLink.set(url);
                 const link = url ? { label: `${this.t().editor.exportModal.openTelegram} ${lang.toUpperCase()}`, url } : undefined;
                 this.runUpdate('tg-' + lang, { status: 'done', link });
@@ -2600,7 +2728,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (!id || !account) return links;
 
         const asThread = this.microMode()[network] === 'thread';
-        for (const lang of this.exportLangs()) {
+        for (const lang of this.microLangsOf(network)) {
             const step = `${network}-${lang}`;
             this.runUpdate(step, { status: 'running' });
             try {
@@ -2684,10 +2812,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return username ? `https://t.me/${username}/${messageId}` : null;
     }
 
-    selectChannel(c: Channel) {
-        this.chatId = String(c.telegramChatId);
-    }
-
+    /**
+     * ADR-099 — every ticked network, one scheduled row per destination and version. Partial
+     * failure is reported as such: a row that could not be scheduled must not be hidden behind
+     * the ones that could.
+     */
     async schedulePost() {
         const id = this.currentId();
         if (!id || !this.scheduledAt) return;
@@ -2695,18 +2824,62 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (this.saveState() !== 'saved') await this.save();
         this.scheduling.set(true);
         this.scheduleResult.set('');
-        try {
-            const scheduledAtUtc = new Date(this.scheduledAt).toISOString();
-            for (const lang of this.exportLangs()) {
-                await this.posts.schedule(id, this.chatId.trim(), scheduledAtUtc, this.format, lang);
+
+        const scheduledAtUtc = new Date(this.scheduledAt).toISOString();
+        const tx = this.t().editor.exportModal;
+        let scheduled = 0;
+        const failures: string[] = [];
+        const attempt = async (label: string, run: () => Promise<unknown>) => {
+            try {
+                await run();
+                scheduled++;
+            } catch (e) {
+                failures.push(`${label}: ${httpErrorMessage(e, tx.scheduleFailed)}`);
             }
-            this.scheduleResult.set('✓ Scheduled');
-            this.scheduledAt = '';
-        } catch {
-            this.scheduleResult.set('✗ Scheduling failed');
+        };
+
+        try {
+            if (this.destTelegram()) {
+                for (const lang of this.exportLangs()) {
+                    const chatId = this.chatIdFor(lang);
+                    if (!chatId) { failures.push(`Telegram ${lang.toUpperCase()}: ${this.t().editor.errors.connectChannel}`); continue; }
+                    await attempt(`Telegram ${lang.toUpperCase()}`,
+                        () => this.posts.schedule(id, scheduledAtUtc, lang, { chatId }, this.format));
+                }
+            }
+            for (const network of this.microNetworks) {
+                const account = this.account(network);
+                if (!this.destination(network)() || !account) continue;
+                // The override has to exist server-side before a send that happens without this
+                // page open — the scheduled job reads the stored text, never the field.
+                await this.saveMicroTexts(network);
+                for (const lang of this.microLangsOf(network)) {
+                    await attempt(`${this.microLabels[network]} ${lang.toUpperCase()}`,
+                        () => this.posts.schedule(id, scheduledAtUtc, lang, { targetId: account.id }));
+                }
+            }
+
+            if (failures.length === 0 && scheduled > 0) {
+                this.scheduleResult.set(`✓ ${tx.scheduledCount(scheduled)}`);
+                this.scheduledAt = '';
+            } else {
+                this.scheduleResult.set(`✗ ${failures.join(' · ')}`);
+            }
         } finally {
             this.scheduling.set(false);
         }
+    }
+
+    /**
+     * A time is set. Threads are not schedulable (ADR-099) and the toggles that promise one are
+     * reset here rather than left ticked-but-ignored, which is what the old Telegram-only path did.
+     */
+    onScheduledAtChange(value: string) {
+        this.scheduledAt = value;
+        if (!value) return;
+        this.splitIntoThread.set(false);
+        this.microMode.update(map => Object.fromEntries(
+            Object.entries(map).map(([n, mode]) => [n, mode === 'thread' ? 'link' : mode])) as Record<MicroNetwork, MicroMode>);
     }
 
     quickSchedule(preset: '1m' | '5m' | '1h' | '6h' | '12h' | 'tomorrow') {
@@ -2722,11 +2895,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 9, 0, 0, 0);
                 break;
         }
-        this.scheduledAt = toDatetimeLocalValue(target);
-    }
-
-    selectedChannel(): Channel | undefined {
-        return this.channels().find(c => String(c.telegramChatId) === this.chatId.trim());
+        this.onScheduledAtChange(toDatetimeLocalValue(target));
     }
 
     utcDate(iso: string): Date {

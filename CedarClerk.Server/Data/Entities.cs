@@ -690,7 +690,24 @@ public class ScheduledPost
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid DraftId { get; set; }
+
+    /// <summary>
+    /// Telegram's chat id. Still written for Telegram rows — the ownership check and the channel
+    /// name in the Posts Manager both read it — but it stopped being the destination's identity
+    /// when scheduling became network-agnostic (ADR-099). Empty for every other network.
+    /// </summary>
     public string ChatId { get; set; } = "";
+
+    /// <summary>
+    /// The destination as a <see cref="PublishTarget"/> — what lets a post be scheduled for any
+    /// network rather than Telegram only. Null means a row written before this column: those
+    /// publish through <see cref="ChatId"/>, which is the only thing they carry.
+    /// </summary>
+    public Guid? TargetId { get; set; }
+
+    /// <summary>One of <see cref="CedarClerk.Core.PublishNetworks"/>, denormalised so the list reads without a join.</summary>
+    public string Network { get; set; } = PublishNetworks.Telegram;
+
     public DateTime ScheduledAtUtc { get; set; }
     
     /// <summary>
