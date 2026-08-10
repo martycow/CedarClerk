@@ -25,6 +25,23 @@ irreversible.
 `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` cannot move it. The desktop shell needs a free
 port, so that single line has to become configurable — the only server change the desktop requires.
 
+### One account for both (ADR-108) — 10.08.2026
+
+Marty's ask: sign in on the desktop against the Pi, because he had used the same address in both
+places and could see the confusion coming. Done — **identity comes from the Pi, data stays local.**
+
+- [ ] **Rebuild and try it**: `.\Scripts\build.ps1 -DesktopOnly`, then `cd CedarClerk.Desktop; npm start`.
+  Sign in with the same email and password as the website. The local account made yesterday is
+  **adopted**, not duplicated, so nothing you already made there is orphaned.
+- [ ] **The honest cost, and it needs your eye**: one identity does **not** mean one set of data.
+  Drafts on the Pi and documents here stay separate. Every screen now carries a "local data" chip in
+  the header saying so — check that it reads clearly enough, because without it this change makes
+  the confusion worse rather than better.
+- [ ] **Offline**: an existing session lasts 30 days; a *new* sign-in needs the Pi and says so with
+  its own message, distinct from a wrong password.
+- [ ] **Not built**: full cloud mode (data from the Pi too). It would cost the asset index — the Pi
+  cannot read your disk — which is the whole reason the desktop exists.
+
 ### First real desktop launch found two blockers — both fixed 10.08.2026
 
 Marty launched the desktop app and asked two questions; both turned out to be defects I had left.

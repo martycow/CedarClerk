@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { httpErrorMessage } from './http-error.util';
 import { LocaleService, UiLang } from './i18n/locale.service';
 
 interface MeResponse {
@@ -88,13 +89,22 @@ export class AuthService {
     // over. The login page uses this to offer a retry instead of a "wrong password"-shaped dead end.
     readonly serverUnreachable = signal(false);
 
-    async login(email: string, password: string): Promise<boolean> {
+    /**
+     * ADR-108 — the server distinguishes "wrong password" (401) from "could not ask" (503), and so
+     * must this: sending somebody to change a password because their network was down is the worst
+     * kind of sign-in error. The message comes back from the server, which knows which host it
+     * failed to reach.
+     */
+    async login(email: string, password: string): Promise<{ ok: true } | { ok: false; error?: string }> {
         try {
             await firstValueFrom(this.http.post('/api/auth/login', { email, password }));
             await this.refresh();
-            return this.userEmail() !== null;
-        } catch {
-            return false;
+            return this.userEmail() !== null ? { ok: true } : { ok: false };
+        } catch (e) {
+            const message = e instanceof HttpErrorResponse && e.status === 503
+                ? httpErrorMessage(e, '')
+                : undefined;
+            return { ok: false, error: message || undefined };
         }
     }
 

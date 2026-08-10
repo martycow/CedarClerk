@@ -36,7 +36,7 @@ public static class AssetIndexEndpoints
         ["png", "jpg", "jpeg", "gif", "bmp", "webp", "tga", "tif", "tiff", "pbm", "qoi", "blend", "blend1", "blend2"];
 
     /// <summary>Whether this installation may walk its own filesystem. False on the Pi, by omission.</summary>
-    public static bool IndexingEnabled(IConfiguration config) => config.GetValue<bool>(EnabledKey);
+    public static bool IndexingEnabled(IConfiguration config) => config.IsOn(EnabledKey);
 
     public static void MapAssetIndexEndpoints(this WebApplication app)
     {

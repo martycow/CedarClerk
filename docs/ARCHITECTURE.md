@@ -103,6 +103,8 @@ Ownership: nearly every table has an `OwnerId` and every endpoint filters by it 
 
 ASP.NET Core Identity (`AddIdentityCore<ApplicationUser>`), cookie-based (`IdentityConstants.ApplicationScheme`), backed by the same SQLite DB via `AddEntityFrameworkStores<CedarDbContext>`. Registration is invite-code gated (`Cedar:InviteCode` config). 401/403 are returned directly instead of redirecting to a login page (`OnRedirectToLogin`/`OnRedirectToAccessDenied` overrides), since the client is a SPA. Telegram account linking is a separate, optional step for an already-authenticated user (HMAC-verified via `TelegramLoginVerifier` in Core) — not an alternate login method; see `docs/DECISIONS.md`.
 
+**Identity can live on another installation (ADR-108).** With `Cedar:Auth:Upstream` set — only the desktop shell sets it, pointing at the Pi — `/api/auth/login` verifies the credentials there, then finds or creates the local account standing for that identity (`ApplicationUser.RemoteUserId`) and issues an ordinary local cookie. Only the question travels; no upstream cookie is kept, and the data stays wherever it already is. Local registration is refused in that configuration, because a second account on the same address is exactly the confusion this prevents. An unreachable upstream answers **503**, never 401 — "the server did not reply" and "your password is wrong" must not look the same.
+
 ## Scheduling (Quartz.NET)
 
 Three jobs, registered in `Program.cs`:

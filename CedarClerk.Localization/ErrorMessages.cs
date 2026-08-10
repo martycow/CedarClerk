@@ -188,6 +188,15 @@ public static class ErrorMessages
         Ru("В проекте должен остаться хотя бы один документ. Удалите проект целиком или сначала добавьте другой документ.",
            "A project must keep at least one document. Delete the project instead, or add another document first.");
 
+    // ADR-108 — identity that lives on another installation.
+    public static string UpstreamUnreachable(string host) =>
+        Ru($"Не удалось связаться с {host}, чтобы проверить вход. Дело не в пароле — сервер не ответил.",
+           $"Could not reach {host} to check the sign-in. This is not about the password — the server did not answer.");
+
+    public static string RegisterOnUpstream(string host) =>
+        Ru($"Учётные записи создаются на {host} — это приложение только спрашивает у него, кто вы.",
+           $"Accounts are created on {host} — this app only asks it who you are.");
+
     // T-122 — the asset index.
     public static string AssetIndexingUnavailable =>
         Ru("Индексация папок доступна только в десктопном приложении: сервер в облаке не читает диски со стороны пользователя.",

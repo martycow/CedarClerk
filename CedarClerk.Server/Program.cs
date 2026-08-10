@@ -91,6 +91,9 @@ builder.Services.AddSingleton<AiJobService>();
 // for seconds to minutes), so it is a singleton that makes its own scope per scan.
 builder.Services.AddSingleton<AssetIndexService>();
 builder.Services.AddSingleton(new ThumbnailPaths(thumbnailsDir));
+// ADR-108 — asks another installation who somebody is. Holds no state; scoped because it takes
+// IHttpClientFactory and is used inside a request.
+builder.Services.AddScoped<UpstreamAuth>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramBotService>());
 builder.Services.AddHttpClient(); // named clients used by billing (Stripe), translation providers, and email
 builder.Services.AddSingleton<ResendEmailProvider>();
@@ -186,7 +189,7 @@ var indexNoCache = new StaticFileOptions
 // The landing is a sales page for strangers who found the product on the web. The desktop app has
 // no strangers — it opens on somebody's own machine — and greeting them with pricing was the first
 // thing Marty saw on the first real launch (10.08.2026).
-if (!builder.Configuration.GetValue<bool>(Consts.General.DesktopModeCfg))
+if (!builder.Configuration.IsOn(Consts.General.DesktopModeCfg))
     app.UseLanding(builder.Configuration[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost);
 
 app.UseDefaultFiles();
@@ -291,15 +294,18 @@ using (var scope = app.Services.CreateScope())
 }
 
 #region Health (Heartbeat)
-app.MapGet("/api/health", () => Results.Ok(new
+app.MapGet("/api/health", (UpstreamAuth upstream) => Results.Ok(new
 {
+    // ADR-108 — where this installation checks credentials, when it is not itself. The login page
+    // needs it before anyone is signed in, and it names a host rather than a secret.
+    upstreamAuthHost = upstream.IsConfigured ? upstream.DisplayHost : null,
     name = app.Environment.ApplicationName,
     env = app.Environment.EnvironmentName,
     version = Consts.CurrentVersion,
     // Whether this installation asks for an invite code. Reported here because the register page
     // needs it *before* anyone is signed in, and /api/health is the one endpoint a stranger may
     // already call. It says what this server requires — not who is asking.
-    openRegistration = app.Configuration.GetValue<bool>(Consts.General.OpenRegistrationCfg),
+    openRegistration = app.Configuration.IsOn(Consts.General.OpenRegistrationCfg),
     timeUtc = DateTime.UtcNow,
     status = "I'm fine, thanks."
 }));

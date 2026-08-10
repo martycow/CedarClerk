@@ -7,6 +7,12 @@
     <app-cedar-logo [size]="19"></app-cedar-logo>
     <span class="brand-name">Cedar Clerk</span>
     @if (version.version(); as v) { <span class="version-tag" [title]="'v' + v">v{{ v }}</span> }
+    <!--ADR-108 — the account is shared with the server, the documents are not. With one identity
+        across two data sets, the expectation that they are the same gets STRONGER, so this says
+        otherwise on every screen rather than once at sign-in.-->
+    @if (version.upstreamAuthHost(); as host) {
+    <span class="local-tag" [title]="t().common.localDataHint(host)">{{ t().common.localData }}</span>
+    }
     <span class="crumb-sep">/</span>
     <span class="crumb-current">{{ crumb() }}</span>
     @if (crumbSuffix()) {

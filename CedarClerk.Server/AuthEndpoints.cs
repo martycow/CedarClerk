@@ -58,8 +58,13 @@ public static class AuthEndpoints
         #region Register
         groupBuilder.MapPost("/register", async (RegisterRequest req, UserManager<ApplicationUser> users,
             SignInManager<ApplicationUser> signIn, IConfiguration cfg, CedarDbContext db,
-            ResendEmailProvider email, ILogger<Program> logger) =>
+            ResendEmailProvider email, ILogger<Program> logger, UpstreamAuth upstream) =>
         {
+            // ADR-108 — where identity comes from upstream, accounts are made there. A second local
+            // account on the same address is precisely the confusion this exists to prevent.
+            if (upstream.IsConfigured)
+                return Results.BadRequest(new { error = ErrorMessages.RegisterOnUpstream(upstream.DisplayHost ?? "") });
+
             var submitted = req.InviteCode?.Trim() ?? "";
 
             // Real invite codes first (IF2 step 3), config code as the fallback — deliberately
@@ -76,7 +81,7 @@ public static class AuthEndpoints
             // strangers: it listens on 127.0.0.1 only and serves the one person sitting at the
             // machine. Without this a fresh install could not create its first account — there is no
             // code to type, and no way to make one without an account to make it from.
-            var openRegistration = cfg.GetValue<bool>(Consts.General.OpenRegistrationCfg);
+            var openRegistration = cfg.IsOn(Consts.General.OpenRegistrationCfg);
 
             if (!openRegistration && !codeUsable && !configMatches)
                 return Results.BadRequest(new { error = ErrorMessages.InvalidInviteCode });
@@ -155,8 +160,14 @@ public static class AuthEndpoints
         }).RequireAuthorization();
         #endregion
 
-        groupBuilder.MapPost("/login", async (LoginRequest req, SignInManager<ApplicationUser> signIn, UserManager<ApplicationUser> users) =>
+        groupBuilder.MapPost("/login", async (LoginRequest req, SignInManager<ApplicationUser> signIn,
+            UserManager<ApplicationUser> users, UpstreamAuth upstream) =>
         {
+            // ADR-108 — on the desktop, who you are is the Pi's answer, not this machine's. Only the
+            // question "are these credentials real" travels; the session that follows is local.
+            if (upstream.IsConfigured)
+                return await SignInThroughUpstreamAsync(req, signIn, users, upstream);
+
             var user = await users.FindByEmailAsync(req.Email);
             if (user is null) 
                 return Results.Unauthorized();
@@ -178,6 +189,9 @@ public static class AuthEndpoints
             var appUser = await users.GetUserAsync(user);
             return Results.Ok(new
             {
+                // ADR-108 — the stable identity a downstream installation keys its local account by.
+                // An email can be changed; this cannot.
+                id = appUser?.Id,
                 // Which optional modules this installation runs (ADR-101). Not a security boundary —
                 // the endpoints themselves are simply not mapped when the flag is off; this is what
                 // lets the client hide the menu entries instead of linking to a 404.
@@ -632,4 +646,56 @@ public static class AuthEndpoints
 
     private static HeaderSlotType? ParseSlotType(string? value) =>
         !string.IsNullOrWhiteSpace(value) && Enum.TryParse<HeaderSlotType>(value, out var t) ? t : null;
+
+    /// <summary>
+    /// ADR-108 — verify with the upstream, then find or make the local account standing for that
+    /// identity, and sign in locally.
+    /// </summary>
+    private static async Task<IResult> SignInThroughUpstreamAsync(
+        LoginRequest req, SignInManager<ApplicationUser> signIn, UserManager<ApplicationUser> users, UpstreamAuth upstream)
+    {
+        var (outcome, identity) = await upstream.VerifyAsync(req.Email, req.Password);
+
+        if (outcome == UpstreamAuth.Outcome.Unreachable)
+            // 503, not 401. Telling somebody their password is wrong when the server simply did not
+            // answer is the worst kind of sign-in error: it sends them to fix the one thing that is
+            // not broken.
+            return Results.Json(new { error = ErrorMessages.UpstreamUnreachable(upstream.DisplayHost ?? "") },
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        if (outcome != UpstreamAuth.Outcome.Ok || identity is null)
+            return Results.Unauthorized();
+
+        ApplicationUser? user = null;
+        if (identity.RemoteId is not null)
+            user = await users.Users.FirstOrDefaultAsync(u => u.RemoteUserId == identity.RemoteId);
+
+        // Adopt an account made here before this existed rather than creating a second one on the
+        // same address — which is exactly the mess this change is for.
+        user ??= await users.FindByEmailAsync(identity.Email);
+
+        if (user is null)
+        {
+            user = new ApplicationUser
+            {
+                UserName = identity.Email,
+                Email = identity.Email,
+                RemoteUserId = identity.RemoteId,
+                // The upstream confirmed the address by letting them in with it.
+                EmailConfirmed = true,
+            };
+            // No password: this account is never verified here, only recognised.
+            var created = await users.CreateAsync(user);
+            if (!created.Succeeded)
+                return Results.BadRequest(new { errors = created.Errors.Select(e => e.Description) });
+        }
+        else if (identity.RemoteId is not null && user.RemoteUserId != identity.RemoteId)
+        {
+            user.RemoteUserId = identity.RemoteId;
+            await users.UpdateAsync(user);
+        }
+
+        await signIn.SignInAsync(user, isPersistent: true);
+        return Results.Ok(new { message = "Logged in" });
+    }
 }

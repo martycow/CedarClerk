@@ -49,6 +49,12 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
             .HasIndex(u => u.TelegramUserId)
             .IsUnique()
             .HasFilter("\"TelegramUserId\" IS NOT NULL");
+        // ADR-108 — one local account per upstream identity. Filtered, because every ordinary
+        // account has no remote id and SQLite would otherwise treat them all as duplicates.
+        builder.Entity<ApplicationUser>()
+            .HasIndex(u => u.RemoteUserId)
+            .IsUnique()
+            .HasFilter("\"RemoteUserId\" IS NOT NULL");
         builder.Entity<BotKnownChat>()
             .HasIndex(c => c.TelegramChatId)
             .IsUnique();

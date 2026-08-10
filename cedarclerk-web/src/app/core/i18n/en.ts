@@ -20,9 +20,14 @@ export const en = {
         toggleTheme: 'Toggle theme',
         nothingHere: 'Nothing here.',
         backToEditor: 'Back to editor',
+        // ADR-108 — shown wherever the account comes from another installation but the data does not.
+        localData: 'local data',
+        localDataHint: (host: string) =>
+            `Your account is checked against ${host}, but the documents and assets here live on this computer only.`,
     },
     login: {
         tagline: 'Write here. Publish there. Moo.',
+        signsInAgainst: (host: string) => `Signing in against ${host}`,
         email: 'Email',
         password: 'Password',
         submit: 'Log in',

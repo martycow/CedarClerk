@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
+import { VersionService } from '../core/version.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { LangSwitchComponent } from '../shared/lang-switch.component';
@@ -17,6 +18,9 @@ export class LoginComponent {
     auth = inject(AuthService);
     private router = inject(Router);
     theme = inject(ThemeService);
+    // ADR-108 — names the installation that decides who you are, so signing in never feels like
+    // guessing which account this is.
+    version = inject(VersionService);
     t = inject(LocaleService).t;
 
     email = '';
@@ -37,9 +41,14 @@ export class LoginComponent {
     async submit() {
         this.busy.set(true);
         this.error.set('');
-        const ok = await this.auth.login(this.email, this.password);
+        const result = await this.auth.login(this.email, this.password);
         this.busy.set(false);
-        ok ? this.router.navigateByUrl('/drafts')
-            : this.error.set(this.t().login.failed);
+        if (result.ok) {
+            void this.router.navigateByUrl('/drafts');
+            return;
+        }
+        // The server's own words when it could not reach the installation that holds the identity;
+        // the generic "wrong email or password" only when that is actually what happened.
+        this.error.set(result.error ?? this.t().login.failed);
     }
 }

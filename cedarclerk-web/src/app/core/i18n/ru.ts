@@ -26,9 +26,13 @@ export const ru: Dict = {
         toggleTheme: 'Сменить тему',
         nothingHere: 'Здесь пусто.',
         backToEditor: 'Назад в редактор',
+        localData: 'данные локальные',
+        localDataHint: (host: string) =>
+            `Учётная запись проверяется на ${host}, но документы и ассеты здесь лежат только на этом компьютере.`,
     },
     login: {
         tagline: 'Пишите здесь. Публикуйте там. Муууу.',
+        signsInAgainst: (host: string) => `Вход проверяется на ${host}`,
         email: 'Почта',
         password: 'Пароль',
         submit: 'Войти',

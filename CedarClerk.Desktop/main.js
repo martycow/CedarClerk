@@ -107,10 +107,10 @@ async function startServer() {
             // account from one process, it would let any tenant enumerate its filesystem. So the
             // capability is off by default everywhere and turned on only right here.
             Cedar__AssetIndex__Enabled: 'true',
-            // No invite code here, and none to type: the gate protects a shared server from
-            // strangers, and this one listens on 127.0.0.1 for one person. Without this a fresh
-            // install cannot create its first account — there is nowhere to get a code from.
-            Cedar__Registration__Open: 'true',
+            // ADR-108 — who you are is the Pi's answer, so one address cannot mean two different
+            // people. Accounts are created there too, which is why the open-registration flag is
+            // deliberately NOT set here any more.
+            Cedar__Auth__Upstream: 'https://cedarclerk.mooexe.dev',
             // Presentation only: skips the marketing landing page, which has no audience here.
             Cedar__Desktop: 'true',
             ASPNETCORE_ENVIRONMENT: 'Desktop',

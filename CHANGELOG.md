@@ -2,6 +2,22 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-10 (one account) — the desktop asks the Pi who you are (ADR-108)
+
+Marty had signed in on the desktop with the same address he uses on the website and could see what was coming: two accounts, one email, nothing saying they were different. So the desktop now **asks the Pi who you are** — same email, same password, one identity — while the data stays on the machine.
+
+**Why not the full cloud mode** that ADR-105 sketched, where the desktop just opens the website: it would have made the data one set too, and cost the asset index, because the Pi cannot read anybody's disk (ADR-107 keeps that capability off there deliberately). That would have switched off the one thing the desktop exists for. Cloud mode remains a separate, unbuilt option; this is not it.
+
+**Identity is keyed by id, not by address** — `ApplicationUser.RemoteUserId` — because an email can be changed and an identity cannot. Until the Pi is redeployed its `/api/auth/me` reports no id, so the email carries the identity in the meantime; it sharpens itself on the next deploy. And the account Marty made locally yesterday is **adopted** on first remote sign-in rather than duplicated, which is precisely the mess he asked to avoid.
+
+**The honest cost, stated in the ADR and now on every screen**: one identity is not one set of data. Drafts on the Pi and documents on the desktop remain separate, and with a shared account the expectation that they are the same gets *stronger*. The header carries a permanent "local data" chip for exactly that reason. Without it this change would make the confusion worse.
+
+**An unreachable Pi answers 503, never 401.** Telling somebody their password is wrong when the server merely failed to answer sends them to fix the one thing that is not broken. Verified along with the rest by standing up two servers — one playing the Pi, one playing the desktop — so no real credential was involved: sign-in works, a wrong password is 401, registering locally is refused with a message pointing at the server, the Pi going away produces 503 with its own wording, and a session already issued keeps working offline.
+
+**A latent crash found on the way, and it was mine.** `IConfiguration.GetValue<bool>` *throws* on an empty string — and an empty string is an ordinary thing to find in an environment variable; the desktop shell already sets `Cedar__BotToken=''` deliberately. Any flag cleared that way would have taken down whatever endpoint read it with an `InvalidOperationException`. All five boolean flags now go through one helper that treats unreadable as **off**, which is the only safe reading for something that gates a capability.
+
+**And the flaky login test was diagnosed rather than silenced.** Under `--repeat-each=10` against a warm dev server it passed **40/40**, which said the code was fine and the race was with Angular's first lazy-chunk compile — a build that `webServer.url` had already declared finished. A `globalSetup` now opens `/login` once before the suite. Four cold runs since: 53/53. That is consistent with a fix and **not proof** — at the original ~25% failure rate, four clean runs happen by chance about a third of the time — so `T-143` stays open at a lower priority instead of being called closed.
+
 ## 2026-08-10 (after the first real launch) — the desktop app was unusable, twice over
 
 Marty opened the desktop app for the first time and asked two mild questions. Both were defects, and both were the same defect really: the shell was built and never signed into.

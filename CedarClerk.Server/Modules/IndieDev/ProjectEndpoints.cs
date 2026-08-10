@@ -26,7 +26,7 @@ public static class ProjectEndpoints
     private const int NameMaxLength = 80;
     private const int DescriptionMaxLength = 2000;
 
-    public static bool IsEnabled(IConfiguration config) => config.GetValue<bool>(EnabledKey);
+    public static bool IsEnabled(IConfiguration config) => config.IsOn(EnabledKey);
 
     /// <summary>
     /// ADR-103 — a project always holds at least one document, enforced here rather than in the

@@ -84,6 +84,12 @@ public static class Consts
         // thing that opens a security gate.
         public const string DesktopModeCfg = "Cedar:Desktop";
 
+        // ADR-108 — another Cedar Clerk installation that decides WHO the author is. Set only on
+        // the desktop, pointing at the Pi; absent on the Pi itself, which would otherwise be
+        // delegating identity to itself. Data stays wherever it already is — this is identity, not
+        // a proxy.
+        public const string UpstreamAuthCfg = "Cedar:Auth:Upstream";
+
         // ADR-104 — where Kestrel listens, when something needs to say. Empty everywhere except the
         // desktop shell, which takes a free port from the OS and passes it in: two instances on one
         // machine cannot both hold 8080, and the Pi's port is fixed by the tunnel config anyway.

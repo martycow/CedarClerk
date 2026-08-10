@@ -162,3 +162,15 @@
     white-space: nowrap;
     max-width: 22ch;
 }
+
+/* ADR-108 — quiet, but always there. --t2 rather than --t3: this carries information (T-082). */
+.local-tag {
+    flex: none;
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: var(--radius-sm);
+    background: var(--alt);
+    color: var(--t2);
+    white-space: nowrap;
+}

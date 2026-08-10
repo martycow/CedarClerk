@@ -10,6 +10,9 @@ import { defineConfig, devices } from '@playwright/test';
 // ordinary development.
 export default defineConfig({
     testDir: './e2e',
+    // T-143 — warms the dev server's lazy chunks before the first test, which was otherwise racing
+    // a compile that `webServer.url` had already declared finished. See e2e/global-setup.ts.
+    globalSetup: './e2e/global-setup.ts',
     // One worker on purpose: every test shares one server and one SQLite file, and a parallel run
     // would be testing the test harness rather than the app.
     fullyParallel: false,
