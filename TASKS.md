@@ -25,6 +25,20 @@ irreversible.
 `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` cannot move it. The desktop shell needs a free
 port, so that single line has to become configurable — the only server change the desktop requires.
 
+### T-140 and T-141 done 10.08.2026 — previews, metadata, links
+
+Two of the three gaps T-122 left are closed. `dotnet test` **698/698**.
+
+- [ ] **Marty's look, and the one thing only you can check**: open a **real** `.blend` in the grid and
+  see whether its preview is the right way up. Blender stores those rows bottom-up and the code flips
+  them, but that was only ever verified against a file this session generated.
+- [ ] **Also worth pointing at a real project**: the widened format table now covers `.blend`,
+  `.aseprite`, `.kra`, `.ztl`, `.sbsar`, `.rpp`, `.flp`, `.bank`, Unity/Unreal/Godot files, shaders and
+  scripts. If something you use daily is missing, it lands in "Other" rather than being lost — say
+  which and it is one line.
+- [ ] **Deliberately silent**: MP3, OGG and FLAC show no duration. Each needs a real parser, and a
+  wrong "2:14" is worse than none. WAV reports duration and sample rate.
+
 ### T-122 (Asset Manager) done 10.08.2026
 
 `/projects/:id/assets` — an index of files on this machine. **Nothing is uploaded**, and every state

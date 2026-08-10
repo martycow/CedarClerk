@@ -40,6 +40,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     // Indie-gamedev module (Phase 13, ADR-101) — same context on purpose, see Entities.IndieDev.cs.
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<AssetEntry> AssetEntries => Set<AssetEntry>();
+    public DbSet<EntityLink> EntityLinks => Set<EntityLink>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -109,6 +110,15 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         // them. Tens of thousands of rows per project is the expected size, not the bad case.
         builder.Entity<AssetEntry>().HasIndex(a => new { a.ProjectId, a.Kind });
         builder.Entity<AssetEntry>().Property(a => a.Kind).HasDefaultValue(AssetKinds.Other);
+        // T-141 — one row per pair, whichever side created it. LinkTargets.Order is what makes the
+        // unique index able to say so: without a fixed order, A→B and B→A are two different rows
+        // describing the same fact.
+        builder.Entity<EntityLink>()
+            .HasIndex(l => new { l.FromType, l.FromId, l.ToType, l.ToId })
+            .IsUnique();
+        // "What is linked to this thing" is asked from both ends, so both ends are indexed.
+        builder.Entity<EntityLink>().HasIndex(l => new { l.OwnerId, l.FromType, l.FromId });
+        builder.Entity<EntityLink>().HasIndex(l => new { l.OwnerId, l.ToType, l.ToId });
         // The project list query: this owner's projects, active ones first by their own order.
         builder.Entity<Project>().HasIndex(p => new { p.OwnerId, p.ArchivedAt });
         // "What is in this project" — the dashboard's only real question, and the one the drafts

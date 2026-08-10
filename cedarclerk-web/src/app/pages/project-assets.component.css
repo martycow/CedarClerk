@@ -358,11 +358,13 @@
 
 .preview,
 .preview-pane {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: var(--space-1);
+    overflow: hidden;
     /* Striped, not blank: a plain rectangle reads as an image that failed to load. */
     background: repeating-linear-gradient(45deg, var(--alt), var(--alt) 4px, var(--surface) 4px, var(--surface) 8px);
     color: var(--t2);
@@ -383,6 +385,65 @@
 }
 
 .preview-label.danger { color: var(--danger); font-weight: 600; }
+
+/* The thumbnail fills its frame; the striped ground stays visible behind a transparent PNG, which
+   is how a sprite with an alpha channel reads as a sprite rather than as a white square.
+   Taken out of flow on purpose: as a flex item its own proportions fed back into the container and
+   a tall image made its tile taller than its neighbours, so a row of sprites came out ragged. */
+.thumb {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.link-row,
+.link-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    background: none;
+    border: none;
+    color: var(--text);
+    font-family: inherit;
+    font-size: var(--fs-ui);
+    text-align: left;
+    min-width: 0;
+}
+
+.link-row app-icon,
+.link-option app-icon { color: var(--accent); flex: none; }
+
+.link-option { cursor: pointer; color: var(--t2); }
+.link-option:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.link-row:hover { background: var(--hover); }
+
+.link-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.link-remove {
+    display: flex;
+    align-items: center;
+    border: none;
+    background: none;
+    color: var(--t2);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+    cursor: pointer;
+}
+
+.link-remove:hover:not(:disabled) { color: var(--danger); background: var(--hover-danger); }
+
+.link-add { margin-top: var(--space-2); }
 
 .tile-name {
     font-family: var(--font-mono);

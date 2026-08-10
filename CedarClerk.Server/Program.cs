@@ -39,11 +39,16 @@ var importTmpDir = Path.Combine(dataDir, "import-tmp");
 // (~/.aspnet/DataProtection-Keys) is outside dataDir, so the backup cron never saw them and a Pi
 // OS reinstall would have signed everyone out irrecoverably.
 var dataProtectionKeysDir = Path.Combine(dataDir, "dataprotection-keys");
+// T-140 — generated asset thumbnails. Under dataDir, never beside the source: the folder being
+// indexed is somebody's game project, usually under version control, and writing into it would be
+// both a surprise and a diff.
+var thumbnailsDir = Path.Combine(dataDir, "thumbs");
 
 Directory.CreateDirectory(dataDir);
 Directory.CreateDirectory(mediaDir);
 Directory.CreateDirectory(importTmpDir);
 Directory.CreateDirectory(dataProtectionKeysDir);
+Directory.CreateDirectory(thumbnailsDir);
 #endregion
 
 #region Services
@@ -85,6 +90,7 @@ builder.Services.AddSingleton<AiJobService>();
 // T-122 — the folder walk outlives the request that starts it (a scan of a real game project runs
 // for seconds to minutes), so it is a singleton that makes its own scope per scan.
 builder.Services.AddSingleton<AssetIndexService>();
+builder.Services.AddSingleton(new ThumbnailPaths(thumbnailsDir));
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramBotService>());
 builder.Services.AddHttpClient(); // named clients used by billing (Stripe), translation providers, and email
 builder.Services.AddSingleton<ResendEmailProvider>();

@@ -34,6 +34,21 @@ export interface AssetEntry {
     indexedAt: string;
     /** Set means the last scan did not find the file. **Missing is not deleted.** */
     missingSince: string | null;
+    // T-140 — what the file's own header said. Null where the kind has nothing to say (an image
+    // has no duration) or the header could not be read. Only WAV reports a duration at all.
+    width: number | null;
+    height: number | null;
+    durationMs: number | null;
+    sampleRate: number | null;
+    /** Whether asking for a thumbnail can succeed. Images that are on disk, and nothing else. */
+    hasThumbnail: boolean;
+}
+
+/** A document the author has linked to an asset (T-141) — stated, never discovered. */
+export interface LinkedDocument {
+    id: string;
+    title: string;
+    documentType: string;
 }
 
 export interface AssetDetail extends AssetEntry {
@@ -109,6 +124,23 @@ export class AssetIndexService {
         return firstValueFrom(this.http.delete<void>(`/api/projects/${projectId}/assets/index`));
     }
 
+    /** Generated on first request and cached server-side; regenerated when the file changes. */
+    thumbnailUrl(projectId: string, assetId: string) {
+        return `/api/projects/${projectId}/assets/${assetId}/thumb`;
+    }
+
+    links(projectId: string, assetId: string) {
+        return firstValueFrom(this.http.get<LinkedDocument[]>(`/api/projects/${projectId}/assets/${assetId}/links`));
+    }
+
+    addLink(projectId: string, assetId: string, draftId: string) {
+        return firstValueFrom(this.http.post<void>(`/api/projects/${projectId}/assets/${assetId}/links/${draftId}`, {}));
+    }
+
+    removeLink(projectId: string, assetId: string, draftId: string) {
+        return firstValueFrom(this.http.delete<void>(`/api/projects/${projectId}/assets/${assetId}/links/${draftId}`));
+    }
+
     reindexOne(projectId: string, assetId: string) {
         return firstValueFrom(this.http.post<Partial<AssetEntry>>(`/api/projects/${projectId}/assets/${assetId}/reindex`, {}));
     }
@@ -125,6 +157,12 @@ export function formatBytes(bytes: number): string {
         unit++;
     }
     return `${value >= 10 ? Math.round(value) : value.toFixed(1)} ${units[unit]}`;
+}
+
+/** m:ss — how a sound file's length is written everywhere else. Mirrors Core's WavHeader. */
+export function formatDuration(ms: number): string {
+    const total = Math.round(ms / 1000);
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
 /**

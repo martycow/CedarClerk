@@ -166,15 +166,18 @@
                                 @if (a.missingSince) {
                                     <app-icon name="warning" size="lg"></app-icon>
                                     <span class="preview-label danger">{{ t().projects.assets.notFoundAtPath }}</span>
+                                } @else if (showsThumbnail(a)) {
+                                    <img class="thumb" [src]="thumbUrl(a)" [alt]="a.fileName"
+                                         loading="lazy" (error)="onThumbError(a)">
                                 } @else {
-                                    <!-- No thumbnail pipeline yet, so every kind is honest about it
-                                         rather than showing an empty frame that reads as broken. -->
+                                    <!-- Kinds with no thumbnail say so, rather than showing an empty
+                                         frame that reads as a broken image. -->
                                     <app-icon [name]="kindIcons[a.kind]" size="lg"></app-icon>
                                     <span class="preview-label">{{ t().projects.assets.noPreview(t().projects.assets.kindOne[a.kind]) }}</span>
                                 }
                             </span>
                             <span class="tile-name" [title]="a.relativePath">{{ a.fileName }}</span>
-                            <span class="tile-meta">{{ bytes(a.sizeBytes) }} · {{ a.modifiedAt | date:'d MMM' }}</span>
+                            <span class="tile-meta">{{ detailsOf(a) }} · {{ a.modifiedAt | date:'d MMM' }}</span>
                         </button>
                     }
                 </div>
@@ -193,7 +196,7 @@
                                 <span class="path" [title]="a.relativePath">{{ a.relativePath }}</span>
                             </div>
                             <div>{{ t().projects.assets.kindOne[a.kind] }}</div>
-                            <div class="right">{{ bytes(a.sizeBytes) }} · {{ a.modifiedAt | date:'d MMM, HH:mm' }}</div>
+                            <div class="right">{{ detailsOf(a) }} · {{ a.modifiedAt | date:'d MMM, HH:mm' }}</div>
                             <div [class.danger]="!!a.missingSince" [class.ok]="!a.missingSince">
                                 {{ a.missingSince ? t().projects.assets.notFoundAtPath : t().projects.assets.onDisk }}
                             </div>
@@ -249,6 +252,8 @@
                 @if (a.missingSince) {
                     <app-icon name="warning" size="lg"></app-icon>
                     <span class="preview-label danger">{{ t().projects.assets.notFoundAtPath }}</span>
+                } @else if (showsThumbnail(a)) {
+                    <img class="thumb" [src]="thumbUrl(a)" [alt]="a.fileName" (error)="onThumbError(a)">
                 } @else {
                     <app-icon [name]="kindIcons[a.kind]" size="lg"></app-icon>
                     <span class="preview-label">{{ t().projects.assets.noPreview(t().projects.assets.kindOne[a.kind]) }}</span>
@@ -261,7 +266,7 @@
                     <dt>{{ t().projects.assets.colType }}</dt>
                     <dd>{{ t().projects.assets.kindOne[a.kind] }}</dd>
                     <dt>{{ t().projects.assets.colDetails }}</dt>
-                    <dd>{{ bytes(a.sizeBytes) }} · {{ a.modifiedAt | date:'d MMM y, HH:mm' }}</dd>
+                    <dd>{{ detailsOf(a) }} · {{ a.modifiedAt | date:'d MMM y, HH:mm' }}</dd>
                     <dt>{{ t().projects.assets.colStatus }}</dt>
                     <dd [class.danger]="!!a.missingSince" [class.ok]="!a.missingSince">
                         {{ a.missingSince ? t().projects.assets.notFoundAtPath : t().projects.assets.onDisk }}
@@ -272,10 +277,37 @@
 
                 @if (a.missingSince) { <p class="hint">{{ t().projects.assets.missingHint }}</p> }
 
-                <div class="field-label spaced">{{ t().projects.assets.usedIn }}</div>
-                <!-- Honest: nothing links documents to indexed files yet, so it says so rather than
-                     showing an empty list that implies a search was run. -->
-                <p class="hint">{{ t().projects.assets.notReferenced }}</p>
+                <!-- "Linked", not "Used in": an indexed file lives outside Cedar Clerk, so nothing
+                     can discover a reference to it. These links are stated by the author. -->
+                <div class="field-label spaced">{{ t().projects.assets.linkedDocuments }}</div>
+                @for (doc of links(); track doc.id) {
+                    <div class="link-row">
+                        <app-icon name="file-text" size="sm"></app-icon>
+                        <span class="link-title" [title]="doc.title">{{ doc.title }}</span>
+                        <button class="link-remove" [disabled]="busy()" (click)="removeLink(doc.id)"
+                                [title]="t().projects.assets.unlink" [attr.aria-label]="t().projects.assets.unlink">
+                            <app-icon name="x" size="sm"></app-icon>
+                        </button>
+                    </div>
+                } @empty {
+                    <p class="hint">{{ t().projects.assets.notLinked }}</p>
+                }
+
+                @if (linking()) {
+                    @for (doc of linkableDocuments(); track doc.id) {
+                        <button class="link-option" [disabled]="busy()" (click)="addLink(doc.id)">
+                            <app-icon name="plus" size="sm"></app-icon>
+                            <span class="link-title">{{ doc.title }}</span>
+                        </button>
+                    } @empty {
+                        <p class="hint">{{ t().projects.assets.nothingToLink }}</p>
+                    }
+                } @else if (linkableDocuments().length > 0) {
+                    <button class="btn-ghost link-add" (click)="linking.set(true)">
+                        <app-icon name="link" size="sm"></app-icon>
+                        <span>{{ t().projects.assets.linkDocument }}</span>
+                    </button>
+                }
             </div>
         </div>
 

@@ -27,6 +27,14 @@ public static class AssetIndexEndpoints
 
     public const string EnabledKey = "Cedar:AssetIndex:Enabled";
 
+    /// <summary>
+    /// The extensions a thumbnail exists for, as a set the list query can translate to SQL.
+    /// <c>AssetKinds.CanPreview</c> takes a path and so cannot be called inside a LINQ-to-SQLite
+    /// projection; this is the same answer in a form EF can send to the database.
+    /// </summary>
+    private static readonly string[] PreviewableExtensions =
+        ["png", "jpg", "jpeg", "gif", "bmp", "webp", "tga", "tif", "tiff", "pbm", "qoi", "blend", "blend1", "blend2"];
+
     /// <summary>Whether this installation may walk its own filesystem. False on the Pi, by omission.</summary>
     public static bool IndexingEnabled(IConfiguration config) => config.GetValue<bool>(EnabledKey);
 
@@ -69,6 +77,12 @@ public static class AssetIndexEndpoints
                 {
                     a.Id, a.RelativePath, a.FileName, a.Extension, a.Kind,
                     a.SizeBytes, a.ModifiedAt, a.IndexedAt, a.MissingSince,
+                    a.Width, a.Height, a.DurationMs, a.SampleRate,
+                    // The grid asks for a thumbnail only where one can exist — an <img> pointed at a
+                    // 404 renders as a broken-image icon, which is exactly what this screen must
+                    // never show. Decided per extension, not per kind: a PSD is an image nothing
+                    // here can decode, and a .blend is a model that carries its own picture.
+                    hasThumbnail = a.MissingSince == null && PreviewableExtensions.Contains(a.Extension),
                 })
                 .ToListAsync();
 
@@ -98,6 +112,8 @@ public static class AssetIndexEndpoints
             {
                 asset.Id, asset.RelativePath, asset.FileName, asset.Extension, asset.Kind,
                 asset.SizeBytes, asset.ModifiedAt, asset.IndexedAt, asset.MissingSince,
+                asset.Width, asset.Height, asset.DurationMs, asset.SampleRate,
+                hasThumbnail = asset.MissingSince == null && PreviewableExtensions.Contains(asset.Extension),
                 // The absolute path is what "Reveal in file manager" needs, and it is only
                 // meaningful on the machine that did the indexing.
                 fullPath = project.AssetRootPath is null
@@ -138,6 +154,97 @@ public static class AssetIndexEndpoints
             await db.SaveChangesAsync();
 
             return Results.Ok(new { asset.Id, asset.SizeBytes, asset.ModifiedAt, asset.IndexedAt, asset.MissingSince });
+        });
+
+        // T-140 — the thumbnail. Behind the same authorisation as everything else and NOT under
+        // /media/*: an indexed file is somebody's unreleased game art on their own disk, while the
+        // public media path is for what an author chose to publish.
+        group.MapGet("/{assetId:guid}/thumb", async (
+            Guid projectId, Guid assetId, ClaimsPrincipal user, CedarDbContext db,
+            ThumbnailPaths thumbs, ILogger<AssetIndexService> logger) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var project = await db.Projects.FirstOrDefaultAsync(p => p.Id == projectId && p.OwnerId == uid);
+            if (project?.AssetRootPath is null) return Results.NotFound();
+
+            var asset = await db.AssetEntries
+                .FirstOrDefaultAsync(a => a.Id == assetId && a.ProjectId == projectId && a.OwnerId == uid);
+            if (asset is null || asset.MissingSince is not null || !AssetMetadata.CanHaveThumbnail(asset.RelativePath))
+                return Results.NotFound();
+
+            var cached = thumbs.For(asset.Id);
+            // Regenerated when the file has moved on since the cached copy, or a replaced sprite
+            // would keep showing its predecessor until somebody noticed.
+            if (asset.ThumbnailForModifiedAt != asset.ModifiedAt || !File.Exists(cached))
+            {
+                var source = Path.Combine(project.AssetRootPath,
+                    asset.RelativePath.Replace('/', Path.DirectorySeparatorChar));
+                if (!AssetMetadata.TryWriteThumbnail(source, cached, logger)) return Results.NotFound();
+                asset.ThumbnailForModifiedAt = asset.ModifiedAt;
+                await db.SaveChangesAsync();
+            }
+
+            return Results.File(cached, "image/jpeg", enableRangeProcessing: false);
+        });
+
+        // T-141 — documents this asset is linked to. Stated by the author, never discovered: an
+        // indexed file lives outside Cedar Clerk, so no document can reference it on its own.
+        group.MapGet("/{assetId:guid}/links", async (Guid projectId, Guid assetId, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            if (!await db.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == uid)) return Results.NotFound();
+
+            var documentIds = await LinkedIdsAsync(db, uid, LinkTargets.Asset, assetId, LinkTargets.Document);
+            var documents = await db.Drafts
+                .Where(d => documentIds.Contains(d.Id) && d.OwnerId == uid)
+                .OrderBy(d => d.Title)
+                .Select(d => new { d.Id, d.Title, d.DocumentType })
+                .ToListAsync();
+
+            return Results.Ok(documents);
+        });
+
+        group.MapPost("/{assetId:guid}/links/{draftId:guid}", async (
+            Guid projectId, Guid assetId, Guid draftId, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            if (!await db.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == uid)) return Results.NotFound();
+            if (!await db.AssetEntries.AnyAsync(a => a.Id == assetId && a.ProjectId == projectId && a.OwnerId == uid))
+                return Results.NotFound();
+            if (!await db.Drafts.AnyAsync(d => d.Id == draftId && d.OwnerId == uid)) return Results.NotFound();
+
+            var pair = LinkTargets.Order(LinkTargets.Asset, assetId, LinkTargets.Document, draftId);
+
+            // Ordered first, so linking the same pair from either end finds the existing row rather
+            // than tripping the unique index.
+            if (await db.EntityLinks.AnyAsync(l => l.FromType == pair.FromType && l.FromId == pair.FromId
+                                                   && l.ToType == pair.ToType && l.ToId == pair.ToId))
+                return Results.NoContent();
+
+            db.EntityLinks.Add(new EntityLink
+            {
+                OwnerId = uid,
+                ProjectId = projectId,
+                FromType = pair.FromType,
+                FromId = pair.FromId,
+                ToType = pair.ToType,
+                ToId = pair.ToId,
+            });
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        });
+
+        group.MapDelete("/{assetId:guid}/links/{draftId:guid}", async (
+            Guid projectId, Guid assetId, Guid draftId, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var pair = LinkTargets.Order(LinkTargets.Asset, assetId, LinkTargets.Document, draftId);
+
+            var deleted = await db.EntityLinks
+                .Where(l => l.OwnerId == uid && l.FromType == pair.FromType && l.FromId == pair.FromId
+                            && l.ToType == pair.ToType && l.ToId == pair.ToId)
+                .ExecuteDeleteAsync();
+            return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });
 
         group.MapGet("/index", (Guid projectId, ClaimsPrincipal user, AssetIndexService scans, IConfiguration config) =>
@@ -200,6 +307,24 @@ public static class AssetIndexEndpoints
             if (scan is null || scan.OwnerId != uid) return Results.NotFound();
             return scans.Cancel(projectId) ? Results.NoContent() : Results.NotFound();
         });
+    }
+
+    /// <summary>
+    /// The ids of everything of <paramref name="wantedType"/> linked to one thing. Both columns are
+    /// searched because <see cref="LinkTargets.Order"/> decides which side a pair lands on, and the
+    /// caller neither knows nor should have to.
+    /// </summary>
+    private static async Task<List<Guid>> LinkedIdsAsync(
+        CedarDbContext db, string ownerId, string type, Guid id, string wantedType)
+    {
+        var rows = await db.EntityLinks
+            .Where(l => l.OwnerId == ownerId
+                        && ((l.FromType == type && l.FromId == id && l.ToType == wantedType)
+                            || (l.ToType == type && l.ToId == id && l.FromType == wantedType)))
+            .Select(l => new { l.FromType, l.FromId, l.ToId })
+            .ToListAsync();
+
+        return rows.Select(r => r.FromType == wantedType ? r.FromId : r.ToId).ToList();
     }
 
     private static object Describe(AssetScan scan, bool available) => new

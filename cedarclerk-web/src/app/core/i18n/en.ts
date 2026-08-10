@@ -160,8 +160,13 @@ export const en = {
             fileStaysOnDisk: 'The file stays on disk — Cedar Clerk stores the path and metadata only.',
             reveal: 'Reveal in file manager',
             reindexFile: 'Re-index file',
-            usedIn: 'Used in',
-            notReferenced: 'Not referenced by any document.',
+            // "Linked", not "Used in": an indexed file lives outside Cedar Clerk, so a reference to
+            // it cannot be discovered — only stated. The wording has to say which of the two it is.
+            linkedDocuments: 'Linked documents',
+            notLinked: 'Not linked to any document yet.',
+            linkDocument: 'Link a document',
+            unlink: 'Unlink',
+            nothingToLink: 'Every document in this project is already linked.',
             indexedLabel: 'Indexed',
             missingHint: 'The path is recorded, the file is not there right now. It may be on a drive that is unplugged.',
         },

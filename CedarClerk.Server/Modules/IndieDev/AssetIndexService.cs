@@ -213,15 +213,24 @@ public class AssetIndexService(IServiceScopeFactory scopes, ILogger<AssetIndexSe
 
             if (existing.TryGetValue(relative, out var row))
             {
+                var changed = row.ModifiedAt != info.LastWriteTimeUtc || row.SizeBytes != info.Length;
                 row.SizeBytes = info.Length;
                 row.ModifiedAt = info.LastWriteTimeUtc;
                 row.IndexedAt = DateTime.UtcNow;
                 // Found again — whatever it was missing from, it is back.
                 row.MissingSince = null;
+                // T-140 — headers are read only when the file is new or has actually moved. A
+                // re-scan of a hundred thousand unchanged files therefore opens none of them, which
+                // is the difference between a re-index that takes seconds and one that takes minutes.
+                if (changed || row.MetadataForModifiedAt != info.LastWriteTimeUtc)
+                    ReadMetadata(row, fullPath);
+                // A changed file's cached thumbnail is of the old bytes; drop it and let the next
+                // request make a new one.
+                if (changed) row.ThumbnailForModifiedAt = null;
             }
             else
             {
-                db.AssetEntries.Add(new AssetEntry
+                var added = new AssetEntry
                 {
                     OwnerId = scan.OwnerId,
                     ProjectId = scan.ProjectId,
@@ -231,7 +240,9 @@ public class AssetIndexService(IServiceScopeFactory scopes, ILogger<AssetIndexSe
                     Kind = AssetKinds.FromPath(fullPath),
                     SizeBytes = info.Length,
                     ModifiedAt = info.LastWriteTimeUtc,
-                });
+                };
+                ReadMetadata(added, fullPath);
+                db.AssetEntries.Add(added);
                 scan.Indexed++;
             }
 
@@ -254,6 +265,14 @@ public class AssetIndexService(IServiceScopeFactory scopes, ILogger<AssetIndexSe
             scan.MarkedMissing++;
         }
         if (scan.MarkedMissing > 0) await db.SaveChangesAsync(token);
+    }
+
+    private static void ReadMetadata(AssetEntry row, string fullPath)
+    {
+        AssetMetadata.TryRead(fullPath, row.Kind, row);
+        // Stamped whether or not anything was learned: a file whose header says nothing must not be
+        // reopened on every single scan for the rest of its life.
+        row.MetadataForModifiedAt = row.ModifiedAt;
     }
 
     /// <summary>Root-relative, '/'-separated — the same string on Windows and everywhere else.</summary>

@@ -2,6 +2,28 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-10 (latest) — previews, metadata and links (T-140/T-141)
+
+Two of the three gaps the asset index shipped with, closed the same day. Marty's one instruction shaped both: **the formats he actually works in have to be supported, `.blend` among them.**
+
+**`.blend` got its own parser, and it is the point of the feature.** A Blender file is what a lot of game projects actually *are*, and it is the one important file no image library will open. Blender writes a small RGBA preview inside the file; `CedarClerk.Core/BlendThumbnail.cs` walks the block headers and lifts it out — 12-byte header, block stride that depends on whether the file was saved 32- or 64-bit, then the `TEST` block's pixels. Only the first megabyte is read, because a scene file can be hundreds of megabytes and the preview sits near the front. The rows come out bottom-up, the way OpenGL hands them over, so the image is flipped. A zstd- or gzip-compressed `.blend` refuses honestly: the preview is in there, but shipping a decompressor to make a thumbnail is not the trade.
+
+**The format table grew from "what a web app would think of" to what a game project holds**: Unity scenes and prefabs, Unreal assets, Godot scenes, `.aseprite`, `.kra`, `.ztl`, `.sbsar`, Reaper and FL Studio projects, FMOD banks, shaders, scripts. Engine files stay kind `other` on purpose — a Unity scene is neither an image nor a document, and filing it under "text" to have somewhere to put it would be a lie of convenience.
+
+**Thumbnails are generated on demand, never during a scan** — a scan that decoded every image would take minutes to produce previews almost nobody looks at — and they are written to `CEDAR_DATA_DIR/thumbs/`, **never beside the source**. The folder being indexed is somebody's game project, usually under version control; dropping files into it would be both a surprise and a diff. They are served through an owner-scoped endpoint rather than the public `/media/*`, which is for what an author chose to publish, not for what sits on their disk.
+
+**Whether a thumbnail is even possible is decided per extension, not per kind.** "Image" covers both a PNG and a Photoshop document; one decodes here and the other does not. Getting this wrong is how a grid fills with broken-image icons.
+
+**Metadata is read from headers, and only when a file is new or has changed.** Image dimensions via `Image.Identify` (no pixels decoded), WAV duration and sample rate via a pure parser in Core. MP3, OGG and FLAC say nothing: each needs a real parser, and an author who reads "2:14" has no reason to doubt it — a wrong duration is worse than none.
+
+**Links (`T-141`) generalise ADR-106's `TaskLink` into `EntityLink`** rather than sitting beside it, because the moment a second pair of things needed linking it would have been two tables doing one job. The pair is ordered before it is written, so linking from either end is one row and the unique index can say so. And the links are **stated, never discovered**: an indexed file lives outside Cedar Clerk, so no TipTap document can reference it — which is why the label reads "Linked documents" rather than the design's "Used in".
+
+Verified by running it against a fixture folder rather than by reading the code: PNG dimensions, WAV duration and rate, `.blend` and `.blend1` previews rendered as JPEGs, `.fbx` correctly refusing one, `.exe` and `Library/` skipped, and a link that survives being added twice and disappears when removed. One thing genuinely unverified and flagged rather than glossed: the orientation of a preview from a *real* `.blend`, since every Blender file in this session was synthetic.
+
+A layout defect caught by looking rather than by testing: the thumbnail was a flex item, so a tall image made its tile taller than its neighbours and a row of sprites came out ragged. It is out of flow now.
+
+`dotnet test` **698/698**, frontend 11/11, `ng build` warning-free, contrast 0 failing pairs, smoke **53/53** (one login test flaked once across six runs and passed alone and on re-run — recorded as `T-143` rather than called green).
+
 ## 2026-08-10 (late) — the asset index (T-122, ADR-107)
 
 The reason the desktop app existed a few hours earlier: a screen that reads a game project's asset folder. `/projects/:id/assets` indexes **paths and metadata, never bytes** — and every state on it is built to keep saying so, because the failure mode of this feature is a person believing their files were copied somewhere.

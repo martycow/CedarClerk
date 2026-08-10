@@ -20,36 +20,90 @@ public static class AssetKinds
 
     public static readonly IReadOnlyList<string> All = [Image, Model, Audio, Video, Font, Text, Other];
 
-    // Extensions are matched lowercase, without the dot. Deliberately generous on images (a game
-    // project's art folder holds sources as well as exports) and deliberately short elsewhere:
-    // an extension nobody recognises lands in Other, which is a true statement, while a wrong
-    // guess is not.
+    // Extensions are matched lowercase, without the dot. The list is deliberately long: this is a
+    // game project's folder, and the formats an author actually opens are engine and DCC formats,
+    // not the handful a web app would think of. An extension nobody recognises lands in Other,
+    // which is a true statement — a wrong guess is not.
     private static readonly Dictionary<string, string> ByExtension = new(StringComparer.OrdinalIgnoreCase)
     {
-        // Raster, vector and the source formats art actually lives in.
+        // --- Images: raster, vector, and the source formats art is actually authored in.
         ["png"] = Image, ["jpg"] = Image, ["jpeg"] = Image, ["gif"] = Image, ["bmp"] = Image,
         ["webp"] = Image, ["tga"] = Image, ["tif"] = Image, ["tiff"] = Image, ["psd"] = Image,
-        ["svg"] = Image, ["exr"] = Image, ["hdr"] = Image, ["dds"] = Image, ["ase"] = Image,
-        ["aseprite"] = Image, ["xcf"] = Image, ["kra"] = Image,
+        ["psb"] = Image, ["svg"] = Image, ["exr"] = Image, ["hdr"] = Image, ["dds"] = Image,
+        ["ktx"] = Image, ["ktx2"] = Image, ["basis"] = Image, ["qoi"] = Image, ["pbm"] = Image,
+        // Pixel-art tools.
+        ["ase"] = Image, ["aseprite"] = Image, ["pyxel"] = Image, ["piskel"] = Image,
+        // Painting suites.
+        ["xcf"] = Image, ["kra"] = Image, ["clip"] = Image, ["procreate"] = Image,
+        // Vector/UI authoring.
+        ["ai"] = Image, ["afdesign"] = Image, ["afphoto"] = Image, ["fig"] = Image,
 
-        ["fbx"] = Model, ["obj"] = Model, ["blend"] = Model, ["gltf"] = Model, ["glb"] = Model,
-        ["dae"] = Model, ["3ds"] = Model, ["ply"] = Model, ["stl"] = Model, ["max"] = Model,
-        ["ma"] = Model, ["mb"] = Model, ["usd"] = Model, ["usda"] = Model, ["usdc"] = Model,
+        // --- 3D. `.blend` first, because it is the one that matters most here and the only one
+        // that carries its own preview (see BlendThumbnail).
+        ["blend"] = Model, ["blend1"] = Model, ["blend2"] = Model,
+        ["fbx"] = Model, ["obj"] = Model, ["gltf"] = Model, ["glb"] = Model, ["dae"] = Model,
+        ["3ds"] = Model, ["ply"] = Model, ["stl"] = Model, ["abc"] = Model, ["usd"] = Model,
+        ["usda"] = Model, ["usdc"] = Model, ["usdz"] = Model,
+        ["max"] = Model, ["ma"] = Model, ["mb"] = Model, ["c4d"] = Model, ["zpr"] = Model,
+        ["ztl"] = Model, ["spp"] = Model, ["sbs"] = Model, ["sbsar"] = Model, ["mset"] = Model,
+        ["vox"] = Model, ["qb"] = Model,
 
+        // --- Audio. No Music/SFX split: nothing in an extension distinguishes a score from an
+        // ambience loop, and a filter built on a guess is worse than no filter.
         ["wav"] = Audio, ["mp3"] = Audio, ["ogg"] = Audio, ["flac"] = Audio, ["aiff"] = Audio,
         ["aif"] = Audio, ["m4a"] = Audio, ["opus"] = Audio, ["wma"] = Audio,
-        // Tracker and sequencer formats. They are music by construction, but they are also audio,
-        // and this does not pretend to a Music/SFX split — see the note on the class.
         ["mid"] = Audio, ["midi"] = Audio, ["mod"] = Audio, ["xm"] = Audio, ["it"] = Audio,
+        ["s3m"] = Audio,
+        // DAW and middleware project files — the sources a composer actually edits.
+        ["rpp"] = Audio, ["flp"] = Audio, ["als"] = Audio, ["logicx"] = Audio, ["ptx"] = Audio,
+        ["bank"] = Audio, ["fspro"] = Audio, ["wproj"] = Audio,
 
         ["mp4"] = Video, ["mov"] = Video, ["avi"] = Video, ["mkv"] = Video, ["webm"] = Video,
-        ["wmv"] = Video, ["m4v"] = Video,
+        ["wmv"] = Video, ["m4v"] = Video, ["prproj"] = Video, ["aep"] = Video, ["kdenlive"] = Video,
 
         ["ttf"] = Font, ["otf"] = Font, ["woff"] = Font, ["woff2"] = Font, ["fnt"] = Font,
+        ["fon"] = Font, ["bdf"] = Font,
 
+        // --- Text: docs, data and the things engines keep as text. Shaders and scripts live here
+        // rather than in a category of their own — an author looking for "the text files" wants
+        // both, and a Scripts filter would need a code index to be worth anything.
         ["txt"] = Text, ["md"] = Text, ["json"] = Text, ["xml"] = Text, ["yaml"] = Text,
-        ["yml"] = Text, ["csv"] = Text, ["tsv"] = Text, ["ink"] = Text, ["yarn"] = Text,
+        ["yml"] = Text, ["csv"] = Text, ["tsv"] = Text, ["toml"] = Text, ["ini"] = Text,
+        ["ink"] = Text, ["yarn"] = Text, ["twee"] = Text, ["fountain"] = Text, ["rpy"] = Text,
+        ["cs"] = Text, ["gd"] = Text, ["lua"] = Text, ["py"] = Text, ["cpp"] = Text, ["h"] = Text,
+        ["hlsl"] = Text, ["glsl"] = Text, ["shader"] = Text, ["gdshader"] = Text, ["cginc"] = Text,
+        ["usf"] = Text, ["ush"] = Text,
+
+        // --- Engine files. Kept as Other rather than invented into a new kind: they are neither
+        // an image nor a document, and grouping a Unity scene with a text file would be a lie of
+        // convenience. They matter enough to be indexed, which is the point.
+        ["unity"] = Other, ["prefab"] = Other, ["asset"] = Other, ["mat"] = Other,
+        ["anim"] = Other, ["controller"] = Other, ["unitypackage"] = Other, ["shadergraph"] = Other,
+        ["uasset"] = Other, ["umap"] = Other,
+        ["tscn"] = Other, ["tres"] = Other, ["escn"] = Other, ["godot"] = Other,
+        ["tmx"] = Other, ["tsx"] = Other, ["ldtk"] = Other, ["tiled-project"] = Other,
     };
+
+    /// <summary>
+    /// Extensions a thumbnail can actually be produced for. Two groups: what the image library
+    /// decodes, and <c>.blend</c>, which carries its own preview (see <see cref="BlendThumbnail"/>).
+    ///
+    /// Being precise here is what keeps the grid honest — the alternative is asking for a thumbnail
+    /// of every image and letting a broken-image icon appear for the ones (PSD, EXR, Aseprite) that
+    /// no decoder here can open.
+    /// </summary>
+    private static readonly HashSet<string> Previewable = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "png", "jpg", "jpeg", "gif", "bmp", "webp", "tga", "tif", "tiff", "pbm", "qoi",
+        "blend", "blend1", "blend2",
+    };
+
+    /// <summary>Whether a thumbnail can be produced for this file at all.</summary>
+    public static bool CanPreview(string? path) => Previewable.Contains(ExtensionOf(path));
+
+    /// <summary>True for the files whose preview comes from inside the file rather than a decoder.</summary>
+    public static bool HasEmbeddedPreview(string? path) =>
+        ExtensionOf(path) is "blend" or "blend1" or "blend2";
 
     /// <summary>
     /// The kind for a file name or path. Anything unrecognised is <see cref="Other"/> — never null,

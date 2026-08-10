@@ -99,4 +99,52 @@ public class AssetEntry
     /// later scan finds it again.
     /// </summary>
     public DateTime? MissingSince { get; set; }
+
+    // T-140 — what the file's own header says. Null means "not read" or "this kind does not say":
+    // an image has no duration, and only WAV reports one at all (see CedarClerk.Core.WavHeader).
+    public int? Width { get; set; }
+    public int? Height { get; set; }
+    public int? DurationMs { get; set; }
+    public int? SampleRate { get; set; }
+
+    /// <summary>
+    /// The <see cref="ModifiedAt"/> the metadata above was read for. Re-reading only when this no
+    /// longer matches is what keeps a re-scan of a hundred thousand files from opening every one of
+    /// them again: the first scan pays for the headers, later scans pay only for what changed.
+    /// </summary>
+    public DateTime? MetadataForModifiedAt { get; set; }
+
+    /// <summary>
+    /// The <see cref="ModifiedAt"/> the cached thumbnail was made from. Null = none yet. Thumbnails
+    /// are generated on demand rather than during the scan — a scan that also decoded every image
+    /// would take minutes, and most of them are never looked at.
+    /// </summary>
+    public DateTime? ThumbnailForModifiedAt { get; set; }
+}
+
+/// <summary>
+/// A link between two things in a project (T-141) — today a document and an indexed asset.
+///
+/// **Generalises ADR-106's <c>TaskLink</c>** rather than sitting beside it: that row was going to be
+/// (task → anything), and the moment a second kind of thing needed linking it would have been two
+/// tables doing one job. A task link is an <see cref="EntityLink"/> whose one side is a task.
+///
+/// **Links are made by hand, and that is not a shortcut.** An indexed asset lives on disk outside
+/// Cedar Clerk; nothing in a TipTap document can reference it, because the editor's own images are
+/// uploaded media under <c>/media/</c>. There is no text to scan for, so "used in" could never be
+/// discovered — only stated.
+/// </summary>
+public class EntityLink
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public Guid ProjectId { get; set; }
+
+    /// <summary>One of <see cref="CedarClerk.Core.LinkTargets"/>.</summary>
+    public string FromType { get; set; } = "";
+    public Guid FromId { get; set; }
+    public string ToType { get; set; } = "";
+    public Guid ToId { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

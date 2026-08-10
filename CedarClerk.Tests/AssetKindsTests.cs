@@ -44,6 +44,48 @@ public class AssetKindsTests
         Assert.Equal("gitignore", AssetKinds.ExtensionOf(".gitignore"));
     }
 
+    [Theory]
+    // Marty, 10.08.2026 — the formats he actually works in have to be recognised, not just the
+    // ones a web app would think of. One per family, so a deleted line is a visible loss.
+    [InlineData("scenes/ferry.blend", AssetKinds.Model)]
+    [InlineData("sculpt/collector.ztl", AssetKinds.Model)]
+    [InlineData("mats/rust.sbsar", AssetKinds.Model)]
+    [InlineData("art/tiles.aseprite", AssetKinds.Image)]
+    [InlineData("art/poster.kra", AssetKinds.Image)]
+    [InlineData("art/sheet.psd", AssetKinds.Image)]
+    [InlineData("music/theme.flp", AssetKinds.Audio)]
+    [InlineData("audio/session.rpp", AssetKinds.Audio)]
+    [InlineData("audio/Master.bank", AssetKinds.Audio)]
+    [InlineData("trailer/cut.prproj", AssetKinds.Video)]
+    [InlineData("ui/pixel.bdf", AssetKinds.Font)]
+    [InlineData("dialogue/act1.fountain", AssetKinds.Text)]
+    [InlineData("shaders/water.gdshader", AssetKinds.Text)]
+    [InlineData("Scripts/Player.cs", AssetKinds.Text)]
+    // Engine files are indexed but stay Other: a Unity scene is neither an image nor a document,
+    // and filing it under Text to have somewhere to put it would be a lie of convenience.
+    [InlineData("Scenes/Level01.unity", AssetKinds.Other)]
+    [InlineData("Content/Hero.uasset", AssetKinds.Other)]
+    [InlineData("scenes/main.tscn", AssetKinds.Other)]
+    public void The_formats_a_game_project_actually_holds_are_recognised(string path, string expected)
+    {
+        Assert.Equal(expected, AssetKinds.FromPath(path));
+        Assert.True(AssetKinds.ShouldIndex(path));
+    }
+
+    [Fact]
+    public void Only_the_files_a_thumbnail_can_be_made_from_claim_one()
+    {
+        Assert.True(AssetKinds.CanPreview("a.png"));
+        Assert.True(AssetKinds.CanPreview("a.tga"));
+        Assert.True(AssetKinds.CanPreview("a.blend"));
+        // Images the decoder here cannot open. Claiming a thumbnail for these is how a grid full
+        // of broken-image icons happens.
+        Assert.False(AssetKinds.CanPreview("a.psd"));
+        Assert.False(AssetKinds.CanPreview("a.exr"));
+        Assert.False(AssetKinds.CanPreview("a.aseprite"));
+        Assert.False(AssetKinds.CanPreview("a.fbx"));
+    }
+
     [Fact]
     public void Only_recognised_files_are_indexed()
     {

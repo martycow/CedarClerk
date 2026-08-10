@@ -13,9 +13,11 @@ import {
     AssetIndexService,
     AssetKind,
     AssetPage,
+    LinkedDocument,
     ScanState,
     desktopBridge,
     formatBytes,
+    formatDuration,
 } from '../core/asset-index.service';
 import { ProjectDetail, ProjectsService } from '../core/projects.service';
 import { IconComponent } from '../shared/icon.component';
@@ -48,6 +50,7 @@ export class ProjectAssetsComponent implements OnDestroy {
     readonly kinds = ASSET_KINDS;
     readonly kindIcons = ASSET_KIND_ICONS;
     readonly bytes = formatBytes;
+    readonly duration = formatDuration;
     readonly desktop = desktopBridge();
 
     projectId = signal<string>('');
@@ -69,7 +72,14 @@ export class ProjectAssetsComponent implements OnDestroy {
     recentFolders = signal<string[]>(this.loadRecent());
 
     selected = signal<AssetDetail | null>(null);
+    links = signal<LinkedDocument[]>([]);
+    linking = signal(false);
     busy = signal(false);
+
+    // Thumbnails that failed to load. A tile falls back to the honest "no preview" label rather
+    // than leaving the browser's broken-image icon, which on this screen would read as "the file
+    // is damaged" when it usually means "the server could not decode this format".
+    private thumbFailed = signal<ReadonlySet<string>>(new Set());
 
     private pollTimer: ReturnType<typeof setInterval> | null = null;
     private searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -256,14 +266,76 @@ export class ProjectAssetsComponent implements OnDestroy {
 
     // ---- one asset -------------------------------------------------------
 
+    thumbUrl(asset: AssetEntry) {
+        return this.api.thumbnailUrl(this.projectId(), asset.id);
+    }
+
+    showsThumbnail(asset: AssetEntry) {
+        return asset.hasThumbnail && !this.thumbFailed().has(asset.id);
+    }
+
+    onThumbError(asset: AssetEntry) {
+        this.thumbFailed.update(set => new Set(set).add(asset.id));
+    }
+
+    /** The project's documents minus the ones already linked — what the picker may offer. */
+    linkableDocuments() {
+        const linked = new Set(this.links().map(l => l.id));
+        return (this.project()?.documents ?? []).filter(d => !linked.has(d.id));
+    }
+
     async open(asset: AssetEntry) {
         const id = this.projectId();
         if (!id) return;
         try {
             this.selected.set(await this.api.get(id, asset.id));
+            this.linking.set(false);
+            this.links.set(await this.api.links(id, asset.id));
         } catch (e) {
             this.loadError.set(httpErrorMessage(e, this.t().projects.assets.loadFailed));
         }
+    }
+
+    async addLink(draftId: string) {
+        const id = this.projectId();
+        const asset = this.selected();
+        if (!id || !asset || this.busy()) return;
+        this.busy.set(true);
+        try {
+            await this.api.addLink(id, asset.id, draftId);
+            this.links.set(await this.api.links(id, asset.id));
+            this.linking.set(false);
+        } catch (e) {
+            this.loadError.set(httpErrorMessage(e, this.t().projects.actionFailed));
+        } finally {
+            this.busy.set(false);
+        }
+    }
+
+    async removeLink(draftId: string) {
+        const id = this.projectId();
+        const asset = this.selected();
+        if (!id || !asset || this.busy()) return;
+        this.busy.set(true);
+        try {
+            await this.api.removeLink(id, asset.id, draftId);
+            this.links.set(await this.api.links(id, asset.id));
+        } catch (e) {
+            this.loadError.set(httpErrorMessage(e, this.t().projects.actionFailed));
+        } finally {
+            this.busy.set(false);
+        }
+    }
+
+    /** "2048×1024", "2:14 · 48 kHz" — whatever the header actually said, and nothing else. */
+    detailsOf(asset: AssetEntry) {
+        const parts = [this.bytes(asset.sizeBytes)];
+        if (asset.width && asset.height) parts.unshift(`${asset.width}×${asset.height}`);
+        if (asset.durationMs) {
+            parts.unshift(this.duration(asset.durationMs));
+            if (asset.sampleRate) parts.splice(1, 0, `${Math.round(asset.sampleRate / 1000)} kHz`);
+        }
+        return parts.join(' · ');
     }
 
     async revealSelected() {
