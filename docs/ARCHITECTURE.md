@@ -118,7 +118,14 @@ A zip container (chosen 08.07.2026 over base64-in-JSON, which would have cost +3
 
 See `.claude/rules/production-environment.md` for the Pi/Cloudflare/systemd specifics this architecture assumes, and `.claude/rules/ef-migrations.md` / `.claude/rules/renderers.md` for the invariants that guard it.
 
+Scripts (`Scripts/`, run from repo root):
+- `test.ps1` — backend tests, frontend units and the contrast contract; `-Smoke` adds the Playwright suite
+- `build.ps1` — Angular, the Pi-shaped server publish, and the desktop shell in one pass
+- `deploy.ps1` — the pipeline below, gated by `_git-guard.ps1`: **master only, clean tree only** (T-138)
+- `e2e.ps1` — the smoke suite against a scratch database with no bot token
+
 Deploy (`Scripts/deploy.ps1`, from repo root):
+0. Git guard: branch is `master`, working tree clean, HEAD tagged with `Consts.CurrentVersion` (warning only)
 1. `npm run build` in `cedarclerk-web/` → `cedarclerk-web/dist/cedarclerk-web/browser`
 2. `dotnet publish CedarClerk.Server -c Release -o publish/`
 3. Copy the Angular build output into `publish/wwwroot`

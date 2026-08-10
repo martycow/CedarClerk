@@ -25,6 +25,23 @@ irreversible.
 `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` cannot move it. The desktop shell needs a free
 port, so that single line has to become configurable — the only server change the desktop requires.
 
+### T-121 (desktop) and T-138 (scripts) done 10.08.2026
+
+`.\Scripts\test.ps1` · `.\Scripts\build.ps1` · `.\Scripts\deploy.ps1` — the three commands worth
+remembering, now also at the top of CLAUDE.md's table. **Deploy refuses to run from anything but
+`master`, or with uncommitted changes**; `-Force` overrides and says so.
+
+The desktop shell runs: `.\Scripts\build.ps1` then `cd CedarClerk.Desktop; npm start`.
+
+- [ ] **Marty's look** — open it once and see whether it feels like an app rather than a browser in
+  a costume. Everything else here was checked by running it (see `docs/DESKTOP.md`, "Что проверено").
+- [ ] **Note**: a test launch created `%APPDATA%\CedarClerk` with an empty database and a
+  DataProtection key ring. Harmless — it is where real desktop data will live — but it means the
+  first real launch will not be the first launch.
+- [ ] **Still open on the desktop** (`T-121`, rewritten): the cloud mode from ADR-105 — right now
+  only the local mode exists — and an installer that has actually been installed.
+- [ ] **`T-137`**: the desktop database has no backup. Worth deciding before it holds anything real.
+
 ### T-120 done end to end (10.08.2026)
 
 Marty's Claude Design package landed the same evening (`docs/design_handoff_indiedev_core_loop/`) and

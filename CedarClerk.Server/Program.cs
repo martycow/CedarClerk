@@ -285,4 +285,16 @@ app.MapGet("/api/health", () => Results.Ok(new
 }));
 #endregion
 
-app.Run(Consts.URLs.Localhost);
+// ADR-104 — the listening address is configuration, not a literal. `app.Run(url)` silently
+// overrides ASPNETCORE_URLS, so the hardcoded localhost:8080 made the port unmovable: the desktop
+// shell has to take a free port from the OS, and two of these on one machine cannot both be 8080.
+//
+// The default is unchanged, so `dotnet run` and the Pi (whose port is fixed by the Cloudflare
+// tunnel config) behave exactly as before.
+var explicitUrl = app.Configuration[Consts.General.UrlsCfg];
+if (!string.IsNullOrWhiteSpace(explicitUrl))
+    app.Run(explicitUrl);
+else if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
+    app.Run();  // no argument: let Kestrel read ASPNETCORE_URLS itself, which may list several
+else
+    app.Run(Consts.URLs.Localhost);

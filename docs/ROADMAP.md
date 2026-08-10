@@ -455,7 +455,9 @@ Three things the implementation changed or added, each recorded in `docs/DECISIO
 
 **MUST, in build order** — rows `T-120…T-126` in `docs/BACKLOG.md`:
 1. ~~`Project` + `Draft.DocumentType` + `Draft.ProjectId`~~ — **done 10.08.2026**, backend and screens
-2. Desktop shell — a prerequisite of 3, not a parallel wish
+2. ~~Desktop shell~~ — **local mode done 10.08.2026** (T-121). `CedarClerk.Desktop/` is an Electron main + preload + builder config and nothing else; the server and the SPA are the ordinary ones. Verified by running it, not by reading it: a free port taken from the OS, `/api/health` answering `env: Desktop`, the SPA served, **the bot logging "disabled"** (the check that matters — a desktop bot would knock the Pi's off its token), `%APPDATA%\CedarClerk` created with `cedar.db`/`media`/`dataprotection-keys`, and closing the window leaving **no orphaned server** — an orphan holds the WAL lock and the next launch would fail to open the database. One server line changed to get here: the listening address was a literal that overrode `ASPNETCORE_URLS`, so no port but 8080 was reachable. Still open (rewritten `T-121`): the cloud mode from ADR-105, and an installer that has actually been installed.
+
+   **Build/test/deploy scripts landed with it** (T-138, now closed): `Scripts/test.ps1`, `Scripts/build.ps1` and a git guard on `Scripts/deploy.ps1` — master only, clean tree only, with a version-tag warning. Marty's branch rule had been written down that morning and enforced by nothing; the guard was proven by running it, including the `-Force` path and the dirty-tree refusal.
 3. Asset Manager (`AssetEntry`, path indexing)
 4. Task Tracker (`GameTask`, `TaskLink`)
 5. Development Planner (`Sprint`, deadlines)

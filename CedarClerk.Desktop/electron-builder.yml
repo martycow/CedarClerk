@@ -1,0 +1,38 @@
+# Packaging for the desktop shell (T-121, ADR-104). Run through Scripts/build.ps1, which publishes
+# the server into ./server/ first — electron-builder only wraps what is already there.
+appId: dev.mooexe.cedarclerk
+productName: Cedar Clerk
+copyright: Marty (martycow)
+
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - main.js
+  - preload.js
+  - package.json
+
+# The published self-contained server, copied beside the app rather than into the asar: it is a
+# native executable and has to stay a real file on disk to be spawned.
+extraResources:
+  - from: server
+    to: server
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  # No code signing yet — an unsigned build gets a SmartScreen warning on first run, and buying a
+  # certificate is a decision, not a build step (docs/DESKTOP.md, "Risks").
+  signAndEditExecutable: false
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  # A per-user install writes nothing to Program Files, so no elevation prompt.
+  artifactName: CedarClerk-Setup-${version}.${ext}
+
+# macOS and Linux targets are omitted on purpose: nobody has a machine to verify them on, and an
+# untested installer is worse than an absent one.

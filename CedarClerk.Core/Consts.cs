@@ -72,6 +72,11 @@ public static class Consts
         public const string BlogHostCfg = "Cedar:BlogHost";
         public const string InviteCodeCfg = "Cedar:InviteCode";
 
+        // ADR-104 — where Kestrel listens, when something needs to say. Empty everywhere except the
+        // desktop shell, which takes a free port from the OS and passes it in: two instances on one
+        // machine cannot both hold 8080, and the Pi's port is fixed by the tunnel config anyway.
+        public const string UrlsCfg = "Cedar:Urls";
+
         // The account granted admin rights on startup (IF2). Config-driven on purpose: the first
         // admin can't be made through the admin panel, and this works on a fresh database or a
         // restored backup without hand-editing SQL on the Pi.

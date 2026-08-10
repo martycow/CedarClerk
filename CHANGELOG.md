@@ -2,6 +2,18 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-10 (night) — the desktop shell, and scripts that refuse to ship the wrong branch (T-121/T-138)
+
+**The desktop app exists and runs.** `CedarClerk.Desktop/` is an Electron main process, a preload script and a builder config — that is the whole shell. It starts the ordinary `CedarClerk.Server` as a child process on a port it asks the OS for, waits for `/api/health`, and opens the ordinary Angular SPA against it. Neither the server nor the frontend is forked, which was the entire argument for this approach (ADR-104).
+
+**One line of server code had to change**, and it was the one found while writing the ADR: the listening address was a literal in `app.Run(Consts.URLs.Localhost)`, and an argument to `app.Run` silently overrides `ASPNETCORE_URLS` — so no port but 8080 was reachable, and two instances on one machine could never both start. It now reads `Cedar:Urls`, then `ASPNETCORE_URLS`, then the old default, so `dotnet run` and the Pi notice nothing. A side effect worth naming: `Scripts/e2e.ps1` had been setting `ASPNETCORE_URLS` for weeks and being silently ignored.
+
+**Verified by running it, not by reading it.** The published server answering on a deliberately odd port (8123); `/api/health` reporting `env: Desktop`; the SPA served; `%APPDATA%\CedarClerk` created with its database, media folder and DataProtection key ring; migrations applied from nothing. Two checks matter more than the rest: the startup log says **`Cedar:BotToken not set — bot is disabled`** — a desktop bot would knock the Pi's bot off its token, and this project has two 409 incidents behind it — and closing the window leaves **zero** processes of either kind, because an orphaned server holds the SQLite WAL lock and the next launch would find a database it cannot open.
+
+**Three scripts, and a guard that had been a rule on paper only.** Marty's branch rule was written into CLAUDE.md that morning: master holds the latest stable version, and deploys run from master and only from master. `deploy.ps1` knew nothing about it and would have shipped `dev` or `indiedev_module` just as readily, leaving a version answering in production that nobody meant to release. `Scripts/_git-guard.ps1` now refuses a wrong branch, a detached HEAD and a dirty working tree, and warns when HEAD carries no tag matching `Consts.CurrentVersion`. The guard was proven rather than assumed — the refusal, the allowed branch, the `-Force` path and the dirty-tree stop were each run and watched, which is how the `-Force` message got fixed: it said "Deploy refused" and then continued anyway.
+
+`test.ps1` runs backend tests, frontend units and the contrast contract in one command (`-Smoke` adds Playwright); `build.ps1` builds the Angular app, the Pi-shaped server and the desktop shell, keeping the shell's version in step with `Consts.cs` so a mismatched pair reports itself at startup. Neither checks the branch, on purpose: building a feature branch is the normal case, and a guard that fires twenty times a day teaches people to reach for `-Force` without reading.
+
 ## 2026-08-10 (evening) — the module gets screens (T-120, Phase 13)
 
 Marty generated a UI prototype in Claude Design and dropped the package into `docs/design_handoff_indiedev_core_loop/` — an interactive prototype, 26 screenshots and a README carrying exact token values for twelve screens. Three of them are backed by code that now exists, so those are the three that got built: the projects list, the project dashboard, and the two dialogs that create things.

@@ -23,7 +23,9 @@ appsettings.*.local.json
 *.env
 .env*
 test.ps1
- 
+# ...but the repo's own runner is tracked — the rule above is for a scratch file at the root.
+!Scripts/test.ps1
+
 # Local SQLite (path is case-sensitive on purpose — CedarClerk.Server/Data/ holds source files)
 CedarClerk.Server/Data/media/
 *.db
@@ -60,3 +62,8 @@ CedarClerk.Server/Data/cedar.db-shm
 CedarClerk.Server/Data/cedar.db-wal
 CedarClerk.Server/Data/media/
 CedarClerk.Server/Data/import-tmp/
+
+# === Desktop shell (T-121) ===
+# The published server copied in beside the Electron shell by Scripts/build.ps1 — a build output,
+# ~70MB of self-contained runtime, regenerated on every build.
+CedarClerk.Desktop/server/
