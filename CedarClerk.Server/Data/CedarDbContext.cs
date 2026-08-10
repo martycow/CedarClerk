@@ -96,6 +96,9 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         // publish on the first deploy. Declared on the model rather than hand-edited into the
         // migration so that regenerating the migration cannot quietly lose it.
         builder.Entity<Draft>().Property(d => d.DocumentType).HasDefaultValue(DocumentTypes.Post);
+        // Same reason as the line above — EF ignores the property initialiser, and a project with an
+        // empty type would fall through StarterDocumentType's unknown branch.
+        builder.Entity<Project>().Property(p => p.ProjectType).HasDefaultValue(ProjectTypes.FullGame);
         // The project list query: this owner's projects, active ones first by their own order.
         builder.Entity<Project>().HasIndex(p => new { p.OwnerId, p.ArchivedAt });
         // "What is in this project" — the dashboard's only real question, and the one the drafts

@@ -80,5 +80,15 @@
   "MessageSquareShare": "chat-teardrop-dots",
   "Sparkles": "sparkle",
   "UserRound": "user",
-  "LogOut": "sign-out"
+  "LogOut": "sign-out",
+
+  "game-controller": "game-controller",
+  "flask": "flask",
+  "rocket-launch": "rocket-launch",
+  "timer": "timer",
+  "book-open": "book-open",
+  "film-slate": "film-slate",
+  "tree-structure": "tree-structure",
+  "note": "note",
+  "kanban": "kanban"
 }

@@ -10,7 +10,7 @@ import { AccountMenuComponent } from './account-menu.component';
 import { CountBadgeComponent } from './count-badge.component';
 import { IconComponent } from './icon.component';
 
-export type PageHeaderPage = 'posts' | 'glossary' | 'settings' | 'admin' | 'drafts';
+export type PageHeaderPage = 'posts' | 'glossary' | 'settings' | 'admin' | 'drafts' | 'projects';
 
 // Header/nav redesign (27.07.2026, docs/DECISIONS.md) — one glass header shared by the "secondary"
 // screens, replacing near-identical header blocks that had already drifted (glass on Posts/Admin,
@@ -37,6 +37,11 @@ export class PageHeaderComponent {
     // Only /drafts has nothing to go back to — it's the landing page itself.
     showBack = input(true);
 
+    // A second crumb segment, for screens that live under one of the pages above — the project
+    // dashboard reads "Projects / Cedar Station". Empty means the crumb stays one level, which is
+    // every other screen. It ellipsizes rather than widening the header (T-051).
+    crumbSuffix = input('');
+
     crumb = computed(() => {
         const t = this.t();
         switch (this.page()) {
@@ -45,6 +50,7 @@ export class PageHeaderComponent {
             case 'settings': return t.settings.crumb;
             case 'admin': return t.admin.crumb;
             case 'drafts': return t.drafts.crumb;
+            case 'projects': return t.projects.crumb;
         }
     });
 }

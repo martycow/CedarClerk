@@ -50,6 +50,103 @@ export const en = {
         legalAnd: 'and',
         legalPrivacy: 'Privacy Policy',
     },
+    // Phase 13 — the indie-gamedev module (T-120). Present in the dictionary whether or not the
+    // module is enabled: a dictionary that changes shape by configuration would defeat the
+    // `ru.ts is typeof en` check that keeps the two in step.
+    projects: {
+        crumb: 'Projects',
+        title: 'Projects',
+        // Plural forms differ per language, so these are functions — see the note on drafts below.
+        sub: (total: number, active: number) => `${total} ${total === 1 ? 'project' : 'projects'} · ${active} active`,
+        search: 'Search projects…',
+        newProject: 'New project',
+        filterAll: 'All',
+        filterActive: 'Active',
+        filterArchived: 'Archived',
+        colName: 'Name',
+        colDocs: 'Docs',
+        colTasks: 'Tasks',
+        colAssets: 'Assets',
+        colActivity: 'Last activity',
+        colState: 'State',
+        stateActive: 'Active',
+        stateArchived: 'Archived',
+        loading: 'Loading…',
+        empty: 'No projects yet',
+        emptyHint: 'A project is a game. Documents, tasks and assets live inside it.',
+        emptyFiltered: 'No project matches this filter.',
+        notFound: 'This project does not exist, or it is not yours.',
+        loadFailed: 'Could not load projects.',
+        // Dashboard
+        settings: 'Settings',
+        newDocument: 'New document',
+        viewAll: 'View all',
+        documentCount: (n: number) => `${n} ${n === 1 ? 'document' : 'documents'}`,
+        noDocumentsOfType: 'None yet',
+        // Said plainly rather than shown as three empty cards: the parts do not exist yet, and an
+        // empty "Up next" would read as "you have no tasks" instead of "tasks are not built".
+        railPending: 'Tasks, sprints and the asset index arrive with the next steps of this module.',
+        railPendingTitle: 'Not built yet',
+        openDocument: 'Open in the editor',
+        actionFailed: 'That did not work.',
+        edit: {
+            title: 'Project settings',
+            nameLabel: 'Name',
+            descriptionLabel: 'Description',
+            archive: 'Archive project',
+            unarchive: 'Restore from archive',
+            remove: 'Delete project',
+            // The reassurance is the point: a container disappearing must not read as the writing
+            // disappearing with it.
+            removeConfirm: 'Delete this project? Its documents are kept — they only stop belonging to a project.',
+        },
+        create: {
+            title: 'New project',
+            hint: 'a project is never empty — the type decides its starter document',
+            nameLabel: 'Name',
+            namePlaceholder: 'Cedar Station',
+            submit: 'Create project',
+            startsWith: (starter: string) => `Starts with: ${starter}`,
+            failed: 'Could not create the project.',
+        },
+        newDoc: {
+            title: 'New document',
+            inProject: (project: string) => `in ${project}`,
+            note: 'The type shows as an icon wherever the document is listed — no colour labels.',
+            failed: 'Could not create the document.',
+        },
+        projectTypes: {
+            fullgame: {
+                name: 'Full game',
+                blurb: 'The whole toolkit: documents, sprints, asset index, press kit.',
+                starter: 'GDD (master)',
+            },
+            jam: {
+                name: 'Game jam entry',
+                blurb: 'Deadline first — one sprint, a plan, a submission checklist.',
+                starter: 'Jam plan',
+            },
+            prototype: {
+                name: 'Prototype',
+                blurb: 'A question to answer. Notes and tasks, no ceremony.',
+                starter: 'Hypothesis note',
+            },
+            released: {
+                name: 'Released game',
+                blurb: 'Post-launch: patches, changelogs, press.',
+                starter: 'Changelog',
+            },
+        },
+        // `group` is the heading over a section of the dashboard; `name` is what the picker calls it.
+        docTypes: {
+            post: { name: 'Devlog post', group: 'Devlog', blurb: 'Long-form update — publishes to the blog and Telegram.' },
+            design: { name: 'Game design doc', group: 'Game design', blurb: 'Systems, rules, numbers. The master reference.' },
+            script: { name: 'Script', group: 'Script', blurb: 'Dialogue and barks, scene by scene.' },
+            plot: { name: 'Story outline', group: 'Story outline', blurb: 'Beats and arcs before they become script.' },
+            changelog: { name: 'Changelog', group: 'Changelog', blurb: 'One line per change, grouped by build.' },
+            note: { name: 'Note', group: 'Notes', blurb: 'Anything that does not fit the other five.' },
+        },
+    },
     drafts: {
         crumb: 'Drafts',
         title: 'Drafts',

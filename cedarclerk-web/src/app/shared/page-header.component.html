@@ -9,8 +9,21 @@
     @if (version.version(); as v) { <span class="version-tag" [title]="'v' + v">v{{ v }}</span> }
     <span class="crumb-sep">/</span>
     <span class="crumb-current">{{ crumb() }}</span>
+    @if (crumbSuffix()) {
+    <span class="crumb-sep">/</span>
+    <span class="crumb-current crumb-leaf" [title]="crumbSuffix()">{{ crumbSuffix() }}</span>
+    }
     <span class="spacer"></span>
 
+    <!--Phase 13 — first in the nav row, per the design handoff. Hidden when the module is off:
+        the routes are guarded and the endpoints are not even mapped (ADR-101), so a visible button
+        would lead nowhere.-->
+    @if (auth.indieDev()) {
+    <a class="nav-btn" [class.on]="page() === 'projects'" routerLink="/projects" [title]="t().projects.crumb">
+        <app-icon name="game-controller" size="sm"></app-icon>
+        <span class="btn-label">{{ t().projects.crumb }}</span>
+    </a>
+    }
     <a class="nav-btn" [class.on]="page() === 'posts'" routerLink="/posts" [title]="t().editor.postsManager">
         <app-icon name="newspaper" size="sm"></app-icon>
         <span class="btn-label">{{ t().editor.postsManager }}</span>

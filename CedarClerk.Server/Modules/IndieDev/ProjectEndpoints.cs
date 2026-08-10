@@ -13,7 +13,9 @@ namespace CedarClerk.Server.Modules.IndieDev;
 // confirms that an id exists.
 public static class ProjectEndpoints
 {
-    public record CreateProjectRequest(string Name, string? Description, string? DocumentType, string? DocumentTitle);
+    // DocumentType is optional because ProjectType already implies one (ProjectTypes
+    // .StarterDocumentType); it stays overridable so the rule never becomes a wall.
+    public record CreateProjectRequest(string Name, string? Description, string? ProjectType, string? DocumentType, string? DocumentTitle);
     public record UpdateProjectRequest(string Name, string? Description, string? CoverUrl);
     public record ArchiveProjectRequest(bool Archived);
     public record CreateDocumentRequest(string? DocumentType, string? Title);
@@ -51,21 +53,29 @@ public static class ProjectEndpoints
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
 
-            var counts = await db.Drafts
+            // Count and last activity in one pass. "Last activity" means the newest edit to any of
+            // the project's documents — the project row itself never moves, so its CreatedAt would
+            // have shown the day it was made under a column headed "Last activity".
+            var stats = await db.Drafts
                 .Where(d => d.OwnerId == uid && d.ProjectId != null)
                 .GroupBy(d => d.ProjectId)
-                .Select(g => new { ProjectId = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(g => g.ProjectId!.Value, g => g.Count);
+                .Select(g => new { ProjectId = g.Key, Count = g.Count(), LastActivity = g.Max(d => d.UpdatedAt) })
+                .ToDictionaryAsync(g => g.ProjectId!.Value, g => g);
 
             return Results.Ok(projects.Select(p => new
             {
                 p.Id,
                 p.Name,
                 p.Description,
+                p.ProjectType,
                 p.CoverUrl,
                 p.CreatedAt,
                 p.ArchivedAt,
-                documentCount = counts.GetValueOrDefault(p.Id),
+                documentCount = stats.GetValueOrDefault(p.Id)?.Count ?? 0,
+                // Falls back to the project's own creation for the moment between the two writes
+                // of a create — there is no state in which a project has no documents (ADR-103),
+                // but a null here would still render as an empty cell rather than a date.
+                lastActivityAt = stats.GetValueOrDefault(p.Id)?.LastActivity ?? p.CreatedAt,
             }));
         });
 
@@ -89,6 +99,7 @@ public static class ProjectEndpoints
                 project.Id,
                 project.Name,
                 project.Description,
+                project.ProjectType,
                 project.CoverUrl,
                 project.CreatedAt,
                 project.ArchivedAt,
@@ -103,13 +114,18 @@ public static class ProjectEndpoints
         {
             if (Invalid(req.Name, req.Description) is { } badRequest) return badRequest;
 
-            var type = req.DocumentType ?? DocumentTypes.Post;
+            var projectType = req.ProjectType ?? ProjectTypes.FullGame;
+            if (!ProjectTypes.IsKnown(projectType))
+                return Results.Json(new { error = ErrorMessages.UnknownProjectType(projectType) }, statusCode: StatusCodes.Status400BadRequest);
+
+            // The project type decides the starter document unless the caller names one outright.
+            var type = req.DocumentType ?? ProjectTypes.StarterDocumentType(projectType);
             if (!DocumentTypes.IsKnown(type))
                 return Results.Json(new { error = ErrorMessages.UnknownDocumentType(type) }, statusCode: StatusCodes.Status400BadRequest);
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var name = req.Name.Trim();
-            var project = new Project { OwnerId = uid, Name = name, Description = req.Description?.Trim() ?? "" };
+            var project = new Project { OwnerId = uid, Name = name, Description = req.Description?.Trim() ?? "", ProjectType = projectType };
 
             var title = string.IsNullOrWhiteSpace(req.DocumentTitle) ? name : req.DocumentTitle.Trim();
             var draft = new Draft { OwnerId = uid, Title = title, DocumentType = type, ProjectId = project.Id };

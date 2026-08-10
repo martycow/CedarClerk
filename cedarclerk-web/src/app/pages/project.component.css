@@ -1,0 +1,452 @@
+/* Phase 13 / T-120 — the project dashboard. No data-density attribute on the root, so --dens-*
+   resolves comfortable here while the same tokens read compact on /projects. That contrast is
+   ADR-071 principle 3 working, and it is why nothing in this file hardcodes a spacing value. */
+.project-page {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--dens-fs);
+}
+
+.hint {
+    color: var(--t2);
+    font-size: var(--fs-meta);
+}
+
+.spacer {
+    flex: 1;
+}
+
+.project-body {
+    max-width: 1360px;
+    margin: 0 auto;
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+}
+
+/* ---------- Head ---------- */
+.project-head {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
+.cover {
+    width: 56px;
+    height: 38px;
+    flex: none;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: repeating-linear-gradient(45deg, var(--alt), var(--alt) 4px, var(--surface) 4px, var(--surface) 8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.cover.has-image {
+    background: var(--alt);
+}
+
+.cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.cover-initials {
+    font-family: var(--font-mono);
+    font-size: var(--fs-11);
+    color: var(--t3);
+}
+
+.head-text {
+    min-width: 0;
+}
+
+.head-text h1 {
+    margin: 0;
+    font-size: var(--fs-22);
+    font-weight: 700;
+    letter-spacing: -.02em;
+}
+
+.status-line {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    flex-wrap: wrap;
+    margin-top: 3px;
+    font-size: var(--fs-meta);
+    color: var(--t2);
+}
+
+.status-line app-icon {
+    color: var(--t2);
+}
+
+.dot {
+    opacity: .6;
+}
+
+.description {
+    margin: var(--space-2) 0 0;
+    font-size: var(--fs-meta);
+    color: var(--t2);
+    max-width: 60ch;
+}
+
+.btn-accent {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    border: none;
+    background: var(--accent);
+    color: var(--sheet);
+    border-radius: var(--dens-radius);
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--dens-fs);
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.btn-accent:hover:not(:disabled) {
+    filter: brightness(1.08);
+}
+
+.btn-accent:disabled,
+.btn-ghost:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.btn-ghost {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--t2);
+    border-radius: var(--dens-radius);
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--dens-fs);
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.btn-ghost:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--border-strong);
+}
+
+.btn-ghost.danger:hover:not(:disabled) {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+/* ---------- Grid ---------- */
+/* Sections are deliberately unequal — the documents are the screen, the rail is a sidebar. */
+.project-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: var(--space-5);
+    align-items: start;
+}
+
+.main-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    min-width: 0;
+}
+
+.type-card,
+.pending-card {
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow);
+    padding: var(--space-4);
+}
+
+.pending-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.card-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.card-head app-icon {
+    color: var(--accent);
+}
+
+.card-title {
+    font-size: var(--fs-body);
+    font-weight: 600;
+}
+
+.card-count {
+    font-size: var(--fs-caption);
+    color: var(--t2);
+}
+
+.doc-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    padding: var(--space-2) var(--space-1);
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.doc-row:hover {
+    background: var(--hover);
+}
+
+.doc-title {
+    font-size: var(--fs-ui);
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.doc-meta {
+    font-size: var(--fs-meta);
+    color: var(--t2);
+    white-space: nowrap;
+}
+
+.none-yet {
+    margin: 0;
+    padding: var(--space-2) var(--space-1);
+    font-size: var(--fs-meta);
+    color: var(--t2);
+}
+
+.tile-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-3);
+}
+
+.type-tile {
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+}
+
+.type-tile:hover {
+    border-color: var(--abord);
+}
+
+.tile-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.tile-head app-icon {
+    color: var(--accent);
+}
+
+.tile-name {
+    font-size: var(--fs-ui);
+    font-weight: 600;
+}
+
+.tile-latest {
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    font-family: inherit;
+    font-size: var(--fs-meta);
+    color: var(--t2);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tile-latest:hover {
+    color: var(--text);
+}
+
+.side-rail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    min-width: 0;
+}
+
+.load-error {
+    color: var(--danger);
+    font-size: var(--dens-fs);
+}
+
+/* ---------- Dialogs ---------- */
+/* The shared modal head is a flex row and lets its title shrink, which wrapped "New project" onto
+   two lines. Projected content keeps this component's style scope, so the heading is fixed here
+   rather than by changing the shell for every modal in the app. */
+.modal-head-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    min-width: 0;
+}
+
+.modal-heading {
+    white-space: nowrap;
+}
+
+.modal-hint {
+    font-size: var(--fs-meta);
+    font-weight: 400;
+    color: var(--t2);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.modal-note {
+    font-size: var(--fs-caption);
+    color: var(--t2);
+    max-width: 46ch;
+}
+
+.doc-type-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-2);
+}
+
+.doc-type-card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    text-align: left;
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--sheet);
+    color: var(--text);
+    cursor: pointer;
+    font-family: inherit;
+    min-width: 0;
+}
+
+.doc-type-card:hover:not(:disabled) {
+    background: var(--asoft);
+    border-color: var(--abord);
+}
+
+.doc-type-card:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.doc-type-card app-icon {
+    color: var(--accent);
+    flex: none;
+    margin-top: 1px;
+}
+
+.doc-type-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.doc-type-name {
+    font-size: var(--fs-ui);
+    font-weight: 600;
+}
+
+.doc-type-blurb {
+    font-size: var(--fs-meta);
+    color: var(--t2);
+}
+
+.field-label {
+    display: block;
+    font-size: var(--fs-caption);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-weight: 600;
+    color: var(--t2);
+    margin-bottom: var(--space-1);
+}
+
+.field-label.spaced {
+    margin-top: var(--space-3);
+}
+
+.text-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: var(--dens-control-y) var(--dens-control-x);
+    border: 1px solid var(--border);
+    border-radius: var(--dens-radius);
+    background: var(--sheet);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--fs-body);
+    resize: vertical;
+}
+
+.danger-row {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+    flex-wrap: wrap;
+}
+
+.danger-hint {
+    margin-top: var(--space-2);
+}
+
+/* One column below iPad landscape: the rail is a sidebar, and a 320px sidebar beside a squeezed
+   document column serves neither. */
+@media (max-width: 1000px) {
+    .project-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+    .tile-row {
+        grid-template-columns: 1fr;
+    }
+
+    .doc-type-grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/auth.guard';
 import { adminGuard } from './core/admin.guard';
 import { guestGuard } from './core/guest.guard';
+import { indieDevGuard } from './core/indiedev.guard';
 
 // T-092 — every route is lazy (`loadComponent`), and the router preloads them all in the
 // background once the app has booted (see app.config.ts). The measurement behind that: with the
@@ -47,6 +48,19 @@ export const routes: Routes = [
         path: 'glossary',
         loadComponent: () => import('./pages/glossary.component').then(m => m.GlossaryComponent),
         canActivate: [authGuard],
+    },
+    // Phase 13 — the indie-gamedev module (ADR-101). indieDevGuard already covers signed-in, the
+    // same way adminGuard does; with the flag off it redirects to /drafts rather than 404-ing,
+    // because the URL is not wrong, the feature is simply not installed here.
+    {
+        path: 'projects',
+        loadComponent: () => import('./pages/projects.component').then(m => m.ProjectsComponent),
+        canActivate: [indieDevGuard],
+    },
+    {
+        path: 'projects/:id',
+        loadComponent: () => import('./pages/project.component').then(m => m.ProjectComponent),
+        canActivate: [indieDevGuard],
     },
     // adminGuard already covers signed-in — it redirects to /login itself (IF2).
     {

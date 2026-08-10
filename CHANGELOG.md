@@ -2,6 +2,18 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-10 (evening) — the module gets screens (T-120, Phase 13)
+
+Marty generated a UI prototype in Claude Design and dropped the package into `docs/design_handoff_indiedev_core_loop/` — an interactive prototype, 26 screenshots and a README carrying exact token values for twelve screens. Three of them are backed by code that now exists, so those are the three that got built: the projects list, the project dashboard, and the two dialogs that create things.
+
+**The design overturned a decision made this morning.** ADR-103 had removed the project-type taxonomy on the grounds that it was invented here and asked for by nobody. The handoff has it, with four real types and a starter document each — Full game starts with a GDD, a jam entry with a jam plan, a prototype with a hypothesis note, a released game with a changelog. That is a product decision rather than a guess, so the taxonomy is back: `ProjectTypes` in Core, `Project.ProjectType` in the schema, and the create dialog is a type picker exactly as drawn. The starter document's *title* still comes from the client, because the server has one language and the client has two.
+
+**Five deliberate deviations, each because something behind the pixels does not exist yet.** The dashboard's right rail is drawn as three cards — Up next, Sprint, Recent assets — and tasks, sprints and the asset index are all still unbuilt. Rendering them empty would tell the reader "you have no tasks" when the truth is "tasks are not built", so the rail is one card that says the true thing. The same reasoning put an em-dash rather than a zero in the list's Tasks and Assets columns. The list's empty state and the project-settings dialog were built without a design because the handoff marks both as undrawn. And the project-type icon is **not** in the list's Name column, because the handoff does not put one there — which leaves the project type invisible on that screen, so that is a backlog row (`T-139`) rather than a silent improvement.
+
+**Looked at, not just compiled.** The screens were captured live in both themes against the scratch database and compared against the package's own screenshots, which caught four things the tests could not: the shared modal's head put the hint *before* the title and wrapped "New project" onto two lines, the breadcrumb stopped at "Projects" instead of walking to the project name, and the Last activity column was showing each project's creation date — the project row never moves, so the column now reads the newest edit among its documents.
+
+`dotnet test` **639/639**, frontend 11/11, `ng build` warning-free at 587 kB initial against a 650 kB budget, contrast 0 failing pairs in both themes, smoke **53/53**.
+
 ## 2026-08-10 — the indie-gamedev turn, on paper (ADR-101…107, Phase 13, no version bump)
 
 Marty's brief redirects the product: Cedar Clerk stops being "an editor that publishes posts" and becomes a toolkit for an indie game developer, where a post is one document type among several living inside a **project**. Around it: tasks, sprints, an asset index, a press kit, script and design tooling; and new publishing targets aimed at that audience (itch.io, Steam, IndieDB, LinkedIn). The brief is explicit that this is a **module inside one codebase, not a fork**.

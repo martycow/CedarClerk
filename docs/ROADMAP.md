@@ -449,8 +449,12 @@ Three things the implementation changed or added, each recorded in `docs/DECISIO
 - **ADR-103 narrowed**: the create dialog picks the starting *document* type, not a project type. The project-type taxonomy was invented in the ADR and asked for by nobody.
 - **Working material does not publish.** `design`/`script`/`plot`/`note` are refused on the networks' shared path and, separately, on the blog — which is deliberately not a publish target and so inherits nothing. `post` and `changelog` publish. Nothing changes for existing content, which is all `post`.
 
+**T-120 frontend done 10.08.2026, from Marty's Claude Design package** (`docs/design_handoff_indiedev_core_loop/` — prototype, 26 screenshots, a README carrying exact token values). Built: `/projects` (compact list, create-project dialog), `/projects/:id` (comfortable dashboard, new-document and project-settings dialogs), "Projects" first in the shared topbar with the crumb walking to the project name, eight new Phosphor icons, `projects` blocks in both dictionaries. `dotnet test` **639/639**, frontend 11/11, `ng build` warning-free at 587 kB initial (650 kB budget), contrast 0 failing pairs, smoke **53/53** — and the screens were captured live in both themes rather than trusted from the code.
+
+**The package overturned one of this phase's own decisions**: ADR-103 had removed the project-type taxonomy as invented, and the design brings it back with four real types (Full game / Game jam entry / Prototype / Released game), each naming its starter document. It is a product decision now rather than a guess, so `ProjectTypes` exists in Core and `Project.ProjectType` in the schema (migration `AddProjectType`). Five deliberate deviations from the handoff, each because the backing feature or the designed state does not exist yet, are listed in `docs/INDIEDEV.md`.
+
 **MUST, in build order** — rows `T-120…T-126` in `docs/BACKLOG.md`:
-1. `Project` + `Draft.DocumentType` + `Draft.ProjectId` — the foundation *(backend done, frontend open)*
+1. ~~`Project` + `Draft.DocumentType` + `Draft.ProjectId`~~ — **done 10.08.2026**, backend and screens
 2. Desktop shell — a prerequisite of 3, not a parallel wish
 3. Asset Manager (`AssetEntry`, path indexing)
 4. Task Tracker (`GameTask`, `TaskLink`)

@@ -25,6 +25,23 @@ irreversible.
 `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` cannot move it. The desktop shell needs a free
 port, so that single line has to become configurable — the only server change the desktop requires.
 
+### T-120 done end to end (10.08.2026)
+
+Marty's Claude Design package landed the same evening (`docs/design_handoff_indiedev_core_loop/`) and
+the screens were built from it: `/projects` (list, compact) and `/projects/:id` (dashboard,
+comfortable), the create-project and new-document dialogs, and "Projects" first in the shared topbar.
+**The design brought back the project-type taxonomy** that ADR-103 had removed as invented — with four
+real types and a starter document each, so it is back as a product decision (ADR-103, amended).
+
+Checks: `dotnet test` **639/639**, frontend **11/11**, `ng build` warning-free (587 kB initial against
+a 650 kB budget), contrast **0 failing pairs**, smoke **53/53**. The screens were captured live in both
+themes against the scratch database and compared to the package's own screenshots.
+
+- [ ] **Marty's look** — the five deliberate deviations are listed in `docs/INDIEDEV.md`; the two most
+  worth a second opinion: the dashboard's right rail is one honest "not built yet" card instead of
+  three empty ones, and the project-type icon is **not** in the list's Name column because the design
+  does not have it — which leaves project type invisible on that screen.
+
 ### T-120 backend done the same day
 
 `Project`, `Draft.DocumentType`/`ProjectId`, migration, `/api/projects` + `/api/documents/{id}/type`

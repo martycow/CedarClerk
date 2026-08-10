@@ -1,0 +1,163 @@
+<div class="project-page">
+    <app-page-header page="projects" [showBack]="false" [crumbSuffix]="project()?.name ?? ''"></app-page-header>
+
+    <div class="project-body">
+        @if (loadError(); as err) {
+            <p class="load-error">{{ err }}</p>
+        } @else if (loading()) {
+            <p class="hint">{{ t().projects.loading }}</p>
+        } @else if (project(); as p) {
+            <div class="project-head">
+                <div class="cover" [class.has-image]="!!p.coverUrl">
+                    @if (p.coverUrl) {
+                        <img [src]="p.coverUrl" alt="" loading="lazy">
+                    } @else {
+                        <span class="cover-initials">{{ initials(p.name) }}</span>
+                    }
+                </div>
+                <div class="head-text">
+                    <h1>{{ p.name }}</h1>
+                    <div class="status-line">
+                        <app-icon [name]="projectIcons[p.projectType]" size="sm"></app-icon>
+                        <span>{{ t().projects.projectTypes[p.projectType].name }}</span>
+                        <span class="dot">·</span>
+                        <span>{{ p.archivedAt ? t().projects.stateArchived : t().projects.stateActive }}</span>
+                        <span class="dot">·</span>
+                        <span>{{ t().projects.documentCount(p.documents.length) }}</span>
+                    </div>
+                    @if (p.description) { <p class="description">{{ p.description }}</p> }
+                </div>
+                <span class="spacer"></span>
+                <button class="btn-ghost" (click)="startEdit()">
+                    <app-icon name="gear" size="sm"></app-icon>
+                    <span>{{ t().projects.settings }}</span>
+                </button>
+                <button class="btn-accent" (click)="addingDocument.set(true)">
+                    <app-icon name="plus" size="sm"></app-icon>
+                    <span>{{ t().projects.newDocument }}</span>
+                </button>
+            </div>
+
+            @if (actionError(); as err) { <p class="load-error">{{ err }}</p> }
+
+            <div class="project-grid">
+                <div class="main-column">
+                    @for (type of featuredTypes; track type) {
+                        <section class="type-card">
+                            <div class="card-head">
+                                <app-icon [name]="docIcons[type]" size="md"></app-icon>
+                                <span class="card-title">{{ t().projects.docTypes[type].group }}</span>
+                                <span class="card-count">{{ countOf(type) }}</span>
+                                <span class="spacer"></span>
+                            </div>
+                            @for (doc of recentOf(type); track doc.id) {
+                                <button class="doc-row" (click)="openDocument(doc)" [title]="t().projects.openDocument">
+                                    <span class="doc-title">{{ doc.title }}</span>
+                                    <span class="doc-meta">{{ doc.updatedAt | date:'d MMM, HH:mm' }}</span>
+                                </button>
+                            } @empty {
+                                <p class="none-yet">{{ t().projects.noDocumentsOfType }}</p>
+                            }
+                        </section>
+                    }
+
+                    <div class="tile-row">
+                        @for (type of tileTypes; track type) {
+                            <section class="type-tile">
+                                <div class="tile-head">
+                                    <app-icon [name]="docIcons[type]" size="sm"></app-icon>
+                                    <span class="tile-name">{{ t().projects.docTypes[type].group }}</span>
+                                    <span class="card-count">{{ countOf(type) }}</span>
+                                </div>
+                                @if (latestOf(type); as latest) {
+                                    <button class="tile-latest" (click)="openDocument(latest)" [title]="t().projects.openDocument">
+                                        {{ latest.title }}
+                                    </button>
+                                } @else {
+                                    <span class="none-yet">{{ t().projects.noDocumentsOfType }}</span>
+                                }
+                            </section>
+                        }
+                    </div>
+                </div>
+
+                <!-- The right rail's three cards (Up next / Sprint / Recent assets) need tasks,
+                     sprints and the asset index, none of which exist yet (T-122/T-123). Rendering
+                     them empty would say "you have no tasks" instead of "tasks are not built", so
+                     the rail says the true thing once and takes up no more room than that. -->
+                <aside class="side-rail">
+                    <section class="pending-card">
+                        <div class="card-head">
+                            <app-icon name="kanban" size="md"></app-icon>
+                            <span class="card-title">{{ t().projects.railPendingTitle }}</span>
+                        </div>
+                        <p class="hint">{{ t().projects.railPending }}</p>
+                    </section>
+                </aside>
+            </div>
+        }
+    </div>
+</div>
+
+@if (addingDocument()) {
+    <app-modal [width]="640" (closed)="addingDocument.set(false)">
+        <span modal-title class="modal-head-row">
+            <span class="modal-heading">{{ t().projects.newDoc.title }}</span>
+            @if (project(); as p) { <span class="modal-hint">{{ t().projects.newDoc.inProject(p.name) }}</span> }
+        </span>
+
+        <div class="doc-type-grid">
+            @for (type of docTypes; track type) {
+                <button class="doc-type-card" [disabled]="busy()" (click)="createDocument(type)">
+                    <app-icon [name]="docIcons[type]" size="md"></app-icon>
+                    <span class="doc-type-text">
+                        <span class="doc-type-name">{{ t().projects.docTypes[type].name }}</span>
+                        <span class="doc-type-blurb">{{ t().projects.docTypes[type].blurb }}</span>
+                    </span>
+                </button>
+            }
+        </div>
+
+        @if (actionError(); as err) { <p class="load-error">{{ err }}</p> }
+
+        <ng-container modal-actions>
+            <span class="modal-note">{{ t().projects.newDoc.note }}</span>
+            <span class="spacer"></span>
+            <button class="btn-ghost" (click)="addingDocument.set(false)">{{ t().common.cancel }}</button>
+        </ng-container>
+    </app-modal>
+}
+
+@if (editing()) {
+    <app-modal [width]="520" (closed)="editing.set(false)">
+        <span modal-title class="modal-head-row"><span class="modal-heading">{{ t().projects.edit.title }}</span></span>
+
+        <label class="field-label" for="edit-name">{{ t().projects.edit.nameLabel }}</label>
+        <input id="edit-name" class="text-input" type="text" maxlength="80"
+               [ngModel]="editName()" (ngModelChange)="editName.set($event)">
+
+        <label class="field-label spaced" for="edit-description">{{ t().projects.edit.descriptionLabel }}</label>
+        <textarea id="edit-description" class="text-input" rows="3" maxlength="2000"
+                  [ngModel]="editDescription()" (ngModelChange)="editDescription.set($event)"></textarea>
+
+        <div class="danger-row">
+            <button class="btn-ghost" [disabled]="busy()" (click)="toggleArchived()">
+                {{ project()?.archivedAt ? t().projects.edit.unarchive : t().projects.edit.archive }}
+            </button>
+            <button class="btn-ghost danger" [disabled]="busy()"
+                    (click)="confirmDelete ? deleteProject() : (confirmDelete = true)">
+                {{ confirmDelete ? t().common.delete : t().projects.edit.remove }}
+            </button>
+        </div>
+        @if (confirmDelete) { <p class="hint danger-hint">{{ t().projects.edit.removeConfirm }}</p> }
+
+        @if (actionError(); as err) { <p class="load-error">{{ err }}</p> }
+
+        <ng-container modal-actions>
+            <button class="btn-ghost" (click)="editing.set(false)">{{ t().common.cancel }}</button>
+            <button class="btn-accent" [disabled]="editName().trim().length === 0 || busy()" (click)="saveEdit()">
+                {{ t().common.save }}
+            </button>
+        </ng-container>
+    </app-modal>
+}

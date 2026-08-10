@@ -25,6 +25,13 @@ public class Project
     public string Description { get; set; } = "";
 
     /// <summary>
+    /// One of <see cref="CedarClerk.Core.ProjectTypes"/>. Decides which document the project is
+    /// created with, and nothing else after that — a project is not locked out of any document type
+    /// by how it started.
+    /// </summary>
+    public string ProjectType { get; set; } = CedarClerk.Core.ProjectTypes.FullGame;
+
+    /// <summary>
     /// A /media/... path from the ordinary asset upload — same whitelist, same quota, same public
     /// serving as ApplicationUser.AvatarUrl and GlossaryTerm.ImageUrl. Null = no cover.
     /// </summary>

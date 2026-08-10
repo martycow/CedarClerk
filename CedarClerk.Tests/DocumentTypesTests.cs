@@ -72,6 +72,33 @@ public class DocumentTypesTests
         Assert.False(DocumentTypes.IsPublishable(""));
     }
 
+    [Theory]
+    [InlineData(ProjectTypes.FullGame, DocumentTypes.Design)]
+    [InlineData(ProjectTypes.Jam, DocumentTypes.Design)]
+    [InlineData(ProjectTypes.Prototype, DocumentTypes.Note)]
+    [InlineData(ProjectTypes.Released, DocumentTypes.Changelog)]
+    public void Each_project_type_starts_with_its_own_document(string projectType, string expected)
+    {
+        Assert.Equal(expected, ProjectTypes.StarterDocumentType(projectType));
+    }
+
+    [Fact]
+    public void An_unknown_project_type_still_produces_a_document()
+    {
+        // ADR-103 — a project cannot exist without one, so this branch must never return nothing.
+        Assert.Equal(DocumentTypes.Post, ProjectTypes.StarterDocumentType(null));
+        Assert.Equal(DocumentTypes.Post, ProjectTypes.StarterDocumentType("mmo"));
+        Assert.True(DocumentTypes.IsKnown(ProjectTypes.StarterDocumentType("anything")));
+    }
+
+    [Fact]
+    public void Every_project_type_starts_with_a_real_document_type()
+    {
+        // Guards the pairing itself: a typo in StarterDocumentType would otherwise only surface as
+        // a 400 at the moment someone creates a project.
+        Assert.All(ProjectTypes.All, t => Assert.True(DocumentTypes.IsKnown(ProjectTypes.StarterDocumentType(t))));
+    }
+
     [Fact]
     public async Task The_last_document_of_a_project_is_recognised()
     {

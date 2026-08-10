@@ -188,6 +188,9 @@ public static class ErrorMessages
         Ru("В проекте должен остаться хотя бы один документ. Удалите проект целиком или сначала добавьте другой документ.",
            "A project must keep at least one document. Delete the project instead, or add another document first.");
 
+    public static string UnknownProjectType(string type) =>
+        Ru($"Неизвестный тип проекта «{type}».", $"Unknown project type '{type}'.");
+
     public static string UnknownDocumentType(string type) =>
         Ru($"Неизвестный тип документа «{type}».", $"Unknown document type '{type}'.");
 
