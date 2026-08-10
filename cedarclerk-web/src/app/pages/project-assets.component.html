@@ -1,0 +1,295 @@
+<div class="assets-page" data-density="compact">
+    <app-page-header page="projects" [showBack]="false"
+                     [crumbSuffix]="(project()?.name ?? '') + ' / ' + t().projects.assets.crumb"></app-page-header>
+
+    <div class="assets-body">
+        <div class="assets-toolbar">
+            <div>
+                <h1>{{ t().projects.assets.title }}</h1>
+                <div class="assets-sub">
+                    @if (page(); as p) {
+                        <span>{{ t().projects.assets.sub(p.totalIndexed) }}</span>
+                        @if (p.rootPath) {
+                            <span class="dot">·</span><span class="path">{{ p.rootPath }}</span>
+                        } @else {
+                            <span class="dot">·</span><span>{{ t().projects.assets.neverIndexed }}</span>
+                        }
+                        @if (p.indexedAt) {
+                            <span class="dot">·</span>
+                            <span>{{ t().projects.assets.indexedAt }} {{ p.indexedAt | date:'d MMM, HH:mm' }}</span>
+                        }
+                        @if (p.missingCount > 0) {
+                            <span class="dot">·</span>
+                            <span class="danger">{{ t().projects.assets.notFoundCount(p.missingCount) }}</span>
+                        }
+                    }
+                </div>
+            </div>
+            <span class="spacer"></span>
+
+            @if (!needsFolder()) {
+                <input class="search-input" type="search" [ngModel]="search()" (ngModelChange)="onSearch($event)"
+                       [placeholder]="t().projects.assets.search" [attr.aria-label]="t().projects.assets.search">
+                <div class="view-toggle">
+                    <button [class.active]="view() === 'grid'" (click)="setView('grid')"
+                            [title]="t().projects.assets.viewGrid" [attr.aria-label]="t().projects.assets.viewGrid">
+                        <app-icon name="squares-four" size="sm"></app-icon>
+                    </button>
+                    <button [class.active]="view() === 'list'" (click)="setView('list')"
+                            [title]="t().projects.assets.viewList" [attr.aria-label]="t().projects.assets.viewList">
+                        <app-icon name="list" size="sm"></app-icon>
+                    </button>
+                </div>
+                @if (auth.assetIndex()) {
+                    <button class="btn-ghost" [disabled]="busy() || scanning()" (click)="rescan()">
+                        <app-icon name="arrow-clockwise" size="sm"></app-icon>
+                        <span>{{ t().projects.assets.reindex }}</span>
+                    </button>
+                    <button class="btn-ghost" [disabled]="busy()" (click)="startPicking()">
+                        <app-icon name="folder-open" size="sm"></app-icon>
+                        <span>{{ t().projects.assets.changeFolder }}</span>
+                    </button>
+                }
+            }
+        </div>
+
+        <!-- Scanning banner. Says what it is doing and lets the author walk away from it. -->
+        @if (scan(); as s) {
+            @if (s.running) {
+                <div class="scan-banner">
+                    <app-icon name="circle-notch" size="md" class="spin"></app-icon>
+                    <div class="scan-text">
+                        <div class="scan-head">
+                            <strong>{{ t().projects.assets.scanning }}</strong>
+                            <span class="path">{{ s.rootPath }}</span>
+                        </div>
+                        <div class="scan-meta">
+                            @if (s.status === 'counting') {
+                                {{ t().projects.assets.scanCounting }}
+                            } @else {
+                                {{ t().projects.assets.scanProgress(s.processed ?? 0, s.total ?? 0) }}
+                            }
+                            <span class="dot">·</span>{{ t().projects.assets.scanKeepWorking }}
+                        </div>
+                    </div>
+                    <div class="scan-bar" [attr.aria-valuenow]="scanPercent()" role="progressbar">
+                        <div class="scan-fill" [style.width.%]="scanPercent()"></div>
+                    </div>
+                    <button class="btn-ghost" (click)="cancelScan()">{{ t().projects.assets.scanCancel }}</button>
+                </div>
+            } @else if (s.status === 'cancelled') {
+                <p class="notice">{{ t().projects.assets.scanCancelled }}</p>
+            } @else if (s.status === 'failed') {
+                <p class="load-error">{{ t().projects.assets.scanFailed }} {{ s.error }}</p>
+            } @else if (s.status === 'completed') {
+                <p class="notice">
+                    {{ t().projects.assets.scanDone(s.indexed ?? 0, s.markedMissing ?? 0) }}
+                    @if ((s.unreadable ?? 0) > 0) {
+                        <span class="dot">·</span>{{ t().projects.assets.scanUnreadable(s.unreadable ?? 0) }}
+                    }
+                </p>
+            }
+        }
+
+        @if (loadError(); as err) { <p class="load-error">{{ err }}</p> }
+
+        @if (loading()) {
+            <p class="hint">{{ t().projects.loading }}</p>
+        } @else if (needsFolder()) {
+            <!-- Pick-a-folder state. The copy is the feature: it promises nothing is uploaded. -->
+            <div class="pick-card">
+                <app-icon name="folder-open" size="lg"></app-icon>
+                <h2>{{ t().projects.assets.pickTitle }}</h2>
+                <p class="pick-body">{{ t().projects.assets.pickBody }}</p>
+
+                @if (auth.assetIndex()) {
+                    <div class="pick-row">
+                        <input class="path-input" type="text" [ngModel]="pickPath()" (ngModelChange)="pickPath.set($event)"
+                               [placeholder]="t().projects.assets.pickPlaceholder"
+                               [attr.aria-label]="t().projects.assets.pickTitle">
+                        @if (desktop) {
+                            <button class="btn-ghost" (click)="browse()">{{ t().projects.assets.pickBrowse }}</button>
+                        }
+                    </div>
+
+                    @if (recentFolders().length > 0) {
+                        <div class="recent">
+                            <div class="field-label">{{ t().projects.assets.pickRecent }}</div>
+                            @for (folder of recentFolders(); track folder) {
+                                <button class="recent-row" (click)="pickPath.set(folder)">
+                                    <app-icon name="arrow-counter-clockwise" size="sm"></app-icon>
+                                    <span class="path">{{ folder }}</span>
+                                </button>
+                            }
+                        </div>
+                    }
+
+                    @if (pickError(); as err) { <p class="load-error">{{ err }}</p> }
+
+                    <button class="btn-accent" [disabled]="pickPath().trim().length === 0 || busy()"
+                            (click)="indexFolder()">
+                        {{ t().projects.assets.pickSubmit }}
+                    </button>
+                } @else {
+                    <!-- Hosted server: it has no disk of the author's to read, and should not. -->
+                    <p class="hint web-only">{{ t().projects.assets.webOnly }}</p>
+                }
+            </div>
+        } @else if (page(); as p) {
+            <div class="filter-tabs">
+                <button [class.active]="kind() === null && !missingOnly()" (click)="setKind(null)">
+                    {{ t().projects.assets.filterAll }} <span class="chip-count">{{ p.totalIndexed }}</span>
+                </button>
+                @for (k of kinds; track k) {
+                    @if (kindCount(k) > 0) {
+                        <button [class.active]="kind() === k" (click)="setKind(k)">
+                            {{ t().projects.assets.kinds[k] }} <span class="chip-count">{{ kindCount(k) }}</span>
+                        </button>
+                    }
+                }
+                @if (p.missingCount > 0) {
+                    <button class="danger-chip" [class.active]="missingOnly()" (click)="showMissing()">
+                        {{ t().projects.assets.filterMissing }} <span class="chip-count">{{ p.missingCount }}</span>
+                    </button>
+                }
+            </div>
+
+            @if (p.items.length === 0) {
+                <p class="hint empty">
+                    {{ p.totalIndexed === 0 ? t().projects.assets.empty : t().projects.assets.emptyFiltered }}
+                </p>
+            } @else if (view() === 'grid') {
+                <div class="asset-grid">
+                    @for (a of p.items; track a.id) {
+                        <button class="tile" [class.missing]="!!a.missingSince" (click)="open(a)">
+                            <span class="preview">
+                                @if (a.missingSince) {
+                                    <app-icon name="warning" size="lg"></app-icon>
+                                    <span class="preview-label danger">{{ t().projects.assets.notFoundAtPath }}</span>
+                                } @else {
+                                    <!-- No thumbnail pipeline yet, so every kind is honest about it
+                                         rather than showing an empty frame that reads as broken. -->
+                                    <app-icon [name]="kindIcons[a.kind]" size="lg"></app-icon>
+                                    <span class="preview-label">{{ t().projects.assets.noPreview(t().projects.assets.kindOne[a.kind]) }}</span>
+                                }
+                            </span>
+                            <span class="tile-name" [title]="a.relativePath">{{ a.fileName }}</span>
+                            <span class="tile-meta">{{ bytes(a.sizeBytes) }} · {{ a.modifiedAt | date:'d MMM' }}</span>
+                        </button>
+                    }
+                </div>
+            } @else {
+                <div class="asset-table">
+                    <div class="asset-row head-row">
+                        <div>{{ t().projects.assets.colFile }}</div>
+                        <div>{{ t().projects.assets.colType }}</div>
+                        <div class="right">{{ t().projects.assets.colDetails }}</div>
+                        <div>{{ t().projects.assets.colStatus }}</div>
+                    </div>
+                    @for (a of p.items; track a.id) {
+                        <div class="asset-row" (click)="open(a)" tabindex="0" (keydown.enter)="open(a)">
+                            <div class="file-cell">
+                                <app-icon [name]="kindIcons[a.kind]" size="sm"></app-icon>
+                                <span class="path" [title]="a.relativePath">{{ a.relativePath }}</span>
+                            </div>
+                            <div>{{ t().projects.assets.kindOne[a.kind] }}</div>
+                            <div class="right">{{ bytes(a.sizeBytes) }} · {{ a.modifiedAt | date:'d MMM, HH:mm' }}</div>
+                            <div [class.danger]="!!a.missingSince" [class.ok]="!a.missingSince">
+                                {{ a.missingSince ? t().projects.assets.notFoundAtPath : t().projects.assets.onDisk }}
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (p.total > 0) {
+                <div class="pager">
+                    <button class="btn-ghost" [disabled]="!canPageBack" (click)="pageBack()">←</button>
+                    <span class="hint">{{ rangeLabel() }}</span>
+                    <button class="btn-ghost" [disabled]="!canPageForward" (click)="pageForward()">→</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<!-- Change-folder dialog: the same copy as the empty state, because it makes the same promise. -->
+@if (picking()) {
+    <app-modal [width]="560" (closed)="picking.set(false)">
+        <span modal-title class="modal-head-row"><span class="modal-heading">{{ t().projects.assets.pickTitle }}</span></span>
+
+        <p class="pick-body">{{ t().projects.assets.pickBody }}</p>
+        <div class="pick-row">
+            <input class="path-input" type="text" [ngModel]="pickPath()" (ngModelChange)="pickPath.set($event)"
+                   [placeholder]="t().projects.assets.pickPlaceholder">
+            @if (desktop) {
+                <button class="btn-ghost" (click)="browse()">{{ t().projects.assets.pickBrowse }}</button>
+            }
+        </div>
+        @if (pickError(); as err) { <p class="load-error">{{ err }}</p> }
+
+        <ng-container modal-actions>
+            <button class="btn-ghost" (click)="picking.set(false)">{{ t().common.cancel }}</button>
+            <button class="btn-accent" [disabled]="pickPath().trim().length === 0 || busy()" (click)="indexFolder()">
+                {{ t().projects.assets.pickSubmit }}
+            </button>
+        </ng-container>
+    </app-modal>
+}
+
+@if (selected(); as a) {
+    <app-modal [width]="780" (closed)="selected.set(null)">
+        <span modal-title class="modal-head-row">
+            <span class="kind-chip">{{ t().projects.assets.kindOne[a.kind] }}</span>
+            <span class="path modal-hint">{{ a.relativePath }}</span>
+        </span>
+
+        <div class="asset-view">
+            <div class="preview-pane" [class.missing]="!!a.missingSince">
+                @if (a.missingSince) {
+                    <app-icon name="warning" size="lg"></app-icon>
+                    <span class="preview-label danger">{{ t().projects.assets.notFoundAtPath }}</span>
+                } @else {
+                    <app-icon [name]="kindIcons[a.kind]" size="lg"></app-icon>
+                    <span class="preview-label">{{ t().projects.assets.noPreview(t().projects.assets.kindOne[a.kind]) }}</span>
+                }
+            </div>
+
+            <div class="asset-fields">
+                <h2 class="asset-name">{{ a.fileName }}</h2>
+                <dl class="field-grid">
+                    <dt>{{ t().projects.assets.colType }}</dt>
+                    <dd>{{ t().projects.assets.kindOne[a.kind] }}</dd>
+                    <dt>{{ t().projects.assets.colDetails }}</dt>
+                    <dd>{{ bytes(a.sizeBytes) }} · {{ a.modifiedAt | date:'d MMM y, HH:mm' }}</dd>
+                    <dt>{{ t().projects.assets.colStatus }}</dt>
+                    <dd [class.danger]="!!a.missingSince" [class.ok]="!a.missingSince">
+                        {{ a.missingSince ? t().projects.assets.notFoundAtPath : t().projects.assets.onDisk }}
+                    </dd>
+                    <dt>{{ t().projects.assets.indexedLabel }}</dt>
+                    <dd>{{ a.indexedAt | date:'d MMM, HH:mm' }}</dd>
+                </dl>
+
+                @if (a.missingSince) { <p class="hint">{{ t().projects.assets.missingHint }}</p> }
+
+                <div class="field-label spaced">{{ t().projects.assets.usedIn }}</div>
+                <!-- Honest: nothing links documents to indexed files yet, so it says so rather than
+                     showing an empty list that implies a search was run. -->
+                <p class="hint">{{ t().projects.assets.notReferenced }}</p>
+            </div>
+        </div>
+
+        <ng-container modal-actions>
+            @if (desktop && a.fullPath) {
+                <button class="btn-ghost" (click)="revealSelected()">{{ t().projects.assets.reveal }}</button>
+            }
+            @if (auth.assetIndex()) {
+                <button class="btn-ghost" [disabled]="busy()" (click)="reindexSelected()">
+                    {{ t().projects.assets.reindexFile }}
+                </button>
+            }
+            <span class="spacer"></span>
+            <span class="modal-note">{{ t().projects.assets.fileStaysOnDisk }}</span>
+        </ng-container>
+    </app-modal>
+}

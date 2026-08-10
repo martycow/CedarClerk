@@ -25,6 +25,20 @@ irreversible.
 `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` cannot move it. The desktop shell needs a free
 port, so that single line has to become configurable — the only server change the desktop requires.
 
+### T-122 (Asset Manager) done 10.08.2026
+
+`/projects/:id/assets` — an index of files on this machine. **Nothing is uploaded**, and every state
+on the screen keeps saying so.
+
+- [ ] **Marty's look** — point it at a real Unity or Godot project and see how it behaves on a folder
+  that size. Everything so far was checked against `docs/` (41 files) and a synthetic folder.
+- [ ] **Worth knowing**: there are no thumbnails yet, so every file says "no preview · kind"
+  (`T-140`); "Used in" is always empty because nothing links documents to files yet (`T-141`).
+- [ ] **A security decision worth your agreement**: indexing is refused unless
+  `Cedar:AssetIndex:Enabled` is set, and only the desktop shell sets it. On the Pi the endpoint would
+  let any account enumerate the server's filesystem. Listing what was already indexed still works
+  everywhere.
+
 ### T-121 (desktop) and T-138 (scripts) done 10.08.2026
 
 `.\Scripts\test.ps1` · `.\Scripts\build.ps1` · `.\Scripts\deploy.ps1` — the three commands worth

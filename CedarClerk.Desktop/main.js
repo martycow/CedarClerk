@@ -86,6 +86,11 @@ async function startServer() {
             // The server already disables the bot when the token is absent, so this is belt and
             // braces against an inherited environment variable.
             Cedar__BotToken: '',
+            // T-122 — the asset index makes the server walk the server's disk. Here that is the
+            // whole point and the machine is the author's own; on the Pi, which serves every
+            // account from one process, it would let any tenant enumerate its filesystem. So the
+            // capability is off by default everywhere and turned on only right here.
+            Cedar__AssetIndex__Enabled: 'true',
             ASPNETCORE_ENVIRONMENT: 'Desktop',
         },
         stdio: ['ignore', 'pipe', 'pipe'],

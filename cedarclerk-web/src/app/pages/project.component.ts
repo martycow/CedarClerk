@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import {
@@ -34,7 +34,7 @@ const TILE_TYPES: DocumentType[] = DOCUMENT_TYPES.filter(t => !FEATURED_TYPES.in
 // compact using the same component styles (ADR-071, principle 3).
 @Component({
     selector: 'app-project',
-    imports: [IconComponent, DatePipe, FormsModule, PageHeaderComponent, ModalComponent],
+    imports: [IconComponent, DatePipe, FormsModule, RouterLink, PageHeaderComponent, ModalComponent],
     templateUrl: 'project.component.html',
     styleUrls: ['project.component.css'],
 })

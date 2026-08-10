@@ -39,6 +39,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
 
     // Indie-gamedev module (Phase 13, ADR-101) — same context on purpose, see Entities.IndieDev.cs.
     public DbSet<Project> Projects => Set<Project>();
+    public DbSet<AssetEntry> AssetEntries => Set<AssetEntry>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -99,6 +100,15 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         // Same reason as the line above — EF ignores the property initialiser, and a project with an
         // empty type would fall through StarterDocumentType's unknown branch.
         builder.Entity<Project>().Property(p => p.ProjectType).HasDefaultValue(ProjectTypes.FullGame);
+        // T-122 — the scan's upsert key: a file is the same file if it is at the same relative path
+        // in the same project. Unique, so two scans racing cannot double a row.
+        builder.Entity<AssetEntry>()
+            .HasIndex(a => new { a.ProjectId, a.RelativePath })
+            .IsUnique();
+        // The screen's two questions: "this project's files, newest first" and the kind filter over
+        // them. Tens of thousands of rows per project is the expected size, not the bad case.
+        builder.Entity<AssetEntry>().HasIndex(a => new { a.ProjectId, a.Kind });
+        builder.Entity<AssetEntry>().Property(a => a.Kind).HasDefaultValue(AssetKinds.Other);
         // The project list query: this owner's projects, active ones first by their own order.
         builder.Entity<Project>().HasIndex(p => new { p.OwnerId, p.ArchivedAt });
         // "What is in this project" — the dashboard's only real question, and the one the drafts

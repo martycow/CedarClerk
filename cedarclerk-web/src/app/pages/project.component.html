@@ -28,6 +28,10 @@
                     @if (p.description) { <p class="description">{{ p.description }}</p> }
                 </div>
                 <span class="spacer"></span>
+                <a class="btn-ghost" [routerLink]="['/projects', p.id, 'assets']">
+                    <app-icon name="images" size="sm"></app-icon>
+                    <span>{{ t().projects.assetsLink }}</span>
+                </a>
                 <button class="btn-ghost" (click)="startEdit()">
                     <app-icon name="gear" size="sm"></app-icon>
                     <span>{{ t().projects.settings }}</span>

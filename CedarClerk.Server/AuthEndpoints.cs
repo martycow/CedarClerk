@@ -175,7 +175,13 @@ public static class AuthEndpoints
                 // Which optional modules this installation runs (ADR-101). Not a security boundary —
                 // the endpoints themselves are simply not mapped when the flag is off; this is what
                 // lets the client hide the menu entries instead of linking to a 404.
-                modules = new { indieDev = Modules.IndieDev.ProjectEndpoints.IsEnabled(config) },
+                modules = new
+                {
+                    indieDev = Modules.IndieDev.ProjectEndpoints.IsEnabled(config),
+                    // T-122 — separate from the module flag: the screens exist wherever the module
+                    // does, but only an installation allowed to read its own disk can scan one.
+                    assetIndex = Modules.IndieDev.AssetIndexEndpoints.IndexingEnabled(config),
+                },
                 email = user.FindFirstValue(ClaimTypes.Email) ?? user.Identity!.Name,
                 createdAt = appUser?.CreatedAt,
                 // T-002 — drives the reminder in Settings. Not a gate: an unconfirmed account

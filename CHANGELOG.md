@@ -2,6 +2,22 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-10 (late) — the asset index (T-122, ADR-107)
+
+The reason the desktop app existed a few hours earlier: a screen that reads a game project's asset folder. `/projects/:id/assets` indexes **paths and metadata, never bytes** — and every state on it is built to keep saying so, because the failure mode of this feature is a person believing their files were copied somewhere.
+
+**A second flag, and it is a security decision rather than a preference.** These endpoints make the server walk the server's own disk on a tenant's say-so. On a laptop that is the entire feature; on the Pi, which serves every account from one process, it is a stranger enumerating `/etc` and reading back filenames. So the module's own flag is not enough: indexing needs `Cedar:AssetIndex:Enabled`, and the only thing that sets it is the desktop shell, for its own single-user process. Listing what is already indexed stays available everywhere — those rows are owner-scoped like everything else, and a project indexed on the desktop should still open from the web.
+
+**The walk is hand-rolled**, because `Directory.EnumerateFiles(.., AllDirectories)` throws on the first folder it cannot open and abandons everything after it — one permission-denied directory would end a scan of a whole drive. This one skips that folder, counts it, and reports the number rather than swallowing it. It also skips `Library/`, `Temp/`, `node_modules/`, `.git/`, `Intermediate/` and their kin by name: an engine cache holds more files than the project and not one authored asset.
+
+**Missing is not deleted.** A file the scan cannot find gets a timestamp, not a `DELETE`. An unplugged external drive would otherwise erase an entire index, and the row is what lets the screen say "not found at path" instead of quietly forgetting the file existed. Verified by doing it: scan, delete a file, re-scan — the row survives and is marked; put the file back, re-scan — the mark clears.
+
+**What it does not pretend to know.** There are no thumbnails, so every kind says "no preview · model" rather than showing an empty frame that reads as a broken image. There is no Music chip despite the design having one: nothing in a file extension distinguishes a score from an ambience loop, and a chip filled by guesswork is worse than no chip. "Used in" is always empty and says so in words, because nothing links a document to an indexed file yet. Three backlog rows, not three silences: `T-140`, `T-141`, `T-142`.
+
+Also caught before it could confuse anyone: the new endpoints class was originally called `AssetEndpoints`, which the server root already had for uploaded post media — two extension methods with one name on `WebApplication`, waiting to resolve the wrong way.
+
+`dotnet test` **655/655**, frontend 11/11, `ng build` warning-free, contrast 0 failing pairs, smoke **53/53**.
+
 ## 2026-08-10 (night) — the desktop shell, and scripts that refuse to ship the wrong branch (T-121/T-138)
 
 **The desktop app exists and runs.** `CedarClerk.Desktop/` is an Electron main process, a preload script and a builder config — that is the whole shell. It starts the ordinary `CedarClerk.Server` as a child process on a port it asks the OS for, waits for `/api/health`, and opens the ordinary Angular SPA against it. Neither the server nor the frontend is forked, which was the entire argument for this approach (ADR-104).

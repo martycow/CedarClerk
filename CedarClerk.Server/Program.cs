@@ -82,6 +82,9 @@ builder.Services.AddSingleton<TelegramBotService>();
 builder.Services.AddSingleton(new MediaPaths(mediaDir));
 builder.Services.AddSingleton(new ImportTmpPaths(importTmpDir));
 builder.Services.AddSingleton<AiJobService>();
+// T-122 — the folder walk outlives the request that starts it (a scan of a real game project runs
+// for seconds to minutes), so it is a singleton that makes its own scope per scan.
+builder.Services.AddSingleton<AssetIndexService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramBotService>());
 builder.Services.AddHttpClient(); // named clients used by billing (Stripe), translation providers, and email
 builder.Services.AddSingleton<ResendEmailProvider>();
@@ -225,7 +228,10 @@ app.MapAiJobEndpoints();
 // entities live in the same context either way, so turning this off hides the feature without
 // touching the schema. `/api/me` reports the same flag so the client hides its menu entries too.
 if (ProjectEndpoints.IsEnabled(app.Configuration))
+{
     app.MapIndieDevEndpoints();
+    app.MapAssetIndexEndpoints();
+}
 #endregion
 
 // MUST be here, after all endpoints. Takes the same options as the static-file middleware above:

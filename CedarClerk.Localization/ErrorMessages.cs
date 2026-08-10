@@ -188,6 +188,18 @@ public static class ErrorMessages
         Ru("В проекте должен остаться хотя бы один документ. Удалите проект целиком или сначала добавьте другой документ.",
            "A project must keep at least one document. Delete the project instead, or add another document first.");
 
+    // T-122 — the asset index.
+    public static string AssetIndexingUnavailable =>
+        Ru("Индексация папок доступна только в десктопном приложении: сервер в облаке не читает диски со стороны пользователя.",
+           "Folder indexing is only available in the desktop app — the hosted server does not read anyone's disk.");
+
+    public static string AssetFolderRequired =>
+        Ru("Сначала выберите папку для индексации.", "Choose a folder to index first.");
+
+    public static string AssetFolderNotFound(string path) =>
+        Ru($"Папки «{path}» нет — проверьте путь или подключите диск.",
+           $"There is no folder at '{path}' — check the path, or plug the drive back in.");
+
     public static string UnknownProjectType(string type) =>
         Ru($"Неизвестный тип проекта «{type}».", $"Unknown project type '{type}'.");
 

@@ -7,7 +7,7 @@ import { LocaleService, UiLang } from './i18n/locale.service';
 interface MeResponse {
     // Phase 13 — which optional modules this installation runs (ADR-101). Optional in the type
     // because an older server simply omits it, and an absent module must read as "off".
-    modules?: { indieDev?: boolean };
+    modules?: { indieDev?: boolean; assetIndex?: boolean };
     email: string; createdAt: string | null; emailConfirmed?: boolean; isAdmin: boolean; planTier: string | null; planExpiresAt: string | null; trialUsed: boolean;
     telegramLinked: boolean; telegramUsername: string | null; telegramLinkedAt: string | null;
     notifyOnEngagement: boolean;
@@ -42,6 +42,9 @@ export class AuthService {
     // ADR-101 — the indie-gamedev module. Same kind of flag as isAdmin: it hides the nav entry and
     // the routes, while the real answer is that the server never maps those endpoints when it is off.
     readonly indieDev = signal(false);
+    // T-122 — whether THIS installation may read its own disk. False on the hosted server by
+    // design: the screens still list what was indexed elsewhere, but nothing can start a scan.
+    readonly assetIndex = signal(false);
     readonly planTier = signal<string | null>(null);
     readonly planExpiresAt = signal<string | null>(null);
     readonly trialUsed = signal(false);
@@ -148,6 +151,7 @@ export class AuthService {
         this.createdAt.set(me.createdAt);
         this.isAdmin.set(me.isAdmin);
         this.indieDev.set(me.modules?.indieDev ?? false);
+        this.assetIndex.set(me.modules?.assetIndex ?? false);
         this.planTier.set(me.planTier);
         this.planExpiresAt.set(me.planExpiresAt);
         this.trialUsed.set(me.trialUsed);
@@ -187,6 +191,7 @@ export class AuthService {
         this.createdAt.set(null);
         this.isAdmin.set(false);
         this.indieDev.set(false);
+        this.assetIndex.set(false);
         this.planTier.set(null);
         this.planExpiresAt.set(null);
         this.trialUsed.set(false);
