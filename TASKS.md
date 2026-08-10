@@ -15,11 +15,11 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
    window's ticked versions, all of them by default. The X credit estimate follows it.
 4. [x] **T-119 — RSS button in the blog header.** The feed existed since ADR-024 and was
    reachable only through `<link rel="alternate">`.
-5. [ ] **Live-verify** — Marty's pass. Worth checking specifically: RU and EN going to two
-   different channels in one publish, a scheduled Bluesky post actually firing, and the Posts
-   Manager naming the network on a scheduled row.
-6. [ ] **Not deployed yet** — `dotnet test` 617/617 and `ng build` are green locally; the blog
-   header and `/rss.xml` were verified against a local run.
+5. [x] **Deployed 09.08.2026, v0.9.40** — migration applied cleanly (`Applying migration
+   '20260810064412_AddScheduledPostTarget'`, two `ALTER TABLE … ADD COLUMN`, no `CREATE TABLE`,
+   zero warnings in the journal), bot back up, and the RSS button plus `/rss.xml` verified on
+   the live blog. `dotnet test` 617/617, frontend 11/11, `ng build` warning-free.
+6. [x] **Live-verified by Marty** — "всё работает".
 
 ## Now (08.08.2026): Marty's request — who is reading
 
