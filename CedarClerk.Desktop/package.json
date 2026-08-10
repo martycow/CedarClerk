@@ -5,7 +5,7 @@
   "main": "main.js",
   "private": true,
   "scripts": {
-    "start": "electron .",
+    "start": "node start.js",
     "pack": "electron-builder --dir",
     "dist": "electron-builder"
   },

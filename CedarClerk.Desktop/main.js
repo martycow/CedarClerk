@@ -6,7 +6,23 @@
 //
 // Why it exists at all: the asset index reads a folder on this machine (ADR-107), and only a
 // process running here can do that. Everything else the desktop gains is a side effect.
-const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
+const electron = require('electron');
+
+// Electron's binary is also a Node runtime, and ELECTRON_RUN_AS_NODE switches it over — a variable
+// several editors set in their integrated terminals. When it is on, `require('electron')` hands
+// back the path to the binary instead of the API, every name below is undefined, and the first one
+// used throws a TypeError that says nothing about why. `npm start` goes through start.js, which
+// strips the variable; this is for anyone running `electron .` by hand.
+if (typeof electron === 'string') {
+    console.error([
+        'Cedar Clerk: Electron is running as plain Node, so its API is unavailable.',
+        'ELECTRON_RUN_AS_NODE is set in this environment (some editors set it in their terminals).',
+        'Use `npm start`, which clears it, or unset the variable and try again.',
+    ].join('\n'));
+    process.exit(1);
+}
+
+const { app, BrowserWindow, dialog, ipcMain, shell } = electron;
 const { spawn } = require('node:child_process');
 const net = require('node:net');
 const path = require('node:path');
