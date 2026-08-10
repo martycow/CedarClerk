@@ -7,7 +7,15 @@
         <div class="auth-header">
             <app-cedar-logo [size]="28"></app-cedar-logo>
             <div class="auth-title">{{ t().register.title }}</div>
-            <div class="auth-tagline">{{ t().register.tagline }}<br>{{ t().register.taglineAsk }}</div>
+            <!-- "Invite-only, ask Marty for a code" is true of the hosted server and nonsense in
+                 the desktop app, where there is nobody to ask and no code to be given. -->
+            <div class="auth-tagline">
+                @if (version.openRegistration()) {
+                    {{ t().register.taglineLocal }}
+                } @else {
+                    {{ t().register.tagline }}<br>{{ t().register.taglineAsk }}
+                }
+            </div>
         </div>
 
         <div class="field">
@@ -18,10 +26,12 @@
             <label for="cc-reg-pass">{{ t().register.password }}</label>
             <input id="cc-reg-pass" [(ngModel)]="password" [placeholder]="t().register.passwordPlaceholder" type="password" autocomplete="new-password">
         </div>
+        @if (!version.openRegistration()) {
         <div class="field">
             <label for="cc-reg-invite">{{ t().register.inviteCode }}</label>
             <input id="cc-reg-invite" class="mono" [(ngModel)]="inviteCode" placeholder="CEDAR-MOO-0" type="text" autocomplete="off" (keyup.enter)="submit()">
         </div>
+        }
 
         @if (error()) {
         <div class="field-error">{{ error() }}</div>

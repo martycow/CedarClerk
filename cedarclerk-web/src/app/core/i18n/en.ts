@@ -38,6 +38,9 @@ export const en = {
         title: 'Join the herd',
         tagline: 'Cedar Clerk is invite-only for now.',
         taglineAsk: 'Ask Marty for a code.',
+        // Shown instead when this installation asks for no invite — i.e. the desktop app, whose
+        // account and data live on this machine and nowhere else.
+        taglineLocal: 'This account lives on this computer, in this app.',
         email: 'Email',
         password: 'Password',
         passwordPlaceholder: '8+ characters',

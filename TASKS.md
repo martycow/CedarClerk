@@ -25,6 +25,24 @@ irreversible.
 `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` cannot move it. The desktop shell needs a free
 port, so that single line has to become configurable — the only server change the desktop requires.
 
+### First real desktop launch found two blockers — both fixed 10.08.2026
+
+Marty launched the desktop app and asked two questions; both turned out to be defects I had left.
+
+1. **A fresh desktop install could not create an account at all.** Registration is invite-gated, the
+   shell set no code, and `appsettings.json` no longer carries one — so the app was unusable out of
+   the box. `Cedar:Registration:Open` now drops the gate for the desktop, which is safe precisely
+   because the server listens on `127.0.0.1` and serves one person. The invite field and the "ask
+   Marty for a code" line disappear there.
+2. **The app opened on the marketing landing page**, prices and all — that page exists for strangers
+   who found the product on the web, and a local app has none. `Cedar:Desktop` skips it.
+
+Verified against the real published build, and the hosted server is unchanged: `/` still serves the
+landing, registration still needs an invite (smoke 53/53).
+
+- [ ] **Rebuild before launching again**: `.\Scripts\build.ps1 -DesktopOnly`, then
+  `cd CedarClerk.Desktop; npm start`. The account you make there is local — see below.
+
 ### T-140 and T-141 done 10.08.2026 — previews, metadata, links
 
 Two of the three gaps T-122 left are closed. `dotnet test` **698/698**.

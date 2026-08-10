@@ -72,7 +72,13 @@ public static class AuthEndpoints
             var configInvite = cfg[Consts.General.InviteCodeCfg];
             var configMatches = !string.IsNullOrEmpty(configInvite) && submitted == configInvite;
 
-            if (!codeUsable && !configMatches)
+            // The invite gate exists to keep strangers off a shared server. The desktop shell has no
+            // strangers: it listens on 127.0.0.1 only and serves the one person sitting at the
+            // machine. Without this a fresh install could not create its first account — there is no
+            // code to type, and no way to make one without an account to make it from.
+            var openRegistration = cfg.GetValue<bool>(Consts.General.OpenRegistrationCfg);
+
+            if (!openRegistration && !codeUsable && !configMatches)
                 return Results.BadRequest(new { error = ErrorMessages.InvalidInviteCode });
 
             var user = new ApplicationUser

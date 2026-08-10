@@ -11,9 +11,17 @@ export class VersionService {
     private http = inject(HttpClient);
     readonly version = signal<string | null>(null);
 
+    // Whether this installation asks for an invite code at registration. False for the hosted
+    // server; true in the desktop shell, which has no public to gate. Read from the same call, so
+    // the register page — which runs before anyone is signed in — needs no endpoint of its own.
+    readonly openRegistration = signal(false);
+
     constructor() {
-        firstValueFrom(this.http.get<{ version: string }>('/api/health'))
-            .then(r => this.version.set(r.version))
+        firstValueFrom(this.http.get<{ version: string; openRegistration?: boolean }>('/api/health'))
+            .then(r => {
+                this.version.set(r.version);
+                this.openRegistration.set(r.openRegistration ?? false);
+            })
             .catch(() => { /* chrome, not critical — silently absent if health is unreachable */ });
     }
 }

@@ -2,6 +2,20 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-10 (after the first real launch) — the desktop app was unusable, twice over
+
+Marty opened the desktop app for the first time and asked two mild questions. Both were defects, and both were the same defect really: the shell was built and never signed into.
+
+**A fresh install could not create an account.** Registration is gated by an invite code; the desktop shell set none, and `appsettings.json` no longer carries one since it was correctly removed as a secret. So the first launch met "Invalid invite code" with no code in existence and no way to make one — the app could not be used at all. The gate exists to keep strangers off a shared server, and a desktop app binding to `127.0.0.1` for one person has no strangers, so `Cedar:Registration:Open` drops it there. The invite field disappears from the form, and the line reading "Cedar Clerk is invite-only — ask Marty for a code" becomes "this account lives on this computer, in this app", which is the true thing to say.
+
+**And it opened on the marketing landing page**, complete with the price table. That page is for someone who found the product on the web; in a local application it is nonsense. `Cedar:Desktop` skips it, and `/` serves the app.
+
+Those are now **five** separate environment variables the shell sets, and keeping them separate is deliberate: two are about working at all (port, no bot token), two are access decisions (reading the disk, registering without an invite), and one is presentation (no landing). A single "desktop mode" flag would mean a change to how the product *looks* could open a door to the filesystem.
+
+Verified against the real published build rather than the debug one — `GET /` returns the SPA shell with no price table, `POST /api/auth/register` with an empty code returns 200, and `/api/auth/me` answers with the new account. The hosted server is untouched: it still serves the landing and still demands an invite, which the smoke suite (53/53) is what proves.
+
+Also worth recording honestly: the login smoke test has now failed **twice in eight full runs**, always as the first test of the run, always passing alone in about two seconds. That is a flake, not a regression — but it was not "fixed" by making the assertion looser, because the cause has not actually been found. `T-143` says so and says how to reproduce it.
+
 ## 2026-08-10 (latest) — previews, metadata and links (T-140/T-141)
 
 Two of the three gaps the asset index shipped with, closed the same day. Marty's one instruction shaped both: **the formats he actually works in have to be supported, `.blend` among them.**

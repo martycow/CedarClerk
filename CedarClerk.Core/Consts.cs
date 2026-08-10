@@ -72,6 +72,18 @@ public static class Consts
         public const string BlogHostCfg = "Cedar:BlogHost";
         public const string InviteCodeCfg = "Cedar:InviteCode";
 
+        // Registration without an invite code. Set ONLY by the desktop shell, which binds to
+        // 127.0.0.1 and serves exactly one person on their own machine — there is no public there
+        // for the invite gate to keep out, and without this a fresh desktop install has no way to
+        // create the first account at all (found by Marty on the first real launch, 10.08.2026).
+        public const string OpenRegistrationCfg = "Cedar:Registration:Open";
+
+        // "This is the desktop app." Presentation only — it decides whether the marketing landing
+        // page is served, and nothing else. Kept separate from the two capability flags above and
+        // in AssetIndexEndpoints on purpose: a flag about how the product looks must never be the
+        // thing that opens a security gate.
+        public const string DesktopModeCfg = "Cedar:Desktop";
+
         // ADR-104 — where Kestrel listens, when something needs to say. Empty everywhere except the
         // desktop shell, which takes a free port from the OS and passes it in: two instances on one
         // machine cannot both hold 8080, and the Pi's port is fixed by the tunnel config anyway.

@@ -44,6 +44,7 @@ export const ru: Dict = {
         title: 'Присоединяйтесь к стаду',
         tagline: 'Cedar Clerk пока работает только по приглашениям.',
         taglineAsk: 'Попросите код у Marty.',
+        taglineLocal: 'Эта учётная запись живёт на этом компьютере, в этом приложении.',
         email: 'Почта',
         password: 'Пароль',
         passwordPlaceholder: 'от 8 символов',

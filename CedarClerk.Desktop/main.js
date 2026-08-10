@@ -91,6 +91,12 @@ async function startServer() {
             // account from one process, it would let any tenant enumerate its filesystem. So the
             // capability is off by default everywhere and turned on only right here.
             Cedar__AssetIndex__Enabled: 'true',
+            // No invite code here, and none to type: the gate protects a shared server from
+            // strangers, and this one listens on 127.0.0.1 for one person. Without this a fresh
+            // install cannot create its first account — there is nowhere to get a code from.
+            Cedar__Registration__Open: 'true',
+            // Presentation only: skips the marketing landing page, which has no audience here.
+            Cedar__Desktop: 'true',
             ASPNETCORE_ENVIRONMENT: 'Desktop',
         },
         stdio: ['ignore', 'pipe', 'pipe'],
