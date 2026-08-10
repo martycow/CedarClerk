@@ -49,7 +49,7 @@ Cedar Clerk перестаёт быть «редактором постов с �
 
 | Сущность | Смысл | Ключевые поля |
 |---|---|---|
-| `Project` | Игра или иная работа, вокруг которой собраны документы | `OwnerId`, `Name`, `Description`, `CoverAssetId?`, `CreatedAt`, `ArchivedAt?` |
+| `Project` | Игра или иная работа, вокруг которой собраны документы | `OwnerId`, `Name`, `Description`, `CoverUrl?`, `CreatedAt`, `ArchivedAt?` |
 | `GameTask` | Задача таск-трекера | `OwnerId`, `ProjectId`, `Name`, `Status`, `Priority`, `Description`, `Assignee`, `SprintId?`, `DueAt?` |
 | `TaskLink` | Связь задачи с чем угодно | `TaskId`, `EntityType`, `EntityId` |
 | `Sprint` | Отрезок планирования поверх задач | `OwnerId`, `ProjectId`, `Name`, `StartsAt`, `EndsAt` |
@@ -58,6 +58,22 @@ Cedar Clerk перестаёт быть «редактором постов с �
 Соглашения проекта соблюдаются: GUID-первичные ключи, плоский `string OwnerId` на каждой owner-scoped строке, фильтрация по владельцу в каждом эндпоинте (`docs/ARCHITECTURE.md`). Сущности модуля живут в `Data/Entities.IndieDev.cs` — второй файл, а не тридцать: конвенция «всё в одном плоском `Entities.cs`» существует, чтобы не плодить файл на сущность, и разделение по модулю ей не противоречит.
 
 **Обязательная миграция.** Любое из перечисленного трогает `Entities.cs` — значит, `dotnet ef migrations add <Name> --project CedarClerk.Server` в той же сессии, немедленно. `SchemaDriftGuardTests` уронит `dotnet test`, если про это забыть (`.claude/rules/ef-migrations.md`).
+
+**Ловушка, на которую уже наступили (T-120):** EF **не читает** инициализатор свойства (`= DocumentTypes.Post`) при генерации миграции и подставляет `defaultValue: ""`. Для колонки, у которой пустое значение означает «неизвестный тип», это заполнило бы все существующие строки нерабочим значением. Дефолт объявляется в `OnModelCreating` через `HasDefaultValue` — тогда он попадает и в миграцию, и в снапшот модели. Проверять это в сгенерированном файле **перед** первым запуском: `Database.Migrate()` на старте выполняет миграцию молча.
+
+## Что реализовано (T-120, 10.08.2026)
+
+Бэкенд фундамента готов, фронтенда пока нет.
+
+- `CedarClerk.Core/DocumentTypes.cs` — шесть типов, `IsKnown`, `IsPublishable`. Чистый C#, покрыт тестами.
+- `Data/Entities.IndieDev.cs` — `Project`. `Draft.DocumentType` + `Draft.ProjectId` в `Entities.cs`.
+- Миграция `AddProjectsAndDocumentTypes`, индексы `(OwnerId, ArchivedAt)` на проектах и `(OwnerId, ProjectId)` на черновиках.
+- `Modules/IndieDev/ProjectEndpoints.cs` — `/api/projects` (список, дашборд, создание с первым документом, переименование, архивация, удаление с отвязкой документов, добавление/привязка/отвязка документов) и `/api/documents/{id}/type`.
+- Регистрация в `Program.cs` за `Cedar:Modules:IndieDev`; тот же флаг в ответе `/api/me` как `modules.indieDev`.
+- Отказ публиковать рабочий материал — на общем пути `PostEndpoints`, то есть для всех сетей сразу.
+- Тексты отказов — в `CedarClerk.Localization/ErrorMessages.cs`, включая интерполированные: тест `ErrorMessageLocalizationTests` ловит только `error = "..."` и пропустил бы `error = $"..."`, но по-английски такой ответ звучал бы одинаково мимо.
+
+`dotnet test` 633/633.
 
 ## MUST — состав v1 модуля
 

@@ -132,6 +132,12 @@ public static class PostEndpoints
         ThreadPartRef? part,
         CancellationToken ct)
     {
+        // ADR-102 — a game-design document or a plot outline is working material, and sending one to
+        // a channel is never what was meant. Placed on the shared path so it holds for every network
+        // at once. No behaviour change for anything written before types existed: those are posts.
+        if (!DocumentTypes.IsPublishable(draft.DocumentType))
+            return new PublishResult(null, ErrorMessages.DocumentTypeNotPublishable, StatusCodes.Status400BadRequest);
+
         var draftId = draft.Id;
         var document = await DraftRevisionService.ResolveAsync(db, draft, language, ct);
         if (document is null)

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using CedarClerk.Core;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
@@ -35,6 +36,9 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<DraftTargetText> DraftTargetTexts => Set<DraftTargetText>();
     public DbSet<PublishJob> PublishJobs => Set<PublishJob>();
     public DbSet<CreditEntry> CreditEntries => Set<CreditEntry>();
+
+    // Indie-gamedev module (Phase 13, ADR-101) — same context on purpose, see Entities.IndieDev.cs.
+    public DbSet<Project> Projects => Set<Project>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -85,5 +89,17 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         builder.Entity<CreditEntry>()
             .HasIndex(c => new { c.Reason, c.Ref })
             .IsUnique();
+        // ADR-102 — the database default has to be stated here, not left to the C# initialiser.
+        // EF does not read a property initialiser when generating a migration, so without this the
+        // ADD COLUMN backfills every existing draft with "" instead of "post" — and an empty type is
+        // neither known nor publishable, which would have made every already-written post refuse to
+        // publish on the first deploy. Declared on the model rather than hand-edited into the
+        // migration so that regenerating the migration cannot quietly lose it.
+        builder.Entity<Draft>().Property(d => d.DocumentType).HasDefaultValue(DocumentTypes.Post);
+        // The project list query: this owner's projects, active ones first by their own order.
+        builder.Entity<Project>().HasIndex(p => new { p.OwnerId, p.ArchivedAt });
+        // "What is in this project" — the dashboard's only real question, and the one the drafts
+        // list asks back when it shows which project a document belongs to.
+        builder.Entity<Draft>().HasIndex(d => new { d.OwnerId, d.ProjectId });
     }
 }

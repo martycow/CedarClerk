@@ -167,11 +167,15 @@ public static class AuthEndpoints
             return Results.Ok();
         }).RequireAuthorization();
 
-        groupBuilder.MapGet("/me", async (ClaimsPrincipal user, UserManager<ApplicationUser> users) =>
+        groupBuilder.MapGet("/me", async (ClaimsPrincipal user, UserManager<ApplicationUser> users, IConfiguration config) =>
         {
             var appUser = await users.GetUserAsync(user);
             return Results.Ok(new
             {
+                // Which optional modules this installation runs (ADR-101). Not a security boundary —
+                // the endpoints themselves are simply not mapped when the flag is off; this is what
+                // lets the client hide the menu entries instead of linking to a 404.
+                modules = new { indieDev = Modules.IndieDev.ProjectEndpoints.IsEnabled(config) },
                 email = user.FindFirstValue(ClaimTypes.Email) ?? user.Identity!.Name,
                 createdAt = appUser?.CreatedAt,
                 // T-002 — drives the reminder in Settings. Not a gate: an unconfirmed account

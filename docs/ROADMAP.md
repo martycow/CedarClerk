@@ -442,8 +442,15 @@ Branch `indiedev_module` (from `dev`). Source of the turn: `_Documents_/CedarCle
 - [x] **`Q-1` closed** — the audience is indie game developers.
 - [x] **A finding that changes one line of server code**: the listening address is a literal in `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` cannot move it and the desktop shell cannot pick a free port until it becomes configurable. Recorded in ADR-104 and `docs/DESKTOP.md`; it is the only server change the desktop needs.
 
+**T-120 backend done 10.08.2026 — `Project`, document types, the module skeleton.** `DocumentTypes` in Core (six types, `IsKnown`, `IsPublishable`); `Project` in its own `Entities.IndieDev.cs`; `Draft.DocumentType`/`ProjectId`; migration `AddProjectsAndDocumentTypes`; `Modules/IndieDev/ProjectEndpoints.cs` behind `Cedar:Modules:IndieDev`, reported to the client through `/api/me`. `dotnet test` **633/633**, smoke **53/53** on a scratch database. Frontend not started.
+
+Three things the implementation changed or added, each recorded in `docs/DECISIONS.md`:
+- **EF generated a migration that would have broken production.** It does not read a property initialiser, so `DocumentType` got `defaultValue: ""` — and an empty type passes neither `IsKnown` nor `IsPublishable`, which would have made **every already-written post refuse to publish on the first deploy.** Fixed on the model with `HasDefaultValue`, not by hand-editing the migration, so regenerating it cannot lose the default again.
+- **ADR-103 narrowed**: the create dialog picks the starting *document* type, not a project type. The project-type taxonomy was invented in the ADR and asked for by nobody.
+- **Working material does not publish.** `design`/`script`/`plot`/`note` are refused on the networks' shared path and, separately, on the blog — which is deliberately not a publish target and so inherits nothing. `post` and `changelog` publish. Nothing changes for existing content, which is all `post`.
+
 **MUST, in build order** — rows `T-120…T-126` in `docs/BACKLOG.md`:
-1. `Project` + `Draft.DocumentType` + `Draft.ProjectId` — the foundation
+1. `Project` + `Draft.DocumentType` + `Draft.ProjectId` — the foundation *(backend done, frontend open)*
 2. Desktop shell — a prerequisite of 3, not a parallel wish
 3. Asset Manager (`AssetEntry`, path indexing)
 4. Task Tracker (`GameTask`, `TaskLink`)

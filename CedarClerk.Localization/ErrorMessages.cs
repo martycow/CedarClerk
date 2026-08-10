@@ -172,6 +172,31 @@ public static class ErrorMessages
         Ru($"Версии {lang.ToUpperInvariant()} у этого черновика нет",
            $"No {lang.ToUpperInvariant()} version of this draft");
 
+    // Indie-gamedev module (T-120, ADR-102/103). Interpolated messages live here for the same
+    // reason the plain ones do — the test above only catches `error = "..."`, so an interpolated
+    // literal would have slipped through the guard while still answering in English regardless of
+    // who is reading.
+    public static string DocumentTypeNotPublishable =>
+        Ru("Этот документ — рабочий материал, а не пост: опубликовать его нельзя. Смените тип документа, если хотели именно опубликовать.",
+           "This document is working material, not a post, so it cannot be published. Change its type if publishing is what you meant.");
+
+    public static string DocumentTypeBlogPublished =>
+        Ru("Пост опубликован в блоге. Снимите публикацию, прежде чем менять тип на рабочий материал.",
+           "This post is published on the blog. Unpublish it before changing its type to working material.");
+
+    public static string ProjectNeedsOneDocument =>
+        Ru("В проекте должен остаться хотя бы один документ. Удалите проект целиком или сначала добавьте другой документ.",
+           "A project must keep at least one document. Delete the project instead, or add another document first.");
+
+    public static string UnknownDocumentType(string type) =>
+        Ru($"Неизвестный тип документа «{type}».", $"Unknown document type '{type}'.");
+
+    public static string ProjectNameLength(int max) =>
+        Ru($"Имя проекта — от 1 до {max} символов.", $"Project name must be 1-{max} characters");
+
+    public static string ProjectDescriptionLength(int max) =>
+        Ru($"Описание проекта — не длиннее {max} символов.", $"Project description must be at most {max} characters");
+
     // Russian is the only translated locale for now, matching the app's own UI dictionaries
     // (en.ts/ru.ts): every other UI language already falls back to English there, and shipping
     // machine-quality German error text would be a worse answer than the English original.

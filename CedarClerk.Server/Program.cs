@@ -3,6 +3,7 @@ using CedarClerk.Core;
 using CedarClerk.Server;
 using CedarClerk.Server.Bot;
 using CedarClerk.Server.Email;
+using CedarClerk.Server.Modules.IndieDev;
 using CedarClerk.Server.Publishing;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics;
@@ -219,6 +220,12 @@ app.MapScheduledPostEndpoints();
 app.MapBillingEndpoints();
 app.MapAdminEndpoints();
 app.MapAiJobEndpoints();
+
+// Indie-gamedev module (Phase 13, ADR-101). A module is endpoints and screens behind a flag — its
+// entities live in the same context either way, so turning this off hides the feature without
+// touching the schema. `/api/me` reports the same flag so the client hides its menu entries too.
+if (ProjectEndpoints.IsEnabled(app.Configuration))
+    app.MapIndieDevEndpoints();
 #endregion
 
 // MUST be here, after all endpoints. Takes the same options as the static-file middleware above:

@@ -25,7 +25,22 @@ irreversible.
 `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` cannot move it. The desktop shell needs a free
 port, so that single line has to become configurable — the only server change the desktop requires.
 
-**Next, in order** (`docs/ROADMAP.md` Phase 13): `T-120` (`Project` + `DocumentType`) → `T-121`
+### T-120 backend done the same day
+
+`Project`, `Draft.DocumentType`/`ProjectId`, migration, `/api/projects` + `/api/documents/{id}/type`
+behind `Cedar:Modules:IndieDev`. `dotnet test` **633/633**, smoke **53/53** on a scratch database.
+
+- [ ] **Frontend is not started** — no screen shows any of this yet. The API can be walked by hand
+  with `Scripts/e2e.ps1 -Serve`, which seeds the same isolated database and leaves it running.
+- [x] **A migration bug caught before it shipped**: EF wrote `defaultValue: ""` for `DocumentType`
+  because it does not read property initialisers. An empty type is neither known nor publishable,
+  so every existing post would have refused to publish on the first deploy. Fixed on the model.
+- [ ] **Marty's call — working material does not publish.** `design`/`script`/`plot`/`note` are
+  refused by the networks and by the blog; `post` and `changelog` go out as before. This was added
+  beyond the plan because the alternative is a design document quietly landing on a public page.
+  Say if it should be a warning rather than a refusal.
+
+**Next, in order** (`docs/ROADMAP.md` Phase 13): `T-120` frontend → `T-121`
 (desktop) → `T-122` (Asset Manager) → `T-123`/`T-124` (tasks, sprints).
 
 **Two things Marty decides before the code starts:**

@@ -274,6 +274,18 @@ public class Draft
     // codebase's "no strict FK-only model" convention (docs/ARCHITECTURE.md). Null = unfiled.
     public Guid? FolderId { get; set; }
 
+    // ADR-102 — what kind of document this is (CedarClerk.Core.DocumentTypes). The default is what
+    // makes this a column instead of a migration: every row written before types existed IS a post,
+    // so there is nothing to backfill. A Draft was never "a post" in the code — it is a TipTap
+    // document with autosave, revisions, translations, tags and a folder, and a design doc or a
+    // script needs all of that verbatim.
+    public string DocumentType { get; set; } = DocumentTypes.Post;
+
+    // ADR-102 — which Project this document belongs to. Plain scalar, no nav property and no FK,
+    // exactly like FolderId above and for the same recorded reason. Null = not in a project, which
+    // is what every draft that predates the module is.
+    public Guid? ProjectId { get; set; }
+
     // Gates the published blog page behind PostInvite tokens (see the ADR following ADR-040,
     // docs/DECISIONS.md) — only meaningful when IsBlogPublished is also true.
     public bool IsPrivate { get; set; }
