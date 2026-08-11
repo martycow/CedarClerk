@@ -1,7 +1,7 @@
 # Phase 10 smoke suite runner (ADR-070).
 #
-# Runs on Marty's machine only — Playwright ships no armhf browsers, so this never enters the
-# deploy pipeline and never touches the Pi.
+# Runs on Marty's machine only — it drives a real browser against a scratch database, so it never
+# enters the deploy pipeline and never touches production.
 #
 # What it does, and why in this order:
 #   1. Wipes a scratch CEDAR_DATA_DIR, so every run starts from an empty database. Nothing here
@@ -9,7 +9,7 @@
 #   2. Starts the server with NO bot token. The environment name is deliberately not
 #      "Development": that is the only thing loading appsettings.Development.json, which is where
 #      the token lives. No token means TelegramBotService logs "bot is disabled" and never
-#      long-polls — which is what keeps this from 409-ing against the Pi
+#      long-polls — which is what keeps this from 409-ing against the production bot
 #      (see .claude/rules/telegram-bot.md).
 #   3. Registers the test account, then restarts the server. The admin bootstrap in Program.cs
 #      only grants rights at startup, so the account must exist before the start that promotes it.

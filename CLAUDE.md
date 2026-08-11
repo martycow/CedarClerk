@@ -27,7 +27,7 @@ Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTUR
 | Task | Command |
 |---|---|
 | **Everything is green?** | `.\Scripts\test.ps1` (backend + frontend + contrast; `-Smoke` adds Playwright) |
-| **Build everything locally** | `.\Scripts\build.ps1` (Angular + Pi server + desktop shell; `-NoDesktop`, `-Installer`, `-RunDesktop`) |
+| **Build everything locally** | `.\Scripts\build.ps1` (Angular + server + desktop shell; `-NoDesktop`, `-Installer`, `-RunDesktop`) |
 | **Deploy** | `.\Scripts\deploy.ps1` — **refuses to run from anything but `master`, or with a dirty tree**. `-SkipBuild` continues an interrupted upload, `-Rollback` puts the previous release back (ADR-113) |
 | Run server locally | `dotnet run --project CedarClerk.Server` (port 8080) |
 | Run frontend locally | `ng serve` in `cedarclerk-web/` (proxies `/api` → 8080) |
@@ -81,11 +81,11 @@ Full text lives in `.claude/rules/*.md` — read the relevant one before touchin
 3. **`.claude/rules/renderers.md`** — escaping + unit-test invariants for `CedarClerk.Core` renderers
 4. **`.claude/rules/destructive-operations.md`** — explain, then STOP and wait for confirmation
 5. **`.claude/rules/secrets.md`** — never move secrets into the repo; rotate before cleanup if one leaks
-6. **`.claude/rules/production-environment.md`** — Pi/Cloudflare/systemd assumptions not to break
+6. **`.claude/rules/production-environment.md`** — droplet/Cloudflare/systemd assumptions not to break
 
 ## Verification workflow
 - Local: `dotnet run --project CedarClerk.Server` (port 8080) + `ng serve` in `cedarclerk-web`. Login: marty@mooexe.dev (ask Marty for the password, do not store it)
 - Tests: `dotnet test` from repo root
-- Prod logs: `ssh martycow@raspberrypi.local "journalctl -u cedarclerk -n 50 --no-pager"`
+- Prod logs: `ssh -t martycow@deploy.mooexe.dev "sudo journalctl -u cedarclerk -n 50 --no-pager"` (asks for the sudo password; **without `sudo` the journal looks empty rather than refused** — `martycow` is not in `systemd-journal`)
 - Test channel: @testingandfun ("Marty's Channel For Testing and Having Fun"). NEVER post to Dev Dairy Diary (the real channel) without explicit permission
 

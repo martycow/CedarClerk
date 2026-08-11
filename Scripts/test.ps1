@@ -58,7 +58,7 @@ if ($runFrontend) {
 
 if ($Smoke) {
     # Wipes a scratch CEDAR_DATA_DIR and runs with no bot token, so it can never touch real data or
-    # knock the Pi's bot off its token (.claude/rules/telegram-bot.md).
+    # knock the production bot off its token (.claude/rules/telegram-bot.md).
     Invoke-Step 'Smoke (Playwright, isolated database)' { & (Join-Path $PSScriptRoot 'e2e.ps1') }
 }
 

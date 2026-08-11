@@ -29,7 +29,7 @@ Two options:
 
 **Recommendation: A.** There is one admin and there will be one admin for the foreseeable future; B adds two tables and a join to express a single boolean. Phase 7's Entertainer is a *content* role for subscribers, not an authorization role, so it isn't the second user of this mechanism.
 
-The bootstrap question is separate and needs an answer either way: the first admin can't be granted through the admin panel. Cleanest is a config value (`Cedar:AdminEmail`) checked on startup that flips the flag on that account — it works on a fresh database, survives a restore, and needs no manual SQL on the Pi. `cedarworks@mooexe.dev` is the account.
+The bootstrap question is separate and needs an answer either way: the first admin can't be granted through the admin panel. Cleanest is a config value (`Cedar:AdminEmail`) checked on startup that flips the flag on that account — it works on a fresh database, survives a restore, and needs no manual SQL on the server. `cedarworks@mooexe.dev` is the account.
 
 ### 2. Invite codes: creating them is easy, attribution is not — and can't be backfilled
 
@@ -81,7 +81,7 @@ Steps 1–3 are the actual ask; 4–5 are where "чем больше функц�
 ## Build status
 
 - **Step 1 — done 27.07.2026.** `ApplicationUser.IsAdmin` (migration `AddIsAdmin`, additive), config bootstrap from `Cedar:AdminEmail` (grant-only, never revokes), `AdminEndpoints` under `/api/admin` with the admin check on the **group** so a new route can't ship ungated, `GET /users` and `GET /summary`, an `/admin` page with `adminGuard`, and an account-menu entry shown only to admins. The gate returns **404 rather than 403** — an admin panel that answers "wrong, but it exists" tells an ordinary account something it has no business knowing.
-- **Step 2 — done 27.07.2026.** Per-user actions on an expanded row: set plan tier and expiry (blank expiry on a paid tier = manual grant that never expires, reusing the meaning `ApplicationUser` already documents rather than inventing a second one), reset trial, lock/unlock (Identity's own `LockoutEnd`, so the normal sign-in path enforces it), grant/revoke admin. **Self-targeting is refused server-side** for lock and admin — there is no second admin to undo a self-lockout, and the fix would be hand-editing the database on the Pi.
+- **Step 2 — done 27.07.2026.** Per-user actions on an expanded row: set plan tier and expiry (blank expiry on a paid tier = manual grant that never expires, reusing the meaning `ApplicationUser` already documents rather than inventing a second one), reset trial, lock/unlock (Identity's own `LockoutEnd`, so the normal sign-in path enforces it), grant/revoke admin. **Self-targeting is refused server-side** for lock and admin — there is no second admin to undo a self-lockout, and the fix would be hand-editing the database on the server.
   - **The audit log was built as part of this step, not deferred.** It was listed as "decide before Step 2"; the decision is that a log which starts halfway through is missing exactly the changes someone would go looking for. New `AdminAuditEntry` (migration `AddAdminAuditLog`, a new table, nothing existing touched), written by every mutation, shown newest-first in the panel. Actor and target emails are **denormalized on purpose**: a log that stops making sense once the rows it points at change isn't a log.
   - Not included, per the decisions above: user deletion and editing other users' content.
 - **Step 3 — done 27.07.2026.** New `InviteCode` entity + `ApplicationUser.InviteCodeId` (migration `AddInviteCodes`). Registration checks real codes first and falls back to `Cedar:InviteCode`, which stays exactly as decided. Admin can create codes (label, optional expiry, optional use cap), **deactivate but never delete** them — accounts point at the row, and deleting it would erase their attribution — and **set attribution by hand** on the accounts that predate tracking, logged as "set by hand" so an admin's assertion about history is never confused with something the system observed.
@@ -95,6 +95,6 @@ Steps 1–3 are the actual ask; 4–5 are where "чем больше функц�
 
 ## Still open
 
-- **`Cedar:AdminEmail` is set on the Pi** (Marty, confirmed 27.07.2026) — see `docs/integrations-setup.md` §3b.
+- **`Cedar:AdminEmail` is set in the production drop-in** (Marty, confirmed 27.07.2026; carried to the droplet 11.08.2026) — see `docs/integrations-setup.md` §3b.
 - **The audit log pages now** (27.07.2026): `GET /api/admin/audit?skip=` returns a page plus `hasMore`, and the panel has a "Load more". **Retention is still deliberately absent** — the log is append-only on purpose, and trimming it would remove exactly what someone would go looking for.
 - ~~Step 3 (invite codes) is next~~ — stale: steps 3, 4 and 5 all shipped 27.07.2026 and the panel is complete. See `TASKS.md`.

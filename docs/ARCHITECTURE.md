@@ -6,7 +6,7 @@ The internal post format is a single TipTap JSON document, stored in SQLite as `
 
 ```
                         ┌──────────────────────────────────────────┐
-                        │              Raspberry Pi 4               │
+                        │   DigitalOcean droplet (Ubuntu 24.04)    │
  cedarclerk.mooexe.dev  │                                          │
   ┌───────────┐  HTTPS  │  ┌────────────────────────────────────┐  │
   │ Cloudflare├────────►│  │        Cedar Clerk Server          │  │
@@ -103,7 +103,7 @@ Ownership: nearly every table has an `OwnerId` and every endpoint filters by it 
 
 ASP.NET Core Identity (`AddIdentityCore<ApplicationUser>`), cookie-based (`IdentityConstants.ApplicationScheme`), backed by the same SQLite DB via `AddEntityFrameworkStores<CedarDbContext>`. Registration is invite-code gated (`Cedar:InviteCode` config). 401/403 are returned directly instead of redirecting to a login page (`OnRedirectToLogin`/`OnRedirectToAccessDenied` overrides), since the client is a SPA. Telegram account linking is a separate, optional step for an already-authenticated user (HMAC-verified via `TelegramLoginVerifier` in Core) — not an alternate login method; see `docs/DECISIONS.md`.
 
-**Identity can live on another installation (ADR-108).** With `Cedar:Auth:Upstream` set — only the desktop shell sets it, pointing at the Pi — `/api/auth/login` verifies the credentials there, then finds or creates the local account standing for that identity (`ApplicationUser.RemoteUserId`) and issues an ordinary local cookie. Only the question travels; no upstream cookie is kept, and the data stays wherever it already is. Local registration is refused in that configuration, because a second account on the same address is exactly the confusion this prevents. An unreachable upstream answers **503**, never 401 — "the server did not reply" and "your password is wrong" must not look the same.
+**Identity can live on another installation (ADR-108).** With `Cedar:Auth:Upstream` set — only the desktop shell sets it, pointing at the production server — `/api/auth/login` verifies the credentials there, then finds or creates the local account standing for that identity (`ApplicationUser.RemoteUserId`) and issues an ordinary local cookie. Only the question travels; no upstream cookie is kept, and the data stays wherever it already is. Local registration is refused in that configuration, because a second account on the same address is exactly the confusion this prevents. An unreachable upstream answers **503**, never 401 — "the server did not reply" and "your password is wrong" must not look the same.
 
 ## Scheduling (Quartz.NET)
 
@@ -118,11 +118,11 @@ A zip container (chosen 08.07.2026 over base64-in-JSON, which would have cost +3
 
 ## Production environment & deploy
 
-See `.claude/rules/production-environment.md` for the Pi/Cloudflare/systemd specifics this architecture assumes, and `.claude/rules/ef-migrations.md` / `.claude/rules/renderers.md` for the invariants that guard it.
+See `.claude/rules/production-environment.md` for the droplet/Cloudflare/systemd specifics this architecture assumes, and `.claude/rules/ef-migrations.md` / `.claude/rules/renderers.md` for the invariants that guard it.
 
 Scripts (`Scripts/`, run from repo root):
 - `test.ps1` — backend tests, frontend units and the contrast contract; `-Smoke` adds the Playwright suite
-- `build.ps1` — Angular, the Pi-shaped server publish, and the desktop shell in one pass
+- `build.ps1` — Angular, the server publish that ships, and the desktop shell in one pass
 - `deploy.ps1` — the pipeline below, gated by `_git-guard.ps1`: **master only, clean tree only** (T-138)
 - `e2e.ps1` — the smoke suite against a scratch database with no bot token
 
@@ -154,7 +154,7 @@ happens while the old version is still serving**; the service is stopped only fo
 
 A second way to run the same thing, not a second application: an Electron shell starts the published `CedarClerk.Server` as a local sidecar process on a free port and opens the same Angular SPA against it. Neither the server nor the frontend is forked.
 
-It works because `CEDAR_DATA_DIR` already decides where SQLite and media live — the desktop points it at `%APPDATA%/CedarClerk` and the server code is unchanged, exactly as the Pi points it at `/home/martycow/cedarclerk/data`. One exception, found while writing ADR-104: the listening address is a literal in `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` cannot override it and that single line has to become configurable.
+It works because `CEDAR_DATA_DIR` already decides where SQLite and media live — the desktop points it at `%APPDATA%/CedarClerk` and the server code is unchanged, exactly as the droplet points it at `/home/martycow/cedarclerk/data`. One exception, found while writing ADR-104: the listening address is a literal in `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` cannot override it and that single line has to become configurable.
 
 The reason it exists is the asset index (ADR-107) — only a process on the developer's own machine can walk a game project's folder. Mechanics, risks and the two run modes: `docs/DESKTOP.md`.
 

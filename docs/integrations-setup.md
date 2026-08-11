@@ -2,7 +2,7 @@
 
 _Восстановлено из `_Documents_/CedarClerk/OLD/integrations-setup.md` (был архивирован при переносе документации в репозиторий, но два других файла — `docs/Handoff_2026-07-15.md` и `docs/ROADMAP.md` — уже ссылаются на него по пути `docs/integrations-setup.md`, так что он возвращён сюда без изменений содержания)._
 
-_Все секреты живут в systemd drop-in на Pi: `/etc/systemd/system/cedarclerk.service.d/data.conf`
+_Все секреты живут в systemd drop-in на продовом дроплете DigitalOcean: `/etc/systemd/system/cedarclerk.service.d/data.conf`
 (строки вида `Environment=Cedar__Ключ__Подключ=значение` — двойное подчёркивание вместо `:`).
 Локально — в `CedarClerk.Server/appsettings.Development.json` (он в .gitignore).
 После правки data.conf: `sudo systemctl daemon-reload && sudo systemctl restart cedarclerk`._
@@ -204,7 +204,7 @@ Resend, работает без верификации домена, но выг
 Environment=Cedar__AdminEmail=cedarworks@mooexe.dev
 ```
 
-Почему через конфиг: первого админа физически нельзя выдать из самой панели, а так это работает и на чистой базе, и на восстановленной из бэкапа, без ручного SQL на Pi.
+Почему через конфиг: первого админа физически нельзя выдать из самой панели, а так это работает и на чистой базе, и на восстановленной из бэкапа, без ручного SQL на сервере.
 
 Важно: бутстрап **только выдаёт права и никогда не отзывает**. Убрать строку — не значит разжаловать админа; это сделано специально, чтобы случайная правка конфига не заперла панель.
 
@@ -212,16 +212,20 @@ Environment=Cedar__AdminEmail=cedarworks@mooexe.dev
 - `journalctl -u cedarclerk -n 30 --no-pager | grep "Admin rights"` — строка появляется один раз, при первой выдаче
 - в UI: меню аккаунта → пункт «Панель админа» виден только у этого аккаунта
 
-## 4. Чеклист прокидывания на Pi
+## 4. Чеклист прокидывания на прод
 
 ```bash
-ssh martycow@raspberrypi.local
+ssh -t martycow@deploy.mooexe.dev            # -t нужен: дальше sudo спросит пароль
 sudo nano /etc/systemd/system/cedarclerk.service.d/data.conf
 # добавить строки Environment=... из разделов выше
 sudo systemctl daemon-reload
 sudo systemctl restart cedarclerk
-journalctl -u cedarclerk -n 20 --no-pager   # проверить, что поднялся
+sudo journalctl -u cedarclerk -n 20 --no-pager   # проверить, что поднялся
 ```
+
+Про `sudo` в последней строке: без него `journalctl` печатает «No entries» вместо отказа —
+`martycow` не в группе `systemd-journal`, и пустой вывод легко принять за молчащий сервис
+(`.claude/rules/production-environment.md`).
 
 Проверка без UI:
 - `curl -s https://cedarclerk.mooexe.dev/api/health` — жив ли сервер

@@ -1,6 +1,6 @@
 # Local build of everything, for checking a release before it goes anywhere (Marty, 10.08.2026).
 #
-#   .\Scripts\build.ps1                 Angular + server (Pi-shaped, linux-arm) + desktop shell
+#   .\Scripts\build.ps1                 Angular + server (the publish that ships) + desktop shell
 #   .\Scripts\build.ps1 -NoDesktop      skip the desktop (fast: no Electron download)
 #   .\Scripts\build.ps1 -DesktopOnly    rebuild the shell against the Angular output already there
 #   .\Scripts\build.ps1 -Installer      also produce CedarClerk-Setup-<version>.exe
@@ -41,12 +41,12 @@ if (-not $DesktopOnly) {
     finally { Pop-Location }
 }
 
-### 2. Server for the Pi
-# armhf/linux-arm, not arm64: the Pi's kernel is 64-bit but its userland is 32-bit
-# (.claude/rules/production-environment.md). Framework-dependent, because the Pi has the runtime
-# installed and never builds anything.
+### 2. Server for production
+# No runtime identifier on purpose: framework-dependent portable IL, because the server has the runtime
+# installed and never builds anything (.claude/rules/production-environment.md). That is what let
+# production move from an armhf Raspberry Pi to an x86_64 droplet (11.08.2026) without a re-port.
 if (-not $DesktopOnly) {
-    Write-Host "`n=== [2/3] Server (linux-arm, framework-dependent - what the Pi runs) ===" -ForegroundColor Cyan
+    Write-Host "`n=== [2/3] Server (framework-dependent, portable - what production runs) ===" -ForegroundColor Cyan
     $publishDir = Join-Path $repoRoot 'publish'
     if (Test-Path $publishDir) { Remove-Item $publishDir -Recurse -Force }
 
@@ -75,7 +75,7 @@ else {
     }
 
     # Self-contained win-x64: the machine running this is not expected to have .NET installed.
-    # A different runtime identifier from the Pi build above, on purpose — see docs/DESKTOP.md.
+    # A runtime identifier, unlike the portable publish above, on purpose — see docs/DESKTOP.md.
     Write-Host "`n  publishing server (win-x64, self-contained)..." -ForegroundColor DarkGray
     if (Test-Path $desktopServerDir) { Remove-Item $desktopServerDir -Recurse -Force }
 

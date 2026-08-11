@@ -76,7 +76,7 @@ Comfortable is the default, declared in `:root`; `[data-density="compact"]` over
 --font-mono:  ui-monospace, Menlo, Consolas, monospace;
 --font-serif: ui-serif, Georgia, "Iowan Old Style", "Source Serif Pro", "Times New Roman", serif;
 ```
-`--font-serif` (added 31.07.2026, tokens v2) is for reading surfaces **only** — blog post body and the editor sheet. A system stack on purpose: the Pi serves every byte itself, and adding a downloaded face is a performance/licensing decision nobody has made.
+`--font-serif` (added 31.07.2026, tokens v2) is for reading surfaces **only** — blog post body and the editor sheet. A system stack on purpose: the server serves every byte itself, and adding a downloaded face is a performance/licensing decision nobody has made.
 
 Font-size scale — added 27.07.2026 (ADR-052), extended 31.07.2026 (ADR-071) to `--fs-9/10/11/12/13/14/15/16/17/18/19/20/22/27`. **Integers only**: the 10/15/17/18/22 steps were added because they are measured, in-use sizes; the half-pixel sizes found in the sweep are not tokenized and collapse to the nearest integer.
 

@@ -21,13 +21,23 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
 - [x] **`T-125` + `T-126`** (0.10.5, ADR-112) — the glossary took a project scope, and builds became
   a record with a changelog generator. **Phase 13's MUST list is complete.**
 - [x] **DigitalOcean referral badge** in the blog footer.
-- [x] **`docs/migration-to-digitalocean.md`** — the Pi→droplet checklist, from the machine's real
-  state. Nothing acted on: it is a plan, and the move is your call.
+- [x] **Production moved to DigitalOcean (11.08.2026)** — Marty ran `docs/migration-to-digitalocean.md`
+  end to end. The droplet `cedarclerk-periwinkle` (fra1, Ubuntu 24.04.4, x86_64, 1 vCPU / 2 GB) serves
+  both hosts over the same Cloudflare Tunnel; the Pi is out. Every doc that described the Pi as
+  production was rewritten from the running machine — rules, `ARCHITECTURE.md`, `CLAUDE.md`,
+  `AGENTS.md`, `DESKTOP.md`, the scripts. `CHANGELOG.md`/`DECISIONS.md` were left alone on purpose.
+- [x] **Deploy rewritten (ADR-113)** — one resumable tarball, checksummed and unpacked before anything
+  is stopped; the service goes down only for two renames (~1s), and `-Rollback` restores the previous
+  release. The old `scp -r` after `systemctl stop` had left production down twice.
 - [ ] **Phase 13 MIGHT is what is left**: press kit, references board, brainstorm sessions, the
   script/plot writers, budget maths. Plus `T-127` — whether itch.io/Steam/IndieDB/LinkedIn even
   offer write APIs, which is research before scoping.
-- [ ] 0.10.3 is live; **0.10.4 and 0.10.5 are not deployed yet** — `.\Scripts\deploy.ps1` from `master`.
-  Nothing has been pushed to GitHub either (`git push origin master dev indiedev_module --tags`).
+- [x] **0.10.5 is live** on the droplet (health-checked 11.08.2026, blog 200).
+- [ ] **Two things the move left open, both needing your sudo password:**
+  `sudo systemctl enable cedarclerk` (`T-143` — the unit is `disabled`, so a DigitalOcean maintenance
+  reboot leaves the site down until someone notices), and a nightly `sqlite3 .backup` (`T-071` — the
+  Pi's daily copy did not travel, so the only backup is DigitalOcean's **weekly** whole-droplet image).
+- [ ] Nothing has been pushed to GitHub (`git push origin master dev indiedev_module --tags`).
 
 ## v0.10.0 is on master (10.08.2026) — deployed 10.08.2026
 
@@ -36,11 +46,11 @@ the history is linear and the branch adds nothing anybody has to reconcile).
 
 - [x] **Deployed 10.08.2026** from `master`. The deploy first failed on a full root filesystem on the
   Pi (0 bytes free, `/var/log` at 13G from cloudflared error-spam); two rotated logs were removed with
-  Marty's confirmation and it went out. The disk is still the tighter constraint it became that day —
-  6.2G free of 27G, logrotate not actually limiting.
+  Marty's confirmation and it went out. That disk pressure is **gone with the machine** — the droplet
+  has 45G free of 48G — and it is part of why the move happened the next day.
 - [ ] **Push** — nothing has left this machine: `git push origin master dev indiedev_module --tags`.
-- [ ] After the deploy the Pi reports `id` from `/api/auth/me`, and the desktop stops keying identity
-  by email (ADR-108's fallback). Nothing to do — it sharpens itself.
+- [x] Production reports `id` from `/api/auth/me` since 0.10.5 went out (11.08.2026), so the desktop
+  no longer keys identity by email (ADR-108's fallback). It sharpened itself, as expected.
 
 ## Previously (10.08.2026): the indie-gamedev turn — decisions written, no code yet
 

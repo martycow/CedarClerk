@@ -17,7 +17,7 @@ The chain is periodically collapsed to a single `InitialCreate` (11.07.2026, dev
 This is a destructive edit of the production database. The 27.07.2026 run is the reference procedure:
 
 1. **Verify equivalence before touching anything.** Generate the new `InitialCreate`, apply it to a scratch DB, and compare against prod *by column set and index set* — not by raw `.schema` text. Raw text always differs harmlessly: prod's tables grew via `ALTER TABLE ADD COLUMN`, which appends columns and requires a `DEFAULT`, while a fresh `CREATE TABLE` uses model order with no defaults. What must match is names/types/nullability and the indexes. (27.07.2026: 27/27 tables, all column sets identical, 40/40 indexes identical.)
-2. Back up `cedar.db` via `sqlite3 .backup` and pull a copy off the Pi.
+2. Back up `cedar.db` via `sqlite3 .backup` and pull a copy off the server. (Both collapses so far were done on the Pi; production moved to a DigitalOcean droplet on 11.08.2026 and the procedure is unchanged, but nothing on the new host has been through it yet.)
 3. **Stop the service**, then `DELETE FROM __EFMigrationsHistory` and insert the single new row.
 4. **Deploy the new binaries before starting the service again.** Order is the whole safety argument: a service started with the *old* binaries after the history edit sees 21 unapplied migrations and tries to `CREATE TABLE` over live tables. Stop → edit → deploy → start.
 5. Verify afterwards: history holds one row, row counts unchanged, `PRAGMA integrity_check` ok, and the log shows **zero** `CREATE TABLE`/`Applying migration` lines.

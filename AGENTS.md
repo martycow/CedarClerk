@@ -62,11 +62,11 @@ Full text lives in `.Codex/rules/*.md` — read the relevant one before touching
 3. **`.Codex/rules/renderers.md`** — escaping + unit-test invariants for `CedarClerk.Core` renderers
 4. **`.Codex/rules/destructive-operations.md`** — explain, then STOP and wait for confirmation
 5. **`.Codex/rules/secrets.md`** — never move secrets into the repo; rotate before cleanup if one leaks
-6. **`.Codex/rules/production-environment.md`** — Pi/Cloudflare/systemd assumptions not to break
+6. **`.Codex/rules/production-environment.md`** — droplet/Cloudflare/systemd assumptions not to break
 
 ## Verification workflow
 - Local: `dotnet run --project CedarClerk.Server` (port 8080) + `ng serve` in `cedarclerk-web`. Login: marty@mooexe.dev (ask Marty for the password, do not store it)
 - Tests: `dotnet test` from repo root
-- Prod logs: `ssh martycow@raspberrypi.local "journalctl -u cedarclerk -n 50 --no-pager"`
+- Prod logs: `ssh -t martycow@deploy.mooexe.dev "sudo journalctl -u cedarclerk -n 50 --no-pager"` (asks for the sudo password; without `sudo` the journal looks empty rather than refused)
 - Test channel: @testingandfun ("Marty's Channel For Testing and Having Fun"). NEVER post to Dev Dairy Diary (the real channel) without explicit permission
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-11 — production is a DigitalOcean droplet now (ADR-114)
+
+Marty ran `docs/migration-to-digitalocean.md` end to end. Production lives on `cedarclerk-periwinkle` (fra1, Ubuntu 24.04.4 LTS, x86_64, 1 vCPU / 2 GB, 45 GB free) and the Raspberry Pi is out. Same paths, same unit, same drop-ins, same Cloudflare Tunnel onto `127.0.0.1:8080`, same single Kestrel process serving both hosts — the application did not notice the platform change. It was a copy rather than a port because the server publishes framework-dependent with no RID: portable IL, which is a property that existed for a different reason (the Pi never built anything) and paid off on the day it was needed.
+
+Everything that described the Pi as production was rewritten **from the running machine, not from memory**: `.claude/rules/production-environment.md` (rewritten whole), the telegram-bot / secrets / ef-migrations rules, `docs/ARCHITECTURE.md`, `CLAUDE.md`, `AGENTS.md`, `docs/DESKTOP.md`, `docs/integrations-setup.md`, the roadmap, the backlog, `TASKS.md` and the build/test/e2e scripts. `CHANGELOG.md` and `docs/DECISIONS.md` were deliberately left alone — they record what was true then, and editing them to match today's machine would lose why the decisions were made.
+
+**Backups got worse, and that is written down rather than smoothed over.** The Pi's nightly `sqlite3 .backup` + rsync to a microSD with 14 dated copies did not travel; there is no crontab and no `~/bin` on the droplet. In its place is DigitalOcean's paid **weekly** droplet backup. Three concrete differences: the loss window went from a day to a week; a restore takes the whole machine, so "yesterday's database with today's code" is not a thing that can be asked for; and the copy now lives in the same account as the original, which the card in another device did not. `sqlite3` is installed and a nightly job is ten lines — `T-071`, raised to High, with an off-account target as the second half.
+
+Found while auditing, not fixed: **the unit is `disabled`**, so a host-maintenance reboot leaves the site down until somebody notices (`T-143`). One command, but it needs the sudo password — `NOPASSWD` is scoped to `systemctl start|stop|restart cedarclerk` on purpose. The move retired `T-070` (the Pi OS upgrade) outright and took the disk-pressure problem with the machine.
+
 ## 2026-08-11 — the deploy stopped being able to take production down (ADR-113)
 
 `scp -r publish/* host:app/` kept dying near the end — `client_loop: send disconnect: Connection reset` — and it always died **after** the service had been stopped. So every dropped connection left production down with half a build in `app/` and no `wwwroot` at all, answering 502, and the re-run started the same 50 MB from zero because scp cannot resume. That is the state this rewrite was written in: 50 of 174 files on the server, service `inactive`.
