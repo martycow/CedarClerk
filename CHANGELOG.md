@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-08-11 — the deploy stopped being able to take production down (ADR-113)
+
+`scp -r publish/* host:app/` kept dying near the end — `client_loop: send disconnect: Connection reset` — and it always died **after** the service had been stopped. So every dropped connection left production down with half a build in `app/` and no `wwwroot` at all, answering 502, and the re-run started the same 50 MB from zero because scp cannot resume. That is the state this rewrite was written in: 50 of 174 files on the server, service `inactive`.
+
+**Everything slow now happens while the old version is still serving.** Build, pack, upload, checksum and unpack all run against `app.new`, which nobody reads. The service is stopped only for two `mv` calls — measured on the server itself and printed in the report, about a second — and the previous release stays as `app.prev`, so `-Rollback` is those same two renames rather than a rebuild.
+
+**One tarball instead of 174 files, uploaded as a resumable stream.** Not only because 50 MB compresses to about half and one sequential transfer spends no round trip per file: a byte stream has a *position*, and a dropped `scp -r` cannot say where it got to. The script asks `stat -c %s` on the far side and sends the local tail from that byte into `cat >>`. Verified against the live server — a transfer cut off at 2 MB of 5 continued and matched sha256. The artefact is cached in `%TEMP%` keyed to a signature of `publish/`, because repacking would change the bytes (gzip stamps a time) and glue a tail onto a different beginning; `-SkipBuild` continues the same file.
+
+**Nothing is touched until it has been proved good**: sha256 on both sides, `CedarClerk.Server.dll` and `wwwroot/index.html` present in the unpacked directory, file counts equal. Any of those failing aborts with the old version still running — a working half-build is worse than a deploy that did not happen, because it looks like one that did.
+
+The output was rebuilt around the same idea: a header saying which version is live and which is about to replace it, per-step timings, a progress bar with speed and ETA during the upload, and a closing panel with a timeline, the measured downtime and the rollback command. Failures print what state the server is actually in and the exact command that fixes it.
+
 ## 2026-08-11 (Phase 13) — the last two MUST rows, and a referral badge (T-125/T-126, ADR-112, 0.10.5)
 
 **Phase 13's MUST list is finished.** The glossary learned about projects, versions became a thing the app records, and the blog footer carries Marty's DigitalOcean badge.

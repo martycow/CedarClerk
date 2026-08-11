@@ -28,7 +28,7 @@ Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTUR
 |---|---|
 | **Everything is green?** | `.\Scripts\test.ps1` (backend + frontend + contrast; `-Smoke` adds Playwright) |
 | **Build everything locally** | `.\Scripts\build.ps1` (Angular + Pi server + desktop shell; `-NoDesktop`, `-Installer`, `-RunDesktop`) |
-| **Deploy** | `.\Scripts\deploy.ps1` — **refuses to run from anything but `master`, or with a dirty tree** |
+| **Deploy** | `.\Scripts\deploy.ps1` — **refuses to run from anything but `master`, or with a dirty tree**. `-SkipBuild` continues an interrupted upload, `-Rollback` puts the previous release back (ADR-113) |
 | Run server locally | `dotnet run --project CedarClerk.Server` (port 8080) |
 | Run frontend locally | `ng serve` in `cedarclerk-web/` (proxies `/api` → 8080) |
 | Run the desktop app | `cd CedarClerk.Desktop; npm start` (after `build.ps1`) |

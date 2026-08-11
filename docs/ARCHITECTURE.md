@@ -126,15 +126,27 @@ Scripts (`Scripts/`, run from repo root):
 - `deploy.ps1` — the pipeline below, gated by `_git-guard.ps1`: **master only, clean tree only** (T-138)
 - `e2e.ps1` — the smoke suite against a scratch database with no bot token
 
-Deploy (`Scripts/deploy.ps1`, from repo root):
-0. Git guard: branch is `master`, working tree clean, HEAD tagged with `Consts.CurrentVersion` (warning only)
-1. `npm run build` in `cedarclerk-web/` → `cedarclerk-web/dist/cedarclerk-web/browser`
-2. `dotnet publish CedarClerk.Server -c Release -o publish/`
-3. Copy the Angular build output into `publish/wwwroot`
-4. `ssh ... "sudo systemctl stop cedarclerk"`
-5. `scp -r publish/* martycow@raspberrypi.local:/home/martycow/cedarclerk/app/`
-6. `ssh ... "sudo systemctl start cedarclerk"`
-7. Health-check loop against `https://cedarclerk.mooexe.dev/api/health` (10 tries, 3s apart)
+Deploy (`Scripts/deploy.ps1`, from repo root). Rewritten 11.08.2026 (ADR-113) so that **everything slow
+happens while the old version is still serving**; the service is stopped only for two directory renames:
+1. Preflight: git guard (branch `master`, clean tree, HEAD tagged with `Consts.CurrentVersion` — the tag
+   is a warning only), `tar` on PATH, and one round trip that reports the service state, free disk and
+   what is in `app/` today
+2. `npm run build` in `cedarclerk-web/` → `cedarclerk-web/dist/cedarclerk-web/browser`
+3. `dotnet publish CedarClerk.Server -c Release -o publish/`
+4. Copy the Angular build output into `publish/wwwroot`
+5. Pack `publish/` into one `cedar-<version>.tar.gz`, cached in `%TEMP%\cedarclerk-deploy` and keyed to a
+   signature of the publish folder, so a re-run ships byte-identical bytes and can continue a transfer
+6. Upload it as a **single resumable stream** (`stat -c %s` on the far side, then the local tail piped
+   into `cat >>`) — a dropped connection continues from the byte it reached, not from zero
+7. Verify sha256 on both sides, unpack into `app.new`, check `CedarClerk.Server.dll`, `wwwroot/index.html`
+   and the file count. Production is still untouched up to this point — any failure above aborts with the
+   old version still running
+8. Stop the service, `app` → `app.prev`, `app.new` → `app`, start it (measured downtime: ~1s)
+9. Health-check loop against `https://cedarclerk.mooexe.dev/api/health` (40 tries, 3s apart), which must
+   answer with the version that was just built
+
+`-SkipBuild` re-ships what is already in `publish/` (this is how a dropped upload is continued),
+`-Rollback` swaps `app.prev` back in and restarts, `-Force` turns the git guard into a warning.
 
 `Migrate()` and `PRAGMA journal_mode=WAL;` run automatically on server startup (`Program.cs`), so a deploy applies pending migrations without a separate step — which is exactly why `.claude/rules/ef-migrations.md`'s "migrate immediately after any entity change" rule matters.
 
