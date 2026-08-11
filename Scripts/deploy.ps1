@@ -1,10 +1,10 @@
-# -PiHost lets a deploy run by IP when mDNS drops (05.08.2026: raspberrypi.local stopped
+# CloudHost lets a deploy run by IP when mDNS drops (05.08.2026: raspberrypi.local stopped
 # resolving mid-deploy and the script "succeeded" against the still-running old version).
 #
 # -Force skips the git guard below. It exists so the guard can be got round deliberately rather
 # than by editing the script, and it announces exactly what it is overriding.
 param(
-    [string] $PiHost = "martycow@raspberrypi.local",
+    [string] $CloudHost = "martycow@deploy.mooexe.dev",
     [switch] $Force
 )
 
@@ -16,6 +16,12 @@ $ErrorActionPreference = "Stop"
 $CedarClerkDir = Split-Path $PSScriptRoot -Parent
 $WebDir = Join-Path $CedarClerkDir "cedarclerk-web"
 $PublishDir = Join-Path $CedarClerkDir "publish"
+
+Write-Host "`n+==---===---===---===---===---===+" -ForegroundColor Green
+Write-Host "`n|     Cedar Clerk Deployment     |" -ForegroundColor Green
+Write-Host "`n+==---===---===---===---===---===+" -ForegroundColor Green
+Write-Host "`n|   " $CloudHost "   |"             -ForegroundColor Green
+Write-Host "`n+==---===---===---===---===---===+" -ForegroundColor Green
 
 ### GIT GUARD (T-138)
 # Marty's rule, 10.08.2026 (CLAUDE.md, "Branches"): master holds the latest stable version and is
@@ -60,7 +66,7 @@ Copy-Item (Join-Path $WebDir "dist\cedarclerk-web\browser") (Join-Path $PublishD
 # Every remote step checks its exit code: a failed ssh/scp used to fall through to the health
 # check, which the still-running OLD version answered — a green "DEPLOYED OK" over no deploy.
 Write-Host "`n=== [4/7] Stopping CedarClerk service on Raspberry Pi ===" -ForegroundColor Cyan
-ssh $PiHost "sudo systemctl stop cedarclerk"
+ssh $CloudHost "sudo systemctl stop cedarclerk"
 if ($LASTEXITCODE -ne 0)
 {
     Write-Host "Could not reach the Pi to stop the service - nothing was changed" -ForegroundColor Red; exit 1
@@ -68,18 +74,18 @@ if ($LASTEXITCODE -ne 0)
 
 ### Copying files to Raspberry Pi
 Write-Host "`n=== [5/7] Copying files to Raspberry Pi ===" -ForegroundColor Cyan
-scp -r (Join-Path $PublishDir "*") "${PiHost}:${AppDir}/"
+scp -r (Join-Path $PublishDir "*") "${CloudHost}:${AppDir}/"
 if ($LASTEXITCODE -ne 0)
 {
-    Write-Host "Copy failed - the service is STOPPED; fix connectivity and re-run, or start it: ssh $PiHost 'sudo systemctl start cedarclerk'" -ForegroundColor Red; exit 1
+    Write-Host "Copy failed - the service is STOPPED; fix connectivity and re-run, or start it: ssh $CloudHost 'sudo systemctl start cedarclerk'" -ForegroundColor Red; exit 1
 }
 
 ### Launching service
 Write-Host "`n=== [6/7] Starting CedarClerk service on Raspberry Pi ===" -ForegroundColor Cyan
-ssh $PiHost "sudo systemctl start cedarclerk"
+ssh $CloudHost "sudo systemctl start cedarclerk"
 if ($LASTEXITCODE -ne 0)
 {
-    Write-Host "Start command failed - start it by hand: ssh $PiHost 'sudo systemctl start cedarclerk'" -ForegroundColor Red; exit 1
+    Write-Host "Start command failed - start it by hand: ssh $CloudHost 'sudo systemctl start cedarclerk'" -ForegroundColor Red; exit 1
 }
 
 ### Checking health
@@ -114,6 +120,6 @@ elseif ($resp)
 }
 else
 {
-    Write-Host "`nHealth check FAILED - check: ssh $PiHost 'journalctl -u cedarclerk -n 30'" -ForegroundColor Red
+    Write-Host "`nHealth check FAILED - check: ssh $CloudHost 'journalctl -u cedarclerk -n 30'" -ForegroundColor Red
     exit 1
 }
