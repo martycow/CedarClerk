@@ -78,7 +78,6 @@ const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '
 // debug console slides out on top of that bar and needs to know it's there.
 const STATUS_BAR_HEIGHT_PX = 27;
 // FI2.11 — how long the "published" confirmation with its links stays up.
-const PUBLISH_TOAST_MS = 10_000;
 const STATUS_BAR_HIDDEN_MQ = '(max-width: 768px)';
 
 // Rounds a date up to the next boundary of `minutes` (e.g. 05:27 + 5min -> 05:30)
@@ -883,7 +882,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     exportError = signal<{ code?: number; message: string } | null>(null);
     // FI2.11 — what the last publish produced, with its links. Cleared after 10s.
     publishSuccess = signal<{ links: { label: string; url: string }[] } | null>(null);
-    private publishToastTimer?: ReturnType<typeof setTimeout>;
 
 
 
@@ -1236,7 +1234,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         clearTimeout(this.saveTimer);
         clearTimeout(this.saveRetryTimer);
         clearTimeout(this.aiToastTimer);
-        clearTimeout(this.publishToastTimer);
         clearInterval(this.aiEditTicker);
         clearInterval(this.autoTranslateTicker);
         clearInterval(this.exportTicker);
@@ -1938,7 +1935,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     private showAiToast(text: string) {
         clearTimeout(this.aiToastTimer);
-        clearTimeout(this.publishToastTimer);
         this.aiToast.set(text);
         this.aiToastTimer = setTimeout(() => this.aiToast.set(null), 3000);
     }
@@ -2522,7 +2518,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.publishingAll.set(true);
         this.publishSuccess.set(null);
         this.microError.set('');
-        clearTimeout(this.publishToastTimer);
 
         // The checklist mirrors what pressing the button will actually do — one row per phase,
         // built before anything runs so the author sees the whole plan tick over.
@@ -2611,10 +2606,19 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.publishRun.set(null);
     }
 
+    /**
+     * The result of a publish, with the links it produced. **It does not expire** (11.08.2026):
+     * it lives inside the export modal, the progress checklist stacks over it, and it used to
+     * delete itself ten seconds later — so watching a publish to its end and then closing the
+     * checklist reliably showed nothing at all. Ten seconds is not long enough to read a link;
+     * it is barely long enough to notice one.
+     */
     private showPublishSuccess(links: { label: string; url: string }[]) {
         this.publishSuccess.set({ links });
-        clearTimeout(this.publishToastTimer);
-        this.publishToastTimer = setTimeout(() => this.publishSuccess.set(null), PUBLISH_TOAST_MS);
+    }
+
+    dismissPublishSuccess() {
+        this.publishSuccess.set(null);
     }
 
     async exportDraft(): Promise<{ label: string; url: string }[]> {
@@ -2667,7 +2671,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
             this.exportResult.set(this.t().editor.exportModal.queued);
             const allIds = [...queuedByLang.values()].flat().map(j => j.id);
-            const finished = await this.awaitJobs(id, allIds, polled => this.reflectJobs(queuedByLang, polled));
+            const byStep = new Map([...queuedByLang].map(([lang, jobs]) => ['tg-' + lang, jobs] as const));
+            const finished = await this.awaitJobs(id, allIds, polled => this.reflectParts(byStep, polled));
 
             for (const [lang, queuedJobs] of queuedByLang) {
                 const byId = new Map(finished.map(j => [j.id, j]));
@@ -2743,7 +2748,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                     : undefined;
                 if (parts) this.runUpdate(step, { parts });
 
-                const finished = await this.awaitJobs(id, jobs.map(j => j.id));
+                // The callback is the whole fix for "a thread with no progress": without it the
+                // chips are drawn once, as waiting, and never touched again.
+                const byStep = new Map([[step, jobs]]);
+                const finished = await this.awaitJobs(
+                    id, jobs.map(j => j.id), polled => this.reflectParts(byStep, polled));
                 if (finished.length < jobs.length) {
                     this.runUpdate(step, { error: this.t().editor.exportModal.stillRunning });
                     this.microError.set(this.t().editor.exportModal.stillRunning);
@@ -2782,10 +2791,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return [...jobs].sort((a, b) => (a.partIndex ?? 0) - (b.partIndex ?? 0));
     }
 
-    /** Every poll of the queue repaints the checklist's part chips — the "test run" effect. */
-    private reflectJobs(queuedByLang: Map<string, PublishJob[]>, polled: PublishJob[]) {
+    /**
+     * Every poll of the queue repaints one step's part chips — the "test run" effect.
+     *
+     * Keyed by step id rather than by language: X and Bluesky threads went without this for their
+     * whole existence (found 11.08.2026 — a 25-part X thread showed 25 grey chips for seventeen
+     * seconds and then flipped to done), because only the Telegram path passed the callback and
+     * the helper could only address `tg-<lang>` rows anyway.
+     */
+    private reflectParts(queued: Map<string, PublishJob[]>, polled: PublishJob[]) {
         const byId = new Map(polled.map(j => [j.id, j]));
-        for (const [lang, queuedJobs] of queuedByLang) {
+        for (const [step, queuedJobs] of queued) {
             if (queuedJobs.length <= 1) continue;
             const parts = this.sortedByPart(queuedJobs).map(q => {
                 const now = byId.get(q.id);
@@ -2795,7 +2811,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                     : now.status === 'Succeeded' ? 'done' : 'failed';
                 return { index: q.partIndex ?? 0, status };
             });
-            this.runUpdate('tg-' + lang, { parts });
+            this.runUpdate(step, { parts });
         }
     }
 

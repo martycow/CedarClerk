@@ -2040,6 +2040,26 @@ input[type="datetime-local"]:focus-visible {
     color: var(--ok);
 }
 
+/* The toast waits to be dismissed now, so it needs a way to be dismissed. */
+.toast-close {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: none;
+    border-radius: var(--radius-sm);
+    color: var(--t2);
+    cursor: pointer;
+}
+
+.toast-close:hover {
+    background: var(--hover-strong);
+    color: var(--text);
+}
+
 .publish-toast a {
     color: var(--accent);
     font-weight: 600;
@@ -2467,9 +2487,12 @@ input[type="datetime-local"]:focus-visible {
     color: var(--text);
 }
 
+/* `--alt` here was a surface token used as a text colour — #EFECE4 on a #FCFBF8 sheet in light,
+   #2F2C23 on #2B2820 in dark. The "7/25" counter was invisible in both themes, which is half of
+   why a long thread looked like it was doing nothing (11.08.2026). */
 .pr-count {
     font-size: var(--fs-meta);
-    color: var(--alt);
+    color: var(--t2);
     font-variant-numeric: tabular-nums;
 }
 

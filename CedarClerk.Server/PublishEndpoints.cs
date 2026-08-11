@@ -454,6 +454,19 @@ public static class PublishEndpoints
             return Results.Ok(new { jobs });
         });
 
+        // Where this owner's posts actually went (11.08.2026). The URLs were always stored — every
+        // job row carries the one the network answered with — but nothing outside the editor's own
+        // progress checklist ever read them, so closing that modal lost them for good. Marty
+        // published a 25-part X thread and could not find a single link to it afterwards.
+        //
+        // Part 0 only: a thread's public address is its head, and 25 links to one thread is not a
+        // list of posts, it is a list of replies.
+        group.MapGet("/published", async (ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            return Results.Ok(new { posts = await PublishedPosts.LatestAsync(db, uid) });
+        });
+
         // ── The author's own text per network and language (T-087, ADR-077) ──────────────────
         group.MapGet("/texts/{draftId:guid}", async (Guid draftId, ClaimsPrincipal user, CedarDbContext db) =>
         {

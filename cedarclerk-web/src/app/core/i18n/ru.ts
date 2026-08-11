@@ -817,6 +817,8 @@ export const ru: Dict = {
         slugPlaceholder: 'adres-posta',
         openBlog: 'Открыть в блоге',
         openTelegram: 'Открыть в Telegram',
+        threadOf: (n: number) => `Тред из ${n} ${plural(n, 'сообщения', 'сообщений', 'сообщений')}`,
+        openPost: (network: string) => `Открыть в ${network}`,
         tagsHint: 'через запятую',
         tagsPlaceholder: 'без тегов',
         folder: 'Папка',

@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-08-11 (publishing) — a thread with no progress, and links nobody could find (ADR-110, 0.10.3)
+
+Marty published a 25-part thread to X and reported two things: no progress while it ran, and no links to the posts anywhere afterwards. The database said the publish went perfectly — all 25 parts `Succeeded`, every one with its URL stored, the whole thread out in **17 seconds**. Both symptoms were in the interface, and there were three defects behind them.
+
+**The part chips never moved.** `awaitJobs` takes an `onProgress` callback that repaints them on every poll; the Telegram path passes it and the short-post path never did. So the chips were drawn once as "waiting" and flipped to done all at once at the end. The helper behind them could only address `tg-<lang>` rows anyway, so there was nothing to pass — it is keyed by step id now and works for any network.
+
+**The counter under them was invisible in both themes.** `.pr-count` was painted with `--alt` — a *surface* token used as a text colour: #EFECE4 on a #FCFBF8 sheet in light, #2F2C23 on #2B2820 in dark. The automated contrast check did not catch it because it verifies defined role pairs, not whatever a stylesheet happens to combine.
+
+**The links deleted themselves.** The success toast lives inside the export modal, the progress checklist stacks on top of it, and the toast removed itself after ten seconds — so watching a publish to the end and then closing the checklist reliably showed nothing at all. It now waits to be dismissed.
+
+**And nothing anywhere survived closing the window.** That is the part worth more than the three fixes: the URLs were in the database the entire time, and the only thing that ever read them was a modal. `GET /api/publish/published` reads them out of the publish queue — no second table, because a table beside the one that already stores the answer is two sources of truth waiting to disagree — and the Posts Manager shows, per post, every network it reached with a link to it. A thread contributes one row pointing at its head, labelled with how many messages it is: 25 links to one thread is not a list of posts, it is a list of replies. Republishing shows the newest link only, and a success with no public address (a Telegram channel without a `@username`) is left out rather than rendered as a dead button.
+
+Verified against a copy of production: the reader returns nine rows for Marty, including the 25-part X thread and a 23-part Bluesky one. Seven tests pin what it may return. `dotnet test` **744/744**, frontend 11/11, contrast clean, smoke **53/53**.
+
+**The lesson**: publishing had no surface that outlived a modal. Progress, result and links all lived in a window, and windows close. Value produced by an action needs an address where it can be found tomorrow.
+
 ## 2026-08-11 (Phase 13) — the task tracker (T-123, 0.10.2)
 
 Fourth of Phase 13's seven MUST rows. A task is its own entity, not a seventh document type — ADR-106 drew that line months of decisions ago and it held: the content of a task is a set of fields that get filtered, sorted and counted, and its text is only one of them. `Description` is a plain textarea, and its empty state says why out loud: **a task that needs tables or media is really a document**, and should be created as one and linked.

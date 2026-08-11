@@ -54,6 +54,19 @@ export interface PublishJob {
     publicUrl?: string | null;
 }
 
+/** A post that exists on a network, as the queue recorded it. */
+export interface PublishedPost {
+    draftId: string;
+    network: string;
+    language: string;
+    targetId: string;
+    publicUrl: string;
+    remoteId: string | null;
+    /** More than 1 means the link is the head of a thread of that many messages. */
+    partCount: number;
+    finishedAt: string | null;
+}
+
 /** One message of a thread, as the preview describes it (T-106). */
 export interface ThreadPart {
     index: number;
@@ -117,6 +130,15 @@ export class PublishService {
     queue(draftId: string, targetIds: string[], language?: string, confirmedFingerprint?: string, splitIntoThread = false) {
         return firstValueFrom(this.http.post<{ jobs: PublishJob[] }>(
             '/api/publish/jobs', { draftId, targetIds, language, confirmedFingerprint, splitIntoThread }));
+    }
+
+    /**
+     * Where this owner's posts went — one row per (draft, network, language, account), newest
+     * first. Read by the Posts Manager: before this existed the only place a published URL was
+     * ever shown was the editor's progress checklist, and closing it lost the link for good.
+     */
+    published() {
+        return firstValueFrom(this.http.get<{ posts: PublishedPost[] }>('/api/publish/published'));
     }
 
     jobs(draftId: string) {

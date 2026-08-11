@@ -848,6 +848,8 @@ export const en = {
         slugPlaceholder: 'post-url',
         openBlog: 'Open on the blog',
         openTelegram: 'Open in Telegram',
+        threadOf: (n: number) => `Thread of ${n} messages`,
+        openPost: (network: string) => `Open on ${network}`,
         tagsHint: 'comma-separated',
         tagsPlaceholder: 'no tags',
         folder: 'Folder',

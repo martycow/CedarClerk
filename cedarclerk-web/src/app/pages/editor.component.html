@@ -636,9 +636,11 @@
             }
             </div>
 
-            <!--FI2.11: the result of a publish, with the links it produced, held for 10 seconds.
-            Inside the modal rather than over the page — this is the answer to the button that was
-            just pressed, and the window stays open after publishing.-->
+            <!--FI2.11: the result of a publish, with the links it produced. Inside the modal
+            rather than over the page — this is the answer to the button that was just pressed, and
+            the window stays open after publishing. **It waits to be dismissed** (11.08.2026): the
+            progress checklist stacks over it, so a ten-second life meant the links were gone before
+            anything uncovered them.-->
             @if (publishSuccess(); as done) {
             <div class="publish-toast">
                 <app-icon name="check" size="sm"></app-icon>
@@ -646,6 +648,10 @@
                 @for (link of done.links; track link.url) {
                 <a [href]="link.url" target="_blank" rel="noopener">{{ link.label }}</a>
                 }
+                <button class="toast-close" (click)="dismissPublishSuccess()"
+                        [title]="t().common.close" [attr.aria-label]="t().common.close">
+                    <app-icon name="x" size="xs"></app-icon>
+                </button>
             </div>
             }
 

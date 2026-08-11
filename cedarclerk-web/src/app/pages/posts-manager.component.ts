@@ -12,6 +12,7 @@ import {
     normalizeFormForEdit, blankFormEdit, newQuestionId, newOptionId,
 } from '../core/form-presets.service';
 import { PostsService, ScheduledPost } from '../core/posts.service';
+import { PublishedPost, PublishService } from '../core/publish.service';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES } from '../core/languages';
 import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -49,6 +50,7 @@ export class PostsManagerComponent implements OnInit {
     private draftsApi = inject(DraftsService);
     private presetsApi = inject(FormPresetsService);
     private postsApi = inject(PostsService);
+    private publishApi = inject(PublishService);
     private router = inject(Router);
     private route = inject(ActivatedRoute);
     feedback = inject(CommentsService);
@@ -118,6 +120,9 @@ export class PostsManagerComponent implements OnInit {
     presetTranslating = signal<string | null>(null);
     presetTranslateError = signal('');
 
+    /** Where each post actually went — filled from the publish queue's own record. */
+    published = signal<PublishedPost[]>([]);
+
     async ngOnInit() {
         this.feedback.refreshNewCount();
         // The default tab is 'posts' and setTab() only runs for a ?tab= deep link, so without
@@ -126,6 +131,7 @@ export class PostsManagerComponent implements OnInit {
         this.loadPresets();
         try {
             this.drafts.set(await this.draftsApi.list());
+            this.loadPublished();
             this.loadScheduled();
             this.loadNewFeedback();
         } catch (e) {
@@ -385,6 +391,30 @@ export class PostsManagerComponent implements OnInit {
 
     blogUrl(d: DraftMeta): string | null {
         return d.blogSlug ? `https://blog.mooexe.dev/${d.blogSlug}` : null;
+    }
+
+    /**
+     * Failing to load this must not take the page down with it: a missing "where it went" list is
+     * a smaller loss than a Posts Manager that will not open.
+     */
+    private async loadPublished() {
+        try {
+            this.published.set((await this.publishApi.published()).posts);
+        } catch {
+            this.published.set([]);
+        }
+    }
+
+    /**
+     * The short-post networks a draft reached. Telegram and the blog have their own rows already,
+     * built from the draft itself; these are the ones nothing outside the editor ever showed.
+     */
+    publishedElsewhere(d: DraftMeta): PublishedPost[] {
+        return this.published().filter(p => p.draftId === d.id && p.network !== 'telegram');
+    }
+
+    networkLabel(network: string): string {
+        return network === 'x' ? 'X' : network.charAt(0).toUpperCase() + network.slice(1);
     }
 
     telegramUrl(d: DraftMeta): string | null {

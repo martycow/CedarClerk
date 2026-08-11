@@ -148,7 +148,7 @@ beside them — not a reading surface, so they follow the list's density rather 
 
                     <!--FI3.1: everything below is per-destination rather than one flat list -
                     the blog and Telegram have genuinely different settings and links.-->
-                    @if (d.isBlogPublished || blogUrl(d) || telegramUrl(d)) {
+                    @if (d.isBlogPublished || blogUrl(d) || telegramUrl(d) || publishedElsewhere(d).length) {
                     <details class="detail-group" [open]="isOpen('destinations')" (toggle)="rememberOpen('destinations', $event)">
                         <summary>{{ t().manager.groups.destinations }}</summary>
                     <div class="detail-field">
@@ -188,6 +188,25 @@ beside them — not a reading surface, so they follow the list's density rather 
                         <label>{{ t().manager.telegram }}</label>
                         <a class="detail-link-btn" [href]="url" target="_blank" rel="noopener">
                             <app-icon name="arrow-square-out" size="sm"></app-icon> {{ t().manager.openTelegram }}
+                        </a>
+                    </div>
+                    }
+
+                    <!--Where else this post went (11.08.2026). Read from the publish queue's own
+                    record, which held every URL all along and was never shown anywhere outside the
+                    editor's progress checklist — so closing that modal lost the link for good.-->
+                    @for (post of publishedElsewhere(d); track post.network + post.language + post.targetId) {
+                    <div class="detail-field">
+                        <label>{{ networkLabel(post.network) }} · {{ post.language.toUpperCase() }}</label>
+                        @if (post.partCount > 1) {
+                        <p class="field-hint-inline">{{ t().manager.threadOf(post.partCount) }}</p>
+                        }
+                        @if (post.finishedAt) {
+                        <p class="field-hint-inline">{{ t().manager.publishedOn }} {{ post.finishedAt | date:'d MMM yyyy, HH:mm' }}</p>
+                        }
+                        <a class="detail-link-btn" [href]="post.publicUrl" target="_blank" rel="noopener">
+                            <app-icon name="arrow-square-out" size="sm"></app-icon>
+                            {{ t().manager.openPost(networkLabel(post.network)) }}
                         </a>
                     </div>
                     }

@@ -238,6 +238,14 @@ Screenshots behind the `hand` marks are reproducible with `AUDIT=1 npx playwrigh
 
 **Still not verified by anything**, and each needs a person or a device rather than a script: flush-on-hide on a real iPhone; incremental re-translation preserving manual corrections (needs a provider key and a Pro Plus account); the uk/be/ka capability refusal; the Posts Manager submission modal and "mark all as read" (need a real submission); tag rename/delete; audit paging past the first page; the glossary tooltip on a published post; per-language cross-links; and whether the Russian wording reads well — which is Marty's call, not a script's.
 
+### Added 11.08.2026 — where a post went (ADR-110)
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Published-elsewhere rows | `posts-manager.component.html`, inside the Destinations group, `@for (post of publishedElsewhere(d))` | panel | One row per network a post reached (X, Bluesky), with the link, the language, when it went and "thread of N messages" | None — folded into the page load, and a failure leaves the list empty rather than breaking the page | Read from `GET /api/publish/published`, which reads the publish queue. Before this the only place a published URL ever appeared was the editor's progress checklist, and closing it lost the link |
+| Publish success toast | `editor.component.html`, `.publish-toast` + `.toast-close` | toast | The links a publish produced | IS the result | **Stopped expiring 11.08.2026** — it sits under the progress checklist, so a ten-second life meant it was gone before anything uncovered it. Dismissed by its own × |
+| Thread part chips | `editor.component.html`, `.pr-parts` / `.pr-part` | panel | One numbered chip per thread message, filling in as parts send | IS the loading state | Repainted every poll on **every** network since 11.08.2026 — the short-post path never passed the progress callback, so an X thread showed 25 static chips |
+
 ## `admin.component` (`cedarclerk-web/src/app/pages/admin.component.{ts,html,css}`)
 
 IF2, built 27.07.2026 in five steps (`docs/admin-panel-scope.md`). Reached from the nav row, gated by `adminGuard`; a non-admin gets a redirect and the API answers 404 rather than 403 — an account must not learn that an endpoint it may not use exists.
