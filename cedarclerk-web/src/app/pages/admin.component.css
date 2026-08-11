@@ -465,3 +465,20 @@
 }
 
 .post-links a:hover { text-decoration: underline; }
+
+/* Credit adjustment (11.08.2026). The balance reads first because the number being changed matters
+   more than the control that changes it. */
+.credit-balance {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.credit-amount {
+    width: 5.5em;
+}
+
+.credit-note {
+    flex: 1;
+    min-width: 8em;
+}

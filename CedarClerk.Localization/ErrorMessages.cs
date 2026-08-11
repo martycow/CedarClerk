@@ -188,6 +188,15 @@ public static class ErrorMessages
         Ru("В проекте должен остаться хотя бы один документ. Удалите проект целиком или сначала добавьте другой документ.",
            "A project must keep at least one document. Delete the project instead, or add another document first.");
 
+    // Admin credit adjustments (11.08.2026).
+    public static string CreditAmountRequired =>
+        Ru("Укажите, сколько кредитов начислить или списать — ноль ничего не меняет.",
+           "Say how many credits to add or take back — zero changes nothing.");
+
+    public static string CreditsWouldGoNegative(int balance) =>
+        Ru($"На балансе {balance}; списать больше нельзя — отрицательный баланс приложение читать не умеет.",
+           $"The balance is {balance}; taking more would go negative, which nothing in the app can read.");
+
     // ADR-108 — identity that lives on another installation.
     public static string UpstreamUnreachable(string host) =>
         Ru($"Не удалось связаться с {host}, чтобы проверить вход. Дело не в пароле — сервер не ответил.",

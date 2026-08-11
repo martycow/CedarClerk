@@ -25,6 +25,13 @@ public static class AdminEndpoints
 
     // Every mutation goes through here. Takes the actor and target so the row reads correctly
     // later without joining to anything that might have changed since.
+    /// <summary>
+    /// A signed movement, so one control both tops up and takes back. Note is the admin's own words
+    /// about why, and it goes into the audit log rather than into the ledger — the ledger records
+    /// what moved, the audit records who decided and why.
+    /// </summary>
+    public record AdjustCreditsRequest(int Amount, string? Note);
+
     private static void Audit(CedarDbContext db, ApplicationUser actor, string action,
         ApplicationUser? target = null, string? details = null)
     {
@@ -76,6 +83,10 @@ public static class AdminEndpoints
                 .Select(g => new { OwnerId = g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.OwnerId, x => x.Count);
             var publishedCounts = await db.Drafts.Where(d => d.IsBlogPublished).GroupBy(d => d.OwnerId)
                 .Select(g => new { OwnerId = g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.OwnerId, x => x.Count);
+            // ADR-092 — a balance is the sum of the ledger, never a stored counter. Summed for
+            // everyone in one query rather than per user, the same way the other counts are.
+            var creditBalances = await db.CreditEntries.GroupBy(c => c.OwnerId)
+                .Select(g => new { OwnerId = g.Key, Total = g.Sum(c => c.Delta) }).ToDictionaryAsync(x => x.OwnerId, x => x.Total);
 
             var now = DateTime.UtcNow;
             return Results.Ok(users.Select(u => new
@@ -96,6 +107,7 @@ public static class AdminEndpoints
                 Drafts = draftCounts.GetValueOrDefault(u.Id),
                 Published = publishedCounts.GetValueOrDefault(u.Id),
                 Channels = channelCounts.GetValueOrDefault(u.Id),
+                Credits = creditBalances.GetValueOrDefault(u.Id),
             }));
         });
 
@@ -144,6 +156,37 @@ public static class AdminEndpoints
             Audit(db, actor, "plan", target, $"{before} → {after}");
             await db.SaveChangesAsync();
             return Results.Ok(new { target.PlanTier, target.PlanExpiresAt });
+        });
+
+        // Marty, 11.08.2026. Deliberately NOT refused on self, unlike lock and admin: those are
+        // one-way doors out of the panel, while a balance is not a privilege — and testing an X
+        // post needs credits on the account doing the testing. Every movement is logged either way.
+        group.MapPost("/users/{id}/credits", async (string id, AdjustCreditsRequest req,
+            ClaimsPrincipal principal, UserManager<ApplicationUser> users, CedarDbContext db) =>
+        {
+            if (req.Amount == 0)
+                return Results.BadRequest(new { error = ErrorMessages.CreditAmountRequired });
+
+            var actor = (await users.GetUserAsync(principal))!;
+            var target = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
+            if (target is null) return Results.NotFound();
+
+            var before = await CreditWallet.BalanceAsync(db, target.Id);
+
+            // A fresh reference per movement: (Reason, Ref) is unique, and each decision an admin
+            // makes is its own event — granting 10 twice on purpose must produce 20, not 10.
+            var adjusted = await CreditWallet.TryAdjustAsync(
+                db, target.Id, req.Amount, CreditReasons.AdminGrant, Guid.NewGuid().ToString());
+
+            if (!adjusted)
+                return Results.BadRequest(new { error = ErrorMessages.CreditsWouldGoNegative(before) });
+
+            var after = before + req.Amount;
+            var note = string.IsNullOrWhiteSpace(req.Note) ? "" : $" — {req.Note.Trim()}";
+            Audit(db, actor, "credits", target, $"{req.Amount:+#;-#;0} → {after} (was {before}){note}");
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new { balance = after });
         });
 
         group.MapPost("/users/{id}/reset-trial", async (string id,

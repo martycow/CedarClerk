@@ -39,4 +39,28 @@ public static class CreditWallet
         await db.SaveChangesAsync(ct);
         return true;
     }
+
+    /// <summary>
+    /// An admin's own correction to a balance: a **signed** movement, positive to top somebody up
+    /// and negative to take back a mistake. Returns false when a deduction would leave the balance
+    /// below zero — a negative balance is not a state anything else in the app knows how to read.
+    ///
+    /// Separate from <see cref="GrantAsync"/> and <see cref="TryChargeAsync"/> rather than folded
+    /// into either: both of those refuse a non-positive amount on purpose, because a purchase of
+    /// -10 or a charge of 0 is a bug at the call site. This one is the single place where a human
+    /// deliberately moves a balance in either direction, and it is written to the same ledger, so
+    /// the correction is as visible afterwards as whatever it corrects.
+    /// </summary>
+    public static async Task<bool> TryAdjustAsync(
+        CedarDbContext db, string ownerId, int delta, string reason, string? @ref, CancellationToken ct = default)
+    {
+        if (delta == 0) return false;
+
+        if (delta < 0 && await BalanceAsync(db, ownerId, ct) + delta < 0)
+            return false;
+
+        db.CreditEntries.Add(new CreditEntry { OwnerId = ownerId, Delta = delta, Reason = reason, Ref = @ref });
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
 }

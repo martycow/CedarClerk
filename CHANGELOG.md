@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-11 (admin) — moving a balance by hand (0.10.1)
+
+Marty asked for a way to put credits on an account from the admin panel. The mechanism that already existed underneath — the ledger from ADR-092, where a balance is `SUM(Delta)` and never a stored number — made the shape of the answer obvious: an adjustment is one more row, not an edit of a total.
+
+**The control is signed, so the same place that gives also takes back.** An amount and an optional note, then Add or Take back. Separating the two directions into two features would have been the wrong instinct: an admin who granted 100 instead of 10 needs the correction to be as easy as the mistake, and correcting through the same ledger leaves both movements visible afterwards rather than making the error disappear.
+
+**It refuses to go below zero.** `CreditWallet.TryAdjustAsync` checks the balance before writing a deduction and returns false rather than leaving a negative number nothing else in the app knows how to read — the charge path already assumed a balance is never negative, and an admin's typo is not a good reason to break that assumption. Zero is refused too: it would write a decision that changed nothing.
+
+**Each grant is its own event.** The ledger's `(Reason, Ref)` uniqueness makes `GrantAsync` idempotent on purpose — a Stripe webhook fired twice must not pay twice. That is exactly wrong for an admin who deliberately grants 10 and then 10 again, so the endpoint passes a fresh reference per movement: two decisions, two rows, twenty credits.
+
+**Self-targeting is allowed here, unlike lock and admin.** Those two are refused server-side because they are one-way doors out of the panel — an admin who locks themselves cannot get back in. A balance is not a privilege, and testing a paid post needs credits on the account doing the testing, so the refusal would have bought nothing and cost something real. The audit log records it either way, actor and target both, along with the note and the before/after numbers.
+
+Seven ledger tests cover the boundaries, including the one that matters most — a deduction past zero refuses **and writes no row**, so a refused correction leaves no trace of having been attempted. Verified against a running server end to end: grant, grant again (50, not 25), take back, refuse −999, refuse 0, and the three audit lines that came out the other side.
+
 ## 0.10.0 — the indie-gamedev turn (10.08.2026)
 
 The middle number moved for the first time since Phase 11, and for the reason CLAUDE.md reserves it: this is not a list of fixes, it changes what the app is. A post stopped being the only kind of thing Cedar Clerk holds.

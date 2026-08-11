@@ -23,6 +23,8 @@ export interface AdminUser {
     drafts: number;
     published: number;
     channels: number;
+    /** ADR-092 — the sum of the credit ledger, not a stored counter. */
+    credits: number;
 }
 
 export interface AdminSummary {
@@ -122,6 +124,12 @@ export class AdminService {
     setPlan(userId: string, tier: string, expiresAt: string | null) {
         return firstValueFrom(this.http.post<{ planTier: string; planExpiresAt: string | null }>(
             `/api/admin/users/${userId}/plan`, { tier, expiresAt }));
+    }
+
+    /** A signed movement: positive tops up, negative takes back. Returns the new balance. */
+    adjustCredits(userId: string, amount: number, note: string | null) {
+        return firstValueFrom(
+            this.http.post<{ balance: number }>(`/api/admin/users/${userId}/credits`, { amount, note }));
     }
 
     resetTrial(userId: string) {

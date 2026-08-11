@@ -160,6 +160,18 @@ export class AdminComponent implements OnInit {
         return this.run(() => this.api.setPlan(u.id, this.planTier, expiry));
     }
 
+    creditAmount = 10;
+    creditNote = '';
+
+    adjustCredits(u: AdminUser, sign: 1 | -1) {
+        const amount = Math.trunc(Math.abs(this.creditAmount)) * sign;
+        if (!amount) return Promise.resolve();
+        return this.run(async () => {
+            await this.api.adjustCredits(u.id, amount, this.creditNote.trim() || null);
+            this.creditNote = '';
+        });
+    }
+
     resetTrial(u: AdminUser) {
         return this.run(() => this.api.resetTrial(u.id));
     }

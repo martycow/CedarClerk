@@ -86,4 +86,72 @@ public class CreditWalletTests
         Assert.Null(CreditPacks.Find("nope"));
         Assert.Null(CreditPacks.Find(null));
     }
+
+    // Admin credit adjustment (11.08.2026, Marty's request). The wallet moves money's worth, so the
+    // boundary that matters is the one where a correction would take a balance somewhere the rest
+    // of the app cannot read.
+    [Fact]
+    public async Task An_admin_can_top_a_balance_up()
+    {
+        using var db = NewDb();
+        Assert.True(await CreditWallet.TryAdjustAsync(db, "u1", 10, CreditReasons.AdminGrant, "a"));
+        Assert.Equal(10, await CreditWallet.BalanceAsync(db, "u1"));
+    }
+
+    [Fact]
+    public async Task Granting_the_same_amount_twice_on_purpose_gives_twice_as_much()
+    {
+        // Unlike a purchase, an admin decision is its own event: two grants of ten are twenty. The
+        // endpoint passes a fresh reference each time, which is what makes that true.
+        using var db = NewDb();
+        await CreditWallet.TryAdjustAsync(db, "u1", 10, CreditReasons.AdminGrant, Guid.NewGuid().ToString());
+        await CreditWallet.TryAdjustAsync(db, "u1", 10, CreditReasons.AdminGrant, Guid.NewGuid().ToString());
+        Assert.Equal(20, await CreditWallet.BalanceAsync(db, "u1"));
+    }
+
+    [Fact]
+    public async Task A_correction_can_take_credits_back()
+    {
+        using var db = NewDb();
+        await CreditWallet.GrantAsync(db, "u1", 50, CreditReasons.Purchase, "s1");
+        Assert.True(await CreditWallet.TryAdjustAsync(db, "u1", -20, CreditReasons.AdminGrant, "fix"));
+        Assert.Equal(30, await CreditWallet.BalanceAsync(db, "u1"));
+    }
+
+    [Fact]
+    public async Task Taking_back_more_than_there_is_refuses_rather_than_going_negative()
+    {
+        using var db = NewDb();
+        await CreditWallet.GrantAsync(db, "u1", 5, CreditReasons.Purchase, "s1");
+
+        Assert.False(await CreditWallet.TryAdjustAsync(db, "u1", -6, CreditReasons.AdminGrant, "oops"));
+        // And nothing was written: a refused correction must not leave a row behind.
+        Assert.Equal(5, await CreditWallet.BalanceAsync(db, "u1"));
+        Assert.Equal(1, await db.CreditEntries.CountAsync());
+    }
+
+    [Fact]
+    public async Task Taking_a_balance_to_exactly_zero_is_allowed()
+    {
+        using var db = NewDb();
+        await CreditWallet.GrantAsync(db, "u1", 5, CreditReasons.Purchase, "s1");
+        Assert.True(await CreditWallet.TryAdjustAsync(db, "u1", -5, CreditReasons.AdminGrant, "fix"));
+        Assert.Equal(0, await CreditWallet.BalanceAsync(db, "u1"));
+    }
+
+    [Fact]
+    public async Task Zero_is_refused_because_it_records_a_decision_that_changed_nothing()
+    {
+        using var db = NewDb();
+        Assert.False(await CreditWallet.TryAdjustAsync(db, "u1", 0, CreditReasons.AdminGrant, "nothing"));
+        Assert.Equal(0, await db.CreditEntries.CountAsync());
+    }
+
+    [Fact]
+    public async Task An_adjustment_belongs_to_one_owner_only()
+    {
+        using var db = NewDb();
+        await CreditWallet.TryAdjustAsync(db, "u1", 10, CreditReasons.AdminGrant, "a");
+        Assert.Equal(0, await CreditWallet.BalanceAsync(db, "u2"));
+    }
 }

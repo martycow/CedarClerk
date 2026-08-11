@@ -101,6 +101,26 @@ properties rather than as a class each component has to remember.-->
                         <p class="field-hint-inline">{{ planTier === 'Free' ? t().admin.actions.freeHasNoExpiry : t().admin.actions.blankIsForever }}</p>
                     </div>
 
+                    <div class="action-group">
+                        <label>{{ t().admin.actions.credits }}</label>
+                        <div class="action-row">
+                            <span class="credit-balance">{{ t().admin.actions.creditBalance(u.credits) }}</span>
+                            <input type="number" class="credit-amount" min="1" step="1" [(ngModel)]="creditAmount">
+                            <input type="text" class="credit-note" [(ngModel)]="creditNote"
+                                   [placeholder]="t().admin.actions.creditNote">
+                            <button class="btn-accent" (click)="adjustCredits(u, 1)" [disabled]="busy()">
+                                {{ t().admin.actions.creditAdd }}
+                            </button>
+                            <!--Taking back is the same control with the other sign: a correction has
+                                to be as easy as the mistake, and it lands in the same ledger.-->
+                            <button class="btn-ghost" (click)="adjustCredits(u, -1)"
+                                    [disabled]="busy() || u.credits === 0">
+                                {{ t().admin.actions.creditTake }}
+                            </button>
+                        </div>
+                        <p class="field-hint-inline">{{ t().admin.actions.creditHint }}</p>
+                    </div>
+
                     <div class="action-row">
                         <button class="btn-ghost" (click)="resetTrial(u)" [disabled]="busy() || !u.trialUsed">
                             {{ u.trialUsed ? t().admin.actions.resetTrial : t().admin.actions.trialUnused }}

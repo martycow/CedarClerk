@@ -2,13 +2,26 @@
 
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
-## v0.10.0 is on master (10.08.2026) — not deployed
+## Now (11.08.2026)
+
+- [x] **Credits from the admin panel** (0.10.1) — a signed adjustment on the existing ledger, refused
+  below zero, logged to the audit with the admin's own note. See `CHANGELOG.md` for why grants are
+  deliberately *not* idempotent and why self-targeting is allowed here.
+- [ ] **Next MUST in Phase 13: `T-123` Task Tracker** (`GameTask` + `TaskLink`, ADR-106). The design
+  already exists — board view, list view and the task modal are in
+  `docs/design_handoff_indiedev_core_loop`.
+- [ ] `.\Scripts\deploy.ps1` from `master` to put 0.10.1 live; nothing has been pushed to GitHub yet
+  (`git push origin master dev indiedev_module --tags`).
+
+## v0.10.0 is on master (10.08.2026) — deployed 10.08.2026
 
 Version bumped and tagged; `indiedev_module` merged into `dev` and `master` (both fast-forward, so
 the history is linear and the branch adds nothing anybody has to reconcile).
 
-- [ ] **Deploy when you want it live**: `.\Scripts\deploy.ps1` from `master`. The guard checks the
-  branch, the clean tree and the tag, so a wrong-branch deploy now refuses instead of shipping.
+- [x] **Deployed 10.08.2026** from `master`. The deploy first failed on a full root filesystem on the
+  Pi (0 bytes free, `/var/log` at 13G from cloudflared error-spam); two rotated logs were removed with
+  Marty's confirmation and it went out. The disk is still the tighter constraint it became that day —
+  6.2G free of 27G, logrotate not actually limiting.
 - [ ] **Push** — nothing has left this machine: `git push origin master dev indiedev_module --tags`.
 - [ ] After the deploy the Pi reports `id` from `/api/auth/me`, and the desktop stops keying identity
   by email (ADR-108's fallback). Nothing to do — it sharpens itself.
