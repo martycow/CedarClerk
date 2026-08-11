@@ -244,6 +244,7 @@ if (ProjectEndpoints.IsEnabled(app.Configuration))
 {
     app.MapIndieDevEndpoints();
     app.MapAssetIndexEndpoints();
+    app.MapTaskEndpoints();
 }
 #endregion
 

@@ -67,6 +67,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/project-assets.component').then(m => m.ProjectAssetsComponent),
         canActivate: [indieDevGuard],
     },
+    {
+        path: 'projects/:id/tasks',
+        loadComponent: () => import('./pages/project-tasks.component').then(m => m.ProjectTasksComponent),
+        canActivate: [indieDevGuard],
+    },
     // adminGuard already covers signed-in — it redirects to /login itself (IF2).
     {
         path: 'admin',

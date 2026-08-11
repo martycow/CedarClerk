@@ -123,6 +123,73 @@ public class AssetEntry
 }
 
 /// <summary>
+/// One task of the tracker (T-123, ADR-106) — a fixed set of fields, not a document.
+///
+/// The boundary ADR-106 draws: if the content is free text and the fields around it are metadata,
+/// it is a <see cref="Draft"/> with a type. If the content is a set of fields and text is only one
+/// of them, it is its own entity. Hence <see cref="Description"/> is **plain text, not TipTap** —
+/// a task that needs tables and media is really a document, and should be created as one and
+/// linked. The empty state in the UI says exactly that.
+///
+/// Named <c>GameTask</c> rather than <c>Task</c> for the obvious reason: every async signature in
+/// the codebase already uses that name.
+/// </summary>
+public class GameTask
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+
+    /// <summary>Required — a task outside a project has nowhere to be shown (unlike a document,
+    /// which may live on its own; every draft written before the module does).</summary>
+    public Guid ProjectId { get; set; }
+
+    public string Title { get; set; } = "";
+
+    /// <summary>One of <see cref="CedarClerk.Core.TaskStatuses"/>.</summary>
+    public string Status { get; set; } = CedarClerk.Core.TaskStatuses.Backlog;
+
+    /// <summary>1–3, see <see cref="CedarClerk.Core.TaskPriorities"/>.</summary>
+    public int Priority { get; set; } = CedarClerk.Core.TaskPriorities.Normal;
+
+    /// <summary>Plain text — see the type's summary for why this is not a document body.</summary>
+    public string Description { get; set; } = "";
+
+    /// <summary>
+    /// Free text, deliberately. The product is single-user (INDIEDEV.md): a picker over a list of
+    /// one, or people-management UI for a person working alone, would be ceremony around nothing.
+    /// It exists at all because Marty's roles are many even when the person is one — "composer",
+    /// "marketing" is a useful thing to write here.
+    /// </summary>
+    public string Assignee { get; set; } = "";
+
+    /// <summary>
+    /// T-124's sprint. The column exists before the <c>Sprint</c> entity does so that the planner
+    /// adds a table rather than also altering this one; until then it is always null. A plain
+    /// scalar with no FK, like <c>Draft.FolderId</c> and <c>Draft.ProjectId</c>.
+    /// </summary>
+    public Guid? SprintId { get; set; }
+
+    /// <summary>Null = no deadline. Overdue is derived, never stored — it changes with the clock.</summary>
+    public DateTime? DueAt { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// When the task became <see cref="CedarClerk.Core.TaskStatuses.Done"/>, cleared if it is
+    /// reopened. Stored rather than derived from UpdatedAt because editing the title of a finished
+    /// task would otherwise move the day it was finished.
+    /// </summary>
+    public DateTime? CompletedAt { get; set; }
+
+    /// <summary>
+    /// Archived, not deleted — the same choice <see cref="Project.ArchivedAt"/> makes. A task that
+    /// turned out to be wrong is part of what happened; the board just stops showing it.
+    /// </summary>
+    public DateTime? ArchivedAt { get; set; }
+}
+
+/// <summary>
 /// A link between two things in a project (T-141) — today a document and an indexed asset.
 ///
 /// **Generalises ADR-106's <c>TaskLink</c>** rather than sitting beside it: that row was going to be

@@ -1,0 +1,631 @@
+/* T-123 — the task board. Compact density (set on the root in the template): this is a screen for
+   scanning what is in flight, not for reading. Every value is a token.
+
+   The toolbar, chips, buttons and table chrome deliberately match project-assets.component.css
+   value for value — the handoff calls this the "list-screen anatomy" copied from /drafts, and the
+   three module screens have to read as one product. There is no shared component library yet
+   (docs/DESIGN.md flags this); when there is, all three collapse into it. */
+.tasks-page {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--dens-fs);
+}
+
+.hint {
+    color: var(--t2);
+    font-size: var(--fs-meta);
+}
+
+.spacer { flex: 1; }
+.right { text-align: right; }
+.dot { opacity: .6; margin: 0 var(--space-1); }
+.danger { color: var(--danger); }
+
+.error-line {
+    margin: 0;
+    color: var(--danger);
+    font-size: var(--dens-fs);
+}
+
+.tasks-body {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: var(--space-4) var(--space-5) var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.tasks-toolbar {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--dens-gap);
+    flex-wrap: wrap;
+}
+
+.tasks-toolbar h1 {
+    margin: 0;
+    font-size: var(--fs-22);
+    font-weight: 700;
+    letter-spacing: -.02em;
+}
+
+.tasks-sub {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 3px;
+    font-size: var(--fs-meta);
+    color: var(--t2);
+    max-width: 70ch;
+}
+
+.search-input {
+    box-sizing: border-box;
+    width: 240px;
+    padding: var(--dens-control-y) var(--dens-control-x);
+    border: 1px solid var(--border);
+    border-radius: var(--dens-radius);
+    background: var(--sheet);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--dens-fs);
+}
+
+.view-toggle {
+    display: flex;
+    gap: 2px;
+    background: var(--alt);
+    border-radius: var(--radius-md);
+    padding: 2px;
+}
+
+.view-toggle button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 27px;
+    height: 27px;
+    border: none;
+    background: none;
+    border-radius: 6px;
+    color: var(--t2);
+    cursor: pointer;
+}
+
+.view-toggle button.active {
+    background: var(--sheet);
+    color: var(--accent);
+    box-shadow: var(--shadow);
+}
+
+.btn-accent {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    border: none;
+    background: var(--accent);
+    color: var(--sheet);
+    border-radius: var(--dens-radius);
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--dens-fs);
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.btn-accent:hover:not(:disabled) { filter: brightness(1.08); }
+
+.btn-accent:disabled,
+.btn-ghost:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.btn-ghost {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--t2);
+    border-radius: var(--dens-radius);
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--dens-fs);
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.btn-ghost:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--border-strong);
+}
+
+.btn-ghost.small {
+    align-self: flex-start;
+    font-size: var(--fs-meta);
+}
+
+/* Destructive, and it looks it only on hover — a permanently red button in a card you open to
+   read makes deleting the loudest thing on the screen. */
+.btn-ghost.danger:hover:not(:disabled) {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+.icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: none;
+    border-radius: var(--radius-sm);
+    color: var(--t3);
+    cursor: pointer;
+    flex: none;
+}
+
+.icon-btn:hover:not(:disabled) {
+    background: var(--hover-strong);
+    color: var(--text);
+}
+
+/* ---------- Filter chips ---------- */
+.filter-row {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.chip {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 4px var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--t2);
+    font: inherit;
+    font-size: var(--fs-meta);
+    cursor: pointer;
+}
+
+.chip:hover { border-color: var(--border-strong); color: var(--text); }
+
+.chip.on {
+    background: var(--asoft);
+    border-color: var(--abord);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.chip-count {
+    font-variant-numeric: tabular-nums;
+    opacity: .75;
+}
+
+.chip.danger-chip { color: var(--danger); }
+
+.chip.danger-chip.on {
+    background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+    border-color: color-mix(in srgb, var(--danger) 38%, var(--border));
+    color: var(--danger);
+}
+
+/* ---------- Empty ---------- */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-6);
+    text-align: center;
+}
+
+.empty-state app-icon { color: var(--accent); }
+
+.empty-title {
+    margin: 0;
+    font-size: var(--fs-body);
+    font-weight: 600;
+}
+
+.empty-state .hint { max-width: 46ch; }
+
+.empty-state .btn-accent { margin-top: var(--space-2); }
+
+.empty-filtered {
+    padding: var(--space-5);
+    text-align: center;
+}
+
+/* ---------- Board ---------- */
+.board {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--dens-gap);
+    align-items: start;
+}
+
+.column {
+    background: var(--alt);
+    border-radius: var(--radius-md);
+    padding: var(--space-2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+.column-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+}
+
+.column-name {
+    font-size: var(--fs-10);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    font-weight: 600;
+    color: var(--t2);
+}
+
+.column-count {
+    font-size: var(--fs-10);
+    color: var(--t3);
+    font-variant-numeric: tabular-nums;
+}
+
+.column-empty {
+    margin: 0;
+    padding: var(--space-3) var(--space-2);
+    font-size: var(--fs-meta);
+    color: var(--t3);
+    text-align: center;
+}
+
+.task-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: 10px;
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--dens-radius);
+    cursor: pointer;
+    min-width: 0;
+    transition: border-color var(--motion-fast) var(--ease);
+}
+
+.task-card:hover { border-color: var(--abord); }
+
+.task-title {
+    margin: 0;
+    font-size: var(--dens-fs);
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.task-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    font-size: var(--fs-meta);
+    color: var(--t2);
+}
+
+/* Mono so P1/P2/P3 line up down a column; only P1 is tinted, per the design — three tinted levels
+   would make the tint mean "priority" instead of "this one first". */
+.prio {
+    font-family: var(--font-mono);
+    font-size: var(--fs-11);
+    font-weight: 600;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--alt);
+    color: var(--t2);
+}
+
+.prio.p1 {
+    background: color-mix(in srgb, var(--warn) 16%, var(--sheet));
+    color: var(--warn);
+}
+
+/* Only the date turns red, never the card or the column: a late task is still an ordinary task. */
+.due.overdue {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+.due .none { color: var(--t3); }
+
+.assignee {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 12ch;
+}
+
+.link-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    min-width: 0;
+}
+
+.link-chip {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 2px 7px;
+    background: var(--alt);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-caption);
+    color: var(--t2);
+    min-width: 0;
+    max-width: 100%;
+}
+
+.link-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* A link whose target is gone says so instead of rendering as an empty chip. */
+.link-label.gone { font-style: italic; color: var(--t3); }
+
+/* ---------- List view ---------- */
+.tasks-table {
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.tasks-row {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) 130px 60px 130px 170px;
+    align-items: center;
+    gap: var(--dens-gap);
+    padding: var(--dens-row-y) var(--space-4);
+    border-top: 1px solid var(--border);
+    cursor: pointer;
+    min-width: 0;
+}
+
+.tasks-row:first-child { border-top: none; }
+
+.tasks-row:not(.head-row):hover { background: var(--hover); }
+
+.head-row {
+    background: var(--alt);
+    cursor: default;
+    font-size: var(--fs-10);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--t2);
+    font-weight: 600;
+}
+
+.sort-head {
+    border: none;
+    background: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-transform: inherit;
+    letter-spacing: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.sort-head.right { text-align: right; }
+.sort-head:hover { color: var(--text); }
+
+.title-cell {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.links-cell,
+.tasks-row .due {
+    font-size: var(--fs-meta);
+    color: var(--t2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--alt);
+    color: var(--t2);
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-badge.tone-accent {
+    background: var(--asoft);
+    color: var(--accent);
+}
+
+.status-badge.tone-ok {
+    background: color-mix(in srgb, var(--ok) 16%, var(--sheet));
+    color: var(--ok);
+}
+
+/* ---------- The task card (modal) ---------- */
+.modal-head-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.task-modal {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.task-title-input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--text);
+    font-family: inherit;
+    font-size: var(--fs-19);
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+/* Borderless until touched: the title is the heading of the card first and a field second. */
+.task-title-input:hover { border-color: var(--border); }
+.task-title-input:focus { border-color: var(--abord); background: var(--surface); }
+
+.field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+}
+
+.field label {
+    font-size: var(--fs-caption);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-weight: 600;
+    color: var(--t2);
+}
+
+.field input,
+.field select,
+.field textarea {
+    box-sizing: border-box;
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--fs-ui);
+}
+
+/* Plain text, deliberately (ADR-106) — so it is a textarea and not the editor. */
+.field textarea {
+    resize: vertical;
+    line-height: 1.6;
+    font-family: inherit;
+}
+
+.link-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.link-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    min-width: 0;
+}
+
+.link-row:hover { background: var(--hover); }
+.link-row app-icon { color: var(--accent); flex: none; }
+
+.link-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: var(--space-1);
+}
+
+.link-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    border: none;
+    background: none;
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--fs-ui);
+    text-align: left;
+    cursor: pointer;
+    min-width: 0;
+}
+
+.link-option span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.link-option:hover:not(:disabled) { background: var(--hover); }
+.link-option app-icon { color: var(--accent); flex: none; }
+
+.stamp {
+    margin: 0;
+    font-size: var(--fs-caption);
+    color: var(--t2);
+}
+
+.modal-foot-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+}
+
+/* The board scrolls sideways rather than squeezing four columns into a phone: a 60px-wide kanban
+   column is not a column. iPad landscape (1024px) still fits all four. */
+@media (max-width: 900px) {
+    .board {
+        grid-template-columns: repeat(4, minmax(220px, 1fr));
+        overflow-x: auto;
+    }
+
+    .field-grid { grid-template-columns: 1fr; }
+
+    .tasks-row {
+        grid-template-columns: minmax(160px, 1fr) 110px 50px;
+    }
+
+    .tasks-row > :nth-child(4),
+    .tasks-row > :nth-child(5) { display: none; }
+}

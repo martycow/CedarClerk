@@ -62,6 +62,21 @@ public static class ProjectEndpoints
                 .Select(g => new { ProjectId = g.Key, Count = g.Count(), LastActivity = g.Max(d => d.UpdatedAt) })
                 .ToDictionaryAsync(g => g.ProjectId!.Value, g => g);
 
+            // T-123 — the "Tasks" column of the list is the *open* count, not every task ever
+            // written: a finished project would otherwise show its largest number on the day it
+            // stopped having anything left to do.
+            var openTasks = await db.GameTasks
+                .Where(t => t.OwnerId == uid && t.ArchivedAt == null && t.Status != TaskStatuses.Done)
+                .GroupBy(t => t.ProjectId)
+                .Select(g => new { ProjectId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.ProjectId, g => g.Count);
+
+            var assetCounts = await db.AssetEntries
+                .Where(a => a.OwnerId == uid)
+                .GroupBy(a => a.ProjectId)
+                .Select(g => new { ProjectId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.ProjectId, g => g.Count);
+
             return Results.Ok(projects.Select(p => new
             {
                 p.Id,
@@ -72,6 +87,8 @@ public static class ProjectEndpoints
                 p.CreatedAt,
                 p.ArchivedAt,
                 documentCount = stats.GetValueOrDefault(p.Id)?.Count ?? 0,
+                openTaskCount = openTasks.GetValueOrDefault(p.Id),
+                assetCount = assetCounts.GetValueOrDefault(p.Id),
                 // Falls back to the project's own creation for the moment between the two writes
                 // of a create — there is no state in which a project has no documents (ADR-103),
                 // but a null here would still render as an empty cell rather than a date.
@@ -94,6 +111,20 @@ public static class ProjectEndpoints
                 .Select(d => new { d.Id, d.Title, d.DocumentType, d.UpdatedAt, d.IsArchived, d.IsBlogPublished })
                 .ToListAsync();
 
+            // T-123 — the dashboard's right rail. Five tasks, sorted by urgency in one place so the
+            // rail and the board cannot disagree about what "next" means (TaskEndpoints.UpNextAsync).
+            var upNext = await TaskEndpoints.UpNextAsync(db, uid, id);
+            var upNextLinks = await ProjectLinks.LinkedIdsForManyAsync(
+                db, uid, LinkTargets.Task, upNext.Select(t => t.Id).ToList());
+            var upNextLabels = await TaskEndpoints.ResolveLabelsAsync(
+                db, uid, upNextLinks.Values.SelectMany(v => v));
+
+            var taskCounts = await db.GameTasks
+                .Where(t => t.ProjectId == id && t.OwnerId == uid && t.ArchivedAt == null)
+                .GroupBy(t => t.Status)
+                .Select(g => new { Status = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.Status, g => g.Count);
+
             return Results.Ok(new
             {
                 project.Id,
@@ -104,6 +135,9 @@ public static class ProjectEndpoints
                 project.CreatedAt,
                 project.ArchivedAt,
                 documents,
+                upNext = upNext.Select(t => TaskEndpoints.Describe(t, upNextLinks, upNextLabels)),
+                taskCounts,
+                openTaskCount = taskCounts.Where(c => TaskStatuses.IsOpen(c.Key)).Sum(c => c.Value),
             });
         });
 
@@ -173,8 +207,18 @@ public static class ProjectEndpoints
             var project = await db.Projects.FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == uid);
             if (project is null) return Results.NotFound();
 
+            // Documents survive the project and are simply unfiled — they are the user's writing,
+            // and deleting a container is not a request to delete what was in it.
             await db.Drafts.Where(d => d.ProjectId == id && d.OwnerId == uid)
                 .ExecuteUpdateAsync(s => s.SetProperty(d => d.ProjectId, d => null));
+
+            // Everything that only means anything *inside* this project does go, though. None of
+            // these three has a navigation property, so EF cascades none of them, and each was
+            // being left behind: an asset index of a folder nobody is indexing any more, tasks with
+            // no board to appear on, and links naming both.
+            await db.AssetEntries.Where(a => a.ProjectId == id && a.OwnerId == uid).ExecuteDeleteAsync();
+            await db.GameTasks.Where(t => t.ProjectId == id && t.OwnerId == uid).ExecuteDeleteAsync();
+            await db.EntityLinks.Where(l => l.ProjectId == id && l.OwnerId == uid).ExecuteDeleteAsync();
 
             db.Projects.Remove(project);
             await db.SaveChangesAsync();

@@ -68,11 +68,11 @@
                             <span class="project-name" [class.dim]="!!p.archivedAt" [title]="p.name">{{ p.name }}</span>
                         </div>
                         <div class="right">{{ p.documentCount }}</div>
-                        <!-- Tasks and assets do not exist yet (T-122/T-123). A zero here would read as
-                             "this project has no tasks" rather than "tasks are not built" — so the cell
-                             says nothing and explains itself on hover. -->
-                        <div class="right pending" [title]="t().projects.railPending">—</div>
-                        <div class="right pending" [title]="t().projects.railPending">—</div>
+                        <!-- Both are real counts now (T-122/T-123). Tasks is the *open* count, so a
+                             finished project does not show its largest number on the day it stopped
+                             having anything left to do. -->
+                        <div class="right">{{ p.openTaskCount }}</div>
+                        <div class="right">{{ p.assetCount }}</div>
                         <div class="activity">{{ p.lastActivityAt | date:'d MMM, HH:mm' }}</div>
                         <div>
                             <span class="status-badge" [class.tone-accent]="!p.archivedAt">

@@ -85,14 +85,47 @@
                     </div>
                 </div>
 
-                <!-- The right rail's three cards (Up next / Sprint / Recent assets) need tasks,
-                     sprints and the asset index, none of which exist yet (T-122/T-123). Rendering
-                     them empty would say "you have no tasks" instead of "tasks are not built", so
-                     the rail says the true thing once and takes up no more room than that. -->
+                <!-- T-123 — "Up next" is real now. The sprint card below still is not, and says
+                     so: an empty card would read as "no sprint" instead of "no planner yet". -->
                 <aside class="side-rail">
-                    <section class="pending-card">
+                    <section class="rail-card">
                         <div class="card-head">
                             <app-icon name="kanban" size="md"></app-icon>
+                            <span class="card-title">{{ t().projects.tasks.upNext }}</span>
+                            <span class="spacer"></span>
+                            <a class="card-link" [routerLink]="['/projects', p.id, 'tasks']">
+                                {{ t().projects.tasks.board }} →
+                            </a>
+                        </div>
+
+                        @for (task of p.upNext; track task.id) {
+                            <a class="up-next-row"
+                               [routerLink]="['/projects', p.id, 'tasks']" [queryParams]="{ task: task.id }">
+                                <span class="up-next-title">{{ task.title }}</span>
+                                <span class="up-next-meta">
+                                    <span class="prio" [class.p1]="task.priority === 1">
+                                        {{ t().projects.tasks.priority(task.priority) }}
+                                    </span>
+                                    @if (task.dueAt) {
+                                        <!-- Only the date turns red, never the whole row. -->
+                                        <span class="due" [class.overdue]="overdue(task)">
+                                            {{ task.dueAt | date:'d MMM' }}@if (overdue(task)) {<span> · {{ t().projects.tasks.overdue }}</span>}
+                                        </span>
+                                    } @else {
+                                        <span class="due none">{{ t().projects.tasks.noDueDate }}</span>
+                                    }
+                                </span>
+                            </a>
+                        } @empty {
+                            <p class="hint">
+                                {{ p.openTaskCount ? t().projects.tasks.upNextEmpty : t().projects.tasks.noTasksYet }}
+                            </p>
+                        }
+                    </section>
+
+                    <section class="pending-card">
+                        <div class="card-head">
+                            <app-icon name="timer" size="md"></app-icon>
                             <span class="card-title">{{ t().projects.railPendingTitle }}</span>
                         </div>
                         <p class="hint">{{ t().projects.railPending }}</p>

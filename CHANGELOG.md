@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-08-11 (Phase 13) — the task tracker (T-123, 0.10.2)
+
+Fourth of Phase 13's seven MUST rows. A task is its own entity, not a seventh document type — ADR-106 drew that line months of decisions ago and it held: the content of a task is a set of fields that get filtered, sorted and counted, and its text is only one of them. `Description` is a plain textarea, and its empty state says why out loud: **a task that needs tables or media is really a document**, and should be created as one and linked.
+
+**Both views are built, and neither is a fallback.** The board answers "what is happening", the sortable list answers "what is due and in what order"; the design asks for both and the toggle remembers which one you use. The card is a centered modal, opened through a `?task=` query parameter — which is what makes a task linkable, so the dashboard's "Up next" rail can open one directly.
+
+**The links reuse `EntityLink` rather than adding the `TaskLink` table ADR-106 specified.** T-141 had already generalised that row when documents needed linking to assets, so a task link is an `EntityLink` whose one side is a task, and the pair-ordering that makes A→B and B→A a single row came along for free. The batch reader that draws chips on every card at once needed one thing the asset screen never did: when **both** sides are tasks, one row belongs on two cards. That is a test, not a comment.
+
+**Sorting lives on the server, in one function.** The board, the list and the dashboard rail all answer "what next", and three implementations of that would be three chances to disagree with each other. Within it, overdue outranks priority deliberately: a P3 that was due last week needs answering before a P1 due next month — precisely what a priority-first rail gets backwards.
+
+**A gap found on the way, fixed rather than filed.** Deleting a project left its asset index behind, and deleting a document left its links behind — neither `AssetEntry` nor `EntityLink` has a navigation property, so EF cascaded neither, and both had been quietly accumulating since T-122/T-141. Tasks would have been the third orphan. All three delete paths clean up after themselves now.
+
+**Sprints are deliberately not here** — that is T-124, next. `GameTask.SprintId` exists already so the planner adds a table instead of altering this one, and the dashboard's sprint card says it is not built rather than rendering empty. The two placeholder cells in the projects list (Tasks, Assets) stopped being em-dashes and became real counts on the same commit; Tasks counts **open** tasks, so a finished project does not show its largest number on the day it ran out of things to do.
+
+`dotnet test` **737/737**, frontend 11/11, contrast clean, smoke **53/53**. Verified against a running server rather than by reading: board order, a reciprocal task↔task link showing on both cards, the overdue task first in the rail, `completedAt` surviving an unrelated edit and clearing on reopen, a deleted task taking its links off the other card, and both validation refusals.
+
 ## 2026-08-11 (admin) — moving a balance by hand (0.10.1)
 
 Marty asked for a way to put credits on an account from the admin panel. The mechanism that already existed underneath — the ledger from ADR-092, where a balance is `SUM(Delta)` and never a stored number — made the shape of the answer obvious: an adjustment is one more row, not an edit of a total.

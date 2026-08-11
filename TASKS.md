@@ -7,11 +7,14 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
 - [x] **Credits from the admin panel** (0.10.1) — a signed adjustment on the existing ledger, refused
   below zero, logged to the audit with the admin's own note. See `CHANGELOG.md` for why grants are
   deliberately *not* idempotent and why self-targeting is allowed here.
-- [ ] **Next MUST in Phase 13: `T-123` Task Tracker** (`GameTask` + `TaskLink`, ADR-106). The design
-  already exists — board view, list view and the task modal are in
-  `docs/design_handoff_indiedev_core_loop`.
-- [ ] `.\Scripts\deploy.ps1` from `master` to put 0.10.1 live; nothing has been pushed to GitHub yet
-  (`git push origin master dev indiedev_module --tags`).
+- [x] **`T-123` Task Tracker** (0.10.2) — board, list and the task card, on `GameTask` + the existing
+  `EntityLink`. Sprints stay out on purpose; that is `T-124`. See `CHANGELOG.md` for the three
+  decisions worth knowing and the orphaned-rows gap it closed on the way.
+- [ ] **Next MUST: `T-124` Development Planner** — `Sprint` over the tasks that now exist.
+  `GameTask.SprintId` is already there, so this adds a table rather than altering one. Design:
+  `docs/design_handoff_indiedev_core_loop` §8 (stacked sprint cards, honest overdue).
+- [ ] 0.10.1 is live; **0.10.2 is not deployed yet** — `.\Scripts\deploy.ps1` from `master`.
+  Nothing has been pushed to GitHub either (`git push origin master dev indiedev_module --tags`).
 
 ## v0.10.0 is on master (10.08.2026) — deployed 10.08.2026
 

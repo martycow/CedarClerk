@@ -1205,6 +1205,10 @@ public static class DraftEndpoints
                 // DraftRevision is keyed by a bare Guid. Without this a deleted private post lives
                 // on in the database and in every backup generation of it.
                 await db.DraftRevisions.Where(r => r.DraftId == id).ExecuteDeleteAsync();
+                // T-141/T-123 — the links a document was on either side of. Same reasoning as the
+                // revisions above, one level out: EntityLink holds bare Guids, so nothing cascades,
+                // and a surviving row renders as a chip pointing at a document that is gone.
+                await Modules.IndieDev.ProjectLinks.RemoveAllForAsync(db, uid, CedarClerk.Core.LinkTargets.Document, id);
             }
             return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });

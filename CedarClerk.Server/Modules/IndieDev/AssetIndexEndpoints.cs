@@ -194,7 +194,7 @@ public static class AssetIndexEndpoints
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             if (!await db.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == uid)) return Results.NotFound();
 
-            var documentIds = await LinkedIdsAsync(db, uid, LinkTargets.Asset, assetId, LinkTargets.Document);
+            var documentIds = await ProjectLinks.LinkedIdsAsync(db, uid, LinkTargets.Asset, assetId, LinkTargets.Document);
             var documents = await db.Drafts
                 .Where(d => documentIds.Contains(d.Id) && d.OwnerId == uid)
                 .OrderBy(d => d.Title)
@@ -213,24 +213,7 @@ public static class AssetIndexEndpoints
                 return Results.NotFound();
             if (!await db.Drafts.AnyAsync(d => d.Id == draftId && d.OwnerId == uid)) return Results.NotFound();
 
-            var pair = LinkTargets.Order(LinkTargets.Asset, assetId, LinkTargets.Document, draftId);
-
-            // Ordered first, so linking the same pair from either end finds the existing row rather
-            // than tripping the unique index.
-            if (await db.EntityLinks.AnyAsync(l => l.FromType == pair.FromType && l.FromId == pair.FromId
-                                                   && l.ToType == pair.ToType && l.ToId == pair.ToId))
-                return Results.NoContent();
-
-            db.EntityLinks.Add(new EntityLink
-            {
-                OwnerId = uid,
-                ProjectId = projectId,
-                FromType = pair.FromType,
-                FromId = pair.FromId,
-                ToType = pair.ToType,
-                ToId = pair.ToId,
-            });
-            await db.SaveChangesAsync();
+            await ProjectLinks.AddAsync(db, uid, projectId, LinkTargets.Asset, assetId, LinkTargets.Document, draftId);
             return Results.NoContent();
         });
 
@@ -238,13 +221,8 @@ public static class AssetIndexEndpoints
             Guid projectId, Guid assetId, Guid draftId, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var pair = LinkTargets.Order(LinkTargets.Asset, assetId, LinkTargets.Document, draftId);
-
-            var deleted = await db.EntityLinks
-                .Where(l => l.OwnerId == uid && l.FromType == pair.FromType && l.FromId == pair.FromId
-                            && l.ToType == pair.ToType && l.ToId == pair.ToId)
-                .ExecuteDeleteAsync();
-            return deleted > 0 ? Results.NoContent() : Results.NotFound();
+            var removed = await ProjectLinks.RemoveAsync(db, uid, LinkTargets.Asset, assetId, LinkTargets.Document, draftId);
+            return removed ? Results.NoContent() : Results.NotFound();
         });
 
         group.MapGet("/index", (Guid projectId, ClaimsPrincipal user, AssetIndexService scans, IConfiguration config) =>
@@ -307,24 +285,6 @@ public static class AssetIndexEndpoints
             if (scan is null || scan.OwnerId != uid) return Results.NotFound();
             return scans.Cancel(projectId) ? Results.NoContent() : Results.NotFound();
         });
-    }
-
-    /// <summary>
-    /// The ids of everything of <paramref name="wantedType"/> linked to one thing. Both columns are
-    /// searched because <see cref="LinkTargets.Order"/> decides which side a pair lands on, and the
-    /// caller neither knows nor should have to.
-    /// </summary>
-    private static async Task<List<Guid>> LinkedIdsAsync(
-        CedarDbContext db, string ownerId, string type, Guid id, string wantedType)
-    {
-        var rows = await db.EntityLinks
-            .Where(l => l.OwnerId == ownerId
-                        && ((l.FromType == type && l.FromId == id && l.ToType == wantedType)
-                            || (l.ToType == type && l.ToId == id && l.FromType == wantedType)))
-            .Select(l => new { l.FromType, l.FromId, l.ToId })
-            .ToListAsync();
-
-        return rows.Select(r => r.FromType == wantedType ? r.FromId : r.ToId).ToList();
     }
 
     private static object Describe(AssetScan scan, bool available) => new

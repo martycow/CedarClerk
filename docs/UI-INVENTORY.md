@@ -227,6 +227,7 @@ The `Verified` column is filled in by Phase 10 Block D. `smoke` means a Playwrig
 | `/settings` | `settings.component` | Profile vs Account tab, Pro-gated fields, save failure | smoke + hand (both tabs) | — |
 | `/glossary` | `glossary.component` | empty, per-language empty, translate-all failure mid-run | smoke + hand (empty, one term) | — |
 | `/admin` | `admin.component` | non-admin gate, empty audit, audit paging, self-targeting refusal | smoke + hand (all four tabs) | — |
+| `/projects/:id/tasks` | `project-tasks.component` | empty board, empty column, filtered-empty, load error, action error, overdue | hand + API (11.08.2026) | Both views and the card modal exercised against a running server; not yet in the smoke suite |
 | `/terms`, `/privacy` | `legal-page.component` | — | hand (terms) | T-052 (placeholder text) |
 | Blog index | `BlogEndpoints.RenderIndexAsync` | no posts, timeline, tag filter, semi-public lock | smoke + hand (timeline, semi-public lock with excerpt withheld) | T-094, T-099 |
 | Blog post | `BlogEndpoints.RenderPostAsync` | not-translated notice, TOC, watermark, copy protection, floating nav, glossary tooltip, poll | smoke + hand (rendered post) | T-094 |
@@ -289,6 +290,27 @@ Not Angular: these are strings built on the server and host-routed by `Program.c
 | Static block | `.reg-static` | — | Text and/or image the reader only reads (T-032) | N/A | Carries **no** `data-question` — a block with one would submit an empty answer for a question nobody was asked |
 | Consent field | `.reg-consent`, `data-question-consent` | — | Statement plus a required checkbox (ADR-060) | N/A | Separate attribute because the script reads `.checked`, not `.value` |
 | Guest guard | `core/guest.guard.ts` | — | A live session is redirected away from `/login` and `/register` | N/A | v0.9.17. A server that doesn't answer falls through to the login page — unknown is not the same as proven |
+
+## `project-tasks.component` (`cedarclerk-web/src/app/pages/project-tasks.component.{ts,html,css}`)
+
+T-123, built 11.08.2026 from `docs/design_handoff_indiedev_core_loop` §3-4. Compact density on the page root; reached from the project dashboard's "Board →" link, gated by `indieDevGuard` (with the module off the route redirects to `/drafts` — the URL is not wrong, the feature is not installed).
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Toolbar | `.tasks-toolbar` | panel | Title, "N open · M in total", overdue count, search, view toggle, "+ New task" | Page-level `loading()` | Same anatomy as `/drafts` and the asset screen — the three module screens have to read as one product |
+| View toggle | `.view-toggle` | tab | Board ↔ list. Both are required by the design; neither is a fallback | N/A | Persisted in `localStorage` (`cedar.taskView`), like the drafts view |
+| Filter chips | `.filter-row` `.chip` | button | All / Open / Overdue, with counts | N/A | The overdue chip only renders when something is overdue — a permanent zero would read as a broken filter |
+| Board column | `.column` (×4) | panel | One per status, on `--alt` with `--sheet` cards; header carries the count and a "+" that creates straight into that column | N/A | Horizontal scroll below 900px: a 60px-wide kanban column is not a column |
+| Task card | `.task-card` | button | Title, priority chip, due date, assignee, link chips. Click opens the card modal | N/A | Only the **date** goes red when overdue — never the card, never the column |
+| Link chip | `.link-chip` | — | Icon + label of a linked document/asset/task | N/A | A link whose target is gone renders italic "no longer exists" rather than an empty chip |
+| List view | `.tasks-table` | panel | Task / Status / Prio / Due / Links, sortable headers | N/A | Undated tasks sort last in **both** directions — "no deadline" is not a late deadline |
+| Task card modal | `app-modal` `[width]="560"`, `.task-modal` | modal | Title, status, priority, due, assignee, description, links, timestamps | Present — `busy()` on every control | Centered modal, the design's chosen variant. Opened via the `?task=` query parameter, which is what makes a task linkable from the dashboard |
+| Description field | `.field textarea` | — | Plain text, deliberately not a rich editor | N/A | ADR-106: a task that needs tables or media is really a document. The empty state says exactly that |
+| Link picker | `.link-picker` | panel | Documents of this project not already linked | Present — `busy()` | Documents only for now; asset↔task links exist in the API and are drawn, but are added from the asset screen |
+| Card footer | `.modal-foot-row` | button | Delete · Archive · Save · Mark done / Reopen | Present — `busy()` | Delete asks for confirmation and says archiving is the softer option; the ghost button only turns red on hover |
+| New-task modal | `app-modal` `[width]="480"` | modal | Title, status, priority. Enter creates | Present — `busy()` | Opens pre-set to the column its "+" was pressed in |
+
+**Known gap, not introduced here**: `projects.component`, `project.component` and `project-assets.component` (T-120/T-122) were never added to this file. The task board is documented above because it was built today; the other three module screens remain absent and are worth a sweep.
 
 ## Icon inventory
 

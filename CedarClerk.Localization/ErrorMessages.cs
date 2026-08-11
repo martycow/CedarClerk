@@ -230,6 +230,29 @@ public static class ErrorMessages
     public static string ProjectDescriptionLength(int max) =>
         Ru($"Описание проекта — не длиннее {max} символов.", $"Project description must be at most {max} characters");
 
+    // T-123 — the task tracker.
+    public static string TaskTitleLength(int max) =>
+        Ru($"Название задачи — от 1 до {max} символов.", $"Task title must be 1-{max} characters");
+
+    public static string TaskDescriptionLength(int max) =>
+        Ru($"Описание задачи — не длиннее {max} символов. Задаче, которой нужно больше, стоит быть документом.",
+           $"Task description must be at most {max} characters. A task that needs more is really a document.");
+
+    public static string TaskAssigneeLength(int max) =>
+        Ru($"Исполнитель — не длиннее {max} символов.", $"Assignee must be at most {max} characters");
+
+    public static string UnknownTaskStatus(string status) =>
+        Ru($"Неизвестный статус задачи «{status}».", $"Unknown task status '{status}'.");
+
+    public static string UnknownTaskPriority(int priority) =>
+        Ru($"Приоритет — 1, 2 или 3; получено {priority}.", $"Priority is 1, 2 or 3 — got {priority}.");
+
+    public static string UnknownLinkTarget(string type) =>
+        Ru($"Неизвестный тип связи «{type}».", $"Unknown link target '{type}'.");
+
+    public static string TaskCannotLinkToItself =>
+        Ru("Задачу нельзя связать с ней же самой.", "A task cannot be linked to itself.");
+
     // Russian is the only translated locale for now, matching the app's own UI dictionaries
     // (en.ts/ru.ts): every other UI language already falls back to English there, and shipping
     // machine-quality German error text would be a worse answer than the English original.

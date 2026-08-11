@@ -14,6 +14,7 @@ import {
     ProjectsService,
     projectInitials,
 } from '../core/projects.service';
+import { isOverdue } from '../core/tasks.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
 import { PageHeaderComponent } from '../shared/page-header.component';
@@ -50,6 +51,7 @@ export class ProjectComponent {
     readonly docIcons = DOCUMENT_TYPE_ICONS;
     readonly projectIcons = PROJECT_TYPE_ICONS;
     readonly initials = projectInitials;
+    readonly overdue = isOverdue;
 
     project = signal<ProjectDetail | null>(null);
     loading = signal(true);

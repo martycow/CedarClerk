@@ -168,6 +168,7 @@
 }
 
 .type-card,
+.rail-card,
 .pending-card {
     background: var(--sheet);
     border: 1px solid var(--border);
@@ -176,11 +177,78 @@
     padding: var(--space-4);
 }
 
+.rail-card,
 .pending-card {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
 }
+
+/* T-123 — the "Up next" rail. Padded a touch tighter than a document card: it is a list of five
+   short rows, and the card chrome should not dominate what is inside it. */
+.rail-card { padding: 14px 16px; }
+
+.rail-card .spacer { flex: 1; }
+
+.card-link {
+    font-size: var(--fs-meta);
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.card-link:hover { text-decoration: underline; }
+
+.up-next-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-2) var(--space-1);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: inherit;
+    min-width: 0;
+}
+
+.up-next-row:hover { background: var(--hover); }
+
+.up-next-title {
+    font-size: var(--fs-ui);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.up-next-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--fs-meta);
+    color: var(--t2);
+}
+
+/* Mono so the three levels line up down the rail; only P1 carries a tint. */
+.prio {
+    font-family: var(--font-mono);
+    font-size: var(--fs-11);
+    font-weight: 600;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--alt);
+    color: var(--t2);
+}
+
+.prio.p1 {
+    background: color-mix(in srgb, var(--warn) 16%, var(--sheet));
+    color: var(--warn);
+}
+
+/* Only the date goes red — never the row, and never the whole rail. */
+.due.overdue {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+.due.none { color: var(--t3); }
 
 .card-head {
     display: flex;

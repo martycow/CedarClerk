@@ -2,9 +2,11 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { IconName } from '../shared/icon-data.generated';
+import { GameTask, TaskStatus } from './tasks.service';
 
 // Phase 13 / T-120 — the indie-gamedev module. A project is a game; documents, tasks and assets
-// live inside it. Only documents exist so far; tasks and the asset index arrive with T-122/T-123.
+// live inside it. Tasks live in tasks.service.ts and the index in asset-index.service.ts; what is
+// here is the project itself and its documents.
 //
 // Mirrors the module's server-side shape (Modules/IndieDev/ProjectEndpoints.cs). The whole module
 // is behind a flag: `auth.modules().indieDev` decides whether any of this is reachable, and the
@@ -53,6 +55,9 @@ export interface ProjectSummary {
     createdAt: string;
     archivedAt: string | null;
     documentCount: number;
+    /** Open tasks, not every task ever written — see ProjectEndpoints for why. */
+    openTaskCount: number;
+    assetCount: number;
     /** Newest edit to any of the project's documents — the project row itself never moves. */
     lastActivityAt: string;
 }
@@ -66,8 +71,13 @@ export interface ProjectDocument {
     isBlogPublished: boolean;
 }
 
-export interface ProjectDetail extends Omit<ProjectSummary, 'documentCount' | 'lastActivityAt'> {
+export interface ProjectDetail extends Omit<ProjectSummary, 'documentCount' | 'openTaskCount' | 'assetCount' | 'lastActivityAt'> {
     documents: ProjectDocument[];
+    /** T-123 — the dashboard's right rail, already sorted by urgency on the server. */
+    upNext: GameTask[];
+    /** Open tasks per status; a status with none is simply absent. */
+    taskCounts: Partial<Record<TaskStatus, number>>;
+    openTaskCount: number;
 }
 
 export interface CreateProjectInput {

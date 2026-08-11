@@ -41,6 +41,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<AssetEntry> AssetEntries => Set<AssetEntry>();
     public DbSet<EntityLink> EntityLinks => Set<EntityLink>();
+    public DbSet<GameTask> GameTasks => Set<GameTask>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -125,6 +126,16 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         // "What is linked to this thing" is asked from both ends, so both ends are indexed.
         builder.Entity<EntityLink>().HasIndex(l => new { l.OwnerId, l.FromType, l.FromId });
         builder.Entity<EntityLink>().HasIndex(l => new { l.OwnerId, l.ToType, l.ToId });
+        // T-123 — the board's only query: this project's tasks, grouped by column. Archived is in
+        // the key because every screen except the archive itself filters them out first.
+        builder.Entity<GameTask>().HasIndex(t => new { t.ProjectId, t.ArchivedAt, t.Status });
+        // "What is due next" — the dashboard's up-next rail and the overdue count, across projects.
+        builder.Entity<GameTask>().HasIndex(t => new { t.OwnerId, t.DueAt });
+        // EF does not read a property initialiser when generating a migration — it wrote
+        // defaultValue: "" for Draft.DocumentType and would have made every existing post
+        // unpublishable (T-120, INDIEDEV.md). Declared here so the default reaches the migration.
+        builder.Entity<GameTask>().Property(t => t.Status).HasDefaultValue(TaskStatuses.Backlog);
+        builder.Entity<GameTask>().Property(t => t.Priority).HasDefaultValue(TaskPriorities.Normal);
         // The project list query: this owner's projects, active ones first by their own order.
         builder.Entity<Project>().HasIndex(p => new { p.OwnerId, p.ArchivedAt });
         // "What is in this project" — the dashboard's only real question, and the one the drafts
