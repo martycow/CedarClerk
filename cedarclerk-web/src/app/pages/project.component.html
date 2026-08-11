@@ -32,6 +32,12 @@
                     <app-icon name="images" size="sm"></app-icon>
                     <span>{{ t().projects.assetsLink }}</span>
                 </a>
+                <!--T-126 — versions have no card in the rail: a project with none should not carry
+                an empty one, and the rail is already the busiest column on the screen.-->
+                <a class="btn-ghost" [routerLink]="['/projects', p.id, 'builds']">
+                    <app-icon name="rocket-launch" size="sm"></app-icon>
+                    <span>{{ t().projects.builds.title }}</span>
+                </a>
                 <button class="btn-ghost" (click)="startEdit()">
                     <app-icon name="gear" size="sm"></app-icon>
                     <span>{{ t().projects.settings }}</span>

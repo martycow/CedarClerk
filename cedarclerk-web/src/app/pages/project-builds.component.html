@@ -1,0 +1,145 @@
+<div class="builds-page" data-density="compact">
+    <app-page-header page="projects" [showBack]="false"
+                     [crumbSuffix]="(project()?.name ?? '') + ' / ' + t().projects.builds.crumb"></app-page-header>
+
+    <div class="builds-body">
+        <div class="builds-toolbar">
+            <div>
+                <h1>{{ t().projects.builds.title }}</h1>
+                <div class="builds-sub">
+                    @if (project(); as p) {
+                        <span>{{ p.name }}</span><span class="dot">·</span>
+                    }
+                    <span>{{ t().projects.builds.sub(builds().length, unreleasedCount()) }}</span>
+                </div>
+            </div>
+            <span class="spacer"></span>
+            <a class="btn-ghost" [routerLink]="['/projects', projectId(), 'tasks']">
+                <app-icon name="kanban" size="sm"></app-icon>
+                {{ t().projects.tasks.board }}
+            </a>
+            <button class="btn-accent" (click)="startCreating()" [disabled]="busy()">
+                <app-icon name="plus" size="sm"></app-icon>
+                {{ t().projects.builds.newBuild }}
+            </button>
+        </div>
+
+        @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
+
+        @if (loading()) {
+            <p class="hint">{{ t().projects.loading }}</p>
+        } @else if (loadError(); as e) {
+            <p class="error-line">{{ e }}</p>
+        } @else if (!builds().length) {
+            <div class="empty-state">
+                <app-icon name="rocket-launch" size="lg"></app-icon>
+                <p class="empty-title">{{ t().projects.builds.empty }}</p>
+                <p class="hint">{{ t().projects.builds.emptyHint }}</p>
+                <button class="btn-accent" (click)="startCreating()">
+                    <app-icon name="plus" size="sm"></app-icon>
+                    {{ t().projects.builds.newBuild }}
+                </button>
+            </div>
+        } @else {
+            @for (build of builds(); track build.id) {
+                <section class="build-card">
+                    <header class="build-head">
+                        <span class="build-version">{{ build.version }}</span>
+                        <span class="status-badge" [class.tone-ok]="build.released">
+                            {{ build.released ? t().projects.builds.released : t().projects.builds.unreleased }}
+                        </span>
+                        @if (build.releasedAt) {
+                            <span class="build-date">{{ build.releasedAt | date:'d MMM yyyy' }}</span>
+                        }
+                        @if (build.taskCount) {
+                            <span class="build-count">{{ t().projects.planner.progress(build.doneCount, build.taskCount) }}</span>
+                        }
+                        <span class="spacer"></span>
+                        <button class="btn-ghost small" (click)="createChangelog(build)" [disabled]="busy()">
+                            <app-icon name="list-numbers" size="sm"></app-icon>
+                            {{ t().projects.builds.makeChangelog }}
+                        </button>
+                        <button class="icon-btn" (click)="startEditing(build)" [disabled]="busy()"
+                                [title]="t().projects.builds.editBuild"
+                                [attr.aria-label]="t().projects.builds.editBuild">
+                            <app-icon name="pencil-simple" size="xs"></app-icon>
+                        </button>
+                    </header>
+
+                    @if (build.notes) { <p class="build-notes">{{ build.notes }}</p> }
+
+                    @if (build.documents.length) {
+                        <div class="build-docs">
+                            @for (doc of build.documents; track doc.id) {
+                                <button class="doc-chip" (click)="openDocument(doc.id)">
+                                    <app-icon name="file-text" size="xs"></app-icon>
+                                    <span>{{ doc.title }}</span>
+                                </button>
+                            }
+                        </div>
+                    }
+
+                    @for (task of tasksOf(build); track task.id) {
+                        <div class="task-row" (click)="openTask(task)" tabindex="0"
+                             (keydown.enter)="openTask(task)" [attr.aria-label]="task.title">
+                            <span class="task-title" [title]="task.title">{{ task.title }}</span>
+                            <span>
+                                <span class="status-badge"
+                                      [class.tone-accent]="task.status === 'in_progress'"
+                                      [class.tone-ok]="task.status === 'done'">
+                                    {{ t().projects.tasks.status[task.status] }}
+                                </span>
+                            </span>
+                        </div>
+                    } @empty {
+                        <p class="hint build-empty">{{ t().projects.builds.noTasks }}</p>
+                    }
+                </section>
+            }
+        }
+    </div>
+</div>
+
+@if (creating() || editing()) {
+    <app-modal [width]="480" (closed)="creating.set(false); editing.set(null)">
+        <span modal-title>
+            {{ editing() ? t().projects.builds.editBuild : t().projects.builds.newBuild }}
+        </span>
+
+        <div class="build-form">
+            <div class="field">
+                <label>{{ t().projects.builds.fieldVersion }}</label>
+                <input type="text" [ngModel]="draftVersion()" (ngModelChange)="draftVersion.set($event)"
+                       [placeholder]="t().projects.builds.versionPlaceholder"
+                       [attr.aria-label]="t().projects.builds.fieldVersion" (keydown.enter)="save()">
+            </div>
+            <div class="field">
+                <label>{{ t().projects.builds.fieldReleased }}</label>
+                <input type="date" [ngModel]="draftReleased()" (ngModelChange)="draftReleased.set($event)">
+                <p class="field-hint">{{ t().projects.builds.releasedHint }}</p>
+            </div>
+            <div class="field">
+                <label>{{ t().projects.builds.fieldNotes }}</label>
+                <textarea rows="4" [ngModel]="draftNotes()" (ngModelChange)="draftNotes.set($event)"
+                          [placeholder]="t().projects.builds.notesPlaceholder"></textarea>
+            </div>
+
+            @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
+        </div>
+
+        <div modal-footer class="modal-foot-row">
+            @if (editing(); as b) {
+                <button class="btn-ghost danger" (click)="remove(b)" [disabled]="busy()">
+                    {{ t().projects.builds.deleteBuild }}
+                </button>
+            }
+            <span class="spacer"></span>
+            <button class="btn-ghost" (click)="creating.set(false); editing.set(null)">
+                {{ t().projects.planner.cancel }}
+            </button>
+            <button class="btn-accent" (click)="save()" [disabled]="busy()">
+                {{ editing() ? t().projects.planner.save : t().projects.builds.create }}
+            </button>
+        </div>
+    </app-modal>
+}

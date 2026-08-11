@@ -1310,7 +1310,8 @@ public static class BlogEndpoints
 
         // Idea #11 - the owner's glossary for the language being shown. Empty for an owner who
         // never defined one, which costs a single indexed read and changes nothing downstream.
-        var glossary = await GlossaryEndpoints.LoadForAsync(db, draft.OwnerId, lang);
+        // T-125 — a post in a project also renders with that project's own terms.
+        var glossary = await GlossaryEndpoints.LoadForAsync(db, draft.OwnerId, lang, draft.ProjectId);
         var body = CedarToBlogHtmlRenderer.Render(cedarJson, $"https://{Consts.URLs.BlogHost}", lang, glossary);
         var dateLine = draft.BlogPublishedAt is { } published
             ? $"<span class=\"post-card-date\">{BlogDateFormatter.DateTimeShort(published, lang)}</span>"
@@ -1713,6 +1714,10 @@ public static class BlogEndpoints
 
         .site-footer { border-top: 1px solid var(--border); background: var(--surface); }
         .site-footer-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 16px 20px; font-size: 12px; color: var(--t2); }
+        /* The referral badge sits below the made-with line, with no top padding of its own so the
+           two read as one footer block rather than two. */
+        .referral-row { padding-top: 0; }
+        .referral-row img { max-width: 100%; height: auto; display: block; }
 
         @media (max-width: 480px) {
             .post-sheet { padding: 22px 16px 20px; }
@@ -1730,6 +1735,15 @@ public static class BlogEndpoints
         <div class="site-footer"><div class="site-footer-inner">
         <svg width="14" height="14" viewBox="0 0 24 24"><polygon points="12,2 19,11 5,11" fill="var(--accent)"></polygon><polygon points="12,7 21,18 3,18" fill="var(--accent)" opacity="0.75"></polygon><rect x="10.6" y="18" width="2.8" height="4" rx="1" fill="var(--accent)" opacity="0.9"></rect></svg>
         <span>Made with <a href="https://cedarclerk.mooexe.dev" style="font-weight:500">Cedar Clerk</a> — write here, publish there. Moo.</span>
+        </div>
+        <!--Marty's DigitalOcean referral badge (11.08.2026). Its own row under the made-with line
+        rather than beside it: the badge is a hosted SVG of a fixed size and would push the centred
+        footer text off-centre. `loading=lazy` and explicit dimensions so a slow CDN cannot shift
+        the page as it arrives, and rel=noopener because it leaves the site.-->
+        <div class="site-footer-inner referral-row">
+        <a href="https://www.digitalocean.com/?refcode=925f882ca720&amp;utm_campaign=Referral_Invite&amp;utm_medium=Referral_Program&amp;utm_source=badge" target="_blank" rel="noopener">
+        <img src="https://web-platforms.sfo2.cdn.digitaloceanspaces.com/WWW/Badge%202.svg" alt="DigitalOcean Referral Badge" width="200" height="42" loading="lazy">
+        </a>
         </div></div>
         <script>
         /* Idea #11 - one popup element reused by every term, positioned under whichever term is

@@ -9,11 +9,13 @@ public static class LinkTargets
 {
     public const string Document = "document";
     public const string Asset = "asset";
-    /// <summary>Not linkable yet — the entity arrives with T-123. Named now so the pair-ordering
-    /// below never has to change when it does.</summary>
     public const string Task = "task";
 
-    public static readonly IReadOnlyList<string> All = [Asset, Document, Task];
+    /// <summary>T-126 — a released version. Documents attach to one; tasks use a column instead
+    /// (ADR-112), because "which build did this ship in" is a single answer worth filtering by.</summary>
+    public const string Build = "build";
+
+    public static readonly IReadOnlyList<string> All = [Asset, Build, Document, Task];
 
     public static bool IsKnown(string? type) => type is not null && All.Contains(type);
 

@@ -17,12 +17,12 @@ public static class TaskEndpoints
     // flags — without them, "no due date" and "don't touch the due date" are the same request.
     public record CreateTaskRequest(
         string Title, string? Description, string? Status, int? Priority,
-        string? Assignee, DateTime? DueAt, Guid? SprintId);
+        string? Assignee, DateTime? DueAt, Guid? SprintId, Guid? BuildId);
 
     public record UpdateTaskRequest(
         string? Title, string? Description, string? Status, int? Priority,
         string? Assignee, DateTime? DueAt, bool? ClearDueAt, Guid? SprintId, bool? ClearSprint,
-        bool? Archived);
+        Guid? BuildId, bool? ClearBuild, bool? Archived);
 
     public record LinkRequest(string Type, Guid Id);
 
@@ -96,6 +96,14 @@ public static class TaskEndpoints
                 sprintId = wanted;
             }
 
+            Guid? buildId = null;
+            if (req.BuildId is { } wantedBuild)
+            {
+                if (!await db.Builds.AnyAsync(b => b.Id == wantedBuild && b.ProjectId == projectId && b.OwnerId == uid))
+                    return Results.BadRequest(new { error = ErrorMessages.UnknownBuild });
+                buildId = wantedBuild;
+            }
+
             var task = new GameTask
             {
                 OwnerId = uid,
@@ -107,6 +115,7 @@ public static class TaskEndpoints
                 Assignee = assignee,
                 DueAt = req.DueAt,
                 SprintId = sprintId,
+                BuildId = buildId,
                 // A task created straight into Done is finished now, not never — the board's Done
                 // column is a legitimate place to write something down after doing it.
                 CompletedAt = status == TaskStatuses.Done ? DateTime.UtcNow : null,
@@ -197,6 +206,15 @@ public static class TaskEndpoints
                 if (!await db.Sprints.AnyAsync(s => s.Id == sprint && s.ProjectId == task.ProjectId && s.OwnerId == uid))
                     return Results.BadRequest(new { error = ErrorMessages.UnknownSprint });
                 task.SprintId = sprint;
+            }
+
+            if (req.ClearBuild == true) task.BuildId = null;
+            else if (req.BuildId is { } build)
+            {
+                // Same rule as the sprint: only a build of this task's own project.
+                if (!await db.Builds.AnyAsync(b => b.Id == build && b.ProjectId == task.ProjectId && b.OwnerId == uid))
+                    return Results.BadRequest(new { error = ErrorMessages.UnknownBuild });
+                task.BuildId = build;
             }
 
             if (req.Archived is { } archived)
@@ -302,6 +320,7 @@ public static class TaskEndpoints
         t.Description,
         t.Assignee,
         t.SprintId,
+        t.BuildId,
         t.DueAt,
         t.CreatedAt,
         t.UpdatedAt,

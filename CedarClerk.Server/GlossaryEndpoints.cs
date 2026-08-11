@@ -10,7 +10,9 @@ namespace CedarClerk.Server;
 // named entity with its own CRUD file, everything scoped by OwnerId.
 public static class GlossaryEndpoints
 {
-    public record UpsertTermRequest(string Term, string Description, string? Aliases, string? ImageUrl, string? Language, bool IsCaseSensitive = false);
+    // ProjectId is nullable and optional: absent means a global term, which is what every term
+    // written before T-125 is and what the glossary screen still defaults to.
+    public record UpsertTermRequest(string Term, string Description, string? Aliases, string? ImageUrl, string? Language, bool IsCaseSensitive = false, Guid? ProjectId = null);
 
     private const int TermMaxLength = 80;
     private const int DescriptionMaxLength = 1000;
@@ -20,12 +22,20 @@ public static class GlossaryEndpoints
     {
         var group = app.MapGroup("/api/glossary").RequireAuthorization();
 
-        group.MapGet("/", async (ClaimsPrincipal user, CedarDbContext db) =>
+        // ?projectId= narrows to one project's terms *plus* the global ones — the same set a
+        // document in that project renders with. ?scope=global asks for the global ones alone.
+        // Without either, everything the owner has, which is what the glossary screen shows.
+        group.MapGet("/", async (ClaimsPrincipal user, CedarDbContext db, Guid? projectId, string? scope) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var terms = await db.GlossaryTerms.Where(t => t.OwnerId == uid)
+            var query = db.GlossaryTerms.Where(t => t.OwnerId == uid);
+
+            if (scope == "global") query = query.Where(t => t.ProjectId == null);
+            else if (projectId is { } id) query = query.Where(t => t.ProjectId == null || t.ProjectId == id);
+
+            var terms = await query
                 .OrderBy(t => t.Term)
-                .Select(t => new { t.Id, t.Term, t.Description, t.Aliases, t.ImageUrl, t.Language, t.IsCaseSensitive, t.SourceTermId, t.UpdatedAt })
+                .Select(t => new { t.Id, t.Term, t.Description, t.Aliases, t.ImageUrl, t.Language, t.IsCaseSensitive, t.SourceTermId, t.ProjectId, t.UpdatedAt })
                 .ToListAsync();
             return Results.Ok(terms);
         });
@@ -56,10 +66,11 @@ public static class GlossaryEndpoints
                 IsCaseSensitive = req.IsCaseSensitive,
                 ImageUrl = NormalizeImage(req.ImageUrl),
                 Language = ResolveLanguage(req.Language),
+                ProjectId = req.ProjectId,
             };
             db.GlossaryTerms.Add(term);
             await db.SaveChangesAsync();
-            return Results.Ok(new { term.Id, term.Term, term.Description, term.Aliases, term.ImageUrl, term.Language, term.UpdatedAt });
+            return Results.Ok(new { term.Id, term.Term, term.Description, term.Aliases, term.ImageUrl, term.Language, term.ProjectId, term.UpdatedAt });
         });
 
         group.MapPut("/{id:guid}", async (Guid id, UpsertTermRequest req, ClaimsPrincipal user, CedarDbContext db) =>
@@ -76,9 +87,12 @@ public static class GlossaryEndpoints
             term.IsCaseSensitive = req.IsCaseSensitive;
             term.ImageUrl = NormalizeImage(req.ImageUrl);
             term.Language = ResolveLanguage(req.Language);
+            // Moving a term between scopes is an edit, not a re-entry — which is half of why the
+            // scope is a column on the same row rather than a second entity (ADR-112).
+            term.ProjectId = req.ProjectId;
             term.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
-            return Results.Ok(new { term.Id, term.Term, term.Description, term.Aliases, term.ImageUrl, term.Language, term.UpdatedAt });
+            return Results.Ok(new { term.Id, term.Term, term.Description, term.Aliases, term.ImageUrl, term.Language, term.ProjectId, term.UpdatedAt });
         });
 
         group.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
@@ -292,20 +306,32 @@ public static class GlossaryEndpoints
     /// The glossary a blog page renders with: one owner's terms in the language being shown.
     /// Empty is the normal case for an owner who has never defined one, and costs one indexed
     /// read per page.
+    ///
+    /// T-125 (ADR-112) — <paramref name="projectId"/> is the document's project. Global terms plus
+    /// that project's, and **the project's wins** where both define the same word: a narrower
+    /// scope is a more precise definition, which is the reason to write one.
     /// </summary>
-    internal static async Task<IReadOnlyList<GlossaryEntry>> LoadForAsync(CedarDbContext db, string ownerId, string language)
+    internal static async Task<IReadOnlyList<GlossaryEntry>> LoadForAsync(
+        CedarDbContext db, string ownerId, string language, Guid? projectId = null)
     {
         var rows = await db.GlossaryTerms
-            .Where(t => t.OwnerId == ownerId && t.Language == language)
-            .Select(t => new { t.Term, t.Description, t.Aliases, t.ImageUrl, t.IsCaseSensitive })
+            .Where(t => t.OwnerId == ownerId && t.Language == language
+                        && (t.ProjectId == null || t.ProjectId == projectId))
+            .Select(t => new { t.Term, t.Description, t.Aliases, t.ImageUrl, t.IsCaseSensitive, t.ProjectId })
             .ToListAsync();
 
-        return rows.Select(r => new GlossaryEntry(
-            r.Term,
-            r.Description,
-            r.ImageUrl,
-            r.Aliases.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-            r.IsCaseSensitive)).ToList();
+        return rows
+            // Project terms first, so DistinctBy below keeps them over a global term of the same
+            // name. Comparison is case-insensitive because the scanner matches that way too.
+            .OrderByDescending(r => r.ProjectId.HasValue)
+            .DistinctBy(r => r.Term, StringComparer.OrdinalIgnoreCase)
+            .Select(r => new GlossaryEntry(
+                r.Term,
+                r.Description,
+                r.ImageUrl,
+                r.Aliases.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+                r.IsCaseSensitive))
+            .ToList();
     }
 
     public record SuggestFormsRequest(string Term, string? Language);

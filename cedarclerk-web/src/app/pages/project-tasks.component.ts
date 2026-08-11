@@ -17,6 +17,7 @@ import {
     isOverdue,
 } from '../core/tasks.service';
 import { Sprint, SprintsService } from '../core/sprints.service';
+import { Build, BuildsService } from '../core/builds.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
 import { PageHeaderComponent } from '../shared/page-header.component';
@@ -44,6 +45,7 @@ export class ProjectTasksComponent {
     private api = inject(TasksService);
     private projects = inject(ProjectsService);
     private sprintsApi = inject(SprintsService);
+    private buildsApi = inject(BuildsService);
     private route = inject(ActivatedRoute);
     private router = inject(Router);
     t = inject(LocaleService).t;
@@ -58,6 +60,7 @@ export class ProjectTasksComponent {
     project = signal<ProjectDetail | null>(null);
     tasks = signal<GameTask[]>([]);
     sprints = signal<Sprint[]>([]);
+    builds = signal<Build[]>([]);
     /** null = every sprint; '' = the tasks in none of them. */
     sprintFilter = signal<string | null>(null);
     loading = signal(true);
@@ -152,12 +155,13 @@ export class ProjectTasksComponent {
         this.loading.set(true);
         this.loadError.set(null);
         try {
-            const [project, tasks, sprints] = await Promise.all([
-                this.projects.get(id), this.api.list(id), this.sprintsApi.list(id),
+            const [project, tasks, sprints, builds] = await Promise.all([
+                this.projects.get(id), this.api.list(id), this.sprintsApi.list(id), this.buildsApi.list(id),
             ]);
             this.project.set(project);
             this.tasks.set(tasks);
             this.sprints.set(sprints);
+            this.builds.set(builds);
             // Opened by URL before the tasks existed — the effect above could not fill the fields.
             const open = tasks.find(t => t.id === this.openTaskId());
             if (open) this.beginEdit(open);
@@ -331,6 +335,10 @@ export class ProjectTasksComponent {
         return this.run(() => this.api.update(task.id, sprintId
             ? { sprintId }
             : { clearSprint: true }));
+    }
+
+    setBuild(task: GameTask, buildId: string) {
+        return this.run(() => this.api.update(task.id, buildId ? { buildId } : { clearBuild: true }));
     }
 
     linkCounts(task: GameTask) {

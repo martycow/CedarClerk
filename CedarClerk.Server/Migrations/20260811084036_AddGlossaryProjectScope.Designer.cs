@@ -3,6 +3,7 @@ using System;
 using CedarClerk.Server;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CedarClerk.Server.Migrations
 {
     [DbContext(typeof(CedarDbContext))]
-    partial class CedarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260811084036_AddGlossaryProjectScope")]
+    partial class AddGlossaryProjectScope
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.29");
@@ -489,41 +492,6 @@ namespace CedarClerk.Server.Migrations
                         .IsUnique();
 
                     b.ToTable("BotKnownChatAdmins");
-                });
-
-            modelBuilder.Entity("CedarClerk.Server.Build", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Notes")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("OwnerId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("ProjectId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("ReleasedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Version")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProjectId", "Version")
-                        .IsUnique();
-
-                    b.ToTable("Builds");
                 });
 
             modelBuilder.Entity("CedarClerk.Server.Channel", b =>
@@ -1054,9 +1022,6 @@ namespace CedarClerk.Server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("BuildId")
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("TEXT");
 
@@ -1152,8 +1117,6 @@ namespace CedarClerk.Server.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("OwnerId", "ProjectId", "Language");
 
                     b.ToTable("GlossaryTerms");
                 });

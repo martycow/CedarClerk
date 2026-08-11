@@ -464,6 +464,15 @@ public class GlossaryTerm
     /// nothing recorded where they came from, and guessing by text would link the wrong pairs.
     /// </summary>
     public Guid? SourceTermId { get; set; }
+    /// <summary>
+    /// T-125 (ADR-112) — the project this term belongs to, or null for a global one. A plain
+    /// scalar with no FK, like <c>Draft.ProjectId</c>.
+    ///
+    /// A document sees global terms **plus** its own project's: "Unity" is global, "the ferry" is
+    /// about one game, and an article about that game needs both. A project's term never shows up
+    /// outside it — otherwise "local" would mean nothing.
+    /// </summary>
+    public Guid? ProjectId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

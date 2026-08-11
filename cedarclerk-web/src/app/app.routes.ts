@@ -73,6 +73,11 @@ export const routes: Routes = [
         canActivate: [indieDevGuard],
     },
     {
+        path: 'projects/:id/builds',
+        loadComponent: () => import('./pages/project-builds.component').then(m => m.ProjectBuildsComponent),
+        canActivate: [indieDevGuard],
+    },
+    {
         path: 'projects/:id/tasks',
         loadComponent: () => import('./pages/project-tasks.component').then(m => m.ProjectTasksComponent),
         canActivate: [indieDevGuard],

@@ -18,6 +18,8 @@ export interface GlossaryTerm {
     isCaseSensitive: boolean;
     /** The root of the translation group: every language version of one idea shares it. */
     sourceTermId: string | null;
+    /** T-125 — the project this term belongs to, or null for a global one. */
+    projectId: string | null;
     updatedAt: string;
 }
 
@@ -28,6 +30,8 @@ export interface GlossaryTermInput {
     imageUrl: string | null;
     language: string;
     isCaseSensitive: boolean;
+    /** Null keeps the term global, which is what every term written before T-125 is. */
+    projectId?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -36,6 +40,15 @@ export class GlossaryService {
 
     list() {
         return firstValueFrom(this.http.get<GlossaryTerm[]>('/api/glossary'));
+    }
+
+    /**
+     * What a document in this project renders with: the project's own terms **plus** the global
+     * ones. Not "or" — "Unity" is global, "the ferry" is about one game, and an article about that
+     * game needs both.
+     */
+    listForProject(projectId: string) {
+        return firstValueFrom(this.http.get<GlossaryTerm[]>(`/api/glossary?projectId=${projectId}`));
     }
 
     create(input: GlossaryTermInput) {

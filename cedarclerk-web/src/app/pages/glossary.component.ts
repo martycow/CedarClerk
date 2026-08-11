@@ -3,6 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { LocaleService } from '../core/i18n/locale.service';
 import { GlossaryService, GlossaryTerm, GlossaryTermInput } from '../core/glossary.service';
+import { ProjectSummary, ProjectsService } from '../core/projects.service';
+import { AuthService } from '../core/auth.service';
 import { AssetsService } from '../core/assets.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES, endonymOf } from '../core/languages';
@@ -22,6 +24,8 @@ import { GlossaryTermFormComponent } from '../shared/glossary-term-form.componen
 export class GlossaryComponent implements OnInit {
     t = inject(LocaleService).t;
     private api = inject(GlossaryService);
+    private projectsApi = inject(ProjectsService);
+    auth = inject(AuthService);
     private assets = inject(AssetsService);
 
     readonly contentLanguages = CONTENT_LANGUAGES;
@@ -29,6 +33,12 @@ export class GlossaryComponent implements OnInit {
     readonly endonymOf = endonymOf;
 
     terms = signal<GlossaryTerm[]>([]);
+    /**
+     * T-125 — which scope is being looked at: null = everything, '' = global only, an id = that
+     * project (its own terms plus the global ones, the same set its documents render with).
+     */
+    scopeFilter = signal<string | null>(null);
+    projects = signal<ProjectSummary[]>([]);
     loading = signal(true);
     error = signal('');
     busy = signal(false);
@@ -59,6 +69,15 @@ export class GlossaryComponent implements OnInit {
     async ngOnInit() {
         try {
             this.terms.set(await this.api.list());
+            // Only when the module is on: with it off there are no projects, and the scope row
+            // has nothing to offer beyond "global", which is the only scope that exists there.
+            if (this.auth.indieDev()) {
+                try {
+                    this.projects.set(await this.projectsApi.list());
+                } catch {
+                    this.projects.set([]);
+                }
+            }
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().glossary.loadFailed));
         } finally {
@@ -68,7 +87,34 @@ export class GlossaryComponent implements OnInit {
 
     visibleTerms(): GlossaryTerm[] {
         const lang = this.languageFilter();
-        return this.terms().filter(t => (t.language || DEFAULT_PRIMARY_LANGUAGE) === lang);
+        const scope = this.scopeFilter();
+        return this.terms().filter(t => {
+            if ((t.language || DEFAULT_PRIMARY_LANGUAGE) !== lang) return false;
+            if (scope === null) return true;
+            if (scope === '') return !t.projectId;
+            // A project's view includes the global terms, because that is what its documents see.
+            return !t.projectId || t.projectId === scope;
+        });
+    }
+
+    scopeCount(scope: string | null): number {
+        const lang = this.languageFilter();
+        return this.terms().filter(t => {
+            if ((t.language || DEFAULT_PRIMARY_LANGUAGE) !== lang) return false;
+            if (scope === null) return true;
+            if (scope === '') return !t.projectId;
+            return t.projectId === scope;
+        }).length;
+    }
+
+    projectName(id: string): string {
+        return this.projects().find(p => p.id === id)?.name ?? '';
+    }
+
+    /** Where "New term" will put it: the selected project, or global for "all" and "global". */
+    newTermScope(): string | null {
+        const scope = this.scopeFilter();
+        return scope ? scope : null;
     }
 
     countFor(lang: string): number {
@@ -120,7 +166,9 @@ export class GlossaryComponent implements OnInit {
                 const saved = await this.api.update(id, input);
                 this.terms.update(list => list.map(t => t.id === id ? saved : t));
             } else {
-                const created = await this.api.create(input);
+                // The scope selector doubles as "where this one goes" — the hint under it says so,
+                // because a filter that silently decides a property would be a trap.
+                const created = await this.api.create({ ...input, projectId: this.newTermScope() });
                 this.terms.update(list => [...list, created].sort((a, b) => a.term.localeCompare(b.term)));
             }
             this.languageFilter.set(input.language);

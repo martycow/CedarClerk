@@ -41,6 +41,8 @@ export interface GameTask {
     assignee: string;
     /** T-124 — the sprint this task is planned into, or null. */
     sprintId: string | null;
+    /** T-126 — the version this task shipped in, or null. */
+    buildId: string | null;
     dueAt: string | null;
     createdAt: string;
     updatedAt: string;
@@ -72,6 +74,8 @@ export interface UpdateTaskInput {
     clearDueAt?: boolean;
     sprintId?: string;
     clearSprint?: boolean;
+    buildId?: string;
+    clearBuild?: boolean;
     archived?: boolean;
 }
 

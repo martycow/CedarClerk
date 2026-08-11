@@ -10,6 +10,31 @@
 
         <!--Terms are listed per language because that is how they are matched: an English post
         is scanned against the English terms only.-->
+        <!--T-125 — the scope row. A project's view deliberately includes the global terms: that
+        is the set its documents actually render with, so the screen shows what the reader gets.-->
+        @if (projects().length) {
+        <div class="scope-row">
+            <button class="chip" [class.on]="scopeFilter() === null" (click)="scopeFilter.set(null)">
+                {{ t().glossary.scopeAll }} <span class="chip-count">{{ scopeCount(null) }}</span>
+            </button>
+            <button class="chip" [class.on]="scopeFilter() === ''" (click)="scopeFilter.set('')">
+                {{ t().glossary.scopeGlobal }} <span class="chip-count">{{ scopeCount('') }}</span>
+            </button>
+            @for (p of projects(); track p.id) {
+            <button class="chip" [class.on]="scopeFilter() === p.id" (click)="scopeFilter.set(p.id)" [title]="p.name">
+                {{ p.name }} <span class="chip-count">{{ scopeCount(p.id) }}</span>
+            </button>
+            }
+        </div>
+        <p class="hint scope-hint">
+            @if (newTermScope(); as id) {
+                {{ t().glossary.scopeNewIn(projectName(id)) }}
+            } @else {
+                {{ t().glossary.scopeNewGlobal }}
+            }
+        </p>
+        }
+
         <div class="lang-tabs">
             @for (l of contentLanguages; track l) {
             <button [class.on]="languageFilter() === l" (click)="languageFilter.set(l)">
@@ -68,6 +93,9 @@
             <ng-container *ngTemplateOutlet="termForm"></ng-container>
             } @else {
             <div class="term-card" [class.on]="previewId() === term.id" (click)="openPreview(term)">
+                @if (term.projectId) {
+                <span class="scope-badge">{{ projectName(term.projectId) }}</span>
+                }
                 @if (term.imageUrl) { <img class="term-thumb" [src]="term.imageUrl" alt=""> }
                 <div class="term-body">
                     <div class="term-head">

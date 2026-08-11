@@ -179,6 +179,13 @@ public class GameTask
     /// </summary>
     public Guid? SprintId { get; set; }
 
+    /// <summary>
+    /// T-126 — the build this task shipped in, or null. A column rather than a link because the
+    /// question is "which one", singular, and it gets filtered and counted (ADR-112). A document's
+    /// relationship to a build is looser and uses <see cref="EntityLink"/> instead.
+    /// </summary>
+    public Guid? BuildId { get; set; }
+
     /// <summary>Null = no deadline. Overdue is derived, never stored — it changes with the clock.</summary>
     public DateTime? DueAt { get; set; }
 
@@ -227,6 +234,36 @@ public class Sprint
     /// <summary>Dates, not instants — a sprint is a run of days, and half of one is not a thing.</summary>
     public DateTime StartsAt { get; set; }
     public DateTime EndsAt { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// A released (or planned) version of the game (T-126, ADR-112).
+///
+/// A real entity rather than a tag: a version has a number, a release date, notes and a set of
+/// things that went into it, and a flat <c>Draft.Tags</c> string holds none of those and cannot
+/// answer "what is in 0.4.2" except by scanning and parsing. Same line ADR-106 drew for tasks —
+/// a set of fields is an entity, free text is a tag.
+///
+/// **It knows nothing about git.** No repository tags, no CI, no build artefacts: this is a record
+/// the author keeps, and pretending to be an integration that does not exist would be worse than
+/// honestly being a record.
+/// </summary>
+public class Build
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public Guid ProjectId { get; set; }
+
+    /// <summary>Whatever the author calls it — "0.4.2", "Demo 3", "Steam Next Fest build".</summary>
+    public string Version { get; set; } = "";
+
+    /// <summary>Free text: what this version is about, above the list of what went into it.</summary>
+    public string Notes { get; set; } = "";
+
+    /// <summary>Null = planned but not out yet. The list shows unreleased builds first.</summary>
+    public DateTime? ReleasedAt { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

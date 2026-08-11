@@ -263,6 +263,19 @@ public static class ErrorMessages
     public static string UnknownSprint =>
         Ru("Такого спринта нет — возможно, он удалён.", "There is no such sprint — it may have been deleted.");
 
+    // T-126 — builds and versions.
+    public static string BuildVersionLength(int max) =>
+        Ru($"Версия — от 1 до {max} символов.", $"A version must be 1-{max} characters");
+
+    public static string BuildNotesLength(int max) =>
+        Ru($"Заметки к версии — не длиннее {max} символов.", $"Build notes must be at most {max} characters");
+
+    public static string BuildVersionTaken(string version) =>
+        Ru($"Версия «{version}» в этом проекте уже есть.", $"This project already has a version '{version}'.");
+
+    public static string UnknownBuild =>
+        Ru("Такой версии нет — возможно, она удалена.", "There is no such version — it may have been deleted.");
+
     // Russian is the only translated locale for now, matching the app's own UI dictionaries
     // (en.ts/ru.ts): every other UI language already falls back to English there, and shipping
     // machine-quality German error text would be a worse answer than the English original.

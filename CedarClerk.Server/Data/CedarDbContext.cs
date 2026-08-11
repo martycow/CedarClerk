@@ -43,6 +43,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<EntityLink> EntityLinks => Set<EntityLink>();
     public DbSet<GameTask> GameTasks => Set<GameTask>();
     public DbSet<Sprint> Sprints => Set<Sprint>();
+    public DbSet<Build> Builds => Set<Build>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -144,6 +145,11 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         builder.Entity<Sprint>().HasIndex(s => new { s.ProjectId, s.StartsAt });
         // The number is what the S-chip shows, so two sprints must not share one inside a project.
         builder.Entity<Sprint>().HasIndex(s => new { s.ProjectId, s.Number }).IsUnique();
+        // T-126 — the builds screen asks for one project's versions, newest first. Unique on the
+        // version string: two builds called 0.4.2 in one project is a typo, not a plan.
+        builder.Entity<Build>().HasIndex(b => new { b.ProjectId, b.Version }).IsUnique();
+        // T-125 — a document renders with global terms plus its project's, so both are one query.
+        builder.Entity<GlossaryTerm>().HasIndex(t => new { t.OwnerId, t.ProjectId, t.Language });
         // The project list query: this owner's projects, active ones first by their own order.
         builder.Entity<Project>().HasIndex(p => new { p.OwnerId, p.ArchivedAt });
         // "What is in this project" — the dashboard's only real question, and the one the drafts

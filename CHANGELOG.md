@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-08-11 (Phase 13) — the last two MUST rows, and a referral badge (T-125/T-126, ADR-112, 0.10.5)
+
+**Phase 13's MUST list is finished.** The glossary learned about projects, versions became a thing the app records, and the blog footer carries Marty's DigitalOcean badge.
+
+**T-125 — a glossary term can belong to a project.** One nullable column, the same move `Draft.ProjectId` made: a project's term and a global one have identical shape, and a second table would have meant nine duplicated columns and no way to move a term between scopes without retyping it. What a document sees is global terms **plus** its own project's — not "or", because "Unity" is global and "the ferry" is about one game and an article about that game needs both. Where both define the same word the project's wins: a narrower scope is a more precise definition, which is the reason to write one. The glossary screen grew a scope row that doubles as "where a new term goes", with a line under it saying so — a filter that silently decided a property would be a trap.
+
+**T-126 — builds are a record, not a tag.** The brief asked for "build/version tagging, and therefore an extensive tagging system"; that describes a result, not a mechanism. A version has a number, a release date, notes and a set of things in it, and a flat `Tags` string holds none of them and cannot answer "what is in 0.4.2" except by scanning and parsing. So it is an entity — the same line ADR-106 drew for tasks.
+
+A task carries a `BuildId` column (it ships in one build, and that gets filtered and counted); a document attaches through the existing `EntityLink` (its relationship is looser — a changelog, a devlog, a design doc it implements — and `Draft` is already thirty-five fields wide with a recorded debt for splitting it). The asymmetry is deliberate and follows the question each side is asked.
+
+**The changelog comes out as a document, not as text to copy.** `POST /api/builds/{id}/changelog` writes a real `changelog` document into the project — heading, the build's notes, one bullet per finished task — and links it back to the build. It then lives an ordinary document's life: edited, translated, published, versioned. Handing back a string would have been a generator whose output has nowhere to go.
+
+**What a build deliberately is not**: connected to git. No repository tags, no CI, no artefacts. It is a record the author keeps, and pretending to be an integration that does not exist would be worse than honestly being a record. The empty state says so in as many words.
+
+**The blog footer carries a DigitalOcean referral badge** on its own row under the made-with line — beside it, the fixed-size hosted SVG would have pushed the centred text off-centre. Explicit dimensions and `loading=lazy` so a slow CDN cannot shift the page as it arrives.
+
+`dotnet test` **752/752**, frontend 11/11, contrast clean, smoke **53/53**. Verified against a running server: a project's glossary view excluding another project's terms, a duplicate version refused, a build from another project refused, the changelog built from two finished tasks with the in-progress one left out, and a task surviving the deletion of its build.
+
+Also written: **`docs/migration-to-digitalocean.md`** — a Pi→droplet checklist built from the machine's actual state rather than from a generic guide. The short version of why it is mostly easy and once dangerous: the published app is portable IL, so armhf→x86_64 changes nothing, and the one real hazard is that two processes must never hold the Telegram token at the same time.
+
 ## 2026-08-11 (Phase 13) — the development planner (T-124, ADR-111, 0.10.4)
 
 Fifth of Phase 13's seven MUST rows, and the last one the design handoff had drawn. `/projects/:id/planner` stacks one card per sprint — current, then planned, then "No sprint", then the finished ones collapsed — with a progress bar, the task rows inside, and the dates that decide everything.
