@@ -1103,7 +1103,7 @@ public static class DraftEndpoints
 
         // T-016 — the stored content of one version, plus what it would change if restored. Until
         // now the history was readable but not reachable: recovering a version meant sqlite3 on
-        // the Pi, which is not a recovery story for anyone but Marty.
+        // the server, which is not a recovery story for anyone but Marty.
         groupBuilder.MapGet("/{id:guid}/revisions/{lang}/{revisionId:guid}", async (
             Guid id, string lang, Guid revisionId, ClaimsPrincipal user, CedarDbContext db) =>
         {
@@ -1424,7 +1424,7 @@ public static class DraftEndpoints
           .WithMetadata(new RequestFormLimitsAttribute { MultipartBodyLengthLimit = MarkdownZipMaxBytes });
 
         // ADR-058 — local-only bypass for imports over Cloudflare's ~100MB edge limit, triggered
-        // over SSH directly on the Pi (never through the tunnel, so that limit never applies).
+        // over SSH directly on the server (never through the tunnel, so that limit never applies).
         // AllowAnonymous() opts out of the group's RequireAuthorization(); IsGenuinelyLocal() below
         // is the real gate — see its own comment for why loopback IP alone isn't enough here.
         groupBuilder.MapPost("/import-markdown-local", async (
@@ -1578,7 +1578,7 @@ public static class DraftEndpoints
     // (cedarclerk.mooexe.dev), never rewriting it to localhost — already relied on elsewhere in
     // this file for the blog's host-based routing. Only a request that both connects over
     // loopback AND was addressed to "localhost" (e.g. `curl http://localhost:8080/...` run
-    // directly on the Pi) satisfies both. Deliberately not using CF-Connecting-IP/X-Forwarded-For
+    // directly on the server) satisfies both. Deliberately not using CF-Connecting-IP/X-Forwarded-For
     // — ordinary, attacker-settable headers this app never validates against a trusted-proxy list.
     private static bool IsGenuinelyLocal(HttpContext ctx) =>
         ctx.Connection.RemoteIpAddress is { } ip && IPAddress.IsLoopback(ip)
@@ -1694,7 +1694,7 @@ public static class DraftEndpoints
             <div class="page">
             <div class="post-sheet">
             {{titleHeading}}
-            <div class="post-meta">{{publishedAt.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)}}</div>
+            <div class="post-meta">{{DisplayTime.ToZone(publishedAt).ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)}}</div>
             {{bodyHtml}}
             {{signatureBlock}}
             </div>

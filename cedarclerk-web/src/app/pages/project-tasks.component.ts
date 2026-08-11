@@ -1,7 +1,7 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { ProjectDetail, ProjectsService, DOCUMENT_TYPE_ICONS } from '../core/projects.service';
@@ -37,7 +37,7 @@ type SortKey = 'title' | 'status' | 'priority' | 'dueAt';
 // linkable — the dashboard's "Up next" rail opens a card by navigating here.
 @Component({
     selector: 'app-project-tasks',
-    imports: [IconComponent, DatePipe, FormsModule, PageHeaderComponent, ModalComponent],
+    imports: [IconComponent, ZonedDatePipe, FormsModule, PageHeaderComponent, ModalComponent],
     templateUrl: 'project-tasks.component.html',
     styleUrls: ['project-tasks.component.css'],
 })

@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { ChannelsService, Channel, ChannelStats, ChannelStatSnapshotDto, BlogStats, BlogStatSnapshotDto, AudienceSlice } from '../core/channels.service';
 import { LocaleService } from '../core/i18n/locale.service';
 
@@ -77,7 +77,7 @@ const PAD_BOTTOM = 4;
 
 @Component({
     selector: 'app-stats',
-    imports: [DatePipe],
+    imports: [ZonedDatePipe],
     templateUrl: 'stats.component.html',
     styleUrls: ['stats.component.css'],
 })

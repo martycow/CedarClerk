@@ -1,10 +1,10 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
     AdminService, AdminAuditEntry, AdminBilling, AdminInviteCode, AdminPost, AdminSummary,
     AdminUsage, AdminUser,
 } from '../core/admin.service';
+import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
@@ -20,7 +20,7 @@ const AVATAR_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#
 // invite codes, a read-only cross-owner post list, billing/usage reporting, and the audit log.
 @Component({
     selector: 'app-admin',
-    imports: [DatePipe, FormsModule, PageHeaderComponent],
+    imports: [ZonedDatePipe, FormsModule, PageHeaderComponent],
     templateUrl: 'admin.component.html',
     styleUrls: ['admin.component.css'],
 })

@@ -33,11 +33,12 @@ if (dataDir == null)
 var mediaDir = Path.Combine(dataDir, "media");
 var dbPath = Path.Combine(dataDir, Consts.DbFileName);
 // ADR-058 — where a zip too large for Cloudflare's edge (~100MB) is scp'd for the local-only
-// import bypass. Under dataDir so it's covered by the existing backup cron.
+// import bypass. Under dataDir, which is where everything worth keeping lives.
 var importTmpDir = Path.Combine(dataDir, "import-tmp");
 // T-074 — the keys that decrypt every auth cookie. ASP.NET's default location
-// (~/.aspnet/DataProtection-Keys) is outside dataDir, so the backup cron never saw them and a Pi
-// OS reinstall would have signed everyone out irrecoverably.
+// (~/.aspnet/DataProtection-Keys) is outside dataDir, so no backup of the data directory would have
+// included them and a host rebuild would have signed everyone out irrecoverably. That is also why
+// they had to be carried by hand during the DigitalOcean move (ADR-114).
 var dataProtectionKeysDir = Path.Combine(dataDir, "dataprotection-keys");
 // T-140 — generated asset thumbnails. Under dataDir, never beside the source: the folder being
 // indexed is somebody's game project, usually under version control, and writing into it would be
@@ -53,6 +54,15 @@ Directory.CreateDirectory(thumbnailsDir);
 
 #region Services
 builder.Services.AddDbContext<CedarDbContext>(dbContextBuilder => dbContextBuilder.UseSqlite($"Data Source={dbPath}"));
+
+// ADR-115 — every DateTime on the wire carries its Z. SQLite loses DateTimeKind, so values that are
+// UTC in fact came back Unspecified and serialized without a suffix, which a browser reads as local
+// time. One converter instead of remembering a helper in each new component.
+builder.Services.ConfigureHttpJsonOptions(jsonOptions =>
+{
+    jsonOptions.SerializerOptions.Converters.Add(new UtcDateTimeConverter());
+    jsonOptions.SerializerOptions.Converters.Add(new NullableUtcDateTimeConverter());
+});
 
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysDir))
@@ -318,7 +328,7 @@ app.MapGet("/api/health", (UpstreamAuth upstream) => Results.Ok(new
 // overrides ASPNETCORE_URLS, so the hardcoded localhost:8080 made the port unmovable: the desktop
 // shell has to take a free port from the OS, and two of these on one machine cannot both be 8080.
 //
-// The default is unchanged, so `dotnet run` and the Pi (whose port is fixed by the Cloudflare
+// The default is unchanged, so `dotnet run` and production (whose port is fixed by the Cloudflare
 // tunnel config) behave exactly as before.
 var explicitUrl = app.Configuration[Consts.General.UrlsCfg];
 if (!string.IsNullOrWhiteSpace(explicitUrl))

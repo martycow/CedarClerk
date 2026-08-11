@@ -49,7 +49,7 @@
                             {{ build.released ? t().projects.builds.released : t().projects.builds.unreleased }}
                         </span>
                         @if (build.releasedAt) {
-                            <span class="build-date">{{ build.releasedAt | date:'d MMM yyyy' }}</span>
+                            <span class="build-date">{{ build.releasedAt | zonedDate:'d MMM yyyy' }}</span>
                         }
                         @if (build.taskCount) {
                             <span class="build-count">{{ t().projects.planner.progress(build.doneCount, build.taskCount) }}</span>

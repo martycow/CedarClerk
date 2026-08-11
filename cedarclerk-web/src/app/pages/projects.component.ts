@@ -1,7 +1,7 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { LocaleService } from '../core/i18n/locale.service';
 import {
     PROJECT_TYPES,
@@ -25,7 +25,7 @@ type Filter = 'all' | 'active' | 'archived';
 // Two screens that list things should not feel like two products, and the handoff says so.
 @Component({
     selector: 'app-projects',
-    imports: [IconComponent, DatePipe, FormsModule, PageHeaderComponent, ModalComponent],
+    imports: [IconComponent, ZonedDatePipe, FormsModule, PageHeaderComponent, ModalComponent],
     templateUrl: 'projects.component.html',
     styleUrls: ['projects.component.css'],
 })

@@ -163,7 +163,7 @@ public static class AuthEndpoints
         groupBuilder.MapPost("/login", async (LoginRequest req, SignInManager<ApplicationUser> signIn,
             UserManager<ApplicationUser> users, UpstreamAuth upstream) =>
         {
-            // ADR-108 — on the desktop, who you are is the Pi's answer, not this machine's. Only the
+            // ADR-108 — on the desktop, who you are is production's answer, not this machine's. Only the
             // question "are these credentials real" travels; the session that follows is local.
             if (upstream.IsConfigured)
                 return await SignInThroughUpstreamAsync(req, signIn, users, upstream);

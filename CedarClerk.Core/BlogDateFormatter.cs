@@ -3,11 +3,13 @@ namespace CedarClerk.Core;
 /// <summary>
 /// Dates on the blog, in the language of the page they appear on (T-094).
 ///
-/// Explicit month tables rather than <c>CultureInfo</c>: the Pi runs without ICU data
-/// (see <c>.claude/rules/production-environment.md</c>), which is why the rest of this codebase
-/// formats with <c>InvariantCulture</c> — and why the blog ended up showing a hardcoded Russian
-/// month header above an English card date **on the same page**, with neither following the
-/// language the reader had asked for.
+/// Explicit month tables rather than <c>CultureInfo</c>. The original reason was that the Pi's bare
+/// runtime had no ICU data, which is why the rest of this codebase formats with
+/// <c>InvariantCulture</c>; the DigitalOcean droplet does have ICU (11.08.2026), but the tables stay
+/// — nine languages of month names are the product's own data, and reading them out of whatever the
+/// host machine happens to ship is how the blog ended up showing a hardcoded Russian month header
+/// above an English card date **on the same page**, with neither following the language the reader
+/// had asked for.
 ///
 /// Only the twelve month names and the day/month order are language-dependent here. Anything more
 /// (declension after a numeral, for instance) would be a translation problem rather than a
@@ -71,4 +73,21 @@ public static class BlogDateFormatter
     /// <summary>The same date with a time, for a card that shows when a post went out.</summary>
     public static string DateTimeShort(DateTime date, string? lang) =>
         $"{Date(date, lang)}, {date:HH\\:mm}";
+
+    // ADR-115. The three above take a wall-clock DateTime and stay pure formatters — which is what
+    // makes them testable against literal expected strings. These take the UTC instant the database
+    // actually holds and do the conversion, so no caller has to remember it.
+    //
+    // The zone abbreviation is appended only where a time is shown: a reader anywhere in the world
+    // needs to know what "14:05" means, while a bare date does not move enough to matter.
+
+    /// <summary>UTC instant → "17 августа 2026" in the display zone.</summary>
+    public static string DateLocal(DateTime utc, string? lang) => Date(DisplayTime.ToZone(utc), lang);
+
+    /// <summary>UTC instant → "Август 2026" in the display zone.</summary>
+    public static string MonthHeadingLocal(DateTime utc, string? lang) => MonthHeading(DisplayTime.ToZone(utc), lang);
+
+    /// <summary>UTC instant → "17 августа 2026, 14:05 PDT" in the display zone.</summary>
+    public static string DateTimeLocal(DateTime utc, string? lang) =>
+        $"{DateTimeShort(DisplayTime.ToZone(utc), lang)} {DisplayTime.Abbreviation(utc)}";
 }

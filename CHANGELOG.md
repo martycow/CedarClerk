@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-08-11 — every time on screen is Pacific, and the app stops being seven hours out (ADR-115)
+
+Marty's ask was a display rule: the server keeps UTC, the blog and the app print Pacific time. Reading the code turned up that the second half was already broken in a way nobody had named.
+
+**The bug underneath the request.** Everything is stored in UTC — `DateTime.UtcNow` appears 125 times, `DateTime.Now` never, and file times are taken as `LastWriteTimeUtc`. But SQLite has nowhere to keep `DateTimeKind`, so EF hands those values back as `Unspecified`, and `System.Text.Json` prints them **without a trailing Z** — which a browser reads as *local* time. The app was showing UTC numbers labelled as local: seven hours ahead, today. Two components had a hand-rolled `utcDate()` helper that patched it; about eighteen others did not. `UtcDateTimeConverter` now writes every `DateTime`/`DateTime?` as UTC with its `Z`, in one place, because a converter cannot be forgotten by the next component and a helper obviously can.
+
+**The zone is `America/Los_Angeles`, not a literal PST.** "Pacific Standard Time" is the winter half; from March to November Los Angeles is on PDT, so a fixed −8 would have been an hour wrong on the day it was asked for. The named zone follows the change and the label follows reality — `PDT` in summer, `PST` in winter. It is spelled once per side (`Consts.General.DisplayTimeZone`, `DISPLAY_TIME_ZONE`), which is where a per-user timezone would land.
+
+**On the blog** every date now goes through `DisplayTime`, including the timeline's month grouping — a post published at 00:30 UTC on the 1st belongs to the previous month here, and grouping it by the UTC month would have filed it under a heading its own card contradicts. Times carry the zone name because the audience is worldwide; the app's do not, because the operator is in one place and `PDT` next to every row is noise. Machine-facing timestamps are untouched: RSS `pubDate` stays GMT, `<time datetime>` stays UTC.
+
+**In the app** a `zonedDate` pipe replaced all 42 `| date:` usages across 13 screens, and the three remaining `toLocale*` spots (the scheduled-post chip, the stats sparkline labels, the editor's date pill) now go through the same formatter. The pipe reads an offset-less value as UTC rather than local, so it is correct even where the old wire format resurfaces.
+
+**Not changed, deliberately**: the scheduling picker still reads its `datetime-local` field in the browser's zone. That is input rather than display, it already shows a PT line in its hint, and doing half of it silently would make that hint the first thing to lie.
+
+`dotnet test` **764/764** (7 new for the zone, 5 for the converter), frontend **18/18**, contrast clean. One existing test changed its expectation rather than its subject: a header slot given midnight UTC now prints the previous day, which is the correct answer to "what date was that here".
+
 ## 2026-08-11 — production is a DigitalOcean droplet now (ADR-114)
 
 Marty ran `docs/migration-to-digitalocean.md` end to end. Production lives on `cedarclerk-periwinkle` (fra1, Ubuntu 24.04.4 LTS, x86_64, 1 vCPU / 2 GB, 45 GB free) and the Raspberry Pi is out. Same paths, same unit, same drop-ins, same Cloudflare Tunnel onto `127.0.0.1:8080`, same single Kestrel process serving both hosts — the application did not notice the platform change. It was a copy rather than a port because the server publishes framework-dependent with no RID: portable IL, which is a property that existed for a different reason (the Pi never built anything) and paid off on the day it was needed.

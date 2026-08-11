@@ -73,7 +73,7 @@
                              having anything left to do. -->
                         <div class="right">{{ p.openTaskCount }}</div>
                         <div class="right">{{ p.assetCount }}</div>
-                        <div class="activity">{{ p.lastActivityAt | date:'d MMM, HH:mm' }}</div>
+                        <div class="activity">{{ p.lastActivityAt | zonedDate:'d MMM, HH:mm' }}</div>
                         <div>
                             <span class="status-badge" [class.tone-accent]="!p.archivedAt">
                                 {{ p.archivedAt ? t().projects.stateArchived : t().projects.stateActive }}

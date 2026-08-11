@@ -1,14 +1,24 @@
 import { Node, mergeAttributes } from '@tiptap/core';
+import { DISPLAY_TIME_ZONE, formatInZone, zoneAbbreviation } from '../core/display-time';
 
 // Telegram live-renders the actual display client-side from unix+format at delivery time —
-// this is only an editor-side preview, not what recipients will see.
+// this is only an editor-side preview, not what recipients will see. The blog, which does render
+// it, prints the display zone (ADR-115), so the preview follows that rather than the machine's.
 function formatPreview(unix: number, format: string): string {
     const date = new Date(unix * 1000);
     const parts: string[] = [];
-    if (format.includes('w')) parts.push(date.toLocaleDateString(undefined, { weekday: 'short' }));
-    if (format.includes('D')) parts.push(date.toLocaleDateString());
-    if (format.includes('T')) parts.push(date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    return parts.join(' ') || date.toLocaleString();
+    if (format.includes('w')) parts.push(WEEKDAYS_SHORT[weekdayInZone(date)]);
+    if (format.includes('D')) parts.push(formatInZone(date, 'd MMM yyyy'));
+    if (format.includes('T')) parts.push(`${formatInZone(date, 'HH:mm')} ${zoneAbbreviation(date)}`);
+    return parts.join(' ') || formatInZone(date);
+}
+
+const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function weekdayInZone(date: Date): number {
+    const named = new Intl.DateTimeFormat('en-US', { timeZone: DISPLAY_TIME_ZONE, weekday: 'short' }).format(date);
+    const index = WEEKDAYS_SHORT.indexOf(named);
+    return index < 0 ? date.getDay() : index;
 }
 
 export const DateTimeNode = Node.create({

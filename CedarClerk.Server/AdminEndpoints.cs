@@ -145,13 +145,13 @@ public static class AdminEndpoints
             var target = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
             if (target is null) return Results.NotFound();
 
-            var before = $"{target.PlanTier}" + (target.PlanExpiresAt is { } e ? $" until {e:yyyy-MM-dd}" : "");
+            var before = $"{target.PlanTier}" + (target.PlanExpiresAt is { } e ? $" until {DisplayTime.ToZone(e):yyyy-MM-dd}" : "");
             target.PlanTier = tier;
             // Null expiry on a paid tier already means "manual grant, never expires" everywhere
             // else in the app (see ApplicationUser) — the admin grant reuses that, it doesn't
             // invent a second meaning. Free never carries an expiry.
             target.PlanExpiresAt = tier == PlanTiers.Free ? null : req.ExpiresAt;
-            var after = $"{target.PlanTier}" + (target.PlanExpiresAt is { } e2 ? $" until {e2:yyyy-MM-dd}" : " (no expiry)");
+            var after = $"{target.PlanTier}" + (target.PlanExpiresAt is { } e2 ? $" until {DisplayTime.ToZone(e2):yyyy-MM-dd}" : " (no expiry)");
 
             Audit(db, actor, "plan", target, $"{before} → {after}");
             await db.SaveChangesAsync();
@@ -207,7 +207,7 @@ public static class AdminEndpoints
         {
             var actor = (await users.GetUserAsync(principal))!;
             // Locking yourself out is not a decision worth honouring — there is no second admin
-            // to undo it, and the fix would be hand-editing the database on the Pi.
+            // to undo it, and the fix would be hand-editing the database on the server.
             if (actor.Id == id) return Results.BadRequest(new { error = ErrorMessages.CannotLockOwnAccount });
 
             var target = await db.Users.FirstOrDefaultAsync(u => u.Id == id);

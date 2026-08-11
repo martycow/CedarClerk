@@ -20,7 +20,7 @@ public static class BlogEndpoints
 
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
 
-    // Hardcoded rather than CultureInfo("ru-RU") — the Pi's runtime install is bare (no SDK,
+    // Hardcoded rather than CultureInfo("ru-RU") — the production runtime install is bare (no SDK,
     // see .claude/rules/production-environment.md) and the rest of the codebase never reaches
     // for a non-invariant CultureInfo, so avoid depending on ICU data being present for this.
     private record ReactRequest(string? AnnotationId, string Kind);
@@ -1048,13 +1048,13 @@ public static class BlogEndpoints
             string? lastMonthKey = null;
             foreach (var p in filtered)
             {
-                var monthKey = p.BlogPublishedAt?.ToString("yyyy-MM") ?? "";
+                var monthKey = DisplayTime.ToZone(p.BlogPublishedAt)?.ToString("yyyy-MM") ?? "";
                 if (monthKey != lastMonthKey)
                 {
                     lastMonthKey = monthKey;
                     if (p.BlogPublishedAt is { } monthDate)
                     {
-                        var monthLabel = BlogDateFormatter.MonthHeading(monthDate, indexLang);
+                        var monthLabel = BlogDateFormatter.MonthHeadingLocal(monthDate, indexLang);
                         sb.Append("<div class=\"timeline-month-sep\"><span class=\"sep-line\"></span><span class=\"sep-label\">")
                           .Append(monthLabel).Append("</span><span class=\"sep-line\"></span></div>");
                     }
@@ -1072,7 +1072,7 @@ public static class BlogEndpoints
                 sb.Append("<a class=\"post-card\" href=\"/").Append(p.BlogSlug).Append("\">");
                 sb.Append("<div class=\"post-card-meta\">");
                 sb.Append("<span class=\"post-card-date\">")
-                  .Append(p.BlogPublishedAt is { } cardDate ? BlogDateFormatter.Date(cardDate, indexLang) : "")
+                  .Append(p.BlogPublishedAt is { } cardDate ? BlogDateFormatter.DateLocal(cardDate, indexLang) : "")
                   .Append("</span>");
 
                 sb.Append("<span class=\"post-card-langs\">RU");
@@ -1314,7 +1314,7 @@ public static class BlogEndpoints
         var glossary = await GlossaryEndpoints.LoadForAsync(db, draft.OwnerId, lang, draft.ProjectId);
         var body = CedarToBlogHtmlRenderer.Render(cedarJson, $"https://{Consts.URLs.BlogHost}", lang, glossary);
         var dateLine = draft.BlogPublishedAt is { } published
-            ? $"<span class=\"post-card-date\">{BlogDateFormatter.DateTimeShort(published, lang)}</span>"
+            ? $"<span class=\"post-card-date\">{BlogDateFormatter.DateTimeLocal(published, lang)}</span>"
             : "";
         // I15 — author's own wording when set; escaped, unlike the built-in defaults which carry
         // their own arrow entity.

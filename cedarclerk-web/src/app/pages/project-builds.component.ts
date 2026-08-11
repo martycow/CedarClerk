@@ -1,7 +1,7 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { Build, BuildsService } from '../core/builds.service';
@@ -21,7 +21,7 @@ import { PageHeaderComponent } from '../shared/page-header.component';
 // and the one thing it does beyond recording is turn a version into a changelog document.
 @Component({
     selector: 'app-project-builds',
-    imports: [IconComponent, DatePipe, FormsModule, RouterLink, PageHeaderComponent, ModalComponent],
+    imports: [IconComponent, ZonedDatePipe, FormsModule, RouterLink, PageHeaderComponent, ModalComponent],
     templateUrl: 'project-builds.component.html',
     styleUrls: ['project-builds.component.css'],
 })

@@ -17,7 +17,7 @@ export const AI_OPERATION_TIMEOUT_MS = 600_000;
 // leash than AI-edit.
 export const AUTO_TRANSLATE_TIMEOUT_MS = 1_200_000;
 
-// A large Notion markdown export can legitimately take minutes to upload over the Pi's residential
+// A large Notion markdown export can legitimately take minutes to upload over a slow link
 // connection — a fixed overall timeout would cut off a real-but-slow upload. `{ each }` instead
 // resets on every progress tick, so only genuine silence (a dropped connection, not a slow one)
 // times out. Previously there was no timeout at all, which made a slow-but-live upload and a truly

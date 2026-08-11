@@ -130,7 +130,7 @@ export class AuthService {
     }
 
     // A failed /api/auth/me is not proof of a logout (T-062): the auth cookie lives 30 days and
-    // survives network blips, 5xx and the 502 Cloudflare answers with while the Pi restarts
+    // survives network blips, 5xx and the 502 Cloudflare answers with while the server restarts
     // mid-deploy. Only a 401 clears the session; anything else is retried and then reported as
     // 'unavailable' with the current state left untouched.
     async refresh(): Promise<RefreshOutcome> {

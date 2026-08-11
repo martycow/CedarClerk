@@ -58,7 +58,7 @@
                 <div>
                     <div class="profile-email">{{ auth.userEmail() }}</div>
                     @if (auth.createdAt(); as since) {
-                    <div class="profile-meta">{{ t().settings.profile.memberSince }} {{ since | date:'MMMM yyyy' }}</div>
+                    <div class="profile-meta">{{ t().settings.profile.memberSince }} {{ since | zonedDate:'MMMM yyyy' }}</div>
                     }
                     <div class="avatar-actions">
                         <label class="btn-primary avatar-pick">
@@ -318,7 +318,7 @@
                 <div>
                     <div class="plan-banner-title">{{ b.planTier }} {{ t().settings.subscription.planSuffix }}</div>
                     @if (auth.planExpiresAt(); as until) {
-                    <div class="plan-banner-meta">{{ t().settings.subscription.renews }} {{ until | date:'d MMM yyyy' }}</div>
+                    <div class="plan-banner-meta">{{ t().settings.subscription.renews }} {{ until | zonedDate:'d MMM yyyy' }}</div>
                     }
                 </div>
                 <span class="spacer"></span>
@@ -484,7 +484,7 @@
                 <li>
                     <span class="ledger-delta" [class.positive]="entry.delta > 0">{{ entry.delta > 0 ? '+' : '' }}{{ entry.delta }}</span>
                     <span class="ledger-reason">{{ creditReasonLabel(entry.reason) }}</span>
-                    <span class="ledger-date">{{ entry.createdAt | date:'d MMM yyyy, HH:mm' }}</span>
+                    <span class="ledger-date">{{ entry.createdAt | zonedDate:'d MMM yyyy, HH:mm' }}</span>
                 </li>
                 }
             </ul>
@@ -510,7 +510,7 @@
                     <div class="integration-title">{{ t().settings.integrations.telegramAccount }}</div>
                     <div class="integration-meta">
                         {{ t().settings.integrations.linkedTo }} <span class="strong">&#64;{{ auth.telegramUsername() }}</span>
-                        @if (auth.telegramLinkedAt(); as since) { · {{ t().settings.integrations.since }} {{ since | date:'d MMM yyyy' }} }
+                        @if (auth.telegramLinkedAt(); as since) { · {{ t().settings.integrations.since }} {{ since | zonedDate:'d MMM yyyy' }} }
                     </div>
                 </div>
                 @if (askUnlinkTelegram()) {
@@ -637,7 +637,7 @@
                         @if (blueskyAccount(); as account) {
                         <div class="integration-meta">
                             {{ t().settings.integrations.linkedTo }} <span class="strong">&#64;{{ account.displayName }}</span>
-                            @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | date:'d MMM yyyy' }} }
+                            @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'d MMM yyyy' }} }
                         </div>
                         } @else {
                         <div class="integration-meta muted">{{ t().settings.integrations.notConnected }}</div>
@@ -673,7 +673,7 @@
                         @if (xAccount(); as account) {
                         <div class="integration-meta">
                             {{ t().settings.integrations.linkedTo }} <span class="strong">{{ account.displayName }}</span>
-                            @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | date:'d MMM yyyy' }} }
+                            @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'d MMM yyyy' }} }
                         </div>
                         } @else {
                         <div class="integration-meta muted">{{ t().settings.integrations.notConnected }}</div>

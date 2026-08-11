@@ -1,9 +1,10 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { formatInZone } from '../core/display-time';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subscription, TimeoutError } from 'rxjs';
+import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
 import {
     DraftsService, DraftMeta, DRAFT_TITLE_MAX, EMPTY_DOC, NewDraftTemplate, NEW_DRAFT_TEMPLATES,
@@ -92,7 +93,7 @@ function computeStatus(d: DraftMeta, t: Dict): DraftStatus {
         return { label: s.publishFailed, tone: 'danger', detail: d.scheduled.error ?? '' };
     }
     if (d.scheduled?.status === 'Pending') {
-        const when = new Date(d.scheduled.scheduledAtUtc).toLocaleString();
+        const when = formatInZone(d.scheduled.scheduledAtUtc);
         return { label: s.scheduled, tone: 'default', detail: `${when} · ${d.scheduled.chatId}` };
     }
     if (d.staleLanguages.length > 0) {
@@ -121,7 +122,7 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
 
 @Component({
     selector: 'app-drafts',
-    imports: [IconComponent, DatePipe, FormsModule, PageHeaderComponent, ModalComponent, PopoverComponent, FolderPickerComponent, TagPickerComponent],
+    imports: [IconComponent, ZonedDatePipe, FormsModule, PageHeaderComponent, ModalComponent, PopoverComponent, FolderPickerComponent, TagPickerComponent],
     templateUrl: 'drafts.component.html',
     styleUrls: ['drafts.component.css'],
 })

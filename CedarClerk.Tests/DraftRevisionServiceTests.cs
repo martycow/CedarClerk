@@ -77,7 +77,7 @@ public class DraftRevisionServiceTests
     }
 
     // The autosave fires on every pause in typing; without a ceiling a few weeks of writing is a
-    // few hundred megabytes of near-identical documents on the Pi.
+    // few hundred megabytes of near-identical documents on the server.
     [Fact]
     public async Task Save_revisions_are_pruned_but_published_ones_are_kept()
     {

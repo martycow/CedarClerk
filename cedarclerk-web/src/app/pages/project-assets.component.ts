@@ -1,7 +1,7 @@
-import { DatePipe } from '@angular/common';
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
@@ -36,7 +36,7 @@ const SCAN_POLL_MS = 700;
 // empty rectangle that looks like a broken image.
 @Component({
     selector: 'app-project-assets',
-    imports: [IconComponent, DatePipe, FormsModule, PageHeaderComponent, ModalComponent],
+    imports: [IconComponent, ZonedDatePipe, FormsModule, PageHeaderComponent, ModalComponent],
     templateUrl: 'project-assets.component.html',
     styleUrls: ['project-assets.component.css'],
 })

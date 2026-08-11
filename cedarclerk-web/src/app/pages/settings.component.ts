@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DatePipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
+import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
 import { LocaleService, UiLang } from '../core/i18n/locale.service';
 import { BillingService, BillingStatus, CreditsStatus, PlanId } from '../core/billing.service';
@@ -21,7 +21,7 @@ export type SettingsTab = 'profile' | 'account';
 
 @Component({
     selector: 'app-settings',
-    imports: [IconComponent, FormsModule, DatePipe, PageHeaderComponent, BrandIconComponent],
+    imports: [IconComponent, FormsModule, ZonedDatePipe, PageHeaderComponent, BrandIconComponent],
     templateUrl: 'settings.component.html',
     styleUrls: ['settings.component.css']
 })

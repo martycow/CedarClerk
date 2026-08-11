@@ -74,12 +74,12 @@
                         @if (hoveredPoint(card); as hp) {
                         <div class="chart-tooltip" [style.left.%]="(hp.x / 600) * 100">
                             <div class="tooltip-value">{{ hp.value }}</div>
-                            <div class="tooltip-date">{{ hp.date | date:'d MMM' }}</div>
+                            <div class="tooltip-date">{{ hp.date | zonedDate:'d MMM' }}</div>
                         </div>
                         }
                         <div class="chart-axis-labels">
-                            <span>{{ card.chart.points[0].date | date:'d MMM' }}</span>
-                            <span>{{ card.chart.points[card.chart.points.length - 1].date | date:'d MMM' }}</span>
+                            <span>{{ card.chart.points[0].date | zonedDate:'d MMM' }}</span>
+                            <span>{{ card.chart.points[card.chart.points.length - 1].date | zonedDate:'d MMM' }}</span>
                         </div>
                     </div>
                     } @else {

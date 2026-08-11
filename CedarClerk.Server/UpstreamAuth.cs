@@ -7,7 +7,7 @@ namespace CedarClerk.Server;
 /// <summary>
 /// Verifies a sign-in against another Cedar Clerk installation (ADR-108).
 ///
-/// Configured only on the desktop shell, which points at the Pi. On the Pi itself the setting is
+/// Configured only on the desktop shell, which points at production. On the server itself the setting is
 /// absent — an installation delegating identity to itself would be a loop.
 ///
 /// It answers one question — "are these credentials real, and whose are they" — and nothing else.
@@ -55,7 +55,7 @@ public class UpstreamAuth(IHttpClientFactory http, IConfiguration config, ILogge
         }
         catch (Exception e)
         {
-            // No network, DNS gone, TLS refused, the Pi is off. All of it is "cannot ask right now",
+            // No network, DNS gone, TLS refused, the server is off. All of it is "cannot ask right now",
             // which is a different answer to the author than "wrong password".
             logger.LogWarning(e, "Upstream auth at {BaseUrl} is unreachable", baseUrl);
             return (Outcome.Unreachable, null);

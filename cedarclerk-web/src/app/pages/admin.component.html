@@ -75,9 +75,9 @@ properties rather than as a class each component has to remember.-->
                         <div class="user-card-meta muted">
                             {{ u.telegramUsername ? '@' + u.telegramUsername : t().admin.columns.telegram + ': —' }}
                             · {{ t().admin.contentSummary(u.published, u.drafts, u.channels) }}
-                            · {{ u.createdAt | date:'d MMM yyyy' }}
+                            · {{ u.createdAt | zonedDate:'d MMM yyyy' }}
                             @if (u.planExpiresAt) {
-                            · {{ u.planExpiresAt | date:'d MMM yyyy' }}
+                            · {{ u.planExpiresAt | zonedDate:'d MMM yyyy' }}
                             } @else if (u.effectiveTier !== 'Free') {
                             · {{ t().admin.neverExpires }}
                             }
@@ -191,7 +191,7 @@ properties rather than as a class each component has to remember.-->
                 <!--Joined is counted from accounts; uses is the code's own counter. They agree
                 unless something went wrong, which is worth being able to see.-->
                 <span class="muted">{{ t().admin.invites.usageValue(c.joined, c.maxUses) }}</span>
-                <span class="muted">{{ c.expiresAt ? (c.expiresAt | date:'d MMM yyyy') : t().admin.invites.noExpiry }}</span>
+                <span class="muted">{{ c.expiresAt ? (c.expiresAt | zonedDate:'d MMM yyyy') : t().admin.invites.noExpiry }}</span>
                 <span>
                     <button class="btn-ghost" (click)="toggleInvite(c)" [disabled]="busy()">
                         {{ c.isActive ? t().admin.invites.disable : t().admin.invites.enable }}
@@ -260,7 +260,7 @@ properties rather than as a class each component has to remember.-->
             </div>
             @for (p of b.payments; track p.id) {
             <div class="payment-row">
-                <span class="muted">{{ p.createdAt | date:'d MMM yyyy, HH:mm' }}</span>
+                <span class="muted">{{ p.createdAt | zonedDate:'d MMM yyyy, HH:mm' }}</span>
                 <span class="muted">{{ p.ownerEmail }}</span>
                 <span>{{ p.plan }} · {{ p.provider }}</span>
                 <span>{{ formatAmount(p.amount, p.currency) }}</span>
@@ -296,7 +296,7 @@ properties rather than as a class each component has to remember.-->
         <div class="audit-list">
             @for (a of audit(); track a.id) {
             <div class="audit-row">
-                <span class="muted">{{ a.createdAt | date:'d MMM, HH:mm' }}</span>
+                <span class="muted">{{ a.createdAt | zonedDate:'d MMM, HH:mm' }}</span>
                 <span class="audit-action">{{ a.action }}</span>
                 <span>{{ a.targetEmail || '—' }}</span>
                 <span class="muted">{{ a.details }}</span>

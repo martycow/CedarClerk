@@ -1,7 +1,8 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { formatInZone } from '../core/display-time';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
 import {
     DraftsService, DraftMeta, PostRegistration,
@@ -41,7 +42,7 @@ const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
 // now — editing, per-question breakdowns and the pie chart are N10, presets are N12.
 @Component({
     selector: 'app-posts-manager',
-    imports: [IconComponent, DatePipe, FormsModule, PageHeaderComponent, ModalComponent, CommentsComponent, StatsComponent, CountBadgeComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent],
+    imports: [IconComponent, ZonedDatePipe, FormsModule, PageHeaderComponent, ModalComponent, CommentsComponent, StatsComponent, CountBadgeComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent],
     templateUrl: 'posts-manager.component.html',
     styleUrls: ['posts-manager.component.css'],
 })
@@ -287,7 +288,7 @@ export class PostsManagerComponent implements OnInit {
         }));
         const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
         const areaPath = `${linePath} L${points[points.length - 1].x.toFixed(1)},150 L${points[0].x.toFixed(1)},150 Z`;
-        const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+        const day = (iso: string) => formatInZone(iso, 'd MMM');
 
         return {
             linePath,

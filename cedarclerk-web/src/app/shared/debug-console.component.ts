@@ -7,7 +7,7 @@ const MAX_BODY_CHARS = 4000;
 
 // Full-width, collapsible request/response console pinned to the bottom of the viewport — lets
 // Marty see whether a slow publish is actually stuck or just working, and inspect the exact raw
-// error body a failed request came back with, without SSH-ing into the Pi. Mounted once in the
+// error body a failed request came back with, without SSH-ing into the server. Mounted once in the
 // root app shell (app.html) so it's available on every page, not just the editor.
 @Component({
     selector: 'app-debug-console',

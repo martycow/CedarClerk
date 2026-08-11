@@ -24,7 +24,7 @@ public class ApplicationUser : IdentityUser
     public Guid? InviteCodeId { get; set; }
 
     /// <summary>
-    /// ADR-108 — this account's id on the installation that authenticates it (the Pi). Null on
+    /// ADR-108 — this account's id on the installation that authenticates it (production). Null on
     /// every ordinary account, which is every account on a server that authenticates its own users.
     ///
     /// Keyed by id rather than by email because an email can be changed and an identity cannot;

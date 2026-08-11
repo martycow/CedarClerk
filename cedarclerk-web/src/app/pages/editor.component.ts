@@ -9,6 +9,7 @@ import { Editor } from '@tiptap/core';
 import { EditorState, TextSelection } from '@tiptap/pm/state';
 import { Node as PMNode, Slice } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
+import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
 import {
     DraftsService, DraftMeta, TranslationMeta, TranslationFull, AiEditKind, AiEditResult, PostInvite,
@@ -24,7 +25,7 @@ import { CountBadgeComponent } from '../shared/count-badge.component';
 import { GlossaryTermFormComponent } from '../shared/glossary-term-form.component';
 import { GlossaryService, GlossaryTermInput } from '../core/glossary.service';
 import { AppearancePanelComponent } from '../shared/appearance-panel.component';
-import { DatePipe, NgTemplateOutlet } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, CompressionLevel, UpdatePreview } from '../core/posts.service';
 import { PublishService, PublishAccount, PublishJob, ThreadPart } from '../core/publish.service';
 import { BillingService } from '../core/billing.service';
@@ -257,7 +258,7 @@ interface UploadItem {
 
 @Component({
     selector: 'app-editor',
-    imports: [IconComponent, BrandIconComponent, FormsModule, DatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent, AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent, CountBadgeComponent, GlossaryTermFormComponent],
+    imports: [IconComponent, BrandIconComponent, FormsModule, ZonedDatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent, AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent, CountBadgeComponent, GlossaryTermFormComponent],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
 })

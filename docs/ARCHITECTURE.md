@@ -112,6 +112,25 @@ Three jobs, registered in `Program.cs`:
 - `SnapshotChannelStatsJob` — daily at 04:00 UTC (cron `0 0 4 * * ?`), records `ChannelStatSnapshot`
 - `DowngradeExpiredPlansJob` — hourly, downgrades lapsed paid plans back to Free
 
+## Time: UTC on the wire, Pacific on the page (ADR-115)
+
+The server stores and transports instants in UTC — `DateTime.UtcNow` everywhere, file times as
+`LastWriteTimeUtc`, and `UtcDateTimeConverter` guarantees every `DateTime` leaves the API as UTC with
+a trailing `Z`. That converter is not cosmetic: SQLite cannot store `DateTimeKind`, so EF returns
+`Unspecified` for values that are UTC in fact, they serialized without a suffix, and a browser reads
+an offset-less timestamp as **local time** — the app was showing times seven hours out everywhere the
+one hand-rolled `utcDate()` helper had not been applied.
+
+Everything a human reads is rendered in one display zone, named once per side:
+`Consts.General.DisplayTimeZone` (backend, used through `CedarClerk.Core.DisplayTime` and the
+`…Local` wrappers on `BlogDateFormatter`) and `DISPLAY_TIME_ZONE` in `core/display-time.ts` (frontend,
+used through the `zonedDate` pipe, which replaced every `| date:`). It is `America/Los_Angeles` rather
+than a fixed −8 because Los Angeles is on PDT for most of the year, and the blog labels the zone
+(`PDT`/`PST`) while the app does not — readers are worldwide, the operator is not. Machine-facing
+timestamps stay UTC: RSS `pubDate`, `<time datetime="…Z">`, and every API field.
+
+When timezones become per-user, those two constants are the place that changes.
+
 ## `.cedar` file format
 
 A zip container (chosen 08.07.2026 over base64-in-JSON, which would have cost +33% size) — analogous to `.docx`/`.epub`. Contains `document.json` (`{ formatVersion, meta: {...}, doc: <TipTap JSON> }`) plus an `assets/` folder with original media files. `CedarPackage` (Core) handles roundtrip/corrupt-zip/version cases, covered by unit tests. Export/import guards against path-traversal and zip-bombs (`DraftEndpoints` import path). Translations are **not** currently included in `.cedar` export (deliberate, not yet done).

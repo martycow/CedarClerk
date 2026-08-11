@@ -39,8 +39,14 @@ public class HeaderSlotRendererTests
     [Fact]
     public void PublishedDate_formats_the_date_and_returns_null_when_unpublished()
     {
-        var ctx = Empty with { PublishedAt = new DateTime(2026, 7, 17) };
+        // The context carries the UTC instant; the slot prints it in the display zone (ADR-115).
+        var ctx = Empty with { PublishedAt = new DateTime(2026, 7, 17, 21, 0, 0, DateTimeKind.Utc) };
         Assert.Equal(new HeaderSlotValue("17 Jul 2026", null), HeaderSlotRenderer.Render(HeaderSlotType.PublishedDate, ctx));
+
+        // 03:00 UTC is the previous evening here, and the date has to say so rather than jump ahead.
+        var afterMidnightUtc = Empty with { PublishedAt = new DateTime(2026, 7, 17, 3, 0, 0, DateTimeKind.Utc) };
+        Assert.Equal(new HeaderSlotValue("16 Jul 2026", null), HeaderSlotRenderer.Render(HeaderSlotType.PublishedDate, afterMidnightUtc));
+
         Assert.Null(HeaderSlotRenderer.Render(HeaderSlotType.PublishedDate, Empty));
     }
 

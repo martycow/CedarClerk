@@ -33,6 +33,11 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
   script/plot writers, budget maths. Plus `T-127` — whether itch.io/Steam/IndieDB/LinkedIn even
   offer write APIs, which is research before scoping.
 - [x] **0.10.5 is live** on the droplet (health-checked 11.08.2026, blog 200).
+- [x] **Times are Pacific on every surface** (0.10.6, ADR-115) — and the app stopped being seven hours
+  out: the server's timestamps reached the browser without a `Z`, so UTC was read as local everywhere
+  the one `utcDate()` helper had not been applied. A JSON converter fixes the wire, a `zonedDate` pipe
+  replaced all 42 `| date:` usages, and the blog names the zone (`14:05 PDT`) since its readers are not
+  all here. Scheduling **input** still reads the browser's zone — noted in the ADR, not done.
 - [ ] **Two things the move left open, both needing your sudo password:**
   `sudo systemctl enable cedarclerk` (`T-143` — the unit is `disabled`, so a DigitalOcean maintenance
   reboot leaves the site down until someone notices), and a nightly `sqlite3 .backup` (`T-071` — the

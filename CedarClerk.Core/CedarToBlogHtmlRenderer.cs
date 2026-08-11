@@ -329,7 +329,7 @@ public static class CedarToBlogHtmlRenderer
         var publishedLine = publishedAt is { } p
             // T-094 — the third date on this page, missed when the other two were fixed: it printed
             // "1 Aug 2026" under a Russian post. Same formatter as the rest of the blog now.
-            ? $"<div class=\"comment-published-line\">{(lang == "en" ? "Post published" : "Пост опубликован")}: {BlogDateFormatter.DateTimeShort(p, lang)}</div>"
+            ? $"<div class=\"comment-published-line\">{(lang == "en" ? "Post published" : "Пост опубликован")}: {BlogDateFormatter.DateTimeLocal(p, lang)}</div>"
             : "";
 
         return $"""
@@ -537,13 +537,17 @@ public static class CedarToBlogHtmlRenderer
     // one inside the text, and it follows the page's language for the same reason). The weekday
     // stays invariant: it is three letters and adding nine more month tables for it is not the
     // trade this needs.
-    private static string FormatDateTime(DateTime dt, string format, string lang = "ru")
+    private static string FormatDateTime(DateTime utc, string format, string lang = "ru")
     {
+        // The node stores a unix timestamp, so this is a real instant and gets the same treatment as
+        // every other time on the page (ADR-115): shown in the display zone, and named as such
+        // whenever a clock time is part of it.
+        var dt = DisplayTime.ToZone(utc);
         var parts = new List<string>();
         if (format.Contains('w')) parts.Add(dt.ToString("ddd", CultureInfo.InvariantCulture));
         if (format.Contains('D')) parts.Add(BlogDateFormatter.Date(dt, lang));
-        if (format.Contains('T')) parts.Add(dt.ToString("HH:mm", CultureInfo.InvariantCulture));
-        return parts.Count > 0 ? string.Join(' ', parts) : BlogDateFormatter.DateTimeShort(dt, lang);
+        if (format.Contains('T')) parts.Add($"{dt.ToString("HH:mm", CultureInfo.InvariantCulture)} {DisplayTime.Abbreviation(utc)}");
+        return parts.Count > 0 ? string.Join(' ', parts) : BlogDateFormatter.DateTimeLocal(utc, lang);
     }
 
     private static bool IsGifSrc(string src) =>

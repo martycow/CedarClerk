@@ -170,7 +170,7 @@ components below also appear on comfortable screens.-->
                 </div>
                 }
                 @if (!tight()) {
-                <div class="right">{{ d.updatedAt | date:'d MMM, HH:mm' }}</div>
+                <div class="right">{{ d.updatedAt | zonedDate:'d MMM, HH:mm' }}</div>
                 }
                 <div class="row-actions">
                     <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate" [attr.aria-label]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">
@@ -221,7 +221,7 @@ components below also appear on comfortable screens.-->
                 </div>
                 }
                 <div class="drafts-card-foot">
-                    <span>{{ d.updatedAt | date:'d MMM, HH:mm' }}</span>
+                    <span>{{ d.updatedAt | zonedDate:'d MMM, HH:mm' }}</span>
                     <span class="row-actions">
                         <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate" [attr.aria-label]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">
                             <app-icon name="layout" size="sm"></app-icon>

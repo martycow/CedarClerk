@@ -63,7 +63,7 @@
                             @for (doc of recentOf(type); track doc.id) {
                                 <button class="doc-row" (click)="openDocument(doc)" [title]="t().projects.openDocument">
                                     <span class="doc-title">{{ doc.title }}</span>
-                                    <span class="doc-meta">{{ doc.updatedAt | date:'d MMM, HH:mm' }}</span>
+                                    <span class="doc-meta">{{ doc.updatedAt | zonedDate:'d MMM, HH:mm' }}</span>
                                 </button>
                             } @empty {
                                 <p class="none-yet">{{ t().projects.noDocumentsOfType }}</p>
@@ -115,7 +115,7 @@
                                     @if (task.dueAt) {
                                         <!-- Only the date turns red, never the whole row. -->
                                         <span class="due" [class.overdue]="overdue(task)">
-                                            {{ task.dueAt | date:'d MMM' }}@if (overdue(task)) {<span> · {{ t().projects.tasks.overdue }}</span>}
+                                            {{ task.dueAt | zonedDate:'d MMM' }}@if (overdue(task)) {<span> · {{ t().projects.tasks.overdue }}</span>}
                                         </span>
                                     } @else {
                                         <span class="due none">{{ t().projects.tasks.noDueDate }}</span>
@@ -156,7 +156,7 @@
                                     {{ t().projects.planner.progress(s.doneCount, s.taskCount) }}
                                     <span class="dot">·</span>
                                 }
-                                {{ t().projects.planner.endsOn }} {{ s.endsAt | date:'d MMM' }}
+                                {{ t().projects.planner.endsOn }} {{ s.endsAt | zonedDate:'d MMM' }}
                             </p>
                             @if (s.overdueCount) {
                                 <p class="overdue-note">{{ t().projects.planner.overdueInside(s.overdueCount) }}</p>

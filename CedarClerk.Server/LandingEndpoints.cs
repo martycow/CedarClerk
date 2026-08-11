@@ -292,8 +292,8 @@ public static class LandingEndpoints
                     <div class="about">
                         <p>{T("Cedar Clerk пишет Марти — разработчик игр, который устал вести канал и блог как две отдельные работы.",
                               "Cedar Clerk is built by Marty, a game developer who got tired of running a channel and a blog as two separate jobs.")}</p>
-                        <p>{T("Это инструмент, сделанный сначала для себя: он крутится на одной Raspberry Pi, хранит тексты в открытом формате и умеет отдать их обратно файлом в любой момент.",
-                              "It is a tool built for its own author first: it runs on a single Raspberry Pi, keeps posts in an open format, and will hand them back as a file whenever you ask.")}</p>
+                        <p>{T("Это инструмент, сделанный сначала для себя: он крутится на одном маленьком сервере, хранит тексты в открытом формате и умеет отдать их обратно файлом в любой момент.",
+                              "It is a tool built for its own author first: it runs on one small server, keeps posts in an open format, and will hand them back as a file whenever you ask.")}</p>
                     </div>
                 </section>
             </div>

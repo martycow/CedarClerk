@@ -4,7 +4,7 @@ import { catchError, tap, throwError } from 'rxjs';
 import { DebugLogService } from './debug-log.service';
 
 // Records every HttpClient request/response into DebugLogService for the bottom debug console
-// panel — the only way (short of SSH-ing into the Pi) to see the raw body of a failed request,
+// panel — the only way (short of SSH-ing into the server) to see the raw body of a failed request,
 // e.g. a Telegram publish rejection with its full server-side error text.
 export const debugLogInterceptor: HttpInterceptorFn = (req, next) => {
     const log = inject(DebugLogService);

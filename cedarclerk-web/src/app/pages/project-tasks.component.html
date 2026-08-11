@@ -111,7 +111,7 @@
                                     </span>
                                     @if (task.dueAt) {
                                         <span class="due" [class.overdue]="overdue(task)">
-                                            {{ task.dueAt | date:'d MMM' }}@if (overdue(task)) {<span> · {{ t().projects.tasks.overdue }}</span>}
+                                            {{ task.dueAt | zonedDate:'d MMM' }}@if (overdue(task)) {<span> · {{ t().projects.tasks.overdue }}</span>}
                                         </span>
                                     }
                                     @if (sprintOf(task); as s) {
@@ -166,7 +166,7 @@
                         </div>
                         <div class="due" [class.overdue]="overdue(task)">
                             @if (task.dueAt) {
-                                {{ task.dueAt | date:'d MMM' }}@if (overdue(task)) {<span> · {{ t().projects.tasks.overdue }}</span>}
+                                {{ task.dueAt | zonedDate:'d MMM' }}@if (overdue(task)) {<span> · {{ t().projects.tasks.overdue }}</span>}
                             } @else { <span class="none">—</span> }
                         </div>
                         <div class="links-cell">
@@ -308,12 +308,12 @@
             </div>
 
             <p class="stamp">
-                {{ t().projects.tasks.created }} {{ task.createdAt | date:'d MMM, HH:mm' }}
+                {{ t().projects.tasks.created }} {{ task.createdAt | zonedDate:'d MMM, HH:mm' }}
                 <span class="dot">·</span>
-                {{ t().projects.tasks.updated }} {{ task.updatedAt | date:'d MMM, HH:mm' }}
+                {{ t().projects.tasks.updated }} {{ task.updatedAt | zonedDate:'d MMM, HH:mm' }}
                 @if (task.completedAt) {
                     <span class="dot">·</span>
-                    {{ t().projects.tasks.completed }} {{ task.completedAt | date:'d MMM, HH:mm' }}
+                    {{ t().projects.tasks.completed }} {{ task.completedAt | zonedDate:'d MMM, HH:mm' }}
                 }
             </p>
 

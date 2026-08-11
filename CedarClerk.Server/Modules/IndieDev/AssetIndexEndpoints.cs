@@ -10,7 +10,7 @@ namespace CedarClerk.Server.Modules.IndieDev;
 // ## Why there is a second flag on top of the module's
 //
 // These endpoints make the SERVER walk the SERVER's disk on a tenant's say-so. On a laptop that is
-// the whole point; on the Pi, which serves every account from one process, it is a stranger being
+// the whole point; on the server, which serves every account from one process, it is a stranger being
 // able to enumerate `/etc` and read back the filenames. So indexing is off unless
 // `Cedar:AssetIndex:Enabled` says otherwise, and the only thing that says otherwise is the desktop
 // shell, which sets it for its own single-user process.
@@ -35,7 +35,7 @@ public static class AssetIndexEndpoints
     private static readonly string[] PreviewableExtensions =
         ["png", "jpg", "jpeg", "gif", "bmp", "webp", "tga", "tif", "tiff", "pbm", "qoi", "blend", "blend1", "blend2"];
 
-    /// <summary>Whether this installation may walk its own filesystem. False on the Pi, by omission.</summary>
+    /// <summary>Whether this installation may walk its own filesystem. False in production, by omission.</summary>
     public static bool IndexingEnabled(IConfiguration config) => config.IsOn(EnabledKey);
 
     public static void MapAssetIndexEndpoints(this WebApplication app)

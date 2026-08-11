@@ -16,7 +16,7 @@
                         }
                         @if (p.indexedAt) {
                             <span class="dot">·</span>
-                            <span>{{ t().projects.assets.indexedAt }} {{ p.indexedAt | date:'d MMM, HH:mm' }}</span>
+                            <span>{{ t().projects.assets.indexedAt }} {{ p.indexedAt | zonedDate:'d MMM, HH:mm' }}</span>
                         }
                         @if (p.missingCount > 0) {
                             <span class="dot">·</span>
@@ -177,7 +177,7 @@
                                 }
                             </span>
                             <span class="tile-name" [title]="a.relativePath">{{ a.fileName }}</span>
-                            <span class="tile-meta">{{ detailsOf(a) }} · {{ a.modifiedAt | date:'d MMM' }}</span>
+                            <span class="tile-meta">{{ detailsOf(a) }} · {{ a.modifiedAt | zonedDate:'d MMM' }}</span>
                         </button>
                     }
                 </div>
@@ -196,7 +196,7 @@
                                 <span class="path" [title]="a.relativePath">{{ a.relativePath }}</span>
                             </div>
                             <div>{{ t().projects.assets.kindOne[a.kind] }}</div>
-                            <div class="right">{{ detailsOf(a) }} · {{ a.modifiedAt | date:'d MMM, HH:mm' }}</div>
+                            <div class="right">{{ detailsOf(a) }} · {{ a.modifiedAt | zonedDate:'d MMM, HH:mm' }}</div>
                             <div [class.danger]="!!a.missingSince" [class.ok]="!a.missingSince">
                                 {{ a.missingSince ? t().projects.assets.notFoundAtPath : t().projects.assets.onDisk }}
                             </div>
@@ -266,13 +266,13 @@
                     <dt>{{ t().projects.assets.colType }}</dt>
                     <dd>{{ t().projects.assets.kindOne[a.kind] }}</dd>
                     <dt>{{ t().projects.assets.colDetails }}</dt>
-                    <dd>{{ detailsOf(a) }} · {{ a.modifiedAt | date:'d MMM y, HH:mm' }}</dd>
+                    <dd>{{ detailsOf(a) }} · {{ a.modifiedAt | zonedDate:'d MMM y, HH:mm' }}</dd>
                     <dt>{{ t().projects.assets.colStatus }}</dt>
                     <dd [class.danger]="!!a.missingSince" [class.ok]="!a.missingSince">
                         {{ a.missingSince ? t().projects.assets.notFoundAtPath : t().projects.assets.onDisk }}
                     </dd>
                     <dt>{{ t().projects.assets.indexedLabel }}</dt>
-                    <dd>{{ a.indexedAt | date:'d MMM, HH:mm' }}</dd>
+                    <dd>{{ a.indexedAt | zonedDate:'d MMM, HH:mm' }}</dd>
                 </dl>
 
                 @if (a.missingSince) { <p class="hint">{{ t().projects.assets.missingHint }}</p> }

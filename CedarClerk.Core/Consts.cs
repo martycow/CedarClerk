@@ -2,7 +2,7 @@
 
 public static class Consts
 {
-    public const string CurrentVersion = "0.10.5";
+    public const string CurrentVersion = "0.10.6";
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
 
@@ -67,6 +67,16 @@ public static class Consts
     {
         // Not a secret — just enough to avoid storing raw visitor IPs directly.
         public const string VisitorHashSalt = "cedar-clerk-visitor-v1";
+
+        // Every time printed for a human is in this zone (ADR-115). The server itself runs in UTC
+        // and always will; this is display only. A named zone, not a fixed -8, because Los Angeles
+        // is on PDT from March to November and a fixed offset would be an hour wrong for most of
+        // the year. The frontend keeps the same value in `core/display-time.ts` — the two constants
+        // are the place a per-user timezone would replace.
+        public const string DisplayTimeZone = "America/Los_Angeles";
+        public const string DisplayTimeZoneWindows = "Pacific Standard Time";
+        public const string DisplayTimeZoneStandard = "PST";
+        public const string DisplayTimeZoneDaylight = "PDT";
         
         public const string MainHostCfg = "Cedar:MainHost";
         public const string BlogHostCfg = "Cedar:BlogHost";
@@ -85,19 +95,19 @@ public static class Consts
         public const string DesktopModeCfg = "Cedar:Desktop";
 
         // ADR-108 — another Cedar Clerk installation that decides WHO the author is. Set only on
-        // the desktop, pointing at the Pi; absent on the Pi itself, which would otherwise be
+        // the desktop, pointing at the production server; absent there, which would otherwise be
         // delegating identity to itself. Data stays wherever it already is — this is identity, not
         // a proxy.
         public const string UpstreamAuthCfg = "Cedar:Auth:Upstream";
 
         // ADR-104 — where Kestrel listens, when something needs to say. Empty everywhere except the
         // desktop shell, which takes a free port from the OS and passes it in: two instances on one
-        // machine cannot both hold 8080, and the Pi's port is fixed by the tunnel config anyway.
+        // machine cannot both hold 8080, and production's port is fixed by the tunnel config anyway.
         public const string UrlsCfg = "Cedar:Urls";
 
         // The account granted admin rights on startup (IF2). Config-driven on purpose: the first
         // admin can't be made through the admin panel, and this works on a fresh database or a
-        // restored backup without hand-editing SQL on the Pi.
+        // restored backup without hand-editing SQL on the server.
         public const string AdminEmailCfg = "Cedar:AdminEmail";
 
         public const string ProviderKeyCfg = "Cedar:Translate:Provider";

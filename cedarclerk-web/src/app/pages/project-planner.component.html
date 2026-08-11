@@ -48,7 +48,7 @@
                             <span class="sprint-number">S{{ s.number }}</span>
                             <span class="sprint-name">{{ s.name }}</span>
                             <span class="sprint-dates">
-                                {{ s.startsAt | date:'d MMM' }} – {{ s.endsAt | date:'d MMM' }}
+                                {{ s.startsAt | zonedDate:'d MMM' }} – {{ s.endsAt | zonedDate:'d MMM' }}
                             </span>
                             <span class="status-badge"
                                   [class.tone-accent]="s.state === 'current'"
@@ -110,7 +110,7 @@
                                 </span>
                                 <span class="due" [class.overdue]="overdue(task)">
                                     @if (task.dueAt) {
-                                        {{ task.dueAt | date:'d MMM' }}@if (overdue(task)) {<span> · {{ t().projects.tasks.overdue }}</span>}
+                                        {{ task.dueAt | zonedDate:'d MMM' }}@if (overdue(task)) {<span> · {{ t().projects.tasks.overdue }}</span>}
                                     } @else { <span class="none">—</span> }
                                 </span>
                             </div>

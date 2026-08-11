@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit, inject, input, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { CommentsService, AllCommentsComment, DraftReactions } from '../core/comments.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -15,7 +15,7 @@ import { IconComponent } from '../shared/icon.component';
 // around it.
 @Component({
     selector: 'app-comments',
-    imports: [IconComponent, DatePipe],
+    imports: [IconComponent, ZonedDatePipe],
     templateUrl: 'comments.component.html',
     styleUrls: ['comments.component.css']
 })

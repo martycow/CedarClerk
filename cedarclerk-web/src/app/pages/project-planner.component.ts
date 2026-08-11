@@ -1,7 +1,7 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { ProjectDetail, ProjectsService } from '../core/projects.service';
@@ -27,7 +27,7 @@ interface SprintGroup {
 // pretending work vanished with the date is the one thing this screen must not do.
 @Component({
     selector: 'app-project-planner',
-    imports: [IconComponent, DatePipe, FormsModule, RouterLink, PageHeaderComponent, ModalComponent],
+    imports: [IconComponent, ZonedDatePipe, FormsModule, RouterLink, PageHeaderComponent, ModalComponent],
     templateUrl: 'project-planner.component.html',
     styleUrls: ['project-planner.component.css'],
 })
