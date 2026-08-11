@@ -294,12 +294,34 @@ if ($Rollback) {
     $script:TotalSteps = 2
     Start-Step 'Rollback' 'putting app.prev back'
 
-    $probe = Invoke-Remote "test -d '$PrevDir' && echo yes || echo no"
-    if ($probe.Output -ne 'yes') {
+    # app.prev is whatever was in app/ at the last swap, and that is not automatically a good release:
+    # the first run after a failed scp deploy files it away half-copied. Rolling back onto that would
+    # be a step backwards dressed as a recovery, so it has to look like a whole app first.
+    $probe = Invoke-Remote @"
+test -d '$PrevDir' || { echo NOPREV; exit 0; }
+test -f '$PrevDir/CedarClerk.Server.dll' || echo NODLL
+test -f '$PrevDir/wwwroot/index.html' || echo NOWWWROOT
+echo "FILES=`$(find '$PrevDir' -type f | wc -l)"
+"@
+    if ($probe.Output -match 'NOPREV') {
         Stop-Deploy 'There is no previous release to roll back to.' `
             -State @("$PrevDir does not exist on the server.") `
             -Hints @('Deploy a known-good commit instead:  git checkout <tag>; .\Scripts\deploy.ps1')
     }
+    if ($probe.Output -match 'NODLL|NOWWWROOT') {
+        $missing = @()
+        if ($probe.Output -match 'NODLL') { $missing += 'CedarClerk.Server.dll' }
+        if ($probe.Output -match 'NOWWWROOT') { $missing += 'wwwroot/index.html' }
+        if (-not $Force) {
+            Stop-Deploy 'The previous release is incomplete - rolling back to it would break the site.' `
+                -State @("$PrevDir is missing: $($missing -join ', ')",
+                         'It is most likely the half-copied directory a failed deploy left behind.') `
+                -Hints @('git checkout <a tag that worked>; .\Scripts\deploy.ps1',
+                         '.\Scripts\deploy.ps1 -Rollback -Force    # if you know better')
+        }
+        Write-Warn "-Force: rolling back onto app.prev even though it is missing $($missing -join ', ')"
+    }
+    Write-Note "app.prev holds $([regex]::Match($probe.Output, 'FILES=(\d+)').Groups[1].Value) files and looks complete"
 
     $swap = Invoke-Remote @"
 set -e
