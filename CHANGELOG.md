@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.10.0 — the indie-gamedev turn (10.08.2026)
+
+The middle number moved for the first time since Phase 11, and for the reason CLAUDE.md reserves it: this is not a list of fixes, it changes what the app is. A post stopped being the only kind of thing Cedar Clerk holds.
+
+**What the release contains**, in the order it was built — each with its own entry below:
+
+- **Phase 13 scoped on paper first** (ADR-101…107): module not fork, document type as a column, a project that is never empty, Electron over the existing server, no cloud sync in v1, a task as its own entity, an asset index of paths rather than bytes. `Q-1` — the audience question, open since 30.07 — closed: indie game developers.
+- **Projects and document types** — `/projects`, the project dashboard, the create dialogs, built from Marty's Claude Design handoff.
+- **A desktop application** — Electron around the ordinary server, and the three build/test/deploy scripts that came with it, including a git guard that refuses to ship anything but `master`.
+- **The asset index** — a project's local files by path, never copied, with thumbnails (including `.blend`, read out of the file Blender writes them into), header metadata, and document links.
+- **One account across both** (ADR-108) — the desktop asks the Pi who you are; the data stays local, and every screen says so.
+- **Export fixes** (ADR-109) — Bluesky's advertised images were never actually sent, and a YouTube video reached the short networks as nothing at all. Both now travel.
+
+**Nothing here is deployed yet.** This is the first version of the module to reach `master`; the Pi still runs 0.9.40 until `Scripts/deploy.ps1` is run from `master`.
+
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
 ## 2026-08-10 (export) — the pictures and the video that never left (ADR-109)

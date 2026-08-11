@@ -2,7 +2,18 @@
 
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
-## Now (10.08.2026): the indie-gamedev turn — decisions written, no code yet
+## v0.10.0 is on master (10.08.2026) — not deployed
+
+Version bumped and tagged; `indiedev_module` merged into `dev` and `master` (both fast-forward, so
+the history is linear and the branch adds nothing anybody has to reconcile).
+
+- [ ] **Deploy when you want it live**: `.\Scripts\deploy.ps1` from `master`. The guard checks the
+  branch, the clean tree and the tag, so a wrong-branch deploy now refuses instead of shipping.
+- [ ] **Push** — nothing has left this machine: `git push origin master dev indiedev_module --tags`.
+- [ ] After the deploy the Pi reports `id` from `/api/auth/me`, and the desktop stops keying identity
+  by email (ADR-108's fallback). Nothing to do — it sharpens itself.
+
+## Previously (10.08.2026): the indie-gamedev turn — decisions written, no code yet
 
 Marty's brief (`_Documents_/CedarClerk/Gamedev_Focused_Rework.md`) turns the product towards indie game
 developers. This session was deliberately **documents only** — the CLAUDE.md rule is decisions before

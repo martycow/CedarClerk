@@ -4,6 +4,8 @@ Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-
 
 ## Status summary (as of 10.08.2026)
 
+**v0.10.0 — the first version carrying the indie-gamedev module.** The middle number moved because the product changed shape, not because a pile of fixes accumulated (CLAUDE.md's rule for that digit). `indiedev_module` merged into `dev` and then `master`, both fast-forward; tagged `0.10.0`. **Not deployed yet** — the Pi stays on 0.9.40 until `Scripts/deploy.ps1` runs from `master`.
+
 **Phase 13 — IndieDev Module — scoped 10.08.2026, no code yet.** Marty's brief turns the product towards indie game developers: a post becomes one document type among several, living inside a project. Seven decisions written first (ADR-101…107), scope in `docs/INDIEDEV.md`, desktop mechanics in `docs/DESKTOP.md`, design brief in `docs/indiedev-design-prompt.md`. **This also closes `Q-1`**, open since 30.07.2026 — the product has one audience now instead of four. Work happens on the `indiedev_module` branch, which the brief explicitly allows deleting if the business model doesn't hold.
 
 **Phase 10 — UI Verification Sweep — closed 31.07.2026.** The frontend has a 37-scenario Playwright smoke suite where it had nothing, the UI inventory covers the screens and the blog, and 7 defects were found of which 4 are fixed. The audit-before-redesign ordering is ADR-070. **Deployed: production is on v0.9.20** (health check 31.07) — 0.9.18 plus the two iPad fixes that followed it, both verified live by Marty.
