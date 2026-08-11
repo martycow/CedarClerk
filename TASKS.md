@@ -25,6 +25,23 @@ irreversible.
 `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` cannot move it. The desktop shell needs a free
 port, so that single line has to become configurable — the only server change the desktop requires.
 
+### Marty's export report: images and the YouTube link (ADR-109) — 10.08.2026
+
+Three separate defects behind one symptom, and the worst was the quiet one.
+
+- **Bluesky claimed four images and sent none.** The capability advertised them, the record never
+  carried an `embed`, and `uploadBlob` was never called — so the pre-flight check, which reads
+  capabilities, passed a post with pictures and delivered it without them. It uploads them now
+  (up to four, in reading order, with alt text, compressed under Bluesky's 1MB blob cap).
+- **The YouTube video vanished with no signal at all** — the node contributed nothing to the short
+  post's text and nothing to the validator. Both networks now carry the watch link, caption first.
+- **X takes no media and now says so in words** rather than "3 media items, and this network takes 0".
+
+- [ ] **Only you can finish this one**: post something with a picture to Bluesky. The list-building
+  and the text are unit-tested, but `uploadBlob` against real bsky.social needs your account.
+- [ ] **X images are still not implemented** — that is a separate mechanism and separate money per
+  post, so it was not started inside a bug report. Say if you want it scoped.
+
 ### One account for both (ADR-108) — 10.08.2026
 
 Marty's ask: sign in on the desktop against the Pi, because he had used the same address in both

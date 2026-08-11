@@ -42,6 +42,25 @@ public static class CedarPlainText
                     if (text.Length > 0) paragraphs.Add(text);
                     return;
                 }
+
+                // A YouTube node is an embed everywhere else (an iframe on the blog, a thumbnail
+                // plus a watch link on Telegram) and had no representation here at all — so a post
+                // about a video reached Bluesky and X with the video **silently missing**, which is
+                // exactly what Marty hit (10.08.2026). These networks cannot embed it either, but
+                // they can carry the link, and a link is the whole of what a viewer needs.
+                if (type == "youtube")
+                {
+                    if ((string?)obj["attrs"]?["videoId"] is { Length: > 0 } videoId)
+                    {
+                        var caption = (string?)obj["attrs"]?["caption"];
+                        var url = $"https://www.youtube.com/watch?v={videoId}";
+                        // The caption first, so a thread part reads as a sentence rather than as a
+                        // bare URL somebody has to guess the point of.
+                        paragraphs.Add(string.IsNullOrWhiteSpace(caption) ? url : $"{caption.Trim()} {url}");
+                    }
+                    return;
+                }
+
                 foreach (var (_, value) in obj) Collect(value, paragraphs);
                 return;
         }

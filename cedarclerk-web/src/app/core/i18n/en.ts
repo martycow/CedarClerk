@@ -639,7 +639,11 @@ export const en = {
             xCreditNote: (n: number) => `1 credit per post · balance: ${n}`,
             issues: {
                 'too-long': (actual: string, limit: string) => `Too long for this network: ${actual} characters against a limit of ${limit}`,
-                'too-many-media': (actual: string, limit: string) => `${actual} media items, and this network takes ${limit}`,
+                // "3 media items, and this network takes 0" is arithmetic where a sentence was
+                // needed: zero is not a smaller limit, it is a different fact (X, 10.08.2026).
+                'too-many-media': (actual: string, limit: string) => limit === '0'
+                    ? `${actual} media items — this network takes none, so they will not be sent`
+                    : `${actual} media items, and this network takes ${limit}`,
                 'image-too-large': (actual: string, limit: string) => `An image is ${actual}; this network fetches at most ${limit} — it will be compressed`,
                 'no-video': 'Video is dropped on this network',
                 'no-audio': 'Audio is dropped on this network',

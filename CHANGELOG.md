@@ -2,6 +2,20 @@
 
 Human-readable, grouped by session/date, derived from `git log` (33 commits, `6ace957`→`6065cd9`) and the richer context already captured in `docs/ROADMAP.md`/`docs/DECISIONS.md`. Not a raw commit dump — see `git log` directly for that.
 
+## 2026-08-10 (export) — the pictures and the video that never left (ADR-109)
+
+Marty reported that images and a YouTube link had not gone out to Bluesky and X. Reading the code turned one symptom into three defects, and the one that mattered most was not the visible one.
+
+**Bluesky's capability was a lie.** It advertised four images, a byte cap and alt-text support; the record it actually posted carried `text`, `facets` and `reply` and nothing else, and `uploadBlob` was never called anywhere in the file. That matters more than a missing feature: the editor's pre-flight check reads capabilities to decide what to warn about, so a post with four pictures passed every check and arrived with none of them. The app promised and silently dropped. It uploads them now — up to four, in the order a reader meets them, with alt text, compressed through the same `ImageCompressor` the Telegram path uses because Bluesky's blob cap is 1MB and almost no real screenshot fits. A picture that cannot be uploaded is skipped and logged rather than failing the publish: a post without an image is worth far more than a post that never goes out. Only the first part of a thread carries them, because repeating the same four pictures on every part is not what a thread looks like anywhere.
+
+**The YouTube video disappeared with no signal whatsoever.** A `youtube` node was unknown to `CedarPlainText`, which builds the short-post text, and unknown to `PublishValidator`, which decides what to warn about — so it contributed no link, no text and no warning. The blog embeds an iframe and Telegram sends a thumbnail plus a watch link; these two got nothing. They now carry the link, caption first so a thread part reads as a sentence rather than a bare URL. That also fixes threads, where the video used to fall out of the middle of the document.
+
+**X takes no media, which was true and badly said.** `MaxMediaItems = 0` is honest — media was never in its v1 (ADR-093) — but the warning read "3 media items, and this network takes 0", which is arithmetic where a sentence was needed. Zero is not a smaller limit; it is a different fact, and the message says so now. Implementing uploads for X is a separate mechanism and separate money per post, so it was not quietly started inside a bug report.
+
+The lesson is worth more than the three fixes: **`PublishCapabilities` is a promise the pre-flight check reads.** A gap between it and the implementation produces neither an error nor a warning — it produces content that silently disappears. A capability has to arrive with the code that honours it, never before.
+
+`dotnet test` **711/711**, frontend 11/11, contrast 0, smoke 53/53. Still unverified and flagged rather than glossed: a real upload to bsky.social, which needs Marty's account.
+
 ## 2026-08-10 (one account) — the desktop asks the Pi who you are (ADR-108)
 
 Marty had signed in on the desktop with the same address he uses on the website and could see what was coming: two accounts, one email, nothing saying they were different. So the desktop now **asks the Pi who you are** — same email, same password, one identity — while the data stays on the machine.

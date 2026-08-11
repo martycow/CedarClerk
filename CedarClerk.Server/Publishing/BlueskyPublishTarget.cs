@@ -25,6 +25,7 @@ public class BlueskyPublishTarget(
     PublishTargetSecrets secrets,
     IHttpClientFactory httpFactory,
     IConfiguration cfg,
+    MediaPaths media,
     ILogger<BlueskyPublishTarget> logger) : IPublishTarget
 {
     public const string DefaultService = "https://bsky.social";
@@ -114,6 +115,19 @@ public class BlueskyPublishTarget(
                 // available and Bluesky does not require it to agree with theirs.
                 ["createdAt"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
             };
+
+            // 10.08.2026 — until today this record carried text and nothing else, while the
+            // capability above advertised four images. The editor's pre-flight reads capabilities,
+            // so a post with pictures passed every check and arrived with none of them: the app
+            // promised and silently dropped. Attaching them is what makes the promise true.
+            //
+            // Only the first part of a thread gets them: repeating the same four pictures on every
+            // part is not what "a thread about a post" looks like anywhere.
+            if (request.Part is null or { Index: 0 })
+            {
+                var embed = await BuildImageEmbedAsync(http, request, ct);
+                if (embed is not null) record["embed"] = embed;
+            }
 
             if (post.Facets.Count > 0)
             {
@@ -245,4 +259,103 @@ public class BlueskyPublishTarget(
 
     public sealed record SessionResponse(string Did, string Handle, string AccessJwt, string RefreshJwt);
     private sealed record CreateRecordResponse(string? Uri, string? Cid);
+
+    /// <summary>
+    /// Uploads up to <see cref="PublishCapabilities.MaxMediaItems"/> of the document's images as
+    /// blobs and returns the embed that references them, or null when there is nothing to attach.
+    ///
+    /// Never fails the publish: a post that goes out without a picture is worth much more than one
+    /// that does not go out at all, and the outcome is logged either way.
+    /// </summary>
+    private async Task<JsonObject?> BuildImageEmbedAsync(HttpClient http, PublishRequest request, CancellationToken ct)
+    {
+        var refs = CedarImageRefs.Collect(request.CedarJson);
+        if (refs.Count == 0) return null;
+
+        var images = new JsonArray();
+        foreach (var image in refs)
+        {
+            if (images.Count >= Capabilities.MaxMediaItems) break;
+
+            // Only what is on this server's disk. An external URL cannot be uploaded from here, and
+            // a post referencing bytes we never sent would be a broken picture on somebody's feed.
+            var fileName = CedarImageRefs.LocalFileName(image.Src);
+            if (fileName is null) continue;
+
+            var path = Path.Combine(media.Dir, fileName);
+            if (!File.Exists(path)) continue;
+
+            var bytes = await File.ReadAllBytesAsync(path, ct);
+            var contentType = ContentTypeOf(fileName);
+
+            // Bluesky caps a blob at 1MB — far below what a camera or a screenshot produces, so
+            // most real pictures need the same compression Telegram's path already does.
+            if (bytes.LongLength > (Capabilities.MaxImageBytes ?? long.MaxValue))
+            {
+                var compressed = ImageCompressor.TryCompressJpeg(bytes, Capabilities.MaxImageBytes!.Value, logger);
+                if (compressed is null)
+                {
+                    logger.LogWarning("Skipping {File} for Bluesky: {Bytes} bytes and it would not compress under the cap",
+                        fileName, bytes.LongLength);
+                    continue;
+                }
+                bytes = compressed;
+                contentType = "image/jpeg";
+            }
+
+            var blob = await UploadBlobAsync(http, bytes, contentType, ct);
+            if (blob is null)
+            {
+                logger.LogWarning("Bluesky refused the blob for {File}; the post goes out without it", fileName);
+                continue;
+            }
+
+            images.Add(new JsonObject
+            {
+                // Alt text is supported and expected here (Capabilities.SupportsAltText). Empty
+                // rather than absent when the author wrote none: the field is required.
+                ["alt"] = image.Alt ?? "",
+                ["image"] = blob,
+            });
+        }
+
+        return images.Count == 0
+            ? null
+            : new JsonObject { ["$type"] = "app.bsky.embed.images", ["images"] = images };
+    }
+
+    /// <summary>The blob reference Bluesky hands back, ready to be embedded verbatim.</summary>
+    private async Task<JsonNode?> UploadBlobAsync(HttpClient http, byte[] bytes, string contentType, CancellationToken ct)
+    {
+        try
+        {
+            using var content = new ByteArrayContent(bytes);
+            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            using var response = await http.PostAsync("/xrpc/com.atproto.repo.uploadBlob", content, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning("uploadBlob answered {Status}: {Body}",
+                    (int)response.StatusCode, await response.Content.ReadAsStringAsync(ct));
+                return null;
+            }
+
+            var body = await response.Content.ReadFromJsonAsync<JsonNode>(cancellationToken: ct);
+            // { "blob": { "$type": "blob", "ref": {...}, "mimeType": ..., "size": ... } } — the
+            // inner object is what an embed references, unchanged.
+            return body?["blob"]?.DeepClone();
+        }
+        catch (Exception e)
+        {
+            logger.LogWarning(e, "uploadBlob failed");
+            return null;
+        }
+    }
+
+    private static string ContentTypeOf(string fileName) => Path.GetExtension(fileName).ToLowerInvariant() switch
+    {
+        ".png" => "image/png",
+        ".gif" => "image/gif",
+        ".webp" => "image/webp",
+        _ => "image/jpeg",
+    };
 }

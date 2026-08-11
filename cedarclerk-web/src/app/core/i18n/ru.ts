@@ -614,7 +614,9 @@ export const ru: Dict = {
             xCreditNote: (n: number) => `1 кредит за пост · баланс: ${n}`,
             issues: {
                 'too-long': (actual: string, limit: string) => `Слишком длинно для этой сети: ${actual} символов при лимите ${limit}`,
-                'too-many-media': (actual: string, limit: string) => `Медиа: ${actual}, а сеть принимает ${limit}`,
+                'too-many-media': (actual: string, limit: string) => limit === '0'
+                    ? `Медиа: ${actual} — эта сеть их не принимает вовсе, они не уйдут`
+                    : `Медиа: ${actual}, а сеть принимает ${limit}`,
                 'image-too-large': (actual: string, limit: string) => `Картинка весит ${actual}, сеть забирает не больше ${limit} — будет сжата`,
                 'no-video': 'Видео на этой сети не отправится',
                 'no-audio': 'Аудио на этой сети не отправится',
