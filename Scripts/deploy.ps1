@@ -17,10 +17,14 @@ $CedarClerkDir = Split-Path $PSScriptRoot -Parent
 $WebDir = Join-Path $CedarClerkDir "cedarclerk-web"
 $PublishDir = Join-Path $CedarClerkDir "publish"
 
+# The health check proves the DEPLOYED version answers, not merely that something does — the
+# version comes from the same Consts.cs that was just built.
+$expected_version = (Select-String -Path (Join-Path $CedarClerkDir "CedarClerk.Core\Consts.cs") -Pattern 'CurrentVersion = "([^"]+)"').Matches[0].Groups[1].Value
+
 Write-Host "`n+==---===---===---===---===---===+" -ForegroundColor Green
-Write-Host "`n|     Cedar Clerk Deployment     |" -ForegroundColor Green
+Write-Host "`n|     Cedar Clerk $expected_version Deployment" -ForegroundColor Green
 Write-Host "`n+==---===---===---===---===---===+" -ForegroundColor Green
-Write-Host "`n|   " $CloudHost "   |"             -ForegroundColor Green
+Write-Host "`n|   " $CloudHost                    -ForegroundColor Green
 Write-Host "`n+==---===---===---===---===---===+" -ForegroundColor Green
 
 ### GIT GUARD (T-138)
@@ -65,7 +69,7 @@ Copy-Item (Join-Path $WebDir "dist\cedarclerk-web\browser") (Join-Path $PublishD
 ### Stopping service
 # Every remote step checks its exit code: a failed ssh/scp used to fall through to the health
 # check, which the still-running OLD version answered — a green "DEPLOYED OK" over no deploy.
-Write-Host "`n=== [4/7] Stopping CedarClerk service on Raspberry Pi ===" -ForegroundColor Cyan
+Write-Host "`n=== [4/7] Stopping CedarClerk service on $CloudHost ===" -ForegroundColor Cyan
 ssh $CloudHost "sudo systemctl stop cedarclerk"
 if ($LASTEXITCODE -ne 0)
 {
@@ -73,7 +77,7 @@ if ($LASTEXITCODE -ne 0)
 }
 
 ### Copying files to Raspberry Pi
-Write-Host "`n=== [5/7] Copying files to Raspberry Pi ===" -ForegroundColor Cyan
+Write-Host "`n=== [5/7] Copying files to $CloudHost ===" -ForegroundColor Cyan
 scp -r (Join-Path $PublishDir "*") "${CloudHost}:${AppDir}/"
 if ($LASTEXITCODE -ne 0)
 {
@@ -81,7 +85,7 @@ if ($LASTEXITCODE -ne 0)
 }
 
 ### Launching service
-Write-Host "`n=== [6/7] Starting CedarClerk service on Raspberry Pi ===" -ForegroundColor Cyan
+Write-Host "`n=== [6/7] Starting CedarClerk service on $CloudHost ===" -ForegroundColor Cyan
 ssh $CloudHost "sudo systemctl start cedarclerk"
 if ($LASTEXITCODE -ne 0)
 {
@@ -104,18 +108,14 @@ for ($i = 0; $i -lt 30; $i++)
     catch {}
 }
 
-# The health check proves the DEPLOYED version answers, not merely that something does — the
-# version comes from the same Consts.cs that was just built.
-$expected = (Select-String -Path (Join-Path $CedarClerkDir "CedarClerk.Core\Consts.cs") -Pattern 'CurrentVersion = "([^"]+)"').Matches[0].Groups[1].Value
-
-if ($resp -and $resp.version -eq $expected)
+if ($resp -and $resp.version -eq $expected_version)
 {
     Write-Host "`nDEPLOYED OK:" -ForegroundColor Green
     $resp | ConvertTo-Json
 }
 elseif ($resp)
 {
-    Write-Host "`nVERSION MISMATCH - the server answers v$($resp.version), the build is v${expected}: the old binaries are still running" -ForegroundColor Red
+    Write-Host "`nVERSION MISMATCH - the server answers v$($resp.version), the build is v${expected_version}: the old binaries are still running" -ForegroundColor Red
     exit 1
 }
 else
