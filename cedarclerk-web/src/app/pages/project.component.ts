@@ -15,6 +15,7 @@ import {
     projectInitials,
 } from '../core/projects.service';
 import { isOverdue } from '../core/tasks.service';
+import { sprintProgress } from '../core/sprints.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
 import { PageHeaderComponent } from '../shared/page-header.component';
@@ -52,6 +53,7 @@ export class ProjectComponent {
     readonly projectIcons = PROJECT_TYPE_ICONS;
     readonly initials = projectInitials;
     readonly overdue = isOverdue;
+    readonly sprintPercent = sprintProgress;
 
     project = signal<ProjectDetail | null>(null);
     loading = signal(true);

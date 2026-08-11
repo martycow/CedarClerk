@@ -42,6 +42,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<AssetEntry> AssetEntries => Set<AssetEntry>();
     public DbSet<EntityLink> EntityLinks => Set<EntityLink>();
     public DbSet<GameTask> GameTasks => Set<GameTask>();
+    public DbSet<Sprint> Sprints => Set<Sprint>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -108,6 +109,9 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         // Same reason as the line above — EF ignores the property initialiser, and a project with an
         // empty type would fall through StarterDocumentType's unknown branch.
         builder.Entity<Project>().Property(p => p.ProjectType).HasDefaultValue(ProjectTypes.FullGame);
+        // Same lesson again (T-120): EF ignores the property initialiser, so without this the
+        // ADD COLUMN backfills every existing project with 0 and their first sprint would be "S0".
+        builder.Entity<Project>().Property(p => p.NextSprintNumber).HasDefaultValue(1);
         // T-122 — the scan's upsert key: a file is the same file if it is at the same relative path
         // in the same project. Unique, so two scans racing cannot double a row.
         builder.Entity<AssetEntry>()
@@ -136,6 +140,10 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         // unpublishable (T-120, INDIEDEV.md). Declared here so the default reaches the migration.
         builder.Entity<GameTask>().Property(t => t.Status).HasDefaultValue(TaskStatuses.Backlog);
         builder.Entity<GameTask>().Property(t => t.Priority).HasDefaultValue(TaskPriorities.Normal);
+        // T-124 — the planner asks for one project's sprints in date order, and nothing else.
+        builder.Entity<Sprint>().HasIndex(s => new { s.ProjectId, s.StartsAt });
+        // The number is what the S-chip shows, so two sprints must not share one inside a project.
+        builder.Entity<Sprint>().HasIndex(s => new { s.ProjectId, s.Number }).IsUnique();
         // The project list query: this owner's projects, active ones first by their own order.
         builder.Entity<Project>().HasIndex(p => new { p.OwnerId, p.ArchivedAt });
         // "What is in this project" — the dashboard's only real question, and the one the drafts

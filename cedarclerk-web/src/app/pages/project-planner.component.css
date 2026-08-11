@@ -1,0 +1,369 @@
+/* T-124 — the development planner. Compact density (set on the root in the template). Toolbar,
+   buttons, badges and chips match project-tasks.component.css value for value on purpose: the
+   module's screens have to read as one product, and there is still no shared component library
+   (docs/DESIGN.md flags this — when there is one, all four collapse into it). */
+.planner-page {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--dens-fs);
+}
+
+.hint {
+    color: var(--t2);
+    font-size: var(--fs-meta);
+}
+
+.spacer { flex: 1; }
+.dot { opacity: .6; margin: 0 var(--space-1); }
+
+.error-line {
+    margin: 0;
+    color: var(--danger);
+    font-size: var(--dens-fs);
+}
+
+.planner-body {
+    max-width: 1360px;
+    margin: 0 auto;
+    padding: var(--space-4) var(--space-5) var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.planner-toolbar {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--dens-gap);
+    flex-wrap: wrap;
+}
+
+.planner-toolbar h1 {
+    margin: 0;
+    font-size: var(--fs-22);
+    font-weight: 700;
+    letter-spacing: -.02em;
+}
+
+.planner-sub {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 3px;
+    font-size: var(--fs-meta);
+    color: var(--t2);
+}
+
+.btn-accent {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    border: none;
+    background: var(--accent);
+    color: var(--sheet);
+    border-radius: var(--dens-radius);
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--dens-fs);
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.btn-accent:hover:not(:disabled) { filter: brightness(1.08); }
+
+.btn-accent:disabled,
+.btn-ghost:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.btn-ghost {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--t2);
+    border-radius: var(--dens-radius);
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--dens-fs);
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.btn-ghost:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--border-strong);
+}
+
+/* Destructive, and it looks it only on hover — see the same rule on the task card. */
+.btn-ghost.danger:hover:not(:disabled) {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+.icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: none;
+    border-radius: var(--radius-sm);
+    color: var(--t3);
+    cursor: pointer;
+    flex: none;
+}
+
+.icon-btn:hover:not(:disabled) {
+    background: var(--hover-strong);
+    color: var(--text);
+}
+
+/* ---------- Empty ---------- */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-6);
+    text-align: center;
+}
+
+.empty-state app-icon { color: var(--accent); }
+
+.empty-title {
+    margin: 0;
+    font-size: var(--fs-body);
+    font-weight: 600;
+}
+
+.empty-state .hint { max-width: 52ch; }
+.empty-state .btn-accent { margin-top: var(--space-2); }
+
+/* ---------- One sprint ---------- */
+.sprint-card {
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+/* "No sprint" is a real group, not a lesser one — but it is a pile rather than a plan, so it
+   carries no fill of its own. */
+.sprint-card.unplanned {
+    background: none;
+    border-style: dashed;
+}
+
+.sprint-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    padding: var(--space-2) var(--space-4);
+    background: var(--alt);
+    border-bottom: 1px solid var(--border);
+}
+
+.sprint-card.unplanned .sprint-head { background: none; }
+
+.sprint-number {
+    font-family: var(--font-mono);
+    font-size: var(--fs-11);
+    font-weight: 600;
+    color: var(--t2);
+}
+
+.sprint-name {
+    font-size: var(--dens-fs);
+    font-weight: 600;
+}
+
+.sprint-dates {
+    font-size: var(--fs-meta);
+    color: var(--t2);
+}
+
+.overdue-note {
+    font-size: var(--fs-meta);
+    color: var(--danger);
+    font-weight: 600;
+}
+
+.sprint-progress-text {
+    font-size: var(--fs-meta);
+    color: var(--t2);
+    font-variant-numeric: tabular-nums;
+}
+
+.sprint-bar {
+    width: 120px;
+    height: 6px;
+    background: color-mix(in srgb, var(--border) 70%, transparent);
+    border-radius: 3px;
+    overflow: hidden;
+    flex: none;
+}
+
+.sprint-fill {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    transition: width var(--motion-base) var(--ease);
+}
+
+.sprint-empty {
+    margin: 0;
+    padding: var(--space-3) var(--space-4);
+}
+
+.collapsed-line {
+    display: block;
+    width: 100%;
+    padding: var(--space-2) var(--space-4);
+    border: none;
+    background: none;
+    color: var(--t2);
+    font: inherit;
+    font-size: var(--fs-meta);
+    text-align: left;
+    cursor: pointer;
+}
+
+.collapsed-line:hover { background: var(--hover); color: var(--text); }
+
+/* ---------- A task row ---------- */
+.task-row {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) 60px 130px 130px;
+    align-items: center;
+    gap: var(--dens-gap);
+    padding: var(--dens-row-y) var(--space-4);
+    border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    cursor: pointer;
+    min-width: 0;
+}
+
+.task-row:first-of-type { border-top: none; }
+.task-row:hover { background: var(--hover); }
+
+.task-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+/* Mono so the levels line up down the card; only P1 is tinted, as everywhere else. */
+.prio {
+    font-family: var(--font-mono);
+    font-size: var(--fs-11);
+    font-weight: 600;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--alt);
+    color: var(--t2);
+    justify-self: start;
+}
+
+.prio.p1 {
+    background: color-mix(in srgb, var(--warn) 16%, var(--sheet));
+    color: var(--warn);
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--alt);
+    color: var(--t2);
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-badge.tone-accent {
+    background: var(--asoft);
+    color: var(--accent);
+}
+
+.status-badge.tone-ok {
+    background: color-mix(in srgb, var(--ok) 16%, var(--sheet));
+    color: var(--ok);
+}
+
+.due {
+    font-size: var(--fs-meta);
+    color: var(--t2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Only the date turns red. Never the row, never the sprint. */
+.due.overdue {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+.due .none { color: var(--t3); }
+
+/* ---------- The sprint dialog ---------- */
+.sprint-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+}
+
+.field label {
+    font-size: var(--fs-caption);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-weight: 600;
+    color: var(--t2);
+}
+
+.field input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--fs-ui);
+}
+
+.modal-foot-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+}
+
+@media (max-width: 760px) {
+    .task-row { grid-template-columns: minmax(140px, 1fr) 50px 110px; }
+    .task-row > :nth-child(4) { display: none; }
+    .field-grid { grid-template-columns: 1fr; }
+}

@@ -39,7 +39,7 @@ export interface GameTask {
     priority: TaskPriority;
     description: string;
     assignee: string;
-    /** T-124's sprint; always null until the planner exists. */
+    /** T-124 — the sprint this task is planned into, or null. */
     sprintId: string | null;
     dueAt: string | null;
     createdAt: string;
@@ -70,6 +70,8 @@ export interface UpdateTaskInput {
     assignee?: string;
     dueAt?: string;
     clearDueAt?: boolean;
+    sprintId?: string;
+    clearSprint?: boolean;
     archived?: boolean;
 }
 

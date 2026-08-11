@@ -15,10 +15,12 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
   painted with a surface token and invisible in both themes, and the links deleted themselves after
   ten seconds from behind the modal that covered them. **The Posts Manager now lists every network a
   post reached, with links**, read from the publish queue that stored them all along.
-- [ ] **Next MUST: `T-124` Development Planner** — `Sprint` over the tasks that now exist.
-  `GameTask.SprintId` is already there, so this adds a table rather than altering one. Design:
-  `docs/design_handoff_indiedev_core_loop` §8 (stacked sprint cards, honest overdue).
-- [ ] 0.10.1 is live; **0.10.2 and 0.10.3 are not deployed yet** — `.\Scripts\deploy.ps1` from `master`.
+- [x] **`T-124` Development Planner** (0.10.4, ADR-111) — `/projects/:id/planner`, sprint state
+  derived from dates, sprint filters on the board, the dashboard's real sprint card. Two MUST rows
+  left in Phase 13: the project glossary (`T-125`) and build/version tagging (`T-126`).
+- [ ] **Next: `T-125` project-scoped glossary** — `GlossaryTerm` exists; it needs one `ProjectId`
+  column and the scope in the UI.
+- [ ] 0.10.3 is live; **0.10.4 is not deployed yet** — `.\Scripts\deploy.ps1` from `master`.
   Nothing has been pushed to GitHub either (`git push origin master dev indiedev_module --tags`).
 
 ## v0.10.0 is on master (10.08.2026) — deployed 10.08.2026

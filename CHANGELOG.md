@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-08-11 (Phase 13) — the development planner (T-124, ADR-111, 0.10.4)
+
+Fifth of Phase 13's seven MUST rows, and the last one the design handoff had drawn. `/projects/:id/planner` stacks one card per sprint — current, then planned, then "No sprint", then the finished ones collapsed — with a progress bar, the task rows inside, and the dates that decide everything.
+
+**A sprint has no status column.** "Current / planned / finished" is worked out from the two dates every time it is asked. A stored status is wrong the second the clock passes the end date, and keeping it right needs a background job, or a fix-on-read, or a "close this sprint" button — machinery serving a copy of a fact already written down twice. Compared by calendar day and inclusive at both ends: a sprint that ends today is still the current one today.
+
+**A sprint is never "overdue" — it holds tasks that are.** The card says "1 task overdue" in words rather than turning red, which is the same rule the board already follows: only the date is ever red, never the card, never the column.
+
+**"Finished" means the days ran out, not that everything got done.** A finished sprint collapses to a one-line summary *only when everything in it is actually done*; leave one unfinished and it stays open on the screen. Hiding it would be pretending work disappeared along with the date, and that is the one thing a planner must not do.
+
+**The sprint number is stored, and the first attempt got it wrong.** `S14` on a task card has to be real data — parsing a number out of a name breaks on the first sprint called "Polish" — so the number is a column. Assigning it as `MAX(Number) + 1` looked right and is not: delete the highest sprint and the next one you create takes its number straight back. Running the endpoints caught it (the test I wrote afterwards would not have — I wrote it because the run failed). It is a counter on the project now, never wound back, so a deletion leaves a gap: a gap is honest, a second "S3" standing for a different fortnight is not.
+
+**Deleting a sprint frees its tasks rather than deleting them** — the same rule as deleting a project, which leaves the documents. They land back in "No sprint", which is a real group on the planner rather than nowhere. And a task can only join a sprint of its own project; without that check an id from another project would be accepted and the task would fall out of both planners at once.
+
+The board gained sprint filter chips and an `S` chip on its cards, the task card gained a sprint picker, and the dashboard's placeholder became the real sprint card — with the honest empty state when today falls outside every sprint, which is a fact about the calendar rather than a missing feature.
+
+`dotnet test` **752/752**, frontend 11/11, contrast clean, smoke **53/53**. Verified against a running server: three sprints in three states, the order, the overdue count inside the current one, a sprint from another project refused, backwards dates refused, numbers surviving two deletions without reuse, and a task outliving the sprint it was in.
+
 ## 2026-08-11 (publishing) — a thread with no progress, and links nobody could find (ADR-110, 0.10.3)
 
 Marty published a 25-part thread to X and reported two things: no progress while it ran, and no links to the posts anywhere afterwards. The database said the publish went perfectly — all 25 parts `Succeeded`, every one with its URL stored, the whole thread out in **17 seconds**. Both symptoms were in the interface, and there were three defects behind them.

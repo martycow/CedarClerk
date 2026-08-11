@@ -58,6 +58,16 @@ public class Project
 
     /// <summary>When the last completed scan finished. Null = never scanned.</summary>
     public DateTime? AssetsIndexedAt { get; set; }
+
+    /// <summary>
+    /// T-124 — the number the next sprint of this project will get, then incremented.
+    ///
+    /// A counter rather than <c>MAX(Number) + 1</c>, because that expression **reuses the highest
+    /// number as soon as the sprint holding it is deleted** — caught by running it, not by reading
+    /// it. ADR-111 wants a gap instead: a second "S3" standing for a different stretch of time is
+    /// exactly the confusion the number exists to prevent.
+    /// </summary>
+    public int NextSprintNumber { get; set; } = 1;
 }
 
 /// <summary>
@@ -187,6 +197,38 @@ public class GameTask
     /// turned out to be wrong is part of what happened; the board just stops showing it.
     /// </summary>
     public DateTime? ArchivedAt { get; set; }
+}
+
+/// <summary>
+/// A stretch of planning over tasks (T-124, ADR-106/111) — a name, a number and two dates.
+///
+/// **There is no status column.** "Current / planned / finished" is decided by the dates every
+/// time it is asked, because a stored status is wrong the second the clock passes <see
+/// cref="EndsAt"/> and then needs machinery to keep it true. See ADR-111.
+/// </summary>
+public class Sprint
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public Guid ProjectId { get; set; }
+
+    /// <summary>
+    /// Sequential within the project, assigned at creation, **never reused**. This is what makes
+    /// the `S14` chip on a task card real data rather than a number parsed out of a name — the
+    /// number answers "which one", the name answers "about what" ("Ferry Terminal").
+    ///
+    /// A gap after a deletion is honest; a second sprint 7 meaning a different stretch of time
+    /// is not.
+    /// </summary>
+    public int Number { get; set; }
+
+    public string Name { get; set; } = "";
+
+    /// <summary>Dates, not instants — a sprint is a run of days, and half of one is not a thing.</summary>
+    public DateTime StartsAt { get; set; }
+    public DateTime EndsAt { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 /// <summary>

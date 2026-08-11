@@ -253,6 +253,16 @@ public static class ErrorMessages
     public static string TaskCannotLinkToItself =>
         Ru("Задачу нельзя связать с ней же самой.", "A task cannot be linked to itself.");
 
+    // T-124 — sprints.
+    public static string SprintNameLength(int max) =>
+        Ru($"Имя спринта — от 1 до {max} символов.", $"Sprint name must be 1-{max} characters");
+
+    public static string SprintEndsBeforeItStarts =>
+        Ru("Спринт не может закончиться раньше, чем начался.", "A sprint cannot end before it starts.");
+
+    public static string UnknownSprint =>
+        Ru("Такого спринта нет — возможно, он удалён.", "There is no such sprint — it may have been deleted.");
+
     // Russian is the only translated locale for now, matching the app's own UI dictionaries
     // (en.ts/ru.ts): every other UI language already falls back to English there, and shipping
     // machine-quality German error text would be a worse answer than the English original.

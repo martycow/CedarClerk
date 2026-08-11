@@ -211,6 +211,25 @@
     opacity: .75;
 }
 
+/* Separates the state filters from the sprint filters: they answer different questions and
+   combine, so they must not read as one row of mutually exclusive options. */
+.chip-divider {
+    width: 1px;
+    align-self: stretch;
+    margin: 0 var(--space-1);
+    background: var(--border);
+}
+
+/* The S-chip on a board card — mono, like the priority chip, so numbers line up. */
+.sprint-chip {
+    font-family: var(--font-mono);
+    font-size: var(--fs-11);
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--alt);
+    color: var(--t2);
+}
+
 .chip.danger-chip { color: var(--danger); }
 
 .chip.danger-chip.on {

@@ -123,12 +123,44 @@
                         }
                     </section>
 
-                    <section class="pending-card">
+                    <!--T-124 — the sprint covering today, or the honest statement that none does.
+                    "No sprint covers today" is a fact about the calendar, not a missing feature.-->
+                    <section class="rail-card">
                         <div class="card-head">
                             <app-icon name="timer" size="md"></app-icon>
                             <span class="card-title">{{ t().projects.railPendingTitle }}</span>
+                            <span class="spacer"></span>
+                            <a class="card-link" [routerLink]="['/projects', p.id, 'planner']">
+                                {{ t().projects.planner.title }} →
+                            </a>
                         </div>
-                        <p class="hint">{{ t().projects.railPending }}</p>
+
+                        @if (p.currentSprint; as s) {
+                            <p class="sprint-line">
+                                <span class="sprint-number">S{{ s.number }}</span>
+                                <span class="sprint-name">{{ s.name }}</span>
+                            </p>
+                            @if (s.taskCount) {
+                                <span class="sprint-bar" [attr.aria-hidden]="true">
+                                    <span class="sprint-fill" [style.width.%]="sprintPercent(s)"></span>
+                                </span>
+                            }
+                            <p class="hint">
+                                @if (s.taskCount) {
+                                    {{ t().projects.planner.progress(s.doneCount, s.taskCount) }}
+                                    <span class="dot">·</span>
+                                }
+                                {{ t().projects.planner.endsOn }} {{ s.endsAt | date:'d MMM' }}
+                            </p>
+                            @if (s.overdueCount) {
+                                <p class="overdue-note">{{ t().projects.planner.overdueInside(s.overdueCount) }}</p>
+                            }
+                        } @else {
+                            <p class="hint">{{ t().projects.planner.noCurrentSprint }}</p>
+                            <a class="card-link" [routerLink]="['/projects', p.id, 'planner']">
+                                {{ t().projects.planner.planSprint }} →
+                            </a>
+                        }
                     </section>
                 </aside>
             </div>

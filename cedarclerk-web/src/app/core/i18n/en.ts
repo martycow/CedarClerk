@@ -91,10 +91,9 @@ export const en = {
         viewAll: 'View all',
         documentCount: (n: number) => `${n} ${n === 1 ? 'document' : 'documents'}`,
         noDocumentsOfType: 'None yet',
-        // Sprints are still to come (T-124); tasks and the asset index are built, so only the
-        // sprint card still says so. An empty rail must read as "nothing due", never as "not built".
-        railPending: 'Sprints arrive with the development planner, the next step of this module.',
-        railPendingTitle: 'Sprints',
+        // T-124 — sprints exist now. What is left of the placeholder is the honest empty state:
+        // "no sprint covers today" is a fact about the calendar, not a missing feature.
+        railPendingTitle: 'Sprint',
         openDocument: 'Open in the editor',
         actionFailed: 'That did not work.',
         assetsLink: 'Assets',
@@ -173,6 +172,51 @@ export const en = {
                 assets ? `${assets} ${assets === 1 ? 'asset' : 'assets'}` : '',
                 tasks ? `${tasks} ${tasks === 1 ? 'task' : 'tasks'}` : '',
             ].filter(Boolean).join(' · '),
+        },
+        // T-124 — the development planner.
+        planner: {
+            crumb: 'Planner',
+            title: 'Planner',
+            sub: (sprints: number, open: number) =>
+                `${sprints} ${sprints === 1 ? 'sprint' : 'sprints'} · ${open} open ${open === 1 ? 'task' : 'tasks'}`,
+            newSprint: 'New sprint',
+            editSprint: 'Edit sprint',
+            loadFailed: 'Could not load the planner.',
+            empty: 'No sprints yet',
+            emptyHint: 'A sprint is a stretch of days with tasks in it. Everything not in one stays in "No sprint" — it is a way to plan, not a place tasks have to live.',
+            noSprint: 'No sprint',
+            noSprintHint: 'Not planned into any sprint yet.',
+            noTasks: 'No tasks in this sprint yet.',
+            state: {
+                current: 'Current',
+                planned: 'Planned',
+                finished: 'Finished',
+            },
+            progress: (done: number, total: number) => `${done} of ${total} done`,
+            // Said about the tasks, never about the sprint — a sprint is not overdue, it holds
+            // tasks that are.
+            overdueInside: (n: number) => `${n} ${n === 1 ? 'task' : 'tasks'} overdue`,
+            collapsed: (n: number) => `${n} ${n === 1 ? 'task' : 'tasks'} completed · collapsed`,
+            expand: 'Show',
+            collapse: 'Hide',
+            fieldName: 'Name',
+            fieldStarts: 'Starts',
+            fieldEnds: 'Ends',
+            namePlaceholder: 'What this stretch is about',
+            nameRequired: 'A sprint needs a name.',
+            endsBeforeStarts: 'A sprint cannot end before it starts.',
+            deleteSprint: 'Delete',
+            deleteConfirm: 'Delete this sprint? Its tasks stay — they go back to "No sprint".',
+            assignSprint: 'Sprint',
+            unassigned: 'No sprint',
+            create: 'Create sprint',
+            save: 'Save',
+            cancel: 'Cancel',
+            actionFailed: 'That did not work.',
+            // The dashboard rail's card
+            noCurrentSprint: 'No sprint covers today.',
+            planSprint: 'Plan one',
+            endsOn: 'ends',
         },
         // T-122 — the asset index. Every string here has to keep one promise: nothing is uploaded.
         assets: {

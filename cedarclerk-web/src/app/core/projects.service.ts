@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { IconName } from '../shared/icon-data.generated';
 import { GameTask, TaskStatus } from './tasks.service';
+import { Sprint } from './sprints.service';
 
 // Phase 13 / T-120 — the indie-gamedev module. A project is a game; documents, tasks and assets
 // live inside it. Tasks live in tasks.service.ts and the index in asset-index.service.ts; what is
@@ -77,6 +78,8 @@ export interface ProjectDetail extends Omit<ProjectSummary, 'documentCount' | 'o
     upNext: GameTask[];
     /** Open tasks per status; a status with none is simply absent. */
     taskCounts: Partial<Record<TaskStatus, number>>;
+    /** T-124 — the sprint covering today, or null when none does. */
+    currentSprint: Sprint | null;
     openTaskCount: number;
 }
 

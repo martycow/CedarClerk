@@ -227,6 +227,7 @@ The `Verified` column is filled in by Phase 10 Block D. `smoke` means a Playwrig
 | `/settings` | `settings.component` | Profile vs Account tab, Pro-gated fields, save failure | smoke + hand (both tabs) | — |
 | `/glossary` | `glossary.component` | empty, per-language empty, translate-all failure mid-run | smoke + hand (empty, one term) | — |
 | `/admin` | `admin.component` | non-admin gate, empty audit, audit paging, self-targeting refusal | smoke + hand (all four tabs) | — |
+| `/projects/:id/planner` | `project-planner.component` | empty planner, empty sprint, collapsed vs expanded, load error, overdue inside a sprint | hand + API (11.08.2026) | Not yet in the smoke suite |
 | `/projects/:id/tasks` | `project-tasks.component` | empty board, empty column, filtered-empty, load error, action error, overdue | hand + API (11.08.2026) | Both views and the card modal exercised against a running server; not yet in the smoke suite |
 | `/terms`, `/privacy` | `legal-page.component` | — | hand (terms) | T-052 (placeholder text) |
 | Blog index | `BlogEndpoints.RenderIndexAsync` | no posts, timeline, tag filter, semi-public lock | smoke + hand (timeline, semi-public lock with excerpt withheld) | T-094, T-099 |
@@ -245,6 +246,25 @@ Screenshots behind the `hand` marks are reproducible with `AUDIT=1 npx playwrigh
 | Published-elsewhere rows | `posts-manager.component.html`, inside the Destinations group, `@for (post of publishedElsewhere(d))` | panel | One row per network a post reached (X, Bluesky), with the link, the language, when it went and "thread of N messages" | None — folded into the page load, and a failure leaves the list empty rather than breaking the page | Read from `GET /api/publish/published`, which reads the publish queue. Before this the only place a published URL ever appeared was the editor's progress checklist, and closing it lost the link |
 | Publish success toast | `editor.component.html`, `.publish-toast` + `.toast-close` | toast | The links a publish produced | IS the result | **Stopped expiring 11.08.2026** — it sits under the progress checklist, so a ten-second life meant it was gone before anything uncovered it. Dismissed by its own × |
 | Thread part chips | `editor.component.html`, `.pr-parts` / `.pr-part` | panel | One numbered chip per thread message, filling in as parts send | IS the loading state | Repainted every poll on **every** network since 11.08.2026 — the short-post path never passed the progress callback, so an X thread showed 25 static chips |
+
+## `project-planner.component` (`cedarclerk-web/src/app/pages/project-planner.component.{ts,html,css}`)
+
+T-124, built 11.08.2026 from `docs/design_handoff_indiedev_core_loop` §8. Compact density; reached from the dashboard's sprint card or the board's toolbar, gated by `indieDevGuard`.
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Toolbar | `.planner-toolbar` | panel | Title, "N sprints · M open tasks", link to the board, "+ New sprint" | Page-level `loading()` | Same anatomy as the board and the asset screen |
+| Sprint card | `.sprint-card` | panel | One per sprint: number, name, dates, state badge, overdue note, progress bar, task rows | `busy()` on its controls | Order is current → planned → No sprint → finished |
+| State badge | `.status-badge` in the head | — | Current / Planned / Finished | N/A | **Derived from the dates on every read** (ADR-111), never stored |
+| Overdue note | `.overdue-note` | — | "N tasks overdue" inside this sprint | N/A | Said about the tasks — a sprint is never itself overdue, and the card never turns red |
+| Progress bar | `.sprint-bar` / `.sprint-fill` | — | Share of the sprint's tasks that are done | N/A | Absent when the sprint holds no tasks: an empty bar would read as 0% of something |
+| "No sprint" group | `.sprint-card.unplanned` | panel | Tasks planned into nothing yet | N/A | Dashed border, no fill — a pile rather than a plan. Sits between planned and finished on purpose |
+| Collapsed summary | `.collapsed-line` | button | "N tasks completed · collapsed" | N/A | **Only when everything in the sprint is done.** One unfinished task keeps the card open — collapsing it would hide the case worth seeing |
+| Sprint dialog | `app-modal` `[width]="480"` | modal | Name, start, end; Delete on the left when editing | Present — `busy()` | Deleting says the tasks stay. Refuses an end before the start, client and server both |
+| Sprint filter chips | `project-tasks.component.html`, after the state chips, separated by `.chip-divider` | button | All / S1 / S2 … / No sprint, with counts | N/A | Rendered only once sprints exist. Combines with the state filters rather than replacing them |
+| Sprint chip on a card | `project-tasks.component.html`, `.sprint-chip` | — | `S14`, mono, with the sprint's name as its tooltip | N/A | The number is stored (ADR-111), not parsed out of the name |
+| Sprint picker | task card modal, `.field select` | dropdown | Moves a task between sprints, or out of all of them | Present — `busy()` | Saved on change rather than with the text fields: it is a move, not an edit |
+| Dashboard sprint card | `project.component.html`, `.rail-card` (second) | panel | The sprint covering today: number, name, progress, end date, overdue line | Page-level | Says "No sprint covers today" when none does — a fact about the calendar, not a missing feature |
 
 ## `admin.component` (`cedarclerk-web/src/app/pages/admin.component.{ts,html,css}`)
 

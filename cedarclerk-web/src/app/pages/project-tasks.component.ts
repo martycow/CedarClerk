@@ -16,6 +16,7 @@ import {
     TasksService,
     isOverdue,
 } from '../core/tasks.service';
+import { Sprint, SprintsService } from '../core/sprints.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
 import { PageHeaderComponent } from '../shared/page-header.component';
@@ -42,6 +43,7 @@ type SortKey = 'title' | 'status' | 'priority' | 'dueAt';
 export class ProjectTasksComponent {
     private api = inject(TasksService);
     private projects = inject(ProjectsService);
+    private sprintsApi = inject(SprintsService);
     private route = inject(ActivatedRoute);
     private router = inject(Router);
     t = inject(LocaleService).t;
@@ -55,6 +57,9 @@ export class ProjectTasksComponent {
     projectId = signal('');
     project = signal<ProjectDetail | null>(null);
     tasks = signal<GameTask[]>([]);
+    sprints = signal<Sprint[]>([]);
+    /** null = every sprint; '' = the tasks in none of them. */
+    sprintFilter = signal<string | null>(null);
     loading = signal(true);
     loadError = signal<string | null>(null);
     busy = signal(false);
@@ -97,9 +102,13 @@ export class ProjectTasksComponent {
     private matching = computed(() => {
         const needle = this.search().trim().toLowerCase();
         const filter = this.filter();
+        const sprint = this.sprintFilter();
         return this.tasks().filter(t => {
             if (filter === 'open' && t.status === 'done') return false;
             if (filter === 'overdue' && !isOverdue(t)) return false;
+            // '' is a filter in its own right — "planned into nothing" is a real question, and the
+            // planner's own "No sprint" group asks it too.
+            if (sprint !== null && (t.sprintId ?? '') !== sprint) return false;
             if (!needle) return true;
             return t.title.toLowerCase().includes(needle)
                 || t.description.toLowerCase().includes(needle)
@@ -143,9 +152,12 @@ export class ProjectTasksComponent {
         this.loading.set(true);
         this.loadError.set(null);
         try {
-            const [project, tasks] = await Promise.all([this.projects.get(id), this.api.list(id)]);
+            const [project, tasks, sprints] = await Promise.all([
+                this.projects.get(id), this.api.list(id), this.sprintsApi.list(id),
+            ]);
             this.project.set(project);
             this.tasks.set(tasks);
+            this.sprints.set(sprints);
             // Opened by URL before the tasks existed — the effect above could not fill the fields.
             const open = tasks.find(t => t.id === this.openTaskId());
             if (open) this.beginEdit(open);
@@ -304,6 +316,21 @@ export class ProjectTasksComponent {
                 if (!b.dueAt) return -1;
                 return a.dueAt.localeCompare(b.dueAt);
         }
+    }
+
+    /** The sprint a task is in, or null. Used for the S-chip and the card's sprint field. */
+    sprintOf(task: GameTask): Sprint | null {
+        return this.sprints().find(s => s.id === task.sprintId) ?? null;
+    }
+
+    sprintTaskCount(sprintId: string): number {
+        return this.tasks().filter(t => (t.sprintId ?? '') === sprintId).length;
+    }
+
+    setSprint(task: GameTask, sprintId: string) {
+        return this.run(() => this.api.update(task.id, sprintId
+            ? { sprintId }
+            : { clearSprint: true }));
     }
 
     linkCounts(task: GameTask) {

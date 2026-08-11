@@ -51,6 +51,24 @@
                     {{ t().projects.tasks.filterOverdue }} <span class="chip-count">{{ overdueCount() }}</span>
                 </button>
             }
+
+            <!--T-124 — sprint chips, only once there are sprints to pick between. A lone "All"
+            chip beside a lone sprint is a control with nothing to control.-->
+            @if (sprints().length) {
+                <span class="chip-divider"></span>
+                <button class="chip" [class.on]="sprintFilter() === null" (click)="sprintFilter.set(null)">
+                    {{ t().projects.tasks.filterAll }}
+                </button>
+                @for (s of sprints(); track s.id) {
+                    <button class="chip" [class.on]="sprintFilter() === s.id" (click)="sprintFilter.set(s.id)"
+                            [title]="s.name">
+                        S{{ s.number }} <span class="chip-count">{{ sprintTaskCount(s.id) }}</span>
+                    </button>
+                }
+                <button class="chip" [class.on]="sprintFilter() === ''" (click)="sprintFilter.set('')">
+                    {{ t().projects.planner.unassigned }} <span class="chip-count">{{ sprintTaskCount('') }}</span>
+                </button>
+            }
         </div>
 
         @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
@@ -95,6 +113,9 @@
                                         <span class="due" [class.overdue]="overdue(task)">
                                             {{ task.dueAt | date:'d MMM' }}@if (overdue(task)) {<span> · {{ t().projects.tasks.overdue }}</span>}
                                         </span>
+                                    }
+                                    @if (sprintOf(task); as s) {
+                                        <span class="sprint-chip" [title]="s.name">S{{ s.number }}</span>
                                     }
                                     @if (task.assignee) { <span class="assignee">{{ task.assignee }}</span> }
                                 </div>
@@ -205,6 +226,18 @@
                     <label>{{ t().projects.tasks.fieldAssignee }}</label>
                     <input type="text" [ngModel]="draftAssignee()" (ngModelChange)="draftAssignee.set($event)"
                            [placeholder]="t().projects.tasks.assigneePlaceholder">
+                </div>
+                <!--Saved on change rather than with the rest: it moves the task between planner
+                groups, which is a move, not an edit of text.-->
+                <div class="field">
+                    <label>{{ t().projects.planner.assignSprint }}</label>
+                    <select [ngModel]="task.sprintId ?? ''" (ngModelChange)="setSprint(task, $event)"
+                            [disabled]="busy()">
+                        <option value="">{{ t().projects.planner.unassigned }}</option>
+                        @for (s of sprints(); track s.id) {
+                            <option [value]="s.id">S{{ s.number }} — {{ s.name }}</option>
+                        }
+                    </select>
                 </div>
             </div>
 

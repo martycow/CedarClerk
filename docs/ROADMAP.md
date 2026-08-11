@@ -6,7 +6,7 @@ Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-
 
 **v0.10.0 — the first version carrying the indie-gamedev module.** The middle number moved because the product changed shape, not because a pile of fixes accumulated (CLAUDE.md's rule for that digit). `indiedev_module` merged into `dev` and then `master`, both fast-forward; tagged `0.10.0`. **Not deployed yet** — the Pi stays on 0.9.40 until `Scripts/deploy.ps1` runs from `master`.
 
-**Phase 13 — IndieDev Module — in progress.** Four of seven MUST rows done (projects and document types, the desktop shell, the asset index, the task tracker); the planner is next. Marty's brief turns the product towards indie game developers: a post becomes one document type among several, living inside a project. Seven decisions written first (ADR-101…107), scope in `docs/INDIEDEV.md`, desktop mechanics in `docs/DESKTOP.md`, design brief in `docs/indiedev-design-prompt.md`. **This also closes `Q-1`**, open since 30.07.2026 — the product has one audience now instead of four. Work happens on the `indiedev_module` branch, which the brief explicitly allows deleting if the business model doesn't hold.
+**Phase 13 — IndieDev Module — in progress.** Five of seven MUST rows done (projects and document types, the desktop shell, the asset index, the task tracker, the planner); the project glossary and build tagging are what is left. Marty's brief turns the product towards indie game developers: a post becomes one document type among several, living inside a project. Seven decisions written first (ADR-101…107), scope in `docs/INDIEDEV.md`, desktop mechanics in `docs/DESKTOP.md`, design brief in `docs/indiedev-design-prompt.md`. **This also closes `Q-1`**, open since 30.07.2026 — the product has one audience now instead of four. Work happens on the `indiedev_module` branch, which the brief explicitly allows deleting if the business model doesn't hold.
 
 **Phase 10 — UI Verification Sweep — closed 31.07.2026.** The frontend has a 37-scenario Playwright smoke suite where it had nothing, the UI inventory covers the screens and the blog, and 7 defects were found of which 4 are fixed. The audit-before-redesign ordering is ADR-070. **Deployed: production is on v0.9.20** (health check 31.07) — 0.9.18 plus the two iPad fixes that followed it, both verified live by Marty.
 
@@ -472,7 +472,13 @@ Three things the implementation changed or added, each recorded in `docs/DECISIO
    **A finding, fixed rather than filed**: deleting a project left its asset index, and deleting a document left its links — neither has a navigation property, so EF cascaded neither. Tasks would have been the third orphan. All three delete paths clean up now.
 
    **Sprints are deliberately absent** — that is `T-124`, next. `GameTask.SprintId` exists so the planner adds a table rather than altering this one, and the sprint card on the dashboard says it is not built rather than rendering empty. `dotnet test` **737/737**, frontend 11/11, contrast clean, smoke **53/53**; verified against a running server — board order, reciprocal task links, an overdue rail, `completedAt` surviving an unrelated edit and clearing on reopen, and a deleted task taking its links off the other card.
-5. Development Planner (`Sprint`, deadlines)
+5. ~~Development Planner~~ — **done 11.08.2026** (T-124, ADR-111). `SprintStates` in Core, `Sprint` + migration `AddSprints`, `SprintEndpoints`, `/projects/:id/planner` with stacked cards in the design's order (current → planned → No sprint → finished, collapsed). The board gained sprint chips and a filter; the dashboard's placeholder card became the real one.
+
+   **A sprint has no status column** — the three states come from the dates on every read, because a stored one is wrong the moment the clock passes the end date and then needs machinery to keep it true. And a sprint is never itself overdue: it holds tasks that are, and the card says so in words.
+
+   **The number caught a bug worth keeping.** `S14` has to be stored (parsing it out of a name breaks on a sprint called "Polish"), and assigning it as `MAX(Number) + 1` reuses the highest number the moment its sprint is deleted. Running the endpoints found it; the test came after. It is a counter on the project now — a gap in the numbering is honest, a second "S3" for a different fortnight is not.
+
+   `dotnet test` **752/752**, smoke **53/53**; verified by running it, including two deletions without number reuse and a task outliving its sprint.
 6. Project-scoped glossary
 7. Build/version tagging
 

@@ -136,6 +136,9 @@ public static class ProjectEndpoints
                 project.ArchivedAt,
                 documents,
                 upNext = upNext.Select(t => TaskEndpoints.Describe(t, upNextLinks, upNextLabels)),
+                // T-124 — the rail's sprint card. Null means no sprint covers today, which the
+                // card says in words rather than rendering an empty progress bar.
+                currentSprint = await SprintEndpoints.CurrentAsync(db, uid, id),
                 taskCounts,
                 openTaskCount = taskCounts.Where(c => TaskStatuses.IsOpen(c.Key)).Sum(c => c.Value),
             });

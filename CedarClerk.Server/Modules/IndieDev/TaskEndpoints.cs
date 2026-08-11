@@ -88,6 +88,14 @@ public static class TaskEndpoints
             if (assignee.Length > AssigneeMaxLength)
                 return Results.BadRequest(new { error = ErrorMessages.TaskAssigneeLength(AssigneeMaxLength) });
 
+            Guid? sprintId = null;
+            if (req.SprintId is { } wanted)
+            {
+                if (!await db.Sprints.AnyAsync(s => s.Id == wanted && s.ProjectId == projectId && s.OwnerId == uid))
+                    return Results.BadRequest(new { error = ErrorMessages.UnknownSprint });
+                sprintId = wanted;
+            }
+
             var task = new GameTask
             {
                 OwnerId = uid,
@@ -98,7 +106,7 @@ public static class TaskEndpoints
                 Priority = priority,
                 Assignee = assignee,
                 DueAt = req.DueAt,
-                SprintId = req.SprintId,
+                SprintId = sprintId,
                 // A task created straight into Done is finished now, not never — the board's Done
                 // column is a legitimate place to write something down after doing it.
                 CompletedAt = status == TaskStatuses.Done ? DateTime.UtcNow : null,
@@ -181,7 +189,15 @@ public static class TaskEndpoints
             else if (req.DueAt is { } due) task.DueAt = due;
 
             if (req.ClearSprint == true) task.SprintId = null;
-            else if (req.SprintId is { } sprint) task.SprintId = sprint;
+            else if (req.SprintId is { } sprint)
+            {
+                // T-124 — a task may only join a sprint of its own project. Without this a sprint
+                // id from another project would be accepted and the task would vanish from every
+                // planner: its own would not list it, and the other one cannot see it.
+                if (!await db.Sprints.AnyAsync(s => s.Id == sprint && s.ProjectId == task.ProjectId && s.OwnerId == uid))
+                    return Results.BadRequest(new { error = ErrorMessages.UnknownSprint });
+                task.SprintId = sprint;
+            }
 
             if (req.Archived is { } archived)
                 task.ArchivedAt = archived ? task.ArchivedAt ?? DateTime.UtcNow : null;
