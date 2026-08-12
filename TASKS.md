@@ -2,7 +2,7 @@
 
 In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`; this file is the shorter "what's actually next" list. No code-level TODO/FIXME comments exist in the source as of 15.07.2026 (swept across `CedarClerk.Server`, `CedarClerk.Core`, `CedarClerk.Tests`, `cedarclerk-web/src`) — everything here comes from `docs/Handoff_2026-07-15.md` and the Phase 6 tail in `docs/ROADMAP.md`.
 
-## Now (11.08.2026)
+## Now (12.08.2026)
 
 - [x] **Credits from the admin panel** (0.10.1) — a signed adjustment on the existing ledger, refused
   below zero, logged to the audit with the admin's own note. See `CHANGELOG.md` for why grants are
@@ -51,8 +51,26 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
   Намеренная остановка теперь снимает обработчик до убийства. Диалог обновления — по-английски, как и
   остальная оболочка; события пишутся в `%APPDATA%\CedarClerk\update.log`. **Ставить 0.10.9 лучше
   инсталлятором руками**: установку выполняет старый код, то есть этот же диалог покажется в последний раз.
+- [x] **Десктоп стал клиентом облака** (0.11.0, ADR-117) — по твоему замечанию, что одна почта на
+  десктопе всё равно означает другой аккаунт. Это ровно та цена, которую ADR-108 записал и принял;
+  лечится она не синхронизацией, а отсутствием второй копии. Окно грузит `cedarclerk.mooexe.dev`,
+  база одна, а локальный процесс стал **агентом файловой системы**: обход папки, stat файла, генерация
+  превью, и больше ничего — ни базы, ни Identity, ни бота, ни SPA. ADR-105 и ADR-108 отменены.
+  Байты ассетов по-прежнему никуда не уезжают; уезжают пути, метаданные и JPEG-превью — **все**, по
+  твоему выбору, что стало выполнимым только благодаря возобновляемому проходу.
+  **В браузере у каждого ассета чип «Отпечаток»** с именем машины; «Показать в проводнике» там просто
+  отсутствует. `T-121` закрыт, `T-137` снят как моот.
+- [ ] **Проверить вживую то, что тестами не ловится** (список — в `docs/DESKTOP.md` §Риски):
+  окно открывается на облачном `/projects` без прайс-таблицы; скан настоящей папки Unity/Blender и
+  **ориентация превью настоящего `.blend`** (единственное, что осталось непроверенным с T-140);
+  тот же проект в браузере с чипами «Отпечаток»; отмена посреди прохода по превью и продолжение;
+  ноль процессов после закрытия окна; `curl` к агенту без токена → 401.
+- [ ] **Порядок деплоя не переставлять**: сначала обычный `deploy.ps1` (прод получает эндпоинты
+  импорта), потом `deploy.ps1 -Desktop`. Обратный порядок даёт копию, которая шлёт батчи в сервер,
+  ничего о них не знающий.
 - [ ] **Подпись кода для десктопа** — пока её нет, доверие к обновлению равно доверию к домену
-  (ADR-116). Пока установка одна и своя — приемлемо; перед первым внешним пользователем — нет.
+  (ADR-116). **С ADR-117 это стало весомее**: тот же домен теперь ещё и выдаёт мосту доступ к диску,
+  то есть подмена origin'а — не только произвольный exe, но и чтение выбранной папки (`T-145`).
 - [ ] **Two things the move left open, both needing your sudo password:**
   `sudo systemctl enable cedarclerk` (`T-143` — the unit is `disabled`, so a DigitalOcean maintenance
   reboot leaves the site down until someone notices), and a nightly `sqlite3 .backup` (`T-071` — the

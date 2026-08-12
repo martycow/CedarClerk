@@ -103,7 +103,7 @@ Ownership: nearly every table has an `OwnerId` and every endpoint filters by it 
 
 ASP.NET Core Identity (`AddIdentityCore<ApplicationUser>`), cookie-based (`IdentityConstants.ApplicationScheme`), backed by the same SQLite DB via `AddEntityFrameworkStores<CedarDbContext>`. Registration is invite-code gated (`Cedar:InviteCode` config). 401/403 are returned directly instead of redirecting to a login page (`OnRedirectToLogin`/`OnRedirectToAccessDenied` overrides), since the client is a SPA. Telegram account linking is a separate, optional step for an already-authenticated user (HMAC-verified via `TelegramLoginVerifier` in Core) — not an alternate login method; see `docs/DECISIONS.md`.
 
-**Identity can live on another installation (ADR-108).** With `Cedar:Auth:Upstream` set — only the desktop shell sets it, pointing at the production server — `/api/auth/login` verifies the credentials there, then finds or creates the local account standing for that identity (`ApplicationUser.RemoteUserId`) and issues an ordinary local cookie. Only the question travels; no upstream cookie is kept, and the data stays wherever it already is. Local registration is refused in that configuration, because a second account on the same address is exactly the confusion this prevents. An unreachable upstream answers **503**, never 401 — "the server did not reply" and "your password is wrong" must not look the same.
+**There is one installation, and identity is simply its own (ADR-117).** ADR-108's `Cedar:Auth:Upstream` — the desktop verifying credentials against production while keeping its own data — is gone, along with `UpstreamAuth`. It existed to make one email mean one person across two databases; with one database the problem it solved does not arise. The desktop is a window onto this installation and signs in against it like any browser. `ApplicationUser.RemoteUserId` survives as a vestigial column: dropping one in SQLite rebuilds `AspNetUsers`, which Identity touches on every authorized request, and that is a real risk for no return.
 
 ## Scheduling (Quartz.NET)
 
@@ -177,13 +177,13 @@ installer's version legitimately differ — the deploy report prints which one i
 
 `Migrate()` and `PRAGMA journal_mode=WAL;` run automatically on server startup (`Program.cs`), so a deploy applies pending migrations without a separate step — which is exactly why `.claude/rules/ef-migrations.md`'s "migrate immediately after any entity change" rule matters.
 
-## Desktop distribution (ADR-104/105/116)
+## Desktop distribution (ADR-104/116/117)
 
-A second way to run the same thing, not a second application: an Electron shell starts the published `CedarClerk.Server` as a local sidecar process on a free port and opens the same Angular SPA against it. Neither the server nor the frontend is forked.
+A window onto this installation plus a process that can read one machine's disk — not a second application and, since ADR-117, not a second database either. The Electron shell loads `https://cedarclerk.mooexe.dev/projects` and starts the published `CedarClerk.Server` with `Cedar:Agent:Enabled`, which strips it to `/agent/*`: walk a folder, stat a file, render a thumbnail. Neither the server nor the frontend is forked.
 
-It works because `CEDAR_DATA_DIR` already decides where SQLite and media live — the desktop points it at `%APPDATA%/CedarClerk` and the server code is unchanged, exactly as the droplet points it at `/home/martycow/cedarclerk/data`. One exception, found while writing ADR-104: the listening address is a literal in `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` cannot override it and that single line has to become configurable.
+The reason it exists is the asset index (ADR-107) — only a process on the developer's own machine can walk a game project's folder. **The division of labour is the whole design: the agent reads the disk, the page uploads what it found.** The page already holds a session cookie, so the agent needs no credentials and the shell does no authentication; the work also ends up inside an ordinary screen with a progress bar rather than in an unobservable background process. Mechanics, the two locks on the agent, and the file-versus-fingerprint distinction: `docs/DESKTOP.md`.
 
-The reason it exists is the asset index (ADR-107) — only a process on the developer's own machine can walk a game project's folder. Mechanics, risks and the two run modes: `docs/DESKTOP.md`.
+`CEDAR_DATA_DIR` is no longer part of this story — the desktop stores nothing. It still decides where the droplet keeps SQLite and media (`/home/martycow/cedarclerk/data`). One server change came out of ADR-104 and stayed: the listening address used to be a literal in `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` could not override it, and `Cedar:Urls` now exists for the agent's free port.
 
 **Updates come from our own server** (ADR-116): `electron-updater`'s generic provider reads `https://cedarclerk.mooexe.dev/downloads/latest.yml`, which `DownloadEndpoints` serves as plain static files out of `CEDAR_DATA_DIR/downloads`. There is no update service and no third-party account — the whole protocol is a manifest, an installer and a blockmap in one folder, put there by `deploy.ps1 -Desktop`.
 

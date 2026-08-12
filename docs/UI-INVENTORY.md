@@ -339,7 +339,31 @@ T-123, built 11.08.2026 from `docs/design_handoff_indiedev_core_loop` §3-4. Com
 | Card footer | `.modal-foot-row` | button | Delete · Archive · Save · Mark done / Reopen | Present — `busy()` | Delete asks for confirmation and says archiving is the softer option; the ghost button only turns red on hover |
 | New-task modal | `app-modal` `[width]="480"` | modal | Title, status, priority. Enter creates | Present — `busy()` | Opens pre-set to the column its "+" was pressed in |
 
-**Known gap, not introduced here**: `projects.component`, `project.component` and `project-assets.component` (T-120/T-122) were never added to this file. The task board is documented above because it was built today; the other three module screens remain absent and are worth a sweep.
+## `project-assets.component` (`cedarclerk-web/src/app/pages/project-assets.component.{ts,html,css}`)
+
+T-122, reshaped by **ADR-117** on 12.08.2026 when the index moved to the cloud and indexing became a push from the desktop agent. Compact density on the page root; reached from the project dashboard, gated by `indieDevGuard`.
+
+**The question this screen has to keep answering: is this a file or a fingerprint of one?** The index opens from anywhere, so most of the time the bytes are on another machine. `isLocal()` compares the project's `sourceMachine.id` against `cedarDesktop.machine()`, and defaults to **false** — a browser has no bridge, so it never claims otherwise.
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Toolbar | `.assets-toolbar` | panel | Title, "N files indexed", root path, last-indexed time, not-found count, search, view toggle | Page-level `loading()` | Same anatomy as `/drafts` and the task board |
+| Machine note | `.fingerprint-note` | — | "files on MARTY-PC" beside the root path, with a tooltip explaining what is here instead | N/A | Only when `!isLocal()`. Without it a bare path reads as "on this computer" wherever it is shown |
+| Re-index / Change folder | `.btn-ghost` in the toolbar | button | Re-scan the recorded folder; pick a new one | `scanning()` disables both | Re-index needs `isLocal()` — from elsewhere the path names a folder this machine cannot see. Change folder only needs a bridge, since it picks a new one |
+| Scan banner | `.scan-banner` | panel | Two phases: index (counting → indexing → sweeping) and previews, each with its own counts; previews also show megabytes | Is itself the loading state | The progress **bar** covers the index phase only. One bar across both would crawl then leap — the phases differ by orders of magnitude per item, and the preview pass has no honest denominator until the sweep has run |
+| Cancel | `.btn-ghost` in the banner | button | Stops the walk and the upload | N/A | Everything already uploaded stays. The preview pass resumes from `thumbs/pending`, so cancelling costs nothing but time |
+| Pick-a-folder card | `.pick-card` | panel | Empty state. One button: the OS folder picker | `scanning()` | The typed-path field is **gone** (ADR-117): a path the page invented would have to be granted by the page, and the grant exists precisely so disk access starts with a human gesture. Recent folders are listed as history, not as buttons |
+| Web-only notice | `.web-only` + link to `/downloads/latest` | — | In a browser: indexing needs the app, and what is indexed still shows here | N/A | Two facts in one sentence, because "you can't do this" alone reads as a broken screen |
+| Filter chips | `.filter-tabs` | button | All / per-kind / not-found, with counts from the **unfiltered** set | N/A | No "Music" chip: a track cannot be told from ambience by extension (ADR-107) |
+| Grid tile | `.tile` | button | Preview or icon, filename, size · dimensions · date | N/A | Striped ground, not blank — a plain rectangle reads as an image that failed |
+| Fingerprint chip | `.fingerprint-chip` | — | "fingerprint" over the top-right of a tile, tooltip naming the machine | N/A | Deliberately quiet (`--t2`, not `--danger`): this is the normal case, not a warning, and the not-found state owns the alarming colour |
+| Preview states | `.preview-label` | — | Three: stored, coming, impossible | N/A | Without the middle one a freshly indexed folder in a browser looks identical to one full of formats nothing can decode |
+| List view | `.asset-table` | panel | File / Type / Details / Status | N/A | The status column has three values too — not found, on disk, fingerprint. "On disk" is a claim about *this* disk and would be false from a browser |
+| Asset modal | `app-modal` `[width]="780"` | modal | Preview, fields, machine, linked documents | Present — `busy()` | Says outright what is here when the file is elsewhere |
+| Reveal / Re-index file | `.modal-actions` | button | Explorer highlight; re-stat this one file | `busy()` | **Hidden**, not disabled, unless `isLocal()`: a greyed button invites a hunt for the reason it is grey. Re-index is two hops now — the agent looks, the page pushes |
+| Link picker | `.link-option` | panel | Documents of this project not already linked | `busy()` | "Linked documents", never "Used in": an indexed file lives outside Cedar Clerk, so a reference to it can only be stated (T-141) |
+
+**Known gap, not introduced here**: `projects.component` and `project.component` (T-120) were never added to this file and remain absent.
 
 ## Icon inventory
 
