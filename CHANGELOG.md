@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-11 — pictures on the blog open where you are reading them
+
+Marty's ask, from a desktop browser: click an image in a post and have it fill the screen — **not** open in a new tab. That is the whole feature, and the two words that shaped it are "not" and "tab": the article has to still be there when the picture closes.
+
+**One viewer per page, and it is a gallery.** The script collects every image in `.post-sheet` once, so a collage of eight photos is eight frames of one viewer with arrows and an `N / M` counter, rather than eight unrelated popups. Keys work the way they look: ←/→ move, Escape closes, and clicking anywhere — the picture included — closes it, because "click it again to get out" is the gesture people try first.
+
+**The caption comes along.** If the image has a `figcaption`, the enlarged view shows it; without that, the big version would be *less* informative than the small one it replaced. It is written with `textContent`, never `innerHTML` — owner-authored text on a public page, same rule the glossary tooltip follows.
+
+**The zoom cursor is added by JavaScript, not by a CSS selector.** So "this looks clickable" and "this actually opens" cannot drift apart, and a reader with scripts off is not invited to click something nothing will answer.
+
+**A hole this opened, and closing it is the part worth remembering.** Copy protection on private posts (ADR-063) was bound to `.post-sheet`. The viewer's overlay is appended to `<body>` — outside it — so the first working version made every picture on a protected post right-clickable and draggable the moment it was enlarged. A feature about looking at images had quietly disabled a feature about not taking them. The guard now listens on `document` and filters with `closest('.post-sheet,.lightbox')`, which also covers an overlay that does not exist yet when the guard runs.
+
+Verified in the smoke suite rather than by eye: a post with an image and a collage, click → the overlay is visible, the URL is still the post's, the source matches the picture clicked, the caption and `1 / 2` are there, → moves to the second image, Escape closes it. Full suite green.
+
 ## 2026-08-11 — the desktop app updates itself, and the deploy is what publishes it (ADR-116)
 
 Marty asked for two things in one sentence: the deploy should produce the desktop installer, and an installed copy should end up on the new version by itself. Before this, the installer was a local artifact of `build.ps1 -Installer` that never left his machine, and "updating" meant rebuilding and reinstalling by hand.

@@ -303,6 +303,7 @@ Not Angular: these are strings built on the server and host-routed by `Program.c
 | Floating nav | `.floating-nav` | panel | Back-to-menu and back-to-top, after 400px of scroll | N/A | Glyphs (`☰`, `↑`), not icon-set icons — see the icon inventory below |
 | Poll | `poll` node, `PollVote` | panel | Blog-only vote, results shown after voting (ADR-055) | N/A | No Telegram surface at all, by decision |
 | Glossary tooltip | `.glossary-term` / `.glossary-pop` | popover | Hover/focus/tap explanation, first occurrence per page | N/A | Description written with `textContent`, never `innerHTML` |
+| Image viewer | `.lightbox` (built by the shell script), `img.zoomable` | overlay | Click any picture in the post to see it at ~94% of the viewport without leaving the page (Marty, 11.08.2026). Arrows/←→ walk **every** image in the post, so a collage or carousel is one gallery; the `figcaption` and an `N / M` counter show under it; click anywhere, Escape or the × closes | N/A — the images are already on the page | The zoom cursor is added by the script, so it cannot promise a click that JavaScript is not there to handle. The overlay lives on `<body>`, which is why the copy-protection guard had to move to a document-level listener — otherwise an enlarged picture on a private post was right-clickable |
 | RSS | `RenderRssAsync`, `/rss.xml` | — | Latest 30 published posts | N/A | Auto-discovery `<link>` in every page head |
 
 ## Surfaces added in 0.9.16–0.9.17 (30.07.2026) — absent from this file before

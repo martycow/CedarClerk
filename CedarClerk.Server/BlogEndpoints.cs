@@ -1350,11 +1350,18 @@ public static class BlogEndpoints
         // Copy protection (same private-only family as the watermark above): selection, copy/cut
         // and the context menu are blocked on the post sheet only — the comment/annotation UI
         // below it stays fully usable. A deterrent, not protection: the source is one Ctrl+U away.
+        //
+        // The image viewer is covered too, and had to be: its overlay is appended to <body>, so a
+        // guard bound to `.post-sheet` alone would have left every picture right-clickable the
+        // moment it was enlarged — a hole opened by a feature that has nothing to do with copying.
+        // Hence a document-level listener filtered by `closest`: the overlay does not exist yet
+        // when this runs.
         var copyGuard = draft is { IsPrivate: true, DisableCopy: true }
             ? """
-              <style>.post-sheet{-webkit-user-select:none;user-select:none}.post-sheet img{-webkit-user-drag:none;user-drag:none}</style>
-              <script>(function(){var s=document.querySelector('.post-sheet');if(!s)return;
-              ['contextmenu','copy','cut','dragstart'].forEach(function(ev){s.addEventListener(ev,function(e){e.preventDefault();});});})();</script>
+              <style>.post-sheet,.lightbox{-webkit-user-select:none;user-select:none}.post-sheet img,.lightbox img{-webkit-user-drag:none;user-drag:none}</style>
+              <script>(function(){if(!document.querySelector('.post-sheet'))return;
+              ['contextmenu','copy','cut','dragstart'].forEach(function(ev){document.addEventListener(ev,function(e){
+              if(e.target&&e.target.closest&&e.target.closest('.post-sheet,.lightbox'))e.preventDefault();});});})();</script>
               """
             : "";
 
@@ -1602,6 +1609,29 @@ public static class BlogEndpoints
         .carousel-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
         .carousel-dot { width: 8px; height: 8px; border-radius: 50%; border: none; background: rgba(128,128,128,0.4); cursor: pointer; padding: 0; }
         .carousel-dot.active { background: var(--accent); }
+
+        /* Image viewer. The zoom cursor is put on by the script, not by a CSS selector, so that
+           "this image opens" and "this image is clickable" can never disagree — and so a reader
+           with JavaScript off is not invited to click something that will not happen. */
+        .post-sheet img.zoomable { cursor: zoom-in; }
+        .lightbox { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 3vh 3vw; background: rgba(0, 0, 0, .93); opacity: 0; transition: opacity .12s ease; }
+        .lightbox.open { opacity: 1; }
+        /* 100% of a flex item that is already inside the padded box: the image fills what is left
+           after the caption row, which is why the caption never pushes it off-screen. */
+        .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; cursor: zoom-out; }
+        .lightbox-cap { flex: none; max-width: 900px; text-align: center; font-size: 13.5px; line-height: 1.5; color: rgba(255, 255, 255, .72); }
+        .lightbox-count { font-variant-numeric: tabular-nums; color: rgba(255, 255, 255, .45); }
+        .lightbox-btn { position: absolute; display: flex; align-items: center; justify-content: center; border: none; border-radius: 50%; background: rgba(255, 255, 255, .12); color: #fff; cursor: pointer; font-family: inherit; line-height: 1; padding: 0; }
+        .lightbox-btn:hover { background: rgba(255, 255, 255, .22); }
+        .lightbox-close { top: 16px; right: 16px; width: 40px; height: 40px; font-size: 26px; }
+        .lightbox-prev, .lightbox-next { top: 50%; transform: translateY(-50%); width: 46px; height: 46px; font-size: 30px; }
+        .lightbox-prev { left: 16px; }
+        .lightbox-next { right: 16px; }
+        /* On a phone the arrows would sit on top of the picture itself; there the swipe-sized
+           targets move to the bottom corners, where a thumb already is. */
+        @media (max-width: 600px) {
+            .lightbox-prev, .lightbox-next { top: auto; bottom: 16px; transform: none; }
+        }
         .youtube-embed { position: relative; width: 100%; aspect-ratio: 16 / 9; margin: 0 0 16px; border-radius: 6px; overflow: hidden; }
         .youtube-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
         .footnotes { font-size: 12.5px; color: var(--t2); border-top: 1px solid var(--border); padding: 10px 0 0; margin: 0 0 4px; }
@@ -1826,6 +1856,118 @@ public static class BlogEndpoints
             dots.forEach(function (d, idx) { d.addEventListener('click', function () { show(idx); }); });
             if (imgs.length) show(0);
         });
+
+        /* Click a picture in a post and it opens over the page instead of in a new tab (Marty,
+           11.08.2026). One overlay is built once and reused, and the set of images is collected
+           from the post body — so a collage or a carousel becomes a gallery with arrows rather
+           than eight separate one-image popups.
+
+           An image inside a link is skipped. The renderer cannot produce one today (link is a mark
+           and marks only apply to text nodes), so this is a guard for a future it does not have
+           yet — but the rule is worth stating: where a click already means "go there", it wins. */
+        (function () {
+            var sheet = document.querySelector('.post-sheet');
+            if (!sheet) return;
+
+            var images = Array.prototype.filter.call(sheet.querySelectorAll('img'), function (img) {
+                return !img.closest('a') && !img.classList.contains('reg-static-image');
+            });
+            if (!images.length) return;
+
+            var box = document.createElement('div');
+            box.className = 'lightbox';
+            box.hidden = true;
+            box.setAttribute('role', 'dialog');
+            box.setAttribute('aria-modal', 'true');
+
+            var full = document.createElement('img');
+            var cap = document.createElement('div');
+            cap.className = 'lightbox-cap';
+            var close = button('lightbox-close', String.fromCharCode(215), 'Close');
+            var prev = button('lightbox-prev', String.fromCharCode(8249), 'Previous image');
+            var next = button('lightbox-next', String.fromCharCode(8250), 'Next image');
+
+            box.appendChild(full);
+            box.appendChild(cap);
+            box.appendChild(close);
+            if (images.length > 1) { box.appendChild(prev); box.appendChild(next); }
+            document.body.appendChild(box);
+
+            function button(cls, glyph, label) {
+                var b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'lightbox-btn ' + cls;
+                b.textContent = glyph;
+                b.setAttribute('aria-label', label);
+                return b;
+            }
+
+            var at = 0;
+            var restoreFocus = null;
+
+            function show(n) {
+                at = (n + images.length) % images.length;
+                var img = images[at];
+                full.src = img.currentSrc || img.src;
+                full.alt = img.alt || '';
+
+                /* The caption a reader already sees under the picture, carried over so the
+                   enlarged view is not less informative than the small one. Written as text,
+                   never as markup: it is owner-authored content on a public page. */
+                var figure = img.closest('figure');
+                var figcap = figure ? figure.querySelector('figcaption') : null;
+                cap.textContent = figcap ? figcap.textContent : '';
+                if (images.length > 1) {
+                    var counter = document.createElement('span');
+                    counter.className = 'lightbox-count';
+                    /* A middle dot, not spaces: HTML collapses runs of whitespace, so a padded
+                       separator would have rendered as "caption 1 / 4" with nothing between. */
+                    counter.textContent = (cap.textContent ? ' · ' : '') + (at + 1) + ' / ' + images.length;
+                    cap.appendChild(counter);
+                }
+            }
+
+            function open(n) {
+                restoreFocus = document.activeElement;
+                show(n);
+                box.hidden = false;
+                /* The page behind must not scroll while this is open — a scroll wheel over a
+                   full-screen picture that moves the article underneath is disorienting, and the
+                   position is lost by the time it is closed. */
+                document.body.style.overflow = 'hidden';
+                requestAnimationFrame(function () { box.classList.add('open'); });
+                close.focus();
+            }
+
+            function hide() {
+                box.classList.remove('open');
+                box.hidden = true;
+                full.removeAttribute('src');
+                document.body.style.overflow = '';
+                if (restoreFocus && restoreFocus.focus) restoreFocus.focus();
+            }
+
+            images.forEach(function (img, idx) {
+                img.classList.add('zoomable');
+                img.addEventListener('click', function () { open(idx); });
+            });
+
+            /* Anything that is not an arrow closes it, the picture included: "click it again to
+               get out" is the gesture people try first, and a viewer that ignores it feels stuck. */
+            box.addEventListener('click', function (e) {
+                if (e.target === prev) { show(at - 1); return; }
+                if (e.target === next) { show(at + 1); return; }
+                hide();
+            });
+
+            document.addEventListener('keydown', function (e) {
+                if (box.hidden) return;
+                if (e.key === 'Escape') { hide(); return; }
+                if (images.length < 2) return;
+                if (e.key === 'ArrowLeft') { show(at - 1); e.preventDefault(); }
+                if (e.key === 'ArrowRight') { show(at + 1); e.preventDefault(); }
+            });
+        })();
 
         (function () {
             var themeBtn = document.getElementById('themeToggleBtn');
