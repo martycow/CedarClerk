@@ -40,9 +40,16 @@ public sealed class DeployCommand : AsyncCommand<DeploySettings>
         var version = CedarClerk.Core.Consts.CurrentVersion;
         var checks = new List<Check>();
 
+        // Under --dry-run git is not run either, so these come back empty. Saying so beats printing
+        // a sentence with a hole where the branch name should be.
         var branch = (await Git(session, "rev-parse --abbrev-ref HEAD", cancellationToken)).Trim();
         checks.Add(new Check(branch == "master", true, "branch",
-            branch == "master" ? "master" : $"{branch} - deploy.ps1 refuses anything but master"));
+            branch switch
+            {
+                "master" => "master",
+                "" => "not read (nothing was run)",
+                _ => $"{branch} - deploy.ps1 refuses anything but master"
+            }));
 
         var dirty = (await Git(session, "status --porcelain", cancellationToken)).Trim();
         var dirtyCount = dirty.Length == 0 ? 0 : dirty.Split('\n').Length;
@@ -121,10 +128,15 @@ public sealed class DeployCommand : AsyncCommand<DeploySettings>
 
     private static void Report(Session session, List<Check> checks, string liveVersion, string localVersion)
     {
+        // "v0.11.0 → v0.11.0" is not a deploy, it is a rebuild, and reading it as an upgrade is
+        // exactly the confusion a version pair in the header is here to prevent.
+        var versions = liveVersion == localVersion
+            ? $"[{Palette.Hex(Palette.Ok)}]v{localVersion}[/] [grey]already live - this would ship the same version[/]"
+            : $"[{Palette.Hex(Palette.Warn)}]{(liveVersion.Length > 0 ? "v" + liveVersion : "down")}[/] " +
+              $"[grey]{session.Glyphs.Arrow}[/] [{Palette.Hex(Palette.Accent)}]v{localVersion}[/]";
+
         session.Console.Write(Ui.Rule(session.Glyphs,
-            $"[grey]deploy preflight[/]  [{Palette.Hex(Palette.Warn)}]{(liveVersion.Length > 0 ? "v" + liveVersion : "down")}[/] " +
-            $"[grey]{session.Glyphs.Arrow}[/] [{Palette.Hex(Palette.Accent)}]v{localVersion}[/]",
-            session.Console.Profile.Width));
+            $"[grey]deploy preflight[/]  {versions}", session.Console.Profile.Width));
 
         foreach (var check in checks)
         {
