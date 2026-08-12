@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console" Version="0.55.0" />
+    <PackageReference Include="Spectre.Console.Cli" Version="0.55.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CedarClerk.Core\CedarClerk.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Resampling and section-splitting are implementation details of the rendering and the probe,
+       but they are exactly where an off-by-one hides. Internal keeps them out of the public shape
+       of the tool while still letting the tests pin them down. -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>CedarClerk.Cli.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+</Project>

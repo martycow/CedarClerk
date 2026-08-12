@@ -4,13 +4,19 @@
 #   .\Scripts\test.ps1 -Smoke       ...plus the 53-scenario Playwright suite          (~2min)
 #   .\Scripts\test.ps1 -Backend     backend only
 #   .\Scripts\test.ps1 -Frontend    frontend only
+#   .\Scripts\test.ps1 -Detailed    print a line per test instead of only the summary
 #
 # No git check here on purpose: running tests on a feature branch is the normal case, and a guard
 # that fires on the thing you do twenty times a day teaches people to pass -Force by reflex.
+#
+# -Detailed exists for `cedar test` (ADR-118), which draws a tick per test as the results arrive.
+# It changes nothing but console verbosity, and it is opt-in so an ordinary run keeps the short
+# output everyone is used to.
 param(
     [switch] $Smoke,
     [switch] $Backend,
-    [switch] $Frontend
+    [switch] $Frontend,
+    [switch] $Detailed
 )
 
 $ErrorActionPreference = 'Stop'
@@ -42,7 +48,12 @@ function Invoke-Step {
 if ($runBackend) {
     # SchemaDriftGuardTests lives in here: it fails when Entities.cs has moved without a migration,
     # which is the one mistake that breaks the app at startup rather than at build time.
-    Invoke-Step 'Backend (dotnet test)' { dotnet test $repoRoot --nologo }
+    if ($Detailed) {
+        Invoke-Step 'Backend (dotnet test)' { dotnet test $repoRoot --nologo --logger 'console;verbosity=normal' }
+    }
+    else {
+        Invoke-Step 'Backend (dotnet test)' { dotnet test $repoRoot --nologo }
+    }
 }
 
 if ($runFrontend) {

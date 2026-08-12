@@ -31,11 +31,13 @@ checklist the move followed is `docs/migration-to-digitalocean.md`.
 - **sudo is scoped**: `NOPASSWD` covers exactly `/bin/systemctl start|stop|restart cedarclerk` and
   nothing else. Every other privileged command prompts for a password, which over a non-interactive
   `ssh` simply fails. Use `ssh -t` when a password prompt is genuinely wanted.
-- **Logs need that password too.** `martycow` is not in `adm`/`systemd-journal`, so
-  `journalctl -u cedarclerk` prints "No entries" rather than an error — a trap worth knowing, because it
-  looks like a quiet service instead of a permission problem. Read them with
-  `ssh -t martycow@deploy.mooexe.dev "sudo journalctl -u cedarclerk -n 50 --no-pager"`, or fix it once
-  with `sudo usermod -aG systemd-journal martycow`.
+- **Logs read fine without sudo** — corrected 12.08.2026 against the running machine (ADR-118). The
+  unit runs `User=martycow`, so its journal entries belong to that user and
+  `ssh martycow@deploy.mooexe.dev "journalctl -q -u cedarclerk -n 50 --no-pager"` returns them. What
+  `martycow` still cannot see is *other* units' output (not in `adm`/`systemd-journal`), and without
+  `-q` journalctl prints a "you are not seeing messages from other users" hint that reads like a
+  refusal but isn't. `sudo journalctl` also works over `ssh -t`, it is simply not required.
+  **Always bound the query**: the service logs every EF statement, which is ~1.5 million lines a day.
 - **Networking**: public URL `https://cedarclerk.mooexe.dev` via **Cloudflare Tunnel**
   (`cloudflared.service`, running as root from `/etc/cloudflared/config.yml`) → `http://127.0.0.1:8080`.
   TLS terminates at Cloudflare. **Kestrel listens on loopback only** — the droplet exposes nothing but
