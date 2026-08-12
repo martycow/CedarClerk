@@ -134,13 +134,16 @@ public class LogoTests
     // that it says both halves of what it has to say, and that it cannot make the block overflow.
 
     [Fact]
-    public void The_subtitle_names_the_tool_and_says_it_is_a_console()
+    public void The_subtitle_says_it_is_a_console_and_whose_it_is()
     {
         var console = Console(100, unicode: true);
         Logo.Show(console, Glyphs.Unicode, "v0.0.0", animate: false);
 
-        Assert.Contains("c e d a r", console.Output);
+        // The name itself is the wordmark drawn above; the letter-spaced "c e d a r" moved out of this
+        // line when the copyright moved in, and asserting on it kept the test red against a shipped
+        // logo (found 12.08.2026).
         Assert.Contains("operations console", console.Output);
+        Assert.Contains("Moo.exe", console.Output);
     }
 
     [Fact]

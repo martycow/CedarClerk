@@ -5,13 +5,14 @@ using Spectre.Console.Cli;
 
 namespace CedarClerk.Cli.Commands;
 
-// Reports what backup actually exists, which today is the uncomfortable part (ADR-118 decision 6).
+// Reports what backup actually exists (ADR-118 decision 6).
 //
-// The nightly sqlite3 copy did not survive the move off the Pi: there is no crontab and no script on
-// the droplet. So this command's job is not to tick a box but to name the three consequences —
-// a week-wide loss window, restores that take the whole machine, and a copy living in the same
-// account as the original. `backup now` is deliberately not built here: creating one is T-071, new
-// behaviour on the server rather than a wrapper around behaviour that exists.
+// A nightly sqlite3 copy came back on 12.08.2026 (T-071): Marty's `~/bin/backup.sh` writes fourteen
+// dated copies into {RemoteDataDir}/backups. This command reads that directory — so the path here and
+// the path in the script are one fact in two places, and moving either alone makes the tool report an
+// absence over a full directory. What it still names is what those copies are not: off the droplet,
+// and never more than the database. `backup now` is deliberately not built: making a copy is server
+// behaviour, and the tool wraps behaviour that exists rather than adding its own.
 public sealed class BackupVerifyCommand : AsyncCommand<CedarSettings>
 {
     protected override Task<int> ExecuteAsync(CommandContext context, CedarSettings settings, CancellationToken cancellationToken) =>
@@ -102,11 +103,11 @@ public sealed class BackupVerifyCommand : AsyncCommand<CedarSettings>
 
         rows.Add($"[grey]live db[/]  {Format.Size(liveBytes)}");
         rows.Add("");
-        rows.Add($"[{Palette.Hex(Palette.Warn)}]{session.Glyphs.Warn} what does exist:[/] [grey]DigitalOcean's weekly whole-droplet image.[/]");
-        rows.Add("[grey]  · the loss window is a week, not a day[/]");
-        rows.Add("[grey]  · a restore takes the whole machine with it[/]");
-        rows.Add("[grey]  · it lives in the same account as the droplet[/]");
-        rows.Add($"[grey]  · T-071 closes this; {CliConsts.BinaryName} does not make backups (ADR-118)[/]");
+        rows.Add($"[{Palette.Hex(Palette.Warn)}]{session.Glyphs.Warn} what these copies are not:[/] [grey]off the droplet.[/]");
+        rows.Add("[grey]  · they sit on the same disk as the database they copy[/]");
+        rows.Add("[grey]  · they hold the database only - media/ is in the weekly image alone[/]");
+        rows.Add("[grey]  · the weekly image lives in the same account as the droplet[/]");
+        rows.Add($"[grey]  · T-147 closes this; {CliConsts.BinaryName} does not make backups (ADR-118)[/]");
 
         session.Console.Write(new Panel(new Markup(string.Join('\n', rows)))
         {

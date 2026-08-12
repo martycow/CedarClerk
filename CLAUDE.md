@@ -98,6 +98,6 @@ Full text lives in `.claude/rules/*.md` — read the relevant one before touchin
 ## Verification workflow
 - Local: `dotnet run --project CedarClerk.Server` (port 8080) + `ng serve` in `cedarclerk-web`. Login: marty@mooexe.dev (ask Marty for the password, do not store it)
 - Tests: `dotnet test` from repo root
-- Prod logs: `ssh -t martycow@deploy.mooexe.dev "sudo journalctl -u cedarclerk -n 50 --no-pager"` (asks for the sudo password; **without `sudo` the journal looks empty rather than refused** — `martycow` is not in `systemd-journal`)
+- Prod logs: `cedar logs`, or `ssh martycow@periwinkle.mooexe.dev "journalctl -q -u cedarclerk -n 50 --no-pager"` — **no sudo needed**, the unit runs as `martycow`. Keep the `-q`: without it journalctl prints a "not seeing messages from other users" hint that reads like a refusal. **Always bound the query** — the service logs every EF statement, ~1.5M lines a day
 - Test channel: @testingandfun ("Marty's Channel For Testing and Having Fun"). NEVER post to Dev Dairy Diary (the real channel) without explicit permission
 

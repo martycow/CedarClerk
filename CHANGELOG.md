@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-08-12 — a state check: two tags, a dead hostname, and the backup that came back
+
+Nothing here was planned work. It is what a "what is the state of git" question turned up, and the answer took four things with it.
+
+**The working copy was sitting on `dev`, 28 commits behind `master`.** `dev` had no commits of its own — it was a stale pointer wholly contained in `master`, which meant every rule file, every document and `CLAUDE.md` itself were being read from before the CLI, the `LIVE` tag and the DigitalOcean move existed. That is the quiet failure mode of the branch rule: nothing is broken, nothing is dirty, and every fact in context is a month old. `dev` has been fast-forwarded onto `master`, and the first move of a session should be to look at which branch the files on disk belong to.
+
+**`0.11.0` shipped without its tag.** The version bumped in `457d3f7` and twelve commits went on top of it; the last version tag was `0.10.9`. The tag is now on the commit that carries the bump, not on the tip — the rule is "bump the const and the tag together", so the tag belongs where the const changed. **And `LIVE` had been pushed to origin**, which `CLAUDE.md` explicitly says it never is. It is a local answer to "what is running here"; on a shared remote it is one machine's opinion presented as the project's. Deleted from origin, kept locally.
+
+**`deploy.mooexe.dev` no longer resolves.** The droplet answers on `periwinkle.mooexe.dev` now, and the old name was still the default host compiled into `CliConsts`, plus seven documents. Anything still saying `deploy.` fails at DNS resolution rather than at login, which reads like a network problem instead of a stale name. `CHANGELOG.md` and `docs/DECISIONS.md` keep the old name on purpose: they record what was true then.
+
+**`T-071` is closed, and `T-143` with it** — both by Marty on the server, which is the only place either could be done. The nightly `sqlite3 .backup` is back: fourteen dated copies, gzipped, with a healthchecks.io ping so that a *silent* failure raises an alert rather than nothing. Two things nearly made it a backup that exists only on paper. The cron line's `>> …/backups/backup.log` is opened by the shell before the script runs, so the script's own `mkdir -p` came too late — with no directory, cron would have failed to open the log and never started the script at all, every night, quietly. And the first destination was `~/backups`, while `cedar status` and `cedar backup verify` read `{RemoteDataDir}/backups`: a status line reporting "no local copy" over a directory full of copies. The path is one fact in two places now, and both the CLI's comment and the rules file say so.
+
+What is left of that theme is `T-147`: the nightly copy sits on the same disk as the database it copies, holds the database only — `media/` is 937 MB and rides in the weekly image alone — and that weekly image lives in the same DigitalOcean account as the droplet it protects.
+
+**One red test, found by running them.** `LogoTests.The_subtitle_names_the_tool_and_says_it_is_a_console` asserted on `c e d a r` in the subtitle, which moved out of that line when the copyright moved in. It was failing on `master` — on the deployed commit — and would have blocked the next `cedar test` for reasons that had nothing to do with whatever change was being tested. The assertion now checks what the line actually says; the name is the wordmark drawn above it.
+
 ## 2026-08-12 — stage 2: the scripts became the wrapper (ADR-119)
 
 ADR-118 ended on "stage 2 is a separate decision". This is it, with Marty's condition attached: everything must still build, test and deploy exactly as before.

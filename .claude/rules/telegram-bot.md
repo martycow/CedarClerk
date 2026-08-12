@@ -5,11 +5,11 @@ The Telegram Bot API allows exactly one process to long-poll (`getUpdates`) a gi
 
 Before running the **full local dev server** with a real token (it starts its own `TelegramBotService` long-polling loop):
 ```
-ssh martycow@deploy.mooexe.dev "sudo systemctl stop cedarclerk"
+ssh martycow@periwinkle.mooexe.dev "sudo systemctl stop cedarclerk"
 ```
 ...run/test locally, then:
 ```
-ssh martycow@deploy.mooexe.dev "sudo systemctl start cedarclerk"
+ssh martycow@periwinkle.mooexe.dev "sudo systemctl start cedarclerk"
 ```
 Locally with no token configured, the bot is disabled by design — `TelegramBotService.IsRunning` returns false and `PostEndpoints`/export return 503 with a clear message instead of throwing. This lets local dev proceed without ever touching the production bot process.
 

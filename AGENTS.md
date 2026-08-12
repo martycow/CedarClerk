@@ -67,6 +67,6 @@ Full text lives in `.Codex/rules/*.md` — read the relevant one before touching
 ## Verification workflow
 - Local: `dotnet run --project CedarClerk.Server` (port 8080) + `ng serve` in `cedarclerk-web`. Login: marty@mooexe.dev (ask Marty for the password, do not store it)
 - Tests: `dotnet test` from repo root
-- Prod logs: `ssh -t martycow@deploy.mooexe.dev "sudo journalctl -u cedarclerk -n 50 --no-pager"` (asks for the sudo password; without `sudo` the journal looks empty rather than refused)
+- Prod logs: `cedar logs`, or `ssh martycow@periwinkle.mooexe.dev "journalctl -q -u cedarclerk -n 50 --no-pager"` — no sudo needed, the unit runs as `martycow`; keep `-q` and always bound the query (~1.5M lines a day)
 - Test channel: @testingandfun ("Marty's Channel For Testing and Having Fun"). NEVER post to Dev Dairy Diary (the real channel) without explicit permission
 

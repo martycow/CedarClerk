@@ -236,13 +236,13 @@ public sealed class StatusView
 
     private IRenderable BackupLine(ServerSnapshot snapshot, DateTimeOffset now)
     {
-        // ADR-118 decision 6: there is no nightly copy on this machine, and the honest answer is to
-        // say which kind of backup exists rather than to leave the row looking satisfied.
+        // A nightly copy exists since 12.08.2026 (T-071), so an empty directory is now a failure to
+        // report rather than a state of the world - the cron entry is expected to have filled it.
         if (snapshot.LastBackupUtc is null)
             return new Markup(
                 $"[{Palette.Hex(Palette.Danger)}]{_glyphs.Bad} backup[/]  " +
-                "[grey]no local copy on the droplet - the only one is DigitalOcean's weekly whole-machine image " +
-                $"(T-071)[/]{System.Environment.NewLine}");
+                "[grey]no copy in data/backups - the nightly job has not run or is writing elsewhere; " +
+                $"only DigitalOcean's weekly whole-machine image is left[/]{System.Environment.NewLine}");
 
         var age = now - snapshot.LastBackupUtc.Value;
         var (colour, mark) = age.TotalHours switch

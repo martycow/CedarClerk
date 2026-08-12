@@ -215,7 +215,7 @@ Environment=Cedar__AdminEmail=cedarworks@mooexe.dev
 ## 4. Чеклист прокидывания на прод
 
 ```bash
-ssh -t martycow@deploy.mooexe.dev            # -t нужен: дальше sudo спросит пароль
+ssh -t martycow@periwinkle.mooexe.dev            # -t нужен: дальше sudo спросит пароль
 sudo nano /etc/systemd/system/cedarclerk.service.d/data.conf
 # добавить строки Environment=... из разделов выше
 sudo systemctl daemon-reload

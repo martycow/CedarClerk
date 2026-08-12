@@ -25,15 +25,15 @@ checklist the move followed is `docs/migration-to-digitalocean.md`.
   `ExecStart=/home/martycow/.dotnet/dotnet CedarClerk.Server.dll`, `Restart=always`, `RestartSec=5`.
   Two drop-ins in `/etc/systemd/system/cedarclerk.service.d/`: `data.conf` (secrets, see `secrets.md`)
   and `override.conf`.
-- **⚠ The unit is `disabled`, so it does NOT come back after a reboot.** DigitalOcean reboots droplets
-  for host maintenance, and the site would simply stay down until someone noticed. The one-time fix is
-  `sudo systemctl enable cedarclerk` — it needs the sudo password, so Marty has to run it himself.
+- **The unit is `enabled`** since 12.08.2026 (`T-143`, done by Marty — it needed his sudo password), so
+  it comes back after a DigitalOcean maintenance reboot. It was `disabled` for the first day after the
+  move, which would have left the site down until someone noticed.
 - **sudo is scoped**: `NOPASSWD` covers exactly `/bin/systemctl start|stop|restart cedarclerk` and
   nothing else. Every other privileged command prompts for a password, which over a non-interactive
   `ssh` simply fails. Use `ssh -t` when a password prompt is genuinely wanted.
 - **Logs read fine without sudo** — corrected 12.08.2026 against the running machine (ADR-118). The
   unit runs `User=martycow`, so its journal entries belong to that user and
-  `ssh martycow@deploy.mooexe.dev "journalctl -q -u cedarclerk -n 50 --no-pager"` returns them. What
+  `ssh martycow@periwinkle.mooexe.dev "journalctl -q -u cedarclerk -n 50 --no-pager"` returns them. What
   `martycow` still cannot see is *other* units' output (not in `adm`/`systemd-journal`), and without
   `-q` journalctl prints a "you are not seeing messages from other users" hint that reads like a
   refusal but isn't. `sudo journalctl` also works over `ssh -t`, it is simply not required.
@@ -44,35 +44,54 @@ checklist the move followed is `docs/migration-to-digitalocean.md`.
   SSH (port 22) to the internet, and that is deliberate: the tunnel is the only way in. Port 8080 is
   fixed by the tunnel config. Blog (`blog.mooexe.dev`) is host-routed inside the same Kestrel process
   (`Program.cs` `MapWhen` on `Host.Host`).
-- **SSH**: key-based to `martycow@deploy.mooexe.dev` (165.227.155.148). `raspberrypi.local` is dead as a
-  deploy target; `cedar deploy` reads the host from `%APPDATA%\cedar\config.json` (`cedar config`)
-  and takes `--host` to override it for one run.
+- **SSH**: key-based to `martycow@periwinkle.mooexe.dev` (165.227.155.148). **The name changed on
+  12.08.2026** — it was `deploy.mooexe.dev`, whose DNS record is gone, so anything still saying
+  `deploy.` fails at resolution, not at login. `CHANGELOG.md` and `docs/DECISIONS.md` still carry the
+  old name because they record what was true then; everywhere else was updated. The record must stay
+  **DNS only** in Cloudflare — a proxied record answers with Cloudflare's IPs, which do not take SSH.
+  `raspberrypi.local` is dead as a deploy target; `cedar deploy` reads the host from
+  `%APPDATA%\cedar\config.json` (`cedar config`) and takes `--host` to override it for one run.
 - **Timezone is UTC** (the Pi ran local time). Anything that reads the wall clock on the server — cron,
   log timestamps, a scheduled post's idea of "tonight" — now means UTC.
 
 ## Backups — read this before assuming data is safe
 
-**What exists**: DigitalOcean's paid droplet backup, **weekly** (Marty enabled it 11.08.2026). That is a
-whole-machine image, taken by the platform, retained for four weeks.
+There are now **two** backups, and they protect different things. Any sentence about backups has to say
+which one it means.
 
-**What no longer exists**: the Pi's daily `sqlite3 .backup` + `rsync` to a microSD with 14 dated copies
-(`~/bin/cedar-backup.sh`, cron 3:30 AM). It did not move. **There is no crontab and no `~/bin` on the
-droplet** — verified 11.08.2026.
+**Nightly database copy** — `T-071`, closed 12.08.2026 by Marty on the server, not by this repo.
+`~/bin/backup.sh` runs from his crontab at **03:30 UTC** (the droplet is UTC — that is 03:30 UTC, not
+local): `sqlite3 .backup` into `/home/martycow/cedarclerk/data/backups/cedar-<YYYY-MM-DD>.db.gz`,
+gzipped, `-mtime +13 -delete` keeping fourteen days, then a ping to healthchecks.io so that a *silent*
+failure raises an alert instead of nothing. First copy verified by hand the same day: 15 MB database →
+2.8 MB gz. The ping URL lives in the script on the server and is not in this repo — see `secrets.md`.
 
-Three consequences that are not obvious, and none of them is a reason to panic — just to be honest:
+Two things about it that are easy to get wrong:
 
-1. **The worst case went from losing a day to losing a week.** A weekly image is the only copy, so a
-   failure the day before the snapshot costs six days of posts, media and accounts.
-2. **Restoring is all-or-nothing.** A droplet image restores the whole machine to that moment — app,
-   database, media, config. There is no "put yesterday's database back and keep today's code".
-3. **The copy lives in the same account as the thing it protects.** An accidental destroy, a billing
-   lapse or a compromised login takes the backup with the droplet. The Pi's copy was on a card in
-   another device; that property was lost in the move, not gained.
+- **The destination path is shared with the CLI.** `cedar status` and `cedar backup verify` look in
+  `{RemoteDataDir}/backups` (`CedarClerk.Cli/Server/ServerProbe.cs`, `Commands/BackupCommand.cs`).
+  Moving the script's `DEST` without moving the CLI's path makes the status line report "no local copy"
+  over a directory full of copies — which is exactly what happened on the first attempt, when the
+  script wrote to `~/backups`.
+- **The cron line's log redirect needs the directory to already exist.** `>> …/backups/backup.log`
+  is opened by the shell *before* the script runs, so the script's own `mkdir -p` is too late: with no
+  directory, cron fails to open the log and never starts the script at all. The first scheduled run
+  would have died this way, silently, if the healthcheck had not been there to notice.
 
-`sqlite3` is installed on the droplet, so restoring the daily copy is a small cron job (backlog `T-071`,
-raised to High on 11.08.2026), and an off-box target — DO Spaces or anything `rclone` reaches — is what
-closes point 3. Neither is done. Until they are, "the data is backed up" is true only in the weekly,
-same-account, whole-machine sense, and any sentence about backups should say which one it means.
+**Weekly whole-machine image** — DigitalOcean's paid droplet backup (enabled 11.08.2026), retained four
+weeks, taken by the platform.
+
+What the nightly copy does *not* fix, and what is therefore still open:
+
+1. **It is on the same disk as the database it copies.** A lost droplet takes both. An off-box target —
+   DO Spaces or anything `rclone` reaches — is the remaining work, and it is not done.
+2. **It covers the database only.** `media/` is ~937 MB and is in the weekly image alone.
+3. **The weekly image lives in the same account as the droplet.** An accidental destroy, a billing lapse
+   or a compromised login takes it too. The Pi's microSD had that property; it was lost in the move.
+
+Restoring the database alone is now possible (`gunzip` a dated copy over `cedar.db` with the service
+stopped), which it was not between 11.08 and 12.08.2026. Restoring anything else still means restoring
+the whole machine to the moment of the weekly image.
 
 ## What the move retired
 

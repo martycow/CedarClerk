@@ -98,10 +98,9 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
 - [ ] **Подпись кода для десктопа** — пока её нет, доверие к обновлению равно доверию к домену
   (ADR-116). **С ADR-117 это стало весомее**: тот же домен теперь ещё и выдаёт мосту доступ к диску,
   то есть подмена origin'а — не только произвольный exe, но и чтение выбранной папки (`T-145`).
-- [ ] **Two things the move left open, both needing your sudo password:**
-  `sudo systemctl enable cedarclerk` (`T-143` — the unit is `disabled`, so a DigitalOcean maintenance
-  reboot leaves the site down until someone notices), and a nightly `sqlite3 .backup` (`T-071` — the
-  Pi's daily copy did not travel, so the only backup is DigitalOcean's **weekly** whole-droplet image).
+- [x] **Обе вещи, которые оставил переезд, закрыты Марти на сервере 12.08.2026**: юнит теперь `enabled`
+  (`T-143`), и появился ночной `sqlite3 .backup` в `data/backups`, 14 копий, пинг в healthchecks.io
+  (`T-071`). Осталось из этой темы только off-box копия — она в бэклоге.
 - [ ] Nothing has been pushed to GitHub (`git push origin master dev indiedev_module --tags`).
 
 ## v0.10.0 is on master (10.08.2026) — deployed 10.08.2026

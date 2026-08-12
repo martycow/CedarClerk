@@ -13,7 +13,7 @@ public static class CliConsts
     public const string ServiceName = "cedarclerk";
     public const string TunnelServiceName = "cloudflared";
 
-    public const string DefaultHost = "martycow@deploy.mooexe.dev";
+    public const string DefaultHost = "martycow@periwinkle.mooexe.dev";
     public const string DefaultRemoteRoot = "/home/martycow/cedarclerk";
     public const string DefaultHealthUrl = "https://cedarclerk.mooexe.dev/api/health";
 

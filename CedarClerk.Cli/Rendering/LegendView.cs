@@ -49,7 +49,7 @@ public static class LegendView
         }),
         new("backup", new[]
         {
-            new Term("no local copy", "there is no nightly copy on the droplet. The only backup is DigitalOcean's weekly whole-machine image, in the same account (T-071)."),
+            new Term("no local copy", "the nightly copy in data/backups is missing - the cron job did not run, or writes somewhere the tool does not look. What is left is DigitalOcean's weekly whole-machine image, in the same account."),
         }),
         new("tests", new[]
         {
