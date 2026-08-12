@@ -38,6 +38,12 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
   the one `utcDate()` helper had not been applied. A JSON converter fixes the wire, a `zonedDate` pipe
   replaced all 42 `| date:` usages, and the blog names the zone (`14:05 PDT`) since its readers are not
   all here. Scheduling **input** still reads the browser's zone — noted in the ADR, not done.
+- [x] **Десктоп обновляется сам** (0.10.7, ADR-116) — `.\Scripts\deploy.ps1 -Desktop` собирает инсталлер
+  и публикует его в `data/downloads/`, установленная копия проверяет `/downloads/latest.yml` при запуске
+  и раз в 4 часа. Собрано и проверено локально; **на прод ещё не отправлено** — первый `-Desktop`-деплой
+  будет и первой настоящей проверкой раздачи через Cloudflare.
+- [ ] **Подпись кода для десктопа** — пока её нет, доверие к обновлению равно доверию к домену
+  (ADR-116). Пока установка одна и своя — приемлемо; перед первым внешним пользователем — нет.
 - [ ] **Two things the move left open, both needing your sudo password:**
   `sudo systemctl enable cedarclerk` (`T-143` — the unit is `disabled`, so a DigitalOcean maintenance
   reboot leaves the site down until someone notices), and a nightly `sqlite3 .backup` (`T-071` — the

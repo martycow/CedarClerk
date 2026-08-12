@@ -276,6 +276,11 @@ public static class ErrorMessages
     public static string UnknownBuild =>
         Ru("Такой версии нет — возможно, она удалена.", "There is no such version — it may have been deleted.");
 
+    // ADR-116 — /downloads/latest before any desktop build has been shipped, or with a manifest
+    // that names no installer. One message for both: from the outside they are the same situation.
+    public static string NoDesktopBuildPublished =>
+        Ru("Десктопная сборка ещё не опубликована.", "No desktop build has been published yet.");
+
     // Russian is the only translated locale for now, matching the app's own UI dictionaries
     // (en.ts/ru.ts): every other UI language already falls back to English there, and shipping
     // machine-quality German error text would be a worse answer than the English original.

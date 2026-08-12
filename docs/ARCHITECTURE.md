@@ -167,15 +167,25 @@ happens while the old version is still serving**; the service is stopped only fo
 `-SkipBuild` re-ships what is already in `publish/` (this is how a dropped upload is continued),
 `-Rollback` swaps `app.prev` back in and restarts, `-Force` turns the git guard into a warning.
 
+`-Desktop` adds two steps **after** the health check, so nothing here can affect the site: it builds the
+installer (`build.ps1 -DesktopOnly -Installer`) and publishes it into `data/downloads/` — `.exe` and
+`.blockmap` staged, checksummed and moved into place first, `latest.yml` written last, older installers
+pruned to the last two. That directory is the one place a deploy writes inside `data/`, and it is what
+`https://cedarclerk.mooexe.dev/downloads` serves for the desktop shell's self-update (ADR-116). Without
+the flag the deploy does not touch the desktop at all, so the site's version and the published
+installer's version legitimately differ — the deploy report prints which one is live.
+
 `Migrate()` and `PRAGMA journal_mode=WAL;` run automatically on server startup (`Program.cs`), so a deploy applies pending migrations without a separate step — which is exactly why `.claude/rules/ef-migrations.md`'s "migrate immediately after any entity change" rule matters.
 
-## Desktop distribution (ADR-104/105, planned)
+## Desktop distribution (ADR-104/105/116)
 
 A second way to run the same thing, not a second application: an Electron shell starts the published `CedarClerk.Server` as a local sidecar process on a free port and opens the same Angular SPA against it. Neither the server nor the frontend is forked.
 
 It works because `CEDAR_DATA_DIR` already decides where SQLite and media live — the desktop points it at `%APPDATA%/CedarClerk` and the server code is unchanged, exactly as the droplet points it at `/home/martycow/cedarclerk/data`. One exception, found while writing ADR-104: the listening address is a literal in `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` cannot override it and that single line has to become configurable.
 
 The reason it exists is the asset index (ADR-107) — only a process on the developer's own machine can walk a game project's folder. Mechanics, risks and the two run modes: `docs/DESKTOP.md`.
+
+**Updates come from our own server** (ADR-116): `electron-updater`'s generic provider reads `https://cedarclerk.mooexe.dev/downloads/latest.yml`, which `DownloadEndpoints` serves as plain static files out of `CEDAR_DATA_DIR/downloads`. There is no update service and no third-party account — the whole protocol is a manifest, an installer and a blockmap in one folder, put there by `deploy.ps1 -Desktop`.
 
 ## Local development
 

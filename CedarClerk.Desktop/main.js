@@ -23,7 +23,8 @@ if (typeof electron === 'string') {
 }
 
 const { app, BrowserWindow, dialog, ipcMain, shell } = electron;
-const { spawn } = require('node:child_process');
+const { autoUpdater } = require('electron-updater');
+const { spawn, spawnSync } = require('node:child_process');
 const net = require('node:net');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -31,6 +32,9 @@ const fs = require('node:fs');
 const SHELL_VERSION = require('./package.json').version;
 const HEALTH_TIMEOUT_MS = 60_000;
 const HEALTH_POLL_MS = 250;
+// A session here is hours, not days, so this is mostly about the copy somebody leaves open all
+// week. The check at launch is the one that matters.
+const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 
 let serverProcess = null;
 let serverOrigin = null;
@@ -151,11 +155,72 @@ function stopServer() {
     serverProcess = null;
     // A .NET host does not always die with its parent, and an orphan holds cedar.db's WAL lock —
     // the next launch would then find a database it cannot open.
+    //
+    // Synchronous on purpose, for two reasons that only look like one. `process.on('exit')` runs no
+    // asynchronous work at all, so a fire-and-forget kill there might never happen; and an update
+    // installing on quit (ADR-116) overwrites this very executable, which a still-running process
+    // holds locked. Both want the kill finished before this function returns.
     if (process.platform === 'win32') {
-        spawn('taskkill', ['/pid', String(child.pid), '/f', '/t'], { stdio: 'ignore' });
+        spawnSync('taskkill', ['/pid', String(child.pid), '/f', '/t'], { stdio: 'ignore' });
     } else {
         child.kill('SIGTERM');
     }
+}
+
+/**
+ * Self-update (ADR-116). `electron-updater` reads https://cedarclerk.mooexe.dev/downloads/latest.yml,
+ * compares versions, downloads the installer named there and verifies its sha512 — the whole
+ * protocol is that file, and the server side of it is plain static hosting.
+ *
+ * Failure here is silent by design: no network, no manifest published yet, a server that is down —
+ * none of them stop the app from working on the version already installed, and a dialog about it
+ * would interrupt someone who is writing.
+ */
+function startUpdateChecks() {
+    // An unpackaged run has no app-update.yml beside it, and checkForUpdates() throws rather than
+    // shrugging — so `npm start` during development would open on an error box.
+    if (!app.isPackaged) return;
+
+    autoUpdater.logger = {
+        info: m => console.log(`[update] ${m}`),
+        warn: m => console.warn(`[update] ${m}`),
+        error: m => console.error(`[update] ${m}`),
+        debug: () => { },
+    };
+    autoUpdater.autoDownload = true;
+    // Closing the window is how this app normally ends, so it is also the least intrusive moment to
+    // install: no prompt, no progress bar, the next launch is simply the new version.
+    autoUpdater.autoInstallOnAppQuit = true;
+
+    autoUpdater.on('error', err => console.error(`[update] ${err?.message ?? err}`));
+
+    autoUpdater.on('update-downloaded', async info => {
+        const message = {
+            type: 'question',
+            buttons: ['Перезапустить сейчас', 'Позже'],
+            defaultId: 0,
+            cancelId: 1,
+            title: 'Cedar Clerk',
+            message: `Версия ${info.version} загружена.`,
+            detail: `Сейчас установлена ${SHELL_VERSION}. Обновление применится при перезапуске — ` +
+                'если выбрать «Позже», оно установится само при закрытии приложения.',
+        };
+        const alive = mainWindow && !mainWindow.isDestroyed();
+        const { response } = alive
+            ? await dialog.showMessageBox(mainWindow, message)
+            : await dialog.showMessageBox(message);
+        if (response !== 0) return;
+
+        // NSIS replaces resources/server/CedarClerk.Server.exe, which is running right now as our
+        // child process. stopServer() is synchronous, so by the time quitAndInstall() hands over,
+        // nothing is holding the file the installer is about to overwrite.
+        stopServer();
+        autoUpdater.quitAndInstall();
+    });
+
+    const check = () => autoUpdater.checkForUpdates().catch(() => { });
+    void check();
+    setInterval(check, UPDATE_CHECK_INTERVAL_MS).unref();
 }
 
 function createWindow(origin) {
@@ -204,6 +269,7 @@ app.whenReady().then(async () => {
     try {
         const origin = await startServer();
         createWindow(origin);
+        startUpdateChecks();
     } catch (e) {
         dialog.showErrorBox('Cedar Clerk', String(e.message ?? e));
         app.quit();

@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-08-11 — the desktop app updates itself, and the deploy is what publishes it (ADR-116)
+
+Marty asked for two things in one sentence: the deploy should produce the desktop installer, and an installed copy should end up on the new version by itself. Before this, the installer was a local artifact of `build.ps1 -Installer` that never left his machine, and "updating" meant rebuilding and reinstalling by hand.
+
+**The update mechanism is three files in a folder.** `electron-updater`'s generic provider needs `latest.yml` (version + sha512), the installer it names, and a `.blockmap` that lets a client fetch only the chunks that changed. `DownloadEndpoints` serves them with ordinary static-file middleware out of `CEDAR_DATA_DIR/downloads`; there is no update service, no GitHub release, no token in the client. GitHub Releases was the obvious alternative and was rejected for needing either a public repository (there isn't one) or a credential shipped inside the app.
+
+**The folder lives under `data/`, and that is the interesting part.** `app/` is replaced wholesale by every deploy, so an installer stored there would vanish on the next ordinary release and take the manifest pointing at it along — every installed copy would then be checking for a file that no longer exists. `data/` survives by construction, so it is where the installers go. This is the single exception to ADR-113's "the deploy never touches `data/`": it writes `data/downloads/` and nothing else there, and that directory is the only thing under `data/` that a rebuild can recreate.
+
+**`latest.yml` is written last, on purpose.** The `.exe` and its blockmap are uploaded into a staging subdirectory, checksummed against the local file and only then moved into place; the manifest follows. Since the manifest is the only file a client reads, a publish that dies halfway is *invisible* rather than broken — copies keep seeing the previous version instead of downloading half a file and failing on sha512. The upload reuses the deploy's own resumable stream (ADR-113), because 119 MB over a home uplink is exactly the size that gets dropped.
+
+**Building the installer is opt-in: `.\Scripts\deploy.ps1 -Desktop`.** electron-builder costs minutes and ~119 MB of upload on top of the usual ~50, and most deploys change the server and the frontend, which reach the desktop with whatever desktop build comes next anyway. The honest cost is that the site's version and the published installer's version can differ; the deploy prints which installer is live, and `/downloads/latest` redirects to whatever the manifest actually names rather than guessing from the running server's version.
+
+**Both new steps run after the health check**, so a failed electron-builder cannot cost a deploy that already succeeded — it reports in yellow and the summary box still prints. The deploy also refuses to start if `CedarClerk.Desktop/package.json` and `Consts.CurrentVersion` disagree: it corrects the file and stops, rather than shipping an installer whose version exists in no commit.
+
+**Two traps handled in the shell.** NSIS overwrites `resources/server/CedarClerk.Server.exe` while our own sidecar is holding it open, so `stopServer()` became synchronous (`spawnSync`) and runs before `quitAndInstall()` — which also fixes a quieter pre-existing bug, since `process.on('exit')` never ran the old asynchronous kill at all. And update checks are skipped entirely when `app.isPackaged` is false: an unpackaged `npm start` has no `app-update.yml` beside it and would have opened on an error box.
+
+**What is not solved: code signing.** Without a certificate `electron-updater` skips signature verification and trusts the sha512 in a manifest fetched over the same HTTPS as the file. Practically, trust in an update equals trust in `cedarclerk.mooexe.dev`. With one installation on Marty's own machine that is fine; with a first outside user, signing stops being a SmartScreen annoyance and becomes a security boundary. Written into ADR-116 and the risk table rather than left to be discovered.
+
+Verified locally, not assumed: the installer builds (118.7 MB) with `latest.yml` and a blockmap beside it, `electron-updater` is inside `app.asar`, `app-update.yml` carries the generic provider URL, and a real published server answers `/downloads/latest.yml` as `text/yaml` with `no-cache`, `/downloads/latest` with a 302 to the installer, and `/downloads/*.blockmap` with a week-long cache — while the same binary in desktop mode answers 404, as it should. `dotnet test` **764/764**; the localization guard caught two hardcoded English strings in the new endpoint before they shipped, and they moved into `ErrorMessages`.
+
 ## 2026-08-11 — every time on screen is Pacific, and the app stops being seven hours out (ADR-115)
 
 Marty's ask was a display rule: the server keeps UTC, the blog and the app print Pacific time. Reading the code turned up that the second half was already broken in a way nobody had named.

@@ -2,6 +2,7 @@
 #
 #   .\Scripts\deploy.ps1                 build, ship, swap, verify
 #   .\Scripts\deploy.ps1 -SkipBuild      ship what is already in publish/ (re-run after a dropped upload)
+#   .\Scripts\deploy.ps1 -Desktop        also build the installer and publish it for self-update
 #   .\Scripts\deploy.ps1 -Rollback       put the previous release back and start it
 #   .\Scripts\deploy.ps1 -Force          run the git guard as a warning instead of a stop
 #   .\Scripts\deploy.ps1 -Ascii          plain glyphs for a console that cannot draw box characters
@@ -20,11 +21,13 @@
 # stays as app.prev, so -Rollback is instant.
 #
 # What this deletes on the server: app.prev (the release before last) and stale tarballs in
-# staging/. It never touches ~/cedarclerk/data - the database and media live there.
+# staging/. Of ~/cedarclerk/data it writes exactly one subdirectory - downloads/, the desktop
+# installer and its manifest (ADR-116, -Desktop only) - and never anything else there.
 param(
     [string] $CloudHost = "martycow@deploy.mooexe.dev",
     [switch] $Force,
     [switch] $SkipBuild,
+    [switch] $Desktop,
     [switch] $Rollback,
     [switch] $Ascii,
     [int]    $Retries = 5
@@ -33,17 +36,22 @@ param(
 $ErrorActionPreference = 'Stop'
 try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch { }
 
-$RepoRoot   = Split-Path $PSScriptRoot -Parent
-$WebDir     = Join-Path $RepoRoot 'cedarclerk-web'
-$PublishDir = Join-Path $RepoRoot 'publish'
-$CacheDir   = Join-Path $env:TEMP 'cedarclerk-deploy'
+$RepoRoot    = Split-Path $PSScriptRoot -Parent
+$WebDir      = Join-Path $RepoRoot 'cedarclerk-web'
+$PublishDir  = Join-Path $RepoRoot 'publish'
+$DesktopDir  = Join-Path $RepoRoot 'CedarClerk.Desktop'
+$CacheDir    = Join-Path $env:TEMP 'cedarclerk-deploy'
 
-$RemoteRoot = '/home/martycow/cedarclerk'
-$AppDir     = "$RemoteRoot/app"
-$NewDir     = "$RemoteRoot/app.new"
-$PrevDir    = "$RemoteRoot/app.prev"
-$Staging    = "$RemoteRoot/staging"
-$HealthUrl  = 'https://cedarclerk.mooexe.dev/api/health'
+$RemoteRoot  = '/home/martycow/cedarclerk'
+$AppDir      = "$RemoteRoot/app"
+$NewDir      = "$RemoteRoot/app.new"
+$PrevDir     = "$RemoteRoot/app.prev"
+$Staging     = "$RemoteRoot/staging"
+# ADR-116 - under data/ because app/ is replaced wholesale on every deploy, and an installer there
+# would disappear on the next ordinary release together with the manifest pointing at it.
+$Downloads   = "$RemoteRoot/data/downloads"
+$HealthUrl   = 'https://cedarclerk.mooexe.dev/api/health'
+$DownloadUrl = 'https://cedarclerk.mooexe.dev/downloads'
 
 # Keepalives, because the failure this script exists for is a connection that goes quiet and gets
 # reset. BatchMode makes a key problem fail immediately instead of hanging on a hidden prompt.
@@ -148,6 +156,22 @@ function Complete-Step {
     Write-Host ('      {0}  ' -f $G.OK) -ForegroundColor Green -NoNewline
     Write-Host (Format-Duration $script:Current.Watch.Elapsed) -ForegroundColor DarkGray -NoNewline
     if ($Note) { Write-Host ("   $Note") -ForegroundColor DarkGray } else { Write-Host '' }
+}
+
+# For a step that failed without endangering anything - the desktop installer after the site is
+# already live. A green tick there would be a lie, and Stop-Deploy would throw away the report of a
+# deploy that actually worked.
+function Stop-Step {
+    param([string] $Note)
+    $script:Current.Watch.Stop()
+    $script:Steps += [pscustomobject]@{
+        Name    = $script:Current.Name
+        Elapsed = $script:Current.Watch.Elapsed
+        Note    = $Note
+    }
+    Write-Host ('      {0}  ' -f $G.NO) -ForegroundColor Yellow -NoNewline
+    Write-Host (Format-Duration $script:Current.Watch.Elapsed) -ForegroundColor DarkGray -NoNewline
+    Write-Host ("   $Note") -ForegroundColor Yellow
 }
 
 function Write-Note { param([string] $Text) Write-Host "      $Text" -ForegroundColor DarkGray }
@@ -261,6 +285,44 @@ function Send-Tail {
     return (-not $broke) -and ($proc.ExitCode -eq 0)
 }
 
+# The retry-and-resume wrapper around Send-Tail, for the desktop artifacts (ADR-116). The release
+# tarball keeps its own copy of this loop on purpose: that path is what production rides on and it
+# has been proven in anger, and sharing code with a feature added later would put a change to the
+# installer in the way of the site going out.
+function Send-Artifact {
+    param([string] $LocalPath, [string] $RemotePath, [switch] $Fresh)
+
+    $total = (Get-Item $LocalPath).Length
+    # A small file whose content changes under a fixed name (latest.yml) must never be resumed: the
+    # bytes already there are a different manifest of the same length, and appending nothing to it
+    # would look like success.
+    if ($Fresh) { Invoke-Remote "rm -f '$RemotePath'" | Out-Null }
+
+    for ($attempt = 1; $attempt -le $Retries; $attempt++) {
+        $offset = Get-RemoteSize $RemotePath
+        if ($offset -lt 0) { return $false }
+        if ($offset -gt $total) {
+            Write-Warn 'the file on the server is longer than the one being sent - starting it over'
+            Invoke-Remote "rm -f '$RemotePath'" | Out-Null
+            $offset = 0
+        }
+        if ($offset -eq $total) { return $true }
+        if ($offset -gt 0) {
+            Write-Note ("resuming at {0} ({1}% was already there)" -f (Format-Size $offset), [int](100 * $offset / $total))
+        }
+
+        Send-Tail -LocalPath $LocalPath -Offset $offset -Total $total -RemotePath $RemotePath | Out-Null
+        if ((Get-RemoteSize $RemotePath) -eq $total) { return $true }
+
+        if ($attempt -lt $Retries) {
+            $wait = [math]::Min(20, 3 * $attempt)
+            Write-Warn "the connection dropped - retrying in ${wait}s (attempt $attempt of $Retries)"
+            Start-Sleep -Seconds $wait
+        }
+    }
+    return $false
+}
+
 #endregion
 #region ----------------------------------------------------------------- header
 
@@ -354,6 +416,8 @@ echo SWAPPED
 }
 
 if ($SkipBuild) { $script:TotalSteps = 6 }
+# Building the installer and shipping it are two steps, and they run after the site is already live.
+if ($Desktop) { $script:TotalSteps += 2 }
 
 #endregion
 #region ----------------------------------------------------------------- 1. preflight
@@ -371,6 +435,31 @@ if (-not (Get-Command tar -ErrorAction SilentlyContinue)) {
 
 if ($SkipBuild -and -not (Test-Path (Join-Path $PublishDir 'CedarClerk.Server.dll'))) {
     Stop-Deploy '-SkipBuild was given, but publish/ holds no build.' -Hints @('Run without -SkipBuild.')
+}
+
+if ($Desktop) {
+    if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+        Stop-Deploy '-Desktop needs npm on PATH - electron-builder is what makes the installer.'
+    }
+    if (-not (Test-Path (Join-Path $WebDir 'dist\cedarclerk-web\browser'))) {
+        Stop-Deploy 'The installer bundles the Angular output, and cedarclerk-web/dist is empty.' `
+            -Hints @('Run without -SkipBuild, or build the frontend first: cd cedarclerk-web; npm run build')
+    }
+
+    # The version an installed copy reports comes from package.json, and the tag on this commit is
+    # what says which source it was built from. Letting the build sync them mid-deploy would ship an
+    # installer whose version exists in no commit - so the mismatch is fixed here and the run stops,
+    # rather than leaving a modified file behind after production has already moved.
+    $pkgPath = Join-Path $DesktopDir 'package.json'
+    $pkgVersion = (Get-Content $pkgPath -Raw | ConvertFrom-Json).version
+    if ($pkgVersion -ne $version) {
+        (Get-Content $pkgPath -Raw) -replace '"version":\s*"[^"]*"', "`"version`": `"$version`"" |
+            Set-Content $pkgPath -NoNewline
+        Stop-Deploy "The desktop shell says $pkgVersion, this build is $version - nothing has been touched." `
+            -State @('package.json has just been corrected; it needs to be part of the tagged commit.') `
+            -Hints @('git add CedarClerk.Desktop/package.json; git commit -m "Sync shell version"',
+                     'then re-run the same deploy command')
+    }
 }
 
 # One round trip for everything that decides whether it is worth starting.
@@ -631,6 +720,133 @@ if ($resp.version -ne $version) {
 Complete-Step "v$($resp.version) is answering"
 
 #endregion
+#region ----------------------------------------------------- 10-11. desktop installer (-Desktop)
+
+# Everything below runs with the site already live, so nothing here can take production down. A
+# failure costs the desktop update, not the deploy - which is why it reports instead of aborting.
+$desktopNote = $null
+$desktopColor = 'Green'
+
+if ($Desktop) {
+    Start-Step 'Desktop build' "electron-builder; the site is already serving v$version"
+
+    $installer = Join-Path $DesktopDir "dist\CedarClerk-Setup-$version.exe"
+    $manifest  = Join-Path $DesktopDir 'dist\latest.yml'
+    $blockmap  = "$installer.blockmap"
+
+    # build.ps1 owns how the shell is built; this only asks for it. -DesktopOnly reuses the Angular
+    # output the steps above produced instead of building the frontend a second time.
+    & (Join-Path $PSScriptRoot 'build.ps1') -DesktopOnly -Installer
+    $builderCode = $LASTEXITCODE
+
+    $missing = @(
+        @{ Path = $installer; Name = 'the installer' },
+        @{ Path = $manifest;  Name = 'latest.yml (electron-builder writes it from the publish block)' }
+    ) | Where-Object { -not (Test-Path $_.Path) } | ForEach-Object { $_.Name }
+
+    if ($builderCode -ne 0 -or $missing) {
+        $desktopColor = 'Yellow'
+        $desktopNote = 'not published - the installer was not built'
+        Write-Warn 'the site is deployed and running; only the desktop update did not happen'
+        foreach ($item in $missing) { Write-Note "missing: $item" }
+        Stop-Step $desktopNote
+    }
+    else {
+        $installerBytes = (Get-Item $installer).Length
+        Complete-Step "$(Format-Size $installerBytes)$(if (Test-Path $blockmap) { ' + blockmap' })"
+
+        Start-Step 'Publishing installer' "into data/downloads, manifest written last"
+
+        # Staged first, moved second, manifest third. latest.yml is the only file an installed copy
+        # reads, so as long as it appears after the file it names, a half-finished publish is
+        # invisible rather than broken: clients keep seeing the previous version.
+        $staging = "$Downloads/.staging"
+        Invoke-Remote "mkdir -p '$staging'" | Out-Null
+
+        $name = Split-Path $installer -Leaf
+        $localHash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()
+        $published = $false
+
+        foreach ($pass in 1, 2) {
+            if (-not (Send-Artifact -LocalPath $installer -RemotePath "$staging/$name")) { break }
+
+            $remoteHash = (Invoke-Remote "sha256sum '$staging/$name' | cut -d' ' -f1").Output.Trim().ToLower()
+            if ($remoteHash -eq $localHash) { $published = $true; break }
+
+            # Same file name, different bytes: a partial upload of an earlier build of this same
+            # version. Resuming spliced two builds together, so the only cure is starting over.
+            Write-Warn "checksum mismatch on pass $pass - discarding the staged file and sending it again"
+            Invoke-Remote "rm -f '$staging/$name'" | Out-Null
+        }
+
+        if (-not $published) {
+            $desktopColor = 'Yellow'
+            $desktopNote = 'not published - the upload did not verify'
+            Stop-Step $desktopNote
+        }
+        else {
+            Write-Note "checksum matches ($($localHash.Substring(0,16))...)"
+
+            # Both are small, but a truncated one is worse than a missing one: a half-written
+            # manifest is still a manifest as far as a client is concerned, and a half-written
+            # blockmap breaks the differential download it exists to enable. So neither moves into
+            # place unless its upload reported success.
+            $blockmapOk = (Test-Path $blockmap) -and
+                (Send-Artifact -LocalPath $blockmap -RemotePath "$staging/$name.blockmap" -Fresh)
+            if ((Test-Path $blockmap) -and -not $blockmapOk) {
+                Write-Warn 'the blockmap did not upload - updates will download the whole installer'
+                Invoke-Remote "rm -f '$staging/$name.blockmap'" | Out-Null
+            }
+
+            $manifestOk = Send-Artifact -LocalPath $manifest -RemotePath "$staging/latest.yml" -Fresh
+
+            # One call: move the payload in, then the manifest, then drop everything older than the
+            # last two releases. Keeping one previous installer is what makes a bad build recoverable
+            # by hand without a rebuild.
+            $place = if (-not $manifestOk) { [pscustomobject]@{ Code = 1; Output = 'latest.yml did not upload' } } else { Invoke-Remote @"
+set -e
+mv -f '$staging/$name' '$Downloads/$name'
+if [ -f '$staging/$name.blockmap' ]; then mv -f '$staging/$name.blockmap' '$Downloads/$name.blockmap'; fi
+mv -f '$staging/latest.yml' '$Downloads/latest.yml'
+ls -1t '$Downloads'/CedarClerk-Setup-*.exe 2>/dev/null | tail -n +3 | xargs -r -I{} rm -f {} {}.blockmap
+echo "KEPT=`$(ls -1 '$Downloads'/CedarClerk-Setup-*.exe 2>/dev/null | wc -l)"
+echo PLACED
+"@
+            }
+
+            if ($place.Output -notmatch 'PLACED') {
+                $desktopColor = 'Yellow'
+                $desktopNote = 'uploaded, but moving it into place failed'
+                Write-Warn $desktopNote
+                foreach ($line in ($place.Output -split "`n")) { Write-Note $line }
+                Stop-Step $desktopNote
+            }
+            else {
+                $kept = [regex]::Match($place.Output, 'KEPT=(\d+)').Groups[1].Value
+                $desktopNote = "v$version   $DownloadUrl/latest"
+
+                # The one thing a file on disk cannot prove: that the route serves it. Worth a check
+                # of its own - a manifest nobody can read is exactly as useless as no manifest.
+                try {
+                    $servedManifest = Invoke-RestMethod -Uri "$DownloadUrl/latest.yml" -TimeoutSec 15
+                    if ("$servedManifest" -notmatch [regex]::Escape("version: $version")) {
+                        throw "the served manifest does not name $version"
+                    }
+                    Complete-Step "$kept installer(s) kept; $DownloadUrl/latest.yml answers v$version"
+                }
+                catch {
+                    $desktopColor = 'Yellow'
+                    $desktopNote = "published, but $DownloadUrl/latest.yml did not verify"
+                    Write-Warn $_.Exception.Message
+                    Write-Note 'the files are on the server; it is the route serving them that did not answer'
+                    Stop-Step 'published, manifest not verified'
+                }
+            }
+        }
+    }
+}
+
+#endregion
 #region ----------------------------------------------------------------- summary
 
 $total = [TimeSpan]::Zero
@@ -649,6 +865,7 @@ $rows += , @('total', (Format-Duration $total), 'White')
 $rows += , @('downtime', "$($downMs)ms  (renaming two directories)", 'Green')
 $rows += , @('shipped', ('{0} files, {1} packed to {2}' -f $publishFiles.Count, (Format-Size $publishBytes), (Format-Size $tarBytes)))
 $rows += , @('running', ("v{0}   {1}" -f $resp.version, $HealthUrl), 'Green')
+if ($Desktop) { $rows += , @('desktop', $desktopNote, $desktopColor) }
 $rows += , @('rollback', '.\Scripts\deploy.ps1 -Rollback')
 
 Write-Box -Title ("{0}  DEPLOYED   {1} {2} v{3}" -f $G.OK, $liveShort, $G.ARR, $version) `

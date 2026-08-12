@@ -44,6 +44,10 @@ var dataProtectionKeysDir = Path.Combine(dataDir, "dataprotection-keys");
 // indexed is somebody's game project, usually under version control, and writing into it would be
 // both a surprise and a diff.
 var thumbnailsDir = Path.Combine(dataDir, "thumbs");
+// ADR-116 — the desktop installer and the electron-updater manifest that points at it. Under
+// dataDir because a deploy replaces app/ wholesale; the directory itself is created only where it
+// is actually served (never in desktop mode), see DownloadEndpoints.
+var downloadsDir = Path.Combine(dataDir, "downloads");
 
 Directory.CreateDirectory(dataDir);
 Directory.CreateDirectory(mediaDir);
@@ -209,6 +213,11 @@ app.UseStaticFiles(new StaticFileOptions
     FileProvider = new PhysicalFileProvider(mediaDir),
     RequestPath = "/media"
 });
+
+// ADR-116 — updates for the desktop shell. Not in desktop mode: there this server is the copy
+// being updated, and the folder would only ever be an empty one in %APPDATA%.
+if (!builder.Configuration.IsOn(Consts.General.DesktopModeCfg))
+    app.UseDesktopDownloads(downloadsDir);
 
 app.UseAuthentication();
 app.UseAuthorization();

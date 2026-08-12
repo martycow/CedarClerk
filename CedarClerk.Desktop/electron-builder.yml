@@ -19,6 +19,18 @@ extraResources:
   - from: server
     to: server
 
+# ADR-116 — where an installed copy looks for a newer version. `generic` means "a folder on an HTTPS
+# host": our own server serves it out of CEDAR_DATA_DIR/downloads (DownloadEndpoints.cs), which is
+# why this needs no repository, no token and no third-party account. Also what makes electron-builder
+# emit latest.yml and the .blockmap beside the installer — without a publish block there is no
+# manifest, and without a manifest nothing updates.
+publish:
+  provider: generic
+  url: https://cedarclerk.mooexe.dev/downloads
+  # Cloudflare does not answer multi-range requests, and a differential download that asks for one
+  # gets a full body back — slower than not trying. Sequential single ranges work.
+  useMultipleRangeRequest: false
+
 win:
   target:
     - target: nsis
