@@ -16,6 +16,12 @@ namespace CedarClerk.Cli.Commands;
 // It is a shortcut for something you could type yourself, so when it cannot run it prints the
 // command instead of failing silently: on a machine that is not Windows there is no
 // "open a terminal" that means anything portable, and printing beats guessing.
+//
+// PowerShell is started directly and never through `wt` (12.08.2026). Windows Terminal splits the
+// arguments it is handed and then builds a fresh command line out of the pieces, which loses the
+// quotes around the command and leaves it looking for an executable literally named
+// `pwsh -NoExit -Command claude` — 0x80070002, file not found. Nothing is lost by dropping it:
+// Windows 11 hosts an ordinary console in Windows Terminal anyway, so the window looks the same.
 public sealed class ClaudeCommand : AsyncCommand<CedarSettings>
 {
     private const string Prompt = "/remote-control";
@@ -37,7 +43,7 @@ public sealed class ClaudeCommand : AsyncCommand<CedarSettings>
         if (!Shell.OnPath("claude"))
             session.Note("'claude' is not on PATH - the new window will say so too.");
 
-        var (exe, args) = Launch(shell, repo, Shell.OnPath("wt"));
+        var (exe, args) = Launch(shell, repo);
 
         if (!OperatingSystem.IsWindows())
         {
@@ -57,15 +63,9 @@ public sealed class ClaudeCommand : AsyncCommand<CedarSettings>
         return 1;
     }
 
-    // Windows Terminal when it is there, because a bare pwsh started this way gets the old console
-    // host and looks nothing like the shell Marty actually works in. `wt` splits its own arguments
-    // on ';', which is why the fallback carries the Set-Location and this one does not — -d already
-    // puts the tab in the right directory, and the command left over has no semicolon in it.
-    //
-    // Whether Windows Terminal is present is passed in rather than looked up here, so that both
-    // branches can be tested on a machine that has only one of them.
-    internal static (string Exe, string Args) Launch(string shell, string repo, bool windowsTerminal) =>
-        windowsTerminal
-            ? ("wt", $"-d \"{repo}\" {shell} -NoExit -Command \"claude {Prompt}\"")
-            : (shell, $"-NoExit -Command \"Set-Location '{repo.Replace("'", "''")}'; claude {Prompt}\"");
+    // Set-Location rather than trusting the launched process to inherit a working directory: the
+    // runner does set one, but a shell profile is free to move the session somewhere else before
+    // the -Command runs, and this is the last thing to run.
+    internal static (string Exe, string Args) Launch(string shell, string repo) =>
+        (shell, $"-NoExit -Command \"Set-Location '{repo.Replace("'", "''")}'; claude {Prompt}\"");
 }

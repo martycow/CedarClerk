@@ -39,20 +39,18 @@ public class SafetyTests
         Assert.Contains("wt -d . pwsh", console.Output);
     }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void The_claude_session_starts_in_the_repository_whichever_terminal_is_available(bool windowsTerminal)
+    [Fact]
+    public void The_claude_session_starts_in_the_repository()
     {
-        var (exe, args) = ClaudeCommand.Launch("pwsh", @"D:\Moo.exe\CedarClerk", windowsTerminal);
+        var (exe, args) = ClaudeCommand.Launch("pwsh", @"D:\Moo.exe\CedarClerk");
 
         Assert.Contains("claude /remote-control", args);
         Assert.Contains(@"D:\Moo.exe\CedarClerk", args);
-        Assert.Equal(windowsTerminal ? "wt" : "pwsh", exe);
+        Assert.Equal("pwsh", exe);
 
-        // wt splits its own arguments on ';', so a semicolon in the wt form would be read as the
-        // start of a second tab rather than as PowerShell syntax.
-        if (windowsTerminal) Assert.DoesNotContain(";", args);
+        // The shell is started directly: `wt` rebuilds the command line it is handed and drops the
+        // quotes, which is what made this fail before (see the comment on ClaudeCommand).
+        Assert.NotEqual("wt", exe);
     }
 
     [Fact]
