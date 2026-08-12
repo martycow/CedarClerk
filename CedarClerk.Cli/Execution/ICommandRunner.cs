@@ -21,30 +21,22 @@ public interface ICommandRunner
 
     Task<CommandResult> RunRemoteAsync(string command, CancellationToken ct);
 
-    // Added by ADR-118 decision 8: the test grid needs each result as it happens, not the whole
-    // stdout at the end. Separate from RunLocalAsync so the ordinary path stays the simple one.
+    // The test grid needs each result as it happens, not the whole stdout at the end (ADR-118).
     Task<CommandResult> RunLocalStreamingAsync(
         string exe, string args, string? workingDirectory, Action<string> onLine, CancellationToken ct);
 
-    // The same for the far side, which `logs --follow` needs: journalctl -f never returns, so a
-    // buffered call would print nothing at all rather than late.
+    // `logs --follow` needs this: journalctl -f never returns, so a buffered call prints nothing at
+    // all rather than late.
     Task<CommandResult> RunRemoteStreamingAsync(string command, Action<string> onLine, CancellationToken ct);
 
-    // The tail of a local file, streamed into a remote command's stdin (ADR-119). This is how the
-    // release tarball crosses: `cat >> file` on the far side, starting from the byte already there,
-    // because scp cannot resume and this transfer has died at 90% before.
-    //
-    // onSent reports the running total including the offset, so a caller can draw one bar across an
-    // upload that took three attempts rather than three bars that each start at zero.
+    // How the release tarball crosses: `cat >> file` on the far side from the byte already there,
+    // because scp cannot resume and this transfer has died at 90% before. onSent includes the offset,
+    // so an upload that took three attempts draws one bar rather than three starting at zero.
     Task<CommandResult> StreamFileToRemoteAsync(
         string localPath, long offset, string remoteCommand, Action<long> onSent, CancellationToken ct);
 
-    // A window the tool opens and then stops owning: nothing is redirected, nothing is waited for,
-    // and the exit code reported is only whether the launch itself succeeded.
-    //
-    // It has to be its own method rather than a flag on RunLocalAsync, because that one captures
-    // stdout and blocks until exit — precisely the two things an interactive session the user is
-    // about to type into must not do. It goes through the interface anyway so that --dry-run keeps
-    // meaning "touch nothing", including "open no windows".
+    // A window the tool opens and stops owning. Its own method because RunLocalAsync captures stdout
+    // and blocks until exit — the two things an interactive session must not do. Still through the
+    // interface, so --dry-run keeps meaning "touch nothing", including "open no windows".
     Task<CommandResult> LaunchDetachedAsync(string exe, string args, string? workingDirectory, CancellationToken ct);
 }

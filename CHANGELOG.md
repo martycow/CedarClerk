@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-12 — the UI inventory gets teeth, and the comments get cut
+
+Two of Marty's standing complaints, both about the same thing: things written down that nobody reads.
+
+**Adding a UI element now goes through `docs/UI-INVENTORY.md`.** The complaint was concrete — X and Bluesky connection controls were built inside the Export modal and then rebuilt into Settings → Integrations (ADR-095), because nobody checked where the Telegram connection already lived. The inventory had described that panel the whole time. So the gap was never knowledge, it was that a 400-row document is only read by someone who already suspects it exists.
+
+Three layers, because one would not hold. `.claude/rules/ui-changes.md` states the rule and the incident behind it. A `PreToolUse` hook fires on the first front-end edit of a session and puts the inventory's location into the context that is about to write the code — once per session, not per edit, since a reminder that repeats is a reminder that gets skimmed. And `UiInventoryDriftTests` fails `dotnet test` when a page component or a `sec-*` settings section exists with no mention in the inventory — the same shape as `SchemaDriftGuardTests`, which is the pattern that already works here: trust the test instead of remembering.
+
+It went red on the first run, which is the point. `project-builds.component` — a whole screen — had shipped with no row at all, and six settings sections were described by name but not by the `id` the anchor nav jumps to. Both fixed; the guard is honest about what it cannot check, which is whether a row that exists is still *true*.
+
+**Comments in `CedarClerk.Core` and `CedarClerk.Cli` were cut back.** Marty asked whether the volume was useful to Claude itself. It is not: a comment restating what the code does is read after the code and adds nothing, and it outlives the code it describes — `Logo.cs` carried a careful description of a subtitle that had changed months ago, which is also why a unit test was failing on `master`. What stays is a *why* that cannot be read off the code: an incident it prevents (npm's `%~dp0`, `scp` leaving production half-copied), an external constraint (X counts weighted units, Telegram collapses a post behind "Show more"), or a choice made against the obvious one (no `System.Formats.Tar`, no `CultureInfo` month names). Core went 18.9% → 13.5%, the CLI 13.2% → 11.9%, and the rule is written into `CLAUDE.md` so the next session does not re-inflate it. 925 tests still green.
+
+**Commits lose their trailers.** `Co-Authored-By` and the `Claude-Session` link were a harness default, and `CLAUDE.md` had said "no body, no bullet list, no explanation" all along — a trailer is a body. Three or four words, nothing after them.
+
 ## 2026-08-12 — a state check: two tags, a dead hostname, and the backup that came back
 
 Nothing here was planned work. It is what a "what is the state of git" question turned up, and the answer took four things with it.

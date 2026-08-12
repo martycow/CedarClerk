@@ -4,18 +4,14 @@ using Spectre.Console.Rendering;
 
 namespace CedarClerk.Cli.Rendering;
 
-// The menu, drawn as one live frame that contains the logo rather than as a prompt printed beneath
-// it. That is the whole reason this exists instead of Spectre's SelectionPrompt: the prompt owns the
-// bottom of the screen and redraws only its own list, so a logo above it can never move (Marty asked
-// for one that keeps glinting; ADR-118 decision 10).
+// The menu as one live frame containing the logo, which is why this exists instead of Spectre's
+// SelectionPrompt: that prompt owns the bottom of the screen and redraws only its own list, so a
+// logo above it can never move (ADR-118 decision 10). Owning the frame costs the arrow-key handling
+// below and buys an animating logo, a header the previous command cannot scroll away, and submenus
+// that replace the screen instead of stacking.
 //
-// Owning the frame costs the arrow-key handling below, and buys three things: the logo animates
-// while you are choosing, the header is never scrolled away by the previous command's output, and a
-// submenu replaces the screen instead of stacking a second copy of everything under the first.
-//
-// It degrades to SelectionPrompt whenever it cannot have the whole screen — redirected output, no
-// ANSI, no interactive console, or a window too short for the frame. A menu that draws half a logo
-// and eats the keyboard would be worse than a plain list.
+// Degrades to SelectionPrompt whenever it cannot have the whole screen — a menu that draws half a
+// logo and eats the keyboard is worse than a plain list.
 public static class Chooser
 {
     public readonly record struct Entry(string Name, string Hint);

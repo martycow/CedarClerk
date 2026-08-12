@@ -2,34 +2,18 @@ using System.Text;
 
 namespace CedarClerk.Core;
 
-/// <summary>One glossary entry as the renderer needs it: what to match, and what to show.</summary>
-/// <param name="Term">The canonical spelling, shown as the tooltip's heading.</param>
-/// <param name="Aliases">
-/// Other spellings that mean the same entry. Russian inflects — "рендерер" appears as
-/// "рендерера", "рендереру" — so matching only the canonical form would miss most occurrences of
-/// a term in a Russian post. Listing them beats guessing at stemming rules per language.
-/// </param>
-/// <param name="IsCaseSensitive">
-/// Off by default, because a term at the start of a sentence is the same term. On when the casing
-/// IS the meaning — "IT" the industry against "it" the pronoun, or a product spelled a fixed way.
-/// Applies to the term and to every alias of it alike: a per-alias switch would be a setting
-/// nobody could hold in their head while writing.
-/// </param>
+// Aliases exist because Russian inflects — "рендерер" appears as "рендерера", "рендереру" — and
+// listing forms beats guessing at per-language stemming. IsCaseSensitive is for terms where the
+// casing IS the meaning ("IT" the industry against "it"), and covers the aliases too.
 public sealed record GlossaryEntry(string Term, string Description, string? ImageUrl, IReadOnlyList<string> Aliases, bool IsCaseSensitive = false);
 
-// Idea #11 — finds glossary terms in already-escaped rendered text and wraps them so the blog page
-// can show a description on hover or tap.
+// Idea #11 — wraps glossary terms in rendered text so the blog page can show a description on hover.
+// Two rules are the whole reason this is a separate, tested unit:
 //
-// Two rules that are not obvious and are the whole reason this is a separate, tested unit:
-//
-// 1. It runs on text that is ALREADY HTML-escaped, and it never introduces unescaped content —
-//    the description and image go into attributes through EscapeAttr. Scanning raw text and
-//    escaping afterwards would escape the markup this adds; scanning escaped text means the
-//    matcher must not treat "&amp;" as five letters, which is why entities are skipped below.
-//
-// 2. Only the FIRST occurrence of each term on a page is marked. Marking every occurrence turns
-//    an article that uses a word twenty times into a page of underlines, which is noise, not help
-//    — the same call every encyclopaedia makes.
+// 1. It runs on ALREADY-ESCAPED text and never introduces unescaped content. Escaping afterwards
+//    would escape the markup this adds; the cost is that the matcher must not read "&amp;" as five
+//    letters, which is why entities are skipped below.
+// 2. Only the FIRST occurrence of a term is marked — twenty underlines of one word is noise.
 public static class GlossaryScanner
 {
     /// <summary>

@@ -2,15 +2,10 @@ using System.Text.Json.Nodes;
 
 namespace CedarClerk.Core;
 
-/// <summary>
-/// The images of a document, in the order a reader meets them, with their alt text (T-089 follow-up,
-/// 10.08.2026).
-///
-/// Separate from <see cref="CedarPackage.FindReferencedMediaPaths"/>, which answers "what files does
-/// this document touch" for packing a <c>.cedar</c>: that one is a set of every media path,
-/// unordered and without alt text. A network that attaches up to four pictures needs the first four
-/// **in order**, and needs their alt text, which Bluesky both supports and expects.
-/// </summary>
+// A document's images in reading order, with alt text. Separate from
+// CedarPackage.FindReferencedMediaPaths, which is an unordered set of every media path for packing a
+// .cedar: a network that attaches four pictures needs the first four in order, with the alt text
+// Bluesky expects.
 public static class CedarImageRefs
 {
     public record ImageRef(string Src, string? Alt);

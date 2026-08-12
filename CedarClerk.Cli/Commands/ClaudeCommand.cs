@@ -5,23 +5,13 @@ using Spectre.Console.Cli;
 
 namespace CedarClerk.Cli.Commands;
 
-// Opens a second terminal sitting in the repository with `claude /remote-control` already running
-// (Marty, 12.08.2026).
+// Opens a second terminal in the repository with `claude /remote-control` running. A separate window
+// because both programs read the keyboard; it is launched and forgotten. When it cannot run it
+// prints the command instead — off Windows there is no portable "open a terminal".
 //
-// A second window rather than a child of this one, and that is the only interesting decision here:
-// both programs read the keyboard, so sharing a console would mean two readers fighting over every
-// keystroke. The new session is launched and then forgotten — no pipes, no exit code worth waiting
-// for, nothing this tool has to keep alive.
-//
-// It is a shortcut for something you could type yourself, so when it cannot run it prints the
-// command instead of failing silently: on a machine that is not Windows there is no
-// "open a terminal" that means anything portable, and printing beats guessing.
-//
-// PowerShell is started directly and never through `wt` (12.08.2026). Windows Terminal splits the
-// arguments it is handed and then builds a fresh command line out of the pieces, which loses the
-// quotes around the command and leaves it looking for an executable literally named
-// `pwsh -NoExit -Command claude` — 0x80070002, file not found. Nothing is lost by dropping it:
-// Windows 11 hosts an ordinary console in Windows Terminal anyway, so the window looks the same.
+// Never through `wt`: Windows Terminal re-splits the arguments and loses the quotes, then looks for
+// an executable literally named `pwsh -NoExit -Command claude` (0x80070002). Nothing is lost —
+// Windows 11 hosts the plain console in Windows Terminal anyway.
 public sealed class ClaudeCommand : AsyncCommand<CedarSettings>
 {
     private const string Prompt = "/remote-control";

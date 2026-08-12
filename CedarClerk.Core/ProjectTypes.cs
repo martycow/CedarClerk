@@ -1,38 +1,21 @@
 namespace CedarClerk.Core;
 
-/// <summary>
-/// What kind of work a <c>Project</c> is. Its one job is answering "what document does this project
-/// start with" — ADR-103 requires a project to hold at least one document from the moment it exists,
-/// and the type is how the create dialog knows which one to make.
-///
-/// Restored by Marty's design handoff (10.08.2026). ADR-103 had narrowed the create dialog to a bare
-/// document-type picker because the project-type taxonomy in it was invented rather than asked for;
-/// the handoff supplies the real four, with a starter document each, so the taxonomy is back — as a
-/// product decision this time.
-/// </summary>
+// What kind of work a Project is. Its one job is answering which document the project starts with —
+// ADR-103 requires a project to hold one from the moment it exists. The four types come from Marty's
+// design handoff (10.08.2026), which is why the taxonomy is a product decision rather than invented.
 public static class ProjectTypes
 {
-    /// <summary>Everything: documents, sprints, an asset index, a press kit. Starts with the GDD.</summary>
     public const string FullGame = "fullgame";
-
-    /// <summary>Deadline first — one sprint, a plan, a submission checklist.</summary>
     public const string Jam = "jam";
-
-    /// <summary>A question to answer. Notes and tasks, no ceremony.</summary>
     public const string Prototype = "prototype";
-
-    /// <summary>Post-launch: patches, changelogs, press.</summary>
     public const string Released = "released";
 
     public static readonly IReadOnlyList<string> All = [FullGame, Jam, Prototype, Released];
 
     public static bool IsKnown(string? type) => type is not null && All.Contains(type);
 
-    /// <summary>
-    /// The kind of document a new project of this type is created with. The document's *title* is
-    /// not decided here: it is user-facing text, and the client already has both languages — the
-    /// server would only be able to write it in one.
-    /// </summary>
+    // The title is the client's to write: it is user-facing text and the client has both languages,
+    // where the server would manage only one.
     public static string StarterDocumentType(string? projectType) => projectType switch
     {
         // The master reference the whole project hangs off.

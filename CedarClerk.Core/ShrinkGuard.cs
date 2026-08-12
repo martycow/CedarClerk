@@ -1,25 +1,16 @@
 namespace CedarClerk.Core;
 
-/// <summary>
-/// T-018.1, from the 29.07.2026 incident: the 1.2s autosave honestly saves whatever the editor
-/// holds at that instant, including the empty document that exists for a moment while a table is
-/// being deleted or a select-all is pending a paste. The server used to accept it without a word,
-/// and the blog renders the stored document live — so a transient empty state became the published
-/// post. This decides when a save is drastic enough to require the author to say "yes, really".
-/// </summary>
+// T-018.1, from the 29.07.2026 incident: the 1.2s autosave saves whatever the editor holds at that
+// instant, including the empty document that exists for a moment while a table is deleted or a
+// select-all waits for a paste. The blog renders the stored document live, so that transient state
+// became the published post. This decides when a save needs the author to say "yes, really".
 public static class ShrinkGuard
 {
-    /// <summary>
-    /// Below this the stored version is a stub, and losing it is not the incident this guards
-    /// against — nobody needs a confirmation dialog to clear two words.
-    /// </summary>
+    // Below this the stored version is a stub — nobody needs a dialog to clear two words.
     public const int MinGuardedTextLength = 200;
 
-    /// <summary>
-    /// Keeping under this share of the stored text is what counts as drastic. Deliberately
-    /// generous: a legitimate heavy edit rarely deletes 80% of a post in one autosave window,
-    /// and the false positive costs one click while the false negative cost a real post.
-    /// </summary>
+    // Generous on purpose: a legitimate heavy edit rarely drops 80% of a post in one autosave
+    // window, and the false positive costs a click where the false negative cost a real post.
     public const double SuspiciousRemainingShare = 0.2;
 
     public record Verdict(bool Suspicious, int StoredTextLength, int IncomingTextLength);

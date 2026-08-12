@@ -3,17 +3,13 @@ using System.Text.Json.Nodes;
 
 namespace CedarClerk.Core;
 
-// FI4.1 — a private post can carry its registration form in more than one language: the primary
-// one in Draft.RegistrationFormJson, the rest in Draft.RegistrationFormTranslationsJson as a
-// JSON object keyed by language code.
+// FI4.1 — a private post's registration form in several languages. ADR-060 replaced the per-column
+// model (primary + a translations object) with one multi-language "v2" blob in the primary column;
+// the translations column survives only as the v1 compatibility path, and Pick/LanguagesWithForm
+// read both shapes so call sites never care which one a row holds.
 //
-// ADR-060 superseded that per-column model with a single multi-language "v2" blob (one skeleton
-// of question/option ids, per-language text overlays) stored in the primary column alone; the
-// translations column and its per-slot writes remain only as the v1 compatibility path. Pick and
-// LanguagesWithForm below understand both shapes, so call sites never care which one a row holds.
-//
-// Like RegistrationFormDefinition, nothing here throws on a malformed blob — a corrupt
-// translations object degrades to "no translations" rather than taking a published post down.
+// Nothing here throws on a malformed blob: a corrupt object degrades to "no translations" rather
+// than taking a published post down.
 public static class RegistrationFormSet
 {
     // Core stays free of a project reference to CedarClerk.Localization (same rule as

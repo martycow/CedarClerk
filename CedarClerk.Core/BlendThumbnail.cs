@@ -2,17 +2,9 @@ using System.Buffers.Binary;
 
 namespace CedarClerk.Core;
 
-/// <summary>
-/// Pulls the preview image Blender saves inside a <c>.blend</c> file (T-140, Marty 10.08.2026).
-///
-/// Why this is worth a parser: a `.blend` is the single most important file in a lot of game
-/// projects, and it is the one file no image library can open. Blender itself writes a small RGBA
-/// preview into the file (Preferences → Save &amp; Load → Save Preview Images, on by default), so
-/// the thumbnail is already there — it just has to be found.
-///
-/// Pure and read-only: it walks block headers and copies one array of pixels out. It does not
-/// understand a `.blend` beyond that, and does not try to.
-/// </summary>
+// Pulls the RGBA preview Blender saves inside a .blend (T-140). Worth a parser because it is the
+// most important file in a game project and the one no image library can open — Blender already
+// wrote the thumbnail, it just has to be found. Read-only: walks block headers, copies out pixels.
 public static class BlendThumbnail
 {
     public record Preview(int Width, int Height, byte[] Rgba);

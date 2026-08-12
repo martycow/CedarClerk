@@ -3,16 +3,11 @@ using Spectre.Console.Rendering;
 
 namespace CedarClerk.Cli.Rendering;
 
-// What an upload looks like while it is happening: a bar, the numbers behind the bar, and a braille
-// chart of the throughput it has actually been getting.
+// An upload in progress: a bar, its numbers, and a braille chart of the throughput.
 //
-// The chart is not decoration. The failure this whole transfer path exists for is a connection that
-// goes quiet and is then reset (ADR-113), and "quiet" has a shape — the line sags towards the floor
-// for several seconds before the drop. A single averaged number cannot show that; a line can, and
-// the same BrailleChart already draws the CPU history on the dashboard, so it costs nothing new.
-//
-// Every colour carries a number beside it (ADR-118 decision 7), and the chart degrades to blocks or
-// hashes with the rest of the screen under --no-unicode.
+// The chart is not decoration. The failure this transfer path exists for is a connection that goes
+// quiet and is then reset (ADR-113), and "quiet" has a shape — the line sags for several seconds
+// before the drop, which an averaged number cannot show.
 public sealed class Transfer
 {
     // Two minutes of history at four samples a second, which is longer than any stall worth seeing

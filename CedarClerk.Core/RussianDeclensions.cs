@@ -1,17 +1,9 @@
 namespace CedarClerk.Core;
 
-/// <summary>
-/// Suggests the Russian forms of a glossary term (T-040).
-///
-/// **Suggestions, not silent generation.** Russian declension has more exceptions than rules, and
-/// a wrongly generated form would mark the wrong word in someone's post with no way to notice. So
-/// this proposes forms into the alias field, where the author reads them and deletes what is
-/// wrong — the same bargain auto-translate makes, and for the same reason.
-///
-/// What it covers is the ordinary noun patterns a glossary is mostly made of: masculine hard stems
-/// (рендерер), feminine -а/-я (сборка), neuter -о/-е (окно), and masculine -ь (уровень). Anything
-/// else returns nothing rather than guessing — an empty suggestion is honest, a wrong one is not.
-/// </summary>
+// Suggests Russian forms of a glossary term into the alias field, where the author deletes what is
+// wrong (T-040). Declension has more exceptions than rules, and a silently generated form would mark
+// the wrong word in someone's post. Covers the ordinary noun patterns only — masculine hard stems,
+// feminine -а/-я, neuter -о/-е, masculine -ь — and returns nothing for anything else.
 public static class RussianDeclensions
 {
     private const string Vowels = "аеёиоуыэюя";

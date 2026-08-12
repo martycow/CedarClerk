@@ -1,20 +1,9 @@
 namespace CedarClerk.Core;
 
-/// <summary>
-/// Dates on the blog, in the language of the page they appear on (T-094).
-///
-/// Explicit month tables rather than <c>CultureInfo</c>. The original reason was that the Pi's bare
-/// runtime had no ICU data, which is why the rest of this codebase formats with
-/// <c>InvariantCulture</c>; the DigitalOcean droplet does have ICU (11.08.2026), but the tables stay
-/// — nine languages of month names are the product's own data, and reading them out of whatever the
-/// host machine happens to ship is how the blog ended up showing a hardcoded Russian month header
-/// above an English card date **on the same page**, with neither following the language the reader
-/// had asked for.
-///
-/// Only the twelve month names and the day/month order are language-dependent here. Anything more
-/// (declension after a numeral, for instance) would be a translation problem rather than a
-/// formatting one, and Russian's genitive is handled by carrying both forms below.
-/// </summary>
+// Dates on the blog, in the language of the page (T-094). Explicit month tables rather than
+// CultureInfo: the Pi had no ICU data, and although the droplet does (11.08.2026), nine languages of
+// month names are the product's own data. Reading them off the host is how the blog once showed a
+// Russian month header above an English card date on the same page.
 public static class BlogDateFormatter
 {
     // Nominative — a standalone heading ("Август 2026"), which is what the timeline separator is.

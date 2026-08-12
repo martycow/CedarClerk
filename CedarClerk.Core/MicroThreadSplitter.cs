@@ -3,17 +3,12 @@ using System.Text;
 
 namespace CedarClerk.Core;
 
-/// <summary>
-/// ADR-094 — splits a whole Cedar document into a microblog thread for a short-post network:
-/// parts under the network's limit, each measured the way THAT network measures (X's weighted
-/// units, Bluesky's graphemes), numbered "N/M" at the end. The blog link is the caller's to
-/// append — the last part's budget reserves room for it.
-///
-/// Paragraph-first, like every splitter in this app: a part ends on a thought where possible,
-/// an overflowing paragraph breaks on sentences, an overflowing sentence on words, and only a
-/// single word longer than a whole post is cut mid-word — at that point there is nothing left
-/// to respect.
-/// </summary>
+// ADR-094 — a whole document as a microblog thread, each part measured the way that network measures
+// (X's weighted units, Bluesky's graphemes) and numbered "N/M". The caller appends the blog link;
+// the last part's budget reserves room for it.
+//
+// Paragraph-first, like every splitter here: a paragraph that overflows breaks on sentences, then on
+// words, and only a word longer than a whole post is cut mid-word.
 public static class MicroThreadSplitter
 {
     /// <summary>Budget kept for the "\n\nN/M" suffix ("\n\n999/999" measures 9 either way).</summary>

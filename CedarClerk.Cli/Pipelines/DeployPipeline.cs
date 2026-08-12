@@ -26,17 +26,14 @@ public sealed record DeployOutcome(
 
 public sealed record RollbackOutcome(string Running, string? LiveTag);
 
-// Scripts/deploy.ps1, moved into C# (ADR-119). Every branch in here is scar tissue and the comments
-// naming the incident are the point of it, so they moved with the code rather than being summarised.
+// Scripts/deploy.ps1, moved into C# (ADR-119). Every branch here is scar tissue; the comments naming
+// each incident moved with the code rather than being summarised away.
 //
-// The shape, which is the safety argument: everything slow happens while the old version is still
-// serving. One tarball, uploaded as a resumable stream, checksummed on the far side, unpacked into
-// app.new — and only then is the service stopped, for two renames and about a second. The previous
-// release stays as app.prev, so a rollback is instant (ADR-113).
-//
-// The order is not a style choice. The old pipeline stopped the service first and copied 174 loose
-// files over scp, so every dropped connection left production down with a half-copied app directory.
-// That happened twice.
+// The shape is the safety argument: everything slow happens while the old version is still serving —
+// one resumable tarball, checksummed on the far side, unpacked into app.new — and only then is the
+// service stopped, for two renames and about a second. app.prev makes a rollback instant (ADR-113).
+// The old pipeline stopped the service first and copied 174 loose files over scp, so a dropped
+// connection left production down with half an app directory. That happened twice.
 public sealed class DeployPipeline
 {
     public const string StagePreflight = "Preflight";

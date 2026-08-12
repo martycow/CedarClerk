@@ -2,18 +2,13 @@ using System.Text.Json;
 
 namespace CedarClerk.Cli.Configuration;
 
-// How many tests the last run of a given selection produced, so the next one can draw the whole
-// field of empty cells up front and fill it in (Marty, 12.08.2026) instead of growing a row at a
-// time. Watching a known shape fill is the effect asked for; a grid that appears as it goes cannot
-// give it, because there is nothing yet to fill.
+// How many tests the last run produced, so the next one can draw the whole field of empty cells and
+// fill it in rather than growing a row at a time.
 //
-// It is a guess, and it is treated as one. Nothing decides anything from this number: the field is
-// drawn to whichever is larger, the remembered count or the results actually in hand, and the final
-// frame is redrawn from the results alone. A stale number makes the animation slightly wrong for one
-// run and is then overwritten — it can never make a red run look green.
-//
-// Kept out of config.json deliberately. That file holds what Marty chose; this holds what the tool
-// observed, and mixing the two makes "delete the config and start over" throw away the wrong thing.
+// Treated as a guess: the field is drawn to whichever is larger, the remembered count or the results
+// in hand, and the final frame comes from the results alone — a stale number can never make a red
+// run look green. Kept out of config.json, which holds what Marty chose rather than what the tool
+// observed; mixing them makes "delete the config and start over" throw away the wrong thing.
 public static class RunMemory
 {
     private const string FileName = "last-run.json";

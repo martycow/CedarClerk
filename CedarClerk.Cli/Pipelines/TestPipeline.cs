@@ -11,17 +11,11 @@ public sealed record TestPhaseResult(string Name, int ExitCode, TimeSpan Elapsed
     public bool Ok => ExitCode == 0;
 }
 
-// Scripts/test.ps1, moved into C# (ADR-119). The four phases, in the same order, with the same
-// meaning of "green": every phase's own exit code, and nothing else, decides.
+// Scripts/test.ps1, moved into C# (ADR-119). Green means every phase's own exit code, nothing else.
 //
-// One thing got better in the move rather than only moving. test.ps1 printed "=== Name ===" and the
-// tracker recognised phases by parsing that back out, which meant check-contrast.mjs printing
-// "=== light ===" in the same shape had to be defended against by name. The phases are now announced
-// by the code that starts them, so the grid's idea of where it is cannot be desynchronised by
-// something a runner prints.
-//
-// -Detailed is gone as a flag and became the only behaviour: the CLI is the only caller now, and the
-// reason it existed was to give this grid a line per test.
+// The phases are announced by the code that starts them rather than parsed back out of "=== Name ==="
+// as test.ps1 did, so a runner printing that shape itself (check-contrast.mjs prints "=== light ===")
+// can no longer desynchronise the grid.
 public sealed class TestPipeline
 {
     public const string PhaseBackend = "Backend (dotnet test)";

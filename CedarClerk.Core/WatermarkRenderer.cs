@@ -2,17 +2,12 @@ using System.Text;
 
 namespace CedarClerk.Core;
 
-// Watermark tiled over a private post's blog page (I7).
+// Watermark tiled over a private post's blog page (I7). One repeating CSS background rather than N
+// elements, since the sheet's height depends on the post.
 //
-// The overlay is one CSS background-image that repeats, not N repeated elements: the sheet's
-// height depends on the post, and a tiling background covers any height without the renderer
-// having to guess how many copies to emit.
-//
-// The tile is an SVG carried as a base64 data URI. Base64 rather than percent-encoded XML on
-// purpose — the payload is author-supplied text landing inside a CSS url(), and base64 removes
-// every quote, paren and backslash from that context outright instead of relying on getting an
-// escaping table right. The text is still XML-escaped inside the SVG itself, per the escaping
-// invariant in .claude/rules/renderers.md.
+// The tile is an SVG in a base64 data URI, not percent-encoded XML: the payload is author-supplied
+// text landing inside a CSS url(), and base64 removes every quote, paren and backslash from that
+// context outright. The text is still XML-escaped inside the SVG (.claude/rules/renderers.md).
 public static class WatermarkRenderer
 {
     private const int TileHeight = 170;

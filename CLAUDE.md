@@ -73,6 +73,8 @@ is ever broken, the way round needs nothing from that folder:
 ## Conventions
 Backend: static `XxxEndpoints` classes (minimal APIs, no MVC), entities in one flat `Entities.cs`, GUID PKs, `Consts`/`ErrorMessages` for reused strings only. Frontend: standalone components, `inject()`, signals, thin RxJS→Promise services, `kebab-case.*.ts` naming. Full detail and rationale: `docs/ARCHITECTURE.md`, `docs/DESIGN.md`.
 
+**Comments (Marty, 12.08.2026 — he reads the code, not prose about it).** A comment earns its place only by carrying a *why* that cannot be read off the code: (1) an incident it prevents a repeat of, (2) an external constraint — an API's quirk, a platform's limit, (3) a deliberate choice against the obvious one. Everything else goes: no XML-doc restating a signature, no block explaining what the next five lines do, no essay above a private method. Default to zero comments, and prefer one dense sentence to a paragraph. A comment that describes code will outlive the code it describes and start lying — `Logo.cs` carried a description of a subtitle that had already changed.
+
 ## Branches (Marty's rule, 10.08.2026)
 - **`master` — only the latest stable version.** Every commit on it is tagged with a version, and **every deploy is run from `master` and only from `master`.**
 - **`dev` — general development.**
@@ -83,6 +85,7 @@ Backend: static `XxxEndpoints` classes (minimal APIs, no MVC), entities in one f
 ## Commits and versioning
 - **Commit each substantial chunk of work** — a chunk can be several features or several bugs together, it does not have to be one item per commit. Don't leave a finished chunk uncommitted.
 - **Commit messages are 3–4 words, maximum.** `Fix account menu`, `Add watermark`, `Blog comment cleanup`. No body, no bullet list, no explanation — the explanation belongs in `CHANGELOG.md`/`docs/ROADMAP.md`, not the message.
+- **No trailers either** (Marty, 12.08.2026): no `Co-Authored-By`, no `Claude-Session` link, nothing after the subject line. Those are a harness default, and a trailer is a body — the same rule the line above states. `git commit -m "Fix account menu"` and nothing more.
 - **Bump the version periodically**: `0.9.0` → `0.9.1` → `0.9.2`. Bump the **middle** number (`0.9.x` → `0.10.0`) only after several large tasks land that genuinely change how the app feels to use — that's how `0.7.0`/`0.8.0`/`0.9.0` were used, one per phase. (Marty's wording calls the third number "minor" and the middle one "major"; the positions above are what he meant.)
 - The version lives in `CedarClerk.Core/Consts.cs` (`CurrentVersion`). **Tag the commit with the bare number** — `git tag 0.9.1` — matching the existing `0.7.0`/`0.8.0`/`0.9.0` tags. Bump the const and the tag together, never one without the other.
 
@@ -94,6 +97,7 @@ Full text lives in `.claude/rules/*.md` — read the relevant one before touchin
 4. **`.claude/rules/destructive-operations.md`** — explain, then STOP and wait for confirmation
 5. **`.claude/rules/secrets.md`** — never move secrets into the repo; rotate before cleanup if one leaks
 6. **`.claude/rules/production-environment.md`** — droplet/Cloudflare/systemd assumptions not to break
+7. **`.claude/rules/ui-changes.md`** — find the element's existing home in `docs/UI-INVENTORY.md` **before** adding a UI element, and update the inventory in the same commit
 
 ## Verification workflow
 - Local: `dotnet run --project CedarClerk.Server` (port 8080) + `ng serve` in `cedarclerk-web`. Login: marty@mooexe.dev (ask Marty for the password, do not store it)

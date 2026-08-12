@@ -1,17 +1,8 @@
 namespace CedarClerk.Core;
 
-/// <summary>
-/// Wall-clock time as the reader sees it (ADR-115).
-///
-/// The server stores and transports instants in UTC — that does not change. This is the single
-/// place that turns one into the time printed on a page, and the zone it uses is
-/// <see cref="Consts.General.DisplayTimeZone"/>.
-///
-/// Values read back from SQLite arrive as <see cref="DateTimeKind.Unspecified"/> because the file
-/// format has nowhere to keep the kind, so everything here treats an unspecified kind as UTC —
-/// which is what it always is in this codebase (<c>DateTime.UtcNow</c> everywhere, file times taken
-/// as <c>LastWriteTimeUtc</c>).
-/// </summary>
+// The single place a stored UTC instant becomes the time printed on a page (ADR-115). SQLite has
+// nowhere to keep the kind, so values read back arrive Unspecified and are treated as UTC — which is
+// what they always are here (DateTime.UtcNow everywhere, file times as LastWriteTimeUtc).
 public static class DisplayTime
 {
     private static readonly TimeZoneInfo Zone = Resolve();

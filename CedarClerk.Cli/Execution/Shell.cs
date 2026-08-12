@@ -1,9 +1,7 @@
 namespace CedarClerk.Cli.Execution;
 
-// Finding the programs the pipelines run.
-//
-// pwsh first because that is what the project's remaining scripts are written against and what
-// Marty's shell is; Windows PowerShell is the fallback so the tool still works without pwsh on PATH.
+// pwsh first — what the remaining scripts are written against — with Windows PowerShell as the
+// fallback, so the tool still works without pwsh on PATH.
 public static class Shell
 {
     private static string? _cachedPowerShell;
@@ -25,12 +23,11 @@ public static class Shell
         return _cachedPowerShell;
     }
 
-    // npm has to be started by its FULL path, and this is not tidiness — it is a bug that cost a
-    // green test run (12.08.2026). npm.cmd locates its own JavaScript through %~dp0, and a batch file
-    // launched by bare name through CreateProcess gets %0 without a directory, so cmd.exe resolves
-    // %~dp0 against the *working* directory instead. The result is
-    // "Cannot find module <cwd>\node_modules\npm\bin\npm-cli.js" — which reads like a broken project
-    // and is in fact a broken launch. It never happened while npm was being started by PowerShell.
+    // npm must be started by its FULL path — a bug that cost a green test run (12.08.2026). npm.cmd
+    // finds its own JavaScript through %~dp0, and a batch file launched by bare name gets %0 without
+    // a directory, so cmd.exe resolves it against the working directory: "Cannot find module
+    // <cwd>\node_modules\npm\bin\npm-cli.js", which reads like a broken project rather than a
+    // broken launch.
     public static string Npm()
     {
         if (_cachedNpm is not null) return _cachedNpm;

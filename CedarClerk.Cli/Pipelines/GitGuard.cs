@@ -3,14 +3,10 @@ using CedarClerk.Cli.Execution;
 
 namespace CedarClerk.Cli.Pipelines;
 
-// Scripts/_git-guard.ps1, moved into C# (ADR-119 decision 6). Same checks, same reasons, same
-// wording where the wording was the point.
-//
-// The rule it enforces is Marty's (CLAUDE.md, "Branches"): master holds the latest stable version,
-// every commit on it carries its version tag, and every deploy runs from master and only from
-// master. What changed is who reports it — these methods answer, they never exit. Deciding what a
-// failed check costs belongs to the pipeline that asked, because "refused" and "warned" are two
-// different answers to the same question depending on which check it was.
+// Scripts/_git-guard.ps1, moved into C# (ADR-119 decision 6). It enforces Marty's branch rule
+// (CLAUDE.md): master holds the latest stable version, every commit on it carries its version tag,
+// and deploys run from master only. These methods answer and never exit — what a failed check costs
+// belongs to the pipeline that asked, since "refused" and "warned" depend on which check it was.
 public sealed class GitGuard
 {
     private static readonly Regex VersionLiteral =

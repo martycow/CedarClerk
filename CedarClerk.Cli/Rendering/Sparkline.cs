@@ -1,18 +1,12 @@
 namespace CedarClerk.Cli.Rendering;
 
-// A series drawn into one line of text, at three resolutions.
+// A series in one line of text. Braille packs 2x4 subpixels per cell — on a 40-column strip that is
+// the difference between a shape and a staircase; blocks cover fonts without braille, the ASCII ramp
+// covers --no-unicode.
 //
-// Braille packs 2x4 subpixels into every cell (base U+2800), which is eight times the vertical
-// detail of the block characters and four times the horizontal — on a 40-column strip that is the
-// difference between a shape and a staircase. Blocks are the fallback for terminals whose font has
-// no braille coverage, and the ASCII ramp is for --no-unicode.
-//
-// Two deliberate choices, both visible in the tests:
-//   * A finite sample never renders as nothing. Zero draws the bottom row, not an empty cell, so a
-//     flat-zero series reads as "measured, and it was zero" rather than "no data" — the two mean
-//     very different things about a server and must not look identical.
-//   * NaN is a gap, drawn as blank. sar leaves holes when the machine was off, and interpolating
-//     across one would invent history.
+// Two choices the tests pin down: zero draws the bottom row rather than an empty cell, so "measured,
+// and it was zero" cannot look like "no data"; and NaN is a blank gap, because sar leaves holes when
+// the machine was off and interpolating would invent history.
 public static class Sparkline
 {
     private const char BrailleBase = '⠀';

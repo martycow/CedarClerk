@@ -12,21 +12,17 @@ public enum RegistrationQuestionType
     // string-valued answers map the other types use — see MultiAnswer below for why.
     Multi,
 
-    // A block of text (Label — an agreement/consent statement, not a question) with a single
-    // checkbox the reader must tick to proceed — e.g. "I agree to the rules". Always Required
-    // (Parse below forces it): an optional consent checkbox isn't a meaningful concept. Has no
-    // Options; its answer is "yes" when ticked, same absent/blank-means-unanswered shape as every
-    // other type, so the existing generic required-question check needs no special case for it.
+    // A statement plus one checkbox to proceed. Always Required (Parse forces it) — an optional
+    // consent checkbox is not a meaningful concept. Answer is "yes" when ticked, so the generic
+    // required-question check needs no special case.
     Consent,
 
-    // T-032 — the same answer as Text, in a box that admits it will be more than a line. Kept as
-    // its own type rather than a flag on Text so the editor can offer it as a choice; the stored
-    // answer is an ordinary string and every existing reader of the answers map is unaffected.
+    // T-032 — Text in a box that admits it will be more than a line. Its own type rather than a flag
+    // so the editor can offer it as a choice; the stored answer is an ordinary string.
     LongText,
 
-    // T-031 — a block the reader does not fill in: an explanatory paragraph, an image, or both.
-    // Never Required, never collected (Parse forces both), so it is invisible to validation and
-    // to the answers map — it exists only in the rendered form.
+    // T-031 — a block the reader does not fill in. Never Required, never collected (Parse forces
+    // both), so it is invisible to validation and to the answers map.
     Static,
 }
 
@@ -41,13 +37,10 @@ public record RegistrationOption(string Id, string Label);
 public record RegistrationQuestion(string Id, string Label, RegistrationQuestionType Type,
     IReadOnlyList<RegistrationOption> Options, bool Required, string? ImageUrl = null);
 
-// Parsed shape of Draft.RegistrationFormJson (B3) — the form an uninvited visitor of a private
-// post fills in to get access. Parsed in Core so the blog renderer and the submit-validation
-// endpoint read the exact same definition instead of each interpreting the raw JSON.
-//
-// The JSON is client-authored (the editor writes it) and never trusted: anything missing or
-// malformed degrades to a safe default rather than throwing, so a hand-edited/corrupt blob can
-// never take a published post down.
+// Draft.RegistrationFormJson (B3), parsed in Core so the blog renderer and the submit-validation
+// endpoint read the same definition instead of each interpreting raw JSON. The blob is
+// client-authored and never trusted: anything malformed degrades to a safe default rather than
+// throwing, so a corrupt one cannot take a published post down.
 public record RegistrationFormDefinition(
     string? Intro,
     bool RequireName,
@@ -55,10 +48,8 @@ public record RegistrationFormDefinition(
     bool RequireEmail,
     bool RequireSocial,
     IReadOnlyList<RegistrationQuestion> Questions,
-    // T-033 — what the respondent is sent after submitting, when they left an address. Null means
-    // no mail: an owner who has not written one has not agreed to write to their readers, and a
-    // generated "thanks" in the owner's voice would be words they never chose. Part of the form's
-    // JSON blob rather than a column, like every other per-form setting.
+    // T-033 — null means no mail: a generated "thanks" would be words in the owner's voice that they
+    // never chose.
     string? ResponseEmailSubject = null,
     string? ResponseEmailBody = null)
 {

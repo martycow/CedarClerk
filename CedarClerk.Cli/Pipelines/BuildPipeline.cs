@@ -11,18 +11,13 @@ public sealed record BuildOptions(
     bool Installer = false,
     bool RunDesktop = false);
 
-// Scripts/build.ps1, moved into C# (ADR-119). Same three parts in the same order, and the two
-// publishes still differ from each other for the reasons they always did:
+// Scripts/build.ps1, moved into C# (ADR-119). The two publishes differ for the reasons they always
+// did: the shipped server is framework-dependent with NO runtime identifier, portable IL, which is
+// what made the armhf Pi → x86_64 droplet move a copy rather than a port; the server inside the
+// desktop shell is self-contained win-x64, because that machine may have no .NET at all.
 //
-//   * the server that ships is framework-dependent with NO runtime identifier — portable IL, because
-//     the droplet has the runtime and never builds anything. That is what made the move from an
-//     armhf Pi to an x86_64 droplet a copy rather than a port
-//     (.claude/rules/production-environment.md).
-//   * the server inside the desktop shell is self-contained win-x64, because the machine running it
-//     is not expected to have .NET at all (docs/DESKTOP.md).
-//
-// It does not check the branch, and that is deliberate: building a feature branch to look at it is
-// the normal case. The branch rule lives in the deploy, where shipping happens.
+// No branch check on purpose — building a feature branch is the normal case, and the branch rule
+// belongs to the deploy, where shipping happens.
 public sealed class BuildPipeline
 {
     private readonly ICommandRunner _runner;

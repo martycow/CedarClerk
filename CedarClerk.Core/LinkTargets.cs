@@ -1,31 +1,24 @@
 namespace CedarClerk.Core;
 
-/// <summary>
-/// What an <c>EntityLink</c> can point at (T-141). A string rather than an enum for the same reason
-/// <c>PublishNetworks</c> is one: a new kind of linkable thing should be a constant and a UI, not a
-/// migration.
-/// </summary>
+// What an EntityLink can point at (T-141). Strings, like PublishNetworks: a new kind of linkable
+// thing should be a constant and a UI, not a migration.
 public static class LinkTargets
 {
     public const string Document = "document";
     public const string Asset = "asset";
     public const string Task = "task";
 
-    /// <summary>T-126 — a released version. Documents attach to one; tasks use a column instead
-    /// (ADR-112), because "which build did this ship in" is a single answer worth filtering by.</summary>
+    // T-126 — documents attach to a released version through a link; tasks use a column instead
+    // (ADR-112), because "which build did this ship in" is one answer worth filtering by.
     public const string Build = "build";
 
     public static readonly IReadOnlyList<string> All = [Asset, Build, Document, Task];
 
     public static bool IsKnown(string? type) => type is not null && All.Contains(type);
 
-    /// <summary>
-    /// Puts a pair in a fixed order so that "this asset and that document" is one row however it
-    /// was created. Without it, linking A→B and later B→A makes two rows describing one fact, and
-    /// no unique index can tell them apart.
-    ///
-    /// Ordered by type name, then by id — arbitrary but stable, which is all that is required.
-    /// </summary>
+    // A fixed order so "this asset and that document" is one row however it was created: without it,
+    // linking A→B and later B→A makes two rows for one fact and no unique index can tell them apart.
+    // By type name then id — arbitrary but stable, which is all that is required.
     public static (string FromType, Guid FromId, string ToType, Guid ToId) Order(
         string typeA, Guid idA, string typeB, Guid idB)
     {

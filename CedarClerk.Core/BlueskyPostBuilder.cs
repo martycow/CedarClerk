@@ -3,35 +3,23 @@ using System.Text;
 
 namespace CedarClerk.Core;
 
-/// <summary>A link inside a Bluesky post, addressed the way the AT Protocol addresses it.</summary>
-/// <param name="ByteStart">
-/// UTF-8 BYTE offset, not a character index. This is the trap in the whole format: a Russian post
-/// is two bytes per letter, so a facet measured in characters points into the middle of a word —
-/// or into the middle of a codepoint — and the link silently covers the wrong text.
-/// </param>
+// Offsets are UTF-8 BYTES, not character indexes — the trap in this format. A Russian post is two
+// bytes per letter, so a facet measured in characters lands mid-word, or mid-codepoint, and the link
+// silently covers the wrong text.
 public sealed record BlueskyFacet(int ByteStart, int ByteEnd, string Uri);
 
 public sealed record BlueskyPost(string Text, IReadOnlyList<BlueskyFacet> Facets);
 
-/// <summary>
-/// Turns a Cedar document into the one short post Bluesky takes (T-089).
-///
-/// ADR-077 decided what this is for: a cross-post is a **standalone post with a manual override**,
-/// so the author's own text wins whenever they wrote one. This builds the fallback for when they
-/// did not — publishing must never block on writing a second version of the post.
-/// </summary>
+// One short post for Bluesky (T-089). ADR-077: a cross-post is a standalone post with a manual
+// override, so the author's own text wins; this builds the fallback, because publishing must never
+// block on writing a second version.
 public static class BlueskyPostBuilder
 {
-    /// <summary>
-    /// Bluesky counts graphemes, not chars: an emoji or a combining sequence is one. Counting
-    /// UTF-16 units instead would reject posts the network accepts.
-    /// </summary>
+    // Graphemes, not chars: an emoji or combining sequence is one, and counting UTF-16 units would
+    // reject posts the network accepts.
     public const int MaxGraphemes = 300;
 
     private const string Ellipsis = "…";
-
-    /// <param name="authorText">The author's own text for this network (ADR-077), or null.</param>
-    /// <param name="blogUrl">Appended when there is room, and always as a real link facet.</param>
     public static BlueskyPost Build(string? authorText, string cedarJson, string? blogUrl)
     {
         var body = string.IsNullOrWhiteSpace(authorText)
@@ -52,10 +40,8 @@ public static class BlueskyPostBuilder
         return new BlueskyPost(Truncate(body, MaxGraphemes), []);
     }
 
-    /// <summary>
-    /// The fallback text: the document's opening paragraphs, in order, until the limit. Paragraphs
-    /// rather than a character slice, so the post ends on a thought rather than mid-word.
-    /// </summary>
+    // Opening paragraphs until the limit, rather than a character slice, so the post ends on a
+    // thought rather than mid-word.
     public static string Teaser(string cedarJson)
     {
         var paragraphs = CedarPlainText.Paragraphs(cedarJson);

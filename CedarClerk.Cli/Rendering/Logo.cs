@@ -4,22 +4,14 @@ using Spectre.Console.Rendering;
 
 namespace CedarClerk.Cli.Rendering;
 
-// The splash: a cedar in three tiers beside the wordmark, and an animation that grows the tree from
-// the ground up before wiping the letters in and sweeping a highlight across them.
+// The splash, and the idle animation the menu keeps on screen. The cycle is a pure function of
+// elapsed time (IdleAt) rather than a coroutine, so the menu redraws only when the answer changes —
+// an idle menu costs nothing, which matters over ssh.
 //
-// It also keeps moving while the menu is on screen (Marty, 12.08.2026): a highlight crosses the
-// letters twice a cycle, and once every ten seconds each letter hops a single row, one after the
-// next. The whole cycle is a pure function of elapsed time (IdleAt) rather than a running
-// coroutine, so the menu can ask "what should the logo look like right now" and redraw only when
-// that answer changes — an idle menu costs nothing, which matters over ssh.
-//
-// It is decoration, and decoration must never be the reason a tool misbehaves — so every part of it
-// degrades on its own:
-//   * no Unicode  -> the same art transliterated to ASCII by one mapping, not a second asset kept
-//                    in sync by hand
-//   * narrow      -> the tree is dropped first, then the art entirely, before anything wraps
-//   * redirected  -> nothing animates; a log file must not fill with frames
-//   * a keypress  -> the animation ends immediately and the finished logo stays
+// Decoration must never be why a tool misbehaves, so each part degrades on its own: no Unicode falls
+// back to the same art transliterated by one mapping, a narrow terminal drops the tree and then the
+// art before anything wraps, redirected output never animates, and a keypress ends the animation
+// with the finished logo left standing.
 public static class Logo
 {
     private const int TreeWidth = 15;

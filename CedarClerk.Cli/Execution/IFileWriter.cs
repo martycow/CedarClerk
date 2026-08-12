@@ -2,18 +2,13 @@ using Spectre.Console;
 
 namespace CedarClerk.Cli.Execution;
 
-// The other half of "--dry-run touches nothing" (ADR-119).
+// The other half of "--dry-run touches nothing" (ADR-119). ICommandRunner covered every process and
+// ssh call, which stopped being the whole story once the build moved into C#: Directory.Delete is a
+// method call, and it would have deleted a real directory during a run that promised to change
+// nothing. Swapped implementation, like the runner, so no pipeline carries an "if dry run" branch.
 //
-// ICommandRunner covered every process and every ssh call, which was the whole story while the
-// pipelines were wrappers around scripts. It stopped being the whole story the moment the build
-// moved into C#: `Directory.Delete(publish)` is not a command, it is a method call, and it would
-// have deleted a real directory during a run that had promised to change nothing.
-//
-// Same arrangement as the runner rather than a new one: the implementation is swapped, so no pipeline
-// contains an "if dry run" branch — the branch that is eventually forgotten on exactly one path.
-//
-// Reads are deliberately not here. File.Exists and ReadAllText change nothing, and routing them
-// through a seam would make every check unanswerable under --dry-run instead of merely inert.
+// Reads stay out: File.Exists changes nothing, and routing it through the seam would make every
+// check unanswerable under --dry-run rather than merely inert.
 public interface IFileWriter
 {
     void DeleteDirectory(string path);

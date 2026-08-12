@@ -3,18 +3,11 @@ using System.Text.Json.Nodes;
 
 namespace CedarClerk.Core;
 
-/// <summary>
-/// T-015 — re-translating a document that changed by one paragraph used to cost a translation of
-/// the whole document: slow, expensive, and it threw away every manual correction the author had
-/// made to the other paragraphs. This works out which top-level blocks actually moved, so only
-/// those are sent to the provider and the rest are copied from the existing translation verbatim.
-/// </summary>
+// T-015 — a document changed by one paragraph used to cost a whole re-translation, which was slow,
+// expensive, and threw away every manual correction in the other paragraphs. This works out which
+// top-level blocks moved; the rest are copied from the existing translation verbatim.
 public static class IncrementalTranslationPlan
 {
-    /// <summary>
-    /// One block of the document being produced: either copied from the existing translation, or
-    /// taken from the new source and handed to the provider.
-    /// </summary>
     public record Step(bool Reuse, int Index);
 
     public record Plan(IReadOnlyList<Step> Steps, IReadOnlyList<string> BlocksToTranslate)
@@ -22,11 +15,8 @@ public static class IncrementalTranslationPlan
         public int ReusedCount => Steps.Count(s => s.Reuse);
     }
 
-    /// <summary>
-    /// Null means "translate the whole document instead" — no snapshot, unparseable content, or
-    /// an existing translation whose block count no longer lines up with the snapshot it was made
-    /// from (a manual restructuring of the translation, which makes position meaningless).
-    /// </summary>
+    // Null means "translate the whole document instead": no snapshot, unparseable content, or a
+    // translation whose block count no longer lines up with the snapshot it was made from.
     public static Plan? Build(string? sourceSnapshotJson, string newSourceJson, string existingTranslationJson)
     {
         if (string.IsNullOrWhiteSpace(sourceSnapshotJson)) return null;
@@ -62,10 +52,6 @@ public static class IncrementalTranslationPlan
             : null;
     }
 
-    /// <summary>
-    /// The finished translation document: reused blocks from <paramref name="existingTranslationJson"/>,
-    /// new ones from the provider's answer, in the new source's order.
-    /// </summary>
     public static string Assemble(Plan plan, string existingTranslationJson, string translatedBlocksJson)
     {
         var reusable = Blocks(existingTranslationJson);
@@ -82,10 +68,7 @@ public static class IncrementalTranslationPlan
         return new JsonObject { ["type"] = "doc", ["content"] = content }.ToJsonString();
     }
 
-    /// <summary>
-    /// A document holding only the blocks that need translating — a real TipTap doc, so it goes
-    /// through the ordinary provider path (which preserves structure and only replaces text).
-    /// </summary>
+    // A real TipTap doc, so the blocks go through the ordinary provider path.
     public static string PartialDocument(Plan plan)
     {
         var content = new JsonArray();
@@ -93,12 +76,8 @@ public static class IncrementalTranslationPlan
         return new JsonObject { ["type"] = "doc", ["content"] = content }.ToJsonString();
     }
 
-    /// <summary>
-    /// Longest-common-subsequence alignment of the two block lists, in new-source order. Each
-    /// entry is (index in the old source, or -1 when the block is new; index in the new source).
-    /// Same algorithm the publish-diff uses, kept separate because this one needs the pairing
-    /// rather than the counts.
-    /// </summary>
+    // LCS alignment in new-source order; OldIndex is -1 for a block that is new. Same algorithm the
+    // publish-diff uses, separate because this one needs the pairing rather than the counts.
     private static IEnumerable<(int OldIndex, int NewIndex)> Align(List<string> before, List<string> after)
     {
         var n = before.Count; var m = after.Count;

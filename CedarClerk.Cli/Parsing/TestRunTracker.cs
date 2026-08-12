@@ -15,18 +15,14 @@ public sealed class TestPhase
     public bool Reconciled { get; set; }
 }
 
-// Follows a test run line by line and keeps a live tally the grid can draw. The phase headers came
-// from Scripts/test.ps1 until ADR-119; TestPipeline announces them itself now, in the same shape.
+// Follows a test run line by line and keeps a live tally for the grid.
 //
-// Why it is more than a line parser: the three runners report at different granularities. dotnet
-// test names every test, Playwright names every test, and `ng test` — which does not forward a
-// reporter flag to vitest — reports nothing until a two-line summary at the end. Counting only what
-// is named would show 700 ticks for a suite of 750 and quietly under-report the frontend.
-//
-// So each phase (test.ps1 prints "=== Name ===" before each) is reconciled against that runner's
-// own summary when the phase closes: if the summary says more tests ran than were named, the
-// difference is added. Nothing is invented — the numbers come from the runner, only their arrival
-// is late. Whether the run PASSED is still the process exit code, never this tally (ADR-118).
+// More than a line parser because the runners report at different granularities: dotnet test and
+// Playwright name every test, while `ng test` reports nothing until a two-line summary. Counting
+// only what is named would show 700 ticks for a suite of 750 and under-report the frontend, so each
+// phase is reconciled against that runner's own summary when it closes. Nothing is invented — the
+// numbers come from the runner, only late. Whether the run PASSED is the exit code, never this
+// tally (ADR-118).
 public sealed class TestRunTracker
 {
     private static readonly Regex Ansi = new(@"\x1B\[[0-9;?]*[ -/]*[@-~]", RegexOptions.Compiled);

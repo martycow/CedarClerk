@@ -27,23 +27,11 @@ public sealed record ThreadPart(
     string? StartsWith,
     string CutReason);
 
-/// <summary>
-/// Splits a document that does not fit one message into a thread of messages (T-106).
-///
-/// The rules, in the order they matter:
-///
-/// 1. **A cut is placed at a heading whenever one is near.** A message that ends mid-section reads
-///    like a transmission error; one that ends where a section ends reads like a chapter. The
-///    splitter therefore takes a heading boundary as soon as the part is <see cref="ComfortableFill"/>
-///    full, rather than filling every message to the brim.
-/// 2. **A block is never split.** A table, a code block, a list or a media group crosses no
-///    boundary — half a table in one message and half in the next is worse than a shorter message.
-/// 3. **Both limits are honoured** — characters and media count. A document can exceed either one
-///    on its own, and a hundred images will cut a thread long before its text does.
-///
-/// Nothing here decides *whether* to split: that is the author's call (T-106's UI), and this only
-/// answers what the split would look like.
-/// </summary>
+// Splits a document too long for one message into a thread (T-106). Three rules: cut at a heading
+// once the part is ComfortableFill full, because a message ending mid-section reads like a
+// transmission error; never split a block, since half a table is worse than a shorter message; and
+// honour both limits, because a hundred images cut a thread long before the text does.
+// Whether to split at all is the author's call — this only answers what the split would look like.
 public static class TelegramThreadSplitter
 {
     /// <summary>

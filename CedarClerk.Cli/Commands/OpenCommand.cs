@@ -14,17 +14,12 @@ public sealed class OpenSettings : CedarSettings
     public string Where { get; init; } = "browser";
 }
 
-// Opening the product itself, from the console that manages it (Marty, 12.08.2026).
+// Opening the product from the console that manages it. Everything else here answers questions about
+// Cedar Clerk; the obvious next move, looking at it, meant typing a URL from memory.
 //
-// It is a small thing and it closes a real gap: everything else here answers questions about Cedar
-// Clerk - is it up, what is it running, what do the logs say - and the obvious next move, looking at
-// it, meant leaving for a browser and typing a URL from memory. Four destinations, one of which is
-// deliberately not production.
-//
-// The desktop shell is a different question from the site, because there are two of it: an installed
-// copy, and the working copy in this repository. Installed first - that is the one Marty actually
-// uses - and the repository build as the fallback, which is the one that exists five minutes after a
-// change. Neither is guessed at silently: what was opened is printed.
+// The desktop shell has two copies: the installed one Marty uses, tried first, and the repository
+// build, which is the one that exists five minutes after a change. What was opened is printed rather
+// than guessed at silently.
 public sealed class OpenCommand : AsyncCommand<OpenSettings>
 {
     private const string LocalUrl = "http://localhost:8080";

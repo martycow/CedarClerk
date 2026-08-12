@@ -94,7 +94,7 @@ Full-page drafts grid/table — the compact editor drafts popover's bigger sibli
 
 ## `settings.component` (`cedarclerk-web/src/app/pages/settings.component.{ts,html}`)
 
-Profile, Appearance, Toolbar customization, Header slots, Social links, Subscription, Integrations — one long page with anchor-nav.
+One long page with anchor-nav. The sections, by the `id` the nav jumps to — **a new control belongs in one of these, and adding an eighth place for an existing concern is the mistake `.claude/rules/ui-changes.md` exists to stop**: `sec-profile` (profile + signature), `sec-language` (interface language), `sec-header-slots`, `sec-social-links`, `sec-subscription` (plan, payment method), `sec-credits`, `sec-cross-links`, `sec-integrations` (Telegram, Bluesky, X, planned networks). Appearance and toolbar customization sit inside the page without their own `sec-` anchors.
 
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|
@@ -364,6 +364,22 @@ T-122, reshaped by **ADR-117** on 12.08.2026 when the index moved to the cloud a
 | Link picker | `.link-option` | panel | Documents of this project not already linked | `busy()` | "Linked documents", never "Used in": an indexed file lives outside Cedar Clerk, so a reference to it can only be stated (T-141) |
 
 **Known gap, not introduced here**: `projects.component` and `project.component` (T-120) were never added to this file and remain absent.
+
+## `project-builds.component` (`cedarclerk-web/src/app/pages/project-builds.component.{ts,html,css}`)
+
+Added to this file 12.08.2026, by the guard test rather than by anyone noticing — it had shipped with no row at all. Compact density on the page root, reached from the project dashboard, `indieDevGuard`. A build is a version of the game; the screen exists to answer "what went into 0.3.1" and to turn that answer into a changelog document.
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Toolbar | `.builds-toolbar` | panel | Title, "N builds, M unreleased", link to the task board, New build | Page-level `loading()` | Same anatomy as the asset index and the task board |
+| Build card | `.build-card` | panel | One per build: version, released/unreleased badge, release date, done/total counts | N/A | Ordering and counts come with the list; nothing is computed in the template |
+| Make changelog | `.btn-ghost.small` in `.build-head` | button | Creates a changelog document from the build's done tasks | `busy()` disables it | The one action that leaves this screen for the editor |
+| Edit build | `.icon-btn` in `.build-head` | button | Opens the same modal as New build, pre-filled | `busy()` | |
+| Linked document chips | `.build-docs` / `.doc-chip` | chip-row | Documents attached to the build; opens each in the editor | N/A | |
+| Task rows | `.task-row` | panel | Tasks assigned to the build, with their status badge; opens the task | N/A | `@empty` renders "no tasks" rather than an empty card |
+| Empty state | `.empty-state` | panel | Rocket icon, explanation, New build | N/A | |
+| Build modal | `app-modal` `[width]="480"` | modal | Version, release date (with hint), notes; Delete on the left when editing | `busy()` on Save and Delete | `Enter` in the version field saves. Delete has no confirm step — worth a look, every other destructive control in the app has one |
+| Error lines | `.error-line` | toast (inline) | `loadError()` above the list, `actionError()` in the toolbar and again in the modal | N/A | |
 
 ## Icon inventory
 

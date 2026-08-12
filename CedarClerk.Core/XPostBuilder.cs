@@ -6,17 +6,13 @@ namespace CedarClerk.Core;
 
 public sealed record XPost(string Text, int WeightedLength);
 
-/// <summary>
-/// Turns a Cedar document into the one short post X takes (T-110). Same contract as
-/// <see cref="BlueskyPostBuilder"/> (ADR-077): the author's override wins, the teaser is the
-/// fallback, and the blog link survives truncation of the body.
-///
-/// The trap in this format is the counting. X does not count characters: it counts *weighted*
-/// units against 280 (twitter-text config v3) — Latin/Cyrillic/general punctuation weigh 1,
-/// everything else (CJK, emoji) weighs 2, and **every URL counts as exactly 23** regardless of
-/// its length, because X rewrites it through t.co. Counting `string.Length` would refuse valid
-/// posts with links and happily build invalid CJK ones.
-/// </summary>
+// One short post for X (T-110). Same contract as BlueskyPostBuilder (ADR-077): the author's override
+// wins, the teaser is the fallback, the blog link survives truncation.
+//
+// The trap is the counting. X counts *weighted* units against 280 (twitter-text v3): Latin/Cyrillic
+// weigh 1, CJK and emoji weigh 2, and every URL counts as exactly 23 whatever its length, because it
+// gets rewritten through t.co. string.Length would refuse valid posts with links and build invalid
+// CJK ones.
 public static partial class XPostBuilder
 {
     public const int MaxWeightedChars = 280;

@@ -3,11 +3,7 @@ using System.Text.Json.Nodes;
 
 namespace CedarClerk.Core;
 
-/// <summary>
-/// What a network will do to a document that does not fit it (T-086). Codes, not sentences: the
-/// wording belongs to the UI, which is localized, and Core is not — the same split the blog
-/// renderer already makes by taking a language string instead of importing the dictionaries.
-/// </summary>
+// Codes, not sentences: the wording belongs to the localized UI, and Core is not localized (T-086).
 public static class PublishIssueCodes
 {
     public const string TooLong = "too-long";
@@ -24,29 +20,20 @@ public static class PublishIssueCodes
     public const string SlowMedia = "slow-media";
 }
 
-/// <param name="Blocking">
-/// True when the network would refuse the post outright; false when it would accept it and drop or
-/// flatten something. The distinction is the whole point of showing this before the send: one is
-/// "fix this", the other is "know this".
-/// </param>
+// Blocking separates "fix this" from "know this": refused outright, against accepted with something
+// dropped or flattened. That distinction is the whole point of showing this before a send.
 public sealed record PublishIssue(string Code, bool Blocking, long Actual = 0, long Limit = 0);
 
-/// <summary>
-/// Checks a document against a network's <see cref="PublishCapabilities"/> before anything is sent
-/// (T-086, ADR-078). Pure and unit-tested, because the alternative — finding out from the network's
-/// error message — is what publishing a table to Telegram did for two weeks.
-/// </summary>
+// Checks a document against a network's capabilities before anything is sent (T-086, ADR-078). The
+// alternative — finding out from the network's error message — is what publishing a table to
+// Telegram did for two weeks.
 public static class PublishValidator
 {
-    /// <summary>Total bytes above which a send is worth warning about regardless of the per-file limit.</summary>
     public const long SlowMediaTotalBytes = 20L * 1024 * 1024;
 
-    /// <param name="mediaBytes">
-    /// Size of each referenced media path, where known. Telegram and Bluesky both fetch or upload
-    /// the bytes at send time, so this is what decides whether a publish takes two seconds or two
-    /// minutes — and a publish that outlives the browser's patience is the failure Marty hit
-    /// (01.08.2026: a 15MB audio plus a 15MB video on a home connection).
-    /// </param>
+    // mediaBytes decides whether a publish takes two seconds or two minutes, since both networks
+    // fetch or upload at send time. A publish outliving the browser's patience is what Marty hit on
+    // 01.08.2026 with a 15MB audio plus a 15MB video on a home connection.
     public static IReadOnlyList<PublishIssue> Validate(
         string cedarJson,
         PublishCapabilities capabilities,

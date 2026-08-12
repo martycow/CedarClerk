@@ -1,4 +1,4 @@
-﻿namespace CedarClerk.Core;
+namespace CedarClerk.Core;
 
 public static class Consts
 {
@@ -6,13 +6,11 @@ public static class Consts
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
 
-    // Cookie MaxAge and the auth ticket's own expiry must be the same number — see Program.cs.
+    // Must equal the auth ticket's own expiry — see Program.cs.
     public static readonly TimeSpan AuthCookieLifetime = TimeSpan.FromDays(30);
 
-    // Part of the data-protection purpose string, so changing it invalidates every existing auth
-    // cookie. This is the value ASP.NET already derived implicitly (IHostEnvironment.ApplicationName
-    // = the server assembly name); pinned only so a project rename can't silently sign everyone
-    // out (T-074).
+    // Part of the data-protection purpose string, so changing it signs everyone out. Pinned to the
+    // value ASP.NET derived implicitly, so a project rename cannot do that silently (T-074).
     public const string DataProtectionApplicationName = "CedarClerk.Server";
 
 
@@ -26,28 +24,23 @@ public static class Consts
     public static class Plans
     {
         public const string Free = "free";
-        
+
         public const string Pro = "pro";
         public const int ProPrice = 3;
-        
+
         public const string ProPlus = "proplus";
         public const int ProPlusPrice = 6;
-        
+
         public const string Trial = "trial";
         public const int TrialPrice = 1;
 
-        /// <summary>
-        /// ADR-092 — a Stars invoice payload for a credit pack is "credits-{packId}:{userId}",
-        /// keeping the same "{what}:{who}" shape the plan payloads already use.
-        /// </summary>
+        // "credits-{packId}:{userId}" — the same {what}:{who} shape as the plan payloads (ADR-092).
         public const string CreditPackPrefix = "credits-";
     }
 
     public static class Signatures
     {
-        // Free tier always gets this fixed, non-removable attribution instead of a custom
-        // PostSignature — the "upgrade to customize/remove it" hook for Pro. See Phase 8 Step 5,
-        // docs/ROADMAP.md.
+        // Free tier gets this instead of a custom PostSignature — the upgrade hook for Pro.
         public const string FreeAttributionText = "Published with Cedar Clerk";
     }
 
@@ -68,71 +61,53 @@ public static class Consts
         // Not a secret — just enough to avoid storing raw visitor IPs directly.
         public const string VisitorHashSalt = "cedar-clerk-visitor-v1";
 
-        // Every time printed for a human is in this zone (ADR-115). The server itself runs in UTC
-        // and always will; this is display only. A named zone, not a fixed -8, because Los Angeles
-        // is on PDT from March to November and a fixed offset would be an hour wrong for most of
-        // the year. The frontend keeps the same value in `core/display-time.ts` — the two constants
-        // are the place a per-user timezone would replace.
+        // Display only; the server runs in UTC (ADR-115). A named zone, not a fixed -8: Los Angeles
+        // is on PDT March–November. The frontend keeps the same value in core/display-time.ts.
         public const string DisplayTimeZone = "America/Los_Angeles";
         public const string DisplayTimeZoneWindows = "Pacific Standard Time";
         public const string DisplayTimeZoneStandard = "PST";
         public const string DisplayTimeZoneDaylight = "PDT";
-        
+
         public const string MainHostCfg = "Cedar:MainHost";
         public const string BlogHostCfg = "Cedar:BlogHost";
         public const string InviteCodeCfg = "Cedar:InviteCode";
 
-        // Registration without an invite code. Set ONLY by the desktop shell, which binds to
-        // 127.0.0.1 and serves exactly one person on their own machine — there is no public there
-        // for the invite gate to keep out, and without this a fresh desktop install has no way to
-        // create the first account at all (found by Marty on the first real launch, 10.08.2026).
+        // Set ONLY by the desktop shell, which binds to 127.0.0.1 and serves one person on their own
+        // machine. Without it a fresh desktop install cannot create its first account at all.
         public const string OpenRegistrationCfg = "Cedar:Registration:Open";
 
-        // ADR-117 — agent mode. The desktop shell no longer runs a second Cedar Clerk; it runs this
-        // same executable stripped down to one job: reading the disk this machine can see. With the
-        // flag on, Program.cs builds no database, no Identity, no bot and no SPA — only /agent/*.
-        //
-        // Set ONLY by the desktop shell. On a hosted server it would be a filesystem-listing service
-        // with no business existing there at all, which is why the walk lives behind this instead of
-        // behind the old Cedar:AssetIndex:Enabled: the capability is now absent from production
-        // rather than switched off in it.
+        // ADR-117 agent mode: the same executable stripped to reading this machine's disk — no
+        // database, Identity, bot or SPA, only /agent/*. Set ONLY by the desktop shell; on a hosted
+        // server it would be a filesystem-listing service with no business existing there.
         public const string AgentModeCfg = "Cedar:Agent:Enabled";
 
-        // The shared secret the shell generates per launch and the agent then demands on every
-        // request. NOT a nicety: an unauthenticated loopback service that enumerates folders is open
-        // to every other process on the machine, and to any page in any browser that can reach
-        // 127.0.0.1. The old sidecar was closed by Identity's cookie; the agent has no Identity, so
-        // it needs its own lock (ADR-117, Decision 6).
+        // Shared secret the shell generates per launch. An unauthenticated loopback service that
+        // enumerates folders is open to every process on the machine and to any page that can reach
+        // 127.0.0.1; the agent has no Identity cookie to close it (ADR-117 decision 6).
         public const string AgentTokenCfg = "Cedar:Agent:Token";
 
-        // ADR-117 — the ceiling on generated previews per owner, in bytes. Marty chose "every
-        // preview, no limit", and that is about the author having no limit — not about the droplet
-        // having no ceiling. Filling a 48 GB disk silently would be denial of service dressed as
-        // generosity, so the refusal happens out loud and names this number.
+        // ADR-117 — Marty chose "every preview, no limit" for the author; the droplet still gets a
+        // ceiling, because filling a 48 GB disk silently is denial of service dressed as generosity.
         public const string ThumbBudgetCfg = "Cedar:AssetIndex:ThumbBudgetBytes";
         public const long ThumbBudgetDefaultBytes = 2L * 1024 * 1024 * 1024;
 
-        // ADR-104 — where Kestrel listens, when something needs to say. Empty everywhere except the
-        // desktop shell, which takes a free port from the OS and passes it in: two instances on one
-        // machine cannot both hold 8080, and production's port is fixed by the tunnel config anyway.
+        // ADR-104 — empty everywhere except the desktop shell, which takes a free port from the OS:
+        // two instances cannot both hold 8080, and production's port is fixed by the tunnel config.
         public const string UrlsCfg = "Cedar:Urls";
 
-        // The account granted admin rights on startup (IF2). Config-driven on purpose: the first
-        // admin can't be made through the admin panel, and this works on a fresh database or a
-        // restored backup without hand-editing SQL on the server.
+        // The first admin cannot be made through the admin panel, and this works on a fresh database
+        // or a restored backup without hand-editing SQL on the server (IF2).
         public const string AdminEmailCfg = "Cedar:AdminEmail";
 
         public const string ProviderKeyCfg = "Cedar:Translate:Provider";
 
         public const string ViewedCookiePrefix = "cedar_viewed_";
 
-        // Grants access to a private post once a valid invite token has been presented — much
-        // longer-lived than ViewedCookiePrefix, which is a same-visit view-count dedup, not an
-        // access grant. See the ADR following ADR-040, docs/DECISIONS.md.
+        // An access grant, much longer-lived than ViewedCookiePrefix, which only dedups view counts
+        // within a visit.
         public const string PrivateAccessCookiePrefix = "cedar_access_";
 
-        // Country/language bucket for a view Cloudflare or the browser didn't identify. A real
-        // bucket, not a null: "unknown" is an honest share of the audience, not a missing row.
+        // A real bucket, not a null: "unknown" is an honest share of the audience.
         public const string UnknownGeo = "??";
     }
 
@@ -141,17 +116,11 @@ public static class Consts
         public const long ImageMaxBytes = 50L * 1024 * 1024;
         public const long MediaMaxBytes = 1000L * 1024 * 1024;
 
-        // Telegram rejects a photo fetched by URL above this size with a misleading "wrong type
-        // of the web page content" error — confirmed empirically (19.07.2026) against
-        // @testingandfun: a 9.88MB JPEG already failed, a 0.94MB one succeeded. Kept well under
-        // the ~10MB ballpark documented for Telegram's own remote-fetch photo limit as a safety
-        // margin. See the ADR in docs/DECISIONS.md.
+        // Above this, Telegram rejects a URL-fetched photo with a misleading "wrong type of the web
+        // page content". Measured 19.07.2026 against @testingandfun: 9.88MB failed, 0.94MB passed.
         public const long TelegramSafeImageBytes = 4L * 1024 * 1024;
 
-        // User-selectable compression degree for the export modal (see the ADR following
-        // ADR-031) — "standard" is TelegramSafeImageBytes above; these are the other two presets.
-        // "high" (6MB) trades some of the safety margin for quality — still comfortably under the
-        // ~9.88MB point our empirical test showed Telegram already rejecting, but closer to it.
+        // The other two compression presets in the export modal; "standard" is the constant above.
         public const long TelegramCompressSmallBytes = 2L * 1024 * 1024;
         public const long TelegramCompressHighBytes = 6L * 1024 * 1024;
     }
@@ -175,9 +144,7 @@ public static class Consts
         public const string SecretKeyCfg = "Cedar:PayPal:SecretKey";
         public const string ClientIdCfg = "Cedar:PayPal:ClientId";
 
-        /// <summary>
-        /// Live or Sandbox (for testing)
-        /// </summary>
+        // Live or Sandbox.
         public const string ModeCfg = "Cedar:PayPal:Mode";
     }
 
@@ -192,25 +159,15 @@ public static class Consts
         public const int DefaultProPlusStarsPrice = 250; // ~ $5.00
         public const int DefaultTrialStarsPrice = 50; // ~ $1.00
 
-        /// <summary>
-        /// Characters a rich message accepts. Declared here for the capability matrix (T-086); the
-        /// editor's status bar carries its own copy of the number inside a localized string
-        /// ("6 / 32,768"), which predates this constant and is not worth an i18n change to unify.
-        /// </summary>
+        // The editor's status bar carries its own copy inside a localized string ("6 / 32,768").
         public const int MaxPostChars = 32_768;
 
-        /// <summary>
-        /// Character budget for one part of a thread (ADR-086). Far below <see cref="MaxPostChars"/>:
-        /// past roughly this size Telegram's client collapses a channel post behind "Show more"
-        /// (6,412 chars collapsed, 1,787 did not — measured 01.08.2026). Tune here if @testingandfun
-        /// shows the threshold sits elsewhere.
-        /// </summary>
+        // Far below MaxPostChars: past roughly this size the client collapses a channel post behind
+        // "Show more" (6,412 chars collapsed, 1,787 did not — measured 01.08.2026). ADR-086.
         public const int ThreadPartChars = 3_000;
 
-        /// <summary>
-        /// ADR-088 escape hatch: "upload" (default) sends own media as multipart bytes; "url"
-        /// flips the target back to URL delivery. Server config only, never author-facing.
-        /// </summary>
+        // ADR-088 escape hatch: "url" flips the target back to URL delivery instead of uploading
+        // bytes. Server config only, never author-facing.
         public const string MediaDeliveryCfg = "Cedar:Telegram:MediaDelivery";
         public const string MediaDeliveryUrl = "url";
     }
@@ -221,49 +178,27 @@ public static class Consts
         public const string ModelCfg = "Cedar:Anthropic:Model";
         public const string DefaultModel = "claude-haiku-4-5";
 
-        // The SDK's own per-call default (10 min, 2 retries) can leave a request hanging for
-        // ~30 minutes with zero feedback before it ever surfaces an error. This matches the SDK's
-        // own 10-minute duration but drops the built-in retries — both providers set
-        // MaxRetries = 0 on the client and add their own narrow, bounded retry instead (only for
-        // Anthropic's OverloadedError/RateLimitError, which return fast, not after a long hang —
-        // see AnthropicTranslationProvider.cs) — so a genuinely stuck call still fails within this
-        // one window instead of the SDK's worst case of three consecutive 10-minute hangs.
-        // ADR-058-follow-up (29.07.2026) moved the caller (auto-translate/ai-edit) off one
-        // held-open HTTP request onto a background job + polling, so a large document is now free
-        // to actually use the full 10 minutes if it genuinely needs it — nothing upstream is
-        // waiting on one live connection anymore.
+        // The SDK's default retries can stack three 10-minute hangs into ~30 minutes of silence, so
+        // both providers set MaxRetries = 0 and add their own bounded retry for the fast-failing
+        // errors only. Nothing upstream holds a connection open since ADR-058-follow-up.
         public static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(600);
 
-        // Marty, 29.07.2026 — auto-translate specifically gets a longer leash than RequestTimeout
-        // above: a large document's translation is the slowest AI call in the app (whole-document
-        // JSON round-trip, not a short edit pass), so 10 minutes was cutting it close. AI-edit
-        // (fix-errors/schizo) stays on RequestTimeout — it's a lighter pass with no reports of
-        // running long. Used as both the SDK client's own Timeout (AnthropicTranslationProvider)
-        // and the job's hardTimeout backstop (DraftEndpoints); the frontend's matching poll
-        // deadline is AUTO_TRANSLATE_TIMEOUT_MS in drafts.service.ts.
+        // Auto-translate is the slowest call in the app — a whole-document JSON round-trip — and 10
+        // minutes was cutting it close (Marty, 29.07.2026). AI-edit stays on RequestTimeout. The
+        // frontend's matching poll deadline is AUTO_TRANSLATE_TIMEOUT_MS in drafts.service.ts.
         public static readonly TimeSpan AutoTranslateTimeout = TimeSpan.FromMinutes(20);
 
-        // ADR-059 (docs/DECISIONS.md) — auto-translate no longer round-trips the whole document as
-        // one prompt; it extracts text (TipTapTextNodes), splits into chunks of at most this many
-        // characters (whole strings only — a chunk never splits one string in half) or
-        // TranslationChunkMaxStrings items, whichever comes first, and translates chunks in
-        // parallel. ChunkRequestTimeout is deliberately short and per-CHUNK (not per-document) —
-        // each call is now small, so a stuck one should fail fast into the existing bounded retry
-        // instead of waiting on the old whole-document-sized window. AutoTranslateTimeout above is
-        // unchanged and still the outer ceiling across every chunk (the AiJobService hard-timeout).
+        // ADR-059 — translation goes chunk by chunk, in parallel. The per-chunk timeout is short
+        // because each call is small: a stuck one should fail fast into the bounded retry.
+        // AutoTranslateTimeout above is still the outer ceiling across every chunk.
         public static readonly TimeSpan ChunkRequestTimeout = TimeSpan.FromMinutes(2);
         public const int TranslationChunkCharBudget = 6_000;
         public const int TranslationChunkMaxStrings = 150;
         public const int MaxParallelChunks = 4;
 
-        // 29.07.2026 — a real ~47,000-character document 502'd with "Model returned malformed
-        // translation output": the response is required to be one JSON object containing the
-        // ENTIRE translated document (all TipTap structure, not just prose) plus the title, and
-        // the old cap of 16,000 tokens was too small to hold that for a document this size — the
-        // model's output got cut off mid-JSON, which is exactly what a truncated-JSON parse error
-        // looks like. Raised to the model's own real ceiling: Haiku 4.5 supports up to 64,000
-        // output tokens (Anthropic's own model comparison table, verified 29.07.2026) — comfortably
-        // above what even a large document's translated JSON should need.
+        // Haiku 4.5's own ceiling. At 16,000 a ~47,000-character document 502'd with "malformed
+        // translation output" (29.07.2026): the response must hold the entire translated document as
+        // one JSON object, and the output was cut off mid-JSON.
         public const int MaxOutputTokens = 64_000;
     }
 
@@ -288,21 +223,19 @@ public static class Consts
     // Registration form shown to uninvited visitors of a private post (B3).
     public static class RegistrationForm
     {
-        // Matches AuthEndpoints' PreferenceJsonMaxChars — same "client owns the shape, server
-        // only bounds the size" treatment as the other JSON preference blobs.
+        // Same "client owns the shape, server only bounds the size" treatment as the other JSON blobs.
         public const int FormJsonMaxChars = 16_000;
         public const int AnswersJsonMaxChars = 8_000;
         public const int FieldMaxLength = 200;
 
-        // Per-post, per-visitor submission cap. A public form that hands out access is an
-        // obvious flood target, and nothing else in the blog endpoints is rate-limited.
+        // A public form that hands out access is an obvious flood target, and nothing else in the
+        // blog endpoints is rate-limited.
         public const int MaxSubmissionsPerVisitor = 3;
         public static readonly TimeSpan SubmissionWindow = TimeSpan.FromHours(24);
     }
 
-    // Cross-links between a post's two homes (I15). Overridable per author in Settings; these are
-    // the fallbacks. The blog one is language-dependent because the blog page is; the Telegram one
-    // is written once into the post.
+    // Fallbacks for the cross-links between a post's two homes (I15); overridable per author. The
+    // blog one is language-dependent because the blog page is.
     public static class CrossLinks
     {
         public const string DefaultBlogLinkText = "Read on the blog →";
@@ -310,42 +243,34 @@ public static class Consts
         public const string DefaultTelegramLinkTextRu = "Смотреть в Telegram &#8594;";
     }
 
-    // Admin panel (IF2).
     public static class Admin
     {
-        // The audit log grows without bound and nothing pages it yet — this is what the panel
-        // shows, not what is kept.
+        // These are what the panel shows, not what is kept — nothing pages any of the three yet.
         public const int AuditPageSize = 100;
+        public const int PostPageSize = 100;
+        public const int PaymentPageSize = 100;
 
         // Short enough to type from a message, long enough not to be guessed off a public page.
         public const int MinInviteCodeLength = 6;
-
-        // Both lists are newest-first and unpaged; these are what the panel shows, not what exists.
-        public const int PostPageSize = 100;
-        public const int PaymentPageSize = 100;
     }
 
-    // The reader-facing headline, separate from the draft's own name (idea #4).
+    // The reader-facing headline, separate from the draft's own name. Far longer than the 64-char
+    // draft name on purpose: a name finds a draft in a list, a title is a real headline.
     public static class ArticleTitle
     {
-        // Deliberately far longer than the 64-character draft *name*: a name is something to
-        // find a draft by in a list, a title is a real headline and routinely longer than that.
         public const int MaxLength = 200;
     }
 
-    // Watermark tiled over a private post's blog page (I7).
+    // Watermark tiled over a private post's blog page (I7). Tight cap: long text tiles into mush.
     public static class Watermark
     {
-        // A watermark is a short label ("CONFIDENTIAL", a reader's name) repeated across the
-        // page — long text tiles into unreadable mush, so the cap is deliberately tight.
         public const int MaxLength = 60;
     }
 
-    // View/reaction deltas on the /drafts screen (B23).
     public static class DraftActivity
     {
-        // How long the owner has to be away before the next /drafts load counts as a new
-        // session and rolls the DraftStatSeen baseline forward.
+        // How long the owner has to be away before the next /drafts load counts as a new session and
+        // rolls the DraftStatSeen baseline forward (B23).
         public static readonly TimeSpan SessionGap = TimeSpan.FromMinutes(30);
     }
 }

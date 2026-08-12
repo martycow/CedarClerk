@@ -2,16 +2,9 @@ using System.Buffers.Binary;
 
 namespace CedarClerk.Core;
 
-/// <summary>
-/// What a RIFF/WAVE header says about a sound file (T-140). Pure and header-only: it reads the
-/// first few dozen bytes and never decodes a sample.
-///
-/// **WAV alone, deliberately.** MP3, OGG and FLAC each need a real parser (frame scanning, VBR
-/// headers, metadata blocks), and a wrong duration is worse than none — an author who sees "2:14"
-/// has no reason to doubt it. WAV is also what a game project's source audio actually is; the
-/// compressed formats are usually exports. Everything else reports nothing, and the UI shows
-/// nothing rather than a guess.
-/// </summary>
+// A RIFF/WAVE header, read from the first few dozen bytes, never a decoded sample (T-140). WAV
+// alone: MP3, OGG and FLAC each need a real parser, and a wrong duration is worse than none — "2:14"
+// gives an author no reason to doubt it. Source audio in a game project is WAV anyway.
 public static class WavHeader
 {
     public record Info(int Channels, int SampleRate, int BitsPerSample, int DurationMs);
@@ -19,10 +12,7 @@ public static class WavHeader
     // "RIFF" + size + "WAVE" is 12 bytes; the smallest useful chunk header is another 8.
     private const int MinimumLength = 20;
 
-    /// <summary>
-    /// Reads the format and duration, or null when the bytes are not a WAV this can be sure about.
-    /// Null is the honest answer for a truncated file, an unusual codec, or anything else.
-    /// </summary>
+    // Null for a truncated file, an unusual codec, or anything else this cannot be sure about.
     public static Info? TryRead(ReadOnlySpan<byte> bytes)
     {
         if (bytes.Length < MinimumLength) return null;

@@ -1,14 +1,8 @@
 namespace CedarClerk.Core;
 
-/// <summary>
-/// Resolved end-of-post signature: Text is always non-empty, Href is set only when the
-/// signature should render as a clickable link.
-/// </summary>
+// Text is always non-empty; Href is set only when the signature renders as a clickable link.
 public sealed record ResolvedSignature(string Text, string? Href);
 
-/// <summary>
-/// Here are defined the limitations for stuff which depend on the Subscription plan
-/// </summary>
 public static class PlanLimitations
 {
     public const int AiDailyLimit = 20;
@@ -45,12 +39,8 @@ public static class PlanLimitations
         return tier >= PlanTiers.Pro;
     }
 
-    /// <summary>
-    /// Free tier always gets the fixed Cedar Clerk attribution; Pro+ can replace it with a custom
-    /// signature (optionally a clickable link via Href) or clear it entirely (null = no signature
-    /// at all). Centralized here so Telegram/blog/static-export don't each re-implement the
-    /// Free-vs-Pro gate. See Phase 8 Step 5, docs/ROADMAP.md, ADR-034 in docs/DECISIONS.md.
-    /// </summary>
+    // Centralized so Telegram, blog and static export do not each re-implement the Free-vs-Pro gate
+    // (ADR-034). Free always gets the fixed attribution; Pro+ can replace or clear it.
     public static ResolvedSignature? ResolveSignature(PlanTiers tier, string? postSignature, string? postSignatureUrl)
     {
         if (!HasCustomSignature(tier))
