@@ -10,7 +10,8 @@ Cedar Clerk — self-hosted personal publishing SaaS. A web rich-text editor who
 - **CedarClerk.Server** — ASP.NET Core (.NET 8) API + static host for the frontend + Telegram bot host
 - **CedarClerk.Core** — the document format and renderers (pure C#, unit-tested)
 - **CedarClerk.Localization** — shared error strings and language constants
-- **CedarClerk.Tests** — xUnit
+- **CedarClerk.Cli** — `cedar`, the operations console (Spectre.Console). Wraps `Scripts/*.ps1` and read-only `ssh`; see ADR-118 for what it deliberately will not do
+- **CedarClerk.Tests** / **CedarClerk.Cli.Tests** — xUnit
 - **cedarclerk-web** — Angular SPA (standalone components, signals, TipTap editor)
 
 Document model: TipTap JSON stored in SQLite (`Draft.CedarJson`). One document → many renderers (Telegram HTML, blog HTML, `.cedar` export) is the core architectural idea — see `docs/ARCHITECTURE.md`.
@@ -26,6 +27,7 @@ Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTUR
 ## Key commands
 | Task | Command |
 |---|---|
+| **Operations console** | `dotnet run --project CedarClerk.Cli` — menu; or `cedar status` / `logs` / `db` / `test` / `deploy` (ADR-118). Wraps the scripts below; **never deploys by itself** |
 | **Everything is green?** | `.\Scripts\test.ps1` (backend + frontend + contrast; `-Smoke` adds Playwright) |
 | **Build everything locally** | `.\Scripts\build.ps1` (Angular + server + desktop shell; `-NoDesktop`, `-Installer`, `-RunDesktop`) |
 | **Deploy** | `.\Scripts\deploy.ps1` — **refuses to run from anything but `master`, or with a dirty tree**. `-SkipBuild` continues an interrupted upload, `-Rollback` puts the previous release back (ADR-113) |

@@ -4,6 +4,17 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
 
 ## Now (12.08.2026)
 
+- [x] **Cedar CLI** (ADR-118) — `CedarClerk.Cli`, интерактивная консоль поверх существующих `.ps1`.
+  `cedar` без аргументов → меню; `cedar status` → дашборд с braille-графиками из `sar`;
+  `logs`, `db`, `backup verify`, `test` (галочка на каждый тест), `build`, `deploy` (preflight,
+  **сам не деплоит**), `restart`, `config`. 78 тестов, `dotnet test` 881/881.
+  - [ ] **Твоя проверка** — то, что нельзя увидеть из-под скрипта: анимация логотипа при запуске,
+    `cedar watch` (обновление без мерцания и чистый выход по Ctrl+C), `cedar test` живьём —
+    сетка галочек, — и `--no-unicode` в настоящем `cmd.exe`.
+  - [ ] **`cedar restart` ещё не запускался вживую** — это единственная destructive-команда, и она
+    роняет блог вместе с приложением на секунды. Проверять, когда будет не жалко.
+  - [ ] Порт логики `.ps1` внутрь C# — **этап 2**, отдельное решение. Сейчас CLI только обёртка.
+
 - [x] **Credits from the admin panel** (0.10.1) — a signed adjustment on the existing ledger, refused
   below zero, logged to the audit with the admin's own note. See `CHANGELOG.md` for why grants are
   deliberately *not* idempotent and why self-targeting is allowed here.
