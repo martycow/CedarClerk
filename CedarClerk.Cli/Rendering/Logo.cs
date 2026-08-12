@@ -145,7 +145,7 @@ public static class Logo
     // word, the description in ordinary lowercase. The separator is the middle dot, which survives
     // CP437 and CP1252; ASCII mode gets a hyphen, like every other em-dash-shaped thing here.
     internal static string SubtitleText(Glyphs glyphs) =>
-        $"{Spaced(CliConsts.BinaryName)}  {(glyphs.IsUnicode ? "·" : "-")}  {SubtitleWords}";
+        $"{SubtitleWords}  {(glyphs.IsUnicode ? "·" : "-")}  (c) Moo.exe 2026";
 
     private static string Spaced(string word) => string.Join(' ', word.ToCharArray());
 
