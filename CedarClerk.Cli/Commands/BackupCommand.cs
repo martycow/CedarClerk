@@ -29,9 +29,11 @@ public sealed class BackupVerifyCommand : AsyncCommand<CedarSettings>
         var script = string.Join('\n', new[]
         {
             "echo '=== files ==='",
-            $"ls -1t {data}/backups/* 2>/dev/null | head -5",
+            // cedar-*.db.gz only — backup.log lives in the same directory and is written after each
+            // run, so a bare glob counts it as a copy and reports it as the newest one.
+            $"ls -1t {data}/backups/cedar-*.db.gz 2>/dev/null | head -5",
             "echo '=== newest ==='",
-            $"stat -c '%Y %s %n' $(ls -1t {data}/backups/* 2>/dev/null | head -1) 2>/dev/null",
+            $"stat -c '%Y %s %n' $(ls -1t {data}/backups/cedar-*.db.gz 2>/dev/null | head -1) 2>/dev/null",
             "echo '=== cron ==='",
             "crontab -l 2>/dev/null | grep -v '^#' | grep -c . || true",
             "echo '=== scripts ==='",

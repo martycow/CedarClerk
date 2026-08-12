@@ -100,9 +100,9 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
   то есть подмена origin'а — не только произвольный exe, но и чтение выбранной папки (`T-145`).
 - [x] **Обе вещи, которые оставил переезд, закрыты Марти на сервере 12.08.2026**: юнит теперь `enabled`
   (`T-143`), и появился ночной `sqlite3 .backup`, 14 копий, пинг в healthchecks.io (`T-071`).
-- [ ] **Одна команда на сервере**: `DEST` в `~/bin/backup.sh` (и путь лога в cron) сейчас
-  `~/backups`, а `cedar status`/`cedar backup verify` смотрят в `~/cedarclerk/data/backups` — строка
-  статуса красная при живых бэкапах. Перенести `DEST` под `data/`, вместе с уже лежащими копиями.
+- [x] `DEST` перенесён в `~/cedarclerk/data/backups` (12.08.2026), туда же лог и путь в cron;
+  `cedar backup verify` показывает копию. CLI считает копии по `cedar-*.db.gz`, а не по `*` — иначе
+  ночной лог оказывался бы «свежайшим бэкапом» нулевого размера.
 - [ ] Копия за пределами дроплета и аккаунта — `T-147`, `media/` (937 МБ) в ночную копию не входит.
 - [ ] Nothing has been pushed to GitHub (`git push origin master dev indiedev_module --tags`).
 

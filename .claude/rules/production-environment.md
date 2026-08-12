@@ -68,14 +68,16 @@ on the server and is not in this repo — see `secrets.md`.
 
 Two things about it that are easy to get wrong:
 
-- **⚠ The script and the CLI disagree about where copies live** — verified still true on 12.08.2026.
-  `DEST` in the script is `/home/martycow/backups`; `cedar status` and `cedar backup verify` read
-  `{RemoteDataDir}/backups`, i.e. `/home/martycow/cedarclerk/data/backups`
-  (`CedarClerk.Cli/Server/ServerProbe.cs`, `Commands/BackupCommand.cs`). So **the tool reports "no local
-  copy" while the copies exist** — the backup is real, the status line is not. The agreed fix is to move
-  the script's `DEST` (and the cron line's log path) under `data/`, which also puts the copies where
-  everything valuable on this host is expected to be. Until someone runs it, do not read a red backup
-  row as data loss.
+- **The destination is one fact in two places.** The script's `DEST` and the path `cedar status` /
+  `cedar backup verify` read (`{RemoteDataDir}/backups`, via `CedarClerk.Cli/Server/ServerProbe.cs`
+  and `Commands/BackupCommand.cs`) must stay equal. They were not for a day: the script wrote to
+  `~/backups` while the tool looked under `data/`, so the status line said "no local copy" over a
+  directory that had one. Both now point at `/home/martycow/cedarclerk/data/backups`, which is also
+  where everything valuable on this host is expected to live.
+- **`backup.log` shares that directory, and the tool counts copies by `cedar-*.db.gz`, not by `*`.**
+  cron appends to the log *after* the copy is written, so a bare glob would have reported a 0-byte
+  log as the newest backup from the first scheduled run onward — the failure would have looked like
+  a backup that ran and produced nothing.
 - **The cron line's log redirect needs the directory to already exist.** `>> …/backups/backup.log`
   is opened by the shell *before* the script runs, so the script's own `mkdir -p` is too late: with no
   directory, cron fails to open the log and never starts the script at all. The first scheduled run

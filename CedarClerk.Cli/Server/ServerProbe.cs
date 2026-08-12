@@ -45,8 +45,10 @@ public sealed class ServerProbe
             "echo '=== deploy ==='",
             $"stat -c '%Y %n' {root}/app 2>/dev/null",
             "echo '=== backup ==='",
-            $"ls -1t {data}/backups/* 2>/dev/null | head -1",
-            $"stat -c '%Y %n' $(ls -1t {data}/backups/* 2>/dev/null | head -1) 2>/dev/null",
+            // Only the copies: cron writes backup.log into the same directory, and it is touched
+            // after every run, so a bare glob would report the log as the newest backup.
+            $"ls -1t {data}/backups/cedar-*.db.gz 2>/dev/null | head -1",
+            $"stat -c '%Y %n' $(ls -1t {data}/backups/cedar-*.db.gz 2>/dev/null | head -1) 2>/dev/null",
             "echo '=== cron ==='",
             "crontab -l 2>/dev/null | grep -cv '^#' || true",
             "echo '=== cpu ==='",
