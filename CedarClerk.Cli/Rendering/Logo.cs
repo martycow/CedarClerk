@@ -80,7 +80,18 @@ public static class Logo
     // One row taller than the art. That extra blank row at the top is the headroom the hop jumps
     // into: without it the top row of CEDAR would be clipped by the top of the block instead of
     // rising, and the "jump" would read as the letter losing its lid.
-    public static int Height => Wordmark.Length + 1;
+    public static int ArtRows => Wordmark.Length + 1;
+
+    // …plus a blank row and the subtitle beneath it (Marty, 12.08.2026).
+    public static int Height => ArtRows + 2;
+
+    // What the subtitle says, and why it says it at all: the wordmark is the product's, and a
+    // console that opens with the product's wordmark and nothing else claims to be the product. This
+    // line is the correction — smaller type, letter-spaced name, plain words for what it is.
+    //
+    // It is kept inside the wordmark's own width so the block never becomes wider than the art, which
+    // is what every "does the logo fit" check measures.
+    private const string SubtitleWords = "operations console";
 
     // Where the animation is in its cycle, as data rather than as a frame — so a caller can compare
     // two of these and skip a redraw when nothing moved.
@@ -128,7 +139,15 @@ public static class Logo
 
     // The finished logo at a given point in the idle cycle. The menu draws this every frame.
     public static IRenderable Still(Glyphs glyphs, bool withTree, Idle idle) =>
-        Frame(Tree.Length, WordWidth, idle.Shimmer, idle.HopMask, withTree, glyphs);
+        Frame(Tree.Length, WordWidth, idle.Shimmer, idle.HopMask, withTree, glyphs, int.MaxValue);
+
+    // "c e d a r  ·  operations console" — the name letter-spaced so it reads as a mark rather than a
+    // word, the description in ordinary lowercase. The separator is the middle dot, which survives
+    // CP437 and CP1252; ASCII mode gets a hyphen, like every other em-dash-shaped thing here.
+    internal static string SubtitleText(Glyphs glyphs) =>
+        $"{Spaced(CliConsts.BinaryName)}  {(glyphs.IsUnicode ? "·" : "-")}  {SubtitleWords}";
+
+    private static string Spaced(string word) => string.Join(' ', word.ToCharArray());
 
     // One mapping instead of a parallel ASCII asset: a second copy would drift the first time the
     // art is touched, and nobody would notice until they ran in cmd.exe.
@@ -148,7 +167,11 @@ public static class Logo
 
         if (!FitsArt(width))
         {
-            console.MarkupLine($"[{Palette.Hex(Palette.Accent)} bold]{CliConsts.DisplayName}[/] [grey]{Markup.Escape(subtitle)}[/]");
+            // Too narrow for the art, so the one line that survives has to carry what the art and the
+            // subtitle carried together: whose console this is, and that it is a console.
+            console.MarkupLine(
+                $"[{Palette.Hex(Palette.Accent)} bold]{CliConsts.DisplayName}[/] " +
+                $"[{Palette.Hex(Palette.Muted)}]{CliConsts.Tagline}[/] [grey]{Markup.Escape(subtitle)}[/]");
             console.WriteLine();
             return;
         }
@@ -183,12 +206,14 @@ public static class Logo
     {
         var skipped = false;
 
-        console.Live(Frame(0, 0, -1, 0, withTree, glyphs)).Start(ctx =>
+        var subtitleWidth = SubtitleText(glyphs).Length;
+
+        console.Live(Frame(0, 0, -1, 0, withTree, glyphs, 0)).Start(ctx =>
         {
-            void Draw(int treeRows, int columns, int shimmer, int hopMask, int delayMs)
+            void Draw(int treeRows, int columns, int shimmer, int hopMask, int subtitle, int delayMs)
             {
                 if (skipped) return;
-                ctx.UpdateTarget(Frame(treeRows, columns, shimmer, hopMask, withTree, glyphs));
+                ctx.UpdateTarget(Frame(treeRows, columns, shimmer, hopMask, withTree, glyphs, subtitle));
                 ctx.Refresh();
                 if (Skipped()) { skipped = true; return; }
                 Thread.Sleep(delayMs);
@@ -197,23 +222,29 @@ public static class Logo
             // 1. The tree grows out of the ground.
             if (withTree)
                 for (var grown = 1; grown <= Tree.Length; grown++)
-                    Draw(grown, 0, -1, 0, 38);
+                    Draw(grown, 0, -1, 0, 0, 38);
 
             // 2. The letters wipe in from the left, four columns at a time.
             for (var columns = 0; columns <= WordWidth; columns += 4)
-                Draw(Tree.Length, columns, columns, 0, 22);
+                Draw(Tree.Length, columns, columns, 0, 0, 22);
 
             // 3. A highlight sweeps across the finished wordmark.
             for (var centre = -6; centre <= WordWidth + 6; centre += 3)
-                Draw(Tree.Length, WordWidth, centre, 0, 16);
+                Draw(Tree.Length, WordWidth, centre, 0, 0, 16);
 
-            // 4. …and the letters hop once, with the same wave the idle cycle uses. Introducing the
+            // 4. The subtitle slides out from underneath, two characters at a time. It goes after the
+            //    sweep rather than with it: the wordmark has to have finished being the thing on
+            //    screen before something else is allowed to qualify it.
+            for (var shown = 0; shown <= subtitleWidth; shown += 2)
+                Draw(Tree.Length, WordWidth, -1, 0, shown, 18);
+
+            // 5. …and the letters hop once, with the same wave the idle cycle uses. Introducing the
             //    effect here means it is recognised when it comes back ten seconds later, instead of
             //    looking like the terminal glitched.
             for (var elapsed = 0.0; elapsed <= HopWaveSeconds; elapsed += 0.04)
-                Draw(Tree.Length, WordWidth, -1, HopMaskAt(elapsed), 40);
+                Draw(Tree.Length, WordWidth, -1, HopMaskAt(elapsed), int.MaxValue, 40);
 
-            ctx.UpdateTarget(Frame(Tree.Length, WordWidth, -1, 0, withTree, glyphs));
+            ctx.UpdateTarget(Frame(Tree.Length, WordWidth, -1, 0, withTree, glyphs, int.MaxValue));
             ctx.Refresh();
         });
     }
@@ -233,14 +264,15 @@ public static class Logo
         }
     }
 
-    private static IRenderable Frame(int treeRows, int wordColumns, int shimmer, int hopMask, bool withTree, Glyphs glyphs)
+    private static IRenderable Frame(
+        int treeRows, int wordColumns, int shimmer, int hopMask, bool withTree, Glyphs glyphs, int subtitleColumns)
     {
         var lines = new List<IRenderable>();
 
         // Everything is drawn one row lower than the art it comes from, so that "hopped" is simply
         // "read one row further down" — the same lookup for a letter that is up and a letter that
         // is not, instead of a second layout for the airborne case.
-        for (var row = 0; row < Height; row++)
+        for (var row = 0; row < ArtRows; row++)
         {
             var markup = new StringBuilder();
             var artRow = row - 1;
@@ -262,7 +294,39 @@ public static class Logo
             lines.Add(new Markup(markup.ToString()));
         }
 
+        lines.Add(new Markup(""));
+        lines.Add(new Markup(Subtitle(glyphs, withTree, subtitleColumns)));
+
         return new Rows(lines);
+    }
+
+    // The subtitle slides out from under the wordmark: characters are revealed left to right, and the
+    // few at the leading edge glow before settling. It is the same trick the wordmark's own wipe uses
+    // one step earlier, so the two read as one movement rather than as two effects.
+    private static string Subtitle(Glyphs glyphs, bool withTree, int columns)
+    {
+        var text = SubtitleText(glyphs);
+        var shown = Math.Clamp(columns, 0, text.Length);
+        var indent = withTree ? new string(' ', TreeWidth + Gap) : "";
+
+        if (shown == 0) return indent;
+
+        // The name half is the accent, the description half is muted — the same relationship the
+        // wordmark and this line have to each other, one size down.
+        var builder = new StringBuilder(indent);
+        for (var i = 0; i < shown; i++)
+        {
+            var colour = shown < text.Length && i >= shown - 3
+                ? Palette.Mix(Palette.Accent, Palette.Text, 0.8)
+                : i < CliConsts.BinaryName.Length * 2
+                    ? Palette.AccentSoft
+                    : Palette.Muted;
+
+            builder.Append('[').Append(Palette.Hex(colour)).Append(']')
+                   .Append(Markup.Escape(text[i].ToString()))
+                   .Append("[/]");
+        }
+        return builder.ToString();
     }
 
     // One row of the wordmark, assembled column by column because neighbouring letters can be at

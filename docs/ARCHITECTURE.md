@@ -139,14 +139,27 @@ A zip container (chosen 08.07.2026 over base64-in-JSON, which would have cost +3
 
 See `.claude/rules/production-environment.md` for the droplet/Cloudflare/systemd specifics this architecture assumes, and `.claude/rules/ef-migrations.md` / `.claude/rules/renderers.md` for the invariants that guard it.
 
-Scripts (`Scripts/`, run from repo root):
-- `test.ps1` — backend tests, frontend units and the contrast contract; `-Smoke` adds the Playwright suite
-- `build.ps1` — Angular, the server publish that ships, and the desktop shell in one pass
-- `deploy.ps1` — the pipeline below, gated by `_git-guard.ps1`: **master only, clean tree only** (T-138)
-- `e2e.ps1` — the smoke suite against a scratch database with no bot token
+**Where this logic lives changed on 12.08.2026 (ADR-119).** The build, the test run and the deploy are
+C# in `CedarClerk.Cli/Pipelines/`; `Scripts/*.ps1` are thin wrappers that call `cedar` so every
+documented command keeps working. One implementation, two entrances.
 
-Deploy (`Scripts/deploy.ps1`, from repo root). Rewritten 11.08.2026 (ADR-113) so that **everything slow
-happens while the old version is still serving**; the service is stopped only for two directory renames:
+- `Pipelines/GitGuard.cs` — branch, clean tree, version tag, and the `LIVE`/`LIVE-PREV` tags (ADR-118 d12)
+- `Pipelines/BuildPipeline.cs` — Angular, the portable server publish that ships, the self-contained
+  desktop server, Electron, the installer
+- `Pipelines/TestPipeline.cs` — backend, frontend units, the contrast contract, and `e2e.ps1` for smoke
+- `Pipelines/DeployPipeline.cs` — the pipeline below, **master only, clean tree only** (T-138)
+- `Pipelines/StageBoard.cs` — the live screen all three run behind: the plan drawn up front, timings,
+  and a running step's own detail (upload bar, braille throughput chart)
+- `Scripts/test.ps1` · `build.ps1` · `deploy.ps1` — wrappers; `Scripts/_cedar.ps1` finds the tool, or
+  falls back to `dotnet run` when it is not installed
+- `Scripts/e2e.ps1` — the smoke suite against a scratch database with no bot token. **Still a script**:
+  it owns a server process and an environment, which is what a shell script is for
+- `Scripts/install-cli.ps1` — packs and installs `cedar` as a .NET global tool. **Still a script**, and
+  necessarily so
+
+Deploy (`cedar deploy`, or `.\Scripts\deploy.ps1`). Rewritten 11.08.2026 (ADR-113) so that **everything
+slow happens while the old version is still serving**; the service is stopped only for two directory
+renames. `cedar deploy` asks before that swap, with the default set to no; the script answers it:
 1. Preflight: git guard (branch `master`, clean tree, HEAD tagged with `Consts.CurrentVersion` — the tag
    is a warning only), `tar` on PATH, and one round trip that reports the service state, free disk and
    what is in `app/` today
@@ -164,8 +177,10 @@ happens while the old version is still serving**; the service is stopped only fo
 9. Health-check loop against `https://cedarclerk.mooexe.dev/api/health` (40 tries, 3s apart), which must
    answer with the version that was just built
 
-`-SkipBuild` re-ships what is already in `publish/` (this is how a dropped upload is continued),
-`-Rollback` swaps `app.prev` back in and restarts, `-Force` turns the git guard into a warning.
+`--skip-build`/`-SkipBuild` re-ships what is already in `publish/` (this is how a dropped upload is
+continued), `--rollback`/`-Rollback` swaps `app.prev` back in and restarts, `--force`/`-Force` turns the
+git guard into a warning, and `--preflight` runs step 1 and stops. `--dry-run` executes nothing at all —
+neither processes nor file deletions (`ICommandRunner` and `IFileWriter` are both swapped for it).
 
 `-Desktop` adds two steps **after** the health check, so nothing here can affect the site: it builds the
 installer (`build.ps1 -DesktopOnly -Installer`) and publishes it into `data/downloads/` — `.exe` and

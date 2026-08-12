@@ -38,6 +38,13 @@ public sealed class DryRunCommandRunner : ICommandRunner
         return Task.FromResult(CommandResult.Empty());
     }
 
+    public Task<CommandResult> StreamFileToRemoteAsync(
+        string localPath, long offset, string remoteCommand, Action<long> onSent, CancellationToken ct)
+    {
+        Print("send", $"{localPath} (from byte {offset}) | ssh {remoteCommand}");
+        return Task.FromResult(CommandResult.Empty());
+    }
+
     public Task<CommandResult> LaunchDetachedAsync(string exe, string args, string? workingDirectory, CancellationToken ct)
     {
         Print("open", $"{exe} {args}");

@@ -8,8 +8,11 @@
 # be edited by hand — and nothing has to be un-edited later. Re-running this script is the whole
 # update procedure.
 #
-# The install is per-user and touches no system state. It does NOT deploy anything: `cedar deploy`
-# is still a preflight that prints the command and stops (ADR-118 decision 2).
+# The install is per-user and touches no system state.
+#
+# This script stays PowerShell and is not going to move (ADR-119 decision 3): installing `cedar` with
+# `cedar` is a circle. It is also why Scripts/_cedar.ps1 can fall back to `dotnet run` — the other
+# scripts must work on a machine where this one has not been run yet.
 param(
     [switch] $Uninstall
 )
@@ -103,6 +106,6 @@ $config | ConvertTo-Json | Set-Content $configPath -Encoding UTF8
 
 Write-Host "`ncedar $version installed." -ForegroundColor Green
 Write-Host "repository: $repoRoot" -ForegroundColor Gray
-Write-Host 'Open a new terminal, then: cedar        (menu)' -ForegroundColor Gray
-Write-Host '                          cedar status  (dashboard)' -ForegroundColor Gray
-Write-Host '                          cedar deploy  (preflight only)' -ForegroundColor Gray
+Write-Host 'Open a new terminal, then: cedar                   (menu)' -ForegroundColor Gray
+Write-Host '                          cedar status             (dashboard)' -ForegroundColor Gray
+Write-Host '                          cedar deploy --preflight (the checks, and stop)' -ForegroundColor Gray

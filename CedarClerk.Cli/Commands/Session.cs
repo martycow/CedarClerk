@@ -17,6 +17,7 @@ public sealed class Session
     public CliConfig Config { get; }
     public ICommandRunner Runner { get; }
     public IHealthProbe Health { get; }
+    public IFileWriter Files { get; }
     public Glyphs Glyphs { get; }
     public ServerProbe Probe { get; }
     public bool Json { get; }
@@ -24,12 +25,13 @@ public sealed class Session
     public bool DryRun { get; }
 
     private Session(IAnsiConsole console, CliConfig config, ICommandRunner runner, IHealthProbe health,
-                    Glyphs glyphs, bool json, bool assumeYes, bool dryRun)
+                    IFileWriter files, Glyphs glyphs, bool json, bool assumeYes, bool dryRun)
     {
         Console = console;
         Config = config;
         Runner = runner;
         Health = health;
+        Files = files;
         Glyphs = glyphs;
         Json = json;
         AssumeYes = assumeYes;
@@ -42,6 +44,8 @@ public sealed class Session
         console ??= AnsiConsole.Console;
         config ??= ConfigStore.Load();
 
+        if (!string.IsNullOrWhiteSpace(settings.Host)) config.Host = settings.Host.Trim();
+
         ICommandRunner runner = settings.DryRun
             ? new DryRunCommandRunner(console)
             : new ProcessCommandRunner(config);
@@ -49,7 +53,10 @@ public sealed class Session
         // --dry-run means "touch nothing", and an HTTP GET to production is still reaching out.
         IHealthProbe health = settings.DryRun ? new OfflineHealthProbe() : new HttpHealthProbe();
 
-        return new Session(console, config, runner, health,
+        // …and deleting publish/ is still touching this machine, which the runner alone never covered.
+        IFileWriter files = settings.DryRun ? new DryRunFileWriter(console) : new RealFileWriter();
+
+        return new Session(console, config, runner, health, files,
             Glyphs.For(console, settings.NoUnicode), settings.Json, settings.AssumeYes, settings.DryRun);
     }
 
@@ -87,7 +94,7 @@ public sealed class Session
     {
         if (Config.LooksComplete) return true;
         Problem($"the repository is not configured - run '{CliConsts.BinaryName} config'");
-        Note($"looked for: {Config.DeployScript}");
+        Note($"looked for: {Config.Solution}");
         return false;
     }
 }

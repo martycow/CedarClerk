@@ -54,6 +54,31 @@ public class SafetyTests
     }
 
     [Fact]
+    public async Task Dry_run_deletes_no_directory_either()
+    {
+        // The half the command runner never covered: publish/ is removed by a method call, not by a
+        // process, so a build under --dry-run would have deleted a real directory.
+        var console = new TestConsole();
+        var writer = DryRun(console).Files;
+
+        Assert.IsType<DryRunFileWriter>(writer);
+
+        var canary = Path.Combine(Path.GetTempPath(), $"cedar-canary-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(canary);
+        writer.DeleteDirectory(canary);
+
+        Assert.True(Directory.Exists(canary), "--dry-run deleted a real directory");
+        Directory.Delete(canary);
+        await Task.CompletedTask;
+    }
+
+    [Fact]
+    public void A_real_run_writes_files_for_real()
+    {
+        Assert.IsType<RealFileWriter>(Session.From(new CedarSettings(), new TestConsole(), new CliConfig()).Files);
+    }
+
+    [Fact]
     public void Dry_run_does_not_even_reach_the_health_endpoint()
     {
         // An HTTP GET to production is still touching the outside world.
@@ -119,18 +144,43 @@ public class SafetyTests
         Assert.Contains("refused", console.Output);
     }
 
+    // `cedar deploy` does deploy since ADR-119, so what has to be pinned down is no longer "it never
+    // ships" but the two things that replaced that promise: --dry-run still touches nothing, and
+    // --preflight still stops after the checks.
+
     [Fact]
-    public async Task Deploy_prints_the_command_and_runs_no_deploy_of_its_own()
+    public async Task Dry_run_deploy_stops_at_the_checks_and_reaches_no_swap()
     {
         var console = new TestConsole();
         console.Profile.Width = 120;
 
-        var settings = new DeploySettings { DryRun = true, NoLogo = true };
-        await DeployCommand.RunAsync(settings, CancellationToken.None);
+        await DeployCommand.RunAsync(new DeploySettings { DryRun = true, NoLogo = true }, CancellationToken.None);
 
-        // Whatever the checks said, nothing that could ship anything may appear as an executed step.
+        // The dry-run runner prints what it would have run, so a swap that had been reached would be
+        // visible here in words.
+        Assert.DoesNotContain("systemctl stop", console.Output);
+        Assert.DoesNotContain("mv '", console.Output);
+    }
+
+    [Fact]
+    public async Task Preflight_only_never_reaches_the_swap_either()
+    {
+        var console = new TestConsole();
+        console.Profile.Width = 120;
+
+        await DeployCommand.RunAsync(
+            new DeploySettings { DryRun = true, NoLogo = true, PreflightOnly = true }, CancellationToken.None);
+
         Assert.DoesNotContain("systemctl stop", console.Output);
         Assert.DoesNotContain("app.new", console.Output);
+    }
+
+    [Fact]
+    public void Every_command_that_can_change_the_server_inherits_the_dry_run_flag()
+    {
+        // The flag it would be worst to forget on a tool that can now stop production.
+        foreach (var type in new[] { typeof(DeploySettings), typeof(BuildSettings), typeof(TestSettings), typeof(OpenSettings) })
+            Assert.True(typeof(CedarSettings).IsAssignableFrom(type), $"{type.Name} does not inherit the global flags");
     }
 
     private static string RepoRoot()

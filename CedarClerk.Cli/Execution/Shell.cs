@@ -1,27 +1,41 @@
 namespace CedarClerk.Cli.Execution;
 
-// Finding a PowerShell to run the existing scripts with.
+// Finding the programs the pipelines run.
 //
-// pwsh first because that is what the project's scripts are written against and what Marty's shell
-// is; Windows PowerShell is the fallback so the tool still works on a machine without pwsh on PATH.
+// pwsh first because that is what the project's remaining scripts are written against and what
+// Marty's shell is; Windows PowerShell is the fallback so the tool still works without pwsh on PATH.
 public static class Shell
 {
-    private static string? _cached;
+    private static string? _cachedPowerShell;
+    private static string? _cachedNpm;
 
     public static string PowerShell()
     {
-        if (_cached is not null) return _cached;
+        if (_cachedPowerShell is not null) return _cachedPowerShell;
 
         foreach (var candidate in new[] { "pwsh", "powershell" })
         {
-            if (!OnPath(candidate)) continue;
-            _cached = candidate;
+            if (Find(candidate) is null) continue;
+            _cachedPowerShell = candidate;
             return candidate;
         }
         // Reporting "pwsh" when nothing was found gives the caller a runnable error message rather
         // than an empty file name.
-        _cached = "pwsh";
-        return _cached;
+        _cachedPowerShell = "pwsh";
+        return _cachedPowerShell;
+    }
+
+    // npm has to be started by its FULL path, and this is not tidiness — it is a bug that cost a
+    // green test run (12.08.2026). npm.cmd locates its own JavaScript through %~dp0, and a batch file
+    // launched by bare name through CreateProcess gets %0 without a directory, so cmd.exe resolves
+    // %~dp0 against the *working* directory instead. The result is
+    // "Cannot find module <cwd>\node_modules\npm\bin\npm-cli.js" — which reads like a broken project
+    // and is in fact a broken launch. It never happened while npm was being started by PowerShell.
+    public static string Npm()
+    {
+        if (_cachedNpm is not null) return _cachedNpm;
+        _cachedNpm = Find("npm") ?? (OperatingSystem.IsWindows() ? "npm.cmd" : "npm");
+        return _cachedNpm;
     }
 
     // -NoProfile keeps a personal profile from printing into output the tool then tries to parse.
@@ -32,12 +46,23 @@ public static class Shell
         return string.Join(' ', parts);
     }
 
-    public static bool OnPath(string exe)
+    public static bool OnPath(string exe) => Find(exe) is not null;
+
+    // The full path to an executable on PATH, or null.
+    //
+    // The extension order is load-bearing on Windows. Node ships BOTH `npm` (a shell script, for
+    // git-bash) and `npm.cmd` in the same directory, and CreateProcess cannot run the first one — so
+    // trying the bare name first finds a file that exists and refuses to start, which is worse than
+    // finding nothing. A name that already carries an extension is tried as written first instead.
+    public static string? Find(string exe)
     {
-        var path = Environment.GetEnvironmentVariable("PATH") ?? "";
         var extensions = OperatingSystem.IsWindows()
-            ? new[] { ".exe", ".cmd", ".bat" }
+            ? Path.HasExtension(exe)
+                ? new[] { "", ".exe", ".cmd", ".bat" }
+                : new[] { ".exe", ".cmd", ".bat", "" }
             : new[] { "" };
+
+        var path = Environment.GetEnvironmentVariable("PATH") ?? "";
 
         foreach (var directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
         {
@@ -45,7 +70,8 @@ public static class Shell
             {
                 try
                 {
-                    if (File.Exists(Path.Combine(directory.Trim('"'), exe + extension))) return true;
+                    var candidate = Path.Combine(directory.Trim('"'), exe + extension);
+                    if (File.Exists(candidate)) return candidate;
                 }
                 catch (ArgumentException)
                 {
@@ -53,6 +79,6 @@ public static class Shell
                 }
             }
         }
-        return false;
+        return null;
     }
 }

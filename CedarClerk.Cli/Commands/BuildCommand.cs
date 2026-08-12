@@ -1,29 +1,37 @@
 using System.ComponentModel;
-using System.Diagnostics;
-using CedarClerk.Cli.Execution;
+using CedarClerk.Cli.Pipelines;
 using CedarClerk.Cli.Rendering;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using Spectre.Console.Rendering;
 
 namespace CedarClerk.Cli.Commands;
 
 public sealed class BuildSettings : CedarSettings
 {
     [CommandOption("--no-desktop")]
-    [Description("Skip the Electron shell (much faster).")]
+    [Description("Skip the Electron shell (much faster - no Electron download).")]
     public bool NoDesktop { get; init; }
 
+    [CommandOption("--desktop-only")]
+    [Description("Rebuild the shell against the Angular output already there.")]
+    public bool DesktopOnly { get; init; }
+
     [CommandOption("--installer")]
-    [Description("Also produce the installer.")]
+    [Description("Also produce CedarClerk-Setup-<version>.exe.")]
     public bool Installer { get; init; }
+
+    [CommandOption("--run")]
+    [Description("Open the shell when it is built.")]
+    public bool Run { get; init; }
 }
 
-// Scripts/build.ps1, with its output kept to one live line instead of several thousand.
+// Scripts/build.ps1, now run from here (ADR-119).
 //
-// It asks first, which looks excessive for a build until you notice what build.ps1 removes on the
-// way: publish/ and CedarClerk.Desktop/server/ are deleted outright, and it rewrites the shell's
-// package.json version. That is small, local and recoverable — hence a prompt rather than the full
-// destructive treatment the rules reserve for the server.
+// It asks first, which looks excessive for a build until you notice what it removes on the way:
+// publish/ and CedarClerk.Desktop/server/ are deleted outright, and the shell's package.json version
+// is rewritten. Small, local and recoverable - hence a prompt rather than the full treatment the
+// rules reserve for the server.
 public sealed class BuildCommand : AsyncCommand<BuildSettings>
 {
     protected override Task<int> ExecuteAsync(CommandContext context, BuildSettings settings, CancellationToken cancellationToken) =>
@@ -36,57 +44,75 @@ public sealed class BuildCommand : AsyncCommand<BuildSettings>
         var session = Session.From(settings);
         if (!session.RequireRepo()) return 2;
 
-        var arguments = new List<string>();
-        if (settings.NoDesktop) arguments.Add("-NoDesktop");
-        if (settings.Installer) arguments.Add("-Installer");
+        var version = GitGuard.VersionOnDisk(session.Config.RepoRoot);
+        var options = new BuildOptions(settings.NoDesktop, settings.DesktopOnly, settings.Installer, settings.Run);
 
         if (!session.DryRun && !session.Confirm(
-                "build.ps1 deletes publish/ and CedarClerk.Desktop/server/, and syncs the shell's version. Continue?"))
+                "This deletes publish/ and CedarClerk.Desktop/server/, and syncs the shell's version. Continue?"))
         {
             session.Note("nothing was done.");
             return 1;
         }
 
-        var watch = Stopwatch.StartNew();
-        var lastLine = "";
-        CommandResult result = CommandResult.Empty();
+        var board = new StageBoard(session.Console, session.Glyphs, "build")
+        {
+            Header = $"[grey]build[/]  [{Palette.Hex(Palette.Accent)}]v{version}[/]  " +
+                     $"[grey35]{Markup.Escape(session.Config.RepoRoot)}[/]"
+        };
+        foreach (var (name, detail) in BuildPipeline.Plan(options)) board.Plan(name, detail);
 
-        await session.Console
-            .Status()
-            .Spinner(session.Glyphs.Spinner)
-            .SpinnerStyle(new Style(Palette.Accent))
-            .StartAsync("building…", async ctx =>
+        try
+        {
+            await board.RunAsync(async _ =>
             {
-                result = await session.Runner.RunLocalStreamingAsync(
-                    Shell.PowerShell(),
-                    Shell.ScriptArgs(session.Config.BuildScript, arguments.ToArray()),
-                    session.Config.RepoRoot,
-                    line =>
-                    {
-                        var text = line.Trim();
-                        if (text.Length == 0) return;
-                        lastLine = text.Length > 90 ? text[..90] + "…" : text;
-                        ctx.Status(Markup.Escape(lastLine));
-                    },
-                    cancellationToken);
-            });
-
-        if (session.Json)
+                await new BuildPipeline(session.Runner, session.Config, session.Files)
+                    .RunAsync(board, options, version, cancellationToken);
+                return 0;
+            }, cancellationToken);
+        }
+        catch (PipelineStop stop)
         {
-            session.WriteJson(new { exitCode = result.ExitCode, seconds = watch.Elapsed.TotalSeconds, lastLine });
-            return result.ExitCode;
+            session.Console.WriteLine();
+            session.Problem(stop.Message);
+            foreach (var line in stop.State) session.Console.MarkupLine($"      [grey]{Markup.Escape(line)}[/]");
+            foreach (var hint in stop.Hints)
+                session.Console.MarkupLine($"        [{Palette.Hex(Palette.Warn)}]{Markup.Escape(hint)}[/]");
+            return 1;
         }
 
-        if (result.Ok)
-            session.Console.MarkupLine(
-                $"[{Palette.Hex(Palette.Ok)}]{session.Glyphs.Ok} built[/] [grey]- v{CedarClerk.Core.Consts.CurrentVersion} in {Format.Duration(watch.Elapsed)}[/]");
-        else
+        Summary(session, board, version, options);
+
+        if (!settings.Run) return 0;
+
+        session.Console.WriteLine();
+        return await OpenCommand.RunAsync(new OpenSettings
         {
-            session.Problem($"the build failed (exit code {result.ExitCode}).");
-            foreach (var line in result.Lines.Where(l => l.Trim().Length > 0).TakeLast(12))
-                session.Note(line);
+            DryRun = settings.DryRun, Json = settings.Json, NoUnicode = settings.NoUnicode,
+            AssumeYes = settings.AssumeYes, NoLogo = settings.NoLogo, Where = "desktop"
+        }, cancellationToken);
+    }
+
+    private static void Summary(Session session, StageBoard board, string version, BuildOptions options)
+    {
+        var rows = new List<IRenderable>
+        {
+            new Markup($"[grey35]version [/] [{Palette.Hex(Palette.Accent)}]v{version}[/]"),
+            new Markup($"[grey35]took    [/] [{Palette.Hex(Palette.Text)}]{Format.Duration(board.Total)}[/]")
+        };
+
+        if (!options.DesktopOnly)
+            rows.Add(new Markup($"[grey35]server  [/] [grey]{Markup.Escape(session.Config.PublishDir)}[/]"));
+
+        if (!options.NoDesktop)
+            rows.Add(new Markup($"[grey35]shell   [/] [grey]{CliConsts.BinaryName} open desktop[/]"));
+
+        if (options.Installer)
+        {
+            var installer = Path.Combine(session.Config.DesktopDistDir, $"CedarClerk-Setup-{version}.exe");
+            rows.Add(new Markup($"[grey35]installer[/] [grey]{Markup.Escape(File.Exists(installer) ? installer : "not produced")}[/]"));
         }
 
-        return result.ExitCode;
+        session.Console.WriteLine();
+        session.Console.Write(Ui.Panel(session.Glyphs, $"{session.Glyphs.Ok} built", new Rows(rows), Palette.Ok));
     }
 }

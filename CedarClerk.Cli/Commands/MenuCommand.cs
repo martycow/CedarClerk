@@ -24,9 +24,10 @@ public sealed class MenuCommand : AsyncCommand<CedarSettings>
     {
         var session = Session.From(settings);
 
+        // The logo says what this is now (the subtitle under the wordmark), so the footer rule is
+        // left with the one thing it alone can say: which version of the working copy you are on.
         if (!settings.NoLogo)
-            Logo.Show(session.Console, session.Glyphs,
-                $"{CliConsts.Tagline} · v{CedarClerk.Core.Consts.CurrentVersion}", animate: true);
+            Logo.Show(session.Console, session.Glyphs, $"v{CedarClerk.Core.Consts.CurrentVersion}", animate: true);
 
         // A first run must open the wizard, not an exception. The config file is guessed from the
         // repository the executable sits in, so most of the answers are already filled in.
@@ -74,10 +75,28 @@ public sealed class MenuCommand : AsyncCommand<CedarSettings>
     private static IReadOnlyList<Item> Root() => new[]
     {
         Group("Monitor", "status, graphs, logs, database", Monitor),
-        Group("Build", "tests and local builds", Build),
+        Group("Build", "tests, builds, deploy", Build),
         Group("Server", "restart, backup", Server),
+        Group("Open", "the product itself", Open),
         new Item("Claude", "a terminal here, running /remote-control", ClaudeCommand.RunAsync),
         new Item("Settings", "host, key, paths", ConfigCommand.RunAsync)
+    };
+
+    // Marty's ask, 12.08.2026. Everything else in this menu answers questions *about* Cedar Clerk;
+    // the obvious next move — looking at it — meant leaving for a browser and typing a URL from
+    // memory.
+    private static IReadOnlyList<Item> Open() => new[]
+    {
+        new Item("In the browser", "production", (s, ct) => OpenCommand.RunAsync(Where(s, "browser"), ct)),
+        new Item("Desktop app", "installed copy, or this working one", (s, ct) => OpenCommand.RunAsync(Where(s, "desktop"), ct)),
+        new Item("The blog", "blog.mooexe.dev", (s, ct) => OpenCommand.RunAsync(Where(s, "blog"), ct)),
+        new Item("Local dev server", "localhost:8080, if you have one running", (s, ct) => OpenCommand.RunAsync(Where(s, "local"), ct))
+    };
+
+    private static OpenSettings Where(CedarSettings from, string where) => new()
+    {
+        DryRun = from.DryRun, AssumeYes = from.AssumeYes, NoUnicode = from.NoUnicode,
+        Json = from.Json, NoLogo = from.NoLogo, Where = where
     };
 
     private static IReadOnlyList<Item> Monitor() => new[]
@@ -115,7 +134,18 @@ public sealed class MenuCommand : AsyncCommand<CedarSettings>
         }),
         new Item("Build", "Angular + server + shell",
             (s, ct) => BuildCommand.RunAsync(Copy<BuildSettings>(s), ct)),
-        new Item("Deploy preflight", "checks, then prints the command",
+        new Item("Deploy preflight", "the checks, and stop", (s, ct) =>
+        {
+            var d = Copy<DeploySettings>(s);
+            return DeployCommand.RunAsync(new DeploySettings
+            {
+                DryRun = d.DryRun, Json = d.Json, NoUnicode = d.NoUnicode, AssumeYes = d.AssumeYes,
+                NoLogo = d.NoLogo, PreflightOnly = true
+            }, ct);
+        }),
+        // The one entry in this menu that stops production. It asks, with the default set to no, and
+        // the question names the machine (ADR-119 decision 2).
+        new Item("Deploy", "the real thing - asks first",
             (s, ct) => DeployCommand.RunAsync(Copy<DeploySettings>(s), ct))
     };
 

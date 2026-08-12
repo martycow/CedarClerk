@@ -30,6 +30,15 @@ public interface ICommandRunner
     // buffered call would print nothing at all rather than late.
     Task<CommandResult> RunRemoteStreamingAsync(string command, Action<string> onLine, CancellationToken ct);
 
+    // The tail of a local file, streamed into a remote command's stdin (ADR-119). This is how the
+    // release tarball crosses: `cat >> file` on the far side, starting from the byte already there,
+    // because scp cannot resume and this transfer has died at 90% before.
+    //
+    // onSent reports the running total including the offset, so a caller can draw one bar across an
+    // upload that took three attempts rather than three bars that each start at zero.
+    Task<CommandResult> StreamFileToRemoteAsync(
+        string localPath, long offset, string remoteCommand, Action<long> onSent, CancellationToken ct);
+
     // A window the tool opens and then stops owning: nothing is redirected, nothing is waited for,
     // and the exit code reported is only whether the launch itself succeeded.
     //

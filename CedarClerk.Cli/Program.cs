@@ -51,14 +51,21 @@ app.Configure(config =>
     });
 
     config.AddCommand<TestCommand>("test")
-        .WithDescription("Scripts/test.ps1, with a tick per test as the results arrive.")
+        .WithDescription("Backend, frontend and contrast, with a tick per test as results arrive.")
         .WithExample("test", "--smoke");
 
     config.AddCommand<BuildCommand>("build")
-        .WithDescription("Scripts/build.ps1.");
+        .WithDescription("Angular, the server publish and the desktop shell.")
+        .WithExample("build", "--no-desktop");
 
     config.AddCommand<DeployCommand>("deploy")
-        .WithDescription("Deploy preflight. Prints the command; never runs it (ADR-118).");
+        .WithDescription("Build, ship, swap, verify. Asks before it stops production (ADR-119).")
+        .WithExample("deploy", "--preflight")
+        .WithExample("deploy", "--rollback");
+
+    config.AddCommand<OpenCommand>("open")
+        .WithDescription("Open Cedar Clerk itself: browser, desktop, blog or local.")
+        .WithExample("open", "desktop");
 
     config.AddCommand<RestartCommand>("restart")
         .WithDescription("Restart the service on the droplet. Asks first.");

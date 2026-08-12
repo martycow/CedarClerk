@@ -120,12 +120,44 @@ public class LogoTests
         var console = Console(100, unicode: true);
         console.Write(Logo.Still(Glyphs.Unicode, withTree: false, idle));
 
-        var lines = console.Lines.Take(Logo.Height).ToArray();
+        // The art only: the subtitle underneath is a different width and a different thing, and the
+        // tests below are about how the letters move.
+        var lines = console.Lines.Take(Logo.ArtRows).ToArray();
         var width = lines.Max(line => line.Length);
         return lines.Select(line => line.PadRight(width)).ToArray();
     }
 
     private static int Width(string[] art) => art[0].Length;
+
+    // The subtitle (Marty, 12.08.2026). A console that opens with the product's wordmark and nothing
+    // else claims to be the product; this line is the correction, so these pin down that it is there,
+    // that it says both halves of what it has to say, and that it cannot make the block overflow.
+
+    [Fact]
+    public void The_subtitle_names_the_tool_and_says_it_is_a_console()
+    {
+        var console = Console(100, unicode: true);
+        Logo.Show(console, Glyphs.Unicode, "v0.0.0", animate: false);
+
+        Assert.Contains("c e d a r", console.Output);
+        Assert.Contains("operations console", console.Output);
+    }
+
+    [Fact]
+    public void The_subtitle_is_never_wider_than_the_wordmark_above_it()
+    {
+        // Every "does the logo fit" check measures the wordmark, so a longer subtitle would push past
+        // the edge of a terminal that had just been told the logo fits.
+        Assert.True(Logo.SubtitleText(Glyphs.Unicode).Length <= Width(Art(Logo.Idle.Still)),
+            "the subtitle is wider than the art it sits under");
+    }
+
+    [Fact]
+    public void The_subtitle_drops_its_middle_dot_in_ascii_mode()
+    {
+        Assert.DoesNotContain("·", Logo.SubtitleText(Glyphs.Plain));
+        Assert.Contains("operations console", Logo.SubtitleText(Glyphs.Plain));
+    }
 
     [Fact]
     public void The_two_halves_of_the_art_are_the_same_size()

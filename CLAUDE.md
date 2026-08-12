@@ -27,21 +27,28 @@ Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTUR
 ## Key commands
 | Task | Command |
 |---|---|
-| **Operations console** | `cedar` — menu; or `cedar status` / `logs` / `db` / `test` / `deploy` / `claude` (ADR-118). Wraps the scripts below; **never deploys by itself**. Installed by `.\Scripts\install-cli.ps1` as a .NET global tool — re-run it after changing the CLI, `-Uninstall` removes it |
-| **Everything is green?** | `.\Scripts\test.ps1` (backend + frontend + contrast; `-Smoke` adds Playwright) |
-| **Build everything locally** | `.\Scripts\build.ps1` (Angular + server + desktop shell; `-NoDesktop`, `-Installer`, `-RunDesktop`) |
-| **Deploy** | `.\Scripts\deploy.ps1` — **refuses to run from anything but `master`, or with a dirty tree**. `-SkipBuild` continues an interrupted upload, `-Rollback` puts the previous release back (ADR-113) |
+| **Operations console** | `cedar` — menu; or `cedar status` / `logs` / `db` / `test` / `build` / `deploy` / `open` / `claude`. **The build, the test run and the deploy live in `CedarClerk.Cli/Pipelines/` since ADR-119**, and the scripts below are thin wrappers over them. Installed by `.\Scripts\install-cli.ps1` as a .NET global tool — **re-run it after changing the CLI**, `-Uninstall` removes it |
+| **Everything is green?** | `cedar test` or `.\Scripts\test.ps1` (backend + frontend + contrast; `--smoke`/`-Smoke` adds Playwright) |
+| **Build everything locally** | `cedar build` or `.\Scripts\build.ps1` (Angular + server + desktop shell; `--no-desktop`, `--installer`, `--run`) |
+| **Deploy** | `cedar deploy` — **asks before it stops production**; or `.\Scripts\deploy.ps1`, which answers that question for you. **Refuses anything but `master`, or a dirty tree.** `--preflight` runs the checks and stops, `--skip-build` continues an interrupted upload, `--rollback` puts the previous release back (ADR-113, ADR-119) |
 | Run server locally | `dotnet run --project CedarClerk.Server` (port 8080) |
 | Run frontend locally | `ng serve` in `cedarclerk-web/` (proxies `/api` → 8080) |
-| Run the desktop app | `cd CedarClerk.Desktop; npm start` (after `build.ps1`) |
+| Open the product | `cedar open` (production) / `open desktop` / `open blog` / `open local` |
+| Run the desktop app | `cedar open desktop`, or `cd CedarClerk.Desktop; npm start` (after a build) |
 | Backend tests | `dotnet test` from repo root |
 | Frontend tests | `npm run test` in `cedarclerk-web/` |
 | Smoke suite | `.\Scripts\e2e.ps1` (scratch database, no bot token); `-Serve` leaves it running |
 | New EF migration | `dotnet ef migrations add <Name> --project CedarClerk.Server` |
 
-The three top rows are the ones to reach for. `Scripts/_git-guard.ps1` holds the shared branch/tree
-checks — `test.ps1` and `build.ps1` deliberately do **not** call them (running and building a feature
-branch is the normal case); only deploying does.
+The three top rows are the ones to reach for. **The direction of the wrapping turned around on
+12.08.2026 (ADR-119)**: it used to be `cedar` running the `.ps1` files, it is now the `.ps1` files
+running `cedar`, so there is one implementation with two entrances. `Scripts/_cedar.ps1` is the shared
+launcher (and falls back to `dotnet run` when the tool is not installed); `GitGuard.cs` holds the
+branch/tree checks that `_git-guard.ps1` used to — `test` and `build` deliberately do **not** apply
+them, since running and building a feature branch is the normal case, and only deploying does.
+
+Two scripts stay real scripts on purpose: `e2e.ps1` (it owns a server process, an isolated data
+directory and a browser) and `install-cli.ps1` (installing `cedar` with `cedar` is a circle).
 
 ## Docs map
 - `docs/DOCS-FLOW.md` — **read this first**: which doc is the source of truth for what, how an item travels Input.md → BACKLOG → TASKS → ROADMAP/CHANGELOG, and the three rules that keep them in sync
@@ -69,7 +76,7 @@ Backend: static `XxxEndpoints` classes (minimal APIs, no MVC), entities in one f
 - **`dev` — general development.**
 - **`indiedev_module`** — branched from `dev` for the indie-gamedev work, because the business model is not yet proven. May be deleted outright if it doesn't work out; keep the module reversible (ADR-101).
 - **`LIVE` marks what is in production** (12.08.2026, ADR-118). `deploy.ps1` moves it onto HEAD after the health check passes, keeping the tag it replaces as `LIVE-PREV`; `-Rollback` moves it back. Local only — it is never pushed. A tag name points at one object, so "one commit at a time" needs no enforcement; what the preflight does check is whether `LIVE` still agrees with the version production answers.
-- **Enforced since 10.08.2026**: `Scripts/deploy.ps1` refuses to run from a branch other than `master`, from a detached HEAD, or with uncommitted changes, and warns when HEAD carries no tag matching `Consts.CurrentVersion`. `-Force` overrides and says what it is overriding. The checks live in `Scripts/_git-guard.ps1`.
+- **Enforced since 10.08.2026**: the deploy refuses to run from a branch other than `master`, from a detached HEAD, or with uncommitted changes, and warns when HEAD carries no tag matching `Consts.CurrentVersion`. `-Force`/`--force` overrides and says what it is overriding. The checks moved from `Scripts/_git-guard.ps1` to `CedarClerk.Cli/Pipelines/GitGuard.cs` on 12.08.2026 (ADR-119) and gained tests on the way.
 
 ## Commits and versioning
 - **Commit each substantial chunk of work** — a chunk can be several features or several bugs together, it does not have to be one item per commit. Don't leave a finished chunk uncommitted.
