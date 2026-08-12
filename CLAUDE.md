@@ -68,6 +68,7 @@ Backend: static `XxxEndpoints` classes (minimal APIs, no MVC), entities in one f
 - **`master` — only the latest stable version.** Every commit on it is tagged with a version, and **every deploy is run from `master` and only from `master`.**
 - **`dev` — general development.**
 - **`indiedev_module`** — branched from `dev` for the indie-gamedev work, because the business model is not yet proven. May be deleted outright if it doesn't work out; keep the module reversible (ADR-101).
+- **`LIVE` marks what is in production** (12.08.2026, ADR-118). `deploy.ps1` moves it onto HEAD after the health check passes, keeping the tag it replaces as `LIVE-PREV`; `-Rollback` moves it back. Local only — it is never pushed. A tag name points at one object, so "one commit at a time" needs no enforcement; what the preflight does check is whether `LIVE` still agrees with the version production answers.
 - **Enforced since 10.08.2026**: `Scripts/deploy.ps1` refuses to run from a branch other than `master`, from a detached HEAD, or with uncommitted changes, and warns when HEAD carries no tag matching `Consts.CurrentVersion`. `-Force` overrides and says what it is overriding. The checks live in `Scripts/_git-guard.ps1`.
 
 ## Commits and versioning

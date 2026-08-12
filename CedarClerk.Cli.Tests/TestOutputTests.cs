@@ -1,4 +1,8 @@
+using CedarClerk.Cli.Commands;
+using CedarClerk.Cli.Configuration;
 using CedarClerk.Cli.Parsing;
+using CedarClerk.Cli.Rendering;
+using Spectre.Console.Testing;
 
 namespace CedarClerk.Cli.Tests;
 
@@ -210,6 +214,68 @@ public class TestOutputTests
         tracker.Finish();
 
         Assert.Equal(0, tracker.Total);
+    }
+
+    // The grid of cells (Marty, 12.08.2026): a field sized from the last run, filling in as results
+    // land. The field only exists mid-run, which is the state no screenshot can be taken of.
+
+    [Fact]
+    public void The_field_is_drawn_to_the_remembered_size_and_fills_in()
+    {
+        var console = new TestConsole();
+        console.Profile.Width = 100;
+        var tracker = new TestRunTracker();
+        Feed(tracker, "=== Backend (dotnet test) ===", "  Passed A.B.C [1 ms]", "  Passed A.B.D [1 ms]");
+
+        var frame = TestCommand.Frame(
+            Session.From(new TestSettings { NoLogo = true }, console, new CliConfig()),
+            tracker, TimeSpan.FromSeconds(1), running: true, expected: 10);
+        console.Write(frame);
+
+        // The counters line repeats the cell glyphs as a key, so the assertion is about the grid row
+        // itself rather than the whole panel.
+        var grid = console.Lines.First(line => line.Contains('□'));
+        Assert.Equal(2, grid.Count(c => c == '▣'));
+        Assert.Equal(8, grid.Count(c => c == '□'));
+    }
+
+    [Fact]
+    public void A_finished_run_shows_the_results_and_no_leftover_placeholders()
+    {
+        // A remembered count that turned out too high must not leave empty cells implying tests that
+        // were never going to run.
+        var console = new TestConsole();
+        console.Profile.Width = 100;
+        var tracker = new TestRunTracker();
+        Feed(tracker, "=== Backend (dotnet test) ===", "  Passed A.B.C [1 ms]");
+        tracker.Finish();
+
+        console.Write(TestCommand.Frame(
+            Session.From(new TestSettings { NoLogo = true }, console, new CliConfig()),
+            tracker, TimeSpan.FromSeconds(1), running: false, expected: 500));
+
+        Assert.DoesNotContain('□', console.Output);
+    }
+
+    [Fact]
+    public void Every_cell_glyph_is_one_column_wide_in_both_modes()
+    {
+        // The grid wraps by counting results, not characters, so a two-character glyph would shear
+        // every row to double width - which is what "OK"/"XX" did in ASCII mode.
+        foreach (var glyphs in new[] { Glyphs.Unicode, Glyphs.Plain })
+            foreach (var cell in new[] { glyphs.CellPending, glyphs.CellPassed, glyphs.CellFailed, glyphs.CellSkipped })
+                Assert.Equal(1, cell.Length);
+    }
+
+    [Fact]
+    public void No_cell_glyph_is_an_emoji_that_would_paint_itself()
+    {
+        // U+2714 is in the emoji set, so Windows renders it from Segoe UI Emoji in that font's own
+        // colour and ignores the ANSI colour entirely - which is how a wall of "green" ticks came
+        // out violet. Geometric Shapes and Mathematical Operators have no emoji presentation.
+        foreach (var cell in new[]
+                 { Glyphs.Unicode.CellPending, Glyphs.Unicode.CellPassed, Glyphs.Unicode.CellFailed, Glyphs.Unicode.CellSkipped })
+            Assert.InRange(cell[0], (char)0x2200, (char)0x25FF);
     }
 
     private static void Feed(TestRunTracker tracker, params string[] lines)

@@ -24,7 +24,7 @@
 # staging/. Of ~/cedarclerk/data it writes exactly one subdirectory - downloads/, the desktop
 # installer and its manifest (ADR-116, -Desktop only) - and never anything else there.
 param(
-    [string] $CloudHost = "martycow@deploy.mooexe.dev",
+    [string] $CloudHost = "martycow@periwinkle.mooexe.dev",
     [switch] $Force,
     [switch] $SkipBuild,
     [switch] $Desktop,
@@ -406,7 +406,15 @@ echo SWAPPED
         try {
             $resp = Invoke-RestMethod -Uri $HealthUrl -TimeoutSec 5
             Complete-Step "server answers v$($resp.version)"
-            Write-Box -Title "$($G.OK) ROLLED BACK" -Rows @(@('running', "v$($resp.version)", 'Green')) -Color Green
+
+            # The tags follow the same swap the server just performed: LIVE-PREV becomes LIVE and
+            # nothing is kept behind it, because the server kept nothing behind app.prev either.
+            $restored = Restore-LiveTag
+            $rollbackRows = @(@('running', "v$($resp.version)", 'Green'))
+            $rollbackRows += , @('LIVE', $(if ($restored) { $restored } else { 'removed - nothing here knows what is running now' }),
+                                 $(if ($restored) { 'Green' } else { 'Yellow' }))
+
+            Write-Box -Title "$($G.OK) ROLLED BACK" -Rows $rollbackRows -Color Green
             exit 0
         }
         catch { }
@@ -427,6 +435,9 @@ Start-Step 'Preflight' 'git state, local tools, server state'
 Assert-Branch -Allowed 'master' -Action 'Deploy' -Force:$Force
 Assert-CleanTree -Action 'Deploy' -Force:$Force
 Test-VersionTag -Version $version
+# Only reports; a stale LIVE is bookkeeping, and stopping here would leave production on the older
+# code with the tag still wrong. $liveShort carries a 'v' prefix, which the comparison does not want.
+Test-LiveTag -LiveVersion $(if ($liveShort -eq 'down') { '' } else { $liveShort.TrimStart('v') })
 
 if (-not (Get-Command tar -ErrorAction SilentlyContinue)) {
     Stop-Deploy 'tar is not on PATH - the whole transfer is one tarball, so it is required.' `
@@ -719,6 +730,10 @@ if ($resp.version -ne $version) {
 
 Complete-Step "v$($resp.version) is answering"
 
+# Only now: production has answered with the version that was just shipped, which is the first
+# moment "this commit is live" is a fact rather than an intention.
+$liveTag = Set-LiveTag
+
 #endregion
 #region ----------------------------------------------------- 10-11. desktop installer (-Desktop)
 
@@ -865,6 +880,10 @@ $rows += , @('total', (Format-Duration $total), 'White')
 $rows += , @('downtime', "$($downMs)ms  (renaming two directories)", 'Green')
 $rows += , @('shipped', ('{0} files, {1} packed to {2}' -f $publishFiles.Count, (Format-Size $publishBytes), (Format-Size $tarBytes)))
 $rows += , @('running', ("v{0}   {1}" -f $resp.version, $HealthUrl), 'Green')
+if ($liveTag) {
+    $rows += , @('LIVE', ("{0}{1}" -f $liveTag.Commit,
+                          $(if ($liveTag.Previous) { "   (was $($liveTag.Previous), kept as LIVE-PREV)" } else { '' })), 'Green')
+}
 if ($Desktop) { $rows += , @('desktop', $desktopNote, $desktopColor) }
 $rows += , @('rollback', '.\Scripts\deploy.ps1 -Rollback')
 

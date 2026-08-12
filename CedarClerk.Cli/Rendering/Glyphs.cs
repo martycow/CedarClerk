@@ -38,6 +38,25 @@ public sealed class Glyphs
 
     public bool IsUnicode => GraphStyle != GraphStyle.Ascii;
 
+    // The test grid draws one cell per result, hundreds side by side, and that changes what a glyph
+    // has to be (Marty, 12.08.2026):
+    //
+    //   * exactly one column wide, in BOTH modes. Ok/Bad are two characters in ASCII ("OK"/"XX"),
+    //     which sheared the grid into rows of double width without anything looking obviously wrong.
+    //   * not an emoji. U+2714 is in the emoji set, so Windows hands it to Segoe UI Emoji, which
+    //     draws its own coloured glyph and ignores the ANSI colour entirely — which is why a wall of
+    //     "green" ticks came out violet. Geometric Shapes have no emoji presentation and stay the
+    //     colour they are told to be.
+    //   * told apart by shape as well as colour (decision 7). Filled, crossed and dotted read
+    //     differently in monochrome; three shades of the same square do not.
+    //
+    // Passed keeps its outline while filling, so a finished grid still reads as cells rather than as
+    // one green slab.
+    public string CellPending => IsUnicode ? "□" : ".";   // □ empty
+    public string CellPassed => IsUnicode ? "▣" : "#";    // ▣ filled, border intact
+    public string CellFailed => IsUnicode ? "⊠" : "X";    // ⊠ crossed
+    public string CellSkipped => IsUnicode ? "⊡" : "-";   // ⊡ dotted
+
     // Typography leaks through too. Em dashes were swapped for hyphens in every user-facing string,
     // because U+2014 is in no DOS code page; the middle dot stayed, since it sits in both CP437 and
     // CP1252. The legend swatch does have to switch: U+25A0 is in neither.

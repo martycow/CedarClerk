@@ -74,6 +74,8 @@ public sealed class DeployCommand : AsyncCommand<DeploySettings>
                 ? $"v{snapshot.Health.Version} answering"
                 : "production is not answering - this deploy would bring it back"));
 
+        checks.Add(await LiveTagCheck(session, snapshot.Health.Version, cancellationToken));
+
         // The swap keeps two copies of the app on disk at once (ADR-113).
         var freeMb = snapshot.Disk.FreeBytes / (1024 * 1024);
         checks.Add(new Check(freeMb > 400, false, "disk",
@@ -149,6 +151,40 @@ public sealed class DeployCommand : AsyncCommand<DeploySettings>
             session.Console.MarkupLine(
                 $"  [{Palette.Hex(colour)}]{mark}[/] [grey]{check.Label,-8}[/] {Markup.Escape(check.Detail)}");
         }
+    }
+
+    // Where the LIVE tag points, and whether it still tells the truth (ADR-118 decision 12).
+    //
+    // "Only one commit carries LIVE" is free — a tag name resolves to exactly one object, so the
+    // tag moves instead of accumulating. What is not free is the tag being stale, and the only way
+    // to notice is to ask production what it is running and compare. Never fatal: a wrong tag is
+    // bookkeeping, and the deploy this check would block is the thing that corrects it.
+    private static async Task<Check> LiveTagCheck(Session session, string liveVersion, CancellationToken cancellationToken)
+    {
+        var live = (await Git(session, "rev-parse -q --verify refs/tags/LIVE^{commit}", cancellationToken)).Trim();
+        if (live.Length == 0)
+            return new Check(true, false, "LIVE", "no tag yet - a successful deploy will create it");
+
+        var head = (await Git(session, "rev-parse -q --verify HEAD", cancellationToken)).Trim();
+        var shortSha = live[..Math.Min(7, live.Length)];
+        var tagged = await VersionAt(session, live, cancellationToken);
+
+        if (live == head)
+            return new Check(true, false, "LIVE", $"already on HEAD ({shortSha})");
+
+        if (liveVersion.Length > 0 && tagged.Length > 0 && tagged != liveVersion)
+            return new Check(false, false, "LIVE",
+                $"{shortSha} says v{tagged}, production answers v{liveVersion} - stale, this deploy corrects it");
+
+        return new Check(true, false, "LIVE", shortSha + (tagged.Length > 0 ? $" (v{tagged})" : ""));
+    }
+
+    // What CurrentVersion was at a commit — the version the tag claims is running.
+    private static async Task<string> VersionAt(Session session, string commit, CancellationToken cancellationToken)
+    {
+        var consts = await Git(session, $"show {commit}:CedarClerk.Core/Consts.cs", cancellationToken);
+        var match = System.Text.RegularExpressions.Regex.Match(consts, "CurrentVersion = \"([^\"]+)\"");
+        return match.Success ? match.Groups[1].Value : "";
     }
 
     private static string CommandLine(Session session, DeploySettings settings)

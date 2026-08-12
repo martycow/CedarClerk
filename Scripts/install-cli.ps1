@@ -20,11 +20,35 @@ $project = Join-Path $repoRoot 'CedarClerk.Cli\CedarClerk.Cli.csproj'
 $packageId = 'CedarClerk.Cli'
 $nupkgDir = Join-Path $repoRoot 'publish\cli-nupkg'
 
-# `dotnet tool uninstall` exits non-zero when the tool is not installed, which is not a failure
-# here — both the -Uninstall path and the reinstall below tolerate it deliberately.
+# Removing the tool has exactly one acceptable failure: it was not installed. Everything else has to
+# stop the script.
+#
+# This was learned the hard way (12.08.2026): a `cedar` left open in another terminal holds its own
+# files in the tool store, the uninstall fails with "Access to the path ... is denied", and the
+# install that follows then reports "Tool is already installed" and exits **zero**. The script
+# happily printed "installed" over a version that had not changed. A failed install that claims
+# success is worse than a loud one, because the next confusing thing you see is a missing command.
 function Remove-CedarTool {
-    dotnet tool uninstall --global $packageId 2>&1 | Out-Null
+    $output = (dotnet tool uninstall --global $packageId 2>&1) -join "`n"
+    $failed = $LASTEXITCODE -ne 0
     $global:LASTEXITCODE = 0
+
+    if (-not $failed) { return }
+    # Not installed is the normal case on a first run and on a machine being cleaned up twice.
+    if ($output -match 'not installed|could not be found|is not found') { return }
+
+    Write-Host ""
+    Write-Host $output -ForegroundColor DarkGray
+    if ($output -match 'denied|being used|another process') {
+        $running = @(Get-Process -Name 'cedar' -ErrorAction SilentlyContinue)
+        Write-Host "The tool's files are locked - a running copy is holding them." -ForegroundColor Red
+        if ($running.Count -gt 0) {
+            Write-Host "  Running now: PID $(($running | ForEach-Object { $_.Id }) -join ', ')" -ForegroundColor Yellow
+        }
+        Write-Host "  Close every open 'cedar' (the menu counts) and run this again." -ForegroundColor DarkGray
+        Write-Host ""
+    }
+    throw 'Could not remove the installed tool.'
 }
 
 if ($Uninstall) {
@@ -56,8 +80,16 @@ Write-Host "`n=== Installing ===" -ForegroundColor Cyan
 # the new binary anyway.
 Remove-CedarTool
 
-dotnet tool install --global $packageId --version $version --add-source $nupkgDir
+$installOutput = (dotnet tool install --global $packageId --version $version --add-source $nupkgDir 2>&1) -join "`n"
+Write-Host $installOutput -ForegroundColor DarkGray
 if ($LASTEXITCODE -ne 0) { throw 'dotnet tool install failed' }
+
+# `dotnet tool install` says this and still exits zero, so the exit code alone cannot tell a fresh
+# install from a no-op. Left unchecked it is the exact path that reported success while leaving the
+# old binary in place.
+if ($installOutput -match 'already installed') {
+    throw 'The old version is still installed - the uninstall above did not take effect.'
+}
 
 # ConfigStore finds the repository by walking up from the executable, which worked while the tool
 # ran out of bin/. A global tool lives in the SDK's store instead, so outside this folder it has no

@@ -10,6 +10,10 @@ public class StatusSettings : CedarSettings
     [CommandOption("--hours <HOURS>")]
     [Description("How much history the graphs show. sysstat samples every 10 minutes.")]
     public int Hours { get; init; } = CliConsts.DefaultHistoryHours;
+
+    [CommandOption("-l|--legend")]
+    [Description("Print the glossary of the abbreviations underneath the dashboard.")]
+    public bool Legend { get; init; }
 }
 
 public sealed class StatusCommand : AsyncCommand<StatusSettings>
@@ -36,7 +40,15 @@ public sealed class StatusCommand : AsyncCommand<StatusSettings>
             return snapshot.Reachable ? 0 : 1;
         }
 
-        session.Console.Write(new StatusView(session.Glyphs, session.Config.Host).Render(snapshot, now, session.Console.Profile.Width));
+        var width = session.Console.Profile.Width;
+        session.Console.Write(new StatusView(session.Glyphs, session.Config.Host).Render(snapshot, now, width));
+
+        // The glossary sits under the dashboard when asked for, and otherwise leaves one grey line
+        // saying where it is. Printing it every time would push the numbers off a short screen.
+        session.Console.Write(settings.Legend
+            ? LegendView.Render(session.Glyphs, width)
+            : LegendView.Hint(session.Glyphs));
+
         return snapshot.Reachable ? 0 : 1;
     }
 }

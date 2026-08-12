@@ -125,6 +125,150 @@ function Test-VersionTag {
     Write-Host "  Every commit on master is meant to carry its version tag: git tag $Version" -ForegroundColor DarkGray
 }
 
+# --------------------------------------------------------------------------- the LIVE tag
+#
+# `LIVE` names the commit production is currently running (Marty, 12.08.2026). "Only one commit may
+# carry it" needs no policing: a tag name points at exactly one object by definition, so the tag
+# *moves* rather than accumulates, and `git tag -f` is the whole of that guarantee.
+#
+# What does need policing is the tag being **wrong** — pointing at something production is not
+# running. That happens through a deploy from another machine, a hand-edit on the server, or a
+# rollback nobody told git about. So: the tag is only moved once the health check has confirmed the
+# new version answering, and Test-LiveTag compares it against what production actually reports.
+#
+# LIVE-PREV mirrors the server's app.prev exactly — one level deep, no more. The server keeps one
+# previous release, so keeping two would let the tags promise a rollback the server cannot perform.
+
+<# The commit a tag points at, or $null when the tag does not exist. #>
+function Get-TagCommit {
+    param([Parameter(Mandatory)] [string] $Tag)
+
+    $sha = git rev-parse -q --verify "refs/tags/$Tag^{commit}" 2>$null
+    $global:LASTEXITCODE = 0
+    if (-not $sha) { return $null }
+    return $sha.Trim()
+}
+
+<# CurrentVersion as it was at a given commit — what the tag claims is running. #>
+function Get-VersionAtCommit {
+    param([Parameter(Mandatory)] [string] $Commit)
+
+    $text = (git show "${Commit}:CedarClerk.Core/Consts.cs" 2>$null) -join "`n"
+    $global:LASTEXITCODE = 0
+    if (-not $text) { return $null }
+
+    $match = [regex]::Match($text, 'CurrentVersion = "([^"]+)"')
+    if (-not $match.Success) { return $null }
+    return $match.Groups[1].Value
+}
+
+<#
+.SYNOPSIS
+Moves LIVE onto HEAD, keeping the tag it replaces as LIVE-PREV.
+
+.DESCRIPTION
+Called only after production has answered with the new version. Tagging earlier would let LIVE name
+a commit that never finished shipping, which is worse than no tag at all: a wrong answer to "what is
+running" is acted on, an absent one is investigated.
+
+Never fatal. By the time this runs the site is already live, and failing a finished deploy over
+bookkeeping would be the tail wagging the dog.
+#>
+function Set-LiveTag {
+    $head = (git rev-parse -q --verify HEAD 2>$null)
+    $global:LASTEXITCODE = 0
+    if (-not $head) {
+        Write-Host "      Could not read HEAD - LIVE was not moved." -ForegroundColor Yellow
+        return $null
+    }
+    $head = $head.Trim()
+
+    $previous = Get-TagCommit 'LIVE'
+
+    # The outgoing LIVE becomes LIVE-PREV even when it is the same commit as HEAD: re-deploying the
+    # same commit makes the server's app.prev that commit too, and a LIVE-PREV left pointing further
+    # back would describe a release the server can no longer roll back to.
+    if ($previous) {
+        git tag -f 'LIVE-PREV' $previous 2>$null | Out-Null
+    }
+    else {
+        # No LIVE means nothing here knows what the server is replacing, so any LIVE-PREV lying
+        # around is a guess. Removing it makes a later rollback say "I do not know" instead.
+        git tag -d 'LIVE-PREV' 2>$null | Out-Null
+    }
+    git tag -f 'LIVE' $head 2>$null | Out-Null
+    $global:LASTEXITCODE = 0
+
+    return [pscustomobject]@{
+        Commit   = $head.Substring(0, 7)
+        Previous = if ($previous) { $previous.Substring(0, 7) } else { $null }
+    }
+}
+
+<#
+.SYNOPSIS
+Puts LIVE back where it was before the last deploy, for -Rollback.
+
+.DESCRIPTION
+The server's rollback moves app.prev into app and keeps nothing behind it; this does the same to the
+tags, which is why LIVE-PREV is deleted rather than chained. With no LIVE-PREV to return to, LIVE is
+removed: after a rollback the running commit is genuinely unknown here, and no tag is the honest way
+to say so.
+#>
+function Restore-LiveTag {
+    $previous = Get-TagCommit 'LIVE-PREV'
+
+    if ($previous) {
+        git tag -f 'LIVE' $previous 2>$null | Out-Null
+        git tag -d 'LIVE-PREV' 2>$null | Out-Null
+        $global:LASTEXITCODE = 0
+        return $previous.Substring(0, 7)
+    }
+
+    git tag -d 'LIVE' 2>$null | Out-Null
+    $global:LASTEXITCODE = 0
+    return $null
+}
+
+<#
+.SYNOPSIS
+Reports where LIVE points and whether it agrees with the version production reports.
+
+.PARAMETER LiveVersion
+What the health endpoint answers right now, or an empty string when production is down.
+
+.DESCRIPTION
+Warns, never stops. A stale tag is a bookkeeping problem, and refusing to deploy over one would
+leave production on the older code *and* the tag still wrong.
+#>
+function Test-LiveTag {
+    param([string] $LiveVersion)
+
+    $live = Get-TagCommit 'LIVE'
+    if (-not $live) {
+        Write-Host "Note: no LIVE tag yet - a successful deploy will create it." -ForegroundColor DarkGray
+        return
+    }
+
+    $head = (git rev-parse -q --verify HEAD 2>$null)
+    $global:LASTEXITCODE = 0
+    $short = $live.Substring(0, 7)
+    $tagged = Get-VersionAtCommit $live
+
+    if ($head -and $head.Trim() -eq $live) {
+        Write-Host "LIVE is already on HEAD ($short) - this deploy will leave it there." -ForegroundColor DarkGray
+        return
+    }
+
+    if ($LiveVersion -and $tagged -and $tagged -ne $LiveVersion) {
+        Write-Host "Note: LIVE points at $short (v$tagged), but production answers v$LiveVersion." -ForegroundColor Yellow
+        Write-Host "  The tag is stale - something shipped without moving it. This deploy corrects it." -ForegroundColor DarkGray
+        return
+    }
+
+    Write-Host "LIVE: $short$(if ($tagged) { " (v$tagged)" })" -ForegroundColor DarkGray
+}
+
 <# Reads CurrentVersion out of Consts.cs — the single place the version lives. #>
 function Get-CedarVersion {
     param([Parameter(Mandatory)] [string] $RepoRoot)

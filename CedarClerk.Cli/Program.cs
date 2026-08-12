@@ -40,6 +40,9 @@ app.Configure(config =>
     config.AddCommand<DbCommand>("db")
         .WithDescription("Read-only look at the live SQLite database.");
 
+    config.AddCommand<LegendCommand>("legend")
+        .WithDescription("What the abbreviations on the status screen mean.");
+
     config.AddBranch("backup", branch =>
     {
         branch.SetDescription("Backup state.");

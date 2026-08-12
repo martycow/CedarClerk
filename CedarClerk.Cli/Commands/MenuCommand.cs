@@ -97,7 +97,8 @@ public sealed class MenuCommand : AsyncCommand<CedarSettings>
                 AssumeYes = logs.AssumeYes, ErrorsOnly = true, Since = "-24h", Tail = 200
             }, ct);
         }),
-        new Item("Database", "quick_check and row counts", DbCommand.RunAsync)
+        new Item("Database", "quick_check and row counts", DbCommand.RunAsync),
+        new Item("Legend", "what rss, wal and dep mean", LegendCommand.RunAsync)
     };
 
     private static IReadOnlyList<Item> Build() => new[]
