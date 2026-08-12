@@ -153,6 +153,17 @@ function stopServer() {
     if (!serverProcess) return;
     const child = serverProcess;
     serverProcess = null;
+
+    // Detach the "it died on its own" reporter BEFORE killing it. `taskkill /f` makes the child
+    // exit with code 1, and a shutdown we asked for must never be announced as a failure.
+    //
+    // This was invisible until updates existed: every other stop happens after the window is gone,
+    // and the handler checks for that. Installing an update stops the server while the window is
+    // still open, so the modal error box appeared in the middle of quitting — which blocks the main
+    // process and breaks the quit sequence. Reported by Marty on the first real update
+    // (11.08.2026): "exit code 1", while the installer itself ran fine.
+    child.removeAllListeners('exit');
+
     // A .NET host does not always die with its parent, and an orphan holds cedar.db's WAL lock —
     // the next launch would then find a database it cannot open.
     //
@@ -164,6 +175,21 @@ function stopServer() {
         spawnSync('taskkill', ['/pid', String(child.pid), '/f', '/t'], { stdio: 'ignore' });
     } else {
         child.kill('SIGTERM');
+    }
+}
+
+/**
+ * An update installs by quitting, so anything that goes wrong takes the console with it — and a
+ * packaged app has no console to begin with. The line lands in the data directory instead, beside
+ * cedar.db, which is the one place that survives both the crash and the reinstall.
+ */
+function logUpdate(message) {
+    const line = `${new Date().toISOString()} ${message instanceof Error ? message.stack : message}`;
+    console.log(`[update] ${line}`);
+    try {
+        fs.appendFileSync(path.join(dataDirectory(), 'update.log'), `${line}\n`);
+    } catch {
+        // A log that cannot be written must not be the reason an update fails.
     }
 }
 
@@ -181,39 +207,43 @@ function startUpdateChecks() {
     // shrugging — so `npm start` during development would open on an error box.
     if (!app.isPackaged) return;
 
-    autoUpdater.logger = {
-        info: m => console.log(`[update] ${m}`),
-        warn: m => console.warn(`[update] ${m}`),
-        error: m => console.error(`[update] ${m}`),
-        debug: () => { },
-    };
+    autoUpdater.logger = { info: logUpdate, warn: logUpdate, error: logUpdate, debug: () => { } };
     autoUpdater.autoDownload = true;
     // Closing the window is how this app normally ends, so it is also the least intrusive moment to
     // install: no prompt, no progress bar, the next launch is simply the new version.
     autoUpdater.autoInstallOnAppQuit = true;
 
-    autoUpdater.on('error', err => console.error(`[update] ${err?.message ?? err}`));
+    autoUpdater.on('error', err => logUpdate(err?.message ?? err));
+    autoUpdater.on('update-available', info => logUpdate(`update available: ${info.version}`));
+    autoUpdater.on('update-not-available', () => logUpdate(`no update; running ${SHELL_VERSION}`));
 
     autoUpdater.on('update-downloaded', async info => {
+        logUpdate(`downloaded ${info.version}`);
+        // English, like every other dialog this shell shows. The app's own interface is translated;
+        // the shell around it is not, and half-translating it would read as a bug rather than care.
         const message = {
             type: 'question',
-            buttons: ['Перезапустить сейчас', 'Позже'],
+            buttons: ['Restart now', 'Later'],
             defaultId: 0,
             cancelId: 1,
             title: 'Cedar Clerk',
-            message: `Версия ${info.version} загружена.`,
-            detail: `Сейчас установлена ${SHELL_VERSION}. Обновление применится при перезапуске — ` +
-                'если выбрать «Позже», оно установится само при закрытии приложения.',
+            message: `Version ${info.version} is ready to install.`,
+            detail: `This copy is ${SHELL_VERSION}. Restarting applies the update — choosing Later ` +
+                'installs it when you close the app.',
         };
         const alive = mainWindow && !mainWindow.isDestroyed();
         const { response } = alive
             ? await dialog.showMessageBox(mainWindow, message)
             : await dialog.showMessageBox(message);
-        if (response !== 0) return;
+        if (response !== 0) {
+            logUpdate('deferred to next quit');
+            return;
+        }
 
         // NSIS replaces resources/server/CedarClerk.Server.exe, which is running right now as our
         // child process. stopServer() is synchronous, so by the time quitAndInstall() hands over,
         // nothing is holding the file the installer is about to overwrite.
+        logUpdate('stopping the server, then handing over to the installer');
         stopServer();
         autoUpdater.quitAndInstall();
     });

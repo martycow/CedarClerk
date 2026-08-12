@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-12 — the first real desktop update, and the bug it walked straight into
+
+Marty deployed with `-Desktop`, the installed copy found the update on launch — and then quit with "exit code 1" when he accepted it. The installer itself ran fine, which is the detail that names the culprit: nothing was wrong with the update, only with how the app got out of its own way.
+
+**`taskkill /f` gives the process it kills an exit code of 1.** The server child had an `exit` handler that reports "the local server stopped unexpectedly" in a modal `showErrorBox` — correct behaviour for a server that dies on its own, and invisible until now because every other stop happens after the window is already gone, which the handler checks for. Installing an update stops the server **while the window is still open**, in the middle of quitting, so the box appeared and blocked the main process mid-hand-over. The fix is one line and a rule worth keeping: an intentional stop detaches the crash reporter before killing, because **a shutdown we asked for cannot be a failure**.
+
+**The shell speaks English again.** The update dialog was the only Russian text in a shell whose other dialogs ("Version mismatch…", "The local server stopped unexpectedly…") are English. Marty asked for English; half-translating an interface reads as a bug rather than as care. The app's own UI is unaffected — it has real translations.
+
+**There is a log now**: `%APPDATA%\CedarClerk\update.log`. A packaged app has no console and an update ends by quitting, so this incident had to be reasoned out from first principles instead of read. Each check, version, download, choice and error is one line.
+
+**The consequence to remember, now written into ADR-116 and `docs/DESKTOP.md`: an update is installed by the version being replaced.** The fix ships in 0.10.9, but the copy installing it is the old one — so this same dialog appears one last time on the way in. Installing 0.10.9 by hand from `/downloads/latest` skips that; everything after it is clean.
+
+Verified on the real packaged build rather than in development: three launches, each starting the server and answering the update check against production (`latest version: 0.10.8` — the whole chain through Cloudflare works), each closing with zero Electron and zero server processes left behind, and the log written where it should be.
+
 ## 2026-08-11 — pictures on the blog open where you are reading them
 
 Marty's ask, from a desktop browser: click an image in a post and have it fill the screen — **not** open in a new tab. That is the whole feature, and the two words that shaped it are "not" and "tab": the article has to still be there when the picture closes.
