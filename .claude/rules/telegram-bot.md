@@ -13,6 +13,20 @@ ssh martycow@periwinkle.mooexe.dev "sudo systemctl start cedarclerk"
 ```
 Locally with no token configured, the bot is disabled by design — `TelegramBotService.IsRunning` returns false and `PostEndpoints`/export return 503 with a clear message instead of throwing. This lets local dev proceed without ever touching the production bot process.
 
+### A local launch has exactly two safe forms (three incidents, 13.07 / 26.07 / 09.08.2026)
+
+`TelegramBotService` polls as part of normal startup regardless of which endpoint is being tested, so this applies even to a pure `curl` check. Production logged 409s twice because the rule was *known* and not *acted on*.
+
+- **Bot not needed** (UI work, HTTP checks):
+  `$env:ASPNETCORE_ENVIRONMENT='LocalNoBot'; $env:ASPNETCORE_URLS='http://localhost:8080'; dotnet run --project CedarClerk.Server --no-launch-profile`
+  Then **read the startup log and confirm `Cedar:BotToken not set — bot is disabled`** before doing anything else. That line is the only proof; "I set an env var" is not one of the safe forms.
+- **Bot actually needed**: stop the production service, run, start it again — and remember that stopping it also kills `/media/*`.
+
+Two traps that defeated earlier attempts:
+- **`--no-launch-profile` is load-bearing.** `launchSettings.json` pins `ASPNETCORE_ENVIRONMENT=Development` in all three profiles, so without the flag the real token from `appsettings.Development.json` loads anyway.
+- **`$env:Cedar__BotToken = ''` does not blank the token — PowerShell *deletes* the variable**, so the file's real token is used. This is what caused the 26.07.2026 repeat.
+- **`CedarClerk.Server/wwwroot` must exist or startup crashes** (`DirectoryNotFoundException` from the static-web-assets loader) — it is a build artifact, absent in a clean tree. Create it to run locally; the deploy writes the Angular build into `publish/wwwroot`, so a stray pre-existing one nests as `wwwroot/browser`.
+
 **This does NOT apply to a one-off `SendRichMessage`/`SendPhoto`/etc. call** (e.g. a diagnostic script that builds a `TelegramBotClient` and sends a single message) — the 409 is specific to concurrent `getUpdates`, not to ordinary send-type API calls. Don't stop the production service just to send a test message; stopping it also takes down `/media/*` (same process serves both — see below), which can actively break what you're trying to test.
 
 ## sendRichMessage — Bot API 10.2, Blocks is canonical (superseded 10.1 guidance below)

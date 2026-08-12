@@ -1,7 +1,7 @@
 # CLAUDE.md — Cedar Clerk
 
 ## Who you're working with
-Marty (martycow) — C#/Unity game developer, knows Angular, does NOT know infrastructure/DevOps.
+Marty (martycow) — C#/Unity game developer, knows Angular. **Infrastructure: no longer a beginner** (updated 12.08.2026) — he moved production off the Raspberry Pi to a DigitalOcean droplet himself, and closed both items that move left open: `systemctl enable`, and a nightly `sqlite3 .backup` in cron with a healthchecks.io ping so a silent failure alerts. Explain infra work, don't skip it — but write to someone who runs `systemctl`, `crontab` and `sed` on a live server, not to someone who has never seen them. The sudo password is his alone, and writing commands on the droplet are handed to him to run (see `.claude/rules/production-environment.md`).
 **Always communicate in Russian.** Use English technical terminology with Russian translations in braces on first use.
 Workflow: vibe-coding — implement step by step, explain what you're doing concisely, wait for Marty's confirmation (terminal output / screenshot) before the next risky step.
 

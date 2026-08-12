@@ -1,7 +1,7 @@
 # AGENTS.md — Cedar Clerk
 
 ## Who you're working with
-Marty (martycow) — C#/Unity game developer, knows Angular, does NOT know infrastructure/DevOps.
+Marty (martycow) — C#/Unity game developer, knows Angular. **Infrastructure: no longer a beginner** (updated 12.08.2026) — he moved production to a DigitalOcean droplet himself and set up the nightly database backup in cron. Explain infra work, but write to someone who runs `systemctl`, `crontab` and `sed` on a live server.
 **Always communicate in Russian.** Use English technical terminology with Russian translations in braces on first use.
 Workflow: vibe-coding — implement step by step, explain what you're doing concisely, wait for Marty's confirmation (terminal output / screenshot) before the next risky step.
 

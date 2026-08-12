@@ -99,8 +99,11 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
   (ADR-116). **С ADR-117 это стало весомее**: тот же домен теперь ещё и выдаёт мосту доступ к диску,
   то есть подмена origin'а — не только произвольный exe, но и чтение выбранной папки (`T-145`).
 - [x] **Обе вещи, которые оставил переезд, закрыты Марти на сервере 12.08.2026**: юнит теперь `enabled`
-  (`T-143`), и появился ночной `sqlite3 .backup` в `data/backups`, 14 копий, пинг в healthchecks.io
-  (`T-071`). Осталось из этой темы только off-box копия — она в бэклоге.
+  (`T-143`), и появился ночной `sqlite3 .backup`, 14 копий, пинг в healthchecks.io (`T-071`).
+- [ ] **Одна команда на сервере**: `DEST` в `~/bin/backup.sh` (и путь лога в cron) сейчас
+  `~/backups`, а `cedar status`/`cedar backup verify` смотрят в `~/cedarclerk/data/backups` — строка
+  статуса красная при живых бэкапах. Перенести `DEST` под `data/`, вместе с уже лежащими копиями.
+- [ ] Копия за пределами дроплета и аккаунта — `T-147`, `media/` (937 МБ) в ночную копию не входит.
 - [ ] Nothing has been pushed to GitHub (`git push origin master dev indiedev_module --tags`).
 
 ## v0.10.0 is on master (10.08.2026) — deployed 10.08.2026

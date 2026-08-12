@@ -61,18 +61,21 @@ which one it means.
 
 **Nightly database copy** — `T-071`, closed 12.08.2026 by Marty on the server, not by this repo.
 `~/bin/backup.sh` runs from his crontab at **03:30 UTC** (the droplet is UTC — that is 03:30 UTC, not
-local): `sqlite3 .backup` into `/home/martycow/cedarclerk/data/backups/cedar-<YYYY-MM-DD>.db.gz`,
-gzipped, `-mtime +13 -delete` keeping fourteen days, then a ping to healthchecks.io so that a *silent*
-failure raises an alert instead of nothing. First copy verified by hand the same day: 15 MB database →
-2.8 MB gz. The ping URL lives in the script on the server and is not in this repo — see `secrets.md`.
+local): `sqlite3 .backup` → gzip → `cedar-<YYYY-MM-DD>.db.gz`, `-mtime +13 -delete` keeping fourteen
+days, then a ping to healthchecks.io so that a *silent* failure raises an alert instead of nothing.
+First copy verified by hand the same day: 15 MB database → 2.8 MB gz. The ping URL lives in the script
+on the server and is not in this repo — see `secrets.md`.
 
 Two things about it that are easy to get wrong:
 
-- **The destination path is shared with the CLI.** `cedar status` and `cedar backup verify` look in
-  `{RemoteDataDir}/backups` (`CedarClerk.Cli/Server/ServerProbe.cs`, `Commands/BackupCommand.cs`).
-  Moving the script's `DEST` without moving the CLI's path makes the status line report "no local copy"
-  over a directory full of copies — which is exactly what happened on the first attempt, when the
-  script wrote to `~/backups`.
+- **⚠ The script and the CLI disagree about where copies live** — verified still true on 12.08.2026.
+  `DEST` in the script is `/home/martycow/backups`; `cedar status` and `cedar backup verify` read
+  `{RemoteDataDir}/backups`, i.e. `/home/martycow/cedarclerk/data/backups`
+  (`CedarClerk.Cli/Server/ServerProbe.cs`, `Commands/BackupCommand.cs`). So **the tool reports "no local
+  copy" while the copies exist** — the backup is real, the status line is not. The agreed fix is to move
+  the script's `DEST` (and the cron line's log path) under `data/`, which also puts the copies where
+  everything valuable on this host is expected to be. Until someone runs it, do not read a red backup
+  row as data loss.
 - **The cron line's log redirect needs the directory to already exist.** `>> …/backups/backup.log`
   is opened by the shell *before* the script runs, so the script's own `mkdir -p` is too late: with no
   directory, cron fails to open the log and never starts the script at all. The first scheduled run
