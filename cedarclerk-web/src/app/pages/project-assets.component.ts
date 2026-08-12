@@ -73,8 +73,6 @@ export class ProjectAssetsComponent implements OnDestroy {
     /** This machine, when there is one. Null in a browser, which is what makes everything a fingerprint. */
     thisMachine = signal<{ id: string; name: string } | null>(null);
 
-    picking = signal(false);
-    pickPath = signal('');
     pickError = signal<string | null>(null);
     recentFolders = signal<string[]>(this.loadRecent());
 
@@ -216,12 +214,6 @@ export class ProjectAssetsComponent implements OnDestroy {
 
     // ---- folder choosing -------------------------------------------------
 
-    startPicking() {
-        this.pickPath.set(this.page()?.rootPath ?? '');
-        this.pickError.set(null);
-        this.picking.set(true);
-    }
-
     /**
      * The OS folder picker, which also grants the folder to the local agent.
      *
@@ -247,7 +239,6 @@ export class ProjectAssetsComponent implements OnDestroy {
         if (!id || target.length === 0 || this.scanning()) return;
 
         this.pickError.set(null);
-        this.picking.set(false);
         this.rememberFolder(target);
         await this.sync.run(id, target);
         // Once, at the end. Refreshing the list on every batch would make a scan of a large folder
