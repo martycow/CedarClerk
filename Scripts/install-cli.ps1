@@ -3,6 +3,14 @@
 #   .\Scripts\install-cli.ps1              build, pack and (re)install as a .NET global tool
 #   .\Scripts\install-cli.ps1 -Uninstall    remove it again
 #
+# THIS IS THE FIRST THING TO RUN ON A FRESH CLONE (ADR-119 decision 1, rewritten). The build, the
+# test run and the deploy used to be scripts in this folder; they are `cedar build`, `cedar test` and
+# `cedar deploy` now, and this script is what makes that name exist. After it, nothing here is needed
+# for ordinary work — only `e2e.ps1`, which `cedar test --smoke` calls for you.
+#
+# If `cedar` is ever broken and cannot install itself, the way round is one line and needs nothing
+# from this folder:  dotnet run --project CedarClerk.Cli -- deploy --preflight
+#
 # Why a global tool and not a published folder on PATH: the SDK already owns
 # %USERPROFILE%\.dotnet\tools and already put it on PATH, so nothing about the environment has to
 # be edited by hand — and nothing has to be un-edited later. Re-running this script is the whole
@@ -11,8 +19,7 @@
 # The install is per-user and touches no system state.
 #
 # This script stays PowerShell and is not going to move (ADR-119 decision 3): installing `cedar` with
-# `cedar` is a circle. It is also why Scripts/_cedar.ps1 can fall back to `dotnet run` — the other
-# scripts must work on a machine where this one has not been run yet.
+# `cedar` is a circle, and this is where it is cut.
 param(
     [switch] $Uninstall
 )

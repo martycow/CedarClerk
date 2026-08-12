@@ -15,7 +15,8 @@ public sealed class TestPhase
     public bool Reconciled { get; set; }
 }
 
-// Follows a run of Scripts/test.ps1 line by line and keeps a live tally the grid can draw.
+// Follows a test run line by line and keeps a live tally the grid can draw. The phase headers came
+// from Scripts/test.ps1 until ADR-119; TestPipeline announces them itself now, in the same shape.
 //
 // Why it is more than a line parser: the three runners report at different granularities. dotnet
 // test names every test, Playwright names every test, and `ng test` — which does not forward a
@@ -50,11 +51,11 @@ public sealed class TestRunTracker
     private readonly HashSet<string>? _known;
     private TestPhase? _current;
 
-    // test.ps1 is not the only thing printing "=== name ===" — check-contrast.mjs uses the same
+    // The pipeline is not the only thing printing "=== name ===" — check-contrast.mjs uses the same
     // shape for "light" and "dark", and they appeared as two empty phases. Naming the steps that
     // count keeps those inside the phase that ran them. An unnamed header is ignored rather than
-    // dropped: its results land in the phase already open, so a step added to test.ps1 later loses
-    // its own row but never its tally.
+    // dropped: its results land in the phase already open, so a step added later loses its own row
+    // but never its tally.
     public TestRunTracker(IEnumerable<string>? knownPhases = null) =>
         _known = knownPhases is null ? null : new HashSet<string>(knownPhases, StringComparer.OrdinalIgnoreCase);
 

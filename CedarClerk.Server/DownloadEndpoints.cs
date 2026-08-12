@@ -10,8 +10,8 @@ namespace CedarClerk.Server;
 /// **There is no update protocol here to speak of** — `electron-updater`'s generic provider is
 /// three files in one folder: `latest.yml` (version + sha512), the installer it names, and a
 /// `.blockmap` that lets a client download only the changed chunks. Serving them is ordinary
-/// static-file middleware; everything clever lives in `Scripts/deploy.ps1 -Desktop`, which puts
-/// them there.
+/// static-file middleware; everything clever lives in `cedar deploy --desktop`, which puts them
+/// there (CedarClerk.Cli/Pipelines/DeployPipeline.cs since ADR-119).
 ///
 /// **The folder is under <c>CEDAR_DATA_DIR</c>, not beside the app**: a deploy replaces `app/`
 /// wholesale, so an installer stored there would vanish on the next ordinary release and take

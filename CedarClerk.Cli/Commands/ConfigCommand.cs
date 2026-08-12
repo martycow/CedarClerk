@@ -45,9 +45,11 @@ public sealed class ConfigCommand : AsyncCommand<CedarSettings>
         config.RepoRoot = session.Console.Prompt(
             new TextPrompt<string>("repository")
                 .DefaultValue(config.RepoRoot.Length > 0 ? config.RepoRoot : ConfigStore.FindRepoRoot() ?? "")
-                .Validate(path => File.Exists(Path.Combine(path, "Scripts", "deploy.ps1"))
+                // The solution file, not a script: since ADR-119 the pipelines are the tool, so what
+                // a configured repository has to contain is the repository itself.
+                .Validate(path => File.Exists(Path.Combine(path, "CedarClerk.sln"))
                     ? ValidationResult.Success()
-                    : ValidationResult.Error("[red]no Scripts/deploy.ps1 under that path[/]")));
+                    : ValidationResult.Error("[red]no CedarClerk.sln under that path[/]")));
 
         config.RemoteRoot = session.Console.Prompt(
             new TextPrompt<string>("remote root").DefaultValue(config.RemoteRoot));

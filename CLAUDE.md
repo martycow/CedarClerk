@@ -27,10 +27,10 @@ Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTUR
 ## Key commands
 | Task | Command |
 |---|---|
-| **Operations console** | `cedar` — menu; or `cedar status` / `logs` / `db` / `test` / `build` / `deploy` / `open` / `claude`. **The build, the test run and the deploy live in `CedarClerk.Cli/Pipelines/` since ADR-119**, and the scripts below are thin wrappers over them. Installed by `.\Scripts\install-cli.ps1` as a .NET global tool — **re-run it after changing the CLI**, `-Uninstall` removes it |
-| **Everything is green?** | `cedar test` or `.\Scripts\test.ps1` (backend + frontend + contrast; `--smoke`/`-Smoke` adds Playwright) |
-| **Build everything locally** | `cedar build` or `.\Scripts\build.ps1` (Angular + server + desktop shell; `--no-desktop`, `--installer`, `--run`) |
-| **Deploy** | `cedar deploy` — **asks before it stops production**; or `.\Scripts\deploy.ps1`, which answers that question for you. **Refuses anything but `master`, or a dirty tree.** `--preflight` runs the checks and stops, `--skip-build` continues an interrupted upload, `--rollback` puts the previous release back (ADR-113, ADR-119) |
+| **Operations console** | `cedar` — menu; or `cedar status` / `logs` / `db` / `test` / `build` / `deploy` / `open` / `claude`. **Since ADR-119 this is the only way to build, test and deploy** — the logic lives in `CedarClerk.Cli/Pipelines/` and the old `.ps1` entry points are gone. Installed by `.\Scripts\install-cli.ps1` — **the first thing to run on a fresh clone, and again after changing the CLI**; `-Uninstall` removes it |
+| **Everything is green?** | `cedar test` (backend + frontend + contrast; `--smoke` adds Playwright) |
+| **Build everything locally** | `cedar build` (Angular + server + desktop shell; `--no-desktop`, `--desktop-only`, `--installer`, `--run`) |
+| **Deploy** | `cedar deploy` — **asks before it stops production, default no.** Refuses anything but `master`, or a dirty tree. `--preflight` runs the checks and stops, `--skip-build` continues an interrupted upload, `--rollback` puts the previous release back, `--desktop` also publishes the installer (ADR-113, ADR-116, ADR-119) |
 | Run server locally | `dotnet run --project CedarClerk.Server` (port 8080) |
 | Run frontend locally | `ng serve` in `cedarclerk-web/` (proxies `/api` → 8080) |
 | Open the product | `cedar open` (production) / `open desktop` / `open blog` / `open local` |
@@ -40,15 +40,17 @@ Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTUR
 | Smoke suite | `.\Scripts\e2e.ps1` (scratch database, no bot token); `-Serve` leaves it running |
 | New EF migration | `dotnet ef migrations add <Name> --project CedarClerk.Server` |
 
-The three top rows are the ones to reach for. **The direction of the wrapping turned around on
-12.08.2026 (ADR-119)**: it used to be `cedar` running the `.ps1` files, it is now the `.ps1` files
-running `cedar`, so there is one implementation with two entrances. `Scripts/_cedar.ps1` is the shared
-launcher (and falls back to `dotnet run` when the tool is not installed); `GitGuard.cs` holds the
-branch/tree checks that `_git-guard.ps1` used to — `test` and `build` deliberately do **not** apply
-them, since running and building a feature branch is the normal case, and only deploying does.
+The three top rows are the ones to reach for. **`Scripts/deploy.ps1`, `build.ps1`, `test.ps1` and
+`_git-guard.ps1` no longer exist** (12.08.2026, ADR-119) — that logic is `CedarClerk.Cli/Pipelines/`,
+with tests. `GitGuard.cs` holds the branch/tree checks the guard used to; `test` and `build`
+deliberately do **not** apply them, since running and building a feature branch is the normal case,
+and only deploying does.
 
-Two scripts stay real scripts on purpose: `e2e.ps1` (it owns a server process, an isolated data
-directory and a browser) and `install-cli.ps1` (installing `cedar` with `cedar` is a circle).
+Two scripts stay, and both are real scripts rather than redirection: `e2e.ps1` (it owns a server
+process, an isolated data directory and a browser — `cedar test --smoke` calls it) and
+`install-cli.ps1` (installing `cedar` with `cedar` is a circle; this is where it is cut). If `cedar`
+is ever broken, the way round needs nothing from that folder:
+`dotnet run --project CedarClerk.Cli -- deploy --preflight`.
 
 ## Docs map
 - `docs/DOCS-FLOW.md` — **read this first**: which doc is the source of truth for what, how an item travels Input.md → BACKLOG → TASKS → ROADMAP/CHANGELOG, and the three rules that keep them in sync

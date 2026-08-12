@@ -1,5 +1,5 @@
-# Packaging for the desktop shell (T-121, ADR-104). Run through Scripts/build.ps1, which publishes
-# the server into ./server/ first — electron-builder only wraps what is already there.
+# Packaging for the desktop shell (T-121, ADR-104). Run through `cedar build --installer`, which
+# publishes the server into ./server/ first — electron-builder only wraps what is already there.
 appId: dev.mooexe.cedarclerk
 productName: Cedar Clerk
 copyright: Marty (martycow)

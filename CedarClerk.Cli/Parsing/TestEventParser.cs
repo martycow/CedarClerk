@@ -6,7 +6,7 @@ public enum TestOutcome { Passed, Failed, Skipped }
 
 public sealed record TestEvent(TestOutcome Outcome, string Name);
 
-// Recognises "one test finished" in the output of the three runners Scripts/test.ps1 drives, so the
+// Recognises "one test finished" in the output of the three runners TestPipeline drives, so the
 // grid can fill in live instead of waiting for an exit code (ADR-118 decision 8, Marty's ask).
 //
 // The contract this leans on is not a contract: these formats belong to dotnet test, vitest and

@@ -140,8 +140,8 @@ A zip container (chosen 08.07.2026 over base64-in-JSON, which would have cost +3
 See `.claude/rules/production-environment.md` for the droplet/Cloudflare/systemd specifics this architecture assumes, and `.claude/rules/ef-migrations.md` / `.claude/rules/renderers.md` for the invariants that guard it.
 
 **Where this logic lives changed on 12.08.2026 (ADR-119).** The build, the test run and the deploy are
-C# in `CedarClerk.Cli/Pipelines/`; `Scripts/*.ps1` are thin wrappers that call `cedar` so every
-documented command keeps working. One implementation, two entrances.
+C# in `CedarClerk.Cli/Pipelines/`, and `Scripts/deploy.ps1`, `build.ps1`, `test.ps1` and
+`_git-guard.ps1` are **gone** — one implementation, one entrance, which is `cedar`.
 
 - `Pipelines/GitGuard.cs` — branch, clean tree, version tag, and the `LIVE`/`LIVE-PREV` tags (ADR-118 d12)
 - `Pipelines/BuildPipeline.cs` — Angular, the portable server publish that ships, the self-contained
@@ -150,16 +150,15 @@ documented command keeps working. One implementation, two entrances.
 - `Pipelines/DeployPipeline.cs` — the pipeline below, **master only, clean tree only** (T-138)
 - `Pipelines/StageBoard.cs` — the live screen all three run behind: the plan drawn up front, timings,
   and a running step's own detail (upload bar, braille throughput chart)
-- `Scripts/test.ps1` · `build.ps1` · `deploy.ps1` — wrappers; `Scripts/_cedar.ps1` finds the tool, or
-  falls back to `dotnet run` when it is not installed
 - `Scripts/e2e.ps1` — the smoke suite against a scratch database with no bot token. **Still a script**:
-  it owns a server process and an environment, which is what a shell script is for
+  it owns a server process and an environment, which is what a shell script is for. `cedar test
+  --smoke` runs it as a phase
 - `Scripts/install-cli.ps1` — packs and installs `cedar` as a .NET global tool. **Still a script**, and
-  necessarily so
+  necessarily so: it is what makes the name exist, and the first thing to run on a fresh clone
 
-Deploy (`cedar deploy`, or `.\Scripts\deploy.ps1`). Rewritten 11.08.2026 (ADR-113) so that **everything
-slow happens while the old version is still serving**; the service is stopped only for two directory
-renames. `cedar deploy` asks before that swap, with the default set to no; the script answers it:
+Deploy (`cedar deploy`). Rewritten 11.08.2026 (ADR-113) so that **everything slow happens while the old
+version is still serving**; the service is stopped only for two directory renames, and the command asks
+before that swap with the default set to no:
 1. Preflight: git guard (branch `master`, clean tree, HEAD tagged with `Consts.CurrentVersion` — the tag
    is a warning only), `tar` on PATH, and one round trip that reports the service state, free disk and
    what is in `app/` today
@@ -177,10 +176,11 @@ renames. `cedar deploy` asks before that swap, with the default set to no; the s
 9. Health-check loop against `https://cedarclerk.mooexe.dev/api/health` (40 tries, 3s apart), which must
    answer with the version that was just built
 
-`--skip-build`/`-SkipBuild` re-ships what is already in `publish/` (this is how a dropped upload is
-continued), `--rollback`/`-Rollback` swaps `app.prev` back in and restarts, `--force`/`-Force` turns the
-git guard into a warning, and `--preflight` runs step 1 and stops. `--dry-run` executes nothing at all —
-neither processes nor file deletions (`ICommandRunner` and `IFileWriter` are both swapped for it).
+`--skip-build` re-ships what is already in `publish/` (this is how a dropped upload is continued),
+`--rollback` swaps `app.prev` back in and restarts, `--force` turns the git guard into a warning,
+`--desktop` adds the installer steps (ADR-116), and `--preflight` runs step 1 and stops. `--dry-run`
+executes nothing at all — neither processes nor file deletions (`ICommandRunner` and `IFileWriter` are
+both swapped for it).
 
 `-Desktop` adds two steps **after** the health check, so nothing here can affect the site: it builds the
 installer (`build.ps1 -DesktopOnly -Installer`) and publishes it into `data/downloads/` — `.exe` and

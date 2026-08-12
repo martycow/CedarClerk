@@ -183,6 +183,41 @@ public class SafetyTests
             Assert.True(typeof(CedarSettings).IsAssignableFrom(type), $"{type.Name} does not inherit the global flags");
     }
 
+    [Fact]
+    public void Every_script_the_tool_names_in_code_actually_exists()
+    {
+        // Written after a real one (12.08.2026): removing the three wrapper scripts left the config
+        // wizard validating a repository by looking for Scripts/deploy.ps1, so it would have rejected
+        // this very repository. A comment mentioning a script is history and is fine; a string
+        // literal is a path the tool will follow.
+        var scripts = Path.Combine(Solution(), "Scripts");
+
+        var named = Directory.GetFiles(RepoRoot(), "*.cs", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
+                        && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
+            .SelectMany(path => System.Text.RegularExpressions.Regex
+                .Matches(File.ReadAllText(path), "\"([^\"\\n]*\\.ps1)\"")
+                .Select(match => (File: Path.GetFileName(path), Script: Path.GetFileName(match.Groups[1].Value))))
+            .Distinct()
+            .ToList();
+
+        // Guards the guard: a regex that stops matching would make this pass by finding nothing.
+        Assert.NotEmpty(named);
+
+        var missing = named.Where(entry => !File.Exists(Path.Combine(scripts, entry.Script))).ToList();
+
+        Assert.True(missing.Count == 0,
+            $"named but absent: {string.Join(", ", missing.Select(m => $"{m.Script} (in {m.File})"))}");
+    }
+
+    private static string Solution()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "CedarClerk.sln")))
+            directory = directory.Parent;
+        return directory!.FullName;
+    }
+
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

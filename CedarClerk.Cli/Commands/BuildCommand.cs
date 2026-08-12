@@ -26,7 +26,7 @@ public sealed class BuildSettings : CedarSettings
     public bool Run { get; init; }
 }
 
-// Scripts/build.ps1, now run from here (ADR-119).
+// What Scripts/build.ps1 used to be, and the only way to do it since ADR-119.
 //
 // It asks first, which looks excessive for a build until you notice what it removes on the way:
 // publish/ and CedarClerk.Desktop/server/ are deleted outright, and the shell's package.json version

@@ -45,7 +45,8 @@ checklist the move followed is `docs/migration-to-digitalocean.md`.
   fixed by the tunnel config. Blog (`blog.mooexe.dev`) is host-routed inside the same Kestrel process
   (`Program.cs` `MapWhen` on `Host.Host`).
 - **SSH**: key-based to `martycow@deploy.mooexe.dev` (165.227.155.148). `raspberrypi.local` is dead as a
-  deploy target; `Scripts/deploy.ps1` defaults to the droplet and takes `-CloudHost` to override.
+  deploy target; `cedar deploy` reads the host from `%APPDATA%\cedar\config.json` (`cedar config`)
+  and takes `--host` to override it for one run.
 - **Timezone is UTC** (the Pi ran local time). Anything that reads the wall clock on the server — cron,
   log timestamps, a scheduled post's idea of "tonight" — now means UTC.
 

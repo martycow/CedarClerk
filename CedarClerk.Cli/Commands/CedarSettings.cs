@@ -28,9 +28,9 @@ public class CedarSettings : CommandSettings
     [Description("Skip the splash screen.")]
     public bool NoLogo { get; init; }
 
-    // Added by ADR-119 so the shim scripts can still honour deploy.ps1's -CloudHost. It overrides the
-    // stored config for one run and is never written back: a flag is an exception, and an exception
-    // that quietly becomes the new default is how you end up deploying to the wrong machine twice.
+    // Deploying somewhere other than the configured droplet for one run — what deploy.ps1's
+    // -CloudHost was for. It is never written back: a flag is an exception, and an exception that
+    // quietly becomes the new default is how you end up deploying to the wrong machine twice.
     [CommandOption("--host")]
     [Description("Override the configured ssh host for this run only.")]
     public string Host { get; init; } = "";

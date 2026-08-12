@@ -5,7 +5,7 @@
 Причина существования — Asset Manager: описать содержимое `D:\Projects\MyGame\Assets` умеет только процесс, запущенный на той же машине (ADR-107).
 
 > **Построено и проверено 10.08.2026 (T-121)** — оболочка, свободный порт, завершение без сирот.
-> **Самообновление 11.08.2026 (ADR-116)** — `deploy.ps1 -Desktop`, установленная копия обновляется сама.
+> **Самообновление 11.08.2026 (ADR-116)** — `cedar deploy --desktop`, установленная копия обновляется сама.
 > **Стало клиентом облака 12.08.2026 (ADR-117)** — локальной базы больше нет.
 
 ## Общая схема
@@ -42,7 +42,7 @@
 | `CedarClerk.Desktop/package.json`, `electron-builder.yml` | Electron + сборка установщика |
 | `CedarClerk.Server/Modules/Agent/` | Собственно агент: эндпоинты, обходчик, гранты, сервис сканов |
 
-Сборка десктопа — `Scripts/build.ps1`: `npm run build` (Angular) → `dotnet publish -r win-x64` → `electron-builder`. `Scripts/deploy.ps1 -Desktop` вызывает его же и публикует результат на сервер (ADR-116); без флага деплой десктопа не касается.
+Сборка десктопа — `cedar build`: `npm run build` (Angular) → `dotnet publish -r win-x64` → `electron-builder`. `cedar deploy --desktop` вызывает те же шаги и публикует результат на сервер (ADR-116); без флага деплой десктопа не касается.
 
 ## Агент
 
@@ -166,22 +166,24 @@ pickFolder → диалог ОС → grant агенту
 ## Сборка и запуск
 
 ```
-.\Scripts\build.ps1                 Angular + сервер + десктоп
-.\Scripts\build.ps1 -DesktopOnly    пересобрать только оболочку
-.\Scripts\build.ps1 -Installer      плюс CedarClerk-Setup-<версия>.exe
-.\Scripts\build.ps1 -RunDesktop     собрать и сразу запустить
-cd CedarClerk.Desktop; npm start    запустить уже собранное
+cedar build                    Angular + сервер + десктоп
+cedar build --desktop-only     пересобрать только оболочку
+cedar build --installer        плюс CedarClerk-Setup-<версия>.exe
+cedar build --run              собрать и сразу запустить
+cedar open desktop             запустить уже собранное (или установленную копию)
 ```
 
-`Scripts/build.ps1` синхронизирует версию в `package.json` с `Consts.CurrentVersion`. `CedarClerk.Desktop/server/` — выход сборки (~70 МБ self-contained рантайма), в git не попадает.
+`BuildPipeline` синхронизирует версию в `package.json` с `Consts.CurrentVersion`. `CedarClerk.Desktop/server/` — выход сборки (~70 МБ self-contained рантайма), в git не попадает.
+
+**`Scripts/build.ps1` больше нет** — с 12.08.2026 сборка живёт в `CedarClerk.Cli/Pipelines/BuildPipeline.cs` (ADR-119). На свежем клоне сначала `.\Scripts\install-cli.ps1`, дальше всё через `cedar`.
 
 ## Как приезжает обновление (ADR-116)
 
 ```
-.\Scripts\deploy.ps1 -Desktop
+cedar deploy --desktop
    │
    ├─ обычный деплой сайта (сборка → архив → swap → health) — сайт уже живой
-   ├─ build.ps1 -DesktopOnly -Installer  →  CedarClerk-Setup-<версия>.exe (~119 МБ)
+   ├─ сборка оболочки + electron-builder  →  CedarClerk-Setup-<версия>.exe (~119 МБ)
    └─ заливка в  ~/cedarclerk/data/downloads/
          ├─ .exe и .blockmap  →  проверка sha256  →  mv на место
          └─ latest.yml        →  последним

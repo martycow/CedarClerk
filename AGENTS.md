@@ -29,7 +29,7 @@ Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTUR
 | Backend tests | `dotnet test` from repo root |
 | Frontend tests | `npm run test` in `cedarclerk-web/` |
 | Production build | `npm run build` (Angular) + `dotnet publish CedarClerk.Server -c Release` |
-| Deploy | `.\Scripts\deploy.ps1` from repo root |
+| Deploy | `cedar deploy` (asks first; ADR-119). `.\Scripts\deploy.ps1` no longer exists |
 | New EF migration | `dotnet ef migrations add <Name> --project CedarClerk.Server` |
 
 ## Docs map

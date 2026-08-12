@@ -12,23 +12,24 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
   - [ ] **`cedar restart` ещё не запускался вживую** — это единственная destructive-команда, и она
     роняет блог вместе с приложением на секунды. Проверять, когда будет не жалко.
 
-- [x] **Этап 2: логика переехала в C#** (ADR-119, 12.08.2026) — обёртка развернулась в обратную
-  сторону. `deploy.ps1`/`build.ps1`/`test.ps1` теперь тонкие обёртки над `cedar`, логика живёт в
-  `CedarClerk.Cli/Pipelines/`. `_git-guard.ps1` удалён (это теперь `GitGuard.cs`), `e2e.ps1` и
-  `install-cli.ps1` остались скриптами намеренно. `cedar deploy` действительно деплоит — спрашивает,
-  по умолчанию «нет»; `--preflight` — прежнее поведение. Логотип получил выезжающую подпись
-  «c e d a r · operations console», в меню появилась группа Open (браузер, десктоп, блог, локальный).
-  CLI-тесты 119/119, полный прогон через обёртку: 920 backend + 18 frontend + contrast, exit 0.
+- [x] **Этап 2: логика переехала в C#** (ADR-119, 12.08.2026). `Scripts/deploy.ps1`, `build.ps1`,
+  `test.ps1` и `_git-guard.ps1` **удалены** — это `CedarClerk.Cli/Pipelines/`, и единственный вход
+  теперь `cedar`. В `Scripts/` осталось два настоящих скрипта: `e2e.ps1` (стенд со своим сервером,
+  его зовёт `cedar test --smoke`) и `install-cli.ps1` (**первое, что запускается на свежем клоне**).
+  `cedar deploy` действительно деплоит — спрашивает, по умолчанию «нет»; `--preflight` — прежнее
+  поведение. Логотип получил выезжающую подпись «c e d a r · operations console», в меню появилась
+  группа Open (браузер, десктоп, блог, локальный). CLI-тесты 120/120, полный прогон:
+  923 backend + 18 frontend + contrast, exit 0.
   - [ ] **Первый настоящий деплой новым кодом ещё не делался.** Это единственное, что нельзя
     проверить иначе. Параллельной копии `deploy.ps1` больше нет — откат это git
-    (`git show <commit>:Scripts/deploy.ps1`). Режимы отказа не изменились по построению: сервис не
+    (`git show dbd8eba:Scripts/deploy.ps1`). Режимы отказа не изменились по построению: сервис не
     останавливается, пока архив не сверен по контрольной сумме и не распакован, `app.prev` на месте,
     `--rollback` работает, прерванная закачка продолжается с того же байта.
-  - [ ] **После обновления CLI обязательно `.\Scripts\install-cli.ps1`** — установленный `cedar`
-    старее скриптов вызывает их обратно. Защита от рекурсии стоит и печатает эту строчку, но лучше
-    просто переустановить.
+  - [ ] **После правок CLI — `.\Scripts\install-cli.ps1`**, иначе `cedar` останется старым.
   - [ ] Живьём не проверены: `cedar build --installer` (electron-builder целиком) и
     `deploy --desktop` (публикация инсталлятора).
+  - [ ] `.claude/settings.local.json` всё ещё разрешает `.\Scripts\deploy.ps1` — записи безвредны,
+    но стоит заменить на `cedar`, когда будешь править разрешения.
 
 - [x] **Credits from the admin panel** (0.10.1) — a signed adjustment on the existing ledger, refused
   below zero, logged to the audit with the admin's own note. See `CHANGELOG.md` for why grants are
