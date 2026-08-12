@@ -70,6 +70,20 @@ public class ErrorMessageLocalizationTests
         Assert.Equal(expected, LanguagePreference.FromAcceptLanguage(header));
     }
 
+    /// <summary>
+    /// The desktop agent (ADR-117) answers in English on purpose, and is exempt.
+    ///
+    /// Its only client is the Electron main process, which is English by decision (ADR-116, "the shell
+    /// speaks English"). No human reads these strings: the page never displays them — `AssetSyncService`
+    /// catches agent failures as a *kind* and supplies its own localised wording, logging the original
+    /// to the console. Putting them in <c>ErrorMessages</c> would translate sentences for a reader that
+    /// does not exist, and would put machine diagnostics in the catalogue of things authors see.
+    ///
+    /// The exemption is a directory rather than a pattern, so a genuinely user-facing endpoint cannot
+    /// quietly inherit it by being written in the same style.
+    /// </summary>
+    private const string AgentDirectory = "Agent";
+
     // T-050 closed 01.08.2026: the ~60 inline English literals in the endpoint files moved into
     // ErrorMessages. This is what keeps the 61st from being written — the same argument
     // SchemaDriftGuardTests makes about migrations, and the reason that one is trusted.
@@ -82,6 +96,8 @@ public class ErrorMessageLocalizationTests
 
         foreach (var file in Directory.EnumerateFiles(serverDir, "*.cs", SearchOption.AllDirectories))
         {
+            if (Path.GetDirectoryName(file) is { } dir && Path.GetFileName(dir) == AgentDirectory) continue;
+
             var lines = File.ReadAllLines(file);
             for (var i = 0; i < lines.Length; i++)
             {

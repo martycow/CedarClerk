@@ -3,6 +3,7 @@ using CedarClerk.Core;
 using CedarClerk.Server;
 using CedarClerk.Server.Bot;
 using CedarClerk.Server.Email;
+using CedarClerk.Server.Modules.Agent;
 using CedarClerk.Server.Modules.IndieDev;
 using CedarClerk.Server.Publishing;
 using Microsoft.AspNetCore.DataProtection;
@@ -21,6 +22,33 @@ var builder = WebApplication.CreateBuilder(args);
 // per-endpoint since this is a small self-hosted server, not a shared multi-tenant Kestrel
 // instance with a reason to keep the default low.
 builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 210 * 1024 * 1024);
+
+#region Agent mode (ADR-117)
+// The desktop shell runs this same executable with Cedar:Agent:Enabled, and in that role it is not a
+// Cedar Clerk installation at all — it is a reader of one machine's disk. So it exits here, before
+// anything below exists: no data directory, no SQLite, no migrations, no Identity, no Quartz, no bot,
+// no SPA, no landing page, no /api/*.
+//
+// An early return rather than a pile of `if` around the rest, and the difference is not tidiness:
+// this way agent mode cannot *accidentally* gain a capability that gets added below later. A hosted
+// Cedar Clerk and a filesystem agent have almost nothing in common but the assembly they ship in, and
+// the code should say so.
+if (AgentEndpoints.IsAgent(builder.Configuration))
+{
+    builder.Services.AddSingleton<AgentScanService>();
+    builder.Services.AddSingleton<AgentGrants>();
+
+    var agent = builder.Build();
+    agent.MapAgentEndpoints();
+    agent.Logger.LogInformation("Cedar Clerk agent {Version} — filesystem only, no database", Consts.CurrentVersion);
+
+    // Loopback only, and not because a firewall might catch the rest: this process answers questions
+    // about the contents of somebody's disk, and it has no business being reachable from the network
+    // even in principle. The shell passes a free port in Cedar:Urls.
+    agent.Run(builder.Configuration[Consts.General.UrlsCfg] ?? Consts.URLs.Localhost);
+    return;
+}
+#endregion
 
 #region Paths
 var dataDir = Environment.GetEnvironmentVariable(Consts.DataDirectoryKey);
@@ -101,13 +129,9 @@ builder.Services.AddSingleton<TelegramBotService>();
 builder.Services.AddSingleton(new MediaPaths(mediaDir));
 builder.Services.AddSingleton(new ImportTmpPaths(importTmpDir));
 builder.Services.AddSingleton<AiJobService>();
-// T-122 — the folder walk outlives the request that starts it (a scan of a real game project runs
-// for seconds to minutes), so it is a singleton that makes its own scope per scan.
-builder.Services.AddSingleton<AssetIndexService>();
+// T-140 — where uploaded asset previews are kept. This installation no longer *makes* them (ADR-117:
+// it cannot see the files), it stores what the desktop agent sent.
 builder.Services.AddSingleton(new ThumbnailPaths(thumbnailsDir));
-// ADR-108 — asks another installation who somebody is. Holds no state; scoped because it takes
-// IHttpClientFactory and is used inside a request.
-builder.Services.AddScoped<UpstreamAuth>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramBotService>());
 builder.Services.AddHttpClient(); // named clients used by billing (Stripe), translation providers, and email
 builder.Services.AddSingleton<ResendEmailProvider>();
@@ -200,11 +224,13 @@ var indexNoCache = new StaticFileOptions
 // straight through to the SPA below, which is why this is middleware and not a mapped endpoint.
 // The blog host is excluded by name: it has its own "/" — its index — and the first version of
 // this middleware quietly replaced it with a marketing page.
-// The landing is a sales page for strangers who found the product on the web. The desktop app has
-// no strangers — it opens on somebody's own machine — and greeting them with pricing was the first
-// thing Marty saw on the first real launch (10.08.2026).
-if (!builder.Configuration.IsOn(Consts.General.DesktopModeCfg))
-    app.UseLanding(builder.Configuration[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost);
+//
+// **Unconditional since ADR-117.** The desktop used to switch this off with `Cedar:Desktop`, because
+// greeting the author with a pricing page was the first thing Marty saw on the first real launch
+// (10.08.2026). The shell now opens `/projects` instead of `/`, so the landing is never on its path —
+// the problem is solved by which address the window asks for rather than by a flag, and one fewer
+// flag is one fewer thing that can be set wrong on a public server.
+app.UseLanding(builder.Configuration[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost);
 
 app.UseDefaultFiles();
 app.UseStaticFiles(indexNoCache);
@@ -214,10 +240,9 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/media"
 });
 
-// ADR-116 — updates for the desktop shell. Not in desktop mode: there this server is the copy
-// being updated, and the folder would only ever be an empty one in %APPDATA%.
-if (!builder.Configuration.IsOn(Consts.General.DesktopModeCfg))
-    app.UseDesktopDownloads(downloadsDir);
+// ADR-116 — updates for the desktop shell. Unconditional since ADR-117: the process that used to
+// need this switched off is now an agent, and an agent leaves this file before reaching here.
+app.UseDesktopDownloads(downloadsDir);
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -316,11 +341,8 @@ using (var scope = app.Services.CreateScope())
 }
 
 #region Health (Heartbeat)
-app.MapGet("/api/health", (UpstreamAuth upstream) => Results.Ok(new
+app.MapGet("/api/health", () => Results.Ok(new
 {
-    // ADR-108 — where this installation checks credentials, when it is not itself. The login page
-    // needs it before anyone is signed in, and it names a host rather than a secret.
-    upstreamAuthHost = upstream.IsConfigured ? upstream.DisplayHost : null,
     name = app.Environment.ApplicationName,
     env = app.Environment.EnvironmentName,
     version = Consts.CurrentVersion,

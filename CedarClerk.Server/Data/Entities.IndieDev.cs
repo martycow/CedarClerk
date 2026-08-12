@@ -46,15 +46,33 @@ public class Project
     public DateTime? ArchivedAt { get; set; }
 
     /// <summary>
-    /// T-122 — the folder whose contents are indexed for this project, as an absolute path on the
-    /// machine running the server. Null = no folder chosen yet, which is what the asset screen's
-    /// pick-a-folder state means.
+    /// T-122 — the folder whose contents are indexed for this project, as an absolute path on
+    /// <see cref="AssetRootMachineId"/>. Null = no folder chosen yet, which is what the asset
+    /// screen's pick-a-folder state means.
     ///
     /// One root per project rather than a list: "Change folder" in the design replaces the root and
     /// re-indexes, and a per-row copy of the root would repeat the same string across tens of
     /// thousands of rows (narrowing of ADR-107's sketch, which put RootPath on the entry).
     /// </summary>
     public string? AssetRootPath { get; set; }
+
+    /// <summary>
+    /// ADR-117 — which machine holds the folder above. A stable id the desktop shell generates once
+    /// and keeps in <c>%APPDATA%\CedarClerk\machine.json</c>.
+    ///
+    /// **This is what makes "is this a file or a fingerprint?" answerable.** Since the index is
+    /// pushed up from a machine and read back from anywhere, every asset screen has to decide whether
+    /// the bytes are within reach — and the only honest way to decide is to compare the machine that
+    /// indexed them against the machine asking. A browser has no machine at all, so it always gets
+    /// the fingerprint answer, which is correct rather than merely safe.
+    ///
+    /// Null on projects indexed before ADR-117: their root came from a machine nobody recorded, so
+    /// "unknown machine" is the truth about them.
+    /// </summary>
+    public string? AssetRootMachineId { get; set; }
+
+    /// <summary>The machine's own name, for saying "the files are on MARTY-PC" rather than a GUID.</summary>
+    public string? AssetRootMachineName { get; set; }
 
     /// <summary>When the last completed scan finished. Null = never scanned.</summary>
     public DateTime? AssetsIndexedAt { get; set; }
@@ -125,9 +143,16 @@ public class AssetEntry
     public DateTime? MetadataForModifiedAt { get; set; }
 
     /// <summary>
-    /// The <see cref="ModifiedAt"/> the cached thumbnail was made from. Null = none yet. Thumbnails
-    /// are generated on demand rather than during the scan — a scan that also decoded every image
-    /// would take minutes, and most of them are never looked at.
+    /// The <see cref="ModifiedAt"/> the stored thumbnail was made from. Null = none yet.
+    ///
+    /// **The same column, a different source since ADR-117.** It used to mean "the server generated a
+    /// preview from this version of the file"; it now means "the agent uploaded one". The question it
+    /// answers did not change — is the preview on disk still of the current file? — so a second column
+    /// would have been a second way to ask one thing.
+    ///
+    /// It is also what makes the preview pass resumable: everything where this does not equal
+    /// <see cref="ModifiedAt"/> is exactly the work still outstanding, so an upload interrupted at the
+    /// eight-thousandth file continues rather than restarts.
     /// </summary>
     public DateTime? ThumbnailForModifiedAt { get; set; }
 }

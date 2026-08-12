@@ -197,26 +197,43 @@ public static class ErrorMessages
         Ru($"На балансе {balance}; списать больше нельзя — отрицательный баланс приложение читать не умеет.",
            $"The balance is {balance}; taking more would go negative, which nothing in the app can read.");
 
-    // ADR-108 — identity that lives on another installation.
-    public static string UpstreamUnreachable(string host) =>
-        Ru($"Не удалось связаться с {host}, чтобы проверить вход. Дело не в пароле — сервер не ответил.",
-           $"Could not reach {host} to check the sign-in. This is not about the password — the server did not answer.");
-
-    public static string RegisterOnUpstream(string host) =>
-        Ru($"Учётные записи создаются на {host} — это приложение только спрашивает у него, кто вы.",
-           $"Accounts are created on {host} — this app only asks it who you are.");
-
-    // T-122 — the asset index.
-    public static string AssetIndexingUnavailable =>
-        Ru("Индексация папок доступна только в десктопном приложении: сервер в облаке не читает диски со стороны пользователя.",
-           "Folder indexing is only available in the desktop app — the hosted server does not read anyone's disk.");
-
+    // T-122 — the asset index. Pushed up from the desktop agent since ADR-117, so these are refusals
+    // aimed at a client that is uploading rather than at a server that is walking.
     public static string AssetFolderRequired =>
         Ru("Сначала выберите папку для индексации.", "Choose a folder to index first.");
 
     public static string AssetFolderNotFound(string path) =>
         Ru($"Папки «{path}» нет — проверьте путь или подключите диск.",
            $"There is no folder at '{path}' — check the path, or plug the drive back in.");
+
+    public static string AssetMachineRequired =>
+        Ru("Не указано, на какой машине лежит папка — без этого нельзя отличить файл от его отпечатка.",
+           "The machine holding the folder was not named — without it, a file cannot be told from its fingerprint.");
+
+    public static string AssetScanStampRequired =>
+        Ru("Не указано время начала сканирования — без него нельзя понять, какие файлы обход не нашёл.",
+           "The scan's start time is missing — without it, there is no way to tell which files the walk did not find.");
+
+    public static string AssetBatchTooLarge(int max) =>
+        Ru($"За один раз принимается не больше {max} файлов.", $"At most {max} files are accepted at once.");
+
+    public static string AssetIndexFull(int max) =>
+        Ru($"В индексе проекта не может быть больше {max} файлов. Выберите папку поуже — например, только Assets, без сборок и кэшей.",
+           $"A project's index holds at most {max} files. Choose a narrower folder — Assets alone, without builds and caches.");
+
+    public static string AssetPathRejected(string path) =>
+        Ru($"Путь «{path}» отклонён: ожидается путь внутри выбранной папки.",
+           $"The path '{path}' was rejected: a path inside the chosen folder was expected.");
+
+    public static string AssetThumbFormRequired =>
+        Ru("Превью загружаются формой с файлами.", "Previews are uploaded as a file form.");
+
+    public static string AssetThumbBatchTooLarge(int max) =>
+        Ru($"За один раз принимается не больше {max} превью.", $"At most {max} previews are accepted at once.");
+
+    public static string AssetThumbBudgetExhausted(long budget) =>
+        Ru($"Место под превью исчерпано — предел {budget / (1024 * 1024)} МБ. Индекс работает, новые превью не сохраняются.",
+           $"The preview allowance is used up — the limit is {budget / (1024 * 1024)} MB. The index still works; new previews are not being stored.");
 
     public static string UnknownProjectType(string type) =>
         Ru($"Неизвестный тип проекта «{type}».", $"Unknown project type '{type}'.");

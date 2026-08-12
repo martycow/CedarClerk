@@ -3,12 +3,14 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { IconName } from '../shared/icon-data.generated';
 
-// T-122 (ADR-107) — the index of a project's local files. **Paths and metadata only; the bytes
-// never move.** Deliberately not the same thing as `assets.service.ts`, which uploads post media
-// into CEDAR_DATA_DIR under the plan's storage quota.
+// T-122 (ADR-107) — the index of a project's local files. **Paths, metadata and small previews; the
+// asset's own bytes never move.** Deliberately not the same thing as `assets.service.ts`, which
+// uploads post media into CEDAR_DATA_DIR under the plan's storage quota.
 //
-// Scanning is available only where the server may read its own disk — the desktop shell sets
-// `Cedar:AssetIndex:Enabled`, the hosted Pi does not, and `auth.assetIndex()` carries the answer.
+// **Reading works everywhere; indexing needs the desktop (ADR-117).** The index is pushed up from the
+// machine holding the files — see `asset-sync.service.ts` — so whether a folder can be scanned is a
+// fact about *this client*: it has `window.cedarDesktop` or it does not. There is no server flag to
+// ask any more, because no server reads a disk.
 
 export type AssetKind = 'image' | 'model' | 'audio' | 'video' | 'font' | 'text' | 'other';
 export const ASSET_KINDS: AssetKind[] = ['image', 'model', 'audio', 'video', 'font', 'text', 'other'];
@@ -40,8 +42,37 @@ export interface AssetEntry {
     height: number | null;
     durationMs: number | null;
     sampleRate: number | null;
-    /** Whether asking for a thumbnail can succeed. Images that are on disk, and nothing else. */
+    /**
+     * A preview is stored **right now** — so an `<img>` pointed at it will not 404. Since ADR-117 this
+     * means "the agent uploaded one", not "the server could make one on request".
+     */
     hasThumbnail: boolean;
+    /**
+     * A preview is *possible* for this file, but has not arrived yet. A different fact from the one
+     * above, and the screen needs both: "waiting for a preview" is honest, while the same placeholder
+     * on a PSD — which nothing here can decode — would be a promise no pass will ever keep.
+     */
+    canHaveThumbnail: boolean;
+}
+
+/** Which machine holds a project's files. Null on projects indexed before ADR-117. */
+export interface AssetSourceMachine {
+    id: string;
+    name: string | null;
+}
+
+/** One file as the desktop agent described it, on its way to the cloud. */
+export interface ScannedFile {
+    relativePath: string;
+    fileName: string;
+    extension: string;
+    kind: AssetKind;
+    sizeBytes: number;
+    modifiedAt: string;
+    width: number | null;
+    height: number | null;
+    durationMs: number | null;
+    sampleRate: number | null;
 }
 
 /** A document the author has linked to an asset (T-141) — stated, never discovered. */
@@ -54,34 +85,27 @@ export interface LinkedDocument {
 export interface AssetDetail extends AssetEntry {
     /** Only meaningful on the machine that indexed it — what "Reveal in file manager" needs. */
     fullPath: string | null;
+    sourceMachine: AssetSourceMachine | null;
 }
 
 export interface AssetPage {
     rootPath: string | null;
+    /**
+     * The machine that indexed this folder. Compared against `cedarDesktop.machine()` to decide
+     * whether the screen is showing files or fingerprints of files — a browser has no machine, so it
+     * always shows fingerprints, which is the truth rather than a fallback.
+     */
+    sourceMachine: AssetSourceMachine | null;
     indexedAt: string | null;
     /** Rows matching the current filter. */
     total: number;
     /** Rows in the project, whatever the filter. */
     totalIndexed: number;
     missingCount: number;
+    /** Previewable files still without a stored preview — what the pass owes. */
+    thumbnailsPending: number;
     byKind: Partial<Record<AssetKind, number>>;
     items: AssetEntry[];
-}
-
-export interface ScanState {
-    available: boolean;
-    running: boolean;
-    status?: 'counting' | 'indexing' | 'completed' | 'failed' | 'cancelled';
-    rootPath?: string;
-    total?: number;
-    processed?: number;
-    indexed?: number;
-    markedMissing?: number;
-    /** Folders the walk could not open — reported rather than swallowed. */
-    unreadable?: number;
-    error?: string | null;
-    startedAt?: string;
-    finishedAt?: string | null;
 }
 
 export interface AssetQuery {
@@ -111,20 +135,7 @@ export class AssetIndexService {
         return firstValueFrom(this.http.get<AssetDetail>(`/api/projects/${projectId}/assets/${assetId}`));
     }
 
-    /** Without a path, re-scans the folder already chosen. With one, replaces it and re-indexes. */
-    startScan(projectId: string, path?: string) {
-        return firstValueFrom(this.http.post<ScanState>(`/api/projects/${projectId}/assets/index`, { path: path ?? null }));
-    }
-
-    scanState(projectId: string) {
-        return firstValueFrom(this.http.get<ScanState>(`/api/projects/${projectId}/assets/index`));
-    }
-
-    cancelScan(projectId: string) {
-        return firstValueFrom(this.http.delete<void>(`/api/projects/${projectId}/assets/index`));
-    }
-
-    /** Generated on first request and cached server-side; regenerated when the file changes. */
+    /** Uploaded by the desktop agent during indexing; 404 until one arrives (ADR-117). */
     thumbnailUrl(projectId: string, assetId: string) {
         return `/api/projects/${projectId}/assets/${assetId}/thumb`;
     }
@@ -141,8 +152,14 @@ export class AssetIndexService {
         return firstValueFrom(this.http.delete<void>(`/api/projects/${projectId}/assets/${assetId}/links/${draftId}`));
     }
 
-    reindexOne(projectId: string, assetId: string) {
-        return firstValueFrom(this.http.post<Partial<AssetEntry>>(`/api/projects/${projectId}/assets/${assetId}/reindex`, {}));
+    /**
+     * Pushes one file's current state, for the "Re-index file" button. The agent stats the file and
+     * this sends the answer — the same batch endpoint a whole scan uses, with one row in it, rather
+     * than a second way to update a row (which is how the two would drift apart).
+     */
+    pushOne(projectId: string, file: ScannedFile) {
+        return firstValueFrom(this.http.post<{ ids: Record<string, string> }>(
+            `/api/projects/${projectId}/assets/batch`, { files: [file] }));
     }
 }
 
@@ -165,13 +182,46 @@ export function formatDuration(ms: number): string {
     return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
+/** Progress of a walk in flight, as the agent reports it. */
+export interface AgentScanState {
+    scanId: string;
+    status: 'counting' | 'scanning' | 'completed' | 'failed' | 'cancelled';
+    running: boolean;
+    rootPath: string;
+    total: number;
+    described: number;
+    unreadable: number;
+    error: string | null;
+}
+
 /**
  * The desktop shell's bridge, when running inside it. Undefined in a browser — which is exactly how
- * the screen knows to show a path field instead of a folder picker.
+ * every screen knows it is looking at fingerprints rather than files (ADR-117).
+ *
+ * Nothing here writes, deletes or launches anything: the shell deliberately does not expose
+ * `shell.openPath`, because the window now loads a remote origin and reading a folder is what the
+ * feature needs while executing a file is what an attacker needs.
  */
 export interface CedarDesktopBridge {
     isDesktop: true;
+    /** This machine's stable id and its current hostname. */
+    machine(): Promise<{ id: string; name: string }>;
+    /** Opens the OS picker and grants the chosen folder to the agent. Null if cancelled. */
     pickFolder(): Promise<string | null>;
+    scan(root: string): Promise<AgentScanState>;
+    scanProgress(scanId: string): Promise<AgentScanState | null>;
+    /** Readable while the walk is still running — that overlap is the point. */
+    scanFiles(scanId: string, skip: number, take: number): Promise<{
+        files: ScannedFile[];
+        described: number;
+        status: AgentScanState['status'];
+        total: number;
+    } | null>;
+    scanCancel(scanId: string): Promise<boolean>;
+    stat(root: string, relativePath: string): Promise<{ missing: boolean; file?: ScannedFile } | null>;
+    /** One preview as base64 JPEG, or null when this file cannot have one. */
+    thumb(fullPath: string): Promise<string | null>;
+    /** Highlights the file in Explorer/Finder. Does not open it. */
     reveal(path: string): Promise<void>;
 }
 

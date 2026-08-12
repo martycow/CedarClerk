@@ -24,11 +24,15 @@ public class ApplicationUser : IdentityUser
     public Guid? InviteCodeId { get; set; }
 
     /// <summary>
-    /// ADR-108 — this account's id on the installation that authenticates it (production). Null on
-    /// every ordinary account, which is every account on a server that authenticates its own users.
+    /// ADR-108 — this account's id on the installation that authenticated it. **Vestigial: nothing
+    /// reads or writes it since ADR-117 retired the desktop's local database**, and the
+    /// <c>UpstreamAuth</c> code that filled it is deleted.
     ///
-    /// Keyed by id rather than by email because an email can be changed and an identity cannot;
-    /// where the upstream is too old to report one, the email stands in until it is updated.
+    /// The column stays anyway, and deliberately. Dropping one in SQLite rebuilds the whole table, and
+    /// this is <c>AspNetUsers</c> — which Identity's security-stamp validation touches on **every
+    /// authorized request**. That is exactly the shape of the `no such column` incident recorded in
+    /// `.claude/rules/ef-migrations.md`. An unused nullable column costs nothing; a table rebuild on a
+    /// live database for tidiness is a risk with no return.
     /// </summary>
     public string? RemoteUserId { get; set; }
 

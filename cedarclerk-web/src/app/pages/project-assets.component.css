@@ -386,6 +386,37 @@
 
 .preview-label.danger { color: var(--danger); font-weight: 600; }
 
+/* ADR-117 — the fingerprint mark.
+
+   Deliberately quiet: it is the normal case, not a warning. Most of the time an author is looking at a
+   project indexed on their one machine from a browser on the same desk, and shouting about it would
+   turn an ordinary fact into an alarm. It only has to be *there*, on every tile, so "these are files I
+   can open" is never assumed. Hence a neutral tone rather than --danger, which the not-found state
+   already owns and should keep to itself. */
+.fingerprint-chip {
+    position: absolute;
+    top: var(--space-1);
+    right: var(--space-1);
+    padding: 1px var(--space-1);
+    border-radius: var(--radius-sm);
+    /* Over a thumbnail, so it carries its own ground — a caption relying on the tile's background
+       becomes unreadable the moment a light sprite sits under it. */
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+    border: 1px solid var(--abord);
+    color: var(--t2);
+    font-size: var(--fs-caption);
+    line-height: 1.4;
+    backdrop-filter: blur(2px);
+}
+
+/* The same fact in the header line, where it names the machine. */
+.fingerprint-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--t2);
+}
+
 /* The thumbnail fills its frame; the striped ground stays visible behind a transparent PNG, which
    is how a sprite with an alpha channel reads as a sprite rather than as a white square.
    Taken out of flow on purpose: as a flex item its own proportions fed back into the container and

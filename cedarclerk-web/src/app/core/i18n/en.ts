@@ -20,14 +20,9 @@ export const en = {
         toggleTheme: 'Toggle theme',
         nothingHere: 'Nothing here.',
         backToEditor: 'Back to editor',
-        // ADR-108 — shown wherever the account comes from another installation but the data does not.
-        localData: 'local data',
-        localDataHint: (host: string) =>
-            `Your account is checked against ${host}, but the documents and assets here live on this computer only.`,
     },
     login: {
         tagline: 'Write here. Publish there. Moo.',
-        signsInAgainst: (host: string) => `Signing in against ${host}`,
         email: 'Email',
         password: 'Password',
         submit: 'Log in',
@@ -285,8 +280,17 @@ export const en = {
             },
             // The honesty rules from the handoff, as strings.
             noPreview: (kind: string) => `no preview · ${kind}`,
+            previewPending: 'preview not uploaded yet',
             notFoundAtPath: 'not found at path',
             onDisk: 'on disk',
+            fingerprint: 'fingerprint',
+            unknownMachine: 'another machine',
+            machineLabel: 'Machine',
+            filesOnMachine: (machine: string) => `files on ${machine}`,
+            fingerprintHint: (machine: string) =>
+                `This is a fingerprint, not the file: the file itself is on ${machine}. What is here is a preview and some metadata.`,
+            fingerprintBody: (machine: string) =>
+                `The file is on ${machine} — what is here is its fingerprint: a preview, a size, and whatever the header said. Revealing it in a file manager only works on that machine.`,
             colFile: 'File',
             colType: 'Type',
             colDetails: 'Details',
@@ -296,25 +300,30 @@ export const en = {
             loadFailed: 'Could not load the index.',
             // Pick-folder state
             pickTitle: 'Choose a folder to index',
-            pickBody: 'Cedar Clerk indexes files where they are — nothing is uploaded. It stores paths, types and metadata; the originals never leave your disk. A disconnected drive shows as “not found at path”, not as deleted.',
-            pickPlaceholder: 'D:\\Projects\\MyGame\\Assets',
-            pickBrowse: 'Browse…',
-            pickSubmit: 'Index this folder',
-            pickRecent: 'Recent',
-            webOnly: 'Indexing runs in the desktop app: a hosted server has no access to your disk, and would not be allowed to read it if it did.',
+            pickBody: 'Cedar Clerk indexes files where they are — the files themselves are never uploaded. Paths, types, metadata and small previews go to the cloud; the originals never leave your disk. A disconnected drive shows as “not found at path”, not as deleted.',
+            pickBrowse: 'Choose a folder…',
+            pickRecent: 'Recent folders',
+            webOnly: 'Choosing a folder only works in the desktop app: a browser has no access to your disk, and a hosted server should not have one. What is already indexed shows here too.',
+            getDesktop: 'Get the app',
+            desktopRequired: 'Indexing a folder only works in the desktop app.',
+            agentUnavailable: 'The local agent did not answer — it is what reads this machine’s disk. Restart the app and try again; details are in the console.',
             // Scanning state
             scanning: 'Indexing',
             scanCounting: 'Counting files…',
+            scanSweeping: 'Marking what is gone…',
             scanProgress: (done: number, total: number) => `${done} of ${total} files`,
+            previewing: 'Previews',
+            previewProgress: (done: number, left: number) => `${done} uploaded, ${left} to go`,
+            previewsStored: (n: number) => `${n} ${n === 1 ? 'preview' : 'previews'} uploaded`,
             scanKeepWorking: 'you can keep working',
             scanCancel: 'Cancel',
-            scanCancelled: 'Indexing cancelled — what was scanned is kept.',
+            scanCancelled: 'Indexing cancelled — what made it across is kept. Previews can be caught up later: running it again continues from what is missing.',
             scanFailed: 'Indexing failed.',
             scanUnreadable: (n: number) => `${n} ${n === 1 ? 'folder' : 'folders'} could not be opened and were skipped`,
             scanDone: (indexed: number, missing: number) =>
                 `Indexed. ${indexed} new, ${missing} no longer found.`,
             // Asset view
-            fileStaysOnDisk: 'The file stays on disk — Cedar Clerk stores the path and metadata only.',
+            fileStaysOnDisk: 'The file itself stays on disk — the cloud holds the path, metadata and preview.',
             reveal: 'Reveal in file manager',
             reindexFile: 'Re-index file',
             // "Linked", not "Used in": an indexed file lives outside Cedar Clerk, so a reference to

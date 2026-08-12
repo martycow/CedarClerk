@@ -8,9 +8,6 @@
             <app-cedar-logo [size]="34"></app-cedar-logo>
             <div class="auth-title">Cedar Clerk</div>
             <div class="auth-tagline">{{ t().login.tagline }}</div>
-            @if (version.upstreamAuthHost(); as host) {
-            <div class="auth-tagline">{{ t().login.signsInAgainst(host) }}</div>
-            }
         </div>
 
         @if (auth.serverUnreachable()) {

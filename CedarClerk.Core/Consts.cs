@@ -88,17 +88,29 @@ public static class Consts
         // create the first account at all (found by Marty on the first real launch, 10.08.2026).
         public const string OpenRegistrationCfg = "Cedar:Registration:Open";
 
-        // "This is the desktop app." Presentation only — it decides whether the marketing landing
-        // page is served, and nothing else. Kept separate from the two capability flags above and
-        // in AssetIndexEndpoints on purpose: a flag about how the product looks must never be the
-        // thing that opens a security gate.
-        public const string DesktopModeCfg = "Cedar:Desktop";
+        // ADR-117 — agent mode. The desktop shell no longer runs a second Cedar Clerk; it runs this
+        // same executable stripped down to one job: reading the disk this machine can see. With the
+        // flag on, Program.cs builds no database, no Identity, no bot and no SPA — only /agent/*.
+        //
+        // Set ONLY by the desktop shell. On a hosted server it would be a filesystem-listing service
+        // with no business existing there at all, which is why the walk lives behind this instead of
+        // behind the old Cedar:AssetIndex:Enabled: the capability is now absent from production
+        // rather than switched off in it.
+        public const string AgentModeCfg = "Cedar:Agent:Enabled";
 
-        // ADR-108 — another Cedar Clerk installation that decides WHO the author is. Set only on
-        // the desktop, pointing at the production server; absent there, which would otherwise be
-        // delegating identity to itself. Data stays wherever it already is — this is identity, not
-        // a proxy.
-        public const string UpstreamAuthCfg = "Cedar:Auth:Upstream";
+        // The shared secret the shell generates per launch and the agent then demands on every
+        // request. NOT a nicety: an unauthenticated loopback service that enumerates folders is open
+        // to every other process on the machine, and to any page in any browser that can reach
+        // 127.0.0.1. The old sidecar was closed by Identity's cookie; the agent has no Identity, so
+        // it needs its own lock (ADR-117, Decision 6).
+        public const string AgentTokenCfg = "Cedar:Agent:Token";
+
+        // ADR-117 — the ceiling on generated previews per owner, in bytes. Marty chose "every
+        // preview, no limit", and that is about the author having no limit — not about the droplet
+        // having no ceiling. Filling a 48 GB disk silently would be denial of service dressed as
+        // generosity, so the refusal happens out loud and names this number.
+        public const string ThumbBudgetCfg = "Cedar:AssetIndex:ThumbBudgetBytes";
+        public const long ThumbBudgetDefaultBytes = 2L * 1024 * 1024 * 1024;
 
         // ADR-104 — where Kestrel listens, when something needs to say. Empty everywhere except the
         // desktop shell, which takes a free port from the OS and passes it in: two instances on one

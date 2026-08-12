@@ -17,11 +17,21 @@ public record ThumbnailPaths(string Dir)
 }
 
 /// <summary>
-/// Reads what a file's own header says, and makes thumbnails on request (T-140).
+/// What a file's own header said. Null fields mean "not read" or "this kind does not say" — an image
+/// has no duration, and only WAV reports one at all.
+/// </summary>
+public record AssetHeader(int? Width, int? Height, int? DurationMs, int? SampleRate);
+
+/// <summary>
+/// Reads what a file's own header says, and renders thumbnails (T-140).
 ///
 /// Both halves are header-or-nothing by design: the index can hold a hundred thousand files, and a
 /// scan that fully decoded each one would take minutes for information almost none of them will be
 /// asked about.
+///
+/// **Called only in agent mode since ADR-117.** The hosted server never sees an indexed file's bytes,
+/// so it neither reads headers nor renders previews — it stores what the agent sent. The two members
+/// production still uses are <see cref="CanHaveThumbnail"/> and <see cref="ThumbnailPaths"/>.
 /// </summary>
 public static class AssetMetadata
 {
@@ -33,13 +43,13 @@ public static class AssetMetadata
     private const int WavHeaderBytes = 4096;
 
     /// <summary>
-    /// Fills in width/height for an image and duration/sample-rate for a WAV. Returns false when it
-    /// learned nothing — a caller uses that only to avoid a pointless write.
+    /// Width/height for an image, duration/sample-rate for a WAV. Null when the file's header said
+    /// nothing — which a caller stamps anyway, or it would reopen that file on every scan forever.
     ///
     /// Never throws: an unreadable or malformed file is a normal thing to meet in a folder of tens
     /// of thousands, and one of them must not end a scan.
     /// </summary>
-    public static bool TryRead(string fullPath, string kind, AssetEntry into)
+    public static AssetHeader? TryRead(string fullPath, string kind)
     {
         try
         {
@@ -51,55 +61,54 @@ public static class AssetMetadata
                     // (PSD, EXR, Aseprite), and the catch below turns that into "no dimensions"
                     // rather than into a failed scan.
                     var info = Image.Identify(fullPath);
-                    into.Width = info.Width;
-                    into.Height = info.Height;
-                    return true;
+                    return new AssetHeader(info.Width, info.Height, null, null);
 
                 case AssetKinds.Model:
                     // A .blend carries its own preview, and its size is the one real measurement
                     // available without opening Blender.
-                    if (!AssetKinds.HasEmbeddedPreview(fullPath)) return false;
-                    if (ReadBlendPreview(fullPath) is not { } preview) return false;
-                    into.Width = preview.Width;
-                    into.Height = preview.Height;
-                    return true;
+                    if (!AssetKinds.HasEmbeddedPreview(fullPath)) return null;
+                    if (ReadBlendPreview(fullPath) is not { } preview) return null;
+                    return new AssetHeader(preview.Width, preview.Height, null, null);
 
                 case AssetKinds.Audio:
-                    if (!fullPath.EndsWith(".wav", StringComparison.OrdinalIgnoreCase)) return false;
+                    if (!fullPath.EndsWith(".wav", StringComparison.OrdinalIgnoreCase)) return null;
                     using (var stream = File.OpenRead(fullPath))
                     {
                         Span<byte> buffer = stackalloc byte[WavHeaderBytes];
                         var read = stream.ReadAtLeast(buffer, WavHeaderBytes, throwOnEndOfStream: false);
-                        if (WavHeader.TryRead(buffer[..read]) is not { } wav) return false;
-                        into.DurationMs = wav.DurationMs;
-                        into.SampleRate = wav.SampleRate;
-                        return true;
+                        if (WavHeader.TryRead(buffer[..read]) is not { } wav) return null;
+                        return new AssetHeader(null, null, wav.DurationMs, wav.SampleRate);
                     }
 
                 default:
-                    return false;
+                    return null;
             }
         }
         catch (Exception)
         {
             // A .png that is really a text file, a file being written to right now, a permission
             // that changed since the walk. None of it is worth a log line per file.
-            return false;
+            return null;
         }
     }
 
     /// <summary>
-    /// Produces a JPEG thumbnail, or null when this file cannot have one. Called on demand from the
-    /// thumbnail endpoint, never from the scan.
+    /// Renders a JPEG thumbnail into memory, or null when this file cannot have one.
+    ///
+    /// **In memory rather than to a path since ADR-117**: the agent hands the bytes back over the
+    /// loopback and never writes anything — the machine being scanned is someone's game project,
+    /// usually under version control, and the agent's whole contract is that it only reads.
+    /// The bytes are small by construction (a 360px JPEG at quality 78), so holding one is cheaper
+    /// than the temp file it replaces.
     /// </summary>
-    public static bool TryWriteThumbnail(string fullPath, string destination, ILogger? logger = null)
+    public static byte[]? TryRenderThumbnail(string fullPath, ILogger? logger = null)
     {
         try
         {
             using var image = AssetKinds.HasEmbeddedPreview(fullPath)
                 ? LoadBlendPreview(fullPath)
                 : Image.Load(fullPath);
-            if (image is null) return false;
+            if (image is null) return null;
             var longEdge = Math.Max(image.Width, image.Height);
             if (longEdge > ThumbnailLongEdge)
             {
@@ -107,22 +116,36 @@ public static class AssetMetadata
                 image.Mutate(x => x.Resize((int)(image.Width * ratio), (int)(image.Height * ratio)));
             }
 
-            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            // Written to a temporary name and moved into place: two requests for the same missing
-            // thumbnail arrive together often (a grid asks for a whole screenful at once), and a
-            // half-written JPEG served to the second one would be a broken image forever after.
-            var temporary = destination + ".tmp";
-            using (var output = File.Create(temporary))
-                image.SaveAsJpeg(output, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder { Quality = ThumbnailQuality });
-            File.Move(temporary, destination, overwrite: true);
-            return true;
+            using var output = new MemoryStream();
+            image.SaveAsJpeg(output, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder { Quality = ThumbnailQuality });
+            return output.ToArray();
         }
         catch (Exception e)
         {
             logger?.LogDebug(e, "No thumbnail for {Path}", fullPath);
-            return false;
+            return null;
         }
     }
+
+    /// <summary>
+    /// Stores a thumbnail the agent uploaded. Written to a temporary name and moved into place: a
+    /// grid asks for a whole screenful of thumbnails at once, and a half-written JPEG served to one
+    /// of those requests would be a broken image forever after.
+    /// </summary>
+    public static void SaveThumbnail(string destination, byte[] jpeg)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        var temporary = destination + ".tmp";
+        File.WriteAllBytes(temporary, jpeg);
+        File.Move(temporary, destination, overwrite: true);
+    }
+
+    /// <summary>
+    /// Whether these bytes really are a JPEG. Checked because the upload endpoint would otherwise be
+    /// a way to store arbitrary bytes on the server under a name the grid then serves as an image.
+    /// </summary>
+    public static bool LooksLikeJpeg(ReadOnlySpan<byte> bytes) =>
+        bytes.Length > 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[^2] == 0xFF && bytes[^1] == 0xD9;
 
     /// <summary>
     /// Whether this exact file can have a thumbnail. Per file rather than per kind, because "image"
