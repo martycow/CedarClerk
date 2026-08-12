@@ -60,6 +60,9 @@ app.Configure(config =>
     config.AddCommand<RestartCommand>("restart")
         .WithDescription("Restart the service on the droplet. Asks first.");
 
+    config.AddCommand<ClaudeCommand>("claude")
+        .WithDescription("Open a terminal in the repository running claude /remote-control.");
+
     config.AddCommand<ConfigCommand>("config")
         .WithDescription("Host, ssh key and paths. No secrets are stored.");
 

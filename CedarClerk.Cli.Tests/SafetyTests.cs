@@ -29,6 +29,33 @@ public class SafetyTests
     }
 
     [Fact]
+    public async Task Dry_run_opens_no_window_either()
+    {
+        var console = new TestConsole();
+
+        var result = await DryRun(console).Runner.LaunchDetachedAsync("wt", "-d . pwsh", null, CancellationToken.None);
+
+        Assert.True(result.Ok);
+        Assert.Contains("wt -d . pwsh", console.Output);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void The_claude_session_starts_in_the_repository_whichever_terminal_is_available(bool windowsTerminal)
+    {
+        var (exe, args) = ClaudeCommand.Launch("pwsh", @"D:\Moo.exe\CedarClerk", windowsTerminal);
+
+        Assert.Contains("claude /remote-control", args);
+        Assert.Contains(@"D:\Moo.exe\CedarClerk", args);
+        Assert.Equal(windowsTerminal ? "wt" : "pwsh", exe);
+
+        // wt splits its own arguments on ';', so a semicolon in the wt form would be read as the
+        // start of a second tab rather than as PowerShell syntax.
+        if (windowsTerminal) Assert.DoesNotContain(";", args);
+    }
+
+    [Fact]
     public void Dry_run_does_not_even_reach_the_health_endpoint()
     {
         // An HTTP GET to production is still touching the outside world.

@@ -5,6 +5,14 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- Installed as a .NET global tool by Scripts/install-cli.ps1: the SDK already owns
+         %USERPROFILE%\.dotnet\tools and already has it on PATH, so `cedar` becomes a command
+         without editing the environment by hand. -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>cedar</ToolCommandName>
+    <PackageId>CedarClerk.Cli</PackageId>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)..\publish\cli-nupkg</PackageOutputPath>
   </PropertyGroup>
 
   <ItemGroup>

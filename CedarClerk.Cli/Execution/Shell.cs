@@ -32,7 +32,7 @@ public static class Shell
         return string.Join(' ', parts);
     }
 
-    private static bool OnPath(string exe)
+    public static bool OnPath(string exe)
     {
         var path = Environment.GetEnvironmentVariable("PATH") ?? "";
         var extensions = OperatingSystem.IsWindows()

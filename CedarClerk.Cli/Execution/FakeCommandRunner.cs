@@ -48,6 +48,14 @@ public sealed class FakeCommandRunner : ICommandRunner
         return Task.FromResult(Match(command));
     }
 
+    public List<string> LaunchedWindows { get; } = new();
+
+    public Task<CommandResult> LaunchDetachedAsync(string exe, string args, string? workingDirectory, CancellationToken ct)
+    {
+        LaunchedWindows.Add($"{exe} {args}");
+        return Task.FromResult(Match($"{exe} {args}"));
+    }
+
     private CommandResult Match(string command)
     {
         var key = _answers.Keys

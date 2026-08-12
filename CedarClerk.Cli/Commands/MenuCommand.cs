@@ -39,12 +39,7 @@ public sealed class MenuCommand : AsyncCommand<CedarSettings>
 
         while (true)
         {
-            session.Console.Write(Ui.Rule(session.Glyphs,
-                $"[{Palette.Hex(Palette.Text)}]{Markup.Escape(session.Config.Host)}[/]  " +
-                $"[grey]working copy[/] [{Palette.Hex(Palette.Accent)}]v{CedarClerk.Core.Consts.CurrentVersion}[/]",
-                session.Console.Profile.Width));
-
-            var choice = Choose(session, "", Root());
+            var choice = Choose(session, null, Root());
             if (choice is null) return 0;
 
             var code = await choice.Run(settings, cancellationToken);
@@ -58,26 +53,30 @@ public sealed class MenuCommand : AsyncCommand<CedarSettings>
         }
     }
 
-    private static Item? Choose(Session session, string title, IReadOnlyList<Item> items)
+    // The way out is always the last row, at every level, so "one more down" is the answer to being
+    // lost regardless of how deep you are.
+    private static Item? Choose(Session session, string? title, IReadOnlyList<Item> items)
     {
-        var prompt = new SelectionPrompt<string>()
-            .PageSize(14)
-            .HighlightStyle(new Style(Palette.Accent))
-            .AddChoices(items.Select(Label).Append(title.Length == 0 ? "Exit" : "← Back"));
+        var entries = items
+            .Select(item => new Chooser.Entry(item.Label, item.Hint))
+            .Append(new Chooser.Entry(title is null ? "Exit" : "Back", ""))
+            .ToList();
 
-        if (title.Length > 0) prompt.Title($"[grey]{Markup.Escape(title)}[/]");
-
-        var picked = session.Console.Prompt(prompt);
-        return items.FirstOrDefault(item => Label(item) == picked);
+        var picked = Chooser.Pick(session.Console, session.Glyphs, Header(session), title, entries);
+        return picked is null || picked >= items.Count ? null : items[picked.Value];
     }
 
-    private static string Label(Item item) => $"{item.Label}   [grey35]{item.Hint}[/]";
+    // Which machine, and which working copy — the two facts the menu exists to keep in front of you.
+    private static string Header(Session session) =>
+        $"[{Palette.Hex(Palette.Text)}]{Markup.Escape(session.Config.Host)}[/]  " +
+        $"[grey]working copy[/] [{Palette.Hex(Palette.Accent)}]v{CedarClerk.Core.Consts.CurrentVersion}[/]";
 
     private static IReadOnlyList<Item> Root() => new[]
     {
         Group("Monitor", "status, graphs, logs, database", Monitor),
         Group("Build", "tests and local builds", Build),
         Group("Server", "restart, backup", Server),
+        new Item("Claude", "a terminal here, running /remote-control", ClaudeCommand.RunAsync),
         new Item("Settings", "host, key, paths", ConfigCommand.RunAsync)
     };
 

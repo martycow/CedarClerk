@@ -50,6 +50,30 @@ public sealed class ProcessCommandRunner : ICommandRunner
     public Task<CommandResult> RunRemoteStreamingAsync(string command, Action<string> onLine, CancellationToken ct) =>
         RunAsync("ssh", SshArgs(command), null, onLine, ct);
 
+    // UseShellExecute is what gives the new process a console of its own instead of inheriting ours,
+    // which is the entire point: two programs reading this terminal's keyboard would fight over it.
+    public Task<CommandResult> LaunchDetachedAsync(string exe, string args, string? workingDirectory, CancellationToken ct)
+    {
+        var info = new ProcessStartInfo
+        {
+            FileName = exe,
+            Arguments = args,
+            UseShellExecute = true,
+            CreateNoWindow = false
+        };
+        if (!string.IsNullOrWhiteSpace(workingDirectory)) info.WorkingDirectory = workingDirectory;
+
+        try
+        {
+            using var process = Process.Start(info);
+            return Task.FromResult(CommandResult.Empty(process is null ? 127 : 0));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(new CommandResult(127, "", ex.Message, TimeSpan.Zero));
+        }
+    }
+
     private static async Task<CommandResult> RunAsync(
         string exe, string args, string? workingDirectory, Action<string>? onLine, CancellationToken ct)
     {

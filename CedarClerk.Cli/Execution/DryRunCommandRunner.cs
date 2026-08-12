@@ -38,6 +38,12 @@ public sealed class DryRunCommandRunner : ICommandRunner
         return Task.FromResult(CommandResult.Empty());
     }
 
+    public Task<CommandResult> LaunchDetachedAsync(string exe, string args, string? workingDirectory, CancellationToken ct)
+    {
+        Print("open", $"{exe} {args}");
+        return Task.FromResult(CommandResult.Empty());
+    }
+
     private void Print(string kind, string command)
     {
         // A multi-line remote script is one call but many lines; indenting the continuation keeps

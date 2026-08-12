@@ -27,7 +27,7 @@ Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTUR
 ## Key commands
 | Task | Command |
 |---|---|
-| **Operations console** | `dotnet run --project CedarClerk.Cli` — menu; or `cedar status` / `logs` / `db` / `test` / `deploy` (ADR-118). Wraps the scripts below; **never deploys by itself** |
+| **Operations console** | `cedar` — menu; or `cedar status` / `logs` / `db` / `test` / `deploy` / `claude` (ADR-118). Wraps the scripts below; **never deploys by itself**. Installed by `.\Scripts\install-cli.ps1` as a .NET global tool — re-run it after changing the CLI, `-Uninstall` removes it |
 | **Everything is green?** | `.\Scripts\test.ps1` (backend + frontend + contrast; `-Smoke` adds Playwright) |
 | **Build everything locally** | `.\Scripts\build.ps1` (Angular + server + desktop shell; `-NoDesktop`, `-Installer`, `-RunDesktop`) |
 | **Deploy** | `.\Scripts\deploy.ps1` — **refuses to run from anything but `master`, or with a dirty tree**. `-SkipBuild` continues an interrupted upload, `-Rollback` puts the previous release back (ADR-113) |

@@ -29,4 +29,13 @@ public interface ICommandRunner
     // The same for the far side, which `logs --follow` needs: journalctl -f never returns, so a
     // buffered call would print nothing at all rather than late.
     Task<CommandResult> RunRemoteStreamingAsync(string command, Action<string> onLine, CancellationToken ct);
+
+    // A window the tool opens and then stops owning: nothing is redirected, nothing is waited for,
+    // and the exit code reported is only whether the launch itself succeeded.
+    //
+    // It has to be its own method rather than a flag on RunLocalAsync, because that one captures
+    // stdout and blocks until exit — precisely the two things an interactive session the user is
+    // about to type into must not do. It goes through the interface anyway so that --dry-run keeps
+    // meaning "touch nothing", including "open no windows".
+    Task<CommandResult> LaunchDetachedAsync(string exe, string args, string? workingDirectory, CancellationToken ct);
 }
