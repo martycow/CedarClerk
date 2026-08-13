@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-13 — the money side gets written down
+
+Marty asked for the business to be tracked like the code is. It went into `docs/BUSINESS.md` rather than into memory, for the reason today keeps demonstrating: a checklist that references code and infrastructure drifts the moment either moves, and the repo is the only copy that moves with them.
+
+Three findings came out of writing it, none of which were the point of the exercise.
+
+**The restore has never been tested.** There are now three kinds of backup — nightly database, off-site copy, weekly machine image — and not one of them has been restored. A backup nobody has restored is a hope with a cron entry, and the check takes ten minutes.
+
+**No real money has ever gone through.** All three payment providers are code-complete and none has processed a live payment. The first one should be Marty's own card on the $1 trial, because the first customer will not have access to the logs and will simply leave.
+
+**Pro Plus may not be profitable, and it is arithmetic, not opinion.** $6/mo includes auto-translate — the most expensive call in the app, a whole document in one request — at up to 20 AI calls a day, which is 600 a month against $6 minus Stripe's cut. The file does not guess at the number; it says to read the real Anthropic bill and compare, and names the three ways out if it does not clear.
+
+The rest is what a solo operator actually needs and no more: the ten gates before public registration opens (registration is closed today on purpose), the tax topics that get decided once and belong to an accountant rather than to a search engine, four metrics instead of twenty, weekly/monthly/quarterly checks tied to commands that exist, and where indie developers can actually be found. Plus the dangerous places already visible — chief among them that every key, backup and access path currently runs through one person and one laptop.
+
 ## 2026-08-13 — the blog footer grows up, and the legal pages stop being drafts
 
 **The footer is three groups on one line now** — brand, links, badge — where it was a centred line with the DigitalOcean badge centred underneath it. Marty's ask was "not in the middle", and the reason it matters is what the position says: a fixed white plate in the centre of a footer reads as an advert placed there; the same plate at the edge reads as a credit. It is also dimmed to `opacity: .72` (full on hover), because it ships as white and was otherwise the brightest thing on a dark page — brighter than the post title. Below 700px the three groups stack and re-centre: a row pushed to the edges looks ragged once it becomes a column.
