@@ -1747,11 +1747,29 @@ public static class BlogEndpoints
         .comment-form button:hover { filter: brightness(1.08); }
 
         .site-footer { border-top: 1px solid var(--border); background: var(--surface); }
-        .site-footer-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 16px 20px; font-size: 12px; color: var(--t2); }
-        /* The referral badge sits below the made-with line, with no top padding of its own so the
-           two read as one footer block rather than two. */
-        .referral-row { padding-top: 0; }
-        .referral-row img { max-width: 100%; height: auto; display: block; }
+        /* Three groups on one line — brand, links, badge — and the badge is the one that must not be
+           centred (Marty, 13.08.2026): a hosted SVG of fixed size in the middle of a footer reads as
+           an advert placed there, while the same badge at the edge reads as a credit. */
+        .site-footer-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center;
+            justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; padding: 16px 20px;
+            font-size: 12px; color: var(--t2); }
+        .footer-brand { display: flex; align-items: center; gap: 8px; }
+        .footer-links { display: flex; align-items: center; gap: 14px; }
+        .footer-links a { color: var(--t2); }
+        .footer-links a:hover { color: var(--text); }
+        /* The badge ships as a white plate, which on the dark theme is the brightest thing on the
+           page — brighter than the post title. Dimming it to the weight of the text around it keeps
+           it a credit rather than a banner; it comes back to full on hover. */
+        .footer-badge { flex: none; display: block; opacity: 0.72; transition: opacity 120ms; }
+        .footer-badge:hover { opacity: 1; }
+        .footer-badge img { max-width: 100%; height: auto; display: block; }
+
+        /* Below this the three groups stack, and the row that was pushed to the edges would look
+           ragged left — so a stacked footer centres instead. */
+        @media (max-width: 700px) {
+            .site-footer-inner { flex-direction: column; justify-content: center; text-align: center; gap: 12px; }
+            .footer-brand { justify-content: center; }
+        }
 
         @media (max-width: 480px) {
             .post-sheet { padding: 22px 16px 20px; }
@@ -1767,16 +1785,23 @@ public static class BlogEndpoints
         {{BODY}}
         </main>
         <div class="site-footer"><div class="site-footer-inner">
+        <div class="footer-brand">
         <svg width="14" height="14" viewBox="0 0 24 24"><polygon points="12,2 19,11 5,11" fill="var(--accent)"></polygon><polygon points="12,7 21,18 3,18" fill="var(--accent)" opacity="0.75"></polygon><rect x="10.6" y="18" width="2.8" height="4" rx="1" fill="var(--accent)" opacity="0.9"></rect></svg>
         <span>Made with <a href="https://cedarclerk.mooexe.dev" style="font-weight:500">Cedar Clerk</a> — write here, publish there. Moo.</span>
         </div>
-        <!--Marty's DigitalOcean referral badge (11.08.2026). Its own row under the made-with line
-        rather than beside it: the badge is a hosted SVG of a fixed size and would push the centred
-        footer text off-centre. `loading=lazy` and explicit dimensions so a slow CDN cannot shift
-        the page as it arrives, and rel=noopener because it leaves the site.-->
-        <div class="site-footer-inner referral-row">
-        <a href="https://www.digitalocean.com/?refcode=925f882ca720&amp;utm_campaign=Referral_Invite&amp;utm_medium=Referral_Program&amp;utm_source=badge" target="_blank" rel="noopener">
-        <img src="https://web-platforms.sfo2.cdn.digitaloceanspaces.com/WWW/Badge%202.svg" alt="DigitalOcean Referral Badge" width="200" height="42" loading="lazy">
+        <!--Terms and Privacy live on the app host, not here: one copy of a legal page, and the blog
+        is a second host serving the same product. Status is the uptime page (T-148) — a link a reader
+        can reach precisely when the blog itself cannot answer, which is why it is not self-hosted.-->
+        <nav class="footer-links">
+        <a href="https://cedarclerk.mooexe.dev/terms">Terms</a>
+        <a href="https://cedarclerk.mooexe.dev/privacy">Privacy</a>
+        <a href="https://status.mooexe.dev" target="_blank" rel="noopener">Status</a>
+        </nav>
+        <!--Marty's DigitalOcean referral badge (11.08.2026). `loading=lazy` and explicit dimensions
+        so a slow CDN cannot shift the page as it arrives, and rel=noopener because it leaves the
+        site.-->
+        <a class="footer-badge" href="https://www.digitalocean.com/?refcode=925f882ca720&amp;utm_campaign=Referral_Invite&amp;utm_medium=Referral_Program&amp;utm_source=badge" target="_blank" rel="noopener">
+        <img src="https://web-platforms.sfo2.cdn.digitaloceanspaces.com/WWW/Badge%202.svg" alt="DigitalOcean Referral Badge" width="160" height="34" loading="lazy">
         </a>
         </div></div>
         <script>
