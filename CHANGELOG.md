@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-08-13 — the blog footer grows up, and the legal pages stop being drafts
+
+**The footer is three groups on one line now** — brand, links, badge — where it was a centred line with the DigitalOcean badge centred underneath it. Marty's ask was "not in the middle", and the reason it matters is what the position says: a fixed white plate in the centre of a footer reads as an advert placed there; the same plate at the edge reads as a credit. It is also dimmed to `opacity: .72` (full on hover), because it ships as white and was otherwise the brightest thing on a dark page — brighter than the post title. Below 700px the three groups stack and re-centre: a row pushed to the edges looks ragged once it becomes a column.
+
+The links are **Terms · Privacy · Status**. Terms and Privacy point at the app host rather than a copy served by the blog — one legal page, two hosts. Status points off-box on purpose: it is the page a reader needs exactly when the blog cannot answer, so hosting it ourselves would defeat it.
+
+**`T-052` is closed: every `[BRACKETED]` blank in Terms and Privacy is filled**, and the "draft template" banner is gone with them. It had been open since 31.07 because Marty did not know what to put in the blanks, which was the right instinct — most of them are decisions, not text. The decisions, from him: operator is Viacheslav Chudaev trading as Moo.exe, an individual in Oregon; jurisdiction Oregon, USA; contact `cedarworks@mooexe.dev`; minimum age 16; cancel any time with no refund of the unused period.
+
+The age question deserved its answer rather than a number: **13 is the COPPA line** (below it, US law demands verifiable parental consent and much more), **16 is the GDPR line** (below it, consent must come from a parent for EU users), and 18 is where sites go when they want a clean contract with an adult. A public blog read from Europe makes 16 the quiet choice.
+
+Everything else came out of the code and the infrastructure rather than out of a template: the active payment processors, Anthropic as the translation provider, `.cedar` and Markdown as the export mechanisms, and the **backup retention window stated in real numbers** — 14 days locally, 30 days off-site, four weeks of whole-machine images — which is only sayable at all because `T-071` and `T-147` happened first. A GDPR/CCPA rights paragraph was added. What is still true and now written down in `TASKS.md`: **no lawyer has read any of it**.
+
 ## 0.11.1 — 2026-08-13 — the blog answers HEAD, and the deploy stops hanging
 
 **The first `cedar deploy` of the day hung on Upload and stayed there.** It looked like a slow transfer — 1m32s against 24.4 MB — and it was not a transfer at all: `staging/` on the droplet was empty, no `cat >>` process existed there, and the local `ssh` had burned **0.00 seconds of CPU** since starting. Nothing was moving in either direction.

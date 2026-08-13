@@ -185,7 +185,7 @@ The `/posts` page (N7, ADR-046). `/comments` and `/stats` now redirect here; the
 
 ## `privacy.component` / `terms.component`
 
-Thin wrappers (10 lines each) around `shared/legal-page.component`, passing only `title`/`updated` inputs. Content is 100% static prose with `[bracketed]` placeholders (see `docs/ROADMAP.md` Phase 8 Step 3) — no interactive elements, nothing to inventory beyond the shared `legal-page` shell already covered above.
+Thin wrappers around `shared/legal-page.component`, passing only `title`/`updated`. Static prose, no interactive elements — nothing to inventory beyond the shared shell above. **Filled in 13.08.2026 (`T-052`)**: every `[bracketed]` blank is gone, both carry `updated="12 August 2026"`, and the "draft template" banner was removed with them. The blog footer links here from every page, which is what made finishing them urgent.
 
 ---
 

@@ -1,14 +1,9 @@
-<app-legal-page title="Privacy Policy" updated="[DATE]">
-    <div class="draft-notice">
-        Draft template — every <span class="placeholder">[bracketed]</span> value needs to be filled in
-        (and the whole thing reviewed by someone who isn't an AI) before this is a real Privacy Policy.
-    </div>
-
+<app-legal-page title="Privacy Policy" updated="12 August 2026">
     <h2>1. Who this is about</h2>
     <p>
-        This Privacy Policy explains what Cedar Clerk (<span class="placeholder">[OPERATOR NAME / LEGAL ENTITY]</span>,
+        This Privacy Policy explains what Cedar Clerk (operated by Viacheslav Chudaev, trading as Moo.exe, in the State of Oregon, United States,
         "we", "us") collects when you use the Service, and why. Contact for privacy questions:
-        <span class="placeholder">[CONTACT EMAIL]</span>.
+        cedarworks@mooexe.dev.
     </p>
 
     <h2>2. What we collect</h2>
@@ -17,7 +12,7 @@
         <li><strong>Telegram identity:</strong> if you link a Telegram account, we store your Telegram user ID, username, and first name, so we can associate your channels and confirm bot access.</li>
         <li><strong>Your content:</strong> drafts, published posts, and uploaded media, so the Service can render and publish them where you ask it to.</li>
         <li><strong>Billing metadata:</strong> your plan tier and a customer reference ID with our payment processor(s). We never see or store full card numbers — that's handled entirely by
-            <span class="placeholder">[Stripe / PayPal / Telegram Stars — list active processors]</span>.
+            Stripe, PayPal, and Telegram Stars.
         </li>
         <li><strong>Blog visitor data:</strong> for reactions on public blog posts, we store a one-way salted hash of your IP address (not the IP itself) so the same visitor can't react twice to the same post — we can't reverse this back to an IP. We also keep a daily count of page views per country and per browser language, so an author can see where their readers are; it is a running total only — no row, cookie or identifier ties any view back to you, and we never store the IP a country was derived from.</li>
         <li><strong>Local preferences:</strong> your light/dark theme choice, stored in your browser's local storage, never sent to us.</li>
@@ -27,36 +22,36 @@
     <p>We use the following processors to run the Service, each bound by their own privacy policy:</p>
     <ul>
         <li><strong>Telegram</strong> — to publish posts to the channel(s) you connect, via the Telegram Bot API.</li>
-        <li><strong>Payment processors</strong> (<span class="placeholder">[Stripe / PayPal / Telegram Stars]</span>) — to handle paid plan billing.</li>
-        <li><strong>AI translation provider</strong> (<span class="placeholder">[Anthropic / OpenAI / DeepL — whichever is configured]</span>) — only when you use the "Auto-translate" feature; the post text you're translating is sent to this provider for that request only.</li>
+        <li><strong>Payment processors</strong> (Stripe, PayPal, Telegram Stars) — to handle paid plan billing.</li>
+        <li><strong>AI translation provider</strong> (Anthropic) — only when you use the "Auto-translate" feature; the post text you're translating is sent to this provider for that request only.</li>
     </ul>
     <p>We don't sell your data, and we don't share it with anyone else beyond what's listed above.</p>
 
     <h2>4. Data retention &amp; deletion</h2>
     <p>
         We keep your data for as long as your account exists. Deleting your account removes your
-        drafts and media from our storage. <span class="placeholder">[BACKUP RETENTION WINDOW, if any]</span>
+        drafts and media from our storage. Backups are the exception, and they are worth stating plainly: a nightly copy of the database is kept for 14 days, an off-site copy of it for 30 days, and our hosting provider keeps a weekly whole-machine image for four weeks. Deleted content therefore survives in those backups until they age out, and we do not restore a backup in order to recover an account you asked us to delete.
     </p>
 
     <h2>5. Your rights</h2>
     <p>
-        You can access, export (via <span class="placeholder">[.cedar export / other mechanism]</span>),
+        You can access, export (via the <code>.cedar</code> export, or a Markdown archive, from the editor),
         or delete your data at any time from Settings.
-        <span class="placeholder">[ADD GDPR/CCPA-STYLE RIGHTS LANGUAGE IF APPLICABLE TO YOUR JURISDICTION/USERS]</span>
+        If you are in the EU/EEA or the UK, you also have the right to ask us for a copy of your data, to correct it, to have it erased, to restrict or object to how we use it, and to complain to your local data protection authority. If you are in California, you have the right to know what we collect, to have it deleted, and not to be discriminated against for asking — we do not sell personal information, so there is nothing to opt out of. Write to cedarworks@mooexe.dev and we will answer within 30 days.
     </p>
 
     <h2>6. Children's privacy</h2>
-    <p>The Service is not directed at children under <span class="placeholder">[AGE]</span>, and we don't knowingly collect their data.</p>
+    <p>The Service is not directed at children under 16, and we don't knowingly collect their data.</p>
 
     <h2>7. Governing law</h2>
-    <p>This Policy is governed by the laws of <span class="placeholder">[JURISDICTION]</span>.</p>
+    <p>This Policy is governed by the laws of the State of Oregon, United States.</p>
 
     <h2>8. Changes to this Policy</h2>
     <p>
         We may update this Policy from time to time. Material changes will be announced
-        <span class="placeholder">[HOW — e.g. email, in-app notice]</span> before they take effect.
+        by email and by a notice in the app at least 14 days before they take effect.
     </p>
 
     <h2>9. Contact</h2>
-    <p>Questions about this Policy: <span class="placeholder">[CONTACT EMAIL]</span></p>
+    <p>Questions about this Policy: cedarworks@mooexe.dev</p>
 </app-legal-page>

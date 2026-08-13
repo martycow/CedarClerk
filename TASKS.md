@@ -382,10 +382,9 @@ Details in `docs/ROADMAP.md` Phase 11 and `CHANGELOG.md`; the decisions are ADR-
   `LandingEndpoints` and the single-file HTML export (`DraftEndpoints.StaticExportHtml`);
   the ADR-074 `--t3` sweep now covers the blog and the export too.
 - [x] ~~Stripe Customer Portal (T-073)~~ — **already active**, confirmed by Marty 31.07.
-- [ ] **T-052 (Terms/Privacy)** — Marty says he doesn't know what to put in the `[BRACKETED]` blanks,
-  so the next step is not "fill them in" but sorting them: which need a legal entity/jurisdiction
-  (genuinely blocked), which follow from decisions already made and visible in the code, and which
-  Claude can draft. Hard prerequisite before public registration opens.
+- [x] **T-052 (Terms/Privacy)** — заполнено 13.08.2026. Осталось единственное: показать текст
+  юристу перед открытием публичной регистрации. Документы вступают в силу как есть, но проверял их
+  не юрист, и это стоит закрыть до того, как появятся чужие деньги и чужие данные.
 
 ### The small defects, none of them blocking
 `T-094`, `T-099`, `T-100` — fixed in the 01.08 night pass (see `CHANGELOG.md`). Still open: `T-098`.
