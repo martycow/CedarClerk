@@ -1,6 +1,16 @@
 # Changelog
 
-## 0.11.1 — 2026-08-13 — the blog answers HEAD
+## 0.11.1 — 2026-08-13 — the blog answers HEAD, and the deploy stops hanging
+
+**The first `cedar deploy` of the day hung on Upload and stayed there.** It looked like a slow transfer — 1m32s against 24.4 MB — and it was not a transfer at all: `staging/` on the droplet was empty, no `cat >>` process existed there, and the local `ssh` had burned **0.00 seconds of CPU** since starting. Nothing was moving in either direction.
+
+The stuck command turned out to be `stat -c %s …/cedar-0.11.1.tar.gz` — the size probe that runs *before* the upload to find the resume offset. On the server that command had already finished and left no process; what survived was an `sshd: martycow@notty` session four minutes old with nothing running inside it.
+
+**`ssh` was inheriting the console's stdin.** Without `-n` it forwards stdin to the far side and will not exit until that stream reaches EOF — which a console never does. Preflight survives this because nothing is competing for the console yet; the live progress panel is what makes the collision certain, so the hang lands on the first probe inside Upload, every time. `ConnectTimeout` cannot help: the connection is fine, it is the command that never returns.
+
+Every remote command now passes `-n`. The one call that genuinely feeds ssh a file — the resumable upload — must not, and a test pins both halves, because `-n` on that path would send an empty file and report success. The same hazard one level down is closed too: local processes get a redirected stdin that is closed immediately, so a child that reads it gets an answer instead of waiting for one.
+
+Nothing was half-deployed by the hang: production kept serving the old version throughout, and `staging/` was empty when it was interrupted. That is the shape ADR-113 was built for — everything slow happens before anything is switched.
 
 The first monitor pointed at `blog.mooexe.dev` reported it down within minutes of being created, while the site opened normally in a browser. Both observations were correct: `curl` got 200, `curl -I` got 404.
 

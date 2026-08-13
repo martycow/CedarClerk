@@ -16,7 +16,15 @@ public sealed class ProcessCommandRunner : ICommandRunner
 
     // BatchMode makes a key problem fail immediately instead of hanging on a hidden password
     // prompt — the same reasoning, and the same flags, as deploy.ps1.
-    private string SshArgs(string command)
+    //
+    // `-n` (stdin from /dev/null) is on every command that does not feed ssh a file, and it is not
+    // tidiness: without it ssh inherits this console's stdin and will not exit until that reaches
+    // EOF, which a console never does. On 13.08.2026 a deploy hung on `stat -c %s` — the remote
+    // command had already finished and left no process, while the client sat at 0% CPU forever.
+    // Preflight survives it because nothing is competing for the console yet; the live progress
+    // panel is what makes the collision certain, so it hangs on the first upload probe every time.
+    // ConnectTimeout cannot save it: the connection is up, it is the command that never returns.
+    internal string SshArgs(string command, bool stdinIsUsed = false)
     {
         var parts = new List<string>
         {
@@ -25,6 +33,7 @@ public sealed class ProcessCommandRunner : ICommandRunner
             "-o", "ServerAliveInterval=15",
             "-o", "ServerAliveCountMax=6"
         };
+        if (!stdinIsUsed) parts.Add("-n");
         if (!string.IsNullOrWhiteSpace(_config.IdentityFile))
         {
             parts.Add("-i");
@@ -63,7 +72,7 @@ public sealed class ProcessCommandRunner : ICommandRunner
         var info = new ProcessStartInfo
         {
             FileName = "ssh",
-            Arguments = SshArgs(remoteCommand),
+            Arguments = SshArgs(remoteCommand, stdinIsUsed: true),
             RedirectStandardInput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -160,6 +169,10 @@ public sealed class ProcessCommandRunner : ICommandRunner
             Arguments = args,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            // Same hazard as ssh's missing -n, one level lower: an inherited console stdin is a
+            // handle that never reaches EOF. Redirected and closed below, so a child that reads it
+            // gets an answer instead of waiting for one.
+            RedirectStandardInput = true,
             UseShellExecute = false,
             CreateNoWindow = true,
             StandardOutputEncoding = Encoding.UTF8,
@@ -196,6 +209,7 @@ public sealed class ProcessCommandRunner : ICommandRunner
             return new CommandResult(127, "", ex.Message, watch.Elapsed);
         }
 
+        process.StandardInput.Close();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
