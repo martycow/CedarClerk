@@ -340,7 +340,11 @@ public static class BlogEndpoints
             return;
         }
 
-        if (ctx.Request.Method != HttpMethods.Get)
+        // HEAD is a GET whose body is thrown away, and Kestrel does the throwing — so it renders the
+        // same page and answers the same status. Refusing it told every uptime monitor the blog was
+        // gone while a browser saw it fine (13.08.2026: UptimeRobot HEADs by default, `curl -I` 404,
+        // `curl` 200). Anything else still gets 404 rather than 405: a page is not a form.
+        if (!HttpMethods.IsGet(ctx.Request.Method) && !HttpMethods.IsHead(ctx.Request.Method))
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             return;

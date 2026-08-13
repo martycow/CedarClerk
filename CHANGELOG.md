@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.1 — 2026-08-13 — the blog answers HEAD
+
+The first monitor pointed at `blog.mooexe.dev` reported it down within minutes of being created, while the site opened normally in a browser. Both observations were correct: `curl` got 200, `curl -I` got 404.
+
+`BlogEndpoints.HandleRequest` refused everything that was not a GET, and **UptimeRobot uses HEAD by default** — as does every other uptime service, most link checkers, and a fair number of crawlers deciding whether a page is worth fetching. A HEAD is a GET whose body is discarded, and Kestrel does the discarding, so the handler can render exactly as it would for a GET and let the server drop the bytes. Anything that is not a read still gets 404 rather than 405: a blog page is not a form, and saying "wrong method" invites a second guess.
+
+What makes this worth a version rather than a line: a monitor that cries wolf on the day it is installed teaches you to ignore it, and the next alert would have been the real one. `BlogHeadRequestTests` pins it — verified red without the fix, in the same way `SchemaDriftGuardTests` was.
+
 ## 2026-08-13 — the backup leaves the droplet (T-147), and something starts watching
 
 **The nightly backup script now lives in the repository.** It did not before: `~/bin/backup.sh` existed only on the droplet, unversioned, un-reviewed, and one `rm` away from being a thing nobody could reconstruct. `Scripts/server/backup.sh` is the source of truth; the copy that runs is installed by hand, because `cedar deploy` replaces the app directory and nothing else, and pretending otherwise would be worse than saying so.
