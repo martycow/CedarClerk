@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-13 — the stack, the tenants, and nine rows in the backlog
+
+Marty's answers to yesterday's business file turned into two more documents and a batch of backlog rows. One number came out of writing them that changes what "ready for users" means.
+
+**Pro promises 8 GB of storage per account. The droplet has 40 GB free in total.** Five paying users, each filling their quota, take the server down — and that is before the deploy needs room for a second copy of the app and the backups need room for fourteen days of database. The quotas were set from generosity rather than from hardware, and `docs/MULTITENANCY.md` says what to do about it: cut them to something the machine can honour (one edit), then move media off the disk entirely into object storage, which is the only change that stops the disk being the ceiling. Do it **before** opening registration — migrating someone else's files is worse than migrating your own.
+
+That document also answers the questions behind the question. Where tenant blogs live: subdomains on a dedicated domain, already decided in ADR-020, with the wildcard certificate and host-routing work that decision implies. What "self-hosted" would actually cost: a public repository, an installable image, and migrations that survive on a database nobody watches — in that order, with Docker first for our own sake (`T-151`) and the licence question last, where AGPL and MIT lead to genuinely different futures.
+
+**`docs/STACK.md`** lists every dependency and service with what it costs and what breaks when it goes down. Fixed costs come to roughly $15/month; everything dangerous is variable, and the dangerous line is Anthropic. A smaller finding worth acting on eventually: Stripe's fee on a $3 subscription is about 13% of it, which is an argument for annual billing — one fee instead of twelve.
+
+**Nine backlog rows** from Marty's list: restore-testing (`T-149`), environments (`T-150`), Docker (`T-151`), the monetisation rethink with all AI on credits (`T-152`), analytics (`T-153`), a landing page (`T-154`), a Miro-style board (`T-155`), a "game engine" redesign experiment (`T-156`), and a second security key (`T-157`). Two of them are notes rather than tasks: `T-155` probably absorbs the existing References board (`T-129`) rather than sitting beside it, and `T-157` exists because moving every account onto one YubiKey is a real improvement that also makes one object the single path to DigitalOcean, Cloudflare, Stripe and email.
+
+Also updated: Stripe is now ticked as proven with real money on the launch checklist, and the blog footer's Status link points at `stats.uptimerobot.com` — a custom domain there is a paid feature, and the DNS record can wait for the plan.
+
 ## 2026-08-13 — the money side gets written down
 
 Marty asked for the business to be tracked like the code is. It went into `docs/BUSINESS.md` rather than into memory, for the reason today keeps demonstrating: a checklist that references code and infrastructure drifts the moment either moves, and the repo is the only copy that moves with them.

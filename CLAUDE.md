@@ -60,6 +60,8 @@ no deploy path touches it.
 - `docs/DOCS-FLOW.md` — **read this first**: which doc is the source of truth for what, how an item travels Input.md → BACKLOG → TASKS → ROADMAP/CHANGELOG, and the three rules that keep them in sync
 - `docs/PRODUCT.md` — what Cedar Clerk is, who it's for, pricing
 - `docs/BUSINESS.md` — the money side: what must be true before public registration opens, where the margin leaks, the four metrics worth counting, and the weekly/monthly checks
+- `docs/STACK.md` — every library, framework and external service, with what each costs and what breaks when it goes down
+- `docs/MULTITENANCY.md` — what happens when there are users: where their blogs live, why the tier quotas outrun the disk, what self-hosted would actually require
 - `docs/PRD.md` — shipped vs. open requirements, deferred/blocked items
 - `docs/ARCHITECTURE.md` — solution layout, data model, API style, deploy pipeline
 - `docs/DESIGN.md` — design tokens (colors/spacing/typography), component patterns

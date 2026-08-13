@@ -1795,7 +1795,9 @@ public static class BlogEndpoints
         <nav class="footer-links">
         <a href="https://cedarclerk.mooexe.dev/terms">Terms</a>
         <a href="https://cedarclerk.mooexe.dev/privacy">Privacy</a>
-        <a href="https://status.mooexe.dev" target="_blank" rel="noopener">Status</a>
+        <!--UptimeRobot's own domain, not status.mooexe.dev: a custom domain is a paid feature there
+        (13.08.2026). Swap the href when the plan changes; the DNS record already points at them.-->
+        <a href="https://stats.uptimerobot.com/jKcnizZ9vU" target="_blank" rel="noopener">Status</a>
         </nav>
         <!--Marty's DigitalOcean referral badge (11.08.2026). `loading=lazy` and explicit dimensions
         so a slow CDN cannot shift the page as it arrives, and rel=noopener because it leaves the
