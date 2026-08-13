@@ -52,6 +52,10 @@ process, an isolated data directory and a browser — `cedar test --smoke` calls
 is ever broken, the way round needs nothing from that folder:
 `dotnet run --project CedarClerk.Cli -- deploy --preflight`.
 
+`Scripts/server/backup.sh` is a third kind: it does not run here at all. It is the source of truth
+for the droplet's nightly backup, and the copy that runs (`~/bin/backup.sh`) is installed by hand —
+no deploy path touches it.
+
 ## Docs map
 - `docs/DOCS-FLOW.md` — **read this first**: which doc is the source of truth for what, how an item travels Input.md → BACKLOG → TASKS → ROADMAP/CHANGELOG, and the three rules that keep them in sync
 - `docs/PRODUCT.md` — what Cedar Clerk is, who it's for, pricing

@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-08-13 — the backup leaves the droplet (T-147), and something starts watching
+
+**The nightly backup script now lives in the repository.** It did not before: `~/bin/backup.sh` existed only on the droplet, unversioned, un-reviewed, and one `rm` away from being a thing nobody could reconstruct. `Scripts/server/backup.sh` is the source of truth; the copy that runs is installed by hand, because `cedar deploy` replaces the app directory and nothing else, and pretending otherwise would be worse than saying so.
+
+**Off-box copying is wired but not switched on**, which is the honest state and not a half-measure — the half that needs an account and a key is Marty's, and the half that needs code is done. `rclone` v1.75 is installed at `~/bin/rclone` as a static binary, no sudo required. The script gained a second stage: `rclone copy` of the day's database into `db/` with a 30-day life there (longer than the 14 kept locally — the remote copy is precisely for when the local ones are gone), and `rclone sync` of `media/`.
+
+Three decisions inside that are the whole substance of it.
+
+**Cloudflare R2, not DigitalOcean Spaces.** Spaces is one checkbox and would have closed the "same disk" risk while leaving the one that actually ends a project: the copy would still live in the same DigitalOcean account as the droplet, where a billing lapse or a compromised login takes both. R2 is a different account, gives 10 GB free against our ~1 GB, and charges nothing for getting the data back — which is the exact moment you least want a bill.
+
+**`--backup-dir`, not a bare `sync`.** A mirror propagates deletions, and to `sync` an accident, a rogue process and ransomware are indistinguishable from an author cleaning up. What sync would delete is moved into `media-removed/<date>` instead.
+
+**Its own healthchecks check.** Sharing the database's check would let either failure silence the other; "the copy on the droplet failed" and "the copy off the droplet failed" want different reactions.
+
+Two smaller things that would have bitten later. `rclone` is invoked by full path, because `~/bin` is not on cron's PATH — `command -v rclone` answers yes in an interactive shell and no at 03:30, which is the kind of difference that only shows up in a month-old log. And the healthchecks ping URL moved out of the script into `~/.config/cedar-backup.env` (mode 600): it is a secret in the sense that matters, since whoever holds it can silence the alarm.
+
+**`T-148` opens: nothing watches production from outside.** The plan is written (`docs/integrations-setup.md` §6) and needs an account, so it is Marty's to run. One detail in it is worth repeating here: the API monitor checks for a keyword, not a 200. When the tunnel is down Cloudflare answers 200 with its own error page, so a status check that only reads the status code reports everything is fine at exactly the moment it is not.
+
 ## 2026-08-12 — the UI inventory gets teeth, and the comments get cut
 
 Two of Marty's standing complaints, both about the same thing: things written down that nobody reads.

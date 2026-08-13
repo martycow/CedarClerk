@@ -103,7 +103,11 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
 - [x] `DEST` перенесён в `~/cedarclerk/data/backups` (12.08.2026), туда же лог и путь в cron;
   `cedar backup verify` показывает копию. CLI считает копии по `cedar-*.db.gz`, а не по `*` — иначе
   ночной лог оказывался бы «свежайшим бэкапом» нулевого размера.
-- [ ] Копия за пределами дроплета и аккаунта — `T-147`, `media/` (937 МБ) в ночную копию не входит.
+- [ ] **`T-147` ждёт ключей**: инфраструктура выгрузки готова (rclone в `~/bin`,
+  `Scripts/server/backup.sh`, конфиги с правами 600), нужен бакет Cloudflare R2 + токен + второй чек
+  healthchecks — чек-лист в `docs/integrations-setup.md` §5.
+- [ ] **`T-148` ждёт регистрации**: UptimeRobot + статус-страница на `status.mooexe.dev` —
+  чек-лист в `docs/integrations-setup.md` §6.
 - [ ] Nothing has been pushed to GitHub (`git push origin master dev indiedev_module --tags`).
 
 ## v0.10.0 is on master (10.08.2026) — deployed 10.08.2026

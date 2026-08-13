@@ -59,7 +59,12 @@ checklist the move followed is `docs/migration-to-digitalocean.md`.
 There are now **two** backups, and they protect different things. Any sentence about backups has to say
 which one it means.
 
-**Nightly database copy** — `T-071`, closed 12.08.2026 by Marty on the server, not by this repo.
+**The script itself lives in the repo** since 12.08.2026: `Scripts/server/backup.sh`. The copy that
+runs is `~/bin/backup.sh` on the droplet, installed **by hand** — `cedar deploy` replaces the app
+directory and nothing else, so a change here reaches production only when someone copies it across.
+`~/bin/backup.sh.prev` holds the version before that.
+
+**Nightly database copy** — `T-071`, closed 12.08.2026 by Marty on the server.
 `~/bin/backup.sh` runs from his crontab at **03:30 UTC** (the droplet is UTC — that is 03:30 UTC, not
 local): `sqlite3 .backup` → gzip → `cedar-<YYYY-MM-DD>.db.gz`, `-mtime +13 -delete` keeping fourteen
 days, then a ping to healthchecks.io so that a *silent* failure raises an alert instead of nothing.
@@ -86,11 +91,29 @@ Two things about it that are easy to get wrong:
 **Weekly whole-machine image** — DigitalOcean's paid droplet backup (enabled 11.08.2026), retained four
 weeks, taken by the platform.
 
-What the nightly copy does *not* fix, and what is therefore still open:
+**Off-box copy — `T-147`, wired but not switched on** (12.08.2026). `rclone` v1.75 is installed at
+`~/bin/rclone` (a static binary, no sudo needed) and `backup.sh` grew a second half: `rclone copy` of
+the day's database into `db/`, kept 30 days there, and `rclone sync` of `media/` with `--backup-dir`
+pointing at `media-removed/<date>`. **Its destination is Cloudflare R2, deliberately not DO Spaces**:
+Spaces would be the same account as the droplet, which is the third failure below.
 
-1. **It is on the same disk as the database it copies.** A lost droplet takes both. An off-box target —
-   DO Spaces or anything `rclone` reaches — is the remaining work, and it is not done.
-2. **It covers the database only.** `media/` is ~937 MB and is in the weekly image alone.
+Three things about it that are load-bearing:
+
+- **`rclone` is called by full path.** `~/bin` is not on cron's PATH, so `command -v rclone` answers
+  yes in a login shell and no at 03:30.
+- **`--backup-dir`, not a bare sync.** A deletion here must not become a deletion there — an accident
+  and ransomware look identical to `sync`, and that is the difference between a mirror and a backup.
+- **It has its own healthchecks check.** "The copy on the droplet failed" and "the copy off the
+  droplet failed" are different emergencies; sharing one check would let either silence the other.
+
+Until `R2_REMOTE` is set in `~/.config/cedar-backup.env`, the off-box half **skips silently** and the
+local copy is unaffected. The keys are Marty's to create — the checklist is
+`docs/integrations-setup.md` §5.
+
+What is still true until then:
+
+1. **The nightly copy is on the same disk as the database it copies.** A lost droplet takes both.
+2. **It covers the database only.** `media/` is ~938 MB and is in the weekly image alone.
 3. **The weekly image lives in the same account as the droplet.** An accidental destroy, a billing lapse
    or a compromised login takes it too. The Pi's microSD had that property; it was lost in the move.
 
