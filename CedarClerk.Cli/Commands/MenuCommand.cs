@@ -87,6 +87,8 @@ public sealed class MenuCommand : AsyncCommand<CedarSettings>
     // memory.
     private static IReadOnlyList<Item> Open() => new[]
     {
+        new Item("Local check", "build front and back, serve, open the browser",
+            (s, ct) => RunCommand.RunAsync(Copy<RunSettings>(s), ct)),
         new Item("In the browser", "production", (s, ct) => OpenCommand.RunAsync(Where(s, "browser"), ct)),
         new Item("Desktop app", "installed copy, or this working one", (s, ct) => OpenCommand.RunAsync(Where(s, "desktop"), ct)),
         new Item("The blog", "blog.mooexe.dev", (s, ct) => OpenCommand.RunAsync(Where(s, "blog"), ct)),

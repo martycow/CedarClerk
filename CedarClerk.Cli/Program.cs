@@ -58,6 +58,11 @@ app.Configure(config =>
         .WithDescription("Angular, the server publish and the desktop shell.")
         .WithExample("build", "--no-desktop");
 
+    config.AddCommand<RunCommand>("run")
+        .WithDescription("Build front and back, serve the publish on localhost:8080, open the browser.")
+        .WithExample("run")
+        .WithExample("run", "--no-build");
+
     config.AddCommand<DeployCommand>("deploy")
         .WithDescription("Build, ship, swap, verify. Asks before it stops production (ADR-119).")
         .WithExample("deploy", "--preflight")
