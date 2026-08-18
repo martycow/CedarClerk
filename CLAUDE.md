@@ -59,7 +59,7 @@ no deploy path touches it.
 
 ## Docs map
 `docs/` root holds only the high-level files (DOCS-FLOW, the DECISIONS index, the untracked INPUT_PROMPT); everything else lives in category folders — `product/ tasks/ design/ tech/ adr/ fleet/ knowledge_base/ for_user/ archive/` (+ `misc/` when something needs it). The taxonomy and placement rules: `docs/DOCS-FLOW.md` §Размещение.
-- `docs/DOCS-FLOW.md` — **read this first**: which doc is the source of truth for what, how an item travels Input.md → BACKLOG → TASKS → ROADMAP/CHANGELOG, and the three rules that keep them in sync
+- `docs/DOCS-FLOW.md` — **read this first**: which doc is the source of truth for what, how an item travels INPUT_PROMPT.md → BACKLOG → TASKS → ROADMAP/CHANGELOG, and the three rules that keep them in sync
 - `docs/product/PRODUCT.md` — what Cedar Clerk is, who it's for, pricing
 - `docs/product/BUSINESS.md` — the money side: what must be true before public registration opens, where the margin leaks, the four metrics worth counting, and the weekly/monthly checks
 - `docs/knowledge_base/STACK.md` — every library, framework and external service, with what each costs and what breaks when it goes down

@@ -69,6 +69,6 @@ CedarClerk.Server/Data/import-tmp/
 CedarClerk.Desktop/server/
 
 # === Marty's dynamic prompt inbox (18.08.2026) ===
-# Rewritten by Marty at will; deliberately untracked - rewrites are tracked by mtime
-# against the last "Input sweep" entry in docs/tasks/ROADMAP.md, same as _Documents_/Input.md.
+# The only inbox (18.08.2026). Rewritten by Marty at will; deliberately untracked - rewrites
+# are tracked by mtime against the last "Input sweep" entry in docs/tasks/ROADMAP.md.
 docs/INPUT_PROMPT.md

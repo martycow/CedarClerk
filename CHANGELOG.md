@@ -30,6 +30,14 @@ run to prove it), and the UI-inventory hook. Historical text — CHANGELOG, `doc
 itself, including the placement rule for future files, lives in `DOCS-FLOW.md` §Размещение, and the
 scheme now carries every category. 935 tests green after the move.
 
+**And the old inbox is retired.** Marty deleted the `_Documents_/CedarClerk/Input.md` row from
+DOCS-FLOW's sources table by hand and asked for the rest: `docs/INPUT_PROMPT.md` is the **only**
+inbox now. Every live doc was cleaned of Input.md as a living source — the mermaid node and its two
+edges, the weak-spots bullet, CLAUDE.md's "how an item travels" line, the `.gitignore` comment —
+while history (this file, the ADRs, the archive, ROADMAP's July entries) keeps its mentions as a
+record of when Input.md was real. The two survivors in live files are deliberate: backlog `Q-9`
+still explains that its spec was lost *to* an Input.md rewrite, now marked retired.
+
 ## 2026-08-18 — the documentation gets a floor plan
 
 The read-only audit (`docs/archive/AUDIT-DOCS-2026-08.md`) came back with five questions; Marty
