@@ -42,7 +42,7 @@ public static class BlogEndpoints
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
             if (draft is null) return Results.NotFound();
 
-            // ADR-102 — the blog is deliberately not an IPublishTarget (docs/ARCHITECTURE.md), so it
+            // ADR-102 — the blog is deliberately not an IPublishTarget (docs/tech/ARCHITECTURE.md), so it
             // does not inherit the refusal on the networks' shared path and needs its own. Without
             // this, working material could not be sent to a channel but could be put on a public web
             // page, which is the more exposing of the two.
@@ -1423,7 +1423,7 @@ public static class BlogEndpoints
         return $"<{tag} class=\"post-signature\">{inner}</{tag}>";
     }
 
-    // Blog-only (see docs/ROADMAP.md Phase 8 Step 4 / ADR in docs/DECISIONS.md) — a subtitle line
+    // Blog-only (see docs/tasks/ROADMAP.md Phase 8 Step 4 / ADR in docs/DECISIONS.md) — a subtitle line
     // under the title, distinct from post-meta-row's date/views/tags. Slot 3 is clamped away for
     // any tier below Pro, even if the column still holds a value from before a downgrade.
     private static string RenderHeaderSlotsLine(

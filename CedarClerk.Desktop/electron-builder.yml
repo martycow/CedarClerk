@@ -36,7 +36,7 @@ win:
     - target: nsis
       arch: [x64]
   # No code signing yet — an unsigned build gets a SmartScreen warning on first run, and buying a
-  # certificate is a decision, not a build step (docs/DESKTOP.md, "Risks").
+  # certificate is a decision, not a build step (docs/tech/DESKTOP.md, "Risks").
   signAndEditExecutable: false
 
 nsis:

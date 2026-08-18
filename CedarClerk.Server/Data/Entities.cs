@@ -103,12 +103,12 @@ public class ApplicationUser : IdentityUser
     public string? TelegramLinkTextTranslationsJson { get; set; }
 
     // Pro-only: makes the whole PostSignature text a clickable link — see Phase 8 Step 5,
-    // docs/ROADMAP.md. Free-tier posts never read this; they get the fixed attribution instead.
+    // docs/tasks/ROADMAP.md. Free-tier posts never read this; they get the fixed attribution instead.
     public string? PostSignatureUrl { get; set; }
 
     public string? StripeCustomerId { get; set; }
 
-    // Header Slot System (blog-only, see docs/ROADMAP.md Phase 8 Step 4) — fixed profile values
+    // Header Slot System (blog-only, see docs/tasks/ROADMAP.md Phase 8 Step 4) — fixed profile values
     // shown by the AuthorSignature/Url/MapLocation slot types, distinct from PostSignature above.
     public string? AuthorDisplayName { get; set; }
     public string? ProfileUrl { get; set; }
@@ -284,7 +284,7 @@ public class Draft
 
     // At most one folder per draft (see the ADR following ADR-038, docs/DECISIONS.md) — unlike
     // Tags, deliberately a plain scalar with no nav property/FK constraint, matching this
-    // codebase's "no strict FK-only model" convention (docs/ARCHITECTURE.md). Null = unfiled.
+    // codebase's "no strict FK-only model" convention (docs/tech/ARCHITECTURE.md). Null = unfiled.
     public Guid? FolderId { get; set; }
 
     // ADR-102 — what kind of document this is (CedarClerk.Core.DocumentTypes). The default is what
@@ -306,7 +306,7 @@ public class Draft
     // NF1 (docs/DECISIONS.md, ADR following ADR-055): a post template. Named and edited exactly
     // like any other Draft (same autosave, same export), just filtered into its own /drafts tab
     // instead of the main list and never itself published — the "cheapest honest shape" per
-    // Marty's own framing in docs/BACKLOG.md, a flag rather than a parallel entity.
+    // Marty's own framing in docs/tasks/BACKLOG.md, a flag rather than a parallel entity.
     public bool IsTemplate { get; set; }
 
     // Registration form shown to uninvited visitors of a private post (B3). Null = no form

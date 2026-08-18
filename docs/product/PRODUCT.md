@@ -2,7 +2,7 @@
 
 > **Turning point, 10.08.2026 — the audience is now indie game developers.** Marty's brief (`_Documents_/CedarClerk/Gamedev_Focused_Rework.md`) narrows the target audience from "creators publishing across channels" to one: the indie game developer. A post becomes one document type among several, living inside a **project**; around it grow tasks, sprints, an asset index, and game-design tooling. This answers `Q-1`, open since 30.07.2026.
 >
-> The sections below still describe the product **as it is today**, and they stay accurate — the module adds, it does not replace (ADR-101). What the module changes is in `docs/INDIEDEV.md`; **Phase 13's MUST list shipped 11.08.2026** (projects, document types, tasks, sprints, builds, asset index, desktop) and lives in `master` behind `Cedar:Modules:IndieDev` — the reversibility the brief asked for is the flag now, not a branch.
+> The sections below still describe the product **as it is today**, and they stay accurate — the module adds, it does not replace (ADR-101). What the module changes is in `docs/product/INDIEDEV.md`; **Phase 13's MUST list shipped 11.08.2026** (projects, document types, tasks, sprints, builds, asset index, desktop) and lives in `master` behind `Cedar:Modules:IndieDev` — the reversibility the brief asked for is the flag now, not a branch.
 
 ## Who it's for after the turn
 
@@ -10,20 +10,20 @@ An indie game developer who is also, by necessity, everything else: programmer, 
 
 Why this audience and not one of the four floated in `Q-1` (bloggers, photo/video makers, writers, indie devs): it is the one whose needs are verified by doing the work rather than by guessing. Marty is the first user, and the only one so far.
 
-Product name is still open (`Q-17`, `docs/BACKLOG.md`). The brief's working title is *Cedar Clerk For Indie Developers*; the standing recommendation is to keep `Cedar Clerk` as the platform name, since a rename drags the domain, the bot handle, the `.cedar` extension and a hundred ADRs behind it.
+Product name is still open (`Q-17`, `docs/tasks/BACKLOG.md`). The brief's working title is *Cedar Clerk For Indie Developers*; the standing recommendation is to keep `Cedar Clerk` as the platform name, since a rename drags the domain, the bot handle, the `.cedar` extension and a hundred ADRs behind it.
 
 ## What Cedar Clerk is
 
-A hosted, write-once-publish-everywhere SaaS for creators who maintain a presence across multiple channels (see ADR-021, `docs/DECISIONS.md`; true self-hosting is a future option — `docs/MULTITENANCY.md` §4, `T-151`). A web rich-text editor (TipTap) is the spine — a post is written once and published to co-equal destinations: a Telegram channel via a shared bot, a hosted blog page with anchor-based reactions and comments on specific fragments, and **X and Bluesky cross-posting — live, with threads, per-target override text and scheduling** (ADR-077/079/092/094/099/100). The blog is not a "Telegram mirror" — it's a first-class output in its own right. Multilingual posts are a first-class feature, not a bolt-on: **nine content languages** (`Languages.ContentLanguages`) with a per-draft primary language (ADR-064/065) and AI auto-translate.
+A hosted, write-once-publish-everywhere SaaS for creators who maintain a presence across multiple channels (see ADR-021, `docs/DECISIONS.md`; true self-hosting is a future option — `docs/product/MULTITENANCY.md` §4, `T-151`). A web rich-text editor (TipTap) is the spine — a post is written once and published to co-equal destinations: a Telegram channel via a shared bot, a hosted blog page with anchor-based reactions and comments on specific fragments, and **X and Bluesky cross-posting — live, with threads, per-target override text and scheduling** (ADR-077/079/092/094/099/100). The blog is not a "Telegram mirror" — it's a first-class output in its own right. Multilingual posts are a first-class feature, not a bolt-on: **nine content languages** (`Languages.ContentLanguages`) with a per-draft primary language (ADR-064/065) and AI auto-translate.
 
-Telegram is currently the most-developed output (furthest along, most battle-tested — see the Bot API 10.2 renderer work in `docs/DECISIONS.md` ADR-018/019) but is not the product identity; the architecture is channel-agnostic at the core (`docs/ARCHITECTURE.md` — "one document, many renderers").
+Telegram is currently the most-developed output (furthest along, most battle-tested — see the Bot API 10.2 renderer work in `docs/DECISIONS.md` ADR-018/019) but is not the product identity; the architecture is channel-agnostic at the core (`docs/tech/ARCHITECTURE.md` — "one document, many renderers").
 
-Currently a single-operator product (Marty is both the builder and the first user, running his own Telegram channel and Dev Diary/blog through it). The multi-tenant machinery (Phase 6) is code-complete — ownership filtering, quotas, billing — but **registration stays invite-only on purpose** until the gates in `docs/BUSINESS.md` §2 close (chiefly `T-172` quotas-vs-disk and `T-149` untested restore). Strangers meet a server-rendered landing at `/` (`LandingEndpoints`, prices from `PlanLimitations`); repositioning it devlog-first in English with a waitlist is `T-154`.
+Currently a single-operator product (Marty is both the builder and the first user, running his own Telegram channel and Dev Diary/blog through it). The multi-tenant machinery (Phase 6) is code-complete — ownership filtering, quotas, billing — but **registration stays invite-only on purpose** until the gates in `docs/product/BUSINESS.md` §2 close (chiefly `T-172` quotas-vs-disk and `T-149` untested restore). Strangers meet a server-rendered landing at `/` (`LandingEndpoints`, prices from `PlanLimitations`); repositioning it devlog-first in English with a waitlist is `T-154`.
 
 ## What the publishing half offers
 
 Write once, reach readers across several channels at once:
-- A better writing/editing experience than any single platform's native composer (rich text, tables, media, formulas, spoilers, etc. — see the TipTap extension list in `docs/ARCHITECTURE.md`), with a UI skin axis on top (Forest Workshop, ADR-120)
+- A better writing/editing experience than any single platform's native composer (rich text, tables, media, formulas, spoilers, etc. — see the TipTap extension list in `docs/tech/ARCHITECTURE.md`), with a UI skin axis on top (Forest Workshop, ADR-120)
 - A hosted blog as a real destination — not just an archive — with reader engagement (reactions, comments) none of the individual channels offer well on their own
 - Scheduled/delayed publishing, for every connected network
 - Multilingual content without maintaining parallel workflows
@@ -41,9 +41,9 @@ Not a Telegram-only tool for Telegram-only creators — channel-agnostic by desi
 | Trial | $1 one-time | 7 days of Pro Plus, usable once per account (`ApplicationUser.TrialUsedAt`) |
 | Founder / Lifetime | one-time, via a designated invite code | Permanent Pro tier, granted at registration through a separate founder invite code — no payment flow, no AI (see ADR-022, `docs/DECISIONS.md`) |
 
-> **The storage quotas above outrun the disk** (8/16GB promised against ~40GB free on the droplet — five Pro users at quota take the server down). Known, analysed in `docs/MULTITENANCY.md` §1, tracked as `T-172`: a registration blocker, not a footnote.
+> **The storage quotas above outrun the disk** (8/16GB promised against ~40GB free on the droplet — five Pro users at quota take the server down). Known, analysed in `docs/product/MULTITENANCY.md` §1, tracked as `T-172`: a registration blocker, not a footnote.
 
-Beside the subscription tiers there is a **prepaid credit wallet** (ADR-092, live): packs of 10/$4, 50/$18, 100/$30 (Stars 200/900/1500), bought in Settings → Credits, spent 1 credit per X post — the pattern every metered cost is meant to move to (`T-152` proposes moving all AI calls onto it, since Pro Plus's flat AI quota has unproven margin — `docs/BUSINESS.md` §3).
+Beside the subscription tiers there is a **prepaid credit wallet** (ADR-092, live): packs of 10/$4, 50/$18, 100/$30 (Stars 200/900/1500), bought in Settings → Credits, spent 1 credit per X post — the pattern every metered cost is meant to move to (`T-152` proposes moving all AI calls onto it, since Pro Plus's flat AI quota has unproven margin — `docs/product/BUSINESS.md` §3).
 
 Payment providers: **Stripe is live and proven with real money** (first real payment 26.07.2026, subscriptions and credit packs both); Telegram Stars and PayPal are code-complete but have never processed a live payment. Details and setup in `docs/for_user/integrations-setup.md`; the decision history (including what was *not* built, like PayPal recurring) is in `docs/DECISIONS.md`.
 
@@ -52,7 +52,7 @@ Payment providers: **Stripe is live and proven with real money** (first real pay
 Carried forward from planning sessions — genuine unknowns, not implementation gaps:
 > TODO (Marty): name for the shared Telegram bot (public-facing, used for onboarding every new user's channel).
 > TODO (Marty): domain strategy — direction now resolved (ADR-020: separate dedicated domain for tenant blogs, working name `cedarclerk.app`), but three sub-questions remain open: exact domain name; whether `blog.mooexe.dev` migrates or stays Marty's personal blog; subdomain vs. path scheme for tenants.
-> ~~TODO (Marty): target market positioning~~ — **answered 10.08.2026**: indie game developers, see the top of this file and `docs/INDIEDEV.md`. Competitors and success metrics remain unarticulated.
+> ~~TODO (Marty): target market positioning~~ — **answered 10.08.2026**: indie game developers, see the top of this file and `docs/product/INDIEDEV.md`. Competitors and success metrics remain unarticulated.
 > ~~TODO (Marty): long-term vision beyond Phase 7/8~~ — **answered 10.08.2026**: the indie-gamedev toolkit is the long-term direction (Phase 13). Phase 7 (Entertainer role) is not cancelled, just no longer the horizon.
 > TODO (Marty): product name — see `Q-17`.
 

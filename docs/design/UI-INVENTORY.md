@@ -1,6 +1,6 @@
 # UI Inventory
 
-Per-element inventory of the frontend UI — what exists, where it lives, what it does, and whether it needs (and has) a loading indicator. Complements `docs/DESIGN.md` (which covers tokens/CSS patterns, not individual elements). Update this file whenever a UI element is added, removed, or meaningfully changed — that's the point of it: a future session should be able to scan a page's table and answer "does this popup need a loading indicator, and does it have one?" without re-reading the component.
+Per-element inventory of the frontend UI — what exists, where it lives, what it does, and whether it needs (and has) a loading indicator. Complements `docs/design/DESIGN.md` (which covers tokens/CSS patterns, not individual elements). Update this file whenever a UI element is added, removed, or meaningfully changed — that's the point of it: a future session should be able to scan a page's table and answer "does this popup need a loading indicator, and does it have one?" without re-reading the component.
 
 ## Format
 
@@ -217,7 +217,7 @@ Everything below was added when Phase 10 (ADR-070) audited this file against the
 
 ## Verification map — one row per surface
 
-The `Verified` column is filled in by Phase 10 Block D. `smoke` means a Playwright scenario covers it (`cedarclerk-web/e2e/`, run via `Scripts/e2e.ps1`); `hand` means someone clicked through it in a browser; a defect ID points at a `docs/BACKLOG.md` row.
+The `Verified` column is filled in by Phase 10 Block D. `smoke` means a Playwright scenario covers it (`cedarclerk-web/e2e/`, run via `Scripts/e2e.ps1`); `hand` means someone clicked through it in a browser; a defect ID points at a `docs/tasks/BACKLOG.md` row.
 
 | Route / surface | Component | States to check | Verified | Defects |
 |---|---|---|---|---|
@@ -274,7 +274,7 @@ IF2, built 27.07.2026 in five steps (scoping doc absorbed into ADR-122, 18.08.20
 
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|
-| Summary cards | `.summary-grid` / `.summary-card` | panel | Seven counts: users, paid, published/drafts, comments, reactions, channels, storage | Page-level `loading()` only | Not a dashboard — no history, no deltas; the data-collection layer that would allow them doesn't exist (see the Channel Analysis dependency in `docs/ROADMAP.md`) |
+| Summary cards | `.summary-grid` / `.summary-card` | panel | Seven counts: users, paid, published/drafts, comments, reactions, channels, storage | Page-level `loading()` only | Not a dashboard — no history, no deltas; the data-collection layer that would allow them doesn't exist (see the Channel Analysis dependency in `docs/tasks/ROADMAP.md`) |
 | Tab strip | `.admin-tabs` | tab | Users · Invites · Posts · Reports | N/A | Four tabs, unlike the Posts Manager's own strip — different component, same visual role, and one of the cross-screen inconsistencies the 28.07 design handoff flags |
 | User card | `.user-card`, expands on click | panel | Email, plan chip, admin/locked/lapsed chips, meta | N/A | Expansion is click-anywhere; the action row stops propagation so a button press doesn't collapse the card |
 | Plan + expiry | `.action-row`, date input + Save | button | Set tier and expiry; blank means forever | Present — `busy()` disables Save | Free has no expiry; the hint line says which rule applies |

@@ -50,7 +50,7 @@ export const SHEET_WIDTH_PX: Record<AppearancePrefs['sheetWidth'], number> = {
     narrow: 560, normal: 680, wide: 820, full: 1040,
 };
 
-// System stacks only (FI1) — no webfonts ship (see docs/DESIGN.md), so "more typefaces" means
+// System stacks only (FI1) — no webfonts ship (see docs/design/DESIGN.md), so "more typefaces" means
 // more of what the OS already has, not a new loading path.
 export const TYPEFACE_STACK: Record<AppearancePrefs['typeface'], string> = {
     system: 'var(--font-sans)',

@@ -64,12 +64,12 @@ Going the other direction — external format *into* Cedar JSON — `CedarClerk.
 `cedarclerk-web/src/app/`:
 - `core/` — one Angular service per feature area (thin RxJS→Promise), the i18n dictionaries (`i18n/en.ts`/`ru.ts`), and the guards (`auth`, `guest`, `admin`, `indiedev`)
 - `pages/` — route components; `editor` is the largest surface by far. `comments` and `stats` exist as components but their routes redirect into the Posts Manager (`/posts`) where they are tabs. The IndieDev screens (`projects`, `project`, `project-tasks/planner/assets/builds`) also live here behind `indieDevGuard` — the `modules/<name>/` folder convention from ADR-101 was **not** adopted on the frontend
-- `shared/` — ~15 genuinely reusable components now, including a real `app-modal`, `app-icon` (Phosphor, generated), `page-header`, `account-menu`, pickers and the appearance panel — `docs/UI-INVENTORY.md` §Shared lists them
+- `shared/` — ~15 genuinely reusable components now, including a real `app-modal`, `app-icon` (Phosphor, generated), `page-header`, `account-menu`, pickers and the appearance panel — `docs/design/UI-INVENTORY.md` §Shared lists them
 - `tiptap-extensions/` — custom TipTap nodes/marks whose HTML output is the shared contract with the backend renderers (e.g. `spoiler-mark.ts` ↔ `<tg-spoiler>` in the Telegram renderers)
 
 ## Modules (ADR-101, 10.08.2026)
 
-A **module** is a set of endpoints and screens behind a config flag — not a separate project, process, database or `DbContext`. The first one is the indie-gamedev toolkit (`docs/INDIEDEV.md`); the shape is meant to be reusable if a second appears.
+A **module** is a set of endpoints and screens behind a config flag — not a separate project, process, database or `DbContext`. The first one is the indie-gamedev toolkit (`docs/product/INDIEDEV.md`); the shape is meant to be reusable if a second appears.
 
 - Backend: `CedarClerk.Server/Modules/<Name>/` holding the same `static class XxxEndpoints` convention as the top-level feature areas, registered in `Program.cs` behind `Cedar:Modules:<Name>`.
 - Frontend: lazy routes in `pages/` behind a guard (`indieDevGuard`) — the planned `modules/<name>/` folder was **not adopted** when the screens landed; a disabled module still never fetches its chunks, since every route is `loadComponent` with background preloading (T-092/ADR-076).
@@ -192,7 +192,7 @@ installer's version legitimately differ — the deploy report prints which one i
 
 A window onto this installation plus a process that can read one machine's disk — not a second application and, since ADR-117, not a second database either. The Electron shell loads `https://cedarclerk.mooexe.dev/projects` and starts the published `CedarClerk.Server` with `Cedar:Agent:Enabled`, which strips it to `/agent/*`: walk a folder, stat a file, render a thumbnail. Neither the server nor the frontend is forked.
 
-The reason it exists is the asset index (ADR-107) — only a process on the developer's own machine can walk a game project's folder. **The division of labour is the whole design: the agent reads the disk, the page uploads what it found.** The page already holds a session cookie, so the agent needs no credentials and the shell does no authentication; the work also ends up inside an ordinary screen with a progress bar rather than in an unobservable background process. Mechanics, the two locks on the agent, and the file-versus-fingerprint distinction: `docs/DESKTOP.md`.
+The reason it exists is the asset index (ADR-107) — only a process on the developer's own machine can walk a game project's folder. **The division of labour is the whole design: the agent reads the disk, the page uploads what it found.** The page already holds a session cookie, so the agent needs no credentials and the shell does no authentication; the work also ends up inside an ordinary screen with a progress bar rather than in an unobservable background process. Mechanics, the two locks on the agent, and the file-versus-fingerprint distinction: `docs/tech/DESKTOP.md`.
 
 `CEDAR_DATA_DIR` is no longer part of this story — the desktop stores nothing. It still decides where the droplet keeps SQLite and media (`/home/martycow/cedarclerk/data`). One server change came out of ADR-104 and stayed: the listening address used to be a literal in `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` could not override it, and `Cedar:Urls` now exists for the agent's free port.
 

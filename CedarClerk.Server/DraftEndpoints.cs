@@ -1614,7 +1614,7 @@ public static class DraftEndpoints
     // Trimmed CSS subset of BlogEndpoints.ShellTemplate — just enough to render every block type
     // CedarToBlogHtmlRenderer can emit (headings, lists, tables, blockquote, code, collage,
     // carousel, spoiler, math, footnotes, TOC) plus a minimal title/date/signature header.
-    // Duplicated rather than shared (docs/DESIGN.md already notes CSS is duplicated per-component
+    // Duplicated rather than shared (docs/design/DESIGN.md already notes CSS is duplicated per-component
     // in this codebase, not centralized) because this needs to be fully self-contained in one
     // file with no external <link>/fetch of any kind. The palette itself is not duplicated:
     // it is inlined from DesignTokens (T-101), so the export stays self-contained without

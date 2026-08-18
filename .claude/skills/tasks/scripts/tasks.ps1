@@ -2,8 +2,8 @@ param([int]$Count = 35)
 
 # .claude/skills/tasks/scripts -> repo root is four levels up
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')
-$backlog = Join-Path $root 'docs\BACKLOG.md'
-if (-not (Test-Path $backlog)) { Write-Error "docs/BACKLOG.md не найден: $backlog"; exit 1 }
+$backlog = Join-Path $root 'docs\tasks\BACKLOG.md'
+if (-not (Test-Path $backlog)) { Write-Error "docs/tasks/BACKLOG.md не найден: $backlog"; exit 1 }
 
 $section = ''
 $rows = @()
@@ -37,4 +37,4 @@ $show = $open | Select-Object -First $Count
 '|---|---|---|---|---|'
 foreach ($r in $show) { "| $($r.Id) | $($r.Name) | $($r.Prio) | $($r.Tags) | $($r.Section) |" }
 ''
-"Открытых T-строк: $($open.Count), показано $($show.Count) — новые сверху, по номеру ID. Полные описания: docs/BACKLOG.md"
+"Открытых T-строк: $($open.Count), показано $($show.Count) — новые сверху, по номеру ID. Полные описания: docs/tasks/BACKLOG.md"

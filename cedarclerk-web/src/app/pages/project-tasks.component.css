@@ -4,7 +4,7 @@
    The toolbar, chips, buttons and table chrome deliberately match project-assets.component.css
    value for value — the handoff calls this the "list-screen anatomy" copied from /drafts, and the
    three module screens have to read as one product. There is no shared component library yet
-   (docs/DESIGN.md flags this); when there is, all three collapse into it. */
+   (docs/design/DESIGN.md flags this); when there is, all three collapse into it. */
 .tasks-page {
     min-height: 100vh;
     background: var(--bg);

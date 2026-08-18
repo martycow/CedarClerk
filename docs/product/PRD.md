@@ -2,11 +2,11 @@
 
 A thin requirements skeleton, slimmed on 18.08.2026 by Marty's call after the docs audit: this file
 had the project's worst drift record (statuses corrected 10.08 and again 18.08), because it
-duplicated shipped-feature enumerations that `docs/ROADMAP.md` already tracks. What remains here is
+duplicated shipped-feature enumerations that `docs/tasks/ROADMAP.md` already tracks. What remains here is
 what no other file holds: **requirement-level invariants** (what must stay true, not what was
 built when), the explicit non-requirements, and the blocked items. For "what shipped and when" read
-`docs/ROADMAP.md`; for "what the product is" read `docs/PRODUCT.md`; for the indie module
-`docs/INDIEDEV.md`; for hard invariants that have bitten before, `.claude/rules/*.md`.
+`docs/tasks/ROADMAP.md`; for "what the product is" read `docs/product/PRODUCT.md`; for the indie module
+`docs/product/INDIEDEV.md`; for hard invariants that have bitten before, `.claude/rules/*.md`.
 
 ## Requirements the product must keep satisfying
 
@@ -33,7 +33,7 @@ built when), the explicit non-requirements, and the blocked items. For "what shi
 - **Paid features are enforced server-side**, not hidden client-side: plan quotas
   (`PlanLimitations`), AI gating with a daily quota, the prepaid credit wallet for per-use costs
   (X posting today; `T-152` proposes all AI follows).
-- **Registration stays invite-only** until the `docs/BUSINESS.md` §1 gates close.
+- **Registration stays invite-only** until the `docs/product/BUSINESS.md` §1 gates close.
 - **The indie module adds, never replaces** (ADR-101): everything above holds with
   `Cedar:Modules:IndieDev` off, and working-material document types refuse to publish.
 
@@ -62,4 +62,4 @@ built when), the explicit non-requirements, and the blocked items. For "what shi
   percentages ADR-055, geo rollups ADR-097).
 
 Resolved (16.07.2026): no formal acceptance criteria / success metrics — the phase checklists in
-`docs/ROADMAP.md` are the definition of done for this project.
+`docs/tasks/ROADMAP.md` are the definition of done for this project.

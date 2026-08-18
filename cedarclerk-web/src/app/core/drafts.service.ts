@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, firstValueFrom, timeout } from 'rxjs';
 import { DEFAULT_PRIMARY_LANGUAGE } from './languages';
 
-// Phase 8 Step 8, docs/ROADMAP.md — neither AI provider streams, so there's no way to signal
+// Phase 8 Step 8, docs/tasks/ROADMAP.md — neither AI provider streams, so there's no way to signal
 // real progress; this is purely a "don't let it look stuck forever" ceiling — how long the client
 // keeps polling GET /api/ai-jobs/{jobId} (ADR-058-follow-up) before giving up and reporting a
 // timeout. Matches the server-side Consts.Anthropic.RequestTimeout (600s = 10 min, the cap on a

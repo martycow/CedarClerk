@@ -13,7 +13,7 @@ if (Test-Path $marker) { exit 0 }
 New-Item -ItemType File -Path $marker -Force | Out-Null
 
 $text = @'
-Front-end edit: docs/UI-INVENTORY.md lists every existing UI element and where it lives. Before adding
+Front-end edit: docs/design/UI-INVENTORY.md lists every existing UI element and where it lives. Before adding
 a new button/field/panel/indicator, search it for the feature's existing home (sec-integrations, the
 Export modal's steps, the Posts Manager tabs) and put the control there. Update the inventory in the
 same commit — UiInventoryDriftTests fails the build for a page or sec-* section it does not mention.

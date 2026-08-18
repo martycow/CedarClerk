@@ -14,15 +14,15 @@ Cedar Clerk — self-hosted personal publishing SaaS. A web rich-text editor who
 - **CedarClerk.Tests** / **CedarClerk.Cli.Tests** — xUnit
 - **cedarclerk-web** — Angular SPA (standalone components, signals, TipTap editor)
 
-Document model: TipTap JSON stored in SQLite (`Draft.CedarJson`). One document → many renderers (Telegram HTML, blog HTML, `.cedar` export) is the core architectural idea — see `docs/ARCHITECTURE.md`.
+Document model: TipTap JSON stored in SQLite (`Draft.CedarJson`). One document → many renderers (Telegram HTML, blog HTML, `.cedar` export) is the core architectural idea — see `docs/tech/ARCHITECTURE.md`.
 
-**Since 10.08.2026 the product is turned towards indie game developers** (Phase 13; MUST list complete 11.08.2026, merged to `master`): a post is one document type among several, living inside a `Project`, alongside tasks, sprints and an asset index. It is a **module inside the same codebase, not a fork** (ADR-101), behind `Cedar:Modules:IndieDev` — read `docs/INDIEDEV.md` before touching anything in that area.
+**Since 10.08.2026 the product is turned towards indie game developers** (Phase 13; MUST list complete 11.08.2026, merged to `master`): a post is one document type among several, living inside a `Project`, alongside tasks, sprints and an asset index. It is a **module inside the same codebase, not a fork** (ADR-101), behind `Cedar:Modules:IndieDev` — read `docs/product/INDIEDEV.md` before touching anything in that area.
 
 ## Anti-desynchronization mechanism
-Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTURE.md. If you change ANY of your decisions, you must record the ADR first, then write code — since 18.08.2026 that means a new `docs/adr/ADR-xxx.md` (first line `# ADR-xxx — Title`) plus its row in the `docs/DECISIONS.md` index.
+Before implementation of anything, firstly read docs/product/PRD.md and docs/tech/ARCHITECTURE.md. If you change ANY of your decisions, you must record the ADR first, then write code — since 18.08.2026 that means a new `docs/adr/ADR-xxx.md` (first line `# ADR-xxx — Title`) plus its row in the `docs/DECISIONS.md` index.
 
 ## Stack
-.NET 8 (minimal APIs, EF Core + SQLite, ASP.NET Identity, Quartz.NET) + Angular 21/TipTap 3 (standalone components, signals, Vitest). Full detail: `docs/ARCHITECTURE.md`.
+.NET 8 (minimal APIs, EF Core + SQLite, ASP.NET Identity, Quartz.NET) + Angular 21/TipTap 3 (standalone components, signals, Vitest). Full detail: `docs/tech/ARCHITECTURE.md`.
 
 ## Key commands
 | Task | Command |
@@ -58,28 +58,29 @@ for the droplet's nightly backup, and the copy that runs (`~/bin/backup.sh`) is 
 no deploy path touches it.
 
 ## Docs map
+`docs/` root holds only the high-level files (DOCS-FLOW, the DECISIONS index, the untracked INPUT_PROMPT); everything else lives in category folders — `product/ tasks/ design/ tech/ adr/ fleet/ knowledge_base/ for_user/ archive/` (+ `misc/` when something needs it). The taxonomy and placement rules: `docs/DOCS-FLOW.md` §Размещение.
 - `docs/DOCS-FLOW.md` — **read this first**: which doc is the source of truth for what, how an item travels Input.md → BACKLOG → TASKS → ROADMAP/CHANGELOG, and the three rules that keep them in sync
-- `docs/PRODUCT.md` — what Cedar Clerk is, who it's for, pricing
-- `docs/BUSINESS.md` — the money side: what must be true before public registration opens, where the margin leaks, the four metrics worth counting, and the weekly/monthly checks
-- `docs/STACK.md` — every library, framework and external service, with what each costs and what breaks when it goes down
-- `docs/MULTITENANCY.md` — what happens when there are users: where their blogs live, why the tier quotas outrun the disk, what self-hosted would actually require
-- `docs/PRD.md` — shipped vs. open requirements, deferred/blocked items
-- `docs/ARCHITECTURE.md` — solution layout, data model, API style, deploy pipeline
-- `docs/DESIGN.md` — design tokens (colors/spacing/typography), component patterns
+- `docs/product/PRODUCT.md` — what Cedar Clerk is, who it's for, pricing
+- `docs/product/BUSINESS.md` — the money side: what must be true before public registration opens, where the margin leaks, the four metrics worth counting, and the weekly/monthly checks
+- `docs/knowledge_base/STACK.md` — every library, framework and external service, with what each costs and what breaks when it goes down
+- `docs/product/MULTITENANCY.md` — what happens when there are users: where their blogs live, why the tier quotas outrun the disk, what self-hosted would actually require
+- `docs/product/PRD.md` — shipped vs. open requirements, deferred/blocked items
+- `docs/tech/ARCHITECTURE.md` — solution layout, data model, API style, deploy pipeline
+- `docs/design/DESIGN.md` — design tokens (colors/spacing/typography), component patterns
 - `docs/DECISIONS.md` — ADR log: why things were built the way they were. Since 18.08.2026 an **index** — one file per ADR in `docs/adr/` (122 at the split)
-- `docs/ROADMAP.md` — phase-by-phase execution status (the live plan — update it when closing items)
-- `docs/BACKLOG.md` — the only source of open, not-yet-started ideas/features/tech-debt (kept separate from ROADMAP on purpose)
-- `docs/UI-INVENTORY.md` — per-element inventory of the frontend UI (location, type, purpose, loading-state check) — update it when adding/changing a UI element
+- `docs/tasks/ROADMAP.md` — phase-by-phase execution status (the live plan — update it when closing items)
+- `docs/tasks/BACKLOG.md` — the only source of open, not-yet-started ideas/features/tech-debt (kept separate from ROADMAP on purpose)
+- `docs/design/UI-INVENTORY.md` — per-element inventory of the frontend UI (location, type, purpose, loading-state check) — update it when adding/changing a UI element
 - `docs/for_user/integrations-setup.md` — payment/translation provider setup runbook
 - `docs/INPUT_PROMPT.md` — Marty's dynamic prompt inbox: "considered as a new prompt every time". **Untracked on purpose** (gitignored; Marty rewrites it at will) — check its mtime against the last "Input sweep" in ROADMAP. Content may predate the code — verify against it
-- `docs/INDIEDEV.md` — the indie-gamedev module (Phase 13): scope, data model, MUST/MIGHT. **Read before implementing any `T-120…T-137` row**
-- `docs/DESKTOP.md` — how the desktop build works (Electron window onto production + local filesystem agent, ADR-117; the sidecar model is history)
-- `docs/indiedev-design-prompt.md` — the brief handed to Claude Design for the module's screens (delivered 10.08; remaining ask — screens 10–11). Since 18.08 it carries **no verbatim token copy** — paste fresh values from `styles.scss` into its marked block before each run
+- `docs/product/INDIEDEV.md` — the indie-gamedev module (Phase 13): scope, data model, MUST/MIGHT. **Read before implementing any `T-120…T-137` row**
+- `docs/tech/DESKTOP.md` — how the desktop build works (Electron window onto production + local filesystem agent, ADR-117; the sidecar model is history)
+- `docs/design/indiedev-design-prompt.md` — the brief handed to Claude Design for the module's screens (delivered 10.08; remaining ask — screens 10–11). Since 18.08 it carries **no verbatim token copy** — paste fresh values from `styles.scss` into its marked block before each run
 - `TASKS.md` — short-horizon "what's next" list
 - `CHANGELOG.md` — human-readable history by session/date
 
 ## Conventions
-Backend: static `XxxEndpoints` classes (minimal APIs, no MVC), entities in one flat `Entities.cs`, GUID PKs, `Consts`/`ErrorMessages` for reused strings only. Frontend: standalone components, `inject()`, signals, thin RxJS→Promise services, `kebab-case.*.ts` naming. Full detail and rationale: `docs/ARCHITECTURE.md`, `docs/DESIGN.md`.
+Backend: static `XxxEndpoints` classes (minimal APIs, no MVC), entities in one flat `Entities.cs`, GUID PKs, `Consts`/`ErrorMessages` for reused strings only. Frontend: standalone components, `inject()`, signals, thin RxJS→Promise services, `kebab-case.*.ts` naming. Full detail and rationale: `docs/tech/ARCHITECTURE.md`, `docs/design/DESIGN.md`.
 
 **Comments (Marty, 12.08.2026 — he reads the code, not prose about it).** A comment earns its place only by carrying a *why* that cannot be read off the code: (1) an incident it prevents a repeat of, (2) an external constraint — an API's quirk, a platform's limit, (3) a deliberate choice against the obvious one. Everything else goes: no XML-doc restating a signature, no block explaining what the next five lines do, no essay above a private method. Default to zero comments, and prefer one dense sentence to a paragraph. A comment that describes code will outlive the code it describes and start lying — `Logo.cs` carried a description of a subtitle that had already changed.
 
@@ -92,7 +93,7 @@ Backend: static `XxxEndpoints` classes (minimal APIs, no MVC), entities in one f
 
 ## Commits and versioning
 - **Commit each substantial chunk of work** — a chunk can be several features or several bugs together, it does not have to be one item per commit. Don't leave a finished chunk uncommitted.
-- **Commit messages are 3–4 words, maximum.** `Fix account menu`, `Add watermark`, `Blog comment cleanup`. No body, no bullet list, no explanation — the explanation belongs in `CHANGELOG.md`/`docs/ROADMAP.md`, not the message.
+- **Commit messages are 3–4 words, maximum.** `Fix account menu`, `Add watermark`, `Blog comment cleanup`. No body, no bullet list, no explanation — the explanation belongs in `CHANGELOG.md`/`docs/tasks/ROADMAP.md`, not the message.
 - **No trailers either** (Marty, 12.08.2026): no `Co-Authored-By`, no `Claude-Session` link, nothing after the subject line. Those are a harness default, and a trailer is a body — the same rule the line above states. `git commit -m "Fix account menu"` and nothing more.
 - **Bump the version periodically**: `0.9.0` → `0.9.1` → `0.9.2`. Bump the **middle** number (`0.9.x` → `0.10.0`) only after several large tasks land that genuinely change how the app feels to use — that's how `0.7.0`/`0.8.0`/`0.9.0` were used, one per phase. (Marty's wording calls the third number "minor" and the middle one "major"; the positions above are what he meant.)
 - The version lives in `CedarClerk.Core/Consts.cs` (`CurrentVersion`). **Tag the commit with the bare number** — `git tag 0.9.1` — matching the existing `0.7.0`/`0.8.0`/`0.9.0` tags. Bump the const and the tag together, never one without the other.
@@ -105,7 +106,7 @@ Full text lives in `.claude/rules/*.md` — read the relevant one before touchin
 4. **`.claude/rules/destructive-operations.md`** — explain, then STOP and wait for confirmation
 5. **`.claude/rules/secrets.md`** — never move secrets into the repo; rotate before cleanup if one leaks
 6. **`.claude/rules/production-environment.md`** — droplet/Cloudflare/systemd assumptions not to break
-7. **`.claude/rules/ui-changes.md`** — find the element's existing home in `docs/UI-INVENTORY.md` **before** adding a UI element, and update the inventory in the same commit
+7. **`.claude/rules/ui-changes.md`** — find the element's existing home in `docs/design/UI-INVENTORY.md` **before** adding a UI element, and update the inventory in the same commit
 
 ## Verification workflow
 - Local: `dotnet run --project CedarClerk.Server` (port 8080) + `ng serve` in `cedarclerk-web`. Login: marty@mooexe.dev (ask Marty for the password, do not store it)

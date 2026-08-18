@@ -2,7 +2,7 @@ using Spectre.Console;
 
 namespace CedarClerk.Cli.Rendering;
 
-// The colours, in one place, borrowed from the app's own warm-editorial token set (docs/DESIGN.md)
+// The colours, in one place, borrowed from the app's own warm-editorial token set (docs/design/DESIGN.md)
 // so the console and the product look like the same thing.
 //
 // Spectre downgrades truecolor to whatever the terminal reports, so these are written as RGB once

@@ -1,4 +1,4 @@
-// Cedar Clerk desktop shell (ADR-104, reshaped by ADR-117). Full rationale: docs/DESKTOP.md.
+// Cedar Clerk desktop shell (ADR-104, reshaped by ADR-117). Full rationale: docs/tech/DESKTOP.md.
 //
 // What this is: a window onto cedarclerk.mooexe.dev, plus a local process that can read this machine's
 // disk. There is exactly one database and it is in the cloud — the shell keeps no data of its own.

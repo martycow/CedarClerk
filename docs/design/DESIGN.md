@@ -140,7 +140,7 @@ The one that matters when writing CSS: **`--t3` never carries information.** If 
 
 ## Component patterns (convention, not enforced)
 
-There is **still no shared button abstraction** — `.btn-accent`/`.btn-ghost` are copy-pasted between component stylesheets with drifting values (e.g. `.btn-ghost` padding differs between the editor and settings). But the modal gap closed: `shared/` now holds ~15 reusable components including a real `app-modal` (used across the app), `app-icon`, `page-header`, `account-menu`, the pickers, the appearance panel and more — `docs/UI-INVENTORY.md` §Shared is the census. The paragraph below survives as the button-pattern reference.
+There is **still no shared button abstraction** — `.btn-accent`/`.btn-ghost` are copy-pasted between component stylesheets with drifting values (e.g. `.btn-ghost` padding differs between the editor and settings). But the modal gap closed: `shared/` now holds ~15 reusable components including a real `app-modal` (used across the app), `app-icon`, `page-header`, `account-menu`, the pickers, the appearance panel and more — `docs/design/UI-INVENTORY.md` §Shared is the census. The paragraph below survives as the button-pattern reference.
 
 De-facto pattern from `editor.component.css` (lines 458–537), useful as a reference if/when this gets formalized into a real shared component:
 ```css

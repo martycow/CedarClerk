@@ -70,5 +70,5 @@ CedarClerk.Desktop/server/
 
 # === Marty's dynamic prompt inbox (18.08.2026) ===
 # Rewritten by Marty at will; deliberately untracked - rewrites are tracked by mtime
-# against the last "Input sweep" entry in docs/ROADMAP.md, same as _Documents_/Input.md.
+# against the last "Input sweep" entry in docs/tasks/ROADMAP.md, same as _Documents_/Input.md.
 docs/INPUT_PROMPT.md

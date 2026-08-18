@@ -3,16 +3,16 @@ using System.Text.RegularExpressions;
 namespace CedarClerk.Tests;
 
 // X and Bluesky were first built inside the Export modal and rebuilt into Settings → Integrations by
-// ADR-095, because nobody checked where the Telegram connection already lived. `docs/UI-INVENTORY.md`
+// ADR-095, because nobody checked where the Telegram connection already lived. `docs/design/UI-INVENTORY.md`
 // records where every element belongs; this fails when the front end grows something it does not.
 public class UiInventoryDriftTests
 {
-    private const string Fix = "add a row to docs/UI-INVENTORY.md in the same commit (see .claude/rules/ui-changes.md)";
+    private const string Fix = "add a row to docs/design/UI-INVENTORY.md in the same commit (see .claude/rules/ui-changes.md)";
 
     private static DirectoryInfo RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "docs", "UI-INVENTORY.md")))
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "docs", "design", "UI-INVENTORY.md")))
             dir = dir.Parent;
 
         Assert.NotNull(dir);
@@ -20,7 +20,7 @@ public class UiInventoryDriftTests
     }
 
     private static string Inventory(DirectoryInfo root) =>
-        File.ReadAllText(Path.Combine(root.FullName, "docs", "UI-INVENTORY.md"));
+        File.ReadAllText(Path.Combine(root.FullName, "docs", "design", "UI-INVENTORY.md"));
 
     private static DirectoryInfo AppDir(DirectoryInfo root) =>
         new(Path.Combine(root.FullName, "cedarclerk-web", "src", "app"));

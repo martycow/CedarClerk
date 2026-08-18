@@ -128,5 +128,5 @@ the whole machine to the moment of the weekly image.
 - The microSD backup target, `/mnt/backup`, and `~/bin/cedar-backup.sh` — see above.
 - The coordination constraint that the same machine ran Marty's Freenove electronics projects.
 
-See `docs/ARCHITECTURE.md` for the deploy pipeline that targets this environment, ADR-113 for why that
+See `docs/tech/ARCHITECTURE.md` for the deploy pipeline that targets this environment, ADR-113 for why that
 pipeline is shaped the way it is, and `docs/for_user/integrations-setup.md` for provider-key setup on top of it.

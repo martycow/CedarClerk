@@ -1,4 +1,4 @@
-// Phase 8 Step 8 (docs/ROADMAP.md) — neither AI provider streams a response today (see the ADR
+// Phase 8 Step 8 (docs/tasks/ROADMAP.md) — neither AI provider streams a response today (see the ADR
 // following ADR-035, docs/DECISIONS.md), so there's no real token-by-token progress to report.
 // This asymptotic curve reads as much more "alive" than a flat elapsed-second counter: fast
 // growth early, slowing down over time, capped at 90% so it never falsely claims completion —

@@ -115,7 +115,7 @@ public class TelegramPublishTarget(
 
         // Free tier always gets the fixed Cedar Clerk attribution; Pro+ can replace it with a
         // custom signature (optionally a clickable link) or clear it entirely. See Phase 8 Step 5,
-        // docs/ROADMAP.md, and ADR-034 in docs/DECISIONS.md.
+        // docs/tasks/ROADMAP.md, and ADR-034 in docs/DECISIONS.md.
         var currentPlan = SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow);
         // FI5 — this Telegram send is already per-language, so the signature appended to it is too.
         var localizedSignature = LocalizedTextMap.Pick(owner.PostSignature, owner.PostSignatureTranslationsJson, request.Language);
@@ -146,7 +146,7 @@ public class TelegramPublishTarget(
             blocks.Add(new RichParagraphBlock(new RichRunLink(new RichRunText(blogLinkText), blogUrl)));
         }
 
-        // Phase 8 Step 6, docs/ROADMAP.md — tags extended to the Telegram export path.
+        // Phase 8 Step 6, docs/tasks/ROADMAP.md — tags extended to the Telegram export path.
         if (isLastPart && PostEndpoints.BuildHashtagLine(draft.Tags) is { } hashtagLine)
             blocks.Add(new RichParagraphBlock(new RichRunText(hashtagLine)));
 
