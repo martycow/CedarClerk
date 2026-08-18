@@ -1,6 +1,6 @@
 # Модуль для инди-геймдева
 
-Единая точка входа по развороту Cedar Clerk в тулкит инди-разработчика игр. Первоисточник замысла — `_Documents_/CedarClerk/Gamedev_Focused_Rework.md` (бриф Марти). Решения — `docs/DECISIONS.md`, ADR-101…107. Устройство десктопа — `docs/tech/DESKTOP.md`. Порядок работ — `docs/tasks/ROADMAP.md`, Phase 13.
+Единая точка входа по развороту Cedar Clerk в тулкит инди-разработчика игр. Первоисточник замысла — внерепозиторный бриф Марти `Gamedev_Focused_Rework.md`. Решения — `docs/DECISIONS.md`, ADR-101…107. Устройство десктопа — `docs/tech/DESKTOP.md`. Порядок работ — `docs/tasks/ROADMAP.md`, Phase 13.
 
 Ветка `indiedev_module` (создана от `dev`) **влита в `master` с v0.10.0 и удалена**. Обратимость, которую бриф требовал от ветки, живёт в флаге `Cedar:Modules:IndieDev` (ADR-101): выключение возвращает сегодняшнее приложение целиком. **MUST-список модуля закрыт 11.08.2026** — статус ведёт `docs/tasks/ROADMAP.md` Phase 13, открытые остатки (MIGHT + `T-127`) — борда.
 

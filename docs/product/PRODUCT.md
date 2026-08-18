@@ -1,6 +1,6 @@
 # Product
 
-> **Turning point, 10.08.2026 — the audience is now indie game developers.** Marty's brief (`_Documents_/CedarClerk/Gamedev_Focused_Rework.md`) narrows the target audience from "creators publishing across channels" to one: the indie game developer. A post becomes one document type among several, living inside a **project**; around it grow tasks, sprints, an asset index, and game-design tooling. This answers `Q-1`, open since 30.07.2026.
+> **Turning point, 10.08.2026 — the audience is now indie game developers.** Marty's out-of-repo brief (`Gamedev_Focused_Rework.md`) narrows the target audience from "creators publishing across channels" to one: the indie game developer. A post becomes one document type among several, living inside a **project**; around it grow tasks, sprints, an asset index, and game-design tooling. This answers `Q-1`, open since 30.07.2026.
 >
 > The sections below still describe the product **as it is today**, and they stay accurate — the module adds, it does not replace (ADR-101). What the module changes is in `docs/product/INDIEDEV.md`; **Phase 13's MUST list shipped 11.08.2026** (projects, document types, tasks, sprints, builds, asset index, desktop) and lives in `master` behind `Cedar:Modules:IndieDev` — the reversibility the brief asked for is the flag now, not a branch.
 

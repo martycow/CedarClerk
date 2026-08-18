@@ -95,7 +95,7 @@ API integration is roughly 20% of this phase; the rest is the degradation model,
 
 ### Phase 13 — IndieDev Module — started 10.08.2026
 
-Branch `indiedev_module` (from `dev`). Source of the turn: `_Documents_/CedarClerk/Gamedev_Focused_Rework.md`. Full scope: `docs/product/INDIEDEV.md`.
+Branch `indiedev_module` (from `dev`). Source of the turn: Marty's out-of-repo brief `Gamedev_Focused_Rework.md`. Full scope: `docs/product/INDIEDEV.md`.
 
 **Done in the scoping session (10.08.2026) — documents only, deliberately no code:**
 - [x] **Research of the shipped state**, against the code rather than the docs. The reusable base is larger than expected: `IPublishTarget` already generalises publishing, `Folder`+`Draft.FolderId` already model unowned grouping, `IsTemplate` is already the precedent for "a document kind as a column", and `CEDAR_DATA_DIR` already makes a local server a configuration change rather than a port. What is genuinely new is five entities, two columns and an Electron shell.

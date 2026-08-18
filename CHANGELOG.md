@@ -38,6 +38,15 @@ while history (this file, the ADRs, the archive, ROADMAP's July entries) keeps i
 record of when Input.md was real. The two survivors in live files are deliberate: backlog `Q-9`
 still explains that its spec was lost *to* an Input.md rewrite, now marked retired.
 
+**Local paths left the documentation too.** Two of Marty's follow-ups: no absolute paths or drive
+letters (three spots — the secrets rule's real folder layout, and a fictional `D:\Projects\MyGame`
+example in DESKTOP.md/ADR-107 that became a drive-less `MyGame/Assets`), and then no `_Documents_`
+folder paths at all (eleven spots): out-of-repo briefs, design handoffs and notes are now referenced
+descriptively — "Marty's out-of-repo brief `Gamedev_Focused_Rework.md`" — with the location being
+Marty's knowledge, not the documentation's. `%APPDATA%\…` and droplet paths stay (portable and
+operational respectively); history keeps its old paths as a record; code test fixtures with `D:\`
+are path-parsing test data, not documentation. The rule is written into `DOCS-FLOW.md` §Размещение.
+
 ## 2026-08-18 — the documentation gets a floor plan
 
 The read-only audit (`docs/archive/AUDIT-DOCS-2026-08.md`) came back with five questions; Marty
