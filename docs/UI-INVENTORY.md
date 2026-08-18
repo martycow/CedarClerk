@@ -41,7 +41,7 @@ The main writing surface — by far the most complex page. Topbar + two toolbar 
 | Code group (`tplCode`) | toolbar, movable | buttons | Inline code, code block | N/A | |
 | Media group (`tplMedia`) | toolbar, movable | buttons + file pickers | Image/video/GIF/audio/carousel/collage upload, YouTube insert | Needed & present — see Upload-progress panel below | |
 | Blocks group (`tplBlocks`) | toolbar, movable | buttons/popovers | Table insert/row/col ops, formula (inline/block), blockquote, toggle block, table of contents, divider, annotation anchor | N/A | |
-| AI actions popover | toolbar, `.ai-chip` | popover | Fix errors / "schizo-izer" rewrite (Pro Plus gated) | Present but weak — only an elapsed-time counter, no real progress bar | Tracked as Phase 8 Step 8 in `docs/ROADMAP.md`; overlaps Backlog #6 and #14 (move AI features elsewhere) |
+| AI actions popover | toolbar, `.ai-chip` | popover | Fix errors / "schizo-izer" rewrite (Pro Plus gated) | Present — asymptotic pseudo-progress % + elapsed time, 3-min timeout, real Cancel (ADR-038, `pseudo-progress.util.ts`; this cell said "elapsed-time only" until 18.08 — stale since 26.07) | What the popover *is* remains Q-7 (T-048); overlaps Backlog #6 and #14 (move AI features elsewhere) |
 | "Customize toolbar" link | toolbar row 1, far right | link | Jumps to Settings → Toolbar customization | N/A | |
 | Upload-progress panel | editor sheet area | panel | Per-file upload progress bars for media inserts | Present | |
 | AI-confirm modal | `app-modal`, `cancelAiConfirm()` | modal | Confirm before running an AI edit (replaces old `window.confirm()`) | See AI actions popover above | |
@@ -80,17 +80,18 @@ Full-page drafts grid/table — the compact editor drafts popover's bigger sibli
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|
 | Header (back link, nav row, theme toggle, account menu) | `<app-page-header page="drafts" [showBack]="false">` | header | **27.07.2026 (ADR-052)**: moved into the shared `app-page-header` (see Shared components). Back-to-editor stays hidden (nothing to go "back" to — the editor is reached by opening a draft or "New draft"), but Posts/Glossary/Settings/Admin nav buttons are now present here too, which they weren't before | N/A | |
-| Search input | `:27` | input | Client-side filter by title/tag | N/A | Plain string, not a signal |
-| View toggle (table/grid) | `:29-34` | tab | Switches `view()` layout | N/A | |
-| New draft button | `:36` | button | Nav to `/editor?new=1` | N/A | |
-| Import Markdown (`.zip`) | toolbar, `.btn-ghost` + hidden `#markdownInput` | button | Import a Notion-shaped Markdown zip as a new draft. **Moved here 26.07.2026** from the editor's removed drafts popover | Needed & present — spin icon via `importingMarkdown()`; unmatched-image warnings and errors render as inline `.channel-error` lines under the toolbar | On success with no warnings it navigates straight into the new draft; with warnings it stays put so the message is readable |
-| Filter tabs (All/Drafts/Scheduled/Published/Needs attention/Archived) | `:40-45` | tab | Sets `filter()`, live counts via `filterCount()` | N/A | |
-| Draft rows (table/grid) | `:56-113` | panel | Click opens draft; status badge, lang badges, folder, tags, updated date, and a 🔒 lock icon on private drafts | Needed & present — page-level `loading()` | The private lock sits inside the Title cell in both views rather than as its own column — no `grid-template-columns` change needed, and it works identically in the grid cards |
+| Search input | `.search-input` | input | Client-side filter by title/tag | N/A | Plain string, not a signal. *(This section's bare `:NN` line anchors had drifted ~30–60 lines by 18.08.2026 — replaced with selectors, which the same audit showed do not rot)* |
+| View toggle (table/grid) | `.view-toggle` | tab | Switches `view()` layout | N/A | |
+| New draft button | toolbar `.btn-accent` | button | Nav to `/editor?new=1` | N/A | |
+| Import Markdown (`.zip`) | toolbar, `.btn-ghost` + hidden `#markdownInput` | button | Import a Notion-shaped Markdown zip as a new draft. **Moved here 26.07.2026** from the editor's removed drafts popover | Needed & present — spin icon via `importingMarkdown()`; unmatched-image warnings and errors render as inline `.error-box` lines under the toolbar | On success with no warnings it navigates straight into the new draft; with warnings it stays put so the message is readable |
+| Filter tabs (All/Drafts/Scheduled/Published/Needs attention/Archived) | `.filter-tabs` | tab | Sets `filter()`, live counts via `filterCount()` | N/A | |
+| Column sort + width resize | `.col-head` buttons + `.col-resize` handles in the table header; `.col-reset` (⤢) resets widths | button | Sort by any column with direction marks (`sortBy()`/`sortMark()`); drag column widths (`startColResize()`); both persisted in `localStorage` | N/A | N1/ADR-049 (27.07.2026); **row added only 18.08.2026** — the audit's one stale finding in a 10-row sample. Title keeps the leftover space so a resize can't reintroduce the horizontal scroll B24 fixed |
+| Draft rows (table/grid) | `.drafts-table` rows / grid cards | panel | Click opens draft; status badge, lang badges, folder, tags, updated date, and a 🔒 lock icon on private drafts | Needed & present — page-level `loading()` | The private lock sits inside the Title cell in both views rather than as its own column — no `grid-template-columns` change needed, and it works identically in the grid cards |
 | Activity cell (per row) | table + grid card, `.activity-cell` | panel | Blog views and reactions (likes + dislikes combined), each with a `+N` accent chip for what accumulated since the previous session (B23, ADR-043). Renders `—` for drafts that were never blog-published | Needed & present — page-level `loading()` | The delta comes from the server (`DraftStatSeen` baseline, 30-min session gap), not from `localStorage`, so it matches across devices. No sparkline: no per-draft stats history exists to draw one from |
-| Archive/unarchive button (per row) | `:75-79`, `:101-103` | button | `toggleArchive()` | Needed & present — `busyId()===d.id` spins the icon (table view only; grid view swaps icon without spinning — minor inconsistency) | |
-| Delete button (per row) | `:80-82`, `:104-106` | button | Opens delete-confirm modal | Needed & present — disabled while `busyId()` set | |
-| Delete confirm modal | `:118-126` | modal | Cancel/Delete via `confirmDelete()` | Needed & present | |
-| Error banner | `:48` | toast (inline) | Surfaces list/archive/delete failures | N/A | Not dismissible |
+| Archive/unarchive button (per row) | per-row icon button, table + grid | button | `toggleArchive()` | Needed & present — `busyId()===d.id` spins the icon (table view only; grid view swaps icon without spinning — minor inconsistency) | |
+| Delete button (per row) | per-row icon button, table + grid | button | Opens delete-confirm modal | Needed & present — disabled while `busyId()` set | |
+| Delete confirm modal | `app-modal` → `confirmDelete()` | modal | Cancel/Delete | Needed & present | |
+| Error banner | `.error-box` under the toolbar | toast (inline) | Surfaces list/archive/delete failures | N/A | Not dismissible |
 
 ## `settings.component` (`cedarclerk-web/src/app/pages/settings.component.{ts,html}`)
 

@@ -73,8 +73,8 @@ no deploy path touches it.
 - `docs/integrations-setup.md` — payment/translation provider setup runbook
 - `docs/INPUT_PROMPT.md` — Marty's dynamic prompt inbox: "considered as a new prompt every time". **Untracked on purpose** (gitignored; Marty rewrites it at will) — check its mtime against the last "Input sweep" in ROADMAP. Content may predate the code — verify against it
 - `docs/INDIEDEV.md` — the indie-gamedev module (Phase 13): scope, data model, MUST/MIGHT. **Read before implementing any `T-120…T-137` row**
-- `docs/DESKTOP.md` — how the desktop build works (Electron + the existing server as a sidecar)
-- `docs/indiedev-design-prompt.md` — the brief handed to Claude Design for the module's screens. Copies design tokens verbatim, so **re-check it against `styles.scss` before each use**
+- `docs/DESKTOP.md` — how the desktop build works (Electron window onto production + local filesystem agent, ADR-117; the sidecar model is history)
+- `docs/indiedev-design-prompt.md` — the brief handed to Claude Design for the module's screens (delivered 10.08; remaining ask — screens 10–11). Since 18.08 it carries **no verbatim token copy** — paste fresh values from `styles.scss` into its marked block before each run
 - `TASKS.md` — short-horizon "what's next" list
 - `CHANGELOG.md` — human-readable history by session/date
 
