@@ -1,9 +1,18 @@
 <div class="auth-page">
+    <span class="wk-decor wk-band" aria-hidden="true"></span>
+    <span class="wk-decor wk-haze" aria-hidden="true"></span>
+    <span class="wk-decor wk-firefly wk-firefly-1" aria-hidden="true"></span>
+    <span class="wk-decor wk-firefly wk-firefly-2" aria-hidden="true"></span>
+
     <button class="theme-toggle" (click)="theme.toggle()" [title]="t().common.toggleTheme">
         {{ theme.theme() === 'dark' ? '☀' : '☾' }}
     </button>
 
     <div class="auth-card">
+        <span class="wk-decor wk-door-paper" aria-hidden="true"></span>
+        <span class="wk-decor wk-hinge wk-hinge-top" aria-hidden="true"></span>
+        <span class="wk-decor wk-hinge wk-hinge-bottom" aria-hidden="true"></span>
+        <span class="wk-decor wk-handle" aria-hidden="true"></span>
         <div class="auth-header">
             <app-cedar-logo [size]="28"></app-cedar-logo>
             <div class="auth-title">{{ t().register.title }}</div>

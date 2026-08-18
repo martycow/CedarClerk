@@ -102,6 +102,7 @@ One long page with anchor-nav. The sections, by the `id` the nav jumps to — **
 | Anchor chip nav | `:18-26` | chip-row | Jumps to each section | N/A | 8 chips (Credits added 05.08.2026) |
 | Post signature + URL fields | `:48-56` | panel + button | Pro-gated custom signature | Needed & present — `signatureBusy()`/`signatureSaved()` | Free users see static attribution instead |
 | Theme mode toggle | `:78-79` | tab | Which palette is being edited (local UI state) | N/A | |
+| Skin toggle (Default / Forest Workshop) | Appearance modal, under the theme toggle (`appearance-panel.component.html:15-21`) | tab | Switches `data-skin` on `<html>` (ADR-120) — device-local via `ThemeService`, localStorage `cedar-skin` | N/A — instant | Orthogonal to light/dark; the default skin carries no attribute at all |
 | Accent preset swatches | `:84-89` | chip-row | `pickAccentPreset()`, saves instantly | **Needed but missing** — fire-and-forget save, only `appearanceError()` on failure | "Applies instantly" by design, but a failed save is silent otherwise |
 | Sheet width / Typeface toggles | `:98-112` | tab | Instant-save prefs | **Needed but missing** (same gap as above) | |
 | Font size / line height sliders | `:117-126` | slider | Instant-save on every drag tick, no debounce | **Needed but missing** | |

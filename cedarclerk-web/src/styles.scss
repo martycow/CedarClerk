@@ -1,3 +1,11 @@
+/* Forest Workshop skin (ADR-120) — @use must sit above the base blocks; every rule in the partial
+   is scoped under the data-skin attribute, so the default skin is untouched, and the forest-night
+   block re-asserts every token the dark block below sets (the later dark block wins specificity
+   ties against the skin's base block). Base-block selector strings must not appear in comments
+   above the blocks — tools/check-contrast.mjs anchors each block on the first occurrence of its
+   selector text, and a mention here once silently pointed its dark check at the light block. */
+@use 'styles/forest';
+
 :root {
     --bg: #ECE9E2;
     --canvas: #E2DED4;

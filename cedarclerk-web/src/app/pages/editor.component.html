@@ -658,7 +658,7 @@
             <!--One Publish for the whole window (B5) — fires every ticked destination. Its label
             follows what pressing it will actually do (FI2.6/FI2.7).-->
             <button modal-actions class="btn-ghost" (click)="exportModalOpen.set(false)">{{ t().common.close }}</button>
-            <button modal-actions class="btn-accent" (click)="publishAll()" [disabled]="!canPublishAll()">
+            <button modal-actions class="btn-accent btn-publish" (click)="publishAll()" [disabled]="!canPublishAll()">
                 @if (publishingAll()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
                 {{ publishButtonLabel() }}
             </button>

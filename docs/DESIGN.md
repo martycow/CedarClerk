@@ -179,6 +179,10 @@ Channel colors are a separate hardcoded array in `editor.component.ts`, not toke
 
 Global (not component-scoped, since TipTap content is rendered via `innerHTML` in places): headings in `em` units so they scale with the editor's zoom control (fixed from a past bug — zoom used to be silently overridden by a hardcoded `font-size: 16px`), `blockquote` with a `3px solid var(--abord)` left border, inline `code`/`pre` with `var(--font-mono)`, `tg-spoiler` (spoiler mark → hidden text via `background: var(--t3); color: transparent`, revealed on hover), `.datetime-pill`, `.annotation-block` (comment/reaction anchor), `.toggle-block`, `.media-with-caption`, `.footnote-badge` — one block per custom TipTap node/mark in `tiptap-extensions/`.
 
+## Skins (ADR-120)
+
+A second styling axis besides light/dark: `data-skin="forest"` on `<html>` (ThemeService, localStorage `cedar-skin`, toggle in the Appearance modal). All of it lives in `cedarclerk-web/src/styles/_forest.scss` — token overrides plus component recipes, every rule scoped under `:root[data-skin="forest"]`; the default skin carries no attribute and is untouched by construction. Forest night keeps paper surfaces cream and darkens only the wood chrome, so its dark block re-asserts every token the base dark theme flips. Fonts (Vollkorn/Source Sans 3/Literata/Caveat) are self-hosted via @fontsource and load only when the skin references them. `tools/check-contrast.mjs` validates the default skin only — forest pairs are checked by hand when the palette moves.
+
 ## Known design debt
 
 - Font-size scale (`--fs-*`) exists but isn't adopted outside the new shared header — see Typography above.

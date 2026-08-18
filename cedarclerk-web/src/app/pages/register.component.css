@@ -5,6 +5,12 @@
     font-family: var(--font-sans);
 }
 
+/* Forest-skin scenery only — the skin's global stylesheet turns them on. */
+.wk-decor {
+    display: none;
+    pointer-events: none;
+}
+
 .auth-page {
     position: relative;
     min-height: 100vh;
