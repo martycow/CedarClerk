@@ -515,7 +515,7 @@ Marty's report «Cedar Clerk против всех» (13.08.2026: Codecks, Hackn
 
 ### Input sweep — 18.08.2026 (`docs/INPUT_PROMPT.md`, first sweep)
 
-A new **in-repo** inbox appeared: `docs/INPUT_PROMPT.md` ("consider everything below as a new prompt every time"). Unlike `Input.md` it is committed, so rewrite moments live in git history rather than in mtime. This sweep processed its three embedded documents; the next sweep is due whenever the file's content changes past this date.
+A new inbox appeared in `docs/`: `docs/INPUT_PROMPT.md` ("consider everything below as a new prompt every time"). It was committed with this sweep — **reversed the same day**: Marty ruled it stays untracked («это просто динамический файл с промптами… коммитить не надо»), so it is gitignored and rewrite moments are tracked by mtime against the latest "Input sweep" here, same as `Input.md`. This sweep processed its three embedded documents; the next sweep is due whenever the file's mtime moves past this date.
 
 **1. "Big Feature Scope v1" (authored 29.07.2026)** — ~100 candidate features (`GDD-*`/`MED-*`/`PUB-*`/`WEB-*`/`COM-*`/`MON-*`/`AI-*`/`ANL-*`/`PLT-*`). Written before Phase 13 existed; its positioning wedge («рабочее место инди-разработчика, превращающее разработку в аудиторию») is the one the product has since adopted, so the document aged into a mix of done, tracked and genuinely new. Triage was done against the code:
 

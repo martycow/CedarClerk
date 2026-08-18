@@ -67,3 +67,8 @@ CedarClerk.Server/Data/import-tmp/
 # The published server copied in beside the Electron shell by Scripts/build.ps1 — a build output,
 # ~70MB of self-contained runtime, regenerated on every build.
 CedarClerk.Desktop/server/
+
+# === Marty's dynamic prompt inbox (18.08.2026) ===
+# Rewritten by Marty at will; deliberately untracked - rewrites are tracked by mtime
+# against the last "Input sweep" entry in docs/ROADMAP.md, same as _Documents_/Input.md.
+docs/INPUT_PROMPT.md

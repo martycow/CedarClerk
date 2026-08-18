@@ -71,7 +71,7 @@ no deploy path touches it.
 - `docs/BACKLOG.md` — the only source of open, not-yet-started ideas/features/tech-debt (kept separate from ROADMAP on purpose)
 - `docs/UI-INVENTORY.md` — per-element inventory of the frontend UI (location, type, purpose, loading-state check) — update it when adding/changing a UI element
 - `docs/integrations-setup.md` — payment/translation provider setup runbook
-- `docs/INPUT_PROMPT.md` — Marty's in-repo dynamic prompt inbox: "considered as a new prompt every time". Content may predate the code — verify against it; sweeps are recorded in ROADMAP as "Input sweep"
+- `docs/INPUT_PROMPT.md` — Marty's dynamic prompt inbox: "considered as a new prompt every time". **Untracked on purpose** (gitignored; Marty rewrites it at will) — check its mtime against the last "Input sweep" in ROADMAP. Content may predate the code — verify against it
 - `docs/INDIEDEV.md` — the indie-gamedev module (Phase 13): scope, data model, MUST/MIGHT. **Read before implementing any `T-120…T-137` row**
 - `docs/DESKTOP.md` — how the desktop build works (Electron + the existing server as a sidecar)
 - `docs/indiedev-design-prompt.md` — the brief handed to Claude Design for the module's screens. Copies design tokens verbatim, so **re-check it against `styles.scss` before each use**
