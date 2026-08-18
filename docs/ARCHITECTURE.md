@@ -26,10 +26,11 @@ The internal post format is a single TipTap JSON document, stored in SQLite as `
                         └──────────────────────────────────────────┘
 ```
 
-Renderers, all in `CedarClerk.Core` (pure C#, no ASP.NET dependency, unit-tested):
-- `CedarToTelegramHtmlRenderer` — Telegram Rich Message HTML (Bot API 10.1, `sendRichMessage`). Canonical Telegram renderer; see `.claude/rules/telegram-bot.md` for its HTML-mode constraints.
-- `CedarToTelegramMarkdownRenderer` — Markdown export alternative.
+Renderers and builders, all in `CedarClerk.Core` (pure C#, no ASP.NET dependency, unit-tested):
+- `CedarToTelegramBlocksRenderer` — **the canonical Telegram renderer** since Bot API 10.2 (16.07.2026): `InputRichMessage.Blocks` is the only mechanism that reliably embeds media with native captions. See `.claude/rules/telegram-bot.md`.
+- `CedarToTelegramHtmlRenderer` / `CedarToTelegramMarkdownRenderer` — kept but **no longer used for sending** (each file says so in its header); HTML mode's constraints still documented in the bot rule.
 - `CedarToBlogHtmlRenderer` — blog HTML pages, including anchor nodes for reactions/comments on specific fragments.
+- Short-post builders: `XPostBuilder` (weighted 280-unit counting), `BlueskyPostBuilder` (UTF-8 byte facets), `MicroThreadSplitter` / `TelegramThreadSplitter` (document → thread parts), plus `HeaderSlotRenderer`, `WatermarkRenderer`, `GlossaryScanner`.
 - `CedarPackage` — `.cedar` file format (see below).
 
 Publishing targets (Phase 12, ADR-078; Telegram moved onto it 01.08.2026, T-085): `PostEndpoints.PublishAsync` is the network-agnostic half — resolve draft, language and target, pick the implementation by network, record the outcome on the target row. `IPublishTarget` in `CedarClerk.Server/Publishing/` is what a network must implement — name itself, describe its limits as data (`CedarClerk.Core.PublishCapabilities`, so the editor can warn before a send), and publish returning a receipt. It does **not** fetch statistics, delete/edit, or run its own connect flow. Credentials live on the `PublishTarget` entity, encrypted by `PublishTargetSecrets` with the DataProtection key ring under `CEDAR_DATA_DIR` — which makes the key ring and `cedar.db` a pair: restoring one without the other leaves credentials unreadable (by design; the owner reconnects). The blog is deliberately not a publish target.
@@ -38,36 +39,40 @@ Going the other direction — external format *into* Cedar JSON — `CedarClerk.
 
 ## Solution layout
 
-4 projects, all `net8.0`:
+6 projects, all `net8.0`:
 
 | Project | Purpose |
 |---|---|
 | `CedarClerk.Server` | ASP.NET Core 8: minimal-API REST endpoints, static host for the Angular SPA, Telegram bot host, Quartz.NET scheduled jobs, EF Core/SQLite data layer |
 | `CedarClerk.Core` | Document format + renderers. Zero external dependencies — pure C#, fully unit-tested |
-| `CedarClerk.Localization` | `ErrorMessages.cs` (shared error strings) and `Languages.cs` (RU/EN constants) |
-| `CedarClerk.Tests` | xUnit, references both `Core` and `Server` |
+| `CedarClerk.Localization` | `ErrorMessages.cs` (shared error strings) and `Languages.cs` (the content/UI language lists — nine content languages: ru/en/de/fr/es/ja/uk/be/ka) |
+| `CedarClerk.Cli` | `cedar`, the operations console (Spectre.Console) — since ADR-119 the only build/test/deploy entrance; pipelines in `Pipelines/` |
+| `CedarClerk.Tests` | xUnit, references `Core` and `Server` |
+| `CedarClerk.Cli.Tests` | xUnit for the CLI and its pipelines |
 
-`CedarClerk.Server` subfolders:
-- `Ai/` — `IAiEditProvider` + Anthropic/OpenAI implementations for the in-editor AI-edit feature (fix errors / "schizo-izer")
+`CedarClerk.Server` subfolders (the list of *conventions*, not a census — the census is `ls`):
+- `Ai/` — `IAiEditProvider` + Anthropic/OpenAI implementations; `AiJobService` runs long AI calls as background jobs polled by the client (202 + jobId — a Cloudflare-timeout lesson)
 - `Bot/` — `TelegramBotService`, `BotChatAccess` (pure permission logic), `BotKnownChatSync`, Quartz job classes
-- `Data/` — `CedarDbContext`, `Entities.cs` (all entities in one flat file)
+- `Data/` — `CedarDbContext`, `Entities.cs` (all core entities in one flat file) + `Entities.IndieDev.cs` (module entities, per ADR-101's file rule)
 - `Migrations/` — EF Core migrations
-- `Publishing/` — `IPublishTarget` (ADR-078) + `PublishTargetSecrets` (per-tenant credential encryption)
+- `Modules/` — feature modules behind config flags: `IndieDev/` (projects, tasks, sprints, builds, asset index) and `Agent/` (the desktop's filesystem agent, ADR-117)
+- `Publishing/` — `IPublishTarget` (ADR-078) + the network implementations (`TelegramPublishTarget`, `XPublishTarget`, `BlueskyPublishTarget`) + `PublishTargetSecrets` (per-tenant credential encryption)
 - `Translation/` — `ITranslationProvider` + Anthropic/OpenAI/DeepL implementations for auto-translate
-- Top-level: one `XxxEndpoints.cs` static class per feature area (`AuthEndpoints`, `DraftEndpoints`, `BlogEndpoints`, `PostEndpoints`, `AssetEndpoints`, `ChannelEndpoints`, `ScheduledPostEndpoints`, `BillingEndpoints`), plus `SubscriptionPlan.cs` and `Program.cs`
+- `Email/` — outbound mail (Resend)
+- Top-level: one `XxxEndpoints.cs` static class per feature area — auth, drafts, blog, posts/publish, assets, channels, scheduling, billing, folders, form presets, glossary, admin, AI jobs, downloads, the landing — plus `SubscriptionPlan.cs` and `Program.cs`. The wiring list in `Program.cs` is the authoritative census.
 
 `cedarclerk-web/src/app/`:
-- `core/` — Angular services (`auth`, `billing`, `channels`, `comments`, `drafts`, `posts`, `telegram-link`, `theme`, `assets`) + `auth.guard.ts`
-- `pages/` — route components: `editor` (the largest surface by far), `comments`, `stats`, `login`, `register`, `settings`
-- `shared/` — `PopoverComponent`, `CedarLogoComponent` (the only genuinely reusable components — see `docs/DESIGN.md` for the gap around buttons/modals)
-- `tiptap-extensions/` — custom TipTap nodes/marks whose HTML output is the shared contract with the backend renderers (e.g. `spoiler-mark.ts` ↔ `<tg-spoiler>` in `CedarToTelegramHtmlRenderer`)
+- `core/` — one Angular service per feature area (thin RxJS→Promise), the i18n dictionaries (`i18n/en.ts`/`ru.ts`), and the guards (`auth`, `guest`, `admin`, `indiedev`)
+- `pages/` — route components; `editor` is the largest surface by far. `comments` and `stats` exist as components but their routes redirect into the Posts Manager (`/posts`) where they are tabs. The IndieDev screens (`projects`, `project`, `project-tasks/planner/assets/builds`) also live here behind `indieDevGuard` — the `modules/<name>/` folder convention from ADR-101 was **not** adopted on the frontend
+- `shared/` — ~15 genuinely reusable components now, including a real `app-modal`, `app-icon` (Phosphor, generated), `page-header`, `account-menu`, pickers and the appearance panel — `docs/UI-INVENTORY.md` §Shared lists them
+- `tiptap-extensions/` — custom TipTap nodes/marks whose HTML output is the shared contract with the backend renderers (e.g. `spoiler-mark.ts` ↔ `<tg-spoiler>` in the Telegram renderers)
 
 ## Modules (ADR-101, 10.08.2026)
 
 A **module** is a set of endpoints and screens behind a config flag — not a separate project, process, database or `DbContext`. The first one is the indie-gamedev toolkit (`docs/INDIEDEV.md`); the shape is meant to be reusable if a second appears.
 
 - Backend: `CedarClerk.Server/Modules/<Name>/` holding the same `static class XxxEndpoints` convention as the top-level feature areas, registered in `Program.cs` behind `Cedar:Modules:<Name>`.
-- Frontend: `cedarclerk-web/src/app/modules/<name>/` with lazy routes. This costs nothing because every route is already `loadComponent` with background preloading (T-092/ADR-076) — a disabled module simply never fetches its chunks.
+- Frontend: lazy routes in `pages/` behind a guard (`indieDevGuard`) — the planned `modules/<name>/` folder was **not adopted** when the screens landed; a disabled module still never fetches its chunks, since every route is `loadComponent` with background preloading (T-092/ADR-076).
 - The flag reaches the client in the `/api/me` response; a guard hides the menu entries, not only the pages.
 - **The schema is shared.** A second `DbContext` over the same SQLite file would mean two independent `Database.Migrate()` calls on startup, which `.claude/rules/ef-migrations.md` does not survive — and the module's entities reference `Draft` and `ApplicationUser` directly, so a context boundary would fall exactly across the links the module exists for.
 - Module entities live in their own `Data/Entities.<Name>.cs`. The "one flat `Entities.cs`" convention exists to avoid a file per entity, and a file per module does not violate it.
@@ -76,28 +81,18 @@ A module **adds**; it never replaces an existing screen. That is what makes it r
 
 ## API style
 
-Minimal APIs only, no MVC controllers. Each feature area is `public static class XxxEndpoints` with a single `MapXxxEndpoints(this WebApplication app)` extension method, wired flatly in `Program.cs`:
-```csharp
-app.MapAuthEndpoints();
-app.MapDraftEndpoints();
-app.MapBlogEndpoints();
-app.MapPostEndpoints();
-app.MapAssetEndpoints();
-app.MapChannelEndpoints();
-app.MapScheduledPostEndpoints();
-app.MapBillingEndpoints();
-```
+Minimal APIs only, no MVC controllers. Each feature area is `public static class XxxEndpoints` with a single `MapXxxEndpoints(this WebApplication app)` extension method, wired flatly in `Program.cs` — fourteen `MapXxx` calls for the core areas plus the module calls behind their flag; that block in `Program.cs` is the authoritative list (an enumeration copied here went stale once already).
 Blog requests are routed separately, by hostname, before the rest: `app.MapWhen(ctx => ctx.Request.Host.Host == blogHost, ...)`. All API routes live under `/api/...`. Errors are either ad-hoc `Results.Json(new { error = "..." }, statusCode: ...)` at the call site, or a small per-endpoint result record (e.g. `PostEndpoints.PublishResult`) for logic factored out of the lambda. See `CedarClerk.Localization.ErrorMessages` for the handful of error strings reused across call sites — most errors are one-off inline literals by convention.
 
 ## Data model
 
 `CedarDbContext : IdentityDbContext<ApplicationUser>` (SQLite). Every entity lives in one flat `CedarClerk.Server/Data/Entities.cs` (not one file per entity), uses a client-generated `Guid Id`, and owner-scoped rows carry a plain `string OwnerId` (+ optional `ApplicationUser? Owner` nav) rather than a strict FK-only model.
 
-Entities (`PublishTarget` added 01.08.2026, T-084): `ApplicationUser` (extends `IdentityUser`; `PlanTier`, `PlanExpiresAt`, `TrialUsedAt`, `FreeChannelCooldownUntil`, Telegram link fields, `PostSignature`, `StripeCustomerId`), `Payment` (audit of all billing events across providers), `AiUsage` (per-user per-UTC-day AI call counter), `Draft` (+ `DraftTranslation` for RU/EN), `Channel` (+ `ChannelStatSnapshot`, `ChannelPost` — see ADR-025), `Asset`, `Reaction`, `Comment`, `BotKnownChat` (+ `BotKnownChatAdmin`), `ScheduledPost`.
+The entity census is the two files themselves — `Entities.cs` (core) and `Entities.IndieDev.cs` (module) — an enumeration here lagged reality by ~17 entities when checked 18.08.2026. The load-bearing shapes: `ApplicationUser` extends `IdentityUser` with plan/trial/Telegram-link/signature/Stripe fields; `Draft` is the document (translations per language in `DraftTranslation`, revisions in `DraftRevision`, daily stats in `DraftStatSnapshot`); `Channel` + `PublishTarget` carry where things publish (`Channel` is projected into `PublishTarget`, ADR-078/T-085); `Payment`/`CreditEntry`/`AiUsage` carry money and quotas; the module adds `Project`, `GameTask`, `Sprint`, `Build`, `AssetEntry` and the generalized `EntityLink`.
 
 Ownership: nearly every table has an `OwnerId` and every endpoint filters by it — see the ownership-audit table in `docs/DECISIONS.md`. Public blog endpoints are the deliberate exception (filtered by `IsBlogPublished` instead, since blog visitors aren't authenticated users).
 
-**A `Draft` is a document, not specifically a post** (ADR-102, planned in Phase 13): `Draft.DocumentType` (default `post`, so every existing row is already correct) and `Draft.ProjectId` turn the same entity into a game-design doc, a script or a changelog. The reason it is a column rather than a new entity: `Draft` is really "a TipTap document with autosave, revision history, translations, tags and a folder", and every one of those is needed verbatim by the other document types — a parallel entity would mean duplicating the most safety-critical code in the project (the ADR-065/066/067 save guards). The cost is that publishing columns (`BlogSlug`, `WatermarkText`, `LastTelegram*`…) sit unused on non-post documents; that is tracked as `T-136`, not pretended away.
+**A `Draft` is a document, not specifically a post** (ADR-102, shipped in Phase 13): `Draft.DocumentType` (default `post`, so every existing row is already correct) and `Draft.ProjectId` turn the same entity into a game-design doc, a script or a changelog. The reason it is a column rather than a new entity: `Draft` is really "a TipTap document with autosave, revision history, translations, tags and a folder", and every one of those is needed verbatim by the other document types — a parallel entity would mean duplicating the most safety-critical code in the project (the ADR-065/066/067 save guards). The cost is that publishing columns (`BlogSlug`, `WatermarkText`, `LastTelegram*`…) sit unused on non-post documents; that is tracked as `T-136`, not pretended away.
 
 ## Auth
 
@@ -107,8 +102,9 @@ ASP.NET Core Identity (`AddIdentityCore<ApplicationUser>`), cookie-based (`Ident
 
 ## Scheduling (Quartz.NET)
 
-Three jobs, registered in `Program.cs`:
+Four jobs, registered in `Program.cs`:
 - `PublishDueScheduledPostsJob` — every 1 minute, sends due `ScheduledPost` rows
+- `RunPublishJobsJob` — every 15 seconds, sweeps the durable `PublishJob` queue (ADR-081)
 - `SnapshotChannelStatsJob` — daily at 04:00 UTC (cron `0 0 4 * * ?`), records `ChannelStatSnapshot`
 - `DowngradeExpiredPlansJob` — hourly, downgrades lapsed paid plans back to Free
 
@@ -182,8 +178,8 @@ before that swap with the default set to no:
 executes nothing at all — neither processes nor file deletions (`ICommandRunner` and `IFileWriter` are
 both swapped for it).
 
-`-Desktop` adds two steps **after** the health check, so nothing here can affect the site: it builds the
-installer (`build.ps1 -DesktopOnly -Installer`) and publishes it into `data/downloads/` — `.exe` and
+`--desktop` adds two steps **after** the health check, so nothing here can affect the site: it builds the
+installer (the `BuildPipeline` desktop path with the installer flag) and publishes it into `data/downloads/` — `.exe` and
 `.blockmap` staged, checksummed and moved into place first, `latest.yml` written last, older installers
 pruned to the last two. That directory is the one place a deploy writes inside `data/`, and it is what
 `https://cedarclerk.mooexe.dev/downloads` serves for the desktop shell's self-update (ADR-116). Without
@@ -200,12 +196,13 @@ The reason it exists is the asset index (ADR-107) — only a process on the deve
 
 `CEDAR_DATA_DIR` is no longer part of this story — the desktop stores nothing. It still decides where the droplet keeps SQLite and media (`/home/martycow/cedarclerk/data`). One server change came out of ADR-104 and stayed: the listening address used to be a literal in `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` could not override it, and `Cedar:Urls` now exists for the agent's free port.
 
-**Updates come from our own server** (ADR-116): `electron-updater`'s generic provider reads `https://cedarclerk.mooexe.dev/downloads/latest.yml`, which `DownloadEndpoints` serves as plain static files out of `CEDAR_DATA_DIR/downloads`. There is no update service and no third-party account — the whole protocol is a manifest, an installer and a blockmap in one folder, put there by `deploy.ps1 -Desktop`.
+**Updates come from our own server** (ADR-116): `electron-updater`'s generic provider reads `https://cedarclerk.mooexe.dev/downloads/latest.yml`, which `DownloadEndpoints` serves as plain static files out of `CEDAR_DATA_DIR/downloads`. There is no update service and no third-party account — the whole protocol is a manifest, an installer and a blockmap in one folder, put there by `cedar deploy --desktop`.
 
 ## Local development
 
-- Server: `dotnet run --project CedarClerk.Server` (port 8080, bot disabled without a token — see `.claude/rules/telegram-bot.md`)
-- Frontend: `ng serve` in `cedarclerk-web/` (proxies `/api` → `http://localhost:8080` via `proxy.conf.json`)
-- Tests: `dotnet test` from repo root (xUnit; 162/162 green as of the last verified state, 11.07.2026)
-- Frontend tests: `npm run test` in `cedarclerk-web/` (Vitest-backed via `@angular/build:unit-test`, not Karma)
+- **See the whole thing as it will ship: `cedar run`** (ADR-121) — builds front and back, serves the real `publish/` artifact on `localhost:8080` against the dev database with the bot forced off, opens the browser; `--no-build` reuses the last publish
+- Server alone: `dotnet run --project CedarClerk.Server` (port 8080, bot disabled without a token — see `.claude/rules/telegram-bot.md`)
+- Frontend alone: `ng serve` in `cedarclerk-web/` (proxies `/api` → `http://localhost:8080` via `proxy.conf.json`)
+- Tests: `cedar test` (backend + frontend + contrast; `--smoke` adds Playwright) — ~930 xUnit cases across `CedarClerk.Tests` and `CedarClerk.Cli.Tests`; plain `dotnet test` from repo root also works
+- Frontend tests alone: `npm run test` in `cedarclerk-web/` (Vitest-backed via `@angular/build:unit-test`, not Karma)
 - EF migrations: `dotnet ef migrations add <Name> --project CedarClerk.Server`

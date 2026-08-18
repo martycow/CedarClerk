@@ -269,7 +269,7 @@ T-124, built 11.08.2026 from `docs/design_handoff_indiedev_core_loop` §8. Compa
 
 ## `admin.component` (`cedarclerk-web/src/app/pages/admin.component.{ts,html,css}`)
 
-IF2, built 27.07.2026 in five steps (`docs/admin-panel-scope.md`). Reached from the nav row, gated by `adminGuard`; a non-admin gets a redirect and the API answers 404 rather than 403 — an account must not learn that an endpoint it may not use exists.
+IF2, built 27.07.2026 in five steps (scoping doc absorbed into ADR-122, 18.08.2026). Reached from the nav row, gated by `adminGuard`; a non-admin gets a redirect and the API answers 404 rather than 403 — an account must not learn that an endpoint it may not use exists.
 
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|
@@ -282,7 +282,7 @@ IF2, built 27.07.2026 in five steps (`docs/admin-panel-scope.md`). Reached from 
 | Credits | `.action-group` — balance, amount, note, Add / Take back | button | Moves an account's credit balance in either direction | Present — `busy()` | **Added 11.08.2026.** Self-targeting is deliberately *allowed* here, unlike lock/admin: a balance is not a privilege, and testing a paid post needs credits on the testing account. Take back is disabled at zero and refused server-side below it; the note goes to the audit log, the movement to the ledger |
 | Invite attribution | `.action-group` | panel | Assign an invite code to an account that predates code tracking | Present — `busy()` | Manual attribution exists because accounts older than IF2 step 3 have no code to point at |
 | Invite creation | `.invite-new` | panel | New code + label | Present — `busy()` | Codes are deactivated, never deleted — deleting one would silently orphan the accounts attributed to it |
-| Audit log | `.audit-list` / `.audit-row` | panel | Append-only record of every admin action | Present — `auditLoadingMore()` on the Load-more button | Paging added after `docs/admin-panel-scope.md` flagged its absence; **retention is deliberately absent** — the log is append-only on purpose |
+| Audit log | `.audit-list` / `.audit-row` | panel | Append-only record of every admin action | Present — `auditLoadingMore()` on the Load-more button | Paging added after the scoping doc flagged its absence; **retention is deliberately absent** — the log is append-only on purpose (ADR-122) |
 | Load more (audit) | `.btn-ghost` under the list | button | `?skip=` paging, `hasMore` drives visibility | Present | |
 
 ## Blog surfaces (server-rendered — `CedarClerk.Server/BlogEndpoints.cs`, `CedarClerk.Core/CedarToBlogHtmlRenderer.cs`)
@@ -365,7 +365,32 @@ T-122, reshaped by **ADR-117** on 12.08.2026 when the index moved to the cloud a
 | Reveal / Re-index file | `.modal-actions` | button | Explorer highlight; re-stat this one file | `busy()` | **Hidden**, not disabled, unless `isLocal()`: a greyed button invites a hunt for the reason it is grey. Re-index is two hops now — the agent looks, the page pushes |
 | Link picker | `.link-option` | panel | Documents of this project not already linked | `busy()` | "Linked documents", never "Used in": an indexed file lives outside Cedar Clerk, so a reference to it can only be stated (T-141) |
 
-**Known gap, not introduced here**: `projects.component` and `project.component` (T-120) were never added to this file and remain absent.
+## `projects.component` (`cedarclerk-web/src/app/pages/projects.component.{ts,html,css}`)
+
+Added 18.08.2026, closing the gap this file had carried since T-120 shipped (10.08). The projects **list** at `/projects`, compact density, `indieDevGuard`; built from the Claude Design core-loop package.
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Toolbar | `.projects-toolbar` | panel | Title, "N projects, M active" subtitle, search, New project | Page-level `loading()` | Same anatomy as `/drafts` and the other module screens |
+| Filter tabs | `.filter-tabs` | tab | All / Active / Archived with counts from the unfiltered set | N/A | |
+| Project row | `.projects-row` | button | Cover (or initials), name, document / open-task / asset counts, last activity, state badge | N/A | Whole row opens the dashboard; keyboard-reachable (`tabindex` + Enter). Tasks column is the **open** count on purpose. **Project type is not shown here** — that is `T-139` |
+| Empty state | `.empty-state` | panel | Controller icon, explanation, New project | N/A | |
+| Create-project modal | `app-modal` `[width]="560"` | modal | Project type picker (four types, each naming its starter document) + name | `saving()` disables submit | Types are ADR-103 as amended by the design package; Enter in the name field submits |
+
+## `project.component` (`cedarclerk-web/src/app/pages/project.component.{ts,html,css}`)
+
+Added 18.08.2026, same gap. The project **dashboard** at `/projects/:id`, comfortable density (no `data-density` attribute), `indieDevGuard`.
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Project head | `.project-head` | panel | Cover, name, type icon + name, active/archived, document count, description | Page-level `loading()` | The **only** screen showing project type (`T-139`) |
+| Head actions | `.btn-ghost`/`.btn-accent` in `.project-head` | button | Assets, Builds, Settings, New document | N/A | Builds link deliberately replaces a rail card — a project with no versions should not carry an empty one (T-126 note in the template) |
+| Featured type cards | `.type-card` | panel | Per featured document type: count + recent documents, each opening the editor | N/A | `@empty` renders "none yet" |
+| Tile row | `.tile-row` / `.type-tile` | panel | Remaining document types: count + latest document | N/A | |
+| "Up next" rail card | `.rail-card` (first) | panel | Server-sorted next tasks: title, priority, due date; link to the board | Page-level | Overdue reddens the **date only**, never the row (T-123). Empty text distinguishes "no tasks at all" from "nothing up next" |
+| Sprint rail card | `.rail-card` (second) | panel | Current sprint, progress bar, end date | Page-level | Row recorded 11.08.2026 under the `project-planner.component` section — one row per element, it stays there |
+| New-document modal | `app-modal` `[width]="640"` | modal | Grid of document types, one click creates and opens | `busy()` disables cards | Note under the actions says where the document lands |
+| Project-settings modal | `app-modal` `[width]="520"` | modal | Name, description, archive/unarchive, delete | `busy()` | Delete is two-click (button arms, hint appears) — the confirm pattern `project-builds`' delete lacks |
 
 ## `project-builds.component` (`cedarclerk-web/src/app/pages/project-builds.component.{ts,html,css}`)
 

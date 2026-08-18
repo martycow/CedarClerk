@@ -42,7 +42,7 @@ Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTUR
 - `docs/BACKLOG.md` — the only source of open, not-yet-started ideas/features/tech-debt (kept separate from ROADMAP on purpose)
 - `docs/UI-INVENTORY.md` — per-element inventory of the frontend UI (location, type, purpose, loading-state check) — update it when adding/changing a UI element
 - `docs/integrations-setup.md` — payment/translation provider setup runbook
-- `docs/admin-panel-scope.md` — scoping for the admin panel (IF2): what exists, what must be decided, build order
+- `docs/INPUT_PROMPT.md` — Marty's in-repo dynamic prompt inbox: "considered as a new prompt every time". Content may predate the code — verify against it; sweeps are recorded in ROADMAP as "Input sweep"
 - `TASKS.md` — short-horizon "what's next" list
 - `CHANGELOG.md` — human-readable history by session/date
 

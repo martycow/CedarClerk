@@ -7,7 +7,7 @@ using CedarClerk.Localization;
 
 namespace CedarClerk.Server;
 
-// Admin panel (IF2) — see docs/admin-panel-scope.md for the scoping this follows.
+// Admin panel (IF2) — see ADR-122 in docs/DECISIONS.md for the scoping decisions this follows.
 //
 // Every other endpoint file in this app filters by OwnerId (61 such queries at the time of
 // writing). The deliberate choice here is NOT to thread an "admin bypasses the filter" flag

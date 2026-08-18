@@ -16,7 +16,7 @@ Cedar Clerk — self-hosted personal publishing SaaS. A web rich-text editor who
 
 Document model: TipTap JSON stored in SQLite (`Draft.CedarJson`). One document → many renderers (Telegram HTML, blog HTML, `.cedar` export) is the core architectural idea — see `docs/ARCHITECTURE.md`.
 
-**Since 10.08.2026 the product is turning towards indie game developers** (Phase 13, branch `indiedev_module`): a post becomes one document type among several, living inside a `Project`, alongside tasks, sprints and an asset index. It is a **module inside the same codebase, not a fork** (ADR-101) — read `docs/INDIEDEV.md` before touching anything in that area.
+**Since 10.08.2026 the product is turned towards indie game developers** (Phase 13; MUST list complete 11.08.2026, merged to `master`): a post is one document type among several, living inside a `Project`, alongside tasks, sprints and an asset index. It is a **module inside the same codebase, not a fork** (ADR-101), behind `Cedar:Modules:IndieDev` — read `docs/INDIEDEV.md` before touching anything in that area.
 
 ## Anti-desynchronization mechanism
 Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTURE.md. If you change ANY of your decisions, you must update docs/DECISIONS.md first, then write code.
@@ -71,7 +71,7 @@ no deploy path touches it.
 - `docs/BACKLOG.md` — the only source of open, not-yet-started ideas/features/tech-debt (kept separate from ROADMAP on purpose)
 - `docs/UI-INVENTORY.md` — per-element inventory of the frontend UI (location, type, purpose, loading-state check) — update it when adding/changing a UI element
 - `docs/integrations-setup.md` — payment/translation provider setup runbook
-- `docs/admin-panel-scope.md` — scoping for the admin panel (IF2): what exists, what must be decided, build order
+- `docs/INPUT_PROMPT.md` — Marty's in-repo dynamic prompt inbox: "considered as a new prompt every time". Content may predate the code — verify against it; sweeps are recorded in ROADMAP as "Input sweep"
 - `docs/INDIEDEV.md` — the indie-gamedev module (Phase 13): scope, data model, MUST/MIGHT. **Read before implementing any `T-120…T-137` row**
 - `docs/DESKTOP.md` — how the desktop build works (Electron + the existing server as a sidecar)
 - `docs/indiedev-design-prompt.md` — the brief handed to Claude Design for the module's screens. Copies design tokens verbatim, so **re-check it against `styles.scss` before each use**
@@ -86,8 +86,8 @@ Backend: static `XxxEndpoints` classes (minimal APIs, no MVC), entities in one f
 ## Branches (Marty's rule, 10.08.2026)
 - **`master` — only the latest stable version.** Every commit on it is tagged with a version, and **every deploy is run from `master` and only from `master`.**
 - **`dev` — general development.**
-- **`indiedev_module`** — branched from `dev` for the indie-gamedev work, because the business model is not yet proven. May be deleted outright if it doesn't work out; keep the module reversible (ADR-101).
-- **`LIVE` marks what is in production** (12.08.2026, ADR-118). `deploy.ps1` moves it onto HEAD after the health check passes, keeping the tag it replaces as `LIVE-PREV`; `-Rollback` moves it back. Local only — it is never pushed. A tag name points at one object, so "one commit at a time" needs no enforcement; what the preflight does check is whether `LIVE` still agrees with the version production answers.
+- **`indiedev_module`** — was branched from `dev` for the indie-gamedev work; **merged into `master` with v0.10.0 and deleted** (branch gone by 18.08.2026). The module lives in `master` behind `Cedar:Modules:IndieDev`; reversibility is the flag plus ADR-101, no longer a branch.
+- **`LIVE` marks what is in production** (12.08.2026, ADR-118). `cedar deploy` moves it onto HEAD after the health check passes, keeping the tag it replaces as `LIVE-PREV`; `--rollback` moves it back. Local only — it is never pushed (re-deleted from origin 18.08.2026 after it leaked there a second time). A tag name points at one object, so "one commit at a time" needs no enforcement; what the preflight does check is whether `LIVE` still agrees with the version production answers.
 - **Enforced since 10.08.2026**: the deploy refuses to run from a branch other than `master`, from a detached HEAD, or with uncommitted changes, and warns when HEAD carries no tag matching `Consts.CurrentVersion`. `-Force`/`--force` overrides and says what it is overriding. The checks moved from `Scripts/_git-guard.ps1` to `CedarClerk.Cli/Pipelines/GitGuard.cs` on 12.08.2026 (ADR-119) and gained tests on the way.
 
 ## Commits and versioning

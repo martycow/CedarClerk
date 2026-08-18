@@ -12,7 +12,7 @@ public class ApplicationUser : IdentityUser
     /// Admin panel access (IF2). A plain flag rather than ASP.NET Identity roles: there is one
     /// admin, and roles would add two tables and a join to express a single boolean. Granted at
     /// startup from Cedar:AdminEmail — the first admin cannot be made through the panel itself.
-    /// See docs/admin-panel-scope.md.
+    /// See ADR-122 in docs/DECISIONS.md.
     /// </summary>
     public bool IsAdmin { get; set; }
 
@@ -149,7 +149,7 @@ public class ApplicationUser : IdentityUser
 
 // Real invite codes (IF2, step 3). Registration used to check one shared string from config
 // (Cedar:InviteCode), which is kept as a fallback so a database problem can't lock registration
-// out entirely — see docs/admin-panel-scope.md.
+// out entirely — see ADR-122 in docs/DECISIONS.md.
 //
 // Codes are DEACTIVATED, never deleted: ApplicationUser.InviteCodeId points here, and deleting a
 // row would silently erase the attribution of everyone who joined through it.

@@ -1,6 +1,6 @@
 # Интеграции: платежи, автоперевод, email — что настроить и куда прокинуть ключи
 
-_Восстановлено из `_Documents_/CedarClerk/OLD/integrations-setup.md` (был архивирован при переносе документации в репозиторий, но два других файла — `docs/Handoff_2026-07-15.md` и `docs/ROADMAP.md` — уже ссылаются на него по пути `docs/integrations-setup.md`, так что он возвращён сюда без изменений содержания)._
+_Восстановлен 15.07.2026 из `_Documents_/CedarClerk/OLD/`, с тех пор дополнялся (§3b админ, §5 R2, §6 мониторинг) и правился по факту. Сверен с `Consts.cs` 18.08.2026 — имена ключей в §2 были выдуманы и исправлены._
 
 _Все секреты живут в systemd drop-in на продовом дроплете DigitalOcean: `/etc/systemd/system/cedarclerk.service.d/data.conf`
 (строки вида `Environment=Cedar__Ключ__Подключ=значение` — двойное подчёркивание вместо `:`).
@@ -20,7 +20,9 @@ _Все секреты живут в systemd drop-in на продовом др�
 заглушкой, теперь настоящий Orders API v2 checkout+capture):
 - **Stripe** — hosted Checkout (subscription для Pro/Pro Plus, one-time payment для Trial) + webhook
   (`checkout.session.completed`, `invoice.paid` — продление, `customer.subscription.deleted`).
-  Заработает сразу после прокидывания ключей.
+  **Работает на проде и проверен реальными деньгами** (первый платёж 26.07.2026); ниже — как это
+  настраивалось. Через тот же Checkout идёт и покупка пакетов кредитов (ADR-092, metadata
+  `credits_pack`).
 - **Telegram Stars** — бот выставляет invoice юзеру с привязанным Telegram-аккаунтом; для Pro/Pro Plus
   это нативная 30-дневная recurring-подписка Stars (`subscriptionPeriod`), Trial — разовый платёж.
 - **PayPal** — Orders API v2, полный цикл checkout → capture (`GET /api/billing/paypal/capture`
@@ -117,14 +119,14 @@ PayPal → после подтверждения PayPal редиректит н�
 
 ```
 Environment=Cedar__Translate__Provider=anthropic
-Environment=Cedar__Translate__AnthropicApiKey=sk-ant-...
+Environment=Cedar__Anthropic__ApiKey=sk-ant-...
 ```
 
-Модель по умолчанию — `claude-opus-4-8` (лучшее качество; ~$5/$25 за млн токенов —
-перевод одного поста стоит копейки). Сэкономить можно, переключив на Sonnet:
+Модель по умолчанию — `claude-haiku-4-5` (`Consts.Anthropic.DefaultModel`; дёшево, для перевода
+достаточно). Поднять качество можно, переключив на Sonnet — это дороже Haiku:
 
 ```
-Environment=Cedar__Translate__AnthropicModel=claude-sonnet-5
+Environment=Cedar__Anthropic__Model=claude-sonnet-5
 ```
 
 ### Вариант B: OpenAI (ChatGPT API)
@@ -134,11 +136,11 @@ Environment=Cedar__Translate__AnthropicModel=claude-sonnet-5
 
 ```
 Environment=Cedar__Translate__Provider=openai
-Environment=Cedar__Translate__OpenAiApiKey=sk-...
-Environment=Cedar__Translate__OpenAiModel=gpt-4o
+Environment=Cedar__OpenAi__ApiKey=sk-...
+Environment=Cedar__OpenAi__Model=gpt-4o
 ```
 
-(модель поменяй на актуальную, какая тебе нравится — ключ `OpenAiModel`).
+(модель поменяй на актуальную, какая тебе нравится — ключ `Cedar:OpenAi:Model`).
 
 ### Вариант C: DeepL — самый дешёвый, но «тупой» построчный перевод
 
@@ -149,7 +151,7 @@ Environment=Cedar__Translate__OpenAiModel=gpt-4o
 
 ```
 Environment=Cedar__Translate__Provider=deepl
-Environment=Cedar__Translate__DeepLApiKey=xxxx-xxxx-xxxx:fx
+Environment=Cedar__DeepL__ApiKey=xxxx-xxxx-xxxx:fx
 ```
 
 Отличие от LLM: DeepL переводит каждый текстовый фрагмент отдельно (структура документа
@@ -281,16 +283,9 @@ nano ~/.config/cedar-backup.env       # HC_OFFSITE_URL=..., R2_REMOTE=r2:cedar-b
 
 ---
 
-## 6. Мониторинг и статус-страница — UptimeRobot
+## 6. Мониторинг и статус-страница — UptimeRobot. **Настроено 13.08.2026 (`T-148`)**
 
-**Зачем.** Сейчас про падение прода узнаёшь, открыв сайт. Юнит `enabled`, так что ребут переживается,
-но упавший процесс, кончившийся диск или сломавшийся туннель никто не заметит. Бесплатный тариф:
-50 мониторов, интервал 5 минут, публичная статус-страница со своим доменом.
-
-**Что нужно от тебя:**
-
-1. Регистрация на `uptimerobot.com` (Free).
-2. Три монитора:
+Живая конфигурация (Марти, Free-тариф, интервал 5 минут) — запись, а не чек-лист:
 
 | Что | Тип | URL | Ключевое слово |
 |---|---|---|---|
@@ -300,13 +295,33 @@ nano ~/.config/cedar-backup.env       # HC_OFFSITE_URL=..., R2_REMOTE=r2:cedar-b
 
 Keyword-монитор на `/api/health` — не роскошь: Cloudflare отдаёт 200 со страницей ошибки, когда
 туннель лёг, так что проверка «пришёл ли 200» скажет «всё хорошо» ровно в тот момент, когда всё
-плохо. Ответ содержит и версию — по нему видно, что задеплоено.
+плохо. Ответ содержит и версию — по нему видно, что задеплоено. Побочный урок первого дня: монитор
+блога сначала «падал» при живом сайте — UptimeRobot ходит `HEAD`, а блог отвечал только на GET;
+починено в 0.11.1 (`BlogHeadRequestTests`).
 
-3. Алерты: e-mail обязательно, плюс Telegram-интеграция, если хочешь их видеть там же, где посты.
-4. **Status Page** → New: мониторы из таблицы, `Custom domain` = `status.mooexe.dev`.
-5. В Cloudflare DNS: `CNAME status → stats.uptimerobot.com`, **Proxy status: DNS only** (серое
-   облако). Проксированная запись ломает им выпуск сертификата — тот же случай, что и `periwinkle`.
+**Статус-страница**: `stats.uptimerobot.com/jKcnizZ9vU`, ссылка Status в футере блога. Свой домен
+(`status.mooexe.dev`) у UptimeRobot платный — CNAME отложен до решения о платном тарифе; если
+когда-нибудь включится, запись в Cloudflare обязана быть **DNS only** (проксирование ломает им
+выпуск сертификата — тот же случай, что и `periwinkle`).
 
 **Чего от них не ждать.** UptimeRobot проверяет снаружи и видит только HTTP. Он не заметит, что
 кончается диск, что ночной бэкап не отработал (это healthchecks.io) и что база растёт быстрее
 обычного — для этого есть `cedar status`.
+
+---
+
+## 7. Соцсети-коннекторы — X и Bluesky. **Работают на проде**
+
+Оба подключаются пользователем в **Settings → Integrations** (ADR-095), ключи приложений — в drop-in.
+
+**X/Twitter** (ADR-092/093): приложение в X Developer Portal (аккаунт Марти), OAuth 2.0 PKCE,
+callback `https://cedarclerk.mooexe.dev/api/targets/x/callback`. В drop-in:
+`Cedar__X__ClientId` + `Cedar__X__ClientSecret`. Публикация платная **для автора** — 1 кредит за
+пост (пакеты кредитов см. §1/Stripe и Stars ниже); у самого приложения в X — свой pay-per-use
+баланс, пополняется в портале X.
+
+**Bluesky** (ADR-079): без приложения и review — пользователь вводит handle + app password,
+хранится зашифрованным (DataProtection), сессия на каждую публикацию. Ключей в drop-in не требует.
+
+**Кредиты** (ADR-092): покупка идёт существующими флоу — Stripe Checkout (metadata `credits_pack`)
+и Stars-invoice (payload `credits-{pack}:{user}`); отдельных ключей нет, работает на тех же, что §1.

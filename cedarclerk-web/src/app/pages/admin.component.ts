@@ -16,7 +16,7 @@ export type AdminTab = 'users' | 'invites' | 'posts' | 'reports';
 // color per identity rather than a random one, so a given user's avatar doesn't shuffle on reload.
 const AVATAR_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
 
-// Admin panel (IF2) — all five steps of docs/admin-panel-scope.md. Users and their management,
+// Admin panel (IF2), built in five scoped steps (ADR-122). Users and their management,
 // invite codes, a read-only cross-owner post list, billing/usage reporting, and the audit log.
 @Component({
     selector: 'app-admin',

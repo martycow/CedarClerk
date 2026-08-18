@@ -1,6 +1,6 @@
 # Design
 
-Source of truth for all values below: `cedarclerk-web/src/styles.scss` (264 lines, the only global stylesheet — there is no separate tokens file). Component-scoped CSS lives alongside each component (`editor.component.css`, `settings.component.css`, etc.) under Angular's default view encapsulation.
+Source of truth for all values below: `cedarclerk-web/src/styles.scss` (~800 lines; since 18.08.2026 it `@use`s a second global partial, `styles/_forest.scss` — the Forest Workshop skin, ~1200 lines scoped under `:root[data-skin="forest"]`). Component-scoped CSS lives alongside each component (`editor.component.css`, `settings.component.css`, etc.) under Angular's default view encapsulation. **When this file and `styles.scss` disagree, `styles.scss` wins** — the values below drifted once (the 01.08 role shift) and were re-synced 18.08.2026.
 
 ## Principles (ADR-071, 31.07.2026)
 
@@ -8,7 +8,7 @@ The visual direction, decided by Marty as the answer to Q-11 and binding on Phas
 
 1. **Warm editorial is the base.** Paper and wood neutrals, olive accent, generous reading measure. This is a continuation of the 08.07.2026 "Cabin" token set below, not a replacement for it — the palette already expresses this direction, and the work is making every screen honour it.
 2. **One palette, one type scale, product-wide.** There is no second colour set for any screen, ever. Difference between screens is expressed only in spacing, radius and size tokens.
-3. **Density is a surface mode, not a component choice.** A page root opts into `[data-density="compact"]` (same mechanism as `data-theme` on `<html>`); tokens inside resolve tighter — row spacing, control padding, `--radius-md`→`--radius-sm`, and borders rather than shadows for separation. Compact: `/posts`, `/drafts`, `/admin`, `/stats`. Comfortable (default): editor sheet, blog, private-post gate. **A component must never hardcode its density** — several are used on both kinds of screen.
+3. **Density is a surface mode, not a component choice.** A page root opts into `[data-density="compact"]` (same mechanism as `data-theme` on `<html>`); tokens inside resolve tighter — row spacing, control padding, `--radius-md`→`--radius-sm`, and borders rather than shadows for separation. Compact: `/posts`, `/drafts`, `/admin` and the Phase 13 list screens (projects list, tasks board, planner, assets, builds). Comfortable (default): editor sheet, project dashboard, blog, private-post gate. **A component must never hardcode its density** — several are used on both kinds of screen.
 4. **Serif for content, sans for chrome — content means the blog.** The blog post body gets a serif; toolbars, tables, forms, menus and every control stay on `--font-sans`. **The editor sheet is explicitly excluded** (narrowed 31.07.2026, ADR-073): its typeface is already a user setting with a serif option, so the design system does not get to pick it.
 5. **Light-first, dark as a peer.** Every token added gets both light and dark values in the same edit, never "dark later".
 6. **The blog is inside the system.** `BlogEndpoints.cs` maintains its own `:root` and 21 hex literals, `CedarToBlogHtmlRenderer` another 6 — a hand-kept duplicate token set serving roughly half of what a reader sees. Tokens v2 must reach the server-rendered surfaces too.
@@ -30,6 +30,8 @@ Values updated 31.07.2026 by the contrast pass (T-082/ADR-074) — see "Accessib
 --abord: color-mix(in srgb, var(--accent) 38%, var(--border));
 ```
 
+Tokens added since this block was first written (values in `styles.scss`, both themes): `--shadow-lg` (the modal shadow, tokenized), `--hover`/`--hover-strong`/`--hover-danger` (theme-correct hover tints), `--scrim` (modal backdrop), `--warn`, `--series-1…6` (chart palette, graded in the contrast table below), and the Cedar Aero glass set (`--blur`, `--glass`, `--glass-strong`, `--glass-border`, `--gloss-top`, `--glow-accent`).
+
 ### Color — dark (`:root[data-theme="dark"]`)
 Overrides only the listed properties; everything else (`--shadow-md`, `--asoft`, `--abord`, radius, spacing, fonts) is inherited unchanged from `:root`:
 ```
@@ -42,7 +44,7 @@ Overrides only the listed properties; everything else (`--shadow-md`, `--asoft`,
 --shadow: 0 1px 3px rgba(0, 0, 0, .45);
 ```
 
-Theme is applied by `ThemeService` (`cedarclerk-web/src/app/core/theme.service.ts`): a signal-backed `Theme = 'light' | 'dark'`, persisted to `localStorage` (key `cedar-theme`), falling back to the `prefers-color-scheme: dark` media query, applied by setting `document.documentElement.dataset['theme']` — i.e. a `data-theme` attribute on `<html>`, matched by the `:root[data-theme="dark"]` selector above. Toggled via a ☾/☀ control in the editor topbar and both auth pages.
+Theme is applied by `ThemeService` (`cedarclerk-web/src/app/core/theme.service.ts`): a signal-backed `Theme = 'light' | 'dark'`, persisted to `localStorage` (key `cedar-theme`), falling back to the `prefers-color-scheme: dark` media query, applied by setting `document.documentElement.dataset['theme']` — i.e. a `data-theme` attribute on `<html>`, matched by the `:root[data-theme="dark"]` selector above. Toggled via a ☾/☀ control in the editor topbar, both auth pages, and the Appearance panel (right above the skin toggle).
 
 ### Radius
 ```
@@ -82,26 +84,27 @@ Patterns stay the ones already in use (`d MMM`, `d MMM, HH:mm`, `d MMM yyyy, HH:
 spelled out (`14:05 PDT`) on the blog and left unspoken in the app: a reader could be anywhere, the
 author is in one place.
 
-`--font-serif` (added 31.07.2026, tokens v2) is for reading surfaces **only** — blog post body and the editor sheet. A system stack on purpose: the server serves every byte itself, and adding a downloaded face is a performance/licensing decision nobody has made.
+`--font-serif` (added 31.07.2026, tokens v2) is for reading surfaces **only** — blog post body and the editor sheet. A system stack on purpose: the server serves every byte itself. The one exception is the **Forest skin**, which self-hosts Vollkorn/Source Sans 3/Literata/Caveat via @fontsource (ADR-120) — the default skin still downloads no font bytes, since only forest-scoped rules reference those families.
 
 Font-size scale — added 27.07.2026 (ADR-052), extended 31.07.2026 (ADR-071) to `--fs-9/10/11/12/13/14/15/16/17/18/19/20/22/27`. **Integers only**: the 10/15/17/18/22 steps were added because they are measured, in-use sizes; the half-pixel sizes found in the sweep are not tokenized and collapse to the nearest integer.
 
 Semantic roles sit on top, and components reach for **these**, not the numbers — the numbers are the palette, the roles are the meaning, and the roles are what the density switch moves:
 ```
---fs-caption: var(--fs-11);   labels above a field, timestamps
---fs-meta:    var(--fs-12);   secondary row data, counts
---fs-ui:      var(--fs-13);   buttons, menu items, table cells
---fs-body:    var(--fs-14);   default UI text
---fs-title:   var(--fs-19);   page and section titles
+--fs-caption: var(--fs-12);   labels above a field, timestamps
+--fs-meta:    var(--fs-13);   secondary row data, counts
+--fs-ui:      var(--fs-14);   buttons, menu items, table cells
+--fs-body:    var(--fs-15);   default UI text
+--fs-title:   var(--fs-20);   page and section titles
 --fs-read:    var(--fs-17);   reading surfaces
 --lh-read:    1.7;
 ```
+*(Every role except `--fs-read` moved up one step on 01.08.2026 — the `styles.scss` comment records it; this file carried the old values until 18.08.2026.)*
 
 ### Icons (ADR-072)
 ```
---icon-sm: 15px;   --icon-md: 18px;   --icon-lg: 20px;
+--icon-xs: 13px;   --icon-sm: 17px;   --icon-md: 20px;   --icon-lg: 24px;
 ```
-These are exactly the three values `.icon` was declared with across 9 files — the inconsistency is why they became tokens. Set: **Phosphor**, inlined SVG behind one `app-icon` component (T-079 done 31.07.2026; `@lucide/angular` is gone). `--icon-xs: 12px` was added by the `/drafts` migration. What each icon *means* in this app, and where a meaning has two glyphs, is on `/dev/icons` — generated from the call sites by `npm run icons:generate`, never hand-kept (ADR-075).
+The tokens were born as the three values `.icon` was declared with across 9 files (15/18/20 — the inconsistency is why they became tokens), then **raised one step each on 01.08.2026**; `--icon-xs` was added by the `/drafts` migration. Set: **Phosphor**, inlined SVG behind one `app-icon` component (T-079 done 31.07.2026; `@lucide/angular` is gone). What each icon *means* in this app, and where a meaning has two glyphs, is on `/dev/icons` — generated from the call sites by `npm run icons:generate`, never hand-kept (ADR-075).
 
 ### Motion
 ```
@@ -137,7 +140,7 @@ The one that matters when writing CSS: **`--t3` never carries information.** If 
 
 ## Component patterns (convention, not enforced)
 
-There is **no shared component library** for buttons or modals — `.btn-accent`, `.btn-ghost`, `.modal-overlay`, `.modal-card`, `.modal-head`, `.modal-body`, `.modal-actions` are defined once inside `editor.component.css` (component-scoped, `ViewEncapsulation.Emulated`) and copy-pasted independently into `settings.component.css` with *different* values (e.g. `.btn-ghost` padding is `7px 14px` in the editor vs `5px 12px` in settings). `login.component.css` has neither class — its own separate button styling. `shared/` only contains `PopoverComponent` and `CedarLogoComponent`, neither of which is a button/modal abstraction.
+There is **still no shared button abstraction** — `.btn-accent`/`.btn-ghost` are copy-pasted between component stylesheets with drifting values (e.g. `.btn-ghost` padding differs between the editor and settings). But the modal gap closed: `shared/` now holds ~15 reusable components including a real `app-modal` (used across the app), `app-icon`, `page-header`, `account-menu`, the pickers, the appearance panel and more — `docs/UI-INVENTORY.md` §Shared is the census. The paragraph below survives as the button-pattern reference.
 
 De-facto pattern from `editor.component.css` (lines 458–537), useful as a reference if/when this gets formalized into a real shared component:
 ```css
@@ -152,7 +155,7 @@ De-facto pattern from `editor.component.css` (lines 458–537), useful as a refe
     background: var(--sheet);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    box-shadow: 0 24px 64px rgba(0, 0, 0, .3);  /* not var(--shadow-md) — untokenized */
+    box-shadow: var(--shadow-lg);  /* tokenized since — exactly this value */
     padding: 22px 24px;
     color: var(--text);
 }
@@ -185,8 +188,9 @@ A second styling axis besides light/dark: `data-skin="forest"` on `<html>` (Them
 
 ## Known design debt
 
-- Font-size scale (`--fs-*`) exists but isn't adopted outside the new shared header — see Typography above.
-- `.btn-*`/`.modal-*` duplicated with drifted values across `editor.component.css` and `settings.component.css` instead of a shared component.
-- `--shadow-md` exists as a token but isn't consistently used — some components (modal, toast) hardcode their own box-shadow values instead.
+- ~~Font-size scale isn't adopted outside the shared header~~ — closed by T-077 (31.07–01.08.2026): 314 → 0 hardcoded `font-size` declarations in the Angular app.
+- `.btn-accent`/`.btn-ghost` duplicated with drifted values across component stylesheets instead of a shared component (modals *are* shared now — `app-modal`).
+- Spacing literals 9/11/14/18px on cards and badges — the scale has no such steps; picking one waits on T-076's mockups, not on a sweep.
+- The blog's server-rendered surfaces get their tokens generated from `styles.scss` (ADR-090), but the renderer still carries a handful of its own hex values.
 
-> TODO (Marty): is there a target design-system tool (Figma, Claude Design file) that should be the source of truth going forward, or is `styles.scss` itself the canonical source? The repo history references Claude-Design-generated mockups (`docs/Cedar Clerk Editor.dc.html` etc., now archived to `_Documents_/CedarClerk/OLD/Design/`) as the origin of the current token set — worth confirming whether that pipeline is still active for future design work.
+> ~~TODO (Marty): target design-system tool?~~ — **answered by practice, 08–18.08.2026**: Claude Design is the active pipeline for new work, delivered as handoff packages (`docs/design_handoff_indiedev_core_loop/` for the module screens; the Forest Workshop project for the skin), while **`styles.scss` stays the canonical source of token values** — packages copy from it, never the reverse.

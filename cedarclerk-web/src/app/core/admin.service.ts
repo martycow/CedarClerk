@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 // Admin panel data (IF2). Everything here is cross-owner and therefore lives behind /api/admin,
-// which is gated server-side — see docs/admin-panel-scope.md for why this is a separate endpoint
+// which is gated server-side — see ADR-122 (docs/DECISIONS.md) for why this is a separate endpoint
 // set rather than an "admin bypasses the owner filter" flag on the normal ones.
 export interface AdminUser {
     id: string;
