@@ -3,7 +3,7 @@
 **Production moved from the Raspberry Pi to a DigitalOcean droplet on 11.08.2026.** Everything below
 was read off the running machine that day, not remembered. The Pi is no longer production; anything
 in `CHANGELOG.md`, `docs/DECISIONS.md` or `TASKS.md` that talks about "the Pi" is history, and the
-checklist the move followed is `docs/migration-to-digitalocean.md`.
+checklist the move followed is `docs/archive/migration-to-digitalocean.md`.
 
 - **Host**: DigitalOcean droplet `cedarclerk-periwinkle` (hostname `cedarclerk-ubuntu-s-1vcpu-2gb-fra1`),
   region **fra1**, 1 vCPU / 2 GB RAM / 48 GB disk (45 GB free), **Ubuntu 24.04.4 LTS, x86_64**.
