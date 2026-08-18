@@ -41,7 +41,7 @@ Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTUR
 - `docs/ROADMAP.md` — phase-by-phase execution status (the live plan — update it when closing items)
 - `docs/BACKLOG.md` — the only source of open, not-yet-started ideas/features/tech-debt (kept separate from ROADMAP on purpose)
 - `docs/UI-INVENTORY.md` — per-element inventory of the frontend UI (location, type, purpose, loading-state check) — update it when adding/changing a UI element
-- `docs/integrations-setup.md` — payment/translation provider setup runbook
+- `docs/for_user/integrations-setup.md` — payment/translation provider setup runbook
 - `docs/INPUT_PROMPT.md` — Marty's dynamic prompt inbox: "considered as a new prompt every time". **Untracked on purpose** (gitignored; Marty rewrites it at will) — check its mtime against the last "Input sweep" in ROADMAP. Content may predate the code — verify against it
 - `TASKS.md` — short-horizon "what's next" list
 - `CHANGELOG.md` — human-readable history by session/date

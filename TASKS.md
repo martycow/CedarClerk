@@ -26,7 +26,7 @@
 - [ ] **`T-172` — цифры квот** (предложение из `docs/MULTITENANCY.md` §1: Free 100 МБ / Pro 1 ГБ /
   Pro Plus 3 ГБ).
 - [ ] **`T-147` — бакет Cloudflare R2 + токен + второй чек healthchecks** (чек-лист —
-  `docs/integrations-setup.md` §5).
+  `docs/for_user/integrations-setup.md` §5).
 - [ ] **`Q-17` — имя продукта** (рекомендация: оставить Cedar Clerk, фокус — подзаголовком).
 - [ ] **`Q-18` — политика NSFW** (новый вопрос из Input sweep; нужна строка в Terms).
 - [ ] **Terms/Privacy показать юристу** до открытия публичной регистрации (тексты заполнены

@@ -45,7 +45,7 @@ Not a Telegram-only tool for Telegram-only creators — channel-agnostic by desi
 
 Beside the subscription tiers there is a **prepaid credit wallet** (ADR-092, live): packs of 10/$4, 50/$18, 100/$30 (Stars 200/900/1500), bought in Settings → Credits, spent 1 credit per X post — the pattern every metered cost is meant to move to (`T-152` proposes moving all AI calls onto it, since Pro Plus's flat AI quota has unproven margin — `docs/BUSINESS.md` §3).
 
-Payment providers: **Stripe is live and proven with real money** (first real payment 26.07.2026, subscriptions and credit packs both); Telegram Stars and PayPal are code-complete but have never processed a live payment. Details and setup in `docs/integrations-setup.md`; the decision history (including what was *not* built, like PayPal recurring) is in `docs/DECISIONS.md`.
+Payment providers: **Stripe is live and proven with real money** (first real payment 26.07.2026, subscriptions and credit packs both); Telegram Stars and PayPal are code-complete but have never processed a live payment. Details and setup in `docs/for_user/integrations-setup.md`; the decision history (including what was *not* built, like PayPal recurring) is in `docs/DECISIONS.md`.
 
 ## Open product questions
 

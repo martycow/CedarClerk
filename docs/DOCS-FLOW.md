@@ -31,6 +31,13 @@ flowchart TB
         ARCH["docs/ARCHITECTURE.md<br/>устройство системы"]
         DESIGN["docs/DESIGN.md<br/>токены, паттерны UI"]
         UIINV["docs/UI-INVENTORY.md<br/>инвентарь элементов UI"]
+        STACK["docs/STACK.md<br/>стек и расходы"]
+        BIZ["docs/BUSINESS.md<br/>деньги: гейты, метрики, ритуалы"]
+        MULTI["docs/MULTITENANCY.md<br/>что будет при пользователях"]
+    end
+
+    subgraph USR["docs/for_user — инструкции и мануалы"]
+        INTEG["docs/for_user/integrations-setup.md<br/>ранбук ключей провайдеров"]
     end
 
     subgraph MOD["Модуль инди-геймдева — Phase 13"]
@@ -83,7 +90,7 @@ flowchart TB
     class MARTY,INPUT,INPUTP,CODE source
     class BACKLOG,ROADMAP,TASKS,CHANGELOG plan
     class DECISIONS,RULES,CLAUDE why
-    class PRODUCT,PRD,ARCH,DESIGN,UIINV ref
+    class PRODUCT,PRD,ARCH,DESIGN,UIINV,STACK,BIZ,MULTI,INTEG ref
     class INDIE,DESKTOP,DPROMPT mod
 ```
 
@@ -127,6 +134,11 @@ flowchart TB
 - **`docs/indiedev-design-prompt.md`** — бриф для Claude Design. Односторонний потребитель: токены копируются в него из `DESIGN.md` дословно, обратно ничего не течёт. **Значит он протухает молча** — при изменении `styles.scss` сверять перед запуском.
 
 Правило «задача живёт ровно в одном месте» действует и здесь: MUST/MIGHT-списки в `INDIEDEV.md` — это *состав* модуля, а строки задач живут в `BACKLOG.md`. Список в `INDIEDEV.md` не вычёркивается по мере работы — статус ведёт `ROADMAP.md`.
+
+## Размещение файлов (правила Марти, 18.08.2026)
+
+- **`docs/for_user/` — все инструкции, мануалы и прочее, что важно пользователю.** Первый жилец — `for_user/integrations-setup.md` (ранбук настройки провайдеров). Новый how-to-документ кладётся сюда, а не в корень `docs/`.
+- Справочники STACK / BUSINESS / MULTITENANCY (появились 13.08) до аудита 18.08 в схеме выше отсутствовали вовсе — теперь внесены; новый док обязан получать узел в схеме в том же коммите.
 
 ## Известные слабые места
 

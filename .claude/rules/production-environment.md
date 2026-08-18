@@ -108,7 +108,7 @@ Three things about it that are load-bearing:
 
 Until `R2_REMOTE` is set in `~/.config/cedar-backup.env`, the off-box half **skips silently** and the
 local copy is unaffected. The keys are Marty's to create — the checklist is
-`docs/integrations-setup.md` §5.
+`docs/for_user/integrations-setup.md` §5.
 
 What is still true until then:
 
@@ -129,4 +129,4 @@ the whole machine to the moment of the weekly image.
 - The coordination constraint that the same machine ran Marty's Freenove electronics projects.
 
 See `docs/ARCHITECTURE.md` for the deploy pipeline that targets this environment, ADR-113 for why that
-pipeline is shaped the way it is, and `docs/integrations-setup.md` for provider-key setup on top of it.
+pipeline is shaped the way it is, and `docs/for_user/integrations-setup.md` for provider-key setup on top of it.
