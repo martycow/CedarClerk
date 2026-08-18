@@ -16,7 +16,7 @@ Cedar Clerk — self-hosted personal publishing SaaS. A web rich-text editor who
 Document model: TipTap JSON stored in SQLite (`Draft.CedarJson`). One document → many renderers (Telegram HTML, blog HTML, `.cedar` export) is the core architectural idea — see `docs/ARCHITECTURE.md`.
 
 ## Anti-desynchronization mechanism
-Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTURE.md. If you change ANY of your decisions, you must update docs/DECISIONS.md first, then write code.
+Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTURE.md. If you change ANY of your decisions, you must record the ADR first, then write code — since 18.08.2026 that means a new `docs/adr/ADR-xxx.md` (first line `# ADR-xxx — Title`) plus its row in the `docs/DECISIONS.md` index.
 
 ## Stack
 .NET 8 (minimal APIs, EF Core + SQLite, ASP.NET Identity, Quartz.NET) + Angular 21/TipTap 3 (standalone components, signals, Vitest). Full detail: `docs/ARCHITECTURE.md`.
@@ -37,7 +37,7 @@ Before implementation of anything, firstly read docs/PRD.md and docs/ARCHITECTUR
 - `docs/PRD.md` — shipped vs. open requirements, deferred/blocked items
 - `docs/ARCHITECTURE.md` — solution layout, data model, API style, deploy pipeline
 - `docs/DESIGN.md` — design tokens (colors/spacing/typography), component patterns
-- `docs/DECISIONS.md` — ADR log: why things were built the way they were
+- `docs/DECISIONS.md` — ADR log: why things were built the way they were. Since 18.08.2026 an **index** — one file per ADR in `docs/adr/` (122 at the split)
 - `docs/ROADMAP.md` — phase-by-phase execution status (the live plan — update it when closing items)
 - `docs/BACKLOG.md` — the only source of open, not-yet-started ideas/features/tech-debt (kept separate from ROADMAP on purpose)
 - `docs/UI-INVENTORY.md` — per-element inventory of the frontend UI (location, type, purpose, loading-state check) — update it when adding/changing a UI element
