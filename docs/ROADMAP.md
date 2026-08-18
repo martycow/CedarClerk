@@ -500,6 +500,15 @@ Three things the implementation changed or added, each recorded in `docs/DECISIO
 
 **Blocked on somebody else's API, not on us** — `T-127`: itch.io, Steam, IndieDB and LinkedIn are each an `IPublishTarget` implementation (cheap), but whether each even offers a write endpoint is unverified. Research before scoping; the precedent is `Q-13`, where the network order had to be redone once X turned out to charge per post.
 
+### Competitor analysis absorbed — 18.08.2026
+
+Marty's report «Cedar Clerk против всех» (13.08.2026: Codecks, HacknPlan, Anchorpoint, IndieViral — 126 screenshots + web research) was read against the code and the backlog. Outcome:
+
+- **15 new backlog rows** (`T-158…T-172`), the anchors being the bridge "sprint → devlog draft" (`T-158`, the one feature nobody in the category has and both halves of which this product already ships), the public project page (`T-159`), onboarding templates (`T-160`), Discord webhook publishing (`T-161`) and the quotas-vs-disk registration blocker (`T-172`, promoted out of `MULTITENANCY.md` §1 into a tracked row).
+- **Descriptions corrected against reality**: `T-154` claimed the site root shows a login form — the landing has existed since `T-009` (`LandingEndpoints`, verified live), so the row now describes the real work: devlog-first repositioning, EN default, waitlist. `T-152`, `T-088`, `T-127`, `T-128` gained the report's inputs.
+- **`T-148` closed** — Marty set up UptimeRobot on 13.08 (three monitors, status page checked live 18.08); the row lagged `BUSINESS.md` by five days.
+- **`docs/PRODUCT.md` pricing table corrected**: it said 1/5GB storage while `PlanLimitations` grants 8/16GB — the code is the arbiter, and the 8/16 numbers are exactly why `T-172` is a blocker.
+
 ---
 
 ## Backlog

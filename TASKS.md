@@ -106,8 +106,9 @@ In-flight work and next actions. Phase-level planning lives in `docs/ROADMAP.md`
 - [ ] **`T-147` ждёт ключей**: инфраструктура выгрузки готова (rclone в `~/bin`,
   `Scripts/server/backup.sh`, конфиги с правами 600), нужен бакет Cloudflare R2 + токен + второй чек
   healthchecks — чек-лист в `docs/integrations-setup.md` §5.
-- [ ] **`T-148` ждёт регистрации**: UptimeRobot + статус-страница на `status.mooexe.dev` —
-  чек-лист в `docs/integrations-setup.md` §6.
+- [x] **`T-148` закрыт 13.08.2026** Марти: три монитора UptimeRobot зелёные (`docs/BUSINESS.md` §1 п.5),
+  статус-страница `stats.uptimerobot.com/jKcnizZ9vU` (свой домен там платный — CNAME отложен),
+  ссылка Status в футере блога. Строка из бэклога удалена 18.08.2026, страница проверена живьём.
 - [ ] Nothing has been pushed to GitHub (`git push origin master dev indiedev_module --tags`).
 
 ## v0.10.0 is on master (10.08.2026) — deployed 10.08.2026

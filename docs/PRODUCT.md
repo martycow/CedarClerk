@@ -31,15 +31,17 @@ Creators who want to write once and reach readers across several channels at onc
 
 Not a Telegram-only tool for Telegram-only creators — channel-agnostic by design, even though Telegram is where the most engineering investment has landed so far.
 
-## Pricing (as implemented, `CedarClerk.Core/Consts.cs` + `PlanLimitations.cs` — code-verified 16.07.2026)
+## Pricing (as implemented, `CedarClerk.Core/Consts.cs` + `PlanLimitations.cs` — code-verified 18.08.2026)
 
 | Tier | Price | What it unlocks |
 |---|---|---|
 | Free | $0 | 1 channel, 200MB asset storage, stats history capped at the last 30 snapshots (`PlanLimitations.MaxChannels`/`StorageLimitBytes` — code-confirmed, not the originally-planned estimate) |
-| Pro | $3/mo | Up to 3 channels, 1GB storage, no "Powered by Cedar Clerk" badge — **same 30-snapshot stats cap as Free**: `ChannelEndpoints.cs`'s stats query has no plan check at all, so "full history" was never actually true for any tier |
-| Pro Plus | $6/mo | Everything in Pro + AI features (`PlanLimitations.HasAiFeatures`): auto-translate, AI edit (fix errors / "schizo-izer"), daily AI-call quota via `AiUsage`. Up to 10 channels, 5GB storage |
+| Pro | $3/mo | Up to 3 channels, **8GB** storage, no "Powered by Cedar Clerk" badge — **same 30-snapshot stats cap as Free**: `ChannelEndpoints.cs`'s stats query has no plan check at all, so "full history" was never actually true for any tier |
+| Pro Plus | $6/mo | Everything in Pro + AI features (`PlanLimitations.HasAiFeatures`): auto-translate, AI edit (fix errors / "schizo-izer"), daily AI-call quota via `AiUsage`. Up to 10 channels, **16GB** storage |
 | Trial | $1 one-time | 7 days of Pro Plus, usable once per account (`ApplicationUser.TrialUsedAt`) |
 | Founder / Lifetime | one-time, via a designated invite code | Permanent Pro tier, granted at registration through a separate founder invite code — no payment flow, no AI (see ADR-022, `docs/DECISIONS.md`) |
+
+> **The storage quotas above outrun the disk** (8/16GB promised against ~40GB free on the droplet — five Pro users at quota take the server down). Known, analysed in `docs/MULTITENANCY.md` §1, tracked as `T-172`: a registration blocker, not a footnote.
 
 Three payment providers, all code-complete but not yet live in production (waiting on real keys — see `TASKS.md`): Stripe, Telegram Stars, PayPal. Details and setup steps in `docs/integrations-setup.md`; the decision history (including what was *not* built, like PayPal recurring) is in `docs/DECISIONS.md`.
 

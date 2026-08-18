@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-18 — the market read, and fifteen rows
+
+Marty's competitor report («Cedar Clerk против всех» — Codecks, HacknPlan, Anchorpoint, IndieViral) was read against the code, the backlog and the live server, and turned into a prioritised plan. The report's central claim held up under verification: all four competitors look *inward* at production, none turns the work into publishable content — and that outward half is the part Cedar Clerk already runs in production.
+
+**Fifteen backlog rows** (`T-158…T-172`). The ones that matter: the bridge from closed sprint/tasks/build to a devlog draft (`T-158` — the analysis' feature №1, cheap because `EntityLink` and the changelog generator already exist), the public project page on the blog domain (`T-159` — every free page advertises the service, and the "Published via Cedar Clerk" footer already ships per ADR-034), onboarding templates with a seeded project (`T-160` — activation is metric №1 and an empty screen kills it), Discord webhook publishing (`T-161` — days of work, and the main home of the audience), and quotas-vs-disk (`T-172` — promoted from `MULTITENANCY.md` §1 into a tracked registration blocker). Plus PRGE 2026 prep with a hard September deadline (`T-164` — go as a visitor with a laptop, not a booth), SEO comparison articles (`T-163`), paid-feature visibility in the UI (`T-165`), and three research rows (IGDB autofill, conditional first comment for Telegram, a game-events database).
+
+**Three doc-vs-reality drifts found while verifying.** `T-154` claimed the site root greets strangers with a login form — the server-rendered landing has existed since `T-009` and answers live; the row now describes the real gap: RU-first generic-publisher positioning where an EN-first devlog-first pitch with a waitlist should be. `T-148` (external monitoring) had been done by Marty on 13.08 and was still open on the board — closed, status page verified live. And `docs/PRODUCT.md` promised 1/5GB storage while `PlanLimitations` grants 8/16 — corrected to the code, which is also exactly why `T-172` blocks registration.
+
+**What was deliberately *not* added**, per the report's own warning about расфокус: time tracking, engine SDKs, a public API, Vision boards — the matrix of competitor features is a temptation, and the winning vertical is «написал → опубликовал везде → аудитория растёт».
+
 ## 2026-08-13 — the stack, the tenants, and nine rows in the backlog
 
 Marty's answers to yesterday's business file turned into two more documents and a batch of backlog rows. One number came out of writing them that changes what "ready for users" means.
