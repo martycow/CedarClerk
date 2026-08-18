@@ -34,6 +34,31 @@ public class PipelineTests
         return board;
     }
 
+    // ------------------------------------------------------------------ a locked publish/
+
+    private sealed class LockedFileWriter : IFileWriter
+    {
+        public void DeleteDirectory(string path) =>
+            throw new UnauthorizedAccessException("Access to the path 'Anthropic.dll' is denied.");
+
+        public void CopyTree(string source, string destination) { }
+        public void WriteText(string path, string content) { }
+    }
+
+    // The 18.08.2026 deploy failure: a `cedar run` server still holds publish/, and the raw
+    // Directory.Delete message names the dll instead of the cause.
+    [Fact]
+    public void A_locked_publish_names_the_running_server_not_the_dll()
+    {
+        var stop = Assert.Throws<PipelineStop>(() =>
+            BuildPipeline.ClearOrExplain(new LockedFileWriter(), @"D:\repo\publish",
+                "a server is usually still running from publish/ - stop `cedar run` (Ctrl+C) and retry"));
+
+        Assert.Contains("publish/ could not be cleared", stop.Message);
+        Assert.Contains(stop.State, line => line.Contains("Anthropic.dll"));
+        Assert.Contains(stop.Hints, hint => hint.Contains("cedar run"));
+    }
+
     // ------------------------------------------------------------------ the git guard
 
     [Fact]

@@ -64,7 +64,8 @@ public sealed class BuildPipeline
 
             await board.StepAsync(StageServer, async step =>
             {
-                _files.DeleteDirectory(_config.PublishDir);
+                ClearOrExplain(_files, _config.PublishDir,
+                    $"a server is usually still running from publish/ - stop `{CliConsts.BinaryName} run` (Ctrl+C) and retry");
 
                 await LocalRun.RunOrStopAsync(_runner, step, "dotnet",
                     $"publish \"{_config.ServerProject}\" -c Release -o \"{_config.PublishDir}\"",
@@ -80,7 +81,8 @@ public sealed class BuildPipeline
         await board.StepAsync(StageDesktopServer, async step =>
         {
             SyncShellVersion(version, step);
-            _files.DeleteDirectory(_config.DesktopServerDir);
+            ClearOrExplain(_files, _config.DesktopServerDir,
+                "the desktop shell may still be running against this tree - close it and retry");
 
             await LocalRun.RunOrStopAsync(_runner, step, "dotnet",
                 $"publish \"{_config.ServerProject}\" -c Release -r win-x64 --self-contained true " +
@@ -118,6 +120,24 @@ public sealed class BuildPipeline
                 ? $"{Rendering.Format.Size(new FileInfo(installer).Length)}  dist/"
                 : "dist/ - the named installer was not found");
         });
+    }
+
+    // A locked publish/ has one usual owner: a server still running from it. Directory.Delete's raw
+    // "Access to the path 'Anthropic.dll' is denied" names the dll and not the cause, which turned
+    // a missing Ctrl+C into a support question (18.08.2026).
+    internal static void ClearOrExplain(Execution.IFileWriter files, string path, string probableCause)
+    {
+        try
+        {
+            files.DeleteDirectory(path);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+        {
+            throw new PipelineStop(
+                $"{Path.GetFileName(path)}/ could not be cleared - a file in it is locked.",
+                new[] { ex.Message },
+                new[] { probableCause });
+        }
     }
 
     // The shell's version is checked against /api/health at startup, so a stale one surfaces as a
