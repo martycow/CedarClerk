@@ -1,6 +1,14 @@
 # Changelog
 
-## 2026-08-18 — the market read, and fifteen rows
+## 2026-08-18 — the workshop in the forest, and 0.12.0
+
+Marty's hypothesis — «а что если Cedar Clerk выглядел бы совсем иначе» — went the whole way in one day: a design prompt, a Claude Design project ("Forest Workshop": nine screens, a materials sheet, ready-made SVG parts), and then the design implemented as a real, shipping **skin**. `v0.12.0` is on the droplet with it.
+
+**The skin is a second styling axis, not a theme fork** (ADR-120): `data-skin="forest"` on `<html>`, orthogonal to `data-theme` — "workshop by day / at night" is the existing light/dark toggle wearing wood. The default skin carries no attribute at all, so it cannot change by a pixel; everything lives in one scoped partial (`_forest.scss`, ~1000 lines) plus a `Skin` toggle in the Appearance panel. What made it in: wood-rail chrome, park-sign buttons with brass inlay, pine-cone checkboxes, leaf tags, rubber-stamp statuses, carpenter's-rule scrollbars, the brass ruler under the editor, resin autosave, and the login page as a door into a misty pine forest. Night keeps paper cream and darkens only the wood — which is why the night block re-asserts every token the base dark theme flips. Found on the way and worth remembering: a header comment containing `:root[data-theme="dark"]` silently broke `check-contrast.mjs`'s block anchoring (the dark palette stopped being validated at all), and a design band SVG stretched with `slice` on an ultrawide crops to the bottom sliver — it is a seamless `repeat-x` tile now. Sounds stayed annotations, as the design itself insists.
+
+**`cedar run`** (ADR-121) closes the local-check gap: build front and back, serve `publish/` — the artifact a deploy ships, not the dev servers — on `localhost:8080` against the dev database, open the browser, Ctrl+C stops it. The bot is forced off with a single-space `Cedar__BotToken` (an empty string would *delete* the variable on Windows and let an exported token through to a 409). A port that already answers gets a refusal naming its owner, never a kill.
+
+**The first deploy of 0.12.0 taught the pipeline a lesson**: a `cedar run` left running holds `publish/`, and the build's `Directory.Delete` surfaced as a bare `Access to the path 'Anthropic.dll' is denied`. The pipeline now says what actually happened — publish/ is locked, a server is probably still running from it, stop `cedar run` and retry — with a test pinning the wording. Also learned: version tags live on GitHub too, so retagging a moved `0.12.0` needs `git push --force origin 0.12.0`.
 
 Marty's competitor report («Cedar Clerk против всех» — Codecks, HacknPlan, Anchorpoint, IndieViral) was read against the code, the backlog and the live server, and turned into a prioritised plan. The report's central claim held up under verification: all four competitors look *inward* at production, none turns the work into publishable content — and that outward half is the part Cedar Clerk already runs in production.
 
