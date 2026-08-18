@@ -1,5 +1,52 @@
 # Changelog
 
+## 2026-08-18 — the documentation gets a floor plan
+
+The read-only audit (`docs/archive/AUDIT-DOCS-2026-08.md`) came back with five questions; Marty
+answered all five, and the answers were executed the same evening. The audit's premise survived
+contact with reality only partially — Q-1 turned out closed since 10.08, the "diverged tags" were
+ancestors of master all along, and the four positioning files had already been reconciled by the
+morning sweep — so what ran was the verified plan, not the original hypothesis.
+
+**`docs/INPUT_PROMPT.md` is untracked again**, hours after being committed for the first time.
+Marty's ruling: «это просто динамический файл с промптами… коммитить не надо». It is gitignored
+now; a rewrite is detected by mtime against the last "Input sweep" entry in ROADMAP — exactly the
+`Input.md` model, and DOCS-FLOW says so instead of praising git history it no longer has.
+
+**The archive lives in the repo: `docs/archive/`.** Three residents: the DigitalOcean migration
+journal (executed 11.08, live truth is `production-environment.md`), the audit itself, and the big
+one — **Phases 0–10 cut whole out of `ROADMAP.md`** (371 lines, ~72 KB, 56% of the file; ROADMAP
+went 128 KB → 52 KB). The live file keeps a one-line stub per archived phase; the one never-started
+phase (7) keeps its open bullets in PRD. The cut honoured the audit's warning that the file is not
+chronological — the boundary is lines, not phase numbers.
+
+**`PRD.md` slimmed 12.7 KB → 4.7 KB** — Marty's call, earned by the file's drift record (statuses
+corrected twice in eight days). What survives is what no other file holds: requirement-level
+invariants, explicit non-requirements, the blocked list, Phase 7. Shipped enumerations now have one
+owner: ROADMAP.
+
+**`DECISIONS.md` split: 122 ADR files + an index.** `docs/adr/ADR-001.md … ADR-122.md`, plus
+`ownership-audit.md` for the non-ADR table that lived between ADR-017 and ADR-018. The split is a
+script over `^### ADR-\d+` with a safety net: reassembling the pieces reproduces the pre-split file
+**byte-identically** (verified before anything was replaced). `DECISIONS.md` stays as the index and
+front door, because ~40 files reference it by path — half of them code comments. New rule wording
+in CLAUDE.md/AGENTS.md/DOCS-FLOW: a new decision = a new `docs/adr/` file + an index row, still
+before the code.
+
+**`docs/for_user/` is born** — Marty's placement rule: «все инструкции, мануалы и прочее, что важно
+пользователю» live there. First resident: `integrations-setup.md` (the provider-key runbook); eight
+live references updated, DECISIONS/CHANGELOG left alone as history. DOCS-FLOW gained a "Размещение
+файлов" section carrying both rules, and the four reference docs its scheme never knew (STACK,
+BUSINESS, MULTITENANCY, the runbook) are on the map now.
+
+The audit's five live contradictions all fixed: CLAUDE.md's docs-map rows still describing the
+desktop as a sidecar and the design prompt as a verbatim token copy; STACK's "931 тест" (a number
+that had already rotted — replaced with "the count lives in `cedar test`"); UI-INVENTORY's AI
+popover cell describing the pre-ADR-038 world; and the `/drafts` section's missing sort/resize row
+— its bare `:NN` line anchors replaced with selectors, which the audit's own 10-row sample showed
+are the anchors that do not rot. The merge hypothesis (PRODUCT+PRD+BUSINESS+INDIEDEV → one file)
+was dropped on Marty's confirmation. 935 tests green after the shuffle.
+
 ## 2026-08-18 — the inbox sweep, and the docs stop lying
 
 `docs/INPUT_PROMPT.md` appeared — an in-repo inbox («considered as a new prompt every time»), committed from now on so its rewrites live in git history, which `Input.md` never had. Its first sweep processed three embedded documents; the full disposition is ROADMAP's new "Input sweep" section. The 29.07 **Big Feature Scope** (~100 features) was triaged against the code: a good third already shipped, another third already on the board, ten rows genuinely new and worth tracking (`T-174…T-183` + `Q-18` NSFW), the rest deliberately not taken — the расфокус rule from the competitor analysis stands. The indie-dev brief turned out to be the same text that spawned Phase 13 — fully absorbed weeks ago, nothing to do. The **Visual Polish session brief** survives as three rows: its stop-gates describe a repository that no longer exists (tags 0.10.8/0.10.9, 442 tests), but its Task A is painfully real — **blog post pages emit no OG tags at all** (`T-174`, High: every post link shared to Telegram/X/Discord renders bare, which breaks acquisition channel №1), and photos go out with EXIF/GPS intact (`T-175`, High). Motion tokens it asked for already shipped in Phase 11 under other names; skeletons and view transitions became `T-184`/`T-185` (Low).
