@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-08-18 — docs/ gets rooms
+
+Marty's taxonomy, third docs session of the day: the root of `docs/` keeps only the high-level
+files — `DOCS-FLOW.md` (the map), `DECISIONS.md` (the ADR index, whose path stays put because ~40
+files, half of them code comments, point at it) and the untracked `INPUT_PROMPT.md` (his explicit
+call: root) — and everything else moved into category folders:
+
+- **`product/`** — PRODUCT, PRD, BUSINESS, MULTITENANCY, INDIEDEV (the module's product reference)
+- **`tasks/`** — BACKLOG, ROADMAP (`TASKS.md` stays at the repo root, outside docs/)
+- **`design/`** — DESIGN, UI-INVENTORY, indiedev-design-prompt
+- **`tech/`** — ARCHITECTURE, DESKTOP
+- **`adr/`** — stayed its own category rather than moving under `tech/`: ADRs are product decisions
+  as often as technical ones (ADR-092 credits pricing, ADR-101 module-not-fork)
+- **`knowledge_base/`** — STACK (Marty's own definition of the category names «технологии и стек»)
+- **`fleet/`** — agent orchestration (Cowtext/FleetView); a README stub for now — agent definitions
+  live in `.claude/agents/`, this folder is for docs about how the fleet works
+- **`for_user/`** and **`archive/`** — as created earlier today; **`misc/`** appears with its first
+  file rather than sitting empty
+
+Thirteen files moved; every live reference followed them in the same commit — the sweep covered
+CLAUDE.md/AGENTS.md/TASKS.md, the rules, the DOCS-FLOW scheme (all mermaid nodes re-pathed), code
+comments, and three **functional** path consumers that a docs move could silently break:
+`UiInventoryDriftTests` (builds the inventory path from components — went red on the first test run,
+which is exactly the guard doing its job, then fixed), the `/tasks` skill's PowerShell script (held
+the path with backslashes, so the forward-slash sweep missed it — caught by `git grep`, fixed, then
+run to prove it), and the UI-inventory hook. Historical text — CHANGELOG, `docs/adr/*`,
+`docs/archive/*` — keeps its old paths on purpose: those record what was true then. The taxonomy
+itself, including the placement rule for future files, lives in `DOCS-FLOW.md` §Размещение, and the
+scheme now carries every category. 935 tests green after the move.
+
 ## 2026-08-18 — the documentation gets a floor plan
 
 The read-only audit (`docs/archive/AUDIT-DOCS-2026-08.md`) came back with five questions; Marty
