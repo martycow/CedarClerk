@@ -40,6 +40,7 @@ flowchart TB
         UIINV["docs/design/UI-INVENTORY.md<br/>инвентарь элементов UI"]
         STACK["docs/knowledge_base/STACK.md<br/>стек и расходы"]
         BIZ["docs/product/BUSINESS.md<br/>деньги: гейты, метрики, ритуалы"]
+        METRICS["docs/product/METRICS.md<br/>словарь событий, вывод метрик §4"]
         MULTI["docs/product/MULTITENANCY.md<br/>что будет при пользователях"]
         LEGAL["Terms + Privacy<br/>/terms, /privacy — Angular-компоненты<br/>заполнены 13.08, юрист не смотрел"]
     end
@@ -80,6 +81,7 @@ flowchart TB
     PRODUCT -->|"кому и зачем"| BACKLOG
     DESIGN --> UIINV
     LEGAL -.->|"юрист до открытия<br/>регистрации — гейт §1"| BIZ
+    BIZ -->|"§4: какие метрики важны →<br/>как считаются (ADR-126)"| METRICS
 
     CODE -->|"меняли UI →<br/>обновить"| UIINV
     CODE -->|"поменяли устройство"| ARCH
@@ -98,7 +100,7 @@ flowchart TB
     class MARTY,INPUTP,CODE source
     class BACKLOG,ROADMAP,TASKS,CHANGELOG plan
     class DECISIONS,RULES,PRODENV,CLAUDE why
-    class PRODUCT,PRD,ARCH,DESIGN,UIINV,STACK,BIZ,MULTI,INTEG,LEGAL ref
+    class PRODUCT,PRD,ARCH,DESIGN,UIINV,STACK,BIZ,METRICS,MULTI,INTEG,LEGAL ref
     class INDIE,DESKTOP,DPROMPT mod
 ```
 
@@ -150,7 +152,7 @@ flowchart TB
 
 | Папка | Что кладётся | Сейчас там |
 |---|---|---|
-| **`product/`** | Самые высокоуровневые контексты продукта: продукт в целом, бизнес-модель, требования | PRODUCT, PRD, BUSINESS, MULTITENANCY, INDIEDEV |
+| **`product/`** | Самые высокоуровневые контексты продукта: продукт в целом, бизнес-модель, требования | PRODUCT, PRD, BUSINESS, METRICS, MULTITENANCY, INDIEDEV |
 | **`tasks/`** | Всё, что связано с задачами | BACKLOG (борда), ROADMAP (фазы). `TASKS.md` остаётся в корне **репозитория**, не docs/ |
 | **`design/`** | Дизайн, UI, UX | DESIGN (токены), UI-INVENTORY, indiedev-design-prompt |
 | **`tech/`** | Техническая составляющая | ARCHITECTURE, DESKTOP |
