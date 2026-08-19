@@ -9,7 +9,7 @@ export type ToolbarButtonId =
     | 'link' | 'emoji' | 'datetime' | 'footnote'
     | 'bulletList' | 'orderedList' | 'taskList' | 'indent' | 'outdent'
     | 'inlineCode' | 'codeBlock'
-    | 'image' | 'video' | 'gif' | 'audio' | 'carousel' | 'collage' | 'youtube'
+    | 'image' | 'video' | 'gif' | 'audio' | 'carousel' | 'collage' | 'youtube' | 'library'
     | 'table' | 'formula' | 'blockquote' | 'toggle' | 'toc' | 'divider' | 'annotation' | 'poll'
     | 'aiActions';
 
@@ -47,7 +47,7 @@ export const TOOLBAR_GROUPS: ToolbarGroupDef[] = [
         id: 'media', label: 'Media', buttons: [
             { id: 'image', label: 'Image' }, { id: 'video', label: 'Video' }, { id: 'gif', label: 'GIF' },
             { id: 'audio', label: 'Audio' }, { id: 'carousel', label: 'Carousel' }, { id: 'collage', label: 'Collage' },
-            { id: 'youtube', label: 'YouTube' },
+            { id: 'youtube', label: 'YouTube' }, { id: 'library', label: 'Media library' },
         ],
     },
     {
@@ -91,7 +91,7 @@ export const MOVABLE_GROUP_IDS = TOOLBAR_GROUPS.filter(g => g.id !== 'ai').map(g
 const MINIMAL_HIDDEN: ToolbarButtonId[] = [
     'underline', 'strike', 'spoiler', 'align', 'emoji', 'datetime', 'footnote',
     'orderedList', 'taskList', 'indent', 'outdent', 'inlineCode', 'codeBlock',
-    'video', 'gif', 'audio', 'carousel', 'collage', 'youtube',
+    'video', 'gif', 'audio', 'carousel', 'collage', 'youtube', 'library',
     'table', 'formula', 'toggle', 'toc', 'divider', 'annotation', 'poll',
 ];
 

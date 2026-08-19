@@ -68,6 +68,8 @@ import { TagUsageService } from '../core/tag-usage.service';
 import { TagPickerComponent } from '../shared/tag-picker.component';
 import { FolderPickerComponent } from '../shared/folder-picker.component';
 import { SeriesPickerComponent } from '../shared/series-picker.component';
+import { MediaPickerComponent } from '../shared/media-picker.component';
+import { LibraryAsset } from '../core/assets.service';
 import { FormRefComponent } from '../shared/form-ref.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import { pseudoProgress } from '../core/pseudo-progress.util';
@@ -259,7 +261,7 @@ interface UploadItem {
 
 @Component({
     selector: 'app-editor',
-    imports: [IconComponent, BrandIconComponent, FormsModule, ZonedDatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent, AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent, SeriesPickerComponent, FormRefComponent, CountBadgeComponent, GlossaryTermFormComponent],
+    imports: [IconComponent, BrandIconComponent, FormsModule, ZonedDatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent, AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent, SeriesPickerComponent, MediaPickerComponent, FormRefComponent, CountBadgeComponent, GlossaryTermFormComponent],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
 })
@@ -925,6 +927,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     readonly watermarkMaxLength = WATERMARK_MAX_LENGTH;
 
     uploads = signal<UploadItem[]>([]);
+    libraryOpen = signal(false);
     private uploadSeq = 0;
 
     // Connecting, disconnecting and the discovered-chats list moved to Settings → Integrations
@@ -2997,6 +3000,20 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             const images = urls.filter((u): u is string => !!u);
             if (images.length) this.insertNode('carousel', { images });
         });
+    }
+
+    // ADR-127 — insert an already-uploaded file: same node mapping as the upload paths above,
+    // including the GIF quirk (a .gif goes in as <video> so Telegram treats it as an animation).
+    onLibraryPicked(asset: LibraryAsset) {
+        this.libraryOpen.set(false);
+        const url = `/media/${asset.localPath}`;
+        if (asset.contentType === 'image/gif' || asset.contentType.startsWith('video/')) {
+            this.insertNode('video', { src: url });
+        } else if (asset.contentType.startsWith('audio/')) {
+            this.insertNode('audio', { src: url });
+        } else {
+            this.editor?.chain().focus().setImage({ src: url }).run();
+        }
     }
 
     onCollageChosen(ev: Event) {

@@ -1,0 +1,51 @@
+<app-modal [width]="680" (closed)="closed.emit()">
+    <app-icon modal-icon name="archive" size="sm"></app-icon>
+    <span modal-title>{{ t().media.pickTitle }}</span>
+
+    <div class="picker-body">
+        <div class="picker-toolbar">
+            <input class="picker-search" type="search" [ngModel]="search()" (ngModelChange)="onSearch($event)"
+                   [placeholder]="t().media.searchPlaceholder" [attr.aria-label]="t().media.searchPlaceholder">
+            <div class="picker-tabs">
+                <button [class.active]="type() === null" (click)="setType(null)">{{ t().media.all }}</button>
+                <button [class.active]="type() === 'image'" (click)="setType('image')">{{ t().media.images }}</button>
+                <button [class.active]="type() === 'video'" (click)="setType('video')">{{ t().media.videos }}</button>
+                <button [class.active]="type() === 'audio'" (click)="setType('audio')">{{ t().media.audio }}</button>
+            </div>
+        </div>
+
+        @if (error(); as err) { <p class="picker-error">{{ err }}</p> }
+
+        @if (loading()) {
+            <p class="picker-hint">{{ t().common.loading }}</p>
+        } @else if (page(); as p) {
+            @if (p.items.length === 0) {
+                <p class="picker-hint">{{ totalUnfiltered() === 0 ? t().media.empty : t().common.nothingHere }}</p>
+            } @else {
+                <div class="picker-grid">
+                    @for (a of p.items; track a.id) {
+                    <button class="picker-tile" (click)="picked.emit(a)" [title]="a.fileName">
+                        <span class="picker-preview">
+                            @if (showsThumbnail(a)) {
+                            <img [src]="url(a)" [alt]="a.fileName" loading="lazy" (error)="onThumbError(a)">
+                            } @else {
+                            <app-icon [name]="kindIcons[kindOf(a)]" size="lg"></app-icon>
+                            }
+                        </span>
+                        <span class="picker-name">{{ a.fileName }}</span>
+                        <span class="picker-sub">{{ bytes(a.sizeBytes) }}</span>
+                    </button>
+                    }
+                </div>
+                @if (p.total > p.items.length || skip() > 0) {
+                <div class="picker-pager">
+                    <button class="picker-page-btn" [disabled]="!canPageBack" (click)="pageBack()">←</button>
+                    <button class="picker-page-btn" [disabled]="!canPageForward" (click)="pageForward()">→</button>
+                </div>
+                }
+            }
+        }
+    </div>
+
+    <button modal-actions class="btn-ghost" (click)="closed.emit()">{{ t().common.cancel }}</button>
+</app-modal>

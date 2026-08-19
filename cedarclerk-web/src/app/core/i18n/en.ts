@@ -559,6 +559,7 @@ export const en = {
             gif: 'Insert GIF',
             carousel: 'Insert image carousel',
             collage: 'Insert image collage',
+            library: 'Insert from media library',
             youtube: 'Insert YouTube video',
             divider: 'Divider — horizontal rule',
             toc: 'Table of contents — auto-generated from headings, works on the blog and (as jump links) in Telegram',
@@ -912,6 +913,7 @@ export const en = {
     media: {
         crumb: 'Media',
         open: 'Media library',
+        pickTitle: 'Insert from library',
         searchPlaceholder: 'Search by file name…',
         all: 'All',
         images: 'Images',
