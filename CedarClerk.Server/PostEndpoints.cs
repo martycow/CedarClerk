@@ -207,7 +207,7 @@ public static class PostEndpoints
             var (kind, destination) = req.Kind switch
             {
                 DraftRevisionService.Kinds.Blog => (DraftRevisionService.Kinds.Blog, (string?)null),
-                PublishNetworks.Bluesky or PublishNetworks.X => (req.Kind, req.ChatId),
+                PublishNetworks.Bluesky or PublishNetworks.X or PublishNetworks.Discord => (req.Kind, req.ChatId),
                 _ => (DraftRevisionService.Kinds.Telegram, req.ChatId),
             };
 

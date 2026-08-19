@@ -824,6 +824,7 @@ export const en = {
             blueskyTextPlaceholder: 'What this post says on Bluesky. Leave empty to send the opening paragraphs plus a link.',
             blueskyFallback: 'empty: a teaser will be built from the post',
             xTextPlaceholder: 'What this post says on X. Leave empty to send the opening paragraphs plus a link.',
+            discordTextPlaceholder: 'What this post says on Discord. Leave empty to send the opening paragraphs plus a link.',
             xCreditNote: (n: number) => `1 credit per post · balance: ${n}`,
             issues: {
                 'too-long': (actual: string, limit: string) => `Too long for this network: ${actual} characters against a limit of ${limit}`,
@@ -1516,6 +1517,9 @@ export const en = {
             xFailed: 'X did not finish connecting. Nothing was saved; try again.',
             xCreditNote: (n: number) => `Posting to X costs 1 credit per post · balance: ${n}`,
             xCreditsLink: 'Buy credits ↑',
+            discord: 'Discord',
+            discordConnectHint: 'Paste a channel webhook URL — in Discord: channel settings → Integrations → Webhooks → New Webhook → Copy URL. No bot and no sign-in needed.',
+            discordWebhookUrl: 'https://discord.com/api/webhooks/…',
             planned: 'Planned',
             plannedHint: 'Not connectable yet — they appear here the moment they are.',
             lastPublished: 'last published',

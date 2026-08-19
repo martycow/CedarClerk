@@ -58,6 +58,8 @@ public static class MicroThreadSplitter
     {
         PublishNetworks.X => (XPostBuilder.WeightedLength, XPostBuilder.MaxWeightedChars),
         PublishNetworks.Bluesky => (BlueskyPostBuilder.GraphemeCount, BlueskyPostBuilder.MaxGraphemes),
+        // Discord never threads (ADR-131) — this only serves length displays and previews.
+        PublishNetworks.Discord => (static text => text.Length, DiscordPostBuilder.MaxChars),
         _ => throw new NotSupportedException($"No micro-thread rules for network '{network}'"),
     };
 

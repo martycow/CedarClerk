@@ -129,7 +129,7 @@ type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
 type PublishRunStatus = 'waiting' | 'running' | 'done' | 'failed';
 
 /** The networks that derive a short post rather than taking the document (ADR-077). */
-type MicroNetwork = 'bluesky' | 'x';
+type MicroNetwork = 'bluesky' | 'x' | 'discord';
 /** ADR-096 — an announcement carrying a link, or the document itself as a reply chain. */
 type MicroMode = 'link' | 'thread';
 
@@ -372,16 +372,20 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // Connecting is not here at all any more: it lives in Settings → Integrations (ADR-095).
     private publishApi = inject(PublishService);
     private billingApi = inject(BillingService);
-    readonly microNetworks: MicroNetwork[] = ['bluesky', 'x'];
-    readonly microLimits: Record<MicroNetwork, number> = { bluesky: 300, x: 280 };
-    readonly microLabels: Record<MicroNetwork, string> = { bluesky: 'Bluesky', x: 'X' };
+    readonly microNetworks: MicroNetwork[] = ['bluesky', 'x', 'discord'];
+    readonly microLimits: Record<MicroNetwork, number> = { bluesky: 300, x: 280, discord: 2000 };
+    readonly microLabels: Record<MicroNetwork, string> = { bluesky: 'Bluesky', x: 'X', discord: 'Discord' };
+    /** Discord never threads (ADR-131) — a webhook message has no reply structure to chain. */
+    readonly microThreadable: Record<MicroNetwork, boolean> = { bluesky: true, x: true, discord: false };
 
     destBluesky = signal(false);
     destX = signal(false);
+    destDiscord = signal(false);
     /** The last short-post failure, so the success toast stays honest about a partial publish. */
     microError = signal('');
     blueskyAccount = signal<PublishAccount | null>(null);
     xAccount = signal<PublishAccount | null>(null);
+    discordAccount = signal<PublishAccount | null>(null);
     xCredits = signal<number | null>(null);
 
     /**
@@ -389,24 +393,24 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
      * publications, not one with an option, so the window asks which rather than offering a
      * checkbox beside a text field the thread mode does not even read.
      */
-    microMode = signal<Record<MicroNetwork, MicroMode>>({ bluesky: 'link', x: 'link' });
+    microMode = signal<Record<MicroNetwork, MicroMode>>({ bluesky: 'link', x: 'link', discord: 'link' });
     /** Parts per network for the currently previewed language; 0 while unknown. */
-    microParts = signal<Record<MicroNetwork, number>>({ bluesky: 0, x: 0 });
-    microCounting = signal<Record<MicroNetwork, boolean>>({ bluesky: false, x: false });
+    microParts = signal<Record<MicroNetwork, number>>({ bluesky: 0, x: 0, discord: 0 });
+    microCounting = signal<Record<MicroNetwork, boolean>>({ bluesky: false, x: false, discord: false });
 
     // Per network, per language. One field for "the current language" silently sent the same text
     // to every ticked version, which is the one thing a per-language override must not do.
-    private microTexts: Record<MicroNetwork, Record<string, string>> = { bluesky: {}, x: {} };
-    private microDirty: Record<MicroNetwork, Set<string>> = { bluesky: new Set(), x: new Set() };
+    private microTexts: Record<MicroNetwork, Record<string, string>> = { bluesky: {}, x: {}, discord: {} };
+    private microDirty: Record<MicroNetwork, Set<string>> = { bluesky: new Set(), x: new Set(), discord: new Set() };
     /** Which language's text the panel is editing — its own tab row, shown only when >1 is ticked. */
-    microTextLang = signal<Record<MicroNetwork, string>>({ bluesky: DEFAULT_PRIMARY_LANGUAGE, x: DEFAULT_PRIMARY_LANGUAGE });
+    microTextLang = signal<Record<MicroNetwork, string>>({ bluesky: DEFAULT_PRIMARY_LANGUAGE, x: DEFAULT_PRIMARY_LANGUAGE, discord: DEFAULT_PRIMARY_LANGUAGE });
 
     /**
      * ADR-100 — which versions actually go out on this network, a subset of the window's ticked
      * ones. Empty means "all of them", which is both the default and what the window did before:
      * one account with a bilingual audience is a real case, two tweets nobody asked for is not.
      */
-    microLangs = signal<Record<MicroNetwork, string[]>>({ bluesky: [], x: [] });
+    microLangs = signal<Record<MicroNetwork, string[]>>({ bluesky: [], x: [], discord: [] });
 
     microLangsOf(network: MicroNetwork): string[] {
         const picked = this.microLangs()[network].filter(l => this.exportLangs().includes(l));
@@ -428,15 +432,28 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     anyDestination(): boolean {
-        return this.destBlog() || this.destTelegram() || this.destBluesky() || this.destX();
+        return this.destBlog() || this.destTelegram() || this.destBluesky() || this.destX() || this.destDiscord();
     }
 
     account(network: MicroNetwork): PublishAccount | null {
-        return network === 'x' ? this.xAccount() : this.blueskyAccount();
+        switch (network) {
+            case 'x': return this.xAccount();
+            case 'discord': return this.discordAccount();
+            default: return this.blueskyAccount();
+        }
     }
 
     destination(network: MicroNetwork) {
-        return network === 'x' ? this.destX : this.destBluesky;
+        switch (network) {
+            case 'x': return this.destX;
+            case 'discord': return this.destDiscord;
+            default: return this.destBluesky;
+        }
+    }
+
+    /** The brand mark for a short-post network — X's is still served under the `twitter` key. */
+    brandOf(network: MicroNetwork): 'twitter' | 'bluesky' | 'discord' {
+        return network === 'x' ? 'twitter' : network;
     }
 
     microText(network: MicroNetwork): string {
@@ -479,9 +496,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
-    /** Graphemes for Bluesky, t.co-weighted units for X — each network's own count (see below). */
+    /** Graphemes for Bluesky, t.co-weighted units for X, plain length for Discord. */
     microLength(network: MicroNetwork): number {
-        return network === 'x' ? this.xWeighted() : this.blueskyGraphemes();
+        switch (network) {
+            case 'x': return this.xWeighted();
+            case 'discord': return this.microText('discord').length;
+            default: return this.blueskyGraphemes();
+        }
     }
 
     microOverLimit(network: MicroNetwork): boolean {
@@ -522,14 +543,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             const networks = await this.publishApi.networks();
             this.blueskyAccount.set(networks.find(n => n.network === 'bluesky')?.accounts[0] ?? null);
             this.xAccount.set(networks.find(n => n.network === 'x')?.accounts[0] ?? null);
+            this.discordAccount.set(networks.find(n => n.network === 'discord')?.accounts[0] ?? null);
         } catch {
             this.blueskyAccount.set(null);
             this.xAccount.set(null);
+            this.discordAccount.set(null);
         }
         // A network that is no longer connected must not stay ticked — Publish would queue against
         // an account that is gone and report it as a failure of the post rather than of the setup.
         if (!this.blueskyAccount()) this.destBluesky.set(false);
         if (!this.xAccount()) this.destX.set(false);
+        if (!this.discordAccount()) this.destDiscord.set(false);
 
         try {
             this.xCredits.set((await this.billingApi.credits()).balance);
@@ -537,12 +561,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
         const id = this.currentId();
         if (!id) return;
-        this.microTexts = { bluesky: {}, x: {} };
-        this.microDirty = { bluesky: new Set(), x: new Set() };
+        this.microTexts = { bluesky: {}, x: {}, discord: {} };
+        this.microDirty = { bluesky: new Set(), x: new Set(), discord: new Set() };
         try {
             const { texts } = await this.publishApi.texts(id);
             for (const entry of texts) {
-                if (entry.network === 'x' || entry.network === 'bluesky')
+                if (entry.network === 'x' || entry.network === 'bluesky' || entry.network === 'discord')
                     this.microTexts[entry.network][entry.language] = entry.text;
             }
         } catch { /* no overrides loaded means every version falls back to its teaser */ }
@@ -2488,7 +2512,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     /** Everything a schedule can apply to — the blog is not a publish target (ADR-099). */
     anyNetworkDestination(): boolean {
-        return this.destTelegram() || this.destBluesky() || this.destX();
+        return this.destTelegram() || this.destBluesky() || this.destX() || this.destDiscord();
     }
 
     /** True when pressing Publish will schedule the networks rather than send them now. */
@@ -2508,7 +2532,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     canPublishAll(): boolean {
         if (this.publishingAll() || this.blogBusy() || this.exporting()) return false;
-        if (!this.destBlog() && !this.destTelegram() && !this.destBluesky() && !this.destX()) return false;
+        if (!this.destBlog() && !this.destTelegram() && !this.destBluesky() && !this.destX() && !this.destDiscord()) return false;
         // Each ticked destination must be able to run. The blog needs nothing extra; Telegram needs
         // a chosen channel for EVERY ticked version (ADR-098) — "RU picked, EN not" is an
         // incomplete request, not one with a default; a short-post network needs a connected

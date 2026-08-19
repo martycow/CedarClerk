@@ -211,7 +211,7 @@ export class PostsManagerComponent implements OnInit {
     }
 
     /** ADR-099 — network names are display strings, not translated: "Bluesky" is "Bluesky". */
-    private readonly networkLabels: Record<string, string> = { telegram: 'Telegram', bluesky: 'Bluesky', x: 'X' };
+    private readonly networkLabels: Record<string, string> = { telegram: 'Telegram', bluesky: 'Bluesky', x: 'X', discord: 'Discord' };
 
     scheduledNetworkLabel(post: ScheduledPost): string {
         return this.networkLabels[post.network] ?? post.network;

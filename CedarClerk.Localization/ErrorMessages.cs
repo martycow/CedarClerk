@@ -134,6 +134,15 @@ public static class ErrorMessages
     public static string BlueskyReconnect => Ru(
         "Не удалось войти в Bluesky — переподключите аккаунт в настройках.",
         "Could not sign in to Bluesky — reconnect the account in settings.");
+    public static string DiscordWebhookRequired => Ru(
+        "Вставьте URL вебхука Discord — его выдаёт настройка канала: Integrations → Webhooks.",
+        "Paste a Discord webhook URL — the channel's settings issue one under Integrations → Webhooks.");
+    public static string DiscordWebhookInvalid => Ru(
+        "Discord не принял этот вебхук — проверьте URL (он должен начинаться с https://discord.com/api/webhooks/).",
+        "Discord refused this webhook — check the URL (it must start with https://discord.com/api/webhooks/).");
+    public static string DiscordReconnect => Ru(
+        "Вебхук Discord больше не работает — вероятно, удалён в настройках канала. Переподключите его в настройках.",
+        "The Discord webhook no longer works — likely deleted in the channel's settings. Reconnect it in settings.");
     public static string LinkYouTelegram => Ru("Сначала привяжите аккаунт Telegram.", "Link your Telegram account first.");
     public static string TelegramBillingNotConfigured =>
         Ru("Оплата через Telegram Stars не настроена!", "Telegram Stars billing is not configured!");

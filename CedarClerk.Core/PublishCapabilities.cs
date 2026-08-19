@@ -7,8 +7,9 @@ public static class PublishNetworks
     public const string Telegram = "telegram";
     public const string Bluesky = "bluesky";
     public const string X = "x";
+    public const string Discord = "discord";
 
-    public static readonly IReadOnlyList<string> All = [Telegram, Bluesky, X];
+    public static readonly IReadOnlyList<string> All = [Telegram, Bluesky, X, Discord];
 
     public static bool IsKnown(string? network) => network is not null && All.Contains(network);
 }

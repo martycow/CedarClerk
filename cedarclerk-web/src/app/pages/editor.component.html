@@ -153,13 +153,13 @@
                         <label class="dest-card" [class.on]="destination(network)()">
                             <input type="checkbox" [checked]="destination(network)()"
                                    (change)="destination(network).set(!destination(network)())">
-                            <app-brand-icon [name]="network === 'x' ? 'twitter' : 'bluesky'" [size]="14"></app-brand-icon>
+                            <app-brand-icon [name]="brandOf(network)" [size]="14"></app-brand-icon>
                             <span class="dest-card-name">{{ microLabels[network] }}</span>
                             <span class="dest-card-meta">{{ acc.displayName }}</span>
                         </label>
                         } @else {
                         <div class="dest-card off">
-                            <app-brand-icon [name]="network === 'x' ? 'twitter' : 'bluesky'" [size]="14"></app-brand-icon>
+                            <app-brand-icon [name]="brandOf(network)" [size]="14"></app-brand-icon>
                             <span class="dest-card-name">{{ microLabels[network] }}</span>
                             <span class="dest-card-meta">{{ t().editor.exportModal.notConnected }}</span>
                             <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'account' }">
@@ -375,7 +375,7 @@
                     @if (destination(network)() && account(network); as acc) {
                     <div class="export-section">
                         <div class="export-section-title">
-                            <app-brand-icon [name]="network === 'x' ? 'twitter' : 'bluesky'" [size]="14"></app-brand-icon>
+                            <app-brand-icon [name]="brandOf(network)" [size]="14"></app-brand-icon>
                             {{ microLabels[network] }}
                             <span class="field-hint-inline">{{ acc.displayName }}</span>
                         </div>
@@ -394,6 +394,9 @@
                         </div>
                         }
 
+                        <!--Discord has no thread mode at all (ADR-131) — the toggle would be a
+                        one-button row, so the whole choice is skipped, not disabled.-->
+                        @if (microThreadable[network]) {
                         <div class="panel-label">{{ t().editor.exportModal.modeLabel }}</div>
                         <div class="mode-toggle">
                             <button [class.on]="microMode()[network] === 'link'" (click)="setMicroMode(network, 'link')">
@@ -407,6 +410,7 @@
                                 <span class="mode-desc">{{ scheduledAt ? t().editor.exportModal.threadsNotScheduled : t().editor.exportModal.modeThreadHint }}</span>
                             </button>
                         </div>
+                        }
 
                         @if (microMode()[network] === 'link') {
                         <!--One field per version: a single field wrote the same override into every
@@ -424,7 +428,7 @@
                             <span class="form-field-label">{{ t().editor.exportModal.textForLanguage(microTextLang()[network].toUpperCase()) }}</span>
                             <textarea class="chat-input" rows="4"
                                       [ngModel]="microText(network)" (ngModelChange)="setMicroText(network, $event)"
-                                      [placeholder]="network === 'x' ? t().editor.exportModal.xTextPlaceholder : t().editor.exportModal.blueskyTextPlaceholder"></textarea>
+                                      [placeholder]="network === 'x' ? t().editor.exportModal.xTextPlaceholder : network === 'discord' ? t().editor.exportModal.discordTextPlaceholder : t().editor.exportModal.blueskyTextPlaceholder"></textarea>
                             <p class="field-hint-inline" [class.over-limit]="microOverLimit(network)">
                                 {{ microLength(network) }} / {{ microLimits[network] }}
                                 @if (!microText(network).trim()) { · {{ t().editor.exportModal.blueskyFallback }} }

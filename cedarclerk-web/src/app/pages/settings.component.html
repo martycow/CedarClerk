@@ -704,6 +704,41 @@
                 @if (xError()) { <p class="field-error">{{ xError() }}</p> }
             </div>
 
+            <!--Discord: a channel webhook pasted whole (ADR-131) — the URL is the credential, so it
+            is verified against Discord before being stored encrypted, and never shown back.-->
+            <div class="integration-block">
+                <div class="integration-block-head">
+                    <span class="integration-icon discord"><app-brand-icon name="discord" [size]="15"></app-brand-icon></span>
+                    <div class="integration-body">
+                        <div class="integration-title">{{ t().settings.integrations.discord }}</div>
+                        @if (discordAccount(); as account) {
+                        <div class="integration-meta">
+                            {{ t().settings.integrations.linkedTo }} <span class="strong">{{ account.displayName }}</span>
+                            @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'d MMM yyyy' }} }
+                        </div>
+                        } @else {
+                        <div class="integration-meta muted">{{ t().settings.integrations.notConnected }}</div>
+                        }
+                    </div>
+                    @if (discordAccount(); as account) {
+                    <button class="btn-danger-ghost sm" (click)="disconnectDiscord(account.id)" [disabled]="discordBusy()">
+                        {{ t().settings.integrations.disconnect }}
+                    </button>
+                    }
+                </div>
+                @if (!discordAccount()) {
+                <p class="field-hint">{{ t().settings.integrations.discordConnectHint }}</p>
+                <div class="connect-row">
+                    <input [(ngModel)]="discordWebhookUrl" [placeholder]="t().settings.integrations.discordWebhookUrl">
+                    <button class="btn-primary sm" (click)="connectDiscord()"
+                            [disabled]="discordBusy() || !discordWebhookUrl.trim()">
+                        {{ discordBusy() ? '…' : t().settings.integrations.connect }}
+                    </button>
+                </div>
+                }
+                @if (discordError()) { <p class="field-error">{{ discordError() }}</p> }
+            </div>
+
             <div class="integration-block dashed">
                 <div class="panel-label">{{ t().settings.integrations.planned }}</div>
                 <div class="planned-row">

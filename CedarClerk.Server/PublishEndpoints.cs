@@ -22,6 +22,7 @@ namespace CedarClerk.Server;
 public static class PublishEndpoints
 {
     public record ConnectBlueskyRequest(string Handle, string AppPassword, string? Service);
+    public record ConnectDiscordRequest(string WebhookUrl);
     public record QueuePublishRequest(Guid DraftId, List<Guid>? TargetIds, string? Language = null, string? ConfirmedFingerprint = null, bool SplitIntoThread = false);
     public record TargetTextRequest(string Network, string Language, string Text);
 
@@ -120,6 +121,79 @@ public static class PublishEndpoints
 
             await db.SaveChangesAsync(ct);
             return Results.Ok(new { handle = session.Handle, did = session.Did });
+        });
+
+        // Discord: a channel webhook pasted whole (T-161, ADR-131). Verified by GETting it —
+        // Discord answers with the webhook's name and channel without any auth beyond the URL's
+        // own token, which is also why the URL is stored encrypted like any other credential.
+        group.MapPost("/discord/connect", async (
+            ConnectDiscordRequest req,
+            ClaimsPrincipal user,
+            CedarDbContext db,
+            PublishTargetSecrets secrets,
+            IHttpClientFactory httpFactory,
+            CancellationToken ct) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var url = req.WebhookUrl?.Trim();
+            if (string.IsNullOrWhiteSpace(url))
+                return Results.BadRequest(new { error = ErrorMessages.DiscordWebhookRequired });
+            if (!DiscordPublishTarget.WebhookUrlShape().IsMatch(url))
+                return Results.BadRequest(new { error = ErrorMessages.DiscordWebhookInvalid });
+
+            var http = httpFactory.CreateClient();
+            JsonElement webhook;
+            try
+            {
+                var response = await http.GetAsync(url, ct);
+                if (!response.IsSuccessStatusCode)
+                    return Results.Json(new { error = ErrorMessages.DiscordWebhookInvalid },
+                        statusCode: StatusCodes.Status401Unauthorized);
+                webhook = JsonSerializer.Deserialize<JsonElement>(await response.Content.ReadAsStringAsync(ct));
+            }
+            catch (HttpRequestException ex)
+            {
+                return Results.Json(new { error = $"Could not reach Discord: {ex.Message}" },
+                    statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            var webhookId = webhook.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+            if (webhookId is null)
+                return Results.Json(new { error = ErrorMessages.DiscordWebhookInvalid },
+                    statusCode: StatusCodes.Status401Unauthorized);
+
+            var name = webhook.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
+            var guildId = webhook.TryGetProperty("guild_id", out var guildProp) ? guildProp.GetString() : null;
+            var channelId = webhook.TryGetProperty("channel_id", out var channelProp) ? channelProp.GetString() : null;
+
+            var credentials = new DiscordCredentials(url, guildId, channelId, name ?? "Discord webhook");
+            var stored = secrets.Protect(JsonSerializer.Serialize(credentials));
+
+            // Keyed by the webhook id: pasting the same webhook twice updates the row, a second
+            // webhook (another channel) becomes a second connected destination.
+            var existing = await db.PublishTargets.FirstOrDefaultAsync(
+                t => t.OwnerId == uid && t.Network == PublishNetworks.Discord && t.RemoteId == webhookId, ct);
+            if (existing is not null)
+            {
+                existing.DisplayName = credentials.Name;
+                existing.CredentialsProtected = stored;
+                existing.IsActive = true;
+                existing.LastError = null;
+            }
+            else
+            {
+                db.PublishTargets.Add(new PublishTarget
+                {
+                    OwnerId = uid,
+                    Network = PublishNetworks.Discord,
+                    DisplayName = credentials.Name,
+                    RemoteId = webhookId,
+                    CredentialsProtected = stored,
+                });
+            }
+
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { name = credentials.Name });
         });
 
         // ── X: OAuth 2.0 Authorization Code + PKCE (T-110, ADR-093) ──────────────────────────

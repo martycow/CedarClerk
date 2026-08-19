@@ -153,6 +153,10 @@ builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<BlueskyPu
 // 501 and no target row can exist, so PublishAsync is unreachable rather than broken.
 builder.Services.AddScoped<XPublishTarget>();
 builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<XPublishTarget>());
+// T-161 — Discord over a per-channel webhook. Unconditional like Bluesky: the tenant brings the
+// webhook, nothing server-side needs configuring first.
+builder.Services.AddScoped<DiscordPublishTarget>();
+builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<DiscordPublishTarget>());
 // T-090 — singleton because it outlives any one request: an author's browser can close the moment
 // after pressing Publish, and the send has to carry on without it.
 builder.Services.AddSingleton<PublishJobRunner>();

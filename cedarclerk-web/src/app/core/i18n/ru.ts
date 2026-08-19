@@ -791,6 +791,7 @@ export const ru: Dict = {
             blueskyTextPlaceholder: 'Что этот пост говорит в Bluesky. Пусто — уйдут первые абзацы и ссылка.',
             blueskyFallback: 'пусто: тизер соберётся из поста',
             xTextPlaceholder: 'Что этот пост говорит в X. Пусто — уйдут первые абзацы и ссылка.',
+            discordTextPlaceholder: 'Что этот пост говорит в Discord. Пусто — уйдут первые абзацы и ссылка.',
             xCreditNote: (n: number) => `1 кредит за пост · баланс: ${n}`,
             issues: {
                 'too-long': (actual: string, limit: string) => `Слишком длинно для этой сети: ${actual} символов при лимите ${limit}`,
@@ -1481,6 +1482,9 @@ export const ru: Dict = {
             xFailed: 'Подключить X не удалось. Ничего не сохранено, попробуйте ещё раз.',
             xCreditNote: (n: number) => `Пост в X стоит 1 кредит · баланс: ${n}`,
             xCreditsLink: 'Купить кредиты ↑',
+            discord: 'Discord',
+            discordConnectHint: 'Вставьте URL вебхука канала — в Discord: настройки канала → Интеграции → Вебхуки → Новый вебхук → Копировать URL. Ни бот, ни вход не нужны.',
+            discordWebhookUrl: 'https://discord.com/api/webhooks/…',
             planned: 'В планах',
             plannedHint: 'Пока не подключаются — появятся здесь, как только смогут.',
             lastPublished: 'последняя публикация',

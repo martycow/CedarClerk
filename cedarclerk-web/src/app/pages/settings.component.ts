@@ -128,6 +128,11 @@ export class SettingsComponent implements OnInit {
     xAccount = signal<PublishAccount | null>(null);
     xBusy = signal(false);
     xError = signal<string | null>(null);
+
+    discordAccount = signal<PublishAccount | null>(null);
+    discordWebhookUrl = '';
+    discordBusy = signal(false);
+    discordError = signal<string | null>(null);
     /** Set by the OAuth callback's `?x=` (ADR-095) — the only sign the round trip finished. */
     xNotice = signal<'connected' | 'error' | null>(null);
 
@@ -194,9 +199,11 @@ export class SettingsComponent implements OnInit {
             const networks = await this.publishApi.networks();
             this.blueskyAccount.set(networks.find(n => n.network === 'bluesky')?.accounts[0] ?? null);
             this.xAccount.set(networks.find(n => n.network === 'x')?.accounts[0] ?? null);
+            this.discordAccount.set(networks.find(n => n.network === 'discord')?.accounts[0] ?? null);
         } catch {
             this.blueskyAccount.set(null);
             this.xAccount.set(null);
+            this.discordAccount.set(null);
         }
     }
 
@@ -276,6 +283,33 @@ export class SettingsComponent implements OnInit {
             this.blueskyError.set(httpErrorMessage(e, this.t().settings.errors.connectChannel));
         } finally {
             this.blueskyBusy.set(false);
+        }
+    }
+
+    async connectDiscord() {
+        this.discordBusy.set(true);
+        this.discordError.set(null);
+        try {
+            await this.publishApi.connectDiscord(this.discordWebhookUrl.trim());
+            // Cleared on success only, same as the Bluesky password: a mistyped URL stays editable.
+            this.discordWebhookUrl = '';
+            await this.loadPublishAccounts();
+        } catch (e) {
+            this.discordError.set(httpErrorMessage(e, this.t().settings.errors.connectChannel));
+        } finally {
+            this.discordBusy.set(false);
+        }
+    }
+
+    async disconnectDiscord(targetId: string) {
+        this.discordBusy.set(true);
+        try {
+            await this.publishApi.disconnect(targetId);
+            this.discordAccount.set(null);
+        } catch (e) {
+            this.discordError.set(httpErrorMessage(e, this.t().settings.errors.connectChannel));
+        } finally {
+            this.discordBusy.set(false);
         }
     }
 

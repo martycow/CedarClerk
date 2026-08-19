@@ -100,6 +100,12 @@ export class PublishService {
      * T-110 — X connects over OAuth: the server answers with x.com's authorize URL and the browser
      * goes there; the callback lands the user back in the app with the target row created.
      */
+    /** T-161 — a channel webhook pasted whole; the server verifies it against Discord before storing. */
+    connectDiscord(webhookUrl: string) {
+        return firstValueFrom(this.http.post<{ name: string }>(
+            '/api/publish/discord/connect', { webhookUrl }));
+    }
+
     connectX() {
         return firstValueFrom(this.http.post<{ url: string }>('/api/publish/x/connect', {}));
     }
