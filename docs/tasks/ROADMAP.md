@@ -186,6 +186,41 @@ A new inbox appeared in `docs/`: `docs/INPUT_PROMPT.md` ("consider everything be
 
 **Board hygiene found on the way**: `T-109`/`T-110`/`T-111` had shipped weeks ago (credits wallet, X connector, threads — all live in production) but still sat open — removed; duplicate ID `T-143` (flaky login smoke test renumbered `T-173`); `T-107`/`T-108` sat in the questions table — moved to Улучшения; `T-018`/`T-060` remainders were pure live-verification — moved to `TASKS.md` where the live-verify checklist lives; `LIVE`/`LIVE-PREV` tags had reached origin again — deleted from origin per the CLAUDE.md rule. One real bug found while verifying: blog index cards hardcode "RU" as the primary-language label (`BlogEndpoints.cs`, against ADR-064/065) → `T-186`.
 
+### DOCS-FLOW hardening — 18.08.2026 (ultracode)
+
+Marty pasted an external DOCS-FLOW analysis (P0/P1 doc gaps, scheme problems, quick wins, three
+waves of agents) with the ultracode keyword. Executed the same evening, verification first:
+
+- **Claims checked by a 12-agent workflow** (6 adversarial claim-checkers with file:line evidence +
+  5 terminology extractors + merge). **Refuted**: the 0.10.8/0.10.9 tag divergence (both ARE
+  ancestors of master — proven by `git merge-base --is-ancestor`); «релиз-процесс недокументирован»
+  (documented in CLAUDE.md + ARCHITECTURE + five ADRs + GitGuard **tests** — a RELEASE.md is
+  rejected; the one real gap became `T-195`); «T-052 — hard blocker» (closed 13.08, lawyer gate
+  remains); «Clerk.com/AWS Cedar conflicts уже всплыли» (zero evidence anywhere in the repo).
+  **Numbers corrected**: inline English server strings = **48 interpolated** `$"…"` (not ~130 —
+  plain literals are guarded by `ErrorMessageLocalizationTests` since 01.08) → `T-194`; open Q-xx =
+  **12**; TASKS.md live-verify = 8 entries / 19 items. **Confirmed**: no QA / SECURITY / API /
+  incidents docs; `knowledge_base/` held only STACK; localization tables live only in code.
+- **The «Сегодня» batch shipped** (commit `8a8ac75`): **ADR-123** + front-matter
+  (`owner`/`last_verified`/`source_of_truth_for`/`guard`) on all 17 live docs;
+  **`DocsFlowGraphTests`** — every live doc must be on the DOCS-FLOW map and every mapped path must
+  exist, proven to go red with an orphan file (the `SchemaDriftGuardTests` pattern, now guarding
+  the docs scheme itself); the mermaid got an **edge legend** (truth-flow / hard gate /
+  reading-order), the reading-order edges went dotted, and the two missing nodes joined the scheme
+  (`production-environment.md` as «истина о проде», Terms+Privacy with the lawyer gate).
+- **`knowledge_base/` seeded**: `docs/knowledge_base/TERMINOLOGY.md` — ~80 project terms across five
+  domains, each extracted from real code with a source reference.
+- **Two live contradictions fixed on the way**: `BUSINESS.md` §4 claimed all four metrics «считаются
+  по данным, которые уже есть» while `T-153` says activation needs analytics — reworded honestly;
+  a stale `T-052` pointer in `AuthEndpoints.cs` now points at the BUSINESS §1 gates.
+- **13 board rows** (`T-187…T-199`): QA.md + verification-planner (High), Wave-1 agents
+  docs-auditor + session-closer (High) and input-sweeper (Medium), FEEDBACK / COMPETITORS import /
+  событийный словарь (Medium), threat model (Medium), and the Low tail (server-string translation
+  with real numbers, preflight backup check, Waves 2–3 + skills, OpenAPI-over-handwritten-API,
+  incidents index, Q-xx aging). **No agent was created today** — Marty's own order puts Wave 1 at
+  week 1, and his warning («каждый агент — ещё один .md, который дрейфует; ставь по одному») is
+  taken as binding.
+
 ---
 
 ## Backlog

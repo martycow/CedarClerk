@@ -114,7 +114,7 @@ public static class AuthEndpoints
 
             // T-002 — the confirmation mail is sent, and the account works either way. Blocking an
             // unconfirmed account would lock out every account that predates this feature, and the
-            // gate that actually matters (public registration, T-052) is not open yet. What this
+            // gate that actually matters (public registration, docs/product/BUSINESS.md §1) is not open yet. What this
             // buys today is a real address on file and a visible reminder until it is confirmed.
             await SendConfirmationEmailAsync(user, users, email, cfg, logger);
 
