@@ -423,6 +423,16 @@ export const en = {
             deleteKeepsDrafts: 'The drafts themselves are not deleted.',
             deleteConfirm: 'Delete folder',
         },
+        tree: {
+            view: 'Tree',
+            expand: 'Expand',
+            collapse: 'Collapse',
+            move: 'Move under…',
+            moveUp: 'Move up',
+            moveDown: 'Move down',
+            root: 'Top level',
+            moveTitle: (name: string) => `Move "${name}" under:`,
+        },
         series: {
             title: 'Series',
             none: 'No series',

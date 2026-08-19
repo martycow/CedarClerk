@@ -397,6 +397,16 @@ export const ru: Dict = {
             deleteKeepsDrafts: 'Сами черновики не удаляются.',
             deleteConfirm: 'Удалить папку',
         },
+        tree: {
+            view: 'Дерево',
+            expand: 'Развернуть',
+            collapse: 'Свернуть',
+            move: 'Переместить под…',
+            moveUp: 'Выше',
+            moveDown: 'Ниже',
+            root: 'Верхний уровень',
+            moveTitle: (name: string) => `Переместить «${name}» под:`,
+        },
         series: {
             title: 'Серия',
             none: 'Без серии',

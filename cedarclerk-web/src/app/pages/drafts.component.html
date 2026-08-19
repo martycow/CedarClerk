@@ -20,6 +20,7 @@ components below also appear on comfortable screens.-->
             <!--Idea #3: the tag set itself is managed here - renaming or deleting a tag rewrites
             every draft that carries it, and the blog follows automatically.-->
             <app-tag-picker [tags]="[]" [manage]="true"></app-tag-picker>
+            @if (view() !== 'tree') {
             <app-popover>
                 <button trigger class="folder-filter-btn" [title]="t().drafts.folders.filter">
                     <app-icon name="folder" size="sm"></app-icon> {{ selectedFolderLabel() }}
@@ -41,12 +42,16 @@ components below also appear on comfortable screens.-->
                     }
                 </div>
             </app-popover>
+            }
             <div class="view-toggle">
                 <button [class.active]="view() === 'table'" (click)="view.set('table')" [title]="t().drafts.viewTable" [attr.aria-label]="t().drafts.viewTable">
                     <app-icon name="list" size="sm"></app-icon>
                 </button>
                 <button [class.active]="view() === 'grid'" (click)="view.set('grid')" [title]="t().drafts.viewGrid" [attr.aria-label]="t().drafts.viewGrid">
                     <app-icon name="squares-four" size="sm"></app-icon>
+                </button>
+                <button [class.active]="view() === 'tree'" (click)="view.set('tree')" [title]="t().drafts.tree.view" [attr.aria-label]="t().drafts.tree.view">
+                    <app-icon name="tree-structure" size="sm"></app-icon>
                 </button>
             </div>
             <!--Both imports live here (B22) — the editor topbar keeps only Export/theme/profile.-->
@@ -86,6 +91,9 @@ components below also appear on comfortable screens.-->
         </app-modal>
         }
 
+        <!--ADR-128: the tree shows structure — a status/folder filter that hides a parent would
+        take its visible subtree with it, so both filters step aside in tree view.-->
+        @if (view() !== 'tree') {
         <div class="filter-tabs">
             <button [class.active]="filter() === 'all'" (click)="filter.set('all')">{{ t().drafts.filters.all }} {{ filterCount('all') }}</button>
             <button [class.active]="filter() === 'draft'" (click)="filter.set('draft')">{{ t().drafts.filters.draft }} {{ filterCount('draft') }}</button>
@@ -95,6 +103,7 @@ components below also appear on comfortable screens.-->
             <button [class.active]="filter() === 'archived'" (click)="filter.set('archived')">{{ t().drafts.filters.archived }} {{ filterCount('archived') }}</button>
             <button [class.active]="filter() === 'template'" (click)="filter.set('template')">{{ t().drafts.filters.template }} {{ filterCount('template') }}</button>
         </div>
+        }
 
         @if (error()) { <p class="error-box"><app-icon name="warning" size="sm"></app-icon>{{ error() }}</p> }
 
@@ -185,6 +194,53 @@ components below also appear on comfortable screens.-->
                         <app-icon name="trash" size="sm"></app-icon>
                     </button>
                 </div>
+            </div>
+            } @empty {
+            <p class="hint">{{ t().common.nothingHere }}</p>
+            }
+        </div>
+        } @else if (view() === 'tree') {
+        <!--ADR-128 — the document tree. Structure, not a filtered list: the status tabs and the
+        folder filter deliberately do not apply (search does, and keeps the ancestor path).-->
+        <div class="drafts-tree">
+            @for (row of treeRows(); track row.d.id) {
+            <div class="tree-row" [class.busy]="busyId() === row.d.id"
+                 [style.padding-left.px]="8 + row.depth * 22" (click)="openDraft(row.d.id)">
+                @if (row.hasChildren) {
+                <button class="tree-caret" [class.closed]="isCollapsed(row.d.id)" (click)="toggleExpanded(row.d.id, $event)"
+                        [attr.aria-label]="isCollapsed(row.d.id) ? t().drafts.tree.expand : t().drafts.tree.collapse">
+                    <app-icon name="caret-down" size="xs"></app-icon>
+                </button>
+                } @else { <span class="tree-caret-spacer"></span> }
+                @if (row.d.isPrivate) { <app-icon name="lock" size="xs" class="private-lock" [attr.title]="t().drafts.privatePost"></app-icon> }
+                <span class="tree-title">{{ row.d.title || t().drafts.untitled }}</span>
+                <span class="status-badge" [class.tone-danger]="status(row.d).tone === 'danger'" [class.tone-ok]="status(row.d).tone === 'ok'">
+                    {{ status(row.d).label }}
+                </span>
+                <span class="spacer"></span>
+                <span class="row-actions" (click)="$event.stopPropagation()">
+                    <button class="mini" (click)="moveUp(row.d, $event)" [disabled]="busyId() === row.d.id"
+                            [title]="t().drafts.tree.moveUp" [attr.aria-label]="t().drafts.tree.moveUp">↑</button>
+                    <button class="mini" (click)="moveDown(row.d, $event)" [disabled]="busyId() === row.d.id"
+                            [title]="t().drafts.tree.moveDown" [attr.aria-label]="t().drafts.tree.moveDown">↓</button>
+                    <app-popover>
+                        <button trigger class="mini" [title]="t().drafts.tree.move" [attr.aria-label]="t().drafts.tree.move">
+                            <app-icon name="tree-structure" size="sm"></app-icon>
+                        </button>
+                        <div panel class="tree-move-menu">
+                            <p class="tree-move-title">{{ t().drafts.tree.moveTitle(row.d.title || t().drafts.untitled) }}</p>
+                            <button class="folder-menu-item" [class.active]="row.d.parentDraftId === null"
+                                    (click)="moveUnder(row.d, null, $event)">{{ t().drafts.tree.root }}</button>
+                            <div class="folder-menu-sep"></div>
+                            <div class="tree-move-list">
+                                @for (target of moveTargets(row.d); track target.id) {
+                                <button class="folder-menu-item" [class.active]="row.d.parentDraftId === target.id"
+                                        (click)="moveUnder(row.d, target.id, $event)">{{ target.title || t().drafts.untitled }}</button>
+                                }
+                            </div>
+                        </div>
+                    </app-popover>
+                </span>
             </div>
             } @empty {
             <p class="hint">{{ t().common.nothingHere }}</p>

@@ -1258,6 +1258,15 @@
                 <!--FI3.2/FI3.3: the tag cloud and the folder menu are shared components now, so
                 this row, the new-draft dialog, /drafts and the posts manager all offer the same
                 control instead of three variations on it.-->
+                @if (breadcrumbs().length) {
+                <!--ADR-128 — where this document sits in the tree; a crumb opens that document.-->
+                <span class="doc-crumbs">
+                    @for (crumb of breadcrumbs(); track crumb.id) {
+                    <button class="doc-crumb" (click)="openDraft(crumb.id)" [title]="crumb.title">{{ crumb.title }}</button>
+                    <span class="doc-crumb-sep">/</span>
+                    }
+                </span>
+                }
                 <div class="tag-row-slot">
                     <app-tag-picker [tags]="tagList()" (tagsChange)="setTags($event)"></app-tag-picker>
                 </div>

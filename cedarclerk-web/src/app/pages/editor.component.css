@@ -2567,3 +2567,35 @@ input[type="datetime-local"]:focus-visible {
 
 .pr-summary.failed { color: var(--danger); }
 .pr-summary.running { color: var(--alt); font-weight: 400; }
+
+/* ADR-128 — tree breadcrumbs in the state strip. */
+.doc-crumbs {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.doc-crumb {
+    border: none;
+    background: none;
+    color: var(--t2);
+    font-size: var(--fs-meta);
+    font-family: inherit;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: var(--radius-sm);
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.doc-crumb:hover { color: var(--text); background: var(--hover); }
+
+.doc-crumb-sep {
+    color: var(--t2);
+    opacity: .5;
+    font-size: var(--fs-meta);
+}

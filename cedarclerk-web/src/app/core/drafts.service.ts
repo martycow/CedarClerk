@@ -122,6 +122,8 @@ export interface DraftMeta {
     scheduled: ScheduledInfo | null; // most recent Pending/Failed ScheduledPost row, if any
     folderId: string | null; // at most one folder per draft — see the ADR following ADR-038
     seriesId: string | null; // at most one series per draft — ADR-125
+    parentDraftId: string | null; // ADR-128 — the document tree; null = root
+    siblingOrder: number;
     isPrivate: boolean; // blog page gated behind PostInvite tokens — see ADR-041
     isTemplate: boolean; // NF1 — a template, filtered into its own /drafts tab, never published
     disableCopy: boolean; // blocks selection/copy/context menu on the blog page; private posts only
@@ -338,6 +340,12 @@ export class DraftsService {
 
     setDraftSeries(id: string, seriesId: string | null) {
         return firstValueFrom(this.http.put<{ seriesId: string | null }>(`/api/drafts/${id}/series`, { seriesId }));
+    }
+
+    // ADR-128 — place a document in the tree; beforeId orders it among its new siblings.
+    setDraftParent(id: string, parentId: string | null, beforeId?: string) {
+        return firstValueFrom(this.http.put<{ parentDraftId: string | null; siblingOrder: number }>(
+            `/api/drafts/${id}/parent`, { parentId, beforeId: beforeId ?? null }));
     }
 
     // Semi-public: listed and searchable on the blog, still gated behind the registration form.

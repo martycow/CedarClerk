@@ -2092,7 +2092,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 blogSlug: null, isBlogPublished: false, blogPublishedAt: null,
                 languages, tags: tags.join(','),
                 isArchived: false, lastTelegramMessageId: null, lastTelegramUsername: null,
-                staleLanguages: [], scheduled: null, folderId, seriesId: null, isPrivate, isTemplate: false, disableCopy: false,
+                staleLanguages: [], scheduled: null, folderId, seriesId: null, parentDraftId: null, siblingOrder: 0,
+                isPrivate, isTemplate: false, disableCopy: false,
                 disableReactions: false, disableComments: false,
                 viewCount: 0, reactionCount: 0, newViewCount: 0, newReactionCount: 0,
             };
@@ -3022,6 +3023,23 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             const images = urls.filter((u): u is string => !!u);
             if (images.length) this.insertNode('carousel', { images });
         });
+    }
+
+    // ADR-128 — the current document's ancestor chain, oldest first, from the already-loaded
+    // list. Empty for a root document; capped at the tree's depth limit.
+    breadcrumbs(): { id: string; title: string }[] {
+        const id = this.currentId();
+        if (!id) return [];
+        const byId = new Map(this.drafts().map(d => [d.id, d]));
+        const crumbs: { id: string; title: string }[] = [];
+        let cursor = byId.get(id)?.parentDraftId ?? null;
+        for (let hops = 0; cursor && hops < 10; hops++) {
+            const d = byId.get(cursor);
+            if (!d) break;
+            crumbs.unshift({ id: d.id, title: d.title });
+            cursor = d.parentDraftId;
+        }
+        return crumbs;
     }
 
     // ADR-127 — insert an already-uploaded file: same node mapping as the upload paths above,

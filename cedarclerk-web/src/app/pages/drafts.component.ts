@@ -137,7 +137,7 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     drafts = signal<DraftMeta[]>([]);
     search = '';
     filter = signal<FilterKey>('all');
-    view = signal<'table' | 'grid'>('table');
+    view = signal<'table' | 'grid' | 'tree'>('table');
     busyId = signal<string | null>(null);
     deleteConfirmId = signal<string | null>(null);
     error = signal('');
@@ -330,6 +330,148 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
 
     openDraft(id: string) {
         this.router.navigate(['/editor'], { queryParams: { draft: id } });
+    }
+
+    // ---- document tree (ADR-128) --------------------------------------------------------------
+    // The tree is structure, not a filtered list: the status tabs and the folder filter do not
+    // apply here (a parent that fails a filter would take its whole visible subtree with it).
+    // Search still works, showing matches with their ancestor path.
+
+    collapsed = signal<ReadonlySet<string>>(new Set());
+
+    toggleExpanded(id: string, ev: Event) {
+        ev.stopPropagation();
+        this.collapsed.update(set => {
+            const next = new Set(set);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    }
+
+    isCollapsed(id: string) {
+        return this.collapsed().has(id);
+    }
+
+    private treePool(): DraftMeta[] {
+        return this.drafts().filter(d => !d.isArchived);
+    }
+
+    private treeChildrenOf(pool: DraftMeta[], parentId: string | null): DraftMeta[] {
+        return pool.filter(d => d.parentDraftId === parentId)
+            .sort((a, b) => a.siblingOrder - b.siblingOrder || b.updatedAt.localeCompare(a.updatedAt));
+    }
+
+    // Search keeps a node visible when it or any descendant matches, plus the ancestors of every
+    // match — a hit deep in the tree arrives with its path, not floating alone.
+    private treeVisibleIds(pool: DraftMeta[]): Set<string> | null {
+        const q = this.search.trim().toLowerCase();
+        if (!q) return null;
+        const byId = new Map(pool.map(d => [d.id, d]));
+        const visible = new Set<string>();
+        for (const d of pool) {
+            if (!d.title.toLowerCase().includes(q) && !d.tags.toLowerCase().includes(q)) continue;
+            for (let cursor: DraftMeta | undefined = d, hops = 0; cursor && hops < 12; hops++) {
+                visible.add(cursor.id);
+                cursor = cursor.parentDraftId ? byId.get(cursor.parentDraftId) : undefined;
+            }
+        }
+        return visible;
+    }
+
+    treeRows(): { d: DraftMeta; depth: number; hasChildren: boolean }[] {
+        const pool = this.treePool();
+        const visible = this.treeVisibleIds(pool);
+        const rows: { d: DraftMeta; depth: number; hasChildren: boolean }[] = [];
+        const walk = (parentId: string | null, depth: number) => {
+            if (depth > 12) return;
+            for (const d of this.treeChildrenOf(pool, parentId)) {
+                if (visible && !visible.has(d.id)) continue;
+                const children = this.treeChildrenOf(pool, d.id);
+                rows.push({ d, depth, hasChildren: children.length > 0 });
+                if (!this.isCollapsed(d.id)) walk(d.id, depth + 1);
+            }
+        };
+        walk(null, 0);
+        // A child of an archived (hidden) parent would vanish from every walk above — surface
+        // such orphans at root level rather than losing them.
+        const seen = new Set(rows.map(r => r.d.id));
+        for (const d of pool) {
+            if (seen.has(d.id)) continue;
+            if (visible && !visible.has(d.id)) continue;
+            rows.push({ d, depth: 0, hasChildren: false });
+        }
+        return rows;
+    }
+
+    // Candidates for "move under…": everything except the node itself and its own subtree.
+    moveTargets(d: DraftMeta): DraftMeta[] {
+        const pool = this.treePool();
+        const excluded = new Set<string>([d.id]);
+        let grew = true;
+        while (grew) {
+            grew = false;
+            for (const x of pool) {
+                if (x.parentDraftId && excluded.has(x.parentDraftId) && !excluded.has(x.id)) {
+                    excluded.add(x.id);
+                    grew = true;
+                }
+            }
+        }
+        return pool.filter(x => !excluded.has(x.id)).sort((a, b) => a.title.localeCompare(b.title));
+    }
+
+    private async applyMove(id: string, parentId: string | null, beforeId?: string) {
+        if (this.busyId()) return;
+        this.busyId.set(id);
+        this.error.set('');
+        try {
+            await this.draftsApi.setDraftParent(id, parentId, beforeId);
+            // Mirror the server's renumbering locally (same ordering rule) instead of refetching:
+            // GET /api/drafts advances the "new since last visit" baselines as a side effect.
+            this.drafts.update(list => {
+                const moved = list.find(d => d.id === id);
+                if (!moved) return list;
+                const siblings = list.filter(d => d.parentDraftId === parentId && d.id !== id)
+                    .sort((a, b) => a.siblingOrder - b.siblingOrder || b.updatedAt.localeCompare(a.updatedAt));
+                let at = siblings.length;
+                if (beforeId) {
+                    const i = siblings.findIndex(d => d.id === beforeId);
+                    if (i >= 0) at = i;
+                }
+                siblings.splice(at, 0, moved);
+                const orders = new Map(siblings.map((d, i) => [d.id, i]));
+                return list.map(d => orders.has(d.id)
+                    ? { ...d, siblingOrder: orders.get(d.id)!, parentDraftId: d.id === id ? parentId : d.parentDraftId }
+                    : d);
+            });
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().drafts.errors.move));
+        } finally {
+            this.busyId.set(null);
+        }
+    }
+
+    moveUnder(d: DraftMeta, parentId: string | null, ev: Event) {
+        ev.stopPropagation();
+        if (d.parentDraftId === parentId) return;
+        void this.applyMove(d.id, parentId);
+    }
+
+    moveUp(d: DraftMeta, ev: Event) {
+        ev.stopPropagation();
+        const siblings = this.treeChildrenOf(this.treePool(), d.parentDraftId);
+        const i = siblings.findIndex(x => x.id === d.id);
+        if (i <= 0) return;
+        void this.applyMove(d.id, d.parentDraftId, siblings[i - 1].id);
+    }
+
+    moveDown(d: DraftMeta, ev: Event) {
+        ev.stopPropagation();
+        const siblings = this.treeChildrenOf(this.treePool(), d.parentDraftId);
+        const i = siblings.findIndex(x => x.id === d.id);
+        if (i < 0 || i >= siblings.length - 1) return;
+        const after = siblings[i + 2];
+        void this.applyMove(d.id, d.parentDraftId, after?.id);
     }
 
     // The dialog used to just navigate to /editor?new=1 and let the editor page create the draft
