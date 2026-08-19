@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CedarClerk.Core;
+using CedarClerk.Localization;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
@@ -40,12 +41,12 @@ public static class SeriesEndpoints
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var slug = SlugGenerator.Slugify(name);
             if (slug.Length == 0)
-                return Results.Json(new { error = "Series name produces an empty slug" }, statusCode: StatusCodes.Status400BadRequest);
+                return Results.Json(new { error = ErrorMessages.SeriesNameEmptySlug }, statusCode: StatusCodes.Status400BadRequest);
 
             // The slug carries the public URL, so a duplicate is refused rather than suffixed —
             // the author picked a name that already means another series.
             if (await db.Series.AnyAsync(s => s.OwnerId == uid && s.Slug == slug))
-                return Results.Json(new { error = "A series with this name already exists" }, statusCode: StatusCodes.Status409Conflict);
+                return Results.Json(new { error = ErrorMessages.SeriesNameTaken }, statusCode: StatusCodes.Status409Conflict);
 
             var series = new Series { OwnerId = uid, Name = name, Slug = slug, Description = req.Description?.Trim() };
             db.Series.Add(series);

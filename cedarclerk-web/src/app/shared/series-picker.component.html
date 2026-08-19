@@ -1,0 +1,58 @@
+<ng-template #menu>
+    <div class="series-menu">
+        <button class="series-menu-item" [class.active]="seriesId() === null" (click)="pick(null)">
+            {{ t().drafts.series.none }}
+        </button>
+        @if (series().length) {
+        <div class="series-menu-sep"></div>
+        @for (s of series(); track s.id) {
+        <div class="series-menu-row" [class.active]="seriesId() === s.id">
+            @if (editingId() === s.id) {
+            <input class="series-input" [(ngModel)]="editingName"
+                   (keydown.enter)="commitRename()" (keydown.escape)="cancelRename()"
+                   (blur)="commitRename()" (click)="$event.stopPropagation()">
+            } @else {
+            <button class="series-menu-item" (click)="pick(s.id)">{{ s.name }}</button>
+            <span class="series-count">{{ s.count }}</span>
+            <button class="series-icon-btn" (click)="startRename(s, $event)" [title]="t().drafts.series.rename" [attr.aria-label]="t().drafts.series.rename">
+                <app-icon name="pencil-simple" size="xs"></app-icon>
+            </button>
+            <button class="series-icon-btn" (click)="askDelete(s, $event)" [title]="t().common.delete" [attr.aria-label]="t().common.delete">
+                <app-icon name="x" size="xs"></app-icon>
+            </button>
+            }
+        </div>
+        }
+        }
+        <div class="series-menu-sep"></div>
+        @if (error()) { <p class="series-error">{{ error() }}</p> }
+        <div class="series-add-row">
+            <input class="series-input" [(ngModel)]="newName"
+                   [placeholder]="t().drafts.series.newPlaceholder" (keydown.enter)="add()">
+            <button class="series-icon-btn" (click)="add()" [disabled]="busy() || !newName.trim()"
+                    [title]="t().drafts.series.add" [attr.aria-label]="t().drafts.series.add">
+                <app-icon name="plus" size="xs"></app-icon>
+            </button>
+        </div>
+    </div>
+</ng-template>
+
+<app-popover>
+    <button trigger class="series-trigger" [class.compact]="compact()" (click)="load()" [title]="t().drafts.series.title">
+        <app-icon name="list-numbers" size="sm"></app-icon> {{ label() }}
+    </button>
+    <ng-container panel [ngTemplateOutlet]="menu"></ng-container>
+</app-popover>
+
+@if (deleteTarget(); as s) {
+<app-modal (closed)="deleteConfirmId.set(null)">
+    <app-icon modal-icon name="trash" size="sm"></app-icon>
+    <span modal-title>{{ t().drafts.series.deleteTitle(s.name) }}</span>
+    <p>
+        @if (s.count > 0) { {{ t().drafts.series.deleteOrphans(s.count) }} }
+        {{ t().drafts.series.deleteKeepsDrafts }}
+    </p>
+    <button modal-actions class="btn-ghost" (click)="deleteConfirmId.set(null)">{{ t().common.cancel }}</button>
+    <button modal-actions class="btn-accent" (click)="confirmDelete()">{{ t().drafts.series.deleteConfirm }}</button>
+</app-modal>
+}

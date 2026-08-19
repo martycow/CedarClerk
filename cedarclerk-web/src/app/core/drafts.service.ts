@@ -121,6 +121,7 @@ export interface DraftMeta {
     staleLanguages: string[]; // subset of `languages` whose translation predates the last RU edit
     scheduled: ScheduledInfo | null; // most recent Pending/Failed ScheduledPost row, if any
     folderId: string | null; // at most one folder per draft — see the ADR following ADR-038
+    seriesId: string | null; // at most one series per draft — ADR-125
     isPrivate: boolean; // blog page gated behind PostInvite tokens — see ADR-041
     isTemplate: boolean; // NF1 — a template, filtered into its own /drafts tab, never published
     disableCopy: boolean; // blocks selection/copy/context menu on the blog page; private posts only
@@ -159,6 +160,7 @@ export type AiEditKind = 'fix-errors' | 'schizo';
 export interface AiEditResult { title: string; cedarJson: string; updatedAt: string; }
 export interface AiJobPoll<T> { status: 'pending' | 'running' | 'completed' | 'failed'; result: T | null; error: string | null; }
 export interface FolderMeta { id: string; name: string; count: number; }
+export interface SeriesMeta { id: string; name: string; slug: string; description: string | null; count: number; }
 export interface PostInvite { id: string; email: string; createdAt: string; url: string; }
 
 // Registration form shown to uninvited visitors of a private post (B3). The JSON shape is
@@ -334,6 +336,10 @@ export class DraftsService {
         return firstValueFrom(this.http.put<{ folderId: string | null }>(`/api/drafts/${id}/folder`, { folderId }));
     }
 
+    setDraftSeries(id: string, seriesId: string | null) {
+        return firstValueFrom(this.http.put<{ seriesId: string | null }>(`/api/drafts/${id}/series`, { seriesId }));
+    }
+
     // Semi-public: listed and searchable on the blog, still gated behind the registration form.
     setDraftListed(id: string, isListedWhilePrivate: boolean) {
         return firstValueFrom(this.http.post<{ isListedWhilePrivate: boolean }>(
@@ -417,6 +423,22 @@ export class DraftsService {
 
     deleteFolder(id: string) {
         return firstValueFrom(this.http.delete(`/api/folders/${id}`));
+    }
+
+    listSeries() {
+        return firstValueFrom(this.http.get<SeriesMeta[]>('/api/series'));
+    }
+
+    createSeries(name: string) {
+        return firstValueFrom(this.http.post<{ id: string; name: string; slug: string; description: string | null }>('/api/series', { name }));
+    }
+
+    renameSeries(id: string, name: string) {
+        return firstValueFrom(this.http.put<{ id: string; name: string; slug: string }>(`/api/series/${id}`, { name }));
+    }
+
+    deleteSeries(id: string) {
+        return firstValueFrom(this.http.delete(`/api/series/${id}`));
     }
 
     getTranslation(id: string, lang: string) {

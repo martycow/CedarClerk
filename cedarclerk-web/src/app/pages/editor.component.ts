@@ -67,6 +67,7 @@ import { DebugLogService } from '../core/debug-log.service';
 import { TagUsageService } from '../core/tag-usage.service';
 import { TagPickerComponent } from '../shared/tag-picker.component';
 import { FolderPickerComponent } from '../shared/folder-picker.component';
+import { SeriesPickerComponent } from '../shared/series-picker.component';
 import { FormRefComponent } from '../shared/form-ref.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import { pseudoProgress } from '../core/pseudo-progress.util';
@@ -258,7 +259,7 @@ interface UploadItem {
 
 @Component({
     selector: 'app-editor',
-    imports: [IconComponent, BrandIconComponent, FormsModule, ZonedDatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent, AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent, CountBadgeComponent, GlossaryTermFormComponent],
+    imports: [IconComponent, BrandIconComponent, FormsModule, ZonedDatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent, AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent, SeriesPickerComponent, FormRefComponent, CountBadgeComponent, GlossaryTermFormComponent],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
 })
@@ -813,6 +814,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // itself and the cloud of tags in use live in shared services now (FI3.2/FI3.3) — this page
     // only holds which folder and tags *this* draft has.
     currentFolderId = signal<string | null>(null);
+    currentSeriesId = signal<string | null>(null);
 
     aiEditBusy = signal(false);
     aiEditElapsed = signal(0);
@@ -1680,6 +1682,18 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
+    async assignSeries(seriesId: string | null) {
+        const id = this.currentId();
+        if (!id || this.currentSeriesId() === seriesId) return;
+        try {
+            await this.draftsApi.setDraftSeries(id, seriesId);
+            this.currentSeriesId.set(seriesId);
+            this.drafts.update(list => list.map(d => d.id === id ? { ...d, seriesId } : d));
+        } catch {
+            this.saveState.set('error');
+        }
+    }
+
     // Machine-translates the RU version into EN and loads the result into the editor for review.
     // Replacing an existing translation goes through a confirm modal first (see confirmTranslate()).
     autoTranslate() {
@@ -1985,6 +1999,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.ruSnapshot = null;
             this.tagList.set(draft.tags ? draft.tags.split(',').filter(t => t.length > 0) : []);
             this.currentFolderId.set(draft.folderId);
+            this.currentSeriesId.set(draft.seriesId);
             this.isPrivate.set(draft.isPrivate);
             this.watermarkText.set(draft.watermarkText);
             this.watermarkInput = draft.watermarkText ?? '';
@@ -2052,7 +2067,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 blogSlug: null, isBlogPublished: false, blogPublishedAt: null,
                 languages, tags: tags.join(','),
                 isArchived: false, lastTelegramMessageId: null, lastTelegramUsername: null,
-                staleLanguages: [], scheduled: null, folderId, isPrivate, isTemplate: false, disableCopy: false,
+                staleLanguages: [], scheduled: null, folderId, seriesId: null, isPrivate, isTemplate: false, disableCopy: false,
                 disableReactions: false, disableComments: false,
                 viewCount: 0, reactionCount: 0, newViewCount: 0, newReactionCount: 0,
             };
@@ -2070,6 +2085,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.ruSnapshot = null;
             this.tagList.set(tags);
             this.currentFolderId.set(folderId);
+            this.currentSeriesId.set(null);
             this.isPrivate.set(isPrivate);
             this.disableCopy.set(false);
             this.watermarkText.set(null);

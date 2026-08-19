@@ -61,6 +61,8 @@ public static class ErrorMessages
     public static string BotNotRunningNoToken => Ru("Telegram-бот не запущен (не настроен токен).", "Telegram bot is not running (no token configured)");
     public static string SlugHasNoUsableCharacters => Ru("В этом адресе нет пригодных символов.", "That URL has no usable characters");
     public static string SlugTaken => Ru("Такой адрес уже занят.", "That URL is already taken");
+    public static string SeriesNameEmptySlug => Ru("Из названия серии не получается адрес — добавьте буквы или цифры.", "Series name produces an empty URL — add letters or digits");
+    public static string SeriesNameTaken => Ru("Серия с таким названием уже есть.", "A series with this name already exists");
     public static string InviteCodeExists => Ru("Такой код уже существует.", "That code already exists");
     public static string NameReservedForAuthor => Ru("Это имя зарезервировано за автором поста.", "That name is reserved for the post's author.");
     public static string NotAZipArchive => Ru("Файл не является корректным .zip-архивом.", "The file is not a valid .zip archive.");

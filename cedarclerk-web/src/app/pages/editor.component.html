@@ -1255,6 +1255,8 @@
                 </div>
                 <app-folder-picker [folderId]="currentFolderId()" [compact]="true"
                                    (picked)="assignFolder($event)"></app-folder-picker>
+                <app-series-picker [seriesId]="currentSeriesId()" [compact]="true"
+                                   (picked)="assignSeries($event)"></app-series-picker>
             </div>
             <!--Re-translating an existing EN version gets the same progress treatment as the
             first-time auto-translate below (B14) — previously it was just % text in the button.-->

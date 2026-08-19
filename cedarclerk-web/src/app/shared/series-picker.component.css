@@ -1,0 +1,143 @@
+.icon-sm { width: 14px; height: 14px; }
+.icon-xs { width: 12px; height: 12px; }
+.icon { width: 20px; height: 20px; }
+
+.series-trigger {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--t2);
+    border-radius: var(--radius-md);
+    padding: 5px 10px;
+    font-family: inherit;
+    font-size: var(--fs-ui);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.series-trigger:hover {
+    color: var(--text);
+    border-color: var(--abord);
+}
+
+/* Table cells and toolbars carry their own framing — a second border there reads as a field. */
+.series-trigger.compact {
+    border-color: transparent;
+    background: none;
+    padding: 2px 4px;
+}
+
+.series-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 200px;
+}
+
+.series-menu-item {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    border: none;
+    background: none;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: var(--fs-ui);
+    font-family: inherit;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.series-menu-item:hover {
+    background: var(--hover);
+}
+
+.series-menu-item.active,
+.series-menu-row.active .series-menu-item {
+    background: var(--asoft);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.series-menu-sep {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+}
+
+.series-menu-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    border-radius: var(--radius-sm);
+}
+
+.series-count {
+    font-size: var(--fs-caption);
+    color: var(--t2);
+    padding: 0 4px;
+    flex: none;
+}
+
+.series-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex: none;
+    border: none;
+    background: none;
+    border-radius: var(--radius-sm);
+    color: var(--t2);
+    cursor: pointer;
+}
+
+.series-icon-btn:hover {
+    color: var(--text);
+    background: var(--hover-strong);
+}
+
+.series-icon-btn:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.series-input {
+    flex: 1;
+    border: 1px solid var(--border-strong);
+    background: var(--sheet);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 5px 8px;
+    font-size: var(--fs-ui);
+    font-family: inherit;
+    outline: none;
+    min-width: 0;
+}
+
+.series-input:focus {
+    border-color: var(--accent);
+}
+
+.series-add-row {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.series-error {
+    font-size: var(--fs-meta);
+    color: var(--danger);
+    margin: 2px 0 4px;
+}
