@@ -1287,6 +1287,18 @@
                                    (picked)="assignFolder($event)"></app-folder-picker>
                 <app-series-picker [seriesId]="currentSeriesId()" [compact]="true"
                                    (picked)="assignSeries($event)"></app-series-picker>
+                @if (backlinks().length) {
+                <app-popover>
+                    <button trigger class="backlinks-chip" [title]="t().editor.wikilink.backlinksTitle(backlinks().length)">
+                        {{ t().editor.wikilink.backlinks(backlinks().length) }}
+                    </button>
+                    <div panel class="backlinks-menu">
+                        @for (b of backlinks(); track b.id) {
+                        <button class="backlinks-item" (click)="openDraft(b.id)">{{ b.title || t().drafts.untitled }}</button>
+                        }
+                    </div>
+                </app-popover>
+                }
             </div>
             <!--Re-translating an existing EN version gets the same progress treatment as the
             first-time auto-translate below (B14) — previously it was just % text in the button.-->

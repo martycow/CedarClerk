@@ -47,6 +47,21 @@ public static class DraftEndpoints
     // ImportTmpPaths.Dir (never an arbitrary path) and the email of the account to own the draft.
     public record LocalImportMarkdownRequest(string ZipFileName, string OwnerEmail);
 
+    // ADR-128 — diff-sync the derived wiki-links against the primary document's current text.
+    // Only ids the owner actually has become rows (a pasted foreign id links nothing), self-links
+    // are ignored, and translations never run this: they inherit the primary's links.
+    private static async Task SyncDocumentLinksAsync(CedarDbContext db, string uid, Guid fromId, string cedarJson)
+    {
+        var linked = WikiLinkRefs.Collect(cedarJson).Where(to => to != fromId).ToList();
+        var owned = linked.Count == 0
+            ? []
+            : await db.Drafts.Where(d => d.OwnerId == uid && linked.Contains(d.Id)).Select(d => d.Id).ToListAsync();
+        var existing = await db.DocumentLinks.Where(l => l.FromDraftId == fromId).ToListAsync();
+        db.DocumentLinks.RemoveRange(existing.Where(l => !owned.Contains(l.ToDraftId)));
+        foreach (var to in owned.Where(to => existing.All(l => l.ToDraftId != to)))
+            db.DocumentLinks.Add(new DocumentLink { OwnerId = uid, FromDraftId = fromId, ToDraftId = to });
+    }
+
     // T-018.1/T-018.3, both from the 29.07.2026 wipe: the two reasons a save is refused rather
     // than applied. Both answer 409 with a `code` the editor switches on — "stale" wants a reload,
     // "shrink" wants an explicit confirmation. Returns null when the save may proceed.
@@ -1118,8 +1133,22 @@ public static class DraftEndpoints
             draft.CedarJson = req.CedarJson;
             draft.UpdatedAt = DateTime.UtcNow;
             await DraftRevisionService.RecordAsync(db, id, draft.PrimaryLanguage, req.Title, req.CedarJson);
+            await SyncDocumentLinksAsync(db, uid, id, req.CedarJson);
             await db.SaveChangesAsync();
             return Results.Ok(new { draft.Id, draft.UpdatedAt });
+        });
+
+        // ADR-128 — who links here. Backlinks are DocumentLink rows walked from the target side.
+        groupBuilder.MapGet("/{id:guid}/backlinks", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            if (!await db.Drafts.AnyAsync(d => d.Id == id && d.OwnerId == uid)) return Results.NotFound();
+            var fromIds = await db.DocumentLinks.Where(l => l.ToDraftId == id && l.OwnerId == uid)
+                .Select(l => l.FromDraftId).ToListAsync();
+            var titles = await db.Drafts.Where(d => fromIds.Contains(d.Id))
+                .OrderBy(d => d.Title)
+                .Select(d => new { d.Id, d.Title }).ToListAsync();
+            return Results.Ok(titles);
         });
 
         groupBuilder.MapPost("/{id:guid}/primary-language", async (Guid id, ChangePrimaryLanguageRequest req, ClaimsPrincipal user, CedarDbContext db) =>
@@ -1171,6 +1200,8 @@ public static class DraftEndpoints
             }
 
             await DraftRevisionService.RecordAsync(db, id, draft.PrimaryLanguage, draft.Title, draft.CedarJson);
+            // The primary document just changed wholesale — its derived links change with it.
+            await SyncDocumentLinksAsync(db, uid, id, draft.CedarJson);
             await db.SaveChangesAsync();
             return Results.Ok(new { draft.PrimaryLanguage, draft.UpdatedAt });
         });
@@ -1288,6 +1319,9 @@ public static class DraftEndpoints
                 // ADR-128 — children move up to the grandparent: the subtree survives its root.
                 await db.Drafts.Where(x => x.OwnerId == uid && x.ParentDraftId == id)
                     .ExecuteUpdateAsync(s => s.SetProperty(d => d.ParentDraftId, info!.ParentDraftId));
+                // ADR-128 — derived links die with either endpoint; a surviving row would render
+                // a backlink to a document that is gone.
+                await db.DocumentLinks.Where(l => l.FromDraftId == id || l.ToDraftId == id).ExecuteDeleteAsync();
                 await db.DraftStatSeens.Where(x => x.DraftId == id && x.OwnerId == uid).ExecuteDeleteAsync();
                 // ADR-065 — revisions hold complete copies of the document, and unlike
                 // DraftTranslation (which has a real navigation property, so EF cascades it)

@@ -27,6 +27,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<AiUsage> AiUsages => Set<AiUsage>();
     public DbSet<Folder> Folders => Set<Folder>();
     public DbSet<Series> Series => Set<Series>();
+    public DbSet<DocumentLink> DocumentLinks => Set<DocumentLink>();
     public DbSet<GlossaryTerm> GlossaryTerms => Set<GlossaryTerm>();
     public DbSet<DraftStatSeen> DraftStatSeens => Set<DraftStatSeen>();
     public DbSet<FormPreset> FormPresets => Set<FormPreset>();
@@ -100,6 +101,11 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         builder.Entity<Series>()
             .HasIndex(s => new { s.OwnerId, s.Slug })
             .IsUnique();
+        // ADR-128 — the diff-sync treats (from, to) as a set; the backlinks query walks by target.
+        builder.Entity<DocumentLink>()
+            .HasIndex(l => new { l.FromDraftId, l.ToDraftId })
+            .IsUnique();
+        builder.Entity<DocumentLink>().HasIndex(l => l.ToDraftId);
         builder.Entity<PublishJob>().HasIndex(j => new { j.DraftId, j.CreatedAt });
         // ADR-092 — the balance query, and the idempotency anchor (SQLite treats NULLs as distinct
         // in a unique index, so unanchored rows are unconstrained).

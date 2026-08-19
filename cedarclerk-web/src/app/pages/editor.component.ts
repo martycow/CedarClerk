@@ -931,6 +931,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     uploads = signal<UploadItem[]>([]);
     libraryOpen = signal(false);
 
+    // ADR-128 — who links to the open document; refreshed on open, best-effort.
+    backlinks = signal<{ id: string; title: string }[]>([]);
+
     // ADR-128 — the `[[` suggester's popover state; the pending command comes from the plugin.
     wikiSuggest = signal<{ x: number; y: number; items: { id: string; title: string }[]; index: number } | null>(null);
     private wikiSuggestCommand: ((attrs: { draftId: string; label: string }) => void) | null = null;
@@ -2059,6 +2062,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.tagList.set(draft.tags ? draft.tags.split(',').filter(t => t.length > 0) : []);
             this.currentFolderId.set(draft.folderId);
             this.currentSeriesId.set(draft.seriesId);
+            this.backlinks.set([]);
+            this.draftsApi.getBacklinks(id).then(list => {
+                if (this.currentId() === id) this.backlinks.set(list);
+            }).catch(() => { /* best-effort — the chip simply stays hidden */ });
             this.isPrivate.set(draft.isPrivate);
             this.watermarkText.set(draft.watermarkText);
             this.watermarkInput = draft.watermarkText ?? '';

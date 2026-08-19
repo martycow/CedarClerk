@@ -342,6 +342,11 @@ export class DraftsService {
         return firstValueFrom(this.http.put<{ seriesId: string | null }>(`/api/drafts/${id}/series`, { seriesId }));
     }
 
+    // ADR-128 — who links to this document (derived from wikilink nodes on save).
+    getBacklinks(id: string) {
+        return firstValueFrom(this.http.get<{ id: string; title: string }[]>(`/api/drafts/${id}/backlinks`));
+    }
+
     // ADR-128 — place a document in the tree; beforeId orders it among its new siblings.
     setDraftParent(id: string, parentId: string | null, beforeId?: string) {
         return firstValueFrom(this.http.put<{ parentDraftId: string | null; siblingOrder: number }>(

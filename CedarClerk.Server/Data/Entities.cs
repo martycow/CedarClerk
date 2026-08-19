@@ -516,6 +516,18 @@ public class Series
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+// ADR-128 — a wiki-link derived from the primary document's text, one row per (from, to) pair,
+// re-diffed on every save. Deliberately separate from the module's EntityLink: that one is a
+// *stated* relation and requires a ProjectId; this one is *derived* and lives outside projects.
+public class DocumentLink
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public Guid FromDraftId { get; set; }
+    public Guid ToDraftId { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 public class DraftTranslation
 {
     public Guid Id { get; set; } = Guid.NewGuid();
