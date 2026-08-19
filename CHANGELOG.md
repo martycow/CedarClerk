@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-08-18 — the task board goes canonical (and English)
+
+`/task-format all`, on Marty's word, plus two new standing rules from the same message.
+The three task files became canonical Cowtext-board checklist lines — `- [ ] T-xxx Name —
+description #tags P1..P3` — and English: TASKS.md got its Now / Waiting on Marty / Live
+verification lanes (23 lines); BACKLOG's Russian tables became 92 checklist lines with
+translated descriptions, every T-ref/ADR-ref/date preserved, priorities mapped High/Medium/Low →
+P1/P2/P3, and the parser traps defused (a bare `P0` or `#word` in a description becomes a
+priority/tag — "idea #5" is now "idea 5"). Dropped as already-recorded elsewhere: the retired
+T-137 row and the answered Q-1/Q-13/Q-14 (their answers live in ROADMAP §Phase 12 / ADR-077 /
+PRODUCT). The Questions and Deferred tables deliberately keep non-name headers so they stay
+invisible to the board — they are not tasks. ROADMAP was only de-Russified; its history lines
+were left byte-for-byte. T-173 is the one `[?]` — genuinely in testing.
+
+The two rules, now in CLAUDE.md: **repository files are written in English** (chat stays
+Russian), and **never write what changed and when** in comments or doc prose — Marty had been
+deleting those notes himself (the ui-inventory hook header among them); history belongs to git
+and this file. The freshest offenders were swept the same commit.
+
 ## 2026-08-18 — Cowtext skills adopted, TASKS.md moves in with its siblings
 
 A survey of the Cowtext project's seven skills and two scripts, with Marty's ask to
