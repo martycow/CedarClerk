@@ -50,7 +50,9 @@ export const routes: Routes = [
         canActivate: [authGuard],
     },
     {
-        path: 'media',
+        // 'library', not 'media' — /media/* is the uploaded files' own URL space (server static
+        // route + dev proxy), and the dev proxy forwards the whole prefix to the backend.
+        path: 'library',
         loadComponent: () => import('./pages/media-library.component').then(m => m.MediaLibraryComponent),
         canActivate: [authGuard],
     },

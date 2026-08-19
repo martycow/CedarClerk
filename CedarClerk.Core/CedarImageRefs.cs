@@ -42,14 +42,20 @@ public static class CedarImageRefs
                         Add(images, (string?)obj["attrs"]?["src"], (string?)obj["attrs"]?["alt"]);
                         break;
 
-                    // A carousel or collage is several pictures in one node, and its children are
-                    // plain objects in an attrs array rather than document nodes — walking the tree
-                    // alone would miss every one of them.
+                    // A carousel or collage is several pictures in one node, in an attrs array
+                    // rather than document nodes — walking the tree alone would miss every one.
+                    // The editor stores the items as plain URL strings; indexing ["src"] into a
+                    // JsonValue throws, which took the whole post page down once OG meta ran this
+                    // on every render (caught by e2e 18.08.2026). Objects are kept accepted in
+                    // case an older document shape carried {src, alt}.
                     case "carousel":
                     case "collage":
                         if (obj["attrs"]?["images"] is JsonArray gallery)
                             foreach (var item in gallery)
-                                Add(images, (string?)item?["src"], (string?)item?["alt"]);
+                            {
+                                if (item is JsonObject o) Add(images, (string?)o["src"], (string?)o["alt"]);
+                                else Add(images, (string?)item, null);
+                            }
                         break;
                 }
 

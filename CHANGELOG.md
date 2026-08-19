@@ -20,8 +20,9 @@ picker in the editor strip; rename keeps the slug). **T-193 / ADR-126**: `docs/p
 — the event dictionary that must exist before T-153 picks an analytics provider: what the database
 already records (and is minable retroactively — activation is a join of `CreatedAt` ×
 first-publish, no event needed), what does not exist until a provider ships, and the stable
-`snake_case` names the provider will transport. **T-177 / ADR-127**: the media library — `/media`
-page (grid/list, type chips, search, quota bar), delete by on-demand scan over every document *and
+`snake_case` names the provider will transport. **T-177 / ADR-127**: the media library — a `/library`
+page (grid/list, type chips, search, quota bar; not `/media`, whose prefix the uploaded files
+themselves own — the first e2e run caught the dev proxy swallowing the route), delete by on-demand scan over every document *and
 every translation* (409 lists the referencing posts; the same sweep fixed the export-modal list
 that only scanned the first translation), insert-from-library via a lightweight picker behind a new
 toolbar button, and paste/drag&drop upload straight into the sheet — reusing

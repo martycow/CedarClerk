@@ -83,6 +83,20 @@ public class ShortPostMediaTests
         Assert.Equal("one", images[0].Alt);
     }
 
+    // What the editor actually writes: plain URL strings. Indexing ["src"] into one used to throw
+    // and took the whole post page down once OG meta ran the collector on every render (18.08.2026).
+    [Fact]
+    public void A_collage_of_plain_url_strings_does_not_throw_and_contributes_them_all()
+    {
+        var doc = Doc("{\"type\":\"collage\",\"attrs\":{\"images\":[\"/media/1.png\",\"/media/2.png\"]}}");
+
+        var images = CedarImageRefs.Collect(doc);
+
+        Assert.Equal(2, images.Count);
+        Assert.Equal("/media/1.png", images[0].Src);
+        Assert.Null(images[0].Alt);
+    }
+
     [Theory]
     [InlineData("/media/photo.jpg", "photo.jpg")]
     [InlineData("/media/photo.jpg?v=123", "photo.jpg")]

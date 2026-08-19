@@ -14,7 +14,7 @@ Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-
 **v0.12.1 — six board rows in one session (18.08.2026, not yet deployed).** `T-186` (index cards
 hardcoding «RU» — fixed), `T-174` (OG/Twitter/canonical/hreflang meta, ADR-124), `T-178` (post
 series as an entity with `/series/{slug}` and prev/next, ADR-125), `T-193` (the metrics event
-dictionary, `docs/product/METRICS.md`, ADR-126), `T-177` (media library v1: `/media` page,
+dictionary, `docs/product/METRICS.md`, ADR-126), `T-177` (media library v1: `/library` page,
 scan-guarded delete, insert-from-library, paste/drop upload, ADR-127) and `T-181` both halves (the
 document tree and `[[`-wiki-links with backlinks, ADR-128). Three migrations, 964 backend tests
 green. Deferred follow-ups became `T-200`/`T-201`; the live-verify checklist in `TASKS.md` grew

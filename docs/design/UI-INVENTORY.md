@@ -227,7 +227,7 @@ Idea #11. Terms the owner defines once, found and explained on the published blo
 
 ## `media-library.component` (`cedarclerk-web/src/app/pages/media-library.component.{ts,html,css}`)
 
-T-177 (ADR-127) — the owner-wide library of uploaded files at `/media`, reached via the shared nav row (icon `images`). Everything here IS uploaded bytes (unlike project-assets, which indexes paths on a machine); the anatomy deliberately mirrors project-assets so the two screens read as siblings.
+T-177 (ADR-127) — the owner-wide library of uploaded files at `/library` (NOT `/media` — that prefix belongs to the uploaded files' own URLs, and the dev proxy forwards it wholesale to the backend), reached via the shared nav row (icon `images`). Everything here IS uploaded bytes (unlike project-assets, which indexes paths on a machine); the anatomy deliberately mirrors project-assets so the two screens read as siblings.
 
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|
