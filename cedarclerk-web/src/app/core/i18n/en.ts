@@ -77,6 +77,8 @@ export const en = {
         loading: 'Loading…',
         empty: 'No projects yet',
         emptyHint: 'A project is a game. Documents, tasks and assets live inside it.',
+        exampleProject: 'Create an example project',
+        exampleHint: 'A filled one to look around — tasks, a sprint, a build and a devlog written from them. Delete it whenever.',
         emptyFiltered: 'No project matches this filter.',
         notFound: 'This project does not exist, or it is not yours.',
         loadFailed: 'Could not load projects.',

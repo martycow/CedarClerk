@@ -32,7 +32,8 @@ type Filter = 'all' | 'active' | 'archived';
 export class ProjectsComponent {
     private api = inject(ProjectsService);
     private router = inject(Router);
-    t = inject(LocaleService).t;
+    private locale = inject(LocaleService);
+    t = this.locale.t;
 
     readonly projectTypes = PROJECT_TYPES;
     readonly typeIcons = PROJECT_TYPE_ICONS;
@@ -106,11 +107,27 @@ export class ProjectsComponent {
                 name,
                 projectType: type,
                 documentTitle: this.t().projects.projectTypes[type].starter,
+                language: this.locale.uiLang(),
             });
             this.creating.set(false);
             void this.router.navigate(['/projects', created.id]);
         } catch (e) {
             this.createError.set(httpErrorMessage(e, this.t().projects.create.failed));
+        } finally {
+            this.saving.set(false);
+        }
+    }
+
+    /** T-160 (ADR-133) — "Cedar Quest" from the empty state; deleting it later is the ordinary path. */
+    async createExample() {
+        if (this.saving()) return;
+        this.saving.set(true);
+        this.loadError.set(null);
+        try {
+            const created = await this.api.createExample(this.locale.uiLang());
+            void this.router.navigate(['/projects', created.id]);
+        } catch (e) {
+            this.loadError.set(httpErrorMessage(e, this.t().projects.create.failed));
         } finally {
             this.saving.set(false);
         }

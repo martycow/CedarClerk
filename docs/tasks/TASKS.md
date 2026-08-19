@@ -12,7 +12,7 @@ Phase status: `docs/tasks/ROADMAP.md`; open tasks: the board in `docs/tasks/BACK
 
 ## Now
 
-- [ ] Growth anchors — T-159 (project showcase), T-160 (onboarding templates), T-154 (landing: EN, devlog-first, waitlist — prerequisite of any acquisition); T-158 (devlog assembler, ADR-132) and T-161 (Discord webhook, ADR-131) are done, hands-on checks below #growth P1
+- [ ] Growth anchors — T-159 (project showcase), T-154 (landing: EN, devlog-first, waitlist — prerequisite of any acquisition); T-158 (devlog assembler, ADR-132), T-160 (starter skeletons + example project, ADR-133) and T-161 (Discord webhook, ADR-131) are done, hands-on checks below #growth P1
 - [ ] Cheap safety — T-175 (EXIF/GPS stripping) is done, ADR-130; hands-on check below, old files on the droplet are T-202. T-174 (OG tags) is done, hands-on check below #security P1
 - [ ] Registration blockers — T-172 remainder: media into R2 (quotas cut, ADR-129; first backup restore tested 18.08 — monthly cadence per `docs/product/BUSINESS.md` §5) #infra P1
 
@@ -40,6 +40,7 @@ Code is written and covered by tests, but never checked by hand or on a device:
 - [ ] The tree (T-181) — moving via the "Move under…" menu, up/down among siblings, editor breadcrumbs open the document, the backlinks chip counts correctly after saving with a `[[` link #editor P1
 - [ ] Discord webhook (T-161) — connect a real channel webhook in Settings → Integrations, publish a post with an image: the announcement lands, the blog link unfurls into a card with the OG image, no @everyone ping even if the text contains one #integrations P1
 - [ ] Sprint → devlog (T-158) — on a real sprint with done/open tasks and a released build: the "Devlog draft" button on the planner card assembles the three sections in the document's language and opens the editor #editor P1
+- [ ] Onboarding (T-160) — on a fresh account: "Create an example project" from the empty `/projects` builds Cedar Quest whole (board, sprint, build, devlog), and a new ordinary project's starter document opens with its skeleton in the UI language #growth P1
 - [ ] Old unverified small things — once each, no rush: incremental re-translation preserving manual edits; DeepL's uk/be/ka refusal with a clear message; the glossary tooltip on a live published post; per-language cross-links; tag rename/delete; audit paging past page one; Russian wording screen by screen #misc P3
 
 ## Notes

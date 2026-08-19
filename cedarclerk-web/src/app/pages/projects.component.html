@@ -41,6 +41,12 @@
                     <app-icon name="plus" size="sm"></app-icon>
                     <span>{{ t().projects.newProject }}</span>
                 </button>
+                <!--T-160 (ADR-133) — a filled example on demand, never seeded silently.-->
+                <button class="btn-ghost" (click)="createExample()" [disabled]="saving()">
+                    <app-icon name="sparkle" size="sm"></app-icon>
+                    <span>{{ t().projects.exampleProject }}</span>
+                </button>
+                <p class="hint">{{ t().projects.exampleHint }}</p>
             </div>
         } @else {
             <div class="projects-table">

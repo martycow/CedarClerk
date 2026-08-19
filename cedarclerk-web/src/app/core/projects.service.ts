@@ -89,6 +89,8 @@ export interface CreateProjectInput {
     projectType: ProjectType;
     /** Optional override; without it the server derives the type from projectType. */
     documentType?: DocumentType;
+    /** The starter document's language — its skeleton headings follow it (ADR-133). */
+    language?: string;
     /** The starter document's title. Sent by the client because the server has no second language. */
     documentTitle?: string;
 }
@@ -108,6 +110,14 @@ export class ProjectsService {
 
     create(input: CreateProjectInput) {
         return firstValueFrom(this.http.post<{ id: string; name: string; documentId: string }>('/api/projects', input));
+    }
+
+    /**
+     * T-160 (ADR-133) — "Cedar Quest", a filled example: tasks across the board, a current sprint,
+     * a released build and a devlog written from them. On demand from the empty state, never seeded.
+     */
+    createExample(language: string) {
+        return firstValueFrom(this.http.post<{ id: string; name: string }>('/api/projects/example', { language }));
     }
 
     update(id: string, name: string, description: string, coverUrl: string | null) {
