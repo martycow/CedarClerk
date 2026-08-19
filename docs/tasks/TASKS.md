@@ -1,89 +1,50 @@
 ---
 owner: marty
 last_verified: 2026-08-18
-source_of_truth_for: что в работе сейчас, ожидания решений Марти, чек-лист живой верификации
+source_of_truth_for: what is in progress now, decisions waiting on Marty, the live-verification checklist
 guard: none
 ---
 
 # Tasks
 
-Короткий горизонт: что в работе сейчас, что ждёт решения Марти и чек-лист живой верификации.
-Статус по фазам — `docs/tasks/ROADMAP.md`; открытые задачи — борда `docs/tasks/BACKLOG.md`; история — `CHANGELOG.md`.
-Переписан начисто 18.08.2026 при разборе `docs/INPUT_PROMPT.md` (Input sweep) — всё закрытое из
-прежней версии этого файла давно зафиксировано в ROADMAP/CHANGELOG, хвост с июля удалён.
+Short horizon: what is in progress, what waits on Marty, and the live-verification checklist.
+Phase status: `docs/tasks/ROADMAP.md`; open tasks: the board in `docs/tasks/BACKLOG.md`; history: `CHANGELOG.md`.
 
-## Сейчас (18.08.2026)
+## Now
 
-Рабочая очередь после конкурентного анализа и Input sweep, в порядке отдачи:
+- [ ] Growth anchors — T-158 (sprint → devlog draft), T-159 (project showcase), T-160 (onboarding templates), T-161 (Discord webhook), T-154 (landing: EN, devlog-first, waitlist — prerequisite of T-164 and any acquisition) #growth P1
+- [ ] Cheap safety — T-175 (EXIF/GPS stripping on photo upload); T-174 (OG tags) is done, hands-on check in the list below #security P1
+- [ ] Registration blockers — T-172 step 1 (cut quotas to honest numbers — a minute of edit, figures are Marty's), T-149 (first test restore of a backup — ten minutes), T-147 (off-box copy waits for R2 keys) #infra P1
 
-1. **Якоря роста** (High на борде): `T-158` (спринт → черновик devlog), `T-159` (витрина проекта),
-   `T-160` (онбординг с шаблонами), `T-161` (Discord webhook), `T-154` (лендинг: EN, devlog-first,
-   waitlist — пререквизит `T-164` и любого привлечения).
-2. **Дешёвая безопасность и рост из sweep 18.08**: `T-175` (EXIF/GPS-очистка загружаемых фото).
-   `T-174` (OG-теги) закрыт 18.08.2026 — ADR-124, проверка руками в чек-листе ниже.
-3. **Блокеры регистрации** (не фичи): `T-172` шаг 1 — срезать квоты до честных (правка минутная,
-   цифры за Марти), `T-149` (первый тестовый restore бэкапа — десять минут), `T-147` (off-box копия
-   ждёт ключей R2).
+## Waiting on Marty
 
-## Ждёт решения / действия Марти
+- [ ] T-164 PRGE 2026, go or not — October 9–11; going makes September tight, T-154 must land first #decision P1
+- [ ] T-172 Quota figures — proposal from `docs/product/MULTITENANCY.md` §1: Free 100 MB / Pro 1 GB / Pro Plus 3 GB #decision P1
+- [ ] T-147 Cloudflare R2 bucket + token + second healthchecks check — checklist in `docs/for_user/integrations-setup.md` §5 #infra P1
+- [ ] Q-17 Product name — recommendation: keep Cedar Clerk, express the focus in a subtitle #decision P2
+- [ ] Q-18 NSFW policy — needs a line in Terms #decision #legal P2
+- [ ] Show Terms/Privacy to a lawyer — before public registration opens; the texts are filled (13.08), no lawyer has seen them — a gate in `docs/product/BUSINESS.md` §2 #legal P1
 
-- [ ] **`T-164` — PRGE 2026, ехать ли** (9–11 октября; решение делает сентябрь жёстким — до него
-  нужен `T-154`).
-- [ ] **`T-172` — цифры квот** (предложение из `docs/product/MULTITENANCY.md` §1: Free 100 МБ / Pro 1 ГБ /
-  Pro Plus 3 ГБ).
-- [ ] **`T-147` — бакет Cloudflare R2 + токен + второй чек healthchecks** (чек-лист —
-  `docs/for_user/integrations-setup.md` §5).
-- [ ] **`Q-17` — имя продукта** (рекомендация: оставить Cedar Clerk, фокус — подзаголовком).
-- [ ] **`Q-18` — политика NSFW** (новый вопрос из Input sweep; нужна строка в Terms).
-- [ ] **Terms/Privacy показать юристу** до открытия публичной регистрации (тексты заполнены
-  13.08, юрист их не видел — гейт в `docs/product/BUSINESS.md` §2).
+## Live verification
 
-## Чек-лист живой верификации
+Code is written and covered by tests, but never checked by hand or on a device:
 
-Код готов и покрыт тестами, но руками/устройством не проверялось:
+- [ ] cedar restart — the CLI's only destructive command, never run (drops the blog together with the app for seconds; run when it costs nothing) #cli P2
+- [ ] cedar build --installer and cedar deploy --desktop — not run end-to-end since the pipeline moved to C# (ADR-119); installer build and Cloudflare distribution were verified only on the old pipeline (0.10.7–0.10.9) #desktop P2
+- [ ] Desktop installer on a clean machine — T-121: builds and is verified on artifacts, never executed #desktop P2
+- [ ] Desktop after ADR-117 — the list in `docs/tech/DESKTOP.md` §Risks: cloud `/projects` without the price table, a scan of a real Unity/Blender folder, the orientation of a real `.blend` preview, cancelling mid-preview-pass and resuming, zero processes after closing the window, `curl` to the agent without a token → 401 #desktop P2
+- [ ] Bluesky post with an image — Marty only: `uploadBlob` against real bsky.social (list building and text are unit-tested, ADR-109) #publishing P2
+- [ ] flush-on-hide on a real iPhone — remainder of T-018 (the 29.07 incident was on iOS; Safari kills a tab differently than desktop) #mobile P2
+- [ ] Save guards + restore from history — remainder of T-060: see the wipe-save refusal, "restore stored" and a version rollback by hand; confirm a heavy honest edit does not false-positive #editor P2
+- [ ] OG previews (T-174) — via @WebpageBot or opengraph.xyz with `?v=2` on the URL (Telegram caches the old scrape): public post — full card with image and description; semi-public — title + fallback only; private and the gate — nothing. `/og-default.png` serves from the blog host #blog P1
+- [ ] Paste/drop into the editor (T-177) — a screenshot from the real clipboard (Win+Shift+S → Ctrl+V) and a multi-file drag&drop; the progress panel appears, files land at the drop point #editor P1
+- [ ] Media library (T-177) — insert from the library → publish → media renders on the blog and Telegram; deleting a used asset → 409 with post titles; a free one — the file AND the `_tg` derivative disappear from disk #media P1
+- [ ] The `[[` trigger on a Russian layout (T-181) — how the suggester behaves when `[` needs the Latin layout; if unreachable from Russian, an alternative is needed (a button/command) #editor P1
+- [ ] A series of 3 posts (T-178) — the `/series/{slug}` page, prev/next on posts, "Part N of M"; a private unlisted post does not shift a stranger's numbering #blog P1
+- [ ] The tree (T-181) — moving via the "Move under…" menu, up/down among siblings, editor breadcrumbs open the document, the backlinks chip counts correctly after saving with a `[[` link #editor P1
+- [ ] Old unverified small things — once each, no rush: incremental re-translation preserving manual edits; DeepL's uk/be/ka refusal with a clear message; the glossary tooltip on a live published post; per-language cross-links; tag rename/delete; audit paging past page one; Russian wording screen by screen #misc P3
 
-- [ ] **`cedar restart`** — единственная destructive-команда CLI, ни разу не запускалась
-  (роняет блог вместе с приложением на секунды — гонять, когда не жалко).
-- [ ] **`cedar build --installer` и `cedar deploy --desktop`** после переезда логики в C#
-  (ADR-119) целиком не прогонялись; сборка инсталлера и раздача через Cloudflare проверены только
-  старым пайплайном (0.10.7–0.10.9).
-- [ ] **Установщик десктопа на чистой машине** (`T-121`) — собирается и проверен на артефактах,
-  но ни разу не выполнялся.
-- [ ] **Десктоп после ADR-117** — список в `docs/tech/DESKTOP.md` §Риски: облачный `/projects` без
-  прайс-таблицы, скан настоящей папки Unity/Blender, **ориентация превью реального `.blend`**,
-  отмена посреди прохода превью и продолжение, ноль процессов после закрытия окна,
-  `curl` к агенту без токена → 401.
-- [ ] **Bluesky-пост с картинкой** — только Марти: `uploadBlob` против реального bsky.social
-  (сборка списка и текст под юнит-тестами, ADR-109).
-- [ ] **flush-on-hide на реальном iPhone** — остаток `T-018` (инцидент 29.07 был на iOS; Safari
-  убивает вкладку иначе, чем десктоп). Строка с борды снята 18.08 — остаток живёт здесь.
-- [ ] **Гарды сейва + версия из истории** — остаток `T-060`: руками увидеть отказ сейва-стирания,
-  «restore stored», откат версии; проверить, что тяжёлая честная правка не ловит false positive.
-  Строка с борды снята 18.08 — остаток живёт здесь.
-- [ ] **OG-превью (`T-174`)** — через @WebpageBot или opengraph.xyz, с `?v=2` на URL (Telegram
-  кэширует старый скрейп): public-пост — полная карточка с картинкой и описанием; semi-public —
-  только title + заглушка; private и гейт — ничего. `/og-default.png` отдаётся с блог-хоста.
-- [ ] **Paste/drop в редактор (`T-177`)** — скриншот из реального клипборда (Win+Shift+S → Ctrl+V)
-  и drag&drop нескольких файлов разом; панель прогресса появляется, файлы встают в точку дропа.
-- [ ] **Медиатека (`T-177`)** — вставка из библиотеки → публикация → медиа рендерится в блоге и
-  Telegram; удаление занятого ассета → 409 с титулами постов; свободного — файл И `_tg`-дериватив
-  исчезают с диска.
-- [ ] **Триггер `[[` на RU-раскладке (`T-181`)** — как ведёт себя саджест, когда `[` требует
-  латиницы; если недостижим с русской раскладки — нужна альтернатива (кнопка/команда).
-- [ ] **Серия из 3 постов (`T-178`)** — страница `/series/{slug}`, prev/next на постах,
-  «часть N из M»; приватный неlisted пост не сдвигает чужую нумерацию.
-- [ ] **Дерево (`T-181`)** — перенос через меню «Переместить под…», ↑/↓ среди сиблингов, крошки
-  в редакторе открывают документ, бэклинки-чип считает верно после сейва с `[[`-ссылкой.
-- [ ] **Старые непроверенные мелочи** (по одному разу, без спешки): инкрементальный ре-перевод
-  с сохранением ручных правок; отказ uk/be/ka у DeepL с внятным сообщением; глоссарий-тултип на
-  живом опубликованном посте; пер-язычные кросс-линки; переименование/удаление тегов; пейджинг
-  аудита дальше первой страницы; русские формулировки экран за экраном.
+## Notes
 
-## Заметки состояния
-
-- Прод: **0.12.0** на дроплете (18.08), `LIVE` = `0.12.0`; master ушёл вперёд на сессию 18.08
-  (0.12.1: OG-теги, серии, медиатека, дерево + wiki-links, словарь метрик) — деплой за Марти.
-  Push в origin регулярный; `LIVE`/`LIVE-PREV` с origin удалены 18.08 — правило «локальный тег»
-  из CLAUDE.md.
-- Ветка `indiedev_module` слита и удалена; модуль живёт в master за флагом `Cedar:Modules:IndieDev`
-  (обратимость — ADR-101). `dev` — устаревший указатель позади master, без своих коммитов.
+- Production: 0.12.0 on the droplet, `LIVE` = `0.12.0`; master is ahead by the 0.12.1 session (OG tags, series, media library, tree + wiki-links, metrics dictionary) — deploying is Marty's call. `LIVE`/`LIVE-PREV` never go to origin (the local-tag rule in CLAUDE.md).
+- The `indiedev_module` branch is merged and deleted; the module lives in master behind `Cedar:Modules:IndieDev` (reversibility: ADR-101). `dev` is a stale pointer behind master with no commits of its own.

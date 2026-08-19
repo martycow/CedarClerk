@@ -1,7 +1,7 @@
 ---
 owner: marty
 last_verified: 2026-08-18
-source_of_truth_for: статус по фазам — что сделано и когда
+source_of_truth_for: phase-by-phase status — what shipped and when
 guard: none
 ---
 
@@ -12,7 +12,7 @@ Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-
 ## Status summary (as of 18.08.2026)
 
 **v0.12.1 — six board rows in one session (18.08.2026, not yet deployed).** `T-186` (index cards
-hardcoding «RU» — fixed), `T-174` (OG/Twitter/canonical/hreflang meta, ADR-124), `T-178` (post
+hardcoding "RU" — fixed), `T-174` (OG/Twitter/canonical/hreflang meta, ADR-124), `T-178` (post
 series as an entity with `/series/{slug}` and prev/next, ADR-125), `T-193` (the metrics event
 dictionary, `docs/product/METRICS.md`, ADR-126), `T-177` (media library v1: `/library` page,
 scan-guarded delete, insert-from-library, paste/drop upload, ADR-127) and `T-181` both halves (the
@@ -170,7 +170,7 @@ Three things the implementation changed or added, each recorded in `docs/DECISIO
 
 ### Competitor analysis absorbed — 18.08.2026
 
-Marty's report «Cedar Clerk против всех» (13.08.2026: Codecks, HacknPlan, Anchorpoint, IndieViral — 126 screenshots + web research) was read against the code and the backlog. Outcome:
+Marty's report "Cedar Clerk vs everyone" (13.08.2026: Codecks, HacknPlan, Anchorpoint, IndieViral — 126 screenshots + web research) was read against the code and the backlog. Outcome:
 
 - **15 new backlog rows** (`T-158…T-172`), the anchors being the bridge "sprint → devlog draft" (`T-158`, the one feature nobody in the category has and both halves of which this product already ships), the public project page (`T-159`), onboarding templates (`T-160`), Discord webhook publishing (`T-161`) and the quotas-vs-disk registration blocker (`T-172`, promoted out of `MULTITENANCY.md` §1 into a tracked row).
 - **Descriptions corrected against reality**: `T-154` claimed the site root shows a login form — the landing has existed since `T-009` (`LandingEndpoints`, verified live), so the row now describes the real work: devlog-first repositioning, EN default, waitlist. `T-152`, `T-088`, `T-127`, `T-128` gained the report's inputs.
@@ -179,21 +179,21 @@ Marty's report «Cedar Clerk против всех» (13.08.2026: Codecks, Hackn
 
 ### Input sweep — 18.08.2026 (`docs/INPUT_PROMPT.md`, first sweep)
 
-A new inbox appeared in `docs/`: `docs/INPUT_PROMPT.md` ("consider everything below as a new prompt every time"). It was committed with this sweep — **reversed the same day**: Marty ruled it stays untracked («это просто динамический файл с промптами… коммитить не надо»), so it is gitignored and rewrite moments are tracked by mtime against the latest "Input sweep" here — the model the out-of-repo `Input.md` used. Later the same day Marty **retired `Input.md` itself**: `docs/INPUT_PROMPT.md` is the only inbox now, and every live doc was cleaned of the old one (history keeps its mentions as a record). This sweep processed the file's three embedded documents; the next sweep is due whenever its mtime moves past this date.
+A new inbox appeared in `docs/`: `docs/INPUT_PROMPT.md` ("consider everything below as a new prompt every time"). It was committed with this sweep — **reversed the same day**: Marty ruled it stays untracked (a dynamic prompt file he rewrites at will, never committed), so it is gitignored and rewrite moments are tracked by mtime against the latest "Input sweep" here — the model the out-of-repo `Input.md` used. Later the same day Marty **retired `Input.md` itself**: `docs/INPUT_PROMPT.md` is the only inbox now, and every live doc was cleaned of the old one (history keeps its mentions as a record). This sweep processed the file's three embedded documents; the next sweep is due whenever its mtime moves past this date.
 
-**1. "Big Feature Scope v1" (authored 29.07.2026)** — ~100 candidate features (`GDD-*`/`MED-*`/`PUB-*`/`WEB-*`/`COM-*`/`MON-*`/`AI-*`/`ANL-*`/`PLT-*`). Written before Phase 13 existed; its positioning wedge («рабочее место инди-разработчика, превращающее разработку в аудиторию») is the one the product has since adopted, so the document aged into a mix of done, tracked and genuinely new. Triage was done against the code:
+**1. "Big Feature Scope v1" (authored 29.07.2026)** — ~100 candidate features (`GDD-*`/`MED-*`/`PUB-*`/`WEB-*`/`COM-*`/`MON-*`/`AI-*`/`ANL-*`/`PLT-*`). Written before Phase 13 existed; its positioning wedge (an indie developer’s workplace that turns development into an audience) is the one the product has since adopted, so the document aged into a mix of done, tracked and genuinely new. Triage was done against the code:
 
 - **Already shipped, no action**: GDD-03 (version history, ADR-067), GDD-09 (TOC), GDD-11 (glossary + project scope), GDD-16 largely (9 content languages, linked versions, stale indicator, incremental re-translation), MED-06 (Telegram media groups via Blocks), MED-11 (YouTube embeds), MED-13 (watermark), MED-15 (audio block), PUB-05 (teaser fallback, ADR-077), PUB-12 (durable publish queue, ADR-081), PUB-13 (threads, T-111), WEB-05 (RSS), ANL-01 largely (Draft/Blog/Channel snapshots + geo rollup; Telegram reaction events via `allowed_updates` remain the unbuilt sliver), AI-02 (translation).
 - **Already tracked on the board**: MED-07 → `T-172`/`T-088` (R2), WEB-11 → `T-128` (press kit), COM-03 → `T-167`, COM-07 → `T-161` (Discord), GDD-18 ≈ `T-158` (devlog from work), WEB-12 ≈ `T-112`, COM-09 → deferred list, AI metering → `T-152`, PLT-03 partially (the `cedar` CLI exists; publish-from-CI would ride `T-127`'s answers).
-- **New rows added**: `T-174` (OG/Twitter tags on blog posts, **High** — verified: only the landing emits any), `T-175` (EXIF stripping, **High** — GPS coordinates currently reach the public blog), `T-176` (FTS search, GDD-13+WEB-08), `T-177` (media library, MED-01/02), `T-178` (post series, PUB-04), `T-179` (content calendar, PUB-01), `T-180` (edit-after-publish sync to Telegram, PUB-03), `T-181` (doc tree + wiki-links, GDD-01/02), `T-182` (living public GDD: block-level visibility + snapshots, GDD-04/05 — the document's own "ключевая связка"), `T-183` (AI video/voice → draft, AI-04/05, gated on `T-152`), and `Q-18` (NSFW policy, its §14.4).
-- **Deliberately not taken** — the 18.08 analysis' расфокус rule stands: entity database (GDD-06), git sync (GDD-17), diagrams/inline-comments/doc-status (GDD-08/10/12), image pipeline & albums & 3D viewer & annotation & AI alt-text (MED-03/05/09/10/12/14/16), per-channel variants beyond the shipped override (PUB-02), shortener/optimal-time/evergreen/digest/approval (PUB-06…11), custom domains before Q-5 (WEB-02), email newsletter (WEB-06 — revisit after `T-159`), the whole MON-* tenant-monetisation block before PMF, AI-01/03/06…11 (AI-09 RAG explicitly), ANL-02…08 beyond what `/stats` already does (T-153 first), PLT-* wholesale (launch-blocking pieces already live in `BUSINESS.md` gates).
+- **New rows added**: `T-174` (OG/Twitter tags on blog posts, **High** — verified: only the landing emits any), `T-175` (EXIF stripping, **High** — GPS coordinates currently reach the public blog), `T-176` (FTS search, GDD-13+WEB-08), `T-177` (media library, MED-01/02), `T-178` (post series, PUB-04), `T-179` (content calendar, PUB-01), `T-180` (edit-after-publish sync to Telegram, PUB-03), `T-181` (doc tree + wiki-links, GDD-01/02), `T-182` (living public GDD: block-level visibility + snapshots, GDD-04/05 — the document's own "key combination"), `T-183` (AI video/voice → draft, AI-04/05, gated on `T-152`), and `Q-18` (NSFW policy, its §14.4).
+- **Deliberately not taken** — the 18.08 analysis' defocus rule stands: entity database (GDD-06), git sync (GDD-17), diagrams/inline-comments/doc-status (GDD-08/10/12), image pipeline & albums & 3D viewer & annotation & AI alt-text (MED-03/05/09/10/12/14/16), per-channel variants beyond the shipped override (PUB-02), shortener/optimal-time/evergreen/digest/approval (PUB-06…11), custom domains before Q-5 (WEB-02), email newsletter (WEB-06 — revisit after `T-159`), the whole MON-* tenant-monetisation block before PMF, AI-01/03/06…11 (AI-09 RAG explicitly), ANL-02…08 beyond what `/stats` already does (T-153 first), PLT-* wholesale (launch-blocking pieces already live in `BUSINESS.md` gates).
 - **Its §14 open questions**: #1 (order) — answered de facto: registration stays closed, own scenario first; #2 (GDD entity) — answered by ADR-102; #3 (storage trigger) — `T-172`; #4 (NSFW) — now `Q-18`; #5 — is `Q-5`; #6 (credits) — ADR-092 wallet + `T-152`.
 
 **2. "Cedar Clerk For Indie Game Developers"** — the same brief as `Gamedev_Focused_Rework.md` that spawned Phase 13 on 10.08. Fully absorbed weeks ago: every feature maps to `T-120…T-135`/`T-127`/`Q-17`, and all six of its TASKS items were completed in the 10–12.08 sessions. No action.
 
 **3. "Session Brief — Visual Polish Sweep" (OG + motion + view transitions)** — written against 0.10.9-era stop-gates that no longer exist (the tag divergence is resolved, tests are ~930 not 442). Verified against the code: Task A is real — blog **post pages emit no OG tags at all** → `T-174` (High), with the brief's hard rules (private posts emit nothing, semi-public title-only, escaping, absolute URLs) carried into the row and required to become an ADR before code. Task B is half-shipped — motion tokens exist since Phase 11 (`--motion-*` + reduced-motion clamp; the brief's `--cabin-dur-*` set would be a duplicate naming), skeletons do not → `T-184` (Low). Task C not built → `T-185` (Low).
 
-**Board hygiene found on the way**: `T-109`/`T-110`/`T-111` had shipped weeks ago (credits wallet, X connector, threads — all live in production) but still sat open — removed; duplicate ID `T-143` (flaky login smoke test renumbered `T-173`); `T-107`/`T-108` sat in the questions table — moved to Улучшения; `T-018`/`T-060` remainders were pure live-verification — moved to `TASKS.md` where the live-verify checklist lives; `LIVE`/`LIVE-PREV` tags had reached origin again — deleted from origin per the CLAUDE.md rule. One real bug found while verifying: blog index cards hardcode "RU" as the primary-language label (`BlogEndpoints.cs`, against ADR-064/065) → `T-186`.
+**Board hygiene found on the way**: `T-109`/`T-110`/`T-111` had shipped weeks ago (credits wallet, X connector, threads — all live in production) but still sat open — removed; duplicate ID `T-143` (flaky login smoke test renumbered `T-173`); `T-107`/`T-108` sat in the questions table — moved to Improvements; `T-018`/`T-060` remainders were pure live-verification — moved to `TASKS.md` where the live-verify checklist lives; `LIVE`/`LIVE-PREV` tags had reached origin again — deleted from origin per the CLAUDE.md rule. One real bug found while verifying: blog index cards hardcode "RU" as the primary-language label (`BlogEndpoints.cs`, against ADR-064/065) → `T-186`.
 
 ### DOCS-FLOW hardening — 18.08.2026 (ultracode)
 
@@ -202,32 +202,31 @@ waves of agents) with the ultracode keyword. Executed the same evening, verifica
 
 - **Claims checked by a 12-agent workflow** (6 adversarial claim-checkers with file:line evidence +
   5 terminology extractors + merge). **Refuted**: the 0.10.8/0.10.9 tag divergence (both ARE
-  ancestors of master — proven by `git merge-base --is-ancestor`); «релиз-процесс недокументирован»
+  ancestors of master — proven by `git merge-base --is-ancestor`); "release process undocumented"
   (documented in CLAUDE.md + ARCHITECTURE + five ADRs + GitGuard **tests** — a RELEASE.md is
-  rejected; the one real gap became `T-195`); «T-052 — hard blocker» (closed 13.08, lawyer gate
-  remains); «Clerk.com/AWS Cedar conflicts уже всплыли» (zero evidence anywhere in the repo).
+  rejected; the one real gap became `T-195`); "T-052 is a hard blocker" (closed 13.08, lawyer gate
+  remains); "Clerk.com/AWS Cedar conflicts already surfaced" (zero evidence anywhere in the repo).
   **Numbers corrected**: inline English server strings = **48 interpolated** `$"…"` (not ~130 —
   plain literals are guarded by `ErrorMessageLocalizationTests` since 01.08) → `T-194`; open Q-xx =
   **12**; TASKS.md live-verify = 8 entries / 19 items. **Confirmed**: no QA / SECURITY / API /
   incidents docs; `knowledge_base/` held only STACK; localization tables live only in code.
-- **The «Сегодня» batch shipped** (commit `8a8ac75`): **ADR-123** + front-matter
+- **The same-day batch shipped** (commit `8a8ac75`): **ADR-123** + front-matter
   (`owner`/`last_verified`/`source_of_truth_for`/`guard`) on all 17 live docs;
   **`DocsFlowGraphTests`** — every live doc must be on the DOCS-FLOW map and every mapped path must
   exist, proven to go red with an orphan file (the `SchemaDriftGuardTests` pattern, now guarding
   the docs scheme itself); the mermaid got an **edge legend** (truth-flow / hard gate /
   reading-order), the reading-order edges went dotted, and the two missing nodes joined the scheme
-  (`production-environment.md` as «истина о проде», Terms+Privacy with the lawyer gate).
+  (`production-environment.md` as the production source of truth, Terms+Privacy with the lawyer gate).
 - **`knowledge_base/` seeded**: `docs/knowledge_base/TERMINOLOGY.md` — ~80 project terms across five
   domains, each extracted from real code with a source reference.
-- **Two live contradictions fixed on the way**: `BUSINESS.md` §4 claimed all four metrics «считаются
-  по данным, которые уже есть» while `T-153` says activation needs analytics — reworded honestly;
+- **Two live contradictions fixed on the way**: `BUSINESS.md` §4 claimed all four metrics are computable from existing data while `T-153` says activation needs analytics — reworded honestly;
   a stale `T-052` pointer in `AuthEndpoints.cs` now points at the BUSINESS §1 gates.
 - **13 board rows** (`T-187…T-199`): QA.md + verification-planner (High), Wave-1 agents
   docs-auditor + session-closer (High) and input-sweeper (Medium), FEEDBACK / COMPETITORS import /
-  событийный словарь (Medium), threat model (Medium), and the Low tail (server-string translation
+  the metrics event dictionary (Medium), threat model (Medium), and the Low tail (server-string translation
   with real numbers, preflight backup check, Waves 2–3 + skills, OpenAPI-over-handwritten-API,
   incidents index, Q-xx aging). **No agent was created today** — Marty's own order puts Wave 1 at
-  week 1, and his warning («каждый агент — ещё один .md, который дрейфует; ставь по одному») is
+  week 1, and his warning (every agent is one more drifting .md file; add them one at a time) is
   taken as binding.
 
 ---
