@@ -1,0 +1,143 @@
+<div class="media-page" data-density="compact">
+    <app-page-header page="media"></app-page-header>
+
+    <div class="media-body">
+        <div class="media-toolbar">
+            <div>
+                <h1>{{ t().media.open }}</h1>
+                @if (page(); as p) {
+                <div class="media-sub">
+                    <span>{{ t().media.usage(bytes(p.usedBytes), bytes(p.limitBytes)) }}</span>
+                </div>
+                <div class="usage-bar" role="progressbar"
+                     [attr.aria-valuenow]="p.limitBytes ? (p.usedBytes / p.limitBytes * 100).toFixed(0) : 0">
+                    <div class="usage-fill" [style.width.%]="p.limitBytes ? p.usedBytes / p.limitBytes * 100 : 0"></div>
+                </div>
+                }
+            </div>
+            <span class="spacer"></span>
+            <input class="search-input" type="search" [ngModel]="search()" (ngModelChange)="onSearch($event)"
+                   [placeholder]="t().media.searchPlaceholder" [attr.aria-label]="t().media.searchPlaceholder">
+            <div class="view-toggle">
+                <button [class.active]="view() === 'grid'" (click)="setView('grid')"
+                        [title]="t().media.gridView" [attr.aria-label]="t().media.gridView">
+                    <app-icon name="squares-four" size="sm"></app-icon>
+                </button>
+                <button [class.active]="view() === 'list'" (click)="setView('list')"
+                        [title]="t().media.listView" [attr.aria-label]="t().media.listView">
+                    <app-icon name="list" size="sm"></app-icon>
+                </button>
+            </div>
+        </div>
+
+        @if (loadError(); as err) { <p class="load-error">{{ err }}</p> }
+
+        @if (loading()) {
+            <p class="hint">{{ t().common.loading }}</p>
+        } @else if (page(); as p) {
+            <div class="filter-tabs">
+                <button [class.active]="type() === null" (click)="setType(null)">
+                    {{ t().media.all }} <span class="chip-count">{{ totalUnfiltered() }}</span>
+                </button>
+                @if (p.counts.image > 0) {
+                <button [class.active]="type() === 'image'" (click)="setType('image')">
+                    {{ t().media.images }} <span class="chip-count">{{ p.counts.image }}</span>
+                </button>
+                }
+                @if (p.counts.video > 0) {
+                <button [class.active]="type() === 'video'" (click)="setType('video')">
+                    {{ t().media.videos }} <span class="chip-count">{{ p.counts.video }}</span>
+                </button>
+                }
+                @if (p.counts.audio > 0) {
+                <button [class.active]="type() === 'audio'" (click)="setType('audio')">
+                    {{ t().media.audio }} <span class="chip-count">{{ p.counts.audio }}</span>
+                </button>
+                }
+            </div>
+
+            @if (p.items.length === 0) {
+                <p class="hint media-empty">{{ totalUnfiltered() === 0 ? t().media.empty : t().common.nothingHere }}</p>
+            } @else if (view() === 'grid') {
+                <div class="asset-grid">
+                    @for (a of p.items; track a.id) {
+                    <button class="tile" (click)="open(a)">
+                        <span class="preview">
+                            @if (showsThumbnail(a)) {
+                            <img class="thumb" [src]="url(a)" [alt]="a.fileName" loading="lazy"
+                                 (error)="onThumbError(a)">
+                            } @else {
+                            <app-icon [name]="kindIcons[kindOf(a)]" size="lg"></app-icon>
+                            <span class="preview-label">{{ kindOf(a) === 'image' ? t().media.noPreview : a.contentType }}</span>
+                            }
+                        </span>
+                        <span class="tile-meta">
+                            <span class="tile-name" [title]="a.fileName">{{ a.fileName }}</span>
+                            <span class="tile-sub">{{ bytes(a.sizeBytes) }} · {{ a.createdAt | zonedDate:'d MMM' }}</span>
+                        </span>
+                    </button>
+                    }
+                </div>
+            } @else {
+                <div class="asset-list">
+                    @for (a of p.items; track a.id) {
+                    <button class="list-row" (click)="open(a)">
+                        <app-icon [name]="kindIcons[kindOf(a)]" size="sm"></app-icon>
+                        <span class="tile-name" [title]="a.fileName">{{ a.fileName }}</span>
+                        <span class="list-type">{{ a.contentType }}</span>
+                        <span class="list-size">{{ bytes(a.sizeBytes) }}</span>
+                        <span class="list-date">{{ a.createdAt | zonedDate:'d MMM yyyy' }}</span>
+                    </button>
+                    }
+                </div>
+            }
+
+            @if (p.total > p.items.length || skip() > 0) {
+            <div class="pager">
+                <button class="btn-ghost" [disabled]="!canPageBack" (click)="pageBack()">←</button>
+                <span class="hint">{{ rangeLabel() }}</span>
+                <button class="btn-ghost" [disabled]="!canPageForward" (click)="pageForward()">→</button>
+            </div>
+            }
+        }
+    </div>
+</div>
+
+@if (selected(); as a) {
+<app-modal (closed)="close()">
+    <app-icon modal-icon [name]="kindIcons[kindOf(a)]" size="sm"></app-icon>
+    <span modal-title [title]="a.fileName">{{ a.fileName }}</span>
+
+    <div class="asset-detail">
+        <div class="preview-pane">
+            @switch (kindOf(a)) {
+                @case ('image') {
+                    @if (showsThumbnail(a)) {
+                    <img class="thumb" [src]="url(a)" [alt]="a.fileName">
+                    } @else { <span class="preview-label">{{ t().media.noPreview }}</span> }
+                }
+                @case ('video') { <video class="thumb" [src]="url(a)" controls preload="metadata"></video> }
+                @case ('audio') { <audio [src]="url(a)" controls preload="metadata"></audio> }
+            }
+        </div>
+        <p class="hint">{{ a.contentType }} · {{ bytes(a.sizeBytes) }} · {{ a.createdAt | zonedDate:'d MMM yyyy, HH:mm' }}</p>
+        <p class="hint">{{ t().media.insertHint }}</p>
+        <p class="hint">{{ t().media.deleteForever }}</p>
+
+        @if (deleteError(); as err) {
+        <p class="load-error">{{ err }}</p>
+            @if (usedBy().length) {
+            <p class="hint">{{ t().media.usedBy }}</p>
+            <ul class="used-by">
+                @for (d of usedBy(); track d.draftId) { <li>{{ d.title }}</li> }
+            </ul>
+            }
+        }
+    </div>
+
+    <button modal-actions class="btn-ghost" (click)="close()">{{ t().common.close }}</button>
+    <button modal-actions class="btn-danger-ghost" [disabled]="busy()" (click)="confirmDelete()">
+        {{ t().common.delete }}
+    </button>
+</app-modal>
+}

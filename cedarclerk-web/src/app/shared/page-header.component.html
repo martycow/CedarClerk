@@ -33,6 +33,10 @@
         <app-icon name="book-bookmark" size="sm"></app-icon>
         <span class="btn-label">{{ t().glossary.open }}</span>
     </a>
+    <a class="nav-btn" [class.on]="page() === 'media'" routerLink="/media" [title]="t().media.open">
+        <app-icon name="images" size="sm"></app-icon>
+        <span class="btn-label">{{ t().media.crumb }}</span>
+    </a>
     <a class="nav-btn" [class.on]="page() === 'settings'" routerLink="/settings" [title]="t().editor.settings">
         <app-icon name="gear" size="sm"></app-icon>
         <span class="btn-label">{{ t().editor.settings }}</span>

@@ -10,7 +10,7 @@ import { AccountMenuComponent } from './account-menu.component';
 import { CountBadgeComponent } from './count-badge.component';
 import { IconComponent } from './icon.component';
 
-export type PageHeaderPage = 'posts' | 'glossary' | 'settings' | 'admin' | 'drafts' | 'projects';
+export type PageHeaderPage = 'posts' | 'glossary' | 'media' | 'settings' | 'admin' | 'drafts' | 'projects';
 
 // Header/nav redesign (27.07.2026, docs/DECISIONS.md) — one glass header shared by the "secondary"
 // screens, replacing near-identical header blocks that had already drifted (glass on Posts/Admin,
@@ -47,6 +47,7 @@ export class PageHeaderComponent {
         switch (this.page()) {
             case 'posts': return t.manager.crumb;
             case 'glossary': return t.glossary.crumb;
+            case 'media': return t.media.crumb;
             case 'settings': return t.settings.crumb;
             case 'admin': return t.admin.crumb;
             case 'drafts': return t.drafts.crumb;

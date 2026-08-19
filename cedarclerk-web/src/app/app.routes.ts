@@ -49,6 +49,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/glossary.component').then(m => m.GlossaryComponent),
         canActivate: [authGuard],
     },
+    {
+        path: 'media',
+        loadComponent: () => import('./pages/media-library.component').then(m => m.MediaLibraryComponent),
+        canActivate: [authGuard],
+    },
     // Phase 13 — the indie-gamedev module (ADR-101). indieDevGuard already covers signed-in, the
     // same way adminGuard does; with the flag off it redirects to /drafts rather than 404-ing,
     // because the URL is not wrong, the feature is simply not installed here.

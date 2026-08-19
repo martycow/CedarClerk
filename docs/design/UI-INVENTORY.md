@@ -217,6 +217,20 @@ Idea #11. Terms the owner defines once, found and explained on the published blo
 | Gate language switcher (blog) | `.reg-langs`, `RegistrationFormHtml` | link row | Switches the private post's registration form between the languages it has one for | N/A | Only rendered with more than one; the reader has no other route to their language, since the post body is behind the form |
 | Glossary tooltip (blog) | `.glossary-term` / `.glossary-pop`, `BlogEndpoints.ShellTemplate` | popover | Shows the description (and image) on hover, focus or tap | N/A | Rendered by `GlossaryScanner`, first occurrence per page only, never inside code or a link. The script writes the description with `textContent`, never `innerHTML` |
 
+## `media-library.component` (`cedarclerk-web/src/app/pages/media-library.component.{ts,html,css}`)
+
+T-177 (ADR-127) — the owner-wide library of uploaded files at `/media`, reached via the shared nav row (icon `images`). Everything here IS uploaded bytes (unlike project-assets, which indexes paths on a machine); the anatomy deliberately mirrors project-assets so the two screens read as siblings.
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Header + usage bar | `.media-toolbar`, `.usage-bar` | header | Title, «занято X из Y» line and a thin quota bar fed by the same `GET /api/assets` response | N/A — arrives with the list | No separate `/usage` call by design |
+| Type chips | `.filter-tabs` | tab | All / Images / Videos / Audio with counts | N/A | Counts come from the **unfiltered** set — chips must not shrink while a filter is on |
+| Search | `.search-input` | input | Filename search, debounced 250ms | N/A | Server-side `Contains` on `FileName` |
+| Grid / list toggle | `.view-toggle` | button | Same control as project-assets; remembered in `localStorage` (`cedar.mediaView`) | N/A | |
+| Tile / row | `.tile` / `.list-row` | button | Opens the asset modal; images preview from `/media/{path}` directly, video/audio show a kind icon | N/A — `loading()` covers the page | `thumbFailed` falls back to the honest «no preview» label, not a broken-image icon |
+| Pager | `.pager` | button | skip/take paging, PAGE_SIZE 60 | N/A | |
+| Asset modal | `app-modal`, `.asset-detail` | modal | Preview (img/video/audio), meta line, insert hint, and Delete | Present — `busy()` on Delete | Delete of a referenced file answers **409** and the modal lists the referencing posts (`.used-by`) instead of a bare refusal — ADR-127 |
+
 ---
 
 # Phase 10 additions (30.07.2026)
