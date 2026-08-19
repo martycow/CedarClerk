@@ -1108,8 +1108,15 @@ public static class BlogEndpoints
         }
 
         var channel = await GetBlogChannelInfoAsync(db);
+        var cfg = ctx.RequestServices.GetRequiredService<IConfiguration>();
+        var blogBase = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}";
+        var indexMeta = OgMetaBuilder.Build(new OgMetaInput(
+            channel?.Title ?? "Blog", null, blogBase + "/",
+            $"{blogBase}/og-default.png", 1200, 630,
+            channel?.Title ?? "Cedar Clerk", indexLang,
+            [], null, null, null, IsArticle: false), OgMetaPolicy.Full);
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), indexLang, RenderHeader(channel)));
+        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), indexLang, RenderHeader(channel), indexMeta));
     }
 
     private static async Task RenderRssAsync(HttpContext ctx, CedarDbContext db)
@@ -1125,7 +1132,7 @@ public static class BlogEndpoints
 
         var channel = await GetBlogChannelInfoAsync(db);
         var siteTitle = System.Net.WebUtility.HtmlEncode(channel?.Title ?? "Cedar Clerk Blog");
-        var siteUrl = $"https://{Consts.URLs.BlogHost}/";
+        var siteUrl = $"https://{ctx.RequestServices.GetRequiredService<IConfiguration>()[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}/";
 
         var sb = new StringBuilder();
         sb.Append("""<?xml version="1.0" encoding="UTF-8"?>""").Append('\n');
@@ -1169,6 +1176,20 @@ public static class BlogEndpoints
             await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(channel)));
             return;
         }
+
+        var cfg = ctx.RequestServices.GetRequiredService<IConfiguration>();
+        var blogBase = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}";
+
+        // ADR-124 — the gate and the private not-found page are exactly what a crawler sees: a
+        // *listed* private post still advertises its title and the stock image there; an unlisted
+        // one reveals nothing, same as a nonexistent slug.
+        string SemiPublicMeta(string pageLang) => draft.IsListedWhilePrivate
+            ? OgMetaBuilder.Build(new OgMetaInput(
+                draft.ArticleTitle ?? draft.Title, null, $"{blogBase}/{draft.BlogSlug}",
+                $"{blogBase}/og-default.png", 1200, 630,
+                channel?.Title ?? "Cedar Clerk", pageLang, [], null, null, null, IsArticle: true),
+                OgMetaPolicy.TitleImageOnly)
+            : "";
 
         // Private posts (see the ADR following ADR-040, docs/DECISIONS.md): a ?invite= token
         // matching one of this draft's PostInvites grants a long-lived cookie; anything else gets
@@ -1214,13 +1235,13 @@ public static class BlogEndpoints
                         draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson);
                     await ctx.Response.WriteAsync(PageShell(gateTitle,
                         CedarToBlogHtmlRenderer.RegistrationFormHtml(form, gateTitle, gateLang, gateLanguages),
-                        gateLang, RenderHeader(channel)));
+                        gateLang, RenderHeader(channel), SemiPublicMeta(gateLang)));
                     return;
                 }
 
                 ctx.Response.StatusCode = StatusCodes.Status404NotFound;
                 ctx.Response.ContentType = "text/html; charset=utf-8";
-                await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(channel)));
+                await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(channel), SemiPublicMeta(Languages.Russian)));
                 return;
             }
 
@@ -1304,6 +1325,7 @@ public static class BlogEndpoints
                 u.HeaderSlot1Type, u.HeaderSlot2Type, u.HeaderSlot3Type, u.PlanTier, u.PlanExpiresAt,
                 u.TelegramLinkText,
                 u.TelegramLinkTextTranslationsJson,
+                u.AvatarUrl,
             })
             .FirstAsync();
         var ownerPlan = SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow);
@@ -1319,7 +1341,7 @@ public static class BlogEndpoints
         // never defined one, which costs a single indexed read and changes nothing downstream.
         // T-125 — a post in a project also renders with that project's own terms.
         var glossary = await GlossaryEndpoints.LoadForAsync(db, draft.OwnerId, lang, draft.ProjectId);
-        var body = CedarToBlogHtmlRenderer.Render(cedarJson, $"https://{Consts.URLs.BlogHost}", lang, glossary);
+        var body = CedarToBlogHtmlRenderer.Render(cedarJson, blogBase, lang, glossary);
         var dateLine = draft.BlogPublishedAt is { } published
             ? $"<span class=\"post-card-date\">{BlogDateFormatter.DateTimeLocal(published, lang)}</span>"
             : "";
@@ -1409,8 +1431,47 @@ public static class BlogEndpoints
             {floatingNav}
             """;
 
+        // ADR-124 — what the page reveals to link-preview crawlers is a function of the post's own
+        // flags, never of the reader's cookie: a crawler holding a valid invite is still a crawler.
+        var metaPolicy = draft.IsPrivate
+            ? draft.IsListedWhilePrivate ? OgMetaPolicy.TitleImageOnly : OgMetaPolicy.None
+            : OgMetaPolicy.Full;
+        var metaHtml = "";
+        if (metaPolicy != OgMetaPolicy.None)
+        {
+            string LangUrl(string l) => l == draft.PrimaryLanguage
+                ? $"{blogBase}/{draft.BlogSlug}"
+                : $"{blogBase}/{draft.BlogSlug}?lang={l}";
+
+            string? image = null;
+            int? imageW = null, imageH = null;
+            if (metaPolicy == OgMetaPolicy.Full && CedarImageRefs.Collect(cedarJson).FirstOrDefault() is { } cover)
+                image = cover.Src.StartsWith('/') ? blogBase + cover.Src : cover.Src;
+            if (image is null && metaPolicy == OgMetaPolicy.Full && owner.AvatarUrl is { Length: > 0 } avatar)
+                image = blogBase + avatar;
+            if (image is null)
+            {
+                image = $"{blogBase}/og-default.png";
+                imageW = 1200;
+                imageH = 630;
+            }
+
+            var alternates = new List<(string, string)> { (draft.PrimaryLanguage, LangUrl(draft.PrimaryLanguage)) };
+            alternates.AddRange(availableLanguages.Where(l => l != draft.PrimaryLanguage).OrderBy(l => l)
+                .Select(l => (l, LangUrl(l))));
+            var description = metaPolicy == OgMetaPolicy.Full
+                ? string.Join(" ", CedarPlainText.Paragraphs(cedarJson))
+                : null;
+
+            metaHtml = OgMetaBuilder.Build(new OgMetaInput(
+                title, description, LangUrl(lang), image, imageW, imageH,
+                channel?.Title ?? "Cedar Clerk", lang,
+                alternates, LangUrl(draft.PrimaryLanguage),
+                draft.BlogPublishedAt, draft.UpdatedAt, IsArticle: true), metaPolicy);
+        }
+
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(title, html, lang, RenderHeader(channel)));
+        await ctx.Response.WriteAsync(PageShell(title, html, lang, RenderHeader(channel), metaHtml));
     }
 
     // Wraps a resolved end-of-post signature (see PlanLimitations.ResolveSignature, Phase 8 Step 5)
@@ -1464,6 +1525,7 @@ public static class BlogEndpoints
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{{TITLE}}</title>
         <link rel="alternate" type="application/rss+xml" title="Blog RSS feed" href="/rss.xml">
+        {{META}}
         <script>
         (function () {
             var saved = localStorage.getItem('cedar-blog-theme');
@@ -2350,7 +2412,9 @@ public static class BlogEndpoints
         <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" onload="document.querySelectorAll('.math-tex').forEach(function (el) { try { katex.render(el.textContent, el, { displayMode: el.dataset.display === 'true', throwOnError: false }); } catch (e) {} });"></script>
         """;
 
-    private static string PageShell(string title, string bodyHtml, string lang, string headerHtml)
+    // metaHtml defaults empty so the pages that must reveal nothing to crawlers — 404 and the
+    // registration gate — emit nothing by construction rather than by remembering to (ADR-124).
+    private static string PageShell(string title, string bodyHtml, string lang, string headerHtml, string metaHtml = "")
     {
         var mathAssets = bodyHtml.Contains("math-tex") ? MathAssets : "";
         return ShellTemplate
@@ -2360,6 +2424,7 @@ public static class BlogEndpoints
             .Replace("{{DARK_TOKENS}}", DesignTokens.Declarations(DesignTokens.Dark))
             .Replace("{{LANG}}", lang)
             .Replace("{{TITLE}}", System.Net.WebUtility.HtmlEncode(title))
+            .Replace("{{META}}", metaHtml)
             .Replace("{{MATH_ASSETS}}", mathAssets)
             .Replace("{{HEADER}}", headerHtml)
             .Replace("{{BODY}}", bodyHtml);

@@ -17,6 +17,8 @@ internal static class BlogTestHost
         var services = new ServiceCollection();
         services.AddSingleton(db);
         services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        services.AddDataProtection();
+        services.AddSingleton<PrivateAccess>();
 
         var ctx = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
         ctx.Request.Method = method;
