@@ -17,6 +17,7 @@ public static class ProjectEndpoints
     // .StarterDocumentType); it stays overridable so the rule never becomes a wall.
     public record CreateProjectRequest(string Name, string? Description, string? ProjectType, string? DocumentType, string? DocumentTitle, string? Language = null);
     public record CreateExampleRequest(string? Language);
+    public record ShowcaseRequest(bool Enabled, string? Slug, string? Links);
     public record UpdateProjectRequest(string Name, string? Description, string? CoverUrl);
     public record ArchiveProjectRequest(bool Archived);
     public record CreateDocumentRequest(string? DocumentType, string? Title);
@@ -26,6 +27,7 @@ public static class ProjectEndpoints
 
     private const int NameMaxLength = 80;
     private const int DescriptionMaxLength = 2000;
+    private const int ShowcaseLinksMaxLength = 2000;
 
     public static bool IsEnabled(IConfiguration config) => config.IsOn(EnabledKey);
 
@@ -135,6 +137,8 @@ public static class ProjectEndpoints
                 project.CoverUrl,
                 project.CreatedAt,
                 project.ArchivedAt,
+                project.ShowcaseSlug,
+                project.ShowcaseLinks,
                 documents,
                 upNext = upNext.Select(t => TaskEndpoints.Describe(t, upNextLinks, upNextLabels)),
                 // T-124 — the rail's sprint card. Null means no sprint covers today, which the
@@ -314,6 +318,40 @@ public static class ProjectEndpoints
             project.CoverUrl = req.CoverUrl;
             await db.SaveChangesAsync();
             return Results.Ok(new { project.Id, project.Name, project.Description, project.CoverUrl });
+        });
+
+        // T-159 (ADR-134) — the public game page's switch. The slug is slugified server-side and
+        // globally unique (one blog host); turning the page off clears the slug and keeps the
+        // links, so switching it back on does not mean re-typing them.
+        group.MapPut("/{id:guid}/showcase", async (Guid id, ShowcaseRequest req, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var project = await db.Projects.FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == uid);
+            if (project is null) return Results.NotFound();
+
+            var links = (req.Links ?? "").Trim();
+            if (links.Length > ShowcaseLinksMaxLength)
+                return Results.BadRequest(new { error = $"Store links are too long ({ShowcaseLinksMaxLength} characters maximum)" });
+            project.ShowcaseLinks = links;
+
+            if (!req.Enabled)
+            {
+                project.ShowcaseSlug = null;
+                await db.SaveChangesAsync();
+                return Results.Ok(new { showcaseSlug = (string?)null, url = (string?)null });
+            }
+
+            var slug = SlugGenerator.Slugify(string.IsNullOrWhiteSpace(req.Slug) ? project.Name : req.Slug);
+            if (slug.Length == 0)
+                return Results.BadRequest(new { error = ErrorMessages.ShowcaseSlugEmpty });
+            if (await db.Projects.AnyAsync(p => p.ShowcaseSlug == slug && p.Id != id))
+                return Results.BadRequest(new { error = ErrorMessages.ShowcaseSlugTaken(slug) });
+
+            project.ShowcaseSlug = slug;
+            await db.SaveChangesAsync();
+
+            var blogBase = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}";
+            return Results.Ok(new { showcaseSlug = slug, url = $"{blogBase}/games/{slug}" });
         });
 
         group.MapPost("/{id:guid}/archive", async (Guid id, ArchiveProjectRequest req, ClaimsPrincipal user, CedarDbContext db) =>

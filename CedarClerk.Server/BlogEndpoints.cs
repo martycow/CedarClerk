@@ -375,6 +375,13 @@ public static class BlogEndpoints
             return;
         }
 
+        // ADR-134 — the public project showcase (T-159).
+        if (segments is ["games", var gameSlug])
+        {
+            await RenderShowcaseAsync(ctx, db, gameSlug);
+            return;
+        }
+
         ctx.Response.StatusCode = StatusCodes.Status404NotFound;
     }
 
@@ -1205,6 +1212,156 @@ public static class BlogEndpoints
         await ctx.Response.WriteAsync(PageShell(series.Name, body, pageLang, RenderHeader(channel), meta));
     }
 
+    // ADR-134 (T-159) — the public game page. Everything on it is opt-in: the page exists only
+    // while ShowcaseSlug is set and the project is not archived; the feed reuses the index's exact
+    // visibility filter, so this surface shows nothing the index does not; the roadmap carries only
+    // ticked tasks, title and status — a task's description is working material and never leaves.
+    private static async Task RenderShowcaseAsync(HttpContext ctx, CedarDbContext db, string slug)
+    {
+        var channel = await GetBlogChannelInfoAsync(db);
+        var project = await db.Projects.FirstOrDefaultAsync(p => p.ShowcaseSlug == slug && p.ArchivedAt == null);
+        if (project is null)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            ctx.Response.ContentType = "text/html; charset=utf-8";
+            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Page not found.</p>", Languages.Russian, RenderHeader(channel)));
+            return;
+        }
+
+        var pageLang = ctx.Request.Query["lang"].ToString() is { Length: > 0 } requested
+                       && Languages.IsContentLanguage(requested)
+            ? requested
+            : Languages.Russian;
+        var en = pageLang != Languages.Russian;
+
+        var posts = await db.Drafts
+            .Where(d => d.ProjectId == project.Id && d.IsBlogPublished && (!d.IsPrivate || d.IsListedWhilePrivate))
+            .OrderByDescending(d => d.BlogPublishedAt)
+            .Select(d => new { d.Title, d.ArticleTitle, d.BlogSlug, d.BlogPublishedAt, d.CedarJson, d.IsPrivate })
+            .ToListAsync();
+
+        var roadmap = (await db.GameTasks
+            .Where(t => t.ProjectId == project.Id && t.IsPublicRoadmap && t.ArchivedAt == null)
+            .Select(t => new { t.Title, t.Status })
+            .ToListAsync())
+            // A reader's order, not the board's: what is moving now, then what is planned, then done.
+            .OrderBy(t => t.Status switch
+            {
+                TaskStatuses.InProgress => 0,
+                TaskStatuses.Planned => 1,
+                TaskStatuses.Backlog => 2,
+                _ => 3,
+            })
+            .ThenBy(t => t.Title)
+            .ToList();
+
+        var cfg = ctx.RequestServices.GetRequiredService<IConfiguration>();
+        var mainBase = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
+        var sb = new StringBuilder();
+
+        sb.Append("<div class=\"showcase-head\">");
+        if (project.CoverUrl is { Length: > 0 } cover)
+            sb.Append("<img class=\"showcase-cover\" src=\"").Append(cover.StartsWith('/') ? mainBase + cover : cover)
+              .Append("\" alt=\"\">");
+        sb.Append("<div class=\"showcase-head-text\"><h1>").Append(System.Net.WebUtility.HtmlEncode(project.Name)).Append("</h1>");
+        if (project.Description is { Length: > 0 } desc)
+            sb.Append("<p class=\"showcase-desc\">").Append(System.Net.WebUtility.HtmlEncode(desc)).Append("</p>");
+
+        var links = ParseShowcaseLinks(project.ShowcaseLinks);
+        if (links.Count > 0)
+        {
+            sb.Append("<div class=\"showcase-links\">");
+            foreach (var (label, url) in links)
+            {
+                sb.Append("<a class=\"showcase-link\" rel=\"noopener\" target=\"_blank\" href=\"")
+                  .Append(System.Net.WebUtility.HtmlEncode(url)).Append("\">")
+                  .Append(System.Net.WebUtility.HtmlEncode(label)).Append("</a>");
+            }
+            sb.Append("</div>");
+        }
+        sb.Append("</div></div>");
+
+        sb.Append("<h2 class=\"showcase-section\">").Append(en ? "Devlog" : "Девлог").Append("</h2>");
+        if (posts.Count == 0)
+        {
+            sb.Append(en ? "<p class=\"empty\">Nothing published yet.</p>"
+                         : "<p class=\"empty\">Пока ничего не опубликовано.</p>");
+        }
+        else
+        {
+            sb.Append("<div class=\"post-list\">");
+            foreach (var p in posts)
+            {
+                var excerpt = p.IsPrivate ? "" : Excerpt(p.CedarJson);
+                sb.Append("<a class=\"post-card\" href=\"/").Append(p.BlogSlug).Append("\">");
+                sb.Append("<div class=\"post-card-meta\"><span class=\"post-card-date\">")
+                  .Append(p.BlogPublishedAt is { } cardDate ? BlogDateFormatter.DateLocal(cardDate, pageLang) : "")
+                  .Append("</span>");
+                if (p.IsPrivate)
+                    sb.Append("<span class=\"post-card-locked\">&#128274;</span>");
+                sb.Append("</div>");
+                sb.Append("<div class=\"post-card-title\">").Append(System.Net.WebUtility.HtmlEncode(p.ArticleTitle ?? p.Title)).Append("</div>");
+                if (excerpt.Length > 0)
+                    sb.Append("<div class=\"post-card-excerpt\">").Append(System.Net.WebUtility.HtmlEncode(excerpt)).Append("</div>");
+                sb.Append("</a>");
+            }
+            sb.Append("</div>");
+        }
+
+        if (roadmap.Count > 0)
+        {
+            sb.Append("<h2 class=\"showcase-section\">").Append(en ? "Roadmap" : "Роадмап").Append("</h2>");
+            sb.Append("<div class=\"roadmap-list\">");
+            foreach (var task in roadmap)
+            {
+                var (label, tone) = task.Status switch
+                {
+                    TaskStatuses.InProgress => (en ? "In progress" : "В работе", "now"),
+                    TaskStatuses.Planned => (en ? "Planned" : "Запланировано", "next"),
+                    TaskStatuses.Backlog => (en ? "Someday" : "Когда-нибудь", "later"),
+                    _ => (en ? "Done" : "Готово", "done"),
+                };
+                sb.Append("<div class=\"roadmap-row\"><span class=\"roadmap-status ").Append(tone).Append("\">")
+                  .Append(label).Append("</span><span class=\"roadmap-title\">")
+                  .Append(System.Net.WebUtility.HtmlEncode(task.Title)).Append("</span></div>");
+            }
+            sb.Append("</div>");
+        }
+
+        var backLinkLabel = en ? "All posts" : "Все посты";
+        var body = $"<a class=\"back-link\" href=\"/\">&larr; {backLinkLabel}</a>{sb}";
+
+        var blogBase = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}";
+        var ogImage = project.CoverUrl is { Length: > 0 } c
+            ? (c.StartsWith('/') ? mainBase + c : c)
+            : $"{blogBase}/og-default.png";
+        var meta = OgMetaBuilder.Build(new OgMetaInput(
+            project.Name, project.Description, $"{blogBase}/games/{project.ShowcaseSlug}",
+            ogImage, 1200, 630,
+            channel?.Title ?? "Cedar Clerk", pageLang,
+            [], null, null, null, IsArticle: false), OgMetaPolicy.Full);
+
+        ctx.Response.ContentType = "text/html; charset=utf-8";
+        await ctx.Response.WriteAsync(PageShell(project.Name, body, pageLang, RenderHeader(channel), meta));
+    }
+
+    /// <summary>`Label|https://url` lines; anything not shaped like that is skipped, not rendered.</summary>
+    public static List<(string Label, string Url)> ParseShowcaseLinks(string raw)
+    {
+        var links = new List<(string, string)>();
+        foreach (var line in raw.Split('\n'))
+        {
+            var split = line.IndexOf('|');
+            if (split <= 0) continue;
+            var label = line[..split].Trim();
+            var url = line[(split + 1)..].Trim();
+            if (label.Length == 0 || !Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp)) continue;
+            links.Add((label, url));
+        }
+        return links;
+    }
+
     private static async Task RenderRssAsync(HttpContext ctx, CedarDbContext db)
     {
         // Public posts only, including the listed-private ones: an RSS item carries an excerpt
@@ -1787,6 +1944,22 @@ public static class BlogEndpoints
         .series-head .series-desc { color: var(--t2); font-size: 14px; margin: 0 0 4px; }
         .series-head .series-count { color: var(--t2); font-size: 12px; }
         .series-part-no { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--accent); }
+        .showcase-head { display: flex; gap: 20px; align-items: flex-start; margin: 0 0 24px; }
+        .showcase-cover { width: 180px; border-radius: 12px; box-shadow: var(--shadow); flex: none; }
+        .showcase-head-text h1 { margin: 0 0 6px; }
+        .showcase-desc { color: var(--t2); font-size: 15px; line-height: 1.55; margin: 0 0 12px; }
+        .showcase-links { display: flex; flex-wrap: wrap; gap: 8px; }
+        .showcase-link { display: inline-block; font-size: 13px; font-weight: 600; color: var(--accent); background: var(--asoft); border: 1px solid var(--abord); border-radius: 999px; padding: 6px 16px; text-decoration: none; }
+        .showcase-link:hover { filter: brightness(1.05); }
+        .showcase-section { font-size: 15px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--t2); margin: 28px 0 12px; }
+        .roadmap-list { display: flex; flex-direction: column; gap: 8px; }
+        .roadmap-row { display: flex; align-items: center; gap: 12px; background: var(--sheet); border-radius: 10px; box-shadow: var(--shadow); padding: 12px 18px; }
+        .roadmap-status { flex: none; font-size: 11px; font-weight: 700; letter-spacing: .03em; border-radius: 999px; padding: 3px 11px; }
+        .roadmap-status.now { color: var(--accent); background: var(--asoft); border: 1px solid var(--abord); }
+        .roadmap-status.next, .roadmap-status.later { color: var(--t2); background: var(--alt); border: 1px solid var(--border); }
+        .roadmap-status.done { color: var(--ok, #3a8a4d); background: var(--alt); border: 1px solid var(--border); }
+        .roadmap-title { font-size: 14px; }
+        @media (max-width: 560px) { .showcase-head { flex-direction: column; } .showcase-cover { width: 100%; } }
         .floating-nav { position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 50; opacity: 0; pointer-events: none; transition: opacity .15s ease; }
         .floating-nav.visible { opacity: 1; pointer-events: auto; }
         .floating-nav-btn { width: 38px; height: 38px; border-radius: 50%; background: var(--sheet); border: 1px solid var(--border); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; color: var(--text); text-decoration: none; cursor: pointer; font-size: 16px; }

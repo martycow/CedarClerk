@@ -341,6 +341,11 @@ export class ProjectTasksComponent {
         return this.run(() => this.api.update(task.id, buildId ? { buildId } : { clearBuild: true }));
     }
 
+    /** T-159 (ADR-134) — onto (or off) the project's public showcase roadmap; title and status only. */
+    setPublicRoadmap(task: GameTask, isPublicRoadmap: boolean) {
+        return this.run(() => this.api.update(task.id, { isPublicRoadmap }));
+    }
+
     linkCounts(task: GameTask) {
         return {
             document: task.links.filter(l => l.type === 'document').length,

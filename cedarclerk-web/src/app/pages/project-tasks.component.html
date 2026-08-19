@@ -253,6 +253,16 @@
                     </select>
                 </div>
                 }
+                <!--T-159 (ADR-134) — opt-in onto the public roadmap; saved on change like the
+                sprint above, and only the title and status ever leave.-->
+                <div class="field">
+                    <label>{{ t().projects.tasks.fieldPublicRoadmap }}</label>
+                    <label class="roadmap-toggle">
+                        <input type="checkbox" [ngModel]="task.isPublicRoadmap"
+                               (ngModelChange)="setPublicRoadmap(task, $event)" [disabled]="busy()">
+                        <span>{{ t().projects.tasks.publicRoadmapHint }}</span>
+                    </label>
+                </div>
             </div>
 
             <div class="field">

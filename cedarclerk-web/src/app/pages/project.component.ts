@@ -63,6 +63,9 @@ export class ProjectComponent {
     editing = signal(false);
     editName = signal('');
     editDescription = signal('');
+    editShowcase = signal(false);
+    editShowcaseSlug = signal('');
+    editShowcaseLinks = signal('');
     actionError = signal<string | null>(null);
     busy = signal(false);
     // Deleting a project is two clicks on the same button rather than a second modal on top of the
@@ -135,9 +138,18 @@ export class ProjectComponent {
         if (!project) return;
         this.editName.set(project.name);
         this.editDescription.set(project.description);
+        this.editShowcase.set(!!project.showcaseSlug);
+        this.editShowcaseSlug.set(project.showcaseSlug ?? '');
+        this.editShowcaseLinks.set(project.showcaseLinks ?? '');
         this.actionError.set(null);
         this.confirmDelete = false;
         this.editing.set(true);
+    }
+
+    /** The live public URL, shown under the toggle so the page is one click away once it exists. */
+    showcaseUrl(): string | null {
+        const slug = this.project()?.showcaseSlug;
+        return slug ? `https://blog.mooexe.dev/games/${slug}` : null;
     }
 
     async saveEdit() {
@@ -149,7 +161,16 @@ export class ProjectComponent {
         this.actionError.set(null);
         try {
             await this.api.update(project.id, name, this.editDescription().trim(), project.coverUrl);
-            this.project.set({ ...project, name, description: this.editDescription().trim() });
+            // T-159 — the showcase saves with the same button; the server slugifies and may rename.
+            const showcase = await this.api.setShowcase(project.id,
+                this.editShowcase(), this.editShowcaseSlug().trim() || null, this.editShowcaseLinks().trim());
+            this.project.set({
+                ...project,
+                name,
+                description: this.editDescription().trim(),
+                showcaseSlug: showcase.showcaseSlug,
+                showcaseLinks: this.editShowcaseLinks().trim(),
+            });
             this.editing.set(false);
         } catch (e) {
             this.actionError.set(httpErrorMessage(e, this.t().projects.actionFailed));

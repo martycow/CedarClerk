@@ -543,6 +543,19 @@
     color: var(--t2);
 }
 
+.roadmap-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--fs-meta);
+    color: var(--t2);
+    cursor: pointer;
+}
+
+.field .roadmap-toggle input {
+    width: auto;
+}
+
 .field input,
 .field select,
 .field textarea {

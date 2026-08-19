@@ -78,6 +78,17 @@ public class Project
     public DateTime? AssetsIndexedAt { get; set; }
 
     /// <summary>
+    /// T-159 (ADR-134) — the public game page's slug on the blog host (`/games/{slug}`), globally
+    /// unique. Null = no public page, and the page answers 404. Archiving the project hides the
+    /// page the same way.
+    /// </summary>
+    public string? ShowcaseSlug { get; set; }
+
+    /// <summary>Store links, one `Label|https://url` per line. A wishlist button is a Steam link
+    /// with a label, not a mechanism (ADR-134).</summary>
+    public string ShowcaseLinks { get; set; } = "";
+
+    /// <summary>
     /// T-124 — the number the next sprint of this project will get, then incremented.
     ///
     /// A counter rather than <c>MAX(Number) + 1</c>, because that expression **reuses the highest
@@ -213,6 +224,12 @@ public class GameTask
 
     /// <summary>Null = no deadline. Overdue is derived, never stored — it changes with the clock.</summary>
     public DateTime? DueAt { get; set; }
+
+    /// <summary>
+    /// T-159 (ADR-134) — ticked tasks appear on the project's public showcase roadmap, title and
+    /// status only. Opt-in per task: a tracker is working material by default.
+    /// </summary>
+    public bool IsPublicRoadmap { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

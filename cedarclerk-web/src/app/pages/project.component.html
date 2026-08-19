@@ -215,6 +215,26 @@
         <textarea id="edit-description" class="text-input" rows="3" maxlength="2000"
                   [ngModel]="editDescription()" (ngModelChange)="editDescription.set($event)"></textarea>
 
+        <!--T-159 (ADR-134) — the public game page. Off by default; the slug is the URL.-->
+        <label class="field-label spaced checkbox-row">
+            <input type="checkbox" [ngModel]="editShowcase()" (ngModelChange)="editShowcase.set($event)">
+            <span>{{ t().projects.edit.showcaseToggle }}</span>
+        </label>
+        @if (editShowcase()) {
+            <p class="hint">{{ t().projects.edit.showcaseHint }}</p>
+            <label class="field-label spaced" for="edit-showcase-slug">{{ t().projects.edit.showcaseSlugLabel }}</label>
+            <input id="edit-showcase-slug" class="text-input" type="text" maxlength="80"
+                   [ngModel]="editShowcaseSlug()" (ngModelChange)="editShowcaseSlug.set($event)"
+                   [placeholder]="t().projects.edit.showcaseSlugPlaceholder">
+            <label class="field-label spaced" for="edit-showcase-links">{{ t().projects.edit.showcaseLinksLabel }}</label>
+            <textarea id="edit-showcase-links" class="text-input" rows="3" maxlength="2000"
+                      [ngModel]="editShowcaseLinks()" (ngModelChange)="editShowcaseLinks.set($event)"
+                      [placeholder]="t().projects.edit.showcaseLinksPlaceholder"></textarea>
+            @if (showcaseUrl(); as url) {
+                <p class="hint"><a [href]="url" target="_blank" rel="noopener">{{ url }}</a></p>
+            }
+        }
+
         <div class="danger-row">
             <button class="btn-ghost" [disabled]="busy()" (click)="toggleArchived()">
                 {{ project()?.archivedAt ? t().projects.edit.unarchive : t().projects.edit.archive }}

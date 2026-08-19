@@ -140,6 +140,12 @@ public static class ErrorMessages
     public static string DiscordWebhookInvalid => Ru(
         "Discord не принял этот вебхук — проверьте URL (он должен начинаться с https://discord.com/api/webhooks/).",
         "Discord refused this webhook — check the URL (it must start with https://discord.com/api/webhooks/).");
+    public static string ShowcaseSlugEmpty => Ru(
+        "Слаг получился пустым — используйте латинские буквы или цифры.",
+        "The slug came out empty — use latin letters or digits.");
+    public static string ShowcaseSlugTaken(string slug) => Ru(
+        $"«{slug}» уже занят — выберите другой слаг.",
+        $"'{slug}' is already taken — pick another slug.");
     public static string DiscordReconnect => Ru(
         "Вебхук Discord больше не работает — вероятно, удалён в настройках канала. Переподключите его в настройках.",
         "The Discord webhook no longer works — likely deleted in the channel's settings. Reconnect it in settings.");

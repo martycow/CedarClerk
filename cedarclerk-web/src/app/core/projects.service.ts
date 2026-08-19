@@ -73,6 +73,10 @@ export interface ProjectDocument {
 }
 
 export interface ProjectDetail extends Omit<ProjectSummary, 'documentCount' | 'openTaskCount' | 'assetCount' | 'lastActivityAt'> {
+    /** T-159 (ADR-134) — null means no public page. */
+    showcaseSlug: string | null;
+    /** One `Label|https://url` per line. */
+    showcaseLinks: string;
     documents: ProjectDocument[];
     /** T-123 — the dashboard's right rail, already sorted by urgency on the server. */
     upNext: GameTask[];
@@ -118,6 +122,12 @@ export class ProjectsService {
      */
     createExample(language: string) {
         return firstValueFrom(this.http.post<{ id: string; name: string }>('/api/projects/example', { language }));
+    }
+
+    /** T-159 (ADR-134) — the public game page's switch; the server slugifies and answers the URL. */
+    setShowcase(id: string, enabled: boolean, slug: string | null, links: string) {
+        return firstValueFrom(this.http.put<{ showcaseSlug: string | null; url: string | null }>(
+            `/api/projects/${id}/showcase`, { enabled, slug, links }));
     }
 
     update(id: string, name: string, description: string, coverUrl: string | null) {

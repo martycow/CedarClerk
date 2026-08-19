@@ -128,6 +128,8 @@ export const en = {
             fieldPriority: 'Priority',
             fieldDue: 'Due',
             fieldAssignee: 'Assignee',
+            fieldPublicRoadmap: 'Public roadmap',
+            publicRoadmapHint: 'Show on the project\'s public page — title and status only',
             fieldDescription: 'Description',
             fieldLinks: 'Linked',
             assigneePlaceholder: 'Anyone — free text',
@@ -349,6 +351,12 @@ export const en = {
             // The reassurance is the point: a container disappearing must not read as the writing
             // disappearing with it.
             removeConfirm: 'Delete this project? Its documents are kept — they only stop belonging to a project.',
+            showcaseToggle: 'Public game page',
+            showcaseHint: 'A page on the blog with the devlog feed, store links and the tasks you mark public. Only published posts appear — nothing the blog does not already show.',
+            showcaseSlugLabel: 'Page address (slug)',
+            showcaseSlugPlaceholder: 'my-game',
+            showcaseLinksLabel: 'Store links, one per line: Label|https://…',
+            showcaseLinksPlaceholder: 'Wishlist on Steam|https://store.steampowered.com/app/…\nitch.io|https://…',
         },
         create: {
             title: 'New project',

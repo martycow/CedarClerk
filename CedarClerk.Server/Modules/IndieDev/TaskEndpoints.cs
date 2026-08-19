@@ -22,7 +22,7 @@ public static class TaskEndpoints
     public record UpdateTaskRequest(
         string? Title, string? Description, string? Status, int? Priority,
         string? Assignee, DateTime? DueAt, bool? ClearDueAt, Guid? SprintId, bool? ClearSprint,
-        Guid? BuildId, bool? ClearBuild, bool? Archived);
+        Guid? BuildId, bool? ClearBuild, bool? Archived, bool? IsPublicRoadmap);
 
     public record LinkRequest(string Type, Guid Id);
 
@@ -220,6 +220,10 @@ public static class TaskEndpoints
             if (req.Archived is { } archived)
                 task.ArchivedAt = archived ? task.ArchivedAt ?? DateTime.UtcNow : null;
 
+            // T-159 (ADR-134) — opt-in onto the project's public roadmap, title and status only.
+            if (req.IsPublicRoadmap is { } publicRoadmap)
+                task.IsPublicRoadmap = publicRoadmap;
+
             task.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
@@ -322,6 +326,7 @@ public static class TaskEndpoints
         t.SprintId,
         t.BuildId,
         t.DueAt,
+        t.IsPublicRoadmap,
         t.CreatedAt,
         t.UpdatedAt,
         t.CompletedAt,

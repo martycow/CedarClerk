@@ -44,6 +44,8 @@ export interface GameTask {
     /** T-126 — the version this task shipped in, or null. */
     buildId: string | null;
     dueAt: string | null;
+    /** T-159 (ADR-134) — ticked tasks appear on the project's public showcase roadmap. */
+    isPublicRoadmap: boolean;
     createdAt: string;
     updatedAt: string;
     completedAt: string | null;
@@ -77,6 +79,7 @@ export interface UpdateTaskInput {
     buildId?: string;
     clearBuild?: boolean;
     archived?: boolean;
+    isPublicRoadmap?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

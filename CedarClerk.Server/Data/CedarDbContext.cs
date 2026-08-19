@@ -126,6 +126,14 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         // Same lesson again (T-120): EF ignores the property initialiser, so without this the
         // ADD COLUMN backfills every existing project with 0 and their first sprint would be "S0".
         builder.Entity<Project>().Property(p => p.NextSprintNumber).HasDefaultValue(1);
+        // ADR-134 — the public game page resolves by slug across all owners (one blog host), so
+        // uniqueness is global; filtered because null means "no public page" and SQLite would
+        // otherwise still allow only distinct NULLs by accident of dialect, not by declaration.
+        builder.Entity<Project>()
+            .HasIndex(p => p.ShowcaseSlug)
+            .IsUnique()
+            .HasFilter("\"ShowcaseSlug\" IS NOT NULL");
+        builder.Entity<Project>().Property(p => p.ShowcaseLinks).HasDefaultValue("");
         // T-122 — the scan's upsert key: a file is the same file if it is at the same relative path
         // in the same project. Unique, so two scans racing cannot double a row.
         builder.Entity<AssetEntry>()
