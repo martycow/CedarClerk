@@ -1427,7 +1427,16 @@ public static class BlogEndpoints
         // never defined one, which costs a single indexed read and changes nothing downstream.
         // T-125 — a post in a project also renders with that project's own terms.
         var glossary = await GlossaryEndpoints.LoadForAsync(db, draft.OwnerId, lang, draft.ProjectId);
-        var body = CedarToBlogHtmlRenderer.Render(cedarJson, blogBase, lang, glossary);
+        // ADR-128 — wikilink targets this page may link to: one query over the referenced ids,
+        // filtered by exactly the index visibility rule. Anything not in the map renders as text.
+        var wikiIds = WikiLinkRefs.Collect(cedarJson);
+        var wikiTargets = wikiIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await db.Drafts
+                .Where(d => wikiIds.Contains(d.Id) && d.OwnerId == draft.OwnerId
+                    && d.IsBlogPublished && d.BlogSlug != null && (!d.IsPrivate || d.IsListedWhilePrivate))
+                .ToDictionaryAsync(d => d.Id, d => d.BlogSlug!);
+        var body = CedarToBlogHtmlRenderer.Render(cedarJson, blogBase, lang, glossary, wikiTargets);
         var dateLine = draft.BlogPublishedAt is { } published
             ? $"<span class=\"post-card-date\">{BlogDateFormatter.DateTimeLocal(published, lang)}</span>"
             : "";

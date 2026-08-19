@@ -73,7 +73,11 @@ public static class CedarPlainText
         foreach (var child in array)
         {
             if (child is not JsonObject obj) continue;
-            if ((string?)obj["type"] == "text") builder.Append((string?)obj["text"]);
+            var childType = (string?)obj["type"];
+            if (childType == "text") builder.Append((string?)obj["text"]);
+            // ADR-128 — a wikilink's label is a word of the sentence; dropping it silently ate a
+            // word from teasers and og:description.
+            else if (childType == "wikilink") builder.Append((string?)obj["attrs"]?["label"]);
             else builder.Append(PlainText(obj["content"]));
         }
         return builder.ToString().Trim();

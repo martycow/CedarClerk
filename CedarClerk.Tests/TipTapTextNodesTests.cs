@@ -44,6 +44,7 @@ public class TipTapTextNodesTests
     [InlineData("""{"type":"doc","content":[{"type":"youtube","attrs":{"videoId":"abc","caption":"ролик"}}]}""", "ролик")]
     [InlineData("""{"type":"doc","content":[{"type":"footnote","attrs":{"id":"1","text":"сноска"}}]}""", "сноска")]
     [InlineData("""{"type":"doc","content":[{"type":"toggle","attrs":{"summary":"детали"},"content":[]}]}""", "детали")]
+    [InlineData("""{"type":"doc","content":[{"type":"wikilink","attrs":{"draftId":"11111111-1111-1111-1111-111111111111","label":"Боёвка"}}]}""", "Боёвка")]
     public void Extracts_attrs_text_for_node_type(string doc, string expected)
     {
         Assert.Contains(expected, TipTapTextNodes.ExtractTexts(doc));

@@ -274,6 +274,11 @@ public static class CedarToTelegramBlocksRenderer
                     ctx.Footnotes.Add((string?)n["attrs"]?["text"] ?? "");
                     runs.Add(new RichRunText($"[{ctx.Footnotes.Count}]"));
                     break;
+                // ADR-128 — Telegram has nowhere for an internal document link to lead, so the
+                // label travels as an ordinary word of the sentence.
+                case "wikilink":
+                    runs.Add(new RichRunText((string?)n["attrs"]?["label"] ?? ""));
+                    break;
             }
         }
         return runs.Count == 1 ? runs[0] : new RichRunSequence(runs);

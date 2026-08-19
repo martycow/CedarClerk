@@ -15,6 +15,16 @@ public class ShortPostMediaTests
             ? $"{{\"type\":\"youtube\",\"attrs\":{{\"videoId\":\"{YouTubeId}\"}}}}"
             : $"{{\"type\":\"youtube\",\"attrs\":{{\"videoId\":\"{YouTubeId}\",\"caption\":\"{caption}\"}}}}";
 
+    // ADR-128 — a wikilink's label is a word of the sentence; dropping it silently ate a word
+    // from teasers and og:description.
+    [Fact]
+    public void A_wikilink_label_stays_in_the_plain_text_paragraph()
+    {
+        var doc = Doc("""{"type":"paragraph","content":[{"type":"text","text":"См. "},{"type":"wikilink","attrs":{"draftId":"11111111-1111-1111-1111-111111111111","label":"Боёвка"}}]}""");
+
+        Assert.Equal("См. Боёвка", Assert.Single(CedarPlainText.Paragraphs(doc)));
+    }
+
     [Fact]
     public void A_youtube_video_reaches_the_short_networks_as_a_link()
     {

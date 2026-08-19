@@ -255,6 +255,11 @@ public static class CedarToTelegramHtmlRenderer
                 sb.Append($"<sup>[{ctx.Footnotes.Count}]</sup>");
                 break;
 
+            // ADR-128 — internal link, plain escaped label here.
+            case "wikilink":
+                sb.Append(Escape((string?)node["attrs"]?["label"] ?? ""));
+                break;
+
             default:
                 RenderNodes(node["content"]?.AsArray(), sb, ctx);
                 break;

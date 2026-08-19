@@ -27,12 +27,17 @@ public static class CedarToBlogHtmlRenderer
         // CedarToTelegramBlocksRenderer.RenderContext for why this needs to happen up front.
         public IReadOnlyList<HeadingEntry> Outline { get; init; } = [];
         public int HeadingIndex;
+        // ADR-128 — wikilink targets that may be linked: id → blog slug, containing ONLY targets
+        // the index would show. Anything absent renders as plain text — a link would leak that a
+        // hidden post exists.
+        public IReadOnlyDictionary<Guid, string> WikiTargets { get; init; } = new Dictionary<Guid, string>();
     }
 
     // "en"/"ru" only, matching CedarClerk.Localization.Languages — Core stays free of a project
     // reference to Localization, so the caller (BlogEndpoints) passes the plain language code.
     public static string Render(string cedarJson, string mediaBaseUrl, string lang = "ru",
-        IReadOnlyList<GlossaryEntry>? glossary = null)
+        IReadOnlyList<GlossaryEntry>? glossary = null,
+        IReadOnlyDictionary<Guid, string>? wikiTargets = null)
     {
         var root = JsonNode.Parse(cedarJson) ?? throw new ArgumentException("Invalid cedar JSON");
         var doc = root["doc"] ?? root;
@@ -43,6 +48,7 @@ public static class CedarToBlogHtmlRenderer
             Lang = lang,
             Outline = HeadingOutline.Extract(doc),
             Glossary = glossary ?? [],
+            WikiTargets = wikiTargets ?? new Dictionary<Guid, string>(),
         };
         RenderNodes(doc["content"]?.AsArray(), sb, ctx);
         AppendFootnotes(sb, ctx);
@@ -266,6 +272,17 @@ public static class CedarToBlogHtmlRenderer
             case "footnote":
                 ctx.Footnotes.Add((string?)node["attrs"]?["text"] ?? "");
                 sb.Append($"<sup><a href=\"#fn-{ctx.Footnotes.Count}\">[{ctx.Footnotes.Count}]</a></sup>");
+                break;
+
+            // ADR-128 — a link only when the target is on the visibility map; otherwise the label
+            // stays as plain text, so a hidden or deleted target never leaks or 404s.
+            case "wikilink":
+                var wikiLabel = Escape((string?)node["attrs"]?["label"] ?? "");
+                if (Guid.TryParse((string?)node["attrs"]?["draftId"], out var wikiId)
+                    && ctx.WikiTargets.TryGetValue(wikiId, out var wikiSlug))
+                    sb.Append($"<a class=\"wikilink\" href=\"/{wikiSlug}\">{wikiLabel}</a>");
+                else
+                    sb.Append(wikiLabel);
                 break;
 
             // NF5 — deliberately blog-only (Marty's own call: "опросы только на сайте"). A poll has

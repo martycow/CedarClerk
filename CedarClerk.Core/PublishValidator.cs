@@ -139,6 +139,10 @@ public static class PublishValidator
                         stats.Characters += ((string?)obj["text"])?.Length ?? 0;
                         if (obj["marks"] is JsonArray { Count: > 0 }) stats.HasFormatting = true;
                         break;
+                    // ADR-128 — the label is sent as plain text on every network, so it counts.
+                    case "wikilink":
+                        stats.Characters += ((string?)obj["attrs"]?["label"])?.Length ?? 0;
+                        break;
                     case "image": stats.MediaCount++; break;
                     case "video": stats.MediaCount++; stats.HasVideo = true; break;
                     case "audio": stats.MediaCount++; stats.HasAudio = true; break;

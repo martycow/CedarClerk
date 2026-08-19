@@ -438,6 +438,30 @@ public class BlogHtmlRendererTests
         Assert.Contains("14 November 2023", CedarToBlogHtmlRenderer.Render(json, Base, "en"));
     }
 
+    // ADR-128 — a wikilink links only through the visibility map; otherwise the label is plain
+    // (and always escaped) text, so a hidden target neither leaks nor 404s.
+    [Fact]
+    public void Renders_wikilink_as_anchor_when_target_is_visible_and_plain_text_otherwise()
+    {
+        var visible = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var hidden = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        var json = """
+                   {"type":"doc","content":[{"type":"paragraph","content":[
+                       {"type":"wikilink","attrs":{"draftId":"11111111-1111-1111-1111-111111111111","label":"Боёвка <1>"}},
+                       {"type":"text","text":" и "},
+                       {"type":"wikilink","attrs":{"draftId":"22222222-2222-2222-2222-222222222222","label":"Секрет"}}
+                   ]}]}
+                   """;
+        var map = new Dictionary<Guid, string> { [visible] = "combat" };
+
+        var html = CedarToBlogHtmlRenderer.Render(json, Base, wikiTargets: map);
+
+        Assert.Contains("<a class=\"wikilink\" href=\"/combat\">Боёвка &lt;1&gt;</a>", html);
+        Assert.Contains("Секрет", html);
+        Assert.DoesNotContain(hidden.ToString(), html);
+        Assert.DoesNotContain("<a class=\"wikilink\" href=\"/combat\">Секрет", html);
+    }
+
     [Fact]
     public void Renders_footnote_references_and_collected_footer()
     {

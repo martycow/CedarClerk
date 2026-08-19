@@ -20,6 +20,7 @@ public static class TipTapTextNodes
         ["audio"] = ["caption", "title"],
         ["youtube"] = ["caption"],
         ["footnote"] = ["text"],
+        ["wikilink"] = ["label"],
         ["toggle"] = ["summary"],
         ["poll"] = ["question"],
     };

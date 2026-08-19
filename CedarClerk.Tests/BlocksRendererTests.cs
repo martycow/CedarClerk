@@ -427,6 +427,21 @@ public class BlocksRendererTests
         Assert.Equal("wDT", dt.Format);
     }
 
+    // ADR-128 — Telegram has nowhere for an internal link to lead: the label is an ordinary word.
+    [Fact]
+    public void Renders_wikilink_label_as_plain_text_run()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"paragraph","content":[
+                       {"type":"text","text":"См. "},
+                       {"type":"wikilink","attrs":{"draftId":"11111111-1111-1111-1111-111111111111","label":"Боёвка"}}
+                   ]}]}
+                   """;
+        var block = Assert.IsType<RichParagraphBlock>(Assert.Single(CedarToTelegramBlocksRenderer.Render(json)));
+        var seq = Assert.IsType<RichRunSequence>(block.Text);
+        Assert.Equal(new RichRunText("Боёвка"), seq.Runs[1]);
+    }
+
     [Fact]
     public void Renders_footnote_reference_inline_and_a_footer_block_at_the_end()
     {

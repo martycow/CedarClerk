@@ -356,6 +356,19 @@ public class MarkdownRendererTests
         Assert.Equal("![](tg://photo?id=m1)\n[Never Gonna Give You Up](https://www.youtube.com/watch?v=dQw4w9WgXcQ)", result.Text);
     }
 
+    // ADR-128 — the label travels as escaped plain text: no target to link to here.
+    [Fact]
+    public void Renders_wikilink_label_as_escaped_plain_text()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"paragraph","content":[
+                       {"type":"text","text":"See "},
+                       {"type":"wikilink","attrs":{"draftId":"11111111-1111-1111-1111-111111111111","label":"Combat [v2]"}}
+                   ]}]}
+                   """;
+        Assert.Equal("""See Combat \[v2\]""", CedarToTelegramMarkdownRenderer.Render(json).Text);
+    }
+
     [Fact]
     public void Renders_footnote_references_and_collected_footer()
     {

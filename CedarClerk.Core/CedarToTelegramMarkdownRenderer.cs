@@ -266,6 +266,10 @@ public static class CedarToTelegramMarkdownRenderer
                     ctx.Footnotes.Add((string?)n["attrs"]?["text"] ?? "");
                     sb.Append($"[^{ctx.Footnotes.Count}]");
                     break;
+                // ADR-128 — internal link, escaped plain label here.
+                case "wikilink":
+                    sb.Append(EscapeMarkdown((string?)n["attrs"]?["label"] ?? ""));
+                    break;
             }
         }
         return sb.ToString();

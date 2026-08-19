@@ -35,6 +35,17 @@ public class PublishValidatorTests
         Assert.Empty(PublishValidator.Validate(Doc(Paragraph("Short enough.")), Caps(maxChars: 100)));
     }
 
+    // ADR-128 — the label is sent as plain text on every network, so it counts toward the limit.
+    [Fact]
+    public void A_wikilink_label_counts_toward_the_character_limit()
+    {
+        var doc = Doc("""{"type":"paragraph","content":[{"type":"wikilink","attrs":{"draftId":"11111111-1111-1111-1111-111111111111","label":"0123456789"}}]}""");
+
+        var issue = Assert.Single(PublishValidator.Validate(doc, Caps(maxChars: 5)));
+        Assert.Equal(PublishIssueCodes.TooLong, issue.Code);
+        Assert.Equal(10, issue.Actual);
+    }
+
     [Fact]
     public void Too_long_is_blocking_and_reports_both_numbers()
     {
