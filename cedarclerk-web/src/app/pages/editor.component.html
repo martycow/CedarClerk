@@ -1061,6 +1061,19 @@
     <app-media-picker (picked)="onLibraryPicked($event)" (closed)="libraryOpen.set(false)"></app-media-picker>
     }
 
+    <!--ADR-128 — the `[[` suggester. mousedown+preventDefault keeps the editor selection alive
+    so the plugin's command still knows the range to replace.-->
+    @if (wikiSuggest(); as ws) {
+    <div class="wiki-suggest" [style.left.px]="ws.x" [style.top.px]="ws.y">
+        @for (item of ws.items; track item.id; let i = $index) {
+        <button class="wiki-suggest-item" [class.active]="i === ws.index"
+                (mousedown)="$event.preventDefault(); wikiPick(item)">{{ item.title || t().drafts.untitled }}</button>
+        } @empty {
+        <p class="wiki-suggest-none">{{ t().editor.wikilink.noMatches }}</p>
+        }
+    </div>
+    }
+
     <!--Insert modal: unified link/YouTube/email/phone/mention, replaces the separate Link and YouTube popovers-->
     @if (insertOpen()) {
     <app-modal [width]="480" (closed)="closeInsertModal()">

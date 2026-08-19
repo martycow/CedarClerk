@@ -766,6 +766,21 @@ body {
         cursor: help;
         font-size: 0.75em;
     }
+
+    /* ADR-128 — the wiki-link chip: reads as a link to another document, not as body text. */
+    .wikilink-chip {
+        display: inline;
+        color: var(--accent);
+        background: var(--asoft);
+        border-radius: var(--radius-sm);
+        padding: 0 4px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .wikilink-chip:hover {
+        text-decoration: underline;
+    }
 }
 
 .carousel-editor {

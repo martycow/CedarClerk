@@ -509,6 +509,11 @@ export const ru: Dict = {
         logout: 'Выйти',
         enterFullscreen: 'Полный экран',
         exitFullscreen: 'Выйти из полного экрана',
+        wikilink: {
+            noMatches: 'Подходящих документов нет',
+            backlinks: (n: number) => `← ${n}`,
+            backlinksTitle: (n: number) => `Ссылаются: ${n} ${plural(n, 'документ', 'документа', 'документов')}`,
+        },
         tb: {
             undo: 'Отменить',
             redo: 'Повторить',

@@ -6,7 +6,8 @@ import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Editor } from '@tiptap/core';
-import { EditorState, TextSelection } from '@tiptap/pm/state';
+import { EditorState, PluginKey, TextSelection } from '@tiptap/pm/state';
+import Suggestion from '@tiptap/suggestion';
 import { Node as PMNode, Slice } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
@@ -52,6 +53,7 @@ import { ToggleNode } from '../tiptap-extensions/toggle-node';
 import { PollNode } from '../tiptap-extensions/poll-node';
 import { ImageNode } from '../tiptap-extensions/image-node';
 import { FootnoteNode } from '../tiptap-extensions/footnote-node';
+import { WikiLinkNode, WIKILINK_OPEN_EVENT } from '../tiptap-extensions/wikilink-node';
 import { AnnotationNode } from '../tiptap-extensions/annotation-node';
 import { TableOfContentsNode } from '../tiptap-extensions/table-of-contents-node';
 import { YoutubeNode, extractYouTubeId } from '../tiptap-extensions/youtube-node';
@@ -928,6 +930,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     uploads = signal<UploadItem[]>([]);
     libraryOpen = signal(false);
+
+    // ADR-128 — the `[[` suggester's popover state; the pending command comes from the plugin.
+    wikiSuggest = signal<{ x: number; y: number; items: { id: string; title: string }[]; index: number } | null>(null);
+    private wikiSuggestCommand: ((attrs: { draftId: string; label: string }) => void) | null = null;
+    private readonly onWikilinkOpen = (ev: Event) => {
+        const draftId = (ev as CustomEvent).detail?.draftId as string | undefined;
+        if (draftId && this.drafts().some(d => d.id === draftId)) void this.openDraft(draftId);
+    };
     private uploadSeq = 0;
 
     // Connecting, disconnecting and the discovered-chats list moved to Settings → Integrations
@@ -1210,6 +1220,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 CollageNode,
                 SpoilerMark,
                 FootnoteNode,
+                WikiLinkNode,
                 DateTimeNode,
                 ToggleNode,
                 PollNode,
@@ -1241,6 +1252,29 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             onFocus: () => this.editorFocused.set(true),
             onBlur: () => this.editorFocused.set(false),
         });
+
+        // ADR-128 — `[[` opens the wiki-link suggester. The popover is hand-rolled off
+        // props.clientRect (a signal-driven fixed-position div in the template); candidates are a
+        // client-side filter over the already-loaded drafts list — no server search yet (T-176).
+        this.editor.registerPlugin(Suggestion<{ id: string; title: string }, { draftId: string; label: string }>({
+            editor: this.editor,
+            pluginKey: new PluginKey('wikilink-suggest'),
+            char: '[[',
+            allowSpaces: true,
+            items: ({ query }) => this.wikiCandidates(query),
+            command: ({ editor, range, props }) => {
+                editor.chain().focus()
+                    .insertContentAt(range, [{ type: 'wikilink', attrs: props }, { type: 'text', text: ' ' }])
+                    .run();
+            },
+            render: () => ({
+                onStart: props => this.showWikiSuggest(props),
+                onUpdate: props => this.showWikiSuggest(props),
+                onExit: () => this.wikiSuggest.set(null),
+                onKeyDown: ({ event }) => this.wikiSuggestKey(event),
+            }),
+        }));
+        this.editor.view.dom.addEventListener(WIKILINK_OPEN_EVENT, this.onWikilinkOpen);
 
         const list = await this.draftsApi.list();
         this.drafts.set(list);
@@ -3023,6 +3057,52 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             const images = urls.filter((u): u is string => !!u);
             if (images.length) this.insertNode('carousel', { images });
         });
+    }
+
+    private wikiCandidates(query: string): { id: string; title: string }[] {
+        const q = query.trim().toLowerCase();
+        return this.drafts()
+            .filter(d => d.id !== this.currentId() && !d.isArchived)
+            .filter(d => !q || d.title.toLowerCase().includes(q))
+            .slice(0, 8)
+            .map(d => ({ id: d.id, title: d.title }));
+    }
+
+    private showWikiSuggest(props: {
+        items: { id: string; title: string }[];
+        command: (attrs: { draftId: string; label: string }) => void;
+        clientRect?: (() => DOMRect | null) | null;
+    }) {
+        const rect = props.clientRect?.();
+        if (!rect) { this.wikiSuggest.set(null); return; }
+        this.wikiSuggestCommand = attrs => props.command(attrs);
+        const prev = this.wikiSuggest();
+        this.wikiSuggest.set({
+            x: rect.left,
+            y: rect.bottom + 4,
+            items: props.items,
+            index: Math.min(prev?.index ?? 0, Math.max(0, props.items.length - 1)),
+        });
+    }
+
+    wikiSuggestKey(event: KeyboardEvent): boolean {
+        const ws = this.wikiSuggest();
+        if (!ws) return false;
+        const count = Math.max(1, ws.items.length);
+        if (event.key === 'ArrowDown') { this.wikiSuggest.set({ ...ws, index: (ws.index + 1) % count }); return true; }
+        if (event.key === 'ArrowUp') { this.wikiSuggest.set({ ...ws, index: (ws.index - 1 + count) % count }); return true; }
+        if (event.key === 'Enter' || event.key === 'Tab') {
+            const item = ws.items[ws.index];
+            if (item) { this.wikiPick(item); return true; }
+            return false;
+        }
+        if (event.key === 'Escape') { this.wikiSuggest.set(null); return true; }
+        return false;
+    }
+
+    wikiPick(item: { id: string; title: string }) {
+        this.wikiSuggestCommand?.({ draftId: item.id, label: item.title });
+        this.wikiSuggest.set(null);
     }
 
     // ADR-128 — the current document's ancestor chain, oldest first, from the already-loaded

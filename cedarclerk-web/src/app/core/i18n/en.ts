@@ -540,6 +540,11 @@ export const en = {
         enterFullscreen: 'Fullscreen',
         exitFullscreen: 'Exit fullscreen',
         // Toolbar button tooltips.
+        wikilink: {
+            noMatches: 'No matching documents',
+            backlinks: (n: number) => `← ${n}`,
+            backlinksTitle: (n: number) => `Linked from ${n} document${n === 1 ? '' : 's'}`,
+        },
         tb: {
             undo: 'Undo',
             redo: 'Redo',
