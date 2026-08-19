@@ -1000,7 +1000,7 @@ public static class BlogEndpoints
             .Select(d => new
             {
                 d.Id, d.Title, d.ArticleTitle, d.BlogSlug, d.BlogPublishedAt, d.Tags, d.CedarJson, d.ViewCount,
-                d.IsPrivate,
+                d.IsPrivate, d.PrimaryLanguage,
                 TranslationLanguages = db.DraftTranslations.Where(t => t.DraftId == d.Id).Select(t => t.Language).ToList(),
             })
             .ToListAsync();
@@ -1079,8 +1079,11 @@ public static class BlogEndpoints
                   .Append(p.BlogPublishedAt is { } cardDate ? BlogDateFormatter.DateLocal(cardDate, indexLang) : "")
                   .Append("</span>");
 
-                sb.Append("<span class=\"post-card-langs\">RU");
-                foreach (var lang in p.TranslationLanguages.OrderBy(l => l))
+                // T-186 — the primary badge said "RU" for every post while the primary language has
+                // been per-draft since ADR-064. A translation row must never shadow the primary
+                // (ADR-065), but the query does not enforce it, so filter rather than trust.
+                sb.Append("<span class=\"post-card-langs\">").Append(p.PrimaryLanguage.ToUpperInvariant());
+                foreach (var lang in p.TranslationLanguages.Where(l => l != p.PrimaryLanguage).OrderBy(l => l))
                     sb.Append(" · ").Append(lang.ToUpperInvariant());
                 sb.Append("</span>");
 
@@ -1106,7 +1109,7 @@ public static class BlogEndpoints
 
         var channel = await GetBlogChannelInfoAsync(db);
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), Languages.Russian, RenderHeader(channel)));
+        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), indexLang, RenderHeader(channel)));
     }
 
     private static async Task RenderRssAsync(HttpContext ctx, CedarDbContext db)
