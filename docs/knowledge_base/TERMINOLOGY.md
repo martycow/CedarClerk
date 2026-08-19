@@ -68,7 +68,7 @@ guard: none
 | PlanTiers | уровни тарифа | Byte-enum Free(0)/Pro(1)/ProPlus(2)/Forever(3); строки планов: pro $3, proplus $6, trial → tier ProPlus | `Core/PlanTiers.cs`, `Consts.Plans` |
 | TTFP | время до первой публикации | Time to first publish — медиана от `AspNetUsers.CreatedAt` до первой публикации (min по Succeeded `PublishJob` и `BlogPublishedAt`); вспомогательная к активации из BUSINESS §4 | METRICS §3.1 (ADR-126) |
 | PlanLimitations | лимиты тарифов | Центральный гейт по tier: каналы 1/3/10, подпись с Pro, AI с ProPlus, слоты 3 против 2, квоты хранилища | `Core/PlanLimitations.cs` |
-| storage quota | квота хранилища | 200 МБ / 8 ГБ / 16 ГБ / 100 ГБ; известный риск: квоты не обеспечены диском (T-172 — блокер регистрации) | `PlanLimitations.cs`, MULTITENANCY §1 |
+| storage quota | квота хранилища | 100 МБ / 1 ГБ / 3 ГБ / 100 ГБ (ADR-129); остаток риска — медиа на диске машины до шага 2 T-172 | `PlanLimitations.cs`, MULTITENANCY §1 |
 | Trial | триал за $1 | $1 за 7 дней ProPlus, один раз на аккаунт (`TrialUsedAt`); в метриках — «фильтр намерения» | `Consts.Plans`, BUSINESS §4 |
 | Forever / Founder-код | вечный тариф основателя | Постоянный Pro (100 ГБ, без AI) отдельным founder-инвайтом без платёжки; «навсегда» = PlanExpiresAt=null; раздача на джемах | ADR-022, BUSINESS §6 |
 | Grace | грейс-период | 2 дня поверх 30-дневной подписки — лаг renewal-вебхука не «мигает» пользователем в Free | `Core/SubscriptionPlanHelper.cs` |

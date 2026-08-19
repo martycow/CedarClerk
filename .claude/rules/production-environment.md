@@ -91,11 +91,12 @@ Two things about it that are easy to get wrong:
 **Weekly whole-machine image** — DigitalOcean's paid droplet backup (enabled 11.08.2026), retained four
 weeks, taken by the platform.
 
-**Off-box copy — `T-147`, wired but not switched on** (12.08.2026). `rclone` v1.75 is installed at
-`~/bin/rclone` (a static binary, no sudo needed) and `backup.sh` grew a second half: `rclone copy` of
+**Off-box copy — live** (T-147; keys created by Marty, verified against R2 18.08.2026: daily
+`cedar-*.db.gz` in `db/`, ~935 MB of media synced). `rclone` v1.75 is installed at
+`~/bin/rclone` (a static binary, no sudo needed) and `backup.sh` runs the second half: `rclone copy` of
 the day's database into `db/`, kept 30 days there, and `rclone sync` of `media/` with `--backup-dir`
 pointing at `media-removed/<date>`. **Its destination is Cloudflare R2, deliberately not DO Spaces**:
-Spaces would be the same account as the droplet, which is the third failure below.
+Spaces would be the same account as the droplet — the point is a second account, not a second disk.
 
 Three things about it that are load-bearing:
 
@@ -106,20 +107,15 @@ Three things about it that are load-bearing:
 - **It has its own healthchecks check.** "The copy on the droplet failed" and "the copy off the
   droplet failed" are different emergencies; sharing one check would let either silence the other.
 
-Until `R2_REMOTE` is set in `~/.config/cedar-backup.env`, the off-box half **skips silently** and the
-local copy is unaffected. The keys are Marty's to create — the checklist is
-`docs/for_user/integrations-setup.md` §5.
+If `R2_REMOTE` ever disappears from `~/.config/cedar-backup.env`, the off-box half **skips
+silently** and only its own healthcheck notices — the local copy is unaffected. The env file also
+carries `HC_DB_URL`/`HC_OFFSITE_URL` (the two ping URLs; secrets, never in this repo). Setup
+checklist: `docs/for_user/integrations-setup.md` §5.
 
-What is still true until then:
-
-1. **The nightly copy is on the same disk as the database it copies.** A lost droplet takes both.
-2. **It covers the database only.** `media/` is ~938 MB and is in the weekly image alone.
-3. **The weekly image lives in the same account as the droplet.** An accidental destroy, a billing lapse
-   or a compromised login takes it too. The Pi's microSD had that property; it was lost in the move.
-
-Restoring the database alone is now possible (`gunzip` a dated copy over `cedar.db` with the service
-stopped), which it was not between 11.08 and 12.08.2026. Restoring anything else still means restoring
-the whole machine to the moment of the weekly image.
+What this leaves: a lost droplet loses at most one day of database and whatever media changed since
+03:30 UTC; the weekly DO image (same account as the droplet) is now the fallback, not the only
+off-box copy. Restoring the database alone is `gunzip` a dated copy over `cedar.db` with the service
+stopped; media restore is `rclone copy` back from R2.
 
 ## What the move retired
 

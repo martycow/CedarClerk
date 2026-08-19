@@ -44,18 +44,19 @@ public static class AssetEndpoints
                         statusCode: StatusCodes.Status403Forbidden);
                 }
 
+                using var buffer = new MemoryStream();
+                await file.CopyToAsync(buffer);
+                var bytes = ImageMetadataStripper.Strip(buffer.ToArray(), file.ContentType);
+
                 var asset = new Asset
                 {
                     FileName = file.FileName,
                     ContentType = file.ContentType,
-                    SizeBytes = file.Length,
+                    SizeBytes = bytes.Length,
                     OwnerId = uid,
                 };
                 asset.LocalPath = $"asset_{asset.Id}{ext}";
-
-                using var buffer = new MemoryStream();
-                await file.CopyToAsync(buffer);
-                await File.WriteAllBytesAsync(Path.Combine(media.Dir, asset.LocalPath), buffer.ToArray());
+                await File.WriteAllBytesAsync(Path.Combine(media.Dir, asset.LocalPath), bytes);
 
                 db.Assets.Add(asset);
                 await db.SaveChangesAsync();

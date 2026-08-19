@@ -117,6 +117,10 @@ public static class AssetMetadata
             }
 
             using var output = new MemoryStream();
+            // ImageSharp copies source EXIF (incl. GPS) into the output by default (ADR-130).
+            image.Metadata.ExifProfile = null;
+            image.Metadata.XmpProfile = null;
+            image.Metadata.IptcProfile = null;
             image.SaveAsJpeg(output, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder { Quality = ThumbnailQuality });
             return output.ToArray();
         }

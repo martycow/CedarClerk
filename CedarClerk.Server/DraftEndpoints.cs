@@ -1499,14 +1499,15 @@ public static class DraftEndpoints
 
             var pathRewrites = new Dictionary<string, string>();
 
-            foreach (var (originalName, bytes) in pkg.Assets)
+            foreach (var (originalName, rawBytes) in pkg.Assets)
             {
-                var contentType = ImageContentSniffer.DetectContentType(bytes);
+                var contentType = ImageContentSniffer.DetectContentType(rawBytes);
                 if (contentType is null || !ImportImageExtensions.TryGetValue(contentType, out var ext))
                     return Results.BadRequest(new { error = $"Unsupported or invalid asset: {originalName}" });
-                if (bytes.Length > Consts.FileSizes.ImageMaxBytes)
+                if (rawBytes.Length > Consts.FileSizes.ImageMaxBytes)
                     return Results.BadRequest(new { error = $"Asset too large: {originalName}" });
 
+                var bytes = ImageMetadataStripper.Strip(rawBytes, contentType);
                 var newName = $"asset_{Guid.NewGuid()}{ext}";
                 await File.WriteAllBytesAsync(Path.Combine(media.Dir, newName), bytes);
 
@@ -1658,6 +1659,7 @@ public static class DraftEndpoints
                     continue;
                 }
 
+                bytes = ImageMetadataStripper.Strip(bytes, contentType);
                 incomingBytes += bytes.Length;
                 pending.Add((refName, bytes, contentType, ext));
             }

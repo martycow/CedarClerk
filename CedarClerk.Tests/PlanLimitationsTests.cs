@@ -18,9 +18,9 @@ public class PlanLimitationsTests
     }
 
     [Theory]
-    [InlineData(PlanTiers.Free, 200L * 1024 * 1024)]
-    [InlineData(PlanTiers.Pro, 8L * 1024 * 1024 * 1024)]
-    [InlineData(PlanTiers.ProPlus, 16L * 1024 * 1024 * 1024)]
+    [InlineData(PlanTiers.Free, 100L * 1024 * 1024)]
+    [InlineData(PlanTiers.Pro, 1L * 1024 * 1024 * 1024)]
+    [InlineData(PlanTiers.ProPlus, 3L * 1024 * 1024 * 1024)]
     [InlineData(PlanTiers.Forever, 100L * 1024 * 1024 * 1024)]
     public void Storage_limits_per_tier(PlanTiers tier, long expectedBytes)
     {

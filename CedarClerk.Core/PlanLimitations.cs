@@ -17,9 +17,10 @@ public static class PlanLimitations
 
     public static long StorageLimitBytes(PlanTiers tier) => tier switch
     {
-        PlanTiers.Free => 200L * 1024 * 1024,           // 200Mb
-        PlanTiers.Pro => 8L * 1024 * 1024 * 1024,       // 8Gb
-        PlanTiers.ProPlus => 16L * 1024 * 1024 * 1024,  // 16Gb
+        // Sized to the droplet's disk, not to generosity (ADR-129) — raising later is easy, lowering isn't.
+        PlanTiers.Free => 100L * 1024 * 1024,           // 100Mb
+        PlanTiers.Pro => 1L * 1024 * 1024 * 1024,       // 1Gb
+        PlanTiers.ProPlus => 3L * 1024 * 1024 * 1024,   // 3Gb
         PlanTiers.Forever => 100L * 1024 * 1024 * 1024, // 100Gb
         _ => throw new ArgumentOutOfRangeException(nameof(tier), tier, null)
     };

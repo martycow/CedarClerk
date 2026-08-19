@@ -18,6 +18,11 @@ public static class ImageCompressor
         try
         {
             using var image = Image.Load(original);
+            // ImageSharp copies source EXIF (incl. GPS) into the output by default — the derivative
+            // is what actually reaches Telegram (ADR-130).
+            image.Metadata.ExifProfile = null;
+            image.Metadata.XmpProfile = null;
+            image.Metadata.IptcProfile = null;
             if (image.Width > MaxLongEdge || image.Height > MaxLongEdge)
             {
                 var ratio = (double)MaxLongEdge / Math.Max(image.Width, image.Height);

@@ -17,7 +17,7 @@ An indie game developer who is also, by necessity, everything else: programmer, 
 
 Why this audience and not one of the four floated in `Q-1` (bloggers, photo/video makers, writers, indie devs): it is the one whose needs are verified by doing the work rather than by guessing. Marty is the first user, and the only one so far.
 
-Product name is still open (`Q-17`, `docs/tasks/BACKLOG.md`). The brief's working title is *Cedar Clerk For Indie Developers*; the standing recommendation is to keep `Cedar Clerk` as the platform name, since a rename drags the domain, the bot handle, the `.cedar` extension and a hundred ADRs behind it.
+The product name stays **Cedar Clerk** (Q-17 closed by Marty 18.08.2026): the platform keeps its name, and the indie-developer focus is expressed in a subtitle — a rename would drag the domain, the bot handle, the `.cedar` extension and a hundred ADRs behind it.
 
 ## What Cedar Clerk is
 
@@ -42,13 +42,13 @@ Not a Telegram-only tool for Telegram-only creators — channel-agnostic by desi
 
 | Tier | Price | What it unlocks |
 |---|---|---|
-| Free | $0 | 1 channel, 200MB asset storage, stats history capped at the last 30 snapshots (`PlanLimitations.MaxChannels`/`StorageLimitBytes` — code-confirmed, not the originally-planned estimate) |
-| Pro | $3/mo | Up to 3 channels, **8GB** storage, no "Powered by Cedar Clerk" badge — **same 30-snapshot stats cap as Free**: `ChannelEndpoints.cs`'s stats query has no plan check at all, so "full history" was never actually true for any tier |
-| Pro Plus | $6/mo | Everything in Pro + AI features (`PlanLimitations.HasAiFeatures`): auto-translate, AI edit (fix errors / "schizo-izer"), daily AI-call quota via `AiUsage`. Up to 10 channels, **16GB** storage |
+| Free | $0 | 1 channel, 100MB asset storage, stats history capped at the last 30 snapshots (`PlanLimitations.MaxChannels`/`StorageLimitBytes` — code-confirmed, not the originally-planned estimate) |
+| Pro | $3/mo | Up to 3 channels, **1GB** storage, no "Powered by Cedar Clerk" badge — **same 30-snapshot stats cap as Free**: `ChannelEndpoints.cs`'s stats query has no plan check at all, so "full history" was never actually true for any tier |
+| Pro Plus | $6/mo | Everything in Pro + AI features (`PlanLimitations.HasAiFeatures`): auto-translate, AI edit (fix errors / "schizo-izer"), daily AI-call quota via `AiUsage`. Up to 10 channels, **3GB** storage |
 | Trial | $1 one-time | 7 days of Pro Plus, usable once per account (`ApplicationUser.TrialUsedAt`) |
 | Founder / Lifetime | one-time, via a designated invite code | Permanent Pro tier, granted at registration through a separate founder invite code — no payment flow, no AI (see ADR-022, `docs/DECISIONS.md`) |
 
-> **The storage quotas above outrun the disk** (8/16GB promised against ~40GB free on the droplet — five Pro users at quota take the server down). Known, analysed in `docs/product/MULTITENANCY.md` §1, tracked as `T-172`: a registration blocker, not a footnote.
+> Quotas are sized to the droplet's disk (ADR-129, `docs/product/MULTITENANCY.md` §1). The remaining registration blocker in `T-172` is step 2: media into object storage, so the disk stops being the ceiling.
 
 Beside the subscription tiers there is a **prepaid credit wallet** (ADR-092, live): packs of 10/$4, 50/$18, 100/$30 (Stars 200/900/1500), bought in Settings → Credits, spent 1 credit per X post — the pattern every metered cost is meant to move to (`T-152` proposes moving all AI calls onto it, since Pro Plus's flat AI quota has unproven margin — `docs/product/BUSINESS.md` §3).
 
@@ -61,6 +61,6 @@ Carried forward from planning sessions — genuine unknowns, not implementation 
 > TODO (Marty): domain strategy — direction now resolved (ADR-020: separate dedicated domain for tenant blogs, working name `cedarclerk.app`), but three sub-questions remain open: exact domain name; whether `blog.mooexe.dev` migrates or stays Marty's personal blog; subdomain vs. path scheme for tenants.
 > ~~TODO (Marty): target market positioning~~ — **answered 10.08.2026**: indie game developers, see the top of this file and `docs/product/INDIEDEV.md`. Competitors and success metrics remain unarticulated.
 > ~~TODO (Marty): long-term vision beyond Phase 7/8~~ — **answered 10.08.2026**: the indie-gamedev toolkit is the long-term direction (Phase 13). Phase 7 (Entertainer role) is not cancelled, just no longer the horizon.
-> TODO (Marty): product name — see `Q-17`.
+> ~~TODO (Marty): product name~~ — **answered 18.08.2026**: the name stays Cedar Clerk (Q-17 closed), the focus lives in a subtitle.
 
 Lifetime-deal pricing is resolved: yes, via the Founder/Lifetime invite-code plan (ADR-022, `docs/DECISIONS.md`) — the only open piece is the invite code's actual value.

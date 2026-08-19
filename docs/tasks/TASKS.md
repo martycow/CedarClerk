@@ -12,17 +12,12 @@ Phase status: `docs/tasks/ROADMAP.md`; open tasks: the board in `docs/tasks/BACK
 
 ## Now
 
-- [ ] Growth anchors — T-158 (sprint → devlog draft), T-159 (project showcase), T-160 (onboarding templates), T-161 (Discord webhook), T-154 (landing: EN, devlog-first, waitlist — prerequisite of T-164 and any acquisition) #growth P1
-- [ ] Cheap safety — T-175 (EXIF/GPS stripping on photo upload); T-174 (OG tags) is done, hands-on check in the list below #security P1
-- [ ] Registration blockers — T-172 step 1 (cut quotas to honest numbers — a minute of edit, figures are Marty's), T-149 (first test restore of a backup — ten minutes), T-147 (off-box copy waits for R2 keys) #infra P1
+- [ ] Growth anchors — T-158 (sprint → devlog draft), T-159 (project showcase), T-160 (onboarding templates), T-161 (Discord webhook), T-154 (landing: EN, devlog-first, waitlist — prerequisite of any acquisition) #growth P1
+- [ ] Cheap safety — T-175 (EXIF/GPS stripping) is done, ADR-130; hands-on check below, old files on the droplet are T-202. T-174 (OG tags) is done, hands-on check below #security P1
+- [ ] Registration blockers — T-172 remainder: media into R2 (quotas cut, ADR-129; first backup restore tested 18.08 — monthly cadence per `docs/product/BUSINESS.md` §5) #infra P1
 
 ## Waiting on Marty
 
-- [ ] T-164 PRGE 2026, go or not — October 9–11; going makes September tight, T-154 must land first #decision P1
-- [ ] T-172 Quota figures — proposal from `docs/product/MULTITENANCY.md` §1: Free 100 MB / Pro 1 GB / Pro Plus 3 GB #decision P1
-- [ ] T-147 Cloudflare R2 bucket + token + second healthchecks check — checklist in `docs/for_user/integrations-setup.md` §5 #infra P1
-- [ ] Q-17 Product name — recommendation: keep Cedar Clerk, express the focus in a subtitle #decision P2
-- [ ] Q-18 NSFW policy — needs a line in Terms #decision #legal P2
 - [ ] Show Terms/Privacy to a lawyer — before public registration opens; the texts are filled (13.08), no lawyer has seen them — a gate in `docs/product/BUSINESS.md` §2 #legal P1
 
 ## Live verification
@@ -37,6 +32,7 @@ Code is written and covered by tests, but never checked by hand or on a device:
 - [ ] flush-on-hide on a real iPhone — remainder of T-018 (the 29.07 incident was on iOS; Safari kills a tab differently than desktop) #mobile P2
 - [ ] Save guards + restore from history — remainder of T-060: see the wipe-save refusal, "restore stored" and a version rollback by hand; confirm a heavy honest edit does not false-positive #editor P2
 - [ ] OG previews (T-174) — via @WebpageBot or opengraph.xyz with `?v=2` on the URL (Telegram caches the old scrape): public post — full card with image and description; semi-public — title + fallback only; private and the gate — nothing. `/og-default.png` serves from the blog host #blog P1
+- [ ] EXIF stripping (T-175) — upload a phone photo with GPS, download it back from `/media/`, confirm the coordinates are gone (any EXIF viewer); the Telegram derivative too #media #security P1
 - [ ] Paste/drop into the editor (T-177) — a screenshot from the real clipboard (Win+Shift+S → Ctrl+V) and a multi-file drag&drop; the progress panel appears, files land at the drop point #editor P1
 - [ ] Media library (T-177) — insert from the library → publish → media renders on the blog and Telegram; deleting a used asset → 409 with post titles; a free one — the file AND the `_tg` derivative disappear from disk #media P1
 - [ ] The `[[` trigger on a Russian layout (T-181) — how the suggester behaves when `[` needs the Latin layout; if unreachable from Russian, an alternative is needed (a button/command) #editor P1
