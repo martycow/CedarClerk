@@ -1,5 +1,40 @@
 # Changelog
 
+## 2026-08-18 — the map gets a guard, the words get a dictionary
+
+Marty pasted an external DOCS-FLOW analysis — six P0 gaps, five P1 docs, structural scheme
+complaints, three waves of agents — with the ultracode keyword. The evening went to verifying it
+before obeying it, and the verification earned its keep: a 12-agent workflow checked every factual
+claim against the repo with file:line evidence. Four claims **refuted** (the 0.10.8/0.10.9 «tag
+divergence» — both are ancestors of master; «release process undocumented» — it lives in CLAUDE.md,
+ARCHITECTURE, five ADRs and GitGuard's own tests, so RELEASE.md is rejected and the one real gap —
+preflight not checking backup freshness — became `T-195`; «T-052 hard blocker» — closed five days
+ago; «Clerk.com/AWS Cedar conflicts surfaced» — zero trace in the repo). The famous «~130
+untranslated strings» is really **48** interpolated ones — plain literals have been guarded by a
+red-capable test since 01.08 — and the analysis' own best idea was confirmed everywhere it counted:
+no QA doc, no threat model, an empty knowledge base, and a scheme rule enforced by nothing.
+
+So the rule got teeth: **`DocsFlowGraphTests`** now fails the build when a live doc is missing from
+the DOCS-FLOW map or the map names a path that does not exist — proven red with an orphan file
+first, the `SchemaDriftGuardTests` pattern applied to the docs themselves. **ADR-123** put
+four-field front-matter (`owner`, `last_verified`, `source_of_truth_for`, `guard`) on all 17 living
+docs — freshness readable without git log. The mermaid got its **edge legend** (truth-flow vs hard
+gate vs reading-order, the three styles that used to read identically), dotted reading-order edges,
+and the two nodes the analysis rightly missed: `production-environment.md` («истина о проде», named
+so in prose and absent from the scheme — our own rule violated) and Terms+Privacy with the lawyer
+gate. **`knowledge_base/TERMINOLOGY.md`** seeded the empty category: ~80 project terms in five
+domains, each extracted from real code by parallel agents and merged — Draft to fingerprint,
+ShrinkGuard to StageBoard. Two live contradictions found by the verifiers were fixed on the spot
+(BUSINESS §4 vs T-153 on whether activation is computable today; a stale T-052 comment in
+`AuthEndpoints.cs`).
+
+The rest became **13 board rows** (`T-187…T-199`) rather than files: QA.md with its
+verification-planner (High — the checklist's 8 entries / 19 items live in the fastest-rotting file
+by the docs' own admission), Wave-1 agents (High, but **deliberately not created today** — the
+analysis' own warning about nine drifting agent-files is taken at face value: one at a time, kill
+the unused), FEEDBACK / COMPETITORS-import / event dictionary / threat model (Medium), and the Low
+tail. 937 tests green, two of them new.
+
 ## 2026-08-18 — docs/ gets rooms
 
 Marty's taxonomy, third docs session of the day: the root of `docs/` keeps only the high-level
