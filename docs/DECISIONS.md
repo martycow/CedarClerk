@@ -136,3 +136,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-121 — `cedar run`: локальная проверка настоящей сборки (18.08.2026)](adr/ADR-121.md)
 - [ADR-122 — `docs/admin-panel-scope.md` удалён; два его решения переезжают сюда (18.08.2026)](adr/ADR-122.md)
 - [ADR-123 — Front-matter метаданных на живых доках (18.08.2026)](adr/ADR-123.md)
+- [ADR-124 — OG/Twitter-meta на блоге: политика приватности и абсолютные URL (18.08.2026)](adr/ADR-124.md)
