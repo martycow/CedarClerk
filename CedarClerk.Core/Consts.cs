@@ -56,6 +56,13 @@ public static class Consts
         public const string Start = "/start";
     }
 
+    public static class Documents
+    {
+        // ADR-128 — the document tree's depth cap: enough for a ГДД outline, shallow enough that
+        // breadcrumbs and the tree view never degenerate.
+        public const int MaxTreeDepth = 10;
+    }
+
     public static class General
     {
         // Not a secret — just enough to avoid storing raw visitor IPs directly.

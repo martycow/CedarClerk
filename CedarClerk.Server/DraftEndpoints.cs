@@ -30,6 +30,7 @@ public static class DraftEndpoints
     public record RenameTagRequest(string From, string To);
     public record UpdateFolderRequest(Guid? FolderId);
     public record UpdateSeriesRequest(Guid? SeriesId);
+    public record UpdateParentRequest(Guid? ParentId, Guid? BeforeId = null);
     public record UpdatePrivateRequest(bool IsPrivate);
     public record UpdateTemplateRequest(bool IsTemplate);
     public record UpdateListedRequest(bool IsListedWhilePrivate);
@@ -153,6 +154,7 @@ public static class DraftEndpoints
                 {
                     d.Id, d.Title, d.PrimaryLanguage, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
                     d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.SeriesId, d.IsPrivate, d.IsTemplate,
+                    d.ParentDraftId, d.SiblingOrder,
                     d.DisableCopy, d.DisableReactions, d.DisableComments, d.ViewCount,
                     Translations = db.DraftTranslations.Where(t => t.DraftId == d.Id)
                         .Select(t => new { t.Language, t.UpdatedAt }).ToList(),
@@ -221,6 +223,7 @@ public static class DraftEndpoints
             {
                 d.Id, d.Title, d.PrimaryLanguage, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
                 d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.SeriesId, d.IsPrivate, d.IsTemplate,
+                d.ParentDraftId, d.SiblingOrder,
                 d.DisableCopy, d.DisableReactions, d.DisableComments, d.ViewCount,
                 ReactionCount = reactionCounts.GetValueOrDefault(d.Id),
                 NewViewCount = deltas[d.Id].Views,
@@ -443,6 +446,55 @@ public static class DraftEndpoints
 
             await db.SaveChangesAsync();
             return Results.Ok(new { draft.SeriesId, draft.SeriesOrder });
+        });
+
+        // ADR-128 — place a document in the tree: under `parentId` (null = root), before
+        // `beforeId` among its new siblings (absent = at the end). The whole target sibling set
+        // is renumbered 0..n, so orders never drift apart. Reorder-within-parent is the same call.
+        groupBuilder.MapPut("/{id:guid}/parent", async (Guid id, UpdateParentRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            if (req.ParentId is { } parentId)
+            {
+                if (parentId == id)
+                    return Results.BadRequest(new { error = ErrorMessages.TreeWouldCycle });
+                var parents = await db.Drafts.Where(d => d.OwnerId == uid)
+                    .Select(d => new { d.Id, d.ParentDraftId })
+                    .ToDictionaryAsync(d => d.Id, d => d.ParentDraftId);
+                if (!parents.ContainsKey(parentId)) return Results.NotFound();
+
+                // Walk the new parent's ancestor chain: meeting `id` there means the target is our
+                // own descendant (a cycle); the chain's length is the new depth. Iteration is
+                // capped so pre-existing bad data can never spin this forever.
+                var depth = 1;
+                for (Guid? cursor = parentId; cursor is { } c; cursor = parents.GetValueOrDefault(c))
+                {
+                    if (c == id)
+                        return Results.BadRequest(new { error = ErrorMessages.TreeWouldCycle });
+                    if (++depth > Consts.Documents.MaxTreeDepth)
+                        return Results.BadRequest(new { error = ErrorMessages.TreeTooDeep });
+                }
+            }
+
+            var siblings = await db.Drafts
+                .Where(d => d.OwnerId == uid && d.ParentDraftId == req.ParentId && d.Id != id)
+                .OrderBy(d => d.SiblingOrder).ThenByDescending(d => d.UpdatedAt)
+                .ToListAsync();
+            var insertAt = siblings.Count;
+            if (req.BeforeId is { } beforeId)
+            {
+                var idx = siblings.FindIndex(d => d.Id == beforeId);
+                if (idx >= 0) insertAt = idx;
+            }
+            draft.ParentDraftId = req.ParentId;
+            siblings.Insert(insertAt, draft);
+            for (var i = 0; i < siblings.Count; i++) siblings[i].SiblingOrder = i;
+
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.ParentDraftId, draft.SiblingOrder });
         });
 
         // Private posts (see the ADR following ADR-040, docs/DECISIONS.md) — invite by email,
@@ -1223,9 +1275,9 @@ public static class DraftEndpoints
             // on the module's own detach path, because a draft can be deleted from the ordinary
             // drafts list, and an invariant only one of the two doors honours is not an invariant.
             // Costs one indexed lookup; for the overwhelmingly common unfiled draft it stops there.
-            var projectId = await db.Drafts.Where(x => x.Id == id && x.OwnerId == uid)
-                .Select(x => x.ProjectId).FirstOrDefaultAsync();
-            if (await Modules.IndieDev.ProjectEndpoints.IsLastDocumentOfProjectAsync(db, id, projectId, uid))
+            var info = await db.Drafts.Where(x => x.Id == id && x.OwnerId == uid)
+                .Select(x => new { x.ProjectId, x.ParentDraftId }).FirstOrDefaultAsync();
+            if (await Modules.IndieDev.ProjectEndpoints.IsLastDocumentOfProjectAsync(db, id, info?.ProjectId, uid))
                 return Results.Json(new { error = ErrorMessages.ProjectNeedsOneDocument }, statusCode: StatusCodes.Status409Conflict);
 
             var deleted = await db.Drafts
@@ -1233,6 +1285,9 @@ public static class DraftEndpoints
                 .ExecuteDeleteAsync();
             if (deleted > 0)
             {
+                // ADR-128 — children move up to the grandparent: the subtree survives its root.
+                await db.Drafts.Where(x => x.OwnerId == uid && x.ParentDraftId == id)
+                    .ExecuteUpdateAsync(s => s.SetProperty(d => d.ParentDraftId, info!.ParentDraftId));
                 await db.DraftStatSeens.Where(x => x.DraftId == id && x.OwnerId == uid).ExecuteDeleteAsync();
                 // ADR-065 — revisions hold complete copies of the document, and unlike
                 // DraftTranslation (which has a real navigation property, so EF cascades it)

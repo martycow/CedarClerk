@@ -293,6 +293,12 @@ public class Draft
     public Guid? SeriesId { get; set; }
     public int? SeriesOrder { get; set; }
 
+    // ADR-128 — the document tree (ГДД structure). Plain scalar, no FK, same convention as
+    // FolderId; null = root. Deleting a node lifts its children to the grandparent — documents
+    // outlive structure. Depth is capped at 10 and cycles are refused by the endpoint.
+    public Guid? ParentDraftId { get; set; }
+    public int SiblingOrder { get; set; }
+
     // ADR-102 — what kind of document this is (CedarClerk.Core.DocumentTypes). The default is what
     // makes this a column instead of a migration: every row written before types existed IS a post,
     // so there is nothing to backfill. A Draft was never "a post" in the code — it is a TipTap

@@ -64,6 +64,8 @@ public static class ErrorMessages
     public static string SlugTaken => Ru("Такой адрес уже занят.", "That URL is already taken");
     public static string SeriesNameEmptySlug => Ru("Из названия серии не получается адрес — добавьте буквы или цифры.", "Series name produces an empty URL — add letters or digits");
     public static string SeriesNameTaken => Ru("Серия с таким названием уже есть.", "A series with this name already exists");
+    public static string TreeWouldCycle => Ru("Документ нельзя вложить в самого себя или в собственный поддокумент.", "A document cannot be nested inside itself or its own child");
+    public static string TreeTooDeep => Ru("Дерево слишком глубокое — максимум 10 уровней.", "The tree is too deep — 10 levels at most");
     public static string InviteCodeExists => Ru("Такой код уже существует.", "That code already exists");
     public static string NameReservedForAuthor => Ru("Это имя зарезервировано за автором поста.", "That name is reserved for the post's author.");
     public static string NotAZipArchive => Ru("Файл не является корректным .zip-архивом.", "The file is not a valid .zip archive.");

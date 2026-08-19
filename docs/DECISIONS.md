@@ -140,3 +140,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-125 — Серии постов: сущность, а не тег (18.08.2026)](adr/ADR-125.md)
 - [ADR-126 — Словарь событий метрик: контракт до провайдера аналитики (18.08.2026)](adr/ADR-126.md)
 - [ADR-127 — Медиатека v1: страница /media, удаление со сканом, paste/drop (18.08.2026)](adr/ADR-127.md)
+- [ADR-128 — Дерево документов и wiki-links: структура ГДД (18.08.2026)](adr/ADR-128.md)
