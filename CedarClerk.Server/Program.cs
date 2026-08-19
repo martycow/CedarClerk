@@ -271,6 +271,7 @@ app.MapWhen(ctx => string.Equals(ctx.Request.Host.Host, blogHost, StringComparis
     blogApp => blogApp.Run(BlogEndpoints.HandleRequest));
 
 app.MapAuthEndpoints();
+app.MapWaitlistEndpoint();
 app.MapDraftEndpoints();
 app.MapFolderEndpoints();
 app.MapSeriesEndpoints();

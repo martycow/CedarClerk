@@ -350,6 +350,14 @@ Not Angular: these are strings built on the server and host-routed by `Program.c
 | RSS | `RenderRssAsync`, `/rss.xml` | — | Latest 30 published posts | N/A | Auto-discovery `<link>` in every page head |
 | Site footer | `ShellTemplate`, `.site-footer-inner` | panel | **Rebuilt 13.08.2026** into three groups on one line: `.footer-brand` (cedar mark + "Made with Cedar Clerk"), `.footer-links` (Terms · Privacy · Status) and `.footer-badge` (DigitalOcean referral). Was the made-with line centred with the badge centred on a second row | N/A — server-rendered | Terms and Privacy point at the **app host**, not the blog: one copy of a legal page for both hosts. Status points at `status.mooexe.dev`, deliberately off-box — it is reachable exactly when the blog is not. Under 700px the three groups stack and re-centre, because a stacked row pushed to the edges reads as ragged. The badge is dimmed to `opacity: .72` (full on hover): it ships as a white plate and was otherwise the brightest thing on a dark page |
 
+## Landing (server-rendered — `CedarClerk.Server/LandingEndpoints.cs`, `/` for signed-out visitors on the app host)
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Hero | `.hero` | panel | **Reworked 18.08.2026 (ADR-135, T-154)** — devlog-first: "Build your game. Grow your audience. One tool.", English by default (Russian only when the browser asks first) | N/A — server-rendered | The four feature cards re-slanted to the same story: work → story, six languages, every network, a public home |
+| Waitlist form | `.waitlist`, `#waitlist-form` | form | **Added 18.08.2026 (ADR-135)** — the primary CTA while registration is invite-only: email → `POST /api/waitlist`, inline JS swaps the form for a done-line | The submit button is the state | Honeypot field instead of a captcha; a repeat signup answers OK — the visitor's goal is to be on the list, and they are |
+| Pricing cards | `.plans` | panel | Prices and limits read from `PlanLimitations`/`Consts.Plans` at render | N/A | Cannot drift from the code that enforces them — the reason the page is server-rendered |
+
 ## Surfaces added in 0.9.16–0.9.17 (30.07.2026) — absent from this file before
 
 | Element | Location | Type | Purpose | Loading state | Notes |

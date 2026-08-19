@@ -140,6 +140,9 @@ public static class ErrorMessages
     public static string DiscordWebhookInvalid => Ru(
         "Discord не принял этот вебхук — проверьте URL (он должен начинаться с https://discord.com/api/webhooks/).",
         "Discord refused this webhook — check the URL (it must start with https://discord.com/api/webhooks/).");
+    public static string WaitlistEmailInvalid => Ru(
+        "Это не похоже на адрес почты.",
+        "That does not look like an email address.");
     public static string ShowcaseSlugEmpty => Ru(
         "Слаг получился пустым — используйте латинские буквы или цифры.",
         "The slug came out empty — use latin letters or digits.");

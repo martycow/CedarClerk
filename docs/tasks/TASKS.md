@@ -12,13 +12,13 @@ Phase status: `docs/tasks/ROADMAP.md`; open tasks: the board in `docs/tasks/BACK
 
 ## Now
 
-- [ ] Growth anchors — T-154 (landing: EN, devlog-first, waitlist — prerequisite of any acquisition) remains; T-158 (devlog assembler, ADR-132), T-159 (showcase page, ADR-134), T-160 (starter skeletons + example project, ADR-133) and T-161 (Discord webhook, ADR-131) are done, hands-on checks below #growth P1
+- [ ] Growth anchors — all five are done: T-154 (landing: devlog-first, EN default, waitlist — ADR-135), T-158 (devlog assembler, ADR-132), T-159 (showcase page, ADR-134), T-160 (starter skeletons + example project, ADR-133), T-161 (Discord webhook, ADR-131). Hands-on checks below; the editor screenshot for the landing is T-204 #growth P1
 - [ ] Cheap safety — T-175 (EXIF/GPS stripping) is done, ADR-130; hands-on check below, old files on the droplet are T-202. T-174 (OG tags) is done, hands-on check below #security P1
 - [ ] Registration blockers — T-172 remainder: media into R2 (quotas cut, ADR-129; first backup restore tested 18.08 — monthly cadence per `docs/product/BUSINESS.md` §5) #infra P1
 
 ## Waiting on Marty
 
-- [ ] Show Terms/Privacy to a lawyer — before public registration opens; the texts are filled (13.08), no lawyer has seen them — a gate in `docs/product/BUSINESS.md` §2 #legal P1
+- [ ] Show Terms/Privacy to a lawyer — before public registration opens; the texts are filled (13.08), no lawyer has seen them — a gate in `docs/product/BUSINESS.md` §2. The privacy text also needs a line about the waitlist email (ADR-135) before that pass #legal P1
 
 ## Live verification
 
@@ -42,6 +42,7 @@ Code is written and covered by tests, but never checked by hand or on a device:
 - [ ] Sprint → devlog (T-158) — on a real sprint with done/open tasks and a released build: the "Devlog draft" button on the planner card assembles the three sections in the document's language and opens the editor #editor P1
 - [ ] Onboarding (T-160) — on a fresh account: "Create an example project" from the empty `/projects` builds Cedar Quest whole (board, sprint, build, devlog), and a new ordinary project's starter document opens with its skeleton in the UI language #growth P1
 - [ ] Showcase page (T-159) — enable the public page in project settings, mark two tasks public: `/games/{slug}` shows cover, links, the devlog feed (private-listed posts locked, unlisted absent) and the roadmap; archiving the project 404s the page #blog P1
+- [ ] Landing + waitlist (T-154) — after deploy: an incognito visit shows the EN devlog-first page (RU browser gets RU), the waitlist form accepts an email and swaps to the done-line, the row lands in `WaitlistEntries` (`cedar db`) #growth P1
 - [ ] Old unverified small things — once each, no rush: incremental re-translation preserving manual edits; DeepL's uk/be/ka refusal with a clear message; the glossary tooltip on a live published post; per-language cross-links; tag rename/delete; audit paging past page one; Russian wording screen by screen #misc P3
 
 ## Notes

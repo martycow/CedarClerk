@@ -921,3 +921,20 @@ public class PublishTarget
     /// <summary>Set for Telegram rows only — the detail table described above.</summary>
     public Guid? ChannelId { get; set; }
 }
+
+/// <summary>
+/// One waitlist signup from the landing (T-154, ADR-135) — an email, the page's language and when.
+/// Deliberately nothing else: the list's one purpose is a launch announcement, and every extra
+/// column would be PII collected before there is even an account to attach it to.
+/// </summary>
+public class WaitlistEntry
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public string Email { get; set; } = "";
+
+    /// <summary>Which language the landing rendered in — what language to announce in.</summary>
+    public string Language { get; set; } = "";
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}

@@ -38,6 +38,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<DraftTargetText> DraftTargetTexts => Set<DraftTargetText>();
     public DbSet<PublishJob> PublishJobs => Set<PublishJob>();
     public DbSet<CreditEntry> CreditEntries => Set<CreditEntry>();
+    public DbSet<WaitlistEntry> WaitlistEntries => Set<WaitlistEntry>();
 
     // Indie-gamedev module (Phase 13, ADR-101) — same context on purpose, see Entities.IndieDev.cs.
     public DbSet<Project> Projects => Set<Project>();
@@ -134,6 +135,10 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
             .IsUnique()
             .HasFilter("\"ShowcaseSlug\" IS NOT NULL");
         builder.Entity<Project>().Property(p => p.ShowcaseLinks).HasDefaultValue("");
+        // ADR-135 — one row per address; the endpoint stores lowercase, so the index can be plain.
+        builder.Entity<WaitlistEntry>()
+            .HasIndex(w => w.Email)
+            .IsUnique();
         // T-122 — the scan's upsert key: a file is the same file if it is at the same relative path
         // in the same project. Unique, so two scans racing cannot double a row.
         builder.Entity<AssetEntry>()

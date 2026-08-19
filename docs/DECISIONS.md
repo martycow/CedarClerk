@@ -147,3 +147,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-132 — Sprint → devlog draft: the assembler writes the material, not the story (18.08.2026)](adr/ADR-132.md)
 - [ADR-133 — Onboarding: starter documents with real skeletons, an example project on demand (18.08.2026)](adr/ADR-133.md)
 - [ADR-134 — Public project showcase: a game page on the blog host, opt-in per item (18.08.2026)](adr/ADR-134.md)
+- [ADR-135 — Landing: devlog-first, English default, a waitlist while the door is closed (18.08.2026)](adr/ADR-135.md)

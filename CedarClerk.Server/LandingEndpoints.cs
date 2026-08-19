@@ -1,6 +1,7 @@
 using System.Net;
 using CedarClerk.Core;
 using CedarClerk.Localization;
+using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
 
@@ -56,20 +57,51 @@ public static class LandingEndpoints
     }
 
     /// <summary>
-    /// Russian unless the browser asks for something else first. The product's own default is
-    /// Russian and its author writes in it; an English-first browser gets English.
+    /// English unless the browser asks for Russian first (ADR-135) — the market this page now
+    /// sells to is English-speaking, and the old Russian-first rule dated from when the author
+    /// was the audience.
     /// </summary>
     private static bool PrefersRussian(string acceptLanguage)
     {
-        if (string.IsNullOrWhiteSpace(acceptLanguage)) return true;
+        if (string.IsNullOrWhiteSpace(acceptLanguage)) return false;
         foreach (var entry in acceptLanguage.Split(','))
         {
             var code = entry.Split(';')[0].Trim().ToLowerInvariant();
             if (code.StartsWith("ru")) return true;
             if (code.Length >= 2) return false;
         }
-        return true;
+        return false;
     }
+
+    /// <summary>
+    /// T-154 (ADR-135) — the waitlist behind the landing's primary CTA. Anonymous by design; the
+    /// honeypot field stands in for a captcha, and a repeat signup answers OK rather than an error:
+    /// the visitor's goal is to be on the list, and they are.
+    /// </summary>
+    public static void MapWaitlistEndpoint(this WebApplication app)
+    {
+        app.MapPost("/api/waitlist", async (WaitlistRequest req, CedarDbContext db) =>
+        {
+            if (!string.IsNullOrEmpty(req.Website)) return Results.Ok(); // a bot filled the invisible field
+            var email = (req.Email ?? "").Trim().ToLowerInvariant();
+            if (email.Length is < 5 or > 254 || email.Count(c => c == '@') != 1
+                || !email.Contains('.', StringComparison.Ordinal) || email.EndsWith('@'))
+                return Results.BadRequest(new { error = ErrorMessages.WaitlistEmailInvalid });
+
+            if (!await db.WaitlistEntries.AnyAsync(w => w.Email == email))
+            {
+                db.WaitlistEntries.Add(new WaitlistEntry
+                {
+                    Email = email,
+                    Language = req.Language == "ru" ? "ru" : "en",
+                });
+                await db.SaveChangesAsync();
+            }
+            return Results.Ok();
+        });
+    }
+
+    public record WaitlistRequest(string? Email, string? Language, string? Website);
 
     private static string Gb(PlanTiers tier) =>
         (PlanLimitations.StorageLimitBytes(tier) / (1024.0 * 1024 * 1024)) is var gb && gb >= 1
@@ -111,8 +143,16 @@ public static class LandingEndpoints
             .hero { padding: 64px 0 40px; text-align: center; }
             .hero h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.15; margin: 0 0 16px; letter-spacing: -.02em; }
             .hero p { font-size: var(--fs-read); color: var(--t2); max-width: 62ch; margin: 0 auto 28px; }
-            .hero-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+            .hero-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
             .hero-note { margin-top: 14px; font-size: var(--fs-caption); color: var(--t2); }
+
+            .waitlist { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+            .waitlist input[type="email"] { width: min(320px, 100%); padding: 9px 14px; border: 1px solid var(--border);
+                border-radius: var(--radius-md); background: var(--sheet); color: var(--text); font: inherit; }
+            .waitlist button { border: none; cursor: pointer; font: inherit; }
+            /* The honeypot: invisible to people, present to bots. display:none would be too obvious. */
+            .waitlist .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+            .waitlist-done { color: var(--accent); font-weight: 600; }
 
             section { padding: 40px 0; }
             h2 { font-size: 26px; margin: 0 0 8px; letter-spacing: -.01em; }
@@ -158,31 +198,60 @@ public static class LandingEndpoints
             }
         """;
 
+    // Plain raw string with placeholders, like Css above: JS is as brace-heavy as CSS, and inside
+    // an interpolated raw string every one of those braces would need escaping.
+    private const string WaitlistJs = """
+        document.getElementById('waitlist-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const form = e.target, note = document.getElementById('waitlist-note');
+            const body = { email: form.email.value, website: form.website.value, language: '%%LANG%%' };
+            try {
+                const res = await fetch('/api/waitlist', { method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                if (res.ok) {
+                    form.replaceWith(Object.assign(document.createElement('p'),
+                        { className: 'waitlist-done', textContent: '%%DONE%%' }));
+                    note.remove();
+                } else {
+                    note.textContent = (await res.json()).error || note.textContent;
+                }
+            } catch {
+                note.textContent = '%%FAIL%%';
+            }
+        });
+        """;
+
+    private static string WaitlistScript(bool ru) => WaitlistJs
+        .Replace("%%LANG%%", ru ? "ru" : "en")
+        .Replace("%%DONE%%", ru ? "Вы в списке — инвайт придёт на эту почту." : "You are on the list — the invite will land in this inbox.")
+        .Replace("%%FAIL%%", ru ? "Не получилось отправить — попробуйте ещё раз." : "Could not send — try again.");
+
     private static string Render(bool ru)
     {
         string T(string russian, string english) => ru ? russian : english;
 
-        var title = T("Cedar Clerk — пишите здесь, публикуйте там",
-                      "Cedar Clerk — write here, publish there");
+        var title = T("Cedar Clerk — делайте игру. Растите аудиторию. Один инструмент.",
+                      "Cedar Clerk — build your game. Grow your audience. One tool.");
         var description = T(
-            "Редактор, из которого один и тот же пост уходит в Telegram-канал и на собственный блог. Самостоятельный хостинг, никакой аналитики за спиной.",
-            "One editor whose post goes out to a Telegram channel and to your own blog. Self-hosted, with nobody watching over your shoulder.");
+            "Задачи, спринты и билды вашей игры превращаются в посты девлога — и уходят в блог, Telegram, X, Bluesky и Discord на шести языках, из одного редактора.",
+            "Your game's tasks, sprints and builds turn into devlog posts — published to your blog, Telegram, X, Bluesky and Discord in six languages, from one editor.");
 
-        // Features are stated as what the product does, not as adjectives about it.
+        // Features are stated as what the product does, not as adjectives about it — and in the
+        // devlog-first order the positioning sells (ADR-135): work → story → reach → home.
         var features = new (string Icon, string Title, string Body)[]
         {
-            (CardIcons[0], T("Один документ — много адресатов", "One document, many destinations"),
-                 T("Пост пишется один раз. Telegram, блог и файл-экспорт — это три рендерера одного и того же текста, а не три копии, которые надо держать в согласии.",
-                   "A post is written once. Telegram, the blog and the file exports are three renderers of the same text, not three copies to keep in agreement.")),
-            (CardIcons[1], T("Живой редактор, а не форма", "A real editor, not a form"),
-                 T("Таблицы, формулы, галереи, сноски, опросы, оглавление. Автосохранение, история версий и защита от случайного стирания текста.",
-                   "Tables, formulas, galleries, footnotes, polls, a table of contents. Autosave, version history, and a guard against wiping your own text.")),
-            (CardIcons[2], T("Шесть языков контента", "Six content languages"),
+            (CardIcons[0], T("Работа становится историей", "Your work becomes the story"),
+                 T("Трекер задач, спринты и версии живут рядом с текстами. Одна кнопка собирает из закрытого спринта черновик девлога — остаётся рассказать, а не вспоминать.",
+                   "The task tracker, sprints and builds live beside your writing. One button assembles a finished sprint into a devlog draft — you tell the story instead of reconstructing it.")),
+            (CardIcons[2], T("Девлог на шести языках — одной кнопкой", "A devlog in six languages, one button"),
                  T("Пост и его переводы живут рядом. Авто-перевод дописывает только то, что изменилось, и не трогает правки, сделанные руками.",
                    "A post and its translations live side by side. Auto-translate rewrites only what changed and leaves your own corrections alone.")),
-            (CardIcons[3], T("Блог, который принадлежит вам", "A blog that is yours"),
-                 T("Своя страница с комментариями, реакциями, RSS и глоссарием терминов. Приватные посты открываются по форме или по личной ссылке.",
-                   "Your own page with comments, reactions, RSS and a glossary. Private posts open behind a form or a personal link.")),
+            (CardIcons[1], T("Один документ — все сети", "One document, every network"),
+                 T("Пост пишется один раз и уходит в блог, Telegram, X, Bluesky и Discord — это рендереры одного текста, а не пять копий, которые надо держать в согласии.",
+                   "A post is written once and goes to the blog, Telegram, X, Bluesky and Discord — renderers of one text, not five copies to keep in agreement.")),
+            (CardIcons[3], T("Публичный дом вашей игры", "A public home for your game"),
+                 T("Свой блог с комментариями, реакциями и RSS — и публичная страница игры: лента девлога, роадмап и ссылки на магазины. Приватные посты открываются по форме или личной ссылке.",
+                   "Your own blog with comments, reactions and RSS — plus a public game page: the devlog feed, a roadmap and store links. Private posts open behind a form or a personal link.")),
         };
 
         var plans = new (string Name, string Price, string[] Lines, bool Featured)[]
@@ -256,13 +325,22 @@ public static class LandingEndpoints
             <main>
             <div class="wrap">
                 <section class="hero">
-                    <h1>{T("Пишите здесь. Публикуйте там.", "Write here. Publish there.")}</h1>
+                    <h1>{T("Делайте игру.<br>Растите аудиторию.<br>Один инструмент.", "Build your game.<br>Grow your audience.<br>One tool.")}</h1>
                     <p>{WebUtility.HtmlEncode(description)}</p>
+                    <!--ADR-135 — the primary CTA is the waitlist: while registration is invite-only,
+                    "Create an account" leads to a wall, and a wall converts nobody.-->
+                    <form class="waitlist" id="waitlist-form" autocomplete="off">
+                        <input type="email" name="email" required maxlength="254"
+                               placeholder="{T("почта для инвайта", "email for an invite")}"
+                               aria-label="{T("Почта", "Email")}">
+                        <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+                        <button class="btn btn-accent" type="submit">{T("В лист ожидания", "Join the waitlist")}</button>
+                    </form>
+                    <p class="hero-note" id="waitlist-note">{T("Регистрация пока по инвайтам — оставьте почту, и инвайт придёт, когда двери откроются.",
+                        "Registration is invite-only for now — leave an email and get an invite when the doors open.")}</p>
                     <div class="hero-actions">
-                        <a class="btn btn-accent" href="/register">{T("Создать аккаунт", "Create an account")}</a>
-                        <a class="btn btn-ghost" href="https://{Consts.URLs.BlogHost}">{T("Посмотреть блог вживую", "See a live blog")}</a>
+                        <a class="btn btn-ghost" href="https://{Consts.URLs.BlogHost}">{T("Посмотреть живой блог", "See a live blog")}</a>
                     </div>
-                    <p class="hero-note">{T("Сейчас регистрация по инвайт-коду.", "Registration is invite-only for now.")}</p>
                 </section>
 
                 <section>
@@ -306,6 +384,7 @@ public static class LandingEndpoints
                 <a href="/privacy">{T("Приватность", "Privacy")}</a>
                 <a href="https://{Consts.URLs.BlogHost}">{T("Блог", "Blog")}</a>
             </div></footer>
+            <script>{WaitlistScript(ru)}</script>
             </body>
             </html>
             """;
