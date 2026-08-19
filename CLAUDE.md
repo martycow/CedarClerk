@@ -76,7 +76,7 @@ no deploy path touches it.
 - `docs/product/INDIEDEV.md` — the indie-gamedev module (Phase 13): scope, data model, MUST/MIGHT. **Read before implementing any `T-120…T-137` row**
 - `docs/tech/DESKTOP.md` — how the desktop build works (Electron window onto production + local filesystem agent, ADR-117; the sidecar model is history)
 - `docs/design/indiedev-design-prompt.md` — the brief handed to Claude Design for the module's screens (delivered 10.08; remaining ask — screens 10–11). Since 18.08 it carries **no verbatim token copy** — paste fresh values from `styles.scss` into its marked block before each run
-- `TASKS.md` — short-horizon "what's next" list
+- `docs/tasks/TASKS.md` — short-horizon "what's next" list (in the repo root until 18.08.2026)
 - `CHANGELOG.md` — human-readable history by session/date
 
 ## Conventions

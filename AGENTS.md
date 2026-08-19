@@ -43,7 +43,7 @@ Before implementation of anything, firstly read docs/product/PRD.md and docs/tec
 - `docs/design/UI-INVENTORY.md` — per-element inventory of the frontend UI (location, type, purpose, loading-state check) — update it when adding/changing a UI element
 - `docs/for_user/integrations-setup.md` — payment/translation provider setup runbook
 - `docs/INPUT_PROMPT.md` — Marty's dynamic prompt inbox: "considered as a new prompt every time". **Untracked on purpose** (gitignored; Marty rewrites it at will) — check its mtime against the last "Input sweep" in ROADMAP. Content may predate the code — verify against it
-- `TASKS.md` — short-horizon "what's next" list
+- `docs/tasks/TASKS.md` — short-horizon "what's next" list (in the repo root until 18.08.2026)
 - `CHANGELOG.md` — human-readable history by session/date
 
 ## Conventions
