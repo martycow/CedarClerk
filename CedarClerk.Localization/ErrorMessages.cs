@@ -33,6 +33,7 @@ public static class ErrorMessages
     public static string AppearancePrefsTooLarge => Ru("Настройки оформления слишком большие.", "Appearance preferences are too large");
     public static string AutoTranslateNotConfigured => Ru("Авто-перевод не настроен.", "Auto-translate is not configured");
     public static string AvatarMustBeUploaded => Ru("Аватар должен быть загруженным изображением.", "Avatar must be an uploaded image");
+    public static string AssetInUse => Ru("Файл используется в постах — сначала уберите его оттуда.", "This file is used by posts — remove it from them first");
     public static string BothTagsRequired => Ru("Нужны и старый, и новый тег.", "Both the old and the new tag are required");
     public static string InvalidEmail => Ru("Введите корректный адрес почты.", "Enter a valid email address");
     public static string ImportFileNotFound => Ru("Файл не найден в каталоге import-tmp.", "File not found in import-tmp directory.");

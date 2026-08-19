@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using CedarClerk.Core;
+using CedarClerk.Localization;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
@@ -69,6 +70,94 @@ public static class AssetEndpoints
             })
             .RequireAuthorization()
             .DisableAntiforgery();
+
+        // ADR-127 — the owner-wide library behind /media. One response carries the page, the
+        // unfiltered type counts (chips must not shrink when a filter is on) and the quota line.
+        app.MapGet("/api/assets", async (ClaimsPrincipal user, CedarDbContext db, string? q, string? type, int skip = 0, int take = 60) =>
+            {
+                var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+                skip = Math.Max(0, skip);
+                take = Math.Clamp(take, 1, 200);
+
+                var owned = db.Assets.AsNoTracking().Where(a => a.OwnerId == uid);
+
+                var typeCounts = await owned.GroupBy(a => a.ContentType)
+                    .Select(g => new { g.Key, Count = g.Count() }).ToListAsync();
+                var counts = new
+                {
+                    image = typeCounts.Where(c => c.Key.StartsWith("image/")).Sum(c => c.Count),
+                    video = typeCounts.Where(c => c.Key.StartsWith("video/")).Sum(c => c.Count),
+                    audio = typeCounts.Where(c => c.Key.StartsWith("audio/")).Sum(c => c.Count),
+                };
+
+                var filtered = owned;
+                if (!string.IsNullOrWhiteSpace(q))
+                    filtered = filtered.Where(a => a.FileName.Contains(q.Trim()));
+                if (type is "image" or "video" or "audio")
+                    filtered = filtered.Where(a => a.ContentType.StartsWith(type + "/"));
+
+                var total = await filtered.CountAsync();
+                var items = await filtered.OrderByDescending(a => a.CreatedAt)
+                    .Skip(skip).Take(take)
+                    .Select(a => new { a.Id, a.FileName, a.LocalPath, a.ContentType, a.SizeBytes, a.CreatedAt })
+                    .ToListAsync();
+
+                var usedBytes = await owned.SumAsync(a => (long?)a.SizeBytes) ?? 0;
+                var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
+
+                return Results.Ok(new { items, total, counts, usedBytes, limitBytes = PlanLimitations.StorageLimitBytes(tier) });
+            })
+            .RequireAuthorization();
+
+        // ADR-127 — delete by on-demand scan over every document and translation the owner has.
+        // Busy answers 409 with the referencing drafts so the reader knows where to go; free
+        // removes the file, the Telegram derivative and the row.
+        app.MapDelete("/api/assets/{id:guid}", async (Guid id, ClaimsPrincipal user, CedarDbContext db, MediaPaths media) =>
+            {
+                var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+                var asset = await db.Assets.FirstOrDefaultAsync(a => a.Id == id && a.OwnerId == uid);
+                if (asset is null) return Results.NotFound();
+
+                var name = asset.LocalPath;
+                var drafts = await db.Drafts.AsNoTracking().Where(d => d.OwnerId == uid)
+                    .Select(d => new { d.Id, d.Title, d.CedarJson }).ToListAsync();
+                var busyIds = drafts
+                    .Where(d => CedarPackage.FindReferencedMediaPathsSafe(d.CedarJson).Contains(name))
+                    .Select(d => d.Id).ToHashSet();
+
+                var draftIds = drafts.Select(d => d.Id).ToList();
+                var translations = await db.DraftTranslations.AsNoTracking()
+                    .Where(t => draftIds.Contains(t.DraftId))
+                    .Select(t => new { t.DraftId, t.CedarJson }).ToListAsync();
+                foreach (var t in translations)
+                {
+                    if (busyIds.Contains(t.DraftId)) continue;
+                    if (CedarPackage.FindReferencedMediaPathsSafe(t.CedarJson).Contains(name))
+                        busyIds.Add(t.DraftId);
+                }
+
+                if (busyIds.Count > 0)
+                {
+                    var usedBy = drafts.Where(d => busyIds.Contains(d.Id))
+                        .Select(d => new { draftId = d.Id, title = d.Title }).ToList();
+                    return Results.Json(new { error = ErrorMessages.AssetInUse, usedBy },
+                        statusCode: StatusCodes.Status409Conflict);
+                }
+
+                DeleteIfExists(Path.Combine(media.Dir, asset.LocalPath));
+                if (asset.TelegramLocalPath is not null)
+                    DeleteIfExists(Path.Combine(media.Dir, asset.TelegramLocalPath));
+
+                db.Assets.Remove(asset);
+                await db.SaveChangesAsync();
+                return Results.Ok();
+            })
+            .RequireAuthorization();
+    }
+
+    private static void DeleteIfExists(string path)
+    {
+        if (File.Exists(path)) File.Delete(path);
     }
 
     // Telegram rejects a photo fetched by URL above ~TelegramSafeImageBytes with a misleading

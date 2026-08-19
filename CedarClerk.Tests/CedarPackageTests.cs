@@ -86,6 +86,14 @@ public class CedarPackageTests
     }
 
     [Fact]
+    public void FindReferencedMediaPathsSafe_returns_empty_for_corrupt_json_and_matches_otherwise()
+    {
+        Assert.Empty(CedarPackage.FindReferencedMediaPathsSafe("{not json"));
+        Assert.Equal(["a.jpg"],
+            CedarPackage.FindReferencedMediaPathsSafe("""{"type":"image","attrs":{"src":"/media/a.jpg"}}"""));
+    }
+
+    [Fact]
     public void RewriteMediaPaths_replaces_known_names_and_leaves_unmapped_untouched()
     {
         const string json = """{"type":"image","attrs":{"src":"/media/old.jpg"}}""";

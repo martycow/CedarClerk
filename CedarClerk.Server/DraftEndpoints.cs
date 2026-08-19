@@ -285,10 +285,12 @@ public static class DraftEndpoints
             var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
             if (draft is null) return Results.NotFound();
 
-            var names = CedarPackage.FindReferencedMediaPaths(draft.CedarJson).ToList();
-            var translationJson = await db.DraftTranslations.Where(t => t.DraftId == id).Select(t => t.CedarJson).FirstOrDefaultAsync();
-            if (translationJson is not null)
-                names = names.Union(CedarPackage.FindReferencedMediaPaths(translationJson)).ToList();
+            // Every translation, not the first one found — a photo living only in the German
+            // version is still embedded media (ADR-127 closed this gap).
+            var names = CedarPackage.FindReferencedMediaPathsSafe(draft.CedarJson).ToList();
+            var translationJsons = await db.DraftTranslations.Where(t => t.DraftId == id).Select(t => t.CedarJson).ToListAsync();
+            foreach (var tj in translationJsons)
+                names = names.Union(CedarPackage.FindReferencedMediaPathsSafe(tj)).ToList();
 
             if (names.Count == 0)
                 return Results.Ok(Array.Empty<object>());

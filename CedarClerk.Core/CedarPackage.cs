@@ -124,6 +124,20 @@ public static class CedarPackage
         return found.Distinct().ToList();
     }
 
+    // ADR-127 — for scans over many documents (asset delete): one corrupt document must not
+    // abort the sweep, it just contributes nothing.
+    public static IReadOnlyList<string> FindReferencedMediaPathsSafe(string tiptapJson)
+    {
+        try
+        {
+            return FindReferencedMediaPaths(tiptapJson);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return Array.Empty<string>();
+        }
+    }
+
     public static string RewriteMediaPaths(string tiptapJson, IReadOnlyDictionary<string, string> oldToNewNames)
     {
         var node = JsonNode.Parse(tiptapJson) ?? throw new CedarPackageException("Document JSON is empty.");
