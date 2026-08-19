@@ -1141,6 +1141,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         // Feeds the badge on the Posts Manager link (N3) — fire-and-forget, never blocks setup.
         this.feedback.refreshNewCount();
         const mediaNodeTypes = new Set(['image', 'video', 'audio', 'carousel', 'collage']);
+        // Mirrors AssetEndpoints.Allowed — anything else is left to the browser's default handling.
+        const uploadTypes = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'audio/mpeg', 'audio/ogg']);
         this.editor = new Editor({
             element: this.editorHost.nativeElement,
             editorProps: {
@@ -1177,6 +1179,26 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                         content = content.cut(0, content.size - content.lastChild!.nodeSize);
                     }
                     return content === slice.content ? slice : new Slice(content, 0, 0);
+                },
+                // ADR-127 — a screenshot in the clipboard or files dragged onto the sheet go
+                // through the same upload-with-progress path as the toolbar buttons. Only claimed
+                // when there are acceptable files; plain text/HTML paste stays default.
+                handlePaste: (_view, event) => {
+                    const files = Array.from(event.clipboardData?.files ?? []).filter(f => uploadTypes.has(f.type));
+                    if (!files.length) return false;
+                    event.preventDefault();
+                    for (const file of files) this.uploadAndInsert(file);
+                    return true;
+                },
+                handleDrop: (view, event) => {
+                    const files = Array.from(event.dataTransfer?.files ?? []).filter(f => uploadTypes.has(f.type));
+                    if (!files.length) return false;
+                    event.preventDefault();
+                    // Land at the drop point, not wherever the caret happened to be.
+                    const pos = view.posAtCoords({ left: event.clientX, top: event.clientY });
+                    if (pos) view.dispatch(view.state.tr.setSelection(TextSelection.near(view.state.doc.resolve(pos.pos))));
+                    for (const file of files) this.uploadAndInsert(file);
+                    return true;
                 },
             },
             extensions: [
@@ -3006,14 +3028,21 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // including the GIF quirk (a .gif goes in as <video> so Telegram treats it as an animation).
     onLibraryPicked(asset: LibraryAsset) {
         this.libraryOpen.set(false);
-        const url = `/media/${asset.localPath}`;
-        if (asset.contentType === 'image/gif' || asset.contentType.startsWith('video/')) {
+        this.insertMediaUrl(`/media/${asset.localPath}`, asset.contentType);
+    }
+
+    private insertMediaUrl(url: string, contentType: string) {
+        if (contentType === 'image/gif' || contentType.startsWith('video/')) {
             this.insertNode('video', { src: url });
-        } else if (asset.contentType.startsWith('audio/')) {
+        } else if (contentType.startsWith('audio/')) {
             this.insertNode('audio', { src: url });
         } else {
             this.editor?.chain().focus().setImage({ src: url }).run();
         }
+    }
+
+    private uploadAndInsert(file: File) {
+        void this.uploadFilePromise(file).then(url => { if (url) this.insertMediaUrl(url, file.type); });
     }
 
     onCollageChosen(ev: Event) {
