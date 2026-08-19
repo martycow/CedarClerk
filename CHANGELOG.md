@@ -1,5 +1,31 @@
 # Changelog
 
+## 2026-08-18 — Cowtext skills adopted, TASKS.md moves in with its siblings
+
+A survey of the Cowtext project's seven skills and two scripts, with Marty's ask to
+borrow what fits. Borrowed and committed: **task-format** and **ultracode** (the
+name-swapped copies already sitting untracked were adapted for real — task-format
+now names the truth that the board is the Cowtext app watching this repo and that
+all three task files live in `docs/tasks/`; ultracode lost the `tech-barn` lane,
+gained Cedar's own lane cut (C# vs Angular/blog), points its record-keeping at
+CHANGELOG/board/TERMINOLOGY instead of Cowtext's Status line, and promises never to
+commit the Cowtext-managed `.claude/agents/`). Borrowed as *patterns* and written
+fresh: **cedar-terminology** (module map + the canon terms — Blocks-is-canon,
+DocumentLink vs EntityLink, semi-public, the silent-drop rule for new nodes — over
+`docs/knowledge_base/TERMINOLOGY.md`) and **design-tokens** (the seven ADR-071 laws,
+token families, the two style systems, the icon-map pipeline, the inventory-first
+law). Skipped with reasons: art-direction/sound-design (pixel art and SFX — no such
+surfaces here), manual-format (no test-manual practice; live-verify lives in
+TASKS.md), `gen_sfx.py`/`gen_sprites.py` (game asset generators).
+
+And `TASKS.md` left the repo root for **`docs/tasks/TASKS.md`** — Marty's call,
+reversing the 18.08 morning decision to keep it in the root. BACKLOG and ROADMAP
+were already there; the Cowtext board searches root → docs/ → docs/tasks/, so it
+still finds everything — which is also why a stray root copy must never reappear
+(it would shadow the real file). DOCS-FLOW (node, prose, placement row), CLAUDE.md
+and AGENTS.md updated; the file gained its ADR-123 front-matter on the way in;
+`DocsFlowGraphTests` green.
+
 ## 2026-08-18 — six board rows in one run (0.12.1)
 
 Marty picked six tasks off the board — `T-186, T-174, T-178, T-193, T-177, T-181` — and the session
