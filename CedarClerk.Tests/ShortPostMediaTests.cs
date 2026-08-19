@@ -83,8 +83,8 @@ public class ShortPostMediaTests
         Assert.Equal("one", images[0].Alt);
     }
 
-    // What the editor actually writes: plain URL strings. Indexing ["src"] into one used to throw
-    // and took the whole post page down once OG meta ran the collector on every render (18.08.2026).
+    // What the editor actually writes: plain URL strings. Indexing ["src"] into one throws,
+    // which takes the post page down wherever the collector runs.
     [Fact]
     public void A_collage_of_plain_url_strings_does_not_throw_and_contributes_them_all()
     {

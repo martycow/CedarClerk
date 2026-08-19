@@ -3,6 +3,7 @@
 ## Who you're working with
 Marty (martycow) — C#/Unity game developer, knows Angular. **Infrastructure: no longer a beginner** (updated 12.08.2026) — he moved production off the Raspberry Pi to a DigitalOcean droplet himself, and closed both items that move left open: `systemctl enable`, and a nightly `sqlite3 .backup` in cron with a healthchecks.io ping so a silent failure alerts. Explain infra work, don't skip it — but write to someone who runs `systemctl`, `crontab` and `sed` on a live server, not to someone who has never seen them. The sudo password is his alone, and writing commands on the droplet are handed to him to run (see `.claude/rules/production-environment.md`).
 **Always communicate in Russian.** Use English technical terminology with Russian translations in braces on first use.
+**Repository files are written in English** (Marty, 18.08.2026): .md docs, comments, commit messages — avoid Russian in files even though the chat is Russian. Reader-facing product strings keep their own i18n rules.
 Workflow: vibe-coding — implement step by step, explain what you're doing concisely, wait for Marty's confirmation (terminal output / screenshot) before the next risky step.
 
 ## What this project is
@@ -76,13 +77,13 @@ no deploy path touches it.
 - `docs/product/INDIEDEV.md` — the indie-gamedev module (Phase 13): scope, data model, MUST/MIGHT. **Read before implementing any `T-120…T-137` row**
 - `docs/tech/DESKTOP.md` — how the desktop build works (Electron window onto production + local filesystem agent, ADR-117; the sidecar model is history)
 - `docs/design/indiedev-design-prompt.md` — the brief handed to Claude Design for the module's screens (delivered 10.08; remaining ask — screens 10–11). Since 18.08 it carries **no verbatim token copy** — paste fresh values from `styles.scss` into its marked block before each run
-- `docs/tasks/TASKS.md` — short-horizon "what's next" list (in the repo root until 18.08.2026)
+- `docs/tasks/TASKS.md` — short-horizon "what's next" list
 - `CHANGELOG.md` — human-readable history by session/date
 
 ## Conventions
 Backend: static `XxxEndpoints` classes (minimal APIs, no MVC), entities in one flat `Entities.cs`, GUID PKs, `Consts`/`ErrorMessages` for reused strings only. Frontend: standalone components, `inject()`, signals, thin RxJS→Promise services, `kebab-case.*.ts` naming. Full detail and rationale: `docs/tech/ARCHITECTURE.md`, `docs/design/DESIGN.md`.
 
-**Comments (Marty, 12.08.2026 — he reads the code, not prose about it).** A comment earns its place only by carrying a *why* that cannot be read off the code: (1) an incident it prevents a repeat of, (2) an external constraint — an API's quirk, a platform's limit, (3) a deliberate choice against the obvious one. Everything else goes: no XML-doc restating a signature, no block explaining what the next five lines do, no essay above a private method. Default to zero comments, and prefer one dense sentence to a paragraph. A comment that describes code will outlive the code it describes and start lying — `Logo.cs` carried a description of a subtitle that had already changed.
+**Comments (Marty, 12.08.2026 — he reads the code, not prose about it).** A comment earns its place only by carrying a *why* that cannot be read off the code: (1) an incident it prevents a repeat of, (2) an external constraint — an API's quirk, a platform's limit, (3) a deliberate choice against the obvious one. Everything else goes: no XML-doc restating a signature, no block explaining what the next five lines do, no essay above a private method. Default to zero comments, and prefer one dense sentence to a paragraph. A comment that describes code will outlive the code it describes and start lying — `Logo.cs` carried a description of a subtitle that had already changed. **Never write what changed and when** (Marty, 18.08.2026 — change-and-date notes scattered through files confuse him): no dates, no "moved/closed/fixed on DD.MM", no "used to be X" in comments or doc prose — change history lives in git and CHANGELOG only. He deletes such notes on sight.
 
 ## Branches (Marty's rule, 10.08.2026)
 - **`master` — only the latest stable version.** Every commit on it is tagged with a version, and **every deploy is run from `master` and only from `master`.**

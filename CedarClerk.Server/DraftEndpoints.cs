@@ -304,7 +304,7 @@ public static class DraftEndpoints
             if (draft is null) return Results.NotFound();
 
             // Every translation, not the first one found — a photo living only in the German
-            // version is still embedded media (ADR-127 closed this gap).
+            // version is still embedded media.
             var names = CedarPackage.FindReferencedMediaPathsSafe(draft.CedarJson).ToList();
             var translationJsons = await db.DraftTranslations.Where(t => t.DraftId == id).Select(t => t.CedarJson).ToListAsync();
             foreach (var tj in translationJsons)
