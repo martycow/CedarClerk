@@ -11,6 +11,15 @@ Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-
 
 ## Status summary (as of 18.08.2026)
 
+**v0.12.1 — six board rows in one session (18.08.2026, not yet deployed).** `T-186` (index cards
+hardcoding «RU» — fixed), `T-174` (OG/Twitter/canonical/hreflang meta, ADR-124), `T-178` (post
+series as an entity with `/series/{slug}` and prev/next, ADR-125), `T-193` (the metrics event
+dictionary, `docs/product/METRICS.md`, ADR-126), `T-177` (media library v1: `/media` page,
+scan-guarded delete, insert-from-library, paste/drop upload, ADR-127) and `T-181` both halves (the
+document tree and `[[`-wiki-links with backlinks, ADR-128). Three migrations, 964 backend tests
+green. Deferred follow-ups became `T-200`/`T-201`; the live-verify checklist in `TASKS.md` grew
+seven entries. Deploy is Marty's call.
+
 **v0.12.0 — the Forest Workshop skin and `cedar run` (18.08.2026).** The skin is a second styling axis (`data-skin="forest"`, ADR-120), orthogonal to light/dark, scoped to one partial with a toggle in the Appearance panel; `cedar run` (ADR-121) builds and serves the real `publish/` artifact locally with the bot forced off. **Deployed 18.08** — production answers 0.12.0. The same day Marty's competitor report was absorbed (see "Competitor analysis absorbed" below: `T-158…T-172`) and `docs/INPUT_PROMPT.md` appeared as a new in-repo inbox — its first sweep is the section right after it.
 
 **v0.11.0 — the desktop stopped being a second Cedar Clerk (12.08.2026, ADR-117).** Marty's report was that using the same email on the desktop still meant a different account — which is exactly the price ADR-108 had written down and accepted ("one identity is not one data set"). The answer was not to build synchronisation but to remove the second copy: the shell now loads `cedarclerk.mooexe.dev`, there is one database, and the local process is stripped to a filesystem **agent** (walk a folder, stat a file, render a preview). ADR-105 and ADR-108 are superseded; the merge problem ADR-105 feared is not solved, it no longer exists. Asset bytes still never leave the machine — paths, metadata and small JPEG previews do, and every screen now says whose machine holds the file. `T-121` closes; `T-137` (no backup for the desktop database) closes as moot, there being no such database. Middle digit moved because how the app is used changed, not because fixes accumulated. Deployed as 0.11.1 on 13.08.2026, in the order the Phase 13 note demands — site first, desktop after.

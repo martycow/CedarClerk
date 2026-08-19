@@ -1,5 +1,45 @@
 # Changelog
 
+## 2026-08-18 — six board rows in one run (0.12.1)
+
+Marty picked six tasks off the board — `T-186, T-174, T-178, T-193, T-177, T-181` — and the session
+closed all six, five ADRs and fifteen commits deep, in the order that kept `BlogEndpoints.cs` warm:
+blog fixes first, the L-sized tree/wiki-links last.
+
+**T-186** (the bug): index cards wrote `RU` as every post's primary language; now the real
+`PrimaryLanguage` leads the chip and the page's own `lang` follows the request. **T-174 / ADR-124**:
+full OG/Twitter/canonical/hreflang meta on post pages and the index, built by a pure
+`OgMetaBuilder` in Core — with a privacy policy that reader auth never widens: private posts emit
+*zero* meta (the gate and the private-404 answer with the same semi-public-only helper, found
+mid-build — crawlers never reach the render path), listed-private gets title+static fallback only,
+public gets everything; a generated 1200×630 `/og-default.png` is the fallback card. **T-178 /
+ADR-125**: series are an entity, not a tag — `/series/{slug}` landing, «Часть N из M» line and
+prev/next on member posts, numbering computed over *visible* members only so a hidden part never
+shifts a stranger's numbering; management mirrors folders end to end (endpoints, service latch,
+picker in the editor strip; rename keeps the slug). **T-193 / ADR-126**: `docs/product/METRICS.md`
+— the event dictionary that must exist before T-153 picks an analytics provider: what the database
+already records (and is minable retroactively — activation is a join of `CreatedAt` ×
+first-publish, no event needed), what does not exist until a provider ships, and the stable
+`snake_case` names the provider will transport. **T-177 / ADR-127**: the media library — `/media`
+page (grid/list, type chips, search, quota bar), delete by on-demand scan over every document *and
+every translation* (409 lists the referencing posts; the same sweep fixed the export-modal list
+that only scanned the first translation), insert-from-library via a lightweight picker behind a new
+toolbar button, and paste/drag&drop upload straight into the sheet — reusing
+`CedarPackage.FindReferencedMediaPaths` as the one truth of «what references what». **T-181 /
+ADR-128**, both halves: the document tree (`ParentDraftId`+`SiblingOrder`, cycle-guard, depth ≤10,
+delete lifts children to the grandparent; a third `tree` view on /drafts with move-menu and ↑/↓;
+breadcrumbs in the editor) and `[[`-wiki-links (`@tiptap/suggestion@3.27.2` verified multi-char,
+inline atom `{draftId, label}`, `DocumentLink` diff-synced on every primary-language save,
+backlinks chip «← N») — rendered as a link on the blog only when the target passes the index
+visibility rule, as an escaped plain word everywhere else, with the label taught to
+`PublishValidator`, `TipTapTextNodes` and `CedarPlainText` so teasers stop eating it silently.
+
+Three migrations (`AddSeries`, `AddDocumentTree`, `AddDocumentLinks`), 964 backend tests green
+(+13), 18 frontend. Deferred honestly to the board: media folders/tags/dedup (`T-200`), tree
+drag&drop (`T-201`). Live-verify checklist in TASKS.md grew seven entries — OG previews through
+Telegram's cache, `[[` on a Russian layout, the 409 titles, the series numbering with a hidden
+part.
+
 ## 2026-08-18 — the map gets a guard, the words get a dictionary
 
 Marty pasted an external DOCS-FLOW analysis — six P0 gaps, five P1 docs, structural scheme
