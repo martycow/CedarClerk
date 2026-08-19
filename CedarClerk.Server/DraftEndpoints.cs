@@ -29,6 +29,7 @@ public static class DraftEndpoints
     public record UpdateTagsRequest(string Tags);
     public record RenameTagRequest(string From, string To);
     public record UpdateFolderRequest(Guid? FolderId);
+    public record UpdateSeriesRequest(Guid? SeriesId);
     public record UpdatePrivateRequest(bool IsPrivate);
     public record UpdateTemplateRequest(bool IsTemplate);
     public record UpdateListedRequest(bool IsListedWhilePrivate);
@@ -151,7 +152,7 @@ public static class DraftEndpoints
                 .Select(d => new
                 {
                     d.Id, d.Title, d.PrimaryLanguage, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
-                    d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.IsPrivate, d.IsTemplate,
+                    d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.SeriesId, d.IsPrivate, d.IsTemplate,
                     d.DisableCopy, d.DisableReactions, d.DisableComments, d.ViewCount,
                     Translations = db.DraftTranslations.Where(t => t.DraftId == d.Id)
                         .Select(t => new { t.Language, t.UpdatedAt }).ToList(),
@@ -219,7 +220,7 @@ public static class DraftEndpoints
             return drafts.Select(d => new
             {
                 d.Id, d.Title, d.PrimaryLanguage, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
-                d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.IsPrivate, d.IsTemplate,
+                d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.SeriesId, d.IsPrivate, d.IsTemplate,
                 d.DisableCopy, d.DisableReactions, d.DisableComments, d.ViewCount,
                 ReactionCount = reactionCounts.GetValueOrDefault(d.Id),
                 NewViewCount = deltas[d.Id].Views,
@@ -409,6 +410,37 @@ public static class DraftEndpoints
             draft.FolderId = req.FolderId;
             await db.SaveChangesAsync();
             return Results.Ok(new { draft.FolderId });
+        });
+
+        // ADR-125 — series membership. Attach assigns SeriesOrder = max+1 among the members;
+        // detach nulls both halves of the pair so no stale order survives a reattach elsewhere.
+        groupBuilder.MapPut("/{id:guid}/series", async (Guid id, UpdateSeriesRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            if (req.SeriesId is { } seriesId)
+            {
+                var ownsSeries = await db.Series.AnyAsync(s => s.Id == seriesId && s.OwnerId == uid);
+                if (!ownsSeries) return Results.NotFound();
+
+                if (draft.SeriesId != seriesId)
+                {
+                    var maxOrder = await db.Drafts.Where(d => d.SeriesId == seriesId)
+                        .MaxAsync(d => (int?)d.SeriesOrder) ?? 0;
+                    draft.SeriesId = seriesId;
+                    draft.SeriesOrder = maxOrder + 1;
+                }
+            }
+            else
+            {
+                draft.SeriesId = null;
+                draft.SeriesOrder = null;
+            }
+
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.SeriesId, draft.SeriesOrder });
         });
 
         // Private posts (see the ADR following ADR-040, docs/DECISIONS.md) — invite by email,

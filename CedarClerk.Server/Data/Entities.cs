@@ -287,6 +287,12 @@ public class Draft
     // codebase's "no strict FK-only model" convention (docs/tech/ARCHITECTURE.md). Null = unfiled.
     public Guid? FolderId { get; set; }
 
+    // ADR-125 — series membership, same plain-scalar convention as FolderId. The pair is set and
+    // cleared together: attach assigns SeriesOrder = max+1 among the members, detach nulls both,
+    // so a stale zero can never make an unattached post claim first place in someone's series.
+    public Guid? SeriesId { get; set; }
+    public int? SeriesOrder { get; set; }
+
     // ADR-102 — what kind of document this is (CedarClerk.Core.DocumentTypes). The default is what
     // makes this a column instead of a migration: every row written before types existed IS a post,
     // so there is nothing to backfill. A Draft was never "a post" in the code — it is a TipTap
@@ -488,6 +494,19 @@ public class Folder
     public Guid Id { get; set; } = Guid.NewGuid();
     public string OwnerId { get; set; } = default!;
     public string Name { get; set; } = "";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+// ADR-125 — a post series ("Devlog #1..#N"). An entity rather than a special tag because the
+// series page needs a stable slug and "part N of M" needs an order, and a flat tag string has
+// neither. Slug is unique per owner; deleting a series unassigns its drafts.
+public class Series
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public string Name { get; set; } = "";
+    public string Slug { get; set; } = "";
+    public string? Description { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

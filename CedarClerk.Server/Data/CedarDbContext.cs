@@ -26,6 +26,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<InviteCode> InviteCodes => Set<InviteCode>();
     public DbSet<AiUsage> AiUsages => Set<AiUsage>();
     public DbSet<Folder> Folders => Set<Folder>();
+    public DbSet<Series> Series => Set<Series>();
     public DbSet<GlossaryTerm> GlossaryTerms => Set<GlossaryTerm>();
     public DbSet<DraftStatSeen> DraftStatSeens => Set<DraftStatSeen>();
     public DbSet<FormPreset> FormPresets => Set<FormPreset>();
@@ -93,6 +94,12 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
             .IsUnique();
         // The runner's query is "what is waiting", and the client's is "how is this draft doing".
         builder.Entity<PublishJob>().HasIndex(j => new { j.Status, j.NextAttemptAt });
+
+        // ADR-125 — the series page resolves by slug, and two series sharing one slug would make
+        // that page a coin toss.
+        builder.Entity<Series>()
+            .HasIndex(s => new { s.OwnerId, s.Slug })
+            .IsUnique();
         builder.Entity<PublishJob>().HasIndex(j => new { j.DraftId, j.CreatedAt });
         // ADR-092 — the balance query, and the idempotency anchor (SQLite treats NULLs as distinct
         // in a unique index, so unanchored rows are unconstrained).
