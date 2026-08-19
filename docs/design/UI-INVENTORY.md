@@ -288,6 +288,7 @@ T-124, built 11.08.2026 from `docs/design_handoff_indiedev_core_loop` §8. Compa
 |---|---|---|---|---|---|
 | Toolbar | `.planner-toolbar` | panel | Title, "N sprints · M open tasks", link to the board, "+ New sprint" | Page-level `loading()` | Same anatomy as the board and the asset screen |
 | Sprint card | `.sprint-card` | panel | One per sprint: number, name, dates, state badge, overdue note, progress bar, task rows | `busy()` on its controls | Order is current → planned → No sprint → finished |
+| Devlog draft button | `.sprint-head`, `.btn-ghost.small` beside the edit pencil | button | **Added 18.08.2026 (ADR-132, T-158)** — assembles the sprint's finished tasks, releases in its window and still-open tasks into a post draft and opens the editor on it | `busy()` disables it | Same generator flow as the builds screen's "Changelog" |
 | State badge | `.status-badge` in the head | — | Current / Planned / Finished | N/A | **Derived from the dates on every read** (ADR-111), never stored |
 | Overdue note | `.overdue-note` | — | "N tasks overdue" inside this sprint | N/A | Said about the tasks — a sprint is never itself overdue, and the card never turns red |
 | Progress bar | `.sprint-bar` / `.sprint-fill` | — | Share of the sprint's tasks that are done | N/A | Absent when the sprint holds no tasks: an empty bar would read as 0% of something |

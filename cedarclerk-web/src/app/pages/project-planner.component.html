@@ -76,6 +76,11 @@
                                     <app-icon name="caret-down" size="xs"></app-icon>
                                 </button>
                             }
+                            <!--T-158 (ADR-132) — work → story: the sprint's material as a post draft.-->
+                            <button class="btn-ghost small" (click)="createDevlog(s)" [disabled]="busy()">
+                                <app-icon name="newspaper" size="xs"></app-icon>
+                                {{ t().projects.planner.makeDevlog }}
+                            </button>
                             <button class="icon-btn" (click)="startEditing(s)" [disabled]="busy()"
                                     [title]="t().projects.planner.editSprint"
                                     [attr.aria-label]="t().projects.planner.editSprint">

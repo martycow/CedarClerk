@@ -12,6 +12,7 @@ namespace CedarClerk.Server.Modules.IndieDev;
 public static class SprintEndpoints
 {
     public record SaveSprintRequest(string Name, DateTime StartsAt, DateTime EndsAt);
+    public record DevlogRequest(string? Title, string? Language);
 
     private const int NameMaxLength = 80;
 
@@ -93,6 +94,87 @@ public static class SprintEndpoints
             await db.SaveChangesAsync();
             return Results.NoContent();
         });
+
+        // T-158 (ADR-132) — the sprint's work assembled into a devlog draft: an ordinary post the
+        // author edits and publishes everywhere, same document-generator shape as the changelog
+        // (ADR-112). The assembler writes the material; the story stays the author's.
+        single.MapPost("/devlog", async (Guid id, DevlogRequest? req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var sprint = await db.Sprints.FirstOrDefaultAsync(s => s.Id == id && s.OwnerId == uid);
+            if (sprint is null) return Results.NotFound();
+
+            var tasks = await db.GameTasks
+                .Where(t => t.SprintId == id && t.OwnerId == uid && t.ArchivedAt == null)
+                .ToListAsync();
+            var done = tasks.Where(t => t.Status == TaskStatuses.Done)
+                .OrderBy(t => t.CompletedAt ?? t.UpdatedAt)
+                .Select(t => t.Title).ToList();
+            var open = tasks.Where(t => t.Status != TaskStatuses.Done)
+                .OrderBy(t => t.Priority).ThenBy(t => t.CreatedAt)
+                .Select(t => t.Title).ToList();
+
+            // Releases that happened during the sprint — the window is inclusive of the end date.
+            var builds = await db.Builds
+                .Where(b => b.ProjectId == sprint.ProjectId && b.OwnerId == uid
+                            && b.ReleasedAt != null
+                            && b.ReleasedAt >= sprint.StartsAt && b.ReleasedAt < sprint.EndsAt.AddDays(1))
+                .OrderBy(b => b.ReleasedAt)
+                .ToListAsync();
+
+            var draft = new Draft
+            {
+                OwnerId = uid,
+                ProjectId = sprint.ProjectId,
+                DocumentType = DocumentTypes.Post,
+                Title = string.IsNullOrWhiteSpace(req?.Title) ? $"Devlog — {sprint.Name}" : req.Title.Trim(),
+            };
+            if (!string.IsNullOrWhiteSpace(req?.Language)) draft.PrimaryLanguage = req.Language;
+            draft.CedarJson = DevlogJson(draft.PrimaryLanguage, done, open, builds);
+
+            db.Drafts.Add(draft);
+            await DraftRevisionService.RecordAsync(db, draft.Id, draft.PrimaryLanguage, draft.Title, draft.CedarJson);
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new { documentId = draft.Id, draft.Title, doneCount = done.Count });
+        });
+    }
+
+    /// <summary>
+    /// The devlog's body: an empty opening paragraph for the author's own story, then only the
+    /// sections that have material — finished tasks, releases in the window, what is still open.
+    /// Headings follow the document's language (ru/en, en otherwise): two languages cover the
+    /// operator and the market, and generated content is the author's to rewrite anyway (ADR-132).
+    /// </summary>
+    public static string DevlogJson(string language, List<string> done, List<string> open, List<Build> builds)
+    {
+        var ru = language == "ru";
+        var content = new System.Text.Json.Nodes.JsonArray { DocJson.Paragraph("") };
+
+        if (done.Count > 0)
+        {
+            content.Add(DocJson.Heading(ru ? "Что сделано" : "What got done"));
+            content.Add(DocJson.BulletList(done));
+        }
+
+        if (builds.Count > 0)
+        {
+            content.Add(DocJson.Heading(ru ? "Релизы" : "Released"));
+            foreach (var build in builds)
+            {
+                content.Add(DocJson.Paragraph(string.IsNullOrWhiteSpace(build.Notes)
+                    ? build.Version
+                    : $"{build.Version} — {build.Notes}"));
+            }
+        }
+
+        if (open.Count > 0)
+        {
+            content.Add(DocJson.Heading(ru ? "Что дальше" : "What's next"));
+            content.Add(DocJson.BulletList(open));
+        }
+
+        return DocJson.Doc(content);
     }
 
     /// <summary>

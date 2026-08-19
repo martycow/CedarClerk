@@ -187,6 +187,12 @@ export class ProjectPlannerComponent {
         await this.run(() => this.api.remove(sprint.id));
     }
 
+    /** T-158 — assembles the devlog draft and opens it; the story gets written in the editor. */
+    async createDevlog(sprint: Sprint) {
+        const created = await this.run(() => this.api.createDevlog(sprint.id));
+        if (created) void this.router.navigate(['/editor'], { queryParams: { id: created.documentId } });
+    }
+
     /** Reloads both lists: moving a sprint's dates can change every other sprint's state. */
     private async run<T>(action: () => Promise<T>): Promise<T | null> {
         this.busy.set(true);

@@ -165,47 +165,18 @@ public static class BuildEndpoints
     {
         var content = new JsonArray
         {
-            Heading(build.Version),
+            DocJson.Heading(build.Version),
         };
 
         if (!string.IsNullOrWhiteSpace(build.Notes))
-            content.Add(Paragraph(build.Notes));
+            content.Add(DocJson.Paragraph(build.Notes));
 
         if (taskTitles.Count > 0)
-        {
-            var items = new JsonArray();
-            foreach (var title in taskTitles)
-            {
-                items.Add(new JsonObject
-                {
-                    ["type"] = "listItem",
-                    ["content"] = new JsonArray { Paragraph(title) },
-                });
-            }
-            content.Add(new JsonObject { ["type"] = "bulletList", ["content"] = items });
-        }
+            content.Add(DocJson.BulletList(taskTitles));
         else
-        {
-            content.Add(Paragraph(""));
-        }
+            content.Add(DocJson.Paragraph(""));
 
-        return new JsonObject { ["type"] = "doc", ["content"] = content }.ToJsonString();
-    }
-
-    private static JsonObject Heading(string text) => new()
-    {
-        ["type"] = "heading",
-        ["attrs"] = new JsonObject { ["level"] = 2 },
-        ["content"] = new JsonArray { new JsonObject { ["type"] = "text", ["text"] = text } },
-    };
-
-    private static JsonObject Paragraph(string text)
-    {
-        var node = new JsonObject { ["type"] = "paragraph" };
-        // TipTap writes an empty paragraph with no content array at all, not with an empty one.
-        if (!string.IsNullOrEmpty(text))
-            node["content"] = new JsonArray { new JsonObject { ["type"] = "text", ["text"] = text } };
-        return node;
+        return DocJson.Doc(content);
     }
 
     private static readonly Dictionary<Guid, List<(string Type, Guid Id)>> NoLinks = [];

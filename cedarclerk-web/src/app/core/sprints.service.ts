@@ -54,6 +54,15 @@ export class SprintsService {
     remove(id: string) {
         return firstValueFrom(this.http.delete<void>(`/api/sprints/${id}`));
     }
+
+    /**
+     * T-158 (ADR-132) — the sprint's finished work assembled into a devlog draft: a real post the
+     * author edits and publishes everywhere, same generator shape as the build's changelog.
+     */
+    createDevlog(id: string, title?: string) {
+        return firstValueFrom(this.http.post<{ documentId: string; title: string; doneCount: number }>(
+            `/api/sprints/${id}/devlog`, { title: title ?? null }));
+    }
 }
 
 /** How far through its tasks a sprint is, 0–100. A sprint with no tasks reads as 0, not as done. */

@@ -205,6 +205,7 @@ export const en = {
                 `${sprints} ${sprints === 1 ? 'sprint' : 'sprints'} · ${open} open ${open === 1 ? 'task' : 'tasks'}`,
             newSprint: 'New sprint',
             editSprint: 'Edit sprint',
+            makeDevlog: 'Devlog draft',
             loadFailed: 'Could not load the planner.',
             empty: 'No sprints yet',
             emptyHint: 'A sprint is a stretch of days with tasks in it. Everything not in one stays in "No sprint" — it is a way to plan, not a place tasks have to live.',

@@ -144,3 +144,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-129 — Storage quotas cut to what the disk can honor (18.08.2026)](adr/ADR-129.md)
 - [ADR-130 — Image metadata stripped on every write path, losslessly (18.08.2026)](adr/ADR-130.md)
 - [ADR-131 — Discord publishing over a webhook, no bot and no OAuth (18.08.2026)](adr/ADR-131.md)
+- [ADR-132 — Sprint → devlog draft: the assembler writes the material, not the story (18.08.2026)](adr/ADR-132.md)
