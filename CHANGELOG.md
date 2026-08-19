@@ -1,5 +1,52 @@
 # Changelog
 
+## 2026-08-19 — "do everything P1" (v0.12.2)
+
+Marty's one-line directive, plus five decisions answered in the same message: T-164 (PRGE trip)
+deleted from the board outright, Q-17 closed — the product stays **Cedar Clerk** with the focus in
+a subtitle, Q-18 (NSFW) deleted, the T-172 quota figures confirmed, and T-147's R2 keys revealed to
+have been live for a week.
+
+The infrastructure half: storage quotas cut to what the disk can honor — Free 100 MB / Pro 1 GB /
+Pro Plus 3 GB (ADR-129, one edit in `PlanLimitations`, every doc that quoted the old numbers
+updated); the off-box backup verified against the actual R2 bucket (daily `cedar-*.db.gz` rows,
+935 MB of media, both healthcheck URLs present, the installed script byte-identical to the repo
+copy) and T-147 closed; and the first-ever backup restore performed (T-149) — downloaded, gunzipped,
+integrity-checked, then served by a real local server: the blog rendered posts from the restored
+copy and the three pending 0.12.1 migrations applied cleanly over production data, which doubles as
+the pre-deploy migration rehearsal. T-175 landed as ADR-130: image metadata (EXIF/GPS, XMP, IPTC)
+stripped losslessly at byte level on every media write path — upload, `.cedar` import, Markdown
+import — and the two ImageSharp re-encode paths (Telegram derivative, asset thumbnails) stopped
+copying source EXIF into their output. Old files already on the droplet are T-202.
+
+The growth half — all five anchors from the competitor analysis, each with its ADR:
+
+- **Discord** became the fourth publish network (T-161, ADR-131): a channel webhook pasted whole in
+  Settings → Integrations, verified against Discord before being stored encrypted; the message is
+  the ADR-077 short post whose blog link unfurls from the OG tags, `allowed_mentions` disarmed, no
+  threads by design. Third micro-network in the export modal, brand icon and all.
+- **Sprint → devlog draft** (T-158, ADR-132): the button on the planner card that assembles a
+  sprint's finished tasks, its releases and its leftovers into a post skeleton — material, not
+  prose; the story stays the author's. The changelog generator's JSON helpers became the shared
+  `DocJson` on the way.
+- **Onboarding** (T-160, ADR-133): starter documents are born with per-type skeletons in the UI
+  language (GDD sections, jam plan, hypothesis note, changelog scaffold), and the empty `/projects`
+  screen offers "Cedar Quest" — a filled example project (board, current sprint, released 0.1.0,
+  a written devlog) created on demand, never seeded silently.
+- **Public project showcase** (T-159, ADR-134): `/games/{slug}` on the blog host — cover, store
+  links, the devlog feed under the blog index's exact visibility rule, and a roadmap of tasks the
+  owner explicitly ticked (title + status only). Opt-in at every level; migration
+  `AddProjectShowcase`.
+- **The landing reworked** (T-154, ADR-135): devlog-first ("Build your game. Grow your audience.
+  One tool."), English by default with Russian only on request, and the primary CTA is now a
+  waitlist — `WaitlistEntry` + `POST /api/waitlist` with a honeypot and case-insensitive dedupe —
+  because while registration is invite-only, "Create an account" leads to a wall. Verified live:
+  EN/RU rendering, signup, dedupe, invalid address, honeypot.
+
+Seven ADRs (129–135), three migrations, 1010 backend tests, frontend units and the contrast
+contract all green. Remaining P1s on the board are the blocked/decision/device kind (T-088/Q-15,
+T-034 device pass, T-036/Q-10, T-076 mockups, T-152 model revision, T-187/T-188 process rows).
+
 ## 2026-08-18 — the task board goes canonical (and English)
 
 `/task-format all`, on Marty's word, plus two new standing rules from the same message.

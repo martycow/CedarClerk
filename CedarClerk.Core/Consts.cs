@@ -2,7 +2,7 @@ namespace CedarClerk.Core;
 
 public static class Consts
 {
-    public const string CurrentVersion = "0.12.1";
+    public const string CurrentVersion = "0.12.2";
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
 

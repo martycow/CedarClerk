@@ -9,7 +9,35 @@ guard: none
 
 Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-saas-plan.md` (v1.7, 15.07.2026) and `Plans/session-brief-v0.8.0-planning.md`, which are now archived under `Plans/OLD/`. **This file is the one live roadmap going forward** — update it when a phase item closes, don't recreate a parallel plan doc. Architectural/product decisions referenced below (why something was built a certain way) live in `docs/DECISIONS.md`, not here — this file tracks *status*, DECISIONS tracks *rationale*.
 
-## Status summary (as of 18.08.2026)
+## Status summary (as of 19.08.2026)
+
+**v0.12.2 — every P1 closed in one session (18–19.08.2026, not yet deployed).** Marty's directive
+was "do everything P1", with five decisions resolved on the way in: T-164 (PRGE) removed outright,
+Q-17 closed (the name stays Cedar Clerk), Q-18 (NSFW) removed, T-172's quota figures confirmed,
+T-147's R2 keys confirmed already live. What shipped:
+
+- **Registration blockers**: quotas cut to disk-honest numbers (Free 100 MB / Pro 1 GB / Pro Plus
+  3 GB, ADR-129); the off-box R2 backup verified live against the bucket and closed (`T-147`); the
+  first backup restore actually performed (`T-149`) — integrity ok, 4 users / 21 drafts / 18
+  published, blog renders from the restored copy, and the three pending 0.12.1 migrations applied
+  cleanly over production data on the way. `T-172`'s remainder (media into R2) stays open.
+- **T-175 — EXIF/GPS stripping** (ADR-130): lossless segment/chunk removal in Core on all three
+  media write paths, plus `ExifProfile` nulled on both ImageSharp re-encode paths (the Telegram
+  derivative was carrying GPS to Telegram). Old files on the droplet are `T-202`.
+- **All five growth anchors**: `T-161` Discord webhook publishing (ADR-131 — fourth network, no
+  bot, no OAuth, `allowed_mentions` off); `T-158` sprint → devlog draft assembler (ADR-132 — the
+  "work → story" button on the planner card); `T-160` onboarding (ADR-133 — starter documents born
+  with per-type skeletons, and "Cedar Quest", the example project, on demand from the empty state);
+  `T-159` public project showcase (ADR-134 — `/games/{slug}` on the blog host: devlog feed under
+  the index's exact visibility rule, opt-in roadmap, store links; migration `AddProjectShowcase`);
+  `T-154` landing rework (ADR-135 — devlog-first copy, English default, and a waitlist
+  (`WaitlistEntry` + `POST /api/waitlist`, honeypot, dedupe) as the primary CTA; migration
+  `AddWaitlist`).
+
+Seven ADRs (129–135), three migrations, 1010 backend tests green, frontend 18/18, contrast clean.
+The landing and waitlist verified live against a local server on the restored production copy.
+Follow-ups became `T-202`/`T-203`/`T-204`; the live-verify checklist grew five entries. Deploy is
+Marty's call.
 
 **v0.12.1 — six board rows in one session (18.08.2026, not yet deployed).** `T-186` (index cards
 hardcoding "RU" — fixed), `T-174` (OG/Twitter/canonical/hreflang meta, ADR-124), `T-178` (post
