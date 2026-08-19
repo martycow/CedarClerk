@@ -1,3 +1,10 @@
+---
+owner: marty
+last_verified: 2026-08-18
+source_of_truth_for: требования-инварианты, non-requirements, blocked
+guard: none
+---
+
 # Product Requirements
 
 A thin requirements skeleton, slimmed on 18.08.2026 by Marty's call after the docs audit: this file

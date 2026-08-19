@@ -1,3 +1,10 @@
+---
+owner: marty
+last_verified: 2026-08-18
+source_of_truth_for: принципы дизайн-системы и карта токенов (значения — styles.scss)
+guard: none
+---
+
 # Design
 
 Source of truth for all values below: `cedarclerk-web/src/styles.scss` (~800 lines; since 18.08.2026 it `@use`s a second global partial, `styles/_forest.scss` — the Forest Workshop skin, ~1200 lines scoped under `:root[data-skin="forest"]`). Component-scoped CSS lives alongside each component (`editor.component.css`, `settings.component.css`, etc.) under Angular's default view encapsulation. **When this file and `styles.scss` disagree, `styles.scss` wins** — the values below drifted once (the 01.08 role shift) and were re-synced 18.08.2026.

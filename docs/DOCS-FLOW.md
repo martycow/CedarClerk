@@ -1,3 +1,10 @@
+---
+owner: marty
+last_verified: 2026-08-18
+source_of_truth_for: карта владения, потоков и размещения документации
+guard: DocsFlowGraphTests
+---
+
 # Как устроена документация Cedar Clerk
 
 Схема потоков между документами: кто первоисточник, что куда переносится и в какой момент. Существует, чтобы не повторялся рассинхрон — когда BACKLOG считает фичу открытой, ROADMAP «не начатой», а в коде она с прошлой недели.
@@ -21,6 +28,7 @@ flowchart TB
     subgraph WHY["Обоснования — почему именно так"]
         DECISIONS["docs/DECISIONS.md<br/><b>ADR-лог: индекс</b><br/>тексты — docs/adr/, файл на ADR"]
         RULES[".claude/rules/*.md<br/><b>жёсткие правила</b><br/>что уже ломалось"]
+        PRODENV[".claude/rules/production-environment.md<br/><b>истина о проде</b><br/>переписан с живой машины"]
         CLAUDE["CLAUDE.md<br/>как со мной работать"]
     end
 
@@ -33,6 +41,7 @@ flowchart TB
         STACK["docs/knowledge_base/STACK.md<br/>стек и расходы"]
         BIZ["docs/product/BUSINESS.md<br/>деньги: гейты, метрики, ритуалы"]
         MULTI["docs/product/MULTITENANCY.md<br/>что будет при пользователях"]
+        LEGAL["Terms + Privacy<br/>/terms, /privacy — Angular-компоненты<br/>заполнены 13.08, юрист не смотрел"]
     end
 
     subgraph USR["docs/for_user — инструкции и мануалы"]
@@ -60,15 +69,17 @@ flowchart TB
     TASKS ==>|"ПЕРЕД кодом:<br/>решение записывается"| DECISIONS
     DECISIONS ==>|"только потом"| CODE
     CODE -->|"сломалось больно →<br/>становится правилом"| RULES
-    RULES -->|"читаются перед<br/>работой в этой зоне"| DECISIONS
+    CODE -->|"прод: снято с машины,<br/>не по памяти (11.08)"| PRODENV
+    RULES -.->|"читаются перед<br/>работой в этой зоне"| DECISIONS
 
     CODE -.->|"сверка: доки врут?"| ROADMAP
     CODE -.->|"сверка"| BACKLOG
 
-    ARCH -->|"читается ПЕРЕД<br/>любой реализацией"| DECISIONS
-    PRD -->|"то же"| DECISIONS
+    ARCH -.->|"читается ПЕРЕД<br/>любой реализацией"| DECISIONS
+    PRD -.->|"то же"| DECISIONS
     PRODUCT -->|"кому и зачем"| BACKLOG
     DESIGN --> UIINV
+    LEGAL -.->|"юрист до открытия<br/>регистрации — гейт §1"| BIZ
 
     CODE -->|"меняли UI →<br/>обновить"| UIINV
     CODE -->|"поменяли устройство"| ARCH
@@ -76,7 +87,7 @@ flowchart TB
     DECISIONS -->|"ADR-101…107<br/>решения модуля"| INDIE
     INDIE -->|"строки T-120…T-137"| BACKLOG
     INDIE --> DESKTOP
-    DESIGN -->|"токены копируются<br/>в бриф дословно"| DPROMPT
+    DESIGN -->|"правила токенов; значения —<br/>из styles.scss перед запуском"| DPROMPT
     INDIE -->|"какие экраны нужны"| DPROMPT
 
     classDef source fill:#5B6E46,stroke:#3E4A2F,color:#fff
@@ -86,10 +97,12 @@ flowchart TB
     classDef mod fill:#C98A3B,stroke:#8A5D1F,color:#fff
     class MARTY,INPUTP,CODE source
     class BACKLOG,ROADMAP,TASKS,CHANGELOG plan
-    class DECISIONS,RULES,CLAUDE why
-    class PRODUCT,PRD,ARCH,DESIGN,UIINV,STACK,BIZ,MULTI,INTEG ref
+    class DECISIONS,RULES,PRODENV,CLAUDE why
+    class PRODUCT,PRD,ARCH,DESIGN,UIINV,STACK,BIZ,MULTI,INTEG,LEGAL ref
     class INDIE,DESKTOP,DPROMPT mod
 ```
+
+**Легенда рёбер** (введена 18.08.2026 — раньше три типа читались одинаково): **сплошная `-->`** — поток истины: содержимое или факт переносится по стрелке; **толстая `==>`** — жёсткий гейт, перепрыгивать нельзя (сначала ADR — только потом код); **пунктирная `-.->`** — сверка или порядок чтения: ничего не переносится, стрелка говорит «посмотри туда до/после».
 
 ## Первоисточники (истина рождается только здесь)
 
@@ -111,7 +124,7 @@ flowchart TB
 
 ## Обоснования
 
-**`docs/DECISIONS.md` (ADR-лог)** — жёсткое правило из CLAUDE.md: **меняешь решение → сначала ADR, потом код.** Отменённые решения не стираются, а перекрываются новым ADR (например ADR-065 исправляет ADR-064) — видно не только «как есть», но и «как думали раньше и почему передумали». **С 18.08.2026 лог распилен** (решение Марти): тексты — по одному файлу в `docs/adr/ADR-XXX.md`, `DECISIONS.md` — индекс, на который продолжают вести все старые ссылки; новый ADR = новый файл + строка индекса.
+**`docs/DECISIONS.md` (ADR-лог)** — жёсткое правило из CLAUDE.md: **меняешь решение → сначала ADR, потом код.** Отменённые решения не стираются, а перекрываются новым ADR (например ADR-065 исправляет ADR-064) — видно не только «как есть», но и «как думали раньше и почему передумали». **С 18.08.2026 лог распилен** (решение Марти): тексты — по файлу на ADR в `docs/adr/`, `DECISIONS.md` — индекс, на который продолжают вести все старые ссылки; новый ADR = новый файл + строка индекса.
 
 **`.claude/rules/*.md`** — то, что уже больно ломалось: Telegram-бот, EF-миграции, рендереры, деструктивные операции, секреты, прод. Читаются **перед** работой в зоне.
 
@@ -142,7 +155,7 @@ flowchart TB
 | **`design/`** | Дизайн, UI, UX | DESIGN (токены), UI-INVENTORY, indiedev-design-prompt |
 | **`tech/`** | Техническая составляющая | ARCHITECTURE, DESKTOP |
 | **`adr/`** | Тексты решений, файл на ADR (+ ownership-audit) | 122 ADR. Индекс — в корне; своя папка, а не `tech/adr/`, потому что ADR бывают и продуктовые (ADR-092, ADR-101), и технические |
-| **`fleet/`** | Оркестрация агентов (Cowtext / FleetView) | пока только README — определения агентов живут в `.claude/agents/` |
+| **`fleet/`** | Оркестрация агентов (Cowtext / FleetView) | пока только `docs/fleet/README.md` — определения агентов живут в `.claude/agents/` |
 | **`knowledge_base/`** | База знаний: терминология, технологии и стек, таблицы локализации, списки внедрённых фич | STACK |
 | **`for_user/`** | Все инструкции, мануалы и прочее, что важно пользователю | integrations-setup (ранбук провайдеров) |
 | **`archive/`** | Архив старых .md — живёт в репо, **текст не редактируется** (запись момента) | журнал переезда на DO, ROADMAP-фазы 0–10, аудит доков |

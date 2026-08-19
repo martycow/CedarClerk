@@ -1,3 +1,10 @@
+---
+owner: marty
+last_verified: 2026-08-18
+source_of_truth_for: назначение категории fleet (доки об оркестрации агентов)
+guard: none
+---
+
 # Fleet
 
 Оркестрация агентов: конфигурации, роли, графы и правила работы агентского флота (Cowtext / FleetView

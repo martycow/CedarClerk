@@ -1,3 +1,10 @@
+---
+owner: marty
+last_verified: 2026-08-18
+source_of_truth_for: поэлементный инвентарь фронтенд-UI
+guard: UiInventoryDriftTests + PreToolUse-хук ui-inventory-reminder
+---
+
 # UI Inventory
 
 Per-element inventory of the frontend UI — what exists, where it lives, what it does, and whether it needs (and has) a loading indicator. Complements `docs/design/DESIGN.md` (which covers tokens/CSS patterns, not individual elements). Update this file whenever a UI element is added, removed, or meaningfully changed — that's the point of it: a future session should be able to scan a page's table and answer "does this popup need a loading indicator, and does it have one?" without re-reading the component.

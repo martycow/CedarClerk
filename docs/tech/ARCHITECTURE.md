@@ -1,3 +1,10 @@
+---
+owner: marty
+last_verified: 2026-08-18
+source_of_truth_for: устройство системы — слои, данные, API, деплой
+guard: none
+---
+
 # Architecture
 
 ## Core idea: one document, many renderers

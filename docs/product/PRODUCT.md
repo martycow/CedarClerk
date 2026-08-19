@@ -1,3 +1,10 @@
+---
+owner: marty
+last_verified: 2026-08-18
+source_of_truth_for: что такое продукт, для кого, прайсинг-снимок
+guard: none
+---
+
 # Product
 
 > **Turning point, 10.08.2026 — the audience is now indie game developers.** Marty's out-of-repo brief (`Gamedev_Focused_Rework.md`) narrows the target audience from "creators publishing across channels" to one: the indie game developer. A post becomes one document type among several, living inside a **project**; around it grow tasks, sprints, an asset index, and game-design tooling. This answers `Q-1`, open since 30.07.2026.

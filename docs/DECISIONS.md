@@ -1,3 +1,10 @@
+---
+owner: marty
+last_verified: 2026-08-18
+source_of_truth_for: индекс ADR — какие решения существуют и где их тексты
+guard: none
+---
+
 # Decisions (ADR log)
 
 Consequential technical/product decisions already made and visible in the codebase or prior planning docs, recorded here per `CLAUDE.md`'s anti-desync rule: **any time a decision here changes, update this log first, then write code.** Entries are append-only; a superseded decision gets a new entry that references the old one rather than an edit-in-place.
@@ -128,3 +135,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-120 — Скин «Лесная мастерская»: измерение data-skin, ортогональное теме (18.08.2026)](adr/ADR-120.md)
 - [ADR-121 — `cedar run`: локальная проверка настоящей сборки (18.08.2026)](adr/ADR-121.md)
 - [ADR-122 — `docs/admin-panel-scope.md` удалён; два его решения переезжают сюда (18.08.2026)](adr/ADR-122.md)
+- [ADR-123 — Front-matter метаданных на живых доках (18.08.2026)](adr/ADR-123.md)

@@ -1,3 +1,10 @@
+---
+owner: marty
+last_verified: 2026-08-18
+source_of_truth_for: скоуп и модель данных инди-модуля (Phase 13)
+guard: none
+---
+
 # Модуль для инди-геймдева
 
 Единая точка входа по развороту Cedar Clerk в тулкит инди-разработчика игр. Первоисточник замысла — внерепозиторный бриф Марти `Gamedev_Focused_Rework.md`. Решения — `docs/DECISIONS.md`, ADR-101…107. Устройство десктопа — `docs/tech/DESKTOP.md`. Порядок работ — `docs/tasks/ROADMAP.md`, Phase 13.
