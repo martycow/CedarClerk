@@ -368,6 +368,13 @@ public static class BlogEndpoints
             return;
         }
 
+        // ADR-125 — the series landing is the first (and so far only) two-segment page.
+        if (segments is ["series", var seriesSlug])
+        {
+            await RenderSeriesAsync(ctx, db, seriesSlug);
+            return;
+        }
+
         ctx.Response.StatusCode = StatusCodes.Status404NotFound;
     }
 
@@ -1119,6 +1126,85 @@ public static class BlogEndpoints
         await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), indexLang, RenderHeader(channel), indexMeta));
     }
 
+    // ADR-125 — the series landing: what the index would show, narrowed to one series and ordered
+    // by its own order rather than by date. An empty (or fully invisible) series is an honest
+    // empty page, not a 404 — the URL is printed on every member post.
+    private static async Task RenderSeriesAsync(HttpContext ctx, CedarDbContext db, string slug)
+    {
+        var channel = await GetBlogChannelInfoAsync(db);
+        var series = await db.Series.FirstOrDefaultAsync(s => s.Slug == slug);
+        if (series is null)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            ctx.Response.ContentType = "text/html; charset=utf-8";
+            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Series not found.</p>", Languages.Russian, RenderHeader(channel)));
+            return;
+        }
+
+        var pageLang = ctx.Request.Query["lang"].ToString() is { Length: > 0 } requested
+                       && Languages.IsContentLanguage(requested)
+            ? requested
+            : Languages.Russian;
+        var en = pageLang == Languages.English;
+
+        var posts = await db.Drafts
+            .Where(d => d.SeriesId == series.Id && d.IsBlogPublished && (!d.IsPrivate || d.IsListedWhilePrivate))
+            .OrderBy(d => d.SeriesOrder).ThenBy(d => d.BlogPublishedAt)
+            .Select(d => new { d.Title, d.ArticleTitle, d.BlogSlug, d.BlogPublishedAt, d.CedarJson, d.IsPrivate, d.ViewCount })
+            .ToListAsync();
+
+        var sb = new StringBuilder();
+        sb.Append("<div class=\"series-head\"><h1>").Append(System.Net.WebUtility.HtmlEncode(series.Name)).Append("</h1>");
+        if (series.Description is { Length: > 0 } desc)
+            sb.Append("<p class=\"series-desc\">").Append(System.Net.WebUtility.HtmlEncode(desc)).Append("</p>");
+        sb.Append("<span class=\"series-count\">").Append(posts.Count).Append(en ? " parts" : " частей").Append("</span></div>");
+
+        if (posts.Count == 0)
+        {
+            sb.Append(en ? "<p class=\"empty\">Nothing published in this series yet.</p>"
+                         : "<p class=\"empty\">В этой серии пока ничего не опубликовано.</p>");
+        }
+        else
+        {
+            sb.Append("<div class=\"post-list timeline\">");
+            var part = 0;
+            foreach (var p in posts)
+            {
+                part++;
+                var excerpt = p.IsPrivate ? "" : Excerpt(p.CedarJson);
+                sb.Append("<div class=\"timeline-item\"><span class=\"timeline-dot\"></span>");
+                sb.Append("<a class=\"post-card\" href=\"/").Append(p.BlogSlug).Append("\">");
+                sb.Append("<div class=\"post-card-meta\">");
+                sb.Append("<span class=\"series-part-no\">").Append(en ? "Part " : "Часть ").Append(part).Append("</span>");
+                sb.Append("<span class=\"post-card-date\">")
+                  .Append(p.BlogPublishedAt is { } cardDate ? BlogDateFormatter.DateLocal(cardDate, pageLang) : "")
+                  .Append("</span>");
+                if (p.IsPrivate)
+                    sb.Append("<span class=\"post-card-locked\">&#128274;</span>");
+                sb.Append("</div>");
+                sb.Append("<div class=\"post-card-title\">").Append(System.Net.WebUtility.HtmlEncode(p.ArticleTitle ?? p.Title)).Append("</div>");
+                if (excerpt.Length > 0)
+                    sb.Append("<div class=\"post-card-excerpt\">").Append(System.Net.WebUtility.HtmlEncode(excerpt)).Append("</div>");
+                sb.Append("</a></div>");
+            }
+            sb.Append("</div>");
+        }
+
+        var backLinkLabel = en ? "All posts" : "Все посты";
+        var body = $"<a class=\"back-link\" href=\"/\">&larr; {backLinkLabel}</a>{sb}";
+
+        var cfg = ctx.RequestServices.GetRequiredService<IConfiguration>();
+        var blogBase = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}";
+        var meta = OgMetaBuilder.Build(new OgMetaInput(
+            series.Name, series.Description, $"{blogBase}/series/{series.Slug}",
+            $"{blogBase}/og-default.png", 1200, 630,
+            channel?.Title ?? "Cedar Clerk", pageLang,
+            [], null, null, null, IsArticle: false), OgMetaPolicy.Full);
+
+        ctx.Response.ContentType = "text/html; charset=utf-8";
+        await ctx.Response.WriteAsync(PageShell(series.Name, body, pageLang, RenderHeader(channel), meta));
+    }
+
     private static async Task RenderRssAsync(HttpContext ctx, CedarDbContext db)
     {
         // Public posts only, including the listed-private ones: an RSS item carries an excerpt
@@ -1360,6 +1446,44 @@ public static class BlogEndpoints
             ? $"<div class=\"post-footer-row\">{signatureBlock}<div class=\"spacer\"></div>{telegramLink}</div>"
             : "";
 
+        // ADR-125 — the series line and prev/next: numbered over the *visible* ordered members,
+        // so an unlisted private part never shifts the numbering a stranger sees. A member that is
+        // itself invisible (owner previewing an unlisted part) simply shows no series chrome.
+        var seriesLine = "";
+        var seriesNav = "";
+        if (draft.SeriesId is { } draftSeriesId
+            && await db.Series.FirstOrDefaultAsync(s => s.Id == draftSeriesId) is { } series)
+        {
+            var members = await db.Drafts
+                .Where(d => d.SeriesId == draftSeriesId && d.IsBlogPublished && (!d.IsPrivate || d.IsListedWhilePrivate))
+                .OrderBy(d => d.SeriesOrder).ThenBy(d => d.BlogPublishedAt)
+                .Select(d => new { d.Id, d.BlogSlug, d.Title, d.ArticleTitle })
+                .ToListAsync();
+            var position = members.FindIndex(m => m.Id == draft.Id);
+            if (position >= 0)
+            {
+                var isEn = lang == Languages.English;
+                var partLabel = isEn
+                    ? $"Part {position + 1} of {members.Count}"
+                    : $"Часть {position + 1} из {members.Count}";
+                seriesLine = $"<div class=\"series-line\"><a href=\"/series/{series.Slug}\">"
+                    + System.Net.WebUtility.HtmlEncode(series.Name) + $"</a> · {partLabel}</div>";
+
+                var prev = position > 0 ? members[position - 1] : null;
+                var next = position < members.Count - 1 ? members[position + 1] : null;
+                if (prev is not null || next is not null)
+                {
+                    var prevHtml = prev is null ? "<span></span>"
+                        : $"<a href=\"/{prev.BlogSlug}\"><span class=\"nav-label\">&larr; {(isEn ? "Previous" : "Предыдущая")}</span>"
+                          + System.Net.WebUtility.HtmlEncode(prev.ArticleTitle ?? prev.Title) + "</a>";
+                    var nextHtml = next is null ? ""
+                        : $"<a class=\"nav-next\" href=\"/{next.BlogSlug}\"><span class=\"nav-label\">{(isEn ? "Next" : "Следующая")} &rarr;</span>"
+                          + System.Net.WebUtility.HtmlEncode(next.ArticleTitle ?? next.Title) + "</a>";
+                    seriesNav = $"<div class=\"series-nav\">{prevHtml}{nextHtml}</div>";
+                }
+            }
+        }
+
         var titleHeading = HeadingOutline.StartsWithHeading(cedarJson)
             ? ""
             : $"<h1>{System.Net.WebUtility.HtmlEncode(title)}</h1>";
@@ -1399,8 +1523,10 @@ public static class BlogEndpoints
             {metaRow}
             {tagsRow}
             {notTranslatedNotice}
+            {seriesLine}
             {titleBlock}
             {body}
+            {seriesNav}
             {footerRow}
             {watermark}
             </div>
@@ -1639,6 +1765,19 @@ public static class BlogEndpoints
         .toc .toc-lvl-5 { padding-left: 56px; }
         .toc .toc-lvl-6 { padding-left: 70px; }
         .not-translated-notice { background: var(--asoft); border: 1px solid var(--abord); border-radius: 10px; padding: 10px 14px; margin: 0 0 14px; font-size: 13px; color: var(--t2); font-style: italic; }
+        .series-line { font-size: 13px; color: var(--t2); margin: 0 0 10px; }
+        .series-line a { color: var(--accent); font-weight: 600; text-decoration: none; }
+        .series-line a:hover { text-decoration: underline; }
+        .series-nav { display: flex; justify-content: space-between; gap: 12px; margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--border); }
+        .series-nav a { max-width: 48%; font-size: 13px; color: var(--text); text-decoration: none; }
+        .series-nav a:hover { color: var(--accent); }
+        .series-nav .nav-label { display: block; font-size: 11px; color: var(--t2); margin-bottom: 2px; }
+        .series-nav .nav-next { text-align: right; margin-left: auto; }
+        .series-head { margin: 0 0 18px; }
+        .series-head h1 { margin: 0 0 6px; }
+        .series-head .series-desc { color: var(--t2); font-size: 14px; margin: 0 0 4px; }
+        .series-head .series-count { color: var(--t2); font-size: 12px; }
+        .series-part-no { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--accent); }
         .floating-nav { position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 50; opacity: 0; pointer-events: none; transition: opacity .15s ease; }
         .floating-nav.visible { opacity: 1; pointer-events: auto; }
         .floating-nav-btn { width: 38px; height: 38px; border-radius: 50%; background: var(--sheet); border: 1px solid var(--border); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; color: var(--text); text-decoration: none; cursor: pointer; font-size: 16px; }
