@@ -68,6 +68,10 @@
     font-weight: 500;
     cursor: pointer;
     font-family: inherit;
+}
+
+/* Withheld while focused: a component's own shadow out-specifies the global rule that draws the ADR-140 halo. */
+.anchor-chips button:not(:focus-visible) {
     box-shadow: var(--shadow);
 }
 
@@ -151,7 +155,6 @@
     font: inherit;
     font-size: var(--fs-body);
     line-height: 1.5;
-    outline: none;
     box-sizing: border-box;
 }
 
@@ -159,11 +162,11 @@
     resize: vertical;
 }
 
+/* Border only: a wash here would be a box-shadow out-specifying the global ADR-140 halo. */
 .field-group textarea:focus,
 .field-group input:focus,
 .field-group select:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--asoft);
 }
 
 .field-group input[type="range"] {
@@ -171,10 +174,6 @@
     background: none;
     padding: 0;
     accent-color: var(--accent);
-}
-
-.field-group input[type="range"]:focus {
-    box-shadow: none;
 }
 
 .format-toggle {
@@ -1006,11 +1005,11 @@
 }
 
 @media (pointer: coarse) {
-    [data-surface="paper"] .anchor-chips button,
-    [data-surface="paper"] .btn-primary,
-    [data-surface="paper"] .btn-danger,
-    [data-surface="paper"] .btn-danger-ghost {
-        min-height: 44px;
+    [data-surface] .anchor-chips button,
+    [data-surface] .btn-primary,
+    [data-surface] .btn-danger,
+    [data-surface] .btn-danger-ghost {
+        min-height: var(--hit-surface);
     }
 }
 

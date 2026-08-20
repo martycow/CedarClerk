@@ -17,7 +17,10 @@ export interface IndexTabItem {
     panelId?: string;
 }
 
-/** Exported because the badge rules outlive this component: T-231 folds `app-count-badge` into it. */
+/**
+ * Exported because the badge rules outlive this component: the hook rail hangs the same tally on a
+ * tool (ADR-155), and T-231 folds `app-count-badge` into it.
+ */
 export function indexTabBadgeLabel(badge: number | string | undefined | null): string {
     if (badge === undefined || badge === null) return '';
     if (typeof badge === 'number') {

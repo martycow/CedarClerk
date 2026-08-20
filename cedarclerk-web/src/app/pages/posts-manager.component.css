@@ -116,9 +116,9 @@
 /* Touch targets, same rule and same reasoning as /drafts: keyed off the pointer rather than the
    viewport, so an iPad in landscape is covered too (T-082). */
 @media (pointer: coarse) {
-    [data-surface="paper"] .manager-tabs button,
-    [data-surface="paper"] .post-card {
-        min-height: 44px;
+    [data-surface] .manager-tabs button,
+    [data-surface] .post-card {
+        min-height: var(--hit-surface);
     }
 }
 

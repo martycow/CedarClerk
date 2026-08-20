@@ -123,6 +123,38 @@ ahead of the code they govern.
   it resolves a translucent backdrop only through CSS nesting, and these components write flat
   selectors, so the hook's own fill and the tab badge read against the page ground there — both are
   measured properly by the pair table instead, at 9.29 and 6.28.
+- **What rendering found that reading did not.** Two verifiers drove the shell in real Chromium and
+  turned up four defects every static check passes over; all four are closed. The touch floor was
+  being *selected* rather than inherited — `[data-surface="X"] button` matches at every depth, so in
+  a nesting (a shelf sheet inside chrome, a ruler on paper) source order decided the floor, and three
+  of seven measured cases stood at 30px where they owed 44. It is a custom property now, the one
+  thing in CSS that resolves to the nearest declaring ancestor in either direction (ADR-156,
+  superseding ADR-138 item 5); `check-density.mjs` gained a seventh rule, verified red on the defect
+  and on both of the naive repairs, one of which leaves a thrice-nested control at no floor at all.
+  Eleven stylesheets re-declared the focus ring ADR-140 says is never re-declared: `outline: none` on
+  the settings fields, the editor title and the three pickers; an `--accent` ring on `/drafts` and an
+  `--abord` one on four editor controls, measuring 2.19–2.76 against a 3.0 floor in both themes; and
+  an Appearance slider that painted no indicator at all. The only `outline` declarations left in the
+  front end are the global rule and the `.tiptap` exclusion, and a component `box-shadow` on a
+  focusable control is now written `:not(:focus-visible)` so it cannot quietly delete the halo. The
+  hook rail carried no unread signal — both badges that did died with `page-header` — so the Metrics
+  hook gained a tally, a work ticket on the hook rather than a notification dot, taking the index
+  tabs' own tokens and label rules (ADR-155). And the dots menu lied three ways: Escape dropped focus
+  to `<body>`, a click that navigated left the panel standing, and the project tile was a `button`
+  with `aria-haspopup` that opens no popup — it is an `<a routerLink>` now, so middle-click works.
+- **One stale rationale, and it was hiding behind a green gate.** The contrast run xfailed the ring
+  on `--wood-hi` with the printed reason "nothing focusable is placed on a bare frame". The drawer
+  pull falsifies it: a transparent button filling the lip, whose background is `--shelf-frame`
+  itself. The ramp is in `RING_SURFACES` now and the exception states what actually carries the ring
+  there — the 4.33:1 boundary inside the band, walked end to end, which is the argument ADR-140
+  already rests cork and the ruler on; ADR-140 and the styleguide's own caption now say the same
+  thing, so the record no longer contradicts the code. The census found nothing the branch had not
+  already: its 42 sub-floor combinations are byte-identical to the commit before these repairs, 33 of
+  them in the neutralised forest partial (`T-235`) and the rest third-party brand tiles and dots that
+  are not text. Three pairs were added for the tally, which the census structurally cannot reach —
+  its resin is 90% opaque, so its backdrop is part of its colour, and an absolutely positioned ticket
+  resolves to the page ground there rather than to the hook it hangs on; measured against the wall, a
+  hook tile and a hovered hook tile, it holds 6.03–6.89.
 - **What is open.** Stages 4 through 6 — the three reference screens, the remaining pages by
   pattern, cleanup and ship — are `T-222`…`T-237` on the board, none started. No decision waits on
   Marty any more; what waits on a deliverable is `T-236`, the narrow-screen designs, whose brief is

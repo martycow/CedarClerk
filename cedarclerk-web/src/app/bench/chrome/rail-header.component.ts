@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, ElementRef, booleanAttribute, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, booleanAttribute, inject, input, output, signal, viewChild } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { CedarLogoComponent } from '../../shared/cedar-logo.component';
 import { IconComponent } from '../../shared/icon.component';
 
@@ -15,27 +16,29 @@ import { IconComponent } from '../../shared/icon.component';
 @Component({
     selector: 'app-rail-header',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [CedarLogoComponent, IconComponent],
+    imports: [CedarLogoComponent, IconComponent, RouterLink],
     host: {
         'data-surface': 'chrome',
         'role': 'banner',
         '(document:click)': 'onDocumentClick($event)',
-        '(document:keydown.escape)': 'closeMenu()',
+        '(document:keydown.escape)': 'onEscape()',
     },
     template: `
         <app-cedar-logo class="mark" [size]="22" fill="var(--rail-ink)" />
         <span class="brand">{{ brand() }}</span>
         @if (version()) { <span class="version">{{ version() }}</span> }
 
-        @if (project()) {
-            <!-- The project name is the accessible name; the purpose rides on aria-haspopup and
-                 the tooltip. An aria-label of "switch project" would replace visible text that is
-                 not inside it, which is the WCAG 2.5.3 failure. -->
-            <button type="button" class="tile" aria-haspopup="true"
-                    [attr.title]="projectHint() || null" (click)="projectClicked.emit()">
+        @if (project() && projectLink()) {
+            <!-- A link, for the reason every hook on the wall is one: a middle click opens the
+                 destination in a tab. It is not aria-haspopup — ARIA 1.2 reads that as "menu",
+                 and what happens here is a navigation.
+                 The project name is the accessible name; an aria-label of "switch project" would
+                 replace visible text that is not inside it, which is the WCAG 2.5.3 failure, so
+                 the purpose rides on the tooltip. -->
+            <a class="tile" [routerLink]="projectLink()" [attr.title]="projectHint() || null">
                 <span class="tile-name">{{ project() }}</span>
                 <app-icon name="caret-down" size="xs" />
-            </button>
+            </a>
         }
 
         @if (crumbs().length) {
@@ -53,14 +56,14 @@ import { IconComponent } from '../../shared/icon.component';
 
         <div class="menu-anchor">
             @if (hasMenu()) {
-                <button type="button" class="dots" [attr.aria-label]="menuLabel()"
+                <button #trigger type="button" class="dots" [attr.aria-label]="menuLabel()"
                         aria-haspopup="true" [attr.aria-expanded]="menuOpen()" (click)="toggleMenu()">
                     <app-icon name="dots-three" size="sm" />
                 </button>
             }
             <!-- Never behind @if: the slot is what holds the projected controls, and a control
                  destroyed on close loses whatever state it was carrying. -->
-            <div class="menu" role="group" [attr.aria-label]="menuLabel()" [hidden]="!menuOpen()">
+            <div #panel class="menu" role="group" [attr.aria-label]="menuLabel()" [hidden]="!menuOpen()">
                 <ng-content select="[menu]" />
             </div>
         </div>
@@ -123,6 +126,7 @@ import { IconComponent } from '../../shared/icon.component';
             font-size: var(--text-chrome);
             font-weight: 700;
             white-space: nowrap;
+            text-decoration: none;
             cursor: pointer;
             text-shadow: 0 1px 1px var(--rail-edge);
         }
@@ -209,12 +213,19 @@ import { IconComponent } from '../../shared/icon.component';
 })
 export class RailHeaderComponent {
     private readonly el = inject(ElementRef<HTMLElement>);
+    private readonly trigger = viewChild<ElementRef<HTMLButtonElement>>('trigger');
+    private readonly panel = viewChild.required<ElementRef<HTMLElement>>('panel');
 
     readonly brand = input('Cedar Clerk');
     readonly version = input('');
     /** The active project. Empty renders no tile — the switcher has nothing to switch. */
     readonly project = input('');
-    /** Tooltip and accessible name of the switcher tile; the consumer's to translate. */
+    /**
+     * Where the tile goes; anything routerLink takes. Empty renders no tile either: a switcher
+     * with no destination is a sign, not a control.
+     */
+    readonly projectLink = input<string | readonly unknown[]>('');
+    /** Tooltip of the switcher tile; the consumer's to translate. The name stays the project's. */
     readonly projectHint = input('');
     readonly crumbs = input<readonly string[]>([]);
     readonly crumbsLabel = input('Breadcrumb');
@@ -222,7 +233,6 @@ export class RailHeaderComponent {
     /** False hides the dots button; the `[menu]` slot still holds whatever was handed to it. */
     readonly hasMenu = input(true, { transform: booleanAttribute });
 
-    readonly projectClicked = output<void>();
     readonly menuOpenChange = output<boolean>();
 
     private readonly open = signal(false);
@@ -232,10 +242,26 @@ export class RailHeaderComponent {
 
     closeMenu(): void { this.setMenu(false); }
 
+    // The menu-button pattern: Escape closes and hands focus back to the button. Hiding the panel
+    // first would drop focus on <body> — [hidden] takes the focused entry out of the tree — so the
+    // question of whether we hold focus at all is asked before the panel goes.
+    onEscape(): void {
+        if (!this.open()) return;
+        const held = this.el.nativeElement.contains(document.activeElement);
+        this.setMenu(false);
+        if (held) this.trigger()?.nativeElement.focus();
+    }
+
     onDocumentClick(event: MouseEvent): void {
         if (!this.open()) return;
-        const target = event.target;
-        if (target instanceof Node && this.el.nativeElement.contains(target)) return;
+        const target = event.target instanceof Element ? event.target : null;
+        if (target && this.panel().nativeElement.contains(target)) {
+            // An entry that leaves the page takes the panel with it, or it hangs over whatever
+            // was navigated to; one that acts in place — theme, Appearance — leaves it standing.
+            if (target.closest('a[href]')) this.setMenu(false);
+            return;
+        }
+        if (target && this.el.nativeElement.contains(target)) return;
         this.setMenu(false);
     }
 

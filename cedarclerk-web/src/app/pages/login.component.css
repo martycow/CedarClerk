@@ -96,13 +96,12 @@
     padding: 9px 12px;
     font-size: var(--fs-body);
     font-family: inherit;
-    outline: none;
     box-sizing: border-box;
 }
 
+/* Border only: a wash here would be a box-shadow out-specifying the global ADR-140 halo. */
 .field input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--asoft);
 }
 
 .primary-btn {

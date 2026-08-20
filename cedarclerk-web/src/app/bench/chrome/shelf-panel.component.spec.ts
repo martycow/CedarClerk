@@ -124,8 +124,38 @@ describe('ShelfPanelComponent', () => {
             const sheet = panel.querySelector('.sp-sheet') as HTMLElement;
             expect(sheet.getAttribute('data-surface')).toBe('paper');
 
+            // The floor is carried down as an inherited custom property, so the sheet decides it
+            // only for as long as nothing of the panel's own stands between the sheet and what is
+            // projected into it and restates the axis. That is the panel's whole part in it.
             const plain = panel.querySelector('.plain') as HTMLElement;
-            expect(plain.closest('[data-surface]')).toBe(sheet);
+            const between: string[] = [];
+            for (let node = plain.parentElement; node && node !== sheet; node = node.parentElement) {
+                if (node.hasAttribute('data-surface')) between.push(node.getAttribute('data-surface')!);
+            }
+            expect(between, 'a surface declared under the sheet takes the floor away from it').toEqual([]);
+        });
+
+        // The resolved floor itself is a media-query cascade over an inherited custom property, and
+        // this runner answers neither half — so it is measured in e2e/17-density.spec.ts, and the
+        // reason is checked here rather than believed. The day this goes red the runner has grown
+        // the ability and the measurement can come home.
+        it('cannot resolve a floor at all, which is why it is measured in e2e/17-density.spec.ts', () => {
+            const style = document.createElement('style');
+            style.textContent = '[data-surface="paper"] { --floor-probe: 44px; }';
+            const outer = document.createElement('div');
+            outer.setAttribute('data-surface', 'paper');
+            outer.innerHTML = '<span></span>';
+            document.head.appendChild(style);
+            document.body.appendChild(outer);
+            try {
+                expect(typeof window.matchMedia, 'the runner grew matchMedia — @media (pointer: coarse) may apply now')
+                    .toBe('undefined');
+                expect(getComputedStyle(outer.firstElementChild!).getPropertyValue('--floor-probe'),
+                    'the runner now inherits custom properties down the tree').toBe('');
+            } finally {
+                outer.remove();
+                style.remove();
+            }
         });
 
         it('leaves a projected paper control its own surface', () => {

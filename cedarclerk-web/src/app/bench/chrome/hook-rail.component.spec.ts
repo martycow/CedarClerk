@@ -104,6 +104,47 @@ describe('HookRailComponent', () => {
         expect(el().querySelectorAll('app-brass-hook').length).toBe(0);
     });
 
+    // The wall is the only place the app says feedback has arrived, so the tally is a real
+    // regression surface and not decoration (ADR-155).
+    it('hangs a tally on the tool with work waiting, and nothing at all at zero', () => {
+        expect(el().querySelectorAll('.tally').length).toBe(0);
+
+        host.items = SIX.map(i => i.id === 'stats' ? { ...i, badge: 3, badgeTitle: 'New comments and reactions' } : i);
+        render();
+        const tallies = Array.from(el().querySelectorAll('.tally'));
+        expect(tallies.length).toBe(1);
+        expect(tallies[0].textContent!.trim()).toBe('3');
+        expect(tallies[0].closest('a.hook')!.getAttribute('href')).toBe('/posts');
+
+        host.items = SIX.map(i => i.id === 'stats' ? { ...i, badge: 0, badgeTitle: 'New comments and reactions' } : i);
+        render();
+        expect(el().querySelectorAll('.tally').length).toBe(0);
+    });
+
+    it('caps a runaway tally so it cannot outgrow the wall', () => {
+        host.items = SIX.map(i => i.id === 'stats' ? { ...i, badge: 150 } : i);
+        render();
+        expect(el().querySelector('.tally')!.textContent!.trim()).toBe('99+');
+
+        host.items = SIX.map(i => i.id === 'stats' ? { ...i, badge: 99 } : i);
+        render();
+        expect(el().querySelector('.tally')!.textContent!.trim()).toBe('99');
+    });
+
+    // An aria-label on the tally REPLACES its text, so naming what it counts without repeating the
+    // number would drop the count out of the link's name — the one thing the tally is there to say.
+    it('keeps the count in the hook name and says what it counts', () => {
+        host.items = SIX.map(i => i.id === 'stats' ? { ...i, badge: 3, badgeTitle: 'New comments and reactions' } : i);
+        render();
+        const tally = el().querySelector('.tally')!;
+        expect(tally.getAttribute('aria-label')).toBe('3 New comments and reactions');
+        expect(tally.getAttribute('title')).toBe('New comments and reactions');
+
+        host.items = SIX.map(i => i.id === 'stats' ? { ...i, badge: 3 } : i);
+        render();
+        expect(el().querySelector('.tally')!.hasAttribute('aria-label')).toBe(false);
+    });
+
     it('reports which tool was taken off the wall', () => {
         hooks()[3].click();
         expect(host.picks).toEqual(['assets']);
@@ -143,14 +184,25 @@ describe('HookRailComponent', () => {
             for (const s of sizes) expect(['var(--text-chrome)', 'var(--text-chrome-sm)']).toContain(s);
         });
 
-        it('is a pegboard, and paints ink on the rail with the cream', () => {
+        // Ink follows the ground it lands on. Type straight on the wall takes the cream; a rule that
+        // paints its own ground takes the ink that ground was measured against, and a ground with no
+        // measured ink fails here rather than shipping unscored.
+        it('is a pegboard, and every ink matches the ground under it', () => {
             expect(css).toMatch(/background:\s*var\(--pegboard\)/);
+            const INK_ON = new Map([
+                ['var(--pegboard)', 'var(--rail-ink)'],
+                ['var(--hook-face)', 'var(--rail-ink)'],
+                // The index tabs' badge pair, byte for byte — one badge across the chrome (ADR-155).
+                ['var(--tab-badge)', 'var(--rail-edge)'],
+            ]);
             const rules = Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g));
             const inked = rules.filter(m => /(^|[^-])color:/.test(m[2]));
             expect(inked.length).toBeGreaterThan(0);
             for (const m of inked) {
-                const value = m[2].match(/(^|[^-])color:\s*([^;}]+)/)![2].trim();
-                expect(value).toBe('var(--rail-ink)');
+                const ink = m[2].match(/(^|[^-])color:\s*([^;}]+)/)![2].trim();
+                const ground = m[2].match(/(^|[^-])background:\s*([^;}]+)/)?.[2].trim();
+                expect(ink, `ink on ${ground ?? 'the wall'} in "${m[1].trim()}"`)
+                    .toBe(ground ? INK_ON.get(ground) : 'var(--rail-ink)');
             }
         });
 

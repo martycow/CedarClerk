@@ -81,11 +81,6 @@
     font-size: var(--dens-fs);
 }
 
-.search-input:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
-}
-
 .view-toggle {
     display: flex;
     gap: 2px;
@@ -110,6 +105,10 @@
 .view-toggle button.active {
     background: var(--sheet);
     color: var(--accent);
+}
+
+/* Withheld while focused: a component's own shadow out-specifies the global rule that draws the ADR-140 halo. */
+.view-toggle button.active:not(:focus-visible) {
     box-shadow: var(--shadow);
 }
 
@@ -739,11 +738,11 @@
    the floor at 44px. Keyed off the pointer, not the viewport, so an iPad in landscape — which is
    wide enough to miss a width query — still gets targets a thumb can hit. */
 @media (pointer: coarse) {
-    [data-surface="paper"] .mini,
-    [data-surface="paper"] .mini-remove,
-    [data-surface="paper"] .view-toggle button {
-        min-width: 44px;
-        min-height: 44px;
+    [data-surface] .mini,
+    [data-surface] .mini-remove,
+    [data-surface] .view-toggle button {
+        min-width: var(--hit-surface);
+        min-height: var(--hit-surface);
     }
 
     [data-surface="paper"] .row-actions {

@@ -41,8 +41,8 @@ export interface AllCommentsFeedback {
 export class CommentsService {
     private http = inject(HttpClient);
 
-    // Shared by every attention badge (N3) — root-provided, so the editor's account menu and the
-    // Posts Manager's tab strip read one number instead of each counting for itself.
+    // Shared by every attention badge (N3) — root-provided, so the rail's tally and the Posts
+    // Manager's tab strip read one number instead of each counting for itself.
     readonly newComments = signal(0);
     readonly newReactions = signal(0);
 

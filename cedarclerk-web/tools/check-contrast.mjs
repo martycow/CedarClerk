@@ -456,6 +456,15 @@ pairs.push({ fg: '--rail-ink', bg: '--surface-rail', min: 4.5, note: 'brand and 
 pairs.push({ fg: '--rail-ink', bg: '--hook-face', under: '--pegboard', min: 4.5, note: 'tool caption on its hook' });
 pairs.push({ fg: '--rail-edge', bg: '--tab-badge', under: '--grad-sign-tile', min: 4.5, note: 'index-tab counter on its resin badge' });
 
+// The same resin badge hung on the hook rail as a work ticket (ADR-155). The resin is 90% opaque,
+// so what it lies on is part of its colour, and the ticket is notched over the tile's top corner:
+// part of it is on the tile and part on the bare wall. The census cannot reach these — it resolves
+// a badge's backdrop to the page ground when no enclosing rule paints one, which for an absolutely
+// positioned ticket is the wrong surface — so the three grounds it can cover are named here.
+pairs.push({ fg: '--rail-edge', bg: '--tab-badge', under: '--pegboard', min: 4.5, note: 'work ticket where it overhangs the wall' });
+pairs.push({ fg: '--rail-edge', bg: '--tab-badge', under: '--hook-face', min: 4.5, note: 'work ticket on a hook tile' });
+pairs.push({ fg: '--rail-edge', bg: '--tab-badge', under: '--rail-lo', min: 4.5, note: 'work ticket on a hovered hook tile' });
+
 // The crumb separator, which is drawn and not written — `content: '/'`, never announced. It is the
 // one thing the soft cream is spent on, and it takes the decoration floor for the same reason --t3
 // does on paper (ADR-074): held to 4.5 it collapses onto the cream it exists to sit below.
@@ -476,8 +485,11 @@ const RING_SURFACES = [
     ['--leaf-bg', null], ['--leaf-bg-2', null],
     ['--surface-rail', null], ['--grad-sign-tile', null],
     ['--accent', null], ['--grad-pine', null],
-    ['--wood-hi', 'ADR-140 — neither ring layer clears bare wood; the boundary inside the band '
-        + 'carries it, and nothing focusable is placed on a bare frame'],
+    ['--shelf-frame', 'ADR-140 — neither ring layer clears the frame where it is light; the '
+        + 'boundary inside the band carries it, as it does for cork and the ruler. The drawer pull '
+        + 'is focusable and sits on the lip, which paints this ramp'],
+    ['--wood-hi', 'ADR-140 — the light stop of --shelf-frame, read flat, where that shortfall '
+        + 'is at its worst'],
     ['--grad-brass', 'ADR-140 — the halo vanishes into the ruler and the dark outline is the whole '
         + 'indicator, which the brass ramp holds at its light stop and not at its dark one'],
 ];

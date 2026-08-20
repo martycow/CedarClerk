@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
+import { CommentsService } from '../../core/comments.service';
 import { LocaleService } from '../../core/i18n/locale.service';
 import { ProjectsService } from '../../core/projects.service';
 import { RulerService } from '../../core/ruler.service';
@@ -49,9 +50,9 @@ function matches(path: string, pattern: string): boolean {
 
             <div class="column">
                 <app-rail-header [version]="versionLabel()" [project]="projectLabel()"
+                                 projectLink="/projects"
                                  [projectHint]="t().shell.switchProject" [crumbs]="crumbs()"
-                                 [crumbsLabel]="t().shell.breadcrumb" [menuLabel]="t().shell.more"
-                                 (projectClicked)="goProjects()">
+                                 [crumbsLabel]="t().shell.breadcrumb" [menuLabel]="t().shell.more">
                     <div menu class="menu-items">
                         <button type="button" class="menu-item theme-toggle" (click)="theme.toggle()">
                             <span class="glyph" aria-hidden="true">{{ theme.theme() === 'dark' ? '☀' : '☾' }}</span>
@@ -186,6 +187,7 @@ export class BenchShellComponent {
     private readonly router = inject(Router);
     private readonly projects = inject(ProjectsService);
     private readonly version = inject(VersionService);
+    private readonly feedback = inject(CommentsService);
 
     protected readonly auth = inject(AuthService);
     protected readonly theme = inject(ThemeService);
@@ -231,7 +233,11 @@ export class BenchShellComponent {
         // hub — the one screen that can name which board was meant. Same gap as the switcher.
         if (this.auth.indieDev()) items.push({ id: 'board', icon: 'kanban', label: t.board, link: id ? ['/projects', id, 'tasks'] : '/projects' });
         items.push({ id: 'assets', icon: 'images', label: t.assets, link: '/library' });
-        items.push({ id: 'metrics', icon: 'chart-bar', label: t.metrics, link: '/posts' });
+        items.push({
+            id: 'metrics', icon: 'chart-bar', label: t.metrics, link: '/posts',
+            badge: this.feedback.newComments() + this.feedback.newReactions(),
+            badgeTitle: this.t().editor.newBadge,
+        });
         items.push({ id: 'settings', icon: 'gear', label: this.t().settings.crumb, link: '/settings', end: true });
         return items;
     });
@@ -259,6 +265,11 @@ export class BenchShellComponent {
     });
 
     constructor() {
+        // The rail is the only global signal that feedback has arrived, so the shell is what asks:
+        // before this it was fetched by whichever screen happened to open, and landing anywhere but
+        // the editor left the tally at zero over unread comments (ADR-155).
+        this.feedback.refreshNewCount();
+
         this.router.events.subscribe(e => {
             if (e instanceof NavigationEnd) this.url.set(e.urlAfterRedirects);
         });
@@ -271,10 +282,6 @@ export class BenchShellComponent {
                 .then(list => this.projectNames.set(new Map(list.map(p => [p.id, p.name]))))
                 .catch(() => { this.namesRequested = false; });
         });
-    }
-
-    protected goProjects(): void {
-        this.router.navigate(['/projects']);
     }
 
     private projectCrumbs(seg: readonly string[]): readonly string[] {

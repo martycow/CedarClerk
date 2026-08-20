@@ -50,9 +50,11 @@ describe('WorktopComponent', () => {
         expect(top().getAttribute('data-surface')).toBe('chrome');
     });
 
-    // The trap: a chrome box holding paper. Chrome's 30px/11-13px numbers are attached to the
+    // The trap: a chrome box holding paper. Chrome's 30px/11-13px numbers ride down from the
     // attribute, so without the body restating the axis the sheet lying on the top would inherit
-    // them, and every control on that sheet would come out at chrome's density.
+    // them, and every control on that sheet would come out at chrome's density. What this runner
+    // can hold the worktop to is the chain of declarations; the px the chain resolves to needs an
+    // engine with a coarse pointer, and is measured in e2e/17-density.spec.ts.
     it('does not leak chrome onto what lies on it', () => {
         expect(body().getAttribute('data-surface')).toBe('paper');
 
@@ -60,9 +62,19 @@ describe('WorktopComponent', () => {
         const projected = TestBed.createComponent(SheetOnTopHost);
         projected.detectChanges();
         const card = projected.nativeElement.querySelector('app-paper-card') as HTMLElement;
-        expect(card.closest('[data-surface]')!.getAttribute('data-surface')).toBe('paper');
+        // The floor rides down as an inherited custom property, so what decides a control's floor
+        // is the last surface named on the way to it. The chain from the top down to the card is
+        // read whole: the frame opens it, and nothing under the body may put chrome back.
+        const chain: string[] = [];
+        for (let node: HTMLElement | null = card; node; node = node.parentElement) {
+            if (node.hasAttribute('data-surface')) chain.unshift(node.getAttribute('data-surface')!);
+        }
+        expect(chain.length, 'the card carries no surface chain at all').toBeGreaterThan(1);
+        expect(chain[0], 'the top itself is the frame').toBe('chrome');
+        expect(chain.indexOf('chrome', 1), `chrome comes back under the body: ${chain.join(' > ')}`).toBe(-1);
         projected.destroy();
     });
+
 
     it('lays lamp over rules over stock, and lets a consumer drop either layer', () => {
         expect(top().style.getPropertyValue('--wt-lamp')).toBe('var(--lamp)');

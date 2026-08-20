@@ -97,7 +97,6 @@
     padding: 9px 12px;
     font-size: var(--fs-body);
     font-family: inherit;
-    outline: none;
     box-sizing: border-box;
 }
 
@@ -106,13 +105,17 @@
     letter-spacing: .04em;
 }
 
+/* Border only: a wash here would be a box-shadow out-specifying the global ADR-140 halo. */
 .field input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--asoft);
 }
 
 .field input.invalid {
     border-color: var(--danger);
+}
+
+/* Withheld while focused: a component's own shadow out-specifies the global rule that draws the ADR-140 halo. */
+.field input.invalid:not(:focus-visible) {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 10%, transparent);
 }
 

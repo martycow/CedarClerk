@@ -167,3 +167,5 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-152 — The accent picker survives, and every tone downstream of it is derived, never held (20.08.2026)](adr/ADR-152.md)
 - [ADR-153 — The bottom edge of the bench: the console becomes a drawer, the status bar dissolves (20.08.2026)](adr/ADR-153.md)
 - [ADR-154 — The shell's content region is paper, so the touch carve-out has something to stand on (20.08.2026)](adr/ADR-154.md)
+- [ADR-155 — The tally: a badge for the hook rail, which the kit does not define (20.08.2026)](adr/ADR-155.md)
+- [ADR-156 — The touch floor is inherited, not selected (20.08.2026)](adr/ADR-156.md)

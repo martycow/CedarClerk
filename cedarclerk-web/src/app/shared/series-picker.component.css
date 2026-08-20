@@ -122,7 +122,6 @@
     padding: 5px 8px;
     font-size: var(--fs-ui);
     font-family: inherit;
-    outline: none;
     min-width: 0;
 }
 

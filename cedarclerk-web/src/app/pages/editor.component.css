@@ -24,7 +24,6 @@
 
 .title {
     border: 1px solid var(--border);
-    outline: none;
     background: var(--sheet);
     font-size: var(--fs-ui);
     color: var(--text);
@@ -38,9 +37,9 @@
     border-color: var(--t2);
 }
 
+/* Border only: a wash here would be a box-shadow out-specifying the global ADR-140 halo. */
 .title:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--asoft);
 }
 
 .save-state {
@@ -826,6 +825,10 @@
     background: var(--sheet);
     color: var(--text);
     border-color: var(--accent);
+}
+
+/* Withheld while focused: a component's own shadow out-specifies the global rule that draws the ADR-140 halo. */
+.lang-tabs button.on:not(:focus-visible) {
     box-shadow: var(--shadow);
 }
 
@@ -1631,14 +1634,6 @@
     display: flex;
     align-items: center;
     gap: 4px;
-}
-
-.chat-input:focus-visible,
-.schedule-row input:focus-visible,
-.link-popover input:focus-visible,
-input[type="datetime-local"]:focus-visible {
-    outline: 2px solid var(--abord);
-    outline-offset: 1px;
 }
 
 @media (max-width: 768px) {

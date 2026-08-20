@@ -532,26 +532,24 @@ textarea {
       Inline links in prose are exempt (WCAG 2.5.8 says so), and so are checkboxes and radios,
       where a 44px box would be a platform control blown up out of shape. */
 @media (pointer: coarse) {
-    [data-surface="paper"] button,
-    [data-surface="paper"] [role="button"],
-    [data-surface="paper"] summary,
-    [data-surface="paper"] select,
-    [data-surface="paper"] a.icon-btn {
-        min-height: var(--hit-target);
-        min-width: var(--hit-target);
-    }
+    /* ADR-138 item 5. The surfaces nest both ways — a shelf panel stands on the worktop sheet, a
+       ruler bar sits on the paper it measures — so a control is a descendant of both selectors and
+       the floor it is owed is the one its NEAREST surface declares. Selector matching cannot say
+       "nearest": two equal-specificity blocks hand the answer to source order, which then gives the
+       same winner to both nestings, and excluding descendants of the opposite surface leaves a
+       control three levels deep matched by neither, standing at no floor at all. Inheritance can —
+       a custom property takes its value from the nearest ancestor that declares it, whatever the
+       depth and whichever way round. So the surface declares the floor and the controls spend it. */
+    [data-surface="paper"] { --hit-surface: var(--hit-target); }
+    [data-surface="chrome"] { --hit-surface: var(--hit-chrome); }
 
-    /* ADR-138 item 5. Chrome nests inside paper — a shelf panel stands on the worktop sheet — so
-       both selector lists match its controls; equal specificity leaves source order to decide, and
-       this one is second. Without it a touch pointer pushes the ruler from 30px to 44 and the rail
-       past --bench-rail-h, which is the whole chrome budget the shell exists to buy back. */
-    [data-surface="chrome"] button,
-    [data-surface="chrome"] [role="button"],
-    [data-surface="chrome"] summary,
-    [data-surface="chrome"] select,
-    [data-surface="chrome"] a.icon-btn {
-        min-height: var(--hit-chrome);
-        min-width: var(--hit-chrome);
+    [data-surface] button,
+    [data-surface] [role="button"],
+    [data-surface] summary,
+    [data-surface] select,
+    [data-surface] a.icon-btn {
+        min-height: var(--hit-surface);
+        min-width: var(--hit-surface);
     }
 }
 
@@ -834,7 +832,6 @@ body {
 
         .toggle-summary-input {
             border: none;
-            outline: none;
             font-weight: 600;
             font-size: 15px;
             width: 100%;
@@ -864,7 +861,6 @@ body {
             width: 100%;
             box-sizing: border-box;
             border: none;
-            outline: none;
             font-weight: 600;
             font-size: 15px;
             background: transparent;
@@ -977,7 +973,6 @@ body {
             width: 100%;
             box-sizing: border-box;
             border: none;
-            outline: none;
             background: transparent;
             font-size: 13px;
             color: var(--t2);

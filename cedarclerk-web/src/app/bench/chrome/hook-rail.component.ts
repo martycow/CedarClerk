@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { BrassHookComponent } from '../scenery/brass-hook.component';
 import { IconComponent } from '../../shared/icon.component';
 import { IconName } from '../../shared/icon-data.generated';
+import { indexTabBadgeLabel } from './index-tabs.component';
 
 export interface HookRailItem {
     id: string;
@@ -15,6 +16,13 @@ export interface HookRailItem {
     link: string | readonly unknown[];
     /** Pins the hook to the bottom of the wall, the way the kit anchors Settings. */
     end?: boolean;
+    /**
+     * What is waiting behind that screen, hung off the tool as a tally. A number follows the app's
+     * counter rules — nothing at zero or below, `99+` past ninety-nine. A string is drawn as written.
+     */
+    badge?: number | string;
+    /** Says what the tally counts, which the number alone cannot. */
+    badgeTitle?: string;
 }
 
 /** The legibility limit HookRail.prompt.md sets: "a wall with everything on it is a wall you stop reading." */
@@ -51,6 +59,10 @@ const MAX_HOOKS = 7;
                         <app-icon [name]="item.icon" size="sm" />
                         @if (item.label) { <span class="cap">{{ item.label }}</span> }
                         <span class="here" aria-hidden="true"></span>
+                        @if (tally(item); as count) {
+                            <span class="tally" [attr.title]="item.badgeTitle || null"
+                                  [attr.aria-label]="item.badgeTitle ? count + ' ' + item.badgeTitle : null">{{ count }}</span>
+                        }
                     </a>
                 </li>
             }
@@ -148,6 +160,29 @@ const MAX_HOOKS = 7;
             border-radius: var(--radius-stamp);
             background: var(--grad-brass);
         }
+
+        /* A work ticket hung on the tool's own peg and notched over its top corner — the wall says
+           a station has something waiting the way a workshop does, with a tag rather than a light.
+           It rides above the hook because a ticket hangs in front of the hardware, and it takes the
+           index tabs' ground and ink so chrome carries one badge instead of two dialects.
+           No min-height: chrome's 30px floor is a control's floor, and a tally is not a control. */
+        :host([data-surface="chrome"]) .tally {
+            position: absolute;
+            top: calc(var(--space-2) * -1);
+            right: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 var(--space-1);
+            border: 1px solid var(--brass-edge);
+            border-radius: var(--radius-stamp);
+            background: var(--tab-badge);
+            color: var(--rail-edge);
+            font-family: var(--font-mono);
+            font-size: var(--text-chrome-sm);
+            font-weight: 700;
+            line-height: 1.5;
+        }
     `],
 })
 export class HookRailComponent {
@@ -162,6 +197,10 @@ export class HookRailComponent {
     readonly picked = output<string>();
 
     private readonly overBudget = computed(() => this.items().length > MAX_HOOKS);
+
+    tally(item: HookRailItem): string {
+        return indexTabBadgeLabel(item.badge);
+    }
 
     constructor() {
         effect(() => {

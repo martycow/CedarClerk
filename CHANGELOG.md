@@ -1,5 +1,69 @@
 # Changelog
 
+## 2026-08-20 — what the browser said about Stage 3 (branch `UI_V2`)
+
+Stage 3 was verified by rendering it rather than by reading it: two passes in real Chromium against
+the built bundle, driving the keyboard and measuring resolved values. They found four defects no
+static check could see, and a fifth was found by distrusting a green gate. Two ADRs (155, 156), the
+branch still unmerged and the version still untouched.
+
+**The touch floor is inherited, not selected (ADR-156).** `[data-surface="X"] button` matches at
+every depth, and bench nests the two surfaces inside each other in both directions — a shelf sheet
+inside chrome, a ruler on paper, a shelf panel on the worktop sheet. Where both selectors matched,
+source order decided, so three of seven measured nestings stood at chrome's 30px while owing paper's
+44. Swapping the blocks moves the same bug onto the other nesting; excluding the opposite surface's
+descendants leaves a thrice-nested control at no floor at all, at 20px. The floor is carried by
+`--hit-surface` now, a custom property being the one thing that resolves to the *nearest* declaring
+ancestor at any depth in either direction, with per-member specificity unchanged. Four page
+stylesheets carrying the same pinned-surface pattern with a bare `44px` moved onto it too.
+`check-density.mjs` gained a seventh rule for it, checked red against the code that shipped the
+defect and against both naive repairs, and `e2e/17-density.spec.ts` measures all seven nestings
+under a coarse pointer.
+
+**The focus ring stopped being re-declared.** ADR-140 says the ring is global and never
+re-declared; eleven stylesheets disagreed. `outline: none` on the settings fields, the editor title
+and the three pickers left the cream halo alone as the whole indicator at 1.02–1.24:1 — the exact
+half-measure ADR-140 warns about. `/drafts` painted its ring `--accent`, which is a user preset and
+so must never be half the floor. Four editor controls painted it `--abord`, accent-derived, and
+measured 2.19–2.76 against a 3.0 floor in both themes. An Appearance slider suppressed outline and
+box-shadow both and carried no indicator whatsoever. The only `outline` declarations left in the
+front end are the global rule and the `.tiptap` exclusion. A component `box-shadow` on a focusable
+control is now written `:not(:focus-visible)` throughout, including all four copies of the
+view-toggle rule and a validity wash that out-specified the halo unconditionally.
+
+**The rail got a tally (ADR-155).** Both unread-feedback badges died with `page-header`, leaving the
+shell with no global signal and `bench-shell` never fetching the count at all. The Metrics hook now
+carries a work ticket notched over its top corner — a tag on the hook, not a notification dot, the
+wall being made of brass and sign tiles rather than phone chrome. It reuses `indexTabBadgeLabel` for
+the hide-at-zero and 99+ rules rather than growing a third copy, takes the index tabs' own tokens so
+chrome has one counter and not two dialects, and folds its label into the link's accessible name
+instead of replacing it. The kit defines no badge for the rail; this is an extension and says so.
+
+**The dots menu stopped lying.** Escape shut the panel and dropped focus to `<body>`; it returns
+focus to the trigger now, and an Escape from elsewhere shuts the panel without reaching for focus. A
+click on an entry that navigated left the panel standing; entries that act in place (theme,
+Appearance) keep it open and the four that navigate close it. The project tile was a `<button>` with
+`aria-haspopup="true"` that opened no popup and had no href — it is an `<a routerLink>` to the hub
+now, so middle-click opens a tab and the ARIA describes what actually happens.
+
+**A green gate hiding a false reason.** `check-contrast.mjs` accepted the ring's shortfall on
+`--wood-hi` because "nothing focusable is placed on a bare frame". The drawer pull falsifies that: a
+transparent button filling the lip, whose background is `--shelf-frame` itself. The ramp is a ring
+surface now and the exception carries the real argument — walked end to end neither layer clears the
+floor where the frame is light, 1.98 for the halo and 2.47 for the outline, and the 4.33:1 boundary
+inside the band is what carries it, the same argument ADR-140 already rests cork and the ruler on;
+at night the surface itself carries it at 4.96. ADR-140, ADR-138 and the styleguide's own rendered
+caption were all still asserting the old reason and now say this one. The census run added no
+failure the branch did not already have — its 42 sub-floor combinations are byte-identical to the
+commit before these repairs — but three pairs were added for the tally, which it structurally cannot
+reach: the resin is 90% opaque so its backdrop is part of its colour, and an absolutely positioned
+ticket resolves to the page ground rather than to the hook it hangs on. Against the wall, a hook
+tile and a hovered hook tile it holds 6.03–6.89.
+
+**Green.** `check-contrast` 0 failing pairs with 3 printed exceptions, `check-density` 213 files and
+0 failures with 9/9 rules measuring something, `ng build` clean, `ng test` 235 passed and 0 skipped,
+`dotnet test` 883 + 127 passed.
+
 ## 2026-08-20 — the bench gets its shell (branch `UI_V2`, Stage 3)
 
 Stage 3 of the Cedar Bench port: the chrome the app is assembled from, and the shell that holds it.

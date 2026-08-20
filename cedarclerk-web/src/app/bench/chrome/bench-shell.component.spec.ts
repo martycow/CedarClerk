@@ -1,9 +1,10 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
+import { CommentsService } from '../../core/comments.service';
 import { ThemeService } from '../../core/theme.service';
 import { BenchShellComponent } from './bench-shell.component';
 
@@ -55,6 +56,30 @@ describe('bench shell', () => {
         const main = el().querySelector('main.body') as HTMLElement;
         expect(main.getAttribute('data-surface')).toBe('paper');
         expect(main.querySelector('router-outlet')).toBeTruthy();
+    });
+
+    // Retiring the page header took the only global unread-feedback badge with it; the wall is
+    // where it lives now, and the shell is what asks for the number (ADR-155).
+    it('hangs the unread-feedback tally on the metrics tool, and nothing at zero', () => {
+        const feedback = TestBed.inject(CommentsService);
+        expect(el().querySelectorAll('app-hook-rail .tally').length).toBe(0);
+
+        feedback.newComments.set(2);
+        feedback.newReactions.set(1);
+        fixture.detectChanges();
+        const tally = el().querySelector('app-hook-rail .tally')!;
+        expect(tally.textContent!.trim()).toBe('3');
+        expect(tally.closest('a.hook')!.getAttribute('href')).toBe('/posts');
+
+        feedback.newComments.set(0);
+        feedback.newReactions.set(0);
+        fixture.detectChanges();
+        expect(el().querySelectorAll('app-hook-rail .tally').length).toBe(0);
+    });
+
+    it('asks for the count itself, so the tally is right on whatever screen opened', () => {
+        const seen = TestBed.inject(HttpTestingController).match('/api/comments/new-count');
+        expect(seen.length).toBe(1);
     });
 
     it('hangs no project tool on the wall while the module is off', () => {
@@ -118,6 +143,16 @@ describe('bench shell', () => {
         expect(el().querySelector('app-rail-header .tile-name')?.textContent?.trim()).toBe('All projects');
     });
 
+    // The shell is what gives the tile its destination, and the destination is the hub. It is a
+    // link for the reason the hooks are: a middle click opens it in a tab.
+    it('points the switcher at the hub, as a link', async () => {
+        TestBed.inject(AuthService).indieDev.set(true);
+        await go('/drafts');
+        const t = el().querySelector('app-rail-header .tile') as HTMLAnchorElement;
+        expect(t.tagName).toBe('A');
+        expect(t.getAttribute('href')).toBe('/projects');
+    });
+
     it('names what is open inside the project, not the project twice', async () => {
         TestBed.inject(AuthService).indieDev.set(true);
         await go('/drafts');
@@ -153,6 +188,25 @@ describe('bench shell', () => {
         menuItem('Appearance').click();
         fixture.detectChanges();
         expect(el().querySelector('app-appearance-panel app-modal')).toBeTruthy();
+    });
+
+    // Theme and Appearance act on the screen behind the panel, so the panel stays; the entries
+    // that are destinations take it with them rather than leaving it hanging over the new page.
+    it('leaves the panel standing for the two in-place entries and shuts it on a destination', async () => {
+        const dots = () => el().querySelector('app-rail-header .dots') as HTMLButtonElement;
+        const panel = () => el().querySelector('app-rail-header .menu') as HTMLElement;
+
+        dots().click();
+        fixture.detectChanges();
+        menuItem('Toggle theme').click();
+        fixture.detectChanges();
+        expect(panel().hasAttribute('hidden')).toBe(false);
+
+        menuItem('Glossary').click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(panel().hasAttribute('hidden')).toBe(true);
+        expect(dots().getAttribute('aria-expanded')).toBe('false');
     });
 
     // Carried over from the root component's own spec: the drawer stays shut, and the lip has to

@@ -212,9 +212,9 @@
 }
 
 @media (pointer: coarse) {
-    [data-surface="paper"] .btn-accent,
-    [data-surface="paper"] .btn-ghost {
-        min-height: 44px;
+    [data-surface] .btn-accent,
+    [data-surface] .btn-ghost {
+        min-height: var(--hit-surface);
     }
 }
 

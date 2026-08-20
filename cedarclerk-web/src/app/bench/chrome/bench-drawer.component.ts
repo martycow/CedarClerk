@@ -34,7 +34,7 @@ let nextId = 0;
             <span class="tabs"><ng-content select="[drawerTabs]" /></span>
         </div>
 
-        <div class="journal" [id]="journalId" [attr.inert]="open() ? null : ''">
+        <div class="journal" data-surface="paper" [id]="journalId" [attr.inert]="open() ? null : ''">
             <div class="rows"><ng-content /></div>
         </div>
     `,

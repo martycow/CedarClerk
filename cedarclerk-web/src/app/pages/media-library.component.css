@@ -100,6 +100,10 @@
 .view-toggle button.active {
     background: var(--sheet);
     color: var(--accent);
+}
+
+/* Withheld while focused: a component's own shadow out-specifies the global rule that draws the ADR-140 halo. */
+.view-toggle button.active:not(:focus-visible) {
     box-shadow: var(--shadow);
 }
 

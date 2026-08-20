@@ -1175,7 +1175,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         document.addEventListener('visibilitychange', this.onVisibilityChange);
         window.addEventListener('pagehide', this.onPageHide);
 
-        // Feeds the badge on the Posts Manager link (N3) — fire-and-forget, never blocks setup.
+        // Refreshes the rail's tally on the way in — fire-and-forget, never blocks setup.
         this.feedback.refreshNewCount();
         const mediaNodeTypes = new Set(['image', 'video', 'audio', 'carousel', 'collage']);
         // Mirrors AssetEndpoints.Allowed — anything else is left to the browser's default handling.

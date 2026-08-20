@@ -205,9 +205,10 @@ for (const f of files) {
     }
 }
 
-// 6. The coarse-pointer rule is scoped to paper (ADR-138 item 5). Left global it pushes the ruler
-//    from 30px to 44 and the chrome budget the shell exists to buy back is gone on first touch.
-const rCoarse = rule('coarse-pointer rule is paper-scoped', 'every selector under @media (pointer: coarse) carries a paper qualifier');
+// 6. The coarse-pointer rules stay inside the surface vocabulary (ADR-138 item 5). Left global one
+//    pushes the ruler from 30px to 44 and the chrome budget the shell exists to buy back is gone on
+//    first touch.
+const rCoarse = rule('coarse-pointer rules name a surface', 'every selector under @media (pointer: coarse) carries a data-surface qualifier');
 const surfaceLanded = files.some(f => /\[data-surface\s*=/.test(f.code));
 if (!surfaceLanded) rCoarse.skipped = 'no [data-surface] in the tree yet — there is no chrome to exempt';
 else for (const f of files) {
@@ -221,7 +222,99 @@ else for (const f of files) {
     }
 }
 
-// 7. A named chrome part that lost its attribute (ADR-138 consequence paragraph).
+// 7. The floor is inherited, never selected (ADR-138 item 5). Rule 6 holds every selector here to
+//    naming a surface, and the two blocks that shipped the nesting defect both did — which is why
+//    it saw nothing. `[data-surface="paper"] button` and `[data-surface="chrome"] button` each
+//    reach any depth, so a control lying under both was decided by which block came second, and
+//    the same second block won for a sheet inside a panel and for a ruler on a sheet, though the
+//    two want opposite answers. No selector can say "nearest": excluding descendants of the
+//    opposite surface only moves the failure three levels down, where neither block matches and
+//    the control stands at no floor at all. So the shape is the rule — a surface declares the
+//    floor, controls spend it, and inheritance answers "nearest" at any depth in either direction.
+const rNearest = rule('the touch floor is inherited, not selected',
+    'under @media (pointer: coarse) no min-height/min-width comes from a selector pinning a surface value; each floor is var() of a property both surfaces declare',
+    'no @media (pointer: coarse) block in the tree');
+
+const PINS = /\[data-surface\s*=\s*"(paper|chrome)"\]/;
+
+// Selector/body pairs one level inside a block body. `blocks` above finds a block by its needle;
+// this walks a body it has already been handed.
+function childRules(body) {
+    const out = [];
+    let i = 0, selStart = 0;
+    while (i < body.length) {
+        if (body[i] === '{') {
+            let depth = 0, j = i;
+            for (; j < body.length; j++) {
+                if (body[j] === '{') depth++;
+                else if (body[j] === '}' && --depth === 0) break;
+            }
+            out.push({ sel: body.slice(selStart, i).trim(), at: i, body: body.slice(i + 1, j) });
+            i = selStart = j + 1;
+        } else if (body[i] === '}') {
+            i = selStart = i + 1;
+        } else i++;
+    }
+    return out;
+}
+
+const FLOOR_HIT = { paper: PAPER_HIT, chrome: CHROME_HIT };
+
+// The carriers, read once from the global block: styles.scss is where a surface declares its floor,
+// and a component sheet may only spend what it inherits, never mint a carrier of its own.
+const globalFloor = { paper: {}, chrome: {} };
+for (const media of blocks(styles.code, '@media (pointer: coarse)')) {
+    for (const r of childRules(media.body)) {
+        const pinned = r.sel.match(PINS);
+        if (!pinned || /min-(?:height|width)\s*:/.test(r.body)) continue;
+        for (const [, k, v] of decls(r.body)) globalFloor[pinned[1]][k] = v.trim();
+    }
+}
+
+for (const f of files) {
+    for (const media of blocks(f.code, '@media (pointer: coarse)')) {
+        rNearest.sites++;
+        const base = media.open + 1;
+        const spent = [];
+
+        for (const r of childRules(media.body)) {
+            if (!r.sel || r.sel.startsWith('@')) continue;
+            const floors = [...r.body.matchAll(/min-(?:height|width)\s*:\s*([^;{}]+)/g)];
+            const pinned = r.sel.match(PINS);
+            if (pinned && floors.length) {
+                fail(rNearest, f.rel, lineOf(f.code, base + r.at),
+                    `"${r.sel.replace(/\s+/g, ' ')}" pins ${pinned[1]} and sets the floor by selector — a descendant selector reaches every depth, so the nesting is answered by source order`);
+                continue;
+            }
+            for (const m of floors) spent.push({ value: m[1].trim(), at: base + r.at, sel: r.sel });
+        }
+
+        if (!spent.length) continue;
+
+        const shared = Object.keys(globalFloor.paper).filter(k => k in globalFloor.chrome);
+        if (!shared.length) {
+            fail(rNearest, f.rel, lineOf(f.code, base),
+                'a floor is spent here but no property is declared by both surfaces for it to be inherited from');
+            continue;
+        }
+        for (const s of spent) {
+            const ref = s.value.match(/^var\((--[\w-]+)\)$/);
+            if (!ref || !shared.includes(ref[1]))
+                fail(rNearest, f.rel, lineOf(f.code, s.at),
+                    `"${s.sel.replace(/\s+/g, ' ')}" sets the floor to ${s.value} — it must be var(${shared.join(') or var(')}), the property each surface declares`);
+        }
+        for (const surface of ['paper', 'chrome']) {
+            for (const k of shared) {
+                const v = px(globalFloor[surface][k], root);
+                if (v !== FLOOR_HIT[surface])
+                    fail(rNearest, 'styles.scss', tokenLine(k),
+                        `${surface} carries ${k} at ${globalFloor[surface][k]}, the contract says ${FLOOR_HIT[surface]}px`);
+            }
+        }
+    }
+}
+
+// 8. A named chrome part that lost its attribute (ADR-138 consequence paragraph).
 const rParts = rule('chrome parts carry the attribute', CHROME_PARTS.join(', '),
     'none of the named chrome components exist yet — the shell has not landed');
 for (const part of CHROME_PARTS) {

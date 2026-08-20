@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { RailHeaderComponent } from './rail-header.component';
 
 function sheetFor(marker: string): string {
@@ -13,23 +14,23 @@ function sheetFor(marker: string): string {
 
 @Component({
     imports: [RailHeaderComponent],
-    template: `<app-rail-header [version]="version" [project]="project" [projectHint]="hint"
-                                [crumbs]="crumbs" [hasMenu]="hasMenu"
-                                (projectClicked)="switches = switches + 1"
+    template: `<app-rail-header [version]="version" [project]="project" [projectLink]="projectLink"
+                                [projectHint]="hint" [crumbs]="crumbs" [hasMenu]="hasMenu"
                                 (menuOpenChange)="opens.push($event)">
                    <span class="save">saved 09:51</span>
                    <button menu class="theme">theme</button>
                    <button menu class="appearance">appearance</button>
+                   <a menu class="elsewhere" href="/glossary" (click)="$event.preventDefault()">glossary</a>
                    <span account class="avatar">M</span>
                </app-rail-header>`,
 })
 class Host {
     version = '';
     project = '';
+    projectLink: string | readonly unknown[] = '';
     hint = '';
     crumbs: string[] = [];
     hasMenu = true;
-    switches = 0;
     opens: boolean[] = [];
 }
 
@@ -38,14 +39,17 @@ describe('RailHeaderComponent', () => {
     let host: Host;
     const el = () => fixture.nativeElement as HTMLElement;
     const rail = () => el().querySelector('app-rail-header') as HTMLElement;
-    const tile = () => el().querySelector('.tile') as HTMLButtonElement | null;
+    const tile = () => el().querySelector('.tile') as HTMLAnchorElement | null;
     const dots = () => el().querySelector('.dots') as HTMLButtonElement | null;
     const menu = () => el().querySelector('.menu') as HTMLElement;
 
     const render = () => { fixture.changeDetectorRef.markForCheck(); fixture.detectChanges(); };
 
     beforeEach(async () => {
-        await TestBed.configureTestingModule({ imports: [Host] }).compileComponents();
+        await TestBed.configureTestingModule({
+            imports: [Host],
+            providers: [provideRouter([])],
+        }).compileComponents();
         fixture = TestBed.createComponent(Host);
         host = fixture.componentInstance;
         render();
@@ -65,27 +69,41 @@ describe('RailHeaderComponent', () => {
         expect(el().querySelector('.version')!.textContent!.trim()).toBe('v0.12.0');
     });
 
-    it('renders the switcher only when a project is on show', () => {
+    it('renders the switcher only when a project is on show and somewhere to send it', () => {
         expect(tile()).toBeNull();
 
         host.project = 'Cedar Quest';
         host.hint = 'Switch project';
         render();
+        expect(tile(), 'a switcher with no destination is not a control').toBeNull();
+
+        host.projectLink = '/projects';
+        render();
         expect(tile()!.textContent).toContain('Cedar Quest');
         expect(tile()!.getAttribute('title')).toBe('Switch project');
-
-        tile()!.click();
-        expect(host.switches).toBe(1);
     });
 
-    // WCAG 2.5.3: the visible project name has to be inside the accessible name, so the purpose
-    // rides on aria-haspopup and never on an aria-label that replaces the name.
+    // What the tile does is navigate, so it is the element every hook on the wall already is: a
+    // link carrying an href, which is what lets a middle click open the destination in a tab.
+    // aria-haspopup is off it — ARIA 1.2 reads that as "menu", and no menu opens here.
+    it('sends the switcher where it says, as a link and not a menu button', () => {
+        host.project = 'Cedar Quest';
+        host.projectLink = '/projects';
+        render();
+        expect(tile()!.tagName).toBe('A');
+        expect(tile()!.getAttribute('href')).toBe('/projects');
+        expect(tile()!.hasAttribute('aria-haspopup')).toBe(false);
+    });
+
+    // WCAG 2.5.3: the visible project name has to be inside the accessible name, so the hint rides
+    // on the tooltip and never on an aria-label that replaces the name.
     it('leaves the project name as the switcher accessible name', () => {
         host.project = 'Cedar Quest';
+        host.projectLink = '/projects';
         host.hint = 'Switch project';
         render();
         expect(tile()!.hasAttribute('aria-label')).toBe(false);
-        expect(tile()!.getAttribute('aria-haspopup')).toBe('true');
+        expect(tile()!.textContent).toContain('Cedar Quest');
     });
 
     it('walks the crumbs and marks the last one as the page', () => {
@@ -124,7 +142,7 @@ describe('RailHeaderComponent', () => {
             expect(host.opens).toEqual([true, false]);
         });
 
-        it('closes on Escape and on a click outside, but not on one inside', () => {
+        it('closes on a click outside, and on nothing else in the rail', () => {
             dots()!.click();
             render();
             rail().dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -134,12 +152,52 @@ describe('RailHeaderComponent', () => {
             document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
             render();
             expect(menu().hasAttribute('hidden')).toBe(true);
+        });
 
+        // What separates the two entries is whether the click leaves the page. One that navigates
+        // and leaves the panel standing hangs it over whatever was opened, which is the defect;
+        // theme and Appearance act on the screen in front of you and the panel stays put.
+        it('stays open under an entry that acts in place, and goes with one that navigates', () => {
             dots()!.click();
             render();
+            (el().querySelector('.theme') as HTMLButtonElement).click();
+            render();
+            expect(menu().hasAttribute('hidden')).toBe(false);
+
+            (el().querySelector('.elsewhere') as HTMLAnchorElement).dispatchEvent(
+                new MouseEvent('click', { bubbles: true }));
+            render();
+            expect(menu().hasAttribute('hidden')).toBe(true);
+        });
+
+        // The WAI-ARIA menu-button pattern: Escape closes and hands focus back to the button.
+        // Without it [hidden] takes the focused entry out of the tree and focus lands on <body>,
+        // which puts the next Tab somewhere the user never left it.
+        it('closes on Escape and gives focus back to the button that opened it', () => {
+            dots()!.click();
+            render();
+            (el().querySelector('.theme') as HTMLButtonElement).focus();
+
             document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
             render();
             expect(menu().hasAttribute('hidden')).toBe(true);
+            expect(document.activeElement).toBe(dots());
+        });
+
+        // Escape belongs to whoever holds focus. A press from elsewhere on the page still shuts
+        // the panel, but pulling focus into the rail would be taking it from that elsewhere.
+        it('shuts on an Escape from outside without reaching for focus', () => {
+            dots()!.click();
+            render();
+            const outside = document.createElement('button');
+            document.body.append(outside);
+            outside.focus();
+
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+            render();
+            expect(menu().hasAttribute('hidden')).toBe(true);
+            expect(document.activeElement).toBe(outside);
+            outside.remove();
         });
 
         // The controls the shell hands to this slot own their own state, so the panel is hidden
