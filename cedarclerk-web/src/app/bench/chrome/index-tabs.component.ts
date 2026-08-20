@@ -55,9 +55,11 @@ export function indexTabBadgeLabel(badge: number | string | undefined | null): s
                     [attr.aria-controls]="item.panelId || null"
                     (click)="pick(item.id)" (keydown)="onKeydown($event, i)">
                 <span class="it-label">{{ item.label }}</span>
-                @if (badgeOf(item)) {
+                @if (badgeOf(item); as count) {
+                    <!-- An aria-label REPLACES the text it is on, so the title alone would take the
+                         count out of the tile's name and leave "Checks unresolved checks". -->
                     <span class="it-badge" [attr.title]="item.badgeTitle || null"
-                          [attr.aria-label]="item.badgeTitle || null">{{ badgeOf(item) }}</span>
+                          [attr.aria-label]="item.badgeTitle ? count + ' ' + item.badgeTitle : null">{{ count }}</span>
                 }
             </button>
         }

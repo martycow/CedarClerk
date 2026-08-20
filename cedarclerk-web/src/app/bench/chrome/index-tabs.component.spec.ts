@@ -106,11 +106,17 @@ describe('IndexTabsComponent', () => {
             expect(badges.map(b => b.textContent!.trim())).toEqual(['new']);
         });
 
-        it('names what it counts when the caller says so', () => {
+        // The count is the whole point of the badge, and an aria-label replaces the text it is
+        // written on rather than adding to it — so the label has to carry both or the tile is
+        // announced as "Checks unresolved checks" with the number gone (ADR-155 clause 5).
+        it('names what it counts without dropping the count', () => {
             create();
             const badge = fixture.nativeElement.querySelector('.it-badge') as HTMLElement;
             expect(badge.getAttribute('title')).toBe('unresolved checks');
-            expect(badge.getAttribute('aria-label')).toBe('unresolved checks');
+            expect(badge.getAttribute('aria-label')).toBe('2 unresolved checks');
+
+            create([{ id: 'a', label: 'A', badge: 4 }], 'a');
+            expect(fixture.nativeElement.querySelector('.it-badge').hasAttribute('aria-label')).toBe(false);
         });
 
         it('states the rules once, where the retirement can reuse them', () => {
