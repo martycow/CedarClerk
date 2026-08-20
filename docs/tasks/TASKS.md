@@ -12,7 +12,7 @@ Phase status: `docs/tasks/ROADMAP.md`; open tasks: the board in `docs/tasks/BACK
 
 ## Now
 
-- [ ] UI V2 — the Cedar Bench port on branch `UI_V2`. Stages 0 and 1 are done: the contrast checker rework and the density lint, the bench palette in the base blocks, night re-derived against cream paper, and the skin mechanism retired (ADR-136…146). Next is Stage 2 — the primitives and the kit page, `T-211`…`T-215`. The whole remainder is on the board as `T-211`…`T-235`; plan in `docs/design/UI-V2-PLAN.md` #design P1
+- [ ] UI V2 — the Cedar Bench port on branch `UI_V2`. Stages 0, 1 and 2 are done: the contrast checker rework and the density lint, the bench palette in the base blocks, night re-derived against cream paper, the skin mechanism retired, and the ten primitives with the styleguide rewritten as their only call site (ADR-136…146, `T-205`…`T-215`). Next is Stage 3 — the chrome components and the shell, `T-216`…`T-221`. The remainder is on the board as `T-216`…`T-235`; plan in `docs/design/UI-V2-PLAN.md` #design P1
 - [ ] Growth anchors — all five are done: T-154 (landing: devlog-first, EN default, waitlist — ADR-135), T-158 (devlog assembler, ADR-132), T-159 (showcase page, ADR-134), T-160 (starter skeletons + example project, ADR-133), T-161 (Discord webhook, ADR-131). Hands-on checks below; the editor screenshot for the landing is T-204 #growth P1
 - [ ] Cheap safety — T-175 (EXIF/GPS stripping) is done, ADR-130; hands-on check below, old files on the droplet are T-202. T-174 (OG tags) is done, hands-on check below #security P1
 - [ ] Registration blockers — T-172 remainder: media into R2 (quotas cut, ADR-129; first backup restore tested 18.08 — monthly cadence per `docs/product/BUSINESS.md` §5) #infra P1

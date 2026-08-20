@@ -349,7 +349,10 @@ function score(fgValue, bgValue, vars, backdrops) {
 // by night, and the one ink allowed on it — --wood-ink — travels the other way. Measuring a paper
 // ink on the wall is therefore not a failing ratio but an unsatisfiable demand: a value at 4.5:1
 // on night --canvas #251F13 is light, and a light value on night --surface #D9CEAE is not.
-const PAPER = ['--surface', '--sheet', '--alt'];
+// --paper-bright is the fourth paper and not a special case: it is the stock a field is cut
+// from — the bench Input, SpecRow's field variant, PaperCard's bright sheet — and body ink,
+// a placeholder and a control boundary all land on it exactly as they do on the other three.
+const PAPER = ['--surface', '--sheet', '--alt', '--paper-bright'];
 const WALL = ['--bg', '--canvas'];
 const pairs = [];
 for (const s of WALL) {
@@ -381,7 +384,8 @@ pairs.push({ fg: '--sheet', bg: '--danger', min: 4.5, note: 'text on a destructi
 pairs.push({ fg: '--accent', bg: '--asoft', min: 4.5, note: 'accent label on its own wash' });
 pairs.push({ fg: '--t2', bg: '--asoft', min: 4.5, note: 'secondary text on the accent wash' });
 pairs.push({ fg: '--text', bg: '--asoft', min: 4.5, note: 'body text on the accent wash' });
-for (const [ink, wash] of [['--ok', '--ok-soft'], ['--warn', '--warn-soft'], ['--danger', '--danger-soft']]) {
+for (const [ink, wash] of [['--ok', '--ok-soft'], ['--warn', '--warn-soft'], ['--danger', '--danger-soft'],
+    ['--brass-lo', '--brass-soft']]) {
     pairs.push({ fg: ink, bg: wash, min: 4.5, note: 'state label on its own wash' });
     pairs.push({ fg: '--text', bg: wash, min: 4.5, note: 'body text on a state wash' });
 }
@@ -426,6 +430,21 @@ for (const grid of ['--grid-worktop', '--grid-graph']) {
     pairs.push({ fg: '--text', bg: grid, under: '--surface', min: 4.5, note: 'body text on ruled paper' });
     pairs.push({ fg: '--t2', bg: grid, under: '--surface', min: 4.5, note: 'secondary text on ruled paper' });
 }
+
+// The bench stocks and plaques, none of which is paper and none of which takes a paper ink. A leaf
+// is dyed card carrying its own green; a rail button and a wood plaque are chrome, so the cream
+// that goes on wood is what is legible on them; and the priority-one chip is filled with resin,
+// the one metal light enough to flip its ink back to dark. Each ramp is scored at both stops
+// rather than as one token: the ink is flat and the ramp does not cross it, so the stops bound the
+// ratio, and a failing stop is named instead of a gradient being named for it.
+pairs.push({ fg: '--leaf-ink', bg: '--leaf-bg', min: 4.5, note: 'leaf label on its lit stop' });
+pairs.push({ fg: '--leaf-ink', bg: '--leaf-bg-2', min: 4.5, note: 'leaf label on its shaded stop' });
+pairs.push({ fg: '--rail-ink', bg: '--rail-lo', min: 4.5, note: 'rail button label' });
+pairs.push({ fg: '--rail-ink', bg: '--rail-edge', min: 4.5, note: 'rail button label, pressed or hovered' });
+pairs.push({ fg: '--rail-ink', bg: '--wood-lo', min: 4.5, note: 'priority chip on the lit stop of its plaque' });
+pairs.push({ fg: '--rail-ink', bg: '--wood-edge', min: 4.5, note: 'priority chip on the shaded stop of its plaque' });
+pairs.push({ fg: '--rail-edge', bg: '--resin-hi', min: 4.5, note: 'priority-one chip on the lit stop of its resin' });
+pairs.push({ fg: '--rail-edge', bg: '--resin', min: 4.5, note: 'priority-one chip on the shaded stop of its resin' });
 
 // Chrome glass (ADR-035): a sticky bar that lets the page move under it. Twice — once on the ground
 // it sits on nine tenths of the time, which is paper and must not regress, and once on the darkest

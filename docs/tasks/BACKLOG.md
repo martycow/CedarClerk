@@ -63,16 +63,12 @@ Scope and rationale: `docs/product/INDIEDEV.md`, ADR-101…107. Build order: `do
 
 ## UI V2 — the Cedar Bench port (branch `UI_V2`)
 
-Plan and rationale: `docs/design/UI-V2-PLAN.md`, ADR-136…146. Stages 0 and 1 shipped — the checks,
-the palette and the retirement of the skin mechanism; status is in `docs/tasks/ROADMAP.md`. The rows
-below are Stages 2 through 6, in the order the plan builds them, plus the one deletion Stage 1 left
-open. Nothing here is started.
+Plan and rationale: `docs/design/UI-V2-PLAN.md`, ADR-136…146. Stages 0, 1 and 2 shipped — the
+checks, the palette, the retirement of the skin mechanism, and the ten primitives with the kit page
+that proves them; status is in `docs/tasks/ROADMAP.md`. The rows below are Stages 3 through 6, in
+the order the plan builds them, plus the one deletion Stage 1 left open. Nothing here is started.
 
 - [ ] T-235 Delete the neutralised forest partial — `styles/_forest.scss` and its `@use` in `styles.scss`: 1 229 lines whose every rule is scoped under `data-skin`, an attribute nothing sets any more, so the file compiles into the bundle and matches nothing. A deletion that size is a `.claude/rules/destructive-operations.md` event — explain, stop, wait #tokens #cleanup #decision P2
-- [ ] T-212 Button component — `app/bench/forms/button.component.ts`, variants pine/paper/rail/danger, sizes md/sm #components P1
-- [ ] T-213 Input component — `app/bench/forms/input.component.ts` implementing `ControlValueAccessor`; the app binds `ngModel` (tag-picker), which a plain `input()` signal cannot serve #components P1
-- [ ] T-214 Display primitives — stamp-badge, leaf-tag, resin-drop, paper-card, task-tag, spec-row, brass-pin, brass-hook under `app/bench/` #components P2
-- [ ] T-215 Styleguide rewrite — replace the Buttons/Fields/Status sections of `pages/styleguide.component.*` with the bench kit and add a surface-class toggle; the two vocabularies must not both be on display #components P2
 - [ ] T-216 Chrome components — rail-header, hook-rail, shelf-panel, bench-drawer, ruler-bar, worktop, index-tabs under `app/bench/chrome` and `app/bench/worktop` #components P1
 - [ ] T-217 Bench shell — `app/bench/chrome/bench-shell.component.*` plus one parent route in `app.routes.ts` wrapping the authenticated children unchanged; login/register/terms/privacy stay outside it (ADR-139) #shell P1
 - [ ] T-218 Retire page-header — delete `shared/page-header.component.*` and its 12 call sites, and the editor topbar nav block in `editor.component.html` #shell P1

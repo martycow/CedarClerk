@@ -1,12 +1,12 @@
 # Changelog
 
-## 2026-08-20 — Cedar Bench becomes the one look (branch `UI_V2`, Stages 0–1)
+## 2026-08-20 — Cedar Bench becomes the one look (branch `UI_V2`, Stages 0–2)
 
 The design system mirrored from Claude Design into `.design-sync/ds-v2/` stops being a second
 palette and becomes the app's only one. Planned before written: `docs/design/UI-V2-PLAN.md` settles
 the ten questions the port turns on — theming attribute, token namespace, component layout,
 half-pixels, night, density, icons, fonts — and eleven ADRs (136–146) landed ahead of the code they
-govern. Two stages of six are done; the branch is not merged and the version is untouched.
+govern. Three stages of six are done; the branch is not merged and the version is untouched.
 
 **Stage 0 — the checks the rest of the port is measured by.** `check-contrast.mjs` was rewritten:
 alpha is composited over the backdrop instead of discarded, a layered background resolves to every
@@ -49,13 +49,46 @@ and one of the same fills shipped on the public blog's channel avatar at 2.92. T
 clears (ADR-146). Page roots and the server-rendered surfaces moved off the wall onto paper on the
 way, and the five Appearance accent presets were re-derived as day/night pairs.
 
-Stages 2 through 6 — primitives and the kit page, the shell, the three reference screens, the
-remaining pages by pattern, cleanup and ship — are `T-211`…`T-234` on the board, none started, plus
-`T-235`. Six decisions wait on Marty as `Q-19`…`Q-24`: whether `/stats` becomes a route again, the
-shape of the stats filters, one editor tool strip against the configurable two rows, where the theme
-and Appearance controls live in the new rail, responsive behaviour the design system does not
-specify at all, and whether the accent picker survives now that pine is meant to be the one colour
-that acts.
+**Stage 2 — the primitives, and the page that proves them.** Ten components under
+`cedarclerk-web/src/app/bench/`, in subfolders mirroring the design system one to one: `app-button`
+and `app-input` in `forms/`, `app-stamp-badge`, `app-resin-drop`, `app-leaf-tag`, `app-paper-card`
+and `app-task-tag` in `display/`, `app-spec-row` on the worktop, and `app-brass-pin` /
+`app-brass-hook` in `scenery/`. The mirror is React and the app is Angular, so it was translated
+rather than copied — children became `ng-content`, named slots `ng-content select`, handlers
+`output()`, the rest `input()` signals — and the mirror's two escape hatches were dropped on the
+way: the `style` prop, which would have re-seeded exactly the one-off values ADR-071 exists to
+remove, and the `cb-` class names `Button.jsx` and `Input.jsx` inject into a global style element
+at import, which became ordinary encapsulated component styles. `app-input` implements
+`ControlValueAccessor`, because twenty templates bind `[(ngModel)]` and a plain `input()` signal
+cannot serve them. Every component that is a surface spells `data-surface` (ADR-138); the two brass
+pieces spell neither, hardware being something that sits *on* a surface rather than something that
+is one. `/dev/styleguide` was rewritten as the kit's only call site, and its spec asserts the rule
+the rewrite exists for — the page draws no control of its own, so what is on display is one
+vocabulary instead of two.
+
+**The colour the primitives cost.** They paint materials nothing had measured: leaf stock, the rail
+as a button face, a wood plaque, a resin chip, and `--paper-bright` as a surface carrying a field's
+ink rather than as a highlight. The census found one real failure among them — the brass stamp put
+`--brass-lo` on a tint of itself, 3.87 by day and 3.42 at night, and the tint was a percentage
+written in the rule, which is the twenty-third instance of the pattern ADR-145 was written to end.
+It became `--brass-soft`, a token on the same formula as the other three washes, and the ink was
+re-derived against it — day keeping its hue and taking the smallest step that clears, night
+stepping down (`#8A6226`→`#7B5822`, `#7E5A20`→`#684A1A`), both still lighter than `--brass-edge`,
+so the brass ramp keeps its order. `--paper-bright` joined the paper family rather than being
+special-cased, which hands it the whole ink set, the hover washes and the five accent presets at
+once. Fourteen pairs were added to `tools/check-contrast.mjs`, each ramp scored at both stops
+rather than as one name; the census now reports **no** bench-sourced combination it cannot account
+for, and the pair table is green with the six accepted exceptions it already carried.
+
+Stages 3 through 6 — the chrome components and the shell, the three reference screens, the
+remaining pages by pattern, cleanup and ship — are `T-216`…`T-234` on the board, none started, plus
+`T-235`. `npm run check:density` stands at six failures, every one of them the unscoped
+`@media (pointer: coarse)` rule `T-219` exists to carve out; it has been red since Stage 0 and no
+bench component adds to it. Six decisions wait on Marty as `Q-19`…`Q-24`: whether `/stats` becomes
+a route again, the shape of the stats filters, one editor tool strip against the configurable two
+rows, where the theme and Appearance controls live in the new rail, responsive behaviour the design
+system does not specify at all, and whether the accent picker survives now that pine is meant to be
+the one colour that acts.
 
 ## 2026-08-19 — "do everything P1" (v0.12.2)
 

@@ -4,16 +4,37 @@ import { ThemeService } from '../core/theme.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { IconComponent } from '../shared/icon.component';
 import { IconName, IconWeight } from '../shared/icon-data.generated';
+import { ButtonComponent, ButtonSize, ButtonVariant } from '../bench/forms/button.component';
+import { InputComponent } from '../bench/forms/input.component';
+import { StampBadgeComponent, StampTone } from '../bench/display/stamp-badge.component';
+import { ResinDropComponent } from '../bench/display/resin-drop.component';
+import { LeafTagComponent, LeafState } from '../bench/display/leaf-tag.component';
+import { PaperCardComponent } from '../bench/display/paper-card.component';
+import { TaskTagComponent } from '../bench/display/task-tag.component';
+import { SpecRowComponent } from '../bench/worktop/spec-row.component';
+import { BrassPinComponent } from '../bench/scenery/brass-pin.component';
+import { BrassHookComponent } from '../bench/scenery/brass-hook.component';
 
-// T-078 — the design-system reference page (ADR-071). One screen showing every token and every
-// component state, in both themes and both density modes, so a divergence is visible without
-// walking the app looking for it.
+export type SgSurface = 'paper' | 'chrome';
+
+// T-078 / T-215 — the design-system reference page (ADR-071, ADR-136). One screen showing every
+// token and every bench primitive, in both themes, both density modes and on both surfaces, so a
+// divergence is visible without walking the app looking for it.
+//
+// One vocabulary only: every control here is a bench component. A styleguide that also drew its
+// own .btn-accent/.sg-input/.sg-badge would be the ambiguity the port exists to end, and it would
+// drift from the components it claims to document the moment either side moved.
 //
 // Deliberately NOT localized: this is a development surface, not a product screen, and putting
 // ~120 more keys into en.ts/ru.ts to name swatches would be work with no reader.
 @Component({
     selector: 'app-styleguide',
-    imports: [IconComponent, RouterLink],
+    imports: [
+        IconComponent, RouterLink,
+        ButtonComponent, InputComponent,
+        StampBadgeComponent, ResinDropComponent, LeafTagComponent, PaperCardComponent, TaskTagComponent,
+        SpecRowComponent, BrassPinComponent, BrassHookComponent,
+    ],
     templateUrl: 'styleguide.component.html',
     styleUrls: ['styleguide.component.css'],
 })
@@ -29,6 +50,10 @@ export class StyleguideComponent {
     // for what /posts and /drafts will set on themselves once they migrate. Storing it would
     // imply it is a user preference, which it is not.
     compact = signal(false);
+    // ADR-138's second axis, and the one thing about it that is invisible without a lever: the
+    // same control painted on wood and on paper. It flips the demo bays, never the page root — a
+    // surface is an element's material, not a screen's mode.
+    surface = signal<SgSurface>('paper');
     motionKey = signal(0);
 
     readonly colors = [
@@ -95,12 +120,39 @@ export class StyleguideComponent {
     // visible rather than described; T-079 replaces them.
     readonly strayGlyphs = ['☾', '✦', '◷', '⤢', '¶', '⏰', '👍', '👎', '☰', '↑'];
 
+    readonly buttonVariants: ButtonVariant[] = ['pine', 'paper', 'rail', 'danger'];
+    readonly buttonSizes: ButtonSize[] = ['md', 'sm'];
+
+    // Hover and focus are live cells, not pinned ones. No template can hold a pseudo-class open,
+    // and the only way to fake one is to restate the component's own rules on the page — a second
+    // copy of the thing this page exists to be the single copy of.
+    readonly controlStates = [
+        { key: 'default', label: 'default' },
+        { key: 'hover', label: 'hover ↖' },
+        { key: 'focus', label: 'focus ⇥' },
+        { key: 'disabled', label: 'disabled' },
+    ];
+
+    readonly stampTones: StampTone[] = ['pine', 'brass', 'rust', 'ink'];
+    readonly leafStates: LeafState[] = ['idle', 'active', 'dried'];
+
+    // Bound through [(value)] so the field's own value channel is exercised on the page rather
+    // than described: the ControlValueAccessor half is proved by the unit specs, this half by
+    // typing into it.
+    title = signal<string | number | null>('Devlog #12 — light and fog');
+    slug = signal<string | number | null>('devlog-12-light-and-fog');
+    parts = signal<string | number | null>(3);
+
     toggleTheme() {
         this.themes.toggle();
     }
 
     togglePseudo() {
         this.locale.setPseudo(!this.pseudo());
+    }
+
+    toggleSurface() {
+        this.surface.update(s => (s === 'paper' ? 'chrome' : 'paper'));
     }
 
     replayMotion() {

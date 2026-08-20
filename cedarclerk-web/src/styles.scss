@@ -82,6 +82,10 @@
     --ok-soft: color-mix(in srgb, var(--ok) 13%, var(--surface));
     --warn-soft: color-mix(in srgb, var(--warn) 13%, var(--surface));
     --danger-soft: color-mix(in srgb, var(--danger) 13%, var(--surface));
+    /* Brass is a metal in the chrome ramp and a state ink on paper — a version stamp, a build
+       number. Only the second job needs a wash, and it takes the same formula as the three above
+       rather than the tint a stamp would otherwise mix for itself. */
+    --brass-soft: color-mix(in srgb, var(--brass-lo) 13%, var(--surface));
 
     /* Hover/pressed wash for rows, menu items and icon buttons. Derived from --text so it follows
        the theme, rather than the per-component rgba literals that belonged to neither. */
@@ -271,7 +275,7 @@
 
     --brass: #C69A4E;
     --brass-hi: #EED9A3;
-    --brass-lo: #8A6226;
+    --brass-lo: #7B5822;
     --brass-edge: #6E4E1B;
     --grad-brass: linear-gradient(180deg, var(--brass-hi), var(--brass));
     --resin: #D89A3E;
@@ -379,6 +383,7 @@
     --ok-soft: color-mix(in srgb, var(--ok) 10%, var(--surface));
     --warn-soft: color-mix(in srgb, var(--warn) 10%, var(--surface));
     --danger-soft: color-mix(in srgb, var(--danger) 10%, var(--surface));
+    --brass-soft: color-mix(in srgb, var(--brass-lo) 10%, var(--surface));
 
     /* Pine already clears its floor on night cream, so --accent is not restated: night does not
        need a lighter green, it needs the same green on a dimmer sheet. The two series that do
@@ -414,7 +419,7 @@
     --leaf-ink: #33421F;
 
     --brass-hi: #F0DCA6;
-    --brass-lo: #7E5A20;
+    --brass-lo: #684A1A;
     --brass-edge: #5C4114;
 
     --rule-ink: rgba(227, 211, 174, .26);

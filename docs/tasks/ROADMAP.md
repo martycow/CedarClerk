@@ -11,7 +11,7 @@ Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-
 
 ## Status summary (as of 20.08.2026)
 
-**UI V2 — Cedar Bench becomes the one look; Stages 0 and 1 (19–20.08.2026, branch `UI_V2`, not
+**UI V2 — Cedar Bench becomes the one look; Stages 0, 1 and 2 (19–20.08.2026, branch `UI_V2`, not
 merged, no version bump).** The design system mirrored from Claude Design at `.design-sync/ds-v2/`
 stops being a second palette and becomes the app's only one. The port was planned before it was
 written — `docs/design/UI-V2-PLAN.md` settles ten questions (theming attribute, token namespace,
@@ -55,11 +55,34 @@ of the code they govern.
   the public blog's channel avatar at 2.92. The array became `--avatar-1…6` + `--avatar-ink`
   behind one hasher, with hue kept and luminance moved until white clears (ADR-146). Page roots and
   the server-rendered surfaces moved off the wall onto paper on the way.
-- **What is open.** Stages 2 through 6 — primitives and the kit page, the shell, the three
-  reference screens, the remaining pages by pattern, cleanup and ship — are `T-211`…`T-234` on the
-  board, none started. Six decisions wait on Marty as `Q-19`…`Q-24`, and two of them block a
-  screen: `Q-19`/`Q-20` block the stats port, `Q-21` blocks the writer shell. The branch cannot
-  deploy until it merges — `cedar deploy` refuses anything but master.
+- **Stage 2 — the primitives, and the page that proves them** (`T-211`…`T-215`). Ten components
+  under `cedarclerk-web/src/app/bench/`, in subfolders mirroring the design system: `app-button`
+  and `app-input` in `forms/`, five display primitives, `app-spec-row` on the worktop and the two
+  brass pieces in `scenery/`. React was translated rather than copied — slots became `ng-content`,
+  handlers `output()`, everything else `input()` signals — and the mirror's two escape hatches were
+  dropped on the way: the `style` prop, which would have re-seeded the one-off values ADR-071
+  exists to remove, and the `cb-` class names `Button.jsx` and `Input.jsx` inject at import, which
+  became ordinary encapsulated styles. Every component spells its surface (ADR-138) except the two
+  brass ones, which are hardware sitting *on* a surface rather than being one. `/dev/styleguide`
+  was rewritten as the kit's only call site, and its spec asserts the rule the rewrite exists for:
+  the page draws no control of its own, so one vocabulary is on display instead of two.
+- **What Stage 2 cost in colour.** The primitives paint materials nothing had measured — leaf
+  stock, the rail as a button face, a wood plaque, a resin chip, `--paper-bright` as a surface
+  carrying a field's ink. The census found one real failure among them: the brass stamp put
+  `--brass-lo` on a tint of itself at 3.87 by day and 3.42 at night. The tint became `--brass-soft`
+  on the same formula as the other three washes (ADR-145 — a wash is a token, not a percentage
+  written in a rule), and the ink was re-derived against it, day keeping its hue and night stepping
+  down (`#8A6226`→`#7B5822`, `#7E5A20`→`#684A1A`), which leaves the brass ramp's order intact.
+  `--paper-bright` joined the paper family rather than being special-cased, so it now carries the
+  whole ink set and the five accent presets. Fourteen pairs were added; the census reports **no**
+  bench-sourced combination it cannot account for.
+- **What is open.** Stages 3 through 6 — the chrome components and the shell, the three reference
+  screens, the remaining pages by pattern, cleanup and ship — are `T-216`…`T-234` on the board,
+  none started. Six decisions wait on Marty as `Q-19`…`Q-24`, and two of them block a screen:
+  `Q-19`/`Q-20` block the stats port, `Q-21` blocks the writer shell. `npm run check:density`
+  stands at six failures, every one of them the unscoped `@media (pointer: coarse)` rule that
+  `T-219` exists to carve out; it has been red since Stage 0 and no bench component adds to it. The
+  branch cannot deploy until it merges — `cedar deploy` refuses anything but master.
 
 **v0.12.2 — every P1 closed in one session (18–19.08.2026, not yet deployed).** Marty's directive
 was "do everything P1", with five decisions resolved on the way in: T-164 (PRGE) removed outright,

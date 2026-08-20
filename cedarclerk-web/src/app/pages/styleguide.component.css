@@ -1,8 +1,11 @@
-/* T-078 — the styleguide's own styles. This file is held to the rule the rest of Phase 11 is
-   migrating towards (ADR-071 principle 7): every colour, size, radius, spacing and duration comes
+/* T-078 / T-215 — the styleguide's own styles. This file is held to the rule the rest of the port
+   is moving towards (ADR-071 principle 7): every colour, size, radius, spacing and duration comes
    from a token. Raw values appear only where they are structural — a grid track, a demo box's
    dimensions, a hairline width. If a value here ever needs to be a literal, that is a missing
-   token, not an exception. */
+   token, not an exception.
+
+   Nothing here draws a control. Every button, field, stamp, tag and row on the page is a bench
+   component, so this file styles the page around them and never a second time over them. */
 
 .sg {
     max-width: 980px;
@@ -50,12 +53,23 @@ h3 {
 }
 
 .sg-sub,
-.sg-note {
+.sg-note,
+.sg-cap,
+.sg-strip-cap {
     color: var(--t2);
     font-size: var(--fs-meta);
     margin: 0 0 var(--space-3);
     max-width: 70ch;
     line-height: 1.55;
+}
+
+.sg-cap,
+.sg-strip-cap {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
 }
 
 section {
@@ -180,14 +194,6 @@ code {
     border-radius: var(--radius-md);
 }
 
-.sg-icon-box {
-    background: var(--t2);
-    /* A filled square at the exact token size — the point is the measurement, and a real glyph's
-       optical size differs from its box, which would make the three look less distinct than they
-       are. Replaced with actual Phosphor icons in T-079. */
-    border-radius: 2px;
-}
-
 .sg-glyphs {
     display: flex;
     gap: var(--space-4);
@@ -239,150 +245,159 @@ code {
     to { left: calc(100% - 28px); }
 }
 
-/* ── Controls ───────────────────────────────────────────────────────────── */
+/* ── The kit ────────────────────────────────────────────────────────────── */
 
-.sg-row {
+/* A bay is a piece of material with the demo standing on it. Its own labels live on that material
+   too, so they take the material's type size — chrome 13px, paper 14px — which is the density
+   contract doing its job on this page rather than being described by it. Every caption that would
+   have to sit on wood the checker cannot score (the shelf frame, the ruler) is outside the bay
+   instead. */
+.sg-bay {
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+}
+
+.sg-bay[data-surface="paper"] {
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
+    color: var(--text);
+}
+
+.sg-bay[data-surface="paper"] .sg-state {
+    font-size: var(--fs-ui);
+    color: var(--t2);
+}
+
+.sg-bay[data-surface="chrome"] {
+    background-color: var(--rail-lo);
+    background-image: var(--tex-wood), var(--surface-rail);
+    border-color: var(--rail-edge);
+    box-shadow: var(--shadow-rail);
+    color: var(--rail-ink);
+}
+
+/* Cream at full strength, not --rail-ink-soft: composited over the rail the soft ink measures
+   4.37:1, and a label is read. */
+.sg-bay[data-surface="chrome"] .sg-state {
+    font-size: var(--text-chrome);
+    color: var(--rail-ink);
+}
+
+.sg-state {
+    font-family: var(--font-mono);
+    line-height: 1.4;
+}
+
+.sg-head {
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    font-weight: 700;
+}
+
+.sg-matrix {
+    display: grid;
+    grid-template-columns: max-content repeat(4, minmax(0, 1fr));
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.sg-cell {
     display: flex;
     align-items: center;
-    gap: var(--dens-gap);
+}
+
+.sg-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+}
+
+.sg-shelf {
+    display: flex;
+    align-items: flex-start;
     flex-wrap: wrap;
+    gap: var(--space-5);
+}
+
+.sg-shelf-wide {
+    gap: var(--space-6);
+}
+
+.sg-fields {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+}
+
+.sg-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    width: 240px;
+}
+
+/* The consumer sizes a card and a tag from the outside — neither takes a width prop, because a
+   free-string dimension is the one-off value the port exists to remove. */
+.sg-card {
+    width: 220px;
+}
+
+.sg-tag {
+    width: 210px;
+}
+
+/* An inspector is chrome wherever it stands, so this bay does not follow the toggle. */
+.sg-bay-panel {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.sg-panel {
+    flex: 1 1 300px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+/* ── Focus ──────────────────────────────────────────────────────────────── */
+
+.sg-strip {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
     margin-bottom: var(--space-3);
 }
 
-.btn-accent,
-.btn-ghost,
-.btn-danger {
-    border-radius: var(--dens-radius);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    font-family: inherit;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background var(--motion-fast) var(--ease),
-                border-color var(--motion-fast) var(--ease),
-                color var(--motion-fast) var(--ease);
+.sg-strip[data-surface="paper"] {
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
 }
 
-.btn-accent {
-    border: 1px solid transparent;
-    background: var(--accent);
-    color: var(--sheet);
+.sg-strip[data-surface="chrome"] {
+    background-color: var(--rail-lo);
+    background-image: var(--tex-wood), var(--surface-rail);
+    border-color: var(--rail-edge);
 }
 
-.btn-accent:hover:not(:disabled) {
-    filter: brightness(1.08);
+.sg-strip.is-wood[data-surface="chrome"] {
+    background-image: var(--tex-wood), var(--shelf-frame);
+    border-color: var(--wood-edge);
 }
 
-.btn-ghost {
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    font-weight: 400;
-}
-
-.btn-ghost:hover:not(:disabled) {
-    color: var(--text);
-    border-color: var(--t3);
-}
-
-.btn-danger {
-    border: 1px solid transparent;
-    background: var(--danger);
-    color: var(--sheet);
-}
-
-.btn-danger:hover:not(:disabled) {
-    filter: brightness(1.08);
-}
-
-button:disabled {
-    opacity: .5;
-    cursor: not-allowed;
-}
-
-/* Focus is a visible ring on every control, not the browser default, and never removed without a
-   replacement — T-082's rule, applied here first because this is where it is checkable. */
-.btn-accent:focus-visible,
-.btn-ghost:focus-visible,
-.btn-danger:focus-visible,
-.sg-input:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-}
-
-.sg-input {
-    border: 1px solid var(--border-strong);
-    background: var(--sheet);
-    color: var(--text);
-    border-radius: var(--dens-radius);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    font-family: inherit;
-}
-
-.sg-input:disabled {
-    opacity: .5;
-}
-
-.sg-input::placeholder {
-    color: var(--t3);
-}
-
-.sg-check {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-size: var(--dens-fs);
-    color: var(--t2);
-    cursor: pointer;
-}
-
-.sg-check input {
-    accent-color: var(--accent);
-}
-
-.sg-badge {
-    display: inline-block;
-    border: 1px solid var(--border);
-    background: var(--alt);
-    color: var(--t2);
-    border-radius: 999px;
-    padding: 2px var(--space-2);
-    font-size: var(--fs-caption);
-    font-weight: 600;
-    letter-spacing: .03em;
-}
-
-.sg-badge-accent {
-    background: var(--asoft);
-    border-color: var(--abord);
-    color: var(--accent);
-}
-
-.sg-badge-ok {
-    background: var(--ok-soft);
-    border-color: color-mix(in srgb, var(--ok) 40%, var(--border));
-    color: var(--ok);
-}
-
-.sg-badge-danger {
-    background: var(--danger-soft);
-    border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
-    color: var(--danger);
-}
-
-.sg-count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 var(--space-1);
-    border-radius: 999px;
-    background: var(--accent);
-    color: var(--sheet);
-    font-size: var(--fs-caption);
-    font-weight: 700;
+.sg-strip.is-ruler[data-surface="chrome"] {
+    background-image: var(--grad-brass);
+    border-color: var(--brass-lo);
 }
 
 /* ── Table ──────────────────────────────────────────────────────────────── */

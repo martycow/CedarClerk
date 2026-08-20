@@ -2,26 +2,32 @@
 
     <header class="sg-top">
         <div>
-            <h1>Cedar Clerk — Design System 2.0</h1>
-            <p class="sg-sub">ADR-071 · every token and component state on one screen. Not a product page.</p>
+            <h1>Cedar Bench — Design System 2.0</h1>
+            <p class="sg-sub">ADR-071 · ADR-136 · every token and every bench primitive on one screen. Not a product page.</p>
         </div>
         <div class="sg-controls">
-            <button class="btn-ghost" (click)="toggleTheme()">Theme: {{ theme() }}</button>
-            <button class="btn-ghost" (click)="compact.set(!compact())">
+            <app-button variant="paper" size="sm" (clicked)="toggleTheme()">Theme: {{ theme() }}</app-button>
+            <app-button variant="paper" size="sm" (clicked)="compact.set(!compact())">
                 Density: {{ compact() ? 'compact' : 'comfortable' }}
-            </button>
-            <button class="btn-ghost" (click)="togglePseudo()" title="Inflates every UI string and
-                    glues a German compound onto its longest word — T-051. Affects the whole app in
-                    this browser until switched off.">
+            </app-button>
+            <app-button variant="paper" size="sm" (clicked)="toggleSurface()">Surface: {{ surface() }}</app-button>
+            <app-button variant="paper" size="sm" (clicked)="togglePseudo()"
+                        title="Inflates every UI string and glues a German compound onto its longest word — T-051.
+                               Affects the whole app in this browser until switched off.">
                 Pseudo-locale: {{ pseudo() ? 'on' : 'off' }}
-            </button>
+            </app-button>
         </div>
     </header>
 
     <p class="sg-note">
-        The density toggle sets <code>data-density</code> on this page's root — the same mechanism
-        <code>ThemeService</code> uses for <code>data-theme</code>. Everything below reacts to it
-        through tokens alone; no component decides its own density.
+        Three switches, three different mechanisms. <code>Theme</code> sets <code>data-theme</code> on
+        the document (<code>ThemeService</code>, persisted). <code>Density</code> sets
+        <code>data-density</code> on this page's root — a property of a page, never of a component.
+        <code>Surface</code> sets <code>data-surface</code> on the demo bays below and on nothing
+        else: chrome and paper are two densities living on one screen (ADR-138), so the surface is a
+        material an element is made of, not a mode a screen is in. Compact chrome is still chrome —
+        the two vocabularies never declare each other's tokens, which
+        <code>npm run check:density</code> enforces.
     </p>
 
     <!-- ── Color ───────────────────────────────────────────────────────────── -->
@@ -134,7 +140,7 @@
             fast = feedback on something already under the cursor · base = something appearing ·
             slow = a full-surface change. All three go to 1ms under the OS "reduce motion" setting.
         </p>
-        <button class="btn-ghost" (click)="replayMotion()">Replay</button>
+        <app-button variant="paper" size="sm" (clicked)="replayMotion()">Replay</app-button>
         <div class="sg-motion">
             @for (m of motions; track m) {
                 <div class="sg-motion-row">
@@ -156,9 +162,11 @@
     <section>
         <h2>Icons</h2>
         <p class="sg-note">
-            Phosphor (ADR-072), inlined through one <code>app-icon</code> component. Size comes from
-            the <code>--icon-*</code> tokens and never from a caller's pixel value; weight is a prop,
-            so "make the icons bolder" is one change rather than a sweep through 200 call sites.
+            Phosphor (ADR-072, ADR-142), inlined through one <code>app-icon</code> component. Size
+            comes from the <code>--icon-*</code> tokens and never from a caller's pixel value;
+            weight is a prop, so "make the icons bolder" is one change rather than a sweep through
+            200 call sites. The design system's own <code>bench-icons.js</code> is reference
+            material and is never shipped: it holds 36 glyphs against the editor toolbar's need.
             What each icon <em>means</em> in this app — and where one meaning has two glyphs — is on
             <a routerLink="/dev/icons">the icon inventory</a> (T-080).
         </p>
@@ -201,44 +209,337 @@
         </div>
     </section>
 
-    <!-- ── Controls ────────────────────────────────────────────────────────── -->
+    <!-- ── The bench kit ───────────────────────────────────────────────────── -->
     <section>
         <h2>Buttons</h2>
         <p class="sg-note">
-            Accent-filled = primary, outlined ghost = secondary. Today these are copy-pasted into
-            editor and settings CSS with drifted values (7px 14px vs 5px 12px); the versions here
-            are the canonical ones and use density tokens, so they change with the toggle above.
+            <code>app-button</code> — four variants, two sizes. The surface is read off the
+            <em>variant</em>, not off the size: <code>rail</code> is the only one painted on wood,
+            so it is the only one that takes chrome's 30px box and 13/11px type. On paper both sizes
+            hold <code>--hit-target</code> (44px), which is why <code>sm</code> there tightens the
+            padding and nothing else. <code>danger</code> is a destructive <em>action</em>, not an
+            error state — it is a dashed-underlined word, never a filled red button, so that
+            deleting something never looks like the primary thing to do.
+            Flip <em>Surface</em> above to move the whole bay onto the rail.
         </p>
-        <div class="sg-row">
-            <button class="btn-accent">Primary</button>
-            <button class="btn-accent" disabled>Primary disabled</button>
-            <button class="btn-ghost">Secondary</button>
-            <button class="btn-ghost" disabled>Secondary disabled</button>
-            <button class="btn-danger">Destructive</button>
+        <p class="sg-cap">
+            Hover and focus are live cells: tab into the row, or put the pointer on it. Nothing in a
+            template can hold a pseudo-class open, and faking one means restating the component's own
+            rules here — a second copy of what this page exists to be the single copy of.
+        </p>
+        <div class="sg-bay" [attr.data-surface]="surface()">
+            <div class="sg-matrix">
+                <span class="sg-state sg-head">variant · size</span>
+                @for (st of controlStates; track st.key) {
+                    <span class="sg-state sg-head">{{ st.label }}</span>
+                }
+                @for (v of buttonVariants; track v) {
+                    @for (s of buttonSizes; track s) {
+                        <span class="sg-state">{{ v }} · {{ s }}</span>
+                        @for (st of controlStates; track st.key) {
+                            <span class="sg-cell">
+                                <app-button [variant]="v" [size]="s" [disabled]="st.key === 'disabled'">
+                                    Publish
+                                </app-button>
+                            </span>
+                        }
+                    }
+                }
+            </div>
         </div>
 
         <h2>Fields</h2>
-        <div class="sg-row">
-            <input class="sg-input" placeholder="Text input" />
-            <input class="sg-input" value="Filled value" />
-            <input class="sg-input" placeholder="Disabled" disabled />
-            <select class="sg-input">
-                <option>Select</option>
-            </select>
-        </div>
-        <div class="sg-row">
-            <label class="sg-check"><input type="checkbox" checked /> Checked</label>
-            <label class="sg-check"><input type="checkbox" /> Unchecked</label>
-            <label class="sg-check"><input type="radio" checked name="sg-r" /> Radio</label>
+        <p class="sg-note">
+            <code>app-input</code> — bright paper pressed into the sheet with an inset shadow. Focus
+            is the global two-layer ring and nothing else: the design system's brass border plus a
+            25%-alpha wash measures 2.39:1 on paper, which is a decorative highlight wearing an
+            indicator's job (ADR-140). <code>dense</code> is the only route to chrome — mono, 11px,
+            a 30px box — and it belongs to an inspector row, never to a form. The field's own
+            <code>data-surface</code> therefore follows <code>dense</code> and ignores the bay it
+            stands in: the last field below is chrome even while the bay under it is paper.
+        </p>
+        <div class="sg-bay" [attr.data-surface]="surface()">
+            <div class="sg-fields">
+                <div class="sg-field">
+                    <span class="sg-state">label · placeholder</span>
+                    <app-input label="Email" placeholder="you@example.com" type="email" />
+                </div>
+                <div class="sg-field">
+                    <span class="sg-state">value · hint</span>
+                    <app-input label="Title" hint="Shown on the blog and in the channel" [(value)]="title" />
+                </div>
+                <div class="sg-field">
+                    <span class="sg-state">serif</span>
+                    <app-input [serif]="true" [(value)]="title" />
+                </div>
+                <div class="sg-field">
+                    <span class="sg-state">number → number | null</span>
+                    <app-input label="Parts" type="number" [(value)]="parts" />
+                </div>
+                <div class="sg-field">
+                    <span class="sg-state">disabled</span>
+                    <app-input label="Slug" [disabled]="true" [(value)]="slug" />
+                </div>
+                <div class="sg-field">
+                    <span class="sg-state">dense → always chrome</span>
+                    <app-input [dense]="true" [(value)]="slug" />
+                </div>
+            </div>
         </div>
 
-        <h2>Status</h2>
-        <div class="sg-row">
-            <span class="sg-badge">Draft</span>
-            <span class="sg-badge sg-badge-accent">LIVE</span>
-            <span class="sg-badge sg-badge-ok">Published</span>
-            <span class="sg-badge sg-badge-danger">Failed</span>
-            <span class="sg-count">7</span>
+        <h2>Stamps, drops and leaves</h2>
+        <p class="sg-note">
+            <code>app-stamp-badge</code> says what state a thing is <em>in</em> and never acts — it
+            takes no click and carries no role, so it cannot quietly become a button. Each tone's
+            wash is mixed from its own ink on ADR-145's formula, so ink and wash are a pair the
+            contrast checker can score. <code>app-resin-drop</code> is the only save indicator in the
+            system: no spinner, no "saving…" toast, and never on a button. It is
+            <code>role="status"</code>, which is what removes the need for the toast.
+            <code>app-leaf-tag</code> labels and filters; <code>dried</code> means no data or
+            switched off and never an error — an error is a rust stamp, and nothing in the leaf
+            reaches for <code>--danger</code>.
+        </p>
+        <div class="sg-bay" [attr.data-surface]="surface()">
+            <div class="sg-shelf">
+                @for (t of stampTones; track t) {
+                    <div class="sg-cell sg-stack">
+                        <span class="sg-state">{{ t }}</span>
+                        <app-stamp-badge [tone]="t">{{ t === 'rust' ? 'failed' : 'live' }}</app-stamp-badge>
+                    </div>
+                }
+                <div class="sg-cell sg-stack">
+                    <span class="sg-state">forming</span>
+                    <app-resin-drop state="forming" label="Unsaved" title="Unsaved changes" />
+                </div>
+                <div class="sg-cell sg-stack">
+                    <span class="sg-state">set</span>
+                    <app-resin-drop state="set" label="Saved" title="All changes saved" />
+                </div>
+            </div>
+            <div class="sg-shelf">
+                @for (st of leafStates; track st) {
+                    <div class="sg-cell sg-stack">
+                        <span class="sg-state">{{ st }}</span>
+                        <app-leaf-tag [state]="st" interactive>{{ st }}</app-leaf-tag>
+                    </div>
+                }
+                <div class="sg-cell sg-stack">
+                    <span class="sg-state">swatch · legend is the filter</span>
+                    <app-leaf-tag state="active" interactive swatch="var(--series-1)">Blog</app-leaf-tag>
+                </div>
+                <div class="sg-cell sg-stack">
+                    <span class="sg-state">removable · pinned</span>
+                    <app-leaf-tag removable removeLabel="Remove this topic" hint="A topic on a draft">
+                        <app-brass-pin pin />
+                        gamedev
+                    </app-leaf-tag>
+                </div>
+            </div>
+        </div>
+
+        <h2>Paper and tags</h2>
+        <p class="sg-note">
+            <code>app-paper-card</code> is the surface ink lies on — never glassy, never blurred,
+            never a large radius, and its whole hover language is a 2–3px lift on
+            <code>--ease-swing</code>. A <code>deckled</code> sheet is cut with
+            <code>clip-path</code>, and a clipped box casts no box-shadow at all, so the drop is a
+            <code>filter</code> on a wrapper. <code>app-task-tag</code> hangs from a hook: only the
+            <em>date</em> turns rust when overdue — never the tag and never the rail it hangs on —
+            and <code>done</code> fades it to 62% rather than striking the text through, because a
+            struck-out task is unreadable and a faded one is finished.
+        </p>
+        <div class="sg-bay" [attr.data-surface]="surface()">
+            <div class="sg-shelf sg-shelf-wide">
+                <div class="sg-stack">
+                    <span class="sg-state">cut · pinned</span>
+                    <app-paper-card class="sg-card">
+                        <app-brass-pin pin label="Pinned" />
+                        <strong>Square-cut stock</strong>
+                        <p>The border is the edge when there is no tear to be the edge.</p>
+                    </app-paper-card>
+                </div>
+                <div class="sg-stack">
+                    <span class="sg-state">deckled · seed 7</span>
+                    <app-paper-card class="sg-card" deckled [seed]="7">
+                        <strong>Torn sheet</strong>
+                        <p>Same seed, same tear — the edge is deterministic, not random per render.</p>
+                    </app-paper-card>
+                </div>
+                <div class="sg-stack">
+                    <span class="sg-state">bright · interactive (hover lifts)</span>
+                    <app-paper-card class="sg-card" bright interactive [rotate]="1.2">
+                        <strong>Being written on</strong>
+                        <p>Brighter stock, a button role, a tab stop and the lift.</p>
+                    </app-paper-card>
+                </div>
+            </div>
+            <div class="sg-shelf sg-shelf-wide">
+                <div class="sg-stack">
+                    <span class="sg-state">P1 · due</span>
+                    <app-task-tag class="sg-tag" [prio]="1" due="12 Sep" hint="Drag to a sprint">
+                        <app-brass-hook hook />
+                        Cut the second toolbar row
+                    </app-task-tag>
+                </div>
+                <div class="sg-stack">
+                    <span class="sg-state">P2 · overdue (the date only)</span>
+                    <app-task-tag class="sg-tag" [prio]="2" due="03 Aug" overdue>
+                        <app-brass-hook hook />
+                        Rebind the smoke selectors
+                    </app-task-tag>
+                </div>
+                <div class="sg-stack">
+                    <span class="sg-state">P3 · stamped · done</span>
+                    <app-task-tag class="sg-tag" [prio]="3" due="01 Aug" done>
+                        <app-brass-hook hook />
+                        <app-stamp-badge stamp tone="pine">shipped</app-stamp-badge>
+                        Port the brass hardware
+                    </app-task-tag>
+                </div>
+            </div>
+        </div>
+
+        <h2>Inspector rows</h2>
+        <p class="sg-note">
+            <code>app-spec-row</code> is one ruled line of a printed spec sheet, stacked inside a
+            shelf panel. The inspector is contextual — it describes the selected object, and falls
+            back to the document when nothing is selected — and it must never show both at once, so
+            every row declares whose property it is through <code>scope</code>. A mixed sheet is then
+            one query rather than a convention nobody can check. Rows are chrome wherever they
+            stand, which is why this bay does not follow the surface toggle.
+        </p>
+        <div class="sg-bay sg-bay-panel" data-surface="chrome">
+            <div class="sg-panel">
+                <span class="sg-state sg-head">scope: document</span>
+                <app-spec-row label="Words" value="1 284" />
+                <app-spec-row label="Blocks" value="37" />
+                <app-spec-row label="Slug" value="devlog-12-light-and-fog" field />
+                <app-spec-row label="Cover" value="missing" warn />
+                <app-spec-row label="State">
+                    <app-stamp-badge tone="brass">draft</app-stamp-badge>
+                </app-spec-row>
+            </div>
+            <div class="sg-panel">
+                <span class="sg-state sg-head">scope: selection</span>
+                <app-spec-row label="Node" value="image" scope="selection" />
+                <app-spec-row label="Width" value="1440px" scope="selection" />
+                <app-spec-row label="Alt" value="" field warn scope="selection" />
+            </div>
+        </div>
+
+        <h2>Hardware</h2>
+        <p class="sg-note">
+            Brass is hardware, not a palette: neither piece takes a colour and neither takes a size,
+            because a pin stops reading as a pin much past 16px. <code>app-brass-pin</code> holds
+            down anything that <em>lies</em> on a surface — a card, a leaf. <code>app-brass-hook</code>
+            carries anything that <em>hangs</em> — a task tag, a tool on the rail. Picking the wrong
+            one breaks the physical logic of the workshop, which is why they are deliberately not
+            interchangeable: different sizes, different APIs. The pin is silent by default and takes
+            a role and a name only when it is the sole thing saying a card is pinned; the hook is
+            never named, because whatever hangs from it carries the name.
+        </p>
+        <div class="sg-bay" [attr.data-surface]="surface()">
+            <div class="sg-shelf">
+                <div class="sg-cell sg-stack">
+                    <span class="sg-state">pin · decoration</span>
+                    <app-brass-pin />
+                </div>
+                <div class="sg-cell sg-stack">
+                    <span class="sg-state">pin · labelled</span>
+                    <app-brass-pin label="Pinned" />
+                </div>
+                <div class="sg-cell sg-stack">
+                    <span class="sg-state">hook · always silent</span>
+                    <app-brass-hook />
+                </div>
+            </div>
+        </div>
+
+        <h2>Error and warning</h2>
+        <p class="sg-note">
+            Four primitives carry one, and each says something different: a destructive
+            <em>action</em>, a failed <em>state</em>, a date that has passed, a value that is missing.
+            The other five have none, and two of them have none on purpose —
+            <code>app-leaf-tag</code>'s <code>dried</code> means "no data", and
+            <code>app-resin-drop</code> has no busy or failed state because its whole union is two
+            values. <code>app-input</code> has no error state at all: the design system's field has
+            no error prop either, so a form validating today has nowhere to put the message. That is
+            a gap in the kit, not a gap on this page.
+        </p>
+        <div class="sg-bay" [attr.data-surface]="surface()">
+            <div class="sg-shelf">
+                <div class="sg-cell sg-stack">
+                    <span class="sg-state">button · danger</span>
+                    <app-button variant="danger" size="sm">Unpublish</app-button>
+                </div>
+                <div class="sg-cell sg-stack">
+                    <span class="sg-state">stamp · rust</span>
+                    <app-stamp-badge tone="rust">failed</app-stamp-badge>
+                </div>
+                <div class="sg-cell sg-stack">
+                    <span class="sg-state">task tag · overdue</span>
+                    <app-task-tag class="sg-tag" [prio]="1" due="03 Aug" overdue>
+                        <app-brass-hook hook />
+                        Ship the ruler
+                    </app-task-tag>
+                </div>
+                <div class="sg-cell sg-stack">
+                    <span class="sg-state">spec row · warn</span>
+                    <app-spec-row label="Alt" value="" field warn />
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Focus ───────────────────────────────────────────────────────────── -->
+    <section>
+        <h2>Focus ring</h2>
+        <p class="sg-note">
+            One global rule, two layers: a <code>--brass-edge</code> outline at 2px offset inside a
+            cream <code>--focus-halo</code> (ADR-140). Two layers because no single colour clears
+            3:1 on both families — flat brass measures 1.86:1 on the ruler it is drawn from, and
+            flat accent measures 1.00:1 on a pine button. The dark outline against the cream halo is
+            a constant 4.20–6.91:1 boundary <em>inside</em> the band whatever lies underneath, so
+            one rule covers every surface. Its stated cost: a focused control gives up its own
+            box-shadow, which is why every shadow in the kit is written
+            <code>:not(:focus-visible)</code>.
+        </p>
+        <p class="sg-cap">Click the first control of a strip, then tab along it.</p>
+
+        <p class="sg-strip-cap">Paper — the outline clears the surface itself, 4.82–7.44 day.</p>
+        <div class="sg-strip" data-surface="paper">
+            <app-button variant="pine">Publish</app-button>
+            <app-button variant="paper">Reindex</app-button>
+            <div class="sg-field"><app-input placeholder="Focus me" /></div>
+        </div>
+
+        <p class="sg-strip-cap">Rail — the surface is dark, so the cream halo carries it, 4.00–7.38 day.</p>
+        <div class="sg-strip" data-surface="chrome">
+            <app-button variant="rail" size="sm">Glossary</app-button>
+            <app-button variant="rail" size="sm">Admin</app-button>
+        </div>
+
+        <p class="sg-strip-cap">
+            <app-stamp-badge tone="brass">exception</app-stamp-badge>
+            Shelf frame (<code>--wood-hi</code>) — neither boundary against the surface clears the
+            floor by day: outline 2.47, halo 1.98. What carries the ring here is the 4.90:1 boundary inside
+            the band. Nothing focusable is placed on a bare wood frame today; if something is, that
+            surface needs its own answer.
+        </p>
+        <div class="sg-strip is-wood" data-surface="chrome">
+            <app-button variant="rail" size="sm">On the frame</app-button>
+        </div>
+
+        <p class="sg-strip-cap">
+            <app-stamp-badge tone="brass">exception</app-stamp-badge>
+            Ruler (<code>--grad-brass</code>) — the halo disappears into the brass, 1.00 at the light
+            stop, and the dark outline is the whole indicator: by day 5.45 there, 2.94 at the dark stop.
+            A third accepted case, cork, has no strip here at all: it is a hex inside a design-system
+            component rather than a token, so nothing on this page can paint it honestly and no pair
+            in the checker can name it.
+        </p>
+        <div class="sg-strip is-ruler" data-surface="chrome">
+            <app-button variant="rail" size="sm">On the ruler</app-button>
         </div>
     </section>
 
@@ -248,7 +549,8 @@
         <p class="sg-note">
             The clearest thing the density toggle does: row padding, control size, radius, and
             separation switching from shadow to border. This is what /posts, /drafts, /admin and
-            /stats opt into.
+            /stats opt into. The state cell is a real stamp, so the table and the kit above cannot
+            drift apart.
         </p>
         <div class="sg-table">
             <div class="sg-tr sg-th">
@@ -257,7 +559,7 @@
             @for (n of [1, 2, 3]; track n) {
                 <div class="sg-tr">
                     <span>Как я собрал сервер на Raspberry Pi, часть {{ n }}</span>
-                    <span><span class="sg-badge sg-badge-accent">LIVE</span></span>
+                    <span><app-stamp-badge tone="pine">live</app-stamp-badge></span>
                     <span>RU · EN</span>
                     <span>1 24{{ n }}</span>
                 </div>

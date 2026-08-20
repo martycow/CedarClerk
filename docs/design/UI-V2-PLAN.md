@@ -65,10 +65,10 @@ Import only what is genuinely new: the 8 `--bench-*`, `--hit-chrome`/`--text-chr
 
 ```
 - [x] T-211 Bench icons — add magnifying-glass dots-three chart-bar flag text-h tree-evergreen to tools/icon-map.json, run icons:generate and icon-usage, commit both generated files #icons P1
-- [ ] T-212 Button component — app/bench/forms/button.component.ts, variants pine|paper|rail|danger, sizes md|sm #components P1
-- [ ] T-213 Input component — app/bench/forms/input.component.ts implementing ControlValueAccessor; the app binds ngModel (tag-picker.component.html), which a plain input() signal cannot serve #components P1
-- [ ] T-214 Display primitives — stamp-badge, leaf-tag, resin-drop, paper-card, task-tag, spec-row, brass-pin, brass-hook under app/bench/ #components P2
-- [ ] T-215 Styleguide rewrite — replace the Buttons/Fields/Status sections of pages/styleguide.component.* with the bench kit and add a surface-class toggle #components P2
+- [x] T-212 Button component — app/bench/forms/button.component.ts, variants pine|paper|rail|danger, sizes md|sm #components P1
+- [x] T-213 Input component — app/bench/forms/input.component.ts implementing ControlValueAccessor; the app binds ngModel (tag-picker.component.html), which a plain input() signal cannot serve #components P1
+- [x] T-214 Display primitives — stamp-badge, leaf-tag, resin-drop, paper-card, task-tag, spec-row, brass-pin, brass-hook under app/bench/ #components P2
+- [x] T-215 Styleguide rewrite — replace the Buttons/Fields/Status sections of pages/styleguide.component.* with the bench kit and add a surface-class toggle #components P2
 ```
 
 Prove every primitive on `/dev/styleguide` before it touches a product screen — it exists for this and has no users to break. Its Buttons/Fields/Status sections are *replaced*, not appended to; a styleguide showing both vocabularies is the ambiguity the port exists to end.
