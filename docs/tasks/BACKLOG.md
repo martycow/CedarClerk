@@ -69,7 +69,6 @@ below are Stages 2 through 6, in the order the plan builds them, plus the one de
 open. Nothing here is started.
 
 - [ ] T-235 Delete the neutralised forest partial — `styles/_forest.scss` and its `@use` in `styles.scss`: 1 229 lines whose every rule is scoped under `data-skin`, an attribute nothing sets any more, so the file compiles into the bundle and matches nothing. A deletion that size is a `.claude/rules/destructive-operations.md` event — explain, stop, wait #tokens #cleanup #decision P2
-- [ ] T-211 Bench icons — add magnifying-glass, dots-three, chart-bar, flag, text-h and tree-evergreen to `tools/icon-map.json`, run `icons:generate` and icon-usage, commit both generated files. Only 13 of the design system's 36 names exist verbatim today, and a name absent from the map renders nothing, silently (ADR-142) #icons P1
 - [ ] T-212 Button component — `app/bench/forms/button.component.ts`, variants pine/paper/rail/danger, sizes md/sm #components P1
 - [ ] T-213 Input component — `app/bench/forms/input.component.ts` implementing `ControlValueAccessor`; the app binds `ngModel` (tag-picker), which a plain `input()` signal cannot serve #components P1
 - [ ] T-214 Display primitives — stamp-badge, leaf-tag, resin-drop, paper-card, task-tag, spec-row, brass-pin, brass-hook under `app/bench/` #components P2
