@@ -17,9 +17,8 @@ export interface ToolbarGroupDef {
     buttons: { id: ToolbarButtonId; label: string }[];
 }
 
-// Order here is the Standard preset's row1-then-row2 reading order; Block-type dropdown and
-// undo/redo are permanently pinned to row 1 (not part of any group, not hideable) since a
-// document editor without them isn't meaningfully "minimal", it's broken.
+// The block-type dropdown and undo/redo are deliberately absent: they are pinned to the head of
+// the first row, outside the group system, so the fit can never wrap them away from the caret.
 export const TOOLBAR_GROUPS: ToolbarGroupDef[] = [
     {
         id: 'text', label: 'Text', buttons: [

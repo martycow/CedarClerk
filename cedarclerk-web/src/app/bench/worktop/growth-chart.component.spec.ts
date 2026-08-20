@@ -183,9 +183,14 @@ describe('GrowthChartComponent', () => {
         });
 
         it('scales the axis to the closed buckets only', () => {
-            const withTail = fixture.componentInstance.yGrid().at(-1)!.v;
-            mount([{ slot: 1, name: 'Telegram', points: [120, 180, 240, 300] }], false);
-            expect(fixture.componentInstance.yGrid().at(-1)!.v).toBe(withTail);
+            // The open bucket is a spike, so the two answers cannot be the same number: reaching
+            // it would put the top at 4 000 and press every closed day onto the baseline.
+            const SPIKE = [{ slot: 1 as const, name: 'Telegram', points: [120, 180, 240, 300, 4000] }];
+            mount(SPIKE, true);
+            expect(fixture.componentInstance.yGrid().at(-1)!.v).toBe(400);
+
+            mount(SPIKE, false);
+            expect(fixture.componentInstance.yGrid().at(-1)!.v).toBe(4000);
         });
     });
 
