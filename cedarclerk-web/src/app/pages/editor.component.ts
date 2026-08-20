@@ -1,12 +1,12 @@
 import {
     AfterViewInit, Component, ElementRef, HostListener, OnDestroy,
-    ViewChild, effect, inject, signal
+    ViewChild, computed, effect, inject, signal
 } from '@angular/core';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Editor } from '@tiptap/core';
-import { EditorState, PluginKey, TextSelection } from '@tiptap/pm/state';
+import { EditorState, NodeSelection, PluginKey, TextSelection } from '@tiptap/pm/state';
 import Suggestion from '@tiptap/suggestion';
 import { Node as PMNode, Slice } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
@@ -58,7 +58,6 @@ import { LayoutShortcuts } from '../tiptap-extensions/layout-shortcuts';
 import { PopoverComponent } from '../shared/popover.component';
 import { ModalComponent } from '../shared/modal.component';
 import { AppearanceService, SHEET_WIDTH_PX, TYPEFACE_STACK, MAX_TABLE_SIZE } from '../core/appearance.service';
-import { ToolbarLayoutService } from '../core/toolbar-layout.service';
 import { TagUsageService } from '../core/tag-usage.service';
 import { TagPickerComponent } from '../shared/tag-picker.component';
 import { FolderPickerComponent } from '../shared/folder-picker.component';
@@ -72,7 +71,18 @@ import { BrandIconComponent } from '../shared/brand-icon.component';
 import { IconComponent } from '../shared/icon.component';
 import { avatarFill, avatarInitial } from '../core/avatar-color.util';
 import { RulerReadout } from '../bench/chrome/ruler-bar.component';
+import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
+import { LeafTagComponent } from '../bench/display/leaf-tag.component';
+import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
+import { SpecRowComponent } from '../bench/worktop/spec-row.component';
+import { WorktopComponent } from '../bench/worktop/worktop.component';
+import { RailActionsService } from '../core/rail-actions.service';
 import { RulerService } from '../core/ruler.service';
+import { STRIP_GROUP_IDS } from '../core/toolbar-layout';
+import { ToolbarFit, fitToolbar } from '../core/toolbar-fit';
+import { NodeLike, SelectionKind, SelectionSpec, describeSelection } from '../core/selection-spec';
+import { OutlineEntry, OutlineNodeLike, buildOutline, topLevelStart } from '../core/document-outline';
+import { DocumentOutlineComponent } from '../shared/document-outline.component';
 
 // FI2.11 — how long the "published" confirmation with its links stays up.
 
@@ -139,6 +149,9 @@ interface PublishRunStep {
 }
 
 const AUTOSAVE_DEBOUNCE_MS = 1200;
+// The structure shelf rebuilds once a burst of typing settles, on the same interval and for the
+// same reason as the RU diff gutter beside it (ADR-162 clause 2).
+const OUTLINE_DEBOUNCE_MS = 200;
 // T-018.6 — widening gaps, then the manual "retry" button takes over rather than hammering on.
 const SAVE_RETRY_DELAYS_MS = [2000, 5000, 15000];
 // T-018.2 — the browser caps a keepalive body at 64KB; Cyrillic is 2 bytes per character, so this
@@ -253,14 +266,15 @@ interface UploadItem {
 
 @Component({
     selector: 'app-editor',
-    imports: [IconComponent, BrandIconComponent, FormsModule, ZonedDatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, ModalComponent, TagPickerComponent, FolderPickerComponent, SeriesPickerComponent, MediaPickerComponent, FormRefComponent, GlossaryTermFormComponent],
+    imports: [IconComponent, BrandIconComponent, FormsModule, ZonedDatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, ModalComponent, TagPickerComponent, FolderPickerComponent, SeriesPickerComponent, MediaPickerComponent, FormRefComponent, GlossaryTermFormComponent,
+        WorktopComponent, ShelfPanelComponent, SpecRowComponent, LeafTagComponent, StampBadgeComponent,
+        DocumentOutlineComponent],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
 })
 export class EditorComponent implements AfterViewInit, OnDestroy {
     auth = inject(AuthService);
     appearance = inject(AppearanceService);
-    toolbarLayout = inject(ToolbarLayoutService);
     private draftsApi = inject(DraftsService);
     private presetsApi = inject(FormPresetsService);
     feedback = inject(CommentsService);
@@ -269,6 +283,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private assets = inject(AssetsService);
     private tagUsageApi = inject(TagUsageService);
     private ruler = inject(RulerService);
+    private rail = inject(RailActionsService);
 
     // What the brass rule at the foot of the screen says while this page is open (ADR-153). The
     // counts are behind the same preference the status bar honoured; the sync word is not, because
@@ -279,13 +294,89 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (this.appearance.prefs().showWordCount) {
             right.push({ text: t.editor.words(this.wordCount()) });
             right.push({ text: t.editor.chars(this.charCount()) });
+            right.push({ text: t.editor.blockOf(this.blockIndex(), this.blockCount()) });
         }
         right.push({ text: this.syncWord() });
         this.ruler.publish({ right });
     });
 
+    // The rail's own two slots (ADR-159): the save drop, and the one primary action. Published
+    // rather than projected, because a page rendered into the outlet cannot reach the chrome above
+    // it, and cleared in ngOnDestroy so the button does not outlive the screen that owns it.
+    private readonly railFeed = effect(() => {
+        const t = this.t();
+        this.rail.publish({
+            save: { state: this.saveState() === 'saved' ? 'set' : 'forming', hint: this.syncWord() },
+            primary: {
+                label: t.editor.export,
+                icon: 'paper-plane-tilt',
+                hint: t.editor.export,
+                run: () => this.openExportModal(),
+            },
+        });
+    });
+
     @ViewChild('editorHost') editorHost!: ElementRef<HTMLElement>;
+    @ViewChild('toolStrip') toolStrip?: ElementRef<HTMLElement>;
     private editor?: Editor;
+
+    // ─── The tool strip fits itself (ADR-150) ─────────────────────────────────────────────────
+    // Group order is the catalogue's own; the fit only decides how many of them stay on the first
+    // row and whether the captions are drawn. Nothing here is stored, and nothing is a width
+    // breakpoint — ADR-147 forbids inventing one before the narrow screens are commissioned.
+    protected readonly stripGroups = STRIP_GROUP_IDS;
+    readonly toolbarFit = signal<ToolbarFit>({ rows: 1, captions: true, firstRow: STRIP_GROUP_IDS.length });
+    readonly row1Groups = computed(() => this.stripGroups.slice(0, this.toolbarFit().firstRow));
+    readonly row2Groups = computed(() =>
+        this.toolbarFit().rows === 2 ? this.stripGroups.slice(this.toolbarFit().firstRow) : []);
+
+    private stripObserver?: ResizeObserver;
+
+    // Captions are measured by flipping the class on the element rather than through the signal:
+    // both states have to be read in one layout pass, and a signal would put a change-detection
+    // round trip between them.
+    private measureToolbar() {
+        const strip = this.toolStrip?.nativeElement;
+        const line = strip?.querySelector<HTMLElement>('.tb-line');
+        const lead = strip?.querySelector<HTMLElement>('.tb-lead');
+        const trail = strip?.querySelector<HTMLElement>('.tb-trail');
+        if (!strip || !line || !lead || !trail) return;
+
+        const available = line.clientWidth;
+        if (available === 0) return;
+
+        const widths = () => this.stripGroups.map(id =>
+            strip.querySelector<HTMLElement>(`[data-tb-group="${id}"]`)?.getBoundingClientRect().width ?? 0);
+
+        const suppressed = strip.classList.contains('no-captions');
+        strip.classList.remove('no-captions');
+        const withCaptions = widths();
+        strip.classList.add('no-captions');
+        const withoutCaptions = widths();
+        strip.classList.toggle('no-captions', suppressed);
+
+        const next = fitToolbar({
+            available,
+            gap: parseFloat(getComputedStyle(line).columnGap) || 0,
+            lead: lead.getBoundingClientRect().width,
+            trail: trail.getBoundingClientRect().width,
+            withCaptions,
+            withoutCaptions,
+        });
+
+        // Two rows are taller than one, so committing an unchanged fit would re-enter through the
+        // observer that watches the strip's own box.
+        const now = this.toolbarFit();
+        if (next.rows === now.rows && next.captions === now.captions && next.firstRow === now.firstRow) return;
+        this.toolbarFit.set(next);
+    }
+
+    // A caption is translated, so its width moves with the locale and nothing about the strip's
+    // own box changes when it does.
+    private readonly stripLocale = effect(() => {
+        this.t();
+        setTimeout(() => this.measureToolbar());
+    });
 
     // ─── Waiting on the publish queue (T-090) ─────────────────────────────────────────────────
     /**
@@ -1060,6 +1151,87 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return this.editor?.getText().length ?? 0;
     }
 
+    worktopLabel(): string {
+        return this.t().editor.worktop.sheet(this.sheetMaxWidthPx());
+    }
+
+    worktopMeta(): string {
+        const state = this.t().editor.state;
+        return `${this.lang().toUpperCase()} · ${this.isLive() ? state.live : state.notPublished}`;
+    }
+
+    blockCount(): number {
+        this.tick();
+        return this.editor?.state.doc.childCount ?? 0;
+    }
+
+    /** 1-based, so the rule reads the way a page number does. 0 only while there is no document. */
+    blockIndex(): number {
+        this.tick();
+        const state = this.editor?.state;
+        if (!state || state.doc.childCount === 0) return 0;
+        return state.selection.$from.index(0) + 1;
+    }
+
+    // ─── The structure shelf (ADR-162) ────────────────────────────────────────────────────────
+    // The panel is a view of the document and holds nothing: `outline()` is the list, `blockIndex()`
+    // above is the lit row, and both are read off ProseMirror. A click comes back through
+    // goToBlock, which dispatches a transaction — so the round trip ends in the same state the
+    // highlight is derived from, and there is no second copy to loop through.
+    private outlineVersion = signal(0);
+    private outlineTimer?: ReturnType<typeof setTimeout>;
+
+    readonly outline = computed<OutlineEntry[]>(() => {
+        this.outlineVersion();
+        return buildOutline(this.outlineNodes());
+    });
+
+    /** -1 while the document has no blocks, so no row lights on an empty sheet. */
+    outlineActive(): number {
+        return this.blockIndex() - 1;
+    }
+
+    private scheduleOutlineRebuild() {
+        clearTimeout(this.outlineTimer);
+        this.outlineTimer = setTimeout(() => this.outlineVersion.update(v => v + 1), OUTLINE_DEBOUNCE_MS);
+    }
+
+    private outlineNodes(): OutlineNodeLike[] {
+        const doc = this.editor?.state.doc;
+        if (!doc) return [];
+        const nodes: OutlineNodeLike[] = [];
+        doc.forEach(node => nodes.push({
+            typeName: node.type.name,
+            attrs: node.attrs,
+            childCount: node.childCount,
+            text: node.textContent,
+            selectableAtom: node.isAtom && NodeSelection.isSelectable(node),
+        }));
+        return nodes;
+    }
+
+    goToBlock(entry: OutlineEntry) {
+        const view = this.editor?.view;
+        if (!view) return;
+        const { doc } = view.state;
+        const sizes: number[] = [];
+        doc.forEach(node => sizes.push(node.nodeSize));
+        // The list is debounced, so a row on screen can outlive the block it describes; resolving a
+        // position past the end throws rather than missing quietly (ADR-162 clause 3).
+        const pos = topLevelStart(sizes, entry.index);
+        if (pos === null) return;
+
+        const node = doc.child(entry.index);
+        // A NodeSelection is the only thing the inspector counts as a selected object (ADR-159
+        // clause 5), so picking a media block fills the shelf beside it; everything else gets a
+        // caret to keep typing from.
+        const selection = node.isAtom && NodeSelection.isSelectable(node)
+            ? NodeSelection.create(doc, pos)
+            : TextSelection.near(doc.resolve(pos + 1));
+        view.dispatch(view.state.tr.setSelection(selection).scrollIntoView());
+        view.focus();
+    }
+
     syncWord(): string {
         const t = this.t().editor;
         switch (this.saveState()) {
@@ -1147,6 +1319,63 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
+    // ─── The inspector (ADR-159) ──────────────────────────────────────────────────────────────
+    // One subject at a time. Only a ProseMirror NodeSelection counts as an object being selected;
+    // a caret inside a paragraph is the document being written, not a block being inspected.
+    private selectedNode(): NodeLike | null {
+        this.tick();
+        const state = this.editor?.state;
+        if (!state || !(state.selection instanceof NodeSelection)) return null;
+        const node = state.selection.node;
+        return { typeName: node.type.name, attrs: node.attrs, childCount: node.childCount };
+    }
+
+    selectionSpec(): SelectionSpec | null {
+        return describeSelection(this.selectedNode());
+    }
+
+    inspectorScope(): 'selection' | 'document' {
+        return this.selectionSpec() ? 'selection' : 'document';
+    }
+
+    inspectorScopeWord(): string {
+        const t = this.t().editor.inspector;
+        return this.inspectorScope() === 'selection' ? t.selected : t.documentScope;
+    }
+
+    selectionKindLabel(): string {
+        const spec = this.selectionSpec();
+        return spec ? this.t().editor.inspector.kinds[spec.kind] : '';
+    }
+
+    /**
+     * Every row the selected block can answer, and no row it cannot. The kit's resolution, byte
+     * size and asset path are absent rather than blank: a TipTap node carries none of the three.
+     */
+    selectionRows(): { label: string; value: string; field?: boolean; warn?: boolean }[] {
+        const spec = this.selectionSpec();
+        if (!spec) return [];
+        const i = this.t().editor.inspector;
+        const rows: { label: string; value: string; field?: boolean; warn?: boolean }[] = [];
+
+        if (spec.source) rows.push({ label: i.source, value: spec.source, field: true });
+        if (spec.altMissing !== undefined) {
+            rows.push({ label: i.alt, value: spec.alt || i.altMissing, field: true, warn: spec.altMissing });
+        }
+        if (spec.caption) rows.push({ label: i.caption, value: spec.caption });
+        if (spec.text) rows.push({ label: i.summary, value: spec.text });
+        if (spec.count !== undefined) rows.push({ label: this.countLabel(spec.kind), value: String(spec.count) });
+        rows.push({ label: i.node, value: spec.typeName });
+        return rows;
+    }
+
+    private countLabel(kind: SelectionKind): string {
+        const i = this.t().editor.inspector;
+        if (kind === 'poll') return i.options;
+        if (kind === 'table') return i.rows;
+        return i.frames;
+    }
+
     tip(label: string, id: string): string {
         const combo = this.shortcuts[id];
         return combo ? `${label} (${combo.replace('Mod', this.modKey)})` : label;
@@ -1172,6 +1401,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     async ngAfterViewInit() {
+        if (this.toolStrip && typeof ResizeObserver !== 'undefined') {
+            this.stripObserver = new ResizeObserver(() => this.measureToolbar());
+            this.stripObserver.observe(this.toolStrip.nativeElement);
+        }
         document.addEventListener('visibilitychange', this.onVisibilityChange);
         window.addEventListener('pagehide', this.onPageHide);
 
@@ -1271,9 +1504,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 TextAlign.configure({ types: ['paragraph', 'heading'] }),
             ],
             content: '',
-            onTransaction: () => {
+            onTransaction: ({ transaction }) => {
                 this.tick.update(v => v + 1);
                 this.scheduleRuDiffRecompute();
+                // Two clocks (ADR-162 clause 2): the lit outline row rides `tick` because it is one
+                // integer off the selection, while the list itself only rebuilds when the document
+                // actually changed, and then only once the typing settles.
+                if (transaction.docChanged) this.scheduleOutlineRebuild();
             },
             onUpdate: () => this.markDirty(),
             onFocus: () => this.editorFocused.set(true),
@@ -1319,6 +1556,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         document.removeEventListener('visibilitychange', this.onVisibilityChange);
         window.removeEventListener('pagehide', this.onPageHide);
         this.ruler.clear();
+        this.rail.clear();
+        this.stripObserver?.disconnect();
         clearTimeout(this.saveTimer);
         clearTimeout(this.saveRetryTimer);
         clearTimeout(this.aiToastTimer);
@@ -1327,6 +1566,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         clearInterval(this.exportTicker);
         clearInterval(this.blogTicker);
         clearTimeout(this.ruDiffTimer);
+        clearTimeout(this.outlineTimer);
         this.aiEditCancelled = true;
         this.autoTranslateCancelled = true;
         this.editor?.destroy();

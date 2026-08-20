@@ -80,12 +80,12 @@ Translate the JSX API mechanically: `children` → `<ng-content>`, named slots �
 The app has no shell today: `src/app/app.html` is `<router-outlet />` plus the debug console, `app.scss` is empty, and every page draws its own header.
 
 ```
-- [ ] T-216 Chrome components — rail-header, hook-rail, shelf-panel, bench-drawer, ruler-bar, worktop, index-tabs under app/bench/chrome and app/bench/worktop #components P1
-- [ ] T-217 Bench shell — app/bench/chrome/bench-shell.component.*, one parent route in app.routes.ts wrapping the authenticated children unchanged; login/register/terms/privacy stay outside it #shell P1
-- [ ] T-218 Retire page-header — delete shared/page-header.component.* and its 12 call sites, delete the editor topbar nav block in editor.component.html #shell P1
-- [ ] T-219 Chrome touch carve-out — scope the @media (pointer: coarse) 44px rule at styles.scss:304 so it cannot inflate rail, hooks, shelf headers, drawer lip and ruler #a11y P1
-- [ ] T-220 Drawer re-house — debug console content becomes the BenchDrawer body; core/debug-log.service.ts and the interceptor survive; hostBarHeight retires; update app.spec.ts #shell P2
-- [ ] T-221 Status bar to ruler — word/char/sync readouts move to RulerBar; invisibles and fullscreen move to the editor tool strip; the console toggle disappears because the lip is the toggle #shell P2
+- [x] T-216 Chrome components — rail-header, hook-rail, shelf-panel, bench-drawer, ruler-bar, worktop, index-tabs under app/bench/chrome and app/bench/worktop #components P1
+- [x] T-217 Bench shell — app/bench/chrome/bench-shell.component.*, one parent route in app.routes.ts wrapping the authenticated children unchanged; login/register/terms/privacy stay outside it #shell P1
+- [x] T-218 Retire page-header — delete shared/page-header.component.* and its 12 call sites, delete the editor topbar nav block in editor.component.html #shell P1
+- [x] T-219 Chrome touch carve-out — scope the @media (pointer: coarse) 44px rule at styles.scss:304 so it cannot inflate rail, hooks, shelf headers, drawer lip and ruler #a11y P1
+- [x] T-220 Drawer re-house — debug console content becomes the BenchDrawer body; core/debug-log.service.ts and the interceptor survive; hostBarHeight retires; update app.spec.ts #shell P2
+- [x] T-221 Status bar to ruler — word/char/sync readouts move to RulerBar; invisibles and fullscreen move to the editor tool strip; the console toggle disappears because the lip is the toggle #shell P2
 ```
 
 Vertical chrome budget in the editor: 44 + 58 + 58 + 27 = 187px today, against 56 + 32 + 30 = 118px global plus a 36px in-content tool strip. The two-row toolbar collapsing to one 36px strip is the biggest density delta in the app and voids ADR-035's user-ordered row assignment — see Q3.
@@ -101,10 +101,10 @@ One data gap the rail hits immediately: `DraftMeta` (`core/drafts.service.ts:107
 Smallest blast radius first.
 
 ```
-- [ ] T-222 Stats screen port — one multi-series GrowthChart replacing four 600x160 single-metric SVGs, sources as LeafTag legend-filters, audience grid into a 320px right ShelfPanel #screens P2
-- [ ] T-223 Hub screen port — project.component grid 2 to 3 columns, ModuleTile re-cut from document types to modules, right shelf keeps sprint and up-next #screens P2
-- [ ] T-224 Writer shell port — editor.component chrome, inspector shelf replacing the horizontal meta strip, one 36px tool strip #screens P2
-- [ ] T-225 Writer outline panel — 224px structure shelf walking the TipTap doc with two-way ProseMirror selection sync #screens P3
+- [x] T-222 Stats screen port — one multi-series GrowthChart replacing four 600x160 single-metric SVGs, sources as LeafTag legend-filters, audience grid into a 320px right ShelfPanel #screens P2
+- [x] T-223 Hub screen port — project.component grid 2 to 3 columns, ModuleTile re-cut from document types to modules, right shelf keeps sprint and up-next #screens P2
+- [x] T-224 Writer shell port — editor.component chrome, inspector shelf replacing the horizontal meta strip, one 36px tool strip #screens P2
+- [x] T-225 Writer outline panel — 224px structure shelf walking the TipTap doc with two-way ProseMirror selection sync #screens P3
 ```
 
 Each screen carries data the API does not have; every one of these is a feature with its own row, not part of a re-skin.
@@ -182,6 +182,17 @@ Six more were written once Marty answered the questions in §6, and they took th
 | ADR-152 | The accent picker survives; every accent-derived tone is derived from `--accent` and never held, and joins `ACCENT_DEPENDENT` in the same commit | Defends ADR-137 clause 5 and ADR-141 clause 6 |
 
 A seventh followed at the next number, out of the port itself rather than out of a question: **ADR-153** — the debug console's chrome becomes a `BenchDrawer` and the editor's status bar dissolves into it and the `RulerBar`, readouts to the rule and controls to the tool strip (`T-220`/`T-221`).
+
+Nine more came out of building rather than out of planning, and took the numbers after it. Three
+closed Stage 3: **ADR-154** (the shell's content region is paper, so the touch carve-out has
+something to stand on), **ADR-155** (the hook rail's tally, which the kit does not define) and
+**ADR-156** (the touch floor is inherited through `--hit-surface`, never selected by pinning a
+surface). Six carried Stage 4: **ADR-157** (a log line is not a material, so its surface is an
+input), **ADR-158** (the chart cannot claim what the data does not say), **ADR-159** (the writer
+keeps no chrome of its own), **ADR-160** (a hub tile is a door, and the wall shows the modules the
+app has), **ADR-161** (one chart needs a metric control, one axis needs a shared window, and a leaf
+must not promise a line) and **ADR-162** (the outline is a view of the document, not a second
+selection).
 
 ---
 

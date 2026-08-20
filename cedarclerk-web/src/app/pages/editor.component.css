@@ -1,72 +1,41 @@
 .app {
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    background: var(--surface);
+    /* The shell owns the rail above and the drawer plus rule below; this is what is left of the
+       viewport between them (ADR-153 clause 6). */
+    height: calc(100vh - var(--bench-rail-h) - var(--bench-bottom-h));
     color: var(--text);
     font-family: var(--font-sans);
 }
 
-/* ---------- Topbar ---------- */
-.topbar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    height: 44px;
-    flex: none;
-    padding: 0 14px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    box-shadow: var(--gloss-top);
-    position: relative;
-    z-index: 3;
+/* The draft title is the sheet's first line rather than a field in a bar (ADR-159 clause 4): the
+   frame appears on hover and focus, so a title being typed looks like a title and not a form.
+   Qualified by the surface it stands on — the worktop body — which is what holds its size to
+   paper's floor and what lets tools/check-density.mjs score it. */
+[data-surface="paper"] .title {
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0 0 var(--space-2);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    padding: var(--space-1) var(--space-2);
+    background: none;
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: var(--fs-22);
+    font-weight: 700;
+    line-height: 1.25;
 }
 
-.title {
-    border: 1px solid var(--border);
-    background: var(--sheet);
-    font-size: var(--fs-ui);
-    color: var(--text);
-    min-width: 220px;
-    padding: 4px 8px;
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-}
+.title::placeholder { color: var(--t3); }
 
 .title:hover {
-    border-color: var(--t2);
+    border-color: var(--border);
 }
 
 /* Border only: a wash here would be a box-shadow out-specifying the global ADR-140 halo. */
 .title:focus {
     border-color: var(--accent);
-}
-
-.save-state {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: var(--fs-meta);
-    color: var(--t2);
-}
-
-.save-state .icon-xs {
-    color: var(--ok);
-}
-
-.save-state .dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--warn);
-}
-
-.save-state.error .dot {
-    background: var(--danger);
-}
-
-.spacer {
-    flex: 1;
 }
 
 /* ---------- Buttons / icons ---------- */
@@ -296,235 +265,257 @@
 }
 
 /* ---------- Toolbar (ribbon, two rows: primary + secondary) ---------- */
-.toolbar {
-    display: flex;
-    align-items: stretch;
-    gap: 10px;
+/* One tool strip, chrome, whose rows and captions are decided by measurement (ADR-150). The
+   attribute is what puts the 30px touch floor and the 11-13px type under everything in here — and
+   what lets tools/check-density.mjs score them. */
+.strip[data-surface="chrome"] {
     flex: none;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
     box-sizing: border-box;
-    overflow-x: auto;
-    overflow-y: visible;
-    position: relative;
-    /* Flex items default to min-width:auto (can't shrink below content size). Without this,
-       a wide row of buttons pushes .app/body wider than the viewport instead of scrolling
-       internally, causing page-level horizontal scroll on iPad/iPhone widths. */
     min-width: 0;
     width: 100%;
+    padding: var(--space-1) var(--space-3);
+    border-bottom: 1px solid var(--wood-edge);
+    background-color: var(--rail-lo);
+    background-image: var(--tex-wood), var(--surface-rail);
+    box-shadow: var(--shadow-rail);
+    color: var(--rail-ink);
+    font-size: var(--text-chrome-sm);
 }
 
-.toolbar-row1 {
-    height: 58px;
-    padding: 5px 14px 0;
-    z-index: 2;
-}
-
-/* Groups can move here via Settings → Toolbar (core/toolbar-layout.ts), so row 2 uses the same
-   height/caption treatment as row 1 — a group's presentation doesn't change with its row. */
-.toolbar-row2 {
-    height: 58px;
-    padding: 5px 14px 0;
-    background: color-mix(in srgb, var(--alt) 80%, transparent);
-}
-
-.tb-group {
+.strip .tb-line {
     display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    /* The fit aims for no overflow at all; this is what the strip does on the width where even
+       two rows do not hold, which is the behaviour it had before the fit existed. */
+    overflow-x: auto;
+    overflow-y: visible;
+}
+
+.strip .tb-line-2 {
+    margin-top: var(--space-1);
+    border-top: 1px solid var(--rail-edge);
+    padding-top: var(--space-1);
+}
+
+.strip .tb-lead,
+.strip .tb-trail {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: none;
+}
+
+/* Pushed to the far end without a spacer element: a spacer would be one more flex item and one
+   more gap than measureToolbar() counts, and the count is what decides the row. */
+.strip .tb-trail { margin-left: auto; }
+
+.strip .tb-group {
+    display: inline-flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 1px;
     flex: none;
+    border-left: 1px solid var(--rail-edge);
+    padding-left: var(--space-2);
 }
 
-.tb-row {
-    display: flex;
+/* The rule is withheld at the head of a row, never the box: a group has to measure the same width
+   wherever the fit puts it, or the measurement and the arrangement chase each other. */
+.strip .tb-group:first-child { border-left-color: transparent; }
+
+.strip .tb-row {
+    display: inline-flex;
     gap: 1px;
 }
 
-/* The caption names its toolbar group; it must never be what decides the group's width (T-051 —
-   a long word here widened the group and pushed the buttons of the next one off the row). */
-.tb-caption {
-    font-size: var(--fs-9);
+/* The caption names its group; it must never be what decides the group's width (T-051 — a long
+   word here widened the group and pushed the next one off the row). */
+/* Cream at full strength: a group caption is a word, and the soft cream is 3.35:1 composited
+   over the rail — the glyph floor, not a label's. The same call the styleguide's state line
+   makes. */
+.strip .tb-caption {
+    font-size: var(--text-chrome-sm);
     letter-spacing: .05em;
     text-transform: uppercase;
-    color: var(--t2);
-    font-weight: 600;
+    color: var(--rail-ink);
+    font-weight: 700;
     white-space: nowrap;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.tb-caption.accent {
-    color: var(--accent);
-    font-weight: 700;
+.strip .tb-caption.accent {
+    color: var(--brass-hi);
 }
 
-.tb-flex-spacer {
-    flex: 1;
-}
+.strip.no-captions .tb-caption { display: none; }
 
-.toolbar .block-dropdown {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 6px;
-    width: auto;
-    height: auto;
-    border: 1px solid var(--border);
-    background: var(--sheet);
-    border-radius: var(--radius-sm);
-    padding: 4px 10px;
-    font-size: var(--fs-ui);
-    color: var(--text);
-    cursor: pointer;
-    font-family: inherit;
-    white-space: nowrap;
-    flex: none;
-}
-
-.toolbar .block-dropdown:hover {
-    border-color: var(--t2);
-    background: var(--sheet);
+.strip-error {
+    margin: var(--space-1) var(--space-3);
 }
 
 .block-menu {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    min-width: 180px;
+    min-width: 150px;
 }
 
-.toolbar .block-menu button {
+/* The same panel hangs off both surfaces — the strip's wood and the inspector's paper — so the
+   base rule is the one that carries the ink and the box, and the strip only tightens it. */
+.block-menu button {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
     width: 100%;
-    text-align: left;
+    padding: var(--space-2) var(--space-3);
     border: none;
-    background: none;
-    padding: 6px 8px;
     border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-size: var(--fs-ui);
+    background: none;
     color: var(--text);
-    font-family: inherit;
-    height: auto;
-    box-sizing: border-box;
+    font-family: var(--font-sans);
+    font-size: var(--fs-ui);
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
 }
 
-.toolbar .block-menu button:hover {
-    background: var(--hover-strong);
+.block-menu button:hover:not(:disabled) { background: var(--hover); }
+
+.block-menu button.on { color: var(--accent); }
+
+.block-menu button:disabled { opacity: .6; cursor: default; }
+
+.strip .block-menu button {
+    min-height: var(--hit-chrome);
+    padding: 0 var(--space-3);
+    font-size: var(--text-chrome);
 }
 
-.toolbar .block-menu button.on {
-    background: var(--asoft);
-}
-
-.toolbar button {
-    display: flex;
+.strip button {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 27px;
-    height: 27px;
-    border: 1px solid transparent;
+    /* --hit-surface carries the touch floor and is declared only under @media (pointer: coarse),
+       so the resting box names the chrome token the strip's own surface resolves to. */
+    min-height: var(--hit-chrome);
+    min-width: var(--hit-chrome);
+    padding: 0 var(--space-1);
+    border: none;
+    border-radius: var(--radius-stamp);
     background: none;
-    padding: 0;
-    border-radius: var(--radius-sm);
+    color: var(--rail-ink-soft);
+    font-family: var(--font-sans);
+    font-size: var(--text-chrome);
     cursor: pointer;
-    font-size: var(--fs-ui);
-    color: var(--t2);
 }
 
-.toolbar button:hover {
+.strip button:hover:not(:disabled) {
     background: var(--hover-strong);
+    color: var(--rail-ink);
 }
 
-.toolbar button.on {
-    background: var(--asoft);
-    border-color: var(--abord);
-    color: var(--text);
+.strip button.on {
+    background: var(--rail-edge);
+    color: var(--rail-ink);
 }
 
-.toolbar button:disabled {
-    opacity: .5;
+.strip button:disabled {
+    opacity: .45;
     cursor: default;
 }
 
-/* The one button on the strip that is not a formatting command: autosave has stopped retrying and
-   this is the last save the draft will get, so it is coloured as an alarm rather than as a glyph.
-   Its hover takes the danger wash rather than the strip's, so the red ink stays on the ground the
-   contrast check measures it against. */
-.toolbar .tb-retry {
+.strip button.block-dropdown {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: var(--hit-chrome);
+    padding: 0 var(--space-2);
+    border: 1px solid var(--brass-edge);
+    border-radius: var(--radius-stamp);
+    background-color: var(--sign-tile-hi);
+    background-image: var(--tex-wood), var(--grad-sign-tile);
+    color: var(--rail-ink);
+    font-family: var(--font-display);
+    font-size: var(--text-chrome-sm);
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.strip button.block-dropdown:hover {
+    filter: brightness(1.08);
+}
+
+/* Severity on chrome is a stamp, never a tinted glyph: the rust ink is derived against paper
+   and measures 1.13:1 laid straight on the rail, while the wash it belongs on is opaque and
+   carries it anywhere. Same face as app-stamp-badge's rust tone. */
+.strip button.tb-retry {
+    padding: 0 var(--space-2);
+    background: var(--danger-soft);
     color: var(--danger);
 }
 
-.toolbar .tb-retry:hover {
-    background: var(--hover-danger);
-}
-
-.toolbar .gif-btn {
-    font-size: var(--fs-10);
+/* The face is the word, so it takes a label's ink rather than the glyph cream the other
+   buttons rest on. */
+.strip button.gif-btn {
+    color: var(--rail-ink);
+    font-size: var(--text-chrome-sm);
     font-weight: 700;
-    letter-spacing: -.02em;
+    letter-spacing: .06em;
 }
 
-/* The only toolbar button whose face is a word rather than a glyph, so on the hover wash it owes
-   the 4.5:1 of text and not the 3:1 of a graphic. */
-.toolbar .gif-btn:hover {
-    color: var(--text);
-}
-
-.toolbar .ai-chip {
-    display: flex;
-    align-items: center;
-    width: auto;
-    height: auto;
-    gap: 5px;
-    border: 1px solid var(--abord);
-    background: var(--asoft);
-    border-radius: 7px;
-    padding: 4px 10px;
-    font-size: var(--fs-meta);
-    font-weight: 600;
-    color: var(--text);
-    cursor: pointer;
-    font-family: inherit;
-    white-space: nowrap;
+.strip button.ai-chip {
     position: relative;
+    gap: var(--space-1);
+    padding: 0 var(--space-2);
+    border: 1px solid var(--brass-edge);
+    border-radius: var(--radius-stamp);
+    background: var(--rail-edge);
+    color: var(--brass-hi);
+    font-weight: 700;
     overflow: hidden;
 }
 
-.toolbar .ai-chip:hover {
-    filter: brightness(.97);
+.strip button.ai-chip:hover:not(:disabled) {
+    background: var(--rail-edge);
+    color: var(--brass-hi);
+    filter: brightness(1.1);
 }
 
-.ai-chip .icon-xs {
-    color: var(--accent);
+.strip button.tb-retry:hover:not(:disabled) {
+    background: var(--danger-soft);
+    color: var(--danger);
+    filter: brightness(1.05);
 }
 
-/* Phase 8 Step 8 — pseudo-progress bar (see pseudo-progress.util.ts), a thin fill along the
-   chip's bottom edge rather than a separate element, to stay compact in the toolbar. */
 .ai-chip-progress-track {
     position: absolute;
-    left: 0; right: 0; bottom: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     height: 2px;
-    background: transparent;
+    background: var(--rail-lo);
 }
 
 .ai-chip-progress-fill {
     display: block;
     height: 100%;
-    background: var(--accent);
-    transition: width .4s ease-out;
+    background: var(--brass);
 }
 
+/* Only ever drawn inside a group on the strip, so it is milled into the wood rather than ruled
+   in the page's own border ink. */
 .sep {
     width: 1px;
     align-self: stretch;
-    background: var(--border);
-    margin: 4px 0;
+    background: var(--rail-edge);
+    margin: var(--space-1) 0;
 }
 
 /* ---------- AI confirm dialog & toast ---------- */
@@ -652,6 +643,93 @@
     display: flex;
     flex: 1;
     min-height: 0;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    box-sizing: border-box;
+}
+
+.wt {
+    flex: 1;
+    min-width: 0;
+}
+
+.outline {
+    flex: none;
+    width: var(--bench-dock-w-narrow);
+}
+
+.inspector {
+    flex: none;
+    width: var(--bench-dock-w-wide);
+}
+
+/* The group heading above a run of spec rows. Small display caps, and the selection heading takes
+   the accent so the panel says out loud which of its two subjects is on show (ADR-159 clause 5).
+   The kit sets it 10.5px; the shelf sheet is paper, whose floor is 14 (ADR-138 item 2), so the
+   heading is told apart by face, tracking and caps instead of by being smaller. */
+[data-surface="paper"] .insp-group {
+    margin: var(--space-3) 0 var(--space-1);
+    font-family: var(--font-display);
+    font-size: var(--fs-14);
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--t2);
+}
+
+.insp-group:first-child { margin-top: 0; }
+
+.insp-group.is-selection { color: var(--accent); }
+
+.insp-leaves,
+.insp-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    padding: var(--space-1) 0;
+}
+
+[data-surface="paper"] .insp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--sheet);
+    padding: var(--space-1) var(--space-2);
+    font-family: var(--font-sans);
+    font-size: var(--fs-ui);
+    color: var(--accent);
+    cursor: pointer;
+}
+
+.insp-btn:hover {
+    border-color: var(--abord);
+    background: var(--asoft);
+}
+
+.insp-btn:disabled {
+    opacity: .6;
+    cursor: default;
+}
+
+.insp-btn.lang-delete {
+    border-color: transparent;
+    background: none;
+    color: var(--t2);
+}
+
+.insp-btn.lang-delete:hover {
+    color: var(--danger);
+    background: none;
+}
+
+.stale-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
 }
 
 .panel-head {
@@ -740,50 +818,17 @@
     flex: none;
 }
 
-.canvas {
-    flex: 1;
-    min-width: 0;
-    overflow-y: auto;
-    padding: 28px;
-    background: var(--surface);
+/* The centred column on the worktop: the title line, then the sheet, at the width the Appearance
+   preference gives them. */
+.sheet-column {
+    width: 100%;
+    margin: 0 auto;
+    padding: var(--space-5) var(--space-4) var(--space-8);
+    box-sizing: content-box;
 }
 
-/* Draft state strip (B25) — sits above the language tabs, same centred column as the sheet. */
-.draft-state-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
-    max-width: 680px;
-    margin: 0 auto 8px;
-}
-
-.state-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: var(--fs-caption);
-    font-weight: 600;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: var(--alt);
-    color: var(--t2);
-}
-
-.state-chip.private {
-    background: var(--asoft);
-    color: var(--accent);
-}
-
-.state-chip.live {
-    background: var(--ok-soft);
-    color: var(--ok);
-}
-
-.state-link {
-    font-size: var(--fs-meta);
+[data-surface="chrome"] .state-link {
+    font-size: var(--text-chrome-sm);
     color: var(--t2);
     text-decoration: none;
 }
@@ -791,105 +836,6 @@
 .state-link:hover {
     color: var(--accent);
     text-decoration: underline;
-}
-
-/* Six language tabs plus the add button, the re-translate/delete pair, the tag row and the
-   folder picker all live on this line. At the Appearance panel's narrow sheet width that is
-   wider than the sheet, and without wrapping it simply ran off the side. */
-.lang-tabs {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px 4px;
-    max-width: 680px;
-    margin: 0 auto 10px;
-    min-width: 0;
-}
-
-.lang-tabs button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    border: 1px solid var(--border);
-    background: var(--alt);
-    color: var(--t2);
-    border-radius: var(--radius-md);
-    padding: 5px 16px;
-    font-size: var(--fs-meta);
-    font-weight: 600;
-    letter-spacing: .04em;
-    cursor: pointer;
-}
-
-.lang-tabs button.on {
-    background: var(--sheet);
-    color: var(--text);
-    border-color: var(--accent);
-}
-
-/* Withheld while focused: a component's own shadow out-specifies the global rule that draws the ADR-140 halo. */
-.lang-tabs button.on:not(:focus-visible) {
-    box-shadow: var(--shadow);
-}
-
-.lang-tabs button:hover:not(.on) {
-    color: var(--text);
-}
-
-.lang-tabs .stale-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent);
-}
-
-.lang-tabs .lang-delete {
-    border: none;
-    background: none;
-    padding: 5px 8px;
-    color: var(--t2);
-}
-
-.lang-tabs .retranslate-btn {
-    border: 1px solid var(--border);
-    background: var(--sheet);
-    border-radius: 999px;
-    padding: 3px 10px;
-    font-size: var(--fs-caption);
-    color: var(--accent);
-    cursor: pointer;
-}
-
-.lang-tabs .retranslate-btn:hover {
-    border-color: var(--accent);
-}
-
-.lang-tabs .lang-delete:hover {
-    color: var(--danger);
-}
-
-/* The shared tag picker owns the tag row now; this keeps it pushed to the right of the state
-   strip the way the hand-rolled row was. */
-.tag-row-slot {
-    margin-left: auto;
-    min-width: 0;
-    /* Wraps with the row rather than forcing it wider - see .lang-tabs above. */
-    max-width: 100%;
-}
-
-.tag-add-btn {
-    border: 1px dashed var(--abord);
-    background: none;
-    border-radius: 999px;
-    padding: 2px 10px;
-    font-size: var(--fs-caption);
-    color: var(--accent);
-    cursor: pointer;
-    font-family: var(--font-sans);
-}
-
-.tag-add-btn:hover {
-    background: var(--asoft);
 }
 
 .sheet.en-empty {
@@ -988,8 +934,6 @@
 }
 
 .sheet {
-    max-width: 680px;
-    margin: 0 auto;
     min-height: 60vh;
     background: var(--sheet);
     border-radius: var(--radius-md);
@@ -1016,7 +960,7 @@
 /* Paragraph numbers live in styles.scss, not here — see the note there (B12). Anything that has
    to match ProseMirror-created nodes cannot be a component-scoped rule. */
 
-.toolbar.hidden-for-focus {
+.strip.hidden-for-focus {
     height: 0;
     padding-top: 0;
     padding-bottom: 0;
@@ -1029,8 +973,6 @@
 /* ---------- RU/EN structural diff gutter ---------- */
 .sheet-wrap {
     position: relative;
-    max-width: 680px;
-    margin: 0 auto;
 }
 
 .sheet-wrap .sheet {
@@ -1049,18 +991,6 @@
 
 @media (max-width: 1200px) {
     .ru-diff-gutter { display: none; }
-}
-
-/* A label that runs out of room must clip, never wrap: a two-line label makes its button taller
-   than the row, which is how "Posts Manager" ended up sitting on top of Export.
-   T-051 added the second half: nowrap alone only stopped the wrap, it did not stop the button from
-   growing — at German word lengths the topbar pushed the whole editor page 770px wider than the
-   viewport. The label now shrinks and ellipses inside a button that can itself give. */
-.btn-label {
-    white-space: nowrap;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .export-btn {
@@ -1637,64 +1567,15 @@
 }
 
 @media (max-width: 768px) {
-    .toolbar {
-        flex-wrap: nowrap;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .toolbar button {
-        min-width: 40px;
-        min-height: 40px;
-    }
-
-    .canvas {
-        padding: 12px;
-    }
-
     .sheet {
         padding: 16px;
     }
 
-    .title {
-        min-width: 0;
-        flex: 1;
-    }
-
-    /* Everything purely decorative or duplicated elsewhere goes, and every icon stays, so
-       nothing becomes unreachable with a tap. */
-    .topbar {
-        gap: 2px;
-        padding: 0 6px;
-    }
-
-    .save-label,
-    .export-trigger .btn-label,
     /* Same "Download .cedar" action also lives in the Export modal, which is reachable on
        mobile — so dropping it here costs nothing and keeps the row from overflowing again. */
     .cedar-download {
         display: none;
     }
-
-    .export-trigger {
-        padding: 5px 8px;
-    }
-}
-
-/* NF2 — the "add a translation" trigger sits with the language tabs. */
-.lang-add {
-    border: 1px dashed var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: var(--radius-sm);
-    padding: 2px 9px;
-    font-family: inherit;
-    font-size: var(--fs-ui);
-    cursor: pointer;
-}
-
-.lang-add:hover {
-    color: var(--accent);
-    border-color: var(--abord);
 }
 
 /* FI2.5 — hints read as advice rather than as body text: a tinted bubble with an icon, used
@@ -1844,6 +1725,16 @@
 .emoji-popover {
     max-height: 320px;
     overflow-y: auto;
+}
+
+/* Its own name rather than the strip's: the picker groups emoji, the strip groups tools, and one
+   of the two is hidden by a fit the other knows nothing about. */
+.emoji-caption {
+    font-size: var(--fs-caption);
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--t2);
+    font-weight: 600;
 }
 
 .emoji-grid {
@@ -2352,11 +2243,13 @@
     overflow: hidden;
 }
 
-.doc-crumb {
+/* Projected into an app-spec-row, whose host declares itself chrome — so the crumbs take chrome's
+   numbers rather than the sheet's, and the lint scores them against chrome. */
+[data-surface="chrome"] .doc-crumb {
     border: none;
     background: none;
     color: var(--t2);
-    font-size: var(--fs-meta);
+    font-size: var(--text-chrome-sm);
     font-family: inherit;
     cursor: pointer;
     padding: 2px 4px;
@@ -2369,10 +2262,10 @@
 
 .doc-crumb:hover { color: var(--text); background: var(--hover); }
 
-.doc-crumb-sep {
+[data-surface="chrome"] .doc-crumb-sep {
     color: var(--t2);
     opacity: .5;
-    font-size: var(--fs-meta);
+    font-size: var(--text-chrome-sm);
 }
 
 /* ADR-128 — the `[[` wiki-link suggester popover, positioned off the caret's clientRect. */
@@ -2424,20 +2317,6 @@
 }
 
 /* ADR-128 — the backlinks chip and its popover. */
-.backlinks-chip {
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: 999px;
-    padding: 2px 8px;
-    font-size: var(--fs-meta);
-    font-family: inherit;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.backlinks-chip:hover { color: var(--text); border-color: var(--abord); }
-
 .backlinks-menu {
     display: flex;
     flex-direction: column;
@@ -2447,7 +2326,7 @@
     overflow-y: auto;
 }
 
-.backlinks-item {
+[data-surface="paper"] .backlinks-item {
     text-align: left;
     border: none;
     background: none;

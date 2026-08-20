@@ -1,0 +1,265 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { StatsComponent } from './stats.component';
+import { ChannelsService } from '../core/channels.service';
+import { GrowthChartComponent } from '../bench/worktop/growth-chart.component';
+
+// The component's own stylesheet, read back out of the document. Two claims this screen makes are
+// claims about CSS — paper's floor holds every size on it, and no colour is written as a literal —
+// and the only way to hold the port to them is to read what actually shipped. The length assertion
+// is the control: without it a renamed class would make every rule below pass over an empty string.
+function sheetFor(marker: string): string {
+    const inline = Array.from(document.querySelectorAll('style')).map(s => s.textContent ?? '');
+    const adopted = Array.from(document.adoptedStyleSheets ?? []).map(
+        s => Array.from(s.cssRules).map(r => r.cssText).join('\n'));
+    const hits = [...inline, ...adopted].filter(t => t.includes(marker));
+    expect(hits.length, `no stylesheet carrying "${marker}" reached the document`).toBeGreaterThan(0);
+    return hits.join('\n').replace(/\/\*[\s\S]*?\*\//g, ' ');
+}
+
+const day = (d: string) => `2026-08-${d}T12:00:00Z`;
+
+const blogSnapshot = (d: string, views: number) =>
+    ({ takenAt: day(d), viewCount: views, likeCount: views / 10, commentCount: 1 });
+
+const channelSnapshot = (d: string, views: number) =>
+    ({ takenAt: day(d), memberCount: 400 + views, viewCount: views, likeCount: 2, commentCount: 0 });
+
+// The blog has read since the 8th; the channel only since the 9th, and it missed the 10th. Both
+// facts are load-bearing: the first is what the window's start rule exists for, the second what
+// carry-forward answers.
+const BLOG = {
+    currentViews: 130, deltaWeekViews: 30,
+    currentLikes: 13, deltaWeekLikes: 3,
+    currentComments: 1, deltaWeekComments: 0,
+    snapshots: [blogSnapshot('08', 100), blogSnapshot('09', 110), blogSnapshot('10', 120), blogSnapshot('11', 130)],
+    countries: [], languages: [],
+};
+
+const DEVLOG = {
+    current: 440, deltaWeek: 30,
+    currentViews: 40, deltaWeekViews: 30,
+    currentLikes: 2, deltaWeekLikes: 0,
+    currentComments: 0, deltaWeekComments: 0,
+    snapshots: [channelSnapshot('09', 10), channelSnapshot('11', 40)],
+};
+
+// Connected, never snapshotted — the honest case for the kit's `dried` leaf.
+const QUIET = {
+    current: null, deltaWeek: null,
+    currentViews: null, deltaWeekViews: null,
+    currentLikes: null, deltaWeekLikes: null,
+    currentComments: null, deltaWeekComments: null,
+    snapshots: [],
+};
+
+class ApiStub {
+    channels = [
+        { id: 'c1', title: 'Devlog', telegramChatId: 1, username: null },
+        { id: 'c2', title: 'Quiet', telegramChatId: 2, username: null },
+    ];
+    blogCalls: number[] = [];
+    channelCalls: string[] = [];
+
+    list() { return Promise.resolve(this.channels as never); }
+
+    getBlogStats(days: number) {
+        this.blogCalls.push(days!);
+        return Promise.resolve(BLOG as never);
+    }
+
+    getStats(id: string, days: number) {
+        this.channelCalls.push(`${id}:${days}`);
+        return Promise.resolve((id === 'c1' ? DEVLOG : QUIET) as never);
+    }
+}
+
+describe('stats screen (Posts Manager tab)', () => {
+    let fixture: ComponentFixture<StatsComponent>;
+    let api: ApiStub;
+    const page = () => fixture.componentInstance;
+    const el = () => fixture.nativeElement as HTMLElement;
+
+    // The screen's state lands through an awaited fan-out, so a render pass has to come after the
+    // microtask queue drains — not merely after the fixture calls itself stable.
+    async function settle(target: ComponentFixture<StatsComponent> = fixture) {
+        target.detectChanges();
+        await new Promise(resolve => setTimeout(resolve, 0));
+        await target.whenStable();
+        target.detectChanges();
+    }
+
+    beforeEach(async () => {
+        api = new ApiStub();
+        TestBed.configureTestingModule({ providers: [{ provide: ChannelsService, useValue: api }] });
+        fixture = TestBed.createComponent(StatsComponent);
+        await settle();
+    });
+
+    it('is paper, and says so where the density lint and the touch carve-out can read it', () => {
+        expect(el().getAttribute('data-surface')).toBe('paper');
+    });
+
+    it('paints a source by its own slot, so switching one off cannot repaint the others', async () => {
+        const before = page().readouts().map(r => `${r.name}:${r.color}`);
+        expect(before).toEqual(['Blog:var(--series-2)', 'Devlog:var(--series-1)']);
+
+        page().toggle('blog');
+        await settle();
+
+        expect(page().readouts().map(r => `${r.name}:${r.color}`)).toEqual(['Devlog:var(--series-1)']);
+    });
+
+    it('dries a connected source that has never been snapshotted, and never draws it', () => {
+        const quiet = page().leaves().find(l => l.name === 'Quiet')!;
+        expect(quiet.state).toBe('dried');
+        expect(quiet.note).toBe('no data yet');
+        expect(page().series().some(s => s.name === 'Quiet')).toBe(false);
+    });
+
+    it('dries a source that does not track the picked metric instead of blanking a card', async () => {
+        page().setMetric('memberCount');
+        await settle();
+
+        const blog = page().leaves().find(l => l.name === 'Blog')!;
+        expect(blog.state).toBe('dried');
+        expect(blog.note).toBe('not tracked');
+        expect(page().series().map(s => s.name)).toEqual(['Devlog']);
+    });
+
+    it('a dried leaf carries no series ink — nothing is drawn in that colour while it is dried', async () => {
+        page().setMetric('memberCount');
+        await settle();
+
+        expect(page().leaves().find(l => l.name === 'Blog')!.swatch).toBe('var(--t3)');
+        expect(page().leaves().find(l => l.name === 'Devlog')!.swatch).toBe('var(--series-1)');
+    });
+
+    it('starts the axis where every drawn line has a reading, and draws nothing before it', () => {
+        expect(page().axis().days).toEqual(['2026-08-09', '2026-08-10', '2026-08-11']);
+        expect(page().series().find(s => s.name === 'Blog')!.points).toEqual([110, 120, 130]);
+    });
+
+    it('carries the last reading through a day with no snapshot rather than dropping to zero', () => {
+        expect(page().series().find(s => s.name === 'Devlog')!.points).toEqual([10, 10, 40]);
+    });
+
+    it('states the window rather than leaving it to the axis, because it moves with the selection', async () => {
+        expect(page().windowLabel()).toBe('3 points · 9 Aug — 11 Aug');
+
+        page().toggle('c1');
+        await settle();
+
+        expect(page().axis().days.length).toBe(4);
+        expect(page().windowLabel()).toBe('4 points · 8 Aug — 11 Aug');
+    });
+
+    it('tells the chart the tail is closed: a running total is complete the moment it is read', () => {
+        const chart = fixture.debugElement.query(By.directive(GrowthChartComponent));
+        expect((chart.componentInstance as GrowthChartComponent).openTail()).toBe(false);
+        expect((chart.componentInstance as GrowthChartComponent).plotted()).toBe(3);
+    });
+
+    it('washes one line and no more — four overlapping washes are mud', async () => {
+        expect(page().series().every(s => s.wash === false)).toBe(true);
+
+        page().toggle('c1');
+        await settle();
+
+        expect(page().series().map(s => s.wash)).toEqual([true]);
+    });
+
+    it('gives the table the same numbers the chart is drawn from', async () => {
+        page().setView('table');
+        await settle();
+
+        const rows = [...el().querySelectorAll('.series-table tbody tr')]
+            .map(tr => [...tr.querySelectorAll('td')].map(td => td.textContent!.trim()));
+        expect(rows).toEqual([['110', '10'], ['120', '10'], ['130', '40']]);
+
+        const drawn = page().series().map(s => s.points);
+        expect(rows.map(r => r.map(Number))).toEqual(drawn[0].map((_, i) => drawn.map(p => p[i])));
+    });
+
+    it('never offers a readout that is a sum of sources', () => {
+        expect(page().readouts().map(r => r.value)).toEqual([130, 40]);
+        expect(page().readouts().map(r => r.delta)).toEqual([30, 30]);
+        expect(el().querySelectorAll('.ro-value').length).toBe(2);
+    });
+
+    it('says the sources are off rather than drawing an empty chart', async () => {
+        page().toggle('blog');
+        page().toggle('c1');
+        await settle();
+
+        expect(page().anySelected()).toBe(false);
+        expect(fixture.debugElement.query(By.directive(GrowthChartComponent))).toBeNull();
+        expect(el().querySelector('.stats-hint')!.textContent).toContain('switched off');
+    });
+
+    it('distinguishes "all off" from "on, but nothing to draw"', async () => {
+        // Only the source that has never been snapshotted is left on.
+        page().toggle('blog');
+        page().toggle('c1');
+        page().toggle('c2');
+        await settle();
+
+        expect(page().anySelected()).toBe(true);
+        expect(el().querySelector('.stats-hint')!.textContent).toContain('has this metric');
+    });
+
+    it('offers Subscribers only when a source can answer it', async () => {
+        expect(page().metricTabs().map(t => t.id))
+            .toEqual(['memberCount', 'viewCount', 'likeCount', 'commentCount']);
+
+        api.channels = [];
+        const blogOnly = TestBed.createComponent(StatsComponent);
+        await settle(blogOnly);
+
+        expect(blogOnly.componentInstance.metricTabs().map(t => t.id))
+            .toEqual(['viewCount', 'likeCount', 'commentCount']);
+    });
+
+    it('fans out once per source per range, and a filter costs no request at all', async () => {
+        expect(api.blogCalls).toEqual([90]);
+        expect(api.channelCalls).toEqual(['c1:90', 'c2:90']);
+
+        page().toggle('c1');
+        page().setMetric('likeCount');
+        page().setView('table');
+        await settle();
+
+        expect(api.blogCalls).toEqual([90]);
+        expect(api.channelCalls).toEqual(['c1:90', 'c2:90']);
+    });
+
+    it('fetches the blog even when its line is off — the audience shelf is blog data', async () => {
+        page().toggle('blog');
+        await page().onRangeCommit(30);
+        await settle();
+
+        expect(api.blogCalls).toEqual([90, 30]);
+        expect(page().series().some(s => s.name === 'Blog')).toBe(false);
+    });
+
+    it('names the source the audience shelf is answering about', () => {
+        const shelves = [...el().querySelectorAll('app-shelf-panel')];
+        const audience = shelves.find(s => s.classList.contains('audience-shelf'))!;
+        expect(audience.querySelector('.sp-title')!.textContent!.trim()).toBe('Audience');
+        expect(audience.querySelector('.sp-count')!.textContent!.trim()).toBe('Blog');
+    });
+
+    it('holds every size on the sheet to paper\'s floor, and writes no colour as a literal', () => {
+        const css = sheetFor('.range-notch-label');
+
+        const sizes = [...css.matchAll(/font-size\s*:\s*([^;}]+)/g)].map(m => m[1].trim());
+        expect(sizes.length).toBeGreaterThan(0);
+        for (const size of sizes) {
+            expect(size, `${size} is not a token from the paper-legal set`)
+                .toMatch(/^var\(--(fs-ui|fs-body|fs-read|text-readout)\)$/);
+        }
+
+        expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+        expect(css).not.toMatch(/\brgba?\(/);
+    });
+});

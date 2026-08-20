@@ -11,11 +11,11 @@ Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-
 
 ## Status summary (as of 20.08.2026)
 
-**UI V2 — Cedar Bench becomes the one look; Stages 0 through 3 (19–20.08.2026, branch `UI_V2`, not
+**UI V2 — Cedar Bench becomes the one look; Stages 0 through 4 (19–20.08.2026, branch `UI_V2`, not
 merged, no version bump).** The design system mirrored from Claude Design at `.design-sync/ds-v2/`
 stops being a second palette and becomes the app's only one. The port was planned before it was
 written — `docs/design/UI-V2-PLAN.md` settles ten questions (theming attribute, token namespace,
-component layout, half-pixels, night, density, icons, fonts) and nineteen ADRs (136–154) landed
+component layout, half-pixels, night, density, icons, fonts) and twenty-seven ADRs (136–162) landed
 ahead of the code they govern.
 
 - **Stage 0 — the two checks the rest of the port is measured by** (`T-205`, `T-206`).
@@ -155,14 +155,54 @@ ahead of the code they govern.
   its resin is 90% opaque, so its backdrop is part of its colour, and an absolutely positioned ticket
   resolves to the page ground there rather than to the hook it hangs on; measured against the wall, a
   hook tile and a hovered hook tile, it holds 6.03–6.89.
-- **What is open.** Stages 4 through 6 — the three reference screens, the remaining pages by
-  pattern, cleanup and ship — are `T-222`…`T-237` on the board, none started. No decision waits on
-  Marty any more; what waits on a deliverable is `T-236`, the narrow-screen designs, whose brief is
-  written as `docs/design/bench-responsive-prompt.md` and which blocks `T-034` and `T-237`. The
-  smoke suite is half-rebound (`T-233`): the shell-level selectors are done, and eleven spec files
-  still bind page-body markup that Stage 4 moves. `styles/_forest.scss` is still neutralised rather
-  than deleted, waiting on Marty as `T-235`. The branch cannot deploy until it merges — `cedar
-  deploy` refuses anything but master.
+- **Stage 4 — the three reference screens** (`T-222`…`T-225`). Stats, the hub and the writer, in
+  that order of blast radius, and six more ADRs (157–162) ahead of them. **Stats**: four
+  single-metric SVG sparklines became one multi-series `app-growth-chart`; the sources became the
+  legend *and* the filter, multi-select, one line each and never a sum (ADR-149); the four fixed
+  stat cards became one readout per drawn source; the audience grid moved into a 320px right shelf;
+  and the metric control the kit does not have was added because one chart needs one, while the
+  window became a function of the selection rather than a fixed period (ADR-161). The chart may not
+  claim a number the curve does not draw: the slip, the crosshair dots, the live region and the
+  emitted event all read out of one computed, `openTail` is a required input because a half-finished
+  bucket plots as a collapse, and every line carries its own name beside its own dot because the
+  six-colour palette fails the CVD separation check in both themes (ADR-158). **The hub**: the
+  project head became a worktop, the projects list absorbed as the left shelf's switcher, four
+  module tiles replaced the document-type cards, and the two plates the kit draws that the database
+  cannot answer are absent rather than dashed (ADR-160). **The writer**: the topbar is gone, its
+  save state and its one primary action published to the rail as data through `RailActionsService`
+  rather than projected as a template; the horizontal meta strip became a 340px inspector that
+  describes either the selection or the document and never both, each row declaring its own scope;
+  the two user-ordered toolbar rows became one strip that fits itself by measurement, which voided
+  `ToolbarLayoutJson` and took the four Settings → Toolbar controls, `toolbar-layout.service.ts` and
+  `POST /api/auth/toolbar-layout` with it (ADR-150, ADR-159); and a 224px structure shelf walks the
+  document with two-way selection sync that holds no selection of its own, so neither direction can
+  loop (ADR-162).
+- **What Stage 4 cost in colour.** The three screens paint combinations nothing had measured, and
+  the census found the tool strip to be the first band in the app carrying captions and buttons at
+  once. Fourteen pairs were added — the strip's hover wash over the rail, brass on the rail and on a
+  recessed chip, a stamped chip against the wood, the six series and the brass event label on graph
+  paper, and the two bar fills against their tracks. Four values were re-derived by day, hue kept and
+  the smallest step that clears taken (ADR-074): `--series-3`, `--series-4` and `--series-6` failed
+  3:1 where the chart's two rules cross and the ground is at its darkest, and `--brass-lo` failed
+  4.5:1 for the same reason. Two call sites moved rather than their token: a group caption and the
+  GIF button are words, and the soft cream measures 3.35:1 on the rail — a glyph's floor, not a
+  label's — so both take `--rail-ink`, leaving the soft cream to the crumb separator and the resting
+  tool glyph, which is what it was derived for. The retry button was the one real defect: rust ink
+  laid straight on the rail is 1.13:1, so it became a stamped chip on the opaque `--danger-soft`
+  wash, which is the system's own way of saying something is wrong on chrome.
+- **What is open.** Stages 5 and 6 — the remaining pages by pattern, cleanup and ship — are
+  `T-226`…`T-237` on the board, none started, and the thirteen features the three screens found the
+  API cannot answer are `T-238`…`T-250` under their own heading. No decision waits on Marty any
+  more; what waits on a deliverable is `T-236`, the narrow-screen designs, whose brief is written as
+  `docs/design/bench-responsive-prompt.md` and which blocks `T-034` and `T-237`. The smoke suite is
+  half-rebound (`T-233`): the shell-level selectors are done, and eleven spec files still bind
+  page-body markup Stage 4 has now moved. `styles/_forest.scss` is still neutralised rather than
+  deleted, waiting on Marty as `T-235`. Nobody has *looked* at the three screens — they are
+  unit-tested and measured, and their verification-map marks are reset. One measured defect is left
+  open on purpose: the drawer lip and the shelf-panel header write `--rail-ink` on `--shelf-frame`,
+  whose light stop is `#B68B60`, so a title reads 2.51:1 by day and no flat ink clears the whole
+  ramp — which material those bands are is a design call, not a settle-time patch. The branch cannot
+  deploy until it merges — `cedar deploy` refuses anything but master.
 
 **v0.12.2 — every P1 closed in one session (18–19.08.2026, not yet deployed).** Marty's directive
 was "do everything P1", with five decisions resolved on the way in: T-164 (PRGE) removed outright,

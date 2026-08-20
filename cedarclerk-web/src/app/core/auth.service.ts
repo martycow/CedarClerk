@@ -69,7 +69,6 @@ export class AuthService {
     readonly socialFacebookUrl = signal<string | null>(null);
     readonly socialYoutubeUrl = signal<string | null>(null);
     readonly socialGithubUrl = signal<string | null>(null);
-    readonly toolbarLayoutJson = signal<string | null>(null);
     readonly appearancePrefsJson = signal<string | null>(null);
     readonly newDraftDefaultsJson = signal<string | null>(null);
     readonly uiLanguage = signal<string | null>(null);
@@ -179,7 +178,6 @@ export class AuthService {
         this.socialFacebookUrl.set(me.socialFacebookUrl);
         this.socialYoutubeUrl.set(me.socialYoutubeUrl);
         this.socialGithubUrl.set(me.socialGithubUrl);
-        this.toolbarLayoutJson.set(me.toolbarLayoutJson);
         this.appearancePrefsJson.set(me.appearancePrefsJson);
         this.newDraftDefaultsJson.set(me.newDraftDefaultsJson);
         this.uiLanguage.set(me.uiLanguage);
@@ -218,7 +216,6 @@ export class AuthService {
         this.socialFacebookUrl.set(null);
         this.socialYoutubeUrl.set(null);
         this.socialGithubUrl.set(null);
-        this.toolbarLayoutJson.set(null);
         this.appearancePrefsJson.set(null);
         this.newDraftDefaultsJson.set(null);
         this.uiLanguage.set(null);
@@ -283,12 +280,6 @@ export class AuthService {
         const res = await firstValueFrom(this.http.post<{ notifyOnEngagement: boolean }>(
             '/api/auth/notifications', { notifyOnEngagement }));
         this.notifyOnEngagement.set(res.notifyOnEngagement);
-    }
-
-    async saveToolbarLayout(layoutJson: string | null): Promise<void> {
-        const res = await firstValueFrom(this.http.post<{ toolbarLayoutJson: string | null }>(
-            '/api/auth/toolbar-layout', { layoutJson }));
-        this.toolbarLayoutJson.set(res.toolbarLayoutJson);
     }
 
     async saveAppearancePrefs(prefsJson: string | null): Promise<void> {

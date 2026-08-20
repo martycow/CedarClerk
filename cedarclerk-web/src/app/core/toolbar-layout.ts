@@ -1,8 +1,6 @@
-// Toolbar customization (ADR-035, Settings → Toolbar). Scoped down from the original mockup's
-// per-button drag-and-drop: buttons are individually hide/show-able (checkbox catalog), but the
-// row1/row2 zone assignment happens at the GROUP level — dragging 30+ individual buttons between
-// two rows adds a lot of engineering surface for a personal-blog tool with one active user, while
-// group-level placement still delivers the core "customizable toolbar" value.
+// The tool strip's catalogue: which buttons exist and in what order they are drawn. Nothing here
+// is a preference any more — ADR-150 deleted the stored layout, its four presets and the per-button
+// visibility list, and the strip decides its own shape by measurement (core/toolbar-fit.ts).
 
 export type ToolbarButtonId =
     | 'bold' | 'italic' | 'underline' | 'strike' | 'spoiler' | 'align'
@@ -68,81 +66,8 @@ export const TOOLBAR_GROUPS: ToolbarGroupDef[] = [
     { id: 'ai', label: 'AI', buttons: [{ id: 'aiActions', label: 'Fix errors / Schizo-izer' }] },
 ];
 
-export const ALL_BUTTON_IDS: ToolbarButtonId[] = TOOLBAR_GROUPS.flatMap(g => g.buttons.map(b => b.id));
-
-export type ToolbarPreset = 'minimal' | 'standard' | 'everything' | 'custom';
-
-export interface ToolbarLayout {
-    preset: ToolbarPreset;
-    // Both rows are ORDERED lists, not just membership: reordering within a row used to be
-    // draggable in the UI but had nowhere to be stored and nothing reading it, so it silently
-    // did nothing. row1Groups is optional in stored JSON — see parseToolbarLayout.
-    row1Groups?: string[];
-    row2Groups: string[];
-    hiddenButtons: ToolbarButtonId[];
-}
-
-export const STANDARD_ROW2_GROUPS = ['code', 'media', 'blocks', 'feedback'];
-export const STANDARD_ROW1_GROUPS = ['text', 'insert', 'lists'];
-
-// 'ai' is pinned to row 1 outside the group system (never movable), so it is not orderable.
-export const MOVABLE_GROUP_IDS = TOOLBAR_GROUPS.filter(g => g.id !== 'ai').map(g => g.id);
-
-const MINIMAL_HIDDEN: ToolbarButtonId[] = [
-    'underline', 'strike', 'spoiler', 'align', 'emoji', 'datetime', 'footnote',
-    'orderedList', 'taskList', 'indent', 'outdent', 'inlineCode', 'codeBlock',
-    'video', 'gif', 'audio', 'carousel', 'collage', 'youtube', 'library',
-    'table', 'formula', 'toggle', 'toc', 'divider', 'annotation', 'poll',
-];
-
-export const DEFAULT_TOOLBAR_LAYOUT: ToolbarLayout = {
-    preset: 'standard',
-    row1Groups: STANDARD_ROW1_GROUPS,
-    row2Groups: STANDARD_ROW2_GROUPS,
-    hiddenButtons: [],
-};
-
-export function presetLayout(preset: ToolbarPreset): ToolbarLayout {
-    switch (preset) {
-        case 'minimal':
-            return { preset, row1Groups: MOVABLE_GROUP_IDS, row2Groups: [], hiddenButtons: MINIMAL_HIDDEN };
-        case 'everything':
-        case 'standard':
-        case 'custom':
-            return {
-                preset: preset === 'custom' ? 'custom' : preset,
-                row1Groups: STANDARD_ROW1_GROUPS,
-                row2Groups: STANDARD_ROW2_GROUPS,
-                hiddenButtons: [],
-            };
-    }
-}
-
-// Normalizes any stored blob into two ordered, disjoint, complete lists. Stored layouts predate
-// row1Groups, so it is derived when absent; and a group added to TOOLBAR_GROUPS after a layout was
-// saved would otherwise vanish from the toolbar entirely, so anything unaccounted for lands in
-// row 1 in canonical order.
-export function normalizeRows(row1: unknown, row2: unknown): { row1Groups: string[]; row2Groups: string[] } {
-    const known = (ids: unknown): string[] =>
-        Array.isArray(ids) ? ids.filter((id): id is string => MOVABLE_GROUP_IDS.includes(id as string)) : [];
-
-    const r2 = [...new Set(known(row2))];
-    const r1 = [...new Set(known(row1))].filter(id => !r2.includes(id));
-    const missing = MOVABLE_GROUP_IDS.filter(id => !r1.includes(id) && !r2.includes(id));
-    return { row1Groups: [...r1, ...missing], row2Groups: r2 };
-}
-
-export function parseToolbarLayout(json: string | null): ToolbarLayout {
-    if (!json) return DEFAULT_TOOLBAR_LAYOUT;
-    try {
-        const parsed = JSON.parse(json);
-        const rows = normalizeRows(parsed.row1Groups, parsed.row2Groups ?? STANDARD_ROW2_GROUPS);
-        return {
-            preset: parsed.preset ?? 'custom',
-            ...rows,
-            hiddenButtons: Array.isArray(parsed.hiddenButtons) ? parsed.hiddenButtons : [],
-        };
-    } catch {
-        return DEFAULT_TOOLBAR_LAYOUT;
-    }
-}
+/**
+ * The order the strip renders groups in. `ai` is not among them: it is pinned to the tail of the
+ * first row beside the view controls and never wraps, so it is not a group the fit can move.
+ */
+export const STRIP_GROUP_IDS: readonly string[] = TOOLBAR_GROUPS.filter(g => g.id !== 'ai').map(g => g.id);

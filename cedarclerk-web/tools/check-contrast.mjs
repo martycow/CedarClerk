@@ -465,10 +465,39 @@ pairs.push({ fg: '--rail-edge', bg: '--tab-badge', under: '--pegboard', min: 4.5
 pairs.push({ fg: '--rail-edge', bg: '--tab-badge', under: '--hook-face', min: 4.5, note: 'work ticket on a hook tile' });
 pairs.push({ fg: '--rail-edge', bg: '--tab-badge', under: '--rail-lo', min: 4.5, note: 'work ticket on a hovered hook tile' });
 
-// The crumb separator, which is drawn and not written — `content: '/'`, never announced. It is the
-// one thing the soft cream is spent on, and it takes the decoration floor for the same reason --t3
-// does on paper (ADR-074): held to 4.5 it collapses onto the cream it exists to sit below.
-pairs.push({ fg: '--rail-ink-soft', bg: '--surface-rail', min: 3.0, note: 'crumb separator on the rail' });
+// The soft cream, which is spent on two things and neither of them is a word: the crumb
+// separator (`content: '/'`, never announced) and the resting face of a tool-strip button, whose
+// face is a glyph and whose name is in its title. Both take the decoration floor for the reason
+// --t3 does on paper (ADR-074) — held to 4.5 it collapses onto the cream it sits below. A label
+// that reached for it takes --rail-ink, on the brand-and-crumb pair further up.
+pairs.push({ fg: '--rail-ink-soft', bg: '--surface-rail', min: 3.0, note: 'crumb separator, resting tool glyph' });
+
+// The editor's tool strip (ADR-150), which puts a row of controls on the rail for the first time:
+// the app had chrome that carried captions and chrome that carried buttons, and never one band
+// carrying both. The hover wash is the app's own, translucent by design, so what it lies on is
+// part of its colour and the rail is named rather than guessed at.
+pairs.push({ fg: '--rail-ink', bg: '--hover-strong', under: '--surface-rail', min: 4.5, note: 'tool label on a hovered control' });
+pairs.push({ fg: '--brass-hi', bg: '--surface-rail', min: 4.5, note: 'brass caption on the rail' });
+pairs.push({ fg: '--brass-hi', bg: '--rail-edge', min: 4.5, note: 'brass label on a recessed chip' });
+// Severity on chrome is a stamp and never a tinted glyph: the rust ink is derived against paper
+// and measures 1.13:1 laid straight on the rail. The wash is opaque, so it carries that ink onto
+// any ground — what is measured here is the chip against the wood it is pinned to.
+pairs.push({ fg: '--danger-soft', bg: '--surface-rail', min: 3.0, note: 'a stamped chip against the rail' });
+
+// Graph paper (ADR-158). The chart draws on the ruled ground rather than on flat paper, and the
+// two rules cross: at an intersection the ink is laid twice, which is the darkest the ground gets
+// and the only stop worth scoring a line against. Every line in the categorical palette is
+// measured there, not just the ones the reference screen happens to plot.
+pairs.push({ fg: '--brass-lo', bg: '--grid-graph', under: '--surface', min: 4.5, note: 'event label pencilled on the axis' });
+for (let i = 1; i <= 6; i++) {
+    pairs.push({ fg: `--series-${i}`, bg: '--grid-graph', under: '--surface', min: 3.0, note: 'chart series on ruled paper' });
+}
+
+// The two bars the ported screens draw — an audience row on the stats shelf and a sprint's
+// progress on the hub. A bar is read by its length, so the fill owes 3:1 against the track it
+// runs in and not against the page. Both are accent-derived, so the preset re-run reaches them.
+pairs.push({ fg: '--pine', bg: '--alt', min: 3.0, note: 'bar fill against its track' });
+pairs.push({ fg: '--grad-pine', bg: '--surface', min: 3.0, note: 'progress fill against its track' });
 
 // Cork. The shelf panel's second sheet tone makes --wood-hi a text background for the first time,
 // which the wood block's own note says only --wood-ink may do.

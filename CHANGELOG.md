@@ -1,5 +1,92 @@
 # Changelog
 
+## 2026-08-20 — the three reference screens (branch `UI_V2`)
+
+Stage 4 of the Cedar Bench port: Stats, the hub and the writer, in that order of blast radius. Six
+ADRs (157–162) ahead of the code, three new bench components, thirteen board rows for the features
+the screens found the database cannot answer, and the branch still unmerged with the version still
+untouched.
+
+**Stats: the legend is the filter, and the chart may not overclaim.** Four 600x160 single-metric
+sparklines became one `app-growth-chart` — every selected source on one axis, sharing one window.
+The sources are the legend *and* the filter: multi-select leaf tags, one line each, never a sum,
+because a draft published to several channels counts its full view total against each of them. The
+four fixed stat cards became one readout per drawn source, and the audience grid moved out from
+under the chart into a 320px right shelf that names whose readers it is counting rather than leaving
+it to be assumed. Two controls the kit does not have were added because one chart needs them: a
+metric strip, filtered to the metrics at least one source tracks, and a chart/table pair over the
+same numbers. The window is now a function of the selection rather than a fixed period, which is new
+behaviour and is stated in the panel's own counter. What the chart refuses to do is the point of
+ADR-158: the readout slip, the crosshair dots, the live region and the emitted event are one
+computed read out of the series, so no caller can state a number the curve does not draw; `openTail`
+is a *required* input because a half-finished bucket plots low and reads as a collapse while
+silently dropping a full one is the same lie mirrored; a series carries a fixed slot rather than an
+array position, since deselecting a source reorders the array and index-keyed colour would repaint
+the survivors; and every line carries its own name beside its own dot, because the six-colour
+palette fails the CVD and normal-vision separation checks in both themes and a legend alone would be
+the only thing telling two lines apart. Every number is also in the page as a hidden table, the open
+bucket included and marked as open.
+
+**The hub: a tile is a door, and the wall shows the modules the app has.** The project head became
+an `app-worktop` with the last edit chalked on its edge; the `/projects` list was absorbed as the
+left shelf's switcher, which leaves two entrances to the project list for one stage and is the
+smallest wrong state available while the route tree belongs to `T-226`; the featured-type cards and
+the tile row, which showed the same documents twice under two groupings, became four
+`app-module-tile` plates and one documents panel. Four plates and not the kit's six: Documents is
+the panel directly below rather than a door to the screen it stands on, and per-project metrics do
+not exist because `Channel` carries `OwnerId` and no `ProjectId`. The kit's engine-and-platform tag
+is not drawn for the same reason. A resume card sits above the wall, because the hub's job is to get
+you back to work in one click.
+
+**The writer keeps no chrome of its own.** The topbar is gone. Its save state and its one primary
+action are *published* to the rail through `RailActionsService` — a signal holder of the same shape
+and for the same reason as `RulerService`, carrying data and never a `TemplateRef`, so a page cannot
+hang arbitrary markup on shared chrome, and `RailAction` is a single object rather than a list, which
+makes a second rail button unrepresentable instead of merely discouraged. The horizontal meta strip
+became a 340px inspector that describes either what is selected or the document and never both: the
+panel's counter is the scope word, every row declares its own scope, and `core/selection-spec.ts` is
+a pure function over a node's shape so the claim is checkable rather than conventional. The rows that
+exist are the ones a TipTap node can answer — the kit's resolution, byte size and originating asset
+are not on the node and are left out rather than drawn as empty values. The two user-ordered toolbar
+rows became one strip that fits itself: `measureToolbar()` reads real widths in one layout pass and
+decides how many groups stay on the first row, whether a second is needed and whether the captions
+are drawn. Nothing is stored and nothing is a width breakpoint. That voided `ToolbarLayoutJson`, and
+with it went `core/toolbar-layout.service.ts`, its injection in the auth guard,
+`POST /api/auth/toolbar-layout`, the Appearance panel's whole toolbar half and four inventory rows.
+A 224px structure shelf now walks the document, and it holds no selection of its own — the lit row is
+derived from the caret and a click moves the caret, so neither direction can loop.
+
+**Three new bench components.** `app-growth-chart`, whose refusals are above. `app-module-tile`,
+whose API is closed on purpose: one number, no content slot, because a second number belongs on the
+screen the tile opens and a projection slot is how the second one gets in. And `app-log-line`, the
+only bench primitive whose surface is an input rather than a pinned value — a line paints no ground,
+so the stock it lies on is named by whoever lays it there; both settings are declared so the density
+lint scores both, and only the size moves.
+
+**What the screens cost in colour.** The tool strip is the first band in the app to carry captions
+and buttons at once, and the chart draws on ruled paper rather than flat paper. Fourteen pairs were
+added — the strip's hover wash over the rail, brass on the rail and on a recessed chip, a stamped
+chip against the wood, the six series and the brass event label on graph paper, and the two bar
+fills against their tracks. Four values were re-derived by day with the hue kept and the smallest
+step that clears taken: `--series-3`, `--series-4` and `--series-6` fell under 3:1 where the graph's
+two rules cross and the ground is at its darkest, and `--brass-lo` fell under 4.5:1 there for the
+same reason. Two call sites moved rather than their token — a group caption and the GIF button are
+words, and the soft cream measures 3.35:1 on the rail, which is a glyph's floor and not a label's,
+so both take the cream at full strength and the soft one keeps the crumb separator and the resting
+tool glyph it was derived for. The one real defect was the retry button: rust ink laid straight on
+the rail is 1.13:1, invisible, so it became a stamped chip on the opaque `--danger-soft` wash, which
+is how the system already says something is wrong on chrome.
+
+**What the settle left open.** Nobody has looked at the three screens; they are unit-tested and
+measured, and their verification-map marks are reset rather than inherited. Thirteen features the
+kit draws and the database cannot answer are on the board as `T-238`…`T-250` — the pre-publish check
+system the writer's drawer tab and check count both wait on, X and Bluesky snapshots, a multi-source
+stats endpoint, CSV export, axis event markers, a per-post breakdown, and six on the project side.
+And one measured defect is named rather than patched: the drawer lip and the shelf-panel header both
+write `--rail-ink` on `--shelf-frame`, whose light stop is `#B68B60`, so a lip title reads 2.51:1 by
+day and its summary 1.79:1, and no flat ink clears that ramp end to end — which material those two
+bands are made of is a design call, not something to settle from the outside.
+
 ## 2026-08-20 — what the browser said about Stage 3 (branch `UI_V2`)
 
 Stage 3 was verified by rendering it rather than by reading it: two passes in real Chromium against

@@ -119,7 +119,9 @@ export const routes: Routes = [
             // N7 folded both of these into the Posts Manager; the old paths stay as redirects because
             // they're what any existing bookmark points at.
             { path: 'comments', redirectTo: 'posts' },
-            { path: 'stats', redirectTo: 'posts' },
+            // The tab is not in the URL, so a bare redirect drops it and an old metrics bookmark
+            // lands on the posts list; ?tab= is what the manager reads on entry (ADR-148).
+            { path: 'stats', redirectTo: 'posts?tab=stats' },
             // Drafts, not the editor, is the landing screen — you pick what to work on first.
             { path: '', pathMatch: 'full', redirectTo: 'drafts' },
             { path: '**', redirectTo: 'drafts' },

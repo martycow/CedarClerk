@@ -1,151 +1,151 @@
-<!--N7: tab body inside the Posts Manager — the page header moved there.-->
-<div class="stats-page">
-    <div class="stats-body">
-        @if (loading()) {
-        <p class="hint">{{ t().common.loading }}</p>
-        } @else {
-            <div class="filter-row">
-                <div class="channel-tabs">
-                    <button class="channel-tab" [class.active]="selectedView() === 'blog'" (click)="selectBlog()">
-                        📄 {{ t().stats.blog }}
-                    </button>
-                    @for (c of channels(); track c.id) {
-                    <button class="channel-tab" [class.active]="selectedView() === 'channel' && selectedChannelId() === c.id" (click)="selectChannel(c.id)">
-                        {{ c.title }}
-                    </button>
-                    }
-                </div>
-                <span class="spacer"></span>
-                <!--N9: free 7…180-day range with magnetic notches at the common values. The
-                fetch fires on release, not on every pixel of the drag.-->
-                <div class="range-slider">
-                    <span class="range-value">{{ rangeLabel() }}</span>
-                    <div class="range-track">
-                        <input type="range" [min]="rangeMin" [max]="rangeMax" step="1" [value]="rangeDays()"
-                               (input)="onRangeInput(+$any($event.target).value)"
-                               (change)="onRangeCommit(+$any($event.target).value)">
-                        <!--I8: the notches were unlabelled 1px ticks packed into a 200px track,
-                        so they marked something without saying what. Labelled and on a much
-                        wider track now — a magnet you can't read isn't a landmark.-->
-                        <div class="range-notches">
-                            @for (n of rangeNotches; track n) {
-                            <span class="range-notch" [style.left.%]="notchOffset(n)" [title]="n + ' days'"></span>
-                            }
-                        </div>
-                        <div class="range-notch-labels">
-                            @for (n of rangeNotches; track n) {
-                            <button class="range-notch-label" [style.left.%]="notchOffset(n)"
-                                    [class.on]="rangeDays() === n" (click)="onRangeCommit(n)">{{ n }}</button>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="stat-grid">
-                @for (card of metricCards(); track card.key) {
-                <div class="stat-card">
-                    <div class="stat-head">
-                        <span class="stat-label">{{ card.label }}</span>
-                        <span class="stat-value">{{ card.current ?? '—' }}</span>
-                        @if (card.delta !== null) {
-                        <span class="stat-delta" [class.up]="card.delta! > 0" [class.down]="card.delta! < 0">
-                            {{ card.delta! > 0 ? '▲' : card.delta! < 0 ? '▼' : '·' }}{{ card.delta! > 0 ? '+' : '' }}{{ card.delta }} / 7d
-                        </span>
-                        }
-                    </div>
-
-                    @if (card.chart.hasData) {
-                    <div class="chart-wrap">
-                        <svg class="chart-svg" viewBox="0 0 600 160" preserveAspectRatio="none"
-                             (pointermove)="onHover($event, card.key, card.chart.points.length)"
-                             (pointerleave)="onLeave(card.key)">
-                            @for (t of card.chart.ticks; track t.y) {
-                            <line class="gridline" x1="4" x2="596" [attr.y1]="t.y" [attr.y2]="t.y"></line>
-                            <text class="tick-label" x="6" [attr.y]="t.y - 3">{{ t.label }}</text>
-                            }
-                            <path class="area-fill" [attr.d]="card.chart.areaPath"></path>
-                            <path class="line-path" fill="none" [attr.d]="card.chart.linePath"></path>
-                            @if (hoveredPoint(card); as hp) {
-                            <line class="crosshair" [attr.x1]="hp.x" [attr.x2]="hp.x" y1="12" y2="156"></line>
-                            <circle class="hover-dot" [attr.cx]="hp.x" [attr.cy]="hp.y" r="4"></circle>
-                            }
-                        </svg>
-                        @if (hoveredPoint(card); as hp) {
-                        <div class="chart-tooltip" [style.left.%]="(hp.x / 600) * 100">
-                            <div class="tooltip-value">{{ hp.value }}</div>
-                            <div class="tooltip-date">{{ hp.date | zonedDate:'d MMM' }}</div>
-                        </div>
-                        }
-                        <div class="chart-axis-labels">
-                            <span>{{ card.chart.points[0].date | zonedDate:'d MMM' }}</span>
-                            <span>{{ card.chart.points[card.chart.points.length - 1].date | zonedDate:'d MMM' }}</span>
-                        </div>
-                    </div>
-                    } @else {
-                    <p class="chart-empty">{{ t().stats.notEnoughHistory }}</p>
-                    }
-                </div>
-                }
-            </div>
-
-            <!--Audience split (Marty, 08.08.2026). Blog only: Telegram reports no per-country
-            numbers, so a channel tab has nothing to show here — see ADR-097.-->
-            @if (selectedView() === 'blog') {
-            <div class="audience-grid">
-                @if (hasAudience()) {
-                <div class="stat-card">
-                    <div class="stat-head">
-                        <span class="stat-label">{{ t().stats.audience.countries }}</span>
-                    </div>
-                    <ul class="audience-list">
-                        @for (row of visibleCountries(); track row.code) {
-                        <li class="audience-row">
-                            <span class="audience-flag">{{ row.flag }}</span>
-                            <span class="audience-label" [title]="row.label">{{ row.label }}</span>
-                            <span class="audience-bar"><span class="audience-bar-fill" [style.width.%]="row.bar"></span></span>
-                            <span class="audience-views">{{ row.views }}</span>
-                            <span class="audience-share">{{ row.share }}%</span>
-                        </li>
-                        }
-                    </ul>
-                    @if (hiddenCount(countryRows()) > 0) {
-                    <button class="audience-more" (click)="countriesExpanded.set(!countriesExpanded())">
-                        {{ countriesExpanded() ? t().stats.audience.showLess : t().stats.audience.showAll(hiddenCount(countryRows())) }}
-                    </button>
-                    }
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-head">
-                        <span class="stat-label">{{ t().stats.audience.languages }}</span>
-                    </div>
-                    <ul class="audience-list">
-                        @for (row of visibleLanguages(); track row.code) {
-                        <li class="audience-row">
-                            <span class="audience-label" [title]="row.label">{{ row.label }}</span>
-                            <span class="audience-bar"><span class="audience-bar-fill" [style.width.%]="row.bar"></span></span>
-                            <span class="audience-views">{{ row.views }}</span>
-                            <span class="audience-share">{{ row.share }}%</span>
-                        </li>
-                        }
-                    </ul>
-                    @if (hiddenCount(languageRows()) > 0) {
-                    <button class="audience-more" (click)="languagesExpanded.set(!languagesExpanded())">
-                        {{ languagesExpanded() ? t().stats.audience.showLess : t().stats.audience.showAll(hiddenCount(languageRows())) }}
-                    </button>
-                    }
-                </div>
-                } @else {
-                <div class="stat-card">
-                    <div class="stat-head">
-                        <span class="stat-label">{{ t().stats.audience.countries }}</span>
-                    </div>
-                    <p class="chart-empty">{{ t().stats.audience.empty }}</p>
-                </div>
-                }
-            </div>
+<!--The Posts Manager's Stats tab (ADR-148): the kit's rail, crumb and top-level export are the
+manager's business or nobody's, so this file starts at the filter strip.-->
+@if (loading()) {
+<p class="stats-hint">{{ t().common.loading }}</p>
+} @else {
+<div class="stats-tab">
+    <div class="stats-main">
+        <!--The legend IS the filter (ADR-149): one leaf per source, its swatch the ink of its line.-->
+        <div class="filter-strip" role="group" [attr.aria-label]="t().stats.sources.legend">
+            @for (leaf of leaves(); track leaf.id) {
+            <app-leaf-tag [state]="leaf.state" [interactive]="leaf.state !== 'dried'"
+                          [swatch]="leaf.swatch" (activated)="toggle(leaf.id)">
+                {{ leaf.name }}<span class="leaf-note">{{ leaf.note }}</span>
+            </app-leaf-tag>
             }
-        }
+
+            <span class="strip-gap"></span>
+
+            <!--N9: free 7…180-day range with magnetic notches at the common values. The fetch
+            fires on release, not on every pixel of the drag. The kit's five fixed period
+            segments are deliberately not ported (ADR-149).-->
+            <div class="range-slider">
+                <span class="range-value">{{ rangeLabel() }}</span>
+                <div class="range-track">
+                    <input type="range" [min]="rangeMin" [max]="rangeMax" step="1" [value]="rangeDays()"
+                           [attr.aria-label]="t().stats.period"
+                           (input)="onRangeInput(+$any($event.target).value)"
+                           (change)="onRangeCommit(+$any($event.target).value)">
+                    <!--I8: the notches were unlabelled 1px ticks packed into a 200px track, so they
+                    marked something without saying what. Labelled and on a much wider track now —
+                    a magnet you can't read isn't a landmark.-->
+                    <div class="range-notches">
+                        @for (n of rangeNotches; track n) {
+                        <span class="range-notch" [style.left.%]="notchOffset(n)"></span>
+                        }
+                    </div>
+                    <div class="range-notch-labels">
+                        @for (n of rangeNotches; track n) {
+                        <button class="range-notch-label" [style.left.%]="notchOffset(n)"
+                                [class.on]="rangeDays() === n" (click)="onRangeCommit(n)">{{ n }}</button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!--Per source, never their sum: a draft published to several channels counts its full view
+        total against each of them, so a cross-source readout would double-count (ADR-025/ADR-149).-->
+        <div class="readouts">
+            @for (r of readouts(); track r.id) {
+            <app-paper-card [rotate]="0">
+                <span class="ro-label">
+                    <span class="ro-swatch" [style.background]="r.color"></span>{{ r.name }}
+                </span>
+                <span class="ro-line">
+                    <span class="ro-value">{{ r.value === null ? '—' : group(r.value) }}</span>
+                    @if (r.delta !== null) {
+                    <span class="ro-delta" [class.up]="r.delta! > 0" [class.down]="r.delta! < 0">
+                        {{ r.delta! > 0 ? '+' : '' }}{{ r.delta }} {{ t().stats.perWeek }}
+                    </span>
+                    }
+                </span>
+            </app-paper-card>
+            }
+        </div>
+
+        <app-shelf-panel class="chart-panel" [title]="t().stats.bySource" [count]="windowLabel()" flush>
+            <app-index-tabs actions [items]="metricTabs()" [value]="metric()"
+                            [label]="t().stats.metricStrip" (selected)="setMetric($event)" />
+            <app-index-tabs actions [items]="viewTabs()" [value]="view()"
+                            [label]="t().stats.viewStrip" (selected)="setView($event)" />
+
+            @if (!drawable().length) {
+            <p class="stats-hint stats-hint-pad">
+                {{ anySelected() ? t().stats.sources.nothingToDraw : t().stats.sources.noneSelected }}
+            </p>
+            } @else if (view() === 'chart') {
+            <!--A running total is complete the moment it is read, so no bucket is left unfinished
+            here; a per-day delta series would answer openTail differently (ADR-161).-->
+            <app-growth-chart class="chart" [label]="chartLabel()" [series]="series()" [openTail]="false"
+                              [xLabels]="axis().labels" [strings]="t().stats.chart" [pending]="pending()" />
+            } @else {
+            <table class="series-table">
+                <caption class="visually-hidden">{{ chartLabel() }}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">{{ t().stats.chart.period }}</th>
+                        @for (s of series(); track s.slot) {
+                        <th scope="col">{{ s.name }}</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of tableRows(); track row.label) {
+                    <tr>
+                        <th scope="row">{{ row.label }}</th>
+                        @for (value of row.values; track $index) {
+                        <td>{{ value }}</td>
+                        }
+                    </tr>
+                    }
+                </tbody>
+            </table>
+            }
+        </app-shelf-panel>
     </div>
+
+    <!--Audience split (Marty, 08.08.2026). Blog only: Telegram reports no per-country numbers, so
+    the shelf says whose readers these are rather than leaving it to be assumed (ADR-097/ADR-149).-->
+    <app-shelf-panel class="audience-shelf" [title]="t().stats.audience.title" [count]="t().stats.blog">
+        @if (hasAudience()) {
+        <h3 class="group-head">{{ t().stats.audience.countries }}</h3>
+        <ul class="audience-list">
+            @for (row of visibleCountries(); track row.code) {
+            <li class="audience-row">
+                <span class="audience-flag">{{ row.flag }}</span>
+                <span class="audience-label" [title]="row.label">{{ row.label }}</span>
+                <span class="audience-bar"><span class="audience-bar-fill" [style.width.%]="row.bar"></span></span>
+                <span class="audience-views">{{ row.views }}</span>
+                <span class="audience-share">{{ row.share }}%</span>
+            </li>
+            }
+        </ul>
+        @if (hiddenCount(countryRows()) > 0) {
+        <button class="audience-more" (click)="countriesExpanded.set(!countriesExpanded())">
+            {{ countriesExpanded() ? t().stats.audience.showLess : t().stats.audience.showAll(hiddenCount(countryRows())) }}
+        </button>
+        }
+
+        <h3 class="group-head">{{ t().stats.audience.languages }}</h3>
+        <ul class="audience-list">
+            @for (row of visibleLanguages(); track row.code) {
+            <li class="audience-row">
+                <span class="audience-label" [title]="row.label">{{ row.label }}</span>
+                <span class="audience-bar"><span class="audience-bar-fill" [style.width.%]="row.bar"></span></span>
+                <span class="audience-views">{{ row.views }}</span>
+                <span class="audience-share">{{ row.share }}%</span>
+            </li>
+            }
+        </ul>
+        @if (hiddenCount(languageRows()) > 0) {
+        <button class="audience-more" (click)="languagesExpanded.set(!languagesExpanded())">
+            {{ languagesExpanded() ? t().stats.audience.showLess : t().stats.audience.showAll(hiddenCount(languageRows())) }}
+        </button>
+        }
+        } @else {
+        <p class="stats-hint">{{ t().stats.audience.empty }}</p>
+        }
+    </app-shelf-panel>
 </div>
+}

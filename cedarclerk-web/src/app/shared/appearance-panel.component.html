@@ -76,69 +76,14 @@
             <label><input type="checkbox" [checked]="appearance.prefs().sheetFlush" (change)="toggleAppearanceFlag('sheetFlush', $event)"> {{ t().settings.appearance.sheetFlush }}</label>
         </div>
 
-        <!--T-041: no Apply button — the appearance half saves itself now, like the toolbar half
-        below it always did. This only reports what happened.-->
+        <!--T-041: no Apply button — every control here saves itself. This only reports what
+        happened.-->
         <p class="ap-save-state" [class.error]="saveState() === 'error'">
             @if (saveState() === 'saving') { {{ t().common.saving }} }
             @else if (saveState() === 'error') { {{ t().settings.appearance.saveFailed }} }
             @else { {{ t().common.saved }} }
         </p>
 
-        <div class="ap-divider"></div>
-
-        <h3>{{ t().settings.toolbar.title }}</h3>
-
-        <div class="ap-field">
-            <label>{{ t().settings.toolbar.preset }}</label>
-            <div class="ap-toggle">
-                <button [class.on]="toolbarLayout.layout().preset === 'minimal'" (click)="pickToolbarPreset('minimal')">{{ t().settings.toolbar.minimal }}</button>
-                <button [class.on]="toolbarLayout.layout().preset === 'standard'" (click)="pickToolbarPreset('standard')">{{ t().settings.toolbar.standard }}</button>
-                <button [class.on]="toolbarLayout.layout().preset === 'everything'" (click)="pickToolbarPreset('everything')">{{ t().settings.toolbar.everything }}</button>
-            </div>
-        </div>
-        @if (toolbarError()) { <p class="ap-error">{{ toolbarError() }}</p> }
-
-        <div class="ap-field">
-            <label>{{ t().settings.toolbar.row1 }}</label>
-            <div class="ap-group-list" cdkDropList #row1List="cdkDropList"
-                [cdkDropListData]="row1Groups()" [cdkDropListConnectedTo]="[row2List]"
-                (cdkDropListDropped)="dropToolbarGroup($event)">
-                @for (id of row1Groups(); track id) {
-                <div class="ap-group-chip" cdkDrag>⠿ {{ groupLabel(id) }}</div>
-                }
-            </div>
-        </div>
-
-        <div class="ap-field">
-            <label>{{ t().settings.toolbar.row2 }}</label>
-            <div class="ap-group-list" cdkDropList #row2List="cdkDropList"
-                [cdkDropListData]="row2Groups()" [cdkDropListConnectedTo]="[row1List]"
-                (cdkDropListDropped)="dropToolbarGroup($event)">
-                @for (id of row2Groups(); track id) {
-                <div class="ap-group-chip" cdkDrag>⠿ {{ groupLabel(id) }}</div>
-                }
-            </div>
-        </div>
-
-        <div class="ap-catalog">
-            @for (group of toolbarGroups; track group.id) {
-            <details class="ap-catalog-group">
-                <summary>
-                    {{ group.label }}
-                    <span class="ap-count">{{ t().settings.toolbar.countOf(groupVisibleCount(groupButtonIds(group)), group.buttons.length) }}</span>
-                </summary>
-                <label class="ap-catalog-all">
-                    <input type="checkbox" [checked]="groupVisibleCount(groupButtonIds(group)) > 0" (change)="toggleGroupVisible(groupButtonIds(group), $event)">
-                    {{ t().settings.toolbar.allInGroup }}
-                </label>
-                @for (b of group.buttons; track b.id) {
-                <label><input type="checkbox" [checked]="!isButtonHidden(b.id)" (change)="toggleButtonVisible(b.id, $event)"> {{ b.label }}</label>
-                }
-            </details>
-            }
-        </div>
-
-        <button class="ap-reset" (click)="pickToolbarPreset('standard')">{{ t().settings.toolbar.resetToStandard }}</button>
     </div>
 </app-modal>
 }

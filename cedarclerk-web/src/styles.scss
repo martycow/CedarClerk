@@ -103,10 +103,10 @@
        last two extend it to six, which is the capacity the app's charts already assume. */
     --series-1: #39543C;
     --series-2: #3E5A76;
-    --series-3: #A8721F;
-    --series-4: #6B7F4A;
+    --series-3: #92631B;
+    --series-4: #617343;
     --series-5: #7A5288;
-    --series-6: #1F7A6E;
+    --series-6: #1F796D;
 
     /* Identity fills for a hashed avatar — a channel's in the editor, a user's in the admin list.
        They live here rather than in the components that hash them because both bind the fill
@@ -275,7 +275,7 @@
 
     --brass: #C69A4E;
     --brass-hi: #EED9A3;
-    --brass-lo: #7B5822;
+    --brass-lo: #674A1C;
     --brass-edge: #6E4E1B;
     --grad-brass: linear-gradient(180deg, var(--brass-hi), var(--brass));
     --resin: #D89A3E;
@@ -338,6 +338,7 @@
        exists to stop. */
     --bench-rail-h: 56px;
     --bench-tool-w: 52px;
+    --bench-dock-w-narrow: 224px;
     --bench-dock-w: 300px;
     --bench-dock-w-wide: 340px;
     --bench-panel-hd: 30px;

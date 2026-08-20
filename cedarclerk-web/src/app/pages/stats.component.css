@@ -1,445 +1,334 @@
-:host {
+/* The tab body is paper (ADR-154); every rule below is scoped to that so tools/check-density.mjs
+   holds this screen to paper's floors instead of finding an unmeasured page root. */
+:host([data-surface="paper"]) {
     display: block;
-    min-height: 100vh;
-    background: var(--surface);
+
+    /* No token owns a plot's height or a shelf column's width — the kit states 320px and the
+       design system stops there — so both are named here rather than dropped into a rule. */
+    --stats-shelf-w: 320px;
+    --stats-plot-h: 420px;
+    --stats-panel-max: 620px;
 }
 
-.spacer {
-    flex: 1;
+:host([data-surface="paper"]) .stats-tab {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--stats-shelf-w);
+    gap: var(--space-3);
+    align-items: start;
 }
 
-.hint {
-    color: var(--t2);
-    font-size: var(--dens-fs);
-}
-
-/* ---------- Header (matches comments.component.css) ---------- */
-.stats-header {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    height: 52px;
-    padding: 0 20px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-}
-
-.brand-name {
-    font-weight: 700;
-    font-size: var(--fs-body);
-    letter-spacing: -.01em;
-}
-
-.crumb-sep {
-    color: var(--t3);
-    font-size: var(--dens-fs);
-}
-
-.crumb-current {
-    font-size: var(--fs-body);
-    font-weight: 500;
-    color: var(--t2);
-}
-
-.icon {
-    width: 15px;
-    height: 15px;
-}
-
-.icon-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    border: none;
-    background: none;
-    border-radius: var(--radius-sm);
-    color: var(--t2);
-    cursor: pointer;
-    font-size: var(--fs-15);
-    text-decoration: none;
-}
-
-.icon-btn:hover {
-    background: var(--hover-strong);
-}
-
-.avatar {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: var(--accent);
-    color: var(--sheet);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--fs-caption);
-    font-weight: 600;
-    flex: none;
-}
-
-/* ---------- Body ---------- */
-/* Priority Fixes 02 (Claude Design, 28.07.2026): joins the ~1150px workspace-width bucket
-   (Posts Manager, Export, Admin) instead of its own one-off 920px. */
-.stats-body {
-    max-width: 1150px;
-    margin: 0 auto;
-    padding: 26px 20px 60px;
+:host([data-surface="paper"]) .stats-main {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: var(--space-3);
+    min-width: 0;
 }
 
-/* ---------- Filter row ---------- */
-.filter-row {
+@media (max-width: 720px) {
+    :host([data-surface="paper"]) .stats-tab { grid-template-columns: minmax(0, 1fr); }
+}
+
+:host([data-surface="paper"]) .stats-hint {
+    margin: 0;
+    color: var(--t2);
+    font-size: var(--fs-ui);
+}
+
+:host([data-surface="paper"]) .stats-hint-pad { padding: var(--space-5) var(--space-4); }
+
+/* ---------- Filter strip: the legend and the filter are one control (ADR-149) ---------- */
+:host([data-surface="paper"]) .filter-strip {
     display: flex;
     align-items: center;
-    gap: 10px;
     flex-wrap: wrap;
+    gap: var(--space-2);
+    box-sizing: border-box;
+    padding: var(--space-2) var(--space-3);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
+    box-shadow: var(--shadow-paper-sm);
 }
 
-.channel-tabs, .range-tabs {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-}
+:host([data-surface="paper"]) .strip-gap { flex: 1; }
 
-.channel-tab, .range-tab {
-    border: 1px solid var(--border);
-    background: var(--sheet);
-    color: var(--t2);
-    border-radius: var(--radius-sm);
-    padding: var(--dens-control-y) var(--dens-control-x);
+:host([data-surface="paper"]) .leaf-note {
+    margin-left: var(--space-1);
+    font-family: var(--font-mono);
     font-size: var(--fs-ui);
-    font-family: inherit;
-    cursor: pointer;
+    font-weight: 400;
+    opacity: .8;
 }
 
-.channel-tab:hover, .range-tab:hover {
-    color: var(--text);
-    border-color: var(--t2);
-}
-
-.channel-tab.active, .range-tab.active {
-    background: var(--asoft);
-    border-color: var(--abord);
-    color: var(--text);
-    font-weight: 600;
-}
-
-/* ---------- Range slider (N9) ---------- */
-.range-slider {
+/* ---------- Range slider (N9 / I8) ---------- */
+:host([data-surface="paper"]) .range-slider {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-2);
 }
 
-.range-value {
+:host([data-surface="paper"]) .range-value {
     font-size: var(--fs-ui);
     font-weight: 600;
     color: var(--t2);
-    min-width: 44px;
     text-align: right;
 }
 
-/* I8 — was 200px wide with a default-height thumb, which put six notches within a few pixels of
-   each other. Wider and taller in both axes, and it shrinks rather than overflowing on narrow
-   screens. */
-.range-track {
+:host([data-surface="paper"]) .range-track {
     position: relative;
     width: 420px;
     max-width: 100%;
-    padding-bottom: 16px;
+    padding-bottom: var(--space-5);
 }
 
-.range-track input[type="range"] {
+:host([data-surface="paper"]) .range-track input[type="range"] {
     width: 100%;
-    height: 22px;
+    height: var(--space-5);
     accent-color: var(--accent);
     position: relative;
     z-index: 1;
 }
 
 /* Ticks sit under the thumb, purely as landmarks — the magnet is in the snapping, not here. */
-.range-notches {
+:host([data-surface="paper"]) .range-notches {
     position: absolute;
     left: 0;
     right: 0;
-    bottom: 16px;
-    height: 7px;
+    bottom: var(--space-5);
+    height: var(--space-2);
     pointer-events: none;
 }
 
-.range-notch {
+:host([data-surface="paper"]) .range-notch {
     position: absolute;
     top: 0;
     width: 2px;
-    height: 7px;
+    height: var(--space-2);
     background: var(--t3);
     transform: translateX(-50%);
     border-radius: 1px;
 }
 
 /* Clickable as well as readable: if a value is worth marking it is worth jumping to. */
-.range-notch-labels {
+:host([data-surface="paper"]) .range-notch-labels {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
-    height: 14px;
+    height: var(--space-5);
 }
 
-.range-notch-label {
+:host([data-surface="paper"]) .range-notch-label {
     position: absolute;
     top: 0;
     transform: translateX(-50%);
     border: none;
     background: none;
-    padding: 0 3px;
-    font-family: inherit;
-    font-size: var(--fs-caption);
-    line-height: 14px;
+    padding: 0 var(--space-1);
+    font-family: var(--font-mono);
+    font-size: var(--fs-ui);
+    line-height: var(--space-5);
     color: var(--t2);
     cursor: pointer;
 }
 
-.range-notch-label:hover {
-    color: var(--text);
-}
+:host([data-surface="paper"]) .range-notch-label:hover { color: var(--text); }
 
-.range-notch-label.on {
-    color: var(--accent);
+:host([data-surface="paper"]) .range-notch-label.on {
+    color: var(--text);
     font-weight: 700;
 }
 
-/* ---------- Stat cards ---------- */
-.stat-grid {
+/* ---------- Readouts: one card per drawn source, never a total ---------- */
+:host([data-surface="paper"]) .readouts {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-3);
 }
 
-@media (max-width: 720px) {
-    .stat-grid {
-        grid-template-columns: 1fr;
-    }
-}
+:host([data-surface="paper"]) .readouts app-paper-card { --paper-card-pad: var(--space-3) var(--space-4); }
 
-.stat-card {
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-    padding: 16px 18px;
-}
-
-.stat-head {
+:host([data-surface="paper"]) .ro-label {
     display: flex;
-    align-items: baseline;
-    gap: 8px;
-    margin-bottom: 8px;
-}
-
-.stat-label {
+    align-items: center;
+    gap: var(--space-2);
     font-size: var(--fs-ui);
     color: var(--t2);
-    flex: 1;
 }
 
-.stat-value {
-    font-size: var(--fs-20);
-    font-weight: 700;
+/* The swatch is the same slot ink the line is drawn in, bound as a token reference (ADR-146). */
+:host([data-surface="paper"]) .ro-swatch {
+    flex: none;
+    width: var(--space-2);
+    height: var(--space-2);
+    border-radius: var(--radius-stamp);
+    box-shadow: inset 0 0 0 1px var(--paper-edge);
+}
+
+:host([data-surface="paper"]) .ro-line {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+}
+
+:host([data-surface="paper"]) .ro-value {
+    font-family: var(--font-mono);
+    font-size: var(--text-readout);
     color: var(--text);
     font-variant-numeric: tabular-nums;
 }
 
-.stat-delta {
-    font-size: var(--fs-meta);
+:host([data-surface="paper"]) .ro-delta {
+    font-family: var(--font-mono);
+    font-size: var(--fs-ui);
     color: var(--t2);
     font-variant-numeric: tabular-nums;
 }
 
-.stat-delta.up {
-    color: var(--ok);
+:host([data-surface="paper"]) .ro-delta.up { color: var(--ok); }
+:host([data-surface="paper"]) .ro-delta.down { color: var(--danger); }
+
+/* ---------- Chart panel: one dataset, two views ---------- */
+/* The plot is drawn to a height; the table is as long as the period, so the panel is capped and
+   the sheet scrolls rather than the tab body growing to six months of rows. */
+:host([data-surface="paper"]) .chart-panel { max-height: var(--stats-panel-max); }
+
+:host([data-surface="paper"]) .chart {
+    display: block;
+    height: var(--stats-plot-h);
 }
 
-.stat-delta.down {
-    color: var(--danger);
+:host([data-surface="paper"]) .series-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-ui);
 }
 
-.chart-empty {
+:host([data-surface="paper"]) .series-table th,
+:host([data-surface="paper"]) .series-table td {
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--rule-ink-soft);
+    text-align: right;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+:host([data-surface="paper"]) .series-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--sheet);
     color: var(--t2);
-    font-size: var(--fs-meta);
-    padding: 40px 0;
-    text-align: center;
+    font-family: var(--font-sans);
+    font-weight: 700;
 }
 
-/* ---------- Audience breakdown (countries / languages) ---------- */
-.audience-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
+:host([data-surface="paper"]) .series-table th[scope="row"] {
+    text-align: left;
+    color: var(--t2);
+    font-weight: 400;
 }
 
-@media (max-width: 720px) {
-    .audience-grid {
-        grid-template-columns: 1fr;
-    }
+:host([data-surface="paper"]) .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    clip-path: inset(50%);
 }
 
-.audience-list {
+/* ---------- Audience shelf ---------- */
+:host([data-surface="paper"]) .group-head {
+    margin: var(--space-4) 0 var(--space-2);
+    font-family: var(--font-display);
+    font-size: var(--fs-ui);
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--t2);
+}
+
+:host([data-surface="paper"]) .group-head:first-child { margin-top: 0; }
+
+:host([data-surface="paper"]) .audience-list {
     list-style: none;
     margin: 0;
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 7px;
+    gap: var(--space-1);
 }
 
-/* Label column is fixed so the bars start on one line down the list — a bar chart whose
-   baseline moves per row can't be read by length, which is the only thing it's for. */
-.audience-row {
-    display: grid;
-    grid-template-columns: auto 116px 1fr 42px 34px;
+:host([data-surface="paper"]) .audience-row {
+    display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
+    min-width: 0;
     font-size: var(--fs-ui);
 }
 
-.audience-flag {
-    font-size: var(--fs-15);
+:host([data-surface="paper"]) .audience-flag {
+    flex: none;
     line-height: 1;
 }
 
-.audience-label {
+/* Fixed so the bars start on one line down the list — a bar chart whose baseline moves per row
+   can't be read by length, which is the only thing it's for. */
+:host([data-surface="paper"]) .audience-label {
+    flex: none;
+    width: 88px;
     color: var(--text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.audience-bar {
-    height: 7px;
-    background: var(--hover-strong);
-    border-radius: 4px;
+:host([data-surface="paper"]) .audience-bar {
+    flex: 1;
+    min-width: 0;
+    height: var(--space-2);
+    background: var(--alt);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-stamp);
     overflow: hidden;
 }
 
-.audience-bar-fill {
+:host([data-surface="paper"]) .audience-bar-fill {
     display: block;
     height: 100%;
-    background: var(--accent);
-    border-radius: 4px;
+    background: var(--pine);
 }
 
-.audience-views {
-    text-align: right;
+:host([data-surface="paper"]) .audience-views {
+    flex: none;
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     color: var(--text);
-    font-weight: 600;
 }
 
-.audience-share {
+:host([data-surface="paper"]) .audience-share {
+    flex: none;
+    width: 40px;
     text-align: right;
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     color: var(--t2);
-    font-size: var(--fs-meta);
 }
 
-.audience-more {
-    margin-top: 10px;
+:host([data-surface="paper"]) .audience-more {
+    margin-top: var(--space-2);
     border: none;
     background: none;
     padding: 0;
     font-family: inherit;
-    font-size: var(--fs-meta);
+    font-size: var(--fs-ui);
     color: var(--t2);
     cursor: pointer;
 }
 
-.audience-more:hover {
-    color: var(--text);
-}
-
-/* ---------- Chart ---------- */
-.chart-wrap {
-    position: relative;
-}
-
-.chart-svg {
-    width: 100%;
-    height: 140px;
-    display: block;
-    cursor: crosshair;
-}
-
-.gridline {
-    stroke: var(--border);
-    stroke-width: 1;
-}
-
-.tick-label {
-    font-size: var(--fs-9);
-    fill: var(--t3);
-}
-
-.area-fill {
-    fill: var(--asoft);
-}
-
-.line-path {
-    stroke: var(--accent);
-    stroke-width: 2;
-    stroke-linejoin: round;
-    stroke-linecap: round;
-}
-
-.crosshair {
-    stroke: var(--t3);
-    stroke-width: 1;
-    opacity: .6;
-}
-
-.hover-dot {
-    fill: var(--accent);
-    stroke: var(--sheet);
-    stroke-width: 2;
-}
-
-.chart-axis-labels {
-    display: flex;
-    justify-content: space-between;
-    font-size: var(--fs-caption);
-    color: var(--t2);
-    margin-top: 2px;
-}
-
-.chart-tooltip {
-    position: absolute;
-    top: 2px;
-    transform: translateX(-50%);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-md);
-    padding: 4px 8px;
-    pointer-events: none;
-    white-space: nowrap;
-    text-align: center;
-}
-
-.tooltip-value {
-    font-size: var(--dens-fs);
-    font-weight: 700;
-    color: var(--text);
-    font-variant-numeric: tabular-nums;
-}
-
-.tooltip-date {
-    font-size: var(--fs-10);
-    color: var(--t2);
-}
+:host([data-surface="paper"]) .audience-more:hover { color: var(--text); }

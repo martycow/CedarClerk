@@ -4,6 +4,7 @@ import { AuthService } from '../../core/auth.service';
 import { CommentsService } from '../../core/comments.service';
 import { LocaleService } from '../../core/i18n/locale.service';
 import { ProjectsService } from '../../core/projects.service';
+import { RailActionsService } from '../../core/rail-actions.service';
 import { RulerService } from '../../core/ruler.service';
 import { ThemeService } from '../../core/theme.service';
 import { VersionService } from '../../core/version.service';
@@ -11,6 +12,8 @@ import { AccountMenuComponent } from '../../shared/account-menu.component';
 import { AppearancePanelComponent } from '../../shared/appearance-panel.component';
 import { DebugConsoleComponent } from '../../shared/debug-console.component';
 import { IconComponent } from '../../shared/icon.component';
+import { ButtonComponent } from '../forms/button.component';
+import { ResinDropComponent } from '../display/resin-drop.component';
 import { HookRailComponent, HookRailItem } from './hook-rail.component';
 import { RailHeaderComponent } from './rail-header.component';
 import { RulerBarComponent } from './ruler-bar.component';
@@ -43,6 +46,7 @@ function matches(path: string, pattern: string): boolean {
     imports: [
         RouterOutlet, RouterLink, IconComponent, HookRailComponent, RailHeaderComponent,
         RulerBarComponent, AccountMenuComponent, AppearancePanelComponent, DebugConsoleComponent,
+        ResinDropComponent, ButtonComponent,
     ],
     template: `
         <div class="shell">
@@ -81,6 +85,20 @@ function matches(path: string, pattern: string): boolean {
                             {{ t().shell.icons }}
                         </a>
                     </div>
+                    <!-- The default slot RailHeader.prompt.md reserves for save state and the
+                         screen's one primary action. Neither is the shell's: a page publishes them
+                         and the rail renders them, as data and never as a template (ADR-159). -->
+                    @if (rail.save(); as s) {
+                        <app-resin-drop [state]="s.state" [label]="s.label || ''" [title]="s.hint || ''" />
+                    }
+                    @if (rail.primary(); as action) {
+                        <app-button class="rail-primary" variant="pine" size="sm" [disabled]="!!action.disabled"
+                                    [title]="action.hint || ''" (clicked)="action.run()">
+                            <app-icon [name]="action.icon" size="xs" />
+                            {{ action.label }}
+                        </app-button>
+                    }
+
                     <app-account-menu account />
                 </app-rail-header>
 
@@ -191,6 +209,7 @@ export class BenchShellComponent {
 
     protected readonly auth = inject(AuthService);
     protected readonly theme = inject(ThemeService);
+    protected readonly rail = inject(RailActionsService);
     protected readonly ruler = inject(RulerService);
     protected readonly t = inject(LocaleService).t;
 
