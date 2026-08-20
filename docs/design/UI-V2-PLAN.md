@@ -30,28 +30,31 @@ Cedar Bench (`.design-sync/ds-v2/`) is the Forest Workshop grown from a *repaint
 
 ## 3. Work breakdown
 
-Task lines follow the board format `- [ ] T-xxx Name — description #tags P1..P3`. **All T-numbers below are `T-NNN` placeholders** — assign real ids when the rows land in `docs/tasks/BACKLOG.md` (highest in use is `T-204`).
+Task lines follow the board format `- [ ] T-xxx Name — description #tags P1..P3`, and carry the ids the rows hold on the board. Stages 0 and 1 are ticked here because they shipped; their status is `docs/tasks/ROADMAP.md`, and the open rows — Stages 2 through 6 — live in `docs/tasks/BACKLOG.md`, which is the only place they are open.
 
 ### Stage 0 — tooling before tokens
 
 `cedar test` is green before any V2 code is written. The mirror lives at `.design-sync/ds-v2/`, outside `docs/`, so `DocsFlowGraphTests.Every_live_doc_is_on_the_map` (`CedarClerk.Tests/DocsFlowGraphTests.cs:28`) never enumerates its 22 `.md` files, and `Every_mapped_path_exists` (`DocsFlowGraphTests.cs:49`) matches only `docs/…\.md`, so the folder's single mention in `docs/DOCS-FLOW.md:146` costs nothing. Stage 0 therefore builds rather than repairs: the two checks the rest of the port is measured by.
 
 ```
-- [ ] T-NNN Contrast checker rework — check-contrast.mjs composites alpha in resolveColor, evaluates gradients at every stop and fails on the worst, and rejects outright any contract token that resolves to a gradient #a11y #tooling P1
-- [ ] T-NNN Density lint — new tools/check-density.mjs: chrome 30px/13-11px vs paper 44px/>=14px, no half-pixel font-size, density never touches a bench token; wire into package.json beside check:contrast #a11y #tooling P2
+- [x] T-205 Contrast checker rework — check-contrast.mjs composites alpha in resolveColor, evaluates gradients at every stop and fails on the worst, and rejects outright any contract token that resolves to a gradient #a11y #tooling P1
+- [x] T-206 Density lint — new tools/check-density.mjs: chrome 30px/13-11px vs paper 44px/>=14px, no half-pixel font-size, density never touches a bench token; wire into package.json beside check:contrast #a11y #tooling P2
 ```
 
 Keep the mirror out of `docs/`: a mirror path spelled there puts it under `Every_mapped_path_exists`, which then requires the files on a fresh clone and forces an untracked cache to be committed. Precedent is against it — `docs/design_handoff_indiedev_core_loop/` is referenced from three docs and is not on disk.
+
+The partial is left in place rather than deleted: nothing writes `data-skin`, so nothing in it can match, and the file survives until Marty says the word (`T-235`).
 
 The checker rework is a hard prerequisite for Stage 1: 19 day pairs and 21 night pairs in V2 already fail, and once bench values sit in the base blocks the checker reads every one of them on every run — with alpha discarded and gradients throwing it either lies or crashes.
 
 ### Stage 1 — tokens
 
 ```
-- [ ] T-NNN Bench base palette — rewrite the :root block in cedarclerk-web/src/styles.scss from ds-v2/tokens/*.css: contract names keep their spelling and stay flat, material names added alongside #tokens P1
-- [ ] T-NNN Bench night block — re-derive night series/rust/text-body against cream paper into :root[data-theme="dark"] at styles.scss:178, carrying the _forest.scss:91-160 corrections #tokens #a11y P1
-- [ ] T-NNN Retire the skin mechanism — delete the Skin union, setSkin/applySkin/loadInitialSkin and the cedar-skin key in core/theme.service.ts, the Appearance skin control and its three i18n keys, styles/_forest.scss and its @use in styles.scss; drop the UI-INVENTORY row and DESIGN.md §Skins in the same commit #tokens #cleanup P1
-- [ ] T-NNN Bench contrast pass — run check:contrast against the rewritten base blocks and fix the 40 failing pairs with re-derived values #a11y P1
+- [x] T-207 Bench base palette — rewrite the :root block in cedarclerk-web/src/styles.scss from ds-v2/tokens/*.css: contract names keep their spelling and stay flat, material names added alongside #tokens P1
+- [x] T-208 Bench night block — re-derive night series/rust/text-body against cream paper into :root[data-theme="dark"] at styles.scss:178, carrying the _forest.scss:91-160 corrections #tokens #a11y P1
+- [x] T-209 Retire the skin mechanism — delete the Skin union, setSkin/applySkin/loadInitialSkin and the cedar-skin key in core/theme.service.ts, the Appearance skin control and its three i18n keys; drop the UI-INVENTORY row and DESIGN.md §Skins in the same commit #tokens #cleanup P1
+- [x] T-210 Bench contrast pass — run check:contrast against the rewritten base blocks and fix the 40 failing pairs with re-derived values #a11y P1
+- [ ] T-235 Delete the neutralised forest partial — styles/_forest.scss and its @use in styles.scss; every rule in it is scoped under an attribute nothing sets, so it compiles into the bundle and matches nothing. A 1 229-line deletion is a `.claude/rules/destructive-operations.md` event, so it waits on Marty #tokens #cleanup #decision P2
 ```
 
 Token rules for this stage. Keep `--space-*` — V2's `--sp-5`/`--sp-6` are 20/26 against the app's 24/32, so a mechanical rename silently shrinks every gap. Keep `--fs-*` — V2's `--text-*` size family collides with the app's `--text` colour. Keep `--motion-*` and `--wk-ease-pop` (identical to `--ease-settle`). Keep `--series-1..6` as the data palette and alias V2's four named series onto the first four; adopting the named set outright cuts categorical capacity from 6 to 4 and breaks the fixed assignment order.
@@ -61,11 +64,11 @@ Import only what is genuinely new: the 8 `--bench-*`, `--hit-chrome`/`--text-chr
 ### Stage 2 — primitives and the kit page
 
 ```
-- [ ] T-NNN Bench icons — add magnifying-glass dots-three chart-bar flag text-h tree-evergreen to tools/icon-map.json, run icons:generate and icon-usage, commit both generated files #icons P1
-- [ ] T-NNN Button component — app/bench/forms/button.component.ts, variants pine|paper|rail|danger, sizes md|sm #components P1
-- [ ] T-NNN Input component — app/bench/forms/input.component.ts implementing ControlValueAccessor; the app binds ngModel (tag-picker.component.html), which a plain input() signal cannot serve #components P1
-- [ ] T-NNN Display primitives — stamp-badge, leaf-tag, resin-drop, paper-card, task-tag, spec-row, brass-pin, brass-hook under app/bench/ #components P2
-- [ ] T-NNN Styleguide rewrite — replace the Buttons/Fields/Status sections of pages/styleguide.component.* with the bench kit and add a surface-class toggle #components P2
+- [ ] T-211 Bench icons — add magnifying-glass dots-three chart-bar flag text-h tree-evergreen to tools/icon-map.json, run icons:generate and icon-usage, commit both generated files #icons P1
+- [ ] T-212 Button component — app/bench/forms/button.component.ts, variants pine|paper|rail|danger, sizes md|sm #components P1
+- [ ] T-213 Input component — app/bench/forms/input.component.ts implementing ControlValueAccessor; the app binds ngModel (tag-picker.component.html), which a plain input() signal cannot serve #components P1
+- [ ] T-214 Display primitives — stamp-badge, leaf-tag, resin-drop, paper-card, task-tag, spec-row, brass-pin, brass-hook under app/bench/ #components P2
+- [ ] T-215 Styleguide rewrite — replace the Buttons/Fields/Status sections of pages/styleguide.component.* with the bench kit and add a surface-class toggle #components P2
 ```
 
 Prove every primitive on `/dev/styleguide` before it touches a product screen — it exists for this and has no users to break. Its Buttons/Fields/Status sections are *replaced*, not appended to; a styleguide showing both vocabularies is the ambiguity the port exists to end.
@@ -77,12 +80,12 @@ Translate the JSX API mechanically: `children` → `<ng-content>`, named slots �
 The app has no shell today: `src/app/app.html` is `<router-outlet />` plus the debug console, `app.scss` is empty, and every page draws its own header.
 
 ```
-- [ ] T-NNN Chrome components — rail-header, hook-rail, shelf-panel, bench-drawer, ruler-bar, worktop, index-tabs under app/bench/chrome and app/bench/worktop #components P1
-- [ ] T-NNN Bench shell — app/bench/chrome/bench-shell.component.*, one parent route in app.routes.ts wrapping the authenticated children unchanged; login/register/terms/privacy stay outside it #shell P1
-- [ ] T-NNN Retire page-header — delete shared/page-header.component.* and its 12 call sites, delete the editor topbar nav block in editor.component.html #shell P1
-- [ ] T-NNN Chrome touch carve-out — scope the @media (pointer: coarse) 44px rule at styles.scss:304 so it cannot inflate rail, hooks, shelf headers, drawer lip and ruler #a11y P1
-- [ ] T-NNN Drawer re-house — debug console content becomes the BenchDrawer body; core/debug-log.service.ts and the interceptor survive; hostBarHeight retires; update app.spec.ts #shell P2
-- [ ] T-NNN Status bar to ruler — word/char/sync readouts move to RulerBar; invisibles and fullscreen move to the editor tool strip; the console toggle disappears because the lip is the toggle #shell P2
+- [ ] T-216 Chrome components — rail-header, hook-rail, shelf-panel, bench-drawer, ruler-bar, worktop, index-tabs under app/bench/chrome and app/bench/worktop #components P1
+- [ ] T-217 Bench shell — app/bench/chrome/bench-shell.component.*, one parent route in app.routes.ts wrapping the authenticated children unchanged; login/register/terms/privacy stay outside it #shell P1
+- [ ] T-218 Retire page-header — delete shared/page-header.component.* and its 12 call sites, delete the editor topbar nav block in editor.component.html #shell P1
+- [ ] T-219 Chrome touch carve-out — scope the @media (pointer: coarse) 44px rule at styles.scss:304 so it cannot inflate rail, hooks, shelf headers, drawer lip and ruler #a11y P1
+- [ ] T-220 Drawer re-house — debug console content becomes the BenchDrawer body; core/debug-log.service.ts and the interceptor survive; hostBarHeight retires; update app.spec.ts #shell P2
+- [ ] T-221 Status bar to ruler — word/char/sync readouts move to RulerBar; invisibles and fullscreen move to the editor tool strip; the console toggle disappears because the lip is the toggle #shell P2
 ```
 
 Vertical chrome budget in the editor: 44 + 58 + 58 + 27 = 187px today, against 56 + 32 + 30 = 118px global plus a 36px in-content tool strip. The two-row toolbar collapsing to one 36px strip is the biggest density delta in the app and voids ADR-035's user-ordered row assignment — see Q3.
@@ -98,10 +101,10 @@ One data gap the rail hits immediately: `DraftMeta` (`core/drafts.service.ts:107
 Smallest blast radius first.
 
 ```
-- [ ] T-NNN Stats screen port — one multi-series GrowthChart replacing four 600x160 single-metric SVGs, sources as LeafTag legend-filters, audience grid into a 320px right ShelfPanel #screens P2
-- [ ] T-NNN Hub screen port — project.component grid 2 to 3 columns, ModuleTile re-cut from document types to modules, right shelf keeps sprint and up-next #screens P2
-- [ ] T-NNN Writer shell port — editor.component chrome, inspector shelf replacing the horizontal meta strip, one 36px tool strip #screens P2
-- [ ] T-NNN Writer outline panel — 224px structure shelf walking the TipTap doc with two-way ProseMirror selection sync #screens P3
+- [ ] T-222 Stats screen port — one multi-series GrowthChart replacing four 600x160 single-metric SVGs, sources as LeafTag legend-filters, audience grid into a 320px right ShelfPanel #screens P2
+- [ ] T-223 Hub screen port — project.component grid 2 to 3 columns, ModuleTile re-cut from document types to modules, right shelf keeps sprint and up-next #screens P2
+- [ ] T-224 Writer shell port — editor.component chrome, inspector shelf replacing the horizontal meta strip, one 36px tool strip #screens P2
+- [ ] T-225 Writer outline panel — 224px structure shelf walking the TipTap doc with two-way ProseMirror selection sync #screens P3
 ```
 
 Each screen carries data the API does not have; every one of these is a feature with its own row, not part of a re-skin.
@@ -122,20 +125,20 @@ Each screen carries data the API does not have; every one of these is a feature 
 | own pattern | `project-tasks` (kanban — no kit covers it), `settings` (754 lines, comfortable by design), `login`/`register` (workshop-door scenery, no shell), `terms`/`privacy` (one sheet, no chrome), `styleguide`, `icons` |
 
 ```
-- [ ] T-NNN Port hub-like pages — projects, project-planner, project-builds onto Worktop plus ShelfPanel #screens P3
-- [ ] T-NNN Port stats-like pages — project-assets, media-library, drafts, admin onto IndexTabs plus one panel plus an inspector shelf #screens P3
-- [ ] T-NNN Port writer-like pages — posts-manager, glossary, comments fragment #screens P3
-- [ ] T-NNN Task board pattern — project-tasks needs a fourth reference screen from Claude Design before it can be ported #screens #decision P3
+- [ ] T-226 Port hub-like pages — projects, project-planner, project-builds onto Worktop plus ShelfPanel #screens P3
+- [ ] T-227 Port stats-like pages — project-assets, media-library, drafts, admin onto IndexTabs plus one panel plus an inspector shelf #screens P3
+- [ ] T-228 Port writer-like pages — posts-manager, glossary, comments fragment #screens P3
+- [ ] T-229 Task board pattern — project-tasks needs a fourth reference screen from Claude Design before it can be ported #screens #decision P3
 ```
 
 ### Stage 6 — cleanup and ship
 
 ```
-- [ ] T-NNN Delete duplicated control CSS — .btn-accent (12 files), .btn-ghost (16), .btn-danger (2), .icon-btn (7), .status-badge (5), tab strips (8) #cleanup P2
-- [ ] T-NNN Retire count-badge — carry the hide-at-zero and 99+ cap into IndexTabs, delete shared/count-badge.component.ts #cleanup P3
-- [ ] T-NNN Close the skin era in the docs — mark ADR-120 superseded by ADR-136 in docs/DECISIONS.md, and check no --wk-* or data-skin reference outlived Stage 1 #docs #decision P3
-- [ ] T-NNN Smoke suite repair — rebind the e2e selectors listed under Risks to the bench markup #tests P1
-- [ ] T-NNN Version and merge — bump Consts.CurrentVersion to 0.13.0, tag 0.13.0, merge UI_V2 to master, deploy #release P1
+- [ ] T-230 Delete duplicated control CSS — .btn-accent (12 files), .btn-ghost (16), .btn-danger (2), .icon-btn (7), .status-badge (5), tab strips (8) #cleanup P2
+- [ ] T-231 Retire count-badge — carry the hide-at-zero and 99+ cap into IndexTabs, delete shared/count-badge.component.ts #cleanup P3
+- [ ] T-232 Close the skin era in the docs — mark ADR-120 superseded by ADR-136 in docs/DECISIONS.md, and check no --wk-* or data-skin reference outlived Stage 1 #docs #decision P3
+- [ ] T-233 Smoke suite repair — rebind the e2e selectors listed under Risks to the bench markup #tests P1
+- [ ] T-234 Version and merge — bump Consts.CurrentVersion to 0.13.0, tag 0.13.0, merge UI_V2 to master, deploy #release P1
 ```
 
 `cedar deploy` refuses anything but `master` with a clean tree (`CedarClerk.Cli/Pipelines/GitGuard.cs`), so `UI_V2` merges before it can ship. Eyeball with `cedar run` (ADR-121) — the real `publish/` build on `localhost:8080` with the bot forced off, which is the only safe way to look at a re-skin without touching the production bot token.
@@ -144,9 +147,9 @@ Docs that must move with the code: `docs/DECISIONS.md` (index row per ADR, **bef
 
 ---
 
-## 4. ADRs to write
+## 4. ADRs
 
-Highest existing is ADR-135, so the port starts at **ADR-136**. Each is a new `docs/adr/ADR-1xx.md` whose first line is `# ADR-1xx — Title`, plus its row appended to the index in `docs/DECISIONS.md`, no front-matter (ADR-123). All land **before** the code they govern.
+Highest existing was ADR-135, so the port starts at **ADR-136**. Each is a new `docs/adr/ADR-1xx.md` whose first line is `# ADR-1xx — Title`, plus its row appended to the index in `docs/DECISIONS.md`, no front-matter (ADR-123). All land **before** the code they govern.
 
 | # | Thesis | Overturns / extends |
 |---|---|---|
@@ -154,13 +157,20 @@ Highest existing is ADR-135, so the port starts at **ADR-136**. Each is a new `d
 | ADR-137 | Token contract: the contract names keep their spelling and stay flat colours in the base blocks; bench material names are added alongside them, and the contract name wins wherever the two are the same colour | Protects ADR-071 principle 2, ADR-090, `DesignTokenDriftTests` |
 | ADR-138 | Surface class (`data-surface`) as a second density axis: chrome 30px / 13–11px, paper 44px / ≥14px, integers only; contrast is lifted out of the split and applies to both | Narrows ADR-071 principle 7 and the `pointer: coarse` rule at `styles.scss:304` |
 | ADR-139 | The bench shell becomes shared chrome; the header nav row and the Electron default menu bar are removed | Reverses ADR-052; required by `.claude/rules/ui-changes.md` rule 1 |
-| ADR-140 | Focus ring is `2px solid var(--brass)` at 2px offset inside the bench look, and its 3:1 is measured, not assumed | Supersedes the ADR-074 clause in `DESIGN.md` §Accessibility |
+| ADR-140 | Focus ring: two layers — a `--brass-edge` outline inside a cream `--focus-halo` — because no single colour clears 3:1 on both paper and rail. Proposed here as a flat `--brass`; the measurement refused it | Supersedes the ADR-074 clause in `DESIGN.md` §Accessibility |
 | ADR-141 | Night values are re-derived against cream paper; V2's night block is not ported verbatim | Defends the ADR-120 fix |
 | ADR-142 | One icon runtime — the generated Phosphor set behind `app-icon`; `bench-icons.js` is reference only, missing glyphs go through `icon-map.json` | Extends ADR-072 |
 | ADR-143 | Fonts stay self-hosted via `@fontsource`; the mirror's Google `@import` is not ported | Restates ADR-120 against the mirror |
 | ADR-144 | The design-system mirror is an uncommitted cache at `.design-sync/ds-v2/`, outside `docs/` and outside git — what that costs: no history, no review, absent on a fresh clone, and every citation of it in this plan unverifiable by CI | Formalises the placement `docs/DOCS-FLOW.md:146` states |
 
-Conditional — write only if implemented: **ADR-145** stats legend-as-filter and table-as-tab (the ADR-095 shape, a UI move); **ADR-146** the debug console becoming the BenchDrawer (`app.spec.ts` asserts it, so the decision predates the code); **ADR-147** the editor's two configurable toolbar rows collapsing to one strip (ADR-035's row assignment loses its meaning).
+Two more were written because the token work found defects the table above did not predict, and they took the next two numbers:
+
+| # | Thesis | Overturns / extends |
+|---|---|---|
+| ADR-145 | A wash is a token: `--ok-soft`/`--warn-soft`/`--danger-soft` on `--asoft`'s formula, and the state inks re-derived against the wash they are painted on rather than against bare paper | Carries ADR-141's method one surface further; applies ADR-074 |
+| ADR-146 | A painted colour that reaches the DOM through a binding is a token, not a literal: the avatar fills become `--avatar-1…6` + `--avatar-ink` behind one hasher | Narrows the T-077/T-101 literal exemptions |
+
+Conditional — write only if implemented, at the next free numbers: **ADR-147** stats legend-as-filter and table-as-tab (the ADR-095 shape, a UI move); **ADR-148** the debug console becoming the BenchDrawer (`app.spec.ts` asserts it, so the decision predates the code); **ADR-149** the editor's two configurable toolbar rows collapsing to one strip (ADR-035's row assignment loses its meaning).
 
 ---
 
@@ -190,8 +200,9 @@ Conditional — write only if implemented: **ADR-145** stats legend-as-filter an
 
 ## 6. Open questions for Marty
 
-1. **Does `/stats` become a route again?** All three kits give it a rail crumb, a hook and a ruler; N7 deliberately made it a tab body inside the Posts Manager.
-2. **Stats sources: exclusive channel tabs or V2's multi-select legend-filter — and five fixed periods or the 7–180-day magnetic slider?** N9/I8 were both explicit fixes; one of each pair loses.
-3. **The editor toolbar:** one 36px strip, or the user-configurable two-row catalogue in `core/toolbar-layout.service.ts` with its Appearance panel? The kit has no room for group captions.
-4. **The theme toggle and the palette/Appearance button have no home in any V2 rail** — the `dots` menu is the only legal spot. Confirm, or the rail gains a control the design system does not define.
-5. **Responsive is unspecified.** The mirror has zero width breakpoints and all three kits are fixed 1440×900. Below what width do the shelf docks stop being columns, does the hook rail rotate or collapse, does the ruler survive? Until this is answered the shell is built at V2 proportions for ≥1100px with the app's existing breakpoint ladder as the fallback, each fallback marked in the ADR as *not specified by the design system*.
+1. **Q-19 — does `/stats` become a route again?** All three kits give it a rail crumb, a hook and a ruler; N7 deliberately made it a tab body inside the Posts Manager.
+2. **Q-20 — stats sources: exclusive channel tabs or V2's multi-select legend-filter — and five fixed periods or the 7–180-day magnetic slider?** N9/I8 were both explicit fixes; one of each pair loses.
+3. **Q-21 — the editor toolbar:** one 36px strip, or the user-configurable two-row catalogue in `core/toolbar-layout.service.ts` with its Appearance panel? The kit has no room for group captions.
+4. **Q-22 — the theme toggle and the palette/Appearance button have no home in any V2 rail** — the `dots` menu is the only legal spot. Confirm, or the rail gains a control the design system does not define.
+5. **Q-23 — responsive is unspecified.** The mirror has zero width breakpoints and all three kits are fixed 1440×900. Below what width do the shelf docks stop being columns, does the hook rail rotate or collapse, does the ruler survive? Until this is answered the shell is built at V2 proportions for ≥1100px with the app's existing breakpoint ladder as the fallback, each fallback marked in the ADR as *not specified by the design system*.
+6. **Q-24 — does the Appearance accent picker survive?** Bench means pine to be the one colour that acts, and `ACCENT_PRESETS` now carries five vetted pairs (a day tone and a darker night one each, ADR-141/ADR-145) rather than one mixed formula. Keeping the picker means every bench component that leans on `--accent` is drawn in a colour the user chose; dropping it makes pine a constant and deletes a settings block. Nothing in the design system offers a second accent.

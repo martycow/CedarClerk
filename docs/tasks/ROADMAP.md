@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-08-18
+last_verified: 2026-08-20
 source_of_truth_for: phase-by-phase status — what shipped and when
 guard: none
 ---
@@ -9,7 +9,57 @@ guard: none
 
 Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-saas-plan.md` (v1.7, 15.07.2026) and `Plans/session-brief-v0.8.0-planning.md`, which are now archived under `Plans/OLD/`. **This file is the one live roadmap going forward** — update it when a phase item closes, don't recreate a parallel plan doc. Architectural/product decisions referenced below (why something was built a certain way) live in `docs/DECISIONS.md`, not here — this file tracks *status*, DECISIONS tracks *rationale*.
 
-## Status summary (as of 19.08.2026)
+## Status summary (as of 20.08.2026)
+
+**UI V2 — Cedar Bench becomes the one look; Stages 0 and 1 (19–20.08.2026, branch `UI_V2`, not
+merged, no version bump).** The design system mirrored from Claude Design at `.design-sync/ds-v2/`
+stops being a second palette and becomes the app's only one. The port was planned before it was
+written — `docs/design/UI-V2-PLAN.md` settles ten questions (theming attribute, token namespace,
+component layout, half-pixels, night, density, icons, fonts) and eleven ADRs (136–146) landed ahead
+of the code they govern.
+
+- **Stage 0 — the two checks the rest of the port is measured by** (`T-205`, `T-206`).
+  `check-contrast.mjs` was rewritten: it composites alpha over the backdrop instead of discarding
+  it, resolves a layered background to every colour it can paint, walks a gradient along its whole
+  ramp and bisects to the exact crossing where an ink passes through the surface's own luminance,
+  scores the two-layer focus ring of ADR-140 against every surface a control can sit on, and fails
+  outright when a token on the server-rendered contract list resolves to a gradient — that list is
+  now one file, `tools/contract-tokens.mjs`, read by both the checker and the token generator.
+  `npm run check:contrast:census` is the second mode: it walks what the app actually paints —
+  component stylesheets, CSS inside a `.ts` `styles:` array, and the CSS inside the C# raw strings
+  of the blog, the landing page and the draft preview — and reports every ink-on-surface no pair in
+  the table covers. `tools/check-density.mjs` enforces ADR-138 behind `npm run check:density`, and
+  `cedar test` gained a Density phase whose place in the phase list is pinned by `PipelineTests`.
+- **Stage 1 — the palette, and the end of the skin** (`T-207`…`T-210`). The bench values are
+  written into the bare `:root` and `:root[data-theme="dark"]` blocks of `styles.scss`, which is
+  the only place a token is both contrast-checked and emitted into `DesignTokens` for the blog and
+  the landing page; contract names keep their spelling and stay flat colours, bench material names
+  sit alongside (ADR-137). Night was re-derived against cream paper rather than copied — the design
+  system's own night block puts body text at 1.01:1 on the page ground (ADR-141). The skin
+  mechanism is gone: no `data-skin`, no `Skin` union, no `setSkin`/`applySkin`/`loadInitialSkin`,
+  no `cedar-skin` key, no Appearance control and no strings behind it in either language;
+  `data-theme` is the only styling axis left (ADR-136). `styles/_forest.scss` is neutralised rather
+  than deleted — nothing writes the attribute its every rule is scoped under — and the deletion
+  itself waits on Marty as `T-235`.
+- **What measuring found that remembering had not.** The census answered a checker that had
+  reported zero failures over three rounds by scoring the wrong pairs: 22 rules each hand-mixed a
+  state tint out of an ink and whatever paper the component sat on, so one visual idea shipped as
+  22 ratios, the worst at 3.63 against a 4.5 floor. Those became `--ok-soft`/`--warn-soft`/
+  `--danger-soft` on `--asoft`'s formula, and the state inks were re-derived against the wash they
+  are painted on rather than against bare paper (ADR-145) — which also caught `--t3`, barred from
+  carrying content, as the only label of a button, and `--alt` used as ink on `--sheet` at 1.06:1.
+  Then a blind spot behind the census itself: a colour bound with `[style.background]` never enters
+  a stylesheet at all. Two components hashed an identity into a six-colour array declared in their
+  own `.ts` — the editor's channel list with a white ink that fails on three of the six (worst
+  2.26), the admin user list with a cream one that fails on all six, and the same fill shipped on
+  the public blog's channel avatar at 2.92. The array became `--avatar-1…6` + `--avatar-ink`
+  behind one hasher, with hue kept and luminance moved until white clears (ADR-146). Page roots and
+  the server-rendered surfaces moved off the wall onto paper on the way.
+- **What is open.** Stages 2 through 6 — primitives and the kit page, the shell, the three
+  reference screens, the remaining pages by pattern, cleanup and ship — are `T-211`…`T-234` on the
+  board, none started. Six decisions wait on Marty as `Q-19`…`Q-24`, and two of them block a
+  screen: `Q-19`/`Q-20` block the stats port, `Q-21` blocks the writer shell. The branch cannot
+  deploy until it merges — `cedar deploy` refuses anything but master.
 
 **v0.12.2 — every P1 closed in one session (18–19.08.2026, not yet deployed).** Marty's directive
 was "do everything P1", with five decisions resolved on the way in: T-164 (PRGE) removed outright,

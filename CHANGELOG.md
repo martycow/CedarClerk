@@ -1,5 +1,62 @@
 # Changelog
 
+## 2026-08-20 — Cedar Bench becomes the one look (branch `UI_V2`, Stages 0–1)
+
+The design system mirrored from Claude Design into `.design-sync/ds-v2/` stops being a second
+palette and becomes the app's only one. Planned before written: `docs/design/UI-V2-PLAN.md` settles
+the ten questions the port turns on — theming attribute, token namespace, component layout,
+half-pixels, night, density, icons, fonts — and eleven ADRs (136–146) landed ahead of the code they
+govern. Two stages of six are done; the branch is not merged and the version is untouched.
+
+**Stage 0 — the checks the rest of the port is measured by.** `check-contrast.mjs` was rewritten:
+alpha is composited over the backdrop instead of discarded, a layered background resolves to every
+colour it can paint, a gradient is walked along its whole ramp with a bisection to the exact
+crossing where an ink passes through the surface's own luminance, the two-layer focus ring is scored
+against every surface a control can sit on, and a token on the server-rendered contract list that
+resolves to a gradient fails outright — that list is now one file, `tools/contract-tokens.mjs`,
+read by the checker and the token generator alike. `npm run check:contrast:census` is a second mode
+answering a different question: it walks what the app actually paints — component stylesheets, CSS
+inside a `.ts` `styles:` array, and the CSS inside the C# raw strings of the blog, the landing page
+and the draft preview — and reports every ink-on-surface no pair in the table covers.
+`tools/check-density.mjs` enforces ADR-138's surface split behind `npm run check:density`, and
+`cedar test` gained a Density phase, its place in the phase list pinned by `PipelineTests`.
+
+**Stage 1 — the palette, and the end of the skin.** The bench values are written into the bare
+`:root` and `:root[data-theme="dark"]` blocks of `styles.scss` — the only place a token is both
+contrast-checked and emitted into `DesignTokens` for the blog and the landing page. Contract names
+keep their spelling and stay flat colours; bench material names sit alongside them (ADR-137). Night
+was re-derived against cream paper rather than copied: the design system's own night block puts body
+text at 1.01:1 on the page ground (ADR-141). The skin mechanism is gone — no `data-skin`, no `Skin`
+union, no `setSkin`/`applySkin`/`loadInitialSkin`, no `cedar-skin` key, no Appearance control and
+no strings behind it in either language; `data-theme` is the only styling axis left (ADR-136).
+`styles/_forest.scss` is neutralised rather than deleted — nothing writes the attribute its every
+rule is scoped under — and the deletion of the file itself waits on Marty as `T-235`.
+
+**What measuring found that remembering had not.** The checker had reported zero failures over three
+rounds, and the census showed why: it was scoring the wrong pairs. `--accent` appears in 189
+declarations and `--sheet` in 163, while several tokens the table did cover appear in none. Under
+that, one visual idea had shipped as 22 ratios — 22 rules each hand-mixing a state tint out of an
+ink and whatever paper the component sat on, the worst at 3.63 against a 4.5 floor. They became
+`--ok-soft`/`--warn-soft`/`--danger-soft` on `--asoft`'s formula, and the state inks were
+re-derived against the wash they are painted on rather than against bare paper (ADR-145) — which
+also caught `--t3`, barred by ADR-074 from carrying content, as the only label of a button, and
+`--alt` used as ink on `--sheet` at 1.06:1. Then the blind spot behind the census itself: a colour
+bound with `[style.background]` never enters a stylesheet at all. Two components hashed an identity
+into a six-colour array declared in their own `.ts` — the editor's channel list with a white ink
+failing on three of the six (worst 2.26), the admin user list with a cream one failing on all six,
+and one of the same fills shipped on the public blog's channel avatar at 2.92. The array became
+`--avatar-1…6` plus `--avatar-ink` behind one hasher, hue kept and luminance moved until white
+clears (ADR-146). Page roots and the server-rendered surfaces moved off the wall onto paper on the
+way, and the five Appearance accent presets were re-derived as day/night pairs.
+
+Stages 2 through 6 — primitives and the kit page, the shell, the three reference screens, the
+remaining pages by pattern, cleanup and ship — are `T-211`…`T-234` on the board, none started, plus
+`T-235`. Six decisions wait on Marty as `Q-19`…`Q-24`: whether `/stats` becomes a route again, the
+shape of the stats filters, one editor tool strip against the configurable two rows, where the theme
+and Appearance controls live in the new rail, responsive behaviour the design system does not
+specify at all, and whether the accent picker survives now that pine is meant to be the one colour
+that acts.
+
 ## 2026-08-19 — "do everything P1" (v0.12.2)
 
 Marty's one-line directive, plus five decisions answered in the same message: T-164 (PRGE trip)

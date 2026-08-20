@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-08-18
+last_verified: 2026-08-20
 source_of_truth_for: the only list of open tasks and questions (T-xxx, Q-xx)
 guard: none
 ---
@@ -60,6 +60,39 @@ Scope and rationale: `docs/product/INDIEDEV.md`, ADR-101…107. Build order: `do
 - [ ] T-167 Playtest feedback → tasks — the cheap version of the Codecks loop (theirs is a Unity SDK, expensive): a public feedback form on the project showcase (T-159), answers land as tasks in the tracker. Forms and the tracker exist — the bridge between them does not. QA/playtests is one of the four role gaps on the competitor-analysis role map #phase13 #growth P3
 - [ ] T-168 Composer: timecode comments on audio — all four competitors ignore the composer role (at most a task category or a waveform preview). Audio metadata already exists in assets (WAV: duration, sample rate); a player with timecode comments in a document makes Cedar Clerk the only tool with something for a composer. By demand of first users, not by plan #phase13 #assets P3
 - [ ] T-169 Research: IGDB autofill for projects — IndieViral autofills project creation from IGDB (name, cover, links) — zero friction. Check the API terms (IGDB belongs to Twitch/Amazon): keys, limits, SaaS-use permissibility — before scoping #research #phase13 P3
+
+## UI V2 — the Cedar Bench port (branch `UI_V2`)
+
+Plan and rationale: `docs/design/UI-V2-PLAN.md`, ADR-136…146. Stages 0 and 1 shipped — the checks,
+the palette and the retirement of the skin mechanism; status is in `docs/tasks/ROADMAP.md`. The rows
+below are Stages 2 through 6, in the order the plan builds them, plus the one deletion Stage 1 left
+open. Nothing here is started.
+
+- [ ] T-235 Delete the neutralised forest partial — `styles/_forest.scss` and its `@use` in `styles.scss`: 1 229 lines whose every rule is scoped under `data-skin`, an attribute nothing sets any more, so the file compiles into the bundle and matches nothing. A deletion that size is a `.claude/rules/destructive-operations.md` event — explain, stop, wait #tokens #cleanup #decision P2
+- [ ] T-211 Bench icons — add magnifying-glass, dots-three, chart-bar, flag, text-h and tree-evergreen to `tools/icon-map.json`, run `icons:generate` and icon-usage, commit both generated files. Only 13 of the design system's 36 names exist verbatim today, and a name absent from the map renders nothing, silently (ADR-142) #icons P1
+- [ ] T-212 Button component — `app/bench/forms/button.component.ts`, variants pine/paper/rail/danger, sizes md/sm #components P1
+- [ ] T-213 Input component — `app/bench/forms/input.component.ts` implementing `ControlValueAccessor`; the app binds `ngModel` (tag-picker), which a plain `input()` signal cannot serve #components P1
+- [ ] T-214 Display primitives — stamp-badge, leaf-tag, resin-drop, paper-card, task-tag, spec-row, brass-pin, brass-hook under `app/bench/` #components P2
+- [ ] T-215 Styleguide rewrite — replace the Buttons/Fields/Status sections of `pages/styleguide.component.*` with the bench kit and add a surface-class toggle; the two vocabularies must not both be on display #components P2
+- [ ] T-216 Chrome components — rail-header, hook-rail, shelf-panel, bench-drawer, ruler-bar, worktop, index-tabs under `app/bench/chrome` and `app/bench/worktop` #components P1
+- [ ] T-217 Bench shell — `app/bench/chrome/bench-shell.component.*` plus one parent route in `app.routes.ts` wrapping the authenticated children unchanged; login/register/terms/privacy stay outside it (ADR-139) #shell P1
+- [ ] T-218 Retire page-header — delete `shared/page-header.component.*` and its 12 call sites, and the editor topbar nav block in `editor.component.html` #shell P1
+- [ ] T-219 Chrome touch carve-out — scope the `@media (pointer: coarse)` 44px rule in `styles.scss` to paper so it cannot inflate rail, hooks, shelf headers, drawer lip and ruler; left global, the density contract is dead on the first touch device (ADR-138) #a11y P1
+- [ ] T-220 Drawer re-house — the debug console's content becomes the BenchDrawer body; `core/debug-log.service.ts` and the interceptor survive, `hostBarHeight` retires, `app.spec.ts` is updated. The ADR comes first — the spec asserts the current shape #shell #decision P2
+- [ ] T-221 Status bar to ruler — word/char/sync readouts move to the RulerBar; invisibles and fullscreen move to the editor tool strip; the console toggle disappears because the drawer lip is the toggle #shell P2
+- [ ] T-222 Stats screen port — one multi-series growth chart replacing four single-metric SVGs, sources as leaf-tag legend filters, the audience grid into a 320px right shelf. Needs Q-19 and Q-20 answered, and what the API does not have behind it — X/Bluesky snapshots, multi-source fetch, CSV export, event markers, period aggregates — is its own work #screens #decision P2
+- [ ] T-223 Hub screen port — `project.component` grid from 2 to 3 columns, module tiles re-cut from document types to modules, the right shelf keeping sprint and up-next. Engine and platforms, a dated milestone, per-project metrics, a project→channel link and an activity journal do not exist behind it #screens P2
+- [ ] T-224 Writer shell port — `editor.component` chrome, an inspector shelf replacing the horizontal meta strip, one 36px tool strip. Blocked on Q-21: the strip voids the user-ordered two rows of ADR-035 #screens #decision P2
+- [ ] T-225 Writer outline panel — a 224px structure shelf walking the TipTap document with two-way ProseMirror selection sync #screens P3
+- [ ] T-226 Port hub-like pages — projects, project-planner, project-builds onto Worktop plus ShelfPanel #screens P3
+- [ ] T-227 Port stats-like pages — project-assets, media-library, drafts, admin onto IndexTabs plus one panel plus an inspector shelf #screens P3
+- [ ] T-228 Port writer-like pages — posts-manager, glossary, and comments as a drawer tab rather than a screen of its own #screens P3
+- [ ] T-229 Task board pattern — project-tasks is a kanban and no kit covers it; it needs a fourth reference screen from Claude Design before it can be ported #screens #decision P3
+- [ ] T-230 Delete duplicated control CSS — `.btn-accent` (12 files), `.btn-ghost` (16), `.btn-danger` (2), `.icon-btn` (7), `.status-badge` (5), tab strips (8). Bulk deletion is a `.claude/rules/destructive-operations.md` event #cleanup P2
+- [ ] T-231 Retire count-badge — carry the hide-at-zero rule and the 99+ cap into IndexTabs, then delete `shared/count-badge.component.ts` #cleanup P3
+- [ ] T-232 Close the skin era in the docs — mark ADR-120 superseded by ADR-136 in `docs/DECISIONS.md` and check that no `--wk-*` or `data-skin` reference outlived the port #docs P3
+- [ ] T-233 Smoke suite repair — rebind the e2e selectors to the bench markup: 17 spec files bind to `.tiptap`, `.post-card`, `.export-trigger`, `.drafts-title`, `.theme-toggle`, `.btn-accent`, `.stat-card`, `.admin-tabs` and `app-page-header` #tests P1
+- [ ] T-234 Version and merge — bump `Consts.CurrentVersion` to 0.13.0, tag it, merge `UI_V2` into master and deploy; `cedar deploy` refuses anything but master with a clean tree #release P1
 
 ## Improvements
 
@@ -143,3 +176,9 @@ Scope and rationale: `docs/product/INDIEDEV.md`, ADR-101…107. Build order: `do
 | Q-9 | Old FI6 (account settings): sub-items 1/3/4/5 were lost when the old inbox was overwritten — needs re-specification |
 | Q-10 | T-036 (response country/IP): raw IPs are deliberately not stored (hash only). Start storing IP/geo for form responses? The privacy policy must reflect it. Precedent (ADR-097): view country comes from `CF-IPCountry` into a daily aggregate — geography without storing IPs. Not a full answer for T-036 (it needs a country per response, not a sum), but it removes the "showing a country requires storing IPs" premise |
 | Q-15 | Public media endpoint vs private posts (T-088). Meta networks require a publicly reachable HTTPS media URL; direct upload is unsupported. Conflicts with private posts, watermark and copy protection (ADR-063). Overlaps Q-8 |
+| Q-19 | UI V2: does `/stats` become a route again? All three bench reference screens give it a rail crumb, a hook and a ruler; N7 deliberately made it a tab body inside the Posts Manager. Blocks T-222 |
+| Q-20 | UI V2: stats sources as exclusive channel tabs or as the design system's multi-select legend filter — and five fixed periods or a 7–180-day slider? N9 and I8 were both explicit fixes; one of each pair loses. Blocks T-222 |
+| Q-21 | UI V2: the editor toolbar — one 36px strip, or the user-configurable two rows of `core/toolbar-layout.service.ts` with their Appearance panel? The kit has no room for group captions, and the strip voids ADR-035's row assignment. Blocks T-224 |
+| Q-22 | UI V2: the theme toggle and the Appearance button have no home in any bench rail — the `dots` menu is the only spot the design system defines. Confirm it, or the rail gains a control the system does not describe. Blocks T-216/T-217 |
+| Q-23 | UI V2: responsive is unspecified — the design system carries zero width breakpoints and all three reference screens are fixed 1440×900. Below what width do the shelf docks stop being columns, does the hook rail rotate or collapse, does the ruler survive? Until this is answered the shell is built at bench proportions for ≥1100px with the app's existing breakpoint ladder as the fallback, each fallback marked in its ADR as not specified by the design system. Overlaps T-034 |
+| Q-24 | UI V2: does the Appearance accent picker survive? Bench means pine to be the one colour that acts. The picker still ships, now on five vetted preset pairs — a day tone and a darker night one each (ADR-141/ADR-145) — instead of one mixed formula; keeping it means bench components lean on a colour the user chose. Dropping it makes pine a constant and deletes a settings block |

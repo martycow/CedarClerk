@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-08-18
+last_verified: 2026-08-20
 source_of_truth_for: карта владения, потоков и размещения документации
 guard: DocsFlowGraphTests
 ---
@@ -89,6 +89,8 @@ flowchart TB
 
     DECISIONS -->|"ADR-101…107<br/>решения модуля"| INDIE
     INDIE -->|"строки T-120…T-137"| BACKLOG
+    UIV2 ==>|"каждое решение —<br/>сперва ADR"| DECISIONS
+    UIV2 -->|"строки T-205…T-235"| BACKLOG
     INDIE --> DESKTOP
     DESIGN -->|"правила токенов; значения —<br/>из styles.scss перед запуском"| DPROMPT
     INDIE -->|"какие экраны нужны"| DPROMPT
