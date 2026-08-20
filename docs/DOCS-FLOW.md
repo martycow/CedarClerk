@@ -53,6 +53,7 @@ flowchart TB
         INDIE["docs/product/INDIEDEV.md<br/><b>скоуп модуля</b><br/>MUST / MIGHT, модель данных"]
         DESKTOP["docs/tech/DESKTOP.md<br/>устройство десктоп-сборки"]
         DPROMPT["docs/design/indiedev-design-prompt.md<br/>бриф для Claude Design"]
+        UIV2["docs/design/UI-V2-PLAN.md<br/>план переноса на Cedar Bench"]
     end
 
     CHANGELOG["CHANGELOG.md<br/><b>история сессий</b><br/>человекочитаемо, по датам"]
@@ -142,6 +143,7 @@ flowchart TB
 
 - **`docs/product/INDIEDEV.md`** — справочник по модулю: скоуп, модель данных, MUST/MIGHT. Читается **перед** реализацией любой строки `T-120…T-137`, ровно как `ARCHITECTURE.md` и `PRD.md` по правилу 2.
 - **`docs/tech/DESKTOP.md`** — устройство десктоп-сборки. Отдельный файл, а не раздел `ARCHITECTURE.md`, потому что описывает вторую среду исполнения со своими рисками; `ARCHITECTURE.md` ссылается на него.
+- **`docs/design/UI-V2-PLAN.md`** — план переноса фронтенда на дизайн-систему Cedar Bench. Живёт только на ветке `UI_V2`, источник истины на время порта; по мере выхода ADR каждое его решение переезжает в `docs/adr/`, и документ отмирает. Сама дизайн-система зеркалится из Claude Design в `.design-sync/ds-v2/` — вне `docs/`, потому что это выкачиваемый кэш, а не документ.
 - **`docs/design/indiedev-design-prompt.md`** — бриф для Claude Design. Односторонний потребитель: токены копируются в него из `DESIGN.md` дословно, обратно ничего не течёт. **Значит он протухает молча** — при изменении `styles.scss` сверять перед запуском.
 
 Правило «задача живёт ровно в одном месте» действует и здесь: MUST/MIGHT-списки в `INDIEDEV.md` — это *состав* модуля, а строки задач живут в `BACKLOG.md`. Список в `INDIEDEV.md` не вычёркивается по мере работы — статус ведёт `ROADMAP.md`.
