@@ -1,269 +1,11 @@
-/* Phase 13 / T-120 — the module's list screen. Every value here is a token: the handoff's rule is
-   that these screens are a continuation of Phase 11's system, not a second one. The page root
-   carries data-density="compact" (set in the template), which is what makes --dens-* resolve tight
-   here and comfortable on the project dashboard, from the same component styles. */
-.projects-page {
-    min-height: 100vh;
-    background: var(--surface);
-    color: var(--text);
-    font-family: var(--font-sans);
-    font-size: var(--dens-fs);
-}
-
 .hint {
     color: var(--t2);
     font-size: var(--dens-fs);
 }
 
-.spacer {
-    flex: 1;
-}
-
-.right {
-    text-align: right;
-}
-
-.projects-body {
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: var(--space-4) var(--space-5) var(--space-6);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-}
-
-/* flex-wrap for the same reason /drafts wraps: a title, a search field and a button are more than
-   a phone's width, and without it the row grows past the viewport instead of stacking (T-051). */
-.projects-toolbar {
-    display: flex;
-    align-items: flex-end;
-    gap: var(--dens-gap);
-    flex-wrap: wrap;
-}
-
-.projects-toolbar h1 {
-    margin: 0;
-    font-size: var(--fs-22);
-    font-weight: 700;
-    letter-spacing: -.02em;
-}
-
-.projects-sub {
-    font-size: var(--fs-meta);
-    color: var(--t2);
-    margin-top: 3px;
-}
-
-.search-input {
-    width: 240px;
-    box-sizing: border-box;
-    padding: var(--dens-control-y) var(--dens-control-x);
-    border: 1px solid var(--border);
-    border-radius: var(--dens-radius);
-    background: var(--sheet);
-    color: var(--text);
-    font: inherit;
-    font-size: var(--dens-fs);
-}
-
-.btn-accent {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    border: none;
-    background: var(--accent);
-    color: var(--sheet);
-    border-radius: var(--dens-radius);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    white-space: nowrap;
-}
-
-.btn-accent:hover:not(:disabled) {
-    filter: brightness(1.08);
-}
-
-.btn-accent:disabled {
-    opacity: .5;
-    cursor: default;
-}
-
-.btn-ghost {
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: var(--dens-radius);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.btn-ghost:hover {
-    color: var(--text);
-    border-color: var(--border-strong);
-}
-
-.filter-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2);
-}
-
-.filter-tabs button {
-    border: 1px solid var(--border);
-    background: var(--sheet);
-    color: var(--t2);
-    border-radius: 999px;
-    padding: var(--space-1) var(--dens-control-x);
-    font-size: var(--fs-meta);
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.filter-tabs button.active {
-    background: var(--asoft);
-    border-color: var(--abord);
-    color: var(--accent);
-    font-weight: 600;
-}
-
-.chip-count {
-    margin-left: var(--space-1);
-    opacity: .75;
-}
-
-/* ---------- Table ---------- */
-.projects-table {
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-    /* Not overflow:hidden — the fixed columns would simply be cut off on a narrow screen with no
-       way to reach them, which is the defect B24 recorded on /drafts. */
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-
-.projects-row {
-    display: grid;
-    grid-template-columns: 56px minmax(220px, 1fr) 80px 80px 80px 150px 110px;
-    gap: var(--dens-gap);
-    align-items: center;
-    padding: var(--dens-row-y) var(--dens-control-x);
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    min-width: 760px;
-}
-
-.projects-row:last-child {
-    border-bottom: none;
-}
-
-.projects-row:hover:not(.head-row) {
-    background: var(--hover);
-}
-
-.head-row {
-    background: var(--alt);
-    cursor: default;
-    font-size: var(--fs-10);
-    text-transform: uppercase;
-    letter-spacing: .07em;
-    color: var(--t2);
-    font-weight: 600;
-}
-
-/* Striped placeholder until a project has real cover art — the handoff's stand-in, and honest
-   about being one: it is visibly not a picture. */
-.cover {
-    width: 44px;
-    height: 30px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    background: repeating-linear-gradient(45deg, var(--alt), var(--alt) 4px, var(--surface) 4px, var(--surface) 8px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-
-.cover.has-image {
-    background: var(--alt);
-}
-
-.cover img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* --t3 carries no information (ADR-074): the initials repeat the name in the next column. */
-.cover-initials {
-    font-family: var(--font-mono);
-    font-size: var(--fs-10);
-    color: var(--t3);
-}
-
-.name-cell {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    min-width: 0;
-}
-
-.type-icon {
-    color: var(--t2);
-    flex: none;
-}
-
-.project-name {
-    font-size: var(--dens-fs);
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.project-name.dim {
-    color: var(--t2);
-}
-
-.activity,
-.projects-row .right {
-    font-size: var(--fs-meta);
-    color: var(--t2);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.head-row .right {
-    color: var(--t2);
-    font-size: var(--fs-10);
-}
-
-/* Not --t3: this dash stands for "not built yet", which is information. */
-.pending {
-    color: var(--t2);
-}
-
-.status-badge {
-    display: inline-block;
-    font-size: var(--fs-caption);
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: var(--radius-sm);
-    background: var(--alt);
-    color: var(--t2);
-}
-
-.status-badge.tone-accent {
-    background: var(--asoft);
-    color: var(--accent);
+.hint.pad,
+.load-error.pad {
+    padding: var(--space-4);
 }
 
 .load-error {
@@ -271,15 +13,150 @@
     font-size: var(--dens-fs);
 }
 
+.right {
+    text-align: right;
+}
+
+.index {
+    padding: var(--space-3);
+}
+
+/* ---------- The two columns ---------- */
+/* The kit's proportions, and no width breakpoint of its own (ADR-147). */
+.index-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--bench-dock-w);
+    gap: var(--space-3);
+    align-items: start;
+}
+
+.index-mid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+}
+
+/* ---------- The lit top ---------- */
+.hero-body {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    padding: var(--space-4) var(--space-5);
+}
+
+.hero-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--fs-27);
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+
+.hero-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-left: auto;
+}
+
+/* ---------- The list ---------- */
+.search {
+    width: 200px;
+}
+
+.rows {
+    display: flex;
+    flex-direction: column;
+    /* Not overflow: hidden — fixed columns would simply be cut off on a narrow screen with no way
+       to reach them, the defect B24 recorded on /drafts. */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: var(--space-8) minmax(220px, 1fr) 80px 80px 80px 150px 110px;
+    gap: var(--dens-gap);
+    align-items: center;
+    box-sizing: border-box;
+    min-width: 760px;
+    min-height: var(--hit-target);
+    padding: var(--dens-row-y) var(--space-3);
+    border-bottom: 1px solid var(--rule-ink-soft);
+    color: var(--text);
+    text-decoration: none;
+}
+
+.row:hover {
+    background: var(--hover);
+}
+
+.head-row {
+    min-height: 0;
+    padding-top: var(--space-1);
+    padding-bottom: var(--space-1);
+    font-family: var(--font-mono);
+    font-size: var(--fs-meta);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--t2);
+}
+
+/* The same wood-and-initials plate the hub's switcher uses. A cover is drawn when the project has
+   one, which no screen in the app can yet set (ADR-168 rule 8). */
+.thumb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-sizing: border-box;
+    width: var(--space-8);
+    height: var(--space-6);
+    border: 1px solid var(--wood-edge);
+    border-radius: var(--radius-paper);
+    background: linear-gradient(180deg, var(--wood-lo), var(--wood-edge));
+    color: var(--rail-ink);
+    font-family: var(--font-mono);
+    font-size: var(--fs-ui);
+}
+
+.thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.name {
+    min-width: 0;
+    font-size: var(--dens-fs);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.name.dim {
+    color: var(--t2);
+}
+
+.num,
+.when {
+    font-family: var(--font-mono);
+    font-size: var(--dens-fs);
+    color: var(--t2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .empty-state {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: var(--space-2);
-    padding: var(--space-6) var(--space-4);
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    padding: var(--space-7) var(--space-4);
     color: var(--t2);
     text-align: center;
 }
@@ -293,15 +170,6 @@
     font-size: var(--fs-body);
     font-weight: 600;
     color: var(--text);
-}
-
-.empty-state .btn-accent {
-    margin-top: var(--space-2);
-}
-
-.empty-filtered {
-    padding: var(--space-5);
-    text-align: center;
 }
 
 /* ---------- Create dialog ---------- */
@@ -362,13 +230,12 @@
 .type-row app-icon {
     color: var(--accent);
     flex: none;
-    margin-top: 1px;
 }
 
 .type-text {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: var(--space-1);
     min-width: 0;
 }
 
@@ -410,16 +277,43 @@
     font-size: var(--fs-body);
 }
 
-/* A phone cannot hold seven columns; the table scrolls inside its own container rather than
-   pushing the page sideways. Below iPad the counts go first — they are the least of what the row
-   says — and the name keeps the space. */
-@media (max-width: 900px) {
-    .projects-row {
-        grid-template-columns: 56px minmax(160px, 1fr) 80px 140px 110px;
-        min-width: 620px;
-    }
+.btn-accent {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    border: none;
+    background: var(--accent);
+    color: var(--sheet);
+    border-radius: var(--dens-radius);
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--dens-fs);
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+}
 
-    .projects-row > .pending {
-        display: none;
-    }
+.btn-accent:hover:not(:disabled) {
+    filter: brightness(1.08);
+}
+
+.btn-accent:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.btn-ghost {
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--t2);
+    border-radius: var(--dens-radius);
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--dens-fs);
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.btn-ghost:hover {
+    color: var(--text);
+    border-color: var(--border-strong);
 }

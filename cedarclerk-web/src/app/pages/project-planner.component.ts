@@ -1,14 +1,22 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { ProjectDetail, ProjectsService } from '../core/projects.service';
+import { RulerService } from '../core/ruler.service';
 import { Sprint, SprintsService, sprintProgress } from '../core/sprints.service';
 import { GameTask, TasksService, isOverdue } from '../core/tasks.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
+import { ButtonComponent } from '../bench/forms/button.component';
+import { PaperCardComponent } from '../bench/display/paper-card.component';
+import { StampBadgeComponent, StampTone } from '../bench/display/stamp-badge.component';
+import { TaskTagComponent } from '../bench/display/task-tag.component';
+import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
+import { SpecRowComponent } from '../bench/worktop/spec-row.component';
+import { WorktopComponent } from '../bench/worktop/worktop.component';
 
 /** A sprint plus the tasks planned into it — what one card on this screen draws. */
 interface SprintGroup {
@@ -16,30 +24,53 @@ interface SprintGroup {
     tasks: GameTask[];
 }
 
-// T-124 (ADR-106/111) — the development planner, from docs/design_handoff_indiedev_core_loop §8.
+/** Current is the one being worked, finished is done with, planned is neither. */
+const SPRINT_TONES: Record<Sprint['state'], StampTone> = {
+    current: 'pine',
+    planned: 'brass',
+    finished: 'ink',
+};
+
+const STATUS_TONES: Record<GameTask['status'], StampTone> = {
+    done: 'pine',
+    in_progress: 'brass',
+    planned: 'ink',
+    backlog: 'ink',
+};
+
+// T-124 (ADR-106/111) — the development planner, ported onto the bench by T-226 (ADR-168).
 //
 // Stacked cards rather than a timeline: the question this screen answers is "what is in this
-// stretch and what is left of it", which is a list per sprint, not a position on an axis.
+// stretch and what is left of it", which is a list per sprint, not a position on an axis. Each
+// stretch is a paper card lying on the worktop, and a task on it is the same luggage tag the hub
+// and the board hang — one object, one drawing of it.
 //
 // Order is current → planned → No sprint → finished, and finished sprints collapse. Nothing is
 // hidden by collapsing: an unfinished task in a sprint whose days ran out still appears, because
 // pretending work vanished with the date is the one thing this screen must not do.
 @Component({
     selector: 'app-project-planner',
-    imports: [IconComponent, ZonedDatePipe, FormsModule, RouterLink, ModalComponent],
+    imports: [
+        IconComponent, ZonedDatePipe, FormsModule, RouterLink, ModalComponent,
+        WorktopComponent, ShelfPanelComponent, SpecRowComponent, PaperCardComponent,
+        StampBadgeComponent, TaskTagComponent, ButtonComponent,
+    ],
     templateUrl: 'project-planner.component.html',
     styleUrls: ['project-planner.component.css'],
 })
-export class ProjectPlannerComponent {
+export class ProjectPlannerComponent implements OnDestroy {
     private api = inject(SprintsService);
     private tasksApi = inject(TasksService);
     private projects = inject(ProjectsService);
     private route = inject(ActivatedRoute);
     private router = inject(Router);
+    private ruler = inject(RulerService);
     t = inject(LocaleService).t;
 
     readonly overdue = isOverdue;
     readonly progress = sprintProgress;
+    readonly sprintTones = SPRINT_TONES;
+    readonly statusTones = STATUS_TONES;
 
     projectId = signal('');
     project = signal<ProjectDetail | null>(null);
@@ -60,6 +91,12 @@ export class ProjectPlannerComponent {
     draftEnds = signal('');
 
     openCount = computed(() => this.tasks().filter(t => t.status !== 'done').length);
+
+    /** The standing summary on the right: counts over what is already loaded (ADR-168 rule 5). */
+    currentSprint = computed(() => this.sprints().find(s => s.state === 'current') ?? null);
+    plannedCount = computed(() => this.sprints().filter(s => s.state === 'planned').length);
+    finishedCount = computed(() => this.sprints().filter(s => s.state === 'finished').length);
+    unplannedCount = computed(() => this.tasks().filter(t => !t.sprintId && t.status !== 'done').length);
 
     /**
      * The screen, in order. "No sprint" sits between what is planned and what has finished: it is
@@ -96,6 +133,20 @@ export class ProjectPlannerComponent {
             this.projectId.set(id);
             void this.load();
         });
+
+        effect(() => {
+            const project = this.project();
+            if (!project) return;
+            const t = this.t().projects;
+            this.ruler.publish({
+                label: project.name,
+                left: [{ text: t.planner.sub(this.sprints().length, this.openCount()) }],
+            });
+        });
+    }
+
+    ngOnDestroy(): void {
+        this.ruler.clear();
     }
 
     async load() {
@@ -138,8 +189,12 @@ export class ProjectPlannerComponent {
         });
     }
 
-    openTask(task: GameTask) {
-        void this.router.navigate(['/projects', this.projectId(), 'tasks'], { queryParams: { task: task.id } });
+    /** The date a tag prints. The overdue word stays beside it: rust ink alone carries no meaning
+        to a reader who cannot see it. */
+    dueLabel(task: GameTask, formatted: string): string {
+        const t = this.t().projects.tasks;
+        if (!task.dueAt) return t.noDueDate;
+        return isOverdue(task) ? `${formatted} · ${t.overdue}` : formatted;
     }
 
     // ---- creating and editing ---------------------------------------------
@@ -189,7 +244,9 @@ export class ProjectPlannerComponent {
     /** T-158 — assembles the devlog draft and opens it; the story gets written in the editor. */
     async createDevlog(sprint: Sprint) {
         const created = await this.run(() => this.api.createDevlog(sprint.id));
-        if (created) void this.router.navigate(['/editor'], { queryParams: { id: created.documentId } });
+        // `draft` and not `id`: it is the only query parameter the editor reads, and the other
+        // spelling silently opened whichever draft happened to be newest (ADR-168 rule 3).
+        if (created) void this.router.navigate(['/editor'], { queryParams: { draft: created.documentId } });
     }
 
     /** Reloads both lists: moving a sprint's dates can change every other sprint's state. */

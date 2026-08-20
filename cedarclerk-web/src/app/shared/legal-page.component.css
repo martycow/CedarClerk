@@ -1,140 +1,117 @@
+/* One sheet on the bench wall, no chrome (ADR-166). The longest continuous prose in the product,
+   so it is set in the reading serif at the writing sheet's own size. */
 :host {
     display: block;
     min-height: 100vh;
-    background: var(--surface);
+    background: var(--surface-page);
     font-family: var(--font-sans);
 }
 
-.legal-page {
+.door {
     position: relative;
     min-height: 100vh;
     display: flex;
     justify-content: center;
-    padding: 24px;
+    padding: var(--space-5);
     box-sizing: border-box;
 }
 
 .theme-toggle {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    border: none;
-    background: none;
-    border-radius: 8px;
-    color: var(--t2);
-    cursor: pointer;
-    font-size: var(--fs-15);
+    top: var(--space-3);
+    right: var(--space-3);
 }
 
-.theme-toggle:hover {
-    background: var(--hover-strong);
-}
-
-.legal-card {
+/* The attribute is on the card because the card is the paper: it declares the touch floor the
+   controls inside spend (ADR-156), and it is what tools/check-density.mjs measures. */
+.legal-card[data-surface="paper"] {
     width: 100%;
     max-width: 720px;
     box-sizing: border-box;
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    padding: 34px 40px 28px;
-    margin-top: 20px;
-}
+    margin-top: var(--space-5);
+    --paper-card-pad: var(--space-7) var(--space-8) var(--space-6);
 
-.legal-header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 20px;
-    text-align: center;
-}
-
-.legal-title {
-    font-size: var(--fs-22);
-    font-weight: 700;
-    letter-spacing: -.01em;
-    color: var(--text);
-}
-
-.legal-updated {
-    font-size: var(--fs-meta);
-    color: var(--t2);
-}
-
-.legal-body {
-    color: var(--text);
-    font-size: var(--fs-body);
-    line-height: 1.65;
-}
-
-.legal-body ::ng-deep h2 {
-    font-size: var(--fs-16);
-    font-weight: 700;
-    margin: 26px 0 8px;
-}
-
-.legal-body ::ng-deep h2:first-child {
-    margin-top: 0;
-}
-
-.legal-body ::ng-deep p {
-    margin: 0 0 12px;
-}
-
-.legal-body ::ng-deep ul {
-    margin: 0 0 12px;
-    padding-left: 22px;
-}
-
-.legal-body ::ng-deep li {
-    margin: 0 0 4px;
-}
-
-.legal-body ::ng-deep .placeholder {
-    background: var(--asoft);
-    border: 1px dashed var(--abord);
-    border-radius: 4px;
-    padding: 0 4px;
-    color: var(--accent);
-    font-weight: 600;
-}
-
-.legal-body ::ng-deep .draft-notice {
-    background: var(--asoft);
-    border: 1px solid var(--abord);
-    border-radius: 10px;
-    padding: 12px 16px;
-    margin: 0 0 20px;
-    font-size: var(--fs-ui);
-    color: var(--t2);
-}
-
-.legal-footer {
-    text-align: center;
-    font-size: var(--fs-ui);
-    color: var(--t2);
-    margin-top: 24px;
-}
-
-.legal-footer a {
-    color: var(--accent);
-    text-decoration: none;
-    font-weight: 500;
-}
-
-.legal-footer a:hover {
-    text-decoration: underline;
-}
-
-@media (max-width: 480px) {
-    .legal-card {
-        padding: 26px 20px;
+    .legal-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-2);
+        margin-bottom: var(--space-5);
+        text-align: center;
     }
+
+    .legal-title {
+        font-family: var(--font-display);
+        font-size: var(--fs-22);
+        font-weight: 700;
+        letter-spacing: -.01em;
+        color: var(--text);
+    }
+
+    .legal-updated {
+        font-size: var(--fs-ui);
+        color: var(--t2);
+    }
+
+    .legal-body {
+        color: var(--text);
+        font-family: var(--font-serif);
+        font-size: var(--fs-read);
+        line-height: var(--lh-read);
+    }
+
+    /* The prose is projected from terms.component.html and privacy.component.html, which carry no
+       stylesheet of their own — this is the only scope that can reach it. */
+    .legal-body ::ng-deep h2 {
+        font-family: var(--font-display);
+        font-size: var(--fs-19);
+        font-weight: 700;
+        margin: var(--space-5) 0 var(--space-2);
+    }
+
+    .legal-body ::ng-deep h2:first-child { margin-top: 0; }
+
+    .legal-body ::ng-deep p { margin: 0 0 var(--space-3); }
+
+    .legal-body ::ng-deep ul {
+        margin: 0 0 var(--space-3);
+        padding-left: var(--space-5);
+    }
+
+    .legal-body ::ng-deep li { margin: 0 0 var(--space-1); }
+
+    .legal-body ::ng-deep .placeholder {
+        border: 1px dashed var(--abord);
+        border-radius: var(--radius-stamp);
+        padding: 0 var(--space-1);
+        background: var(--asoft);
+        color: var(--accent);
+        font-weight: 700;
+    }
+
+    .legal-body ::ng-deep .draft-notice {
+        margin: 0 0 var(--space-5);
+        padding: var(--space-3) var(--space-4);
+        border: 1px solid var(--abord);
+        border-radius: var(--radius-paper);
+        background: var(--asoft);
+        color: var(--t2);
+        font-family: var(--font-sans);
+        font-size: var(--fs-ui);
+    }
+
+    .legal-footer {
+        margin-top: var(--space-5);
+        text-align: center;
+        font-size: var(--fs-ui);
+        color: var(--t2);
+    }
+
+    .legal-footer a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 700;
+    }
+
+    .legal-footer a:hover { text-decoration: underline; }
 }

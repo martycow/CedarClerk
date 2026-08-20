@@ -19,6 +19,10 @@ import { ModalComponent } from '../shared/modal.component';
 import { PopoverComponent } from '../shared/popover.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import { IconComponent } from '../shared/icon.component';
+import { ButtonComponent } from '../bench/forms/button.component';
+import { InputComponent } from '../bench/forms/input.component';
+import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
+import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 
 type FilterKey = 'all' | 'draft' | 'scheduled' | 'published' | 'attention' | 'archived' | 'template';
 export type SortKey = 'title' | 'state' | 'languages' | 'folder' | 'tags' | 'activity' | 'updated' | 'created';
@@ -121,7 +125,11 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
 
 @Component({
     selector: 'app-drafts',
-    imports: [IconComponent, ZonedDatePipe, FormsModule, ModalComponent, PopoverComponent, FolderPickerComponent, TagPickerComponent],
+    imports: [
+        IconComponent, ZonedDatePipe, FormsModule, ModalComponent, PopoverComponent,
+        FolderPickerComponent, TagPickerComponent, IndexTabsComponent, ShelfPanelComponent,
+        InputComponent, ButtonComponent,
+    ],
     templateUrl: 'drafts.component.html',
     styleUrls: ['drafts.component.css'],
 })
@@ -204,6 +212,27 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
 
     filterCount(key: FilterKey): number {
         return this.drafts().filter(d => matchesFilter(d, key)).length;
+    }
+
+    readonly filterKeys: FilterKey[] = ['all', 'draft', 'scheduled', 'published', 'attention', 'archived', 'template'];
+
+    stateTabs(): IndexTabItem[] {
+        const labels = this.t().drafts.filters;
+        return this.filterKeys.map(key => ({ id: key, label: labels[key], badge: this.filterCount(key) }));
+    }
+
+    viewTabs(): IndexTabItem[] {
+        const labels = this.t().drafts;
+        return [
+            { id: 'table', label: labels.viewTable },
+            { id: 'grid', label: labels.viewGrid },
+            { id: 'tree', label: labels.tree.view },
+        ];
+    }
+
+    /** The shelf's "No folder" tally. The server counts folders, not the absence of one. */
+    unfiledCount(): number {
+        return this.drafts().filter(d => d.folderId === null).length;
     }
 
     filteredDrafts(): DraftMeta[] {
@@ -307,13 +336,6 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     folderName(id: string | null): string {
         if (id === null) return this.t().drafts.folders.none;
         return this.folders().find(f => f.id === id)?.name ?? this.t().drafts.folders.none;
-    }
-
-    selectedFolderLabel(): string {
-        const f = this.selectedFolder();
-        if (f === 'all') return this.t().drafts.folders.all;
-        if (f === 'none') return this.t().drafts.folders.none;
-        return this.folderName(f);
     }
 
     async assignFolder(d: DraftMeta, folderId: string | null) {

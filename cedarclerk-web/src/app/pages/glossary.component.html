@@ -1,125 +1,173 @@
-<div class="glossary-page">
-    <div class="glossary-body">
-        <p class="hint-bubble">
-            <app-icon name="info" size="sm"></app-icon>{{ t().glossary.intro }}
-        </p>
+<div class="glossary">
+    @if (error()) { <p class="channel-error">{{ error() }}</p> }
 
-        @if (error()) { <p class="channel-error">{{ error() }}</p> }
-
-        <!--Terms are listed per language because that is how they are matched: an English post
-        is scanned against the English terms only.-->
-        <!--T-125 — the scope row. A project's view deliberately includes the global terms: that
-        is the set its documents actually render with, so the screen shows what the reader gets.-->
-        @if (projects().length) {
-        <div class="scope-row">
-            <button class="chip" [class.on]="scopeFilter() === null" (click)="scopeFilter.set(null)">
-                {{ t().glossary.scopeAll }} <span class="chip-count">{{ scopeCount(null) }}</span>
-            </button>
-            <button class="chip" [class.on]="scopeFilter() === ''" (click)="scopeFilter.set('')">
-                {{ t().glossary.scopeGlobal }} <span class="chip-count">{{ scopeCount('') }}</span>
-            </button>
-            @for (p of projects(); track p.id) {
-            <button class="chip" [class.on]="scopeFilter() === p.id" (click)="scopeFilter.set(p.id)" [title]="p.name">
-                {{ p.name }} <span class="chip-count">{{ scopeCount(p.id) }}</span>
-            </button>
-            }
-        </div>
-        <p class="hint scope-hint">
-            @if (newTermScope(); as id) {
-                {{ t().glossary.scopeNewIn(projectName(id)) }}
-            } @else {
-                {{ t().glossary.scopeNewGlobal }}
-            }
-        </p>
+    <!--Index tiles on the top edge of the sheet: terms are listed per language because that is how
+    they are matched — an English post is scanned against the English terms only. Translate-all
+    stands beside them because it acts on the language they select (ADR-167 clause 7).-->
+    <div class="gl-index">
+        <app-index-tabs [items]="languageTabs()" [value]="languageFilter()"
+                        [label]="t().glossary.langStrip" (selected)="languageFilter.set($event)" />
+        <span class="spacer"></span>
+        @if (countFor(languageFilter())) {
+        <app-button variant="paper" size="sm" (clicked)="openTranslateAll()">
+            <app-icon name="translate" size="sm"></app-icon> {{ t().glossary.translateAll }}
+        </app-button>
         }
+    </div>
 
-        <div class="lang-tabs">
-            @for (l of contentLanguages; track l) {
-            <button [class.on]="languageFilter() === l" (click)="languageFilter.set(l)">
-                {{ l.toUpperCase() }}
-                @if (countFor(l)) { <span class="lang-count">{{ countFor(l) }}</span> }
-            </button>
-            }
-            <span class="spacer"></span>
-            @if (countFor(languageFilter())) {
-            <button class="btn-ghost" (click)="openTranslateAll()">
-                <app-icon name="translate" size="sm"></app-icon> {{ t().glossary.translateAll }}
-            </button>
-            }
-            <button class="btn-accent" (click)="startNew()">
-                <app-icon name="plus" size="sm"></app-icon> {{ t().glossary.newTerm }}
-            </button>
-        </div>
+    <div class="gl-grid">
+        <app-worktop class="sheet" scroll [label]="worktopLabel()" [meta]="worktopMeta()">
+            <div class="sheet-column">
+                <p class="hint-bubble">
+                    <app-icon name="info" size="sm"></app-icon>{{ t().glossary.intro }}
+                </p>
 
-        @if (loading()) {
-        <p class="hint">{{ t().common.loading }}</p>
-        } @else {
-
-        <!--One form, rendered in two places (Marty, 01.08.2026): at the top when creating, and
-        INSIDE the list in place of the card being edited. It used to live only at the top, so
-        editing the last term of a long glossary meant scrolling up to fields that had no visible
-        connection to the row they belonged to.-->
-        <!--One form, rendered in two places (Marty, 01.08.2026): at the top when creating, and
-        INSIDE the list in place of the card being edited. It used to live only at the top, so
-        editing the last term of a long glossary meant scrolling up to fields that had no visible
-        connection to the row they belonged to. The fields themselves are the shared
-        app-glossary-term-form, which the editor's create-from-selection modal uses too.-->
-        <ng-template #termForm>
-            <div class="term-form">
-                <app-glossary-term-form #form
-                    [initialTerm]="editTerm" [initialDescription]="editDescription"
-                    [initialAliases]="editAliases" [initialImageUrl]="editImageUrl()"
-                    [initialLanguage]="editLanguage()" [initialCaseSensitive]="editCaseSensitive()">
-                </app-glossary-term-form>
-                <div class="form-actions">
-                    <button class="btn-ghost" (click)="cancelEdit()">{{ t().common.cancel }}</button>
-                    <button class="btn-accent" (click)="save(form.value())" [disabled]="busy() || !form.canSave()">
-                        @if (busy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                        {{ t().common.save }}
-                    </button>
+                <!--T-125 — the scope strip. A project's view deliberately includes the global terms:
+                that is the set its documents actually render with, so the screen shows what the
+                reader gets. The leaf that is lit also decides where a new term goes, which the hint
+                under it says out loud — a filter that silently sets a property would be a trap.-->
+                @if (projects().length) {
+                <div class="scope-strip" role="group" [attr.aria-label]="t().glossary.scopeStrip">
+                    <app-leaf-tag interactive [state]="scopeFilter() === null ? 'active' : 'idle'"
+                                  (activated)="scopeFilter.set(null)">
+                        {{ t().glossary.scopeAll }}<span class="leaf-note">{{ scopeCount(null) }}</span>
+                    </app-leaf-tag>
+                    <app-leaf-tag interactive [state]="scopeFilter() === '' ? 'active' : 'idle'"
+                                  (activated)="scopeFilter.set('')">
+                        {{ t().glossary.scopeGlobal }}<span class="leaf-note">{{ scopeCount('') }}</span>
+                    </app-leaf-tag>
+                    @for (p of projects(); track p.id) {
+                    <app-leaf-tag interactive [state]="scopeFilter() === p.id ? 'active' : 'idle'"
+                                  [hint]="p.name" (activated)="scopeFilter.set(p.id)">
+                        {{ p.name }}<span class="leaf-note">{{ scopeCount(p.id) }}</span>
+                    </app-leaf-tag>
+                    }
                 </div>
-            </div>
-        </ng-template>
-
-        @if (editing() && !selectedId()) {
-        <ng-container *ngTemplateOutlet="termForm"></ng-container>
-        }
-
-        <div class="term-list">
-            @for (term of visibleTerms(); track term.id) {
-            @if (editing() && selectedId() === term.id) {
-            <ng-container *ngTemplateOutlet="termForm"></ng-container>
-            } @else {
-            <div class="term-card" [class.on]="previewId() === term.id" (click)="openPreview(term)">
-                @if (term.projectId) {
-                <span class="scope-badge">{{ projectName(term.projectId) }}</span>
+                <p class="hint scope-hint">
+                    @if (newTermScope(); as id) {
+                        {{ t().glossary.scopeNewIn(projectName(id)) }}
+                    } @else {
+                        {{ t().glossary.scopeNewGlobal }}
+                    }
+                </p>
                 }
-                @if (term.imageUrl) { <img class="term-thumb" [src]="term.imageUrl" alt=""> }
-                <div class="term-body">
-                    <div class="term-head">
-                        <span class="term-name">{{ term.term }}</span>
-                        @if (term.isCaseSensitive) { <span class="term-flag" [title]="t().glossary.caseSensitiveHint">Aa</span> }
-                        @for (a of aliasList(term); track a) { <span class="term-alias">{{ a }}</span> }
-                        <span class="spacer"></span>
-                        <button class="mini" (click)="startEdit(term); $event.stopPropagation()" [title]="t().common.edit" [attr.aria-label]="t().common.edit">
-                            <app-icon name="pencil-simple" size="sm"></app-icon>
-                        </button>
-                        <button class="mini" (click)="openTranslate(term); $event.stopPropagation()" [title]="t().glossary.translate" [attr.aria-label]="t().glossary.translate">
-                            <app-icon name="translate" size="sm"></app-icon>
-                        </button>
-                        <button class="mini-remove" (click)="deleteConfirmId.set(term.id); $event.stopPropagation()" [title]="t().common.delete" [attr.aria-label]="t().common.delete">
-                            <app-icon name="trash" size="sm"></app-icon>
-                        </button>
+
+                @if (loading()) {
+                <p class="hint">{{ t().common.loading }}</p>
+                } @else {
+
+                <!--One form, rendered in two places (Marty, 01.08.2026): at the top when creating,
+                and INSIDE the list in place of the card being edited. It used to live only at the
+                top, so editing the last term of a long glossary meant scrolling up to fields that
+                had no visible connection to the row they belonged to. The fields themselves are the
+                shared app-glossary-term-form, which the editor's create-from-selection modal uses
+                too.-->
+                <ng-template #termForm>
+                    <div class="term-form">
+                        <app-glossary-term-form #form
+                            [initialTerm]="editTerm" [initialDescription]="editDescription"
+                            [initialAliases]="editAliases" [initialImageUrl]="editImageUrl()"
+                            [initialLanguage]="editLanguage()" [initialCaseSensitive]="editCaseSensitive()">
+                        </app-glossary-term-form>
+                        <div class="form-actions">
+                            <app-button variant="paper" size="sm" (clicked)="cancelEdit()">{{ t().common.cancel }}</app-button>
+                            <app-button variant="pine" size="sm" [disabled]="busy() || !form.canSave()"
+                                        (clicked)="save(form.value())">
+                                @if (busy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                                {{ t().common.save }}
+                            </app-button>
+                        </div>
                     </div>
-                    <p class="term-desc">{{ term.description }}</p>
+                </ng-template>
+
+                @if (editing() && !selectedId()) {
+                <ng-container *ngTemplateOutlet="termForm"></ng-container>
+                }
+
+                <div class="term-list">
+                    @for (term of visibleTerms(); track term.id) {
+                    @if (editing() && selectedId() === term.id) {
+                    <ng-container *ngTemplateOutlet="termForm"></ng-container>
+                    } @else {
+                    <div class="term-card" [class.on]="previewId() === term.id" (click)="openPreview(term)">
+                        @if (term.projectId) {
+                        <span class="scope-badge">{{ projectName(term.projectId) }}</span>
+                        }
+                        @if (term.imageUrl) { <img class="term-thumb" [src]="term.imageUrl" alt=""> }
+                        <div class="term-body">
+                            <div class="term-head">
+                                <span class="term-name">{{ term.term }}</span>
+                                @if (term.isCaseSensitive) { <span class="term-flag" [title]="t().glossary.caseSensitiveHint">Aa</span> }
+                                @for (a of aliasList(term); track a) { <span class="term-alias">{{ a }}</span> }
+                                <span class="spacer"></span>
+                                <button class="mini" (click)="startEdit(term); $event.stopPropagation()" [title]="t().common.edit" [attr.aria-label]="t().common.edit">
+                                    <app-icon name="pencil-simple" size="sm"></app-icon>
+                                </button>
+                                <button class="mini" (click)="openTranslate(term); $event.stopPropagation()" [title]="t().glossary.translate" [attr.aria-label]="t().glossary.translate">
+                                    <app-icon name="translate" size="sm"></app-icon>
+                                </button>
+                                <button class="mini-remove" (click)="deleteConfirmId.set(term.id); $event.stopPropagation()" [title]="t().common.delete" [attr.aria-label]="t().common.delete">
+                                    <app-icon name="trash" size="sm"></app-icon>
+                                </button>
+                            </div>
+                            <p class="term-desc">{{ term.description }}</p>
+                        </div>
+                    </div>
+                    }
+                    } @empty {
+                    <p class="hint">{{ t().glossary.empty }}</p>
+                    }
                 </div>
+                }
             </div>
+        </app-worktop>
+
+        <!--The shelf describes what is picked on the sheet, and the glossary itself when nothing is
+        (ADR-167 clause 8). The preview is the blog's own tooltip — heading, description, optional
+        image, in that order — which is why it is reading matter on the sheet of the shelf rather
+        than a spec row. The commands stay on the row they act on.-->
+        <app-shelf-panel class="inspector" [title]="inspectorTitle()" [count]="inspectorScopeWord()">
+            @if (inspectorScope() === 'selection') {
+                @if (previewTerm(); as term) {
+                @if (previewGroup().length > 1) {
+                <div class="preview-langs">
+                    @for (g of previewGroup(); track g.id) {
+                    <app-leaf-tag interactive [state]="previewLanguage() === (g.language || primaryLanguage) ? 'active' : 'idle'"
+                                  (activated)="previewLanguage.set(g.language || primaryLanguage)">
+                        {{ (g.language || primaryLanguage).toUpperCase() }}
+                    </app-leaf-tag>
+                    }
+                </div>
+                } @else {
+                <p class="insp-note">{{ t().glossary.previewOnlyLanguage }}</p>
+                }
+
+                <div class="glossary-preview-tip">
+                    <span class="glossary-preview-term">{{ term.term }}</span>
+                    <p class="glossary-preview-desc">{{ term.description }}</p>
+                    @if (term.imageUrl) { <img class="glossary-preview-img" [src]="term.imageUrl" alt=""> }
+                </div>
+
+                <app-spec-row scope="selection" [label]="t().glossary.inspector.language"
+                              [value]="(term.language || primaryLanguage).toUpperCase() + ' · ' + endonymOf(term.language || primaryLanguage)"></app-spec-row>
+                <app-spec-row scope="selection" [label]="t().glossary.inspector.scope"
+                              [value]="term.projectId ? projectName(term.projectId) : t().glossary.scopeGlobal"></app-spec-row>
+                <app-spec-row scope="selection" [label]="t().glossary.inspector.matching"
+                              [value]="term.isCaseSensitive ? t().glossary.inspector.exact : t().glossary.inspector.anyCase"></app-spec-row>
+                <app-spec-row scope="selection" [label]="t().glossary.inspector.aliases"
+                              [value]="aliasList(term).join(', ') || t().glossary.inspector.none"></app-spec-row>
+                }
+            } @else {
+                <p class="insp-note">{{ t().glossary.inspector.pick }}</p>
+                <app-spec-row scope="document" [label]="t().glossary.inspector.inLanguage"
+                              [value]="countFor(languageFilter()) + ' · ' + languageFilter().toUpperCase()"></app-spec-row>
+                <app-spec-row scope="document" [label]="t().glossary.inspector.total" value="{{ terms().length }}"></app-spec-row>
+                <app-spec-row scope="document" [label]="t().glossary.inspector.languages" [value]="usedLanguages().join(' ')"></app-spec-row>
+                @if (projects().length) {
+                <app-spec-row scope="document" [label]="t().glossary.inspector.projects" value="{{ projectsWithTerms() }}"></app-spec-row>
+                }
             }
-            } @empty {
-            <p class="hint">{{ t().glossary.empty }}</p>
-            }
-        </div>
-        }
+        </app-shelf-panel>
     </div>
 
     @if (translateFor(); as term) {
@@ -138,12 +186,12 @@
             }
         </div>
         @if (translateError()) { <p class="channel-error">{{ translateError() }}</p> }
-        <button modal-actions class="btn-ghost" (click)="closeTranslate()"
-                [disabled]="translatingLang() !== null">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="runTranslate()" [disabled]="!canTranslate()">
+        <app-button modal-actions variant="paper" (clicked)="closeTranslate()"
+                    [disabled]="translatingLang() !== null">{{ t().common.cancel }}</app-button>
+        <app-button modal-actions variant="pine" (clicked)="runTranslate()" [disabled]="!canTranslate()">
             @if (translatingLang()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
             {{ t().glossary.translateRun }}
-        </button>
+        </app-button>
     </app-modal>
     }
 
@@ -163,42 +211,12 @@
             }
         </div>
         @if (translateError()) { <p class="channel-error">{{ translateError() }}</p> }
-        <button modal-actions class="btn-ghost" (click)="closeTranslateAll()"
-                [disabled]="translatingLang() !== null">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="runTranslateAll()" [disabled]="!canTranslate()">
+        <app-button modal-actions variant="paper" (clicked)="closeTranslateAll()"
+                    [disabled]="translatingLang() !== null">{{ t().common.cancel }}</app-button>
+        <app-button modal-actions variant="pine" (clicked)="runTranslateAll()" [disabled]="!canTranslate()">
             @if (translatingLang()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
             {{ t().glossary.translateRun }}
-        </button>
-    </app-modal>
-    }
-
-    <!--Preview: the tooltip exactly as a reader meets it on the blog, with the translation group's
-    languages as a switcher. Reading, not editing — so it opens on a click anywhere on the card.-->
-    @if (previewTerm(); as term) {
-    <app-modal (closed)="closePreview()" [width]="420">
-        <app-icon modal-icon name="book-bookmark" size="sm"></app-icon>
-        <span modal-title>{{ t().glossary.previewTitle }}</span>
-
-        @if (previewGroup().length > 1) {
-        <div class="preview-langs">
-            @for (g of previewGroup(); track g.id) {
-            <button [class.on]="previewLanguage() === (g.language || 'ru')"
-                    (click)="previewLanguage.set(g.language || 'ru')">{{ (g.language || 'ru').toUpperCase() }}</button>
-            }
-        </div>
-        } @else {
-        <p class="field-hint-inline">{{ t().glossary.previewOnlyLanguage }}</p>
-        }
-
-        <!--Same three parts, same order as the blog's tooltip: heading, description, optional image.-->
-        <div class="glossary-preview-tip">
-            <span class="glossary-preview-term">{{ term.term }}</span>
-            <p class="glossary-preview-desc">{{ term.description }}</p>
-            @if (term.imageUrl) { <img class="glossary-preview-img" [src]="term.imageUrl" alt=""> }
-        </div>
-
-        <button modal-actions class="btn-ghost" (click)="closePreview()">{{ t().common.close }}</button>
-        <button modal-actions class="btn-accent" (click)="startEdit(term); closePreview()">{{ t().common.edit }}</button>
+        </app-button>
     </app-modal>
     }
 
@@ -207,8 +225,8 @@
         <app-icon modal-icon name="trash" size="sm"></app-icon>
         <span modal-title>{{ t().glossary.deleteTitle(term.term) }}</span>
         <p>{{ t().glossary.deleteBody }}</p>
-        <button modal-actions class="btn-ghost" (click)="deleteConfirmId.set(null)">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="confirmDelete()">{{ t().common.delete }}</button>
+        <app-button modal-actions variant="paper" (clicked)="deleteConfirmId.set(null)">{{ t().common.cancel }}</app-button>
+        <app-button modal-actions variant="danger" (clicked)="confirmDelete()">{{ t().common.delete }}</app-button>
     </app-modal>
     }
 </div>

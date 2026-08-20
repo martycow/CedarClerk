@@ -1,6 +1,6 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { LocaleService } from '../core/i18n/locale.service';
 import {
@@ -12,34 +12,49 @@ import {
     projectInitials,
 } from '../core/projects.service';
 import { httpErrorMessage } from '../core/http-error.util';
+import { RulerService } from '../core/ruler.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
+import { ButtonComponent } from '../bench/forms/button.component';
+import { InputComponent } from '../bench/forms/input.component';
+import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
+import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
+import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
+import { SpecRowComponent } from '../bench/worktop/spec-row.component';
+import { WorktopComponent } from '../bench/worktop/worktop.component';
 
 type Filter = 'all' | 'active' | 'archived';
 
-// Phase 13 / T-120 — the module's list screen, built from
-// docs/design_handoff_indiedev_core_loop (chosen variant: table rows, not a card grid).
+// T-226 (ADR-168) — the project index: where a project is found, made and compared. The hub's left
+// dock absorbed the *switch* between projects, not this list, so nothing here moved onto it and
+// nothing from it moved here: the dock takes no search and no create, and this screen draws no
+// current-project mark.
 //
-// Anatomy is deliberately the same as /drafts: toolbar → filter chips → table, compact density.
-// Two screens that list things should not feel like two products, and the handoff says so.
+// A table you scan, so it keeps data-density="compact" (ADR-164 rule 6) — the hub, a screen you
+// read, carries none.
 @Component({
     selector: 'app-projects',
-    imports: [IconComponent, ZonedDatePipe, FormsModule, ModalComponent],
+    imports: [
+        IconComponent, ZonedDatePipe, FormsModule, RouterLink, ModalComponent,
+        WorktopComponent, ShelfPanelComponent, IndexTabsComponent, SpecRowComponent,
+        ButtonComponent, InputComponent, StampBadgeComponent,
+    ],
     templateUrl: 'projects.component.html',
     styleUrls: ['projects.component.css'],
 })
-export class ProjectsComponent {
+export class ProjectsComponent implements OnDestroy {
     private api = inject(ProjectsService);
     private router = inject(Router);
     private locale = inject(LocaleService);
+    private ruler = inject(RulerService);
     t = this.locale.t;
 
     readonly projectTypes = PROJECT_TYPES;
     readonly typeIcons = PROJECT_TYPE_ICONS;
     readonly initials = projectInitials;
 
-    // Archived projects are always fetched: the filter chips carry counts, and a count you cannot
-    // show until the user clicks the chip is not a count.
+    // Archived projects are always fetched: the filter tiles carry counts, and a count you cannot
+    // show until the user clicks the tile is not a count.
     projects = signal<ProjectSummary[]>([]);
     loading = signal(true);
     loadError = signal<string | null>(null);
@@ -55,6 +70,25 @@ export class ProjectsComponent {
     activeCount = computed(() => this.projects().filter(p => !p.archivedAt).length);
     archivedCount = computed(() => this.projects().filter(p => p.archivedAt).length);
 
+    /** Sums over the rows already fetched — nothing here is asked for separately (ADR-168 rule 5). */
+    totals = computed(() => {
+        const list = this.projects();
+        return {
+            documents: list.reduce((n, p) => n + p.documentCount, 0),
+            tasks: list.reduce((n, p) => n + p.openTaskCount, 0),
+            assets: list.reduce((n, p) => n + p.assetCount, 0),
+        };
+    });
+
+    filterTabs = computed<IndexTabItem[]>(() => {
+        const t = this.t().projects;
+        return [
+            { id: 'all', label: t.filterAll, badge: this.projects().length },
+            { id: 'active', label: t.filterActive, badge: this.activeCount() },
+            { id: 'archived', label: t.filterArchived, badge: this.archivedCount() },
+        ];
+    });
+
     visible = computed(() => {
         const needle = this.search().trim().toLowerCase();
         const filter = this.filter();
@@ -67,6 +101,18 @@ export class ProjectsComponent {
 
     constructor() {
         void this.load();
+
+        effect(() => {
+            const t = this.t().projects;
+            this.ruler.publish({
+                label: t.title,
+                left: [{ text: t.sub(this.projects().length, this.activeCount()) }],
+            });
+        });
+    }
+
+    ngOnDestroy(): void {
+        this.ruler.clear();
     }
 
     async load() {
@@ -81,8 +127,8 @@ export class ProjectsComponent {
         }
     }
 
-    open(project: ProjectSummary) {
-        void this.router.navigate(['/projects', project.id]);
+    pickFilter(id: string) {
+        this.filter.set(id as Filter);
     }
 
     startCreate() {

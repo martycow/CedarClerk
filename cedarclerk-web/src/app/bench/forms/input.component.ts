@@ -1,4 +1,4 @@
-import { Component, computed, effect, forwardRef, input, output, signal } from '@angular/core';
+import { booleanAttribute, Component, computed, effect, forwardRef, input, output, signal } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 export type BenchInputType = 'text' | 'email' | 'password' | 'search' | 'number' | 'date' | 'url' | 'tel';
@@ -83,10 +83,10 @@ export class InputComponent implements ControlValueAccessor {
     placeholder = input('');
     type = input<BenchInputType>('text');
     /** Long-form field (a draft title) — switches to the reading serif. */
-    serif = input(false);
+    serif = input(false, { transform: booleanAttribute });
     /** Chrome density: mono, 11px, for an inspector row inside a ShelfPanel only. */
-    dense = input(false);
-    disabled = input(false);
+    dense = input(false, { transform: booleanAttribute });
+    disabled = input(false, { transform: booleanAttribute });
     inputId = input('');
     value = input<string | number | null | undefined>(undefined);
     valueChange = output<string | number | null>();

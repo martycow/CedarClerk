@@ -1,18 +1,12 @@
-<div class="auth-page">
-    <span class="wk-decor wk-band" aria-hidden="true"></span>
-    <span class="wk-decor wk-haze" aria-hidden="true"></span>
-    <span class="wk-decor wk-firefly wk-firefly-1" aria-hidden="true"></span>
-    <span class="wk-decor wk-firefly wk-firefly-2" aria-hidden="true"></span>
-
-    <button class="theme-toggle" (click)="theme.toggle()" [title]="t().common.toggleTheme">
+<div class="door">
+    <!--The rail's dots menu holds the theme toggle everywhere else; there is no rail out here
+    (ADR-166 clause 2).-->
+    <app-button class="theme-toggle" variant="rail" size="sm" [title]="t().common.toggleTheme"
+                (clicked)="theme.toggle()">
         {{ theme.theme() === 'dark' ? '☀' : '☾' }}
-    </button>
+    </app-button>
 
-    <div class="auth-card">
-        <span class="wk-decor wk-door-paper" aria-hidden="true"></span>
-        <span class="wk-decor wk-hinge wk-hinge-top" aria-hidden="true"></span>
-        <span class="wk-decor wk-hinge wk-hinge-bottom" aria-hidden="true"></span>
-        <span class="wk-decor wk-handle" aria-hidden="true"></span>
+    <app-paper-card class="auth-card" bright [rotate]="-0.4">
         <div class="auth-header">
             <app-cedar-logo [size]="34"></app-cedar-logo>
             <div class="auth-title">Cedar Clerk</div>
@@ -20,31 +14,32 @@
         </div>
 
         @if (auth.serverUnreachable()) {
-        <p class="session-notice">
-            {{ t().login.serverUnreachable }}
-            <button type="button" (click)="retrySession()" [disabled]="probing()">
+        <div class="session-notice">
+            <span>{{ t().login.serverUnreachable }}</span>
+            <app-button variant="paper" size="sm" [disabled]="probing()" (clicked)="retrySession()">
                 {{ probing() ? t().login.retrying : t().login.retry }}
-            </button>
-        </p>
+            </app-button>
+        </div>
         }
 
-        <div class="field">
-            <label for="cc-login-email">{{ t().login.email }}</label>
-            <input id="cc-login-email" [(ngModel)]="email" placeholder="you@example.com" type="email" autocomplete="username">
-        </div>
-        <div class="field">
-            <label for="cc-login-pass">{{ t().login.password }}</label>
-            <input id="cc-login-pass" [(ngModel)]="password" placeholder="••••••••" type="password" autocomplete="current-password" (keyup.enter)="submit()">
-        </div>
+        <app-input inputId="cc-login-email" type="email" [label]="t().login.email"
+                   placeholder="you@example.com"
+                   [value]="email" (valueChange)="email = $any($event) ?? ''" />
+        <!--Enter submits, as it did on the field this replaces: the event bubbles from the field
+        to this host.-->
+        <app-input inputId="cc-login-pass" type="password" [label]="t().login.password"
+                   placeholder="••••••••"
+                   [value]="password" (valueChange)="password = $any($event) ?? ''"
+                   (keyup.enter)="submit()" />
 
-        <button class="primary-btn" (click)="submit()" [disabled]="busy()">
+        <app-button class="primary-btn" variant="pine" [disabled]="busy()" (clicked)="submit()">
             {{ busy() ? '…' : t().login.submit }}
-        </button>
+        </app-button>
 
         @if (error()) { <p class="error">{{ error() }}</p> }
 
         <div class="auth-footer">{{ t().login.noAccount }} <a routerLink="/register">{{ t().login.register }}</a> <span class="muted">{{ t().login.inviteRequired }}</span></div>
 
         <app-lang-switch></app-lang-switch>
-    </div>
+    </app-paper-card>
 </div>

@@ -427,6 +427,39 @@
             </div>
         </div>
 
+        <h2>The bench itself</h2>
+        <p class="sg-note">
+            The pieces the screens are built out of rather than dressed with.
+            <code>app-worktop</code> is the lit top: a chrome frame with a chalked edge and a paper
+            body, so a sheet lying on it is not governed by chrome's numbers.
+            <code>app-module-tile</code> is a door — it is an anchor whenever it is handed a route
+            and a button otherwise (ADR-163), and it carries exactly one number.
+            <code>app-shelf-panel</code> is every dock and inspector; its own commands go in its
+            header and nowhere else, which is why it takes no command input.
+            <code>app-index-tabs</code> switches what a panel shows and never navigates.
+            <code>app-log-line</code> stamps a journal line instead of tinting the row.
+            The rest of the chrome is around this page as you read it: the rail above, the hooks
+            down the left, the drawer and the rule along the bottom. <code>app-growth-chart</code>
+            is a screen-level instrument and is shown on the metrics screen, where it has data.
+        </p>
+        <div class="sg-bay" [attr.data-surface]="surface()">
+            <app-worktop label="Bench" meta="one top per screen">
+                <div class="sg-shelf">
+                    <app-module-tile icon="check-square" name="Board" count="12" sub="4 overdue" />
+                    <app-module-tile icon="image" name="Assets" count="2 481" [rotate]="-0.8" />
+                </div>
+            </app-worktop>
+
+            <app-shelf-panel title="Journal" count="3">
+                <app-index-tabs actions [items]="journalTabs" value="checks" label="Journal" />
+                <div class="sg-stack">
+                    <app-log-line level="ok" time="09:51" at="cover">Cover image found</app-log-line>
+                    <app-log-line level="warn" time="09:51" at="block 12">Image has no alt text</app-log-line>
+                    <app-log-line level="build" time="09:44" at="0.3.1">Version cut</app-log-line>
+                </div>
+            </app-shelf-panel>
+        </div>
+
         <h2>Hardware</h2>
         <p class="sg-note">
             Brass is hardware, not a palette: neither piece takes a colour and neither takes a size,

@@ -2,25 +2,23 @@
     <div class="settings-body">
         <!--I12: split in two. "Profile" is everything about the author and what gets published
         under their name — it's reached from the account menu, which is where a profile belongs.
-        "Account" is the machinery: language, plan, connected services. Appearance is neither and
-        already lives in the editor's own panel (I14).-->
-        <nav class="settings-tabs">
-            <button [class.active]="tab() === 'profile'" (click)="setTab('profile')">{{ t().settings.tabs.profile }}</button>
-            <button [class.active]="tab() === 'account'" (click)="setTab('account')">{{ t().settings.tabs.account }}</button>
-        </nav>
+        "Account" is the machinery: language, plan, connected services. Appearance is neither: it
+        is a panel of the shell, opened from the rail's dots menu (ADR-151).-->
+        <app-index-tabs class="settings-tabs" [items]="tabItems()" [value]="tab()"
+                        [label]="t().settings.crumb" (selected)="setTab($any($event))" />
 
         <!--T-002 — a reminder, not a wall: the account works unconfirmed, and blocking one would
         lock out every account that predates this. It disappears the moment the address is confirmed.
-        (Sat INSIDE the anchor-chips nav until 05.08.2026 — the flex row stretched every chip to the
-        card's height, which is what "the buttons look like tall pills" was.)-->
+        Outside the anchor-chips nav on purpose: that row is a flex row, and a card inside it is
+        stretched to the row's height along with every chip beside it.-->
         @if (!auth.emailConfirmed()) {
         <section class="settings-card confirm-card">
             <h2>{{ t().settings.confirmEmail.title }}</h2>
             <p class="field-hint">{{ t().settings.confirmEmail.hint(auth.userEmail() ?? '') }}</p>
             <div class="field-actions">
-                <button class="btn-primary" (click)="resendConfirmation()" [disabled]="confirmBusy()">
+                <app-button variant="pine" (clicked)="resendConfirmation()" [disabled]="confirmBusy()">
                     {{ confirmBusy() ? '…' : t().settings.confirmEmail.resend }}
-                </button>
+                </app-button>
                 @if (confirmSent()) {
                 <span class="saved-check"><app-icon name="check" size="xs"></app-icon>{{ t().settings.confirmEmail.sent }}</span>
                 }
@@ -30,15 +28,15 @@
 
         <nav class="anchor-chips">
             @if (tab() === 'profile') {
-            <button (click)="jump('sec-profile')">{{ t().settings.profile.nav }}</button>
-            <button (click)="jump('sec-cross-links')">{{ t().settings.crossLinks.nav }}</button>
-            <button (click)="jump('sec-header-slots')">{{ t().settings.headerSlots.nav }}</button>
-            <button (click)="jump('sec-social-links')">{{ t().settings.social.nav }}</button>
+            <app-button variant="paper" size="sm" (clicked)="jump('sec-profile')">{{ t().settings.profile.nav }}</app-button>
+            <app-button variant="paper" size="sm" (clicked)="jump('sec-cross-links')">{{ t().settings.crossLinks.nav }}</app-button>
+            <app-button variant="paper" size="sm" (clicked)="jump('sec-header-slots')">{{ t().settings.headerSlots.nav }}</app-button>
+            <app-button variant="paper" size="sm" (clicked)="jump('sec-social-links')">{{ t().settings.social.nav }}</app-button>
             } @else {
-            <button (click)="jump('sec-language')">{{ t().settings.language.nav }}</button>
-            <button (click)="jump('sec-subscription')">{{ t().settings.subscription.nav }}</button>
-            <button (click)="jump('sec-credits')">{{ t().settings.credits.nav }}</button>
-            <button (click)="jump('sec-integrations')">{{ t().settings.integrations.nav }}</button>
+            <app-button variant="paper" size="sm" (clicked)="jump('sec-language')">{{ t().settings.language.nav }}</app-button>
+            <app-button variant="paper" size="sm" (clicked)="jump('sec-subscription')">{{ t().settings.subscription.nav }}</app-button>
+            <app-button variant="paper" size="sm" (clicked)="jump('sec-credits')">{{ t().settings.credits.nav }}</app-button>
+            <app-button variant="paper" size="sm" (clicked)="jump('sec-integrations')">{{ t().settings.integrations.nav }}</app-button>
             }
         </nav>
 
@@ -59,14 +57,14 @@
                     <div class="profile-meta">{{ t().settings.profile.memberSince }} {{ since | zonedDate:'MMMM yyyy' }}</div>
                     }
                     <div class="avatar-actions">
-                        <label class="btn-primary avatar-pick">
+                        <label class="avatar-pick">
                             {{ avatarBusy() ? '…' : t().settings.profile.changeAvatar }}
                             <input type="file" accept="image/*" (change)="onAvatarPicked($event)" [disabled]="avatarBusy()" hidden>
                         </label>
                         @if (auth.avatarUrl()) {
-                        <button class="btn-danger-ghost" (click)="clearAvatar()" [disabled]="avatarBusy()">
+                        <app-button variant="danger" (clicked)="clearAvatar()" [disabled]="avatarBusy()">
                             {{ t().settings.profile.removeAvatar }}
-                        </button>
+                        </app-button>
                         }
                     </div>
                     @if (avatarError()) { <p class="field-error">{{ avatarError() }}</p> }
@@ -84,9 +82,8 @@
                 per content language — same per-language-drafts pattern as the cross-links below.-->
                 <div class="lang-pick-row">
                     @for (l of contentLanguages; track l) {
-                    <button class="pill" [class.on]="signatureLanguage() === l" (click)="setSignatureLanguage(l)">
-                        {{ l.toUpperCase() }}
-                    </button>
+                    <app-leaf-tag interactive [state]="signatureLanguage() === l ? 'active' : 'idle'"
+                                  (activated)="setSignatureLanguage(l)">{{ l.toUpperCase() }}</app-leaf-tag>
                     }
                 </div>
                 <textarea id="cc-sig" [(ngModel)]="signatureText" rows="2" [placeholder]="t().settings.profile.signaturePlaceholder"
@@ -95,24 +92,24 @@
                 <input [(ngModel)]="signatureUrlText" [placeholder]="t().settings.profile.signatureUrlPlaceholder">
                 }
                 <div class="field-actions">
-                    <button class="btn-primary" (click)="saveSignature()" [disabled]="signatureBusy() || !hasProSignature()">
+                    <app-button variant="pine" (clicked)="saveSignature()" [disabled]="signatureBusy() || !hasProSignature()">
                         {{ signatureBusy() ? '…' : t().settings.profile.saveSignature }}
-                    </button>
+                    </app-button>
                     <!--One press fills the signature AND both cross-link texts — they are written
                     together and read together, so translating them apart would be three presses for
                     one thought. Two buttons because there are two real cases: fill everything, or
                     redo the one language that came back wrong.-->
-                    <button class="btn-ghost" (click)="translateProfileTexts()"
+                    <app-button variant="paper" (clicked)="translateProfileTexts()"
                             [disabled]="translatingTexts() || !hasProSignature()">
                         <app-icon name="translate" size="sm"></app-icon>
                         {{ t().settings.profile.translateTexts }}
-                    </button>
+                    </app-button>
                     @if (canTranslateCurrent()) {
-                    <button class="btn-ghost" (click)="translateCurrentLanguage()"
+                    <app-button variant="paper" (clicked)="translateCurrentLanguage()"
                             [disabled]="translatingTexts() || !hasProSignature()">
                         <app-icon name="translate" size="sm"></app-icon>
                         {{ t().settings.profile.translateInto(signatureLanguage().toUpperCase()) }}
-                    </button>
+                    </app-button>
                     }
                     @if (signatureSaved()) {
                     <span class="saved-check"><app-icon name="check" size="xs"></app-icon>{{ t().settings.saved }}</span>
@@ -136,7 +133,7 @@
 
             <div class="card-footer-row">
                 <span class="field-hint">{{ t().settings.profile.doneForToday }}</span>
-                <button class="btn-danger-ghost" (click)="logout()">{{ t().settings.profile.logout }}</button>
+                <app-button variant="danger" (clicked)="logout()">{{ t().settings.profile.logout }}</app-button>
             </div>
         </section>
         }
@@ -149,19 +146,19 @@
             <!--DB3.1: was a flag emoji beside the endonym; Windows ships no regional-indicator
             glyphs, so it rendered as two letters regardless. A two-letter code says the same
             thing on every platform, and matches the editor's content-language tabs.-->
-            <div class="format-toggle" style="max-width:240px">
-                <button [class.on]="locale.uiLang() === 'en'" (click)="setUiLanguage('en')">EN · English</button>
-                <button [class.on]="locale.uiLang() === 'ru'" (click)="setUiLanguage('ru')">RU · Русский</button>
+            <div class="lang-pick-row">
+                <app-leaf-tag interactive [state]="locale.uiLang() === 'en' ? 'active' : 'idle'"
+                              (activated)="setUiLanguage('en')">EN · English</app-leaf-tag>
+                <app-leaf-tag interactive [state]="locale.uiLang() === 'ru' ? 'active' : 'idle'"
+                              (activated)="setUiLanguage('ru')">RU · Русский</app-leaf-tag>
             </div>
             @if (languageError()) { <p class="field-error">{{ languageError() }}</p> }
         </section>
         }
 
-        <!-- Appearance and toolbar customization live in the editor's side panel (I14/B15): every
-             control there changes how the writing sheet looks, and judging a type size on a
-             different screen is guesswork. The signpost card that used to stand here was removed
-             01.08.2026 at Marty's request — a settings card whose only content is "this setting is
-             somewhere else" is a dead end that has to be read every time to be dismissed. -->
+        <!-- Appearance is a panel of the shell, opened from the rail's dots menu (ADR-151), and it
+             has no signpost here: a settings card whose only content is "this setting is somewhere
+             else" is a dead end that has to be read every time to be dismissed. -->
 
         <!-- ============ HEADER SLOTS ============ -->
         @if (tab() === 'profile') {
@@ -239,9 +236,8 @@
             post. Switching tabs saves what is in the fields first.-->
             <div class="lang-pick-row">
                 @for (l of contentLanguages; track l) {
-                <button class="pill" [class.on]="linkTextLanguage() === l" (click)="setLinkTextLanguage(l)">
-                    {{ l.toUpperCase() }}
-                </button>
+                <app-leaf-tag interactive [state]="linkTextLanguage() === l ? 'active' : 'idle'"
+                              (activated)="setLinkTextLanguage(l)">{{ l.toUpperCase() }}</app-leaf-tag>
                 }
             </div>
 
@@ -295,9 +291,9 @@
         scroll, so editing the profile card at the top never leaves the button off-screen.-->
         @if (tab() === 'profile') {
         <div class="profile-save-bar">
-            <button class="btn-primary" (click)="saveProfile()" [disabled]="profileBusy()">
+            <app-button variant="pine" (clicked)="saveProfile()" [disabled]="profileBusy()">
                 {{ profileBusy() ? '…' : t().settings.saveProfile }}
-            </button>
+            </app-button>
             @if (profileSaved()) {
             <span class="saved-check"><app-icon name="check" size="xs"></app-icon>{{ t().settings.saved }}</span>
             }
@@ -400,10 +396,10 @@
                         </span>
                     </button>
                 </div>
-                <button class="btn-primary" (click)="confirmUpgrade()" [disabled]="billingBusy()">
+                <app-button variant="pine" (clicked)="confirmUpgrade()" [disabled]="billingBusy()">
                     <app-icon name="paper-plane-tilt" size="xs"></app-icon>
                     {{ billingBusy() ? '…' : (selectedPlan === 'trial' ? t().settings.subscription.startTrial(priceFor(selectedPlan)) : t().settings.subscription.upgrade(priceFor(selectedPlan))) }}
-                </button>
+                </app-button>
             </div>
             }
             }
@@ -467,10 +463,10 @@
                         </span>
                     </button>
                 </div>
-                <button class="btn-primary" (click)="buyCredits()" [disabled]="creditsBusy()">
+                <app-button variant="pine" (clicked)="buyCredits()" [disabled]="creditsBusy()">
                     <app-icon name="paper-plane-tilt" size="xs"></app-icon>
                     {{ creditsBusy() ? '…' : t().settings.credits.buy(packPriceUsd(selectedPackPriceCents())) }}
-                </button>
+                </app-button>
                 @if (creditsError()) { <span class="field-error">{{ creditsError() }}</span> }
             </div>
             }
@@ -514,20 +510,20 @@
                 @if (askUnlinkTelegram()) {
                 <div class="inline-confirm">
                     <span>{{ t().settings.integrations.sure }}</span>
-                    <button class="btn-danger" (click)="unlinkTelegram()" [disabled]="telegramBusy()">{{ t().settings.integrations.unlink }}</button>
-                    <button class="btn-ghost" (click)="askUnlinkTelegram.set(false)">{{ t().common.cancel }}</button>
+                    <app-button variant="danger" (clicked)="unlinkTelegram()" [disabled]="telegramBusy()">{{ t().settings.integrations.unlink }}</app-button>
+                    <app-button variant="paper" (clicked)="askUnlinkTelegram.set(false)">{{ t().common.cancel }}</app-button>
                 </div>
                 } @else {
-                <button class="btn-ghost" (click)="askUnlinkTelegram.set(true)">{{ t().settings.integrations.unlink }}</button>
+                <app-button variant="paper" (clicked)="askUnlinkTelegram.set(true)">{{ t().settings.integrations.unlink }}</app-button>
                 }
                 } @else {
                 <div class="integration-body">
                     <div class="integration-title">{{ t().settings.integrations.telegramAccount }}</div>
                     <div class="integration-meta muted">{{ t().settings.integrations.notLinked }}</div>
                 </div>
-                <button class="btn-primary sm" (click)="linkTelegram()" [disabled]="telegramBusy()">
+                <app-button variant="pine" size="sm" (clicked)="linkTelegram()" [disabled]="telegramBusy()">
                     {{ telegramBusy() ? t().settings.integrations.waitingForTelegram : t().settings.integrations.linkTelegram }}
-                </button>
+                </app-button>
                 }
             </div>
             @if (telegramError()) { <p class="field-error">{{ telegramError() }}</p> }
@@ -581,9 +577,9 @@
                     <li class="target-row">
                         <span class="target-name">{{ c.title }}</span>
                         @if (c.username) { <span class="target-handle">&#64;{{ c.username }}</span> }
-                        <button class="btn-danger-ghost sm" (click)="removeChannel(c.id)" [disabled]="channelBusy()">
+                        <app-button variant="danger" size="sm" (clicked)="removeChannel(c.id)" [disabled]="channelBusy()">
                             {{ t().settings.integrations.disconnect }}
-                        </button>
+                        </app-button>
                     </li>
                     }
                 </ul>
@@ -596,9 +592,9 @@
                     <li class="target-row">
                         <span class="target-name">{{ k.title }}</span>
                         @if (k.username) { <span class="target-handle">&#64;{{ k.username }}</span> }
-                        <button class="btn-primary sm" (click)="connectChannel(k.telegramChatId + '')" [disabled]="channelBusy()">
+                        <app-button variant="pine" size="sm" (clicked)="connectChannel(k.telegramChatId + '')" [disabled]="channelBusy()">
                             {{ t().settings.integrations.connect }}
-                        </button>
+                        </app-button>
                     </li>
                     }
                 </ul>
@@ -617,9 +613,9 @@
                 <div class="connect-row">
                     <input [(ngModel)]="newChannelChatId" [disabled]="channelBusy()"
                            [placeholder]="t().settings.integrations.manualPlaceholder" (keyup.enter)="connectChannel()">
-                    <button class="btn-primary sm" (click)="connectChannel()" [disabled]="channelBusy() || !newChannelChatId.trim()">
+                    <app-button variant="pine" size="sm" (clicked)="connectChannel()" [disabled]="channelBusy() || !newChannelChatId.trim()">
                         {{ t().settings.integrations.connect }}
-                    </button>
+                    </app-button>
                 </div>
                 }
                 @if (channelError()) { <p class="field-error">{{ channelError() }}</p> }
@@ -642,9 +638,9 @@
                         }
                     </div>
                     @if (blueskyAccount(); as account) {
-                    <button class="btn-danger-ghost sm" (click)="disconnectBluesky(account.id)" [disabled]="blueskyBusy()">
+                    <app-button variant="danger" size="sm" (clicked)="disconnectBluesky(account.id)" [disabled]="blueskyBusy()">
                         {{ t().settings.integrations.disconnect }}
-                    </button>
+                    </app-button>
                     }
                 </div>
                 @if (!blueskyAccount()) {
@@ -652,10 +648,10 @@
                 <div class="connect-row">
                     <input [(ngModel)]="blueskyHandle" [placeholder]="t().settings.integrations.blueskyHandle">
                     <input type="password" [(ngModel)]="blueskyAppPassword" [placeholder]="t().settings.integrations.blueskyAppPassword">
-                    <button class="btn-primary sm" (click)="connectBluesky()"
+                    <app-button variant="pine" size="sm" (clicked)="connectBluesky()"
                             [disabled]="blueskyBusy() || !blueskyHandle.trim() || !blueskyAppPassword.trim()">
                         {{ blueskyBusy() ? '…' : t().settings.integrations.connect }}
-                    </button>
+                    </app-button>
                 </div>
                 }
                 @if (blueskyError()) { <p class="field-error">{{ blueskyError() }}</p> }
@@ -678,13 +674,13 @@
                         }
                     </div>
                     @if (xAccount(); as account) {
-                    <button class="btn-danger-ghost sm" (click)="disconnectX(account.id)" [disabled]="xBusy()">
+                    <app-button variant="danger" size="sm" (clicked)="disconnectX(account.id)" [disabled]="xBusy()">
                         {{ t().settings.integrations.disconnect }}
-                    </button>
+                    </app-button>
                     } @else {
-                    <button class="btn-primary sm" (click)="connectX()" [disabled]="xBusy()">
+                    <app-button variant="pine" size="sm" (clicked)="connectX()" [disabled]="xBusy()">
                         {{ xBusy() ? '…' : t().settings.integrations.xConnect }}
-                    </button>
+                    </app-button>
                     }
                 </div>
                 @if (xNotice() === 'connected') {
@@ -719,19 +715,19 @@
                         }
                     </div>
                     @if (discordAccount(); as account) {
-                    <button class="btn-danger-ghost sm" (click)="disconnectDiscord(account.id)" [disabled]="discordBusy()">
+                    <app-button variant="danger" size="sm" (clicked)="disconnectDiscord(account.id)" [disabled]="discordBusy()">
                         {{ t().settings.integrations.disconnect }}
-                    </button>
+                    </app-button>
                     }
                 </div>
                 @if (!discordAccount()) {
                 <p class="field-hint">{{ t().settings.integrations.discordConnectHint }}</p>
                 <div class="connect-row">
                     <input [(ngModel)]="discordWebhookUrl" [placeholder]="t().settings.integrations.discordWebhookUrl">
-                    <button class="btn-primary sm" (click)="connectDiscord()"
+                    <app-button variant="pine" size="sm" (clicked)="connectDiscord()"
                             [disabled]="discordBusy() || !discordWebhookUrl.trim()">
                         {{ discordBusy() ? '…' : t().settings.integrations.connect }}
-                    </button>
+                    </app-button>
                 </div>
                 }
                 @if (discordError()) { <p class="field-error">{{ discordError() }}</p> }

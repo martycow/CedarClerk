@@ -62,8 +62,11 @@
     --accent: #39543C;
     /* Each of the three is the darkest step of its own hue that still reads as that hue, because
        the floor it has to clear is not paper: every one of them is painted as ink on a wash mixed
-       from itself, and a value tuned against bare paper has no room left for the wash. */
-    --danger: #9E3D27;
+       from itself, and a value tuned against bare paper has no room left for the wash. --danger is
+       held one step darker than that: it is the only one of the three also painted on --asoft,
+       whose tone is the user's accent rather than its own, and the darkest preset makes that wash
+       deeper than danger's own. */
+    --danger: #9C3C26;
     --ok: #356842;
     --warn: #7A5520;
 

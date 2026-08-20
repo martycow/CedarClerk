@@ -55,6 +55,7 @@ flowchart TB
         DPROMPT["docs/design/indiedev-design-prompt.md<br/>бриф для Claude Design"]
         UIV2["docs/design/UI-V2-PLAN.md<br/>план переноса на Cedar Bench"]
         RPROMPT["docs/design/bench-responsive-prompt.md<br/>бриф для Claude Design:<br/>узкие экраны Cedar Bench"]
+        BPROMPT["docs/design/bench-board-prompt.md<br/>бриф для Claude Design:<br/>четвёртый экран — доска задач"]
     end
 
     CHANGELOG["CHANGELOG.md<br/><b>история сессий</b><br/>человекочитаемо, по датам"]
@@ -98,6 +99,9 @@ flowchart TB
     UIV2 -->|"чего киты не отвечают:<br/>хрома уже узкой"| RPROMPT
     DESIGN -->|"те же правила токенов;<br/>значения — перед запуском"| RPROMPT
     RPROMPT -->|"когда экраны придут —<br/>строки T-236…T-237"| BACKLOG
+    UIV2 -->|"чего киты не отвечают:<br/>доски задач в наборе нет"| BPROMPT
+    DESIGN -->|"те же правила токенов;<br/>значения — перед запуском"| BPROMPT
+    BPROMPT -->|"когда экран придёт —<br/>строка T-229"| BACKLOG
 
     classDef source fill:#5B6E46,stroke:#3E4A2F,color:#fff
     classDef plan fill:#E8E3D6,stroke:#B8B0A0,color:#26231D
@@ -108,7 +112,7 @@ flowchart TB
     class BACKLOG,ROADMAP,TASKS,CHANGELOG plan
     class DECISIONS,RULES,PRODENV,CLAUDE why
     class PRODUCT,PRD,ARCH,DESIGN,UIINV,STACK,BIZ,METRICS,MULTI,INTEG,LEGAL ref
-    class INDIE,DESKTOP,DPROMPT,UIV2,RPROMPT mod
+    class INDIE,DESKTOP,DPROMPT,UIV2,RPROMPT,BPROMPT mod
 ```
 
 **Легенда рёбер** (введена 18.08.2026 — раньше три типа читались одинаково): **сплошная `-->`** — поток истины: содержимое или факт переносится по стрелке; **толстая `==>`** — жёсткий гейт, перепрыгивать нельзя (сначала ADR — только потом код); **пунктирная `-.->`** — сверка или порядок чтения: ничего не переносится, стрелка говорит «посмотри туда до/после».
@@ -152,6 +156,7 @@ flowchart TB
 - **`docs/design/UI-V2-PLAN.md`** — план переноса фронтенда на дизайн-систему Cedar Bench. Живёт только на ветке `UI_V2`, источник истины на время порта; по мере выхода ADR каждое его решение переезжает в `docs/adr/`, и документ отмирает. Сама дизайн-система зеркалится из Claude Design в `.design-sync/ds-v2/` — вне `docs/`, потому что это выкачиваемый кэш, а не документ.
 - **`docs/design/indiedev-design-prompt.md`** — бриф для Claude Design. Односторонний потребитель: токены копируются в него из `DESIGN.md` дословно, обратно ничего не течёт. **Значит он протухает молча** — при изменении `styles.scss` сверять перед запуском.
 - **`docs/design/bench-responsive-prompt.md`** — второй бриф для Claude Design, по ADR-147: узкие экраны Cedar Bench. Тот же односторонний тип, что и брифом выше, и по той же причине **без дословного блока токенов** — только пометка «вставить перед запуском» с указателем на `styles.scss`. Отличие в предмете: спрашивается не набор новых экранов, а поведение хромы (рейка, крючковая планка, полки, ящик, линейка) ниже десктопной ширины, плюс контракт плотности при грубом указателе и сами брейкпоинты. Пока ответа нет, `T-034` закрыть нельзя, и ветка порта сознательно живёт без единого `@media` по ширине.
+- **`docs/design/bench-board-prompt.md`** — третий бриф для Claude Design, по ADR-165: четвёртый эталонный экран, доска задач. Того же одностороннего типа и так же без дословного блока токенов. Отдельный файл, а не раздел в брифе выше, потому что предмет другой: не поведение существующих экранов на узких ширинах, а экран, которого в наборе нет, на десктопной ширине — один прогон на двоих дал бы ответы, которые нельзя принять или отклонить по отдельности. Пока ответа нет, `T-229` закрыть нельзя, и `project-tasks` живёт на материалах верстака со своей прежней геометрией.
 
 Правило «задача живёт ровно в одном месте» действует и здесь: MUST/MIGHT-списки в `INDIEDEV.md` — это *состав* модуля, а строки задач живут в `BACKLOG.md`. Список в `INDIEDEV.md` не вычёркивается по мере работы — статус ведёт `ROADMAP.md`.
 
@@ -163,7 +168,7 @@ flowchart TB
 |---|---|---|
 | **`product/`** | Самые высокоуровневые контексты продукта: продукт в целом, бизнес-модель, требования | PRODUCT, PRD, BUSINESS, METRICS, MULTITENANCY, INDIEDEV |
 | **`tasks/`** | Всё, что связано с задачами | TASKS (короткий горизонт), BACKLOG (борда), ROADMAP (фазы) |
-| **`design/`** | Дизайн, UI, UX | DESIGN (токены), UI-INVENTORY, UI-V2-PLAN, indiedev-design-prompt, bench-responsive-prompt |
+| **`design/`** | Дизайн, UI, UX | DESIGN (токены), UI-INVENTORY, UI-V2-PLAN, indiedev-design-prompt, bench-responsive-prompt, bench-board-prompt |
 | **`tech/`** | Техническая составляющая | ARCHITECTURE, DESKTOP |
 | **`adr/`** | Тексты решений, файл на ADR (+ ownership-audit) | 122 ADR. Индекс — в корне; своя папка, а не `tech/adr/`, потому что ADR бывают и продуктовые (ADR-092, ADR-101), и технические |
 | **`fleet/`** | Оркестрация агентов (Cowtext / FleetView) | пока только `docs/fleet/README.md` — определения агентов живут в `.claude/agents/` |

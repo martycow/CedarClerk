@@ -1,5 +1,4 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
@@ -21,7 +20,11 @@ import {
 import { AssetSyncService } from '../core/asset-sync.service';
 import { ProjectDetail, ProjectsService } from '../core/projects.service';
 import { IconComponent } from '../shared/icon.component';
-import { ModalComponent } from '../shared/modal.component';
+import { ButtonComponent } from '../bench/forms/button.component';
+import { InputComponent } from '../bench/forms/input.component';
+import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
+import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
+import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 
 const PAGE_SIZE = 60;
 const RECENT_FOLDERS_KEY = 'cedar.assetFolders';
@@ -39,7 +42,10 @@ const RECENT_FOLDERS_KEY = 'cedar.assetFolders';
 // it is, and it decides it by comparing machines, never by assuming.
 @Component({
     selector: 'app-project-assets',
-    imports: [IconComponent, ZonedDatePipe, FormsModule, ModalComponent],
+    imports: [
+        IconComponent, ZonedDatePipe, IndexTabsComponent, ShelfPanelComponent,
+        SpecRowComponent, InputComponent, ButtonComponent,
+    ],
     templateUrl: 'project-assets.component.html',
     styleUrls: ['project-assets.component.css'],
 })
@@ -200,6 +206,32 @@ export class ProjectAssetsComponent implements OnDestroy {
         // would queue faster than it answers.
         if (this.searchTimer) clearTimeout(this.searchTimer);
         this.searchTimer = setTimeout(() => void this.reloadList(), 250);
+    }
+
+    /** `missing` is a tile beside the kinds, not a kind: it crosses them and clears the kind filter. */
+    readonly kindTab = computed<string>(() => this.missingOnly() ? 'missing' : (this.kind() ?? 'all'));
+
+    readonly kindTabs = computed<IndexTabItem[]>(() => {
+        const page = this.page();
+        const labels = this.t().projects.assets;
+        const items: IndexTabItem[] = [{ id: 'all', label: labels.filterAll, badge: page?.totalIndexed ?? 0 }];
+        for (const kind of this.kinds) {
+            const count = this.kindCount(kind);
+            if (count > 0) items.push({ id: kind, label: labels.kinds[kind], badge: count });
+        }
+        if ((page?.missingCount ?? 0) > 0)
+            items.push({ id: 'missing', label: labels.filterMissing, badge: page!.missingCount });
+        return items;
+    });
+
+    readonly viewTabs = computed<IndexTabItem[]>(() => [
+        { id: 'grid', label: this.t().projects.assets.viewGrid },
+        { id: 'list', label: this.t().projects.assets.viewList },
+    ]);
+
+    pickKind(id: string) {
+        if (id === 'missing') this.showMissing();
+        else this.setKind(id === 'all' ? null : id as AssetKind);
     }
 
     kindCount(kind: AssetKind) {

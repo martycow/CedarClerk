@@ -17,7 +17,7 @@ import {
     projectInitials,
 } from '../core/projects.service';
 import { Build, BuildsService } from '../core/builds.service';
-import { GameTask, isOverdue } from '../core/tasks.service';
+import { isOverdue } from '../core/tasks.service';
 import { sprintProgress } from '../core/sprints.service';
 import { RulerReadout } from '../bench/chrome/ruler-bar.component';
 import { RulerService } from '../core/ruler.service';
@@ -258,16 +258,8 @@ export class ProjectComponent implements OnDestroy {
         return doc.isBlogPublished ? t.published : t.draft;
     }
 
-    go(link: readonly unknown[]) {
-        void this.router.navigate(link as unknown[]);
-    }
-
     openDocument(doc: ProjectDocument) {
         void this.router.navigate(['/editor'], { queryParams: { draft: doc.id } });
-    }
-
-    openTask(task: GameTask) {
-        void this.router.navigate(['/projects', task.projectId, 'tasks'], { queryParams: { task: task.id } });
     }
 
     async createDocument(type: DocumentType) {

@@ -1,11 +1,23 @@
-/* Page chrome mirrors drafts/settings/stats — component styles aren't shared in this app, each
-   page repeats the header/base classes (see the same block in drafts.component.css). */
-.manager-page {
-    min-height: 100vh;
-    background: var(--surface);
+/* The shell owns the rail above and the drawer plus rule below; this is what is left of the
+   viewport between them, the same arithmetic the writer uses (ADR-153 clause 6). */
+:host {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - var(--bench-rail-h) - var(--bench-bottom-h));
     color: var(--text);
     font-family: var(--font-sans);
+}
+
+.manager {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: var(--space-2);
+    box-sizing: border-box;
     font-size: var(--dens-fs);
+
+    --growth-plot-h: 260px;
 }
 
 .hint {
@@ -16,13 +28,13 @@
 .channel-error {
     font-size: var(--fs-meta);
     color: var(--danger);
-    margin: 4px 0;
+    margin: var(--space-1) 0;
 }
 
 .field-hint {
     font-size: var(--fs-meta);
     color: var(--t2);
-    margin: 0 0 10px;
+    margin: 0 0 var(--space-2);
 }
 
 .field-hint-inline {
@@ -31,97 +43,63 @@
     font-weight: 400;
 }
 
-.icon { width: var(--icon-sm); height: var(--icon-sm); }
-.icon-sm { width: var(--icon-sm); height: var(--icon-sm); }
-.icon-xs { width: var(--icon-xs); height: var(--icon-xs); }
 .spacer { flex: 1; }
 
-/* .avatar lives in account-menu.component.css now (IB9). */
-
-/* Priority Fixes 02 (Claude Design, 28.07.2026): joins the ~1150px workspace-width bucket. */
-.manager-body {
-    max-width: 1150px;
-    margin: 0 auto;
-    padding: var(--dens-section) var(--space-5);
-}
-
-/* ---------- Tabs ---------- */
-.manager-tabs {
+/* ---------- Layout ---------- */
+/* The index tiles hang off the top edge of the boards below them, which is where IndexTabs is
+   drawn to sit: the strip overlaps their border by a hair so a lit tile reads as raised out of it. */
+.mg-index {
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 16px;
+    align-items: flex-end;
+    flex: none;
+    margin-bottom: -1px;
+    padding: 0 var(--space-1);
 }
 
-.manager-tabs button {
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: var(--radius-sm);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--fs-ui);
-    font-family: inherit;
-    cursor: pointer;
-    /* No fixed width anywhere on this strip — tab labels are translated text and German-length
-       words must wrap instead of pushing the row off-screen (B26's layout requirement). */
-    max-width: 100%;
-    overflow-wrap: anywhere;
+.mg-grid {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    gap: var(--space-2);
 }
 
-.manager-tabs button.active {
-    border-color: var(--accent);
-    background: var(--asoft);
-    color: var(--accent);
-    font-weight: 600;
+.shelf-list {
+    flex: none;
+    width: var(--bench-dock-w);
 }
 
-/* ---------- Split: list + detail ---------- */
-.manager-split {
-    display: grid;
-    grid-template-columns: minmax(220px, 300px) 1fr;
-    gap: 16px;
-    align-items: start;
-}
-
-/* A grid item's automatic minimum size is its content's size, so a nowrap post title made the
-   track wider than the viewport and the ellipsis never engaged — the list simply ran off the right
-   edge of its own card. Found by the phone capture during the tokens migration; it predates it,
-   and was reachable ever since the split learned to stack at 720px. */
-.manager-split > * {
+.sheet {
+    flex: 1;
     min-width: 0;
 }
 
-@media (max-width: 720px) {
-    .manager-split {
-        grid-template-columns: 1fr;
-    }
+.inspector {
+    flex: none;
+    width: var(--bench-dock-w-wide);
 }
 
-/* T-034 (done with the migration, ADR-070). This screen had exactly one breakpoint — the split
-   collapsing — and nothing else, so on a phone the body kept its 20px side padding and the tab
-   strip its desktop control size. Neither broke the layout the way /drafts did, because the split
-   already stacked and the tab strip already wrapped; this is the narrower fix of making a screen
-   that merely fits into one that reads. */
-@media (max-width: 700px) {
-    .manager-body {
-        padding: var(--space-4) var(--space-3);
-    }
-
-    .manager-tabs {
-        gap: var(--space-1);
-        margin-bottom: var(--space-3);
-    }
+.sheet-column {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: var(--space-4) var(--space-4) var(--space-8);
 }
 
-/* Touch targets, same rule and same reasoning as /drafts: keyed off the pointer rather than the
-   viewport, so an iPad in landscape is covered too (T-082). */
-@media (pointer: coarse) {
-    [data-surface] .manager-tabs button,
-    [data-surface] .post-card {
-        min-height: var(--hit-surface);
-    }
+/* The intro line stands above the boards, so it is the one thing on this screen not on a surface
+   of its own; it keeps the manager's own type size. */
+.manager > .field-hint {
+    flex: none;
+    padding: 0 var(--space-1) var(--space-2);
 }
 
+/* The metrics tab brings its own two-column layout and no scroller — the page is a fixed height
+   now, so the tab body is given one here rather than inside a screen this file does not own. */
+.manager > app-stats {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}
 
 /* Priority Fixes 02 (Claude Design, 28.07.2026): radius-md -> radius-lg, matching the same
    --sheet+--border+--shadow "card" pattern used by Settings/Admin/Stats. */
@@ -198,15 +176,10 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
     padding: var(--space-2);
-    background: var(--sheet);
-    max-height: calc(100vh - 190px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
 }
 
+/* The search field stays pinned at the top of the shelf's scroller. */
 .post-search {
     position: sticky;
     top: calc(var(--space-2) * -1);
@@ -215,16 +188,9 @@
     padding: var(--space-2) var(--space-3);
     border: none;
     border-bottom: 1px solid var(--border);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    border-radius: 0;
     background: var(--sheet);
     width: auto;
-}
-
-.post-detail {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: var(--dens-section) var(--space-4);
-    background: var(--sheet);
 }
 
 .detail-field {
@@ -256,12 +222,6 @@
     padding: var(--dens-control-y) var(--dens-control-x);
     font-size: var(--dens-fs);
     font-family: inherit;
-}
-
-.detail-divider {
-    height: 1px;
-    background: var(--border);
-    margin: 14px 0;
 }
 
 .pill-row {
@@ -334,25 +294,6 @@
 .btn-ghost.danger:hover {
     color: var(--danger);
     border-color: var(--danger);
-}
-
-.detail-links {
-    display: flex;
-    gap: 12px;
-    margin-top: 14px;
-}
-
-.detail-links a {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: var(--fs-meta);
-    color: var(--t2);
-    text-decoration: none;
-}
-
-.detail-links a:hover {
-    color: var(--accent);
 }
 
 .state-chip {
@@ -442,59 +383,6 @@
     flex-direction: column;
     gap: 10px;
     margin-top: 10px;
-}
-
-.question-row {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 10px;
-}
-
-.preset-pill {
-    display: inline-flex;
-    align-items: center;
-}
-
-.preset-x {
-    border: none;
-    background: none;
-    color: var(--t2);
-    cursor: pointer;
-    font-size: var(--fs-body);
-    padding: 0 4px;
-}
-
-.preset-x:hover {
-    color: var(--danger);
-}
-
-.preset-add {
-    display: flex;
-    gap: 6px;
-    margin-top: 8px;
-}
-
-/* I9 — presets moved out of the per-post form editor into their own block below the split, since
-   they exist independently of whichever post happens to be selected. */
-.preset-section {
-    margin-top: 18px;
-    padding: 16px 18px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: var(--sheet);
-}
-
-.preset-section label {
-    display: block;
-    font-size: var(--fs-caption);
-    font-weight: 700;
-    letter-spacing: .05em;
-    text-transform: uppercase;
-    color: var(--t2);
-    margin-bottom: 4px;
 }
 
 .form-save-row {
@@ -616,26 +504,6 @@
     font-weight: 700;
 }
 
-/* FI3.9 — links read as buttons now, not as bare anchors in a row. */
-.detail-link-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    border: 1px solid var(--border);
-    background: var(--sheet);
-    border-radius: var(--radius-md);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    color: var(--text);
-    text-decoration: none;
-    margin-top: 6px;
-}
-
-.detail-link-btn:hover {
-    background: color-mix(in srgb, var(--accent) 8%, var(--sheet));
-    border-color: var(--abord);
-}
-
 /* FI2.8 — scheduled sends for the selected post, moved here out of the Export window. */
 .scheduled-item {
     display: flex;
@@ -671,12 +539,6 @@
     letter-spacing: .06em;
     text-transform: uppercase;
     color: var(--t2);
-}
-
-.form-row-2 {
-    display: grid;
-    grid-template-columns: 1fr 140px;
-    gap: 10px;
 }
 
 .form-field {
@@ -1010,47 +872,42 @@
     margin-bottom: var(--space-2);
 }
 
-.growth-legend button {
+/* No token owns a plot's height — the design system stops at spacing — so it is named here, the
+   way the stats tab names its own. */
+.growth-chart {
+    display: block;
+    width: 100%;
+    height: var(--growth-plot-h);
+}
+
+/* ---------- Inspector ---------- */
+/* Reading matter, so it takes paper's floor rather than chrome's — the shelf's sheet is where it
+   stands (ADR-159 clause 8). */
+[data-surface="paper"] .insp-note {
+    margin: 0 0 var(--space-3);
+    font-size: var(--fs-ui);
+    line-height: 1.45;
+    color: var(--t2);
+}
+
+/* Inside a spec row, and therefore on chrome. */
+[data-surface="chrome"] .insp-link,
+[data-surface="chrome"] .insp-none {
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: 999px;
-    padding: var(--space-1) var(--space-3);
-    font: inherit;
-    font-size: var(--fs-caption);
-    cursor: pointer;
+    min-width: 0;
+    font-size: var(--text-chrome-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.growth-legend button.on {
-    border-color: var(--abord);
-    background: var(--asoft);
-    color: var(--text);
-    font-weight: 600;
+.insp-link {
+    color: var(--accent);
+    text-decoration: none;
 }
 
-.growth-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-}
+.insp-link:hover { text-decoration: underline; }
 
-.growth-chart {
-    width: 100%;
-    height: 160px;
-    display: block;
-}
-
-.growth-line {
-    fill: none;
-    stroke-width: 2;
-    stroke-linejoin: round;
-    stroke-linecap: round;
-}
-
-.growth-area {
-    opacity: .14;
-    stroke: none;
-}
+.insp-none { color: var(--t3); }

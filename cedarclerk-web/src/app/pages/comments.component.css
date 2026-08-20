@@ -1,15 +1,7 @@
-:host {
-    display: block;
-    min-height: 100vh;
-    background: var(--surface);
-}
-
-/* Scoped under a post in the Posts Manager (FI3.5) it is a section, not a page: no full-viewport
-   height, no canvas of its own, no centring column, and no bottom margin under the last group. */
-:host:has(.comments-page.scoped) {
-    min-height: 0;
-    background: none;
-}
+/* A fragment, never a screen (ADR-167 clause 9): the page chrome this file kept from the screen it
+   stopped being — a full-viewport host, a sticky header, a crumb and an avatar — is gone, and what
+   is left is the section under a post. */
+:host { display: block; }
 
 .comments-page.scoped .comments-body {
     max-width: none;
@@ -30,104 +22,29 @@
     font-size: var(--dens-fs);
 }
 
-/* ---------- Header ---------- */
-.comments-header {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    height: 52px;
-    padding: 0 20px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-}
-
-.brand-name {
-    font-weight: 700;
-    font-size: var(--fs-body);
-    letter-spacing: -.01em;
-}
-
-.crumb-sep {
-    color: var(--t3);
-    font-size: var(--dens-fs);
-}
-
-.crumb-current {
-    font-size: var(--fs-body);
-    font-weight: 500;
-    color: var(--t2);
-}
-
-.icon {
-    width: 15px;
-    height: 15px;
-}
-
-.icon-sm {
-    width: 13px;
-    height: 13px;
-}
-
-.icon-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    border: none;
-    background: none;
-    border-radius: var(--radius-sm);
-    color: var(--t2);
-    cursor: pointer;
-    font-size: var(--fs-15);
-    text-decoration: none;
-}
-
-.icon-btn:hover {
-    background: var(--hover-strong);
-}
-
-.avatar {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: var(--accent);
-    color: var(--sheet);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--fs-caption);
-    font-weight: 600;
-    flex: none;
-}
-
 /* ---------- Body ---------- */
 .comments-body {
     max-width: 680px;
     margin: 0 auto;
-    padding: 26px 20px 60px;
+    padding: var(--space-5) var(--space-4) var(--space-8);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--space-2);
 }
 
 .reactions-card {
     display: flex;
     align-items: baseline;
-    gap: 8px;
+    gap: var(--space-2);
     background: var(--sheet);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-    padding: 14px 18px;
-    margin: 0 0 8px;
+    padding: var(--space-3) var(--space-4);
+    margin: 0 0 var(--space-2);
 }
 
 .reactions-summary {
-    font-size: var(--fs-15);
+    font-size: var(--fs-body);
     font-weight: 700;
 }
 
@@ -140,7 +57,7 @@
     background: var(--sheet);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 12px 16px;
+    padding: var(--space-3) var(--space-4);
     font-size: var(--fs-ui);
 }
 
@@ -150,7 +67,7 @@
 .reactions-card.has-new {
     border-color: var(--abord);
     background: var(--asoft);
-    transition: background .5s ease, border-color .5s ease;
+    transition: background var(--motion-slow) var(--ease), border-color var(--motion-slow) var(--ease);
 }
 
 .new-chip {
@@ -172,22 +89,13 @@
 .channel-error {
     font-size: var(--fs-meta);
     color: var(--danger);
-    margin: 4px 0;
+    margin: var(--space-1) 0;
 }
 
 .comment-row-top {
     display: flex;
     align-items: center;
-    gap: 8px;
-}
-
-.comment-draft-title {
-    font-size: var(--dens-fs);
-    font-weight: 600;
-    color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    gap: var(--space-2);
 }
 
 .comment-tag {
@@ -201,7 +109,7 @@
 .comment-row-meta {
     color: var(--t2);
     font-size: var(--fs-caption);
-    margin: 4px 0;
+    margin: var(--space-1) 0;
 }
 
 .comment-row-text {
@@ -232,21 +140,22 @@
 /* Per-post grouping. The flat stream answered "what's new" but not "what happened to this post",
    which is the question this tab exists to answer. */
 .feedback-group {
-    margin: 0 0 18px;
+    margin: 0 0 var(--space-5);
 }
 
 .feedback-group-head {
     display: flex;
     align-items: baseline;
-    gap: 10px;
-    padding: 6px 4px 8px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 8px;
+    gap: var(--space-3);
+    padding: var(--space-1) var(--space-1) var(--space-2);
+    border-bottom: 1px solid var(--rule-ink-soft);
+    margin-bottom: var(--space-2);
 }
 
 .feedback-group-title {
+    font-family: var(--font-display);
     font-size: var(--fs-body);
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text);
 }
 
@@ -260,24 +169,9 @@
 }
 
 .feedback-group-count {
+    font-family: var(--font-mono);
     font-size: var(--fs-meta);
     color: var(--t2);
-}
-
-.feedback-more {
-    border: 1px solid var(--border);
-    background: none;
-    border-radius: var(--radius-md);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-family: inherit;
-    font-size: var(--fs-ui);
-    color: var(--text);
-    cursor: pointer;
-    margin-top: 2px;
-}
-
-.feedback-more:hover {
-    background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .feedback-reactions-only {
@@ -285,26 +179,9 @@
     font-size: var(--fs-ui);
 }
 
-/* T-037 — button classes are per-component in this project (the glossary shipped without them
-   once and every button rendered as a browser default), so this is the same definition as
-   drafts.component.css rather than a shared class. */
+/* T-037 — hovering every card to clear a backlog is not a workflow. */
 .mark-all-row {
     display: flex;
     justify-content: flex-end;
-    margin-bottom: 10px;
-}
-
-.btn-ghost {
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: var(--radius-sm);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.btn-ghost:hover {
-    color: var(--text);
+    margin-bottom: var(--space-2);
 }

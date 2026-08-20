@@ -11,12 +11,12 @@ Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-
 
 ## Status summary (as of 20.08.2026)
 
-**UI V2 — Cedar Bench becomes the one look; Stages 0 through 4 (19–20.08.2026, branch `UI_V2`, not
+**UI V2 — Cedar Bench becomes the one look; Stages 0 through 5 (19–20.08.2026, branch `UI_V2`, not
 merged, no version bump).** The design system mirrored from Claude Design at `.design-sync/ds-v2/`
 stops being a second palette and becomes the app's only one. The port was planned before it was
 written — `docs/design/UI-V2-PLAN.md` settles ten questions (theming attribute, token namespace,
-component layout, half-pixels, night, density, icons, fonts) and twenty-seven ADRs (136–162) landed
-ahead of the code they govern.
+component layout, half-pixels, night, density, icons, fonts) and thirty-three ADRs (136–168) landed
+ahead of the code they govern. Every screen in the app is now drawn from the bench kit.
 
 - **Stage 0 — the two checks the rest of the port is measured by** (`T-205`, `T-206`).
   `check-contrast.mjs` was rewritten: it composites alpha over the backdrop instead of discarding
@@ -190,19 +190,55 @@ ahead of the code they govern.
   tool glyph, which is what it was derived for. The retry button was the one real defect: rust ink
   laid straight on the rail is 1.13:1, so it became a stamped chip on the opaque `--danger-soft`
   wash, which is the system's own way of saying something is wrong on chrome.
-- **What is open.** Stages 5 and 6 — the remaining pages by pattern, cleanup and ship — are
-  `T-226`…`T-237` on the board, none started, and the thirteen features the three screens found the
-  API cannot answer are `T-238`…`T-250` under their own heading. No decision waits on Marty any
-  more; what waits on a deliverable is `T-236`, the narrow-screen designs, whose brief is written as
-  `docs/design/bench-responsive-prompt.md` and which blocks `T-034` and `T-237`. The smoke suite is
-  half-rebound (`T-233`): the shell-level selectors are done, and eleven spec files still bind
-  page-body markup Stage 4 has now moved. `styles/_forest.scss` is still neutralised rather than
-  deleted, waiting on Marty as `T-235`. Nobody has *looked* at the three screens — they are
-  unit-tested and measured, and their verification-map marks are reset. One measured defect is left
-  open on purpose: the drawer lip and the shelf-panel header write `--rail-ink` on `--shelf-frame`,
-  whose light stop is `#B68B60`, so a title reads 2.51:1 by day and no flat ink clears the whole
-  ramp — which material those bands are is a design call, not a settle-time patch. The branch cannot
-  deploy until it merges — `cedar deploy` refuses anything but master.
+- **Stage 5 — every remaining screen, by pattern** (`T-226`…`T-229`), and six more ADRs (163–168)
+  ahead of them. **The hub-like three** — `/projects`, the planner and the builds screen — became a
+  worktop, cards and a summary shelf; the project index deliberately survived the hub's switcher,
+  because what the dock absorbed is the *switch* and not the list (ADR-168). **The stats-like four**
+  — the media library, project assets, `/drafts` and `/admin` — became one board each: an index-tab
+  strip, one panel, and a right column that is never empty, which is what turned two detail *modals*
+  into inspector shelves and the drafts folder popover into a Folders shelf (ADR-164). **The
+  writer-like two** — the Posts Manager and the glossary — became an index shelf, one sheet and an
+  inspector whose scope is exclusive; the manager's hand-rolled two-path SVG became
+  `app-growth-chart` with its metric buttons as a legend-filter, and `/comments` was investigated and
+  deliberately *not* moved into the drawer: it has been a fragment under its post since N7, and the
+  drawer is mounted once by the shell, so a Feedback tab there would follow you onto every screen
+  and need chrome to reach into a page's selection (ADR-167). **The board** the kit does not draw
+  took the bench's materials and kept its own geometry, its title and counts moving to the ruler, and
+  the fourth reference screen is now a written brief rather than an assumption (ADR-165,
+  `docs/design/bench-board-prompt.md`). **The four doors outside the shell** — login, register, terms
+  and privacy — declare their own surface, because nothing above them does (ADR-166). Settings kept
+  every one of its 17 `sec-*` ids and gained 22 bench buttons, and `/dev/styleguide` gained the half
+  of the kit it had never shown.
+- **What Stage 5 cost, and what it retired.** The census came back clean of the ports: fourteen
+  screens added **no** new ink-on-surface combination, because they took primitives instead of
+  page-local colour. It did surface one the palette had never covered — `--danger` on `--asoft`,
+  which the poll editor's remove glyph paints — failing at 4.46 under the darkest accent preset, so
+  `--danger` took the smallest hue-preserving step that clears (ADR-074) and the pair joined the
+  table. Three defects were fixed rather than boarded: `app-input` and `app-button` declared their
+  boolean inputs without `booleanAttribute`, so the bare-attribute form was a compile error at every
+  call site; the `/stats` redirect was a *string*, which the router reads as a path, so an old
+  metrics bookmark silently lost its `?tab=stats`; and two screens navigated to `/editor?id=`, a
+  parameter the editor does not read, so they opened whichever draft was newest.
+  `shared/count-badge.component.ts` is deleted — its last consumer took its tally as a tab badge, and
+  the hide-at-zero and 99+ rules live in `indexTabBadgeLabel` alone (`T-231` closed). The palette
+  change then failed `DesignTokenDriftTests`, which turned out to have been blind: it compared ten
+  hand-listed tokens, so Stage 4's re-derivation of `--series-3`, `--series-4` and `--series-6`
+  never reached the generated C# copy and the blog has been drawing the old chart colours since.
+  The generator was re-run and the guard now walks every token it emits.
+- **What is open.** Stage 6 — cleanup and ship — is on the board, along with four gaps the ports
+  found in the kit itself (`T-251`…`T-254`: no `autocomplete`/`maxlength`/hidden label on the field,
+  no select, textarea or checkbox at all, no anchor form for a button, no query merging on a task
+  tag) and nineteen features the screens found the API cannot answer (`T-238`…`T-250`,
+  `T-255`…`T-260`). What waits on a deliverable is `T-236`, the narrow-screen designs, which blocks
+  `T-034` and `T-237`; `T-229` now waits only on the board brief's run. The smoke suite is still
+  half-rebound (`T-233`) and the page-body markup it binds has moved again. `styles/_forest.scss` is
+  still neutralised rather than deleted, waiting on Marty as `T-235`. **Nobody has looked at any of
+  it**: the verification map's marks are reset for every ported screen, which is now most of the
+  app. One measured defect is left open on purpose: the drawer lip and the shelf-panel header write
+  `--rail-ink` on `--shelf-frame`, whose light stop is `#B68B60`, so a title reads 2.51:1 by day and
+  no flat ink clears the whole ramp — which material those bands are is a design call, not a
+  settle-time patch. The branch cannot deploy until it merges — `cedar deploy` refuses anything but
+  master.
 
 **v0.12.2 — every P1 closed in one session (18–19.08.2026, not yet deployed).** Marty's directive
 was "do everything P1", with five decisions resolved on the way in: T-164 (PRGE) removed outright,

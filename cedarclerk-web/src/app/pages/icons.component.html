@@ -9,13 +9,16 @@
             </p>
         </div>
         <div class="ic-controls">
-            <input type="search" placeholder="Filter by name or meaning…" [ngModel]="query()"
-                   (ngModelChange)="query.set($event)" aria-label="Filter icons">
+            <app-input class="ic-filter" label="Filter" type="search"
+                       placeholder="Filter by name or meaning…"
+                       [value]="query()" (valueChange)="query.set($any($event) ?? '')" />
             @for (w of weights; track w) {
-                <button class="btn-ghost" [class.on]="weight() === w" (click)="weight.set(w)">{{ w }}</button>
+                <app-leaf-tag interactive [state]="weight() === w ? 'active' : 'idle'"
+                              (activated)="weight.set(w)">{{ w }}</app-leaf-tag>
             }
             @for (s of sizes; track s) {
-                <button class="btn-ghost" [class.on]="size() === s" (click)="size.set(s)">{{ s }}</button>
+                <app-leaf-tag interactive [state]="size() === s ? 'active' : 'idle'"
+                              (activated)="size.set(s)">{{ s }}</app-leaf-tag>
             }
         </div>
     </header>

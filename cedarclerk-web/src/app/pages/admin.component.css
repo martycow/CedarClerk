@@ -1,15 +1,17 @@
+/* The shell owns the ground under the page (ADR-139), so nothing here paints one. */
 .admin-page {
-    min-height: 100vh;
-    background: var(--surface);
-    color: var(--text);
-    font-family: var(--font-sans);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3);
 }
 
-/* Priority Fixes 02 (Claude Design, 28.07.2026): joins the ~1150px workspace-width bucket. */
-.admin-body {
-    max-width: 1150px;
-    margin: 0 auto;
-    padding: var(--dens-section) var(--space-5) var(--space-6);
+/* The kit's proportions and no width breakpoint of its own (ADR-147). */
+.admin-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--bench-dock-w);
+    gap: var(--space-3);
+    align-items: start;
 }
 
 .hint {
@@ -22,23 +24,12 @@
     font-size: var(--dens-fs);
 }
 
-/* ---------- Summary ---------- */
-.summary-grid {
+/* ---------- Revenue readouts ---------- */
+.revenue-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 10px;
-    margin-bottom: 26px;
-}
-
-.summary-card {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-    padding: 14px 16px;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
 }
 
 .summary-value {
@@ -191,14 +182,6 @@
    inside their own container, which is the right behaviour for a log nobody reads on a phone; what
    needed fixing is the frame and the user cards, which are the part an admin actually taps. */
 @media (max-width: 700px) {
-    .admin-body {
-        padding: var(--space-4) var(--space-3) var(--space-6);
-    }
-
-    .summary-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
     .user-card {
         padding: var(--space-3);
     }
@@ -208,13 +191,6 @@
     .user-actions {
         margin: var(--space-3) calc(-1 * var(--space-3)) calc(-1 * var(--space-3));
         padding: var(--space-3);
-    }
-}
-
-@media (pointer: coarse) {
-    [data-surface] .btn-accent,
-    [data-surface] .btn-ghost {
-        min-height: var(--hit-surface);
     }
 }
 
@@ -265,37 +241,6 @@
     font-size: var(--dens-fs);
 }
 
-.btn-accent,
-.btn-ghost {
-    border-radius: var(--radius-md);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-family: inherit;
-    font-size: var(--dens-fs);
-    cursor: pointer;
-}
-
-.btn-accent {
-    border: none;
-    background: var(--accent);
-    color: var(--sheet);
-}
-
-.btn-ghost {
-    border: 1px solid var(--border);
-    background: var(--sheet);
-    color: var(--text);
-}
-
-.btn-ghost:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--accent) 8%, var(--sheet));
-}
-
-.btn-accent:disabled,
-.btn-ghost:disabled {
-    opacity: .5;
-    cursor: default;
-}
-
 .field-hint-inline {
     font-size: var(--fs-meta);
     color: var(--t2);
@@ -304,34 +249,14 @@
 
 /* ---------- Audit ---------- */
 .audit-title {
-    margin-top: 28px;
+    margin-top: var(--space-5);
 }
 
 .audit-list {
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-    overflow-x: auto;
-}
-
-.audit-row {
-    display: grid;
-    grid-template-columns: 130px 110px minmax(180px, 1fr) minmax(200px, 1.4fr) minmax(180px, 1fr);
-    gap: 12px;
-    align-items: center;
-    padding: 8px 16px;
-    border-bottom: 1px solid var(--border);
-    font-size: var(--fs-ui);
-    min-width: 860px;
-}
-
-.audit-row:last-child {
-    border-bottom: none;
-}
-
-.audit-action {
-    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
 }
 
 /* ---------- Step 3: invite codes ---------- */
@@ -391,35 +316,6 @@
 .invite-empty {
     padding: 14px 16px;
     margin: 0;
-}
-
-/* Tab strip — same shape as the Posts Manager and Settings, so the app's secondary pages behave
-   alike rather than each inventing navigation. */
-.admin-tabs {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 16px;
-    border-bottom: 1px solid var(--border);
-}
-
-.admin-tabs button {
-    border: none;
-    background: none;
-    font-family: inherit;
-    font-size: var(--fs-body);
-    color: var(--t2);
-    padding: 7px 14px;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-}
-
-.admin-tabs button:hover { color: var(--text); }
-
-.admin-tabs button.active {
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-    font-weight: 600;
 }
 
 .post-row,

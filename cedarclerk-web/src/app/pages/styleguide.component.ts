@@ -12,6 +12,11 @@ import { LeafTagComponent, LeafState } from '../bench/display/leaf-tag.component
 import { PaperCardComponent } from '../bench/display/paper-card.component';
 import { TaskTagComponent } from '../bench/display/task-tag.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
+import { WorktopComponent } from '../bench/worktop/worktop.component';
+import { ModuleTileComponent } from '../bench/worktop/module-tile.component';
+import { LogLineComponent } from '../bench/worktop/log-line.component';
+import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
+import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { BrassPinComponent } from '../bench/scenery/brass-pin.component';
 import { BrassHookComponent } from '../bench/scenery/brass-hook.component';
 
@@ -34,6 +39,8 @@ export type SgSurface = 'paper' | 'chrome';
         ButtonComponent, InputComponent,
         StampBadgeComponent, ResinDropComponent, LeafTagComponent, PaperCardComponent, TaskTagComponent,
         SpecRowComponent, BrassPinComponent, BrassHookComponent,
+        WorktopComponent, ModuleTileComponent, LogLineComponent,
+        ShelfPanelComponent, IndexTabsComponent,
     ],
     templateUrl: 'styleguide.component.html',
     styleUrls: ['styleguide.component.css'],
@@ -131,6 +138,13 @@ export class StyleguideComponent {
         { key: 'hover', label: 'hover ↖' },
         { key: 'focus', label: 'focus ⇥' },
         { key: 'disabled', label: 'disabled' },
+    ];
+
+    // Not localized, like the rest of this page: a development surface names its own demo data.
+    readonly journalTabs: IndexTabItem[] = [
+        { id: 'checks', label: 'Checks', badge: 2 },
+        { id: 'build', label: 'Build' },
+        { id: 'console', label: 'Console', badge: 128 },
     ];
 
     readonly stampTones: StampTone[] = ['pine', 'brass', 'rust', 'ink'];

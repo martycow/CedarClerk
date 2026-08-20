@@ -102,6 +102,22 @@ describe('project hub', () => {
         expect(tileNames()).not.toContain(en.shell.metrics);
     });
 
+    // ADR-163 — a plate is a door, and a door has an address. router.navigate has no URL to hand
+    // the browser, so middle click, copy link address and the hover preview all died with it.
+    it('gives every plate a real href rather than a click handler', () => {
+        const hrefs = tiles().map(x => x.querySelector('.mt-plate')?.getAttribute('href'));
+        expect(hrefs).toEqual([
+            '/projects/p1/tasks', '/projects/p1/planner', '/projects/p1/assets', '/projects/p1/builds',
+        ]);
+        for (const tile of tiles()) expect(tile.querySelector('button')).toBeNull();
+    });
+
+    it('gives the up next tag the same address the board would open at', () => {
+        const tag = el().querySelector('app-task-tag .tt-plate')!;
+        expect(tag.tagName).toBe('A');
+        expect(tag.getAttribute('href')).toBe('/projects/p1/tasks?task=t1');
+    });
+
     it('takes each plate\'s number from the field that actually holds it', () => {
         expect(tileCount(t.tasks.title)).toBe('8');          // detail.openTaskCount
         expect(tileCount(t.railPendingTitle)).toBe('S4');    // the sprint covering today

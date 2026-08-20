@@ -1,128 +1,149 @@
-<div class="planner-page" data-density="compact">
-    <div class="planner-body">
-        <div class="planner-toolbar">
-            <div>
-                <h1>{{ t().projects.planner.title }}</h1>
-                <div class="planner-sub">
-                    @if (project(); as p) {
-                        <span>{{ p.name }}</span><span class="dot">·</span>
-                    }
-                    <span>{{ t().projects.planner.sub(sprints().length, openCount()) }}</span>
-                </div>
-            </div>
-            <span class="spacer"></span>
-            <a class="btn-ghost" [routerLink]="['/projects', projectId(), 'tasks']">
-                <app-icon name="kanban" size="sm"></app-icon>
-                {{ t().projects.tasks.board }}
-            </a>
-            <button class="btn-accent" (click)="startCreating()" [disabled]="busy()">
-                <app-icon name="plus" size="sm"></app-icon>
-                {{ t().projects.planner.newSprint }}
-            </button>
-        </div>
+<div class="planner">
+    <div class="planner-grid">
+        <app-worktop class="top" [label]="project()?.name ?? ''"
+                     [meta]="t().projects.planner.sub(sprints().length, openCount())" >
+            <div class="top-body">
+                <header class="head">
+                    <h1 class="head-title">{{ t().projects.planner.title }}</h1>
+                    <span class="spacer"></span>
+                    <app-button variant="pine" [disabled]="busy()" (clicked)="startCreating()">
+                        <app-icon name="plus" size="sm" />
+                        {{ t().projects.planner.newSprint }}
+                    </app-button>
+                </header>
 
-        @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
+                @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
 
-        @if (loading()) {
-            <p class="hint">{{ t().projects.loading }}</p>
-        } @else if (loadError(); as e) {
-            <p class="error-line">{{ e }}</p>
-        } @else if (!sprints().length && !tasks().length) {
-            <div class="empty-state">
-                <app-icon name="timer" size="lg"></app-icon>
-                <p class="empty-title">{{ t().projects.planner.empty }}</p>
-                <p class="hint">{{ t().projects.planner.emptyHint }}</p>
-                <button class="btn-accent" (click)="startCreating()">
-                    <app-icon name="plus" size="sm"></app-icon>
-                    {{ t().projects.planner.newSprint }}
-                </button>
-            </div>
-        } @else {
-            @for (group of groups(); track group.sprint?.id ?? 'none') {
-                <section class="sprint-card" [class.unplanned]="!group.sprint">
-                    @if (group.sprint; as s) {
-                        <header class="sprint-head">
-                            <span class="sprint-number">S{{ s.number }}</span>
-                            <span class="sprint-name">{{ s.name }}</span>
-                            <span class="sprint-dates">
-                                {{ s.startsAt | zonedDate:'d MMM' }} – {{ s.endsAt | zonedDate:'d MMM' }}
-                            </span>
-                            <span class="status-badge"
-                                  [class.tone-accent]="s.state === 'current'"
-                                  [class.tone-ok]="s.state === 'finished'">
-                                {{ t().projects.planner.state[s.state] }}
-                            </span>
-                            <!--Said about the tasks, never about the sprint: a sprint is not
-                            overdue, it holds tasks that are.-->
-                            @if (s.overdueCount) {
-                                <span class="overdue-note">{{ t().projects.planner.overdueInside(s.overdueCount) }}</span>
-                            }
-                            <span class="spacer"></span>
-
-                            @if (s.taskCount) {
-                                <span class="sprint-progress-text">{{ t().projects.planner.progress(s.doneCount, s.taskCount) }}</span>
-                                <span class="sprint-bar" [attr.aria-hidden]="true">
-                                    <span class="sprint-fill" [style.width.%]="progress(s)"></span>
-                                </span>
-                            }
-
-                            @if (s.state === 'finished') {
-                                <button class="icon-btn" (click)="toggle(s)"
-                                        [title]="isCollapsed(group) ? t().projects.planner.expand : t().projects.planner.collapse"
-                                        [attr.aria-label]="isCollapsed(group) ? t().projects.planner.expand : t().projects.planner.collapse">
-                                    <app-icon name="caret-down" size="xs"></app-icon>
-                                </button>
-                            }
-                            <!--T-158 (ADR-132) — work → story: the sprint's material as a post draft.-->
-                            <button class="btn-ghost small" (click)="createDevlog(s)" [disabled]="busy()">
-                                <app-icon name="newspaper" size="xs"></app-icon>
-                                {{ t().projects.planner.makeDevlog }}
-                            </button>
-                            <button class="icon-btn" (click)="startEditing(s)" [disabled]="busy()"
-                                    [title]="t().projects.planner.editSprint"
-                                    [attr.aria-label]="t().projects.planner.editSprint">
-                                <app-icon name="pencil-simple" size="xs"></app-icon>
-                            </button>
-                        </header>
-                    } @else {
-                        <header class="sprint-head">
-                            <span class="sprint-name">{{ t().projects.planner.noSprint }}</span>
-                            <span class="sprint-dates">{{ t().projects.planner.noSprintHint }}</span>
-                        </header>
-                    }
-
-                    @if (isCollapsed(group)) {
-                        <button class="collapsed-line" (click)="toggle(group.sprint!)">
-                            {{ t().projects.planner.collapsed(group.tasks.length) }}
-                        </button>
-                    } @else {
-                        @for (task of group.tasks; track task.id) {
-                            <div class="task-row" (click)="openTask(task)" tabindex="0"
-                                 (keydown.enter)="openTask(task)" [attr.aria-label]="task.title">
-                                <span class="task-title" [title]="task.title">{{ task.title }}</span>
-                                <span class="prio" [class.p1]="task.priority === 1">
-                                    {{ t().projects.tasks.priority(task.priority) }}
-                                </span>
-                                <span>
-                                    <span class="status-badge"
-                                          [class.tone-accent]="task.status === 'in_progress'"
-                                          [class.tone-ok]="task.status === 'done'">
-                                        {{ t().projects.tasks.status[task.status] }}
+                @if (loading()) {
+                    <p class="hint">{{ t().projects.loading }}</p>
+                } @else if (loadError(); as e) {
+                    <p class="error-line">{{ e }}</p>
+                } @else if (!sprints().length && !tasks().length) {
+                    <div class="empty-state">
+                        <app-icon name="timer" size="lg" />
+                        <p class="empty-title">{{ t().projects.planner.empty }}</p>
+                        <p class="hint">{{ t().projects.planner.emptyHint }}</p>
+                        <app-button variant="pine" (clicked)="startCreating()">
+                            <app-icon name="plus" size="sm" />
+                            {{ t().projects.planner.newSprint }}
+                        </app-button>
+                    </div>
+                } @else {
+                    @for (group of groups(); track group.sprint?.id ?? 'none') {
+                        <!--The pile is torn stock rather than cut: it is what work comes out of,
+                        not something that was planned, and the old card said so with a dashed edge.-->
+                        <app-paper-card class="sprint" [rotate]="$even ? -0.3 : 0.25"
+                                        [bright]="group.sprint?.state === 'current'"
+                                        [deckled]="!group.sprint">
+                            @if (group.sprint; as s) {
+                                <header class="sprint-head">
+                                    <span class="sprint-number">S{{ s.number }}</span>
+                                    <span class="sprint-name">{{ s.name }}</span>
+                                    <span class="sprint-dates">
+                                        {{ s.startsAt | zonedDate:'d MMM' }} – {{ s.endsAt | zonedDate:'d MMM' }}
                                     </span>
-                                </span>
-                                <span class="due" [class.overdue]="overdue(task)">
-                                    @if (task.dueAt) {
-                                        {{ task.dueAt | zonedDate:'d MMM' }}@if (overdue(task)) {<span> · {{ t().projects.tasks.overdue }}</span>}
-                                    } @else { <span class="none">—</span> }
-                                </span>
-                            </div>
-                        } @empty {
-                            <p class="hint sprint-empty">{{ t().projects.planner.noTasks }}</p>
-                        }
+                                    <app-stamp-badge [tone]="sprintTones[s.state]" [rotate]="-1.5">
+                                        {{ t().projects.planner.state[s.state] }}
+                                    </app-stamp-badge>
+                                    <!--Said about the tasks, never about the sprint: a sprint is not
+                                    overdue, it holds tasks that are.-->
+                                    @if (s.overdueCount) {
+                                        <span class="overdue-note">{{ t().projects.planner.overdueInside(s.overdueCount) }}</span>
+                                    }
+                                    <span class="spacer"></span>
+
+                                    @if (s.taskCount) {
+                                        <span class="sprint-progress-text">{{ t().projects.planner.progress(s.doneCount, s.taskCount) }}</span>
+                                        <span class="bar" aria-hidden="true">
+                                            <i [style.width.%]="progress(s)"></i>
+                                        </span>
+                                    }
+
+                                    @if (s.state === 'finished') {
+                                        <app-button variant="paper" size="sm" (clicked)="toggle(s)"
+                                                    [title]="isCollapsed(group) ? t().projects.planner.expand : t().projects.planner.collapse">
+                                            <app-icon name="caret-down" size="xs" />
+                                        </app-button>
+                                    }
+                                    <!--T-158 (ADR-132) — work → story: the sprint's material as a post draft.-->
+                                    <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="createDevlog(s)">
+                                        <app-icon name="newspaper" size="xs" />
+                                        {{ t().projects.planner.makeDevlog }}
+                                    </app-button>
+                                    <app-button variant="paper" size="sm" [disabled]="busy()"
+                                                [title]="t().projects.planner.editSprint" (clicked)="startEditing(s)">
+                                        <app-icon name="pencil-simple" size="xs" />
+                                    </app-button>
+                                </header>
+                            } @else {
+                                <header class="sprint-head">
+                                    <span class="sprint-name">{{ t().projects.planner.noSprint }}</span>
+                                    <span class="sprint-dates">{{ t().projects.planner.noSprintHint }}</span>
+                                </header>
+                            }
+
+                            @if (isCollapsed(group)) {
+                                <button type="button" class="collapsed-line" (click)="toggle(group.sprint!)">
+                                    {{ t().projects.planner.collapsed(group.tasks.length) }}
+                                </button>
+                            } @else {
+                                <div class="tags">
+                                    <!--The same tag the hub and the board hang: one object, one
+                                    drawing of it (ADR-168 rule 4). The tag is a link, so the board
+                                    opens in a tab from a middle click (ADR-163).-->
+                                    @for (task of group.tasks; track task.id) {
+                                        <app-task-tag [prio]="task.priority" [done]="task.status === 'done'"
+                                                      [due]="dueLabel(task, (task.dueAt | zonedDate:'d MMM'))"
+                                                      [overdue]="overdue(task)" [rotate]="$even ? -0.7 : 0.5"
+                                                      [hint]="task.title"
+                                                      [link]="['/projects', projectId(), 'tasks']"
+                                                      [queryParams]="{ task: task.id }">
+                                            {{ task.title }}
+                                            <app-stamp-badge stamp [rotate]="-1" [tone]="statusTones[task.status]">
+                                                {{ t().projects.tasks.status[task.status] }}
+                                            </app-stamp-badge>
+                                        </app-task-tag>
+                                    } @empty {
+                                        <p class="hint sprint-empty">{{ t().projects.planner.noTasks }}</p>
+                                    }
+                                </div>
+                            }
+                        </app-paper-card>
                     }
-                </section>
+                }
+            </div>
+        </app-worktop>
+
+        <app-shelf-panel class="shelf-right" [title]="t().projects.summary" [count]="sprints().length">
+            <div class="grp">{{ t().projects.railPendingTitle }}</div>
+            @if (currentSprint(); as s) {
+                <app-spec-row [label]="t().projects.planner.state.current" [value]="'S' + s.number + ' — ' + s.name" />
+                @if (s.taskCount) {
+                    <app-spec-row [label]="t().projects.hub.sprintDone"
+                                  [value]="t().projects.planner.progress(s.doneCount, s.taskCount)" />
+                }
+                @if (s.overdueCount) {
+                    <app-spec-row warn [label]="t().projects.tasks.filterOverdue"
+                                  [value]="t().projects.planner.overdueInside(s.overdueCount)" />
+                }
+            } @else {
+                <p class="hint">{{ t().projects.planner.noCurrentSprint }}</p>
             }
-        }
+
+            <div class="grp">{{ t().projects.planner.title }}</div>
+            <app-spec-row [label]="t().projects.planner.state.planned" value="{{ plannedCount() }}" />
+            <app-spec-row [label]="t().projects.planner.state.finished" value="{{ finishedCount() }}" />
+
+            <div class="grp">
+                {{ t().projects.colTasks }}
+                <span class="spacer"></span>
+                <a class="grp-link" [routerLink]="['/projects', projectId(), 'tasks']">
+                    {{ t().projects.tasks.board }} →
+                </a>
+            </div>
+            <app-spec-row [label]="t().projects.tasks.filterOpen" value="{{ openCount() }}" />
+            <app-spec-row [label]="t().projects.planner.noSprint" value="{{ unplannedCount() }}" />
+        </app-shelf-panel>
     </div>
 </div>
 

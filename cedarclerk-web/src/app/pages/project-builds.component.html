@@ -1,99 +1,118 @@
-<div class="builds-page" data-density="compact">
-    <div class="builds-body">
-        <div class="builds-toolbar">
-            <div>
-                <h1>{{ t().projects.builds.title }}</h1>
-                <div class="builds-sub">
-                    @if (project(); as p) {
-                        <span>{{ p.name }}</span><span class="dot">·</span>
-                    }
-                    <span>{{ t().projects.builds.sub(builds().length, unreleasedCount()) }}</span>
-                </div>
-            </div>
-            <span class="spacer"></span>
-            <a class="btn-ghost" [routerLink]="['/projects', projectId(), 'tasks']">
-                <app-icon name="kanban" size="sm"></app-icon>
-                {{ t().projects.tasks.board }}
-            </a>
-            <button class="btn-accent" (click)="startCreating()" [disabled]="busy()">
-                <app-icon name="plus" size="sm"></app-icon>
-                {{ t().projects.builds.newBuild }}
-            </button>
-        </div>
+<div class="builds">
+    <div class="builds-grid">
+        <app-worktop class="top" [label]="project()?.name ?? ''"
+                     [meta]="t().projects.builds.sub(builds().length, unreleasedCount())">
+            <div class="top-body">
+                <header class="head">
+                    <h1 class="head-title">{{ t().projects.builds.title }}</h1>
+                    <span class="spacer"></span>
+                    <app-button variant="pine" [disabled]="busy()" (clicked)="startCreating()">
+                        <app-icon name="plus" size="sm" />
+                        {{ t().projects.builds.newBuild }}
+                    </app-button>
+                </header>
 
-        @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
+                @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
 
-        @if (loading()) {
-            <p class="hint">{{ t().projects.loading }}</p>
-        } @else if (loadError(); as e) {
-            <p class="error-line">{{ e }}</p>
-        } @else if (!builds().length) {
-            <div class="empty-state">
-                <app-icon name="rocket-launch" size="lg"></app-icon>
-                <p class="empty-title">{{ t().projects.builds.empty }}</p>
-                <p class="hint">{{ t().projects.builds.emptyHint }}</p>
-                <button class="btn-accent" (click)="startCreating()">
-                    <app-icon name="plus" size="sm"></app-icon>
-                    {{ t().projects.builds.newBuild }}
-                </button>
-            </div>
-        } @else {
-            @for (build of builds(); track build.id) {
-                <section class="build-card">
-                    <header class="build-head">
-                        <span class="build-version">{{ build.version }}</span>
-                        <span class="status-badge" [class.tone-ok]="build.released">
-                            {{ build.released ? t().projects.builds.released : t().projects.builds.unreleased }}
-                        </span>
-                        @if (build.releasedAt) {
-                            <span class="build-date">{{ build.releasedAt | zonedDate:'d MMM yyyy' }}</span>
-                        }
-                        @if (build.taskCount) {
-                            <span class="build-count">{{ t().projects.planner.progress(build.doneCount, build.taskCount) }}</span>
-                        }
-                        <span class="spacer"></span>
-                        <button class="btn-ghost small" (click)="createChangelog(build)" [disabled]="busy()">
-                            <app-icon name="list-numbers" size="sm"></app-icon>
-                            {{ t().projects.builds.makeChangelog }}
-                        </button>
-                        <button class="icon-btn" (click)="startEditing(build)" [disabled]="busy()"
-                                [title]="t().projects.builds.editBuild"
-                                [attr.aria-label]="t().projects.builds.editBuild">
-                            <app-icon name="pencil-simple" size="xs"></app-icon>
-                        </button>
-                    </header>
+                @if (loading()) {
+                    <p class="hint">{{ t().projects.loading }}</p>
+                } @else if (loadError(); as e) {
+                    <p class="error-line">{{ e }}</p>
+                } @else if (!builds().length) {
+                    <div class="empty-state">
+                        <app-icon name="rocket-launch" size="lg" />
+                        <p class="empty-title">{{ t().projects.builds.empty }}</p>
+                        <p class="hint">{{ t().projects.builds.emptyHint }}</p>
+                        <app-button variant="pine" (clicked)="startCreating()">
+                            <app-icon name="plus" size="sm" />
+                            {{ t().projects.builds.newBuild }}
+                        </app-button>
+                    </div>
+                } @else {
+                    @for (build of builds(); track build.id) {
+                        <app-paper-card class="build" [rotate]="$even ? -0.3 : 0.25" [bright]="!build.released">
+                            <header class="build-head">
+                                <span class="build-version">{{ build.version }}</span>
+                                <app-stamp-badge [tone]="build.released ? 'pine' : 'brass'" [rotate]="-1.5">
+                                    {{ build.released ? t().projects.builds.released : t().projects.builds.unreleased }}
+                                </app-stamp-badge>
+                                @if (build.releasedAt) {
+                                    <span class="build-date">{{ build.releasedAt | zonedDate:'d MMM yyyy' }}</span>
+                                }
+                                @if (build.taskCount) {
+                                    <span class="build-count">{{ t().projects.planner.progress(build.doneCount, build.taskCount) }}</span>
+                                }
+                                <span class="spacer"></span>
+                                <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="createChangelog(build)">
+                                    <app-icon name="list-numbers" size="xs" />
+                                    {{ t().projects.builds.makeChangelog }}
+                                </app-button>
+                                <app-button variant="paper" size="sm" [disabled]="busy()"
+                                            [title]="t().projects.builds.editBuild" (clicked)="startEditing(build)">
+                                    <app-icon name="pencil-simple" size="xs" />
+                                </app-button>
+                            </header>
 
-                    @if (build.notes) { <p class="build-notes">{{ build.notes }}</p> }
+                            @if (build.notes) { <p class="build-notes">{{ build.notes }}</p> }
 
-                    @if (build.documents.length) {
-                        <div class="build-docs">
-                            @for (doc of build.documents; track doc.id) {
-                                <button class="doc-chip" (click)="openDocument(doc.id)">
-                                    <app-icon name="file-text" size="xs"></app-icon>
-                                    <span>{{ doc.title }}</span>
-                                </button>
+                            @if (build.documents.length) {
+                                <div class="build-docs">
+                                    <!--A chip opens that document in the editor, so it is an anchor
+                                    with the address the editor reads (ADR-163, ADR-168 rule 3).-->
+                                    @for (doc of build.documents; track doc.id) {
+                                        <a class="doc-chip" routerLink="/editor" [queryParams]="{ draft: doc.id }">
+                                            <app-icon name="file-text" size="xs" />
+                                            <span>{{ doc.title }}</span>
+                                        </a>
+                                    }
+                                </div>
                             }
-                        </div>
-                    }
 
-                    @for (task of tasksOf(build); track task.id) {
-                        <div class="task-row" (click)="openTask(task)" tabindex="0"
-                             (keydown.enter)="openTask(task)" [attr.aria-label]="task.title">
-                            <span class="task-title" [title]="task.title">{{ task.title }}</span>
-                            <span>
-                                <span class="status-badge"
-                                      [class.tone-accent]="task.status === 'in_progress'"
-                                      [class.tone-ok]="task.status === 'done'">
-                                    {{ t().projects.tasks.status[task.status] }}
-                                </span>
-                            </span>
-                        </div>
-                    } @empty {
-                        <p class="hint build-empty">{{ t().projects.builds.noTasks }}</p>
+                            <div class="tags">
+                                @for (task of tasksOf(build); track task.id) {
+                                    <app-task-tag [prio]="task.priority" [done]="task.status === 'done'"
+                                                  [due]="dueLabel(task, (task.dueAt | zonedDate:'d MMM'))"
+                                                  [overdue]="overdue(task)" [rotate]="$even ? -0.7 : 0.5"
+                                                  [hint]="task.title"
+                                                  [link]="['/projects', projectId(), 'tasks']"
+                                                  [queryParams]="{ task: task.id }">
+                                        {{ task.title }}
+                                        <app-stamp-badge stamp [rotate]="-1" [tone]="statusTones[task.status]">
+                                            {{ t().projects.tasks.status[task.status] }}
+                                        </app-stamp-badge>
+                                    </app-task-tag>
+                                } @empty {
+                                    <p class="hint build-empty">{{ t().projects.builds.noTasks }}</p>
+                                }
+                            </div>
+                        </app-paper-card>
                     }
-                </section>
+                }
+            </div>
+        </app-worktop>
+
+        <app-shelf-panel class="shelf-right" [title]="t().projects.summary" [count]="builds().length">
+            <div class="grp">{{ t().projects.builds.title }}</div>
+            @if (latestReleased(); as b) {
+                <app-spec-row [label]="t().projects.builds.latest" [value]="b.version" />
+                <app-spec-row [label]="t().projects.builds.fieldReleased"
+                              value="{{ b.releasedAt | zonedDate:'d MMM yyyy' }}" />
             }
-        }
+            <!--No "latest" rows until something is out: the counts below say Released 0, which is
+            the same fact without a dash that would read as "could not ask".-->
+            <app-spec-row [label]="t().projects.builds.released" value="{{ releasedCount() }}" />
+            <app-spec-row [label]="t().projects.builds.unreleased" value="{{ unreleasedCount() }}" />
+
+            <div class="grp">
+                {{ t().projects.colTasks }}
+                <span class="spacer"></span>
+                <a class="grp-link" [routerLink]="['/projects', projectId(), 'tasks']">
+                    {{ t().projects.tasks.board }} →
+                </a>
+            </div>
+            <app-spec-row [label]="t().projects.builds.assignBuild" value="{{ assignedCount() }}" />
+            <app-spec-row [label]="t().projects.colDocs" value="{{ documentCount() }}" />
+        </app-shelf-panel>
     </div>
 </div>
 

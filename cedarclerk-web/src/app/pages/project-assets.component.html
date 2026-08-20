@@ -1,362 +1,327 @@
+<!--ADR-164 — the kind chips become an index strip, the index list is one panel, and the sub-line
+that used to trail the page title is the Index shelf beside it. The file the author opened is a
+shelf too, because linking it to a document means choosing from a list the modal was covering.-->
 <div class="assets-page" data-density="compact">
-    <div class="assets-body">
-        <div class="assets-toolbar">
-            <div>
-                <h1>{{ t().projects.assets.title }}</h1>
-                <div class="assets-sub">
-                    @if (page(); as p) {
-                        <span>{{ t().projects.assets.sub(p.totalIndexed) }}</span>
-                        @if (p.rootPath) {
-                            <span class="dot">·</span><span class="path">{{ p.rootPath }}</span>
-                            <!-- Whose machine, always. The index opens from anywhere, so the folder
-                                 path alone would read as "on this computer" wherever it is shown. -->
-                            @if (!isLocal()) {
-                                <span class="dot">·</span>
-                                <span class="fingerprint-note" [title]="t().projects.assets.fingerprintHint(sourceMachineName())">
-                                    <app-icon name="cloud" size="sm"></app-icon>
-                                    {{ t().projects.assets.filesOnMachine(sourceMachineName()) }}
-                                </span>
-                            }
-                        } @else {
-                            <span class="dot">·</span><span>{{ t().projects.assets.neverIndexed }}</span>
-                        }
-                        @if (p.indexedAt) {
-                            <span class="dot">·</span>
-                            <span>{{ t().projects.assets.indexedAt }} {{ p.indexedAt | zonedDate:'d MMM, HH:mm' }}</span>
-                        }
-                        @if (p.missingCount > 0) {
-                            <span class="dot">·</span>
-                            <span class="danger">{{ t().projects.assets.notFoundCount(p.missingCount) }}</span>
-                        }
-                    }
-                </div>
-            </div>
-            <span class="spacer"></span>
-
-            @if (!needsFolder()) {
-                <input class="search-input" type="search" [ngModel]="search()" (ngModelChange)="onSearch($event)"
-                       [placeholder]="t().projects.assets.search" [attr.aria-label]="t().projects.assets.search">
-                <div class="view-toggle">
-                    <button [class.active]="view() === 'grid'" (click)="setView('grid')"
-                            [title]="t().projects.assets.viewGrid" [attr.aria-label]="t().projects.assets.viewGrid">
-                        <app-icon name="squares-four" size="sm"></app-icon>
-                    </button>
-                    <button [class.active]="view() === 'list'" (click)="setView('list')"
-                            [title]="t().projects.assets.viewList" [attr.aria-label]="t().projects.assets.viewList">
-                        <app-icon name="list" size="sm"></app-icon>
-                    </button>
-                </div>
-                <!-- Re-scan needs the machine that holds the folder; changing the folder only needs
-                     a machine with a disk, since it picks a new one. -->
-                @if (canIndex() && isLocal()) {
-                    <button class="btn-ghost" [disabled]="busy() || scanning()" (click)="rescan()">
-                        <app-icon name="arrow-clockwise" size="sm"></app-icon>
-                        <span>{{ t().projects.assets.reindex }}</span>
-                    </button>
-                }
-                @if (canIndex()) {
-                    <button class="btn-ghost" [disabled]="busy() || scanning()" (click)="browse()">
-                        <app-icon name="folder-open" size="sm"></app-icon>
-                        <span>{{ t().projects.assets.changeFolder }}</span>
-                    </button>
-                }
-            }
-        </div>
-
-        <!-- Scanning banner. Two phases, because they cost wildly different amounts: the index is
-             fast (small rows) and the preview pass is slow (every image decoded once). One bar across
-             both would crawl and then leap, so the second phase reports counts and megabytes instead.
-             Long work without numbers is indistinguishable from a hang — which is the whole reason
-             "every preview, no limit" needs this banner to be honest rather than reassuring. -->
-        @if (progress(); as s) {
-            @if (scanning()) {
-                <div class="scan-banner">
-                    <app-icon name="circle-notch" size="md" class="spin"></app-icon>
-                    <div class="scan-text">
-                        <div class="scan-head">
-                            <strong>{{ s.phase === 'previews' ? t().projects.assets.previewing : t().projects.assets.scanning }}</strong>
-                            <span class="path">{{ page()?.rootPath }}</span>
-                        </div>
-                        <div class="scan-meta">
-                            @switch (s.phase) {
-                                @case ('counting') { {{ t().projects.assets.scanCounting }} }
-                                @case ('sweeping') { {{ t().projects.assets.scanSweeping }} }
-                                @case ('previews') {
-                                    {{ t().projects.assets.previewProgress(s.thumbsDone, s.thumbsRemaining) }}
-                                    <span class="dot">·</span>{{ bytes(s.thumbBytes) }}
-                                }
-                                @default { {{ t().projects.assets.scanProgress(s.indexed, s.total) }} }
-                            }
-                            <span class="dot">·</span>{{ t().projects.assets.scanKeepWorking }}
-                        </div>
+    <!-- Scanning banner. Two phases, because they cost wildly different amounts: the index is
+         fast (small rows) and the preview pass is slow (every image decoded once). One bar across
+         both would crawl and then leap, so the second phase reports counts and megabytes instead.
+         Long work without numbers is indistinguishable from a hang — which is the whole reason
+         "every preview, no limit" needs this banner to be honest rather than reassuring. -->
+    @if (progress(); as s) {
+        @if (scanning()) {
+            <div class="scan-banner">
+                <app-icon name="circle-notch" size="md" class="spin"></app-icon>
+                <div class="scan-text">
+                    <div class="scan-head">
+                        <strong>{{ s.phase === 'previews' ? t().projects.assets.previewing : t().projects.assets.scanning }}</strong>
+                        <span class="path">{{ page()?.rootPath }}</span>
                     </div>
-                    <!-- The bar tracks the index phase only; the preview phase has no honest
-                         denominator until the sweep has run, and a bar that restarts reads as a bug. -->
-                    @if (s.phase !== 'previews') {
-                        <div class="scan-bar" [attr.aria-valuenow]="scanPercent()" role="progressbar">
-                            <div class="scan-fill" [style.width.%]="scanPercent()"></div>
-                        </div>
-                    }
-                    <button class="btn-ghost" (click)="cancelScan()">{{ t().projects.assets.scanCancel }}</button>
-                </div>
-            } @else if (s.phase === 'cancelled') {
-                <p class="notice">{{ t().projects.assets.scanCancelled }}</p>
-            } @else if (s.phase === 'failed') {
-                <p class="load-error">{{ t().projects.assets.scanFailed }} {{ s.error }}</p>
-            } @else if (s.phase === 'done') {
-                <p class="notice">
-                    {{ t().projects.assets.scanDone(s.indexed, s.markedMissing) }}
-                    <span class="dot">·</span>{{ t().projects.assets.previewsStored(s.thumbsDone) }}
-                    @if (s.unreadable > 0) {
-                        <span class="dot">·</span>{{ t().projects.assets.scanUnreadable(s.unreadable) }}
-                    }
-                </p>
-            }
-        }
-
-        @if (loadError(); as err) { <p class="load-error">{{ err }}</p> }
-
-        @if (loading()) {
-            <p class="hint">{{ t().projects.loading }}</p>
-        } @else if (needsFolder()) {
-            <!-- Pick-a-folder state. The copy is the feature: it promises nothing is uploaded. -->
-            <div class="pick-card">
-                <app-icon name="folder-open" size="lg"></app-icon>
-                <h2>{{ t().projects.assets.pickTitle }}</h2>
-                <p class="pick-body">{{ t().projects.assets.pickBody }}</p>
-
-                <!-- The OS picker is the only way in (ADR-117). A typed path would have to be
-                     granted to the agent by the page, and then the grant would guard nothing — its
-                     point is that reading a disk begins with a gesture the human made. -->
-                @if (canIndex()) {
-                    @if (pickError(); as err) { <p class="load-error">{{ err }}</p> }
-
-                    <button class="btn-accent" [disabled]="scanning()" (click)="browse()">
-                        <app-icon name="folder-open" size="sm"></app-icon>
-                        <span>{{ t().projects.assets.pickBrowse }}</span>
-                    </button>
-
-                    @if (recentFolders().length > 0) {
-                        <div class="recent">
-                            <!-- Shown as history, not as buttons: a remembered path cannot be
-                                 re-indexed without going through the picker again on a machine that
-                                 never granted it. -->
-                            <div class="field-label">{{ t().projects.assets.pickRecent }}</div>
-                            @for (folder of recentFolders(); track folder) {
-                                <div class="recent-row">
-                                    <app-icon name="arrow-counter-clockwise" size="sm"></app-icon>
-                                    <span class="path">{{ folder }}</span>
-                                </div>
+                    <div class="scan-meta">
+                        @switch (s.phase) {
+                            @case ('counting') { {{ t().projects.assets.scanCounting }} }
+                            @case ('sweeping') { {{ t().projects.assets.scanSweeping }} }
+                            @case ('previews') {
+                                {{ t().projects.assets.previewProgress(s.thumbsDone, s.thumbsRemaining) }}
+                                <span class="dot">·</span>{{ bytes(s.thumbBytes) }}
                             }
-                        </div>
-                    }
-                } @else {
-                    <!-- A browser has no folder to offer, and the hosted server has no disk of the
-                         author's to read. Both facts, one sentence, plus where to get the app. -->
-                    <p class="hint web-only">{{ t().projects.assets.webOnly }}</p>
-                    <a class="btn-ghost" href="/downloads/latest">{{ t().projects.assets.getDesktop }}</a>
-                }
-            </div>
-        } @else if (page(); as p) {
-            <div class="filter-tabs">
-                <button [class.active]="kind() === null && !missingOnly()" (click)="setKind(null)">
-                    {{ t().projects.assets.filterAll }} <span class="chip-count">{{ p.totalIndexed }}</span>
-                </button>
-                @for (k of kinds; track k) {
-                    @if (kindCount(k) > 0) {
-                        <button [class.active]="kind() === k" (click)="setKind(k)">
-                            {{ t().projects.assets.kinds[k] }} <span class="chip-count">{{ kindCount(k) }}</span>
-                        </button>
-                    }
-                }
-                @if (p.missingCount > 0) {
-                    <button class="danger-chip" [class.active]="missingOnly()" (click)="showMissing()">
-                        {{ t().projects.assets.filterMissing }} <span class="chip-count">{{ p.missingCount }}</span>
-                    </button>
-                }
-            </div>
-
-            @if (p.items.length === 0) {
-                <p class="hint empty">
-                    {{ p.totalIndexed === 0 ? t().projects.assets.empty : t().projects.assets.emptyFiltered }}
-                </p>
-            } @else if (view() === 'grid') {
-                <div class="asset-grid">
-                    @for (a of p.items; track a.id) {
-                        <button class="tile" [class.missing]="!!a.missingSince" (click)="open(a)">
-                            <span class="preview">
-                                @if (a.missingSince) {
-                                    <app-icon name="warning" size="lg"></app-icon>
-                                    <span class="preview-label danger">{{ t().projects.assets.notFoundAtPath }}</span>
-                                } @else if (showsThumbnail(a)) {
-                                    <img class="thumb" [src]="thumbUrl(a)" [alt]="a.fileName"
-                                         loading="lazy" (error)="onThumbError(a)">
-                                } @else if (awaitingThumbnail(a)) {
-                                    <!-- A preview is possible and has not arrived. Distinct from the
-                                         case below, or a freshly indexed folder seen from a browser
-                                         would look identical to one full of undecodable formats. -->
-                                    <app-icon [name]="kindIcons[a.kind]" size="lg"></app-icon>
-                                    <span class="preview-label">{{ t().projects.assets.previewPending }}</span>
-                                } @else {
-                                    <!-- Kinds with no thumbnail say so, rather than showing an empty
-                                         frame that reads as a broken image. -->
-                                    <app-icon [name]="kindIcons[a.kind]" size="lg"></app-icon>
-                                    <span class="preview-label">{{ t().projects.assets.noPreview(t().projects.assets.kindOne[a.kind]) }}</span>
-                                }
-                                @if (!isLocal() && !a.missingSince) {
-                                    <span class="fingerprint-chip" [title]="t().projects.assets.fingerprintHint(sourceMachineName())">
-                                        {{ t().projects.assets.fingerprint }}
-                                    </span>
-                                }
-                            </span>
-                            <span class="tile-name" [title]="a.relativePath">{{ a.fileName }}</span>
-                            <span class="tile-meta">{{ detailsOf(a) }} · {{ a.modifiedAt | zonedDate:'d MMM' }}</span>
-                        </button>
-                    }
+                            @default { {{ t().projects.assets.scanProgress(s.indexed, s.total) }} }
+                        }
+                        <span class="dot">·</span>{{ t().projects.assets.scanKeepWorking }}
+                    </div>
                 </div>
+                <!-- The bar tracks the index phase only; the preview phase has no honest
+                     denominator until the sweep has run, and a bar that restarts reads as a bug. -->
+                @if (s.phase !== 'previews') {
+                    <div class="scan-bar" [attr.aria-valuenow]="scanPercent()" role="progressbar">
+                        <div class="scan-fill" [style.width.%]="scanPercent()"></div>
+                    </div>
+                }
+                <app-button variant="paper" size="sm" (clicked)="cancelScan()">{{ t().projects.assets.scanCancel }}</app-button>
+            </div>
+        } @else if (s.phase === 'cancelled') {
+            <p class="notice">{{ t().projects.assets.scanCancelled }}</p>
+        } @else if (s.phase === 'failed') {
+            <p class="load-error">{{ t().projects.assets.scanFailed }} {{ s.error }}</p>
+        } @else if (s.phase === 'done') {
+            <p class="notice">
+                {{ t().projects.assets.scanDone(s.indexed, s.markedMissing) }}
+                <span class="dot">·</span>{{ t().projects.assets.previewsStored(s.thumbsDone) }}
+                @if (s.unreadable > 0) {
+                    <span class="dot">·</span>{{ t().projects.assets.scanUnreadable(s.unreadable) }}
+                }
+            </p>
+        }
+    }
+
+    @if (loadError(); as err) { <p class="load-error">{{ err }}</p> }
+
+    @if (loading()) {
+        <p class="hint">{{ t().projects.loading }}</p>
+    } @else if (needsFolder()) {
+        <!-- Pick-a-folder state. The copy is the feature: it promises nothing is uploaded. -->
+        <div class="pick-card">
+            <app-icon name="folder-open" size="lg"></app-icon>
+            <h2>{{ t().projects.assets.pickTitle }}</h2>
+            <p class="pick-body">{{ t().projects.assets.pickBody }}</p>
+
+            <!-- The OS picker is the only way in (ADR-117). A typed path would have to be
+                 granted to the agent by the page, and then the grant would guard nothing — its
+                 point is that reading a disk begins with a gesture the human made. -->
+            @if (canIndex()) {
+                @if (pickError(); as err) { <p class="load-error">{{ err }}</p> }
+
+                <app-button variant="pine" [disabled]="scanning()" (clicked)="browse()">
+                    <app-icon name="folder-open" size="sm"></app-icon>
+                    {{ t().projects.assets.pickBrowse }}
+                </app-button>
+
+                @if (recentFolders().length > 0) {
+                    <div class="recent">
+                        <!-- Shown as history, not as buttons: a remembered path cannot be
+                             re-indexed without going through the picker again on a machine that
+                             never granted it. -->
+                        <div class="field-label">{{ t().projects.assets.pickRecent }}</div>
+                        @for (folder of recentFolders(); track folder) {
+                            <div class="recent-row">
+                                <app-icon name="arrow-counter-clockwise" size="sm"></app-icon>
+                                <span class="path">{{ folder }}</span>
+                            </div>
+                        }
+                    </div>
+                }
             } @else {
-                <div class="asset-table">
-                    <div class="asset-row head-row">
-                        <div>{{ t().projects.assets.colFile }}</div>
-                        <div>{{ t().projects.assets.colType }}</div>
-                        <div class="right">{{ t().projects.assets.colDetails }}</div>
-                        <div>{{ t().projects.assets.colStatus }}</div>
-                    </div>
-                    @for (a of p.items; track a.id) {
-                        <div class="asset-row" (click)="open(a)" tabindex="0" (keydown.enter)="open(a)">
-                            <div class="file-cell">
-                                <app-icon [name]="kindIcons[a.kind]" size="sm"></app-icon>
-                                <span class="path" [title]="a.relativePath">{{ a.relativePath }}</span>
-                            </div>
-                            <div>{{ t().projects.assets.kindOne[a.kind] }}</div>
-                            <div class="right">{{ detailsOf(a) }} · {{ a.modifiedAt | zonedDate:'d MMM, HH:mm' }}</div>
-                            <!-- "On disk" is a claim about *this* disk, and from a browser it would be
-                                 false. Three states, not two. -->
-                            <div [class.danger]="!!a.missingSince" [class.ok]="!a.missingSince && isLocal()">
-                                @if (a.missingSince) {
-                                    {{ t().projects.assets.notFoundAtPath }}
-                                } @else if (isLocal()) {
-                                    {{ t().projects.assets.onDisk }}
-                                } @else {
-                                    {{ t().projects.assets.fingerprint }}
-                                }
-                            </div>
-                        </div>
-                    }
-                </div>
+                <!-- A browser has no folder to offer, and the hosted server has no disk of the
+                     author's to read. Both facts, one sentence, plus where to get the app. -->
+                <p class="hint web-only">{{ t().projects.assets.webOnly }}</p>
+                <a class="btn-ghost" href="/downloads/latest">{{ t().projects.assets.getDesktop }}</a>
             }
-
-            @if (p.total > 0) {
-                <div class="pager">
-                    <button class="btn-ghost" [disabled]="!canPageBack" (click)="pageBack()">←</button>
-                    <span class="hint">{{ rangeLabel() }}</span>
-                    <button class="btn-ghost" [disabled]="!canPageForward" (click)="pageForward()">→</button>
-                </div>
-            }
-        }
-    </div>
-</div>
-
-@if (selected(); as a) {
-    <app-modal [width]="780" (closed)="selected.set(null)">
-        <span modal-title class="modal-head-row">
-            <span class="kind-chip">{{ t().projects.assets.kindOne[a.kind] }}</span>
-            <span class="path modal-hint">{{ a.relativePath }}</span>
-        </span>
-
-        <div class="asset-view">
-            <div class="preview-pane" [class.missing]="!!a.missingSince">
-                @if (a.missingSince) {
-                    <app-icon name="warning" size="lg"></app-icon>
-                    <span class="preview-label danger">{{ t().projects.assets.notFoundAtPath }}</span>
-                } @else if (showsThumbnail(a)) {
-                    <img class="thumb" [src]="thumbUrl(a)" [alt]="a.fileName" (error)="onThumbError(a)">
-                } @else if (awaitingThumbnail(a)) {
-                    <app-icon [name]="kindIcons[a.kind]" size="lg"></app-icon>
-                    <span class="preview-label">{{ t().projects.assets.previewPending }}</span>
-                } @else {
-                    <app-icon [name]="kindIcons[a.kind]" size="lg"></app-icon>
-                    <span class="preview-label">{{ t().projects.assets.noPreview(t().projects.assets.kindOne[a.kind]) }}</span>
+        </div>
+    } @else if (page(); as p) {
+        <!-- Re-scan needs the machine that holds the folder; changing the folder only needs
+             a machine with a disk, since it picks a new one. Both change the index rather than
+             what this panel shows, so they stay on the page (ADR-164). -->
+        @if (canIndex()) {
+            <div class="assets-toolbar">
+                @if (isLocal()) {
+                    <app-button variant="paper" size="sm" [disabled]="busy() || scanning()" (clicked)="rescan()">
+                        <app-icon name="arrow-clockwise" size="sm"></app-icon>
+                        {{ t().projects.assets.reindex }}
+                    </app-button>
                 }
+                <app-button variant="paper" size="sm" [disabled]="busy() || scanning()" (clicked)="browse()">
+                    <app-icon name="folder-open" size="sm"></app-icon>
+                    {{ t().projects.assets.changeFolder }}
+                </app-button>
             </div>
+        }
 
-            <div class="asset-fields">
-                <h2 class="asset-name">{{ a.fileName }}</h2>
-                <dl class="field-grid">
-                    <dt>{{ t().projects.assets.colType }}</dt>
-                    <dd>{{ t().projects.assets.kindOne[a.kind] }}</dd>
-                    <dt>{{ t().projects.assets.colDetails }}</dt>
-                    <dd>{{ detailsOf(a) }} · {{ a.modifiedAt | zonedDate:'d MMM y, HH:mm' }}</dd>
-                    <dt>{{ t().projects.assets.colStatus }}</dt>
-                    <dd [class.danger]="!!a.missingSince" [class.ok]="!a.missingSince && isLocal()">
-                        @if (a.missingSince) {
-                            {{ t().projects.assets.notFoundAtPath }}
-                        } @else if (isLocal()) {
-                            {{ t().projects.assets.onDisk }}
-                        } @else {
-                            {{ t().projects.assets.fingerprint }}
+        <app-index-tabs [items]="kindTabs()" [value]="kindTab()" [label]="t().projects.assets.kindStrip"
+                        (selected)="pickKind($event)" />
+
+        <div class="assets-grid">
+            <app-shelf-panel class="index" [title]="t().projects.assets.title" [count]="rangeLabel()" flush>
+                <app-input actions class="search" [dense]="true" type="search" [value]="search()"
+                           [placeholder]="t().projects.assets.search"
+                           (valueChange)="onSearch($any($event) ?? '')" />
+                <app-index-tabs actions [items]="viewTabs()" [value]="view()"
+                                [label]="t().projects.assets.viewStrip" (selected)="setView($any($event))" />
+
+                @if (p.items.length === 0) {
+                    <p class="hint empty">
+                        {{ p.totalIndexed === 0 ? t().projects.assets.empty : t().projects.assets.emptyFiltered }}
+                    </p>
+                } @else if (view() === 'grid') {
+                    <div class="asset-grid">
+                        @for (a of p.items; track a.id) {
+                            <button type="button" class="tile" [class.missing]="!!a.missingSince"
+                                    [class.is-on]="selected()?.id === a.id" (click)="open(a)">
+                                <span class="preview">
+                                    @if (a.missingSince) {
+                                        <app-icon name="warning" size="lg"></app-icon>
+                                        <span class="preview-label danger">{{ t().projects.assets.notFoundAtPath }}</span>
+                                    } @else if (showsThumbnail(a)) {
+                                        <img class="thumb" [src]="thumbUrl(a)" [alt]="a.fileName"
+                                             loading="lazy" (error)="onThumbError(a)">
+                                    } @else if (awaitingThumbnail(a)) {
+                                        <!-- A preview is possible and has not arrived. Distinct from the
+                                             case below, or a freshly indexed folder seen from a browser
+                                             would look identical to one full of undecodable formats. -->
+                                        <app-icon [name]="kindIcons[a.kind]" size="lg"></app-icon>
+                                        <span class="preview-label">{{ t().projects.assets.previewPending }}</span>
+                                    } @else {
+                                        <!-- Kinds with no thumbnail say so, rather than showing an empty
+                                             frame that reads as a broken image. -->
+                                        <app-icon [name]="kindIcons[a.kind]" size="lg"></app-icon>
+                                        <span class="preview-label">{{ t().projects.assets.noPreview(t().projects.assets.kindOne[a.kind]) }}</span>
+                                    }
+                                    @if (!isLocal() && !a.missingSince) {
+                                        <span class="fingerprint-chip" [title]="t().projects.assets.fingerprintHint(sourceMachineName())">
+                                            {{ t().projects.assets.fingerprint }}
+                                        </span>
+                                    }
+                                </span>
+                                <span class="tile-name" [title]="a.relativePath">{{ a.fileName }}</span>
+                                <span class="tile-meta">{{ detailsOf(a) }} · {{ a.modifiedAt | zonedDate:'d MMM' }}</span>
+                            </button>
                         }
-                    </dd>
-                    @if (a.sourceMachine) {
-                        <dt>{{ t().projects.assets.machineLabel }}</dt>
-                        <dd>{{ a.sourceMachine.name ?? t().projects.assets.unknownMachine }}</dd>
-                    }
-                    <dt>{{ t().projects.assets.indexedLabel }}</dt>
-                    <dd>{{ a.indexedAt | zonedDate:'d MMM, HH:mm' }}</dd>
-                </dl>
-
-                @if (a.missingSince) { <p class="hint">{{ t().projects.assets.missingHint }}</p> }
-                <!-- Said plainly on the one screen showing a single file: what is here is a preview and
-                     some numbers, and the file itself is elsewhere. -->
-                @if (!isLocal() && !a.missingSince) {
-                    <p class="hint">{{ t().projects.assets.fingerprintBody(sourceMachineName()) }}</p>
-                }
-
-                <!-- "Linked", not "Used in": an indexed file lives outside Cedar Clerk, so nothing
-                     can discover a reference to it. These links are stated by the author. -->
-                <div class="field-label spaced">{{ t().projects.assets.linkedDocuments }}</div>
-                @for (doc of links(); track doc.id) {
-                    <div class="link-row">
-                        <app-icon name="file-text" size="sm"></app-icon>
-                        <span class="link-title" [title]="doc.title">{{ doc.title }}</span>
-                        <button class="link-remove" [disabled]="busy()" (click)="removeLink(doc.id)"
-                                [title]="t().projects.assets.unlink" [attr.aria-label]="t().projects.assets.unlink">
-                            <app-icon name="x" size="sm"></app-icon>
-                        </button>
                     </div>
-                } @empty {
-                    <p class="hint">{{ t().projects.assets.notLinked }}</p>
+                } @else {
+                    <div class="asset-table">
+                        <div class="asset-row head-row">
+                            <div>{{ t().projects.assets.colFile }}</div>
+                            <div>{{ t().projects.assets.colType }}</div>
+                            <div class="right">{{ t().projects.assets.colDetails }}</div>
+                            <div>{{ t().projects.assets.colStatus }}</div>
+                        </div>
+                        @for (a of p.items; track a.id) {
+                            <div class="asset-row" [class.is-on]="selected()?.id === a.id"
+                                 (click)="open(a)" tabindex="0" (keydown.enter)="open(a)">
+                                <div class="file-cell">
+                                    <app-icon [name]="kindIcons[a.kind]" size="sm"></app-icon>
+                                    <span class="path" [title]="a.relativePath">{{ a.relativePath }}</span>
+                                </div>
+                                <div>{{ t().projects.assets.kindOne[a.kind] }}</div>
+                                <div class="right">{{ detailsOf(a) }} · {{ a.modifiedAt | zonedDate:'d MMM, HH:mm' }}</div>
+                                <!-- "On disk" is a claim about *this* disk, and from a browser it would be
+                                     false. Three states, not two. -->
+                                <div [class.danger]="!!a.missingSince" [class.ok]="!a.missingSince && isLocal()">
+                                    @if (a.missingSince) {
+                                        {{ t().projects.assets.notFoundAtPath }}
+                                    } @else if (isLocal()) {
+                                        {{ t().projects.assets.onDisk }}
+                                    } @else {
+                                        {{ t().projects.assets.fingerprint }}
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
                 }
 
-                @if (linking()) {
-                    @for (doc of linkableDocuments(); track doc.id) {
-                        <button class="link-option" [disabled]="busy()" (click)="addLink(doc.id)">
-                            <app-icon name="plus" size="sm"></app-icon>
-                            <span class="link-title">{{ doc.title }}</span>
-                        </button>
-                    } @empty {
-                        <p class="hint">{{ t().projects.assets.nothingToLink }}</p>
+                @if (p.total > 0) {
+                    <div class="pager">
+                        <app-button variant="paper" size="sm" [disabled]="!canPageBack" (clicked)="pageBack()">←</app-button>
+                        <span class="hint">{{ rangeLabel() }}</span>
+                        <app-button variant="paper" size="sm" [disabled]="!canPageForward" (clicked)="pageForward()">→</app-button>
+                    </div>
+                }
+            </app-shelf-panel>
+
+            <div class="shelves">
+                <app-shelf-panel class="index-facts" [title]="t().projects.assets.indexPanel"
+                                 [count]="t().projects.assets.sub(p.totalIndexed)">
+                    <app-spec-row [label]="t().projects.assets.folderLabel" [value]="p.rootPath ?? ''" />
+                    <!-- Whose machine, always. The index opens from anywhere, so the folder path
+                         alone would read as "on this computer" wherever it is shown. -->
+                    <app-spec-row [label]="t().projects.assets.machineLabel" [value]="sourceMachineName()" />
+                    @if (p.indexedAt) {
+                        <app-spec-row [label]="t().projects.assets.indexedLabel"
+                                      [value]="p.indexedAt | zonedDate:'d MMM, HH:mm'" />
+                    } @else {
+                        <app-spec-row warn [label]="t().projects.assets.indexedLabel"
+                                      [value]="t().projects.assets.neverIndexed" />
                     }
-                } @else if (linkableDocuments().length > 0) {
-                    <button class="btn-ghost link-add" (click)="linking.set(true)">
-                        <app-icon name="link" size="sm"></app-icon>
-                        <span>{{ t().projects.assets.linkDocument }}</span>
-                    </button>
+                    @if (p.missingCount > 0) {
+                        <app-spec-row warn [label]="t().projects.assets.filterMissing"
+                                      [value]="t().projects.assets.notFoundCount(p.missingCount)" />
+                    }
+                    @if (!isLocal()) {
+                        <p class="hint">{{ t().projects.assets.fingerprintHint(sourceMachineName()) }}</p>
+                    }
+                </app-shelf-panel>
+
+                @if (selected(); as a) {
+                    <app-shelf-panel class="inspector" [title]="t().projects.assets.filePanel"
+                                     [count]="t().projects.assets.kindOne[a.kind]">
+                        <app-button actions variant="rail" size="sm" [title]="t().common.close"
+                                    (clicked)="selected.set(null)">
+                            <app-icon name="x" size="xs"></app-icon>
+                        </app-button>
+
+                        <div class="preview-pane" [class.missing]="!!a.missingSince">
+                            @if (a.missingSince) {
+                                <app-icon name="warning" size="lg"></app-icon>
+                                <span class="preview-label danger">{{ t().projects.assets.notFoundAtPath }}</span>
+                            } @else if (showsThumbnail(a)) {
+                                <img class="thumb" [src]="thumbUrl(a)" [alt]="a.fileName" (error)="onThumbError(a)">
+                            } @else if (awaitingThumbnail(a)) {
+                                <app-icon [name]="kindIcons[a.kind]" size="lg"></app-icon>
+                                <span class="preview-label">{{ t().projects.assets.previewPending }}</span>
+                            } @else {
+                                <app-icon [name]="kindIcons[a.kind]" size="lg"></app-icon>
+                                <span class="preview-label">{{ t().projects.assets.noPreview(t().projects.assets.kindOne[a.kind]) }}</span>
+                            }
+                        </div>
+
+                        <p class="asset-name" [title]="a.relativePath">{{ a.fileName }}</p>
+                        <app-spec-row [label]="t().projects.assets.colDetails" [value]="detailsOf(a)" />
+                        <app-spec-row [label]="t().drafts.columns.updated"
+                                      [value]="a.modifiedAt | zonedDate:'d MMM y, HH:mm'" />
+                        <app-spec-row [warn]="!!a.missingSince" [label]="t().projects.assets.colStatus"
+                                      [value]="a.missingSince ? t().projects.assets.notFoundAtPath
+                                               : (isLocal() ? t().projects.assets.onDisk : t().projects.assets.fingerprint)" />
+                        @if (a.sourceMachine) {
+                            <app-spec-row [label]="t().projects.assets.machineLabel"
+                                          [value]="a.sourceMachine.name ?? t().projects.assets.unknownMachine" />
+                        }
+                        <app-spec-row [label]="t().projects.assets.indexedLabel"
+                                      [value]="a.indexedAt | zonedDate:'d MMM, HH:mm'" />
+
+                        @if (a.missingSince) { <p class="hint">{{ t().projects.assets.missingHint }}</p> }
+                        <!-- Said plainly on the one screen showing a single file: what is here is a preview and
+                             some numbers, and the file itself is elsewhere. -->
+                        @if (!isLocal() && !a.missingSince) {
+                            <p class="hint">{{ t().projects.assets.fingerprintBody(sourceMachineName()) }}</p>
+                        }
+
+                        <!-- "Linked", not "Used in": an indexed file lives outside Cedar Clerk, so nothing
+                             can discover a reference to it. These links are stated by the author. -->
+                        <div class="field-label spaced">{{ t().projects.assets.linkedDocuments }}</div>
+                        @for (doc of links(); track doc.id) {
+                            <div class="link-row">
+                                <app-icon name="file-text" size="sm"></app-icon>
+                                <span class="link-title" [title]="doc.title">{{ doc.title }}</span>
+                                <button class="link-remove" [disabled]="busy()" (click)="removeLink(doc.id)"
+                                        [title]="t().projects.assets.unlink" [attr.aria-label]="t().projects.assets.unlink">
+                                    <app-icon name="x" size="sm"></app-icon>
+                                </button>
+                            </div>
+                        } @empty {
+                            <p class="hint">{{ t().projects.assets.notLinked }}</p>
+                        }
+
+                        @if (linking()) {
+                            @for (doc of linkableDocuments(); track doc.id) {
+                                <button class="link-option" [disabled]="busy()" (click)="addLink(doc.id)">
+                                    <app-icon name="plus" size="sm"></app-icon>
+                                    <span class="link-title">{{ doc.title }}</span>
+                                </button>
+                            } @empty {
+                                <p class="hint">{{ t().projects.assets.nothingToLink }}</p>
+                            }
+                        } @else if (linkableDocuments().length > 0) {
+                            <app-button class="link-add" variant="paper" size="sm" (clicked)="linking.set(true)">
+                                <app-icon name="link" size="sm"></app-icon>
+                                {{ t().projects.assets.linkDocument }}
+                            </app-button>
+                        }
+
+                        <!-- Both need the bytes, so both need to be on the machine holding them. Hidden rather
+                             than disabled elsewhere: a greyed button invites a hunt for the reason it is grey. -->
+                        @if (isLocal() && a.fullPath) {
+                            <div class="file-actions">
+                                <app-button variant="paper" size="sm" (clicked)="revealSelected()">
+                                    {{ t().projects.assets.reveal }}
+                                </app-button>
+                                <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="reindexSelected()">
+                                    {{ t().projects.assets.reindexFile }}
+                                </app-button>
+                            </div>
+                        }
+                        <p class="hint">{{ t().projects.assets.fileStaysOnDisk }}</p>
+                    </app-shelf-panel>
                 }
             </div>
         </div>
-
-        <ng-container modal-actions>
-            <!-- Both need the bytes, so both need to be on the machine holding them. Hidden rather
-                 than disabled elsewhere: a greyed button invites a hunt for the reason it is grey. -->
-            @if (isLocal() && a.fullPath) {
-                <button class="btn-ghost" (click)="revealSelected()">{{ t().projects.assets.reveal }}</button>
-                <button class="btn-ghost" [disabled]="busy()" (click)="reindexSelected()">
-                    {{ t().projects.assets.reindexFile }}
-                </button>
-            }
-            <span class="spacer"></span>
-            <span class="modal-note">{{ t().projects.assets.fileStaysOnDisk }}</span>
-        </ng-container>
-    </app-modal>
-}
+    }
+</div>

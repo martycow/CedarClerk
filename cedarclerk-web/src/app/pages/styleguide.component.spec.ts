@@ -67,7 +67,8 @@ describe('styleguide page', () => {
 
     it('renders the whole kit, not a subset of it', () => {
         for (const tag of ['app-input', 'app-stamp-badge', 'app-resin-drop', 'app-leaf-tag',
-            'app-paper-card', 'app-task-tag', 'app-spec-row', 'app-brass-pin', 'app-brass-hook']) {
+            'app-paper-card', 'app-task-tag', 'app-spec-row', 'app-brass-pin', 'app-brass-hook',
+            'app-worktop', 'app-module-tile', 'app-shelf-panel', 'app-index-tabs', 'app-log-line']) {
             expect(el().querySelector(tag), tag).toBeTruthy();
         }
     });
@@ -92,7 +93,8 @@ describe('styleguide page', () => {
             expect(css, dead).not.toContain(dead);
         }
         // Every native control on the page belongs to a bench component; the page owns none.
-        const bench = 'app-button, app-input, app-leaf-tag, app-spec-row';
+        const bench = 'app-button, app-input, app-leaf-tag, app-spec-row, app-task-tag,'
+            + ' app-module-tile, app-index-tabs';
         const loose = [...el().querySelectorAll('button, input, select, textarea')]
             .filter(node => !node.closest(bench))
             .map(node => node.outerHTML.slice(0, 80));

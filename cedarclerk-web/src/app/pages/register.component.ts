@@ -1,5 +1,4 @@
 import { Component, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
@@ -7,10 +6,16 @@ import { VersionService } from '../core/version.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { LangSwitchComponent } from '../shared/lang-switch.component';
+import { ButtonComponent } from '../bench/forms/button.component';
+import { InputComponent } from '../bench/forms/input.component';
+import { PaperCardComponent } from '../bench/display/paper-card.component';
 
 @Component({
     selector: 'app-register',
-    imports: [FormsModule, RouterLink, CedarLogoComponent, LangSwitchComponent],
+    imports: [
+        RouterLink, CedarLogoComponent, LangSwitchComponent,
+        ButtonComponent, InputComponent, PaperCardComponent,
+    ],
     templateUrl: 'register.component.html',
     styleUrls: ['register.component.css']
 })

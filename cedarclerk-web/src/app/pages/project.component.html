@@ -94,7 +94,7 @@
                     @for (tile of tiles(); track tile.id) {
                         <app-module-tile [icon]="tile.icon" [name]="tile.name" [count]="tile.count"
                                          [sub]="tile.sub" [rotate]="tile.rotate"
-                                         (activated)="go(tile.link)" />
+                                         [link]="tile.link" />
                     }
                 </div>
 
@@ -154,7 +154,8 @@
                     <app-task-tag class="up-next" [prio]="task.priority"
                                   [due]="task.dueAt ? (task.dueAt | zonedDate:'d MMM') : t().projects.tasks.noDueDate"
                                   [overdue]="overdue(task)" [rotate]="$even ? -0.8 : 0.6"
-                                  [hint]="task.title" (activated)="openTask(task)">
+                                  [hint]="task.title" [link]="['/projects', task.projectId, 'tasks']"
+                                  [queryParams]="{ task: task.id }">
                         {{ task.title }}
                     </app-task-tag>
                 } @empty {

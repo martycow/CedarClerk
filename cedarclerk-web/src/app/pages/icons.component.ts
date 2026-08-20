@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../shared/icon.component';
+import { InputComponent } from '../bench/forms/input.component';
+import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 import { ICONS, IconName, IconWeight } from '../shared/icon-data.generated';
 import { ICON_USAGE } from '../shared/icon-usage.generated';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -26,7 +27,7 @@ interface Row {
 // controls would put keys into both dictionaries for a reader who does not exist.
 @Component({
     selector: 'app-icons-page',
-    imports: [IconComponent, FormsModule],
+    imports: [IconComponent, InputComponent, LeafTagComponent],
     templateUrl: 'icons.component.html',
     styleUrls: ['icons.component.css'],
 })

@@ -1,177 +1,82 @@
+/* The other half of the workshop door (ADR-166) — same wall, same sheet, one more field. */
 :host {
     display: block;
     min-height: 100vh;
-    background: var(--surface);
+    background: var(--surface-page);
     font-family: var(--font-sans);
 }
 
-/* Decorative spans the global stylesheet owns; inert here so they can never intercept input. */
-.wk-decor {
-    display: none;
-    pointer-events: none;
-}
-
-.auth-page {
+.door {
     position: relative;
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+    padding: var(--space-5);
     box-sizing: border-box;
 }
 
 .theme-toggle {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    border: none;
-    background: none;
-    border-radius: 8px;
-    color: var(--t2);
-    cursor: pointer;
-    font-size: var(--fs-15);
+    top: var(--space-3);
+    right: var(--space-3);
 }
 
-.theme-toggle:hover {
-    background: var(--hover-strong);
-}
-
-.auth-card {
+/* The attribute is on the card because the card is the paper: it is what declares the touch floor
+   the controls inside spend (ADR-156), and it is what tools/check-density.mjs measures. */
+.auth-card[data-surface="paper"] {
     width: 340px;
     box-sizing: border-box;
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    padding: 30px 28px 26px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
+    --paper-card-pad: var(--space-6);
 
-.auth-header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 4px;
-}
-
-.auth-title {
-    font-size: var(--fs-18);
-    font-weight: 700;
-    letter-spacing: -.01em;
-    color: var(--text);
-}
-
-.auth-tagline {
-    font-size: var(--fs-meta);
-    color: var(--t2);
-    text-align: center;
-    line-height: 1.45;
-}
-
-.field {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.field label {
-    font-size: var(--fs-meta);
-    font-weight: 500;
-    color: var(--t2);
-}
-
-.field input {
-    border: 1px solid var(--border-strong);
-    background: var(--sheet);
-    color: var(--text);
-    border-radius: 8px;
-    padding: 9px 12px;
-    font-size: var(--fs-body);
-    font-family: inherit;
-    box-sizing: border-box;
-}
-
-.field input.mono {
-    font-family: var(--font-mono);
-    letter-spacing: .04em;
-}
-
-/* Border only: a wash here would be a box-shadow out-specifying the global ADR-140 halo. */
-.field input:focus {
-    border-color: var(--accent);
-}
-
-.field input.invalid {
-    border-color: var(--danger);
-}
-
-/* Withheld while focused: a component's own shadow out-specifies the global rule that draws the ADR-140 halo. */
-.field input.invalid:not(:focus-visible) {
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 10%, transparent);
-}
-
-.field-error {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: var(--fs-meta);
-    color: var(--danger);
-}
-
-.primary-btn {
-    border: none;
-    background: var(--accent);
-    color: var(--sheet);
-    border-radius: 8px;
-    padding: 10px;
-    font-size: var(--fs-body);
-    font-weight: 500;
-    cursor: pointer;
-    font-family: inherit;
-    margin-top: 2px;
-}
-
-.primary-btn:hover {
-    filter: brightness(1.08);
-}
-
-.primary-btn:disabled {
-    opacity: 0.6;
-    cursor: default;
-}
-
-.auth-footer {
-    text-align: center;
-    font-size: var(--fs-ui);
-    color: var(--t2);
-}
-
-.auth-footer a {
-    color: var(--accent);
-    text-decoration: none;
-    font-weight: 500;
-}
-
-.auth-footer a:hover {
-    text-decoration: underline;
-}
-
-.auth-footer.muted {
-    color: var(--t2);
-    font-size: var(--fs-meta);
-}
-
-@media (max-width: 480px) {
-    .auth-card {
-        padding: 24px 20px;
+    .auth-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-2);
+        margin-bottom: var(--space-3);
     }
+
+    .auth-title {
+        font-family: var(--font-display);
+        font-size: var(--fs-18);
+        font-weight: 700;
+        letter-spacing: -.01em;
+        color: var(--text);
+    }
+
+    .auth-tagline {
+        font-size: var(--fs-ui);
+        color: var(--t2);
+        text-align: center;
+        line-height: 1.45;
+    }
+
+    app-input { margin-bottom: var(--space-3); }
+
+    .primary-btn { display: flex; }
+
+    .field-error {
+        display: flex;
+        align-items: center;
+        gap: var(--space-1);
+        margin-bottom: var(--space-3);
+        color: var(--danger);
+        font-size: var(--fs-ui);
+    }
+
+    .auth-footer {
+        margin-top: var(--space-3);
+        text-align: center;
+        font-size: var(--fs-ui);
+        color: var(--t2);
+    }
+
+    .auth-footer a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 700;
+    }
+
+    .auth-footer a:hover { text-decoration: underline; }
 }

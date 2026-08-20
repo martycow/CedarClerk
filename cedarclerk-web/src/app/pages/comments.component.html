@@ -21,7 +21,7 @@ list of every post. Feedback is grouped per post: a flat stream answered "what's
         <!--T-037: hovering every card to clear a backlog is not a workflow.-->
         @if (hasUnseen()) {
         <div class="mark-all-row">
-            <button class="btn-ghost" (click)="markEverythingSeen()">{{ t().feedback.markAllSeen }}</button>
+            <app-button variant="paper" size="sm" (clicked)="markEverythingSeen()">{{ t().feedback.markAllSeen }}</app-button>
         </div>
         }
 
@@ -65,9 +65,9 @@ list of every post. Feedback is grouped per post: a flat stream answered "what's
                 }
 
                 @if (hiddenCount(g); as hidden) {
-                <button class="feedback-more" (click)="toggleExpanded(g.draftId)">{{ t().feedback.showAll(hidden) }}</button>
+                <app-button variant="paper" size="sm" (clicked)="toggleExpanded(g.draftId)">{{ t().feedback.showAll(hidden) }}</app-button>
                 } @else if (isExpanded(g.draftId) && g.comments.length > 3) {
-                <button class="feedback-more" (click)="toggleExpanded(g.draftId)">{{ t().feedback.showLess }}</button>
+                <app-button variant="paper" size="sm" (clicked)="toggleExpanded(g.draftId)">{{ t().feedback.showLess }}</app-button>
                 }
 
                 @if (!g.comments.length) {

@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router, provideRouter } from '@angular/router';
 import { ModuleTileComponent } from './module-tile.component';
 
 // The component's own stylesheet, read back out of the document. Two of this component's rules are
@@ -33,8 +34,10 @@ class SmugglerHost {}
 describe('ModuleTileComponent', () => {
     let fixture: ComponentFixture<ModuleTileComponent>;
     const tile = () => fixture.nativeElement as HTMLElement;
+    const plate = () => tile().querySelector('.mt-plate') as HTMLElement;
 
     beforeEach(() => {
+        TestBed.configureTestingModule({ providers: [provideRouter([])] });
         fixture = TestBed.createComponent(ModuleTileComponent);
         fixture.componentRef.setInput('icon', 'list-checks');
         fixture.componentRef.setInput('name', 'Задачи');
@@ -86,35 +89,64 @@ describe('ModuleTileComponent', () => {
         expect(tile().style.transform).toBe('rotate(0.6deg)');
     });
 
-    it('opens what it names, by click and by keyboard, and is reachable to get there', () => {
+    // ADR-163. The three affordances the port lost — middle click, copy link address, the hover
+    // URL preview — are all the browser's, and all of them need an href to exist. So the assertion
+    // is the href itself: a role attribute is exactly what would hide its absence.
+    it('is an anchor carrying the route when the plate is a door', () => {
+        fixture.componentRef.setInput('link', ['/projects', 'p1', 'tasks']);
+        fixture.detectChanges();
+
+        expect(plate().tagName).toBe('A');
+        expect(plate().getAttribute('href')).toBe('/projects/p1/tasks');
+        expect(tile().querySelector('button')).toBeNull();
+        expect(plate().getAttribute('role')).toBeNull();
+        expect(plate().getAttribute('tabindex')).toBeNull();
+    });
+
+    it('takes a route written as a string too', () => {
+        fixture.componentRef.setInput('link', '/projects');
+        fixture.detectChanges();
+        expect(plate().getAttribute('href')).toBe('/projects');
+    });
+
+    it('stays a native button when activation is not a navigation, and says so through activated', () => {
         let hits = 0;
         fixture.componentInstance.activated.subscribe(() => hits++);
 
-        expect(tile().getAttribute('role')).toBe('button');
-        expect(tile().tabIndex).toBe(0);
+        expect(plate().tagName).toBe('BUTTON');
+        expect(plate().getAttribute('type')).toBe('button');
+        expect(plate().getAttribute('href')).toBeNull();
+        expect(tile().getAttribute('role')).toBeNull();
+        expect(tile().getAttribute('tabindex')).toBeNull();
 
-        tile().click();
+        plate().click();
         expect(hits).toBe(1);
+    });
 
-        for (const key of ['Enter', ' ']) {
-            const event = new KeyboardEvent('keydown', { key, cancelable: true });
-            tile().dispatchEvent(event);
-            expect(event.defaultPrevented).toBe(true);
-        }
-        expect(hits).toBe(3);
+    // In link form the anchor is the navigation; a consumer wired to both would go twice.
+    it('navigates through the router and does not also emit activated', () => {
+        let hits = 0;
+        fixture.componentInstance.activated.subscribe(() => hits++);
+        fixture.componentRef.setInput('link', ['/projects', 'p1', 'builds']);
+        fixture.detectChanges();
 
-        const ignored = new KeyboardEvent('keydown', { key: 'a', cancelable: true });
-        tile().dispatchEvent(ignored);
-        expect(ignored.defaultPrevented).toBe(false);
-        expect(hits).toBe(3);
+        const go = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+        plate().dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(go).toHaveBeenCalledTimes(1);
+        expect(hits).toBe(0);
     });
 
     it('hangs a tooltip only when the consumer writes one, and never from a static title', () => {
+        expect(plate().getAttribute('title')).toBeNull();
         expect(tile().getAttribute('title')).toBeNull();
 
         fixture.componentRef.setInput('hint', 'Открыть задачи проекта');
         fixture.detectChanges();
-        expect(tile().getAttribute('title')).toBe('Открыть задачи проекта');
+        expect(plate().getAttribute('title')).toBe('Открыть задачи проекта');
+
+        fixture.componentRef.setInput('link', ['/projects', 'p1', 'tasks']);
+        fixture.detectChanges();
+        expect(plate().getAttribute('title')).toBe('Открыть задачи проекта');
     });
 
     it('puts the one number in mono at the readout size, and nothing else there', () => {

@@ -16,25 +16,29 @@ public class DesignTokenDriftTests
         return File.ReadAllText(Path.Combine(dir!.FullName, "cedarclerk-web", "src", "styles.scss"));
     }
 
-    [Theory]
-    [InlineData("text")]
-    [InlineData("t2")]
-    [InlineData("t3")]
-    [InlineData("accent")]
-    [InlineData("danger")]
-    [InlineData("ok")]
-    [InlineData("warn")]
-    [InlineData("border")]
-    [InlineData("bg")]
-    [InlineData("surface")]
-    public void The_generated_tokens_still_match_the_stylesheet(string token)
+    // Every emitted token, not a hand-picked ten: three series inks were re-derived against graph
+    // paper and a hand-listed guard could not see them, so the blog drew the pre-derivation colours
+    // while the app drew the corrected ones — the exact drift this class exists to catch.
+    [Fact]
+    public void The_generated_tokens_still_match_the_stylesheet()
     {
         var css = StylesScss();
-        // The first occurrence is the light `:root` — the dark theme's overrides come after it.
-        var match = System.Text.RegularExpressions.Regex.Match(css, $@"--{token}:\s*([^;]+);");
+        var drifted = new List<string>();
 
-        Assert.True(match.Success, $"--{token} is gone from styles.scss");
-        Assert.Equal(match.Groups[1].Value.Trim(), DesignTokens.Light[token]);
+        foreach (var (token, generated) in DesignTokens.Light)
+        {
+            // The first occurrence is the light `:root` — the dark theme's overrides come after it.
+            var match = System.Text.RegularExpressions.Regex.Match(css, $@"--{token}:\s*([^;]+);");
+            if (!match.Success) { drifted.Add($"--{token} is gone from styles.scss"); continue; }
+
+            var declared = match.Groups[1].Value.Trim();
+            if (declared != generated)
+                drifted.Add($"--{token}: styles.scss says {declared}, DesignTokens says {generated}");
+        }
+
+        Assert.True(drifted.Count == 0,
+            "run `npm run tokens:generate` — the blog and the landing page are painting stale values:"
+            + Environment.NewLine + string.Join(Environment.NewLine, drifted));
     }
 
     [Fact]

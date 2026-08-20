@@ -18,8 +18,8 @@ export interface IndexTabItem {
 }
 
 /**
- * Exported because the badge rules outlive this component: the hook rail hangs the same tally on a
- * tool (ADR-155), and T-231 folds `app-count-badge` into it.
+ * Exported because the badge rules outlive this component: every counter in the app's chrome is
+ * held to them, including the tally the hook rail hangs on a tool (ADR-155).
  */
 export function indexTabBadgeLabel(badge: number | string | undefined | null): string {
     if (badge === undefined || badge === null) return '';

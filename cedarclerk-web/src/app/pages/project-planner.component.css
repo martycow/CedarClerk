@@ -1,321 +1,196 @@
-/* T-124 — the development planner. Compact density (set on the root in the template). Toolbar,
-   buttons, badges and chips match project-tasks.component.css value for value on purpose: the
-   module's screens have to read as one product, and there is still no shared component library
-   (docs/design/DESIGN.md flags this — when there is one, all four collapse into it). */
-.planner-page {
-    min-height: 100vh;
-    background: var(--surface);
-    color: var(--text);
-    font-family: var(--font-sans);
-    font-size: var(--dens-fs);
+.planner {
+    padding: var(--space-3);
 }
 
 .hint {
     color: var(--t2);
-    font-size: var(--fs-meta);
+    font-size: var(--fs-ui);
 }
 
-.spacer { flex: 1; }
-.dot { opacity: .6; margin: 0 var(--space-1); }
+.spacer {
+    flex: 1;
+}
 
 .error-line {
-    margin: 0;
     color: var(--danger);
-    font-size: var(--dens-fs);
+    font-size: var(--fs-ui);
 }
 
-.planner-body {
-    max-width: 1360px;
-    margin: 0 auto;
-    padding: var(--space-4) var(--space-5) var(--space-6);
+/* ---------- The two columns ---------- */
+/* The kit's proportions, and no width breakpoint of its own (ADR-147). */
+.planner-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--bench-dock-w);
+    gap: var(--space-3);
+    align-items: start;
+}
+
+.top-body {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+    padding: var(--space-4) var(--space-5) var(--space-5);
 }
 
-.planner-toolbar {
+.head {
     display: flex;
-    align-items: flex-end;
-    gap: var(--dens-gap);
+    align-items: center;
+    gap: var(--space-3);
     flex-wrap: wrap;
 }
 
-.planner-toolbar h1 {
+.head-title {
     margin: 0;
-    font-size: var(--fs-22);
+    font-family: var(--font-display);
+    font-size: var(--fs-27);
     font-weight: 700;
-    letter-spacing: -.02em;
+    letter-spacing: -.01em;
 }
 
-.planner-sub {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    margin-top: 3px;
-    font-size: var(--fs-meta);
-    color: var(--t2);
-}
-
-.btn-accent {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    border: none;
-    background: var(--accent);
-    color: var(--sheet);
-    border-radius: var(--dens-radius);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    white-space: nowrap;
-}
-
-.btn-accent:hover:not(:disabled) { filter: brightness(1.08); }
-
-.btn-accent:disabled,
-.btn-ghost:disabled {
-    opacity: .5;
-    cursor: default;
-}
-
-.btn-ghost {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: var(--dens-radius);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    cursor: pointer;
-    font-family: inherit;
-    white-space: nowrap;
-    text-decoration: none;
-}
-
-.btn-ghost:hover:not(:disabled) {
-    color: var(--text);
-    border-color: var(--border-strong);
-}
-
-/* Destructive, and it looks it only on hover — see the same rule on the task card. */
-.btn-ghost.danger:hover:not(:disabled) {
-    color: var(--danger);
-    border-color: var(--danger);
-}
-
-.icon-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    border: none;
-    background: none;
-    border-radius: var(--radius-sm);
-    color: var(--t3);
-    cursor: pointer;
-    flex: none;
-}
-
-.icon-btn:hover:not(:disabled) {
-    background: var(--hover-strong);
-    color: var(--text);
-}
-
-/* ---------- Empty ---------- */
 .empty-state {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: var(--space-2);
-    padding: var(--space-6);
+    padding: var(--space-7) var(--space-4);
+    color: var(--t2);
     text-align: center;
 }
 
-.empty-state app-icon { color: var(--accent); }
+.empty-state app-icon {
+    color: var(--t2);
+}
 
 .empty-title {
     margin: 0;
     font-size: var(--fs-body);
     font-weight: 600;
+    color: var(--text);
 }
 
-.empty-state .hint { max-width: 52ch; }
-.empty-state .btn-accent { margin-top: var(--space-2); }
-
-/* ---------- One sprint ---------- */
-.sprint-card {
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-}
-
-/* "No sprint" is a real group, not a lesser one — but it is a pile rather than a plan, so it
-   carries no fill of its own. */
-.sprint-card.unplanned {
-    background: none;
-    border-style: dashed;
-}
-
+/* ---------- One stretch ---------- */
 .sprint-head {
     display: flex;
     align-items: center;
     gap: var(--space-2);
     flex-wrap: wrap;
-    padding: var(--space-2) var(--space-4);
-    background: var(--alt);
-    border-bottom: 1px solid var(--border);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px dashed var(--rule-ink);
 }
-
-.sprint-card.unplanned .sprint-head { background: none; }
 
 .sprint-number {
     font-family: var(--font-mono);
-    font-size: var(--fs-11);
-    font-weight: 600;
-    color: var(--t2);
+    font-size: var(--fs-ui);
+    font-weight: 700;
+    color: var(--accent);
 }
 
 .sprint-name {
-    font-size: var(--dens-fs);
-    font-weight: 600;
+    font-family: var(--font-display);
+    font-size: var(--fs-18);
+    font-weight: 700;
+    min-width: 0;
 }
 
-.sprint-dates {
-    font-size: var(--fs-meta);
+.sprint-dates,
+.sprint-progress-text {
+    font-family: var(--font-mono);
+    font-size: var(--fs-ui);
     color: var(--t2);
+    white-space: nowrap;
 }
 
 .overdue-note {
-    font-size: var(--fs-meta);
-    color: var(--danger);
+    font-size: var(--fs-ui);
     font-weight: 600;
+    color: var(--danger);
 }
 
-.sprint-progress-text {
-    font-size: var(--fs-meta);
-    color: var(--t2);
-    font-variant-numeric: tabular-nums;
-}
-
-.sprint-bar {
-    width: 120px;
-    height: 6px;
-    background: color-mix(in srgb, var(--border) 70%, transparent);
-    border-radius: 3px;
+.bar {
+    display: block;
+    width: var(--space-8);
+    height: var(--space-2);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-stamp);
+    background: var(--surface);
     overflow: hidden;
-    flex: none;
 }
 
-.sprint-fill {
+.bar i {
     display: block;
     height: 100%;
-    background: var(--accent);
+    background: var(--grad-pine);
     transition: width var(--motion-base) var(--ease);
 }
 
+.tags {
+    display: grid;
+    /* No token owns a tag's minimum, and a px default would be one. A ch keeps the track
+       proportional to the title printed on it. */
+    grid-template-columns: repeat(auto-fill, minmax(20ch, 1fr));
+    gap: var(--space-3);
+    padding-top: var(--space-3);
+}
+
 .sprint-empty {
+    grid-column: 1 / -1;
     margin: 0;
-    padding: var(--space-3) var(--space-4);
 }
 
 .collapsed-line {
     display: block;
     width: 100%;
-    padding: var(--space-2) var(--space-4);
+    box-sizing: border-box;
+    min-height: var(--hit-target);
+    margin-top: var(--space-2);
+    padding: var(--space-2);
     border: none;
     background: none;
     color: var(--t2);
-    font: inherit;
-    font-size: var(--fs-meta);
+    font-family: var(--font-mono);
+    font-size: var(--fs-ui);
     text-align: left;
     cursor: pointer;
 }
 
-.collapsed-line:hover { background: var(--hover); color: var(--text); }
+.collapsed-line:hover {
+    color: var(--text);
+}
 
-/* ---------- A task row ---------- */
-.task-row {
-    display: grid;
-    grid-template-columns: minmax(240px, 1fr) 60px 130px 130px;
+/* ---------- The shelf ---------- */
+.grp {
+    display: flex;
     align-items: center;
-    gap: var(--dens-gap);
-    padding: var(--dens-row-y) var(--space-4);
-    border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-    cursor: pointer;
-    min-width: 0;
-}
-
-.task-row:first-of-type { border-top: none; }
-.task-row:hover { background: var(--hover); }
-
-.task-title {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 0;
-}
-
-/* Mono so the levels line up down the card; only P1 is tinted, as everywhere else. */
-.prio {
-    font-family: var(--font-mono);
-    font-size: var(--fs-11);
-    font-weight: 600;
-    padding: 2px var(--space-2);
-    border-radius: var(--radius-sm);
-    background: var(--alt);
+    gap: var(--space-2);
+    margin: var(--space-3) 0 var(--space-1);
+    font-family: var(--font-display);
+    font-size: var(--fs-ui);
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
     color: var(--t2);
-    justify-self: start;
 }
 
-.prio.p1 {
-    background: var(--warn-soft);
-    color: var(--warn);
+.grp:first-child {
+    margin-top: 0;
 }
 
-.status-badge {
-    display: inline-block;
-    padding: 2px var(--space-2);
-    border-radius: var(--radius-sm);
-    background: var(--alt);
-    color: var(--t2);
-    font-size: var(--fs-caption);
-    font-weight: 600;
-    white-space: nowrap;
-}
-
-.status-badge.tone-accent {
-    background: var(--asoft);
+.grp-link {
+    font-family: var(--font-sans);
+    font-size: var(--fs-ui);
+    font-weight: 400;
+    letter-spacing: normal;
+    text-transform: none;
     color: var(--accent);
-}
-
-.status-badge.tone-ok {
-    background: var(--ok-soft);
-    color: var(--ok);
-}
-
-.due {
-    font-size: var(--fs-meta);
-    color: var(--t2);
+    text-decoration: none;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
-/* Only the date turns red. Never the row, never the sprint. */
-.due.overdue {
-    color: var(--danger);
-    font-weight: 600;
+.grp-link:hover {
+    text-decoration: underline;
 }
 
-.due .none { color: var(--t3); }
-
-/* ---------- The sprint dialog ---------- */
+/* ---------- Dialog ---------- */
 .sprint-form {
     display: flex;
     flex-direction: column;
@@ -362,8 +237,57 @@
     width: 100%;
 }
 
+.btn-accent {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    border: none;
+    background: var(--accent);
+    color: var(--sheet);
+    border-radius: var(--dens-radius);
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--dens-fs);
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.btn-accent:hover:not(:disabled) {
+    filter: brightness(1.08);
+}
+
+.btn-accent:disabled,
+.btn-ghost:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.btn-ghost {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--t2);
+    border-radius: var(--dens-radius);
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--dens-fs);
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.btn-ghost:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--border-strong);
+}
+
+.btn-ghost.danger:hover:not(:disabled) {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
 @media (max-width: 760px) {
-    .task-row { grid-template-columns: minmax(140px, 1fr) 50px 110px; }
-    .task-row > :nth-child(4) { display: none; }
     .field-grid { grid-template-columns: 1fr; }
 }

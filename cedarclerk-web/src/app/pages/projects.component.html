@@ -1,94 +1,100 @@
-<div class="projects-page" data-density="compact">
-    <div class="projects-body">
-        <div class="projects-toolbar">
-            <div>
-                <h1>{{ t().projects.title }}</h1>
-                <div class="projects-sub">{{ t().projects.sub(projects().length, activeCount()) }}</div>
-            </div>
-            <span class="spacer"></span>
-            <input class="search-input" type="search" [ngModel]="search()" (ngModelChange)="search.set($event)"
-                   [placeholder]="t().projects.search" [attr.aria-label]="t().projects.search">
-            <button class="btn-accent" (click)="startCreate()">
-                <app-icon name="plus" size="sm"></app-icon>
-                <span>{{ t().projects.newProject }}</span>
-            </button>
-        </div>
-
-        <div class="filter-tabs">
-            <button [class.active]="filter() === 'all'" (click)="filter.set('all')">
-                {{ t().projects.filterAll }} <span class="chip-count">{{ projects().length }}</span>
-            </button>
-            <button [class.active]="filter() === 'active'" (click)="filter.set('active')">
-                {{ t().projects.filterActive }} <span class="chip-count">{{ activeCount() }}</span>
-            </button>
-            <button [class.active]="filter() === 'archived'" (click)="filter.set('archived')">
-                {{ t().projects.filterArchived }} <span class="chip-count">{{ archivedCount() }}</span>
-            </button>
-        </div>
-
-        @if (loadError(); as err) {
-            <p class="load-error">{{ err }}</p>
-        } @else if (loading()) {
-            <p class="hint">{{ t().projects.loading }}</p>
-        } @else if (projects().length === 0) {
-            <div class="empty-state">
-                <app-icon name="game-controller" size="lg"></app-icon>
-                <p class="empty-title">{{ t().projects.empty }}</p>
-                <p class="hint">{{ t().projects.emptyHint }}</p>
-                <button class="btn-accent" (click)="startCreate()">
-                    <app-icon name="plus" size="sm"></app-icon>
-                    <span>{{ t().projects.newProject }}</span>
-                </button>
-                <!--T-160 (ADR-133) — a filled example on demand, never seeded silently.-->
-                <button class="btn-ghost" (click)="createExample()" [disabled]="saving()">
-                    <app-icon name="sparkle" size="sm"></app-icon>
-                    <span>{{ t().projects.exampleProject }}</span>
-                </button>
-                <p class="hint">{{ t().projects.exampleHint }}</p>
-            </div>
-        } @else {
-            <div class="projects-table">
-                <div class="projects-row head-row">
-                    <div></div>
-                    <div>{{ t().projects.colName }}</div>
-                    <div class="right">{{ t().projects.colDocs }}</div>
-                    <div class="right">{{ t().projects.colTasks }}</div>
-                    <div class="right">{{ t().projects.colAssets }}</div>
-                    <div>{{ t().projects.colActivity }}</div>
-                    <div>{{ t().projects.colState }}</div>
-                </div>
-
-                @for (p of visible(); track p.id) {
-                    <div class="projects-row" (click)="open(p)" tabindex="0" (keydown.enter)="open(p)"
-                         [attr.aria-label]="p.name">
-                        <div class="cover" [class.has-image]="!!p.coverUrl">
-                            @if (p.coverUrl) {
-                                <img [src]="p.coverUrl" alt="" loading="lazy">
-                            } @else {
-                                <span class="cover-initials">{{ initials(p.name) }}</span>
-                            }
-                        </div>
-                        <div class="name-cell">
-                            <span class="project-name" [class.dim]="!!p.archivedAt" [title]="p.name">{{ p.name }}</span>
-                        </div>
-                        <div class="right">{{ p.documentCount }}</div>
-                        <!-- Both are real counts now (T-122/T-123). Tasks is the *open* count, so a
-                             finished project does not show its largest number on the day it stopped
-                             having anything left to do. -->
-                        <div class="right">{{ p.openTaskCount }}</div>
-                        <div class="right">{{ p.assetCount }}</div>
-                        <div class="activity">{{ p.lastActivityAt | zonedDate:'d MMM, HH:mm' }}</div>
-                        <div>
-                            <span class="status-badge" [class.tone-accent]="!p.archivedAt">
-                                {{ p.archivedAt ? t().projects.stateArchived : t().projects.stateActive }}
-                            </span>
-                        </div>
+<div class="index" data-density="compact">
+    <div class="index-grid">
+        <div class="index-mid">
+            <!--The chalk edge carries the counts, so the head under it says the screen's name once.-->
+            <app-worktop class="hero" [meta]="t().projects.sub(projects().length, activeCount())">
+                <div class="hero-body">
+                    <h1 class="hero-title">{{ t().projects.title }}</h1>
+                    <div class="hero-actions">
+                        <app-button variant="pine" (clicked)="startCreate()">
+                            <app-icon name="plus" size="sm" />
+                            {{ t().projects.newProject }}
+                        </app-button>
                     </div>
-                } @empty {
-                    <p class="hint empty-filtered">{{ t().projects.emptyFiltered }}</p>
+                </div>
+            </app-worktop>
+
+            <!--The state filter, with its counts as tab badges (ADR-164 rule 1): nothing is drawn
+            at zero, and the shelf beside the list prints every count including the zeros.-->
+            <app-index-tabs [items]="filterTabs()" [value]="filter()" [label]="t().projects.colState"
+                            (selected)="pickFilter($event)" />
+
+            <app-shelf-panel class="list-panel" [title]="t().projects.title" [count]="visible().length" flush>
+                <app-input actions class="search" [dense]="true" type="search"
+                           [placeholder]="t().projects.search"
+                           [ngModel]="search()" (ngModelChange)="search.set($event)" />
+
+                @if (loadError(); as err) {
+                    <p class="load-error pad">{{ err }}</p>
+                } @else if (loading()) {
+                    <p class="hint pad">{{ t().projects.loading }}</p>
+                } @else if (projects().length === 0) {
+                    <div class="empty-state">
+                        <app-icon name="game-controller" size="lg" />
+                        <p class="empty-title">{{ t().projects.empty }}</p>
+                        <p class="hint">{{ t().projects.emptyHint }}</p>
+                        <app-button variant="pine" (clicked)="startCreate()">
+                            <app-icon name="plus" size="sm" />
+                            {{ t().projects.newProject }}
+                        </app-button>
+                        <!--T-160 (ADR-133) — a filled example on demand, never seeded silently.-->
+                        <app-button variant="paper" [disabled]="saving()" (clicked)="createExample()">
+                            <app-icon name="sparkle" size="sm" />
+                            {{ t().projects.exampleProject }}
+                        </app-button>
+                        <p class="hint">{{ t().projects.exampleHint }}</p>
+                    </div>
+                } @else {
+                    <div class="rows">
+                        <div class="row head-row" aria-hidden="true">
+                            <span></span>
+                            <span>{{ t().projects.colName }}</span>
+                            <span class="right">{{ t().projects.colDocs }}</span>
+                            <span class="right">{{ t().projects.colTasks }}</span>
+                            <span class="right">{{ t().projects.colAssets }}</span>
+                            <span>{{ t().projects.colActivity }}</span>
+                            <span>{{ t().projects.colState }}</span>
+                        </div>
+
+                        <!--A row is a door to that project's hub, so it is an anchor (ADR-163).-->
+                        @for (p of visible(); track p.id) {
+                            <a class="row" [routerLink]="['/projects', p.id]" [attr.aria-label]="p.name">
+                                <span class="thumb" [class.has-image]="!!p.coverUrl">
+                                    @if (p.coverUrl) {
+                                        <img [src]="p.coverUrl" alt="" loading="lazy">
+                                    } @else {
+                                        {{ initials(p.name) }}
+                                    }
+                                </span>
+                                <span class="name" [class.dim]="!!p.archivedAt" [title]="p.name">{{ p.name }}</span>
+                                <span class="right num">{{ p.documentCount }}</span>
+                                <!--The open count, so a finished project does not show its largest
+                                number on the day it stopped having anything left to do.-->
+                                <span class="right num">{{ p.openTaskCount }}</span>
+                                <span class="right num">{{ p.assetCount }}</span>
+                                <span class="when">{{ p.lastActivityAt | zonedDate:'d MMM, HH:mm' }}</span>
+                                <span>
+                                    <app-stamp-badge [tone]="p.archivedAt ? 'ink' : 'pine'" [rotate]="0">
+                                        {{ p.archivedAt ? t().projects.stateArchived : t().projects.stateActive }}
+                                    </app-stamp-badge>
+                                </span>
+                            </a>
+                        } @empty {
+                            <p class="hint pad">{{ t().projects.emptyFiltered }}</p>
+                        }
+                    </div>
                 }
-            </div>
-        }
+            </app-shelf-panel>
+        </div>
+
+        <!--Sums over the rows already on screen: the shelf asks the API for nothing (ADR-168).-->
+        <app-shelf-panel class="shelf-right" [title]="t().projects.summary" [count]="projects().length">
+            <app-spec-row [label]="t().projects.filterActive" value="{{ activeCount() }}" />
+            <app-spec-row [label]="t().projects.filterArchived" value="{{ archivedCount() }}" />
+            <app-spec-row [label]="t().projects.colDocs" value="{{ totals().documents }}" />
+            <app-spec-row [label]="t().projects.colTasks" value="{{ totals().tasks }}" />
+            <app-spec-row [label]="t().projects.colAssets" value="{{ totals().assets }}" />
+        </app-shelf-panel>
     </div>
 </div>
 

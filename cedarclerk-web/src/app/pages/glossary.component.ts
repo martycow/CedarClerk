@@ -1,31 +1,43 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { LocaleService } from '../core/i18n/locale.service';
 import { GlossaryService, GlossaryTerm, GlossaryTermInput } from '../core/glossary.service';
 import { ProjectSummary, ProjectsService } from '../core/projects.service';
 import { AuthService } from '../core/auth.service';
-import { AssetsService } from '../core/assets.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES, endonymOf } from '../core/languages';
 import { ModalComponent } from '../shared/modal.component';
 import { IconComponent } from '../shared/icon.component';
 import { GlossaryTermFormComponent } from '../shared/glossary-term-form.component';
+import { ButtonComponent } from '../bench/forms/button.component';
+import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
+import { LeafTagComponent } from '../bench/display/leaf-tag.component';
+import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
+import { SpecRowComponent, SpecScope } from '../bench/worktop/spec-row.component';
+import { WorktopComponent } from '../bench/worktop/worktop.component';
+import { RailActionsService } from '../core/rail-actions.service';
+import { RulerService } from '../core/ruler.service';
 
 // Idea #11 — the glossary page. A term is defined once here and explained wherever it turns up on
 // the blog; nothing is scanned or marked in the editor, since the ask was for the published page.
 @Component({
     selector: 'app-glossary',
-    imports: [IconComponent, FormsModule, ModalComponent, NgTemplateOutlet, GlossaryTermFormComponent],
+    imports: [
+        IconComponent, FormsModule, ModalComponent, NgTemplateOutlet, GlossaryTermFormComponent,
+        ButtonComponent, IndexTabsComponent, LeafTagComponent, ShelfPanelComponent, SpecRowComponent,
+        WorktopComponent,
+    ],
     templateUrl: 'glossary.component.html',
     styleUrls: ['glossary.component.css'],
 })
-export class GlossaryComponent implements OnInit {
+export class GlossaryComponent implements OnInit, OnDestroy {
     t = inject(LocaleService).t;
     private api = inject(GlossaryService);
     private projectsApi = inject(ProjectsService);
     auth = inject(AuthService);
-    private assets = inject(AssetsService);
+    private ruler = inject(RulerService);
+    private rail = inject(RailActionsService);
 
     readonly contentLanguages = CONTENT_LANGUAGES;
     readonly primaryLanguage = DEFAULT_PRIMARY_LANGUAGE;
@@ -41,7 +53,6 @@ export class GlossaryComponent implements OnInit {
     loading = signal(true);
     error = signal('');
     busy = signal(false);
-    uploading = signal(false);
     deleteConfirmId = signal<string | null>(null);
 
     // null = the "new term" form, otherwise the id being edited. One form either way: a separate
@@ -149,10 +160,6 @@ export class GlossaryComponent implements OnInit {
         this.selectedId.set(null);
     }
 
-    canSave(): boolean {
-        return !this.busy() && this.editTerm.trim().length > 0 && this.editDescription.trim().length > 0;
-    }
-
     // The values come from the shared form component rather than from fields on this page —
     // the page still owns which row is being written and what happens after.
     async save(input: GlossaryTermInput) {
@@ -180,29 +187,6 @@ export class GlossaryComponent implements OnInit {
         }
     }
 
-    // The image goes through the ordinary asset upload, like the avatar (IF1): same type
-    // whitelist, same storage quota, same public serving, no second pipeline.
-    async onImageChosen(ev: Event) {
-        const input = ev.target as HTMLInputElement;
-        const file = input.files?.[0];
-        input.value = '';
-        if (!file) return;
-        this.uploading.set(true);
-        this.error.set('');
-        try {
-            const { url } = await this.assets.upload(file);
-            this.editImageUrl.set(url);
-        } catch (e) {
-            this.error.set(httpErrorMessage(e, this.t().glossary.imageFailed));
-        } finally {
-            this.uploading.set(false);
-        }
-    }
-
-    clearImage() {
-        this.editImageUrl.set(null);
-    }
-
     deleteTarget(): GlossaryTerm | null {
         const id = this.deleteConfirmId();
         return id ? this.terms().find(t => t.id === id) ?? null : null;
@@ -217,6 +201,7 @@ export class GlossaryComponent implements OnInit {
             await this.api.remove(id);
             this.terms.update(list => list.filter(t => t.id !== id));
             if (this.selectedId() === id) this.cancelEdit();
+            if (this.previewId() === id) this.closePreview();
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().glossary.deleteFailed));
         } finally {
@@ -332,7 +317,7 @@ export class GlossaryComponent implements OnInit {
         this.translateAllOpen.set(false);
     }
 
-    // ─── Preview (Marty, 01.08.2026) ───────────────────────────────────────────
+    // ─── Preview ──────────────────────────────────────────────────────────────
     // The point is to see the real tooltip, not a description in a form field: the blog renders
     // the term as a heading, the description under it and an optional image, and that is what this
     // reproduces. The language switcher walks the translation group rather than the whole list,
@@ -364,5 +349,80 @@ export class GlossaryComponent implements OnInit {
         return this.previewGroup().find(t => (t.language || DEFAULT_PRIMARY_LANGUAGE) === lang)
             ?? this.terms().find(t => t.id === this.previewId())
             ?? null;
+    }
+
+    // ─── The bench's own chrome (ADR-167 clauses 7 and 8) ─────────────────────────────────────
+    // The language strip is an index: it picks which set of terms the sheet lists, and the tally on
+    // a tile is that set's size, so an empty language is visibly empty before it is opened.
+    languageTabs(): IndexTabItem[] {
+        return this.contentLanguages.map(l => ({
+            id: l,
+            label: l.toUpperCase(),
+            badge: this.countFor(l),
+            badgeTitle: this.t().glossary.inspector.inLanguage,
+            hint: endonymOf(l),
+        }));
+    }
+
+    worktopLabel(): string {
+        return this.t().glossary.crumb;
+    }
+
+    worktopMeta(): string {
+        const t = this.t().glossary;
+        const scope = this.scopeFilter();
+        const where = scope === null ? t.scopeAll : scope === '' ? t.scopeGlobal : this.projectName(scope);
+        return `${this.languageFilter().toUpperCase()} · ${where} · ${this.visibleTerms().length}`;
+    }
+
+    /** Exclusive, so the shelf can never describe a term and the glossary at the same time. */
+    inspectorScope(): SpecScope {
+        return this.previewTerm() ? 'selection' : 'document';
+    }
+
+    inspectorTitle(): string {
+        const t = this.t().glossary.inspector;
+        return this.inspectorScope() === 'selection' ? t.term : t.glossary;
+    }
+
+    inspectorScopeWord(): string {
+        const t = this.t().glossary.inspector;
+        return this.inspectorScope() === 'selection' ? t.scopeTerm : t.scopeGlossary;
+    }
+
+    /** Only the languages that actually carry a term — a full list would claim coverage. */
+    usedLanguages(): string[] {
+        return this.contentLanguages.filter(l => this.countFor(l) > 0).map(l => l.toUpperCase());
+    }
+
+    projectsWithTerms(): number {
+        const ids = new Set(this.terms().map(t => t.projectId).filter((id): id is string => !!id));
+        return ids.size;
+    }
+
+    private readonly rulerFeed = effect(() => {
+        const t = this.t().glossary;
+        this.ruler.publish({
+            label: t.crumb,
+            left: [{ text: this.languageFilter().toUpperCase(), title: endonymOf(this.languageFilter()) }],
+            right: [
+                { text: t.rulerTerms(this.visibleTerms().length) },
+                ...(this.projects().length ? [{ text: t.rulerScopes(this.projectsWithTerms()) }] : []),
+            ],
+        });
+    });
+
+    // The screen's one primary action (ADR-159 clause 1): creating a term is the only command here
+    // that belongs to the glossary rather than to one row of it.
+    private readonly railFeed = effect(() => {
+        const t = this.t().glossary;
+        this.rail.publish({
+            primary: { label: t.newTerm, icon: 'plus', hint: t.newTerm, run: () => this.startNew() },
+        });
+    });
+
+    ngOnDestroy() {
+        this.ruler.clear();
+        this.rail.clear();
     }
 }

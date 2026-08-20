@@ -1,5 +1,80 @@
 # Changelog
 
+## 2026-08-20 — every remaining screen (branch `UI_V2`)
+
+Stage 5 of the Cedar Bench port: the fourteen screens the three reference screens did not cover, in
+four groups by pattern. Six ADRs (163–168) ahead of the code, no new bench components, ten new board
+rows, one palette value re-derived, and the branch still unmerged with the version still untouched.
+Every screen in the app is now drawn from the kit.
+
+**The hub-like three.** `/projects`, the planner and the builds screen took a worktop, paper cards
+and a summary shelf on the right. The question Stage 4 left open — whether the project index
+survives the hub's switcher — is answered yes and written down: what the dock absorbed is the
+*switch*, and the list keeps what a switcher refused, which is the create modal, the empty state with
+the example project, and search over an unbounded list. Neither side grows the other's controls. Two
+screens were navigating to `/editor?id=`, a parameter the editor does not read, so a devlog draft and
+a document chip silently opened whichever draft was newest; both now pass `draft`. Rows and chips
+became anchors, so a middle click opens a project, a task or a document in a new tab, and the builds
+screen gained the priority and due date it was not drawing — the alternative is one object drawn two
+ways one click apart.
+
+**The stats-like four.** The media library, project assets, `/drafts` and `/admin` each became one
+board: an index-tab strip above, one panel holding the list with its search and view controls in the
+panel's own header, and a right column that is never empty. That shape is what retired two detail
+**modals** — a shelf beside the list replaces a card on top of it, so the list stays readable while
+you look at one file — and the drafts folder popover, which became a Folders shelf. The counts that
+used to be hand-written spans are tab badges now, held to one rule: nothing at zero, `99+` past
+ninety-nine. One count deliberately is not: the per-folder tally on `/drafts` sits on an unbounded,
+user-created list, and an empty folder you just made has to stay visible to file into.
+
+**The writer-like two.** The Posts Manager and the glossary became an index shelf, one sheet and an
+inspector whose scope is exclusive — with a subject picked it describes the subject, without one it
+describes the collection, and every row declares which, so a mixed sheet is a query rather than a
+convention. Every outbound link left the manager's sheet for the inspector instead of being drawn in
+both places. The manager's hand-rolled two-path SVG became `app-growth-chart`, three named series on
+fixed slots with the metric buttons as the legend-filter. `/comments` was investigated and
+deliberately **not** moved into the drawer: it has been a fragment under its own post since N7, and
+the drawer is mounted once by the shell, so a Feedback tab there would follow you onto every screen
+and would need chrome to reach into a page's selection.
+
+**The board, and the four doors.** `project-tasks` is a kanban the kit does not draw, so it took the
+bench's materials and kept its own geometry — four columns as shelf panels, cards as task tags, the
+page title and its counts moving to the ruler. What a board *becomes* on the bench is now a written
+brief rather than an assumption. Login, register, terms and privacy are the one place nothing above
+them declares the surface, so they declare it themselves: the bench wall, one paper card, and the
+theme toggle as a rail button because the rail's dots menu is not out there.
+
+**What measuring found this time, and what it did not.** The census came back clean of the ports —
+fourteen screens added no new ink-on-surface combination at all, because they took primitives instead
+of page-local colour, which is the whole point of having primitives. It did surface one pair the
+palette had never covered: `--danger` on `--asoft`, which the poll editor's remove glyph paints, at
+4.46 against a 4.5 floor under the darkest accent preset. `--danger` took the smallest hue-preserving
+step that clears and the pair joined the table, so the gate now measures it in both themes across all
+five presets.
+
+**Four defects fixed rather than boarded.** `app-input` and `app-button` declared their boolean
+inputs without `booleanAttribute`, which made the bare-attribute form a compile error at every call
+site and cost two agents a build. The `/stats` redirect was a *string*, which the router reads as a
+path, so an old metrics bookmark resolved to the posts list and silently lost its `?tab=stats`; it is
+a `UrlTree` now, with a test that fails if the query is dropped. `shared/count-badge.component.ts`
+is deleted: its last consumer took its tally as a tab badge, so the hide-at-zero and `99+` rules live
+in one function.
+
+And the fourth was found by a guard failing on the palette change and then turning out to have been
+blind: `DesignTokenDriftTests` compared ten hand-listed tokens against `styles.scss`, so when Stage 4
+re-derived `--series-3`, `--series-4` and `--series-6` against graph paper, the generated C# copy the
+blog and the landing page read was never regenerated and nothing said so. The blog has been drawing
+the pre-derivation chart colours since. The generator has been re-run, and the guard now walks every
+token it emits rather than a list somebody has to remember to extend — which is the drift its own
+comment says it exists to catch.
+
+**What is left.** Stage 6 is cleanup and ship. The ports found four gaps in the kit itself — the
+field passes through no `autocomplete` and no `maxlength` and cannot be named without a visible
+label, there is no select, textarea or checkbox at all, a button has no anchor form, and a task tag
+cannot merge a query — and six more features the API cannot answer, on the board with the thirteen
+from Stage 4. Nobody has *looked* at any of it: the verification map's marks are reset for every
+ported screen, which is now most of the app.
+
 ## 2026-08-20 — the three reference screens (branch `UI_V2`)
 
 Stage 4 of the Cedar Bench port: Stats, the hub and the writer, in that order of blast radius. Six

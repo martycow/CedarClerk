@@ -1,18 +1,10 @@
-<div class="auth-page">
-    <span class="wk-decor wk-band" aria-hidden="true"></span>
-    <span class="wk-decor wk-haze" aria-hidden="true"></span>
-    <span class="wk-decor wk-firefly wk-firefly-1" aria-hidden="true"></span>
-    <span class="wk-decor wk-firefly wk-firefly-2" aria-hidden="true"></span>
-
-    <button class="theme-toggle" (click)="theme.toggle()" [title]="t().common.toggleTheme">
+<div class="door">
+    <app-button class="theme-toggle" variant="rail" size="sm" [title]="t().common.toggleTheme"
+                (clicked)="theme.toggle()">
         {{ theme.theme() === 'dark' ? '☀' : '☾' }}
-    </button>
+    </app-button>
 
-    <div class="auth-card">
-        <span class="wk-decor wk-door-paper" aria-hidden="true"></span>
-        <span class="wk-decor wk-hinge wk-hinge-top" aria-hidden="true"></span>
-        <span class="wk-decor wk-hinge wk-hinge-bottom" aria-hidden="true"></span>
-        <span class="wk-decor wk-handle" aria-hidden="true"></span>
+    <app-paper-card class="auth-card" bright [rotate]="0.4">
         <div class="auth-header">
             <app-cedar-logo [size]="28"></app-cedar-logo>
             <div class="auth-title">{{ t().register.title }}</div>
@@ -27,32 +19,32 @@
             </div>
         </div>
 
-        <div class="field">
-            <label for="cc-reg-email">{{ t().register.email }}</label>
-            <input id="cc-reg-email" [(ngModel)]="email" placeholder="you@example.com" type="email" autocomplete="username">
-        </div>
-        <div class="field">
-            <label for="cc-reg-pass">{{ t().register.password }}</label>
-            <input id="cc-reg-pass" [(ngModel)]="password" [placeholder]="t().register.passwordPlaceholder" type="password" autocomplete="new-password">
-        </div>
+        <app-input inputId="cc-reg-email" type="email" [label]="t().register.email"
+                   placeholder="you@example.com"
+                   [value]="email" (valueChange)="email = $any($event) ?? ''" />
+        <app-input inputId="cc-reg-pass" type="password" [label]="t().register.password"
+                   [placeholder]="t().register.passwordPlaceholder"
+                   [value]="password" (valueChange)="password = $any($event) ?? ''" />
         @if (!version.openRegistration()) {
-        <div class="field">
-            <label for="cc-reg-invite">{{ t().register.inviteCode }}</label>
-            <input id="cc-reg-invite" class="mono" [(ngModel)]="inviteCode" placeholder="CEDAR-MOO-0" type="text" autocomplete="off" (keyup.enter)="submit()">
-        </div>
+        <!--Enter submits, as it did on the field this replaces: the event bubbles from the field
+        to this host.-->
+        <app-input class="invite" inputId="cc-reg-invite" [label]="t().register.inviteCode"
+                   placeholder="CEDAR-MOO-0"
+                   [value]="inviteCode" (valueChange)="inviteCode = $any($event) ?? ''"
+                   (keyup.enter)="submit()" />
         }
 
         @if (error()) {
         <div class="field-error">{{ error() }}</div>
         }
 
-        <button class="primary-btn" (click)="submit()" [disabled]="busy()">
+        <app-button class="primary-btn" variant="pine" [disabled]="busy()" (clicked)="submit()">
             {{ busy() ? '…' : t().register.submit }}
-        </button>
+        </app-button>
 
         <div class="auth-footer">{{ t().register.haveAccount }} <a routerLink="/login">{{ t().register.login }}</a></div>
         <div class="auth-footer muted">{{ t().register.legalPrefix }} <a routerLink="/terms">{{ t().register.legalTerms }}</a> {{ t().register.legalAnd }} <a routerLink="/privacy">{{ t().register.legalPrivacy }}</a></div>
 
         <app-lang-switch></app-lang-switch>
-    </div>
+    </app-paper-card>
 </div>

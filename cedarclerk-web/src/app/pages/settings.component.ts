@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
@@ -14,13 +14,19 @@ import { httpErrorMessage } from '../core/http-error.util';
 import { pseudoProgress } from '../core/pseudo-progress.util';
 import { IconComponent } from '../shared/icon.component';
 import { BrandIconComponent } from '../shared/brand-icon.component';
+import { ButtonComponent } from '../bench/forms/button.component';
+import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
+import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 
 type PayMethod = 'stripe' | 'paypal' | 'stars';
 export type SettingsTab = 'profile' | 'account';
 
 @Component({
     selector: 'app-settings',
-    imports: [IconComponent, FormsModule, ZonedDatePipe, BrandIconComponent],
+    imports: [
+        IconComponent, FormsModule, ZonedDatePipe, BrandIconComponent,
+        ButtonComponent, IndexTabsComponent, LeafTagComponent,
+    ],
     templateUrl: 'settings.component.html',
     styleUrls: ['settings.component.css']
 })
@@ -82,6 +88,10 @@ export class SettingsComponent implements OnInit {
     // account menu deep-links to the profile half, which is what "opened by clicking the user"
     // meant; the topbar's Settings button still lands on the general page.
     tab = signal<SettingsTab>('profile');
+    tabItems = computed<IndexTabItem[]>(() => [
+        { id: 'profile', label: this.t().settings.tabs.profile },
+        { id: 'account', label: this.t().settings.tabs.account },
+    ]);
 
     billing = signal<BillingStatus | null>(null);
     billingBusy = signal(false);
@@ -416,7 +426,7 @@ export class SettingsComponent implements OnInit {
     // Appearance and toolbar customization moved into AppearancePanelComponent, rendered beside
     // the writing sheet (I14/B15) — all of their state and handlers went with them.
 
-    // Auto-translate for the per-language profile texts (Marty, 01.08.2026). Everything else that
+    // Auto-translate for the per-language profile texts (Marty's ask). Everything else that
     // is per-language in this product could already be translated in one press; these three could
     // not, and they are the ones an author sees in every post.
     translatingTexts = signal(false);

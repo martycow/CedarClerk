@@ -1,11 +1,37 @@
-/* T-122 — the asset index screen. Compact density (set on the root in the template): this is a
-   screen for scanning thousands of rows, not for reading. Every value is a token. */
+/* T-122 — the asset index screen. Compact density (ADR-164 clause 6): a screen for scanning
+   thousands of rows, not for reading. The shell owns the ground under it. */
 .assets-page {
-    min-height: 100vh;
-    background: var(--surface);
-    color: var(--text);
-    font-family: var(--font-sans);
-    font-size: var(--dens-fs);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3);
+}
+
+/* The kit's proportions and no width breakpoint of its own (ADR-147). */
+.assets-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--bench-dock-w-wide);
+    gap: var(--space-3);
+    align-items: start;
+}
+
+.shelves {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+}
+
+/* Projected into the panel header, which is a single non-wrapping row. */
+.search {
+    width: 200px;
+}
+
+.file-actions {
+    display: flex;
+    gap: var(--space-2);
+    margin: var(--space-3) 0 var(--space-2);
+    flex-wrap: wrap;
 }
 
 .hint {
@@ -13,7 +39,6 @@
     font-size: var(--fs-meta);
 }
 
-.spacer { flex: 1; }
 .right { text-align: right; }
 .dot { opacity: .6; margin: 0 var(--space-1); }
 .danger { color: var(--danger); }
@@ -28,133 +53,11 @@
     white-space: nowrap;
 }
 
-.assets-body {
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: var(--space-4) var(--space-5) var(--space-6);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-}
-
 .assets-toolbar {
     display: flex;
     align-items: flex-end;
     gap: var(--dens-gap);
     flex-wrap: wrap;
-}
-
-.assets-toolbar h1 {
-    margin: 0;
-    font-size: var(--fs-22);
-    font-weight: 700;
-    letter-spacing: -.02em;
-}
-
-.assets-sub {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    margin-top: 3px;
-    font-size: var(--fs-meta);
-    color: var(--t2);
-    max-width: 70ch;
-}
-
-.search-input,
-.path-input {
-    box-sizing: border-box;
-    padding: var(--dens-control-y) var(--dens-control-x);
-    border: 1px solid var(--border);
-    border-radius: var(--dens-radius);
-    background: var(--sheet);
-    color: var(--text);
-    font: inherit;
-    font-size: var(--dens-fs);
-}
-
-.search-input { width: 240px; }
-
-.path-input {
-    flex: 1;
-    min-width: 0;
-    font-family: var(--font-mono);
-    font-size: var(--fs-12);
-}
-
-.view-toggle {
-    display: flex;
-    gap: 2px;
-    background: var(--alt);
-    border-radius: var(--radius-md);
-    padding: 2px;
-}
-
-.view-toggle button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 27px;
-    height: 27px;
-    border: none;
-    background: none;
-    border-radius: 6px;
-    color: var(--t2);
-    cursor: pointer;
-}
-
-.view-toggle button.active {
-    background: var(--sheet);
-    color: var(--accent);
-}
-
-/* Withheld while focused: a component's own shadow out-specifies the global rule that draws the ADR-140 halo. */
-.view-toggle button.active:not(:focus-visible) {
-    box-shadow: var(--shadow);
-}
-
-.btn-accent {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    border: none;
-    background: var(--accent);
-    color: var(--sheet);
-    border-radius: var(--dens-radius);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    white-space: nowrap;
-}
-
-.btn-accent:hover:not(:disabled) { filter: brightness(1.08); }
-
-.btn-accent:disabled,
-.btn-ghost:disabled {
-    opacity: .5;
-    cursor: default;
-}
-
-.btn-ghost {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: var(--dens-radius);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    cursor: pointer;
-    font-family: inherit;
-    white-space: nowrap;
-}
-
-.btn-ghost:hover:not(:disabled) {
-    color: var(--text);
-    border-color: var(--border-strong);
 }
 
 /* ---------- Scanning ---------- */
@@ -250,13 +153,120 @@
     line-height: 1.55;
 }
 
-.pick-row {
-    display: flex;
+/* Not full-width: a button stretched across the card reads as a banner, not as the action. */
+.pick-card .btn-ghost {
+    display: inline-flex;
+    align-items: center;
     gap: var(--space-2);
+    align-self: flex-start;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--t2);
+    border-radius: var(--dens-radius);
+    padding: var(--dens-control-y) var(--dens-control-x);
+    font-size: var(--dens-fs);
+    text-decoration: none;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.btn-ghost:hover { color: var(--text); border-color: var(--border-strong); }
+
+/* ---------- Scanning ---------- */
+.scan-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow);
+}
+
+.scan-banner app-icon { color: var(--accent); flex: none; }
+
+.scan-text { min-width: 0; flex: 1; }
+
+.scan-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+.scan-meta {
+    font-size: var(--fs-meta);
+    color: var(--t2);
+}
+
+.scan-bar {
+    width: 180px;
+    height: 6px;
+    flex: none;
+    background: var(--alt);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.scan-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width var(--motion-base) var(--ease);
+}
+
+.spin { animation: spin 1s linear infinite; }
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.notice {
+    margin: 0;
+    padding: var(--space-2) var(--space-3);
+    background: var(--asoft);
+    border: 1px solid var(--abord);
+    border-radius: var(--dens-radius);
+    font-size: var(--fs-meta);
+    color: var(--t2);
+}
+
+.load-error {
+    color: var(--danger);
+    font-size: var(--dens-fs);
+}
+
+/* ---------- Pick a folder ---------- */
+.pick-card {
+    max-width: 560px;
+    margin: var(--space-6) auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-5);
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+}
+
+.pick-card app-icon { color: var(--accent); }
+
+.pick-card h2 {
+    margin: 0;
+    font-size: var(--fs-19);
+    font-weight: 700;
+}
+
+.pick-body {
+    margin: 0;
+    font-size: var(--fs-ui);
+    color: var(--t2);
+    line-height: 1.55;
 }
 
 /* Not full-width: a button stretched across the card reads as a banner, not as the action. */
-.pick-card .btn-accent {
+.pick-card app-button {
     align-self: flex-start;
 }
 
@@ -299,49 +309,12 @@
 
 .field-label.spaced { margin-top: var(--space-3); margin-bottom: var(--space-1); }
 
-/* ---------- Filters ---------- */
-.filter-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2);
-}
-
-.filter-tabs button {
-    border: 1px solid var(--border);
-    background: var(--sheet);
-    color: var(--t2);
-    border-radius: 999px;
-    padding: var(--space-1) var(--dens-control-x);
-    font-size: var(--fs-meta);
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.filter-tabs button.active {
-    background: var(--asoft);
-    border-color: var(--abord);
-    color: var(--accent);
-    font-weight: 600;
-}
-
-.filter-tabs button.danger-chip {
-    color: var(--danger);
-    border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
-}
-
-.filter-tabs button.danger-chip.active {
-    background: var(--danger-soft);
-    border-color: var(--danger);
-    color: var(--danger);
-}
-
-.chip-count { margin-left: var(--space-1); opacity: .75; }
-
 /* ---------- Grid ---------- */
 .asset-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: var(--space-3);
+    padding: var(--space-3);
 }
 
 .tile {
@@ -360,6 +333,19 @@
 
 .tile:hover { border-color: var(--abord); }
 
+/* The inspector no longer covers the list, so the list has to say which row it is reading. The
+   mark stands down while focused: ADR-140 spends the app's one box-shadow on the focus halo. */
+.tile.is-on,
+.asset-row.is-on {
+    border-color: var(--abord);
+    background: var(--asoft);
+}
+
+.tile.is-on:not(:focus-visible),
+.asset-row.is-on:not(:focus-visible) {
+    box-shadow: inset 2px 0 0 var(--accent);
+}
+
 .preview,
 .preview-pane {
     position: relative;
@@ -375,6 +361,12 @@
 }
 
 .preview { aspect-ratio: 4 / 3; }
+
+.preview-pane {
+    aspect-ratio: 4 / 3;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
 
 .tile.missing .preview,
 .preview-pane.missing {
@@ -411,14 +403,6 @@
     font-size: var(--fs-caption);
     line-height: 1.4;
     backdrop-filter: blur(2px);
-}
-
-/* The same fact in the header line, where it names the machine. */
-.fingerprint-note {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--t2);
 }
 
 /* The thumbnail fills its frame; the striped ground stays visible behind a transparent PNG, which
@@ -497,10 +481,6 @@
 
 /* ---------- List ---------- */
 .asset-table {
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
     overflow-x: auto;
 }
 
@@ -544,6 +524,7 @@
     align-items: center;
     justify-content: center;
     gap: var(--space-3);
+    padding: var(--space-3);
 }
 
 .empty {
@@ -551,84 +532,6 @@
     text-align: center;
 }
 
-/* ---------- Asset view ---------- */
-.modal-head-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    min-width: 0;
-}
-
-.modal-heading { white-space: nowrap; }
-
-.modal-hint {
-    font-size: var(--fs-meta);
-    font-weight: 400;
-    color: var(--t2);
-    min-width: 0;
-}
-
-.modal-note {
-    font-size: var(--fs-caption);
-    color: var(--t2);
-    max-width: 40ch;
-    text-align: right;
-}
-
-.kind-chip {
-    font-size: var(--fs-caption);
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: var(--radius-sm);
-    background: var(--alt);
-    color: var(--t2);
-    white-space: nowrap;
-}
-
-.asset-view {
-    display: grid;
-    grid-template-columns: 320px 1fr;
-    gap: var(--space-4);
-    align-items: start;
-}
-
-.preview-pane {
-    aspect-ratio: 1 / 1;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border);
-}
-
-.asset-fields { min-width: 0; }
-
-.asset-name {
-    margin: 0 0 var(--space-3);
-    font-family: var(--font-mono);
-    font-size: var(--fs-15);
-    font-weight: 600;
-    color: var(--text);
-    overflow-wrap: anywhere;
-}
-
-.field-grid {
-    display: grid;
-    grid-template-columns: 110px 1fr;
-    gap: var(--space-2) var(--space-3);
-    margin: 0;
-    font-size: var(--fs-ui);
-}
-
-.field-grid dt {
-    font-size: var(--fs-caption);
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    font-weight: 600;
-    color: var(--t2);
-    align-self: center;
-}
-
-.field-grid dd { margin: 0; color: var(--text); }
-
 @media (max-width: 700px) {
-    .asset-view { grid-template-columns: 1fr; }
     .scan-bar { display: none; }
 }

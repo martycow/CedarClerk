@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, effect, inject, signal } from '@angular/core';
 import { formatInZone } from '../core/display-time';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -17,7 +17,6 @@ import { PublishedPost, PublishService } from '../core/publish.service';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES } from '../core/languages';
 import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
-import { CountBadgeComponent } from '../shared/count-badge.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import { ModalComponent } from '../shared/modal.component';
 import { CommentsComponent } from './comments.component';
@@ -28,6 +27,15 @@ import { TagUsageService } from '../core/tag-usage.service';
 import { FoldersService } from '../core/folders.service';
 import { StatsComponent } from './stats.component';
 import { IconComponent } from '../shared/icon.component';
+import { ButtonComponent } from '../bench/forms/button.component';
+import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
+import { LeafTagComponent } from '../bench/display/leaf-tag.component';
+import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
+import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
+import { SpecRowComponent, SpecScope } from '../bench/worktop/spec-row.component';
+import { WorktopComponent } from '../bench/worktop/worktop.component';
+import { GrowthChartComponent, GrowthSeries, SeriesSlot } from '../bench/worktop/growth-chart.component';
+import { RulerService } from '../core/ruler.service';
 
 // FI3.5 removed the 'feedback' tab; ?tab=feedback still resolves (to posts, where feedback now
 // lives) because links to it exist in the wild — the account menu, and Marty's own bookmarks.
@@ -41,11 +49,16 @@ const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
 // now — editing, per-question breakdowns and the pie chart are N10, presets are N12.
 @Component({
     selector: 'app-posts-manager',
-    imports: [IconComponent, ZonedDatePipe, FormsModule, ModalComponent, CommentsComponent, StatsComponent, CountBadgeComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent],
+    imports: [
+        IconComponent, ZonedDatePipe, FormsModule, ModalComponent, CommentsComponent, StatsComponent,
+        TagPickerComponent, FolderPickerComponent, FormRefComponent, ButtonComponent, IndexTabsComponent,
+        LeafTagComponent, ShelfPanelComponent, StampBadgeComponent, SpecRowComponent, WorktopComponent,
+        GrowthChartComponent,
+    ],
     templateUrl: 'posts-manager.component.html',
     styleUrls: ['posts-manager.component.css'],
 })
-export class PostsManagerComponent implements OnInit {
+export class PostsManagerComponent implements OnInit, OnDestroy {
     auth = inject(AuthService);
     private draftsApi = inject(DraftsService);
     private presetsApi = inject(FormPresetsService);
@@ -56,6 +69,7 @@ export class PostsManagerComponent implements OnInit {
     feedback = inject(CommentsService);
     private tagUsageApi = inject(TagUsageService);
     private foldersApi = inject(FoldersService);
+    private ruler = inject(RulerService);
     t = inject(LocaleService).t;
 
     tab = signal<ManagerTab>('posts');
@@ -246,13 +260,22 @@ export class PostsManagerComponent implements OnInit {
         });
     }
 
-    readonly growthMetrics = [
-        { key: 'viewCount' as const, color: '--series-1', label: () => this.t().manager.groups.views },
-        { key: 'likeCount' as const, color: '--series-2', label: () => this.t().manager.groups.likes },
-        { key: 'commentCount' as const, color: '--series-3', label: () => this.t().manager.groups.comments },
+    // The three nightly series a post has, on their fixed palette slots. The leaf strip below the
+    // heading is the legend and the filter at once (ADR-149): one line per metric, never a sum.
+    readonly growthMetrics: { key: 'viewCount' | 'likeCount' | 'commentCount'; slot: SeriesSlot; label: () => string }[] = [
+        { key: 'viewCount', slot: 1, label: () => this.t().manager.groups.views },
+        { key: 'likeCount', slot: 2, label: () => this.t().manager.groups.likes },
+        { key: 'commentCount', slot: 3, label: () => this.t().manager.groups.comments },
     ];
-    growthMetric = signal<'viewCount' | 'likeCount' | 'commentCount'>('viewCount');
-    growthColor = () => this.growthMetrics.find(m => m.key === this.growthMetric())!.color;
+    growthShown = signal<ReadonlySet<string>>(new Set(['viewCount', 'likeCount', 'commentCount']));
+
+    toggleGrowthMetric(key: string) {
+        this.growthShown.update(set => {
+            const next = new Set(set);
+            next.has(key) ? next.delete(key) : next.add(key);
+            return next;
+        });
+    }
 
     historyLoading = signal(false);
     private historyFor = signal<string | null>(null);
@@ -274,28 +297,17 @@ export class PostsManagerComponent implements OnInit {
     }
 
     /** Null with fewer than two snapshots — one point is not a line, and a flat line would lie. */
-    historyChart(): { linePath: string; areaPath: string; from: string; to: string; last: string } | null {
+    growthSeries(): GrowthSeries[] | null {
         const rows = this.history();
         if (rows.length < 2) return null;
+        const drawn = this.growthMetrics
+            .filter(m => this.growthShown().has(m.key))
+            .map(m => ({ slot: m.slot, name: m.label(), points: rows.map(r => r[m.key]) }));
+        return drawn.length ? drawn : null;
+    }
 
-        const key = this.growthMetric();
-        const values = rows.map(r => r[key]);
-        const top = Math.max(...values, 1);
-        const points = rows.map((r, i) => ({
-            x: 10 + (i / (rows.length - 1)) * 580,
-            y: 150 - (r[key] / top) * 140,
-        }));
-        const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-        const areaPath = `${linePath} L${points[points.length - 1].x.toFixed(1)},150 L${points[0].x.toFixed(1)},150 Z`;
-        const day = (iso: string) => formatInZone(iso, 'd MMM');
-
-        return {
-            linePath,
-            areaPath,
-            from: day(rows[0].takenAt),
-            to: day(rows[rows.length - 1].takenAt),
-            last: `${values[values.length - 1]}`,
-        };
+    growthLabels(): string[] {
+        return this.history().map(r => formatInZone(r.takenAt, 'd MMM'));
     }
 
     // One publish state per post, resolved in a fixed order (Marty, 01.08.2026): an archived post
@@ -1015,6 +1027,99 @@ export class PostsManagerComponent implements OnInit {
             angle += sweep;
             return slice;
         });
+    }
+
+    // ─── The bench's own chrome (ADR-167 clauses 1 to 4) ──────────────────────────────────────
+    // The strip switches what the panel below it shows and never navigates, which is IndexTabs'
+    // whole jurisdiction. The feedback tally rides the Posts tile as its badge, so the hide-at-zero
+    // and 99+ rules come from the one function that owns them.
+    tabs(): IndexTabItem[] {
+        const t = this.t().manager;
+        return [
+            {
+                id: 'posts', label: t.tabs.posts,
+                badge: this.feedback.newComments() + this.feedback.newReactions(),
+                badgeTitle: t.newSinceLastLook,
+            },
+            { id: 'stats', label: t.tabs.stats },
+            { id: 'forms', label: t.tabs.forms },
+        ];
+    }
+
+    pickTab(id: string) {
+        if (MANAGER_TABS.includes(id as ManagerTab)) this.setTab(id as ManagerTab);
+    }
+
+    /** Exclusive: the shelf describes the selected post, or the library, and never both. */
+    inspectorScope(): SpecScope {
+        return this.selected() ? 'selection' : 'document';
+    }
+
+    inspectorTitle(): string {
+        const t = this.t().manager.inspector;
+        return this.inspectorScope() === 'selection' ? t.post : t.library;
+    }
+
+    inspectorScopeWord(): string {
+        const t = this.t().manager.inspector;
+        return this.inspectorScope() === 'selection' ? t.scopePost : t.scopeLibrary;
+    }
+
+    /** Chalked on the top edge of the sheet: which post is lying on it, and how it stands. */
+    sheetLabel(): string {
+        const d = this.selected();
+        return d ? (d.title || this.t().drafts.untitled) : this.t().manager.crumb;
+    }
+
+    sheetMeta(): string {
+        const d = this.selected();
+        if (!d) return '';
+        return `${this.publishStateLabel(d)} · ${this.allLanguages(d).map(l => l.toUpperCase()).join(' ')}`;
+    }
+
+    presetSheetLabel(): string {
+        const preset = this.presets().find(p => p.id === this.selectedPresetId());
+        return preset?.name || this.t().manager.tabs.forms;
+    }
+
+    presetSheetMeta(): string {
+        const form = this.presetForm();
+        return form ? this.presetLangs().map(l => l.toUpperCase()).join(' ') : '';
+    }
+
+    publishedCount(): number {
+        return this.drafts().filter(d => d.isBlogPublished).length;
+    }
+
+    privateCount(): number {
+        return this.drafts().filter(d => d.isPrivate).length;
+    }
+
+    archivedCount(): number {
+        return this.drafts().filter(d => d.isArchived).length;
+    }
+
+    pendingScheduleCount(): number {
+        return this.scheduled().filter(p => p.status === 'Pending').length;
+    }
+
+    // Screen-level counts, so the rule says the same thing on every tab — a readout that changed
+    // with the tab would make the rule a tab-dependent surface, which ADR-148 clause 4 refuses of
+    // the rail for the same reason.
+    private readonly rulerFeed = effect(() => {
+        const t = this.t().manager;
+        this.ruler.publish({
+            label: t.crumb,
+            right: [
+                { text: t.rulerPosts(this.drafts().length) },
+                { text: t.rulerPublished(this.publishedCount()) },
+                ...(this.pendingScheduleCount() ? [{ text: t.rulerScheduled(this.pendingScheduleCount()) }] : []),
+            ],
+        });
+    });
+
+    ngOnDestroy() {
+        this.ruler.clear();
     }
 }
 

@@ -1,70 +1,59 @@
 <div class="tasks-page" data-density="compact">
     <div class="tasks-body">
         <div class="tasks-toolbar">
-            <div>
-                <h1>{{ t().projects.tasks.title }}</h1>
-                <div class="tasks-sub">
-                    @if (project(); as p) {
-                        <span>{{ p.name }}</span><span class="dot">·</span>
-                    }
-                    <span>{{ t().projects.tasks.sub(openCount(), tasks().length) }}</span>
-                    @if (overdueCount() > 0) {
-                        <span class="dot">·</span>
-                        <span class="danger">{{ overdueCount() }} {{ t().projects.tasks.overdue }}</span>
-                    }
-                </div>
-            </div>
+            <!--app-input names its field with a visible label or with nothing; this one is a
+            toolbar search that has never had a caption, so the name is given from outside.-->
+            <label class="named-elsewhere" for="tasks-search">{{ t().projects.tasks.search }}</label>
+            <app-input class="search-input" inputId="tasks-search" type="search"
+                       [placeholder]="t().projects.tasks.search"
+                       [value]="search()" (valueChange)="search.set($any($event) ?? '')" />
+
             <span class="spacer"></span>
 
-            <input class="search-input" type="search" [ngModel]="search()" (ngModelChange)="search.set($event)"
-                   [placeholder]="t().projects.tasks.search" [attr.aria-label]="t().projects.tasks.search">
+            <app-index-tabs [items]="viewTabs()" [value]="view()" [label]="t().projects.tasks.title"
+                            (selected)="setView($any($event))" />
 
-            <div class="view-toggle">
-                <button [class.active]="view() === 'board'" (click)="setView('board')"
-                        [title]="t().projects.tasks.viewBoard" [attr.aria-label]="t().projects.tasks.viewBoard">
-                    <app-icon name="kanban" size="sm"></app-icon>
-                </button>
-                <button [class.active]="view() === 'list'" (click)="setView('list')"
-                        [title]="t().projects.tasks.viewList" [attr.aria-label]="t().projects.tasks.viewList">
-                    <app-icon name="list" size="sm"></app-icon>
-                </button>
-            </div>
-
-            <button class="btn-accent" (click)="startCreating()" [disabled]="busy()">
+            <app-button variant="pine" [disabled]="busy()" (clicked)="startCreating()">
                 <app-icon name="plus" size="sm"></app-icon>
                 {{ t().projects.tasks.newTask }}
-            </button>
+            </app-button>
         </div>
 
         <div class="filter-row">
-            <button class="chip" [class.on]="filter() === 'all'" (click)="filter.set('all')">
+            <app-leaf-tag interactive [state]="filter() === 'all' ? 'active' : 'idle'"
+                          (activated)="filter.set('all')">
                 {{ t().projects.tasks.filterAll }} <span class="chip-count">{{ tasks().length }}</span>
-            </button>
-            <button class="chip" [class.on]="filter() === 'open'" (click)="filter.set('open')">
+            </app-leaf-tag>
+            <app-leaf-tag interactive [state]="filter() === 'open' ? 'active' : 'idle'"
+                          (activated)="filter.set('open')">
                 {{ t().projects.tasks.filterOpen }} <span class="chip-count">{{ openCount() }}</span>
-            </button>
+            </app-leaf-tag>
             @if (overdueCount() > 0) {
-                <button class="chip danger-chip" [class.on]="filter() === 'overdue'" (click)="filter.set('overdue')">
+                <app-leaf-tag interactive [state]="filter() === 'overdue' ? 'active' : 'idle'"
+                              (activated)="filter.set('overdue')">
                     {{ t().projects.tasks.filterOverdue }} <span class="chip-count">{{ overdueCount() }}</span>
-                </button>
+                </app-leaf-tag>
             }
 
             <!--T-124 — sprint chips, only once there are sprints to pick between. A lone "All"
             chip beside a lone sprint is a control with nothing to control.-->
             @if (sprints().length) {
                 <span class="chip-divider"></span>
-                <button class="chip" [class.on]="sprintFilter() === null" (click)="sprintFilter.set(null)">
+                <app-leaf-tag interactive [state]="sprintFilter() === null ? 'active' : 'idle'"
+                              (activated)="sprintFilter.set(null)">
                     {{ t().projects.tasks.filterAll }}
-                </button>
+                </app-leaf-tag>
                 @for (s of sprints(); track s.id) {
-                    <button class="chip" [class.on]="sprintFilter() === s.id" (click)="sprintFilter.set(s.id)"
-                            [title]="s.name">
+                    <app-leaf-tag interactive [hint]="s.name"
+                                  [state]="sprintFilter() === s.id ? 'active' : 'idle'"
+                                  (activated)="sprintFilter.set(s.id)">
                         S{{ s.number }} <span class="chip-count">{{ sprintTaskCount(s.id) }}</span>
-                    </button>
+                    </app-leaf-tag>
                 }
-                <button class="chip" [class.on]="sprintFilter() === ''" (click)="sprintFilter.set('')">
+                <app-leaf-tag interactive [state]="sprintFilter() === '' ? 'active' : 'idle'"
+                              (activated)="sprintFilter.set('')">
                     {{ t().projects.planner.unassigned }} <span class="chip-count">{{ sprintTaskCount('') }}</span>
-                </button>
+                </app-leaf-tag>
             }
         </div>
 
@@ -79,60 +68,51 @@
                 <app-icon name="check-square" size="lg"></app-icon>
                 <p class="empty-title">{{ t().projects.tasks.empty }}</p>
                 <p class="hint">{{ t().projects.tasks.emptyHint }}</p>
-                <button class="btn-accent" (click)="startCreating()">
+                <app-button variant="pine" (clicked)="startCreating()">
                     <app-icon name="plus" size="sm"></app-icon>
                     {{ t().projects.tasks.newTask }}
-                </button>
+                </app-button>
             </div>
         } @else if (view() === 'board') {
             <div class="board">
                 @for (status of statuses; track status) {
-                    <section class="column">
-                        <header class="column-head">
-                            <span class="column-name">{{ t().projects.tasks.status[status] }}</span>
-                            <span class="column-count">{{ columnCount(status) }}</span>
-                            <span class="spacer"></span>
-                            <button class="icon-btn" (click)="startCreating(status)" [disabled]="busy()"
-                                    [title]="t().projects.tasks.newTask" [attr.aria-label]="t().projects.tasks.newTask">
-                                <app-icon name="plus" size="xs"></app-icon>
-                            </button>
-                        </header>
+                    <app-shelf-panel class="column" [title]="t().projects.tasks.status[status]"
+                                     [count]="columnCount(status)">
+                        <app-button actions variant="rail" size="sm" [disabled]="busy()"
+                                    [title]="t().projects.tasks.newTask" (clicked)="startCreating(status)">
+                            <app-icon name="plus" size="xs" [label]="t().projects.tasks.newTask"></app-icon>
+                        </app-button>
 
-                        @for (task of column(status); track task.id) {
-                            <article class="task-card" (click)="open(task)" tabindex="0" (keydown.enter)="open(task)">
-                                <p class="task-title">{{ task.title }}</p>
-                                <div class="task-meta">
-                                    <span class="prio" [class.p1]="task.priority === 1"
-                                          [title]="t().projects.tasks.priorityFull(task.priority)">
-                                        {{ t().projects.tasks.priority(task.priority) }}
-                                    </span>
-                                    @if (task.dueAt) {
-                                        <span class="due" [class.overdue]="overdue(task)">
-                                            {{ task.dueAt | zonedDate:'d MMM' }}@if (overdue(task)) {<span> · {{ t().projects.tasks.overdue }}</span>}
-                                        </span>
-                                    }
+                        <div class="column-cards">
+                            @for (task of column(status); track task.id) {
+                                <app-task-tag [link]="boardLink()" [queryParams]="{ task: task.id }"
+                                              [prio]="task.priority" [due]="dueLabel(task)"
+                                              [overdue]="overdue(task)" [done]="task.status === 'done'"
+                                              [rotate]="tilt($index)" [hint]="task.title">
+                                    <span class="card-title">{{ task.title }}</span>
                                     @if (sprintOf(task); as s) {
-                                        <span class="sprint-chip" [title]="s.name">S{{ s.number }}</span>
+                                        <app-stamp-badge stamp tone="brass" [rotate]="-1.5"
+                                                         [title]="s.name">S{{ s.number }}</app-stamp-badge>
                                     }
                                     @if (task.assignee) { <span class="assignee">{{ task.assignee }}</span> }
-                                </div>
-                                @if (task.links.length) {
-                                    <div class="link-chips">
-                                        @for (link of task.links; track link.type + link.id) {
-                                            <span class="link-chip" [title]="link.label || t().projects.tasks.linkGone">
-                                                <app-icon [name]="linkIcons[link.type]" size="xs"></app-icon>
-                                                <span class="link-label" [class.gone]="!link.label">
-                                                    {{ link.label || t().projects.tasks.linkGone }}
+                                    @if (task.links.length) {
+                                        <span class="link-chips">
+                                            @for (link of task.links; track link.type + link.id) {
+                                                <span class="link-chip" [title]="link.label || t().projects.tasks.linkGone">
+                                                    <app-icon [name]="linkIcons[link.type]" size="xs"></app-icon>
+                                                    <span class="link-label" [class.gone]="!link.label">
+                                                        {{ link.label || t().projects.tasks.linkGone }}
+                                                    </span>
                                                 </span>
-                                            </span>
-                                        }
-                                    </div>
-                                }
-                            </article>
-                        } @empty {
-                            <p class="column-empty">{{ t().projects.tasks.emptyColumn }}</p>
-                        }
-                    </section>
+                                            }
+                                        </span>
+                                    }
+                                </app-task-tag>
+                            } @empty {
+                                <p class="column-empty">{{ t().projects.tasks.emptyColumn }}</p>
+                            }
+                        </div>
+                    </app-shelf-panel>
                 }
             </div>
         } @else {
@@ -146,15 +126,15 @@
                 </div>
 
                 @for (task of sorted(); track task.id) {
-                    <div class="tasks-row" (click)="open(task)" tabindex="0" (keydown.enter)="open(task)"
-                         [attr.aria-label]="task.title">
+                    <!--A row that opens a task is a destination, so it is an anchor and carries the
+                    query itself (ADR-163).-->
+                    <a class="tasks-row" [routerLink]="boardLink()" [queryParams]="{ task: task.id }"
+                       queryParamsHandling="merge" [attr.aria-label]="task.title">
                         <div class="title-cell" [title]="task.title">{{ task.title }}</div>
                         <div>
-                            <span class="status-badge"
-                                  [class.tone-accent]="task.status === 'in_progress'"
-                                  [class.tone-ok]="task.status === 'done'">
+                            <app-stamp-badge [tone]="statusTone(task.status)" [rotate]="0">
                                 {{ t().projects.tasks.status[task.status] }}
-                            </span>
+                            </app-stamp-badge>
                         </div>
                         <div class="right">
                             <span class="prio" [class.p1]="task.priority === 1">
@@ -170,7 +150,7 @@
                             {{ t().projects.tasks.linkSummary(
                                 linkCounts(task).document, linkCounts(task).asset, linkCounts(task).task) || '—' }}
                         </div>
-                    </div>
+                    </a>
                 } @empty {
                     <p class="hint empty-filtered">{{ t().projects.tasks.emptyFiltered }}</p>
                 }
@@ -183,52 +163,51 @@
 @if (openTask(); as task) {
     <app-modal [width]="560" (closed)="close()">
         <span modal-title class="modal-head-row">
-            <span class="status-badge"
-                  [class.tone-accent]="task.status === 'in_progress'"
-                  [class.tone-ok]="task.status === 'done'">
+            <app-stamp-badge [tone]="statusTone(task.status)" [rotate]="-1.5">
                 {{ t().projects.tasks.status[task.status] }}
-            </span>
+            </app-stamp-badge>
             @if (task.archivedAt) {
-                <span class="status-badge">{{ t().projects.tasks.archived }}</span>
+                <app-stamp-badge tone="ink" [rotate]="1">{{ t().projects.tasks.archived }}</app-stamp-badge>
             }
         </span>
 
         <div class="task-modal">
-            <input class="task-title-input" [ngModel]="draftTitle()" (ngModelChange)="draftTitle.set($event)"
-                   [placeholder]="t().projects.tasks.titlePlaceholder"
-                   [attr.aria-label]="t().projects.tasks.titlePlaceholder">
+            <app-input class="task-title-input" [serif]="true" [placeholder]="t().projects.tasks.titlePlaceholder"
+                       [value]="draftTitle()" (valueChange)="draftTitle.set($any($event) ?? '')"
+                       inputId="task-title" />
+            <label class="named-elsewhere" for="task-title">{{ t().projects.tasks.titlePlaceholder }}</label>
 
             <div class="field-grid">
                 <div class="field">
-                    <label>{{ t().projects.tasks.fieldStatus }}</label>
-                    <select [ngModel]="task.status" (ngModelChange)="setStatus(task, $event)" [disabled]="busy()">
+                    <label for="task-status">{{ t().projects.tasks.fieldStatus }}</label>
+                    <select id="task-status" [ngModel]="task.status" (ngModelChange)="setStatus(task, $event)" [disabled]="busy()">
                         @for (status of statuses; track status) {
                             <option [value]="status">{{ t().projects.tasks.status[status] }}</option>
                         }
                     </select>
                 </div>
                 <div class="field">
-                    <label>{{ t().projects.tasks.fieldPriority }}</label>
-                    <select [ngModel]="task.priority" (ngModelChange)="setPriority(task, $event)" [disabled]="busy()">
+                    <label for="task-priority">{{ t().projects.tasks.fieldPriority }}</label>
+                    <select id="task-priority" [ngModel]="task.priority" (ngModelChange)="setPriority(task, $event)" [disabled]="busy()">
                         @for (p of priorities; track p) {
                             <option [value]="p">{{ t().projects.tasks.priorityFull(p) }}</option>
                         }
                     </select>
                 </div>
                 <div class="field">
-                    <label>{{ t().projects.tasks.fieldDue }}</label>
-                    <input type="date" [ngModel]="draftDue()" (ngModelChange)="draftDue.set($event)">
+                    <app-input type="date" [label]="t().projects.tasks.fieldDue"
+                               [value]="draftDue()" (valueChange)="draftDue.set($any($event) ?? '')" />
                 </div>
                 <div class="field">
-                    <label>{{ t().projects.tasks.fieldAssignee }}</label>
-                    <input type="text" [ngModel]="draftAssignee()" (ngModelChange)="draftAssignee.set($event)"
-                           [placeholder]="t().projects.tasks.assigneePlaceholder">
+                    <app-input [label]="t().projects.tasks.fieldAssignee"
+                               [placeholder]="t().projects.tasks.assigneePlaceholder"
+                               [value]="draftAssignee()" (valueChange)="draftAssignee.set($any($event) ?? '')" />
                 </div>
                 <!--Saved on change rather than with the rest: it moves the task between planner
                 groups, which is a move, not an edit of text.-->
                 <div class="field">
-                    <label>{{ t().projects.planner.assignSprint }}</label>
-                    <select [ngModel]="task.sprintId ?? ''" (ngModelChange)="setSprint(task, $event)"
+                    <label for="task-sprint">{{ t().projects.planner.assignSprint }}</label>
+                    <select id="task-sprint" [ngModel]="task.sprintId ?? ''" (ngModelChange)="setSprint(task, $event)"
                             [disabled]="busy()">
                         <option value="">{{ t().projects.planner.unassigned }}</option>
                         @for (s of sprints(); track s.id) {
@@ -240,8 +219,8 @@
                 picker with one empty option is a control with nothing to control.-->
                 @if (builds().length) {
                 <div class="field">
-                    <label>{{ t().projects.builds.assignBuild }}</label>
-                    <select [ngModel]="task.buildId ?? ''" (ngModelChange)="setBuild(task, $event)"
+                    <label for="task-build">{{ t().projects.builds.assignBuild }}</label>
+                    <select id="task-build" [ngModel]="task.buildId ?? ''" (ngModelChange)="setBuild(task, $event)"
                             [disabled]="busy()">
                         <option value="">{{ t().projects.builds.unassigned }}</option>
                         @for (b of builds(); track b.id) {
@@ -263,10 +242,10 @@
             </div>
 
             <div class="field">
-                <label>{{ t().projects.tasks.fieldDescription }}</label>
+                <label for="task-description">{{ t().projects.tasks.fieldDescription }}</label>
                 <!-- Plain text on purpose (ADR-106): a task that needs tables and media is really a
                      document, and should be created as one and linked. -->
-                <textarea rows="5" [ngModel]="draftDescription()" (ngModelChange)="draftDescription.set($event)"
+                <textarea id="task-description" rows="5" [ngModel]="draftDescription()" (ngModelChange)="draftDescription.set($event)"
                           [placeholder]="t().projects.tasks.descriptionPlaceholder"></textarea>
             </div>
 
@@ -281,11 +260,11 @@
                                     {{ link.label || t().projects.tasks.linkGone }}
                                 </span>
                                 <span class="spacer"></span>
-                                <button class="icon-btn" (click)="removeLink(task, link.type, link.id)"
-                                        [disabled]="busy()" [title]="t().projects.tasks.unlink"
-                                        [attr.aria-label]="t().projects.tasks.unlink">
-                                    <app-icon name="x" size="xs"></app-icon>
-                                </button>
+                                <app-button variant="paper" size="sm" [disabled]="busy()"
+                                            [title]="t().projects.tasks.unlink"
+                                            (clicked)="removeLink(task, link.type, link.id)">
+                                    <app-icon name="x" size="xs" [label]="t().projects.tasks.unlink"></app-icon>
+                                </app-button>
                             </div>
                         }
                     </div>
@@ -297,20 +276,21 @@
                     @if (linkableDocuments().length) {
                         <div class="link-picker">
                             @for (doc of linkableDocuments(); track doc.id) {
-                                <button class="link-option" (click)="addLink(task, doc.id)" [disabled]="busy()">
+                                <app-button variant="paper" size="sm" [disabled]="busy()"
+                                            (clicked)="addLink(task, doc.id)">
                                     <app-icon [name]="docIcons[doc.documentType]" size="sm"></app-icon>
-                                    <span>{{ doc.title }}</span>
-                                </button>
+                                    <span class="link-option-label">{{ doc.title }}</span>
+                                </app-button>
                             }
                         </div>
                     } @else {
                         <p class="hint">{{ t().projects.tasks.linkNone }}</p>
                     }
                 } @else {
-                    <button class="btn-ghost small" (click)="linking.set(true)" [disabled]="busy()">
+                    <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="linking.set(true)">
                         <app-icon name="link" size="sm"></app-icon>
                         {{ t().projects.tasks.linkAdd }}
-                    </button>
+                    </app-button>
                 }
             </div>
 
@@ -328,19 +308,19 @@
         </div>
 
         <div modal-footer class="modal-foot-row">
-            <button class="btn-ghost danger" (click)="remove(task)" [disabled]="busy()">
+            <app-button variant="danger" [disabled]="busy()" (clicked)="remove(task)">
                 {{ t().projects.tasks.delete }}
-            </button>
-            <button class="btn-ghost" (click)="toggleArchived(task)" [disabled]="busy()">
+            </app-button>
+            <app-button variant="paper" [disabled]="busy()" (clicked)="toggleArchived(task)">
                 {{ task.archivedAt ? t().projects.tasks.unarchive : t().projects.tasks.archive }}
-            </button>
+            </app-button>
             <span class="spacer"></span>
-            <button class="btn-ghost" (click)="saveEdits(task)" [disabled]="busy()">
+            <app-button variant="paper" [disabled]="busy()" (clicked)="saveEdits(task)">
                 {{ t().projects.tasks.save }}
-            </button>
-            <button class="btn-accent" (click)="toggleDone(task)" [disabled]="busy()">
+            </app-button>
+            <app-button variant="pine" [disabled]="busy()" (clicked)="toggleDone(task)">
                 {{ task.status === 'done' ? t().projects.tasks.reopen : t().projects.tasks.markDone }}
-            </button>
+            </app-button>
         </div>
     </app-modal>
 }
@@ -350,22 +330,26 @@
         <span modal-title>{{ t().projects.tasks.newTask }}</span>
 
         <div class="task-modal">
-            <input class="task-title-input" [ngModel]="newTitle()" (ngModelChange)="newTitle.set($event)"
-                   [placeholder]="t().projects.tasks.titlePlaceholder"
-                   [attr.aria-label]="t().projects.tasks.titlePlaceholder" (keydown.enter)="create()">
+            <!--Enter submits, as it did on the field this replaces: the event bubbles from the
+            field to this host.-->
+            <app-input class="task-title-input" [serif]="true" inputId="new-task-title"
+                       [placeholder]="t().projects.tasks.titlePlaceholder"
+                       [value]="newTitle()" (valueChange)="newTitle.set($any($event) ?? '')"
+                       (keydown.enter)="create()" />
+            <label class="named-elsewhere" for="new-task-title">{{ t().projects.tasks.titlePlaceholder }}</label>
 
             <div class="field-grid">
                 <div class="field">
-                    <label>{{ t().projects.tasks.fieldStatus }}</label>
-                    <select [ngModel]="newStatus()" (ngModelChange)="newStatus.set($event)">
+                    <label for="new-task-status">{{ t().projects.tasks.fieldStatus }}</label>
+                    <select id="new-task-status" [ngModel]="newStatus()" (ngModelChange)="newStatus.set($event)">
                         @for (status of statuses; track status) {
                             <option [value]="status">{{ t().projects.tasks.status[status] }}</option>
                         }
                     </select>
                 </div>
                 <div class="field">
-                    <label>{{ t().projects.tasks.fieldPriority }}</label>
-                    <select [ngModel]="newPriority()" (ngModelChange)="newPriority.set($event)">
+                    <label for="new-task-priority">{{ t().projects.tasks.fieldPriority }}</label>
+                    <select id="new-task-priority" [ngModel]="newPriority()" (ngModelChange)="newPriority.set($event)">
                         @for (p of priorities; track p) {
                             <option [value]="p">{{ t().projects.tasks.priorityFull(p) }}</option>
                         }
@@ -378,8 +362,8 @@
 
         <div modal-footer class="modal-foot-row">
             <span class="spacer"></span>
-            <button class="btn-ghost" (click)="creating.set(false)">{{ t().projects.tasks.cancel }}</button>
-            <button class="btn-accent" (click)="create()" [disabled]="busy()">{{ t().projects.tasks.newTask }}</button>
+            <app-button variant="paper" (clicked)="creating.set(false)">{{ t().projects.tasks.cancel }}</app-button>
+            <app-button variant="pine" [disabled]="busy()" (clicked)="create()">{{ t().projects.tasks.newTask }}</app-button>
         </div>
     </app-modal>
 }

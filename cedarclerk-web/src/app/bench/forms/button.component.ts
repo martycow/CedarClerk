@@ -1,4 +1,4 @@
-import { Component, computed, input, output } from '@angular/core';
+import { booleanAttribute, Component, computed, input, output } from '@angular/core';
 
 export type ButtonVariant = 'pine' | 'paper' | 'rail' | 'danger';
 export type ButtonSize = 'md' | 'sm';
@@ -101,7 +101,7 @@ export type ButtonSize = 'md' | 'sm';
 export class ButtonComponent {
     variant = input<ButtonVariant>('pine');
     size = input<ButtonSize>('md');
-    disabled = input(false);
+    disabled = input(false, { transform: booleanAttribute });
     type = input<'button' | 'submit' | 'reset'>('button');
     title = input('');
     clicked = output<MouseEvent>();

@@ -1,4 +1,5 @@
-import { Routes } from '@angular/router';
+import { Router, Routes } from '@angular/router';
+import { inject } from '@angular/core';
 import { authGuard } from './core/auth.guard';
 import { adminGuard } from './core/admin.guard';
 import { guestGuard } from './core/guest.guard';
@@ -119,9 +120,10 @@ export const routes: Routes = [
             // N7 folded both of these into the Posts Manager; the old paths stay as redirects because
             // they're what any existing bookmark points at.
             { path: 'comments', redirectTo: 'posts' },
-            // The tab is not in the URL, so a bare redirect drops it and an old metrics bookmark
-            // lands on the posts list; ?tab= is what the manager reads on entry (ADR-148).
-            { path: 'stats', redirectTo: 'posts?tab=stats' },
+            // A redirectTo *string* is a path, so the query would become part of a segment and the
+            // tab would be dropped — an old metrics bookmark landing on the posts list. Only a
+            // UrlTree carries ?tab=, which is what the manager reads on entry (ADR-148).
+            { path: 'stats', redirectTo: () => inject(Router).parseUrl('/posts?tab=stats') },
             // Drafts, not the editor, is the landing screen — you pick what to work on first.
             { path: '', pathMatch: 'full', redirectTo: 'drafts' },
             { path: '**', redirectTo: 'drafts' },

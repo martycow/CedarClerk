@@ -1,12 +1,35 @@
 /* Phase 11 / T-081 — first screen migrated to tokens v2 (ADR-071). This page carries
    data-density="compact" on its root (set in the template), which is what makes --dens-* resolve
-   to the tighter set here; the tokens are never read for a literal value in this file. */
+   to the tighter set here; the tokens are never read for a literal value in this file. The shell
+   owns the ground under the page (ADR-139), so nothing here paints one. */
 .drafts-page {
-    min-height: 100vh;
-    background: var(--surface);
-    color: var(--text);
-    font-family: var(--font-sans);
-    font-size: var(--dens-fs);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3);
+}
+
+/* The kit's proportions and no width breakpoint of its own (ADR-147). The tree is structure and
+   the folder filter does not apply to it (ADR-128), so its shelf is absent and the panel takes
+   the whole board. */
+.drafts-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--bench-dock-w);
+    gap: var(--space-3);
+    align-items: start;
+}
+
+.drafts-grid.no-shelf {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+/* Projected into the panel header, which is a single non-wrapping row. */
+.search {
+    width: 200px;
+}
+
+.pad {
+    padding: var(--space-3);
 }
 
 .hint {
@@ -31,154 +54,17 @@
     flex: 1;
 }
 
-/* ---------- Body ---------- */
-/* I10: was capped at 1080px, which left most of a wide monitor empty while the Title column was
-   the thing actually starved. The cap is now generous rather than absent — a fully fluid table
-   on a 4K display produces rows too wide to scan — and because N1's grid gives Title the leftover
-   space, every extra pixel here goes straight into the column that needed it. */
-.drafts-body {
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: var(--dens-section) var(--space-5) var(--space-6);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-}
-
-/* flex-wrap, not nowrap: on a phone this row holds a title, a search field, three pickers and the
-   New-draft button, which is far more than 390px of viewport. Without wrapping the row simply grew
-   past the edge and the global overflow-x:hidden clipped whatever fell off — which is what "on an
-   iPhone the whole page is wider than the viewport" actually looked like from the inside. */
+/* flex-wrap, not nowrap: on a phone this row holds the tag manager, two imports and New draft,
+   which is more than 390px of viewport. Without wrapping the row simply grew past the edge and the
+   global overflow-x:hidden clipped whatever fell off. */
 .drafts-toolbar {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     gap: var(--dens-gap);
     flex-wrap: wrap;
 }
 
-.drafts-toolbar h1 {
-    margin: 0;
-    font-size: var(--fs-22);
-    font-weight: 700;
-    letter-spacing: -.02em;
-}
-
-.drafts-sub {
-    font-size: var(--fs-meta);
-    color: var(--t2);
-    margin-top: 3px;
-}
-
-.search-input {
-    width: 240px;
-    box-sizing: border-box;
-    padding: var(--dens-control-y) var(--dens-control-x);
-    border: 1px solid var(--border);
-    border-radius: var(--dens-radius);
-    background: var(--sheet);
-    color: var(--text);
-    font: inherit;
-    font-size: var(--dens-fs);
-}
-
-.view-toggle {
-    display: flex;
-    gap: 2px;
-    background: var(--alt);
-    border-radius: var(--radius-md);
-    padding: 2px;
-}
-
-.view-toggle button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 27px;
-    height: 27px;
-    border: none;
-    background: none;
-    border-radius: 6px;
-    color: var(--t2);
-    cursor: pointer;
-}
-
-.view-toggle button.active {
-    background: var(--sheet);
-    color: var(--accent);
-}
-
-/* Withheld while focused: a component's own shadow out-specifies the global rule that draws the ADR-140 halo. */
-.view-toggle button.active:not(:focus-visible) {
-    box-shadow: var(--shadow);
-}
-
-.btn-accent {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    border: none;
-    background: var(--accent);
-    color: var(--sheet);
-    border-radius: var(--dens-radius);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    white-space: nowrap;
-    transition: filter var(--motion-fast) var(--ease);
-}
-
-.btn-accent:hover {
-    filter: brightness(1.08);
-}
-
-.btn-ghost {
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: var(--dens-radius);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    cursor: pointer;
-    font-family: inherit;
-    transition: color var(--motion-fast) var(--ease);
-}
-
-.btn-ghost:hover {
-    color: var(--text);
-}
-
-.filter-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2);
-}
-
-.filter-tabs button {
-    border: 1px solid var(--border);
-    background: var(--sheet);
-    color: var(--t2);
-    border-radius: 999px;
-    padding: var(--space-1) var(--dens-control-x);
-    font-size: var(--fs-meta);
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.filter-tabs button.active {
-    background: var(--asoft);
-    border-color: var(--abord);
-    color: var(--accent);
-    font-weight: 600;
-}
-
-/* ---------- Table view ---------- */
 .drafts-table {
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
     /* Was overflow:hidden (only there to clip the rounded corners), which meant the fixed-width
        column grid below simply got cut off on iPad with no way to reach it — B24. */
     overflow-x: auto;
@@ -429,10 +315,11 @@
 }
 
 /* ---------- Grid view ---------- */
-.drafts-grid {
+.drafts-grid-cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 12px;
+    gap: var(--space-3);
+    padding: var(--space-3);
 }
 
 .draft-card {
@@ -477,32 +364,59 @@
     margin-right: 3px;
 }
 
-.folder-filter-btn {
+/* ---------- Folders shelf ---------- */
+.folder-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.folder-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    border: 1px solid var(--border);
-    background: var(--sheet);
+    gap: var(--space-2);
+    width: 100%;
+    box-sizing: border-box;
+    padding: var(--space-1) var(--space-2);
+    border: none;
+    border-radius: var(--radius-paper);
+    background: none;
     color: var(--text);
-    border-radius: var(--radius-sm);
-    padding: 7px 12px;
-    font-size: var(--dens-fs);
     font-family: inherit;
+    font-size: var(--dens-fs);
+    text-align: left;
     cursor: pointer;
+    min-width: 0;
+}
+
+.folder-row:hover { background: var(--hover); }
+
+/* The chosen folder is marked by a pine edge rather than by a fill, so the row keeps the sheet it
+   is printed on. The edge stands down while focused: ADR-140 spends the app's one box-shadow on
+   the focus halo. */
+.folder-row.is-on { background: var(--asoft); }
+.folder-row.is-on:not(:focus-visible) { box-shadow: inset 2px 0 0 var(--accent); }
+
+.folder-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.folder-filter-btn:hover {
-    border-color: var(--abord);
+.folder-count {
+    font-family: var(--font-mono);
+    font-size: var(--fs-caption);
+    color: var(--t2);
+    flex: none;
 }
 
-.folder-menu {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 200px;
+.folder-cell {
+    min-width: 0;
 }
 
+/* Shared with the tree's move-under popover, which is the only menu left on this page. */
 .folder-menu-item {
     display: flex;
     align-items: center;
@@ -510,7 +424,7 @@
     text-align: left;
     border: none;
     background: none;
-    padding: 6px 8px;
+    padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-sm);
     cursor: pointer;
     font-size: var(--dens-fs);
@@ -522,9 +436,7 @@
     white-space: nowrap;
 }
 
-.folder-menu-item:hover {
-    background: var(--hover);
-}
+.folder-menu-item:hover { background: var(--hover); }
 
 .folder-menu-item.active {
     background: var(--asoft);
@@ -535,33 +447,10 @@
 .folder-menu-sep {
     height: 1px;
     background: var(--border);
-    margin: 4px 0;
+    margin: var(--space-1) 0;
 }
 
-.folder-menu-row {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    border-radius: var(--radius-sm);
-}
-
-.folder-menu-row.active .folder-menu-item {
-    color: var(--accent);
-    font-weight: 600;
-}
-
-.folder-count {
-    font-size: var(--fs-caption);
-    color: var(--t2);
-    padding: 0 4px;
-    flex: none;
-}
-
-.folder-cell {
-    min-width: 0;
-}
-
-/* ---------- New draft dialog (moved here from the editor, 28.07.2026) ---------- */
+/* ---------- New draft dialog ---------- */
 .chat-input {
     width: 100%;
     box-sizing: border-box;
@@ -703,33 +592,19 @@
 /* Phone. The toolbar becomes a stack: the search field and the folder trigger each take the full
    width instead of holding a fixed 240px that cannot fit beside anything else. */
 @media (max-width: 700px) {
-    .drafts-body {
-        padding: var(--space-4) var(--space-3) var(--space-6);
-        gap: var(--space-3);
-    }
-
     .drafts-toolbar {
         align-items: stretch;
     }
 
     /* The spacer exists to push controls right on a wide row; once the row wraps it would insert a
-       full blank line between the title and the search field. */
+       full blank line before the imports. */
     .spacer {
         display: none;
     }
 
-    .search-input {
-        width: 100%;
-        flex: 1 1 100%;
-    }
-
-    .drafts-toolbar h1 {
-        font-size: var(--fs-20);
-    }
-
     /* A grid of "auto-fill, minmax(240px, 1fr)" leaves a 390px phone with one column and 150px of
        dead space to its right, because the track cannot grow past its own content box here. */
-    .drafts-grid {
+    .drafts-grid-cards {
         grid-template-columns: 1fr;
     }
 }
@@ -739,8 +614,7 @@
    wide enough to miss a width query — still gets targets a thumb can hit. */
 @media (pointer: coarse) {
     [data-surface] .mini,
-    [data-surface] .mini-remove,
-    [data-surface] .view-toggle button {
+    [data-surface] .mini-remove {
         min-width: var(--hit-surface);
         min-height: var(--hit-surface);
     }

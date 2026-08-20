@@ -1,7 +1,8 @@
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Component, OnDestroy, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
+import { formatInZone } from '../core/display-time';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { ProjectDetail, ProjectsService, DOCUMENT_TYPE_ICONS } from '../core/projects.service';
@@ -20,6 +21,15 @@ import { Sprint, SprintsService } from '../core/sprints.service';
 import { Build, BuildsService } from '../core/builds.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
+import { RulerService } from '../core/ruler.service';
+import { RulerReadout } from '../bench/chrome/ruler-bar.component';
+import { ButtonComponent } from '../bench/forms/button.component';
+import { InputComponent } from '../bench/forms/input.component';
+import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
+import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
+import { LeafTagComponent } from '../bench/display/leaf-tag.component';
+import { StampBadgeComponent, StampTone } from '../bench/display/stamp-badge.component';
+import { TaskTagComponent } from '../bench/display/task-tag.component';
 
 const VIEW_KEY = 'cedar.taskView';
 
@@ -36,17 +46,22 @@ type SortKey = 'title' | 'status' | 'priority' | 'dueAt';
 // linkable — the dashboard's "Up next" rail opens a card by navigating here.
 @Component({
     selector: 'app-project-tasks',
-    imports: [IconComponent, ZonedDatePipe, FormsModule, ModalComponent],
+    imports: [
+        IconComponent, ZonedDatePipe, FormsModule, ModalComponent, RouterLink,
+        ButtonComponent, InputComponent, IndexTabsComponent, ShelfPanelComponent,
+        LeafTagComponent, StampBadgeComponent, TaskTagComponent,
+    ],
     templateUrl: 'project-tasks.component.html',
     styleUrls: ['project-tasks.component.css'],
 })
-export class ProjectTasksComponent {
+export class ProjectTasksComponent implements OnDestroy {
     private api = inject(TasksService);
     private projects = inject(ProjectsService);
     private sprintsApi = inject(SprintsService);
     private buildsApi = inject(BuildsService);
     private route = inject(ActivatedRoute);
     private router = inject(Router);
+    private ruler = inject(RulerService);
     t = inject(LocaleService).t;
 
     readonly statuses = TASK_STATUSES;
@@ -137,6 +152,20 @@ export class ProjectTasksComponent {
         // A task id in the URL opens its card, including on a cold load or a shared link.
         this.route.queryParamMap.subscribe(q => this.openTaskId.set(q.get('task')));
 
+        // The rail carries the project and the crumb, so what this screen has left to say is a
+        // tally, and the rule is where a tally goes (ADR-159 clause 3).
+        effect(() => {
+            const tasks = this.tasks();
+            const right: RulerReadout[] = [];
+            const late = this.overdueCount();
+            if (late) right.push({ text: `${late} ${this.t().projects.tasks.overdue}` });
+            this.ruler.publish({
+                label: this.project()?.name ?? '',
+                left: [{ text: this.t().projects.tasks.sub(this.openCount(), tasks.length) }],
+                right,
+            });
+        });
+
         // The modal's fields follow which task is open — and only that. Reading `tasks` untracked
         // is the point: every save replaces the array, and a reload must not throw away what is
         // being typed in a card that never closed.
@@ -146,6 +175,10 @@ export class ProjectTasksComponent {
             const task = untracked(() => this.tasks().find(t => t.id === id));
             if (task) this.beginEdit(task);
         });
+    }
+
+    ngOnDestroy(): void {
+        this.ruler.clear();
     }
 
     async load() {
@@ -179,6 +212,31 @@ export class ProjectTasksComponent {
         return this.tasks().filter(t => t.status === status).length;
     }
 
+    /** The strip switches what this screen shows; it never leaves the screen (IndexTabs' rule). */
+    viewTabs = computed<IndexTabItem[]>(() => [
+        { id: 'board', label: this.t().projects.tasks.viewBoard },
+        { id: 'list', label: this.t().projects.tasks.viewList },
+    ]);
+
+    /** Where a card and a row point: this screen, with the task in the query (ADR-163). */
+    boardLink = computed(() => ['/projects', this.projectId(), 'tasks']);
+
+    /** Alternating so a column of tags reads as a stack of paper rather than as a leaning tower. */
+    tilt(index: number): number {
+        return index % 2 === 0 ? -0.8 : 0.8;
+    }
+
+    /** The tag draws the date rust when it is late; the word is what says so without colour. */
+    dueLabel(task: GameTask): string {
+        if (!task.dueAt) return '';
+        const date = formatInZone(task.dueAt, 'd MMM');
+        return isOverdue(task) ? `${date} · ${this.t().projects.tasks.overdue}` : date;
+    }
+
+    statusTone(status: TaskStatus): StampTone {
+        return status === 'done' ? 'pine' : status === 'in_progress' ? 'brass' : 'ink';
+    }
+
     setView(view: 'board' | 'list') {
         this.view.set(view);
         try { localStorage.setItem(VIEW_KEY, view); } catch { /* private mode */ }
@@ -190,14 +248,6 @@ export class ProjectTasksComponent {
     }
 
     // ---- the card ---------------------------------------------------------
-
-    open(task: GameTask) {
-        void this.router.navigate([], {
-            relativeTo: this.route,
-            queryParams: { task: task.id },
-            queryParamsHandling: 'merge',
-        });
-    }
 
     close() {
         void this.router.navigate([], {

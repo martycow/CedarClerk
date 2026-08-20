@@ -1,318 +1,295 @@
-<!--Compact (ADR-071): a user list, an audit log and an invite table. Note that comments.component
-and stats.component need no attribute of their own — they are tab bodies inside the Posts Manager
-and inherit its density through the cascade, which is the point of expressing density as custom
-properties rather than as a class each component has to remember.-->
+<!--Compact (ADR-071, restated by ADR-164 clause 6): a user list, an audit log and an invite table.
+Note that comments.component and stats.component need no attribute of their own — they are tab
+bodies inside the Posts Manager and inherit its density through the cascade, which is the point of
+expressing density as custom properties rather than as a class each component has to remember.
+
+The four sections are the index strip, each one is the panel's body, and the summary cards that
+used to run across the top are the shelf beside it (ADR-164).-->
 <div class="admin-page" data-density="compact">
-    <div class="admin-body">
-        @if (error()) { <p class="channel-error">{{ error() }}</p> }
+    @if (error()) { <p class="channel-error">{{ error() }}</p> }
 
-        @if (loading()) {
-        <p class="hint">{{ t().common.loading }}</p>
-        } @else {
+    @if (loading()) {
+    <p class="hint">{{ t().common.loading }}</p>
+    } @else {
 
-        @if (summary(); as s) {
-        <div class="summary-grid">
-            <div class="summary-card">
-                <span class="summary-value">{{ s.users }}</span>
-                <span class="summary-label">{{ t().admin.summary.users }}</span>
-            </div>
-            <div class="summary-card">
-                <span class="summary-value">{{ s.paidUsers }}</span>
-                <span class="summary-label">{{ t().admin.summary.paidUsers }}</span>
-            </div>
-            <div class="summary-card">
-                <span class="summary-value">{{ s.published }} / {{ s.drafts }}</span>
-                <span class="summary-label">{{ t().admin.summary.published }}</span>
-            </div>
-            <div class="summary-card">
-                <span class="summary-value">{{ s.comments }}</span>
-                <span class="summary-label">{{ t().admin.summary.comments }}</span>
-            </div>
-            <div class="summary-card">
-                <span class="summary-value">{{ s.reactions }}</span>
-                <span class="summary-label">{{ t().admin.summary.reactions }}</span>
-            </div>
-            <div class="summary-card">
-                <span class="summary-value">{{ s.channels }}</span>
-                <span class="summary-label">{{ t().admin.summary.channels }}</span>
-            </div>
-            <div class="summary-card">
-                <span class="summary-value">{{ formatBytes(s.storageBytes) }}</span>
-                <span class="summary-label">{{ t().admin.summary.storage }}</span>
-            </div>
-        </div>
-        }
+    <app-index-tabs [items]="sectionTabs()" [value]="tab()" [label]="t().admin.tabStrip"
+                    (selected)="setTab($any($event))" />
 
-        <nav class="admin-tabs">
-            <button [class.active]="tab() === 'users'" (click)="setTab('users')">{{ t().admin.usersTitle }}</button>
-            <button [class.active]="tab() === 'invites'" (click)="setTab('invites')">{{ t().admin.invites.title }}</button>
-            <button [class.active]="tab() === 'posts'" (click)="setTab('posts')">{{ t().admin.posts.title }}</button>
-            <button [class.active]="tab() === 'reports'" (click)="setTab('reports')">{{ t().admin.reports.title }}</button>
-        </nav>
+    <div class="admin-grid">
+        <app-shelf-panel class="section" [title]="sectionTitle()">
 
-        @if (tab() === 'users') {
-
-        <!--Priority Fixes 01 (Claude Design, 28.07.2026): the fixed-grid table shell swaps for
-        the sheet-card list the rest of the app already uses (Posts Manager, Settings, Admin's
-        own summary cards) — same data, same row-expand-to-actions interaction.-->
-        <div class="user-cards">
-            @for (u of users(); track u.id) {
-            <div class="user-card" [class.expanded]="expandedId() === u.id" (click)="toggleExpanded(u)">
-                <div class="user-card-main">
-                    <span class="user-avatar" [style.background]="avatarColor(u.email)">{{ avatarInitial(u.email) }}</span>
-                    <div class="user-card-body">
-                        <div class="user-card-top">
-                            <span class="user-email">{{ u.email }}</span>
-                            @if (u.isAdmin) { <span class="chip admin">{{ t().admin.adminChip }}</span> }
-                            @if (u.isLocked) { <span class="chip danger">{{ t().admin.lockedChip }}</span> }
-                            <span class="chip plan" [class.accent]="u.effectiveTier !== 'Free'">{{ u.effectiveTier }}</span>
-                            <!--A lapsed plan is the one case where the stored tier and the real
-                            one disagree, so it's called out rather than silently shown as Free.-->
-                            @if (isLapsed(u)) { <span class="chip warn">{{ t().admin.lapsedChip(u.planTier) }}</span> }
-                        </div>
-                        <div class="user-card-meta muted">
-                            {{ u.telegramUsername ? '@' + u.telegramUsername : t().admin.columns.telegram + ': —' }}
-                            · {{ t().admin.contentSummary(u.published, u.drafts, u.channels) }}
-                            · {{ u.createdAt | zonedDate:'d MMM yyyy' }}
-                            @if (u.planExpiresAt) {
-                            · {{ u.planExpiresAt | zonedDate:'d MMM yyyy' }}
-                            } @else if (u.effectiveTier !== 'Free') {
-                            · {{ t().admin.neverExpires }}
-                            }
+            @if (tab() === 'users') {
+            <!--Priority Fixes 01 (Claude Design): the fixed-grid table shell swaps for the
+            sheet-card list the rest of the app already uses — same data, same row-expand-to-actions
+            interaction. The form stays in the row rather than moving to the shelf: it is a wide
+            multi-field editor, not a readout (ADR-164 clause 5).-->
+            <div class="user-cards">
+                @for (u of users(); track u.id) {
+                <div class="user-card" [class.expanded]="expandedId() === u.id" (click)="toggleExpanded(u)">
+                    <div class="user-card-main">
+                        <span class="user-avatar" [style.background]="avatarColor(u.email)">{{ avatarInitial(u.email) }}</span>
+                        <div class="user-card-body">
+                            <div class="user-card-top">
+                                <span class="user-email">{{ u.email }}</span>
+                                @if (u.isAdmin) { <span class="chip admin">{{ t().admin.adminChip }}</span> }
+                                @if (u.isLocked) { <span class="chip danger">{{ t().admin.lockedChip }}</span> }
+                                <span class="chip plan" [class.accent]="u.effectiveTier !== 'Free'">{{ u.effectiveTier }}</span>
+                                <!--A lapsed plan is the one case where the stored tier and the real
+                                one disagree, so it's called out rather than silently shown as Free.-->
+                                @if (isLapsed(u)) { <span class="chip warn">{{ t().admin.lapsedChip(u.planTier) }}</span> }
+                            </div>
+                            <div class="user-card-meta muted">
+                                {{ u.telegramUsername ? '@' + u.telegramUsername : t().admin.columns.telegram + ': —' }}
+                                · {{ t().admin.contentSummary(u.published, u.drafts, u.channels) }}
+                                · {{ u.createdAt | zonedDate:'d MMM yyyy' }}
+                                @if (u.planExpiresAt) {
+                                · {{ u.planExpiresAt | zonedDate:'d MMM yyyy' }}
+                                } @else if (u.effectiveTier !== 'Free') {
+                                · {{ t().admin.neverExpires }}
+                                }
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                @if (expandedId() === u.id) {
-                <div class="user-actions" (click)="$event.stopPropagation()">
-                    <div class="action-group">
-                        <label>{{ t().admin.actions.plan }}</label>
+                    @if (expandedId() === u.id) {
+                    <div class="user-actions" (click)="$event.stopPropagation()">
+                        <div class="action-group">
+                            <label>{{ t().admin.actions.plan }}</label>
+                            <div class="action-row">
+                                <select [(ngModel)]="planTier">
+                                    @for (tier of tiers; track tier) { <option [value]="tier">{{ tier }}</option> }
+                                </select>
+                                <!--Blank on a paid tier is a manual grant with no expiry, which is what
+                                the rest of the app already means by a null expiry.-->
+                                <input type="date" [(ngModel)]="planExpiresAt" [disabled]="planTier === 'Free'">
+                                <app-button variant="pine" size="sm" [disabled]="busy()" (clicked)="savePlan(u)">
+                                    {{ t().common.save }}
+                                </app-button>
+                            </div>
+                            <p class="field-hint-inline">{{ planTier === 'Free' ? t().admin.actions.freeHasNoExpiry : t().admin.actions.blankIsForever }}</p>
+                        </div>
+
+                        <div class="action-group">
+                            <label>{{ t().admin.actions.credits }}</label>
+                            <div class="action-row">
+                                <span class="credit-balance">{{ t().admin.actions.creditBalance(u.credits) }}</span>
+                                <input type="number" class="credit-amount" min="1" step="1" [(ngModel)]="creditAmount">
+                                <input type="text" class="credit-note" [(ngModel)]="creditNote"
+                                       [placeholder]="t().admin.actions.creditNote">
+                                <app-button variant="pine" size="sm" [disabled]="busy()" (clicked)="adjustCredits(u, 1)">
+                                    {{ t().admin.actions.creditAdd }}
+                                </app-button>
+                                <!--Taking back is the same control with the other sign: a correction has
+                                    to be as easy as the mistake, and it lands in the same ledger.-->
+                                <app-button variant="paper" size="sm" [disabled]="busy() || u.credits === 0"
+                                            (clicked)="adjustCredits(u, -1)">
+                                    {{ t().admin.actions.creditTake }}
+                                </app-button>
+                            </div>
+                            <p class="field-hint-inline">{{ t().admin.actions.creditHint }}</p>
+                        </div>
+
                         <div class="action-row">
-                            <select [(ngModel)]="planTier">
-                                @for (tier of tiers; track tier) { <option [value]="tier">{{ tier }}</option> }
-                            </select>
-                            <!--Blank on a paid tier is a manual grant with no expiry, which is what
-                            the rest of the app already means by a null expiry.-->
-                            <input type="date" [(ngModel)]="planExpiresAt" [disabled]="planTier === 'Free'">
-                            <button class="btn-accent" (click)="savePlan(u)" [disabled]="busy()">{{ t().common.save }}</button>
+                            <app-button variant="paper" size="sm" [disabled]="busy() || !u.trialUsed" (clicked)="resetTrial(u)">
+                                {{ u.trialUsed ? t().admin.actions.resetTrial : t().admin.actions.trialUnused }}
+                            </app-button>
+
+                            <!--Self-targeting is refused server-side too; disabling here just explains
+                            why rather than letting the click fail.-->
+                            <app-button variant="paper" size="sm" [disabled]="busy() || isSelf(u)"
+                                        [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''" (clicked)="toggleLock(u)">
+                                {{ u.isLocked ? t().admin.actions.unlock : t().admin.actions.lock }}
+                            </app-button>
+
+                            <app-button variant="paper" size="sm" [disabled]="busy() || isSelf(u)"
+                                        [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''" (clicked)="toggleAdmin(u)">
+                                {{ u.isAdmin ? t().admin.actions.revokeAdmin : t().admin.actions.grantAdmin }}
+                            </app-button>
                         </div>
-                        <p class="field-hint-inline">{{ planTier === 'Free' ? t().admin.actions.freeHasNoExpiry : t().admin.actions.blankIsForever }}</p>
-                    </div>
 
-                    <div class="action-group">
-                        <label>{{ t().admin.actions.credits }}</label>
-                        <div class="action-row">
-                            <span class="credit-balance">{{ t().admin.actions.creditBalance(u.credits) }}</span>
-                            <input type="number" class="credit-amount" min="1" step="1" [(ngModel)]="creditAmount">
-                            <input type="text" class="credit-note" [(ngModel)]="creditNote"
-                                   [placeholder]="t().admin.actions.creditNote">
-                            <button class="btn-accent" (click)="adjustCredits(u, 1)" [disabled]="busy()">
-                                {{ t().admin.actions.creditAdd }}
-                            </button>
-                            <!--Taking back is the same control with the other sign: a correction has
-                                to be as easy as the mistake, and it lands in the same ledger.-->
-                            <button class="btn-ghost" (click)="adjustCredits(u, -1)"
-                                    [disabled]="busy() || u.credits === 0">
-                                {{ t().admin.actions.creditTake }}
-                            </button>
+                        <div class="action-group">
+                            <label>{{ t().admin.invites.attribution }}</label>
+                            <div class="action-row">
+                                <select [value]="u.inviteCodeId ?? ''" (change)="attribute(u, $any($event.target).value)" [disabled]="busy()">
+                                    <option value="">{{ t().admin.invites.unknownOrigin }}</option>
+                                    @for (c of invites(); track c.id) { <option [value]="c.id">{{ c.code }}</option> }
+                                </select>
+                            </div>
+                            <!--Only meaningful for accounts that predate invite tracking; for everyone
+                            else this is already recorded at registration.-->
+                            <p class="field-hint-inline">{{ t().admin.invites.attributionHint }}</p>
                         </div>
-                        <p class="field-hint-inline">{{ t().admin.actions.creditHint }}</p>
+
+                        <p class="field-hint-inline">{{ t().admin.actions.noDeleteNote }}</p>
                     </div>
-
-                    <div class="action-row">
-                        <button class="btn-ghost" (click)="resetTrial(u)" [disabled]="busy() || !u.trialUsed">
-                            {{ u.trialUsed ? t().admin.actions.resetTrial : t().admin.actions.trialUnused }}
-                        </button>
-
-                        <!--Self-targeting is refused server-side too; disabling here just explains
-                        why rather than letting the click fail.-->
-                        <button class="btn-ghost" (click)="toggleLock(u)" [disabled]="busy() || isSelf(u)"
-                                [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''">
-                            {{ u.isLocked ? t().admin.actions.unlock : t().admin.actions.lock }}
-                        </button>
-
-                        <button class="btn-ghost" (click)="toggleAdmin(u)" [disabled]="busy() || isSelf(u)"
-                                [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''">
-                            {{ u.isAdmin ? t().admin.actions.revokeAdmin : t().admin.actions.grantAdmin }}
-                        </button>
-                    </div>
-
-                    <div class="action-group">
-                        <label>{{ t().admin.invites.attribution }}</label>
-                        <div class="action-row">
-                            <select [value]="u.inviteCodeId ?? ''" (change)="attribute(u, $any($event.target).value)" [disabled]="busy()">
-                                <option value="">{{ t().admin.invites.unknownOrigin }}</option>
-                                @for (c of invites(); track c.id) { <option [value]="c.id">{{ c.code }}</option> }
-                            </select>
-                        </div>
-                        <!--Only meaningful for accounts that predate invite tracking; for everyone
-                        else this is already recorded at registration.-->
-                        <p class="field-hint-inline">{{ t().admin.invites.attributionHint }}</p>
-                    </div>
-
-                    <p class="field-hint-inline">{{ t().admin.actions.noDeleteNote }}</p>
+                    }
                 </div>
                 }
             </div>
             }
-        </div>
 
-        }
-
-        @if (tab() === 'invites') {
-        <div class="invite-new">
-            <input [(ngModel)]="newCode" [placeholder]="t().admin.invites.codePlaceholder" maxlength="60">
-            <input [(ngModel)]="newLabel" [placeholder]="t().admin.invites.labelPlaceholder" maxlength="60">
-            <input type="date" [(ngModel)]="newExpiresAt" [title]="t().admin.invites.expiresHint">
-            <input type="number" min="1" [(ngModel)]="newMaxUses" [placeholder]="t().admin.invites.maxUsesPlaceholder">
-            <button class="btn-accent" (click)="createInvite()" [disabled]="busy() || !newCode.trim()">
-                {{ t().admin.invites.create }}
-            </button>
-        </div>
-        <p class="field-hint-inline invite-hint">{{ t().admin.invites.blanksHint }}</p>
-
-        <div class="user-table invite-table">
-            <div class="invite-row head">
-                <span>{{ t().admin.invites.code }}</span>
-                <span>{{ t().admin.invites.label }}</span>
-                <span>{{ t().admin.invites.usage }}</span>
-                <span>{{ t().admin.invites.expires }}</span>
-                <span></span>
+            @if (tab() === 'invites') {
+            <div class="invite-new">
+                <input [(ngModel)]="newCode" [placeholder]="t().admin.invites.codePlaceholder" maxlength="60">
+                <input [(ngModel)]="newLabel" [placeholder]="t().admin.invites.labelPlaceholder" maxlength="60">
+                <input type="date" [(ngModel)]="newExpiresAt" [title]="t().admin.invites.expiresHint">
+                <input type="number" min="1" [(ngModel)]="newMaxUses" [placeholder]="t().admin.invites.maxUsesPlaceholder">
+                <app-button variant="pine" size="sm" [disabled]="busy() || !newCode.trim()" (clicked)="createInvite()">
+                    {{ t().admin.invites.create }}
+                </app-button>
             </div>
-            @for (c of invites(); track c.id) {
-            <div class="invite-row">
-                <span class="user-email">
-                    {{ c.code }}
-                    @if (!c.isUsable) { <span class="chip warn">{{ t().admin.invites.notUsable }}</span> }
-                </span>
-                <span class="muted">{{ c.label || '—' }}</span>
-                <!--Joined is counted from accounts; uses is the code's own counter. They agree
-                unless something went wrong, which is worth being able to see.-->
-                <span class="muted">{{ t().admin.invites.usageValue(c.joined, c.maxUses) }}</span>
-                <span class="muted">{{ c.expiresAt ? (c.expiresAt | zonedDate:'d MMM yyyy') : t().admin.invites.noExpiry }}</span>
-                <span>
-                    <button class="btn-ghost" (click)="toggleInvite(c)" [disabled]="busy()">
-                        {{ c.isActive ? t().admin.invites.disable : t().admin.invites.enable }}
-                    </button>
-                </span>
-            </div>
-            } @empty {
-            <p class="hint invite-empty">{{ t().admin.invites.none }}</p>
-            }
-        </div>
+            <p class="field-hint-inline invite-hint">{{ t().admin.invites.blanksHint }}</p>
 
-        }
-
-        @if (tab() === 'posts') {
-        <div class="user-table">
-            <div class="post-row head">
-                <span>{{ t().admin.posts.title2 }}</span>
-                <span>{{ t().admin.posts.owner }}</span>
-                <span>{{ t().admin.posts.state }}</span>
-                <span>{{ t().admin.posts.activity }}</span>
-                <span>{{ t().admin.posts.links }}</span>
-            </div>
-            @for (p of posts(); track p.id) {
-            <div class="post-row">
-                <span class="user-email">{{ p.title || t().drafts.untitled }}</span>
-                <span class="muted">{{ p.ownerEmail }}</span>
-                <span>
-                    @if (p.isBlogPublished) { <span class="chip">{{ t().admin.posts.published }}</span> }
-                    @if (p.isPrivate) { <span class="chip warn">{{ t().admin.posts.private }}</span> }
-                    @if (p.isArchived) { <span class="chip">{{ t().admin.posts.archived }}</span> }
-                </span>
-                <span class="muted">{{ t().admin.posts.activityValue(p.viewCount, p.comments) }}</span>
-                <span class="post-links">
-                    @if (p.blogUrl) { <a [href]="p.blogUrl" target="_blank" rel="noopener">{{ t().manager.blog }}</a> }
-                    @if (p.telegramUrl) { <a [href]="p.telegramUrl" target="_blank" rel="noopener">{{ t().manager.telegram }}</a> }
-                </span>
-            </div>
-            } @empty {
-            <p class="hint invite-empty">{{ t().common.nothingHere }}</p>
-            }
-        </div>
-        <p class="field-hint-inline invite-hint">{{ t().admin.posts.readOnlyNote }}</p>
-        }
-
-        @if (tab() === 'reports') {
-        @if (billing(); as b) {
-        <h2 class="admin-section-title">{{ t().admin.reports.revenue }}</h2>
-        @if (b.totalByCurrency.length) {
-        <div class="summary-grid">
-            @for (tot of b.totalByCurrency; track tot.currency) {
-            <div class="summary-card">
-                <span class="summary-value">{{ formatAmount(tot.total, tot.currency) }}</span>
-                <span class="summary-label">{{ t().admin.reports.completedOnly }}</span>
+            <div class="user-table invite-table">
+                <div class="invite-row head">
+                    <span>{{ t().admin.invites.code }}</span>
+                    <span>{{ t().admin.invites.label }}</span>
+                    <span>{{ t().admin.invites.usage }}</span>
+                    <span>{{ t().admin.invites.expires }}</span>
+                    <span></span>
+                </div>
+                @for (c of invites(); track c.id) {
+                <div class="invite-row">
+                    <span class="user-email">
+                        {{ c.code }}
+                        @if (!c.isUsable) { <span class="chip warn">{{ t().admin.invites.notUsable }}</span> }
+                    </span>
+                    <span class="muted">{{ c.label || '—' }}</span>
+                    <!--Joined is counted from accounts; uses is the code's own counter. They agree
+                    unless something went wrong, which is worth being able to see.-->
+                    <span class="muted">{{ t().admin.invites.usageValue(c.joined, c.maxUses) }}</span>
+                    <span class="muted">{{ c.expiresAt ? (c.expiresAt | zonedDate:'d MMM yyyy') : t().admin.invites.noExpiry }}</span>
+                    <span>
+                        <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="toggleInvite(c)">
+                            {{ c.isActive ? t().admin.invites.disable : t().admin.invites.enable }}
+                        </app-button>
+                    </span>
+                </div>
+                } @empty {
+                <p class="hint invite-empty">{{ t().admin.invites.none }}</p>
+                }
             </div>
             }
-        </div>
-        }
 
-        <div class="user-table">
-            <div class="payment-row head">
-                <span>{{ t().admin.reports.when }}</span>
-                <span>{{ t().admin.reports.who }}</span>
-                <span>{{ t().admin.reports.what }}</span>
-                <span>{{ t().admin.reports.amount }}</span>
-                <span>{{ t().admin.reports.status }}</span>
+            @if (tab() === 'posts') {
+            <div class="user-table">
+                <div class="post-row head">
+                    <span>{{ t().admin.posts.title2 }}</span>
+                    <span>{{ t().admin.posts.owner }}</span>
+                    <span>{{ t().admin.posts.state }}</span>
+                    <span>{{ t().admin.posts.activity }}</span>
+                    <span>{{ t().admin.posts.links }}</span>
+                </div>
+                @for (p of posts(); track p.id) {
+                <div class="post-row">
+                    <span class="user-email">{{ p.title || t().drafts.untitled }}</span>
+                    <span class="muted">{{ p.ownerEmail }}</span>
+                    <span>
+                        @if (p.isBlogPublished) { <span class="chip">{{ t().admin.posts.published }}</span> }
+                        @if (p.isPrivate) { <span class="chip warn">{{ t().admin.posts.private }}</span> }
+                        @if (p.isArchived) { <span class="chip">{{ t().admin.posts.archived }}</span> }
+                    </span>
+                    <span class="muted">{{ t().admin.posts.activityValue(p.viewCount, p.comments) }}</span>
+                    <span class="post-links">
+                        @if (p.blogUrl) { <a [href]="p.blogUrl" target="_blank" rel="noopener">{{ t().manager.blog }}</a> }
+                        @if (p.telegramUrl) { <a [href]="p.telegramUrl" target="_blank" rel="noopener">{{ t().manager.telegram }}</a> }
+                    </span>
+                </div>
+                } @empty {
+                <p class="hint invite-empty">{{ t().common.nothingHere }}</p>
+                }
             </div>
-            @for (p of b.payments; track p.id) {
-            <div class="payment-row">
-                <span class="muted">{{ p.createdAt | zonedDate:'d MMM yyyy, HH:mm' }}</span>
-                <span class="muted">{{ p.ownerEmail }}</span>
-                <span>{{ p.plan }} · {{ p.provider }}</span>
-                <span>{{ formatAmount(p.amount, p.currency) }}</span>
-                <span class="muted">{{ p.status }}</span>
-            </div>
-            } @empty {
-            <p class="hint invite-empty">{{ t().admin.reports.noPayments }}</p>
+            <p class="field-hint-inline invite-hint">{{ t().admin.posts.readOnlyNote }}</p>
             }
-        </div>
-        }
 
-        <h2 class="admin-section-title audit-title">{{ t().admin.reports.usage }}</h2>
-        <div class="user-table">
-            <div class="usage-row head">
-                <span>{{ t().admin.reports.who }}</span>
-                <span>{{ t().admin.reports.storage }}</span>
-                <span>{{ t().admin.reports.files }}</span>
-                <span>{{ t().admin.reports.aiToday }}</span>
+            @if (tab() === 'reports') {
+            @if (billing(); as b) {
+            <h2 class="admin-section-title">{{ t().admin.reports.revenue }}</h2>
+            @if (b.totalByCurrency.length) {
+            <div class="revenue-row">
+                @for (tot of b.totalByCurrency; track tot.currency) {
+                <app-paper-card [rotate]="0">
+                    <span class="summary-value">{{ formatAmount(tot.total, tot.currency) }}</span>
+                    <span class="summary-label">{{ t().admin.reports.completedOnly }}</span>
+                </app-paper-card>
+                }
             </div>
-            @for (u of usage(); track u.ownerEmail) {
-            <div class="usage-row">
-                <span class="muted">{{ u.ownerEmail }}</span>
-                <span>{{ formatBytes(u.bytes) }}</span>
-                <span class="muted">{{ u.files }}</span>
-                <span class="muted">{{ u.aiToday }}</span>
-            </div>
-            } @empty {
-            <p class="hint invite-empty">{{ t().common.nothingHere }}</p>
             }
-        </div>
 
-        <h2 class="admin-section-title audit-title">{{ t().admin.auditTitle }}</h2>
-        <div class="audit-list">
-            @for (a of audit(); track a.id) {
-            <div class="audit-row">
-                <span class="muted">{{ a.createdAt | zonedDate:'d MMM, HH:mm' }}</span>
-                <span class="audit-action">{{ a.action }}</span>
-                <span>{{ a.targetEmail || '—' }}</span>
-                <span class="muted">{{ a.details }}</span>
-                <span class="muted">{{ t().admin.byActor(a.actorEmail) }}</span>
+            <div class="user-table">
+                <div class="payment-row head">
+                    <span>{{ t().admin.reports.when }}</span>
+                    <span>{{ t().admin.reports.who }}</span>
+                    <span>{{ t().admin.reports.what }}</span>
+                    <span>{{ t().admin.reports.amount }}</span>
+                    <span>{{ t().admin.reports.status }}</span>
+                </div>
+                @for (p of b.payments; track p.id) {
+                <div class="payment-row">
+                    <span class="muted">{{ p.createdAt | zonedDate:'d MMM yyyy, HH:mm' }}</span>
+                    <span class="muted">{{ p.ownerEmail }}</span>
+                    <span>{{ p.plan }} · {{ p.provider }}</span>
+                    <span>{{ formatAmount(p.amount, p.currency) }}</span>
+                    <span class="muted">{{ p.status }}</span>
+                </div>
+                } @empty {
+                <p class="hint invite-empty">{{ t().admin.reports.noPayments }}</p>
+                }
             </div>
-            } @empty {
-            <p class="hint">{{ t().admin.noAudit }}</p>
             }
-            <!--The log is append-only and never trimmed, so a fixed cap would hide history rather
-            than bound it. One page at a time instead.-->
-            @if (auditHasMore()) {
-            <button class="btn-ghost" (click)="loadMoreAudit()" [disabled]="auditLoadingMore()">
-                {{ t().admin.loadMoreAudit }}
-            </button>
-            }
-        </div>
 
-        }
-        }
+            <h2 class="admin-section-title audit-title">{{ t().admin.reports.usage }}</h2>
+            <div class="user-table">
+                <div class="usage-row head">
+                    <span>{{ t().admin.reports.who }}</span>
+                    <span>{{ t().admin.reports.storage }}</span>
+                    <span>{{ t().admin.reports.files }}</span>
+                    <span>{{ t().admin.reports.aiToday }}</span>
+                </div>
+                @for (u of usage(); track u.ownerEmail) {
+                <div class="usage-row">
+                    <span class="muted">{{ u.ownerEmail }}</span>
+                    <span>{{ formatBytes(u.bytes) }}</span>
+                    <span class="muted">{{ u.files }}</span>
+                    <span class="muted">{{ u.aiToday }}</span>
+                </div>
+                } @empty {
+                <p class="hint invite-empty">{{ t().common.nothingHere }}</p>
+                }
+            </div>
+
+            <h2 class="admin-section-title audit-title">{{ t().admin.auditTitle }}</h2>
+            <div class="audit-list">
+                @for (a of audit(); track a.id) {
+                <app-log-line [time]="a.createdAt | zonedDate:'d MMM, HH:mm'" [word]="a.action"
+                              [at]="t().admin.byActor(a.actorEmail)">
+                    {{ a.targetEmail || '—' }} · {{ a.details }}
+                </app-log-line>
+                } @empty {
+                <p class="hint">{{ t().admin.noAudit }}</p>
+                }
+                <!--The log is append-only and never trimmed, so a fixed cap would hide history rather
+                than bound it. One page at a time instead.-->
+                @if (auditHasMore()) {
+                <app-button variant="paper" size="sm" [disabled]="auditLoadingMore()" (clicked)="loadMoreAudit()">
+                    {{ t().admin.loadMoreAudit }}
+                </app-button>
+                }
+            </div>
+            }
+        </app-shelf-panel>
+
+        <app-shelf-panel class="summary" [title]="t().admin.summary.title">
+            @if (summary(); as s) {
+            <app-spec-row [label]="t().admin.summary.users" [value]="'' + s.users" />
+            <app-spec-row [label]="t().admin.summary.paidUsers" [value]="'' + s.paidUsers" />
+            <app-spec-row [label]="t().admin.summary.published" [value]="s.published + ' / ' + s.drafts" />
+            <app-spec-row [label]="t().admin.summary.comments" [value]="'' + s.comments" />
+            <app-spec-row [label]="t().admin.summary.reactions" [value]="'' + s.reactions" />
+            <app-spec-row [label]="t().admin.summary.channels" [value]="'' + s.channels" />
+            <app-spec-row [label]="t().admin.summary.storage" [value]="formatBytes(s.storageBytes)" />
+            }
+        </app-shelf-panel>
     </div>
+    }
 </div>

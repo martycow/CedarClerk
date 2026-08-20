@@ -1,5 +1,4 @@
-import { Component, OnDestroy, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { AssetsService, LibraryAsset, LibraryKind, LibraryPage } from '../core/assets.service';
 import { formatBytes } from '../core/asset-index.service';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -7,7 +6,11 @@ import { httpErrorMessage } from '../core/http-error.util';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { IconComponent } from '../shared/icon.component';
 import { IconName } from '../shared/icon-data.generated';
-import { ModalComponent } from '../shared/modal.component';
+import { ButtonComponent } from '../bench/forms/button.component';
+import { InputComponent } from '../bench/forms/input.component';
+import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
+import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
+import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 
 const PAGE_SIZE = 60;
 
@@ -17,7 +20,10 @@ const PAGE_SIZE = 60;
 // referencing posts, and the modal shows them instead of guessing.
 @Component({
     selector: 'app-media-library',
-    imports: [IconComponent, FormsModule, ZonedDatePipe, ModalComponent],
+    imports: [
+        IconComponent, ZonedDatePipe, IndexTabsComponent, ShelfPanelComponent,
+        SpecRowComponent, InputComponent, ButtonComponent,
+    ],
     templateUrl: 'media-library.component.html',
     styleUrls: ['media-library.component.css'],
 })
@@ -99,6 +105,44 @@ export class MediaLibraryComponent implements OnDestroy {
     setView(view: 'grid' | 'list') {
         this.view.set(view);
         try { localStorage.setItem('cedar.mediaView', view); } catch { /* private mode */ }
+    }
+
+    /** The strip's own id for "no kind filter" — `null` is not a tile id. */
+    readonly typeTab = computed<string>(() => this.type() ?? 'all');
+
+    // A kind with nothing in it keeps losing its whole tile, which is not the badge's hide-at-zero
+    // rule but a filter that would return an empty list whatever else was set.
+    readonly typeTabs = computed<IndexTabItem[]>(() => {
+        const counts = this.page()?.counts;
+        const labels = this.t().media;
+        const named: Record<LibraryKind, string> = {
+            image: labels.images, video: labels.videos, audio: labels.audio,
+        };
+        const items: IndexTabItem[] = [{ id: 'all', label: labels.all, badge: this.totalUnfiltered() }];
+        for (const kind of this.kinds) {
+            const count = counts?.[kind] ?? 0;
+            if (count > 0) items.push({ id: kind, label: named[kind], badge: count });
+        }
+        return items;
+    });
+
+    readonly viewTabs = computed<IndexTabItem[]>(() => [
+        { id: 'grid', label: this.t().media.gridView },
+        { id: 'list', label: this.t().media.listView },
+    ]);
+
+    usagePercent() {
+        const p = this.page();
+        if (!p || !p.limitBytes) return 0;
+        return Math.min(100, Math.round(p.usedBytes / p.limitBytes * 100));
+    }
+
+    usagePercentLabel() {
+        return this.page()?.limitBytes ? `${this.usagePercent()}%` : '';
+    }
+
+    pickType(id: string) {
+        this.setType(id === 'all' ? null : id as LibraryKind);
     }
 
     totalUnfiltered() {

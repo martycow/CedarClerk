@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, numberAttribute, output } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../shared/icon.component';
 import { IconName } from '../../shared/icon-data.generated';
 
@@ -8,34 +10,54 @@ import { IconName } from '../../shared/icon-data.generated';
 // The API is closed on purpose — one icon, one name, one count, one subline, and no content slot.
 // The kit's rule is that a tile carries ONE number and that a second one belongs on the screen the
 // tile opens; a projection slot is how the second number gets in.
+//
+// The plate is drawn inside rather than on the host, because a tile that opens a screen is an
+// anchor and a tile that does anything else is a button, and a host tag name cannot be switched
+// (ADR-163).
 @Component({
     selector: 'app-module-tile',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [IconComponent],
+    imports: [IconComponent, NgTemplateOutlet, RouterLink],
     host: {
         'data-surface': 'paper',
-        'role': 'button',
-        'tabindex': '0',
-        '[attr.title]': 'hint() || null',
         '[style.transform]': 'tilt()',
-        '(click)': 'activated.emit()',
-        '(keydown)': 'onKeydown($event)',
     },
     template: `
-        <span class="mt-head">
-            <app-icon [name]="icon()" size="sm" />
-            <span class="mt-name">{{ name() }}</span>
-        </span>
-        <span class="mt-count">{{ count() }}</span>
-        @if (sub()) {
-            <span class="mt-sub">{{ sub() }}</span>
+        @if (link(); as route) {
+            <a class="mt-plate" [routerLink]="route" [attr.title]="hint() || null">
+                <ng-container [ngTemplateOutlet]="face" />
+            </a>
+        } @else {
+            <button type="button" class="mt-plate" [attr.title]="hint() || null"
+                    (click)="activated.emit()">
+                <ng-container [ngTemplateOutlet]="face" />
+            </button>
         }
+
+        <ng-template #face>
+            <span class="mt-head">
+                <app-icon [name]="icon()" size="sm" />
+                <span class="mt-name">{{ name() }}</span>
+            </span>
+            <span class="mt-count">{{ count() }}</span>
+            @if (sub()) {
+                <span class="mt-sub">{{ sub() }}</span>
+            }
+        </ng-template>
     `,
     styles: [`
-        /* The surface is in the selector and not only on the host element: tools/check-density.mjs
-           reads declared CSS, so this is what puts its 44px box and its 14px type under it. */
-        :host([data-surface="paper"]) {
+        :host {
             display: flex;
+            min-width: 0;
+        }
+
+        /* The surface is in the selector and not only on the host element: tools/check-density.mjs
+           reads declared CSS, so this is what puts its 44px box and its 14px type under it. The
+           floor is unconditional and not left to the coarse-pointer rule: that rule reaches
+           buttons and roles, and the link form is a bare <a>, which ADR-074 exempts as prose. */
+        :host([data-surface="paper"]) .mt-plate {
+            display: flex;
+            flex: 1;
             flex-direction: column;
             align-items: flex-start;
             justify-content: center;
@@ -49,7 +71,9 @@ import { IconName } from '../../shared/icon-data.generated';
             background-color: var(--sheet);
             background-image: var(--tex-paper);
             font-family: var(--font-sans);
+            color: var(--text);
             text-align: left;
+            text-decoration: none;
             cursor: pointer;
 
             /* The lift is the whole hover language of the system — 2-3px on --ease-swing, never a
@@ -110,9 +134,9 @@ import { IconName } from '../../shared/icon-data.generated';
         /* ADR-140 spends the app's one box-shadow on the focus halo, and a second on the same
            element replaces it rather than joining it, so the paper's own shadow stands down while
            the tile is focused. */
-        :host([data-surface="paper"]:not(:focus-visible)) { box-shadow: var(--shadow-paper-sm); }
+        :host([data-surface="paper"]) .mt-plate:not(:focus-visible) { box-shadow: var(--shadow-paper-sm); }
 
-        :host([data-surface="paper"]:hover) { translate: 0 calc(var(--mt-lift) * -1); }
+        :host([data-surface="paper"]) .mt-plate:hover { translate: 0 calc(var(--mt-lift) * -1); }
     `],
 })
 export class ModuleTileComponent {
@@ -128,16 +152,18 @@ export class ModuleTileComponent {
     /** Native tooltip. Not `title`: a static attribute of that name would survive on the host and
         hang a second tooltip off the tile. */
     readonly hint = input('');
+    /**
+     * The screen this plate opens; anything routerLink takes. A door is a link, so a middle click
+     * opens it in a tab (ADR-163). Empty is a tile whose activation is not a navigation, and that
+     * one is a button that speaks through `activated`.
+     */
+    readonly link = input<string | readonly unknown[] | null>(null);
 
+    /** Silent in link form — there the anchor is the navigation, and a consumer handling both would
+        navigate twice. */
     readonly activated = output<void>();
 
     // The kit holds a wall of plates to ±0.6°: past that a grid stops reading as hand-nailed and
     // starts reading as broken.
     protected readonly tilt = computed(() => `rotate(${Math.min(0.6, Math.max(-0.6, this.rotate()))}deg)`);
-
-    protected onKeydown(event: KeyboardEvent): void {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        this.activated.emit();
-    }
 }

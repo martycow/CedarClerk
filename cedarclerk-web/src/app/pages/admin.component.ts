@@ -5,6 +5,12 @@ import {
     AdminUsage, AdminUser,
 } from '../core/admin.service';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
+import { ButtonComponent } from '../bench/forms/button.component';
+import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
+import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
+import { SpecRowComponent } from '../bench/worktop/spec-row.component';
+import { LogLineComponent } from '../bench/worktop/log-line.component';
+import { PaperCardComponent } from '../bench/display/paper-card.component';
 import { AuthService } from '../core/auth.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
@@ -16,7 +22,10 @@ export type AdminTab = 'users' | 'invites' | 'posts' | 'reports';
 // invite codes, a read-only cross-owner post list, billing/usage reporting, and the audit log.
 @Component({
     selector: 'app-admin',
-    imports: [ZonedDatePipe, FormsModule],
+    imports: [
+        ZonedDatePipe, FormsModule, IndexTabsComponent, ShelfPanelComponent, SpecRowComponent,
+        LogLineComponent, PaperCardComponent, ButtonComponent,
+    ],
     templateUrl: 'admin.component.html',
     styleUrls: ['admin.component.css'],
 })
@@ -95,6 +104,21 @@ export class AdminComponent implements OnInit {
 
     setTab(tab: AdminTab) {
         this.tab.set(tab);
+    }
+
+    sectionTabs(): IndexTabItem[] {
+        const labels = this.t().admin;
+        return [
+            { id: 'users', label: labels.usersTitle, badge: this.users().length },
+            { id: 'invites', label: labels.invites.title, badge: this.invites().length },
+            { id: 'posts', label: labels.posts.title, badge: this.posts().length },
+            // Reports is three tables and a journal, not a countable set of things.
+            { id: 'reports', label: labels.reports.title },
+        ];
+    }
+
+    sectionTitle(): string {
+        return this.sectionTabs().find(item => item.id === this.tab())?.label ?? '';
     }
 
     // Payments are stored in minor units (cents/stars), like everywhere else in billing.

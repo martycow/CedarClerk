@@ -1,21 +1,9 @@
 :host {
     display: block;
-    min-height: 100vh;
-    background: var(--surface);
 }
 
 .spacer {
     flex: 1;
-}
-
-.icon-xs {
-    width: 12px;
-    height: 12px;
-}
-
-.icon-xxs {
-    width: 10px;
-    height: 10px;
 }
 
 .avatar {
@@ -39,68 +27,47 @@
 }
 
 /* ---------- Body layout ---------- */
-/* Priority Fixes 02 (Claude Design, 28.07.2026): container widths converge to two buckets — a
+/* Priority Fixes 02 (Claude Design): container widths converge to two buckets — a
    ~700px reading width for text-form pages, ~1150px workspace width for list/grid pages. */
 .settings-body {
     max-width: 700px;
     margin: 0 auto;
-    padding: 26px 20px 60px;
+    padding: var(--space-5) var(--space-5) var(--space-8);
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: var(--space-4);
 }
 
 .anchor-chips {
     display: flex;
-    gap: 6px;
+    gap: var(--space-2);
     position: sticky;
     top: 64px;
     z-index: 5;
 }
 
-.anchor-chips button {
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--t2);
-    border-radius: 999px;
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--fs-meta);
-    font-weight: 500;
-    cursor: pointer;
-    font-family: inherit;
-}
-
-/* Withheld while focused: a component's own shadow out-specifies the global rule that draws the ADR-140 halo. */
-.anchor-chips button:not(:focus-visible) {
-    box-shadow: var(--shadow);
-}
-
-.anchor-chips button:hover {
-    color: var(--text);
-    border-color: var(--t2);
-}
-
 .settings-card {
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-    padding: 22px 26px;
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    box-shadow: var(--shadow-paper-sm);
+    padding: var(--space-5);
 }
 
 .settings-card h2 {
     font-size: var(--fs-15);
     font-weight: 700;
     letter-spacing: -.01em;
-    margin: 0 0 16px;
+    margin: 0 0 var(--space-4);
 }
 
 /* ---------- Profile ---------- */
 .profile-row {
     display: flex;
     align-items: center;
-    gap: 14px;
-    margin: 0 0 20px;
+    gap: var(--space-4);
+    margin: 0 0 var(--space-5);
 }
 
 .profile-email {
@@ -116,8 +83,8 @@
 .field-group {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin: 0 0 6px;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-2);
 }
 
 .field-group label {
@@ -128,7 +95,7 @@
 
 .field-group label svg {
     vertical-align: -2px;
-    margin-right: 5px;
+    margin-right: var(--space-2);
     color: var(--accent);
 }
 
@@ -141,7 +108,7 @@
 .field-error {
     font-size: var(--fs-meta);
     color: var(--danger);
-    margin: 6px 0 0;
+    margin: var(--space-2) 0 0;
 }
 
 .field-group textarea,
@@ -176,200 +143,6 @@
     accent-color: var(--accent);
 }
 
-.format-toggle {
-    display: flex;
-    gap: 4px;
-    margin-top: 4px;
-}
-
-.format-toggle button {
-    flex: 1;
-    border: 1px solid var(--border);
-    background: var(--sheet);
-    border-radius: var(--radius-sm);
-    padding: 6px 0;
-    cursor: pointer;
-    font-size: var(--fs-ui);
-    color: var(--text);
-    font-family: inherit;
-}
-
-.format-toggle button.on {
-    background: var(--asoft);
-    border-color: var(--abord);
-    color: var(--accent);
-    font-weight: 600;
-}
-
-.popover-divider {
-    border-top: 1px solid var(--border);
-    margin: 4px 0 2px;
-}
-
-.accent-presets {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 9px;
-}
-
-.accent-preset {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    border: 1px solid var(--border);
-    background: none;
-    border-radius: var(--radius-md);
-    padding: 10px;
-    cursor: pointer;
-    font-size: var(--fs-meta);
-    color: var(--t2);
-    font-family: inherit;
-}
-
-.accent-preset.on {
-    border-color: var(--abord);
-    background: var(--asoft);
-    color: var(--accent);
-    font-weight: 600;
-}
-
-.accent-swatch {
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-}
-
-.appearance-toggles {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.appearance-toggles label {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    font-size: var(--fs-ui);
-    cursor: pointer;
-}
-
-.appearance-toggles input[type="checkbox"] {
-    accent-color: var(--accent);
-    width: 15px;
-    height: 15px;
-    margin: 0;
-}
-
-.toolbar-rows-editor {
-    display: flex;
-    gap: 14px;
-}
-
-.toolbar-row-zone {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 0;
-}
-
-.toolbar-group-list {
-    display: flex;
-    flex-wrap: wrap;
-    align-content: flex-start;
-    gap: 6px;
-    min-height: 44px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: var(--alt);
-    padding: 9px;
-}
-
-.toolbar-group-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 5px 10px;
-    font-size: var(--fs-meta);
-    color: var(--t2);
-    cursor: grab;
-}
-
-.cdk-drag-preview {
-    background: var(--asoft) !important;
-    border-color: var(--abord) !important;
-    color: var(--accent) !important;
-    box-shadow: var(--shadow-md);
-    border-radius: var(--radius-sm);
-    padding: 5px 10px;
-    font-size: var(--fs-meta);
-}
-
-.cdk-drag-placeholder {
-    opacity: .3;
-}
-
-.toolbar-group-list.cdk-drop-list-dragging .toolbar-group-chip:not(.cdk-drag-placeholder) {
-    transition: transform .15s ease;
-}
-
-.toolbar-catalog {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.catalog-group-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: var(--fs-ui);
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.catalog-group-head input {
-    accent-color: var(--accent);
-    width: 15px;
-    height: 15px;
-    margin: 0;
-}
-
-.catalog-count {
-    font-size: var(--fs-caption);
-    color: var(--t2);
-    font-weight: 500;
-}
-
-.catalog-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 16px;
-    padding-left: 23px;
-    margin-top: 6px;
-}
-
-.catalog-buttons label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: var(--fs-meta);
-    color: var(--t2);
-    cursor: pointer;
-}
-
-.catalog-buttons input {
-    accent-color: var(--accent);
-    width: 13px;
-    height: 13px;
-    margin: 0;
-}
-
 .field-group select:disabled {
     opacity: 0.55;
     cursor: not-allowed;
@@ -378,14 +151,14 @@
 .field-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-top: 4px;
+    gap: var(--space-3);
+    margin-top: var(--space-1);
 }
 
 .saved-check {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: var(--space-2);
     font-size: var(--fs-meta);
     color: var(--ok);
     font-weight: 500;
@@ -396,87 +169,8 @@
     align-items: center;
     justify-content: space-between;
     border-top: 1px solid var(--border);
-    padding: 14px 0 0;
-    margin-top: 18px;
-}
-
-/* ---------- Buttons ---------- */
-.btn-primary {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    border: none;
-    background: var(--accent);
-    color: var(--sheet);
-    border-radius: var(--radius-md);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--fs-ui);
-    font-weight: 500;
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.btn-primary:hover {
-    filter: brightness(1.08);
-}
-
-.btn-primary:disabled {
-    opacity: .6;
-    cursor: default;
-}
-
-.btn-primary.sm {
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--fs-meta);
-}
-
-.btn-danger-ghost {
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--danger);
-    border-radius: var(--radius-md);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--fs-ui);
-    font-weight: 500;
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.btn-danger-ghost:hover {
-    border-color: var(--danger);
-    background: var(--danger-soft);
-}
-
-.btn-danger {
-    border: none;
-    background: var(--danger);
-    color: var(--sheet);
-    border-radius: var(--radius-sm);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--fs-meta);
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.btn-danger:hover {
-    filter: brightness(1.08);
-}
-
-.btn-ghost {
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: var(--radius-sm);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--fs-meta);
-    font-weight: 500;
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.btn-ghost:hover {
-    color: var(--text);
+    padding: var(--space-4) 0 0;
+    margin-top: var(--space-4);
 }
 
 .link-btn {
@@ -512,12 +206,12 @@
 .plan-banner {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-3);
     border: 1px solid var(--abord);
     background: var(--asoft);
     border-radius: var(--radius-md);
-    padding: 12px 14px;
-    margin: 0 0 16px;
+    padding: var(--space-3) var(--space-4);
+    margin: 0 0 var(--space-4);
 }
 
 .plan-banner-title {
@@ -534,12 +228,12 @@
 .success-banner {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
     border: 1px solid color-mix(in srgb, var(--ok) 35%, var(--border));
     background: var(--ok-soft);
     border-radius: var(--radius-md);
-    padding: 10px 14px;
-    margin: 0 0 16px;
+    padding: var(--space-3) var(--space-4);
+    margin: 0 0 var(--space-4);
     font-size: var(--fs-ui);
     font-weight: 500;
     color: var(--ok);
@@ -548,18 +242,18 @@
 .plan-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 10px;
-    margin: 0 0 4px;
+    gap: var(--space-3);
+    margin: 0 0 var(--space-1);
 }
 
 .plan-card {
     border: 1px solid var(--border);
     background: var(--sheet);
     border-radius: var(--radius-md);
-    padding: 14px;
+    padding: var(--space-4);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2);
 }
 
 .plan-card.current {
@@ -579,12 +273,12 @@
     letter-spacing: .05em;
     color: var(--sheet);
     background: var(--accent);
-    border-radius: 4px;
-    padding: 2px 5px;
-    margin-left: 4px;
+    border-radius: var(--radius-sm);
+    padding: 2px var(--space-2);
+    margin-left: var(--space-1);
 }
 
-/* Priority Fixes 05 (Claude Design, 28.07.2026): .pro-lock-badge marks "this field is gated
+/* Priority Fixes 05 (Claude Design): .pro-lock-badge marks "this field is gated
    behind a paid plan" — a different idea from .ai-badge's "this is an AI feature", so it gets a
    different shape: outlined/neutral with a lock glyph instead of an accent-filled pill. */
 .pro-lock-badge {
@@ -597,9 +291,9 @@
     color: var(--t2);
     background: none;
     border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 2px 6px;
-    margin-left: 4px;
+    border-radius: var(--radius-sm);
+    padding: 2px var(--space-2);
+    margin-left: var(--space-1);
 }
 
 .plan-card-price {
@@ -626,8 +320,8 @@
     border: 1px solid var(--border);
     background: var(--sheet);
     color: var(--text);
-    border-radius: 7px;
-    padding: 6px;
+    border-radius: var(--radius-md);
+    padding: var(--space-2);
     font-size: var(--fs-meta);
     font-weight: 600;
     cursor: pointer;
@@ -658,7 +352,7 @@
     font-weight: 500;
     cursor: pointer;
     font-family: inherit;
-    padding: 8px 0 0;
+    padding: var(--space-2) 0 0;
 }
 
 .trial-link:hover {
@@ -667,25 +361,25 @@
 
 .payment-step {
     border-top: 1px solid var(--border);
-    padding: 16px 0 0;
-    margin-top: 14px;
+    padding: var(--space-4) 0 0;
+    margin-top: var(--space-4);
 }
 
 .pay-methods {
     display: flex;
     flex-direction: column;
-    gap: 7px;
-    margin: 0 0 14px;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-4);
 }
 
 .pay-method {
     display: flex;
     align-items: center;
-    gap: 11px;
+    gap: var(--space-3);
     border: 1px solid var(--border);
     background: var(--sheet);
-    border-radius: 9px;
-    padding: 10px 13px;
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-3);
     cursor: pointer;
     font-family: inherit;
     text-align: left;
@@ -747,11 +441,11 @@
 .integration-row {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-3);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    padding: 13px 14px;
-    margin: 0 0 10px;
+    padding: var(--space-3) var(--space-4);
+    margin: 0 0 var(--space-3);
 }
 
 .integration-row.dashed {
@@ -779,14 +473,14 @@
 }
 
 .integration-icon.bot {
-    border-radius: 9px;
+    border-radius: var(--radius-md);
     background: var(--asoft);
     border: 1px solid var(--abord);
     color: var(--accent);
 }
 
 .integration-icon.alt {
-    border-radius: 9px;
+    border-radius: var(--radius-md);
     background: var(--alt);
     color: var(--t2);
 }
@@ -804,7 +498,7 @@
 .integration-meta {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: var(--space-2);
     font-size: var(--fs-meta);
     color: var(--t2);
 }
@@ -821,7 +515,7 @@
 .inline-confirm {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
     font-size: var(--fs-meta);
     color: var(--t2);
 }
@@ -831,11 +525,11 @@
 .integration-block {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    padding: 13px 14px;
-    margin: 0 0 10px;
+    padding: var(--space-3) var(--space-4);
+    margin: 0 0 var(--space-3);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--space-3);
 }
 
 .integration-block > .link-btn {
@@ -850,7 +544,7 @@
 .integration-block-head {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-3);
 }
 
 /* Brand colours, same rule as .integration-icon.telegram above: a mark that shifts hue between
@@ -875,16 +569,16 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-2);
 }
 
 .target-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
     background: var(--alt);
     border-radius: var(--radius-sm);
-    padding: 7px 10px;
+    padding: var(--space-2) var(--space-3);
     font-size: var(--fs-meta);
 }
 
@@ -910,7 +604,7 @@
 
 .connect-row {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
     flex-wrap: wrap;
 }
 
@@ -922,13 +616,13 @@
 .planned-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--space-2);
 }
 
 .planned-chip {
     border: 1px dashed var(--border);
     border-radius: var(--radius-sm);
-    padding: 4px 9px;
+    padding: var(--space-1) var(--space-3);
     font-size: var(--fs-caption);
     color: var(--t2);
 }
@@ -946,7 +640,7 @@
     background: none;
     color: var(--t2);
     border-radius: var(--radius-sm);
-    padding: 5px 7px;
+    padding: var(--space-2) var(--space-2);
     display: flex;
     align-items: center;
     cursor: pointer;
@@ -982,8 +676,8 @@
         gap: var(--space-4);
     }
 
-    /* 26px of side padding inside a card inside a 12px-padded body leaves under 300px of usable
-       width on a 390px phone — the card's own frame was eating a tenth of the screen. */
+    /* A card's own side padding inside an already-padded body left under 300px of usable width on
+       a 390px phone — the frame was eating a tenth of the screen. */
     .settings-card {
         padding: var(--space-4);
     }
@@ -995,53 +689,12 @@
         flex-wrap: wrap;
     }
 
-    .toolbar-rows-editor {
-        flex-direction: column;
-    }
-
-    .accent-presets {
-        grid-template-columns: repeat(3, 1fr);
-    }
 }
 
-@media (pointer: coarse) {
-    [data-surface] .anchor-chips button,
-    [data-surface] .btn-primary,
-    [data-surface] .btn-danger,
-    [data-surface] .btn-danger-ghost {
-        min-height: var(--hit-surface);
-    }
-}
-
-/* I12 — two groups instead of one long scroll. Same shape as the Posts Manager's tab strip, so
-   the two settings-shaped pages in the app read the same way. */
+/* I12 — two groups instead of one long scroll. Painted index tiles, which is what switches what a
+   panel shows anywhere on the bench. */
 .settings-tabs {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 14px;
-    border-bottom: 1px solid var(--border);
-}
-
-.settings-tabs button {
-    border: none;
-    background: none;
-    font-family: inherit;
-    font-size: var(--fs-body);
-    color: var(--t2);
-    padding: 7px 14px;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-}
-
-.settings-tabs button:hover {
-    color: var(--text);
-}
-
-.settings-tabs button.active {
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-    font-weight: 600;
+    margin-bottom: var(--space-3);
 }
 
 /* IF1 — avatar picker in the profile card. */
@@ -1051,17 +704,33 @@
 
 .avatar-actions {
     display: flex;
-    gap: 8px;
-    margin-top: 8px;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
 }
 
+ /* The one control here that cannot be an app-button: it is a <label> wrapping a hidden file
+   input, and a button cannot open a file dialog. It wears the pine face rather than inventing a
+   third one. */
 .avatar-pick {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-height: var(--hit-target);
+    padding: var(--space-2) var(--space-4);
+    border: 1px solid var(--pine-deep);
+    border-radius: var(--radius-plaque);
+    background: var(--grad-pine);
+    color: var(--text-on-pine);
+    font-family: var(--font-sans);
+    font-size: var(--fs-ui);
+    font-weight: 700;
     cursor: pointer;
 }
 
-/* One Save for the whole Profile tab (28.07.2026). Sticky, because the tab is a long scroll and
+.avatar-pick:hover { filter: brightness(1.06); }
+
+/* One Save for the whole Profile tab. Sticky, because the tab is a long scroll and
    the sections above it all write through the same request - a button at the very bottom would
    be off-screen exactly when the fields at the top are being edited. */
 .profile-save-bar {
@@ -1070,42 +739,17 @@
     z-index: 5;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 0;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
     background: linear-gradient(to top, var(--surface) 70%, transparent);
 }
 
-/* The cross-link language picker. `.pill` is styled in the posts manager, and Angular's emulated
-   encapsulation keeps that stylesheet to that component — here the buttons rendered as bare
-   browser buttons with no active state, so clicking a language looked like it did nothing. */
+/* The cross-link and UI language pickers: a leaf is the app's pick-one-of-a-few control. */
 .lang-pick-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    margin: 0 0 12px;
-}
-
-.lang-pick-row .pill {
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--t2);
-    border-radius: 999px;
-    padding: 4px 12px;
-    font-family: inherit;
-    font-size: var(--fs-ui);
-    cursor: pointer;
-}
-
-.lang-pick-row .pill:hover {
-    border-color: var(--abord);
-    color: var(--text);
-}
-
-.lang-pick-row .pill.on {
-    background: var(--asoft);
-    border-color: var(--abord);
-    color: var(--accent);
-    font-weight: 600;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-3);
 }
 
 /* The same progress shape the editor's AI operations use (ADR-038): an asymptotic estimate, not a

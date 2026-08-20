@@ -23,25 +23,10 @@
     display: flex;
     gap: var(--space-2);
     flex-wrap: wrap;
-    align-items: center;
+    align-items: flex-end;
 }
 
-.ic-controls input {
-    padding: var(--dens-control-y) var(--dens-control-x);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--dens-radius);
-    background: var(--surface);
-    color: var(--text);
-    font: inherit;
-    font-size: var(--fs-ui);
-    min-width: 220px;
-}
-
-.btn-ghost.on {
-    border-color: var(--abord);
-    background: var(--asoft);
-    color: var(--accent);
-}
+.ic-filter { min-width: 220px; }
 
 h1 {
     font-size: var(--fs-27);
