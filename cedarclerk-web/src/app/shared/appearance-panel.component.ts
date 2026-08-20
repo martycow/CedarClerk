@@ -75,6 +75,12 @@ export class AppearancePanelComponent implements OnInit {
         return this.theme.theme() === 'dark' ? p.accentDark : p.accentLight;
     }
 
+    // The swatch shows the tone the theme will actually paint, not the preset's day hex — night
+    // derives its own (ADR-141), and a swatch that ignores that advertises a colour you cannot get.
+    swatchHex(preset: { hex: string; night: string }): string {
+        return this.theme.theme() === 'dark' ? preset.night : preset.hex;
+    }
+
     isActivePreset(hex: string): boolean {
         return this.activeAccentHex().toUpperCase() === hex.toUpperCase();
     }

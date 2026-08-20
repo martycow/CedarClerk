@@ -8,6 +8,10 @@
 export const CONTRACT = [
     'bg', 'canvas', 'surface', 'sheet', 'alt', 'border', 'border-strong',
     'text', 't2', 't3', 'accent', 'danger', 'ok', 'warn',
+    // The wall carries one ink and it is not --text (ADR-141), so a server-rendered surface that
+    // paints the wall has nothing readable to put on it without this name.
+    'wood-ink',
+    'series-1', 'series-2', 'series-3', 'series-4', 'series-5', 'series-6',
     'shadow', 'asoft', 'abord', 'font-sans', 'font-mono', 'font-serif',
     'fs-read', 'lh-read', 'radius-sm', 'radius-md', 'radius-lg',
 ];

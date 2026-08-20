@@ -18,9 +18,28 @@ export interface AppearancePrefs {
     sheetFlush: boolean; // no paper card — sheet merges with the canvas
 }
 
+// Two tones per preset, because night is derived downward against cream paper rather than mixed
+// towards white (ADR-141): no single value clears 4.5:1 on both #F1EADA and #D9CEAE, and the
+// night sheet has to stay readable as a label on the same colour used as a button fill.
+// tools/check-contrast.mjs reads this list and scores every entry in both roles and both themes.
+export const ACCENT_PRESETS: { name: string; hex: string; night: string }[] = [
+    { name: 'Cedar', hex: '#39543C', night: '#39543C' },
+    { name: 'Bark', hex: '#755934', night: '#624B2C' },
+    { name: 'Slate', hex: '#4A5A6B', night: '#425160' },
+    { name: 'Ink', hex: '#3A3730', night: '#3A3730' },
+    { name: 'Rust', hex: '#914A29', night: '#7A3F22' },
+];
+
+const BENCH_ACCENT = ACCENT_PRESETS[0];
+
+// A stored accent from another palette has no vetted night tone, and the picker offers nothing but
+// these five — so it resolves to the bench accent rather than painting an unmeasured colour.
+const presetFor = (hex: string) =>
+    ACCENT_PRESETS.find(p => p.hex.toUpperCase() === hex.toUpperCase()) ?? BENCH_ACCENT;
+
 export const DEFAULT_APPEARANCE: AppearancePrefs = {
-    accentLight: '#5B6E46',
-    accentDark: '#5B6E46',
+    accentLight: BENCH_ACCENT.hex,
+    accentDark: BENCH_ACCENT.hex,
     sheetWidth: 'normal',
     typeface: 'system',
     fontSize: 16,
@@ -37,14 +56,6 @@ export const DEFAULT_APPEARANCE: AppearancePrefs = {
 // A table wider or taller than this stops being a table and starts being a spreadsheet — and
 // Telegram's Blocks renderer has to carry every cell.
 export const MAX_TABLE_SIZE = 10;
-
-export const ACCENT_PRESETS: { name: string; hex: string }[] = [
-    { name: 'Cedar', hex: '#5B6E46' },
-    { name: 'Bark', hex: '#8A6A3E' },
-    { name: 'Slate', hex: '#4A5A6B' },
-    { name: 'Ink', hex: '#3A3730' },
-    { name: 'Rust', hex: '#A0522D' },
-];
 
 export const SHEET_WIDTH_PX: Record<AppearancePrefs['sheetWidth'], number> = {
     narrow: 560, normal: 680, wide: 820, full: 1040,
@@ -86,7 +97,14 @@ export class AppearanceService {
         } catch {
             // Corrupt or foreign blob — fall back to defaults rather than fail navigation.
         }
-        const merged = { ...DEFAULT_APPEARANCE, ...parsed };
+        const stored = { ...DEFAULT_APPEARANCE, ...parsed };
+        // Snapped to a preset here rather than only at paint time, so the panel marks the swatch
+        // the app is actually showing.
+        const merged = {
+            ...stored,
+            accentLight: presetFor(stored.accentLight).hex,
+            accentDark: presetFor(stored.accentDark).hex,
+        };
         this.prefs.set(merged);
         this.committed = merged;
         this.dirty.set(false);
@@ -118,10 +136,11 @@ export class AppearanceService {
             el.id = '__appearance-accent';
             document.head.appendChild(el);
         }
-        // Same dark-mix formula already used for the shipped Cedar accent (styles.scss) — keeps
-        // every preset legible on bark instead of re-deriving a new ratio per preset.
-        el.textContent =
-            `:root{--accent:${p.accentLight}}` +
-            `:root[data-theme="dark"]{--accent:color-mix(in srgb, ${p.accentDark} 55%, #E8F0E8 45%)}`;
+        const day = presetFor(p.accentLight), night = presetFor(p.accentDark);
+        // The default writes nothing: this rule and the base block have equal specificity and this
+        // one comes later in <head>, so an injected copy would pin the bench accent against
+        // styles.scss for every logged-in user.
+        el.textContent = day === BENCH_ACCENT && night === BENCH_ACCENT ? ''
+            : `:root{--accent:${day.hex}}:root[data-theme="dark"]{--accent:${night.night}}`;
     }
 }

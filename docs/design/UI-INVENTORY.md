@@ -119,14 +119,15 @@ One long page with anchor-nav. The sections, by the `id` the nav jumps to — **
 | Anchor chip nav | `:18-26` | chip-row | Jumps to each section | N/A | 8 chips (Credits added 05.08.2026) |
 | Post signature + URL fields | `:48-56` | panel + button | Pro-gated custom signature | Needed & present — `signatureBusy()`/`signatureSaved()` | Free users see static attribution instead |
 | Theme mode toggle (Light / Dark) | Appearance modal, top of the panel (`appearance-panel.component.html:7-13`) | tab | Sets `data-theme` on `<html>` — device-local via `ThemeService`, localStorage `cedar-theme`; the accent swatches below edit whichever theme it leaves you on | N/A — instant | The only styling axis — one look, nothing else to select (ADR-136) |
-| Accent preset swatches | `:84-89` | chip-row | `pickAccentPreset()`, saves instantly | **Needed but missing** — fire-and-forget save, only `appearanceError()` on failure | "Applies instantly" by design, but a failed save is silent otherwise |
-| Sheet width / Typeface toggles | `:98-112` | tab | Instant-save prefs | **Needed but missing** (same gap as above) | |
-| Font size / line height sliders | `:117-126` | slider | Instant-save on every drag tick, no debounce | **Needed but missing** | |
-| Appearance checkboxes (ruler/paragraph numbers/word count/focus mode/sheet flush) | `:130-134` | chip-row | 5 instant-save booleans | **Needed but missing** | |
-| Toolbar preset toggle (Minimal/Standard/Everything) | `:146-149` | tab | Instant-save | **Needed but missing** — `toolbarError()` shown, no busy state | |
-| Toolbar row 1/2 drag lists | `:157-174` | panel (drag-drop) | CDK drag-drop moves groups between rows | **Needed but missing** | |
-| Toolbar group/button visibility checkboxes | `:183-188` | chip-row | Show/hide groups or individual buttons | **Needed but missing** | |
-| Reset-to-Standard button | `:197` | button | `pickToolbarPreset('standard')` | **Needed but missing** | |
+| Accent preset swatches | Appearance modal (`appearance-panel.component.html:15-21`) | chip-row | `pickAccentPreset()`, saves instantly | **Needed but missing** — fire-and-forget save, only `appearanceError()` on failure | "Applies instantly" by design, but a failed save is silent otherwise. Each preset carries a day tone and a darker night one (ADR-141) and the swatch paints the active theme's |
+| Sheet width / Typeface toggles | Appearance modal (`appearance-panel.component.html:24-43`) | tab | Instant-save prefs | **Needed but missing** (same gap as above) | |
+| Font size / line height sliders | Appearance modal (`appearance-panel.component.html:45-57`) | slider | Instant-save on every drag tick, no debounce | **Needed but missing** | |
+| Default table size (rows × cols) | Appearance modal (`appearance-panel.component.html:60-69`) | number inputs | The size Insert → Table starts at | **Needed but missing** (same gap as above) | Clamped to `MAX_TABLE_SIZE` (10) whatever is typed — a Telegram Blocks message has to carry every cell |
+| Appearance checkboxes (ruler/paragraph numbers/word count/focus mode/sheet flush) | Appearance modal (`appearance-panel.component.html:71-77`) | chip-row | 5 instant-save booleans | **Needed but missing** | |
+| Toolbar preset toggle (Minimal/Standard/Everything) | Appearance modal (`appearance-panel.component.html:91-98`) | tab | Instant-save | **Needed but missing** — `toolbarError()` shown, no busy state | |
+| Toolbar row 1/2 drag lists | Appearance modal (`appearance-panel.component.html:101-121`) | panel (drag-drop) | CDK drag-drop moves groups between rows | **Needed but missing** | |
+| Toolbar group/button visibility checkboxes | Appearance modal (`appearance-panel.component.html:123-139`) | chip-row | Show/hide groups or individual buttons | **Needed but missing** | |
+| Reset-to-Standard button | Appearance modal (`appearance-panel.component.html:141`) | button | `pickToolbarPreset('standard')` | **Needed but missing** | |
 | Header slot selects (1/2/3) + author/URL/location inputs | `:208-254` | dropdown + panel | Assigns metadata fields to subtitle slots; slot 3 Pro-gated | Saved via explicit Save button below | |
 | Save header slots button | `:258-260` | button | `saveProfile()` | Needed & present — `profileBusy()`/`profileSaved()` | |
 | Social link inputs (Twitter/Instagram/Facebook/YouTube/GitHub) | `:274-292` | panel + button | Informational-only URL fields | Needed & present — `socialBusy()`/`socialSaved()` | |

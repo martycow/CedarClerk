@@ -3,7 +3,7 @@
    to the tighter set here; the tokens are never read for a literal value in this file. */
 .drafts-page {
     min-height: 100vh;
-    background: var(--bg);
+    background: var(--surface);
     color: var(--text);
     font-family: var(--font-sans);
     font-size: var(--dens-fs);
@@ -317,12 +317,12 @@
 }
 
 .status-badge.tone-danger {
-    background: color-mix(in srgb, var(--danger) 16%, var(--sheet));
+    background: var(--danger-soft);
     color: var(--danger);
 }
 
 .status-badge.tone-ok {
-    background: color-mix(in srgb, var(--ok) 16%, var(--sheet));
+    background: var(--ok-soft);
     color: var(--ok);
 }
 
@@ -649,7 +649,7 @@
     margin: 8px 0 0;
     padding: 7px 10px;
     border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
-    background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+    background: var(--danger-soft);
     border-radius: var(--radius-md);
     font-size: var(--fs-meta);
     line-height: 1.45;

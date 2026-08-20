@@ -2,24 +2,7 @@
    attribute is absent for the default skin, so nothing here can touch it. Forest night keeps
    cream paper surfaces (--sheet/--surface/--text stay paper/ink in BOTH themes); only the chrome
    darkens — so the night block re-asserts every token the app's dark block flips light-for-dark.
-   The @font-face imports below are safe to load unconditionally: a face downloads only when a
-   matching font-family is used on rendered text, and only forest-scoped rules reference these. */
-@use '@fontsource/vollkorn/latin-600.css' as *;
-@use '@fontsource/vollkorn/latin-700.css' as *;
-@use '@fontsource/vollkorn/cyrillic-600.css' as *;
-@use '@fontsource/vollkorn/cyrillic-700.css' as *;
-@use '@fontsource/source-sans-3/latin-400.css' as *;
-@use '@fontsource/source-sans-3/latin-600.css' as *;
-@use '@fontsource/source-sans-3/latin-700.css' as *;
-@use '@fontsource/source-sans-3/cyrillic-400.css' as *;
-@use '@fontsource/source-sans-3/cyrillic-600.css' as *;
-@use '@fontsource/source-sans-3/cyrillic-700.css' as *;
-@use '@fontsource/literata/latin-400.css' as *;
-@use '@fontsource/literata/latin-600.css' as *;
-@use '@fontsource/literata/cyrillic-400.css' as *;
-@use '@fontsource/literata/cyrillic-600.css' as *;
-@use '@fontsource/caveat/latin-500.css' as *;
-@use '@fontsource/caveat/cyrillic-500.css' as *;
+   The four faces this file names are loaded once, by styles.scss (ADR-143). */
 
 :root[data-skin="forest"] {
     --bg: #EFE9D8;

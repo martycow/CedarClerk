@@ -1,7 +1,7 @@
 :host {
     display: block;
     min-height: 100vh;
-    background: var(--canvas);
+    background: var(--surface);
 }
 
 .icon { width: 18px; height: 18px; }

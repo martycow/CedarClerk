@@ -14,9 +14,9 @@ import { join, resolve, relative, sep } from 'node:path';
 const SRC = resolve(import.meta.dirname, '../src');
 const EXT = ['.css', '.scss', '.ts', '.html'];
 
+
 const CHROME_FAMILY = /^--(bench-|hit-|text-chrome|text-readout)/;
 const DENS_FAMILY = /^--dens-/;
-const SIZE_TOKEN = /^--(fs-|text-chrome|text-readout|hit-|bench-|dens-)/;
 
 // The chrome parts ADR-138 item 1 names. A file called one of these must spell the attribute.
 const CHROME_PARTS = ['rail-header', 'hook-rail', 'shelf-panel', 'bench-drawer', 'ruler-bar', 'index-tabs'];
@@ -87,46 +87,61 @@ function px(value, vars, seen = new Set()) {
 }
 
 const results = [];
-const rule = (name, note) => {
-    const r = { name, note, fails: [], skipped: null };
+// `sites` is what the rule actually looked at. A rule whose subject has not landed yet finds no
+// sites and would otherwise print "ok 0" — a green line indistinguishable from a rule that
+// searched and found nothing wrong. `nothing` is the reason printed in its place, so an unmeasured
+// surface reads as unmeasured and turns into a real ok/FAIL by itself once the subject exists.
+const rule = (name, note, nothing = null) => {
+    const r = { name, note, fails: [], skipped: null, sites: 0, nothing };
     results.push(r);
     return r;
 };
 const fail = (r, rel, line, msg) => r.fails.push(`${rel}:${line}  ${msg}`);
 
 // 1. Integers only (ADR-071 principle 7, restated by ADR-138 item 3). The mirror ships 63
-//    half-pixel declarations; this is what stops them being copied in.
-const rInt = rule('integers only', 'no half-pixel font-size or size token under src/');
+//    half-pixel declarations; this is what stops them being copied in. Every custom property is a
+//    candidate, not just the type families: ADR-138 item 3 counts the 1.5px ring inside
+//    --shadow-pine-btn and the pegboard's dot radius among them, and neither is a --fs-.
+const rInt = rule('integers only', 'no fractional px in a font-size or in any token value under src/');
 for (const f of files) {
     for (const m of f.code.matchAll(/font-size\s*:\s*([^;{}]+)/g)) {
         const frac = m[1].match(/(-?\d*\.\d+)px/);
         if (frac) fail(rInt, f.rel, lineOf(f.code, m.index), `font-size: ${frac[0]} — half-pixel`);
     }
     for (const m of f.code.matchAll(/(--[\w-]+)\s*:\s*([^;{}]+)/g)) {
-        if (!SIZE_TOKEN.test(m[1])) continue;
         const frac = m[2].match(/(-?\d*\.\d+)px/);
-        if (frac) fail(rInt, f.rel, lineOf(f.code, m.index), `${m[1]}: ${frac[0]} — half-pixel size token`);
+        if (frac) fail(rInt, f.rel, lineOf(f.code, m.index), `${m[1]}: ${frac[0]} — fractional px in a token value`);
     }
 }
 
-// 2. The two vocabularies never cross (ADR-138 item 4).
-const rCross = rule('vocabularies never cross', 'compact declares no chrome token, [data-surface] declares no --dens-*');
+// 2. The two vocabularies never cross (ADR-138 item 4). One clause per direction: the compact block
+//    ships and the surface blocks do not, so a single rule would let the half that measures nothing
+//    hide behind the half that does.
+const rCompactVocab = rule('compact declares no chrome token', 'the density knob may not reach into the chrome family',
+    'no [data-density="compact"] block in styles.scss');
 if (compactBlock) {
+    rCompactVocab.sites++;
     for (const [, k] of decls(compactBlock.body)) {
-        if (CHROME_FAMILY.test(k)) fail(rCross, 'styles.scss', lineOf(styles.code, compactBlock.at), `[data-density="compact"] declares ${k}`);
+        if (CHROME_FAMILY.test(k)) fail(rCompactVocab, 'styles.scss', lineOf(styles.code, compactBlock.at), `[data-density="compact"] declares ${k}`);
     }
 }
+
+const rSurfaceVocab = rule('[data-surface] declares no --dens-*', 'chrome and paper blocks may not reach into the density family',
+    'no [data-surface] block in the tree yet — the shell has not landed');
 for (const f of files) {
     for (const b of blocks(f.code, '[data-surface')) {
+        rSurfaceVocab.sites++;
         for (const [, k] of decls(b.body)) {
-            if (DENS_FAMILY.test(k)) fail(rCross, f.rel, lineOf(f.code, b.at), `[data-surface] block declares ${k}`);
+            if (DENS_FAMILY.test(k)) fail(rSurfaceVocab, f.rel, lineOf(f.code, b.at), `[data-surface] block declares ${k}`);
         }
     }
 }
 
 // 3. Compact is already at paper's floor and must not be tightened past it (ADR-138 item 4).
-const rCompact = rule('compact stays at the paper floor', `--dens-fs under compact resolves to >= ${PAPER_FS_MIN}px`);
+const rCompact = rule('compact stays at the paper floor', `--dens-fs under compact resolves to >= ${PAPER_FS_MIN}px`,
+    'no [data-density="compact"] block in styles.scss');
 if (compactBlock) {
+    rCompact.sites++;
     const vars = { ...root };
     for (const [, k, v] of decls(compactBlock.body)) vars[k] = v.trim();
     const v = px(vars['--dens-fs'], vars);
@@ -134,7 +149,8 @@ if (compactBlock) {
 }
 
 // 4. The contract tokens carry the numbers ADR-138 item 2 states.
-const rTokens = rule('contract token values', `--hit-chrome ${CHROME_HIT}px, --hit-target ${PAPER_HIT}px, chrome type ${CHROME_FS_MIN}-${CHROME_FS_MAX}px, --text-readout via the scale`);
+const rTokens = rule('contract token values', `--hit-chrome ${CHROME_HIT}px, --hit-target ${PAPER_HIT}px, chrome type ${CHROME_FS_MIN}-${CHROME_FS_MAX}px, --text-readout via the scale`,
+    'none of the contract tokens are declared in styles.scss');
 const tokenLine = k => {
     const m = styles.code.match(new RegExp(`${k}\\s*:`));
     return m ? lineOf(styles.code, m.index) : 1;
@@ -142,30 +158,36 @@ const tokenLine = k => {
 const declared = k => Object.prototype.hasOwnProperty.call(root, k);
 for (const [k, want] of [['--hit-chrome', CHROME_HIT], ['--hit-target', PAPER_HIT]]) {
     if (!declared(k)) continue;
+    rTokens.sites++;
     const v = px(root[k], root);
     if (v !== want) fail(rTokens, 'styles.scss', tokenLine(k), `${k} is ${root[k]}, the contract says ${want}px`);
 }
 for (const k of ['--text-chrome', '--text-chrome-sm']) {
     if (!declared(k)) continue;
+    rTokens.sites++;
     const v = px(root[k], root);
     if (v === null || !Number.isInteger(v) || v < CHROME_FS_MIN || v > CHROME_FS_MAX)
         fail(rTokens, 'styles.scss', tokenLine(k), `${k} is ${root[k]}, chrome type is an integer ${CHROME_FS_MIN}-${CHROME_FS_MAX}px`);
 }
 for (const k of Object.keys(root)) {
     if (!/^--bench-|^--hit-/.test(k)) continue;
+    rTokens.sites++;
     const v = px(root[k], root);
     if (v !== null && !Number.isInteger(v)) fail(rTokens, 'styles.scss', tokenLine(k), `${k} is ${root[k]} — not an integer`);
 }
 // A semantic role carrying a bare pixel number is the debt principle 7 exists to stop: the role
 // aliases onto the scale, and the scale carries the number.
+if (declared('--text-readout')) rTokens.sites++;
 if (declared('--text-readout') && !/^var\(--fs-[\w-]+\)$/.test(root['--text-readout']))
     fail(rTokens, 'styles.scss', tokenLine('--text-readout'), `--text-readout is ${root['--text-readout']} — it must alias a --fs-* step`);
 
 // 5. Each surface's floors hold inside anything scoped to it (ADR-138 item 7).
-const rFloors = rule('surface floors', `chrome ${CHROME_HIT}px / ${CHROME_FS_MIN}-${CHROME_FS_MAX}px, paper ${PAPER_HIT}px / >= ${PAPER_FS_MIN}px`);
+const rFloors = rule('surface floors', `chrome ${CHROME_HIT}px / ${CHROME_FS_MIN}-${CHROME_FS_MAX}px, paper ${PAPER_HIT}px / >= ${PAPER_FS_MIN}px`,
+    'no [data-surface="chrome"] or [data-surface="paper"] block in the tree yet — the shell has not landed');
 for (const f of files) {
     for (const [surface, hit, fsMin, fsMax] of [['chrome', CHROME_HIT, CHROME_FS_MIN, CHROME_FS_MAX], ['paper', PAPER_HIT, PAPER_FS_MIN, Infinity]]) {
         for (const b of blocks(f.code, `[data-surface="${surface}"]`)) {
+            rFloors.sites++;
             const base = b.open + 1;
             for (const m of b.body.matchAll(/font-size\s*:\s*([^;{}]+)/g)) {
                 const v = px(m[1], root);
@@ -200,17 +222,21 @@ else for (const f of files) {
 }
 
 // 7. A named chrome part that lost its attribute (ADR-138 consequence paragraph).
-const rParts = rule('chrome parts carry the attribute', CHROME_PARTS.join(', '));
+const rParts = rule('chrome parts carry the attribute', CHROME_PARTS.join(', '),
+    'none of the named chrome components exist yet — the shell has not landed');
 for (const part of CHROME_PARTS) {
     const own = files.filter(f => new RegExp(`(^|/)${part}\\.component\\.(ts|html|css|scss)$`).test(f.rel));
     if (!own.length) continue;
+    rParts.sites++;
     if (!own.some(f => /data-surface\s*=\s*["'`]?chrome/.test(f.code)))
         fail(rParts, own[0].rel, 1, `${part} declares no data-surface="chrome"`);
 }
 
-let failures = 0;
+let failures = 0, unmeasured = 0;
 for (const r of results) {
+    if (!r.skipped && r.nothing && r.sites === 0) r.skipped = r.nothing;
     if (r.skipped) {
+        unmeasured++;
         console.log(`skip        ${r.name} — ${r.skipped}`);
         continue;
     }
@@ -218,5 +244,7 @@ for (const r of results) {
     console.log(`${r.fails.length ? 'FAIL' : 'ok  '}  ${String(r.fails.length).padStart(2)}  ${r.name} — ${r.note}`);
     for (const line of r.fails) console.log(`            ${line}`);
 }
-console.log(`\n${files.length} file(s) scanned, ${failures} failure(s).`);
+console.log(`\n${files.length} file(s) scanned, ${failures} failure(s), `
+    + `${results.length - unmeasured}/${results.length} rule(s) measured something.`);
+if (unmeasured) console.log(`${unmeasured} rule(s) had nothing to measure — printed above, never counted as passing.`);
 process.exit(failures ? 1 : 0);

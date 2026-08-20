@@ -124,7 +124,7 @@ public sealed class MenuCommand : AsyncCommand<CedarSettings>
 
     private static IReadOnlyList<Item> Build() => new[]
     {
-        new Item("Tests", "backend + frontend + contrast",
+        new Item("Tests", "backend + frontend + contrast + density",
             (s, ct) => TestCommand.RunAsync(Copy<TestSettings>(s), ct)),
         new Item("Tests + smoke", "…and Playwright", (s, ct) =>
         {

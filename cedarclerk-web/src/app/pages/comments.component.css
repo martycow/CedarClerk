@@ -1,7 +1,7 @@
 :host {
     display: block;
     min-height: 100vh;
-    background: var(--canvas);
+    background: var(--surface);
 }
 
 /* Scoped under a post in the Posts Manager (FI3.5) it is a section, not a page: no full-viewport
@@ -226,7 +226,7 @@
 
 .mini-remove:hover {
     color: var(--danger);
-    background: var(--hover-strong);
+    background: var(--hover-danger);
 }
 
 /* Per-post grouping. The flat stream answered "what's new" but not "what happened to this post",

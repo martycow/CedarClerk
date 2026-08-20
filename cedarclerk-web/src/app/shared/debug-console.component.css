@@ -83,7 +83,7 @@
 }
 
 .debug-badge.error {
-    background: color-mix(in srgb, var(--danger) 18%, var(--surface));
+    background: var(--danger-soft);
     color: var(--danger);
 }
 

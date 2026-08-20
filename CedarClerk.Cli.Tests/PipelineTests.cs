@@ -332,13 +332,21 @@ public class PipelineTests
     public void No_selector_runs_everything_except_the_slow_suite()
     {
         Assert.Equal(
-            new[] { TestPipeline.PhaseBackend, TestPipeline.PhaseFrontend, TestPipeline.PhaseContrast },
+            new[]
+            {
+                TestPipeline.PhaseBackend, TestPipeline.PhaseFrontend,
+                TestPipeline.PhaseContrast, TestPipeline.PhaseDensity
+            },
             TestPipeline.Phases(new TestOptions()));
 
         Assert.Equal(new[] { TestPipeline.PhaseBackend }, TestPipeline.Phases(new TestOptions(Backend: true)));
 
         Assert.Equal(
-            new[] { TestPipeline.PhaseFrontend, TestPipeline.PhaseContrast, TestPipeline.PhaseSmoke },
+            new[]
+            {
+                TestPipeline.PhaseFrontend, TestPipeline.PhaseContrast,
+                TestPipeline.PhaseDensity, TestPipeline.PhaseSmoke
+            },
             TestPipeline.Phases(new TestOptions(Smoke: true, Frontend: true)));
     }
 

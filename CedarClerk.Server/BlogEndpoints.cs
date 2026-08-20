@@ -1843,7 +1843,7 @@ public static class BlogEndpoints
            private post's gate that is the middle of the screen, with a wide empty band under it.
            A column that is at least the viewport tall, with the main area taking the slack. */
         html { height: 100%; }
-        body { margin: 0; min-height: 100%; display: flex; flex-direction: column; background: var(--canvas); color: var(--text); font-family: var(--font-sans); line-height: 1.6; }
+        body { margin: 0; min-height: 100%; display: flex; flex-direction: column; background: var(--surface); color: var(--text); font-family: var(--font-sans); line-height: 1.6; }
         .site-main { flex: 1 0 auto; }
         .site-footer { flex: none; }
         /* T-039 — a post can take likes but no discussion, or the reverse. The block is only
@@ -1857,7 +1857,7 @@ public static class BlogEndpoints
         img, video { max-width: 100%; height: auto; }
         .spacer { flex: 1; }
 
-        .site-header { position: sticky; top: 0; z-index: 10; background: var(--surface); border-bottom: 1px solid var(--border); }
+        .site-header { position: sticky; top: 0; z-index: 10; background: var(--sheet); border-bottom: 1px solid var(--border); }
         .site-header-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 20px; }
         /* T-101 — the four colour literals left on this page, kept for the same reason the app kept
            its two (T-077): a generated avatar colour, a code block's own dark scheme, and white on
@@ -1892,7 +1892,7 @@ public static class BlogEndpoints
         .timeline-month-sep .sep-line { flex: 1; height: 1px; background: var(--border); }
         .timeline-month-sep .sep-label { flex: none; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--t2); background: var(--asoft); border: 1px solid var(--abord); border-radius: 999px; padding: 3px 12px; white-space: nowrap; }
         .timeline-item { position: relative; }
-        .timeline-dot { position: absolute; left: -24px; top: 24px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--abord); z-index: 1; }
+        .timeline-dot { position: absolute; left: -24px; top: 24px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--abord); z-index: 1; }
         .post-card { display: block; background: var(--sheet); border-radius: 12px; box-shadow: var(--shadow); padding: 20px 24px; border: 1px solid transparent; color: var(--text); }
         .post-card:hover { border-color: var(--abord); }
         .post-card-meta { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 11.5px; color: var(--t2); }

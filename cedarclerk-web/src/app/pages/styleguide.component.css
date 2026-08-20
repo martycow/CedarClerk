@@ -360,13 +360,13 @@ button:disabled {
 }
 
 .sg-badge-ok {
-    background: color-mix(in srgb, var(--ok) 14%, transparent);
+    background: var(--ok-soft);
     border-color: color-mix(in srgb, var(--ok) 40%, var(--border));
     color: var(--ok);
 }
 
 .sg-badge-danger {
-    background: color-mix(in srgb, var(--danger) 14%, transparent);
+    background: var(--danger-soft);
     border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
     color: var(--danger);
 }

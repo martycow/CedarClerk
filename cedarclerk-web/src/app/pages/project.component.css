@@ -3,7 +3,7 @@
    ADR-071 principle 3 working, and it is why nothing in this file hardcodes a spacing value. */
 .project-page {
     min-height: 100vh;
-    background: var(--bg);
+    background: var(--surface);
     color: var(--text);
     font-family: var(--font-sans);
     font-size: var(--dens-fs);
@@ -238,7 +238,7 @@
 }
 
 .prio.p1 {
-    background: color-mix(in srgb, var(--warn) 16%, var(--sheet));
+    background: var(--warn-soft);
     color: var(--warn);
 }
 

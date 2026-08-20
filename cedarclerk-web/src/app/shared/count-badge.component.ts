@@ -17,7 +17,7 @@ import { Component, Input } from '@angular/core';
             padding: 0 5px;
             border-radius: 999px;
             background: var(--accent);
-            color: #F4F2EA;
+            color: var(--sheet);
             font-size: var(--fs-11);
             font-weight: 700;
             line-height: 1;

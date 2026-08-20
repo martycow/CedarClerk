@@ -1,7 +1,7 @@
 /* Page chrome now lives in the shared app-page-header (see docs/DECISIONS.md, 27.07.2026). */
 .admin-page {
     min-height: 100vh;
-    background: var(--canvas);
+    background: var(--surface);
     color: var(--text);
     font-family: var(--font-sans);
 }
@@ -175,12 +175,12 @@
 /* Now the same shape as .chip.danger below, instead of a hand-mixed hue plus a theme override
    sitting eighty lines away from the rule it corrects. */
 .chip.warn {
-    background: color-mix(in srgb, var(--warn) 18%, transparent);
+    background: var(--warn-soft);
     color: var(--warn);
 }
 
 .chip.danger {
-    background: color-mix(in srgb, var(--danger) 14%, transparent);
+    background: var(--danger-soft);
     color: var(--danger);
 }
 

@@ -2,7 +2,7 @@
    screen for scanning thousands of rows, not for reading. Every value is a token. */
 .assets-page {
     min-height: 100vh;
-    background: var(--bg);
+    background: var(--surface);
     color: var(--text);
     font-family: var(--font-sans);
     font-size: var(--dens-fs);
@@ -326,7 +326,7 @@
 }
 
 .filter-tabs button.danger-chip.active {
-    background: color-mix(in srgb, var(--danger) 12%, var(--sheet));
+    background: var(--danger-soft);
     border-color: var(--danger);
     color: var(--danger);
 }
@@ -374,7 +374,7 @@
 
 .tile.missing .preview,
 .preview-pane.missing {
-    background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+    background: var(--danger-soft);
 }
 
 .preview-label {

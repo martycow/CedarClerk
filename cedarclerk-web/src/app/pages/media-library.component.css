@@ -2,7 +2,7 @@
    tiles, not for reading. Every value is a token. */
 .media-page {
     min-height: 100vh;
-    background: var(--bg);
+    background: var(--surface);
     color: var(--text);
     font-family: var(--font-sans);
     font-size: var(--dens-fs);

@@ -2,7 +2,7 @@
    page repeats the header/base classes (see the same block in drafts.component.css). */
 .manager-page {
     min-height: 100vh;
-    background: var(--bg);
+    background: var(--surface);
     color: var(--text);
     font-family: var(--font-sans);
     font-size: var(--dens-fs);
@@ -250,7 +250,7 @@
        Pre-existing, found by the phone capture during the migration. */
     box-sizing: border-box;
     border: 1px solid var(--border);
-    background: var(--bg);
+    background: var(--sheet);
     color: var(--text);
     border-radius: var(--radius-sm);
     padding: var(--dens-control-y) var(--dens-control-x);
@@ -369,7 +369,7 @@
 }
 
 .state-chip.live {
-    background: color-mix(in srgb, var(--ok) 16%, var(--sheet));
+    background: var(--ok-soft);
     color: var(--ok);
 }
 

@@ -4,7 +4,7 @@
    (docs/design/DESIGN.md flags this — when there is one, all four collapse into it). */
 .planner-page {
     min-height: 100vh;
-    background: var(--bg);
+    background: var(--surface);
     color: var(--text);
     font-family: var(--font-sans);
     font-size: var(--dens-fs);
@@ -274,7 +274,7 @@
 }
 
 .prio.p1 {
-    background: color-mix(in srgb, var(--warn) 16%, var(--sheet));
+    background: var(--warn-soft);
     color: var(--warn);
 }
 
@@ -295,7 +295,7 @@
 }
 
 .status-badge.tone-ok {
-    background: color-mix(in srgb, var(--ok) 16%, var(--sheet));
+    background: var(--ok-soft);
     color: var(--ok);
 }
 

@@ -39,7 +39,7 @@ import { LocaleService, UiLang } from '../core/i18n/locale.service';
             font-size: var(--fs-13);
             font-weight: 700;
             letter-spacing: .04em;
-            color: var(--t3);
+            color: var(--t2);
             cursor: pointer;
             transition: color .12s, background .12s;
         }

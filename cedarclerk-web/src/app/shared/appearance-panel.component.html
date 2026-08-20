@@ -15,7 +15,7 @@
         <div class="ap-accents">
             @for (preset of accentPresets; track preset.name) {
             <button class="ap-accent" [class.on]="isActivePreset(preset.hex)" (click)="pickAccentPreset(preset.hex)" [title]="preset.name">
-                <span class="ap-swatch" [style.background]="preset.hex"></span>
+                <span class="ap-swatch" [style.background]="swatchHex(preset)"></span>
             </button>
             }
         </div>

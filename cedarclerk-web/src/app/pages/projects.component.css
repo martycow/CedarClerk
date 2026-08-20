@@ -4,7 +4,7 @@
    here and comfortable on the project dashboard, from the same component styles. */
 .projects-page {
     min-height: 100vh;
-    background: var(--bg);
+    background: var(--surface);
     color: var(--text);
     font-family: var(--font-sans);
     font-size: var(--dens-fs);

@@ -21,6 +21,7 @@ public sealed class TestPipeline
     public const string PhaseBackend = "Backend (dotnet test)";
     public const string PhaseFrontend = "Frontend units (vitest)";
     public const string PhaseContrast = "Contrast contract";
+    public const string PhaseDensity = "Density contract";
     public const string PhaseSmoke = "Smoke (Playwright, isolated database)";
 
     private readonly ICommandRunner _runner;
@@ -40,7 +41,7 @@ public sealed class TestPipeline
 
         var phases = new List<string>();
         if (backend) phases.Add(PhaseBackend);
-        if (frontend) { phases.Add(PhaseFrontend); phases.Add(PhaseContrast); }
+        if (frontend) { phases.Add(PhaseFrontend); phases.Add(PhaseContrast); phases.Add(PhaseDensity); }
         if (options.Smoke) phases.Add(PhaseSmoke);
         return phases;
     }
@@ -77,6 +78,10 @@ public sealed class TestPipeline
         // Reads the tokens straight out of styles.scss and scores every pair the app renders, in both
         // themes. Cheap, and the only check that catches a colour choice going unreadable.
         PhaseContrast => (Shell.Npm(), "run check:contrast", _config.WebDir),
+
+        // The surface split (ADR-138) fails quietly: chrome that loses its attribute inherits paper's
+        // numbers and merely looks loose, so a static read of the CSS is the only thing that goes red.
+        PhaseDensity => (Shell.Npm(), "run check:density", _config.WebDir),
 
         // Wipes a scratch CEDAR_DATA_DIR and runs with no bot token, so it can never touch real data
         // or knock the production bot off its token (.claude/rules/telegram-bot.md). It stays a

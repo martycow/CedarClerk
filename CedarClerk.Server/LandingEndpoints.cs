@@ -128,11 +128,11 @@ public static class LandingEndpoints
             :root { color-scheme: light dark; {{LIGHT_TOKENS}} }
             @media (prefers-color-scheme: dark) { :root { {{DARK_TOKENS}} } }
             * { box-sizing: border-box; }
-            body { margin: 0; background: var(--canvas); color: var(--text); font-family: var(--font-sans); line-height: 1.6; }
+            body { margin: 0; background: var(--surface); color: var(--text); font-family: var(--font-sans); line-height: 1.6; }
             a { color: var(--accent); }
             .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
 
-            header.top { border-bottom: 1px solid var(--border); background: var(--surface); }
+            header.top { border-bottom: 1px solid var(--border); background: var(--sheet); }
             .top-inner { display: flex; align-items: center; gap: 10px; padding: 14px 0; }
             .brand { font-weight: 700; letter-spacing: -.01em; }
             .spacer { flex: 1; }
@@ -162,14 +162,14 @@ public static class LandingEndpoints
                alone on its own row, which reads as an afterthought rather than a fourth thing. */
             .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
             @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } }
-            .card { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); padding: 20px; }
+            .card { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--sheet); padding: 20px; }
             .card-mark { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px;
                           border-radius: var(--radius-md); background: var(--asoft); color: var(--accent); font-size: 18px; }
             .card h3 { font-size: var(--fs-body); margin: 12px 0 6px; }
             .card p { margin: 0; color: var(--t2); font-size: var(--fs-ui); }
 
             .plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; align-items: start; }
-            .plan { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); padding: 22px; }
+            .plan { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--sheet); padding: 22px; }
             .plan-featured { border-color: var(--abord); background: var(--asoft); }
             .plan h3 { margin: 0; font-size: var(--fs-body); }
             .plan-price { font-size: 30px; font-weight: 700; margin: 6px 0 14px; }
@@ -180,7 +180,7 @@ public static class LandingEndpoints
 
             /* The screenshot is the product, so it gets the product's own frame rather than a
                drop shadow pretending to be a browser window. */
-            .shot { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
+            .shot { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--sheet); }
             .shot img { display: block; width: 100%; height: auto; }
             .shot-caption { padding: 12px 16px; border-top: 1px solid var(--border); color: var(--t2); font-size: var(--fs-ui); }
 
@@ -188,7 +188,7 @@ public static class LandingEndpoints
             .about p { margin: 0 0 12px; color: var(--t2); }
             .about p:last-child { margin: 0; }
 
-            footer.bottom { border-top: 1px solid var(--border); background: var(--surface); margin-top: 48px; }
+            footer.bottom { border-top: 1px solid var(--border); background: var(--sheet); margin-top: 48px; }
             .bottom-inner { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 20px 0; font-size: var(--fs-caption); color: var(--t2); }
             .bottom-inner a { color: var(--t2); }
 

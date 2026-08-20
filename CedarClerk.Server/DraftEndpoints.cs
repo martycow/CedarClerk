@@ -1769,7 +1769,7 @@ public static class DraftEndpoints
                 :root { {{DesignTokens.Declarations(DesignTokens.Dark)}} }
             }
             * { box-sizing: border-box; }
-            body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-sans); line-height: 1.6; }
+            body { margin: 0; background: var(--surface); color: var(--text); font-family: var(--font-sans); line-height: 1.6; }
             a { color: var(--accent); }
             img, video { max-width: 100%; height: auto; }
             .page { max-width: 720px; margin: 0 auto; padding: 40px 20px 60px; }

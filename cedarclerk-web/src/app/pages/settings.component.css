@@ -1,7 +1,7 @@
 :host {
     display: block;
     min-height: 100vh;
-    background: var(--canvas);
+    background: var(--surface);
 }
 
 .spacer {
@@ -445,7 +445,7 @@
 
 .btn-danger-ghost:hover {
     border-color: var(--danger);
-    background: color-mix(in srgb, var(--danger) 7%, transparent);
+    background: var(--danger-soft);
 }
 
 .btn-danger {
@@ -537,7 +537,7 @@
     align-items: center;
     gap: 8px;
     border: 1px solid color-mix(in srgb, var(--ok) 35%, var(--border));
-    background: color-mix(in srgb, var(--ok) 9%, var(--surface));
+    background: var(--ok-soft);
     border-radius: var(--radius-md);
     padding: 10px 14px;
     margin: 0 0 16px;
@@ -1073,7 +1073,7 @@
     align-items: center;
     gap: 10px;
     padding: 12px 0;
-    background: linear-gradient(to top, var(--canvas) 70%, transparent);
+    background: linear-gradient(to top, var(--surface) 70%, transparent);
 }
 
 /* The cross-link language picker. `.pill` is styled in the posts manager, and Angular's emulated
