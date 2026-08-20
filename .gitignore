@@ -72,3 +72,6 @@ CedarClerk.Desktop/server/
 # The only inbox (18.08.2026). Rewritten by Marty at will; deliberately untracked - rewrites
 # are tracked by mtime against the last "Input sweep" entry in docs/tasks/ROADMAP.md.
 docs/INPUT_PROMPT.md
+
+# Mirror of the Claude Design system — re-fetchable from the project id in config.json
+.design-sync/
