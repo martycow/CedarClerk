@@ -272,19 +272,21 @@ const toHex = c => '#' + c.slice(0, 3).map(v => Math.round(v).toString(16).padSt
 // The ground is read off the body rule rather than named here. body paints paper while --bg is the
 // wall, and the two are opposite poles at night (ADR-141), so a name written down here is a premise
 // that stays right only until the palette moves under it.
-function groundValue() {
-    const flat = src.replace(/\/\*[\s\S]*?\*\//g, '');
+function groundValue(text) {
+    const flat = text.replace(/\/\*[\s\S]*?\*\//g, '');
     let found = null;
     for (const m of flat.matchAll(/(?:^|[\n};])([^{}@;]*?)\{([^{}]*)\}/g)) {
         if (!/(^|,)\s*body\s*(,|$)/.test(m[1].trim())) continue;
         for (const d of m[2].matchAll(/(?:^|;)\s*background(?:-color)?\s*:\s*([^;]+)/g)) found = d[1].trim();
     }
-    if (!found) throw new Error('no body background in styles.scss — the page ground is unknown');
     return found;
 }
 
-const GROUND = groundValue();
-const groundsOf = vars => painted(GROUND, vars, [[255, 255, 255, 1]]);
+const GROUND = groundValue(src);
+if (!GROUND) throw new Error('no body background in styles.scss — the page ground is unknown');
+// A server-rendered page carries its own body rule, and it is not always the app's: the ground is
+// therefore a parameter rather than a constant.
+const groundsOf = (vars, ground = GROUND) => painted(ground, vars, [[255, 255, 255, 1]]);
 
 const between = (a, b, t) => [...[0, 1, 2].map(i => a[i] * (1 - t) + b[i] * t), 1];
 
@@ -365,7 +367,11 @@ for (const s of PAPER) {
     pairs.push({ fg: '--warn', bg: s, min: 4.5, note: 'warning text' });
     pairs.push({ fg: '--border-strong', bg: s, min: 3.0, note: 'control boundary (field, toggle)' });
 }
-pairs.push({ fg: '--sheet', bg: '--accent', min: 4.5, note: 'text on a primary button' });
+// Every accent fill in the product, and most of them are server-rendered: the app's primary button,
+// the landing page's .btn-accent, and on the blog the channel avatar in the sticky header,
+// .reg-submit and the comment form's button. Narrowing this pair back to the button would leave
+// three public pages, served to readers who never log in, with nothing measuring them.
+pairs.push({ fg: '--sheet', bg: '--accent', min: 4.5, note: 'ink on an accent fill' });
 pairs.push({ fg: '--sheet', bg: '--danger', min: 4.5, note: 'text on a destructive button' });
 
 // The washes. A state badge is its own ink on a tint of itself, which is a harder ratio than the
@@ -381,10 +387,12 @@ for (const [ink, wash] of [['--ok', '--ok-soft'], ['--warn', '--warn-soft'], ['-
 }
 
 // The hover washes are translucent by design — a row hover has to work on whatever paper the row
-// lies on — so each is measured on all three papers. --t2 carries icons here and not text: every
-// rule that puts --t2 on --hover-strong is a square icon button (.icon-btn, .mini, .theme-toggle,
-// .toolbar button), and WCAG 1.4.11 is the floor a glyph owes. A LABEL on this wash is a defect in
-// the rule, not a number to lower — page-header's .nav-btn was one and now takes --text.
+// lies on — so each is measured on all three papers. --t2 carries icons here and not text: what is
+// left on this wash is glyphs, the square icon buttons (.icon-btn, .mini, .theme-toggle, .toolbar
+// button) including the few whose face is a character rather than an SVG, and WCAG 1.4.11 is the
+// floor a glyph owes. A LABEL on this wash is a defect in the rule, not a number to lower: it takes
+// --text and lands on the pair above, as .account-trigger's email, the status bar's console toggle,
+// the toolbar's GIF button and page-header's .nav-btn all do.
 for (const s of PAPER) {
     pairs.push({ fg: '--text', bg: '--hover', under: s, min: 4.5, note: 'body text in a hovered row' });
     pairs.push({ fg: '--t2', bg: '--hover', under: s, min: 4.5, note: 'secondary text in a hovered row' });
@@ -393,6 +401,17 @@ for (const s of PAPER) {
     pairs.push({ fg: '--danger', bg: '--hover-danger', under: s, min: 4.5, note: 'remove icon on its hover wash' });
 }
 for (let i = 1; i <= 6; i++) pairs.push({ fg: `--series-${i}`, bg: '--surface', min: 3.0, note: 'chart series' });
+
+// The hashed avatar fills. These carry an initial, so the floor is text and not the 3:1 a swatch
+// would owe. They are measured here because the census structurally cannot reach them: the fill is
+// bound with [style.background] in the editor's channel list and the admin user list, so it never
+// appears in a stylesheet for the walker to pair with the ink. The count is read rather than fixed
+// at six — a seventh fill added to the palette and left unmeasured is the failure this prevents.
+const AVATAR_FILLS = Object.keys(light).filter(n => /^--avatar-\d+$/.test(n));
+if (!AVATAR_FILLS.length) throw new Error('no --avatar-N fills in styles.scss — the avatar ink is unmeasured');
+for (const fill of AVATAR_FILLS) {
+    pairs.push({ fg: '--avatar-ink', bg: fill, min: 4.5, note: 'initial on a hashed avatar' });
+}
 
 // The primary button is a ramp, not a fill: --grad-pine runs from the lit face of the accent to the
 // accent itself, so a label that clears 4.5:1 on --accent can still fail at the top of its own
@@ -483,7 +502,7 @@ function suggest(from, bg, min, towards) {
     return toHex([0, 1, 2].map(k => from[k] * (1 - hi) + towards[k] * hi));
 }
 
-let failures = 0, gradients = 0, excepted = 0;
+let failures = 0, gradients = 0, excepted = 0, offContract = 0;
 
 function measure(label, vars, list) {
     const grounds = groundsOf(vars);
@@ -550,10 +569,23 @@ function runContract() {
         failures++;
         console.log('\nFAIL  no accent presets read from core/appearance.service.ts — the injected accent is unmeasured (ADR-141)');
     }
+    // The other half of the same rule the gradient check enforces. A server-rendered page receives
+    // the contract names and nothing else, so a var() outside the contract and without a fallback
+    // resolves to nothing there and its declaration silently does not apply — no error, no wrong
+    // colour, just a property that is not set. styles.scss states the hazard on --fs-read; the
+    // landing page carried eight of them, which is what a rule nothing checks is worth.
+    for (const f of serverSheets()) {
+        for (const m of f.code.matchAll(/var\(\s*(--[\w-]+)\s*(,?)/g)) {
+            if (m[2] === ',' || CONTRACT.includes(m[1].slice(2))) continue;
+            offContract++;
+            console.log(`\nFAIL  ${f.rel}:${lineOf(f.code, m.index)} paints ${m[1]}, which DesignTokens does not serve (ADR-137)`);
+        }
+    }
     if (gradients) console.log(`\n${gradients} contract token(s) resolve to a gradient.`);
+    if (offContract) console.log(`${offContract} server-rendered reference(s) to a token outside the contract.`);
     if (excepted) console.log(`${excepted} accepted exception(s).`);
     console.log(`\n${failures} failing pair(s). Set VERBOSE=1 to print the passing ones too.`);
-    process.exit(failures || gradients ? 1 : 0);
+    process.exit(failures || gradients || offContract ? 1 : 0);
 }
 
 // ════ CENSUS ═══════════════════════════════════════════════════════════════════════════════════
@@ -604,6 +636,107 @@ function styleLiterals(code) {
     return out;
 }
 
+// Three pages are painted from C# rather than from a stylesheet — the public blog, the landing page
+// and the draft preview — and until now nothing scanned them: DesignTokens is checked, and the CSS
+// that uses it was not. They are also the only surface served to a reader who never logs in. The
+// treatment is the one above: everything that is not CSS is blanked in place, so the offsets, and
+// so the reported line numbers, stay those of the .cs file.
+const SERVER_DIR = resolve(import.meta.dirname, '../../CedarClerk.Server');
+
+// A run of three or more quotes opens a C# raw string, and the dollars in front of it say how many
+// braces an interpolation hole takes — the only thing that separates a hole from the braces of a
+// CSS rule, since a raw string has no backslash escaping to lean on.
+function rawStrings(code) {
+    const out = [];
+    const open = /(\$*)("{3,})/g;
+    for (let m; (m = open.exec(code));) {
+        const from = m.index + m[0].length;
+        const close = new RegExp(`"{${m[2].length},}`, 'g');
+        close.lastIndex = from;
+        const end = close.exec(code);
+        out.push({ from, to: end ? end.index : code.length, holes: m[1].length });
+        open.lastIndex = end ? end.index + end[0].length : code.length;
+    }
+    return out;
+}
+
+// A hole is opened by a run of at least `holes` braces and closed when the runs balance again, so
+// `{{LIGHT_TOKENS}}` inside a `$"""` hole's own argument list closes nothing. With no dollars there
+// are no holes at all, only the Replace-a-placeholder marks the shell templates carry; both stand
+// where a declaration list will be, and the declarations are the theme this run already holds.
+function blankHoles(text, holes) {
+    if (!holes) return text.replace(/\{\{[A-Z_]+\}\}/g, blankOut);
+    const run = (i, ch) => { let n = 0; while (text[i + n] === ch) n++; return n; };
+    const out = [...text];
+    for (let i = 0; i < text.length;) {
+        const n = text[i] === '{' ? run(i, '{') : 0;
+        if (n < holes) { i += n || 1; continue; }
+        let depth = n, j = i + n;
+        while (j < text.length && depth > 0) {
+            if (text[j] === '{') { const k = run(j, '{'); depth += k; j += k; }
+            else if (text[j] === '}') { const k = run(j, '}'); depth -= k; j += k; }
+            else j++;
+        }
+        for (let p = i; p < j; p++) if (out[p] !== '\n') out[p] = ' ';
+        i = j;
+    }
+    return out.join('');
+}
+
+const STYLE_EL = /<style>([\s\S]*?)<\/style>/g;
+
+function csharpCss(code) {
+    const literals = rawStrings(code);
+    const keep = [], injected = new Set();
+    for (const lit of literals) {
+        const body = code.slice(lit.from, lit.to);
+        for (const m of body.matchAll(STYLE_EL)) {
+            const at = lit.from + m.index + '<style>'.length;
+            keep.push({ from: at, to: at + m[1].length, holes: lit.holes });
+            // `<style>{Css.Replace(...)}</style>` — the sheet is a second literal, and this is the
+            // only place its name appears in the position of a stylesheet.
+            for (const id of m[1].matchAll(/\{+\s*([A-Za-z_]\w*)/g)) injected.add(id[1]);
+        }
+    }
+    for (const lit of literals) {
+        const decl = code.slice(Math.max(0, lit.from - 240), lit.from)
+            .match(/\bstring\s+([A-Za-z_]\w*)\s*=\s*\$*"{3,}$/);
+        if (decl && injected.has(decl[1])) keep.push({ from: lit.from, to: lit.to, holes: lit.holes });
+    }
+    if (!keep.length) return null;
+    let out = blankOut(code);
+    for (const k of keep) out = out.slice(0, k.from) + blankHoles(code.slice(k.from, k.to), k.holes) + out.slice(k.to);
+    return out;
+}
+
+function serverSheets() {
+    const out = [];
+    const walk = dir => {
+        for (const name of readdirSync(dir)) {
+            if (name === 'bin' || name === 'obj') continue;
+            const p = join(dir, name);
+            if (statSync(p).isDirectory()) { walk(p); continue; }
+            if (!name.endsWith('.cs')) continue;
+            const only = csharpCss(readFileSync(p, 'utf8'));
+            if (!only) continue;
+            const code = stripComments(only);
+            out.push({
+                rel: 'CedarClerk.Server/' + relative(SERVER_DIR, p).split(sep).join('/'),
+                code, server: true, ground: groundValue(code) ?? GROUND,
+            });
+        }
+    };
+    walk(SERVER_DIR);
+    return out;
+}
+
+// What a server-rendered page actually receives. DesignTokens carries the contract names and
+// nothing else (ADR-137), so a name the app resolves through styles.scss — --fs-ui, a hover wash,
+// any private derivation — is simply absent there, and resolving one here would score a colour the
+// reader never gets.
+const serverVars = vars => Object.fromEntries(
+    CONTRACT.map(n => [`--${n}`, vars[`--${n}`]]).filter(([, v]) => v !== undefined));
+
 function sheets() {
     const out = [];
     const walk = dir => {
@@ -620,6 +753,7 @@ function sheets() {
         }
     };
     walk(SRC_DIR);
+    out.push(...serverSheets());
     return out;
 }
 
@@ -757,6 +891,46 @@ function enclosing(rule, vars) {
     return null;
 }
 
+// A selector extends another when it adds to it at a boundary: `.mini:hover` extends `.mini`,
+// `.mini-remove` does not, and reading the second as the first attributes an ink to an element that
+// never carries it.
+const SEL_BOUNDARY = /[\s:.#[>+~]/;
+const COMBINATOR = /[\s>+~]/;
+const extendsSel = (base, sel) =>
+    sel.length > base.length && sel.startsWith(base) && SEL_BOUNDARY.test(sel[base.length]);
+
+const partsOf = rule => splitTop(rule.chain.join(' ').replace(/\s+/g, ' '), ',');
+
+// A rule that declares one half of a pair still paints both, and the other half is written
+// somewhere: for a state rule, usually a few lines above it — `.icon-btn:hover` sets the wash and
+// `.icon-btn` sets the ink. Reading it is the same kind of claim the enclosing-backdrop walk makes,
+// so it is labelled the same way and never printed as something read off the rule itself. The
+// nearest match wins, since a longer selector is the more specific rule and the closer element. A
+// rule that lists several selectors resolves only when they all arrive at one value: two answers
+// are not one fact.
+function inheritHalf(entry, parsed, props) {
+    const out = [];
+    for (const target of entry.parts) {
+        let best = null;
+        for (const cand of parsed) {
+            if (cand === entry) continue;
+            const d = own(cand.rule, ...props);
+            if (!d || NON_PAINT.test(clean(d.value))) continue;
+            for (const part of cand.parts) {
+                if (!extendsSel(part, target) || (best && part.length < best.len)) continue;
+                best = {
+                    len: part.length, from: part, value: clean(d.value),
+                    same: !COMBINATOR.test(target.slice(part.length)),
+                };
+            }
+        }
+        if (!best) return { value: null };
+        out.push(best);
+    }
+    if (new Set(out.map(o => o.value)).size > 1) return { value: null, conflict: true };
+    return out[0];
+}
+
 function census() {
     const files = sheets();
     const sites = [];
@@ -767,12 +941,45 @@ function census() {
         skipped.get(k).n++;
     };
 
+    const declared = { both: 0, inherited: 0, unresolved: 0, neither: 0 };
+    const DECLARED = 'declared by the rule';
+
     for (const f of files) {
-        for (const rule of rulesOf(f.code)) {
+        const parsed = rulesOf(f.code).map(rule => ({ rule, parts: partsOf(rule) }));
+        for (const entry of parsed) {
+            const rule = entry.rule;
             const fg = own(rule, 'color'), bg = own(rule, 'background', 'background-color');
-            if (!fg || !bg) continue;
-            const fgV = clean(fg.value), bgV = clean(bg.value);
             const where = `${f.rel}:${lineOf(f.code, rule.at)}`;
+            if (!fg && !bg) { declared.neither++; continue; }
+            let fgV = fg && clean(fg.value), bgV = bg && clean(bg.value);
+            let ink = DECLARED, surface = DECLARED;
+            if (!fg) {
+                const from = inheritHalf(entry, parsed, ['color']);
+                if (!from.value) {
+                    declared.unresolved++;
+                    skip('half', from.conflict
+                        ? 'the selectors listed in the rule inherit different inks'
+                        : 'the ink is not declared on anything this selector extends', where);
+                    continue;
+                }
+                fgV = from.value;
+                ink = `inherited from "${from.from}" — taken from the sheet, not the DOM`;
+            }
+            if (!bg) {
+                const from = inheritHalf(entry, parsed, ['background', 'background-color']);
+                if (!from.value) {
+                    declared.unresolved++;
+                    skip('half', from.conflict
+                        ? 'the selectors listed in the rule inherit different surfaces'
+                        : 'the surface is not declared on anything this selector extends', where);
+                    continue;
+                }
+                bgV = from.value;
+                surface = from.same
+                    ? `the same element without this state, from "${from.from}" — taken from the sheet, not the DOM`
+                    : `the enclosing "${from.from}" — taken from the sheet, not the DOM`;
+            }
+            declared[ink === DECLARED && surface === DECLARED ? 'both' : 'inherited']++;
             if (NON_PAINT.test(bgV)) { skip('rule', `the rule declares no surface of its own — background: ${bgV}`, where); continue; }
             if (NON_PAINT.test(fgV)) { skip('rule', `the ink comes from somewhere else — color: ${fgV}`, where); continue; }
             if (/^transparent$/i.test(bgV)) { skip('rule', 'background is fully transparent — the rule paints no surface of its own', where); continue; }
@@ -782,6 +989,8 @@ function census() {
                 file: f.rel, line: lineOf(f.code, rule.at),
                 sel: rule.chain.join(' ').replace(/\s+/g, ' '),
                 conds: condsOf(rule.chain),
+                server: !!f.server, ground: f.ground ?? GROUND,
+                ink, surface,
                 fgV, bgV, rule, fsV: fs ? clean(fs.value) : null, fsFrom: inheritedFrom,
             });
         }
@@ -798,9 +1007,13 @@ function census() {
             const where = `${s.file}:${s.line}`;
             const wants = [...s.conds].filter(c => c.startsWith('data-theme='));
             if (wants.length && !wants.includes(`data-theme=${themeName}`)) { gated++; continue; }
-            let vars = base;
-            for (const sc of scopes) if ([...sc.conds].every(c => s.conds.has(c))) vars = { ...vars, ...sc.vars };
-            const accented = [...refsOf(s.fgV, vars), ...refsOf(s.bgV, vars)].some(n => ACCENT_DEPENDENT.has(n));
+            // A server-rendered page gets the contract tokens from DesignTokens and nothing else,
+            // in the palette's own accent: appearance.service.ts injects a preset in the app, and
+            // none of these pages runs it — the blog and the landing page are served logged out.
+            let vars = s.server ? serverVars(base) : base;
+            if (!s.server) for (const sc of scopes) if ([...sc.conds].every(c => s.conds.has(c))) vars = { ...vars, ...sc.vars };
+            const accented = !s.server
+                && [...refsOf(s.fgV, vars), ...refsOf(s.bgV, vars)].some(n => ACCENT_DEPENDENT.has(n));
             const skins = accented ? PRESETS.map(p => ({ name: p.name, vars: { ...vars, '--accent': accentOf(p, themeName) } }))
                 : [{ name: null, vars }];
             let worst = null;
@@ -810,7 +1023,8 @@ function census() {
                     const solid = opaque(s.bgV, skin.vars);
                     // The ground follows the rule's own palette: a scoped :root can move the body
                     // colour out from under everything written inside that scope.
-                    const under = skin.vars === base ? grounds : groundsOf(skin.vars);
+                    const under = s.server ? groundsOf(skin.vars, s.ground)
+                        : skin.vars === base ? grounds : groundsOf(skin.vars);
                     const near = solid ? null : enclosing(s.rule, skin.vars);
                     const backdrops = solid ? [[0, 0, 0, 0]]
                         : near ? painted(near.value, skin.vars, under) : under;
@@ -828,16 +1042,22 @@ function census() {
             const px = pxOf(s.fsV, vars);
             const min = px !== null && px >= 19 ? 3.0 : 4.5;
             if (covered.has(`${key(worst.fg)}|${key(worst.bg)}`)) continue;
-            const k = [themeName, toHex(worst.fg), toHex(worst.bg), min, worst.on].join('|');
-            if (!groups.has(k)) groups.set(k, { theme: themeName, ...worst, min, px, fsV: s.fsV, fsFrom: s.fsFrom, at: [] });
+            const k = [themeName, toHex(worst.fg), toHex(worst.bg), min, worst.on, s.ink, s.surface].join('|');
+            if (!groups.has(k)) groups.set(k, {
+                theme: themeName, ...worst, min, px, fsV: s.fsV, fsFrom: s.fsFrom,
+                ink: s.ink, surface: s.surface, at: [],
+            });
             groups.get(k).at.push(`${where}  ${s.sel}`);
         }
     }
 
     const list = [...groups.values()].sort((a, b) => a.r - b.r);
     console.log(`Census — every foreground/background the app declares that the pair table does not cover.`);
-    console.log(`${files.length} stylesheet(s) scanned (${files.filter(f => f.inline).length} inline in a .ts), `
-        + `${sites.length} rule(s) set both a colour and a background.`);
+    console.log(`${files.length} stylesheet(s) scanned (${files.filter(f => f.inline).length} inline in a .ts, `
+        + `${files.filter(f => f.server).length} in a C# raw string).`);
+    console.log(`Of the rules in them: ${declared.both} state an ink and a surface, ${declared.inherited} state one `
+        + `half and the other was read off a rule they extend, ${declared.unresolved} state one half that could not `
+        + `be resolved, ${declared.neither} state neither and paint no combination at all.`);
     console.log(`Floor: 4.5 under 19px, 3.0 at 19px and above. A rule with no font-size of its own is`);
     console.log(`held to 4.5 — the size is inherited from a DOM this cannot see, and 3.0 would be a guess`);
     console.log(`in the direction of passing.\n`);
@@ -847,6 +1067,8 @@ function census() {
         console.log(`${g.r < g.min ? 'FAIL ' : 'ok   '}${g.r.toFixed(2).padStart(5)} (min ${g.min})  [${g.theme}] `
             + `${toHex(g.fg)} on ${toHex(g.bg)}   ${size}${preset}`);
         console.log(`            backdrop: ${g.on}`);
+        if (g.ink !== DECLARED) console.log(`            ink: ${g.ink}`);
+        if (g.surface !== DECLARED) console.log(`            surface: ${g.surface}`);
         for (const at of g.at) console.log(`            ${at}`);
     }
     const bucket = name => [...skipped.values()].filter(s => s.bucket === name);
@@ -859,6 +1081,9 @@ function census() {
     console.log(`\nWhat this run could not measure. A rule is skipped once; a scoring is one rule in one theme.`);
     console.log(`  ${total(bucket('rule'))} rule(s) never reached a score:`);
     for (const s of bucket('rule').sort((a, b) => b.n - a.n))
+        console.log(`  ${String(s.n).padStart(4)}  ${s.why}   (first at ${s.first})`);
+    console.log(`  ${total(bucket('half'))} rule(s) stated one half of a combination and the other stayed unknown:`);
+    for (const s of bucket('half').sort((a, b) => b.n - a.n))
         console.log(`  ${String(s.n).padStart(4)}  ${s.why}   (first at ${s.first})`);
     console.log(`  ${total(bucket('scoring')) + gated} scoring(s) dropped, ${unresolved} of them because a value would not resolve:`);
     console.log(`  ${String(gated).padStart(4)}  the selector states the other theme`);

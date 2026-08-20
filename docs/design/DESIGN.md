@@ -226,7 +226,7 @@ De-facto pattern from `editor.component.css` (lines 458–537), useful as a refe
     color: var(--text);
 }
 .btn-accent {
-    border: none; background: var(--accent); color: #F4F2EA;
+    border: none; background: var(--accent); color: var(--sheet);
     border-radius: var(--radius-sm);
     padding: 7px 16px; font-size: 13px; font-weight: 600;
     cursor: pointer; font-family: inherit;

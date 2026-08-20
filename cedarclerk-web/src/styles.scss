@@ -104,6 +104,20 @@
     --series-5: #7A5288;
     --series-6: #1F7A6E;
 
+    /* Identity fills for a hashed avatar — a channel's in the editor, a user's in the admin list.
+       They live here rather than in the components that hash them because both bind the fill
+       through [style.background], which reaches the DOM without passing any stylesheet: a literal
+       in the .ts is a painted colour no contrast check can read. One set for both themes, because
+       an identity that changed colour at night would stop being one, and every fill is held to
+       --avatar-ink rather than to a surface. */
+    --avatar-1: #9C6B2E;
+    --avatar-2: #5B6E46;
+    --avatar-3: #3E7A4E;
+    --avatar-4: #B4452C;
+    --avatar-5: #4B79A3;
+    --avatar-6: #8168B3;
+    --avatar-ink: #FFFFFF;
+
     /* Paper is cut square and wood is eased: 4px is a field, 8px a plaque. Nothing in the design
        system is rounder than a plaque, so the card/modal step is one above it. */
     --radius-sm: 4px;

@@ -45,6 +45,12 @@
     text-overflow: ellipsis;
 }
 
+/* The email is a label, not a glyph, so on the hover wash it owes 4.5:1 — which --t2 does not
+   clear against the night surface. */
+.account-trigger:hover .user {
+    color: var(--text);
+}
+
 /* Only the editor's topbar asks for the email (showEmail), and that is the one row with no space
    to spare: on an iPad it was pushed past the right edge of the viewport, half-visible. The avatar
    stays, and the menu behind it shows the full address — so this hides a duplicate, not a fact.

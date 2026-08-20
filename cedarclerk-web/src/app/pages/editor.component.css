@@ -550,6 +550,12 @@
     letter-spacing: -.02em;
 }
 
+/* The only toolbar button whose face is a word rather than a glyph, so on the hover wash it owes
+   the 4.5:1 of text and not the 3:1 of a graphic. */
+.toolbar .gif-btn:hover {
+    color: var(--text);
+}
+
 .toolbar .ai-chip {
     display: flex;
     align-items: center;
@@ -810,10 +816,7 @@
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    /* Stays #fff: a channel avatar's background is one of six arbitrary generated colours, not a
-       theme surface, so the readable foreground is white in both themes — var(--sheet) would go
-       dark and become unreadable on a saturated fill. Same reasoning as the brand icons. */
-    color: #fff;
+    color: var(--avatar-ink);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1874,6 +1877,7 @@ input[type="datetime-local"]:focus-visible {
 
 .status-icon-btn:hover {
     background: var(--hover-strong);
+    color: var(--text);
 }
 
 .console-toggle {

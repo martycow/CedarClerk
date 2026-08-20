@@ -144,7 +144,7 @@ public static class LandingEndpoints
             .hero h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.15; margin: 0 0 16px; letter-spacing: -.02em; }
             .hero p { font-size: var(--fs-read); color: var(--t2); max-width: 62ch; margin: 0 auto 28px; }
             .hero-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
-            .hero-note { margin-top: 14px; font-size: var(--fs-caption); color: var(--t2); }
+            .hero-note { margin-top: 14px; font-size: 12px; color: var(--t2); }
 
             .waitlist { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
             .waitlist input[type="email"] { width: min(320px, 100%); padding: 9px 14px; border: 1px solid var(--border);
@@ -165,31 +165,31 @@ public static class LandingEndpoints
             .card { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--sheet); padding: 20px; }
             .card-mark { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px;
                           border-radius: var(--radius-md); background: var(--asoft); color: var(--accent); font-size: 18px; }
-            .card h3 { font-size: var(--fs-body); margin: 12px 0 6px; }
-            .card p { margin: 0; color: var(--t2); font-size: var(--fs-ui); }
+            .card h3 { font-size: 15px; margin: 12px 0 6px; }
+            .card p { margin: 0; color: var(--t2); font-size: 14px; }
 
             .plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; align-items: start; }
             .plan { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--sheet); padding: 22px; }
             .plan-featured { border-color: var(--abord); background: var(--asoft); }
-            .plan h3 { margin: 0; font-size: var(--fs-body); }
+            .plan h3 { margin: 0; font-size: 15px; }
             .plan-price { font-size: 30px; font-weight: 700; margin: 6px 0 14px; }
-            .plan-price span { font-size: var(--fs-ui); font-weight: 400; color: var(--t2); margin-left: 4px; }
+            .plan-price span { font-size: 14px; font-weight: 400; color: var(--t2); margin-left: 4px; }
             .plan ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-            .plan li { color: var(--t2); font-size: var(--fs-ui); padding-left: 18px; position: relative; }
+            .plan li { color: var(--t2); font-size: 14px; padding-left: 18px; position: relative; }
             .plan li::before { content: "·"; position: absolute; left: 6px; color: var(--accent); font-weight: 700; }
 
             /* The screenshot is the product, so it gets the product's own frame rather than a
                drop shadow pretending to be a browser window. */
             .shot { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--sheet); }
             .shot img { display: block; width: 100%; height: auto; }
-            .shot-caption { padding: 12px 16px; border-top: 1px solid var(--border); color: var(--t2); font-size: var(--fs-ui); }
+            .shot-caption { padding: 12px 16px; border-top: 1px solid var(--border); color: var(--t2); font-size: 14px; }
 
             .about { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--sheet); padding: 24px; }
             .about p { margin: 0 0 12px; color: var(--t2); }
             .about p:last-child { margin: 0; }
 
             footer.bottom { border-top: 1px solid var(--border); background: var(--sheet); margin-top: 48px; }
-            .bottom-inner { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 20px 0; font-size: var(--fs-caption); color: var(--t2); }
+            .bottom-inner { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 20px 0; font-size: 12px; color: var(--t2); }
             .bottom-inner a { color: var(--t2); }
 
             @media (max-width: 640px) {

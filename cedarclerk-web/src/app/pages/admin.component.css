@@ -116,7 +116,7 @@
     justify-content: center;
     font-size: var(--dens-fs);
     font-weight: 700;
-    color: var(--sheet);
+    color: var(--avatar-ink);
 }
 
 .user-card-body {

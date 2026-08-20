@@ -1859,10 +1859,7 @@ public static class BlogEndpoints
 
         .site-header { position: sticky; top: 0; z-index: 10; background: var(--sheet); border-bottom: 1px solid var(--border); }
         .site-header-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 20px; }
-        /* T-101 — the four colour literals left on this page, kept for the same reason the app kept
-           its two (T-077): a generated avatar colour, a code block's own dark scheme, and white on
-           an accent fill. A theme token would go dark behind each of them and become unreadable. */
-        .channel-avatar { width: 30px; height: 30px; border-radius: 50%; background: #C98A3B; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex: none; }
+        .channel-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--sheet); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex: none; }
         .channel-avatar.brand { background: var(--asoft); color: var(--accent); }
         .channel-id { min-width: 0; }
         .channel-name { font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1957,7 +1954,7 @@ public static class BlogEndpoints
         .roadmap-status { flex: none; font-size: 11px; font-weight: 700; letter-spacing: .03em; border-radius: 999px; padding: 3px 11px; }
         .roadmap-status.now { color: var(--accent); background: var(--asoft); border: 1px solid var(--abord); }
         .roadmap-status.next, .roadmap-status.later { color: var(--t2); background: var(--alt); border: 1px solid var(--border); }
-        .roadmap-status.done { color: var(--ok, #3a8a4d); background: var(--alt); border: 1px solid var(--border); }
+        .roadmap-status.done { color: var(--ok); background: var(--alt); border: 1px solid var(--border); }
         .roadmap-title { font-size: 14px; }
         @media (max-width: 560px) { .showcase-head { flex-direction: column; } .showcase-cover { width: 100%; } }
         .floating-nav { position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 50; opacity: 0; pointer-events: none; transition: opacity .15s ease; }
@@ -2115,7 +2112,7 @@ public static class BlogEndpoints
         .reg-consent { display: flex; flex-direction: column; gap: 6px; }
         .reg-consent-text { font-size: 13px; line-height: 1.5; margin: 0; white-space: pre-wrap; }
         .reg-consent-check { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
-        .reg-submit { border: none; background: var(--accent); color: #F4F2EA; border-radius: 8px; padding: 11px 18px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; margin-top: 4px; }
+        .reg-submit { border: none; background: var(--accent); color: var(--sheet); border-radius: 8px; padding: 11px 18px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; margin-top: 4px; }
         .reg-submit:hover { filter: brightness(1.08); }
         .reg-submit:disabled { opacity: .6; cursor: default; }
         .reg-error { color: var(--danger); font-size: 13px; margin: 4px 0 0; }
@@ -2129,7 +2126,7 @@ public static class BlogEndpoints
         .comment-form input:focus, .comment-form textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--asoft); }
         .comment-form-row { display: flex; gap: 8px; }
         .comment-form-row .comment-author { flex: 1; min-width: 0; }
-        .comment-form button { flex: none; border: none; background: var(--accent); color: #F4F2EA; border-radius: 8px; padding: 9px 18px; font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: inherit; }
+        .comment-form button { flex: none; border: none; background: var(--accent); color: var(--sheet); border-radius: 8px; padding: 9px 18px; font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: inherit; }
         .comment-form button:hover { filter: brightness(1.08); }
 
         .site-footer { border-top: 1px solid var(--border); background: var(--surface); }

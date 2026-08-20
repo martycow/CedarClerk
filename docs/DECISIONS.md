@@ -158,3 +158,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-143 — Fonts stay self-hosted; the mirror's Google @import is not ported (19.08.2026)](adr/ADR-143.md)
 - [ADR-144 — The design-system mirror is a re-fetchable cache, not a document (19.08.2026)](adr/ADR-144.md)
 - [ADR-145 — A wash is a token: state tints, and inks with room to sit on them (20.08.2026)](adr/ADR-145.md)
+- [ADR-146 — A painted colour that reaches the DOM without a stylesheet is a token, not a literal (20.08.2026)](adr/ADR-146.md)

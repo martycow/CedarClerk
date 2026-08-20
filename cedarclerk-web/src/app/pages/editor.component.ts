@@ -77,8 +77,7 @@ import { httpErrorMessage } from '../core/http-error.util';
 import { pseudoProgress } from '../core/pseudo-progress.util';
 import { BrandIconComponent } from '../shared/brand-icon.component';
 import { IconComponent } from '../shared/icon.component';
-
-const CHANNEL_COLORS = ['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF'];
+import { avatarFill, avatarInitial } from '../core/avatar-color.util';
 
 // Must match .status-bar's height and the breakpoint that hides it in editor.component.css — the
 // debug console slides out on top of that bar and needs to know it's there.
@@ -1066,13 +1065,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     channelColor(id: string): string {
-        let hash = 0;
-        for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-        return CHANNEL_COLORS[hash % CHANNEL_COLORS.length];
+        return avatarFill(id);
     }
 
     channelInitial(title: string): string {
-        return (title?.[0] ?? '?').toUpperCase();
+        return avatarInitial(title);
     }
 
     // ─── Telegram: a channel per version (ADR-098) ────────────────────────────────────────────
