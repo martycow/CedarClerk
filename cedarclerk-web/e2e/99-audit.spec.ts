@@ -96,7 +96,7 @@ test('@audit editor and its modals', async ({ page, context }) => {
         await page.keyboard.press('Escape');
     }
 
-    await page.locator('.status-icon-btn').first().click();
+    await page.locator('.toolbar button:has(.invisibles-glyph)').first().click();
     await page.locator('.tiptap').click();
     await shot(page, '26-paragraph-marks');
 
@@ -353,6 +353,7 @@ test('@audit landing', async ({ browser }) => {
 test('@audit dark theme spot check', async ({ page, context }) => {
     await createDraft(context, 'Тёмная тема', ['Текст.']);
     await page.goto('/drafts');
+    await page.locator('app-rail-header .dots').click();
     await page.locator('.theme-toggle').first().click();
     await shot(page, '80-dark-drafts');
     await page.goto('/posts');

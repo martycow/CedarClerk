@@ -14,7 +14,6 @@
     font-size: var(--dens-fs);
 }
 
-/* Page chrome now lives in the shared app-page-header (docs/DECISIONS.md, 27.07.2026). */
 /* .icon and .icon-sm were 15px and 14px — a one-pixel difference carrying two names, which is the
    kind of thing the icon tokens exist to end. Both resolve to --icon-sm now; T-079 should delete
    whichever class survives the Phosphor migration. */
@@ -740,14 +739,14 @@
    the floor at 44px. Keyed off the pointer, not the viewport, so an iPad in landscape — which is
    wide enough to miss a width query — still gets targets a thumb can hit. */
 @media (pointer: coarse) {
-    .mini,
-    .mini-remove,
-    .view-toggle button {
+    [data-surface="paper"] .mini,
+    [data-surface="paper"] .mini-remove,
+    [data-surface="paper"] .view-toggle button {
         min-width: 44px;
         min-height: 44px;
     }
 
-    .row-actions {
+    [data-surface="paper"] .row-actions {
         gap: var(--space-1);
     }
 }

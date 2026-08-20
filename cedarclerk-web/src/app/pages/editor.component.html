@@ -1,22 +1,7 @@
 <div class="app">
-    <!--Top bar-->
     <header class="topbar">
-        <!--Order: drafts, brand, divider, title, save-state | Export, theme, account. .cedar
-        download lives in the Export modal; .cedar import lives on /drafts. Drafts moved leftmost
-        of everything, ahead of the logo (Marty, 28.07.2026) — it's the way back out to every
-        other draft, not a peer of the branding it used to trail.-->
-        <!--I18: was a hamburger, which reads as "menu" and said nothing about drafts.-->
-        <a class="icon-btn" routerLink="/drafts" [title]="t().editor.drafts" [attr.aria-label]="t().editor.drafts">
-            <app-icon name="files" size="sm"></app-icon>
-        </a>
-
-        <div class="brand">
-            <app-cedar-logo [size]="20"></app-cedar-logo>
-            <span class="brand-name">Cedar Clerk</span>
-            @if (version.version(); as v) { <span class="version-tag" [title]="'v' + v">v{{ v }}</span> }
-        </div>
-        <span class="divider"></span>
-
+        <!--The draft's own line: what it is called, whether it is saved, and the one action that
+        sends it out. Brand, navigation, theme and the account are the shell rail's (ADR-139).-->
         <input class="title" [(ngModel)]="title" (ngModelChange)="markDirty()" [maxlength]="draftTitleMax" [placeholder]="t().editor.draftTitle">
 
         <span class="save-state" [class.saving]="saveState() === 'saving' || saveState() === 'dirty'" [class.error]="saveState() === 'error'">
@@ -34,49 +19,6 @@
             <app-icon name="paper-plane-tilt" size="sm"></app-icon>
             <span class="btn-label">{{ t().editor.export }}</span>
         </button>
-
-        <!--I11: real topbar buttons, like Export — they used to live only inside the account
-        popover (B22). Reversing that also settled B6 (two ways into Settings) in favour of the
-        topbar; the same nav row now ships on every screen (27.07.2026 header redesign), so the
-        account menu itself never carries these links at all any more.-->
-        <a class="export-btn nav-btn" routerLink="/posts" [title]="t().editor.postsManager">
-            <app-icon name="newspaper" size="sm"></app-icon>
-            <span class="btn-label">{{ t().editor.postsManager }}</span>
-            <app-count-badge [count]="feedback.newComments() + feedback.newReactions()" [title]="t().editor.newBadge"></app-count-badge>
-        </a>
-
-        <!--The glossary was reachable only from the account menu, which is two clicks and a
-        guess away from the screen where terms are actually written.-->
-        <a class="export-btn nav-btn" routerLink="/glossary" [title]="t().glossary.open">
-            <app-icon name="book-bookmark" size="sm"></app-icon>
-            <span class="btn-label">{{ t().glossary.open }}</span>
-        </a>
-
-        <a class="export-btn nav-btn" routerLink="/settings" [title]="t().editor.settings">
-            <app-icon name="gear" size="sm"></app-icon>
-            <span class="btn-label">{{ t().editor.settings }}</span>
-        </a>
-
-        <!--IF2: same treatment as the other two nav buttons, but only for an admin. Hiding it is
-        convenience — /api/admin is gated server-side.-->
-        @if (auth.isAdmin()) {
-        <a class="export-btn nav-btn" routerLink="/admin" [title]="t().admin.open">
-            <app-icon name="shield-check" size="sm"></app-icon>
-            <span class="btn-label">{{ t().admin.crumb }}</span>
-        </a>
-        }
-
-        <button class="icon-btn" (click)="apPanel.open.set(true)" [title]="t().settings.appearance.title" [attr.aria-label]="t().settings.appearance.title">
-            <app-icon name="palette" size="sm"></app-icon>
-        </button>
-
-        <button class="icon-btn theme-toggle" (click)="theme.toggle()" [title]="t().common.toggleTheme">
-            {{ theme.theme() === 'dark' ? '☀' : '☾' }}
-        </button>
-
-        <!--The menu itself is shared with /drafts, /settings and /posts, where the avatar used to
-        be inert (IB9).-->
-        <app-account-menu [showEmail]="true"></app-account-menu>
     </header>
 
     @if (exportModalOpen()) {
@@ -985,6 +927,31 @@
         </div>
         }
 
+        <!--The three controls the status bar used to carry (ADR-153). They are controls, so the
+        rule below could not take them: it is read-only by design and offers no slot to put one in.-->
+        <span class="sep"></span>
+        <!--Only while autosave has given up. It retries on a widening backoff and then stops, so
+        this button is the last way to save the draft, not a convenience.-->
+        @if (saveState() === 'error') {
+        <button class="tb-retry" (click)="retrySave()"
+                [title]="t().editor.syncFailedRetry" [attr.aria-label]="t().editor.syncFailedRetry">
+            <app-icon name="arrow-clockwise" size="sm"></app-icon>
+        </button>
+        }
+        <!--B13: reveals spaces, tabs and paragraph ends, so it's clear where the content really
+        sits. Display only - the document is untouched.-->
+        <button [class.on]="showInvisibles()" (click)="showInvisibles.set(!showInvisibles())"
+                [title]="t().editor.showInvisibles" [attr.aria-label]="t().editor.showInvisibles">
+            <span class="invisibles-glyph">¶</span>
+        </button>
+        <!--I13: real browser fullscreen, not a CSS-only "hide the chrome" mode — the ask was a
+        fullscreen button, and the browser's own is the one Esc already exits.-->
+        <button (click)="toggleFullscreen()"
+                [title]="isFullscreen() ? t().editor.exitFullscreen : t().editor.enterFullscreen"
+                [attr.aria-label]="isFullscreen() ? t().editor.exitFullscreen : t().editor.enterFullscreen">
+            @if (isFullscreen()) { <app-icon name="arrows-in-simple" size="sm"></app-icon> }
+            @else { <app-icon name="arrows-out-simple" size="sm"></app-icon> }
+        </button>
     </div>
     @if (aiEditError()) { <p class="channel-error" style="margin:4px 14px">{{ aiEditError() }}</p> }
 
@@ -1363,7 +1330,6 @@
         <!--FI1 (28.07.2026, ADR following ADR-053): moved off the sheet's own side into a modal —
         the always-present sliding column broke the page's own layout logic and produced a second,
         page-level scrollbar alongside the sheet's own. Opened from the topbar's palette button.-->
-        <app-appearance-panel #apPanel></app-appearance-panel>
     </div>
 
     @if (revisionsOpen()) {
@@ -1483,48 +1449,6 @@
     </app-modal>
     }
 
-    <!--Status bar-->
-    <div class="status-bar">
-        <span class="spacer"></span>
-        @if (appearance.prefs().showWordCount) {
-        <span>{{ t().editor.words(wordCount()) }}</span>
-        <span>{{ t().editor.chars(charCount()) }}</span>
-        }
-        <div class="sync-indicator">
-            @switch (saveState()) {
-                @case ('saved') { <span class="dot ok"></span> {{ t().editor.synced }} }
-                @case ('saving') { <span class="dot warn"></span> {{ t().editor.syncing }} }
-                @case ('dirty') { <span class="dot warn"></span> {{ t().editor.syncing }} }
-                @case ('error') { <span class="dot err"></span> <button class="retry-inline" (click)="retrySave()">{{ t().editor.syncFailedRetry }}</button> }
-            }
-        </div>
-        <!--B13: reveals spaces, tabs and paragraph ends, so it's clear where the content really
-        sits. Display only - the document is untouched.-->
-        <button class="status-icon-btn console-toggle" [class.active]="showInvisibles()"
-                (click)="showInvisibles.set(!showInvisibles())" [title]="t().editor.showInvisibles">
-            <span class="invisibles-glyph">¶</span>
-        </button>
-        <!--The debug console's toggle lives here rather than as a floating tab of its own: that
-        tab's fixed strip covered this bar and swallowed clicks meant for the fullscreen button.-->
-        <button class="status-icon-btn console-toggle" [class.active]="debugLog.open()"
-                (click)="debugLog.toggleOpen()" [title]="t().debug.console">
-            <app-icon name="terminal-window" size="xs"></app-icon>
-            <span>{{ t().debug.console }}</span>
-            @if (debugLog.inFlightCount() > 0) {
-            <span class="console-badge busy">{{ debugLog.inFlightCount() }}</span>
-            }
-            @if (debugLog.errorCount() > 0) {
-            <span class="console-badge error">{{ debugLog.errorCount() }}</span>
-            }
-        </button>
-        <!--I13: real browser fullscreen, not a CSS-only "hide the chrome" mode — the ask was a
-        fullscreen button, and the browser's own is the one Esc already exits.-->
-        <button class="status-icon-btn" (click)="toggleFullscreen()"
-                [title]="isFullscreen() ? t().editor.exitFullscreen : t().editor.enterFullscreen">
-            @if (isFullscreen()) { <app-icon name="arrows-in-simple" size="xs"></app-icon> }
-            @else { <app-icon name="arrows-out-simple" size="xs"></app-icon> }
-        </button>
-    </div>
     @if (termMenu(); as menu) {
     <button class="term-menu-backdrop" (click)="termMenu.set(null)" [attr.aria-label]="t().common.close"></button>
     <div class="term-menu" [style.left.px]="menu.x" [style.top.px]="menu.y">

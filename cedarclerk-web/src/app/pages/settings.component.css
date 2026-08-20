@@ -1006,10 +1006,10 @@
 }
 
 @media (pointer: coarse) {
-    .anchor-chips button,
-    .btn-primary,
-    .btn-danger,
-    .btn-danger-ghost {
+    [data-surface="paper"] .anchor-chips button,
+    [data-surface="paper"] .btn-primary,
+    [data-surface="paper"] .btn-danger,
+    [data-surface="paper"] .btn-danger-ghost {
         min-height: 44px;
     }
 }

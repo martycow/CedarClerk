@@ -12,7 +12,6 @@ import { PublishService, PublishAccount } from '../core/publish.service';
 import { AssetsService } from '../core/assets.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { pseudoProgress } from '../core/pseudo-progress.util';
-import { PageHeaderComponent } from '../shared/page-header.component';
 import { IconComponent } from '../shared/icon.component';
 import { BrandIconComponent } from '../shared/brand-icon.component';
 
@@ -21,7 +20,7 @@ export type SettingsTab = 'profile' | 'account';
 
 @Component({
     selector: 'app-settings',
-    imports: [IconComponent, FormsModule, ZonedDatePipe, PageHeaderComponent, BrandIconComponent],
+    imports: [IconComponent, FormsModule, ZonedDatePipe, BrandIconComponent],
     templateUrl: 'settings.component.html',
     styleUrls: ['settings.component.css']
 })

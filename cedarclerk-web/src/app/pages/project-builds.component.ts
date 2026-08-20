@@ -9,7 +9,6 @@ import { ProjectDetail, ProjectsService } from '../core/projects.service';
 import { GameTask, TasksService } from '../core/tasks.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
-import { PageHeaderComponent } from '../shared/page-header.component';
 
 // T-126 (ADR-112) — build and version records.
 //
@@ -21,7 +20,7 @@ import { PageHeaderComponent } from '../shared/page-header.component';
 // and the one thing it does beyond recording is turn a version into a changelog document.
 @Component({
     selector: 'app-project-builds',
-    imports: [IconComponent, ZonedDatePipe, FormsModule, RouterLink, PageHeaderComponent, ModalComponent],
+    imports: [IconComponent, ZonedDatePipe, FormsModule, RouterLink, ModalComponent],
     templateUrl: 'project-builds.component.html',
     styleUrls: ['project-builds.component.css'],
 })

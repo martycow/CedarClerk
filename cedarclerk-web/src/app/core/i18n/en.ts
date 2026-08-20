@@ -21,6 +21,23 @@ export const en = {
         nothingHere: 'Nothing here.',
         backToEditor: 'Back to editor',
     },
+    // The bench shell's own chrome: the tool wall, the sign board and the dots menu. Screen names
+    // rather than route names — the wall says what you work on, not where the URL goes.
+    shell: {
+        screens: 'Screens',
+        breadcrumb: 'Breadcrumb',
+        more: 'More',
+        switchProject: 'Switch project',
+        allProjects: 'All projects',
+        hub: 'Hub',
+        text: 'Text',
+        board: 'Board',
+        assets: 'Assets',
+        metrics: 'Metrics',
+        editorCrumb: 'Editor',
+        styleguide: 'Style guide',
+        icons: 'Icons',
+    },
     login: {
         tagline: 'Write here. Publish there. Moo.',
         email: 'Email',
@@ -932,6 +949,8 @@ export const en = {
     debug: {
         console: 'Console',
         requests: (n: number) => `${n} request${n === 1 ? '' : 's'}`,
+        inFlight: (n: number) => `${n} in flight`,
+        errors: (n: number) => `${n} error${n === 1 ? '' : 's'}`,
         clear: 'Clear',
         request: 'Request',
         response: 'Response',

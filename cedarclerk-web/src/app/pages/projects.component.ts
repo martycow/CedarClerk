@@ -14,7 +14,6 @@ import {
 import { httpErrorMessage } from '../core/http-error.util';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
-import { PageHeaderComponent } from '../shared/page-header.component';
 
 type Filter = 'all' | 'active' | 'archived';
 
@@ -25,7 +24,7 @@ type Filter = 'all' | 'active' | 'archived';
 // Two screens that list things should not feel like two products, and the handoff says so.
 @Component({
     selector: 'app-projects',
-    imports: [IconComponent, ZonedDatePipe, FormsModule, PageHeaderComponent, ModalComponent],
+    imports: [IconComponent, ZonedDatePipe, FormsModule, ModalComponent],
     templateUrl: 'projects.component.html',
     styleUrls: ['projects.component.css'],
 })

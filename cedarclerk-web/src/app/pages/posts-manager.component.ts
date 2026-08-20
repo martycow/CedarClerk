@@ -19,7 +19,6 @@ import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { CountBadgeComponent } from '../shared/count-badge.component';
 import { httpErrorMessage } from '../core/http-error.util';
-import { PageHeaderComponent } from '../shared/page-header.component';
 import { ModalComponent } from '../shared/modal.component';
 import { CommentsComponent } from './comments.component';
 import { TagPickerComponent } from '../shared/tag-picker.component';
@@ -42,7 +41,7 @@ const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
 // now — editing, per-question breakdowns and the pie chart are N10, presets are N12.
 @Component({
     selector: 'app-posts-manager',
-    imports: [IconComponent, ZonedDatePipe, FormsModule, PageHeaderComponent, ModalComponent, CommentsComponent, StatsComponent, CountBadgeComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent],
+    imports: [IconComponent, ZonedDatePipe, FormsModule, ModalComponent, CommentsComponent, StatsComponent, CountBadgeComponent, TagPickerComponent, FolderPickerComponent, FormRefComponent],
     templateUrl: 'posts-manager.component.html',
     styleUrls: ['posts-manager.component.css'],
 })

@@ -11,7 +11,7 @@ test.beforeEach(async ({ context }) => {
 // actually assert without uploading anything.
 test('the media library opens and shows the empty state', async ({ page }) => {
     await page.goto('/library');
-    await expect(page.locator('app-page-header')).toBeVisible();
+    await expect(page.locator('app-rail-header')).toBeVisible();
     await expect(page.locator('.media-empty')).toBeVisible();
     await expect(page.locator('.media-empty')).toContainText('No files yet');
 });

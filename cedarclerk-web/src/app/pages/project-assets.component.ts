@@ -22,7 +22,6 @@ import { AssetSyncService } from '../core/asset-sync.service';
 import { ProjectDetail, ProjectsService } from '../core/projects.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
-import { PageHeaderComponent } from '../shared/page-header.component';
 
 const PAGE_SIZE = 60;
 const RECENT_FOLDERS_KEY = 'cedar.assetFolders';
@@ -40,7 +39,7 @@ const RECENT_FOLDERS_KEY = 'cedar.assetFolders';
 // it is, and it decides it by comparing machines, never by assuming.
 @Component({
     selector: 'app-project-assets',
-    imports: [IconComponent, ZonedDatePipe, FormsModule, PageHeaderComponent, ModalComponent],
+    imports: [IconComponent, ZonedDatePipe, FormsModule, ModalComponent],
     templateUrl: 'project-assets.component.html',
     styleUrls: ['project-assets.component.css'],
 })

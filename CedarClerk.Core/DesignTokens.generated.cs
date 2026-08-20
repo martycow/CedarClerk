@@ -27,7 +27,7 @@ public static class DesignTokens
         ["danger"] = "#9E3D27",
         ["ok"] = "#356842",
         ["warn"] = "#7A5520",
-        ["wood-ink"] = "#3B2A18",
+        ["wood-ink"] = "#3A2918",
         ["series-1"] = "#39543C",
         ["series-2"] = "#3E5A76",
         ["series-3"] = "#A8721F",

@@ -230,8 +230,8 @@
     --wood-lo: #7C5939;
     --wood-edge: #573E26;
     --wood-groove: #6B4C2F;
-    --wood-ink: #3B2A18;
-    --wood-ink-soft: rgba(59, 42, 24, .68);
+    --wood-ink: #3A2918;
+    --wood-ink-soft: rgba(58, 41, 24, .68);
 
     --wall-hi: var(--bg);
     --wall-lo: var(--canvas);
@@ -308,6 +308,11 @@
     --pegboard:
         radial-gradient(circle at 50% 50%, rgba(30, 18, 6, .5) 0 1px, rgba(0, 0, 0, 0) 2px) 0 0 / 26px 26px,
         var(--surface-rail);
+    /* Two translucent faces that carry a caption, named because a surface with text on it has to
+       be reachable by the contrast pair table, and a color-mix written inline in a component is
+       not. Both let their own board show through, which is why neither is a flat token. */
+    --hook-face: color-mix(in srgb, var(--rail-edge) 45%, transparent);
+    --tab-badge: color-mix(in srgb, var(--resin) 90%, transparent);
 
     --radius-plaque: var(--radius-md);
     --radius-field: var(--radius-sm);
@@ -339,6 +344,9 @@
     --bench-drawer-lip: 32px;
     --bench-drawer-open: 172px;
     --bench-ruler-h: 30px;
+    /* What the shut drawer and the rule take together. Derived, because a page reserving room
+       for the bottom chrome and the chrome itself must never be able to disagree. */
+    --bench-bottom-h: calc(var(--bench-drawer-lip) + var(--bench-ruler-h));
     --hit-chrome: 30px;
     --hit-target: 44px;
     --text-chrome: var(--fs-13);
@@ -524,13 +532,26 @@ textarea {
       Inline links in prose are exempt (WCAG 2.5.8 says so), and so are checkboxes and radios,
       where a 44px box would be a platform control blown up out of shape. */
 @media (pointer: coarse) {
-    button,
-    [role="button"],
-    summary,
-    select,
-    a.icon-btn {
-        min-height: 44px;
-        min-width: 44px;
+    [data-surface="paper"] button,
+    [data-surface="paper"] [role="button"],
+    [data-surface="paper"] summary,
+    [data-surface="paper"] select,
+    [data-surface="paper"] a.icon-btn {
+        min-height: var(--hit-target);
+        min-width: var(--hit-target);
+    }
+
+    /* ADR-138 item 5. Chrome nests inside paper — a shelf panel stands on the worktop sheet — so
+       both selector lists match its controls; equal specificity leaves source order to decide, and
+       this one is second. Without it a touch pointer pushes the ruler from 30px to 44 and the rail
+       past --bench-rail-h, which is the whole chrome budget the shell exists to buy back. */
+    [data-surface="chrome"] button,
+    [data-surface="chrome"] [role="button"],
+    [data-surface="chrome"] summary,
+    [data-surface="chrome"] select,
+    [data-surface="chrome"] a.icon-btn {
+        min-height: var(--hit-chrome);
+        min-width: var(--hit-chrome);
     }
 }
 
@@ -621,7 +642,7 @@ body {
    view encapsulation appends an _ngcontent attribute to the compiled selector's last element.
    ProseMirror creates .ProseMirror's own paragraphs/headings at runtime and they never carry that
    attribute, so `.sheet.show-invisibles .ProseMirror p::after` compiled to something that could
-   never match anything — the status-bar ¶ button toggled the class fine, nothing ever rendered.
+   never match anything — the ¶ button toggled the class fine, nothing ever rendered.
    Moved here verbatim (global styles.scss has no encapsulation to fight) rather than rewritten. */
 .sheet.show-invisibles .ProseMirror p::after,
 .sheet.show-invisibles .ProseMirror h1::after,

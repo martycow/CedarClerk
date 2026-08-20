@@ -11,12 +11,12 @@ Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-
 
 ## Status summary (as of 20.08.2026)
 
-**UI V2 — Cedar Bench becomes the one look; Stages 0, 1 and 2 (19–20.08.2026, branch `UI_V2`, not
+**UI V2 — Cedar Bench becomes the one look; Stages 0 through 3 (19–20.08.2026, branch `UI_V2`, not
 merged, no version bump).** The design system mirrored from Claude Design at `.design-sync/ds-v2/`
 stops being a second palette and becomes the app's only one. The port was planned before it was
 written — `docs/design/UI-V2-PLAN.md` settles ten questions (theming attribute, token namespace,
-component layout, half-pixels, night, density, icons, fonts) and eleven ADRs (136–146) landed ahead
-of the code they govern.
+component layout, half-pixels, night, density, icons, fonts) and nineteen ADRs (136–154) landed
+ahead of the code they govern.
 
 - **Stage 0 — the two checks the rest of the port is measured by** (`T-205`, `T-206`).
   `check-contrast.mjs` was rewritten: it composites alpha over the backdrop instead of discarding
@@ -76,13 +76,61 @@ of the code they govern.
   `--paper-bright` joined the paper family rather than being special-cased, so it now carries the
   whole ink set and the five accent presets. Fourteen pairs were added; the census reports **no**
   bench-sourced combination it cannot account for.
-- **What is open.** Stages 3 through 6 — the chrome components and the shell, the three reference
-  screens, the remaining pages by pattern, cleanup and ship — are `T-216`…`T-234` on the board,
-  none started. Six decisions wait on Marty as `Q-19`…`Q-24`, and two of them block a screen:
-  `Q-19`/`Q-20` block the stats port, `Q-21` blocks the writer shell. `npm run check:density`
-  stands at six failures, every one of them the unscoped `@media (pointer: coarse)` rule that
-  `T-219` exists to carve out; it has been red since Stage 0 and no bench component adds to it. The
-  branch cannot deploy until it merges — `cedar deploy` refuses anything but master.
+- **Stage 3 — the shell** (`T-216`…`T-221`). Seven chrome components under `bench/chrome/` —
+  `app-bench-shell` and the `app-rail-header`, `app-hook-rail`, `app-shelf-panel`, `app-index-tabs`,
+  `app-bench-drawer` and `app-ruler-bar` it assembles — plus one parent route in `app.routes.ts`
+  wrapping every authenticated child unchanged. `/login`, `/register`, `/terms` and `/privacy` sit
+  outside it and keep their own theme toggle, so the debug console is absent from them by the shape
+  of the route tree rather than by a URL list (ADR-139). `shared/page-header.component.*` and the
+  editor topbar's nav row are deleted: navigation is the hook rail, and the crumb and the account
+  are the rail header's. The editor's status bar dissolved (ADR-153) — word, character and sync
+  readouts are published to the ruler through a new `RulerService`, while the invisibles and
+  fullscreen toggles and the error-state retry-save moved to the tool strip, because a rule takes
+  no controls; the debug console kept its rows and its service and lost its tab, its panel and its
+  own animation to the drawer, `hostBarHeight` retiring with the bar it measured. The
+  `@media (pointer: coarse)` rule is scoped to paper with a chrome counterpart beside it, so a touch
+  pointer can no longer inflate the rail past `--bench-rail-h` (ADR-138); `npm run check:density`
+  has gone from six failures to eight rules all measuring, the coarse-pointer one included.
+- **What Stage 3 decided, and who decided it.** Four answers are Marty's: metrics stays a tab body
+  inside the Posts Manager rather than becoming a route again (ADR-148, `Q-19`); the stats sources
+  become the kit's legend-filter while the app's 7–180-day slider stays, one line per source and
+  never their sum, because ADR-025's per-channel attribution makes a cross-source total
+  double-counted by construction (ADR-149, `Q-20`); the tool strip is adaptive, one row or two by
+  measurement, with group captions the first thing it gives up and toolbar customization deleted
+  outright (ADR-150, `Q-21`); and the narrow screens are commissioned from Claude Design rather than
+  invented here, since the kit states `1440x900` and no second geometry (ADR-147, `Q-23`). Four are
+  the implementer's defaults taken under a general instruction to proceed, and are recorded as
+  defaults rather than as Marty's answers: the theme toggle and the Appearance trigger go behind the
+  rail's dots menu, which also hoists the Appearance panel out of `editor.component` into the shell
+  (ADR-151, `Q-22`); the accent picker survives on ADR-141's five vetted pairs (ADR-152, `Q-24`);
+  the console becomes a drawer and the status bar dissolves (ADR-153); and the shell's content
+  region declares `data-surface="paper"` (ADR-154).
+- **What Stage 3 cost in colour.** The shell paints chrome nothing had measured, and the census
+  found one real defect: the rail's dots menu is a paper board pinned under a cream-inked rail, and
+  it inherited that cream onto its own `--sheet` surface — a menu whose every label sat at 1.12:1,
+  invisible. It takes `--text` now, and `rail-header.component.spec.ts` no longer asks that *every*
+  colour on the rail be the cream but splits the rule in two: a rule that declares a paper surface
+  must take paper ink, and exactly one rule may, so a second cannot appear quietly. The cork sheet
+  made `--wood-hi` a text background for the first time — the wood block's own note allows only
+  `--wood-ink` there — and that pair stood at 4.477 by day against a 4.5 floor; the ink took the
+  smallest step that clears with its hue kept, `#3B2A18`→`#3A2918` (ADR-074), which also moves the
+  contract copy in `DesignTokens.generated.cs`. Two translucent faces that carry a caption became
+  tokens, `--hook-face` and `--tab-badge`, because a surface with text on it has to be nameable in
+  the pair table and an inline `color-mix` is not; two rules hid a gradient in `background-image`
+  with no `background-color`, so the census read the frame behind them instead of the tile they
+  paint. Six pairs were added and the two accepted `--glass` exceptions retired with `page-header`,
+  the surface that painted them. What the census still cannot reach is named rather than excluded:
+  it resolves a translucent backdrop only through CSS nesting, and these components write flat
+  selectors, so the hook's own fill and the tab badge read against the page ground there — both are
+  measured properly by the pair table instead, at 9.29 and 6.28.
+- **What is open.** Stages 4 through 6 — the three reference screens, the remaining pages by
+  pattern, cleanup and ship — are `T-222`…`T-237` on the board, none started. No decision waits on
+  Marty any more; what waits on a deliverable is `T-236`, the narrow-screen designs, whose brief is
+  written as `docs/design/bench-responsive-prompt.md` and which blocks `T-034` and `T-237`. The
+  smoke suite is half-rebound (`T-233`): the shell-level selectors are done, and eleven spec files
+  still bind page-body markup that Stage 4 moves. `styles/_forest.scss` is still neutralised rather
+  than deleted, waiting on Marty as `T-235`. The branch cannot deploy until it merges — `cedar
+  deploy` refuses anything but master.
 
 **v0.12.2 — every P1 closed in one session (18–19.08.2026, not yet deployed).** Marty's directive
 was "do everything P1", with five decisions resolved on the way in: T-164 (PRGE) removed outright,

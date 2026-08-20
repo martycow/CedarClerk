@@ -20,7 +20,6 @@ import { Sprint, SprintsService } from '../core/sprints.service';
 import { Build, BuildsService } from '../core/builds.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
-import { PageHeaderComponent } from '../shared/page-header.component';
 
 const VIEW_KEY = 'cedar.taskView';
 
@@ -37,7 +36,7 @@ type SortKey = 'title' | 'status' | 'priority' | 'dueAt';
 // linkable — the dashboard's "Up next" rail opens a card by navigating here.
 @Component({
     selector: 'app-project-tasks',
-    imports: [IconComponent, ZonedDatePipe, FormsModule, PageHeaderComponent, ModalComponent],
+    imports: [IconComponent, ZonedDatePipe, FormsModule, ModalComponent],
     templateUrl: 'project-tasks.component.html',
     styleUrls: ['project-tasks.component.css'],
 })

@@ -1,4 +1,4 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -10,10 +10,8 @@ import { IconComponent } from './icon.component';
 // is the only page-chrome element with real behaviour (routing, logout, a live badge), so it
 // becomes one component rather than markup copied four times.
 //
-// Header redesign (27.07.2026, docs/DECISIONS.md): every screen now carries the nav row itself
-// (app-page-header / the editor topbar's own buttons, I11), so the popover no longer duplicates
-// Posts/Glossary/Settings links — the old showNav input is gone, this menu is just Profile,
-// Admin (if applicable) and Logout everywhere.
+// Navigation is the hook rail's (ADR-139), so this popover carries none of it: Profile, Admin
+// where it applies, and Logout — the three things that are about the account rather than the app.
 @Component({
     selector: 'app-account-menu',
     imports: [IconComponent, RouterLink, PopoverComponent],
@@ -26,7 +24,6 @@ import { IconComponent } from './icon.component';
                 } @else {
                 <span class="avatar">{{ avatarInitial() }}</span>
                 }
-                @if (showEmail()) { <span class="user">{{ auth.userEmail() }}</span> }
             </button>
             <div panel class="account-popover">
                 <p class="profile-email">{{ auth.userEmail() }}</p>
@@ -57,9 +54,6 @@ import { IconComponent } from './icon.component';
 export class AccountMenuComponent {
     auth = inject(AuthService);
     t = inject(LocaleService).t;
-
-    // Only the editor topbar has the width for it; the other headers carry a breadcrumb instead.
-    showEmail = input(false);
 
     avatarInitial(): string {
         const email = this.auth.userEmail();

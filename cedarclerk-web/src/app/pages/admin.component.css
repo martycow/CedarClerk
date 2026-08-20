@@ -1,4 +1,3 @@
-/* Page chrome now lives in the shared app-page-header (see docs/DECISIONS.md, 27.07.2026). */
 .admin-page {
     min-height: 100vh;
     background: var(--surface);
@@ -213,8 +212,8 @@
 }
 
 @media (pointer: coarse) {
-    .btn-accent,
-    .btn-ghost {
+    [data-surface="paper"] .btn-accent,
+    [data-surface="paper"] .btn-ghost {
         min-height: 44px;
     }
 }

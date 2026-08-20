@@ -9,7 +9,6 @@ import { Sprint, SprintsService, sprintProgress } from '../core/sprints.service'
 import { GameTask, TasksService, isOverdue } from '../core/tasks.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
-import { PageHeaderComponent } from '../shared/page-header.component';
 
 /** A sprint plus the tasks planned into it — what one card on this screen draws. */
 interface SprintGroup {
@@ -27,7 +26,7 @@ interface SprintGroup {
 // pretending work vanished with the date is the one thing this screen must not do.
 @Component({
     selector: 'app-project-planner',
-    imports: [IconComponent, ZonedDatePipe, FormsModule, RouterLink, PageHeaderComponent, ModalComponent],
+    imports: [IconComponent, ZonedDatePipe, FormsModule, RouterLink, ModalComponent],
     templateUrl: 'project-planner.component.html',
     styleUrls: ['project-planner.component.css'],
 })

@@ -1,5 +1,67 @@
 # Changelog
 
+## 2026-08-20 — the bench gets its shell (branch `UI_V2`, Stage 3)
+
+Stage 3 of the Cedar Bench port: the chrome the app is assembled from, and the shell that holds it.
+Eight more ADRs (147–154) landed with it, and the branch is still unmerged with the version
+untouched.
+
+**The shell.** Seven components under `bench/chrome/` — `app-bench-shell` and the
+`app-rail-header`, `app-hook-rail`, `app-shelf-panel`, `app-index-tabs`, `app-bench-drawer` and
+`app-ruler-bar` it assembles — plus one parent route in `app.routes.ts` wrapping every authenticated
+child unchanged. `/login`, `/register`, `/terms` and `/privacy` stay outside it and keep their own
+theme toggle, which is also what removes the debug console from them: by the shape of the route tree
+rather than by a URL list (ADR-139). `shared/page-header.component.*` and the editor topbar's nav row
+are gone — navigation is the hook rail, and the crumb, the save state and the account belong to the
+rail header. The editor's status bar dissolved (ADR-153): its word, character and sync readouts are
+published to the ruler through a new `RulerService`, while the invisibles and fullscreen toggles and
+the error-state retry-save moved to the tool strip, since a rule takes no controls. The debug console
+kept its rows, its service and its interceptor and lost its tab, its panel and its own animation to
+the drawer; `hostBarHeight` retired with the bar it measured. The `@media (pointer: coarse)` rule is
+scoped to paper with a chrome counterpart beside it, so a touch pointer can no longer push the ruler
+to 44px or the rail past `--bench-rail-h` (ADR-138) — `npm run check:density` went from six failures
+to eight rules that all measure something, the coarse-pointer one included.
+
+**The decisions, and whose they are.** Four are Marty's: metrics stays a tab body inside the Posts
+Manager instead of becoming a route again (ADR-148); the stats sources become the kit's
+legend-filter while the app's 7–180-day slider stays, drawing one line per source and never their
+sum, because ADR-025's per-channel attribution makes any cross-source total double-counted by
+construction (ADR-149); the tool strip is adaptive, one row or two by measurement, group captions
+the first thing it gives up, and toolbar customization deleted outright (ADR-150); and the narrow
+screens are commissioned from Claude Design rather than invented here, the kit stating `1440x900`
+and no second geometry (ADR-147). Four are the implementer's defaults, taken under a general
+instruction to proceed and recorded as defaults rather than as answers Marty gave: the theme toggle
+and the Appearance trigger behind the rail's dots menu, which also hoists the Appearance panel out
+of `editor.component` into the shell (ADR-151); the accent picker surviving on ADR-141's five vetted
+pairs (ADR-152); the console becoming a drawer and the status bar dissolving (ADR-153); and the
+shell's content region declaring `data-surface="paper"` (ADR-154).
+
+**What the shell cost in colour.** One real defect, and the census is what found it: the rail's dots
+menu is a paper board pinned under a cream-inked rail, and it inherited that cream onto its own
+`--sheet` surface, so every label in it sat at 1.12:1 — a menu that was there and could not be read.
+It takes `--text` now, and its spec stopped asking that *every* colour on the rail be the cream and
+started asking two things instead: a rule that declares a paper surface takes paper ink, and exactly
+one rule may, so a second cannot arrive unnoticed. The cork sheet made `--wood-hi` a text background
+for the first time — the wood block's own note allows only `--wood-ink` there — and the pair stood
+at 4.477 by day against a 4.5 floor, so the ink took the smallest step that clears with its hue
+kept, `#3B2A18`→`#3A2918` (ADR-074); being a contract token, it moved the generated copy in
+`DesignTokens.generated.cs` with it. Two translucent faces that carry a caption became tokens,
+`--hook-face` and `--tab-badge`, because a surface with text on it has to be nameable in the pair
+table and an inline `color-mix` is not, and two rules had hidden a gradient in `background-image`
+with no `background-color`, leaving the census to read the frame behind them rather than the tile
+they paint. Six pairs were added; the two accepted `--glass` exceptions retired with `page-header`,
+the surface that painted them. What the census still cannot reach is named rather than excluded — it
+resolves a translucent backdrop only through CSS nesting, and these components write flat selectors,
+so the hook's fill and the tab badge read against the page ground there; both are measured properly
+by the pair table instead, at 9.29 and 6.28.
+
+Stages 4 through 6 — the three reference screens, the remaining pages by pattern, cleanup and ship —
+are `T-222`…`T-237` on the board. No decision waits on Marty any more; what waits on a deliverable is
+`T-236`, the narrow-screen designs, whose brief is written as `docs/design/bench-responsive-prompt.md`
+and which blocks `T-034` and `T-237`. The smoke suite is half-rebound (`T-233`): the shell-level
+selectors are done and eleven spec files still bind page-body markup Stage 4 moves.
+`styles/_forest.scss` is still neutralised rather than deleted, waiting on Marty as `T-235`.
+
 ## 2026-08-20 — Cedar Bench becomes the one look (branch `UI_V2`, Stages 0–2)
 
 The design system mirrored from Claude Design into `.design-sync/ds-v2/` stops being a second

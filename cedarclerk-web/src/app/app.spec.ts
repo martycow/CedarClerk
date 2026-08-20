@@ -14,13 +14,14 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  // Replaced the Angular scaffold's "should render title" check, which asserted an <h1> the
-  // shell has never had and so had been failing since the app was first built out.
-  it('renders the shell with the debug console on a non-public route', async () => {
+  // The root draws one thing now. Everything that used to hang off it — the console, the rule —
+  // belongs to the shell route, and bench-shell.component.spec.ts is where those are asserted.
+  it('renders nothing but the outlet', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('router-outlet')).toBeTruthy();
-    expect(compiled.querySelector('app-debug-console')).toBeTruthy();
+    expect(compiled.querySelector('app-debug-console')).toBeFalsy();
+    expect(compiled.querySelector('app-ruler-bar')).toBeFalsy();
   });
 });

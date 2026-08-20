@@ -8,7 +8,6 @@ import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { IconComponent } from '../shared/icon.component';
 import { IconName } from '../shared/icon-data.generated';
 import { ModalComponent } from '../shared/modal.component';
-import { PageHeaderComponent } from '../shared/page-header.component';
 
 const PAGE_SIZE = 60;
 
@@ -18,7 +17,7 @@ const PAGE_SIZE = 60;
 // referencing posts, and the modal shows them instead of guessing.
 @Component({
     selector: 'app-media-library',
-    imports: [IconComponent, FormsModule, ZonedDatePipe, ModalComponent, PageHeaderComponent],
+    imports: [IconComponent, FormsModule, ZonedDatePipe, ModalComponent],
     templateUrl: 'media-library.component.html',
     styleUrls: ['media-library.component.css'],
 })

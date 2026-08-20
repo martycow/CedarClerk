@@ -15,7 +15,6 @@ import { FolderPickerComponent } from '../shared/folder-picker.component';
 import { TagPickerComponent } from '../shared/tag-picker.component';
 import { LocaleService } from '../core/i18n/locale.service';
 import { Dict } from '../core/i18n/en';
-import { PageHeaderComponent } from '../shared/page-header.component';
 import { ModalComponent } from '../shared/modal.component';
 import { PopoverComponent } from '../shared/popover.component';
 import { httpErrorMessage } from '../core/http-error.util';
@@ -122,7 +121,7 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
 
 @Component({
     selector: 'app-drafts',
-    imports: [IconComponent, ZonedDatePipe, FormsModule, PageHeaderComponent, ModalComponent, PopoverComponent, FolderPickerComponent, TagPickerComponent],
+    imports: [IconComponent, ZonedDatePipe, FormsModule, ModalComponent, PopoverComponent, FolderPickerComponent, TagPickerComponent],
     templateUrl: 'drafts.component.html',
     styleUrls: ['drafts.component.css'],
 })

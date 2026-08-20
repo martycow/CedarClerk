@@ -15,7 +15,7 @@ export interface DebugLogEntry {
 
 const MAX_ENTRIES = 200;
 
-// Backs the bottom debug console panel (shared/debug-console.component.ts) — a ring buffer of
+// Backs the bench drawer's journal (shared/debug-console.component.ts) — a ring buffer of
 // every HttpClient request/response this session has made, populated by debug-log.interceptor.ts.
 // Session-only by design (no localStorage persistence): this is for diagnosing what just
 // happened (e.g. why a Telegram publish failed), not a durable history.
@@ -26,18 +26,9 @@ export class DebugLogService {
     inFlightCount = computed(() => this.entries().filter(e => e.inFlight).length);
     errorCount = computed(() => this.entries().filter(e => e.isError && !e.inFlight).length);
 
-    // Open state lives here, not in the component, so a page that owns a status bar can host the
-    // toggle itself (the editor does) while the panel stays mounted once in the app shell.
+    // Open state lives here rather than in the component: the drawer is a controlled component,
+    // so the one thing it cannot own is whether it is open.
     open = signal(false);
-
-    // Height of the host page's own bottom bar, in px — the panel slides up to sit on top of it
-    // instead of covering it. 0 means "no host bar", which also switches the console back to
-    // rendering its own floating tab.
-    hostBarHeight = signal(0);
-
-    toggleOpen() {
-        this.open.update(v => !v);
-    }
 
     start(method: string, url: string, requestBody: unknown): DebugLogEntry {
         const entry: DebugLogEntry = {

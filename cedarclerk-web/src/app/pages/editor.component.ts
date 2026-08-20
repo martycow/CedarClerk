@@ -1,6 +1,6 @@
 import {
     AfterViewInit, Component, ElementRef, HostListener, OnDestroy,
-    ViewChild, inject, signal
+    ViewChild, effect, inject, signal
 } from '@angular/core';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -21,11 +21,8 @@ import {
 import { FormPresetsService, FormPreset } from '../core/form-presets.service';
 import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
-import { AccountMenuComponent } from '../shared/account-menu.component';
-import { CountBadgeComponent } from '../shared/count-badge.component';
 import { GlossaryTermFormComponent } from '../shared/glossary-term-form.component';
 import { GlossaryService, GlossaryTermInput } from '../core/glossary.service';
-import { AppearancePanelComponent } from '../shared/appearance-panel.component';
 import { NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, CompressionLevel, UpdatePreview } from '../core/posts.service';
 import { PublishService, PublishAccount, PublishJob, ThreadPart } from '../core/publish.service';
@@ -59,13 +56,9 @@ import { TableOfContentsNode } from '../tiptap-extensions/table-of-contents-node
 import { YoutubeNode, extractYouTubeId } from '../tiptap-extensions/youtube-node';
 import { LayoutShortcuts } from '../tiptap-extensions/layout-shortcuts';
 import { PopoverComponent } from '../shared/popover.component';
-import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { ModalComponent } from '../shared/modal.component';
-import { ThemeService } from '../core/theme.service';
-import { VersionService } from '../core/version.service';
 import { AppearanceService, SHEET_WIDTH_PX, TYPEFACE_STACK, MAX_TABLE_SIZE } from '../core/appearance.service';
 import { ToolbarLayoutService } from '../core/toolbar-layout.service';
-import { DebugLogService } from '../core/debug-log.service';
 import { TagUsageService } from '../core/tag-usage.service';
 import { TagPickerComponent } from '../shared/tag-picker.component';
 import { FolderPickerComponent } from '../shared/folder-picker.component';
@@ -78,12 +71,10 @@ import { pseudoProgress } from '../core/pseudo-progress.util';
 import { BrandIconComponent } from '../shared/brand-icon.component';
 import { IconComponent } from '../shared/icon.component';
 import { avatarFill, avatarInitial } from '../core/avatar-color.util';
+import { RulerReadout } from '../bench/chrome/ruler-bar.component';
+import { RulerService } from '../core/ruler.service';
 
-// Must match .status-bar's height and the breakpoint that hides it in editor.component.css — the
-// debug console slides out on top of that bar and needs to know it's there.
-const STATUS_BAR_HEIGHT_PX = 27;
 // FI2.11 — how long the "published" confirmation with its links stays up.
-const STATUS_BAR_HIDDEN_MQ = '(max-width: 768px)';
 
 // Rounds a date up to the next boundary of `minutes` (e.g. 05:27 + 5min -> 05:30)
 function ceilToMinutes(date: Date, minutes: number): Date {
@@ -262,14 +253,12 @@ interface UploadItem {
 
 @Component({
     selector: 'app-editor',
-    imports: [IconComponent, BrandIconComponent, FormsModule, ZonedDatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, CedarLogoComponent, ModalComponent, AccountMenuComponent, AppearancePanelComponent, TagPickerComponent, FolderPickerComponent, SeriesPickerComponent, MediaPickerComponent, FormRefComponent, CountBadgeComponent, GlossaryTermFormComponent],
+    imports: [IconComponent, BrandIconComponent, FormsModule, ZonedDatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, ModalComponent, TagPickerComponent, FolderPickerComponent, SeriesPickerComponent, MediaPickerComponent, FormRefComponent, GlossaryTermFormComponent],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
 })
 export class EditorComponent implements AfterViewInit, OnDestroy {
     auth = inject(AuthService);
-    theme = inject(ThemeService);
-    version = inject(VersionService);
     appearance = inject(AppearanceService);
     toolbarLayout = inject(ToolbarLayoutService);
     private draftsApi = inject(DraftsService);
@@ -278,15 +267,22 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     t = inject(LocaleService).t;
     private route = inject(ActivatedRoute);
     private assets = inject(AssetsService);
-    debugLog = inject(DebugLogService);
     private tagUsageApi = inject(TagUsageService);
+    private ruler = inject(RulerService);
 
-    // The status bar hosts the debug console's toggle, so the console is told how tall that bar
-    // is — and that below the mobile breakpoint it isn't rendered at all, where the console goes
-    // back to its own floating tab.
-    private statusBarMq = window.matchMedia(STATUS_BAR_HIDDEN_MQ);
-    private syncStatusBarHeight = () =>
-        this.debugLog.hostBarHeight.set(this.statusBarMq.matches ? 0 : STATUS_BAR_HEIGHT_PX);
+    // What the brass rule at the foot of the screen says while this page is open (ADR-153). The
+    // counts are behind the same preference the status bar honoured; the sync word is not, because
+    // a document that failed to save has to say so whether or not counts are wanted.
+    private readonly rulerFeed = effect(() => {
+        const t = this.t();
+        const right: RulerReadout[] = [];
+        if (this.appearance.prefs().showWordCount) {
+            right.push({ text: t.editor.words(this.wordCount()) });
+            right.push({ text: t.editor.chars(this.charCount()) });
+        }
+        right.push({ text: this.syncWord() });
+        this.ruler.publish({ right });
+    });
 
     @ViewChild('editorHost') editorHost!: ElementRef<HTMLElement>;
     private editor?: Editor;
@@ -1064,6 +1060,15 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return this.editor?.getText().length ?? 0;
     }
 
+    syncWord(): string {
+        const t = this.t().editor;
+        switch (this.saveState()) {
+            case 'saved': return t.synced;
+            case 'error': return t.syncFailed;
+            default: return t.syncing;
+        }
+    }
+
     channelColor(id: string): string {
         return avatarFill(id);
     }
@@ -1167,8 +1172,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     async ngAfterViewInit() {
-        this.syncStatusBarHeight();
-        this.statusBarMq.addEventListener('change', this.syncStatusBarHeight);
         document.addEventListener('visibilitychange', this.onVisibilityChange);
         window.addEventListener('pagehide', this.onPageHide);
 
@@ -1313,10 +1316,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     ngOnDestroy() {
-        this.statusBarMq.removeEventListener('change', this.syncStatusBarHeight);
         document.removeEventListener('visibilitychange', this.onVisibilityChange);
         window.removeEventListener('pagehide', this.onPageHide);
-        this.debugLog.hostBarHeight.set(0);
+        this.ruler.clear();
         clearTimeout(this.saveTimer);
         clearTimeout(this.saveRetryTimer);
         clearTimeout(this.aiToastTimer);

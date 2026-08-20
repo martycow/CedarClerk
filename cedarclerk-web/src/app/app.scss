@@ -1,0 +1,5 @@
+/* The root draws nothing of its own: every screen's chrome hangs off the shell route
+   (app/bench/chrome/bench-shell.component.ts), and the pages outside it are the workshop door. */
+:host {
+    display: block;
+}

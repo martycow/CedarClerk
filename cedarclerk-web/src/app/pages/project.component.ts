@@ -18,7 +18,6 @@ import { isOverdue } from '../core/tasks.service';
 import { sprintProgress } from '../core/sprints.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
-import { PageHeaderComponent } from '../shared/page-header.component';
 
 /** How many recent documents a type's card shows before "View all" is the only way to more. */
 const RECENT_PER_TYPE = 3;
@@ -36,7 +35,7 @@ const TILE_TYPES: DocumentType[] = DOCUMENT_TYPES.filter(t => !FEATURED_TYPES.in
 // compact using the same component styles (ADR-071, principle 3).
 @Component({
     selector: 'app-project',
-    imports: [IconComponent, ZonedDatePipe, FormsModule, RouterLink, PageHeaderComponent, ModalComponent],
+    imports: [IconComponent, ZonedDatePipe, FormsModule, RouterLink, ModalComponent],
     templateUrl: 'project.component.html',
     styleUrls: ['project.component.css'],
 })

@@ -1,6 +1,4 @@
 <div class="project-page">
-    <app-page-header page="projects" [showBack]="false" [crumbSuffix]="project()?.name ?? ''"></app-page-header>
-
     <div class="project-body">
         @if (loadError(); as err) {
             <p class="load-error">{{ err }}</p>

@@ -30,6 +30,7 @@ test('the theme toggle switches and persists', async ({ page }) => {
     await page.goto('/drafts');
     const before = await page.locator('html').getAttribute('data-theme');
 
+    await page.locator('app-rail-header .dots').click();
     await page.locator('.theme-toggle').first().click();
     await expect(page.locator('html')).not.toHaveAttribute('data-theme', before ?? '');
 
@@ -40,7 +41,7 @@ test('the theme toggle switches and persists', async ({ page }) => {
 
 test('the glossary page opens', async ({ page }) => {
     await page.goto('/glossary');
-    await expect(page.locator('app-page-header')).toBeVisible();
+    await expect(page.locator('app-rail-header')).toBeVisible();
 });
 
 // Asserted on the account's own email rather than the word "Profile": the language test above

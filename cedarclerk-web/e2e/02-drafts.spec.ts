@@ -36,7 +36,7 @@ test('renaming a draft shows up in the list without a reload', async ({ page, co
     await openDraft(page, id);
     await withSave(page, () => page.locator('input.title').fill('After rename'));
 
-    await page.locator('a.icon-btn[href="/drafts"]').click();
+    await page.locator('app-hook-rail a[href="/drafts"]').click();
     await expect(page.locator('.drafts-title', { hasText: 'After rename' })).toBeVisible();
     await expect(page.locator('.drafts-title', { hasText: 'Before rename' })).toHaveCount(0);
 });

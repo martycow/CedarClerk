@@ -8,7 +8,6 @@ import { AuthService } from '../core/auth.service';
 import { AssetsService } from '../core/assets.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES, endonymOf } from '../core/languages';
-import { PageHeaderComponent } from '../shared/page-header.component';
 import { ModalComponent } from '../shared/modal.component';
 import { IconComponent } from '../shared/icon.component';
 import { GlossaryTermFormComponent } from '../shared/glossary-term-form.component';
@@ -17,7 +16,7 @@ import { GlossaryTermFormComponent } from '../shared/glossary-term-form.componen
 // the blog; nothing is scanned or marked in the editor, since the ask was for the published page.
 @Component({
     selector: 'app-glossary',
-    imports: [IconComponent, FormsModule, PageHeaderComponent, ModalComponent, NgTemplateOutlet, GlossaryTermFormComponent],
+    imports: [IconComponent, FormsModule, ModalComponent, NgTemplateOutlet, GlossaryTermFormComponent],
     templateUrl: 'glossary.component.html',
     styleUrls: ['glossary.component.css'],
 })

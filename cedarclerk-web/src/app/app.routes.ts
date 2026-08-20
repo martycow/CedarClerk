@@ -24,95 +24,105 @@ export const routes: Routes = [
     },
     { path: 'terms', loadComponent: () => import('./pages/terms.component').then(m => m.TermsComponent) },
     { path: 'privacy', loadComponent: () => import('./pages/privacy.component').then(m => m.PrivacyComponent) },
+    // ADR-139 clause 1 — one parent route, and the pre-auth pages are outside it by the shape of
+    // the tree. The four above are the workshop door: the rail carries a project switcher, save
+    // state and hooks into guarded screens, and every one of them is meaningless without a session.
+    // /dev/* stays inside, because the styleguide's job is showing chrome components in chrome.
     {
-        path: 'editor',
-        loadComponent: () => import('./pages/editor.component').then(m => m.EditorComponent),
-        canActivate: [authGuard],
+        path: '',
+        loadComponent: () => import('./bench/chrome/bench-shell.component').then(m => m.BenchShellComponent),
+        children: [
+            {
+                path: 'editor',
+                loadComponent: () => import('./pages/editor.component').then(m => m.EditorComponent),
+                canActivate: [authGuard],
+            },
+            {
+                path: 'drafts',
+                loadComponent: () => import('./pages/drafts.component').then(m => m.DraftsPageComponent),
+                canActivate: [authGuard],
+            },
+            {
+                path: 'settings',
+                loadComponent: () => import('./pages/settings.component').then(m => m.SettingsComponent),
+                canActivate: [authGuard],
+            },
+            {
+                path: 'posts',
+                loadComponent: () => import('./pages/posts-manager.component').then(m => m.PostsManagerComponent),
+                canActivate: [authGuard],
+            },
+            {
+                path: 'glossary',
+                loadComponent: () => import('./pages/glossary.component').then(m => m.GlossaryComponent),
+                canActivate: [authGuard],
+            },
+            {
+                // 'library', not 'media' — /media/* is the uploaded files' own URL space (server static
+                // route + dev proxy), and the dev proxy forwards the whole prefix to the backend.
+                path: 'library',
+                loadComponent: () => import('./pages/media-library.component').then(m => m.MediaLibraryComponent),
+                canActivate: [authGuard],
+            },
+            // Phase 13 — the indie-gamedev module (ADR-101). indieDevGuard already covers signed-in, the
+            // same way adminGuard does; with the flag off it redirects to /drafts rather than 404-ing,
+            // because the URL is not wrong, the feature is simply not installed here.
+            {
+                path: 'projects',
+                loadComponent: () => import('./pages/projects.component').then(m => m.ProjectsComponent),
+                canActivate: [indieDevGuard],
+            },
+            {
+                path: 'projects/:id',
+                loadComponent: () => import('./pages/project.component').then(m => m.ProjectComponent),
+                canActivate: [indieDevGuard],
+            },
+            {
+                path: 'projects/:id/assets',
+                loadComponent: () => import('./pages/project-assets.component').then(m => m.ProjectAssetsComponent),
+                canActivate: [indieDevGuard],
+            },
+            {
+                path: 'projects/:id/planner',
+                loadComponent: () => import('./pages/project-planner.component').then(m => m.ProjectPlannerComponent),
+                canActivate: [indieDevGuard],
+            },
+            {
+                path: 'projects/:id/builds',
+                loadComponent: () => import('./pages/project-builds.component').then(m => m.ProjectBuildsComponent),
+                canActivate: [indieDevGuard],
+            },
+            {
+                path: 'projects/:id/tasks',
+                loadComponent: () => import('./pages/project-tasks.component').then(m => m.ProjectTasksComponent),
+                canActivate: [indieDevGuard],
+            },
+            // adminGuard already covers signed-in — it redirects to /login itself (IF2).
+            {
+                path: 'admin',
+                loadComponent: () => import('./pages/admin.component').then(m => m.AdminComponent),
+                canActivate: [adminGuard],
+            },
+            // T-078 / T-080 — the design-system reference and the icon inventory (ADR-071/072). Behind
+            // authGuard rather than open: development surfaces, with no reason to be part of the public
+            // site.
+            {
+                path: 'dev/styleguide',
+                loadComponent: () => import('./pages/styleguide.component').then(m => m.StyleguideComponent),
+                canActivate: [authGuard],
+            },
+            {
+                path: 'dev/icons',
+                loadComponent: () => import('./pages/icons.component').then(m => m.IconsComponent),
+                canActivate: [authGuard],
+            },
+            // N7 folded both of these into the Posts Manager; the old paths stay as redirects because
+            // they're what any existing bookmark points at.
+            { path: 'comments', redirectTo: 'posts' },
+            { path: 'stats', redirectTo: 'posts' },
+            // Drafts, not the editor, is the landing screen — you pick what to work on first.
+            { path: '', pathMatch: 'full', redirectTo: 'drafts' },
+            { path: '**', redirectTo: 'drafts' },
+        ],
     },
-    {
-        path: 'drafts',
-        loadComponent: () => import('./pages/drafts.component').then(m => m.DraftsPageComponent),
-        canActivate: [authGuard],
-    },
-    {
-        path: 'settings',
-        loadComponent: () => import('./pages/settings.component').then(m => m.SettingsComponent),
-        canActivate: [authGuard],
-    },
-    {
-        path: 'posts',
-        loadComponent: () => import('./pages/posts-manager.component').then(m => m.PostsManagerComponent),
-        canActivate: [authGuard],
-    },
-    {
-        path: 'glossary',
-        loadComponent: () => import('./pages/glossary.component').then(m => m.GlossaryComponent),
-        canActivate: [authGuard],
-    },
-    {
-        // 'library', not 'media' — /media/* is the uploaded files' own URL space (server static
-        // route + dev proxy), and the dev proxy forwards the whole prefix to the backend.
-        path: 'library',
-        loadComponent: () => import('./pages/media-library.component').then(m => m.MediaLibraryComponent),
-        canActivate: [authGuard],
-    },
-    // Phase 13 — the indie-gamedev module (ADR-101). indieDevGuard already covers signed-in, the
-    // same way adminGuard does; with the flag off it redirects to /drafts rather than 404-ing,
-    // because the URL is not wrong, the feature is simply not installed here.
-    {
-        path: 'projects',
-        loadComponent: () => import('./pages/projects.component').then(m => m.ProjectsComponent),
-        canActivate: [indieDevGuard],
-    },
-    {
-        path: 'projects/:id',
-        loadComponent: () => import('./pages/project.component').then(m => m.ProjectComponent),
-        canActivate: [indieDevGuard],
-    },
-    {
-        path: 'projects/:id/assets',
-        loadComponent: () => import('./pages/project-assets.component').then(m => m.ProjectAssetsComponent),
-        canActivate: [indieDevGuard],
-    },
-    {
-        path: 'projects/:id/planner',
-        loadComponent: () => import('./pages/project-planner.component').then(m => m.ProjectPlannerComponent),
-        canActivate: [indieDevGuard],
-    },
-    {
-        path: 'projects/:id/builds',
-        loadComponent: () => import('./pages/project-builds.component').then(m => m.ProjectBuildsComponent),
-        canActivate: [indieDevGuard],
-    },
-    {
-        path: 'projects/:id/tasks',
-        loadComponent: () => import('./pages/project-tasks.component').then(m => m.ProjectTasksComponent),
-        canActivate: [indieDevGuard],
-    },
-    // adminGuard already covers signed-in — it redirects to /login itself (IF2).
-    {
-        path: 'admin',
-        loadComponent: () => import('./pages/admin.component').then(m => m.AdminComponent),
-        canActivate: [adminGuard],
-    },
-    // T-078 / T-080 — the design-system reference and the icon inventory (ADR-071/072). Behind
-    // authGuard rather than open: development surfaces, with no reason to be part of the public
-    // site.
-    {
-        path: 'dev/styleguide',
-        loadComponent: () => import('./pages/styleguide.component').then(m => m.StyleguideComponent),
-        canActivate: [authGuard],
-    },
-    {
-        path: 'dev/icons',
-        loadComponent: () => import('./pages/icons.component').then(m => m.IconsComponent),
-        canActivate: [authGuard],
-    },
-    // N7 folded both of these into the Posts Manager; the old paths stay as redirects because
-    // they're what any existing bookmark points at.
-    { path: 'comments', redirectTo: 'posts' },
-    { path: 'stats', redirectTo: 'posts' },
-    // Drafts, not the editor, is the landing screen — you pick what to work on first.
-    { path: '', pathMatch: 'full', redirectTo: 'drafts' },
-    { path: '**', redirectTo: 'drafts' },
 ];

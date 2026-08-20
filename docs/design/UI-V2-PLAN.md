@@ -170,7 +170,18 @@ Two more were written because the token work found defects the table above did n
 | ADR-145 | A wash is a token: `--ok-soft`/`--warn-soft`/`--danger-soft` on `--asoft`'s formula, and the state inks re-derived against the wash they are painted on rather than against bare paper | Carries ADR-141's method one surface further; applies ADR-074 |
 | ADR-146 | A painted colour that reaches the DOM through a binding is a token, not a literal: the avatar fills become `--avatar-1…6` + `--avatar-ink` behind one hasher | Narrows the T-077/T-101 literal exemptions |
 
-Conditional — write only if implemented, at the next free numbers: **ADR-147** stats legend-as-filter and table-as-tab (the ADR-095 shape, a UI move); **ADR-148** the debug console becoming the BenchDrawer (`app.spec.ts` asserts it, so the decision predates the code); **ADR-149** the editor's two configurable toolbar rows collapsing to one strip (ADR-035's row assignment loses its meaning).
+Six more were written once Marty answered the questions in §6, and they took the next six numbers:
+
+| # | Thesis | Overturns / extends |
+|---|---|---|
+| ADR-147 | Narrow screens are commissioned from Claude Design, not invented here: the shell is built at the kits' desktop proportions and adds no width breakpoint of its own | Blocks T-034; defers, does not answer |
+| ADR-148 | Metrics stays a tab body inside the Posts Manager — no rail hook, no crumb, and the kit's rail-level CSV action moves into the chart panel's header | Keeps ADR-046's N7 against the kit; adjusts ADR-139 clause 4 |
+| ADR-149 | The legend is the filter: sources become multi-select, one line per source and never a sum; the kit's five period segments are not ported | Overturns ADR-030's exclusive source selection; preserves ADR-049's N9 and I8; constrained by ADR-025 |
+| ADR-150 | The tool strip is adaptive — one row or two, captions only when there is room — and toolbar customization is removed entirely | Voids ADR-035's first decision bullet and its `@angular/cdk` justification |
+| ADR-151 | The theme toggle and the Appearance trigger go into the RailHeader dots menu, and the Appearance panel is hoisted into the shell | Extends ADR-139 clause 4 |
+| ADR-152 | The accent picker survives; every accent-derived tone is derived from `--accent` and never held, and joins `ACCENT_DEPENDENT` in the same commit | Defends ADR-137 clause 5 and ADR-141 clause 6 |
+
+A seventh followed at the next number, out of the port itself rather than out of a question: **ADR-153** — the debug console's chrome becomes a `BenchDrawer` and the editor's status bar dissolves into it and the `RulerBar`, readouts to the rule and controls to the tool strip (`T-220`/`T-221`).
 
 ---
 
@@ -198,11 +209,37 @@ Conditional — write only if implemented, at the next free numbers: **ADR-147**
 
 ---
 
-## 6. Open questions for Marty
+## 6. Questions and their answers
 
-1. **Q-19 — does `/stats` become a route again?** All three kits give it a rail crumb, a hook and a ruler; N7 deliberately made it a tab body inside the Posts Manager.
-2. **Q-20 — stats sources: exclusive channel tabs or V2's multi-select legend-filter — and five fixed periods or the 7–180-day magnetic slider?** N9/I8 were both explicit fixes; one of each pair loses.
-3. **Q-21 — the editor toolbar:** one 36px strip, or the user-configurable two-row catalogue in `core/toolbar-layout.service.ts` with its Appearance panel? The kit has no room for group captions.
-4. **Q-22 — the theme toggle and the palette/Appearance button have no home in any V2 rail** — the `dots` menu is the only legal spot. Confirm, or the rail gains a control the design system does not define.
-5. **Q-23 — responsive is unspecified.** The mirror has zero width breakpoints and all three kits are fixed 1440×900. Below what width do the shelf docks stop being columns, does the hook rail rotate or collapse, does the ruler survive? Until this is answered the shell is built at V2 proportions for ≥1100px with the app's existing breakpoint ladder as the fallback, each fallback marked in the ADR as *not specified by the design system*.
-6. **Q-24 — does the Appearance accent picker survive?** Bench means pine to be the one colour that acts, and `ACCENT_PRESETS` now carries five vetted pairs (a day tone and a darker night one each, ADR-141/ADR-145) rather than one mixed formula. Keeping the picker means every bench component that leans on `--accent` is drawn in a colour the user chose; dropping it makes pine a constant and deletes a settings block. Nothing in the design system offers a second accent.
+All six are settled and each carries its ADR. Four are Marty's own answers; two were defaulted by the
+implementer under a general instruction to proceed, were shown to him as defaults rather than asked,
+and are reversible — their ADRs say so in the same words.
+
+1. **Q-19 — does `/stats` become a route again?** **Answered by Marty: no, it stays a tab.**
+   `ADR-148`. The kit gives metrics a crumb, a hook, a ruler and a rail-level CSV button; the app
+   keeps it as a tab body inside the Posts Manager, the rail spends no hook on it, and the kit's
+   export action moves into the chart panel's own header.
+2. **Q-20 — stats sources and period control.** **Answered by Marty: the kit's legend-filter, and
+   the slider.** `ADR-149`. Sources become multi-select filters that *are* the legend; the kit's five
+   fixed period segments are not ported, so N9 and I8 survive intact and the only deliberate fix
+   overturned is ADR-030's exclusive source selection. What is lost is one-click "only this channel".
+   The plan's framing above — "one of each pair loses" — was wrong: the app already carries the
+   slider, the kit is the one with fixed periods.
+3. **Q-21 — the editor toolbar.** **Answered by Marty: adaptive, one row or two, captions when
+   there is room, customization removed.** `ADR-150`. It voids ADR-035's first decision bullet —
+   `ToolbarLayoutJson`, group-level row placement, the per-button catalogue — and with it that
+   entry's justification for `@angular/cdk`, whose only consumer in `src` is those drag lists. Group
+   captions already ship (`.tb-caption`, ten of them); they become conditional rather than new.
+4. **Q-22 — the theme toggle and the Appearance trigger.** **Defaulted by the implementer, not
+   asked:** both go into the `RailHeader` dots menu, the slot `RailHeader.prompt.md` reserves for the
+   rare rest. `ADR-151`. The Appearance panel is hoisted out of `editor.component` into the shell,
+   which is also the first time it is reachable from any screen but the editor.
+5. **Q-23 — responsive.** **Answered by Marty: commission the screens from Claude Design.**
+   `ADR-147`. The shell is built to the kit at desktop proportions and the narrow behaviour is
+   *deferred, not invented* — the shell stages add no width breakpoint of their own, and the app
+   below that width keeps whatever it does today. The `≥1100px` fallback this plan proposed above is
+   withdrawn: no threshold is designed here. `T-034` is blocked on the deliverable.
+6. **Q-24 — does the Appearance accent picker survive?** **Defaulted by the implementer, not
+   asked:** yes. `ADR-152`. The constraint it carries is that every accent-derived tone is derived
+   from `--accent` and never held, and that a new one joins `ACCENT_DEPENDENT` in the same commit —
+   otherwise the gate's five-preset re-run measures a colour the app does not paint.

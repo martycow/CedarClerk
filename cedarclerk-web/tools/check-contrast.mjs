@@ -379,7 +379,7 @@ pairs.push({ fg: '--sheet', bg: '--danger', min: 4.5, note: 'text on a destructi
 
 // The washes. A state badge is its own ink on a tint of itself, which is a harder ratio than the
 // same ink on paper and the one the app actually paints — .status-badge, .state-chip, .chip.warn,
-// .prio.p1, .console-badge.error, .sg-badge-*, .pr-part.pr-done and the two banners. --t2 rides
+// .prio.p1, .sg-badge-*, .pr-part.pr-done and the two banners. --t2 rides
 // the accent wash the same way, on .hint-bubble, .notice and the blog's .sep-label.
 pairs.push({ fg: '--accent', bg: '--asoft', min: 4.5, note: 'accent label on its own wash' });
 pairs.push({ fg: '--t2', bg: '--asoft', min: 4.5, note: 'secondary text on the accent wash' });
@@ -395,8 +395,7 @@ for (const [ink, wash] of [['--ok', '--ok-soft'], ['--warn', '--warn-soft'], ['-
 // left on this wash is glyphs, the square icon buttons (.icon-btn, .mini, .theme-toggle, .toolbar
 // button) including the few whose face is a character rather than an SVG, and WCAG 1.4.11 is the
 // floor a glyph owes. A LABEL on this wash is a defect in the rule, not a number to lower: it takes
-// --text and lands on the pair above, as .account-trigger's email, the status bar's console toggle,
-// the toolbar's GIF button and page-header's .nav-btn all do.
+// --text and lands on the pair above, as the toolbar's GIF button does.
 for (const s of PAPER) {
     pairs.push({ fg: '--text', bg: '--hover', under: s, min: 4.5, note: 'body text in a hovered row' });
     pairs.push({ fg: '--t2', bg: '--hover', under: s, min: 4.5, note: 'secondary text in a hovered row' });
@@ -446,21 +445,25 @@ pairs.push({ fg: '--rail-ink', bg: '--wood-edge', min: 4.5, note: 'priority chip
 pairs.push({ fg: '--rail-edge', bg: '--resin-hi', min: 4.5, note: 'priority-one chip on the lit stop of its resin' });
 pairs.push({ fg: '--rail-edge', bg: '--resin', min: 4.5, note: 'priority-one chip on the shaded stop of its resin' });
 
-// Chrome glass (ADR-035): a sticky bar that lets the page move under it. Twice — once on the ground
-// it sits on nine tenths of the time, which is paper and must not regress, and once on the darkest
-// fill the app itself paints, which is where it breaks. The second is an exception rather than a
-// fix because the true backdrop is the document: a photograph scrolling under the bar can be any
-// colour, so no value of this token is a guarantee, and the two components that paint it —
-// page-header and the editor topbar — are both deleted by ADR-139 stage 3 along with the material.
-// Marty's call is in the report: raise --glass to 95% and lose the material, or delete on schedule.
-const GLASS_UNDER_DARK = 'the backdrop is the document, which can be any colour — no opacity of a '
-    + 'translucent bar answers that, and ADR-139 stage 3 deletes both surfaces that paint it';
-pairs.push({ fg: '--text', bg: '--glass', min: 4.5, note: 'chrome label on glass over paper' });
-pairs.push({ fg: '--t2', bg: '--glass', min: 4.5, note: 'chrome meta on glass over paper' });
-pairs.push({ fg: '--t3', bg: '--glass', min: 3.0, note: 'breadcrumb separator on glass over paper' });
-pairs.push({ fg: '--text', bg: '--glass', under: '--text', min: 4.5, note: 'chrome label on glass over a dark fill' });
-pairs.push({ fg: '--t2', bg: '--glass', under: '--text', min: 4.5, except: GLASS_UNDER_DARK, note: 'chrome meta on glass over a dark fill' });
-pairs.push({ fg: '--t3', bg: '--glass', under: '--text', min: 3.0, except: GLASS_UNDER_DARK, note: 'breadcrumb separator on glass over a dark fill' });
+// The shell's own chrome (ADR-139), which paints combinations no page did. The sign tile is the
+// carved wood a caption is cut into — the project tile, the current hook, a shelf panel's title
+// and an index tab all take it — and the rail gradient is what the header's own brand and crumbs
+// sit on; both are ramps, so each is scored along its stops. The two translucent faces are named
+// tokens rather than inline color-mixes for exactly this reason: a surface carrying text has to be
+// nameable here, and `under` is what it is painted on rather than a guess at the page ground.
+pairs.push({ fg: '--rail-ink', bg: '--grad-sign-tile', min: 4.5, note: 'caption carved into a sign tile' });
+pairs.push({ fg: '--rail-ink', bg: '--surface-rail', min: 4.5, note: 'brand and crumb on the rail' });
+pairs.push({ fg: '--rail-ink', bg: '--hook-face', under: '--pegboard', min: 4.5, note: 'tool caption on its hook' });
+pairs.push({ fg: '--rail-edge', bg: '--tab-badge', under: '--grad-sign-tile', min: 4.5, note: 'index-tab counter on its resin badge' });
+
+// The crumb separator, which is drawn and not written — `content: '/'`, never announced. It is the
+// one thing the soft cream is spent on, and it takes the decoration floor for the same reason --t3
+// does on paper (ADR-074): held to 4.5 it collapses onto the cream it exists to sit below.
+pairs.push({ fg: '--rail-ink-soft', bg: '--surface-rail', min: 3.0, note: 'crumb separator on the rail' });
+
+// Cork. The shelf panel's second sheet tone makes --wood-hi a text background for the first time,
+// which the wood block's own note says only --wood-ink may do.
+pairs.push({ fg: '--wood-ink', bg: '--wood-hi', min: 4.5, note: 'note pinned to a cork board' });
 
 // The focus ring (ADR-140), which nothing measured. Two layers, one global rule, and the surfaces
 // below are every one a focusable control sits on — the gradients standing for their own stops.

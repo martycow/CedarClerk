@@ -15,51 +15,11 @@
     height: 44px;
     flex: none;
     padding: 0 14px;
-    border-bottom: 1px solid var(--glass-border);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
     box-shadow: var(--gloss-top);
     position: relative;
-    isolation: isolate;
     z-index: 3;
-}
-
-/* Glass background lives on a pseudo-element, not .topbar itself: backdrop-filter on the
-   real element would make it a containing block for position:fixed descendants (the export
-   modal's overlay, popovers), breaking their viewport-relative positioning/centering. */
-.topbar::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background: var(--glass);
-    backdrop-filter: var(--blur);
-    -webkit-backdrop-filter: var(--blur);
-}
-
-.brand {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.brand-name {
-    font-weight: 700;
-    font-size: var(--fs-body);
-    letter-spacing: -.01em;
-    /* Same reason as .btn-label: squeezed, "Cedar Clerk" broke across two lines and made the whole
-       topbar taller — visible on an iPad in portrait. */
-    white-space: nowrap;
-}
-
-.version-tag {
-    font-size: var(--fs-caption);
-    color: var(--t2);
-    white-space: nowrap;
-}
-
-.divider {
-    width: 1px;
-    height: 18px;
-    background: var(--border);
 }
 
 .title {
@@ -126,31 +86,6 @@
     height: 12px;
 }
 
-.icon-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    border: none;
-    background: none;
-    padding: 5px 8px;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    color: var(--t2);
-}
-
-.icon-btn:hover {
-    background: var(--hover-strong);
-}
-
-
-.theme-toggle {
-    width: 30px;
-    height: 30px;
-    justify-content: center;
-    font-size: var(--fs-15);
-    padding: 0;
-}
-
 .export-btn {
     display: flex;
     align-items: center;
@@ -182,19 +117,6 @@
 .export-btn.on {
     background: var(--accent);
     color: var(--sheet);
-}
-
-/* I11 — same shape as Export, but neutral: Export is the primary action of this screen and
-   should stay the only tinted control in the row. */
-.nav-btn {
-    background: none;
-    border-color: var(--border);
-    text-decoration: none;
-}
-
-.nav-btn:hover {
-    background: var(--hover-strong);
-    filter: none;
 }
 
 .channel-chosen {
@@ -380,30 +302,17 @@
     align-items: stretch;
     gap: 10px;
     flex: none;
-    border-bottom: 1px solid var(--glass-border);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
     box-sizing: border-box;
     overflow-x: auto;
     overflow-y: visible;
     position: relative;
-    isolation: isolate;
     /* Flex items default to min-width:auto (can't shrink below content size). Without this,
        a wide row of buttons pushes .app/body wider than the viewport instead of scrolling
        internally, causing page-level horizontal scroll on iPad/iPhone widths. */
     min-width: 0;
     width: 100%;
-}
-
-/* Same reasoning as .topbar::before above — keeps backdrop-filter off the real .toolbar
-   element so its position:fixed popover panels (Paragraph/table/formula/AI menus) stay
-   positioned relative to the viewport instead of being clipped by .toolbar's own overflow-x. */
-.toolbar::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background: var(--glass);
-    backdrop-filter: var(--blur);
-    -webkit-backdrop-filter: var(--blur);
 }
 
 .toolbar-row1 {
@@ -542,6 +451,18 @@
 .toolbar button:disabled {
     opacity: .5;
     cursor: default;
+}
+
+/* The one button on the strip that is not a formatting command: autosave has stopped retrying and
+   this is the last save the draft will get, so it is coloured as an alarm rather than as a glyph.
+   Its hover takes the danger wash rather than the strip's, so the red ink stays on the ground the
+   contrast check measures it against. */
+.toolbar .tb-retry {
+    color: var(--danger);
+}
+
+.toolbar .tb-retry:hover {
+    background: var(--hover-danger);
 }
 
 .toolbar .gif-btn {
@@ -732,11 +653,6 @@
     display: flex;
     flex: 1;
     min-height: 0;
-}
-
-.icon-btn.on {
-    background: var(--asoft);
-    color: var(--accent);
 }
 
 .panel-head {
@@ -1132,32 +1048,6 @@
     .ru-diff-gutter { display: none; }
 }
 
-/* The editor's topbar is the crowded one — it carries the title field, the save state and Export
-   on top of the four nav buttons every screen has. At an iPad's 1180px the labels no longer fit:
-   "Posts Manager" wrapped onto two lines and overlapped Export, and the account email ran off the
-   right edge of the viewport. The icons stay (each has a title, and the nav row is identical on
-   every other screen), so nothing becomes unreachable — the row just stops overflowing.
-   The 768px block below drops far more; this is the intermediate step that was missing. */
-@media (max-width: 1280px) {
-    .nav-btn .btn-label,
-    .version-tag {
-        display: none;
-    }
-
-    .nav-btn {
-        padding: 5px 8px;
-    }
-}
-
-/* iPad in portrait (820px): with the labels already gone the row still ran ~30px long and pushed
-   the account avatar off the right edge. The wordmark is the cheapest thing to drop — the logo
-   beside it stays, so the app is still named on screen. */
-@media (max-width: 900px) {
-    .brand-name {
-        display: none;
-    }
-}
-
 /* A label that runs out of room must clip, never wrap: a two-line label makes its button taller
    than the row, which is how "Posts Manager" ended up sitting on top of Export.
    T-051 added the second half: nowrap alone only stopped the wrap, it did not stop the button from
@@ -1170,8 +1060,7 @@
     text-overflow: ellipsis;
 }
 
-.export-btn,
-.nav-btn {
+.export-btn {
     flex: 0 1 auto;
     min-width: 44px;
     overflow: hidden;
@@ -1188,56 +1077,6 @@
 .diff-marker.added { background: var(--ok); }
 .diff-marker.changed { background: color-mix(in srgb, var(--accent) 55%, var(--warn) 45%); }
 .diff-marker.removed { background: var(--danger); }
-
-/* ---------- Status bar ---------- */
-.status-bar {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    height: 27px;
-    flex: none;
-    padding: 0 12px;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    font-size: var(--fs-meta);
-    color: var(--t2);
-}
-
-.sync-indicator {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.sync-indicator .dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--t3);
-}
-
-.sync-indicator .dot.ok {
-    background: var(--ok);
-}
-
-.sync-indicator .dot.warn {
-    background: var(--warn);
-}
-
-.sync-indicator .dot.err {
-    background: var(--danger);
-}
-
-.retry-inline {
-    border: none;
-    background: none;
-    color: var(--danger);
-    cursor: pointer;
-    font-size: var(--fs-meta);
-    padding: 0;
-    text-decoration: underline;
-    font-family: inherit;
-}
 
 /* ---------- Export modal ---------- */
 /* N13: the wide export window spends its extra width on columns instead of one tall scroll.
@@ -1803,17 +1642,12 @@ input[type="datetime-local"]:focus-visible {
 }
 
 @media (max-width: 768px) {
-    .status-bar {
-        display: none;
-    }
-
     .toolbar {
         flex-wrap: nowrap;
         -webkit-overflow-scrolling: touch;
     }
 
-    .toolbar button,
-    .icon-btn {
+    .toolbar button {
         min-width: 40px;
         min-height: 40px;
     }
@@ -1831,82 +1665,24 @@ input[type="datetime-local"]:focus-visible {
         flex: 1;
     }
 
-    /* The topbar's icon-btns just got bigger (rule above) and there's no room left for text
-       labels/decoration too — without this, reaching Settings (behind the account avatar, the
-       last item in the row) needed scrolling the whole page sideways. Drop everything that's
-       purely decorative or duplicated elsewhere, keep every icon (so every action stays reachable
-       with a tap, nothing is actually removed). */
+    /* Everything purely decorative or duplicated elsewhere goes, and every icon stays, so
+       nothing becomes unreachable with a tap. */
     .topbar {
         gap: 2px;
         padding: 0 6px;
     }
 
-    .brand-name,
-    .version-tag,
-    .divider,
     .save-label,
     .export-trigger .btn-label,
-    /* I11's two nav buttons keep their icons (and the badge) but drop their labels here, same
-       rule as Export — nothing becomes unreachable, the row just stops overflowing. */
-    .nav-btn .btn-label,
     /* Same "Download .cedar" action also lives in the Export modal, which is reachable on
        mobile — so dropping it here costs nothing and keeps the row from overflowing again. */
     .cedar-download {
         display: none;
     }
 
-    .export-trigger,
-    .nav-btn {
+    .export-trigger {
         padding: 5px 8px;
     }
-}
-
-/* I13 — fullscreen toggle in the status bar, sized to the bar rather than to the topbar's
-   icon buttons, which are a size larger. */
-.status-icon-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    background: none;
-    color: inherit;
-    cursor: pointer;
-    padding: 2px 4px;
-    border-radius: var(--radius-sm);
-}
-
-.status-icon-btn:hover {
-    background: var(--hover-strong);
-    color: var(--text);
-}
-
-.console-toggle {
-    gap: 5px;
-    font: inherit;
-    padding: 2px 7px;
-}
-
-.console-toggle.active {
-    background: var(--hover-strong);
-    color: var(--text);
-}
-
-.console-badge {
-    border-radius: 999px;
-    padding: 0 5px;
-    font-size: var(--fs-10);
-    font-weight: 700;
-    line-height: 15px;
-}
-
-.console-badge.busy {
-    background: var(--asoft);
-    color: var(--accent);
-}
-
-.console-badge.error {
-    background: var(--danger-soft);
-    color: var(--danger);
 }
 
 /* NF2 — the "add a translation" trigger sits with the language tabs. */

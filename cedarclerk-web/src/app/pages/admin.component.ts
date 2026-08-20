@@ -8,7 +8,6 @@ import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
-import { PageHeaderComponent } from '../shared/page-header.component';
 import { avatarFill, avatarInitial as initialOf } from '../core/avatar-color.util';
 
 export type AdminTab = 'users' | 'invites' | 'posts' | 'reports';
@@ -17,7 +16,7 @@ export type AdminTab = 'users' | 'invites' | 'posts' | 'reports';
 // invite codes, a read-only cross-owner post list, billing/usage reporting, and the audit log.
 @Component({
     selector: 'app-admin',
-    imports: [ZonedDatePipe, FormsModule, PageHeaderComponent],
+    imports: [ZonedDatePipe, FormsModule],
     templateUrl: 'admin.component.html',
     styleUrls: ['admin.component.css'],
 })
