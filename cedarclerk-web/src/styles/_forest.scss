@@ -1060,7 +1060,7 @@
 }
 
 :root[data-skin="forest"] .auth-page .field label {
-    font-size: 11.5px;
+    font-size: var(--fs-12);
     font-weight: 600;
     letter-spacing: .05em;
     text-transform: uppercase;

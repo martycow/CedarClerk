@@ -7,7 +7,7 @@ guard: none
 
 # Design
 
-Source of truth for all values below: `cedarclerk-web/src/styles.scss` (~800 lines; since 18.08.2026 it `@use`s a second global partial, `styles/_forest.scss` — the Forest Workshop skin, ~1200 lines scoped under `:root[data-skin="forest"]`). Component-scoped CSS lives alongside each component (`editor.component.css`, `settings.component.css`, etc.) under Angular's default view encapsulation. **When this file and `styles.scss` disagree, `styles.scss` wins** — the values below drifted once (the 01.08 role shift) and were re-synced 18.08.2026.
+Source of truth for all values below: `cedarclerk-web/src/styles.scss` (it also `@use`s `styles/_forest.scss`, whose every rule is scoped under a `data-skin` attribute nothing sets — an inert partial, not a second source of values). Component-scoped CSS lives alongside each component (`editor.component.css`, `settings.component.css`, etc.) under Angular's default view encapsulation. **When this file and `styles.scss` disagree, `styles.scss` wins** — the values below drifted once (the 01.08 role shift) and were re-synced 18.08.2026.
 
 ## Principles (ADR-071, 31.07.2026)
 
@@ -51,7 +51,7 @@ Overrides only the listed properties; everything else (`--shadow-md`, `--asoft`,
 --shadow: 0 1px 3px rgba(0, 0, 0, .45);
 ```
 
-Theme is applied by `ThemeService` (`cedarclerk-web/src/app/core/theme.service.ts`): a signal-backed `Theme = 'light' | 'dark'`, persisted to `localStorage` (key `cedar-theme`), falling back to the `prefers-color-scheme: dark` media query, applied by setting `document.documentElement.dataset['theme']` — i.e. a `data-theme` attribute on `<html>`, matched by the `:root[data-theme="dark"]` selector above. Toggled via a ☾/☀ control in the editor topbar, both auth pages, and the Appearance panel (right above the skin toggle).
+Theme is applied by `ThemeService` (`cedarclerk-web/src/app/core/theme.service.ts`): a signal-backed `Theme = 'light' | 'dark'`, persisted to `localStorage` (key `cedar-theme`), falling back to the `prefers-color-scheme: dark` media query, applied by setting `document.documentElement.dataset['theme']` — i.e. a `data-theme` attribute on `<html>`, matched by the `:root[data-theme="dark"]` selector above. Toggled via a ☾/☀ control in the editor topbar, both auth pages, and the Appearance panel. It is the only styling axis the app has — there is one look (ADR-136), and light/dark is the whole of the choice.
 
 ### Radius
 ```
@@ -91,7 +91,7 @@ Patterns stay the ones already in use (`d MMM`, `d MMM, HH:mm`, `d MMM yyyy, HH:
 spelled out (`14:05 PDT`) on the blog and left unspoken in the app: a reader could be anywhere, the
 author is in one place.
 
-`--font-serif` (added 31.07.2026, tokens v2) is for reading surfaces **only** — blog post body and the editor sheet. A system stack on purpose: the server serves every byte itself. The one exception is the **Forest skin**, which self-hosts Vollkorn/Source Sans 3/Literata/Caveat via @fontsource (ADR-120) — the default skin still downloads no font bytes, since only forest-scoped rules reference those families.
+`--font-serif` (added 31.07.2026, tokens v2) is for reading surfaces **only** — blog post body and the editor sheet. The four faces it and `--font-sans`/`--font-display`/`--font-note` name — Literata, Source Sans 3, Vollkorn, Caveat — are self-hosted via `@fontsource` (ADR-143), one file per weight per named subset, so the server still serves every byte itself and the explicit list is what bounds the payload.
 
 Font-size scale — added 27.07.2026 (ADR-052), extended 31.07.2026 (ADR-071) to `--fs-9/10/11/12/13/14/15/16/17/18/19/20/22/27`. **Integers only**: the 10/15/17/18/22 steps were added because they are measured, in-use sizes; the half-pixel sizes found in the sweep are not tokenized and collapse to the nearest integer.
 
@@ -130,12 +130,15 @@ The rules below are checked, not remembered: `cedarclerk-web/e2e/12-a11y.spec.ts
 
 | Token | Contract |
 |---|---|
-| `--text`, `--t2` | text — 4.5:1 against every surface |
-| `--accent`, `--danger`, `--ok`, `--warn` | text — 4.5:1 against every surface |
+| `--text`, `--t2` | text — 4.5:1 against every paper surface (`--surface`, `--sheet`, `--alt`) |
+| `--accent`, `--danger`, `--ok`, `--warn` | text — 4.5:1 against every paper surface |
 | `--t3` | **not text.** Placeholder, disabled, decoration — 3:1 |
 | `--border-strong` | the boundary of a field/select/toggle — 3:1 |
+| `--wood-ink` | the only ink allowed on the wall (`--bg`, `--canvas`) — 4.5:1 |
 | `--border`, `--abord` | decorative hairline — no threshold, deliberately |
 | `--series-1…6` | graphical object — 3:1 on `--surface` |
+
+Paper ink and wall ink are measured separately because they travel in opposite directions (ADR-141): the wall is dark at night while the sheet stays cream, so no one value clears 4.5:1 on both, and pairing a paper token against `--bg` would be an unsatisfiable demand rather than a standard.
 
 The one that matters when writing CSS: **`--t3` never carries information.** If text is quiet because it is secondary, that is `--t2` plus a smaller `--fs-*` role.
 
@@ -189,10 +192,6 @@ Channel colors are a separate hardcoded array in `editor.component.ts`, not toke
 
 Global (not component-scoped, since TipTap content is rendered via `innerHTML` in places): headings in `em` units so they scale with the editor's zoom control (fixed from a past bug — zoom used to be silently overridden by a hardcoded `font-size: 16px`), `blockquote` with a `3px solid var(--abord)` left border, inline `code`/`pre` with `var(--font-mono)`, `tg-spoiler` (spoiler mark → hidden text via `background: var(--t3); color: transparent`, revealed on hover), `.datetime-pill`, `.annotation-block` (comment/reaction anchor), `.toggle-block`, `.media-with-caption`, `.footnote-badge` — one block per custom TipTap node/mark in `tiptap-extensions/`.
 
-## Skins (ADR-120)
-
-A second styling axis besides light/dark: `data-skin="forest"` on `<html>` (ThemeService, localStorage `cedar-skin`, toggle in the Appearance modal). All of it lives in `cedarclerk-web/src/styles/_forest.scss` — token overrides plus component recipes, every rule scoped under `:root[data-skin="forest"]`; the default skin carries no attribute and is untouched by construction. Forest night keeps paper surfaces cream and darkens only the wood chrome, so its dark block re-asserts every token the base dark theme flips. Fonts (Vollkorn/Source Sans 3/Literata/Caveat) are self-hosted via @fontsource and load only when the skin references them. `tools/check-contrast.mjs` validates the default skin only — forest pairs are checked by hand when the palette moves.
-
 ## Known design debt
 
 - ~~Font-size scale isn't adopted outside the shared header~~ — closed by T-077 (31.07–01.08.2026): 314 → 0 hardcoded `font-size` declarations in the Angular app.
@@ -200,4 +199,4 @@ A second styling axis besides light/dark: `data-skin="forest"` on `<html>` (Them
 - Spacing literals 9/11/14/18px on cards and badges — the scale has no such steps; picking one waits on T-076's mockups, not on a sweep.
 - The blog's server-rendered surfaces get their tokens generated from `styles.scss` (ADR-090), but the renderer still carries a handful of its own hex values.
 
-> ~~TODO (Marty): target design-system tool?~~ — **answered by practice, 08–18.08.2026**: Claude Design is the active pipeline for new work, delivered as handoff packages (`docs/design_handoff_indiedev_core_loop/` for the module screens; the Forest Workshop project for the skin), while **`styles.scss` stays the canonical source of token values** — packages copy from it, never the reverse.
+> ~~TODO (Marty): target design-system tool?~~ — **answered by practice, 08–18.08.2026**: Claude Design is the active pipeline for new work, delivered as handoff packages (`docs/design_handoff_indiedev_core_loop/` for the module screens; Cedar Bench, mirrored at `.design-sync/ds-v2/`, for the app's one look), while **`styles.scss` stays the canonical source of token values** — packages copy from it, never the reverse.

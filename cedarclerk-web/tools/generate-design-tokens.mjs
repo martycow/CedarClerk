@@ -9,17 +9,10 @@
 // The output is committed, like icon-data.generated.ts, and a test fails if it drifts.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { CONTRACT } from './contract-tokens.mjs';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const css = readFileSync(resolve(ROOT, 'src/styles.scss'), 'utf8');
-
-/** The tokens the server-rendered surfaces actually use. Anything else is the app's business. */
-const WANTED = [
-    'bg', 'canvas', 'surface', 'sheet', 'alt', 'border', 'border-strong',
-    'text', 't2', 't3', 'accent', 'danger', 'ok', 'warn',
-    'shadow', 'asoft', 'abord', 'font-sans', 'font-mono', 'font-serif',
-    'fs-read', 'lh-read', 'radius-sm', 'radius-md', 'radius-lg',
-];
 
 function block(selector) {
     const start = css.indexOf(selector);
@@ -40,7 +33,7 @@ function block(selector) {
 const light = block(':root');
 const dark = block(':root[data-theme="dark"]');
 
-const pick = (vars) => WANTED
+const pick = (vars) => CONTRACT
     .filter(name => vars[name] !== undefined)
     .map(name => `        ["${name}"] = ${JSON.stringify(vars[name])},`)
     .join('\n');
@@ -76,4 +69,4 @@ ${pick(dark)}
 `;
 
 writeFileSync(resolve(ROOT, '../CedarClerk.Core/DesignTokens.generated.cs'), out);
-console.log(`wrote ${Object.keys(light).filter(k => WANTED.includes(k)).length} light and ${Object.keys(dark).filter(k => WANTED.includes(k)).length} dark tokens`);
+console.log(`wrote ${Object.keys(light).filter(k => CONTRACT.includes(k)).length} light and ${Object.keys(dark).filter(k => CONTRACT.includes(k)).length} dark tokens`);

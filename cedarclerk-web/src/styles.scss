@@ -1,79 +1,100 @@
-/* Forest Workshop skin (ADR-120) — @use must sit above the base blocks; every rule in the partial
-   is scoped under the data-skin attribute, so the default skin is untouched, and the forest-night
-   block re-asserts every token the dark block below sets (the later dark block wins specificity
-   ties against the skin's base block). Base-block selector strings must not appear in comments
-   above the blocks — tools/check-contrast.mjs anchors each block on the first occurrence of its
-   selector text, and a mention here once silently pointed its dark check at the light block. */
+/* The four self-hosted faces (ADR-143) — one file per weight per named subset, because the
+   explicit list is what bounds the payload and a whole-family import is what it was chosen
+   against. Nothing above the base blocks may spell a base-block selector, in code or in prose:
+   tools/check-contrast.mjs and tools/generate-design-tokens.mjs each anchor a block on the first
+   occurrence of its selector text, and a mention up here once pointed the dark check at the
+   light block. */
+@use '@fontsource/vollkorn/latin-600.css' as *;
+@use '@fontsource/vollkorn/latin-700.css' as *;
+@use '@fontsource/vollkorn/cyrillic-600.css' as *;
+@use '@fontsource/vollkorn/cyrillic-700.css' as *;
+@use '@fontsource/source-sans-3/latin-400.css' as *;
+@use '@fontsource/source-sans-3/latin-600.css' as *;
+@use '@fontsource/source-sans-3/latin-700.css' as *;
+@use '@fontsource/source-sans-3/cyrillic-400.css' as *;
+@use '@fontsource/source-sans-3/cyrillic-600.css' as *;
+@use '@fontsource/source-sans-3/cyrillic-700.css' as *;
+@use '@fontsource/literata/latin-400.css' as *;
+@use '@fontsource/literata/latin-600.css' as *;
+@use '@fontsource/literata/cyrillic-400.css' as *;
+@use '@fontsource/literata/cyrillic-600.css' as *;
+@use '@fontsource/caveat/latin-500.css' as *;
+@use '@fontsource/caveat/cyrillic-500.css' as *;
+
+/* Neutralised rather than removed: with the skin attribute never set, no rule in it can match. */
 @use 'styles/forest';
 
+/* Cedar Bench, the one look (ADR-136). Two vocabularies share this block. The contract names
+   (ADR-137) are an integration surface, not a palette: tools/check-contrast.mjs scores them,
+   tools/generate-design-tokens.mjs copies them into DesignTokens for the blog and the landing
+   page, DesignTokenDriftTests pins ten of them by name, and core/appearance.service.ts rewrites
+   --accent at runtime. They keep their spelling and hold flat colours — a gradient here reaches a
+   server-rendered surface verbatim. The bench material names sit alongside and alias onto them
+   wherever both name one swatch; a component reaching for a role uses the contract name. */
 :root {
-    --bg: #ECE9E2;
-    --canvas: #E2DED4;
-    --surface: #F7F5EF;
-    --sheet: #FCFBF8;
-    --alt: #EFECE4;
-    --border: #DBD5C8;
-    --text: #26231D;
-    /* T-082/ADR-074 — the muted tiers and the status tones were re-measured against every surface
-       token, worst case first (which is --canvas: a dark-on-light pair loses contrast as the
-       background darkens, so the recessed surface, not the sheet, is what binds). Each value below
-       is the smallest step towards black that clears 4.5:1 there — the hue is untouched, these are
-       the same colours a shade deeper. See tools/check-contrast.mjs, which now fails the build. */
-    --t2: #686257;
-    /* --t3 is NOT a text colour any more. At 4.5:1 on this palette it lands within two steps of
-       --t2 and the third tier stops existing; instead it keeps its lightness and its job shrinks
-       to placeholder, disabled and decoration, where 3:1 (non-text contrast) is the rule. Anything
-       that used it to say something now uses --t2. */
-    --t3: #847E72;
-    --accent: #566842;
+    /* Wall — the plaster ground, in two stops. Chrome draws on this; paper never does, and at
+       night it is the one family that travels towards white (ADR-141). */
+    --bg: #F3EDDE;
+    --canvas: #E9E1CC;
+
+    /* Paper — every reading surface, cream in both themes. --surface is the deepest of the three
+       and is therefore what every dark-on-light ratio is measured against, not --sheet. */
+    --surface: #F1EADA;
+    --sheet: #FAF6EC;
+    --alt: #F5F0E1;
+
+    --border: #CDC1A8;
+    /* The boundary of a control the user is meant to find and operate — a field, a select, a
+       toggle track. Separate from --border, which is a quiet hairline between cards and rows:
+       this one is an affordance and holds 3:1 against every surface. */
+    --border-strong: #8A6F4C;
+
+    --text: #2C251A;
+    --t2: #665A45;
+    /* --t3 is not a text colour. At 4.5:1 on this palette it lands within two steps of --t2 and
+       the third tier stops existing, so its job is placeholder, disabled and decoration, where
+       3:1 is the rule. Anything that says something uses --t2 — including the chart axis numbers
+       and tile sublines the design system draws on this tier (ADR-137). */
+    --t3: #8C7F66;
+
+    --accent: #39543C;
     --danger: #A84129;
     --ok: #386D46;
-    /* --warn completes the status triad. The app has had three status tones since the admin panel
-       shipped, but only two were tokenized: the third lived as #8A6A10 with a hand-written
-       :root[data-theme="dark"] override to #E3C35C inside admin.component.css. The value existed
-       and was already split by theme by hand — this only gives it a name. */
-    --warn: #7B5E0E;
+    --warn: #7A5520;
 
-    /* The boundary of a control the user is meant to find and operate — a field, a select, a
-       toggle track. Separate from --border (T-082/ADR-074): that one is a hairline between cards
-       and rows and stays quiet, this one is an affordance and holds 3:1 against every surface. */
-    --border-strong: #857D6F;
-
-    --shadow: 0 1px 3px rgba(40, 35, 25, .10);
-    --shadow-md: 0 8px 24px rgba(40, 35, 25, .12);
-    --shadow-lg: 0 24px 64px rgba(0, 0, 0, .30);
+    --shadow: 0 1px 3px rgba(58, 38, 16, .14);
+    --shadow-md: 0 8px 24px rgba(58, 38, 16, .18);
+    --shadow-lg: 0 24px 64px rgba(40, 22, 6, .35);
 
     --asoft: color-mix(in srgb, var(--accent) 13%, var(--surface));
     --abord: color-mix(in srgb, var(--accent) 38%, var(--border));
 
-    /* Hover/pressed wash for rows, menu items and icon buttons. Added with the /drafts migration
-       (tokens v2): every such surface in the app was carrying its own literal — `rgba(128, 120,
-       100, .08)`, `.1`, `.14` — a colour that belongs to neither theme and simply happened to look
-       acceptable in both. Derived from --text, so it follows the theme instead of guessing at it. */
+    /* Hover/pressed wash for rows, menu items and icon buttons. Derived from --text so it follows
+       the theme, rather than the per-component rgba literals that belonged to neither. */
     --hover: color-mix(in srgb, var(--text) 7%, transparent);
     --hover-strong: color-mix(in srgb, var(--text) 13%, transparent);
     --hover-danger: color-mix(in srgb, var(--danger) 12%, transparent);
 
-    /* The scrim behind a modal. Was a fixed rgba(24, 21, 16, .45) inside modal.component.css and
-       therefore identical in both themes — which is wrong in the direction that matters: the same
-       45% veil that separates a dialog from a light page barely registers against a dark one. */
-    --scrim: rgba(24, 21, 16, .45);
+    /* The scrim behind a modal, per theme: the same veil that separates a dialog from a light
+       page barely registers against a dark one. */
+    --scrim: rgba(28, 18, 8, .5);
 
-    /* Categorical chart series (N10). Assigned in this fixed order and never cycled — a 7th
-       category folds into "Other". Deliberately excludes --danger/--ok: those mean a state, not
-       an identity. Both light and dark steps were checked against this theme's chart surface
-       (lightness band, chroma floor, colourblind separation, contrast) — re-run that check
-       before changing any value here, don't eyeball it. */
-    --series-1: #6B8A3D;
-    --series-2: #2E6FA8;
-    --series-3: #C56F2C;
-    --series-4: #8A5BA8;
-    --series-5: #A8762A;
-    --series-6: #0E9184;
+    /* Categorical chart series. Assigned in this fixed order and never cycled — a 7th category
+       folds into "Other". Deliberately excludes --danger/--ok, which mean a state, not an
+       identity. The first four are the design system's named set (pine, ink, resin, moss); the
+       last two extend it to six, which is the capacity the app's charts already assume. */
+    --series-1: #39543C;
+    --series-2: #3E5A76;
+    --series-3: #A8721F;
+    --series-4: #6B7F4A;
+    --series-5: #7A5288;
+    --series-6: #1F7A6E;
 
-    --radius-sm: 6px;
-    --radius-md: 10px;
-    --radius-lg: 14px;
+    /* Paper is cut square and wood is eased: 4px is a field, 8px a plaque. Nothing in the design
+       system is rounder than a plaque, so the card/modal step is one above it. */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
 
     --space-1: 4px;
     --space-2: 8px;
@@ -81,11 +102,15 @@
     --space-4: 16px;
     --space-5: 24px;
     --space-6: 32px;
+    --space-7: 34px;
+    --space-8: 48px;
 
     /* Density (ADR-071 principle 3). These are the COMFORTABLE values, which is the default for
        the whole product; a page root opts into the tighter set with [data-density="compact"]
        below. The rule that makes this work: a component uses these tokens and never decides its
-       own density, because several components appear on both kinds of screen. */
+       own density, because several components appear on both kinds of screen. This axis is about
+       screens; the chrome/paper axis below is about materials, and the two never cross
+       (ADR-138). */
     --dens-row-y: 10px;      /* vertical padding of a table/list row */
     --dens-control-y: 7px;   /* control padding, vertical */
     --dens-control-x: 14px;  /* control padding, horizontal */
@@ -95,22 +120,13 @@
     --dens-fs: var(--fs-body);
     --dens-elev: var(--shadow);
 
-    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-sans: 'Source Sans 3', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
     --font-mono: ui-monospace, Menlo, Consolas, monospace;
+    --font-serif: 'Literata', Georgia, "Iowan Old Style", serif;
 
-    /* Content serif (ADR-071 principle 4: serif for content, sans for chrome). A system stack,
-       deliberately not a webfont — the Pi serves every byte of this app itself, and adding a
-       downloaded face is a performance and licensing decision nobody has made. Only the reading
-       surfaces use this: the blog post body and the editor sheet. Never toolbars, tables or forms. */
-    --font-serif: ui-serif, Georgia, "Iowan Old Style", "Source Serif Pro", "Times New Roman", serif;
-
-    /* Font-size scale. Originally (27.07.2026) reverse-engineered from what was already hardcoded;
-       extended for tokens v2 (ADR-071) after measuring all 314 hardcoded font-sizes in component
-       CSS. Two things that measurement changed:
-       - The scale is INTEGERS ONLY. 110 of the 314 were half-pixels (44x 12.5, 30x 11.5, 16x 10.5,
-         14x 13.5). A browser rounds those per element at render time, so 12.5 and 13 can look
-         identical at one zoom and different at another. Half-steps collapse to the nearest integer.
-       - 10/15/17/18/22 were added because they are measured, in-use sizes that had no token. */
+    /* Font-size scale, INTEGERS ONLY. Half-pixels round per element at render time, so 12.5 and
+       13 look identical at one zoom and different at another; the design system ships 63 of them
+       and tools/check-density.mjs is what stops them arriving. */
     --fs-9: 9px;
     --fs-10: 10px;
     --fs-11: 11px;
@@ -123,34 +139,26 @@
     --fs-18: 18px;
     --fs-19: 19px;
     --fs-20: 20px;
+    --fs-21: 21px;
     --fs-22: 22px;
     --fs-27: 27px;
 
     /* Semantic type roles. Components reach for THESE, not the numeric scale above — the numbers
-       are the palette, these are the meanings. This is what makes a density switch possible at
-       all: --fs-ui/--fs-body change value under [data-density="compact"] and every control that
-       used the role follows, while anything that hardcoded 13px does not. */
-    /* Each role moved up one step of the numeric scale 01.08.2026 (Marty: the editor's text is too
-       small). Deliberately the ROLES and not the numbers: the scale stays what it is, and every
-       component that reached for a role — which after T-077 is all of them — follows in one edit.
-       Product-wide rather than editor-only, because ADR-071 principle 2 allows exactly one type
-       scale; the dense screens stay tighter through --dens-fs, which is what density is for. */
+       are the palette, these are the meanings, and that is what makes a density switch possible
+       at all. */
     --fs-caption: var(--fs-12);
     --fs-meta: var(--fs-13);
     --fs-ui: var(--fs-14);
     --fs-body: var(--fs-15);
     --fs-title: var(--fs-20);
 
-    /* Reading surfaces (blog body, editor sheet) — larger and looser than any chrome. */
-    --fs-read: var(--fs-17);
-    --lh-read: 1.7;
+    /* Reading surfaces (blog body, editor sheet) — larger and looser than any chrome. A literal
+       rather than a var: a contract name is copied into DesignTokens verbatim, and --fs-17 is
+       outside the contract, so an alias here resolves to nothing on the served page (ADR-137). */
+    --fs-read: 17px;
+    --lh-read: 1.75;
 
-    /* Icon sizes (ADR-072, T-079). These three values are exactly the ones `.icon` is currently
-       declared with in 9 different files (15/18/20px) — the inconsistency is the reason for the
-       tokens, so they are named rather than reconciled to one number. */
-    /* Raised one step each 01.08.2026 (Marty: "иконки слишком маленькие"). The old set was
-       reverse-engineered from what components already declared, which is a good way to find a
-       scale and a bad way to judge one — 15px was never chosen, it was inherited. */
+    /* Icon sizes (ADR-072). */
     --icon-xs: 13px;
     --icon-sm: 17px;
     --icon-md: 20px;
@@ -164,54 +172,215 @@
     --motion-base: 180ms;
     --motion-slow: 280ms;
     --ease: cubic-bezier(.2, .6, .3, 1);
+    --ease-settle: cubic-bezier(.3, 1.4, .45, 1);
+    --ease-swing: cubic-bezier(.3, 1.3, .5, 1);
+    --dur-publish: 600ms;
 
-    /* "Cedar Aero" chrome materials (ADR-035, editor redesign) — applied to toolbars/popovers/
-       modals only; content sheets (the writing surface, cards) stay solid for readability. */
+    /* "Cedar Aero" chrome materials (ADR-035) — toolbars, popovers and modals only; content
+       sheets stay solid for readability. */
     --blur: saturate(1.6) blur(14px);
     --glass: color-mix(in srgb, var(--surface) 80%, transparent);
     --glass-strong: color-mix(in srgb, var(--surface) 90%, transparent);
     --glass-border: color-mix(in srgb, #ffffff 55%, var(--border));
     --gloss-top: inset 0 1px 0 color-mix(in srgb, #ffffff 65%, transparent);
     --glow-accent: 0 1px 10px color-mix(in srgb, var(--accent) 22%, transparent);
+
+    /* ── Bench materials (ADR-137, additive) ────────────────────────────────────────────────
+       A material name answers "what is this made of"; a contract name answers "what is this
+       for". Where both name one swatch the material aliases onto the contract, never the
+       reverse: only the contract name is measured, carried to the blog and moved by the user's
+       accent preset. */
+
+    /* Wood — structure: rail, shelf frames, panel headers. Never a text background except
+       through --wood-ink, which is the only ink allowed on the wall. */
+    --wood-hi: #B68B60;
+    --wood: #9C7350;
+    --wood-lo: #7C5939;
+    --wood-edge: #573E26;
+    --wood-groove: #6B4C2F;
+    --wood-ink: #3B2A18;
+    --wood-ink-soft: rgba(59, 42, 24, .68);
+
+    --wall-hi: var(--bg);
+    --wall-lo: var(--canvas);
+    --surface-page: linear-gradient(170deg, var(--wall-hi) 0%, var(--wall-lo) 100%);
+    --lamp: radial-gradient(1100px 700px at 14% -10%, rgba(255, 228, 170, .34), rgba(255, 228, 170, 0) 60%);
+
+    /* Dark park-sign rail — the app chrome. */
+    --rail-hi: #6B4F33;
+    --rail-mid: #4E3820;
+    --rail-lo: #3E2C17;
+    --rail-edge: #241808;
+    --rail-ink: #F2E8CE;
+    --rail-ink-soft: rgba(242, 232, 206, .6);
+    --sign-tile-hi: #66492E;
+    --sign-tile-lo: #4A351D;
+    --surface-rail: linear-gradient(180deg, var(--rail-hi), var(--rail-mid) 58%, var(--rail-lo));
+    --grad-sign-tile: linear-gradient(180deg, var(--sign-tile-hi), var(--sign-tile-lo));
+
+    --paper: var(--sheet);
+    --paper-2: var(--surface);
+    --paper-bright: #FFFDF4;
+    --paper-edge: #DDD2B8;
+
+    --ink: var(--text);
+    --ink-2: var(--t2);
+    --ink-3: var(--t3);
+
+    --pine: var(--accent);
+    --pine-hi: #4A6A4D;
+    --pine-deep: #2C4230;
+    --grad-pine: linear-gradient(180deg, var(--pine-hi), var(--pine));
+    --text-on-pine: #F2EFE2;
+    --moss: #71854F;
+    --leaf-bg: #DCE2C4;
+    --leaf-bg-2: #C9D3A4;
+    --leaf-ink: #3D4E2A;
+
+    --brass: #C69A4E;
+    --brass-hi: #EED9A3;
+    --brass-lo: #8A6226;
+    --brass-edge: #6E4E1B;
+    --grad-brass: linear-gradient(180deg, var(--brass-hi), var(--brass));
+    --resin: #D89A3E;
+    --resin-hi: #F2C878;
+    --rust: var(--danger);
+
+    /* Procedural SVG noise. The design system's copies are byte-identical to the ones the app
+       already ships, so there is one set of files rather than two. */
+    --tex-wood: url('/assets/forest/tex-wood.svg');
+    --tex-paper: url('/assets/forest/tex-paper.svg');
+    --tex-cork: url('/assets/forest/tex-cork.svg');
+
+    /* Paper lies on the wall; wood casts harder edges. */
+    --shadow-paper: 0 1px 2px rgba(58, 38, 16, .18), 0 10px 26px rgba(58, 38, 16, .2);
+    --shadow-paper-sm: 0 1px 2px rgba(58, 38, 16, .12);
+    --shadow-card-drop: drop-shadow(0 2px 3px rgba(50, 30, 10, .28)) drop-shadow(0 10px 18px rgba(50, 30, 10, .24));
+    --shadow-rail: inset 0 1px 0 rgba(255, 240, 210, .12), 0 2px 8px rgba(30, 18, 6, .4);
+    --shadow-pine-btn: inset 0 0 0 1.5px rgba(238, 217, 163, .35), 0 2px 0 #24382A, 0 4px 8px rgba(46, 28, 10, .25);
+    --shadow-field-inset: inset 0 1px 2px rgba(80, 56, 26, .14);
+    --shadow-shelf: inset 0 1px 0 rgba(255, 240, 210, .14), 0 2px 7px rgba(30, 18, 6, .34);
+    --shadow-sheet-inset: inset 0 1px 3px rgba(58, 38, 16, .3);
+
+    --border-paper: 1px solid rgba(120, 96, 58, .35);
+    --border-field: 1px solid rgba(110, 86, 50, .5);
+    --border-rail-btn: 1px solid rgba(242, 232, 206, .3);
+    --frame-board: linear-gradient(160deg, #6B4F33, #43301B);
+    --shelf-frame: linear-gradient(160deg, var(--wood-hi), var(--wood-lo) 62%, var(--wood-edge));
+    --pegboard:
+        radial-gradient(circle at 50% 50%, rgba(30, 18, 6, .5) 0 1.6px, rgba(0, 0, 0, 0) 1.7px) 0 0 / 26px 26px,
+        var(--surface-rail);
+
+    --radius-plaque: var(--radius-md);
+    --radius-field: var(--radius-sm);
+    --radius-stamp: 3px;
+    --radius-paper: 3px;
+
+    --font-display: 'Vollkorn', Georgia, serif;
+    --font-note: 'Caveat', cursive;
+
+    /* Pencil rules: the worktop is squared paper, the chart is graph paper. */
+    --rule-ink: rgba(120, 96, 58, .32);
+    --rule-ink-soft: rgba(120, 96, 58, .15);
+    --grid-worktop:
+        repeating-linear-gradient(0deg, transparent 0 23px, var(--rule-ink-soft) 23px 24px),
+        repeating-linear-gradient(90deg, transparent 0 23px, var(--rule-ink-soft) 23px 24px);
+    --grid-graph:
+        repeating-linear-gradient(0deg, transparent 0 27px, var(--rule-ink-soft) 27px 28px),
+        repeating-linear-gradient(90deg, transparent 0 59px, var(--rule-ink-soft) 59px 60px);
+
+    /* The bench shell's own dimensions, and the chrome half of the surface split (ADR-138):
+       wood and brass may be dense, paper may not. --text-readout aliases the scale rather than
+       carrying 21px itself — a semantic role holding a bare number is the debt integers-only
+       exists to stop. */
+    --bench-rail-h: 56px;
+    --bench-tool-w: 52px;
+    --bench-dock-w: 300px;
+    --bench-dock-w-wide: 340px;
+    --bench-panel-hd: 30px;
+    --bench-drawer-lip: 32px;
+    --bench-drawer-open: 172px;
+    --bench-ruler-h: 30px;
+    --hit-chrome: 30px;
+    --hit-target: 44px;
+    --text-chrome: var(--fs-13);
+    --text-chrome-sm: var(--fs-11);
+    --text-readout: var(--fs-21);
+
+    --page-max: 1380px;
+    --page-pad: 28px;
+
+    /* The lighter of the two focus layers (ADR-140). Fixed in both themes on purpose: its job is
+       to be lighter than the metal whatever the theme does to the metal. */
+    --focus-halo: rgba(238, 217, 163, .85);
 }
 
+/* Night keeps the paper cream and darkens only the wood, so two ink polarities travel in opposite
+   directions inside this one block (ADR-141): paper tokens step towards black, wall and rail
+   tokens towards white. A contributor's instinct about a dark theme is wrong here in both
+   directions, and the binding surface for every ratio below is --surface, the deepest cream.
+   Only what actually moves is restated — anything absent is inherited, and a second copy of a
+   value is a second place to change it. */
 :root[data-theme="dark"] {
-    --bg: #1D1B17;
-    --canvas: #171511;
-    --surface: #25221B;
-    --sheet: #2B2820;
-    --alt: #2F2C23;
-    --border: #3C382D;
-    --text: #EAE6DB;
-    --t2: #A69F8F;
-    /* Same contract as in light (ADR-074), same direction of travel — here the binding surface is
-       --alt, the lightest of the dark set, and the step is towards white rather than black. */
-    --t3: #8B8477;
-    --accent: color-mix(in srgb, #5B6E46 55%, #E8F0E8 45%);
-    --danger: #E2745C;
-    --ok: #82BB8C;
-    --warn: #E3C35C;
-    --border-strong: #7B7465;
+    --bg: #2E2718;
+    --canvas: #251F13;
+    --surface: #D9CEAE;
+    --sheet: #E6DCC2;
+    --alt: #DFD4B6;
+    --border: #BCA98A;
+    --border-strong: #7E6440;
+    --text: #241E13;
+    --t2: #5C5138;
+    --t3: #7F7257;
+    --danger: #8F3520;
+    --ok: #33623F;
+    --warn: #74511E;
 
-    /* Dark series steps are chosen against the dark chart surface, not derived from the light
-       ones — a lightened flip of the light palette lands outside the band this theme needs. */
-    --series-1: #7FA24F;
-    --series-2: #4E90C8;
-    --series-3: #C87A3E;
-    --series-4: #A87CC6;
-    --series-5: #B88C42;
-    --series-6: #2AA294;
+    /* The wash darkens with the paper it is mixed into, so the accent label on it loses contrast
+       unless the mix is lighter here. */
+    --asoft: color-mix(in srgb, var(--accent) 10%, var(--surface));
 
-    --shadow: 0 1px 3px rgba(0, 0, 0, .45);
+    /* Pine already clears its floor on night cream, so --accent is not restated: night does not
+       need a lighter green, it needs the same green on a dimmer sheet. The two series that do
+       not clear it are stepped down, not up. */
+    --series-3: #97661C;
+    --series-4: #647645;
+
+    --shadow: 0 1px 3px rgba(0, 0, 0, .4);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, .44);
     --shadow-lg: 0 24px 64px rgba(0, 0, 0, .6);
-    --scrim: rgba(0, 0, 0, .62);
+    --scrim: rgba(10, 7, 3, .6);
 
-    --blur: saturate(1.7) blur(20px);
-    --glass: color-mix(in srgb, var(--surface) 58%, transparent);
-    --glass-strong: color-mix(in srgb, var(--surface) 78%, transparent);
-    --glass-border: color-mix(in srgb, #ffffff 12%, var(--border));
-    --gloss-top: inset 0 1px 0 color-mix(in srgb, #ffffff 12%, transparent);
-    --glow-accent: 0 0 24px color-mix(in srgb, var(--accent) 32%, transparent);
+    --wood-hi: #5F4830;
+    --wood: #4B3823;
+    --wood-lo: #3A2A1A;
+    --wood-edge: #20150C;
+    --wood-groove: #332516;
+    /* The one ink that flips: the wall is dark at night, and nothing but chrome draws on it. */
+    --wood-ink: #E3D3AE;
+    --wood-ink-soft: rgba(227, 211, 174, .66);
+    --lamp: radial-gradient(950px 640px at 80% -8%, rgba(255, 182, 94, .32), rgba(255, 182, 94, 0) 62%);
+
+    --rail-hi: #4A3620;
+    --rail-mid: #33230F;
+    --rail-lo: #281A0A;
+
+    --paper-bright: #EFE6CC;
+    --paper-edge: #C2B48D;
+
+    --pine-hi: #3C5640;
+    --pine-deep: #22342A;
+    --moss: #5F7342;
+    --leaf-bg: #C6CFA2;
+    --leaf-bg-2: #B4C08C;
+    --leaf-ink: #33421F;
+
+    --brass-hi: #F0DCA6;
+    --brass-lo: #7E5A20;
+    --brass-edge: #5C4114;
+
+    --rule-ink: rgba(227, 211, 174, .26);
+    --rule-ink-soft: rgba(227, 211, 174, .12);
 }
 
 /* Compact density (ADR-071 principle 3) — for the table-shaped screens: /posts, /drafts, /admin,
@@ -248,6 +417,7 @@ html, body {
         --motion-fast: 1ms;
         --motion-base: 1ms;
         --motion-slow: 1ms;
+        --dur-publish: 1ms;
     }
 
     *, *::before, *::after {
@@ -265,10 +435,18 @@ html, body {
 
 /* 1. Focus. Keyboard focus is visible on every control, in both themes, and is never removed
       without a replacement. :focus-visible rather than :focus so a mouse click does not leave a
-      ring behind; the offset keeps it clear of the control's own border. */
+      ring behind; the offset keeps it clear of the control's own border.
+
+      Two layers, because no single colour clears 3:1 on both paper and rail (ADR-140): flat brass
+      vanishes on the ruler it is drawn from, flat accent vanishes on a pine button. The dark
+      outline against the cream halo is a constant boundary inside the band whatever lies under
+      it, so one rule covers every surface. The halo costs a focused control its own box-shadow
+      for as long as it is focused, which reads as a glow. Neither layer may be --accent: that is
+      injected at runtime from the user's preset, and the floor must not be an input. */
 :focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--brass-edge);
     outline-offset: 2px;
+    box-shadow: 0 0 0 5px var(--focus-halo);
 }
 
 /* The editor sheet is the one place a ring would be wrong: ProseMirror's contenteditable takes
@@ -276,6 +454,7 @@ html, body {
    The caret is the focus indicator there. */
 .tiptap:focus-visible {
     outline: none;
+    box-shadow: none;
 }
 
 /* 2. The boundary of a field is an affordance, not decoration, so it uses the stronger token.
@@ -704,7 +883,7 @@ body {
         }
 
         .toc-block-item {
-            font-size: 13.5px;
+            font-size: var(--fs-14);
             padding: 2px 0;
         }
 

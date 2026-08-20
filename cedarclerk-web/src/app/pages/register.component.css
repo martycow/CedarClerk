@@ -5,7 +5,7 @@
     font-family: var(--font-sans);
 }
 
-/* Forest-skin scenery only — the skin's global stylesheet turns them on. */
+/* Decorative spans the global stylesheet owns; inert here so they can never intercept input. */
 .wk-decor {
     display: none;
     pointer-events: none;

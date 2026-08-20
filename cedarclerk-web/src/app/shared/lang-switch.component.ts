@@ -36,7 +36,7 @@ import { LocaleService, UiLang } from '../core/i18n/locale.service';
             border-radius: var(--radius-md);
             padding: 4px 10px;
             font-family: inherit;
-            font-size: 12.5px;
+            font-size: var(--fs-13);
             font-weight: 700;
             letter-spacing: .04em;
             color: var(--t3);

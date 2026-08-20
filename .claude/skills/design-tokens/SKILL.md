@@ -23,8 +23,8 @@ design-tokens.)
 4. **Serif for content = the blog body**; chrome stays `--font-sans`; the editor
    sheet's typeface is a user setting — the system does not pick it (ADR-073).
 5. **Light-first, dark as a peer** — every new token gets both values in the
-   same edit. There is also a third axis: the skin (`data-skin="forest"`,
-   ADR-120) — orthogonal to theme, scoped to one partial (`styles/_forest.scss`).
+   same edit. `data-theme` is the only styling axis: the app has one look
+   (ADR-136), so a token has exactly two values and no third scope.
 6. **The blog is inside the system** — but it is a SECOND style surface:
    `BlogEndpoints.cs` `ShellTemplate` carries its own CSS. A token added for the
    app does not exist there; blog styling is edited in the template string.
@@ -75,8 +75,8 @@ page component or `sec-*` section missing from it entirely.
    `typeof en` (build enforces).
 3. Component CSS is view-encapsulated: `btn-ghost`-style utility classes must be
    defined in the page's own stylesheet (they are per-component, not global).
-4. Both themes AND the forest skin still read; the contrast contract test
-   (`cedar test`) stays green.
+4. Both themes still read; the contrast contract test (`cedar test`) stays
+   green.
 5. Popover-in-modal fights fixed positioning — use the `inline` pattern
    (folder-picker's lesson) instead of nesting `app-popover` in `app-modal`.
 6. Blog-side changes edit `ShellTemplate` CSS, not styles.scss — and vice versa.

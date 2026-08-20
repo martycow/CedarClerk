@@ -12,14 +12,6 @@
             </div>
         </div>
 
-        <div class="ap-field">
-            <label>{{ t().settings.appearance.skinLabel }}</label>
-            <div class="ap-toggle">
-                <button [class.on]="theme.skin() === 'default'" (click)="theme.setSkin('default')">{{ t().settings.appearance.skinDefault }}</button>
-                <button [class.on]="theme.skin() === 'forest'" (click)="theme.setSkin('forest')">{{ t().settings.appearance.skinForest }}</button>
-            </div>
-        </div>
-
         <div class="ap-accents">
             @for (preset of accentPresets; track preset.name) {
             <button class="ap-accent" [class.on]="isActivePreset(preset.hex)" (click)="pickAccentPreset(preset.hex)" [title]="preset.name">
