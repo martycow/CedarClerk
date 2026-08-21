@@ -181,3 +181,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-166 — Outside the shell nothing declares the surface, so the door declares it itself (20.08.2026)](adr/ADR-166.md)
 - [ADR-167 — The reading screens: an index shelf, one sheet, and the facts on the inspector — and feedback stays under its post (20.08.2026)](adr/ADR-167.md)
 - [ADR-168 — The project index is not the hub's shelf: what the switcher refused stays a screen (20.08.2026)](adr/ADR-168.md)
+- [ADR-169 — A pine button as a link is a pine button, and that is the whole of the anchor form (20.08.2026)](adr/ADR-169.md)

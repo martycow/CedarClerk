@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { ProjectComponent } from './project.component';
 import { ProjectDetail, ProjectSummary, ProjectsService } from '../core/projects.service';
@@ -175,14 +175,25 @@ describe('project hub', () => {
         expect(titles).toEqual(['Devlog #12', 'Cave script', 'Design bible']);
     });
 
-    it('opens the newest document from Continue', () => {
+    // ADR-169. Continue is a door to a document, so it carries the address a middle click can take
+    // to a new tab — and the assertion is the href rather than a spy on the router, because a
+    // handler calling navigate() passes a spy while offering the browser nothing.
+    it('opens the newest document from Continue, as a link', () => {
         const resume = el().querySelector('.resume-t')?.textContent?.trim();
         expect(resume).toBe('Devlog #12');
 
-        const router = TestBed.inject(Router);
-        const nav = vi.spyOn(router, 'navigate').mockResolvedValue(true);
-        (el().querySelector('.resume-row app-button button') as HTMLButtonElement).click();
-        expect(nav).toHaveBeenCalledWith(['/editor'], { queryParams: { draft: 'd-new' } });
+        const open = el().querySelector('.resume-row app-button a') as HTMLAnchorElement;
+        expect(open.getAttribute('href')).toBe('/editor?draft=d-new');
+        expect(el().querySelector('.resume-row app-button button')).toBeNull();
+    });
+
+    // Same rule one panel down: the editor addresses a document by query, so each row's href
+    // carries the id it opens rather than the newest draft the editor would fall back to.
+    it('hangs every document row on its own address', () => {
+        const rows = [...panel(t.hub.documentsPanel).querySelectorAll('.doc-row')] as HTMLElement[];
+        expect(rows.map(r => r.tagName)).toEqual(['A', 'A', 'A']);
+        expect(rows.map(r => r.getAttribute('href')))
+            .toEqual(['/editor?draft=d-new', '/editor?draft=d-mid', '/editor?draft=d-old']);
     });
 
     it('hands a task tag its own urgency rather than reddening the row', () => {

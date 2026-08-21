@@ -285,10 +285,20 @@
     font-size: var(--fs-ui);
     cursor: pointer;
     font-family: inherit;
+    text-decoration: none;
 }
 
 .btn-ghost:hover {
     color: var(--text);
+}
+
+/* One of these opens the post in the editor and is therefore an anchor (ADR-163). The global
+   coarse-pointer floor reaches buttons and roles, not bare links, so the row states it for both
+   tags and still spends whatever its nearest surface declares. */
+@media (pointer: coarse) {
+    [data-surface] .btn-ghost {
+        min-height: var(--hit-surface);
+    }
 }
 
 .btn-ghost.danger:hover {

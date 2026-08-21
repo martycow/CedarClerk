@@ -120,10 +120,10 @@ name the smoke suite binds.-->
                         @if (d.isArchived) { <app-icon name="arrow-counter-clockwise" size="sm"></app-icon> {{ t().manager.unarchive }} }
                         @else { <app-icon name="archive" size="sm"></app-icon> {{ t().manager.archive }} }
                     </button>
-                    <button class="btn-ghost" (click)="openInEditor(d)">
+                    <a class="btn-ghost" routerLink="/editor" [queryParams]="{ draft: d.id }">
                         <app-icon name="pen" size="sm"></app-icon>
                         {{ t().manager.openInEditor }}
-                    </button>
+                    </a>
                     <button class="btn-ghost danger" (click)="deleteConfirmId.set(d.id)" [disabled]="busy()">
                         <app-icon name="trash" size="sm"></app-icon>
                         {{ t().common.delete }}

@@ -81,7 +81,8 @@
                             <app-stamp-badge [tone]="documentTone(doc)" [rotate]="-1.5">
                                 {{ documentState(doc) }}
                             </app-stamp-badge>
-                            <app-button variant="pine" (clicked)="openDocument(doc)">
+                            <app-button variant="pine" [link]="['/editor']"
+                                        [queryParams]="{ draft: doc.id }">
                                 {{ t().projects.hub.open }}
                             </app-button>
                         </div>
@@ -102,13 +103,13 @@
                                  [count]="p.documents.length">
                     <div class="doc-list">
                         @for (doc of documents(); track doc.id) {
-                            <button type="button" class="doc-row" (click)="openDocument(doc)"
-                                    [title]="t().projects.openDocument">
+                            <a class="doc-row" routerLink="/editor" [queryParams]="{ draft: doc.id }"
+                               [title]="t().projects.openDocument">
                                 <app-icon [name]="docIcons[doc.documentType]" size="sm" class="doc-icon" />
                                 <span class="doc-title">{{ doc.title }}</span>
                                 <span class="doc-type">{{ t().projects.docTypes[doc.documentType].name }}</span>
                                 <span class="doc-meta">{{ doc.updatedAt | zonedDate:'d MMM, HH:mm' }}</span>
-                            </button>
+                            </a>
                         } @empty {
                             <p class="hint">{{ t().projects.hub.noDocuments }}</p>
                         }

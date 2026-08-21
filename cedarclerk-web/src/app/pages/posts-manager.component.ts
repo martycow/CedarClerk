@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit, effect, inject, signal } from '@angular/core';
 import { formatInZone } from '../core/display-time';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
 import {
@@ -52,6 +52,7 @@ const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, ModalComponent, CommentsComponent, StatsComponent,
         TagPickerComponent, FolderPickerComponent, FormRefComponent, ButtonComponent, IndexTabsComponent,
+        RouterLink,
         LeafTagComponent, ShelfPanelComponent, StampBadgeComponent, SpecRowComponent, WorktopComponent,
         GrowthChartComponent,
     ],
@@ -64,7 +65,6 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
     private presetsApi = inject(FormPresetsService);
     private postsApi = inject(PostsService);
     private publishApi = inject(PublishService);
-    private router = inject(Router);
     private route = inject(ActivatedRoute);
     feedback = inject(CommentsService);
     private tagUsageApi = inject(TagUsageService);
@@ -433,10 +433,6 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
         return d.lastTelegramUsername && d.lastTelegramMessageId
             ? `https://t.me/${d.lastTelegramUsername}/${d.lastTelegramMessageId}`
             : null;
-    }
-
-    openInEditor(d: DraftMeta) {
-        this.router.navigate(['/editor'], { queryParams: { draft: d.id } });
     }
 
     private patch(id: string, patch: Partial<DraftMeta>) {

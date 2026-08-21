@@ -229,11 +229,21 @@
     color: var(--text);
     font-family: inherit;
     text-align: left;
+    text-decoration: none;
     cursor: pointer;
 }
 
 .doc-row:hover {
     background: var(--hover);
+}
+
+/* A row that opens a document is an anchor (ADR-163), and the global coarse-pointer rule reaches
+   buttons and roles rather than bare links — so the floor the row used to be given it now states,
+   still spending whatever its nearest surface declares. */
+@media (pointer: coarse) {
+    [data-surface] .doc-row {
+        min-height: var(--hit-surface);
+    }
 }
 
 .doc-icon {

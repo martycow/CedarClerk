@@ -258,10 +258,6 @@ export class ProjectComponent implements OnDestroy {
         return doc.isBlogPublished ? t.published : t.draft;
     }
 
-    openDocument(doc: ProjectDocument) {
-        void this.router.navigate(['/editor'], { queryParams: { draft: doc.id } });
-    }
-
     async createDocument(type: DocumentType) {
         const project = this.project();
         if (!project || this.busy()) return;

@@ -197,6 +197,25 @@ describe('posts manager', () => {
         expect(sheet().querySelectorAll('a[href^="http"]').length).toBe(0);
     });
 
+    // ADR-163/ADR-169 — the one action here that opens something carries its address, and the
+    // address names the picked post: the editor falls back to the newest draft when the query is
+    // missing, so a link to the wrong id and a link to none look identical on screen.
+    it('opens the picked post in the editor as a link, not a handler', async () => {
+        card('Devlog 12').click();
+        await settle();
+
+        const open = [...sheet().querySelectorAll('.detail-actions .btn-ghost')]
+            .find(x => x.textContent?.includes(t.openInEditor)) as HTMLAnchorElement;
+        expect(open.tagName).toBe('A');
+        expect(open.getAttribute('href')).toBe('/editor?draft=live');
+
+        card('Notes').click();
+        await settle();
+        const other = [...sheet().querySelectorAll('.detail-actions .btn-ghost')]
+            .find(x => x.textContent?.includes(t.openInEditor)) as HTMLAnchorElement;
+        expect(other.getAttribute('href')).toBe('/editor?draft=drafted');
+    });
+
     it('says a post is not published rather than drawing an empty link', async () => {
         card('Notes').click();
         await settle();
