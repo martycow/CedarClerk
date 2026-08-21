@@ -397,7 +397,7 @@ for (const [ink, wash] of [['--ok', '--ok-soft'], ['--warn', '--warn-soft'], ['-
 
 // The hover washes are translucent by design — a row hover has to work on whatever paper the row
 // lies on — so each is measured on all three papers. --t2 carries icons here and not text: what is
-// left on this wash is glyphs, the square icon buttons (.icon-btn, .mini, .theme-toggle, .toolbar
+// left on this wash is glyphs, the square icon buttons (.mini, .theme-toggle, .toolbar
 // button) including the few whose face is a character rather than an SVG, and WCAG 1.4.11 is the
 // floor a glyph owes. A LABEL on this wash is a defect in the rule, not a number to lower: it takes
 // --text and lands on the pair above, as the toolbar's GIF button does.
@@ -970,8 +970,8 @@ const extendsSel = (base, sel) =>
 const partsOf = rule => splitTop(rule.chain.join(' ').replace(/\s+/g, ' '), ',');
 
 // A rule that declares one half of a pair still paints both, and the other half is written
-// somewhere: for a state rule, usually a few lines above it — `.icon-btn:hover` sets the wash and
-// `.icon-btn` sets the ink. Reading it is the same kind of claim the enclosing-backdrop walk makes,
+// somewhere: for a state rule, usually a few lines above it — `.mini:hover` sets the wash and
+// `.mini` sets the ink. Reading it is the same kind of claim the enclosing-backdrop walk makes,
 // so it is labelled the same way and never printed as something read off the rule itself. The
 // nearest match wins, since a longer selector is the more specific rule and the closer element. A
 // rule that lists several selectors resolves only when they all arrive at one value: two answers

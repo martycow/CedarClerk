@@ -550,8 +550,7 @@ textarea {
     [data-surface] button,
     [data-surface] [role="button"],
     [data-surface] summary,
-    [data-surface] select,
-    [data-surface] a.icon-btn {
+    [data-surface] select {
         min-height: var(--hit-surface);
         min-width: var(--hit-surface);
     }

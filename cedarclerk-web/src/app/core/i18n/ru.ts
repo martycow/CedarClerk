@@ -102,11 +102,9 @@ export const ru: Dict = {
         newDocument: 'Новый документ',
         viewAll: 'Все',
         documentCount: (n: number) => `${n} ${plural(n, 'документ', 'документа', 'документов')}`,
-        noDocumentsOfType: 'Пока пусто',
         railPendingTitle: 'Спринт',
         openDocument: 'Открыть в редакторе',
         actionFailed: 'Не получилось.',
-        assetsLink: 'Ассеты',
         summary: 'Сводка',
         hub: {
             activeProject: 'активный проект',
@@ -278,7 +276,6 @@ export const ru: Dict = {
             actionFailed: 'Не получилось.',
             noCurrentSprint: 'Сегодня не входит ни в один спринт.',
             planSprint: 'Запланировать',
-            endsOn: 'до',
         },
         assets: {
             crumb: 'Ассеты',
@@ -712,7 +709,6 @@ export const ru: Dict = {
         state: {
             public: 'Публичный',
             private: 'Приватный',
-            watermarked: 'Вотермарка',
             live: 'LIVE',
             notPublished: 'Не опубликован',
             blogLink: 'Блог ↗',

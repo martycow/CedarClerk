@@ -104,13 +104,11 @@ export const en = {
         newDocument: 'New document',
         viewAll: 'View all',
         documentCount: (n: number) => `${n} ${n === 1 ? 'document' : 'documents'}`,
-        noDocumentsOfType: 'None yet',
         // T-124 — sprints exist now. What is left of the placeholder is the honest empty state:
         // "no sprint covers today" is a fact about the calendar, not a missing feature.
         railPendingTitle: 'Sprint',
         openDocument: 'Open in the editor',
         actionFailed: 'That did not work.',
-        assetsLink: 'Assets',
         // T-226 (ADR-168) — the standing shelf every hub-like screen carries on its right.
         summary: 'Summary',
         // T-223 (ADR-160) — the hub. Everything here names something the API can answer: the
@@ -294,7 +292,6 @@ export const en = {
             // The dashboard rail's card
             noCurrentSprint: 'No sprint covers today.',
             planSprint: 'Plan one',
-            endsOn: 'ends',
         },
         // T-122 — the asset index. Every string here has to keep one promise: nothing is uploaded.
         assets: {
@@ -748,7 +745,6 @@ export const en = {
         state: {
             public: 'Public',
             private: 'Private',
-            watermarked: 'Watermark',
             live: 'LIVE',
             notPublished: 'Not published',
             blogLink: 'Blog ↗',
