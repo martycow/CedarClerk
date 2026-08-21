@@ -19,6 +19,8 @@ import { join, relative, resolve, sep } from 'node:path';
 import { CONTRACT } from './contract-tokens.mjs';
 
 const src = readFileSync(resolve(import.meta.dirname, '../src/styles.scss'), 'utf8');
+const generatedTokens = readFileSync(
+    resolve(import.meta.dirname, '../../CedarClerk.Core/DesignTokens.generated.cs'), 'utf8');
 
 function block(selector) {
     const i = src.indexOf(selector);
@@ -580,7 +582,7 @@ function suggest(from, bg, min, towards) {
     return toHex([0, 1, 2].map(k => from[k] * (1 - hi) + towards[k] * hi));
 }
 
-let failures = 0, gradients = 0, excepted = 0, offContract = 0;
+let failures = 0, gradients = 0, excepted = 0, offContract = 0, stale = 0;
 
 function measure(label, vars, list, themeName) {
     const grounds = groundsOf(vars);
@@ -650,6 +652,17 @@ function runContract() {
         failures++;
         console.log('\nFAIL  no accent presets read from core/appearance.service.ts — the injected accent is unmeasured (ADR-141)');
     }
+    // What the server is actually served, which is not the same question as what the list names.
+    // CONTRACT states which tokens are meant to reach DesignTokens; the generated file is what
+    // does. They part company the moment a name joins the list and `npm run tokens:generate` is
+    // not run, and nothing notices: DesignTokenDriftTests walks the generated dictionary, so a
+    // name missing from it is a name it never visits.
+    const served = new Set([...generatedTokens.matchAll(/\["([\w-]+)"\]/g)].map(m => m[1]));
+    for (const name of CONTRACT) {
+        if (light[`--${name}`] === undefined || served.has(name)) continue;
+        stale++;
+        console.log(`\nFAIL  --${name} is on the contract and declared in styles.scss, but DesignTokens does not carry it — run \`npm run tokens:generate\` (ADR-137)`);
+    }
     // The other half of the same rule the gradient check enforces. A server-rendered page receives
     // the contract names and nothing else, so a var() outside the contract and without a fallback
     // resolves to nothing there and its declaration silently does not apply — no error, no wrong
@@ -657,16 +670,17 @@ function runContract() {
     // landing page carried eight of them, which is what a rule nothing checks is worth.
     for (const f of serverSheets()) {
         for (const m of f.code.matchAll(/var\(\s*(--[\w-]+)\s*(,?)/g)) {
-            if (m[2] === ',' || CONTRACT.includes(m[1].slice(2))) continue;
+            if (m[2] === ',' || served.has(m[1].slice(2))) continue;
             offContract++;
             console.log(`\nFAIL  ${f.rel}:${lineOf(f.code, m.index)} paints ${m[1]}, which DesignTokens does not serve (ADR-137)`);
         }
     }
     if (gradients) console.log(`\n${gradients} contract token(s) resolve to a gradient.`);
+    if (stale) console.log(`${stale} contract token(s) missing from DesignTokens.`);
     if (offContract) console.log(`${offContract} server-rendered reference(s) to a token outside the contract.`);
     if (excepted) console.log(`${excepted} accepted exception(s).`);
     console.log(`\n${failures} failing pair(s). Set VERBOSE=1 to print the passing ones too.`);
-    process.exit(failures || gradients || offContract ? 1 : 0);
+    process.exit(failures || gradients || offContract || stale ? 1 : 0);
 }
 
 // ════ CENSUS ═══════════════════════════════════════════════════════════════════════════════════

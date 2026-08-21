@@ -83,14 +83,26 @@ test('the shipped shell resolves the same two floors the fixture assumes', async
     // race; it cannot hide one going missing, because then this line is what goes red.
     await expect(page.getByRole('button', { name: 'New draft' })).toBeVisible();
 
+    // Both the floor the surface hands down and the height the control ends up with. min-height
+    // alone measured the mechanism on the sheet and something else in the rail: rail-header sizes
+    // its own dots button from var(--hit-chrome) outside any media query, so that half read 30px
+    // with the whole coarse block deleted. --hit-surface exists only while the mechanism does, so
+    // it is the half that goes red when it breaks.
     const floors = await page.evaluate(() => {
-        const railed = document.querySelector('app-rail-header[data-surface="chrome"] button');
-        const papered = document.querySelector('main[data-surface="paper"] button');
+        const read = (el: Element | null, missing: string) => el
+            ? {
+                floor: getComputedStyle(el).getPropertyValue('--hit-surface').trim(),
+                min: getComputedStyle(el).minHeight,
+            }
+            : missing;
         return {
-            rail: railed ? getComputedStyle(railed).minHeight : 'no button in the rail',
-            body: papered ? getComputedStyle(papered).minHeight : 'no button on the sheet',
+            rail: read(document.querySelector('app-rail-header[data-surface="chrome"] button'), 'no button in the rail'),
+            body: read(document.querySelector('main[data-surface="paper"] button'), 'no button on the sheet'),
         };
     });
 
-    expect(floors).toEqual({ rail: '30px', body: '44px' });
+    expect(floors).toEqual({
+        rail: { floor: '30px', min: '30px' },
+        body: { floor: '44px', min: '44px' },
+    });
 });

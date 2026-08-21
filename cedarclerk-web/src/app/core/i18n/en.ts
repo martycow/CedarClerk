@@ -19,7 +19,6 @@ export const en = {
         close: 'Close',
         toggleTheme: 'Toggle theme',
         nothingHere: 'Nothing here.',
-        backToEditor: 'Back to editor',
     },
     // The bench shell's own chrome: the tool wall, the sign board and the dots menu. Screen names
     // rather than route names — the wall says what you work on, not where the URL goes.

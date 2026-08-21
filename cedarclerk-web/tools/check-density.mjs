@@ -319,13 +319,20 @@ for (const f of files) {
 }
 
 // 8. A named chrome part that lost its attribute (ADR-138 consequence paragraph).
+//
+// A selector is not a declaration. Every one of these six files also carries
+// `:host([data-surface="chrome"])` rules, so a search for the bare name is answered by the
+// stylesheet whether or not the host still sets the attribute — the rule read green with the host
+// binding deleted. Only the two forms that put the attribute on the element count: Angular host
+// metadata, and a template attribute, which is the occurrence a `[` does not precede.
+const SETS_CHROME = [/(['"])data-surface\1\s*:\s*(['"])chrome\2/, /(^|[^[\w-])data-surface\s*=\s*"chrome"/];
 const rParts = rule('chrome parts carry the attribute', CHROME_PARTS.join(', '),
     'none of the named chrome components exist yet — the shell has not landed');
 for (const part of CHROME_PARTS) {
     const own = files.filter(f => new RegExp(`(^|/)${part}\\.component\\.(ts|html|css|scss)$`).test(f.rel));
     if (!own.length) continue;
     rParts.sites++;
-    if (!own.some(f => /data-surface\s*=\s*["'`]?chrome/.test(f.code)))
+    if (!own.some(f => SETS_CHROME.some(re => re.test(f.code))))
         fail(rParts, own[0].rel, 1, `${part} declares no data-surface="chrome"`);
 }
 

@@ -49,7 +49,39 @@ test('a no-op save does not flip the indicator to unsaved', async ({ page, conte
     await openDraft(page, id);
     await expectSynced(page, 20_000);
 
+    // The first "Synced" is not yet quiet — the load can still write once more behind it, and that
+    // write is not what this test is about. Wait for a run of them before opening the window.
+    const settled = await page.evaluate(async () => {
+        let run = 0;
+        for (let i = 0; i < 400; i++) {
+            run = synced() ? run + 1 : 0;
+            if (run >= 30) return true;
+            await new Promise(r => setTimeout(r, 50));
+        }
+        return false;
+
+        function synced() {
+            return (document.querySelector('app-ruler-bar')?.textContent ?? '').includes('Synced');
+        }
+    });
+    expect(settled, 'the editor never held Synced long enough to watch').toBe(true);
+
+    // Watched across the interaction rather than read after it. markDirty() flips the word to
+    // "Syncing…" and the autosave puts it back well inside expect's retry window, so any assertion
+    // made afterwards — retrying or not — reads "Synced" whether or not moving the caret dirtied
+    // the document: the test passed with markDirty() wired to every transaction. The watcher opens
+    // before the click and runs past the autosave debounce, so a flip has nowhere to hide.
+    const words = page.evaluate(async () => {
+        const seen = new Set<string>();
+        for (let i = 0; i < 60; i++) {
+            const text = (document.querySelector('app-ruler-bar')?.textContent ?? '').replace(/\s+/g, ' ');
+            seen.add(text.includes('Synced') ? 'Synced' : text.trim().slice(0, 60));
+            await new Promise(r => setTimeout(r, 50));
+        }
+        return [...seen];
+    });
+
     await page.locator('.tiptap').click();
     await page.keyboard.press('End');
-    await expectSynced(page);
+    expect(await words).toEqual(['Synced']);
 });

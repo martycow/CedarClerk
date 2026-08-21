@@ -25,7 +25,6 @@ export const ru: Dict = {
         close: 'Закрыть',
         toggleTheme: 'Сменить тему',
         nothingHere: 'Здесь пусто.',
-        backToEditor: 'Назад в редактор',
     },
     shell: {
         screens: 'Экраны',
