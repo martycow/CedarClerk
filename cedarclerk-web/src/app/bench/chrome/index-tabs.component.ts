@@ -18,8 +18,9 @@ export interface IndexTabItem {
 }
 
 /**
- * Exported because the badge rules outlive this component: every counter in the app's chrome is
- * held to them, including the tally the hook rail hangs on a tool (ADR-155).
+ * Exported because the badge rules outlive this component: the hook rail hangs the same tally on a
+ * tool and reads it through here (ADR-155). A badge is not every number the chrome draws — a shelf
+ * panel's count and a ruler readout are shown as written, zero included.
  */
 export function indexTabBadgeLabel(badge: number | string | undefined | null): string {
     if (badge === undefined || badge === null) return '';

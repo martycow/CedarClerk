@@ -23,9 +23,13 @@ const BUILDS: Build[] = [
     {
         id: 'b-older', projectId: 'p1', version: '0.3.0', notes: '',
         releasedAt: '2026-07-02T09:00:00', createdAt: '', released: true,
-        taskCount: 0, doneCount: 0, documents: [],
+        taskCount: 2, doneCount: 0, documents: [{ id: 'doc-2', title: 'Notes 0.3.0' }, { id: 'doc-3', title: 'Credits' }],
     },
 ];
+
+// Two released, one unreleased, three attached documents and four tasks carrying a version: the
+// four numbers the shelf prints are four different numbers, so no row can be reading a
+// neighbour's count and still come out right.
 
 function task(over: Partial<GameTask>): GameTask {
     return {
@@ -39,6 +43,8 @@ function task(over: Partial<GameTask>): GameTask {
 const TASKS: GameTask[] = [
     task({ id: 't-fog', title: 'Volumetric fog', buildId: 'b-next', status: 'in_progress', priority: 1, dueAt: '2026-01-01T00:00:00' }),
     task({ id: 't-save', title: 'Save on quit', buildId: 'b-out', status: 'done' }),
+    task({ id: 't-fx', title: 'Water shader', buildId: 'b-older' }),
+    task({ id: 't-ui', title: 'Pause menu', buildId: 'b-older', status: 'done' }),
     task({ id: 't-loose', title: 'Nothing to do with a version' }),
 ];
 
@@ -95,17 +101,18 @@ describe('project builds', () => {
     // ADR-163/ADR-168 rule 3 — the chip is a door, and `draft` is the address the editor reads.
     it('makes an attached document a link the editor can actually open', () => {
         const chips = [...el().querySelectorAll('a.doc-chip')] as HTMLAnchorElement[];
-        expect(chips.length).toBe(1);
-        expect(chips[0].getAttribute('href')).toBe('/editor?draft=doc-1');
+        expect(chips.map(c => c.getAttribute('href')))
+            .toEqual(['/editor?draft=doc-1', '/editor?draft=doc-2', '/editor?draft=doc-3']);
         expect(el().querySelectorAll('button.doc-chip').length).toBe(0);
     });
 
     // ADR-168 rule 4 — one object, one drawing of it: the tag the planner and the hub hang.
     it('hangs a version\'s tasks as the same tags the planner does, and only its own', () => {
-        expect(tags().length).toBe(2);
         const plates = tags().map(x => x.querySelector('.tt-plate') as HTMLAnchorElement);
-        expect(plates.map(p => p.getAttribute('href')))
-            .toEqual(['/projects/p1/tasks?task=t-fog', '/projects/p1/tasks?task=t-save']);
+        expect(plates.map(p => p.getAttribute('href'))).toEqual([
+            '/projects/p1/tasks?task=t-fog', '/projects/p1/tasks?task=t-save',
+            '/projects/p1/tasks?task=t-fx', '/projects/p1/tasks?task=t-ui',
+        ]);   // t-loose belongs to no version, so it hangs on no card
         expect(tags()[0].querySelector('.tt-prio')?.textContent?.trim()).toBe('P1');
         expect(tags()[0].querySelector('.tt-due')?.classList.contains('tt-overdue')).toBe(true);
         expect(tags()[0].querySelector('.tt-stamp app-stamp-badge')?.textContent?.trim())
@@ -125,8 +132,8 @@ describe('project builds', () => {
     });
 
     it('counts the shelf out of the versions and tasks already loaded', () => {
-        expect(specValue(t.builds.assignBuild)).toBe('2'); // t-loose belongs to no version
-        expect(specValue(t.colDocs)).toBe('1');
+        expect(specValue(t.builds.assignBuild)).toBe('4'); // t-loose belongs to no version
+        expect(specValue(t.colDocs)).toBe('3');
     });
 
     // ADR-168 rule 3 — `draft` is the only query parameter the editor reads.

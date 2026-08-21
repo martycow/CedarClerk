@@ -14,12 +14,15 @@ const term = (over: Partial<GlossaryTerm>): GlossaryTerm => ({
 });
 
 // One idea in two languages (RU is the root, EN carries sourceTermId), one project-scoped RU term,
-// and one EN term with no translation group. The pairing is what the group switcher is read
-// against; the project term is what the scope leaves are read against.
+// and two EN terms with no translation group. The pairing is what the group switcher is read
+// against; the project term is what the scope leaves are read against. The two languages hold
+// different numbers on purpose: with two apiece, a tile whose badge counted the other
+// language's set would print the same digit as one that counted its own.
 const RU_ROOT = term({ id: 'ru1', term: 'Рендерер', description: 'Превращает документ в вывод.', aliases: 'рендерера, рендереру' });
 const EN_LEAF = term({ id: 'en1', term: 'Renderer', description: 'Turns a document into output.', language: 'en', sourceTermId: 'ru1' });
 const RU_PROJ = term({ id: 'ru2', term: 'Верстак', description: 'Рабочая поверхность.', projectId: 'p1', isCaseSensitive: true });
 const EN_ALONE = term({ id: 'en2', term: 'Bench', description: 'The work surface.', language: 'en' });
+const EN_SPARE = term({ id: 'en3', term: 'Worktop', description: 'The lit top.', language: 'en' });
 
 const PROJECT: ProjectSummary = {
     id: 'p1', name: 'Cedar Quest', description: '', projectType: 'fullgame', coverUrl: null,
@@ -28,7 +31,7 @@ const PROJECT: ProjectSummary = {
 };
 
 class FakeGlossary {
-    terms: GlossaryTerm[] = [RU_ROOT, EN_LEAF, RU_PROJ, EN_ALONE];
+    terms: GlossaryTerm[] = [RU_ROOT, EN_LEAF, RU_PROJ, EN_ALONE, EN_SPARE];
     async list() { return structuredClone(this.terms); }
 }
 
@@ -78,13 +81,13 @@ describe('glossary screen', () => {
     it('indexes the terms by language and counts each set on its own tile', async () => {
         expect(tabs().map(x => x.querySelector('.it-label')?.textContent?.trim()).slice(0, 2)).toEqual(['RU', 'EN']);
         expect(tabs()[0].querySelector('.it-badge')?.textContent?.trim()).toBe('2');
-        expect(tabs()[1].querySelector('.it-badge')?.textContent?.trim()).toBe('2');
+        expect(tabs()[1].querySelector('.it-badge')?.textContent?.trim()).toBe('3');
         expect(names()).toEqual(['Рендерер', 'Верстак']);
 
         tabs()[1].click();
         await settle();
 
-        expect(names()).toEqual(['Renderer', 'Bench']);
+        expect(names()).toEqual(['Renderer', 'Bench', 'Worktop']);
     });
 
     // T-125 — a project's view deliberately includes the global terms, because that is the set its
@@ -108,7 +111,7 @@ describe('glossary screen', () => {
     it('describes the picked term on the shelf, and the glossary itself when none is picked', async () => {
         expect(page().inspectorScope()).toBe('document');
         expect(rows().every(r => r.getAttribute('data-scope') === 'document')).toBe(true);
-        expect(rowValue(t.inspector.total)).toBe('4');
+        expect(rowValue(t.inspector.total)).toBe('5');
         expect(rowValue(t.inspector.inLanguage)).toBe('2 · RU');
 
         cards()[1].click();           // Верстак — project-scoped, case-sensitive

@@ -19,7 +19,8 @@ let nextId = 0;
     template: `
         @if (label()) { <label class="label" [attr.for]="fieldId()">{{ label() }}</label> }
         <input class="field" [class.serif]="serif()" [id]="fieldId()" [attr.type]="type()"
-               [attr.placeholder]="placeholder() || null" [disabled]="isDisabled()"
+               [attr.placeholder]="placeholder() || null" [attr.autocomplete]="autocomplete() || null"
+               [disabled]="isDisabled()"
                [value]="text()" (input)="onInput($event)" (blur)="onBlur()">
         @if (hint()) { <p class="hint">{{ hint() }}</p> }
     `,
@@ -82,6 +83,12 @@ export class InputComponent implements ControlValueAccessor {
     hint = input('');
     placeholder = input('');
     type = input<BenchInputType>('text');
+    /**
+     * The browser's fill hint. A credential field that omits it is offered to the password manager
+     * on heuristics alone, and `current-password` vs `new-password` is a distinction no heuristic
+     * makes: one asks to fill, the other to generate.
+     */
+    autocomplete = input('');
     /** Long-form field (a draft title) — switches to the reading serif. */
     serif = input(false, { transform: booleanAttribute });
     /** Chrome density: mono, 11px, for an inspector row inside a ShelfPanel only. */

@@ -22,11 +22,19 @@ const SPRINTS: Sprint[] = [
         state: 'planned', taskCount: 0, doneCount: 0, overdueCount: 0,
     },
     {
+        id: 's-later', projectId: 'p1', number: 6, name: 'Spring build',
+        startsAt: '2026-09-15T00:00:00', endsAt: '2026-09-30T00:00:00',
+        state: 'planned', taskCount: 0, doneCount: 0, overdueCount: 0,
+    },
+    {
         id: 's-old', projectId: 'p1', number: 3, name: 'Summer build',
         startsAt: '2026-07-01T00:00:00', endsAt: '2026-07-14T00:00:00',
         state: 'finished', taskCount: 1, doneCount: 1, overdueCount: 0,
     },
 ];
+
+// Two planned and one finished, so the shelf's state tallies are two different numbers: with one
+// apiece a row reading the other state's count would print the same digit as its own.
 
 function task(over: Partial<GameTask>): GameTask {
     return {
@@ -93,7 +101,8 @@ describe('project planner', () => {
     // Current → planned → the pile → finished. The pile sits next to the future because that is
     // where work comes out of, and a finished sprint is the only one that collapses.
     it('stacks the stretches in the order the screen is read in', () => {
-        expect(cardNames()).toEqual(['Autumn build', 'Winter build', t.planner.noSprint, 'Summer build']);
+        expect(cardNames())
+            .toEqual(['Autumn build', 'Winter build', 'Spring build', t.planner.noSprint, 'Summer build']);
     });
 
     // ADR-168 rule 4 — the same tag the hub hangs, and it is a link (ADR-163).
@@ -149,7 +158,7 @@ describe('project planner', () => {
         expect(specValue(t.planner.state.current)).toBe('S4 — Autumn build');
         expect(specValue(t.hub.sprintDone)).toBe(t.planner.progress(1, 2));
         expect(specValue(t.tasks.filterOverdue)).toBe(t.planner.overdueInside(1));
-        expect(specValue(t.planner.state.planned)).toBe('1');
+        expect(specValue(t.planner.state.planned)).toBe('2');
         expect(specValue(t.planner.state.finished)).toBe('1');
         expect(specValue(t.tasks.filterOpen)).toBe('2');   // t-late and t-pile
         expect(specValue(t.planner.noSprint)).toBe('1');   // t-pile
@@ -158,7 +167,7 @@ describe('project planner', () => {
     it('publishes the rule while it is open and clears it on the way out', () => {
         const ruler = TestBed.inject(RulerService);
         expect(ruler.label()).toBe('Cedar Quest');
-        expect(ruler.left().map(r => r.text)).toEqual([t.planner.sub(3, 2)]);
+        expect(ruler.left().map(r => r.text)).toEqual([t.planner.sub(4, 2)]);
 
         fixture.destroy();
         expect(ruler.label()).toBe('');

@@ -43,6 +43,15 @@ describe('bench Input', () => {
         expect(field().getAttribute('type')).toBe('text');
     });
 
+    // A password field without this attribute is offered to the manager on heuristics alone, and
+    // current-password vs new-password is the one hint no heuristic supplies.
+    it('passes the fill hint to the field, and omits the attribute when none is given', () => {
+        expect(field().hasAttribute('autocomplete')).toBe(false);
+        fixture.componentRef.setInput('autocomplete', 'current-password');
+        fixture.detectChanges();
+        expect(field().getAttribute('autocomplete')).toBe('current-password');
+    });
+
     it('binds the label to the field it labels', () => {
         fixture.componentRef.setInput('label', 'Email');
         fixture.componentRef.setInput('hint', 'we never post it anywhere');

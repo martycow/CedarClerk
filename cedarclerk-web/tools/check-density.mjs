@@ -208,7 +208,8 @@ for (const f of files) {
 // 6. The coarse-pointer rules stay inside the surface vocabulary (ADR-138 item 5). Left global one
 //    pushes the ruler from 30px to 44 and the chrome budget the shell exists to buy back is gone on
 //    first touch.
-const rCoarse = rule('coarse-pointer rules name a surface', 'every selector under @media (pointer: coarse) carries a data-surface qualifier');
+const rCoarse = rule('coarse-pointer rules name a surface', 'every selector under @media (pointer: coarse) carries a data-surface qualifier',
+    'no selector under a @media (pointer: coarse) block in the tree');
 const surfaceLanded = files.some(f => /\[data-surface\s*=/.test(f.code));
 if (!surfaceLanded) rCoarse.skipped = 'no [data-surface] in the tree yet — there is no chrome to exempt';
 else for (const f of files) {
@@ -217,6 +218,9 @@ else for (const f of files) {
         for (const m of b.body.matchAll(/([^{}]+)\{/g)) {
             const sel = m[1].trim();
             if (!sel || sel.startsWith('@')) continue;
+            // The selector, not the block, is the site: a coarse block holding none of them has
+            // been read and has scored nothing, which is what `nothing` above exists to say.
+            rCoarse.sites++;
             if (!sel.includes('data-surface')) fail(rCoarse, f.rel, lineOf(f.code, base + m.index), `selector "${sel.replace(/\s+/g, ' ')}" is unqualified`);
         }
     }

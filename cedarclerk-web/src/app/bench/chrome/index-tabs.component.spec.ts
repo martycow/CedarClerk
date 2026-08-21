@@ -87,7 +87,7 @@ describe('IndexTabsComponent', () => {
         expect(tiles().some(t => t.classList.contains('is-on'))).toBe(false);
     });
 
-    // The two behaviours every counter in the app's chrome owes, which live in this component.
+    // The two behaviours a chrome badge owes, and this component is where they live.
     describe('the badge counts the way the app already counted', () => {
         it('draws nothing at zero or below', () => {
             create([{ id: 'a', label: 'A', badge: 0 }, { id: 'b', label: 'B', badge: -3 }], 'a');

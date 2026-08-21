@@ -23,12 +23,12 @@
         }
 
         <app-input inputId="cc-login-email" type="email" [label]="t().login.email"
-                   placeholder="you@example.com"
+                   placeholder="you@example.com" autocomplete="username"
                    [value]="email" (valueChange)="email = $any($event) ?? ''" />
         <!--Enter submits, as it did on the field this replaces: the event bubbles from the field
         to this host.-->
         <app-input inputId="cc-login-pass" type="password" [label]="t().login.password"
-                   placeholder="••••••••"
+                   placeholder="••••••••" autocomplete="current-password"
                    [value]="password" (valueChange)="password = $any($event) ?? ''"
                    (keyup.enter)="submit()" />
 

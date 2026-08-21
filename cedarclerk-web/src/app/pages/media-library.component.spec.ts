@@ -13,9 +13,10 @@ function asset(id: string, contentType: string): LibraryAsset {
 const PAGE: LibraryPage = {
     items: [asset('a1', 'image/png'), asset('a2', 'video/mp4')],
     total: 2,
-    // audio at zero and images past ninety-nine: one tile is dropped by the page, the other's
-    // badge is capped by the component. Two different rules, and they must not be confusable.
-    counts: { image: 140, video: 1, audio: 0 },
+    // Audio at zero, so its tile is dropped by the page; no single kind past ninety-nine, so the
+    // cap can only show up on the "All" tile — and that tile's badge is then a number no kind
+    // carries on its own, which is the only way it says "the sum" rather than "one of these".
+    counts: { image: 60, video: 45, audio: 0 },
     usedBytes: 500, limitBytes: 1000,
 };
 
@@ -61,9 +62,9 @@ describe('media library', () => {
 
     it('draws the type filter as index tabs, hiding a kind with nothing in it and capping at 99+', () => {
         expect(tileText(t.typeStrip)).toEqual([
-            [t.all, '99+'],
-            [t.images, '99+'],
-            [t.videos, '1'],
+            [t.all, '99+'],     // 60 + 45, so neither kind's own count could be standing in for it
+            [t.images, '60'],
+            [t.videos, '45'],
         ]);
     });
 

@@ -23,13 +23,20 @@ function draft(id: string, over: Partial<DraftMeta> = {}): DraftMeta {
     };
 }
 
-// One live post with a Telegram message and a translation, one private draft that never went out,
-// one archived. The three publish states are what the status stamp is read against, and the
-// unpublished one is what proves the blog row says so rather than rendering an empty link.
+// Two live posts (one with a Telegram message and a translation), one private draft that never
+// went out, one archived. The three publish states are what the status stamp is read against,
+// and the unpublished one is what proves the blog row says so rather than rendering an empty
+// link. Four posts, two published, one archived and one pending schedule: every number the
+// rule and the shelf print is different from every other, so none of them can be standing in
+// for a neighbour.
 const LIVE = draft('live', {
     title: 'Devlog 12', blogSlug: 'devlog-12', isBlogPublished: true,
     blogPublishedAt: '2026-08-10T09:00:00', languages: ['en'],
     lastTelegramUsername: 'testingandfun', lastTelegramMessageId: 42,
+});
+const EARLIER = draft('earlier', {
+    title: 'Devlog 11', blogSlug: 'devlog-11', isBlogPublished: true,
+    blogPublishedAt: '2026-08-03T09:00:00',
 });
 const DRAFTED = draft('drafted', { title: 'Notes', isPrivate: true });
 const OLD = draft('old', { title: 'Retired', isArchived: true });
@@ -41,7 +48,7 @@ const SNAPSHOTS = [
 ];
 
 class FakeDrafts {
-    async list() { return structuredClone([LIVE, DRAFTED, OLD]); }
+    async list() { return structuredClone([LIVE, EARLIER, DRAFTED, OLD]); }
     async listFolders() { return []; }
     async get(id: string) { return { id, articleTitle: '', registrationFormJson: null, formLanguages: [], cedarJson: '{}' } as never; }
     async listRegistrations() { return []; }
@@ -91,6 +98,7 @@ describe('posts manager', () => {
     const el = () => fixture.nativeElement as HTMLElement;
     const tiles = () => [...el().querySelectorAll('app-index-tabs .it-tile')] as HTMLElement[];
     const cards = () => [...el().querySelectorAll('.post-card')] as HTMLElement[];
+    const card = (title: string) => cards().find(c => c.textContent?.includes(title))!;
     const shelf = () => el().querySelector('app-shelf-panel.inspector') as HTMLElement;
     const rows = () => [...shelf().querySelectorAll('app-spec-row')] as HTMLElement[];
     const row = (label: string) => rows().find(r => r.querySelector('.label')?.textContent?.trim() === label);
@@ -149,7 +157,7 @@ describe('posts manager', () => {
         expect(rail.primary()).toBeNull();
         expect(ruler.label()).toBe(t.crumb);
         expect(ruler.right().map(r => r.text))
-            .toEqual([t.rulerPosts(3), t.rulerPublished(1), t.rulerScheduled(1)]);
+            .toEqual([t.rulerPosts(4), t.rulerPublished(2), t.rulerScheduled(1)]);
 
         fixture.destroy();
         expect(ruler.right()).toEqual([]);
@@ -160,11 +168,11 @@ describe('posts manager', () => {
     it('describes the library until a post is picked, then that post and nothing else', async () => {
         expect(page().inspectorScope()).toBe('document');
         expect(rows().every(r => r.getAttribute('data-scope') === 'document')).toBe(true);
-        expect(rowValue(t.inspector.posts)).toBe('3');
-        expect(rowValue(t.inspector.published)).toBe('1');
+        expect(rowValue(t.inspector.posts)).toBe('4');
+        expect(rowValue(t.inspector.published)).toBe('2');
         expect(rowValue(t.inspector.archivedCount)).toBe('1');
 
-        cards()[0].click();
+        card('Devlog 12').click();
         await settle();
 
         expect(page().inspectorScope()).toBe('selection');
@@ -177,7 +185,7 @@ describe('posts manager', () => {
     // ADR-167 clause 3 — the links are facts about the post, so the shelf is the only place they
     // are drawn; the sheet keeps only what is done to it.
     it('puts every outbound link on the shelf and none of them back on the sheet', async () => {
-        cards()[0].click();
+        card('Devlog 12').click();
         await settle();
 
         const hrefs = [...shelf().querySelectorAll('a.insp-link')].map(a => a.getAttribute('href'));
@@ -190,7 +198,7 @@ describe('posts manager', () => {
     });
 
     it('says a post is not published rather than drawing an empty link', async () => {
-        cards()[1].click();
+        card('Notes').click();
         await settle();
 
         expect(rowValue(t.blog)).toBeUndefined();
@@ -200,7 +208,7 @@ describe('posts manager', () => {
 
     // ADR-167 clause 6 — three named lines on their own slots, and the leaf strip filters them.
     it('draws the nightly snapshots as one chart per metric, and a leaf switches a line off', async () => {
-        cards()[0].click();
+        card('Devlog 12').click();
         await settle();
         // Through the real path: the fetch is tied to the group being opened, and a test that
         // called loadHistory directly would pass over a group that never opens.
