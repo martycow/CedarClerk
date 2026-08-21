@@ -21,9 +21,6 @@
 @use '@fontsource/caveat/latin-500.css' as *;
 @use '@fontsource/caveat/cyrillic-500.css' as *;
 
-/* Neutralised rather than removed: with the skin attribute never set, no rule in it can match. */
-@use 'styles/forest';
-
 /* Cedar Bench, the one look (ADR-136). Two vocabularies share this block. The contract names
    (ADR-137) are an integration surface, not a palette: tools/check-contrast.mjs scores them,
    tools/generate-design-tokens.mjs copies them into DesignTokens for the blog and the landing
