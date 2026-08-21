@@ -11,11 +11,11 @@ Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-
 
 ## Status summary (as of 20.08.2026)
 
-**UI V2 — Cedar Bench becomes the one look; Stages 0 through 5 (19–20.08.2026, branch `UI_V2`, not
+**UI V2 — Cedar Bench becomes the one look; Stages 0 through 6 (19–20.08.2026, branch `UI_V2`, not
 merged, no version bump).** The design system mirrored from Claude Design at `.design-sync/ds-v2/`
 stops being a second palette and becomes the app's only one. The port was planned before it was
 written — `docs/design/UI-V2-PLAN.md` settles ten questions (theming attribute, token namespace,
-component layout, half-pixels, night, density, icons, fonts) and thirty-three ADRs (136–168) landed
+component layout, half-pixels, night, density, icons, fonts) and thirty-eight ADRs (136–173) landed
 ahead of the code they govern. Every screen in the app is now drawn from the bench kit.
 
 - **Stage 0 — the two checks the rest of the port is measured by** (`T-205`, `T-206`).
@@ -225,20 +225,53 @@ ahead of the code they govern. Every screen in the app is now drawn from the ben
   hand-listed tokens, so Stage 4's re-derivation of `--series-3`, `--series-4` and `--series-6`
   never reached the generated C# copy and the blog has been drawing the old chart colours since.
   The generator was re-run and the guard now walks every token it emits.
-- **What is open.** Stage 6 — cleanup and ship — is on the board, along with four gaps the ports
-  found in the kit itself (`T-251`…`T-254`: no `autocomplete`/`maxlength`/hidden label on the field,
-  no select, textarea or checkbox at all, no anchor form for a button, no query merging on a task
-  tag) and nineteen features the screens found the API cannot answer (`T-238`…`T-250`,
-  `T-255`…`T-260`). What waits on a deliverable is `T-236`, the narrow-screen designs, which blocks
-  `T-034` and `T-237`; `T-229` now waits only on the board brief's run. The smoke suite is still
-  half-rebound (`T-233`) and the page-body markup it binds has moved again. `styles/_forest.scss` is
-  still neutralised rather than deleted, waiting on Marty as `T-235`. **Nobody has looked at any of
-  it**: the verification map's marks are reset for every ported screen, which is now most of the
-  app. One measured defect is left open on purpose: the drawer lip and the shelf-panel header write
-  `--rail-ink` on `--shelf-frame`, whose light stop is `#B68B60`, so a title reads 2.51:1 by day and
-  no flat ink clears the whole ramp — which material those bands are is a design call, not a
-  settle-time patch. The branch cannot deploy until it merges — `cedar deploy` refuses anything but
-  master.
+- **Stage 6 — the cleanup, and what measuring it found** (`T-230`…`T-233`). Four sweeps, and three
+  of them found the remembered numbers were wrong. The dead-CSS sweep (ADR-170) deleted one selector
+  fragment and four dictionary strings against a plan that had forecast forty-two files: `.btn-accent`
+  and `.btn-ghost` are live in fourteen blocks across eight page stylesheets, not dead, and
+  `.icon-btn` was gone already.
+  What it turned up instead is on the board — eight modal buttons whose CSS went with the port while
+  their markup did not, so four dialogs footer in platform grey (`T-262`). The count-badge retirement
+  (`T-231`) needed no code: the component was already deleted, and its null/zero/`99+` rules are
+  carried by `indexTabBadgeLabel`, which three mutations proved is what five screens actually read.
+  The docs sweep (`T-232`) marked ADR-120 superseded and corrected the token skill, which had been
+  telling every reviewer the wrong radii. The smoke suite (`T-233`, ADR-171) was the largest: sixteen
+  of fifty-seven tests red, fourteen of them bound to class names the repaint moved rather than to
+  any behaviour, and two red since ADR-135 rewrote the landing on `master` — a suite red for one
+  reason hides every other reason it is red. It is rebound to roles and accessible names, and it
+  found the one thing the port genuinely broke (`T-265`, the writer with no sheet at 390px) plus an
+  order-coupling through the server that had been masked by a test too broken to leak.
+- **What settling the branch found.** The closing census surfaced one combination the pair table had
+  never covered — the brass bar marking the current tool, which reads 4.42 at night and 2.91 by day
+  against the 3.0 a graphical object owes. It is now measured and accepted with its reason (ADR-172),
+  on the strength of three facts that were measured rather than assumed: the raised sign tile is
+  relief and not colour, scoring 1.00 against the very wall it hangs on, so it cannot be the cue the
+  bar falls back on; the bold caption is the cue and already passes; and the bar is `aria-hidden`
+  behind an `aria-current` that carries the state properly. Mutating the brass then exposed a
+  weakness in the mechanism itself — `except` was a bare string consulted in both themes, so
+  accepting a day shortfall bought silence at night, where the same pair passes by a wide margin.
+  Exceptions are now scoped to the theme they were derived in, which tightens ADR-140's three as
+  well. The second find was that `icon-usage.generated.ts` had shipped stale twice in this port with
+  nothing to notice: the generator gained a `--check` mode rendering through the same code path as
+  the write, and `cedar test` gained an Icon inventory phase (ADR-173).
+- **What is open.** **The port is done and both remaining rows are Marty's**: `T-234`, the version
+  bump to 0.13.0 with its tag, the merge into master and the deploy — deliberately not done here,
+  since a version is his call and `cedar deploy` refuses anything but master — and `T-235`, deleting
+  the 1 229-line forest partial, which is a `.claude/rules/destructive-operations.md` event and waits
+  for the word. Nothing else in the port blocks either. What remains around it is work the port
+  surfaced rather than work it owes: three gaps in the kit itself (`T-251`, `T-252`, `T-254` — no
+  `autocomplete`/`maxlength`/hidden label on the field, no select, textarea or checkbox at all, no
+  query merging on a task tag; the fourth, the button's missing anchor form, closed under ADR-169),
+  twenty features the screens found the API cannot answer (`T-238`…`T-250`, `T-255`…`T-261`), the
+  three rows ADR-170's sweep left in place of `T-230` (`T-262`, `T-263`, `T-264`), and `T-236`, the
+  narrow-screen designs, which is a deliverable rather than a task and blocks `T-034`, `T-237` and
+  `T-265`. **Nobody has looked at any of it**: the verification map's marks are reset for every
+  ported screen, which is now most of the app, and that is the real gate in front of a deploy rather
+  than anything a checker reports. Two measured defects are left open on purpose. The drawer lip and
+  the shelf-panel header write `--rail-ink` on `--shelf-frame`, whose light stop is `#B68B60`, so a
+  title reads 2.51:1 by day and no flat ink clears the whole ramp — which material those bands are
+  is a design call, not a settle-time patch. And the current-tool bar sits at 2.91 by day against a
+  3.0 floor, accepted under ADR-172 rather than closed by moving a palette at the end of a port.
 
 **v0.12.2 — every P1 closed in one session (18–19.08.2026, not yet deployed).** Marty's directive
 was "do everything P1", with five decisions resolved on the way in: T-164 (PRGE) removed outright,

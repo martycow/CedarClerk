@@ -1,7 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
-import { ADMIN, BLOG_ORIGIN, createDraft, paragraphs, pinEnglish, signIn } from './helpers';
+import { ADMIN, BLOG_ORIGIN, createDraft, expectSynced, paragraphs, pinEnglish, signIn } from './helpers';
 
 // Phase 10 Block D — the visual half of the audit. NOT part of the smoke suite: it asserts almost
 // nothing, it captures each surface (including the ones nobody has ever opened) so the screenshots
@@ -50,13 +50,13 @@ test('@audit drafts screen, both views', async ({ page, context }) => {
     await page.goto('/drafts');
     await shot(page, '11-drafts-table');
 
-    await page.locator('.view-toggle button').nth(1).click();
+    const views = page.getByRole('tablist', { name: 'List view' });
+    await views.getByRole('tab', { name: 'Grid' }).click();
     await shot(page, '12-drafts-grid');
 
-    await page.locator('.view-toggle button').nth(0).click();
-    await page.locator('.folder-filter-btn').click();
-    await shot(page, '13-drafts-folder-menu');
-    await page.keyboard.press('Escape');
+    await views.getByRole('tab', { name: 'Table' }).click();
+    // No shot of a folder menu: ADR-164 took the filter out of the popover and stood it on the
+    // shelf beside the list, where every drafts capture above already shows it.
 
     await page.locator('app-tag-picker button').first().click();
     await shot(page, '14-drafts-tag-manage');
@@ -71,7 +71,7 @@ test('@audit editor and its modals', async ({ page, context }) => {
     await expect(page.locator('.tiptap')).toBeVisible();
     await shot(page, '20-editor');
 
-    await page.locator('.export-trigger').click();
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
     await shot(page, '21-export-collapsed');
 
     // Both destinations ticked — the state the export window is actually used in.
@@ -84,7 +84,10 @@ test('@audit editor and its modals', async ({ page, context }) => {
     await shot(page, '23-version-history');
     await page.keyboard.press('Escape');
 
-    await page.locator('.retranslate-btn').first().click();
+    // Named, not classed: `.retranslate-btn` was on two buttons — the guarded re-translate, which
+    // needs a second language version to exist, and the make-primary popover trigger, which does
+    // not. `.first()` therefore shot the star menu under this shot's name for as long as it ran.
+    await page.getByRole('button', { name: 'All languages' }).click();
     await shot(page, '24-translate-all');
     await page.keyboard.press('Escape');
 
@@ -96,19 +99,15 @@ test('@audit editor and its modals', async ({ page, context }) => {
         await page.keyboard.press('Escape');
     }
 
-    await page.locator('.toolbar button:has(.invisibles-glyph)').first().click();
+    await page.getByRole('button', { name: 'Show paragraph marks' }).click();
     await page.locator('.tiptap').click();
     await shot(page, '26-paragraph-marks');
 
-    // Appearance panel (ADR-057 made it a modal; ADR-069 replaced Apply with autosave).
-    const palette = page.locator('header button').filter({ has: page.locator('svg') });
-    for (let i = 0; i < await palette.count(); i++) {
-        const title = await palette.nth(i).getAttribute('title');
-        if (title && /appearance|оформ/i.test(title)) {
-            await palette.nth(i).click();
-            break;
-        }
-    }
+    // Appearance panel (ADR-057 made it a modal; ADR-069 replaced Apply with autosave). ADR-151
+    // moved its trigger out of the editor's own chrome into the rail's dots menu, and hoisted the
+    // panel into the shell, so it is reachable from every screen rather than from this one.
+    await page.getByRole('button', { name: 'More', exact: true }).click();
+    await page.getByRole('button', { name: 'Appearance', exact: true }).click();
     await shot(page, '27-appearance');
 });
 
@@ -117,7 +116,7 @@ test('@audit save-guard dialog', async ({ page, context }) => {
         `Абзац ${i + 1}: достаточно текста, чтобы документ уверенно превышал порог в двести символов, ниже которого страж вообще не срабатывает.`);
     const id = await createDraft(context, 'Страж сохранения', long);
     await page.goto(`/editor?draft=${id}`);
-    await expect(page.locator('.save-state .save-label')).toHaveText('Saved', { timeout: 20_000 });
+    await expectSynced(page, 20_000);
 
     await page.locator('.tiptap').click();
     await page.keyboard.press('Control+a');
@@ -164,7 +163,7 @@ test('@audit posts manager tabs', async ({ page, context }) => {
 test('@audit settings, glossary, admin', async ({ page, context }) => {
     await page.goto('/settings?tab=profile');
     await shot(page, '50-settings-profile');
-    await page.getByRole('button', { name: 'Account', exact: true }).click();
+    await page.getByRole('tab', { name: 'Account', exact: true }).click();
     await shot(page, '51-settings-account');
 
     await page.goto('/glossary');
@@ -177,8 +176,9 @@ test('@audit settings, glossary, admin', async ({ page, context }) => {
 
     await page.goto('/admin');
     await shot(page, '60-admin-users');
-    for (const [i, name] of [[1, '61-admin-invites'], [2, '62-admin-posts'], [3, '63-admin-reports']] as [number, string][]) {
-        await page.locator('.admin-tabs button').nth(i).click();
+    const sections = page.getByRole('tablist', { name: 'Admin sections' });
+    for (const [tab, name] of [['Invite codes', '61-admin-invites'], ['Posts', '62-admin-posts'], ['Reports', '63-admin-reports']] as [string, string][]) {
+        await sections.getByRole('tab', { name: tab }).click();
         await shot(page, name);
     }
 });
@@ -254,8 +254,12 @@ for (const device of DEVICES) {
         // email ran off the right edge.
         const id = await createDraft(context, 'Заголовок поста для проверки топбара', ['Текст.']);
         await page.goto(`/editor?draft=${id}`);
-        await expect(page.locator('.tiptap')).toBeVisible();
+        await expect(page.locator('app-rail-header')).toBeVisible();
+        // Captured before the assertion, not after it: at 390px the writer's three columns do not
+        // collapse and the sheet is pushed clean out of the viewport, so this shot IS the evidence
+        // and the assertion below is what refuses to call it fine (T-237).
         await shot(page, `93-editor-${device.name}`);
+        await expect(page.locator('.tiptap')).toBeVisible();
     });
 }
 
@@ -311,7 +315,7 @@ test('@audit thread offer', async ({ page, context }) => {
     const id = await createDraft(context, 'Длинный документ', long);
     await page.goto(`/editor?draft=${id}`);
     await expect(page.locator('.tiptap')).toBeVisible();
-    await page.locator('.export-trigger').click();
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
     await page.locator('.dest-card input[type=checkbox]').nth(1).check();
     await page.locator('.thread-toggle input').check();
     await expect(page.locator('.thread-parts li').first()).toBeVisible();
@@ -353,8 +357,8 @@ test('@audit landing', async ({ browser }) => {
 test('@audit dark theme spot check', async ({ page, context }) => {
     await createDraft(context, 'Тёмная тема', ['Текст.']);
     await page.goto('/drafts');
-    await page.locator('app-rail-header .dots').click();
-    await page.locator('.theme-toggle').first().click();
+    await page.getByRole('button', { name: 'More', exact: true }).click();
+    await page.getByRole('button', { name: 'Toggle theme' }).click();
     await shot(page, '80-dark-drafts');
     await page.goto('/posts');
     await shot(page, '81-dark-posts');

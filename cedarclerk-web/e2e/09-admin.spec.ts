@@ -6,7 +6,7 @@ test.beforeEach(async ({ context }) => pinEnglish(context));
 test('the admin page lists users', async ({ page, context }) => {
     await signIn(context);
     await page.goto('/admin');
-    await expect(page.locator('.admin-tabs')).toBeVisible();
+    await expect(page.getByRole('tablist', { name: 'Admin sections' })).toBeVisible();
     await expect(page.locator('body')).toContainText(ADMIN.email);
 });
 

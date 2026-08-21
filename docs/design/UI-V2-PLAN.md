@@ -1,25 +1,79 @@
 ---
-source_of_truth_for: план переноса фронтенда на Design System V2 (Cedar Bench)
-guard: none — plan document, superseded by the ADRs as they land
+source_of_truth_for: план переноса фронтенда на Design System V2 (Cedar Bench) — закрытый; истина по решениям в docs/adr/
+guard: none — plan document, superseded by the ADRs that landed; where the two disagree the ADR wins
 ---
 
 # UI V2 — Cedar Bench port plan
 
+## 0. Where this stands
+
+**Every stage is closed, Stage 6 included, and the port is finished.** Every screen in the app is
+drawn from the bench kit, and what remains needs Marty rather than more porting: `T-234`, the version
+bump, tag, merge and deploy; and `T-235`, deleting the forest partial. This document was written
+before any code and amended as the port ran; it is now a record of the reasoning, not an instruction.
+Every decision in §2 landed as an ADR, and **the ADR governs** — where one of them and a line here
+disagree, the line here is the stale one.
+
+Settling the branch added two measurements the port had shipped without. The census found the
+current-tool bar on the hook rail was the one thing the pair table had never covered — 2.91 by day
+against the 3.0 a graphical object owes — and ADR-172 measures it and accepts the day figure, having
+first established by measurement that the raised sign tile is relief and not colour (1.00 against its
+own wall) and so cannot be the cue the bar was assumed to reinforce. Mutating that pair then exposed
+the exception mechanism itself as too broad: `except` was consulted in both themes, so accepting a
+day shortfall silenced night. Exceptions are now scoped to the theme they were derived in. The second
+was `icon-usage.generated.ts`, which shipped stale twice during the port with nothing to notice; it
+now has a `--check` mode and a phase in `cedar test` (ADR-173).
+
+What is still open, and the whole of it, on `docs/tasks/BACKLOG.md`:
+
+- `T-229` — the board arrangement. The materials half shipped (ADR-165) and the brief is written
+  (`docs/design/bench-board-prompt.md`); the run remains.
+- `T-230` — closed by ADR-170. The deletion the row was written for came to one dead selector
+  fragment and four orphan strings; what carried the name forward is a decision about modal
+  footers (`T-263`, behind `T-252`) and eight buttons the port left unpainted (`T-262`).
+- `T-231` — closed. `shared/count-badge.component.ts` is deleted and the hide-at-zero and 99+ rules
+  live in `indexTabBadgeLabel` alone.
+- `T-232` — closed. ADR-120 is marked superseded in the index and the skin era survives only in
+  the partial `T-235` deletes.
+- `T-233` — closed by ADR-171. The suite is green at 57 tests. What the run found on the way is one
+  regression the port did cause and `T-265` now holds: at 390px the writer has no sheet.
+- `T-234` — version, merge, deploy. Marty's: the version number is his call and `cedar deploy`
+  refuses anything but master.
+- `T-235` — deleting `styles/_forest.scss`. It is neutralised, not gone: still `@use`d, still
+  compiled into the bundle, matching nothing because nothing sets `data-skin`. A deletion that size
+  is a `.claude/rules/destructive-operations.md` event and waits on Marty.
+- `T-236` / `T-237` — the narrow-screen designs and their port; they block `T-034`.
+- `T-251`, `T-252`, `T-254` — three gaps found in the kit itself while building against it. The
+  fourth, a button with no anchor form, closed under ADR-169.
+- `T-262`, `T-263`, `T-264` — what ADR-170's sweep turned up in place of `T-230`: four dialogs whose
+  footers lost their paint, fourteen live modal-button blocks that cannot collapse until `T-252`
+  draws the controls those dialogs need, and 25 candidate orphan dictionary keys.
+
+Twenty features the ports found the API cannot answer are `T-238`…`T-250` and `T-255`…`T-261`.
+Those are not port remainder — each is a feature with its own row, which is what §4's screen table
+predicted and what building confirmed.
+
+---
+
 ## 1. What V2 is
 
-Cedar Bench (`.design-sync/ds-v2/`) is the Forest Workshop grown from a *repaint* into a *layout system*. V1 (ADR-120, `cedarclerk-web/src/styles/_forest.scss`) is 1 246 lines of attribute-scoped overrides that recolour existing app classes — same screens, wood-and-paper palette. V2 keeps that palette almost byte-for-byte (~34 colour tokens identical, all three noise SVGs identical, all four faces already self-hosted) and adds what V1 never had: an application shell (`RailHeader` / `HookRail` / `ShelfPanel` / `BenchDrawer` / `RulerBar`), a two-class density contract (chrome 30px vs paper 44px), 20 real components instead of class repaints, and layout-dimension tokens. The port is therefore **not a colour job** — it is a chrome-and-component job on a palette that mostly already ships.
+Cedar Bench (`.design-sync/ds-v2/`) is the Forest Workshop grown from a *repaint* into a *layout system*. V1 (ADR-120, `cedarclerk-web/src/styles/_forest.scss`) is 1 229 lines of attribute-scoped overrides that recolour existing app classes — same screens, wood-and-paper palette. V2 keeps that palette almost byte-for-byte (~34 colour tokens identical, all three noise SVGs identical, all four faces already self-hosted) and adds what V1 never had: an application shell (`RailHeader` / `HookRail` / `ShelfPanel` / `BenchDrawer` / `RulerBar`), a two-class density contract (chrome 30px vs paper 44px), 20 real components instead of class repaints, and layout-dimension tokens. The port is therefore **not a colour job** — it is a chrome-and-component job on a palette that mostly already ships.
 
 ---
 
 ## 2. Decisions before code
 
+All ten were taken before any code and all ten landed; §4 names the ADR each became, and that ADR is
+the governing text. The "Recommendation" column is what was proposed here, kept because the reason
+beside it is why the ADR reads as it does.
+
 | # | Decision | Recommendation | Reason |
 |---|---|---|---|
-| **D1** | Theming attribute: V2's `data-time="night"` vs the app's `data-theme` × `data-skin` | **Keep `data-theme` and nothing else.** V2's `:root` ports onto the bare `:root` block at `cedarclerk-web/src/styles.scss:8`, `[data-time="night"]` onto `:root[data-theme="dark"]` at `styles.scss:178`; `data-time` is discarded as a mechanism and `data-skin` is retired with it | `[data-time]` is (0,1,0) and loses to `:root[data-theme="dark"]` (0,2,0) — dropped in verbatim it silently fails on every token the app's dark block also owns. `data-theme` is the only axis with persistence (`cedar-theme`, `core/theme.service.ts:5`), a pre-auth path (the `ThemeService` constructor applies it at `theme.service.ts:13-16`, so login is already themed) and a server-rendered twin (`CedarClerk.Server/BlogEndpoints.cs`, `LandingEndpoints.cs`, fed by `DesignTokens`). A second attribute earns its keep only while two looks exist; with one look `data-skin` selects between a palette and itself |
-| **D2** | Is Bench a third skin, or does it replace Forest? | **Neither — Bench becomes the one and only look, and the skin mechanism retires with the port.** The `Skin` union (`core/theme.service.ts:4`), `setSkin`/`applySkin`/`loadInitialSkin` (`theme.service.ts:28-53`), the `cedar-skin` key (`theme.service.ts:6`), the Appearance control (`appearance-panel.component.html:15-21`) and `styles/_forest.scss` (1 246 lines) all go. The `default` palette is not preserved anywhere — its values are overwritten in place | Forest repaints app classes (`.btn-accent`, `.chip`, `.status-badge`) that Stage 6 deletes outright, so the partial outlives its own targets by at most one stage. Two palettes means every new bench component carries a second set of values and `cedarclerk-web/tools/check-contrast.mjs` a second pass — that is how the blog fell a shade behind the app before `DesignTokenDriftTests` existed. `--accent` is injected at the bare `:root` by `core/appearance.service.ts:124`, which lands on the contract directly once nothing is scoped above it. Supersedes ADR-120; the textures in `cedarclerk-web/public/assets/forest/` outlive the partial that referenced them |
-| **D3** | Token namespace | **No partial and no attribute scope: bench values are written into the bare `:root` block (`cedarclerk-web/src/styles.scss:8`) and into `:root[data-theme="dark"]` (`styles.scss:178`).** Material names (`--wood --paper --pine --brass --resin --rail-ink --bench-*`) are added **alongside** the contract names (`--bg --canvas --surface --sheet --alt --text --t2 --t3 --accent --danger --ok --warn --border-strong --asoft`, plus `--series-1..6`), which keep their exact spelling and stay flat colours; where a bench material is the same colour as a contract token, the contract name is the one components use | `cedarclerk-web/tools/check-contrast.mjs:30-31` and `cedarclerk-web/tools/generate-design-tokens.mjs:40-41` both `indexOf(':root')` in `styles.scss` and brace-match from there, so the base blocks are the only place a token is contrast-checked *and* emitted into `DesignTokens.Light`/`Dark` for the blog and the landing page. Bench in the base blocks gets both for free — and that makes the names load-bearing: `DesignTokenDriftTests` pins ten by `[InlineData]` (`text t2 t3 accent danger ok warn border bg surface`) and compares the raw declaration text, so a rename is a red test and a gradient is a gradient string painted onto the blog. `--accent` is additionally injected at `:root` by `core/appearance.service.ts:124` |
+| **D1** | Theming attribute: V2's `data-time="night"` vs the app's `data-theme` × `data-skin` | **Keep `data-theme` and nothing else.** V2's `:root` ports onto the bare `:root` block in `cedarclerk-web/src/styles.scss`, `[data-time="night"]` onto `:root[data-theme="dark"]`; `data-time` is discarded as a mechanism and `data-skin` is retired with it | `[data-time]` is (0,1,0) and loses to `:root[data-theme="dark"]` (0,2,0) — dropped in verbatim it silently fails on every token the app's dark block also owns. `data-theme` is the only axis with persistence (`cedar-theme`, `core/theme.service.ts:5`), a pre-auth path (the `ThemeService` constructor applies it at `theme.service.ts:13-16`, so login is already themed) and a server-rendered twin (`CedarClerk.Server/BlogEndpoints.cs`, `LandingEndpoints.cs`, fed by `DesignTokens`). A second attribute earns its keep only while two looks exist; with one look `data-skin` selects between a palette and itself |
+| **D2** | Is Bench a third skin, or does it replace Forest? | **Neither — Bench becomes the one and only look, and the skin mechanism retires with the port.** The `Skin` union (`core/theme.service.ts:4`), `setSkin`/`applySkin`/`loadInitialSkin` (`theme.service.ts:28-53`), the `cedar-skin` key (`theme.service.ts:6`) and the Appearance control (`appearance-panel.component.html:15-21`) all go. **`styles/_forest.scss` is the one exception and it did not go**: with nothing setting the attribute no rule in it can match, so it was neutralised where it stands and its deletion is `T-235`, waiting on Marty. The `default` palette is not preserved anywhere — its values are overwritten in place | Forest repaints app classes (`.btn-accent`, `.chip`, `.status-badge`) that Stage 6 deletes outright, so the partial outlives its own targets by at most one stage. Two palettes means every new bench component carries a second set of values and `cedarclerk-web/tools/check-contrast.mjs` a second pass — that is how the blog fell a shade behind the app before `DesignTokenDriftTests` existed. `--accent` is injected at the bare `:root` by `core/appearance.service.ts:124`, which lands on the contract directly once nothing is scoped above it. Supersedes ADR-120; the textures in `cedarclerk-web/public/assets/forest/` outlive the partial that referenced them |
+| **D3** | Token namespace | **No partial and no attribute scope: bench values are written into the bare `:root` block (`cedarclerk-web/src/styles.scss:34`) and into `:root[data-theme="dark"]` (`styles.scss:374`).** Material names (`--wood --paper --pine --brass --resin --rail-ink --bench-*`) are added **alongside** the contract names (`--bg --canvas --surface --sheet --alt --text --t2 --t3 --accent --danger --ok --warn --border-strong --asoft`, plus `--series-1..6`), which keep their exact spelling and stay flat colours; where a bench material is the same colour as a contract token, the contract name is the one components use | `cedarclerk-web/tools/check-contrast.mjs:30-31` and `cedarclerk-web/tools/generate-design-tokens.mjs:40-41` both `indexOf(':root')` in `styles.scss` and brace-match from there, so the base blocks are the only place a token is contrast-checked *and* emitted into `DesignTokens.Light`/`Dark` for the blog and the landing page. Bench in the base blocks gets both for free — and that makes the names load-bearing: `DesignTokenDriftTests` pins ten by `[InlineData]` (`text t2 t3 accent danger ok warn border bg surface`) and compares the raw declaration text, so a rename is a red test and a gradient is a gradient string painted onto the blog. `--accent` is additionally injected at `:root` by `core/appearance.service.ts:124` |
 | **D4** | Component library layout | **`cedarclerk-web/src/app/bench/`**, subfolders mirroring the DS one-to-one (`chrome/ worktop/ display/ forms/ scenery/`), `kebab-case.component.ts`, selector prefix `app-` (`angular.json` `"prefix": "app"`). No barrel file. `<cc-icon>`/`<cc-logo>` are **not** ported | `shared/` is already 44 flat files mixing shells, pickers with real behaviour and page fragments; a design library under one root is what makes "does this already exist?" answerable — `.claude/rules/ui-changes.md` rule 1 applied to code. `app-icon`/`app-cedar-logo` already fill the icon roles, and a custom element would force `CUSTOM_ELEMENTS_SCHEMA` on every consuming template — rejected in ADR-072 |
-| **D5** | What gets deleted | `shared/page-header.component.*` (12 call sites) · `shared/count-badge.component.ts` (3) · `shared/debug-console.component.{html,css}` chrome only (service + interceptor survive) · the editor topbar nav block · every duplicated `.btn-accent`/`.btn-ghost`/`.btn-danger`/`.icon-btn`/`.status-badge`/tab-strip block in `src/app/**/*.css` · the skin machinery: `styles/_forest.scss`, the `Skin` union and its three methods in `core/theme.service.ts:4-53`, the `cedar-skin` key, the Appearance skin control (`appearance-panel.component.html:15-21`) with `skinLabel`/`skinDefault`/`skinForest` in `core/i18n/en.ts:1345-1347` and `core/i18n/ru.ts:1310-1312`, the inventory row at `docs/design/UI-INVENTORY.md:122`, §Skins at `docs/design/DESIGN.md:192`, and the old `default` palette values in the base blocks | Each is two objects doing one job once the Bench component exists, and the skin machinery is a switch with one position left. Bulk deletion is a `.claude/rules/destructive-operations.md` event: explain, stop, wait |
+| **D5** | What gets deleted | `shared/page-header.component.*` (12 call sites) · `shared/count-badge.component.ts` (3) · `shared/debug-console.component.{html,css}` chrome only (service + interceptor survive) · the editor topbar nav block · every duplicated `.btn-accent`/`.btn-ghost`/`.btn-danger`/`.icon-btn`/`.status-badge`/tab-strip block in `src/app/**/*.css` · the skin machinery: the `Skin` union and its three methods in `core/theme.service.ts:4-53`, the `cedar-skin` key, the Appearance skin control (`appearance-panel.component.html:15-21`) with `skinLabel`/`skinDefault`/`skinForest` in `core/i18n/en.ts:1345-1347` and `core/i18n/ru.ts:1310-1312`, the inventory row at `docs/design/UI-INVENTORY.md:122`, §Skins in `docs/design/DESIGN.md`, and the old `default` palette values in the base blocks. `styles/_forest.scss` is **not** on this list: it is neutralised in place and its deletion is `T-235` | Each is two objects doing one job once the Bench component exists, and the skin machinery is a switch with one position left. Bulk deletion is a `.claude/rules/destructive-operations.md` event: explain, stop, wait. The control-class half of this list is narrowed by ADR-170 — measured against the ported tree, only `.icon-btn` and `.btn-danger` had nothing left matching them; the `.btn-accent`/`.btn-ghost`/`.status-badge` blocks are live modal markup and wait on a bench form |
 | **D6** | Half-pixel sizes | **Round on port**: `--text-lg` 16.5→16, `--text-chrome` 12.5→13 (`--fs-13`), `--text-stamp` 10.5→11 (`--fs-11`) | ADR-071 principle 7 / `DESIGN.md:22` — integers only, a measured decision taken after 110 half-pixel declarations rounded inconsistently across zoom levels. V2 ships 67 half-pixel values; copying them reverses a measurement |
 | **D7** | V2's night palette | **Do not port verbatim.** Re-derive night `--series-*`, `--rust` and `--text-body`-on-wall *downward*, against cream paper | V2's night block lightens the series set while night paper stays cream: `--series-pine` #7C9A72 on night `--paper` #E6DCC2 is **2.29:1** against a 3.0 floor. `--text-body` #241E13 on night `--wall-lo` #251F13 is **1.01:1** — invisible. `_forest.scss:96-104` already solved exactly this, and V2 reverses it |
 | **D8** | Density | **Two orthogonal axes, both kept.** `data-density="compact"` (page-level, paper only, 9 page roots, ~155 `--dens-*` call sites) stays; `data-surface="chrome"\|"paper"` (element-level) is new. `[data-density="compact"]` must never redefine a `--bench-*`/`--text-chrome*`/`--hit-chrome` token | Compact `--dens-fs` is already 14px — exactly V2's paper floor, so compact is contract-compliant unchanged and must not be tightened. No page-root attribute can express "56px rail and a 30px ruler around a 640px reading sheet", which is why the surface split exists at all |
@@ -30,7 +84,7 @@ Cedar Bench (`.design-sync/ds-v2/`) is the Forest Workshop grown from a *repaint
 
 ## 3. Work breakdown
 
-Task lines follow the board format `- [ ] T-xxx Name — description #tags P1..P3`, and carry the ids the rows hold on the board. Stages 0 and 1 are ticked here because they shipped; their status is `docs/tasks/ROADMAP.md`, and the open rows — Stages 2 through 6 — live in `docs/tasks/BACKLOG.md`, which is the only place they are open.
+Task lines follow the board format `- [ ] T-xxx Name — description #tags P1..P3`, and carry the ids the rows hold on the board. Everything through Stage 5 is ticked here because it shipped; the account of what each stage actually did is `docs/tasks/ROADMAP.md`, and the rows still open — Stage 6, and `T-235` out of Stage 1 — live in `docs/tasks/BACKLOG.md`, which is the only place they are open. Where a row's description here and its description on the board differ, the board is the one that was rewritten against the finished code.
 
 ### Stage 0 — tooling before tokens
 
@@ -90,11 +144,11 @@ The app has no shell today: `src/app/app.html` is `<router-outlet />` plus the d
 
 Vertical chrome budget in the editor: 44 + 58 + 58 + 27 = 187px today, against 56 + 32 + 30 = 118px global plus a 36px in-content tool strip. The two-row toolbar collapsing to one 36px strip is the biggest density delta in the app and voids ADR-035's user-ordered row assignment — see Q3.
 
-Tool budget: V2 allows 5–7 hooks against 10 destinations. Proposed six — Hub (`/projects`, hidden when `auth.indieDev()` is false), Text (`/drafts` + `/editor`), Board (`/projects/:id/tasks`), Assets (`/library`), Metrics (`/posts`), plus bottom-anchored Settings. Glossary, Admin and `/dev/*` go behind the rail's `dots` control, which is what `RailHeader.prompt.md` prescribes for the rare rest.
+Tool budget: V2 allows 5–7 hooks against 10 destinations. Six were proposed and six shipped — Hub (`/projects`, hidden when `auth.indieDev()` is false), Text (`/drafts` + `/editor`), Board (`/projects/:id/tasks`), Assets (`/library`), Metrics (`/posts`), plus bottom-anchored Settings. Glossary, Admin and `/dev/*` sit behind the rail's `dots` control, which is what `RailHeader.prompt.md` prescribes for the rare rest, and ADR-151 sent the theme toggle and the Appearance trigger there too.
 
 Two rules the current chrome breaks and this stage must fix: **no transparency or blur** (`.page-header` uses `--glass` + `backdrop-filter`, and `.topbar::before` exists *only* to work around blur creating a containing block — killing blur deletes the hack), and the density split.
 
-One data gap the rail hits immediately: `DraftMeta` (`core/drafts.service.ts:107-140`) carries no `projectId`, so the rail's project switcher has nothing behind it on `/drafts`, `/editor`, `/posts` and `/library`. Either the API grows the field or the tile is account-scoped outside `/projects/:id`.
+One data gap the rail hits immediately: `DraftMeta` (`core/drafts.service.ts`) carries no `projectId`, so the rail's project switcher has nothing behind it on `/drafts`, `/editor`, `/posts` and `/library`. Of the two ways out, the second was taken — the API was left alone and the tile is account-scoped wherever the project is unknown, which is every screen but the hub. The Board hook falls back to `/projects` for the same reason. A tile naming a project on `/drafts` would be a confident guess, and that is the thing it must not be.
 
 ### Stage 4 — the three reference screens
 
@@ -119,27 +173,56 @@ Each screen carries data the API does not have; every one of these is a feature 
 
 | Pattern | Pages |
 |---|---|
-| hub-like | `projects` (absorbed as the hub's left shelf), `project-planner`, `project-builds` |
+| hub-like | `projects`, `project-planner`, `project-builds` |
 | stats-like | `project-assets`, `media-library`, `drafts`, `admin` |
 | writer-like | `posts-manager`, `glossary`, `comments` (a fragment → drawer tab, never its own screen) |
 | own pattern | `project-tasks` (kanban — no kit covers it), `settings` (754 lines, comfortable by design), `login`/`register` (workshop-door scenery, no shell), `terms`/`privacy` (one sheet, no chrome), `styleguide`, `icons` |
 
 ```
-- [ ] T-226 Port hub-like pages — projects, project-planner, project-builds onto Worktop plus ShelfPanel #screens P3
-- [ ] T-227 Port stats-like pages — project-assets, media-library, drafts, admin onto IndexTabs plus one panel plus an inspector shelf #screens P3
-- [ ] T-228 Port writer-like pages — posts-manager, glossary, comments fragment #screens P3
+- [x] T-226 Port hub-like pages — projects, project-planner, project-builds onto Worktop plus ShelfPanel #screens P3
+- [x] T-227 Port stats-like pages — project-assets, media-library, drafts, admin onto IndexTabs plus one panel plus an inspector shelf #screens P3
+- [x] T-228 Port writer-like pages — posts-manager, glossary, comments fragment #screens P3
 - [ ] T-229 Task board pattern — project-tasks needs a fourth reference screen from Claude Design before it can be ported #screens #decision P3
 ```
+
+Two lines in this stage were overtaken while it ran. **`projects` was not absorbed** — ADR-160 put a
+project *switcher* in the hub's left dock, and ADR-168 then answered what that left of the route:
+`/projects` stays a screen, because search, the filter chips, the counts and project creation are
+not a dock's work. The table above is corrected accordingly. And **`T-229` no longer waits on a
+fourth reference screen**: ADR-165 dressed the board in the bench's materials while keeping its own
+geometry, so what is left is the arrangement alone, and the brief for it is written
+(`docs/design/bench-board-prompt.md`).
 
 ### Stage 6 — cleanup and ship
 
 ```
-- [ ] T-230 Delete duplicated control CSS — .btn-accent (12 files), .btn-ghost (16), .btn-danger (2), .icon-btn (7), .status-badge (5), tab strips (8) #cleanup P2
-- [ ] T-231 Retire count-badge — carry the hide-at-zero and 99+ cap into IndexTabs, delete shared/count-badge.component.ts #cleanup P3
-- [ ] T-232 Close the skin era in the docs — mark ADR-120 superseded by ADR-136 in docs/DECISIONS.md, and check no --wk-* or data-skin reference outlived Stage 1 #docs #decision P3
-- [ ] T-233 Smoke suite repair — rebind the e2e selectors listed under Risks to the bench markup #tests P1
+- [x] T-230 Delete duplicated control CSS — .btn-accent (12 files), .btn-ghost (16), .btn-danger (2), .icon-btn (7), .status-badge (5), tab strips (8) #cleanup P2
+- [x] T-231 Retire count-badge — carry the hide-at-zero and 99+ cap into IndexTabs, delete shared/count-badge.component.ts #cleanup P3
+- [x] T-232 Close the skin era in the docs — mark ADR-120 superseded by ADR-136 in docs/DECISIONS.md, and check no --wk-* or data-skin reference outlived Stage 1 #docs #decision P3
+- [x] T-233 Smoke suite repair — rebind the e2e selectors listed under Risks to the bench markup #tests P1
 - [ ] T-234 Version and merge — bump Consts.CurrentVersion to 0.13.0, tag 0.13.0, merge UI_V2 to master, deploy #release P1
 ```
+
+`T-230`'s counts above are the pre-port measurement and never described the file this stage found.
+Re-measured under ADR-170: `.btn-danger` has no definition anywhere, and `.icon-btn` was down to
+`a.icon-btn` inside the global coarse-pointer selector — a hook over no anchor, deleted here, which
+amends ADR-169 clause 5 to a list of four. The tab strips are `app-index-tabs` everywhere but the
+media picker. What is left is live: `.btn-accent` in six page stylesheets and `.btn-ghost` in eight,
+every rule matched by its own template, plus `.status-badge` in `drafts.component.css`. They are
+modal footers, the last markup the bench does not cover, and collapsing them is `T-263` waiting on
+`T-252` rather than a deletion anyone can make now. The sweep also found the opposite failure —
+four shared components whose footers carry `.btn-ghost`/`.btn-accent` with no rule left to paint
+them (`T-262`).
+
+`--wk-*` and `data-skin` outlived Stage 1 in exactly one place that can act on them, by decision:
+`styles/_forest.scss` itself, where 57 `--wk-*` declarations, the 116 `var(--wk-*)` references that
+read them and 259 lines whose selector names `data-skin` sit unreachable until `T-235` deletes the
+file. Nothing else under `src/` and nothing in the server's C#
+declares or selects either. They are still *named* where naming them is the point — the ADRs that
+retired the mechanism, the board rows that will delete it, and one comment in
+`tools/check-contrast.mjs`, which is not stale: the checker walks that partial like any other sheet,
+and `data-skin=forest` is the condition that keeps its rules from being scored in a palette they
+never paint in.
 
 `cedar deploy` refuses anything but `master` with a clean tree (`CedarClerk.Cli/Pipelines/GitGuard.cs`), so `UI_V2` merges before it can ship. Eyeball with `cedar run` (ADR-121) — the real `publish/` build on `localhost:8080` with the bot forced off, which is the only safe way to look at a re-skin without touching the production bot token.
 
@@ -153,7 +236,7 @@ Highest existing was ADR-135, so the port starts at **ADR-136**. Each is a new `
 
 | # | Thesis | Overturns / extends |
 |---|---|---|
-| ADR-136 | One look: Cedar Bench replaces the skin mechanism — `data-skin`, the `default` palette and forest all retire, and `data-time` is discarded with them; `data-theme` is the only surviving axis | Supersedes ADR-120 |
+| ADR-136 | One look: Cedar Bench replaces the skin mechanism — `data-skin`, the `default` palette and the machinery behind them retire, and `data-time` is discarded with them; `data-theme` is the only surviving axis. The forest partial is neutralised rather than deleted, and its deletion is `T-235` | Supersedes ADR-120's mechanism clauses; four of its findings survive into ADR-140/141/143 |
 | ADR-137 | Token contract: the contract names keep their spelling and stay flat colours in the base blocks; bench material names are added alongside them, and the contract name wins wherever the two are the same colour | Protects ADR-071 principle 2, ADR-090, `DesignTokenDriftTests` |
 | ADR-138 | Surface class (`data-surface`) as a second density axis: chrome 30px / 13–11px, paper 44px / ≥14px, integers only; contrast is lifted out of the split and applies to both | Narrows ADR-071 principle 7 and the `pointer: coarse` rule at `styles.scss:304` |
 | ADR-139 | The bench shell becomes shared chrome; the header nav row and the Electron default menu bar are removed | Reverses ADR-052; required by `.claude/rules/ui-changes.md` rule 1 |
@@ -194,6 +277,20 @@ app has), **ADR-161** (one chart needs a metric control, one axis needs a shared
 must not promise a line) and **ADR-162** (the outline is a view of the document, not a second
 selection).
 
+Seven more carried Stage 5 and the anchor work after it, and the port ends at **ADR-169**:
+**ADR-163** (a bench control that navigates is an anchor, and the control carries the route),
+**ADR-164** (a scanning screen is one board: index tiles, one panel, and a shelf that is never
+empty), **ADR-165** (a screen the kit does not draw takes the bench's materials and keeps its own
+geometry — the board), **ADR-166** (outside the shell nothing declares the surface, so the door
+declares it itself — login, register, terms, privacy), **ADR-167** (the reading screens: an index
+shelf, one sheet, the facts on the inspector, and feedback under its post), **ADR-168** (the project
+index is not the hub's shelf: what the switcher refused stays a screen) and **ADR-169** (a pine
+button as a link is a pine button, and that is the whole of the anchor form).
+
+Thirty-four ADRs, then, against the ten this section planned. The gap is the point: a plan can name
+the decisions it already knows it is taking, and the rest are found by building. This document dies
+into them.
+
 ---
 
 ## 5. Risks
@@ -201,9 +298,9 @@ selection).
 | Risk | Concrete failure |
 |---|---|
 | A gradient reaches a contract token | Worse now than under a skin: the contract *is* the base block, so a gradient there is on the blog's delivery path by construction. `resolveColor` throws `cannot resolve: linear-gradient(…)` uncaught → `cedar test` red with a stack trace, while `generate-design-tokens.mjs` does not resolve values at all, *survives*, and writes the gradient string into `DesignTokens.Light` — `BlogEndpoints.cs` then paints it where a flat colour is expected |
-| A `:root` string appears above the base block, in code or in a comment | Both tools `indexOf(':root')` and brace-match from the first hit, so anything earlier mis-anchors the light check onto the wrong block — the incident `styles.scss:1-6` records. Retiring the skin removes both the `@use 'styles/forest'` line and that comment; nothing may reintroduce a `:root` mention above `styles.scss:8` |
-| Bench tokens put in a partial out of habit | Neither tool reads partials, so those tokens are never contrast-checked and never reach the blog — a silent coverage hole, not a pass. D3 exists to stop this; ADR-120 already records the same hole for forest |
-| Mid-port the app renders bench tokens on unported screens | Stage 1 lands before Stages 4–5, and with `data-skin` gone there is no fallback to switch back to: every page still drawing its own `.page-header`, `.btn-accent`, `.stat-card` renders those rules against bench values, and the only way to see the previous look is `git checkout master`. Any contrast or legibility regression on an unported screen is live on the branch until that screen's stage lands, so `npm run check:contrast` after Stage 1 is the only thing watching them |
+| A `:root` string appears above the base block, in code or in a comment | Both tools `indexOf(':root')` and brace-match from the first hit, so anything earlier mis-anchors the light check onto the wrong block — the incident `styles.scss:1-6` records. **Still live, and more of it than expected**: retiring the skin was supposed to remove the `@use 'styles/forest'` line, and `T-235` has not run, so the `@use` and the warning comment both stand. Nothing may spell `:root` above the base block, which now opens at `styles.scss:34` |
+| Bench tokens put in a partial out of habit | Half right, and the wrong half is the reassuring one. `generate-design-tokens.mjs` reads `styles.scss` alone, so a token in a partial never reaches `DesignTokens` and never reaches the blog or the landing page — that hole is real. `check-contrast.mjs` does **not** share it: it walks every `.css`/`.scss` under `src/` and every `styles` literal in a `.ts`, collects conditional `:root` blocks from all of them, and judges each rule in the palette its own selector chain qualifies for. So a partial is a delivery hole, not a measurement hole. D3 exists to stop it either way |
+| ~~Mid-port the app renders bench tokens on unported screens~~ | Spent — Stage 5 closed and every screen is ported, so no page is left rendering its own controls against values they were not drawn for. It cost what it said it would: `npm run check:contrast` was the only thing watching those screens between Stage 1 and their own stage, and `git checkout master` the only way to see the previous look |
 | Renaming `--text`→`--text-body`, `--t2`→`--text-muted`, `--series-N`→`--series-pine` | `vars[p.fg]` is `undefined` → `TypeError: Cannot read properties of undefined`; `DesignTokenDriftTests` goes red on ten `[InlineData]` names |
 | V2 has no `--ok` and no `--warn` | Ten checker pairs reference them; dropping either crashes the run |
 | V2 night ported verbatim | `--text-body` on night `--wall-lo` is 1.01:1 — body text is invisible on the page background; the whole night series set falls to 1.5–2.3:1 against cream paper |
@@ -211,7 +308,7 @@ selection).
 | `--brass` as the focus ring | 2.39:1 on `--paper`, 1.98:1 on `--wall-lo` — SC 1.4.11 fails on the app's only focus affordance |
 | `pointer: coarse` left global | The 44px minimum silently inflates rail, hooks, ruler and drawer lip on touch; the rail becomes 70px, the ruler 44px, and the density contract is dead on arrival |
 | Icon-dense chrome without labels | `e2e/12-a11y.spec.ts` fails on any `<button>`/`<a>` holding an `<svg>` with no text and no `aria-label` — HookRail, ShelfPanel actions, RulerBar, drawer toggle |
-| Class renames across the smoke suite | 17 spec files bind to `.tiptap` ×21, `.post-card` ×6, `.export-trigger` ×5, `.drafts-title` ×5, `.theme-toggle`, `.btn-accent`, `.stat-card`, `.admin-tabs` and `app-page-header`; `e2e/10-ui-shell.spec.ts` breaks the moment the header is replaced |
+| Class renames across the smoke suite | Landed and repaired under ADR-171, which answers it for good: a binding names a role and an accessible name, and a class only where the element has neither. The forecast above was half wrong in both directions — `.tiptap` never broke (it is TipTap's own class, not ours) and `.stat-card` was never in the suite, while `.save-state .save-label`, the settings tabs, the language picker and the landing's whole hero were not on the list and were |
 | New `pages/*.component.ts` or new `sec-*` id without an inventory row | `UiInventoryDriftTests` red. Worse: a **renamed** page leaves a stale row, so the test stays green while the inventory lies |
 | Bulk CSS deletion without confirmation | `.claude/rules/destructive-operations.md` — explain, then stop and wait |
 | A glyph name absent from `icon-map.json` | `app-icon` renders **nothing**, silently. Six V2 names are missing from the map's 96 rows today |
@@ -249,7 +346,9 @@ and are reversible — their ADRs say so in the same words.
    `ADR-147`. The shell is built to the kit at desktop proportions and the narrow behaviour is
    *deferred, not invented* — the shell stages add no width breakpoint of their own, and the app
    below that width keeps whatever it does today. The `≥1100px` fallback this plan proposed above is
-   withdrawn: no threshold is designed here. `T-034` is blocked on the deliverable.
+   withdrawn: no threshold is designed here. The brief is written — `docs/design/bench-responsive-prompt.md`,
+   nine questions, target widths 1180/820/390 — and the run is `T-236`, which blocks `T-034` and
+   `T-237`.
 6. **Q-24 — does the Appearance accent picker survive?** **Defaulted by the implementer, not
    asked:** yes. `ADR-152`. The constraint it carries is that every accent-derived tone is derived
    from `--accent` and never held, and that a new one joins `ACCENT_DEPENDENT` in the same commit —

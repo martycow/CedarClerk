@@ -7,13 +7,13 @@ guard: none
 
 # Design
 
-Source of truth for all values below: `cedarclerk-web/src/styles.scss` (it also `@use`s `styles/_forest.scss`, whose every rule is scoped under a `data-skin` attribute nothing sets — an inert partial, not a second source of values). Component-scoped CSS lives alongside each component (`editor.component.css`, `settings.component.css`, etc.) under Angular's default view encapsulation. **When this file and `styles.scss` disagree, `styles.scss` wins.**
+Source of truth for all values below: `cedarclerk-web/src/styles.scss`, and both of its base blocks are the whole of it — there is no partial and no attribute scope holding a second set (ADR-136). `styles/_forest.scss` is still `@use`d and still compiles into the bundle, but every rule in it is scoped under a `data-skin` attribute nothing sets any more, so it can match nothing and declares nothing; it is neutralised and pending deletion (`T-235`). Component-scoped CSS lives alongside each component (`editor.component.css`, `settings.component.css`, etc.) under Angular's default view encapsulation. **When this file and `styles.scss` disagree, `styles.scss` wins.**
 
 ## Principles (ADR-071, 31.07.2026)
 
 The visual direction, decided by Marty as the answer to Q-11 and binding on Phase 11. Rationale is in ADR-071; what follows is the rule, not the argument.
 
-1. **Warm editorial is the base.** Paper and wood neutrals, olive accent, generous reading measure. This is a continuation of the 08.07.2026 "Cabin" token set below, not a replacement for it — the palette already expresses this direction, and the work is making every screen honour it.
+1. **Warm editorial is the base.** Paper and wood neutrals, olive accent, generous reading measure. The values below are Cedar Bench (ADR-136), which carries this direction on rather than turning from it: the "Cabin" set it grew out of was rewritten in place, not kept beside it.
 2. **One palette, one type scale, product-wide.** There is no second colour set for any screen, ever. Difference between screens is expressed only in spacing, radius and size tokens.
 3. **Density is a surface mode, not a component choice.** A page root opts into `[data-density="compact"]` (same mechanism as `data-theme` on `<html>`); tokens inside resolve tighter — row spacing, control padding, `--radius-md`→`--radius-sm`, and borders rather than shadows for separation. Compact: `/posts`, `/drafts`, `/admin` and the Phase 13 list screens (projects list, tasks board, planner, assets, builds). Comfortable (default): editor sheet, project dashboard, blog, private-post gate. **A component must never hardcode its density** — several are used on both kinds of screen.
 4. **Serif for content, sans for chrome — content means the blog.** The blog post body gets a serif; toolbars, tables, forms, menus and every control stay on `--font-sans`. **The editor sheet is explicitly excluded** (narrowed 31.07.2026, ADR-073): its typeface is already a user setting with a serif option, so the design system does not get to pick it.

@@ -335,7 +335,7 @@ public class PipelineTests
             new[]
             {
                 TestPipeline.PhaseBackend, TestPipeline.PhaseFrontend,
-                TestPipeline.PhaseContrast, TestPipeline.PhaseDensity
+                TestPipeline.PhaseIcons, TestPipeline.PhaseContrast, TestPipeline.PhaseDensity
             },
             TestPipeline.Phases(new TestOptions()));
 
@@ -344,8 +344,8 @@ public class PipelineTests
         Assert.Equal(
             new[]
             {
-                TestPipeline.PhaseFrontend, TestPipeline.PhaseContrast,
-                TestPipeline.PhaseDensity, TestPipeline.PhaseSmoke
+                TestPipeline.PhaseFrontend, TestPipeline.PhaseIcons,
+                TestPipeline.PhaseContrast, TestPipeline.PhaseDensity, TestPipeline.PhaseSmoke
             },
             TestPipeline.Phases(new TestOptions(Smoke: true, Frontend: true)));
     }

@@ -20,6 +20,7 @@ public sealed class TestPipeline
 {
     public const string PhaseBackend = "Backend (dotnet test)";
     public const string PhaseFrontend = "Frontend units (vitest)";
+    public const string PhaseIcons = "Icon inventory";
     public const string PhaseContrast = "Contrast contract";
     public const string PhaseDensity = "Density contract";
     public const string PhaseSmoke = "Smoke (Playwright, isolated database)";
@@ -41,7 +42,7 @@ public sealed class TestPipeline
 
         var phases = new List<string>();
         if (backend) phases.Add(PhaseBackend);
-        if (frontend) { phases.Add(PhaseFrontend); phases.Add(PhaseContrast); phases.Add(PhaseDensity); }
+        if (frontend) { phases.Add(PhaseFrontend); phases.Add(PhaseIcons); phases.Add(PhaseContrast); phases.Add(PhaseDensity); }
         if (options.Smoke) phases.Add(PhaseSmoke);
         return phases;
     }
@@ -74,6 +75,11 @@ public sealed class TestPipeline
         PhaseBackend => ("dotnet", $"test \"{_config.RepoRoot}\" --nologo --logger \"console;verbosity=normal\"", _config.RepoRoot),
 
         PhaseFrontend => (Shell.Npm(), "run test", _config.WebDir),
+
+        // icon-usage.generated.ts is committed and describes our own call sites, so a repaint that
+        // moves them leaves it lying with nothing to notice — it shipped stale twice in one port
+        // before this phase existed (ADR-173).
+        PhaseIcons => (Shell.Npm(), "run check:icons", _config.WebDir),
 
         // Reads the tokens straight out of styles.scss and scores every pair the app renders, in both
         // themes. Cheap, and the only check that catches a colour choice going unreadable.

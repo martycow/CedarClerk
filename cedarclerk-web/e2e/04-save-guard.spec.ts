@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createDraft, openDraft, paragraphs, pinEnglish, signIn, withSave } from './helpers';
+import { createDraft, expectSynced, openDraft, paragraphs, pinEnglish, signIn, withSave } from './helpers';
 
 // ADR-066. The 29.07 incident in one test: a save that would leave almost nothing must be refused
 // and must offer the stored version back.
@@ -17,7 +17,7 @@ test.beforeEach(async ({ context }) => {
 test('deleting nearly everything is refused, and the stored text comes back', async ({ page, context }) => {
     const id = await createDraft(context, 'Shrink guard', LONG);
     await openDraft(page, id);
-    await expect(page.locator('.save-state .save-label')).toHaveText('Saved', { timeout: 20_000 });
+    await expectSynced(page, 20_000);
 
     await page.locator('.tiptap').click();
     await page.keyboard.press('Control+a');
@@ -36,7 +36,7 @@ test('deleting nearly everything is refused, and the stored text comes back', as
 test('an ordinary heavy edit is not refused', async ({ page, context }) => {
     const id = await createDraft(context, 'Heavy but legitimate', LONG);
     await openDraft(page, id);
-    await expect(page.locator('.save-state .save-label')).toHaveText('Saved', { timeout: 20_000 });
+    await expectSynced(page, 20_000);
 
     // withSave waits for a 200 PUT, so this cannot pass by the save simply not having happened
     // yet — the point is that the server *accepted* a rewrite of this size.

@@ -1,5 +1,81 @@
 # Changelog
 
+## 2026-08-20 — the Cedar Bench port, end to end (branch `UI_V2`, Stages 0–6)
+
+**This is the entry for the whole port.** The five below it are the sessions it ran in; this one is
+what changed between 0.12.2 and whatever version Marty stamps on the merge. Nothing is deployed and
+nothing is tagged — `Consts.CurrentVersion` still reads `0.12.2` on purpose, because the number and
+the merge are his call (`T-234`).
+
+**The app has one look now, and it is a workshop.** Cedar Bench — mirrored from Claude Design at
+`.design-sync/ds-v2/` — stops being a second palette and becomes the only one. The skin mechanism it
+replaces is gone entirely: no `data-skin`, no `Skin` union, no `setSkin`/`applySkin`, no `cedar-skin`
+key, no Appearance control and no strings behind it in either language. `data-theme` is the one
+styling axis left, joined by `data-surface`, which says whether a band is paper or chrome and carries
+the density and touch floors with it. Thirty-eight ADRs (136–173) were written **before** the code
+they govern, and the plan that framed them — `docs/design/UI-V2-PLAN.md` — settled ten questions
+before a line moved.
+
+**Every screen in the app was redrawn**, not restyled: twenty-one bench components under
+`src/app/bench/`, a shell that wraps every authenticated route (tool wall, sign board, drawer, ruler),
+and then the screens in four patterns — hub-like onto a worktop and a summary shelf, stats-like onto
+one index strip plus one panel plus an inspector shelf, writer-like onto an index shelf plus one sheet
+plus an exclusive-scope inspector, and the kanban onto the bench's materials with its own geometry
+kept. Four doors — login, register, terms, privacy — sit outside the shell and declare their own
+surface. Two detail modals and the drafts folder popover were retired on the way: a shelf beside the
+list beats a card on top of it.
+
+**What the port is really about is that the measurements were wrong, and now they are not.** The
+contrast checker was rewritten first, before any repaint, and it immediately falsified three rounds of
+its own green: it had been compositing nothing, so it scored the wrong pairs. Twenty-two rules each
+hand-mixed a state tint out of an ink and whatever paper the component sat on — one visual idea
+shipping as twenty-two ratios, the worst at 3.63 against a 4.5 floor. Night turned out to have been
+copied rather than derived, with body text at 1.01:1 on the page ground. `--t3`, barred from carrying
+content, was the only label of a button. `--alt` was ink on `--sheet` at 1.06:1. A drift guard that
+existed to catch exactly this had been comparing ten hand-listed tokens, so the blog had been drawing
+pre-derivation chart colours with nothing able to say so. Each of those is now a token, a pair in the
+table, or a guard that walks everything instead of a list.
+
+**The cleanup found the same thing at a smaller scale: the remembered numbers were wrong.** The
+dead-CSS sweep was planned against forty-two files and deleted one selector fragment and four
+dictionary strings — `.btn-accent` and `.btn-ghost` are live in fourteen blocks across eight page
+stylesheets, and
+`.icon-btn` had been gone for a while. What it found instead was eight modal buttons whose CSS went
+with the port while their markup did not, so four dialogs currently footer in platform grey
+(`T-262`). The smoke suite was worse: sixteen of fifty-seven tests red, and **not one of them red
+because a behaviour had been lost** — fourteen were bound to class names the repaint moved, and two
+had been red since ADR-135 rewrote the landing on `master`, unnoticed, because a suite red for one
+reason hides every other reason it is red. It is rebound to roles and accessible names (ADR-171),
+which is what a screen reader announces, and it caught the one genuine regression the port did cause:
+at 390px the writer has no sheet to write on (`T-265`).
+
+**Two things were measured for the first time while settling the branch.** The brass bar marking the
+current tool on the hook rail had shipped through the entire port with nothing covering it; it reads
+4.42 at night and 2.91 by day against the 3.0 a graphical object owes. It is now in the table and the
+day figure is accepted with its reason (ADR-172) — reached by measuring rather than assuming, which
+mattered, because the "raised sign tile" everyone would have named as the fallback cue turns out to be
+relief and not colour at all: it scores 1.00 against the very wall it hangs on. The cue is the bold
+caption, which passes. Mutating that new pair then exposed the exception mechanism itself as too
+broad — `except` was a bare string consulted in both themes, so accepting a day shortfall bought
+silence at night, where the same pair passes by a wide margin. Exceptions now name the theme they were
+derived in, which tightens ADR-140's three as well as the new one.
+
+**And the icon inventory stopped depending on memory.** `icon-usage.generated.ts` is committed,
+describes our own call sites, and shipped stale twice during this port because a repaint moves call
+sites and nothing re-ran the generator. It now has a `--check` mode that renders through the same code
+path as the write, and `cedar test` has an Icon inventory phase beside the contrast and density
+contracts (ADR-173) — the third member of a family the repository already believed in and had left
+this one artifact out of.
+
+**What this does not include.** Nobody has opened any of it. Every checker is green — backend,
+frontend units, icons, contrast, density and the fifty-seven-test smoke suite — but the verification
+map's marks are reset for every ported screen, which is now most of the app, and a measurement is not
+a look. `styles/_forest.scss` is still there: 1 229 lines scoped under an attribute nothing sets, so
+it compiles into the bundle and matches nothing, and deleting it is a destructive-operations event
+waiting on Marty (`T-235`). The shell ships with no width breakpoint of its own, deliberately — the
+design system states one viewport and inventing a ladder underneath it is what ADR-147 refused, so the
+narrow screens wait on designs (`T-236`).
+
 ## 2026-08-20 — every remaining screen (branch `UI_V2`)
 
 Stage 5 of the Cedar Bench port: the fourteen screens the three reference screens did not cover, in

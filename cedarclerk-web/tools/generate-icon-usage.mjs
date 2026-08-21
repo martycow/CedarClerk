@@ -5,7 +5,8 @@
 // until the next commit. This scans the real call sites, so a stale answer is impossible as long
 // as the script is re-run; it is committed for the same reason icon-data.generated.ts is.
 //
-// Run: node tools/generate-icon-usage.mjs   (from cedarclerk-web/)
+// Run: node tools/generate-icon-usage.mjs            (from cedarclerk-web/) — rewrites the file
+//      node tools/generate-icon-usage.mjs --check    — compares instead, and goes red on drift
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve, relative } from 'node:path';
 
@@ -131,5 +132,24 @@ const out = [
     '',
 ].join('\n');
 
-writeFileSync(resolve(ROOT, 'src/app/shared/icon-usage.generated.ts'), out);
-console.log(`wrote ${rows.length} icons, ${rows.reduce((n, r) => n + r.count, 0)} call sites`);
+const target = resolve(ROOT, 'src/app/shared/icon-usage.generated.ts');
+const sites = rows.reduce((n, r) => n + r.count, 0);
+
+// The check renders through the same `out` the write uses, so it cannot pass while the committed
+// file disagrees with what running the generator would produce (ADR-173).
+if (process.argv.includes('--check')) {
+    const committed = readFileSync(target, 'utf8');
+    if (committed === out) {
+        console.log(`icon usage is current — ${rows.length} icons, ${sites} call sites`);
+        process.exit(0);
+    }
+    const was = committed.match(/^\/\/ (\d+) distinct icons across (\d+) call sites\.$/m);
+    console.log('FAIL  src/app/shared/icon-usage.generated.ts is stale.');
+    if (was) console.log(`      committed: ${was[1]} icons, ${was[2]} call sites`);
+    console.log(`      src/app:   ${rows.length} icons, ${sites} call sites`);
+    console.log('      Fix: npm run icons:generate  (or node tools/generate-icon-usage.mjs)');
+    process.exit(1);
+}
+
+writeFileSync(target, out);
+console.log(`wrote ${rows.length} icons, ${sites} call sites`);

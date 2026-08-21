@@ -77,6 +77,11 @@ test('a touch control takes the floor of its nearest declared surface, either wa
 test('the shipped shell resolves the same two floors the fixture assumes', async ({ page }) => {
     await page.goto('/drafts');
     await expect(page.locator('app-rail-header')).toBeVisible();
+    // The rail is chrome and paints while the page below it is still on `loading()`, which has no
+    // control in it at all — so the paper half of this measurement read "no button on the sheet"
+    // once in five runs. Waiting for a control that is actually on the sheet is what removes the
+    // race; it cannot hide one going missing, because then this line is what goes red.
+    await expect(page.getByRole('button', { name: 'New draft' })).toBeVisible();
 
     const floors = await page.evaluate(() => {
         const railed = document.querySelector('app-rail-header[data-surface="chrome"] button');

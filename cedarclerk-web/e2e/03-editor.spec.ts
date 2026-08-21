@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createDraft, openDraft, pinEnglish, signIn, typeInSheet, withSave } from './helpers';
+import { createDraft, expectSynced, openDraft, pinEnglish, signIn, typeInSheet, withSave } from './helpers';
 
 test.beforeEach(async ({ context }) => {
     await pinEnglish(context);
@@ -42,14 +42,14 @@ test('a heading round-trips through the block dropdown', async ({ page, context 
     await expect(page.locator('.tiptap h2')).toContainText('a line to promote');
 });
 
-// The status bar is the only place that says whether work is safe; a save indicator that lies is
-// worse than none, and ADR-065 changed exactly this path (a no-op save must stay "Saved").
+// The rule is the only place that says whether work is safe; a save indicator that lies is worse
+// than none, and ADR-065 changed exactly this path (a no-op save must stay synced).
 test('a no-op save does not flip the indicator to unsaved', async ({ page, context }) => {
     const id = await createDraft(context, 'No-op', ['untouched text']);
     await openDraft(page, id);
-    await expect(page.locator('.save-state .save-label')).toHaveText('Saved', { timeout: 20_000 });
+    await expectSynced(page, 20_000);
 
     await page.locator('.tiptap').click();
     await page.keyboard.press('End');
-    await expect(page.locator('.save-state .save-label')).toHaveText('Saved');
+    await expectSynced(page);
 });

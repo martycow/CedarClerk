@@ -459,6 +459,16 @@ pairs.push({ fg: '--rail-edge', bg: '--resin', min: 4.5, note: 'priority-one chi
 pairs.push({ fg: '--rail-ink', bg: '--grad-sign-tile', min: 4.5, note: 'caption carved into a sign tile' });
 pairs.push({ fg: '--rail-ink', bg: '--surface-rail', min: 4.5, note: 'brand and crumb on the rail' });
 pairs.push({ fg: '--rail-ink', bg: '--hook-face', under: '--pegboard', min: 4.5, note: 'tool caption on its hook' });
+// The bar that marks the current tool. It is a shape and not a label, so it owes 3:1 as a
+// graphical object, and the surface it owes it against is the wall rather than the tile: it is
+// offset past the hook's right edge and stands on the pegboard.
+pairs.push({
+    fg: '--grad-brass', bg: '--pegboard', min: 3.0, note: 'current-tool bar against the wall',
+    exceptIn: 'light',
+    except: 'ADR-172 — 2.91 by day at the lightest stop of both ramps, 4.42 at night. The bar is '
+        + 'aria-hidden and reinforces a state the bold caption already carries on a passing pair; '
+        + 'the raised tile is relief and not colour, measuring 1.00 against this same wall',
+});
 pairs.push({ fg: '--rail-edge', bg: '--tab-badge', under: '--grad-sign-tile', min: 4.5, note: 'index-tab counter on its resin badge' });
 
 // The same resin badge hung on the hook rail as a work ticket (ADR-155). The resin is 90% opaque,
@@ -529,7 +539,7 @@ const RING_SURFACES = [
 ];
 for (const [s, except] of RING_SURFACES) {
     pairs.push({
-        fg: '--brass-edge', alt: '--focus-halo', bg: s, min: 3.0, except,
+        fg: '--brass-edge', alt: '--focus-halo', bg: s, min: 3.0, except, exceptIn: 'light',
         note: 'focus ring against the surface',
     });
     pairs.push({
@@ -572,7 +582,7 @@ function suggest(from, bg, min, towards) {
 
 let failures = 0, gradients = 0, excepted = 0, offContract = 0;
 
-function measure(label, vars, list) {
+function measure(label, vars, list, themeName) {
     const grounds = groundsOf(vars);
     for (const p of list) {
         const backdrops = p.under ? painted(vars[p.under], vars, grounds) : grounds;
@@ -584,20 +594,23 @@ function measure(label, vars, list) {
         }
         const { r, fg, bg, ramp } = best;
         const ok = r >= p.min;
+        // An exception is forgiven only in the theme it was derived in. A bare one bought silence
+        // in the other theme too, where the same pair passes by a wide margin (ADR-172 clause 5).
+        const forgiven = p.except && (!p.exceptIn || p.exceptIn === themeName);
         let mark = ok ? 'ok   ' : 'FAIL ';
-        if (!ok && p.except) { mark = 'xfail'; excepted++; }
+        if (!ok && forgiven) { mark = 'xfail'; excepted++; }
         else if (!ok) failures++;
         const named = p.alt ? `${carrier} (of ${p.fg}/${p.alt})` : p.fg;
         let line = `${mark}${r.toFixed(2).padStart(5)} (min ${p.min})  ${label}${named} on ${p.bg}`
             + `${p.under ? ` over ${p.under}` : ''}  — ${p.note}`;
         if (ramp) line += `   worst ${toHex(fg)} on ${toHex(bg)}`;
         if (mark === 'xfail') line += `   accepted: ${p.except}`;
-        if (ok && p.except) line += `   — clears its floor in this theme`;
+        if (ok && forgiven) line += `   — clears its floor in this theme`;
         if (!ok && process.env.SUGGEST) {
             const towards = lum(bg) > 0.18 ? [0, 0, 0] : [255, 255, 255];
             line += `   → ${suggest(fg, bg, p.min, towards)}`;
         }
-        if (!ok || (ok && p.except) || process.env.VERBOSE) console.log(line);
+        if (!ok || (ok && forgiven) || process.env.VERBOSE) console.log(line);
     }
 }
 
@@ -629,9 +642,9 @@ function runContract() {
             const via = trail.length ? ` (via ${trail.join(' → ')})` : '';
             console.log(`FAIL  --${name} is a gradient${via} — a contract token ships verbatim into DesignTokens (ADR-137)`);
         }
-        measure('', vars, pairs);
+        measure('', vars, pairs, themeName);
         for (const preset of PRESETS)
-            measure(`[${preset.name}] `, { ...vars, '--accent': accentOf(preset, themeName) }, accentPairs);
+            measure(`[${preset.name}] `, { ...vars, '--accent': accentOf(preset, themeName) }, accentPairs, themeName);
     }
     if (!PRESETS.length) {
         failures++;

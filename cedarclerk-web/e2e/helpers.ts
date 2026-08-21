@@ -47,6 +47,9 @@ export function paragraphs(lines: string[]) {
     };
 }
 
+// `.tiptap` is the one class ADR-171 clause 2 allows here: the writing surface has no role and no
+// name, and the class is TipTap's own on the editable element rather than anything our stylesheets
+// put there.
 export async function openDraft(page: Page, id: string) {
     await page.goto(`/editor?id=${id}`);
     await expect(page.locator('.tiptap')).toBeVisible();
@@ -72,7 +75,15 @@ export async function withSave(page: Page, action: () => Promise<void>) {
     );
     await action();
     await written;
-    await expect(page.locator('.save-state .save-label')).toHaveText('Saved', { timeout: 10_000 });
+    await expectSynced(page);
+}
+
+// The editor's topbar indicator is gone: ADR-153 dissolved the status bar, and ADR-159 clause 3
+// split what it said in two — the drop on the rail is the state, the rule at the foot of the screen
+// carries the word. So the word is read off the rule, which is also the only half a person reads.
+// "Syncing…" and "Sync failed" are the other two, and neither contains this one.
+export async function expectSynced(page: Page, timeout = 10_000) {
+    await expect(page.locator('app-ruler-bar')).toContainText('Synced', { timeout });
 }
 
 // Node's DNS does not resolve *.localhost — only Chromium special-cases it — so anything going

@@ -30,7 +30,7 @@ Currently a single-operator product (Marty is both the builder and the first use
 ## What the publishing half offers
 
 Write once, reach readers across several channels at once:
-- A better writing/editing experience than any single platform's native composer (rich text, tables, media, formulas, spoilers, etc. — see the TipTap extension list in `docs/tech/ARCHITECTURE.md`), with a UI skin axis on top (Forest Workshop, ADR-120)
+- A better writing/editing experience than any single platform's native composer (rich text, tables, media, formulas, spoilers, etc. — see the TipTap extension list in `docs/tech/ARCHITECTURE.md`), drawn in one look, Cedar Bench — a workshop of paper, wood, pine and brass, with light and dark as the whole of the choice (ADR-136)
 - A hosted blog as a real destination — not just an archive — with reader engagement (reactions, comments) none of the individual channels offer well on their own
 - Scheduled/delayed publishing, for every connected network
 - Multilingual content without maintaining parallel workflows
