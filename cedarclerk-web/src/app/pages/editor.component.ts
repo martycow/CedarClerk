@@ -1090,7 +1090,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     // B13 - reveals where the content actually is: spaces, tabs and paragraph ends. A pure
     // display toggle, nothing about the document changes.
-    showInvisibles = signal(false);
 
     dtValue = '';
     dtWeekday = true;
@@ -1098,6 +1097,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     dtTime = true;
 
     footnoteText = '';
+    footnoteOpen = signal(false);
+
 
     // Unified Insert modal — replaces the separate Link and YouTube popovers (ADR-035): "Auto"
     // detects YouTube vs a generic link from the pasted value, the rail lets you override it.
@@ -1233,8 +1234,15 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const selection = node.isAtom && NodeSelection.isSelectable(node)
             ? NodeSelection.create(doc, pos)
             : TextSelection.near(doc.resolve(pos + 1));
-        view.dispatch(view.state.tr.setSelection(selection).scrollIntoView());
+        view.dispatch(view.state.tr.setSelection(selection));
         view.focus();
+
+        // ProseMirror's own scrollIntoView() moves the sheet by the least it can, which lands the
+        // picked block against whichever edge it came from — on a long document that reads as "the
+        // list jumped somewhere" rather than "here it is". The DOM's own centring is what shows it.
+        const dom = view.nodeDOM(pos) ?? view.domAtPos(pos + 1).node;
+        const box = dom instanceof HTMLElement ? dom : dom?.parentElement ?? null;
+        box?.scrollIntoView({ block: 'center', inline: 'nearest' });
     }
 
     syncWord(): string {
@@ -3539,19 +3547,55 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.cmd(c => c.setHorizontalRule());
     }
 
+    openFootnoteModal() {
+        this.footnoteText = '';
+        this.footnoteOpen.set(true);
+    }
+
     insertFootnote() {
         const text = this.footnoteText.trim();
         if (!text) return;
+        this.footnoteOpen.set(false);
         this.cmd(c => c.insertContent({ type: 'footnote', attrs: { text } }));
         this.footnoteText = '';
     }
 
+    tableOpen = signal(false);
+    tableRows = 3;
+    tableCols = 3;
+    tableHeaderRow = true;
+    readonly maxTableSize = MAX_TABLE_SIZE;
+
+    formulaOpen = signal(false);
+    formulaText = '';
+
+    /** The Appearance size is the dialog's starting point, not the insert itself (I5). */
+    openTableModal() {
+        this.tableRows = clampTableSize(this.appearance.prefs().tableRows);
+        this.tableCols = clampTableSize(this.appearance.prefs().tableCols);
+        this.tableHeaderRow = true;
+        this.tableOpen.set(true);
+    }
+
     insertTable() {
-        // I5 — the size comes from Appearance now instead of a hardcoded 3×3. Clamped on read as
-        // well as on write, since the preference blob is user-editable via the API.
-        const rows = Math.min(Math.max(this.appearance.prefs().tableRows, 1), MAX_TABLE_SIZE);
-        const cols = Math.min(Math.max(this.appearance.prefs().tableCols, 1), MAX_TABLE_SIZE);
-        this.cmd(c => c.insertTable({ rows, cols, withHeaderRow: true }));
+        // Clamped on read as well as on write: the preference blob is user-editable through the
+        // API, and so is a number field.
+        const rows = clampTableSize(this.tableRows);
+        const cols = clampTableSize(this.tableCols);
+        this.tableOpen.set(false);
+        this.cmd(c => c.insertTable({ rows, cols, withHeaderRow: this.tableHeaderRow }));
+    }
+
+    openFormulaModal() {
+        this.formulaText = '';
+        this.formulaOpen.set(true);
+    }
+
+    insertFormula(where: 'inline' | 'block') {
+        const latex = this.formulaText.trim();
+        if (!latex) return;
+        this.formulaOpen.set(false);
+        this.cmd(c => (where === 'inline' ? c.insertInlineMath({ latex }) : c.insertBlockMath({ latex })));
     }
 
     canAnnotate(): boolean {
@@ -3563,26 +3607,35 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (this.canAnnotate()) this.cmd(c => c.wrapIn('annotation', { id: crypto.randomUUID() }));
     }
 
-    insertInlineMath() {
-        const latex = window.prompt('Formula (LaTeX), e.g.: E = mc^2');
-        if (latex) this.cmd(c => c.insertInlineMath({ latex }));
-    }
-
-    insertBlockMath() {
-        const latex = window.prompt('Formula (LaTeX), block, e.g.: \\int_0^1 x^2\\,dx');
-        if (latex) this.cmd(c => c.insertBlockMath({ latex }));
-    }
-
     indent() {
         if (!this.editor) return;
-        const type = this.editor.isActive('taskItem') ? 'taskItem' : 'listItem';
-        this.editor.chain().focus().sinkListItem(type).run();
+        this.editor.chain().focus().sinkListItem(this.listItemType()).run();
     }
 
     outdent() {
         if (!this.editor) return;
-        const type = this.editor.isActive('taskItem') ? 'taskItem' : 'listItem';
-        this.editor.chain().focus().liftListItem(type).run();
+        this.editor.chain().focus().liftListItem(this.listItemType()).run();
+    }
+
+    /**
+     * Whether the two indent controls would do anything from where the caret is. Outside a list
+     * neither can, and the first item of a list cannot sink — ProseMirror's own `can()` answers
+     * both, so the buttons stop being lit over a command that silently does nothing.
+     */
+    canIndent(): boolean {
+        this.tick();
+        if (!this.editor) return false;
+        return this.editor.can().sinkListItem(this.listItemType());
+    }
+
+    canOutdent(): boolean {
+        this.tick();
+        if (!this.editor) return false;
+        return this.editor.can().liftListItem(this.listItemType());
+    }
+
+    private listItemType(): string {
+        return this.editor?.isActive('taskItem') ? 'taskItem' : 'listItem';
     }
 
     private insertNode(type: string, attrs: Record<string, any>) {
@@ -3721,4 +3774,8 @@ function diffTopLevelBlocks(oldBlocks: any[], newBlocks: any[]): BlockDiffOp[] {
         if (deletes > paired) result.push({ kind: 'removed', newIndex });
     }
     return result;
+}
+
+function clampTableSize(n: number): number {
+    return Math.min(Math.max(Math.round(n) || 1, 1), MAX_TABLE_SIZE);
 }

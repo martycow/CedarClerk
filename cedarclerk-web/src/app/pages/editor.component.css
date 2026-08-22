@@ -398,11 +398,23 @@
 
 .block-menu button:disabled { opacity: .6; cursor: default; }
 
+/* The panel is paper hanging off wood, so it keeps paper's ink. Without these three the entries
+   were painted the strip's soft cream on a cream sheet — `.strip button` and `.block-menu button`
+   are the same specificity, and the strip's block comes second. */
 .strip .block-menu button {
     min-height: var(--hit-chrome);
     padding: 0 var(--space-3);
     font-size: var(--text-chrome);
+    color: var(--text);
 }
+
+.strip .block-menu button:hover:not(:disabled) { color: var(--text); background: var(--hover); }
+
+.strip .block-menu button.on { color: var(--accent); }
+
+/* Same defect, same reason: the footnote panel's own Insert button is a class the strip's element
+   rule out-specifies, so it too came out cream on cream. */
+.strip .link-popover button { color: var(--text); }
 
 .strip button {
     display: inline-flex;
@@ -1577,6 +1589,37 @@
     gap: 4px;
 }
 
+/* The table and formula dialogs (ADR-none — a straight replacement of window.prompt and of an
+   insert that read its size from a preference nobody remembered setting). */
+.dialog-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+}
+
+.dialog-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+    font-size: var(--fs-meta);
+    color: var(--t2);
+}
+
+.dialog-field textarea {
+    font-family: var(--font-mono);
+    resize: vertical;
+}
+
+.dialog-check {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    font-size: var(--fs-meta);
+    color: var(--text);
+}
+
 @media (max-width: 768px) {
     .sheet {
         padding: 16px;
@@ -1774,11 +1817,6 @@
    them without either inserting characters or fighting the browser's own whitespace handling.
    DB2: the actual rule moved to styles.scss (global) — this component's emulated encapsulation
    meant it never matched ProseMirror's runtime-rendered paragraphs, so the button did nothing. */
-
-.invisibles-glyph {
-    font-size: var(--fs-ui);
-    line-height: 1;
-}
 
 /* ADR-065 — version history rows and the publish-confirmation diff. */
 /* A row is a button now (T-016): it opens the version rather than just describing it. */

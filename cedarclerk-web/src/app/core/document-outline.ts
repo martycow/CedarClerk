@@ -5,9 +5,13 @@
 import { IconName } from '../shared/icon-data.generated';
 import { fileNameOf } from './selection-spec';
 
+// Every block type the shelf can meet names itself. `embed` used to stand for four of them at
+// once — a poll, a toggle, a table of contents and a YouTube frame all read "Embed", which told
+// the reader nothing about which one they were looking at.
 export type OutlineKind =
     | 'heading' | 'paragraph' | 'list' | 'quote' | 'code' | 'divider'
-    | 'image' | 'video' | 'audio' | 'gallery' | 'embed' | 'table' | 'block';
+    | 'image' | 'video' | 'audio' | 'gallery' | 'youtube' | 'poll' | 'toggle' | 'toc'
+    | 'table' | 'block';
 
 export interface OutlineNodeLike {
     typeName: string;
@@ -46,14 +50,15 @@ const KINDS: Record<string, OutlineKind> = {
     blockquote: 'quote', codeBlock: 'code', horizontalRule: 'divider',
     image: 'image', video: 'video', audio: 'audio',
     carousel: 'gallery', collage: 'gallery',
-    youtube: 'embed', poll: 'embed', toggle: 'embed', tableOfContents: 'embed',
+    youtube: 'youtube', poll: 'poll', toggle: 'toggle', tableOfContents: 'toc',
     table: 'table',
 };
 
 const ICONS: Record<OutlineKind, IconName> = {
     heading: 'text-h', paragraph: 'text-align-left', list: 'list-bullets', quote: 'quotes',
     code: 'code-block', divider: 'list-dashes', image: 'image', video: 'video-camera',
-    audio: 'waveform', gallery: 'images', embed: 'cube', table: 'table', block: 'file',
+    audio: 'waveform', gallery: 'images', youtube: 'film-slate', poll: 'chart-bar',
+    toggle: 'caret-right', toc: 'list-numbers', table: 'table', block: 'file',
 };
 
 /** Kinds described by how many they hold rather than by what they say. */
@@ -90,7 +95,8 @@ export function buildOutline(nodes: OutlineNodeLike[]): OutlineEntry[] {
         const level = kind === 'heading' ? headingLevel(node) : undefined;
         if (level !== undefined) lastHeading = level;
 
-        const media = kind === 'image' || kind === 'video' || kind === 'audio' || kind === 'embed';
+        // A block that names itself by its file — or, for YouTube, by the id that stands in for one.
+        const media = kind === 'image' || kind === 'video' || kind === 'audio' || kind === 'youtube';
         const entry: OutlineEntry = {
             index,
             kind,

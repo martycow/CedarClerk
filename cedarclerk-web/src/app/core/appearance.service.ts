@@ -10,6 +10,7 @@ export interface AppearancePrefs {
     lineHeight: number;
     showParagraphNumbers: boolean;
     showLineRules: boolean;
+    showInvisibles: boolean;
     // Default size for Insert → Table (I5). Bounded by MAX_TABLE_SIZE — "within reason", as asked.
     tableRows: number;
     tableCols: number;
@@ -46,6 +47,7 @@ export const DEFAULT_APPEARANCE: AppearancePrefs = {
     lineHeight: 1.75,
     showParagraphNumbers: false,
     showLineRules: false,
+    showInvisibles: false,
     tableRows: 3,
     tableCols: 3,
     showWordCount: true,

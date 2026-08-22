@@ -7,7 +7,7 @@ export type ToolbarButtonId =
     | 'link' | 'emoji' | 'datetime' | 'footnote'
     | 'bulletList' | 'orderedList' | 'taskList' | 'indent' | 'outdent'
     | 'inlineCode' | 'codeBlock'
-    | 'image' | 'video' | 'gif' | 'audio' | 'carousel' | 'collage' | 'youtube' | 'library'
+    | 'image' | 'video' | 'gif' | 'audio' | 'carousel' | 'collage' | 'library'
     | 'table' | 'formula' | 'blockquote' | 'toggle' | 'toc' | 'divider' | 'annotation' | 'poll'
     | 'aiActions';
 
@@ -44,7 +44,7 @@ export const TOOLBAR_GROUPS: ToolbarGroupDef[] = [
         id: 'media', label: 'Media', buttons: [
             { id: 'image', label: 'Image' }, { id: 'video', label: 'Video' }, { id: 'gif', label: 'GIF' },
             { id: 'audio', label: 'Audio' }, { id: 'carousel', label: 'Carousel' }, { id: 'collage', label: 'Collage' },
-            { id: 'youtube', label: 'YouTube' }, { id: 'library', label: 'Media library' },
+            { id: 'library', label: 'Media library' },
         ],
     },
     {

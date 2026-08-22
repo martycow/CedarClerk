@@ -105,7 +105,7 @@ export class AppearancePanelComponent {
         this.previewAndSave({ tableCols: this.clampTable(n) });
     }
 
-    toggleAppearanceFlag(key: 'showParagraphNumbers' | 'showLineRules' | 'showWordCount' | 'focusModeHideToolbar' | 'sheetFlush', ev: Event) {
+    toggleAppearanceFlag(key: 'showParagraphNumbers' | 'showLineRules' | 'showInvisibles' | 'showWordCount' | 'focusModeHideToolbar' | 'sheetFlush', ev: Event) {
         this.previewAndSave({ [key]: (ev.target as HTMLInputElement).checked });
     }
 

@@ -690,13 +690,7 @@
                 
 
                 
-                <app-popover>
-                    <button trigger [title]="t().editor.tb.footnote" [attr.aria-label]="t().editor.tb.footnote"><app-icon name="text-superscript" size="xs"></app-icon></button>
-                    <div panel class="link-popover">
-                        <textarea class="chat-input" rows="3" [placeholder]="t().editor.groups.footnotePlaceholder" [(ngModel)]="footnoteText"></textarea>
-                        <button class="export-btn full" style="margin-top:8px" (click)="insertFootnote()" [disabled]="!footnoteText.trim()">{{ t().editor.groups.insert }}</button>
-                    </div>
-                </app-popover>
+                <button (click)="openFootnoteModal()" [title]="t().editor.tb.footnote" [attr.aria-label]="t().editor.tb.footnote"><app-icon name="text-superscript" size="xs"></app-icon></button>
                 
             </div>
             <span class="tb-caption">{{ t().editor.groups.insert }}</span>
@@ -709,8 +703,8 @@
                  <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')" [title]="tip(t().editor.tb.bulletList, 'bulletList')"><app-icon name="list" size="xs"></app-icon></button> 
                  <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')" [title]="tip(t().editor.tb.orderedList, 'orderedList')"><app-icon name="list-numbers" size="xs"></app-icon></button> 
                  <button (click)="cmd(c => c.toggleTaskList())" [class.on]="isActive('taskList')" [title]="tip(t().editor.tb.taskList, 'taskList')"><app-icon name="list-checks" size="xs"></app-icon></button> 
-                 <button (click)="indent()" [title]="t().editor.tb.indent" [attr.aria-label]="t().editor.tb.indent"><app-icon name="text-indent" size="xs"></app-icon></button> 
-                 <button (click)="outdent()" [title]="t().editor.tb.outdent" [attr.aria-label]="t().editor.tb.outdent"><app-icon name="text-outdent" size="xs"></app-icon></button> 
+                 <button (click)="indent()" [disabled]="!canIndent()" [title]="t().editor.tb.indent" [attr.aria-label]="t().editor.tb.indent"><app-icon name="text-indent" size="xs"></app-icon></button> 
+                 <button (click)="outdent()" [disabled]="!canOutdent()" [title]="t().editor.tb.outdent" [attr.aria-label]="t().editor.tb.outdent"><app-icon name="text-outdent" size="xs"></app-icon></button> 
             </div>
             <span class="tb-caption">{{ t().editor.groups.lists }}</span>
         </div>
@@ -764,10 +758,6 @@
                 
 
                 
-                <button (click)="openInsertModal('youtube')" [title]="t().editor.tb.youtube">
-                    <svg viewBox="0 0 24 24" class="icon"><path fill="#f00" d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33Z"/><path fill="#fff" d="M9.75 15.02 15.5 11.75 9.75 8.48v6.54Z"/></svg>
-                </button>
-                
             </div>
             <span class="tb-caption">{{ t().editor.groups.media }}</span>
         </div>
@@ -781,28 +771,22 @@
                     <button trigger [title]="t().editor.tb.table" [attr.aria-label]="t().editor.tb.table"><app-icon name="table" size="xs"></app-icon></button>
                     <div panel class="block-menu">
                         @if (isActive('table')) {
-                        <button (click)="cmd(c => c.addRowBefore())"><app-icon name="plus" size="xs"></app-icon> Add row above</button>
-                        <button (click)="cmd(c => c.addRowAfter())"><app-icon name="plus" size="xs"></app-icon> Add row below</button>
-                        <button (click)="cmd(c => c.deleteRow())"><app-icon name="x" size="xs"></app-icon> Delete row</button>
-                        <button (click)="cmd(c => c.addColumnBefore())"><app-icon name="plus" size="xs"></app-icon> Add column left</button>
-                        <button (click)="cmd(c => c.addColumnAfter())"><app-icon name="plus" size="xs"></app-icon> Add column right</button>
-                        <button (click)="cmd(c => c.deleteColumn())"><app-icon name="x" size="xs"></app-icon> Delete column</button>
-                        <button (click)="cmd(c => c.deleteTable())"><app-icon name="trash" size="xs"></app-icon> Delete table</button>
+                        <button (click)="cmd(c => c.addRowBefore())"><app-icon name="plus" size="xs"></app-icon> {{ t().editor.tableMenu.addRowAbove }}</button>
+                        <button (click)="cmd(c => c.addRowAfter())"><app-icon name="plus" size="xs"></app-icon> {{ t().editor.tableMenu.addRowBelow }}</button>
+                        <button (click)="cmd(c => c.deleteRow())"><app-icon name="x" size="xs"></app-icon> {{ t().editor.tableMenu.deleteRow }}</button>
+                        <button (click)="cmd(c => c.addColumnBefore())"><app-icon name="plus" size="xs"></app-icon> {{ t().editor.tableMenu.addColumnLeft }}</button>
+                        <button (click)="cmd(c => c.addColumnAfter())"><app-icon name="plus" size="xs"></app-icon> {{ t().editor.tableMenu.addColumnRight }}</button>
+                        <button (click)="cmd(c => c.deleteColumn())"><app-icon name="x" size="xs"></app-icon> {{ t().editor.tableMenu.deleteColumn }}</button>
+                        <button (click)="cmd(c => c.deleteTable())"><app-icon name="trash" size="xs"></app-icon> {{ t().editor.tableMenu.deleteTable }}</button>
                         } @else {
-                        <button (click)="insertTable()"><app-icon name="table" size="xs"></app-icon> Insert table</button>
+                        <button (click)="openTableModal()"><app-icon name="table" size="xs"></app-icon> {{ t().editor.tableMenu.insert }}</button>
                         }
                     </div>
                 </app-popover>
                 
 
                 
-                <app-popover>
-                    <button trigger [title]="t().editor.tb.formula" [attr.aria-label]="t().editor.tb.formula"><app-icon name="sigma" size="xs"></app-icon></button>
-                    <div panel class="block-menu">
-                        <button (click)="insertInlineMath()"><app-icon name="sigma" size="xs"></app-icon> Inline formula</button>
-                        <button (click)="insertBlockMath()"><app-icon name="sigma" size="xs"></app-icon> Block formula</button>
-                    </div>
-                </app-popover>
+                <button (click)="openFormulaModal()" [title]="t().editor.tb.formula" [attr.aria-label]="t().editor.tb.formula"><app-icon name="sigma" size="xs"></app-icon></button>
                 
 
                  <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" [title]="tip(t().editor.tb.blockquote, 'blockquote')"><app-icon name="quotes" size="xs"></app-icon></button> 
@@ -885,13 +869,66 @@
 
         <input type="datetime-local" class="chat-input" [(ngModel)]="dtValue">
         <div class="dt-flags">
-            <label><input type="checkbox" [(ngModel)]="dtWeekday"> Weekday</label>
-            <label><input type="checkbox" [(ngModel)]="dtDate"> Date</label>
-            <label><input type="checkbox" [(ngModel)]="dtTime"> Time</label>
+            <label><input type="checkbox" [(ngModel)]="dtWeekday"> {{ t().editor.datetimeFlags.weekday }}</label>
+            <label><input type="checkbox" [(ngModel)]="dtDate"> {{ t().editor.datetimeFlags.date }}</label>
+            <label><input type="checkbox" [(ngModel)]="dtTime"> {{ t().editor.datetimeFlags.time }}</label>
         </div>
 
         <button modal-actions class="btn-ghost" (click)="datetimeOpen.set(false)">{{ t().common.cancel }}</button>
         <button modal-actions class="btn-accent" (click)="insertDateTime()" [disabled]="!dtValue">{{ t().editor.groups.insert }}</button>
+    </app-modal>
+    }
+
+    <!--Table and formula are set up in a dialog rather than inserted blind: the size used to come
+    from a preference nobody remembered setting, and the LaTeX came from window.prompt.-->
+    @if (footnoteOpen()) {
+    <app-modal [width]="420" (closed)="footnoteOpen.set(false)">
+        <app-icon modal-icon name="text-superscript" size="sm"></app-icon>
+        <span modal-title>{{ t().editor.tb.footnote }}</span>
+
+        <textarea rows="3" [placeholder]="t().editor.groups.footnotePlaceholder" [(ngModel)]="footnoteText"></textarea>
+
+        <button modal-actions class="btn-ghost" (click)="footnoteOpen.set(false)">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-accent" (click)="insertFootnote()" [disabled]="!footnoteText.trim()">{{ t().editor.groups.insert }}</button>
+    </app-modal>
+    }
+
+    @if (tableOpen()) {
+    <app-modal [width]="320" (closed)="tableOpen.set(false)">
+        <app-icon modal-icon name="table" size="sm"></app-icon>
+        <span modal-title>{{ t().editor.tableMenu.title }}</span>
+
+        <div class="dialog-grid">
+            <label class="dialog-field">
+                <span>{{ t().editor.tableMenu.rows }}</span>
+                <input type="number" min="1" [max]="maxTableSize" [(ngModel)]="tableRows">
+            </label>
+            <label class="dialog-field">
+                <span>{{ t().editor.tableMenu.cols }}</span>
+                <input type="number" min="1" [max]="maxTableSize" [(ngModel)]="tableCols">
+            </label>
+        </div>
+        <label class="dialog-check"><input type="checkbox" [(ngModel)]="tableHeaderRow"> {{ t().editor.tableMenu.headerRow }}</label>
+
+        <button modal-actions class="btn-ghost" (click)="tableOpen.set(false)">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-accent" (click)="insertTable()">{{ t().editor.groups.insert }}</button>
+    </app-modal>
+    }
+
+    @if (formulaOpen()) {
+    <app-modal [width]="420" (closed)="formulaOpen.set(false)">
+        <app-icon modal-icon name="sigma" size="sm"></app-icon>
+        <span modal-title>{{ t().editor.formula.title }}</span>
+
+        <label class="dialog-field">
+            <span>{{ t().editor.formula.latex }}</span>
+            <textarea rows="3" [placeholder]="t().editor.formula.placeholder" [(ngModel)]="formulaText"></textarea>
+        </label>
+        <p class="field-hint-inline">{{ t().editor.formula.hint }}</p>
+
+        <button modal-actions class="btn-ghost" (click)="formulaOpen.set(false)">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-ghost" (click)="insertFormula('inline')" [disabled]="!formulaText.trim()">{{ t().editor.formula.inline }}</button>
+        <button modal-actions class="btn-accent" (click)="insertFormula('block')" [disabled]="!formulaText.trim()">{{ t().editor.formula.block }}</button>
     </app-modal>
     }
 
@@ -1112,12 +1149,6 @@
                             <app-icon name="arrow-clockwise" size="xs"></app-icon>
                         </button>
                         }
-                        <!--B13: reveals spaces, tabs and paragraph ends, so it is clear where the content
-                        really sits. Display only - the document is untouched.-->
-                        <button [class.on]="showInvisibles()" (click)="showInvisibles.set(!showInvisibles())"
-                                [title]="t().editor.showInvisibles" [attr.aria-label]="t().editor.showInvisibles">
-                            <span class="invisibles-glyph">¶</span>
-                        </button>
                         <!--I13: real browser fullscreen, not a CSS-only "hide the chrome" mode — the ask
                         was a fullscreen button, and the browser own is the one Esc already exits.-->
                         <button (click)="toggleFullscreen()"
@@ -1180,7 +1211,7 @@
                         the more useful one, and taking it away to show a single disabled item would be a
                         worse trade. The form inside is the shared app-glossary-term-form, so it is the
                         same one /glossary shows, not a copy of it.-->
-                        <div class="sheet" data-surface="paper" [class.show-invisibles]="showInvisibles()" #editorHost
+                        <div class="sheet" data-surface="paper" [class.show-invisibles]="appearance.prefs().showInvisibles" #editorHost
                             (contextmenu)="onSheetContextMenu($event)"
                             [class.flush]="appearance.prefs().sheetFlush"
                             [class.show-para-numbers]="appearance.prefs().showParagraphNumbers"
