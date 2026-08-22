@@ -36,6 +36,9 @@ public static class Consts
 
         // "credits-{packId}:{userId}" — the same {what}:{who} shape as the plan payloads (ADR-092).
         public const string CreditPackPrefix = "credits-";
+        /// <summary>ADR-189 — what follows CreditPackPrefix when the purchase was a bare number
+        /// of credits rather than a pack: "credits-custom:27".</summary>
+        public const string CustomCreditsPrefix = "custom:";
     }
 
     public static class Signatures

@@ -112,6 +112,8 @@ export class SettingsComponent implements OnInit {
     creditsMessage = signal<string | null>(null);
     creditsError = signal<string | null>(null);
     selectedPackId: string | null = null;
+    /** ADR-189 — a bare number of credits. Set, it is what gets bought and no pack is picked. */
+    customCredits: number | null = null;
     creditsPayMethod: 'stripe' | 'stars' = 'stripe';
 
     telegramBusy = signal(false);
@@ -713,8 +715,36 @@ export class SettingsComponent implements OnInit {
 
     pickPack(id: string) {
         this.selectedPackId = id;
+        this.customCredits = null;
         this.creditsMessage.set(null);
         this.creditsError.set(null);
+    }
+
+    /** Picking an amount unpicks the pack: one order at a time, and the price says which. */
+    pickCustomCredits(value: number | null) {
+        this.customCredits = value && value > 0 ? Math.floor(value) : null;
+        if (this.customCredits) this.selectedPackId = null;
+        this.creditsMessage.set(null);
+        this.creditsError.set(null);
+    }
+
+    /** Whether what is typed is something the server will sell. */
+    customCreditsValid(): boolean {
+        const c = this.credits();
+        const n = this.customCredits;
+        return !!c && !!n && n >= c.minCustomCredits && n <= c.maxCustomCredits;
+    }
+
+    hasCreditOrder(): boolean {
+        return !!this.selectedPackId || this.customCreditsValid();
+    }
+
+    /** What the order costs, in cents — the pack's price, or the amount at the list rate. */
+    orderPriceCents(): number {
+        const c = this.credits();
+        if (!c) return 0;
+        if (this.selectedPackId) return this.selectedPackPriceCents();
+        return this.customCreditsValid() ? this.customCredits! * c.unitPriceUsdCents : 0;
     }
 
     packPriceUsd(cents: number): string {
@@ -726,20 +756,21 @@ export class SettingsComponent implements OnInit {
     }
 
     async buyCredits() {
-        const packId = this.selectedPackId;
-        if (!packId) return;
+        if (!this.hasCreditOrder()) return;
+        const order = { packId: this.selectedPackId, credits: this.selectedPackId ? null : this.customCredits };
 
         this.creditsBusy.set(true);
         this.creditsMessage.set(null);
         this.creditsError.set(null);
         try {
             if (this.creditsPayMethod === 'stripe') {
-                const res = await this.billingApi.creditsStripeCheckout(packId);
+                const res = await this.billingApi.creditsStripeCheckout(order);
                 window.location.href = res.url; // Stripe hosted checkout page
             } else {
-                await this.billingApi.creditsStarsInvoice(packId);
+                await this.billingApi.creditsStarsInvoice(order);
                 this.creditsMessage.set(this.t().settings.credits.invoiceSent);
                 this.selectedPackId = null;
+                this.customCredits = null;
             }
         } catch (e) {
             this.creditsError.set(httpErrorMessage(e, this.t().settings.errors.checkout));

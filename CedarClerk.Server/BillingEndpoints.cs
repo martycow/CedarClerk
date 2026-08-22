@@ -20,7 +20,8 @@ namespace CedarClerk.Server;
 public static class BillingEndpoints
 {
     public record CheckoutRequest(string Plan);
-    public record CreditCheckoutRequest(string PackId);
+    /// <summary>A pack by id, or — ADR-189 — a bare number of credits priced at the list rate.</summary>
+    public record CreditCheckoutRequest(string? PackId, int? Credits = null);
 
     public static void MapBillingEndpoints(this WebApplication app)
     {
@@ -45,6 +46,10 @@ public static class BillingEndpoints
                 balance = await CreditWallet.BalanceAsync(db, user.Id),
                 xPostCost = CreditPacks.XPostCost,
                 packs = CreditPacks.All.Select(p => new { p.Id, p.Credits, p.PriceUsdCents, p.PriceStars }),
+                unitPriceUsdCents = CreditPacks.UnitPriceUsdCents,
+                unitPriceStars = CreditPacks.UnitPriceStars,
+                minCustomCredits = CreditPacks.MinCustomCredits,
+                maxCustomCredits = CreditPacks.MaxCustomCredits,
                 providers = new
                 {
                     stripe = !string.IsNullOrEmpty(cfg[Consts.Stripe.SecretKeyCfg]),
@@ -59,8 +64,14 @@ public static class BillingEndpoints
             var secretKey = cfg[Consts.Stripe.SecretKeyCfg];
             if (string.IsNullOrEmpty(secretKey))
                 return Results.Json(new { error = ErrorMessages.StripeNotConfigured }, statusCode: StatusCodes.Status501NotImplemented);
-            if (CreditPacks.Find(req.PackId) is not { } pack)
-                return Results.BadRequest(new { error = $"Unknown credit pack '{req.PackId}'" });
+            // A pack, or a bare number priced here and never in the request body (ADR-189).
+            var pack = CreditPacks.Find(req.PackId);
+            var custom = pack is null ? CreditPacks.ValidCustom(req.Credits) : null;
+            if (pack is null && custom is null)
+                return Results.BadRequest(new { error = ErrorMessages.CreditAmountOutOfRange(CreditPacks.MinCustomCredits, CreditPacks.MaxCustomCredits) });
+
+            var credits = pack?.Credits ?? custom!.Value;
+            var priceCents = pack?.PriceUsdCents ?? credits * CreditPacks.UnitPriceUsdCents;
 
             var user = await users.GetUserAsync(principal);
             if (user is null) return Results.Unauthorized();
@@ -71,13 +82,16 @@ public static class BillingEndpoints
                 ["mode"] = "payment",
                 ["line_items[0][quantity]"] = "1",
                 ["line_items[0][price_data][currency]"] = "usd",
-                ["line_items[0][price_data][unit_amount]"] = pack.PriceUsdCents.ToString(),
-                ["line_items[0][price_data][product_data][name]"] = $"Cedar Clerk — {pack.Credits} credits",
+                ["line_items[0][price_data][unit_amount]"] = priceCents.ToString(),
+                ["line_items[0][price_data][product_data][name]"] = $"Cedar Clerk — {credits} credits",
                 ["success_url"] = $"{mainHost}/?billing=credits-success",
                 ["cancel_url"] = $"{mainHost}/?billing=cancelled",
                 ["client_reference_id"] = user.Id,
-                ["metadata[credits_pack]"] = pack.Id,
+                // The pack when there is one; the count either way, so fulfilment never has to find
+                // a pack that does not exist.
+                ["metadata[credits_amount]"] = credits.ToString(),
             };
+            if (pack is not null) form["metadata[credits_pack]"] = pack.Id;
             if (!string.IsNullOrEmpty(user.Email))
                 form["customer_email"] = user.Email;
 
@@ -97,8 +111,10 @@ public static class BillingEndpoints
 
         group.MapPost("/credits/telegram-stars/invoice", async (CreditCheckoutRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users, TelegramBotService bot) =>
         {
-            if (CreditPacks.Find(req.PackId) is not { } pack)
-                return Results.BadRequest(new { error = $"Unknown credit pack '{req.PackId}'" });
+            var pack = CreditPacks.Find(req.PackId);
+            var custom = pack is null ? CreditPacks.ValidCustom(req.Credits) : null;
+            if (pack is null && custom is null)
+                return Results.BadRequest(new { error = ErrorMessages.CreditAmountOutOfRange(CreditPacks.MinCustomCredits, CreditPacks.MaxCustomCredits) });
             if (!bot.IsRunning)
                 return Results.Json(new { error = ErrorMessages.BotNotRunning }, statusCode: StatusCodes.Status503ServiceUnavailable);
 
@@ -107,15 +123,20 @@ public static class BillingEndpoints
             if (user.TelegramUserId is null)
                 return Results.BadRequest(new { error = ErrorMessages.LinkYouTelegram });
 
-            var title = $"Cedar Clerk — {pack.Credits} credits";
+            var credits = pack?.Credits ?? custom!.Value;
+            var priceStars = pack?.PriceStars ?? credits * CreditPacks.UnitPriceStars;
+            // The payload is what the bot reads the purchase back off, so a custom amount says so.
+            var payloadId = pack?.Id ?? $"{Consts.Plans.CustomCreditsPrefix}{credits}";
+
+            var title = $"Cedar Clerk — {credits} credits";
             var invoiceLink = await bot.Client.CreateInvoiceLink(
                 title: title,
-                description: $"{pack.Credits} publishing credits, one-time purchase.",
-                payload: $"{Consts.Plans.CreditPackPrefix}{pack.Id}:{user.Id}",
+                description: $"{credits} publishing credits, one-time purchase.",
+                payload: $"{Consts.Plans.CreditPackPrefix}{payloadId}:{user.Id}",
                 currency: "XTR",
-                prices: [new LabeledPrice(title, pack.PriceStars)]);
+                prices: [new LabeledPrice(title, priceStars)]);
 
-            await bot.Client.SendMessage(user.TelegramUserId.Value, $"{title} — {pack.PriceStars} ⭐\nTap to pay: {invoiceLink}");
+            await bot.Client.SendMessage(user.TelegramUserId.Value, $"{title} — {priceStars} ⭐\nTap to pay: {invoiceLink}");
 
             return Results.Ok(new { sent = true });
         }).RequireAuthorization();
@@ -244,24 +265,35 @@ public static class BillingEndpoints
                     var plan = obj.TryGetProperty("metadata", out var meta) && meta.TryGetProperty("plan", out var p) ? p.GetString() : null;
                     var sessionId = obj.TryGetProperty("id", out var sid) ? sid.GetString() : null;
 
-                    // ADR-092 — a credit-pack purchase, not a plan
-                    var packId = obj.TryGetProperty("metadata", out var meta2) && meta2.TryGetProperty("credits_pack", out var cp) ? cp.GetString() : null;
-                    if (userId is not null && CreditPacks.Find(packId) is { } pack)
+                    // ADR-092 — a credit purchase, not a plan. The pack when the session names one,
+                    // the count otherwise: a custom amount has no pack to look up (ADR-189).
+                    obj.TryGetProperty("metadata", out var meta2);
+                    var packId = meta2.ValueKind == JsonValueKind.Object && meta2.TryGetProperty("credits_pack", out var cp) ? cp.GetString() : null;
+                    var creditPack = CreditPacks.Find(packId);
+                    var grantedCredits = creditPack?.Credits;
+                    if (grantedCredits is null && meta2.ValueKind == JsonValueKind.Object
+                        && meta2.TryGetProperty("credits_amount", out var ca)
+                        && int.TryParse(ca.GetString(), out var parsedCredits))
+                    {
+                        grantedCredits = CreditPacks.ValidCustom(parsedCredits);
+                    }
+
+                    if (userId is not null && grantedCredits is { } credited)
                     {
                         if (sessionId is not null && await db.Payments.AnyAsync(x => x.ExternalId == sessionId))
                             break;
-                        await CreditWallet.GrantAsync(db, userId, pack.Credits, CreditReasons.Purchase, sessionId);
+                        await CreditWallet.GrantAsync(db, userId, credited, CreditReasons.Purchase, sessionId);
                         db.Payments.Add(new Payment
                         {
                             OwnerId = userId,
                             Provider = "stripe",
-                            Plan = $"{Consts.Plans.CreditPackPrefix}{pack.Id}",
+                            Plan = $"{Consts.Plans.CreditPackPrefix}{creditPack?.Id ?? Consts.Plans.CustomCreditsPrefix + credited}",
                             ExternalId = sessionId,
                             Amount = obj.TryGetProperty("amount_total", out var amt2) && amt2.ValueKind == JsonValueKind.Number ? amt2.GetInt64() : 0,
                             Currency = obj.TryGetProperty("currency", out var cur3) ? cur3.GetString() ?? "" : "",
                         });
                         await db.SaveChangesAsync();
-                        logger.LogInformation("Stripe credits purchase — user {UserId}, pack {PackId}", userId, pack.Id);
+                        logger.LogInformation("Stripe credits purchase — user {UserId}, {Credits} credits", userId, credited);
                         break;
                     }
 

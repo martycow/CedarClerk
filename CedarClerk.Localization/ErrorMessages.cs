@@ -107,6 +107,11 @@ public static class ErrorMessages
         "The document changed while the thread was being published — this part no longer exists. Publish again.");
 
     public static string BotNotRunning => Ru("Telegram-бот не запущен.", "Telegram bot is not running.");
+    /// <summary>ADR-189 — the bounds come from the caller: they are CreditPacks' to state, and
+    /// this project does not reference Core.</summary>
+    public static string CreditAmountOutOfRange(int min, int max) => Ru(
+        $"Укажите пакет или количество кредитов от {min} до {max}.",
+        $"Name a pack, or a number of credits between {min} and {max}.");
 
     // T-089 — the one Bluesky failure an author can act on: the stored app password no longer opens
     // a session (revoked in Bluesky's settings, or unreadable because the DataProtection key ring

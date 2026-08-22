@@ -21,6 +21,26 @@ public static class CreditPacks
     ];
 
     public static CreditPack? Find(string? id) => All.FirstOrDefault(p => p.Id == id);
+
+    /// <summary>
+    /// ADR-189 — the list rate for buying credits by the number, taken from the smallest pack so the
+    /// packs are visibly a discount rather than a second price list. Derived, never written twice:
+    /// moving a pack's price moves this with it.
+    /// </summary>
+    public static int UnitPriceUsdCents => All[0].PriceUsdCents / All[0].Credits;
+
+    public static int UnitPriceStars => All[0].PriceStars / All[0].Credits;
+
+    /// <summary>
+    /// Below five the provider's own fee is most of the charge; above a thousand it stops being a
+    /// top-up and a four-figure charge nobody meant to make is a refund conversation.
+    /// </summary>
+    public const int MinCustomCredits = 5;
+    public const int MaxCustomCredits = 1000;
+
+    /// <summary>The credits a request asks for, or null when it asks for nothing sellable.</summary>
+    public static int? ValidCustom(int? credits) =>
+        credits is >= MinCustomCredits and <= MaxCustomCredits ? credits : null;
 }
 
 /// <summary>Reasons a CreditEntry row exists — the ledger's vocabulary, shared with the UI.</summary>

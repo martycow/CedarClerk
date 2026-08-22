@@ -23,6 +23,11 @@ export interface CreditsStatus {
     balance: number;
     xPostCost: number;
     packs: CreditPack[];
+    /** ADR-189 — the list rate a custom amount is priced at, and what the server will accept. */
+    unitPriceUsdCents: number;
+    unitPriceStars: number;
+    minCustomCredits: number;
+    maxCustomCredits: number;
     providers: { stripe: boolean; telegramStars: boolean };
     ledger: CreditLedgerEntry[];
 }
@@ -59,11 +64,12 @@ export class BillingService {
         return firstValueFrom(this.http.get<CreditsStatus>('/api/billing/credits'));
     }
 
-    creditsStripeCheckout(packId: string) {
-        return firstValueFrom(this.http.post<{ url: string }>('/api/billing/credits/stripe/checkout', { packId }));
+    /** A pack by id, or a bare number of credits — the server prices both (ADR-189). */
+    creditsStripeCheckout(order: { packId: string | null; credits: number | null }) {
+        return firstValueFrom(this.http.post<{ url: string }>('/api/billing/credits/stripe/checkout', order));
     }
 
-    creditsStarsInvoice(packId: string) {
-        return firstValueFrom(this.http.post<{ sent: boolean }>('/api/billing/credits/telegram-stars/invoice', { packId }));
+    creditsStarsInvoice(order: { packId: string | null; credits: number | null }) {
+        return firstValueFrom(this.http.post<{ sent: boolean }>('/api/billing/credits/telegram-stars/invoice', order));
     }
 }

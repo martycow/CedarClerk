@@ -464,7 +464,23 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                     }
                 </div>
 
-                @if (selectedPackId) {
+                <!--ADR-189: any number, at the list rate — which is the smallest pack's, so the packs
+                above stay visibly the cheaper way to buy. The server prices it; this only says how
+                many, and the bounds here are a courtesy to the person typing.-->
+                <div class="field-group custom-credits">
+                    <label for="cc-custom-credits">{{ t().settings.credits.customLabel }}</label>
+                    <div class="connect-row">
+                        <input id="cc-custom-credits" type="number" [min]="c.minCustomCredits" [max]="c.maxCustomCredits"
+                               [ngModel]="customCredits" (ngModelChange)="pickCustomCredits($event)"
+                               [placeholder]="'' + c.minCustomCredits">
+                        @if (customCreditsValid()) {
+                        <span class="field-hint">{{ packPriceUsd(orderPriceCents()) }}</span>
+                        }
+                    </div>
+                    <p class="field-hint">{{ t().settings.credits.customHint(packPriceUsd(c.unitPriceUsdCents), c.minCustomCredits, c.maxCustomCredits) }}</p>
+                </div>
+
+                @if (hasCreditOrder()) {
                 <div class="payment-step">
                     <div class="field-hint">{{ t().settings.credits.payWith }}</div>
                     <div class="pay-methods">
@@ -489,7 +505,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                     </div>
                     <app-button variant="pine" (clicked)="buyCredits()" [disabled]="creditsBusy()">
                         <app-icon name="paper-plane-tilt" size="xs"></app-icon>
-                        {{ creditsBusy() ? '…' : t().settings.credits.buy(packPriceUsd(selectedPackPriceCents())) }}
+                        {{ creditsBusy() ? '…' : t().settings.credits.buy(packPriceUsd(orderPriceCents())) }}
                     </app-button>
                     @if (creditsError()) { <span class="field-error">{{ creditsError() }}</span> }
                 </div>

@@ -139,11 +139,12 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
                 return;
             }
 
-            // ADR-092 — a credit-pack purchase, not a plan
+            // ADR-092 — a credit purchase, not a plan. A pack by id, or ADR-189's custom amount,
+            // which carries the count in the payload because there is no pack to look up.
             if (plan.StartsWith(Consts.Plans.CreditPackPrefix, StringComparison.Ordinal)
-                && CreditPacks.Find(plan[Consts.Plans.CreditPackPrefix.Length..]) is { } pack)
+                && CreditsOfPayload(plan[Consts.Plans.CreditPackPrefix.Length..]) is { } purchasedCredits)
             {
-                await CreditWallet.GrantAsync(db, user.Id, pack.Credits, CreditReasons.Purchase, payment.TelegramPaymentChargeId);
+                await CreditWallet.GrantAsync(db, user.Id, purchasedCredits, CreditReasons.Purchase, payment.TelegramPaymentChargeId);
                 db.Payments.Add(new Payment
                 {
                     OwnerId = user.Id,
@@ -154,8 +155,8 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
                     Currency = payment.Currency, // "XTR"
                 });
                 await db.SaveChangesAsync();
-                logger.LogInformation("Telegram Stars credits purchase — user {UserId}, pack {PackId}", user.Id, pack.Id);
-                await Client.SendMessage(message.Chat, $"Payment received — {pack.Credits} credits added to your Cedar Clerk balance.");
+                logger.LogInformation("Telegram Stars credits purchase — user {UserId}, {Credits} credits", user.Id, purchasedCredits);
+                await Client.SendMessage(message.Chat, $"Payment received — {purchasedCredits} credits added to your Cedar Clerk balance.");
                 return;
             }
 
@@ -262,4 +263,15 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
             }
         }
     }
+
+    /// <summary>
+    /// How many credits an invoice payload bought: a pack by id, or ADR-189's custom amount, which
+    /// carries the count itself because there is no pack to look up. Null when it is neither.
+    /// </summary>
+    private static int? CreditsOfPayload(string id) =>
+        CreditPacks.Find(id) is { } pack ? pack.Credits
+        : id.StartsWith(Consts.Plans.CustomCreditsPrefix, StringComparison.Ordinal)
+          && int.TryParse(id[Consts.Plans.CustomCreditsPrefix.Length..], out var credits)
+            ? CreditPacks.ValidCustom(credits)
+            : null;
 }

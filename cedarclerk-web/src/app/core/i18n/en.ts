@@ -1663,6 +1663,9 @@ export const en = {
             balance: (n: number) => `${n} credit${n === 1 ? '' : 's'}`,
             balanceLabel: 'Balance',
             packCredits: (n: number) => `${n} credits`,
+            customLabel: 'Or any number of credits',
+            customHint: (unit: string, min: number, max: number) =>
+                `${unit} per credit, ${min}–${max}. The packs above are cheaper per credit.`,
             buy: (usd: string) => `Buy · ${usd}`,
             payWith: 'Pay with',
             invoiceSent: '✓ Invoice sent to your Telegram — open the bot chat and confirm the payment there.',

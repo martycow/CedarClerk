@@ -1620,6 +1620,9 @@ export const ru: Dict = {
             balance: (n: number) => `${n} ${plural(n, 'кредит', 'кредита', 'кредитов')}`,
             balanceLabel: 'Баланс',
             packCredits: (n: number) => `${n} ${plural(n, 'кредит', 'кредита', 'кредитов')}`,
+            customLabel: 'Или любое количество кредитов',
+            customHint: (unit: string, min: number, max: number) =>
+                `${unit} за кредит, от ${min} до ${max}. Пакеты выше дешевле за кредит.`,
             buy: (usd: string) => `Купить · ${usd}`,
             payWith: 'Оплатить через',
             invoiceSent: '✓ Счёт отправлен в ваш Telegram — откройте чат с ботом и подтвердите оплату там.',

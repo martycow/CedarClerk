@@ -201,3 +201,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-186 — The bench remembers which project is open, and the tile is a real switcher (22.08.2026)](adr/ADR-186.md)
 - [ADR-187 — The AI actions leave the tool strip for the sheet's own context menu (22.08.2026)](adr/ADR-187.md)
 - [ADR-188 — Fullscreen is the window's, not the writer's: it moves to the rail (22.08.2026)](adr/ADR-188.md)
+- [ADR-189 — Credits can be bought by the number, at the list rate; the packs stay a discount (22.08.2026)](adr/ADR-189.md)
