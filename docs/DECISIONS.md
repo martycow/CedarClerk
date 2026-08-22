@@ -195,3 +195,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-180 — Departure Mono is the readout face, and it is bound to its 11px grid (22.08.2026)](adr/ADR-180.md)
 - [ADR-181 — A reading menu is not a tool: the blog's theme and text size share one home (22.08.2026)](adr/ADR-181.md)
 - [ADR-182 — The paper control box is 38px drawn; 44px is the touch floor, not the drawn one (22.08.2026)](adr/ADR-182.md)
+- [ADR-183 — The overflow menu hangs on the tool wall, not on the sign board (22.08.2026)](adr/ADR-183.md)

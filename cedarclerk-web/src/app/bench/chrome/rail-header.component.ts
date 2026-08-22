@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, booleanAttribute, inject, input, output, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CedarLogoComponent } from '../../shared/cedar-logo.component';
 import { IconComponent } from '../../shared/icon.component';
@@ -7,9 +7,9 @@ import { IconComponent } from '../../shared/icon.component';
 // screen — brand, project switcher, breadcrumb — and, on the right, the screen's save state, its
 // one primary action and the account.
 //
-// V2 has no menu bar. RailHeader.prompt.md says where what it carried went, and the last of it is
-// the `dots` button in the right slot: "the rare rest live behind one dots button". That slot is
-// this component's `[menu]` projection, and ADR-151 spends it on the theme toggle and Appearance.
+// The overflow the mirror's `dots` button stood for is not here: it hangs at the foot of the tool
+// wall instead (ADR-183), where four of its six entries are screens and the wall is what names
+// screens. The right slot keeps what the prompt file reserved it for.
 //
 // Every label is an input rather than a translation looked up here: the bench library holds no
 // locale, the same way app-task-tag leaves its drag hint to the consumer.
@@ -20,8 +20,6 @@ import { IconComponent } from '../../shared/icon.component';
     host: {
         'data-surface': 'chrome',
         'role': 'banner',
-        '(document:click)': 'onDocumentClick($event)',
-        '(document:keydown.escape)': 'onEscape()',
     },
     template: `
         <app-cedar-logo class="mark" [size]="22" fill="var(--pine-mark)" />
@@ -53,20 +51,6 @@ import { IconComponent } from '../../shared/icon.component';
 
         <span class="spacer"></span>
         <ng-content />
-
-        <div class="menu-anchor">
-            @if (hasMenu()) {
-                <button #trigger type="button" class="dots" [attr.aria-label]="menuLabel()"
-                        aria-haspopup="true" [attr.aria-expanded]="menuOpen()" (click)="toggleMenu()">
-                    <app-icon name="dots-three" size="xs" />
-                </button>
-            }
-            <!-- Never behind @if: the slot is what holds the projected controls, and a control
-                 destroyed on close loses whatever state it was carrying. -->
-            <div #panel class="menu" role="group" [attr.aria-label]="menuLabel()" [hidden]="!menuOpen()">
-                <ng-content select="[menu]" />
-            </div>
-        </div>
 
         <ng-content select="[account]" />
     `,
@@ -179,51 +163,9 @@ import { IconComponent } from '../../shared/icon.component';
         }
 
         :host([data-surface="chrome"]) .spacer { flex: 1; }
-
-        :host([data-surface="chrome"]) .menu-anchor { position: relative; flex: none; }
-
-        :host([data-surface="chrome"]) .dots {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: var(--hit-chrome);
-            min-height: var(--hit-chrome);
-            border: var(--border-rail-btn);
-            border-radius: var(--radius-plaque);
-            background: var(--rail-btn-face, rgba(0, 0, 0, .16));
-            color: var(--rail-ink);
-            cursor: pointer;
-        }
-
-        :host([data-surface="chrome"]) .dots:hover { background: var(--rail-btn-face-hover, rgba(0, 0, 0, .28)); }
-
-        /* The panel hangs off the rail and lands on paper: the rail's ink rule governs the board,
-           not what is pinned under it. */
-        :host([data-surface="chrome"]) .menu {
-            position: absolute;
-            top: calc(100% + var(--space-2));
-            right: 0;
-            z-index: 1;
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-1);
-            padding: var(--space-2);
-            border: var(--border-paper);
-            border-radius: var(--radius-plaque);
-            background-color: var(--sheet);
-            background-image: var(--tex-paper);
-            box-shadow: var(--shadow-paper);
-            color: var(--text);
-        }
-
-        :host([data-surface="chrome"]) .menu[hidden] { display: none; }
     `],
 })
 export class RailHeaderComponent {
-    private readonly el = inject(ElementRef<HTMLElement>);
-    private readonly trigger = viewChild<ElementRef<HTMLButtonElement>>('trigger');
-    private readonly panel = viewChild.required<ElementRef<HTMLElement>>('panel');
-
     readonly brand = input('Cedar Clerk');
     readonly version = input('');
     /** The active project. Empty renders no tile — the switcher has nothing to switch. */
@@ -237,48 +179,4 @@ export class RailHeaderComponent {
     readonly projectHint = input('');
     readonly crumbs = input<readonly string[]>([]);
     readonly crumbsLabel = input('Breadcrumb');
-    readonly menuLabel = input('More');
-    /** False hides the dots button; the `[menu]` slot still holds whatever was handed to it. */
-    readonly hasMenu = input(true, { transform: booleanAttribute });
-
-    readonly menuOpenChange = output<boolean>();
-
-    private readonly open = signal(false);
-    readonly menuOpen = this.open.asReadonly();
-
-    toggleMenu(): void { this.setMenu(!this.open()); }
-
-    closeMenu(): void { this.setMenu(false); }
-
-    // The menu-button pattern: Escape closes and hands focus back to the button. Hiding the panel
-    // first would drop focus on <body> — [hidden] takes the focused entry out of the tree — so the
-    // question of whether we hold focus at all is asked before the panel goes.
-    onEscape(): void {
-        if (!this.open()) return;
-        const held = this.el.nativeElement.contains(document.activeElement);
-        this.setMenu(false);
-        if (held) this.trigger()?.nativeElement.focus();
-    }
-
-    onDocumentClick(event: MouseEvent): void {
-        if (!this.open()) return;
-        const target = event.target instanceof Element ? event.target : null;
-        if (target && this.panel().nativeElement.contains(target)) {
-            // An entry that leaves the page takes the panel with it, or it hangs over whatever
-            // was navigated to; one that acts in place — theme, Appearance — leaves it standing.
-            if (target.closest('a[href]')) this.setMenu(false);
-            return;
-        }
-        // The trigger, and nothing else on the rail. Anything wider kept the panel standing under
-        // the account popover beside it — the two are siblings in this header, so "inside the
-        // header" is true of both and each stayed open while the other opened.
-        if (target && this.trigger()?.nativeElement.contains(target)) return;
-        this.setMenu(false);
-    }
-
-    private setMenu(next: boolean): void {
-        if (this.open() === next) return;
-        this.open.set(next);
-        this.menuOpenChange.emit(next);
-    }
 }

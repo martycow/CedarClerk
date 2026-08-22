@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, booleanAttribute, computed, effect, input, isDevMode, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, booleanAttribute, computed, effect, inject, input, isDevMode, output, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { BrassHookComponent } from '../scenery/brass-hook.component';
 import { IconComponent } from '../../shared/icon.component';
@@ -36,6 +36,10 @@ const MAX_HOOKS = 7;
 // The active hook comes in as `value` rather than being read off routerLinkActive: one hook
 // covers two paths (Text is /drafts and /editor) and another a child path, so the shell computes
 // it from a route-prefix table (ADR-139).
+//
+// At the foot of the wall, under the tail hook, hangs the tray: one dots control holding everything
+// that is not one of the seven — the rare screens, the theme, Appearance (ADR-183). It is outside
+// the list, so the landmark announces hooks and only hooks and the seven-hook budget is untouched.
 @Component({
     selector: 'app-hook-rail',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,6 +48,8 @@ const MAX_HOOKS = 7;
         'data-surface': 'chrome',
         'role': 'navigation',
         '[attr.aria-label]': 'label()',
+        '(document:click)': 'onDocumentClick($event)',
+        '(document:keydown.escape)': 'onEscape()',
     },
     template: `
         <ul class="wall">
@@ -67,10 +73,27 @@ const MAX_HOOKS = 7;
                 </li>
             }
         </ul>
+
+        @if (hasTray()) {
+            <div class="tray">
+                <button #trayTrigger type="button" class="dots" [attr.aria-label]="trayLabel()"
+                        aria-haspopup="true" [attr.aria-expanded]="trayOpen()" (click)="toggleTray()">
+                    <app-icon name="dots-three" size="sm" />
+                </button>
+                <!-- Never behind @if: the slot is what holds the projected controls, and a control
+                     destroyed on close loses whatever state it was carrying. -->
+                <div #trayPanel class="tray-panel" role="group" [attr.aria-label]="trayLabel()"
+                     [hidden]="!trayOpen()">
+                    <ng-content select="[tray]" />
+                </div>
+            </div>
+        }
     `,
     styles: [`
         :host([data-surface="chrome"]) {
+            position: relative;
             display: flex;
+            flex-direction: column;
             flex: none;
             box-sizing: border-box;
             width: var(--bench-tool-w);
@@ -84,6 +107,7 @@ const MAX_HOOKS = 7;
         :host([data-surface="chrome"]) .wall {
             display: flex;
             flex: 1;
+            min-height: 0;
             flex-direction: column;
             align-items: center;
             gap: 6px;
@@ -187,6 +211,53 @@ const MAX_HOOKS = 7;
             font-weight: 700;
             line-height: 1.5;
         }
+
+        /* The foot of the wall. The panel opens sideways rather than upward: the rule and the
+           drawer lip are under this edge, and a menu growing over them would be a paper sheet on
+           top of the chrome it belongs beside. */
+        :host([data-surface="chrome"]) .tray {
+            position: relative;
+            flex: none;
+            display: flex;
+            justify-content: center;
+            padding: var(--space-2) 0 var(--space-3);
+        }
+
+        :host([data-surface="chrome"]) .dots {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: calc(var(--bench-tool-w) - var(--space-1));
+            min-height: var(--hit-chrome);
+            border: var(--border-rail-btn);
+            border-radius: var(--radius-stamp);
+            background: var(--hook-face);
+            color: var(--rail-ink);
+            cursor: pointer;
+        }
+
+        :host([data-surface="chrome"]) .dots:hover { background: var(--rail-lo); }
+
+        /* Paper, pinned to the wall: the rail's ink rule governs the pegboard, not what hangs off
+           it. */
+        :host([data-surface="chrome"]) .tray-panel {
+            position: absolute;
+            bottom: var(--space-2);
+            left: calc(100% + var(--space-2));
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-1);
+            padding: var(--space-2);
+            border: var(--border-paper);
+            border-radius: var(--radius-plaque);
+            background-color: var(--sheet);
+            background-image: var(--tex-paper);
+            box-shadow: var(--shadow-paper);
+            color: var(--text);
+        }
+
+        :host([data-surface="chrome"]) .tray-panel[hidden] { display: none; }
     `],
 })
 export class HookRailComponent {
@@ -197,10 +268,58 @@ export class HookRailComponent {
     readonly label = input('Screens');
     /** False drops the brass hooks, the way the mirror's `hooks={false}` does. */
     readonly hooks = input(true, { transform: booleanAttribute });
+    /** Accessible name of the tray control; the consumer's to translate. */
+    readonly trayLabel = input('More');
+    /** False drops the tray button; the `[tray]` slot then holds nothing worth opening. */
+    readonly hasTray = input(true, { transform: booleanAttribute });
 
     readonly picked = output<string>();
+    readonly trayOpenChange = output<boolean>();
+
+    private readonly el = inject(ElementRef<HTMLElement>);
+    private readonly trayTrigger = viewChild<ElementRef<HTMLButtonElement>>('trayTrigger');
+    private readonly trayPanel = viewChild<ElementRef<HTMLElement>>('trayPanel');
+
+    private readonly open = signal(false);
+    readonly trayOpen = this.open.asReadonly();
 
     private readonly overBudget = computed(() => this.items().length > MAX_HOOKS);
+
+    toggleTray(): void { this.setTray(!this.open()); }
+
+    closeTray(): void { this.setTray(false); }
+
+    // The menu-button pattern: Escape closes and hands focus back to the button. Hiding the panel
+    // first would drop focus on <body> — [hidden] takes the focused entry out of the tree — so the
+    // question of whether we hold focus at all is asked before the panel goes.
+    onEscape(): void {
+        if (!this.open()) return;
+        const held = this.el.nativeElement.contains(document.activeElement);
+        this.setTray(false);
+        if (held) this.trayTrigger()?.nativeElement.focus();
+    }
+
+    onDocumentClick(event: MouseEvent): void {
+        if (!this.open()) return;
+        const target = event.target instanceof Element ? event.target : null;
+        const panel = this.trayPanel()?.nativeElement;
+        if (target && panel?.contains(target)) {
+            // An entry that leaves the page takes the panel with it, or it hangs over whatever was
+            // navigated to; one that acts in place — theme, Appearance — leaves it standing.
+            if (target.closest('a[href]')) this.setTray(false);
+            return;
+        }
+        // The trigger, and nothing else on the wall: a hook clicked beside it is a navigation, and
+        // the panel must not survive it.
+        if (target && this.trayTrigger()?.nativeElement.contains(target)) return;
+        this.setTray(false);
+    }
+
+    private setTray(next: boolean): void {
+        if (this.open() === next) return;
+        this.open.set(next);
+        this.trayOpenChange.emit(next);
+    }
 
     tally(item: HookRailItem): string {
         return indexTabBadgeLabel(item.badge);

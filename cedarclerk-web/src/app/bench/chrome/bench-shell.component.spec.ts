@@ -17,7 +17,7 @@ describe('bench shell', () => {
     const el = () => fixture.nativeElement as HTMLElement;
     const hooks = () => [...el().querySelectorAll('app-hook-rail .hook')] as HTMLAnchorElement[];
     const crumbs = () => [...el().querySelectorAll('app-rail-header .crumbs li')].map(li => li.textContent?.trim());
-    const menuItems = () => [...el().querySelectorAll('app-rail-header .menu-item')] as HTMLElement[];
+    const menuItems = () => [...el().querySelectorAll('app-hook-rail .menu-item')] as HTMLElement[];
     // The theme entry carries its sun/moon glyph in the same element as its label.
     const menuText = (i: Element) => (i.textContent ?? '').replace(/\s+/g, ' ').trim();
     const menuItem = (label: string) => menuItems().find(i => menuText(i).includes(label))!;
@@ -165,12 +165,14 @@ describe('bench shell', () => {
         expect(crumbs()).toEqual(['Icons']);
     });
 
-    // ADR-151 — the two controls with no bench surface of their own live behind the dots button.
-    it('keeps the theme toggle and Appearance behind the dots button', () => {
+    // ADR-151, moved to the wall by ADR-183 — the two controls with no bench surface of their own
+    // live in the tray at the foot of the hook rail, beside the screens that got no hook.
+    it('keeps the theme toggle and Appearance in the wall tray', () => {
         const labels = menuItems().map(menuText);
         expect(labels.some(l => l.includes('Toggle theme'))).toBe(true);
         expect(labels).toContain('Appearance');
-        expect(el().querySelector('app-rail-header .dots')).toBeTruthy();
+        expect(el().querySelector('app-hook-rail .dots')).toBeTruthy();
+        expect(el().querySelector('app-rail-header .dots')).toBeNull();
         // Navigation is the wall's; the menu carries only what the wall has no hook for.
         expect(labels).toContain('Glossary');
         expect(labels).not.toContain('Drafts');
@@ -193,8 +195,8 @@ describe('bench shell', () => {
     // Theme and Appearance act on the screen behind the panel, so the panel stays; the entries
     // that are destinations take it with them rather than leaving it hanging over the new page.
     it('leaves the panel standing for the two in-place entries and shuts it on a destination', async () => {
-        const dots = () => el().querySelector('app-rail-header .dots') as HTMLButtonElement;
-        const panel = () => el().querySelector('app-rail-header .menu') as HTMLElement;
+        const dots = () => el().querySelector('app-hook-rail .dots') as HTMLButtonElement;
+        const panel = () => el().querySelector('app-hook-rail .tray-panel') as HTMLElement;
 
         dots().click();
         fixture.detectChanges();

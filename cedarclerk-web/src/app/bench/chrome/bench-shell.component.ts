@@ -55,35 +55,7 @@ function matches(path: string, pattern: string): boolean {
             <app-rail-header [version]="versionLabel()" [project]="projectLabel()"
                              projectLink="/projects"
                              [projectHint]="t().shell.switchProject" [crumbs]="crumbs()"
-                             [crumbsLabel]="t().shell.breadcrumb" [menuLabel]="t().shell.more">
-                <div menu class="menu-items">
-                    <button type="button" class="menu-item theme-toggle" (click)="theme.toggle()">
-                        <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="sm" />
-                        {{ t().common.toggleTheme }}
-                    </button>
-                    <button type="button" class="menu-item" (click)="appearance().open.set(true)">
-                        <app-icon name="palette" size="sm" />
-                        {{ t().settings.appearance.title }}
-                    </button>
-                    <a class="menu-item" routerLink="/glossary">
-                        <app-icon name="book-bookmark" size="sm" />
-                        {{ t().glossary.crumb }}
-                    </a>
-                    @if (auth.isAdmin()) {
-                        <a class="menu-item" routerLink="/admin">
-                            <app-icon name="shield-check" size="sm" />
-                            {{ t().admin.crumb }}
-                        </a>
-                    }
-                    <a class="menu-item" routerLink="/dev/styleguide">
-                        <app-icon name="palette" size="sm" />
-                        {{ t().shell.styleguide }}
-                    </a>
-                    <a class="menu-item" routerLink="/dev/icons">
-                        <app-icon name="squares-four" size="sm" />
-                        {{ t().shell.icons }}
-                    </a>
-                </div>
+                             [crumbsLabel]="t().shell.breadcrumb">
                 <!-- The default slot RailHeader.prompt.md reserves for save state and the
                      screen's one primary action. Neither is the shell's: a page publishes them
                      and the rail renders them, as data and never as a template (ADR-159). -->
@@ -103,7 +75,37 @@ function matches(path: string, pattern: string): boolean {
             </app-rail-header>
 
             <div class="row">
-                <app-hook-rail [items]="hooks()" [value]="activeHook()" [label]="t().shell.screens" />
+                <app-hook-rail [items]="hooks()" [value]="activeHook()" [label]="t().shell.screens"
+                               [trayLabel]="t().shell.more">
+                    <div tray class="menu-items">
+                        <button type="button" class="menu-item theme-toggle" (click)="theme.toggle()">
+                            <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="sm" />
+                            {{ t().common.toggleTheme }}
+                        </button>
+                        <button type="button" class="menu-item" (click)="appearance().open.set(true)">
+                            <app-icon name="palette" size="sm" />
+                            {{ t().settings.appearance.title }}
+                        </button>
+                        <a class="menu-item" routerLink="/glossary">
+                            <app-icon name="book-bookmark" size="sm" />
+                            {{ t().glossary.crumb }}
+                        </a>
+                        @if (auth.isAdmin()) {
+                            <a class="menu-item" routerLink="/admin">
+                                <app-icon name="shield-check" size="sm" />
+                                {{ t().admin.crumb }}
+                            </a>
+                        }
+                        <a class="menu-item" routerLink="/dev/styleguide">
+                            <app-icon name="palette" size="sm" />
+                            {{ t().shell.styleguide }}
+                        </a>
+                        <a class="menu-item" routerLink="/dev/icons">
+                            <app-icon name="squares-four" size="sm" />
+                            {{ t().shell.icons }}
+                        </a>
+                    </div>
+                </app-hook-rail>
 
                 <!-- The ground every screen stands on. ADR-138 item 5's carve-out keys on this
                      attribute: the touch floor reaches what is under here and stops at the chrome

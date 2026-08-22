@@ -15,12 +15,8 @@ function sheetFor(marker: string): string {
 @Component({
     imports: [RailHeaderComponent],
     template: `<app-rail-header [version]="version" [project]="project" [projectLink]="projectLink"
-                                [projectHint]="hint" [crumbs]="crumbs" [hasMenu]="hasMenu"
-                                (menuOpenChange)="opens.push($event)">
+                                [projectHint]="hint" [crumbs]="crumbs">
                    <span class="save">saved 09:51</span>
-                   <button menu class="theme">theme</button>
-                   <button menu class="appearance">appearance</button>
-                   <a menu class="elsewhere" href="/glossary" (click)="$event.preventDefault()">glossary</a>
                    <span account class="avatar">M</span>
                </app-rail-header>`,
 })
@@ -30,8 +26,6 @@ class Host {
     projectLink: string | readonly unknown[] = '';
     hint = '';
     crumbs: string[] = [];
-    hasMenu = true;
-    opens: boolean[] = [];
 }
 
 describe('RailHeaderComponent', () => {
@@ -40,8 +34,6 @@ describe('RailHeaderComponent', () => {
     const el = () => fixture.nativeElement as HTMLElement;
     const rail = () => el().querySelector('app-rail-header') as HTMLElement;
     const tile = () => el().querySelector('.tile') as HTMLAnchorElement | null;
-    const dots = () => el().querySelector('.dots') as HTMLButtonElement | null;
-    const menu = () => el().querySelector('.menu') as HTMLElement;
 
     const render = () => { fixture.changeDetectorRef.markForCheck(); fixture.detectChanges(); };
 
@@ -117,113 +109,9 @@ describe('RailHeaderComponent', () => {
         expect(items[1].getAttribute('aria-current')).toBe('page');
     });
 
-    it('projects the save state, the account and the menu entries into their own slots', () => {
+    it('projects the save state and the account into their own slots', () => {
         expect(el().querySelector('.save')!.textContent).toContain('saved 09:51');
         expect(el().querySelector('.avatar')!.textContent!.trim()).toBe('M');
-        expect(menu().querySelectorAll('button').length).toBe(2);
-    });
-
-    describe('the dots menu — the slot the prompt file reserves for the rare rest', () => {
-        it('starts closed, and says so', () => {
-            expect(dots()!.getAttribute('aria-expanded')).toBe('false');
-            expect(dots()!.getAttribute('aria-haspopup')).toBe('true');
-            expect(menu().hasAttribute('hidden')).toBe(true);
-        });
-
-        it('opens and closes on the button, reporting each move once', () => {
-            dots()!.click();
-            render();
-            expect(menu().hasAttribute('hidden')).toBe(false);
-            expect(dots()!.getAttribute('aria-expanded')).toBe('true');
-
-            dots()!.click();
-            render();
-            expect(menu().hasAttribute('hidden')).toBe(true);
-            expect(host.opens).toEqual([true, false]);
-        });
-
-        // Only the button that opened it and the panel itself hold it open. The account popover is
-        // this component's sibling in the same header, so "somewhere on the rail" kept both panels
-        // standing at once — the one thing a menu button must not do.
-        it('closes on a click anywhere but its own button and panel', () => {
-            dots()!.click();
-            render();
-            rail().dispatchEvent(new MouseEvent('click', { bubbles: true }));
-            render();
-            expect(menu().hasAttribute('hidden')).toBe(true);
-
-            dots()!.click();
-            render();
-            expect(menu().hasAttribute('hidden')).toBe(false);
-
-            document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-            render();
-            expect(menu().hasAttribute('hidden')).toBe(true);
-        });
-
-        // What separates the two entries is whether the click leaves the page. One that navigates
-        // and leaves the panel standing hangs it over whatever was opened, which is the defect;
-        // theme and Appearance act on the screen in front of you and the panel stays put.
-        it('stays open under an entry that acts in place, and goes with one that navigates', () => {
-            dots()!.click();
-            render();
-            (el().querySelector('.theme') as HTMLButtonElement).click();
-            render();
-            expect(menu().hasAttribute('hidden')).toBe(false);
-
-            (el().querySelector('.elsewhere') as HTMLAnchorElement).dispatchEvent(
-                new MouseEvent('click', { bubbles: true }));
-            render();
-            expect(menu().hasAttribute('hidden')).toBe(true);
-        });
-
-        // The WAI-ARIA menu-button pattern: Escape closes and hands focus back to the button.
-        // Without it [hidden] takes the focused entry out of the tree and focus lands on <body>,
-        // which puts the next Tab somewhere the user never left it.
-        it('closes on Escape and gives focus back to the button that opened it', () => {
-            dots()!.click();
-            render();
-            (el().querySelector('.theme') as HTMLButtonElement).focus();
-
-            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-            render();
-            expect(menu().hasAttribute('hidden')).toBe(true);
-            expect(document.activeElement).toBe(dots());
-        });
-
-        // Escape belongs to whoever holds focus. A press from elsewhere on the page still shuts
-        // the panel, but pulling focus into the rail would be taking it from that elsewhere.
-        it('shuts on an Escape from outside without reaching for focus', () => {
-            dots()!.click();
-            render();
-            const outside = document.createElement('button');
-            document.body.append(outside);
-            outside.focus();
-
-            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-            render();
-            expect(menu().hasAttribute('hidden')).toBe(true);
-            expect(document.activeElement).toBe(outside);
-            outside.remove();
-        });
-
-        // The controls the shell hands to this slot own their own state, so the panel is hidden
-        // rather than destroyed and the same elements come back on reopen.
-        it('keeps the projected controls alive while closed', () => {
-            const before = el().querySelector('.theme');
-            dots()!.click();
-            render();
-            dots()!.click();
-            render();
-            expect(el().querySelector('.theme')).toBe(before);
-        });
-
-        it('hasMenu=false drops the button and keeps the slot', () => {
-            host.hasMenu = false;
-            render();
-            expect(dots()).toBeNull();
-            expect(menu().querySelectorAll('button').length).toBe(2);
-        });
     });
 
     describe('the prompt.md rules, read off the shipped CSS', () => {
@@ -239,18 +127,11 @@ describe('RailHeaderComponent', () => {
             const rules = Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g));
             const inked = rules.filter(m => /(^|[^-])color:/.test(m[2]));
             expect(inked.length).toBeGreaterThan(0);
-            let onPaper = 0;
             for (const m of inked) {
                 const value = m[2].match(/(^|[^-])color:\s*([^;}]+)/)![2].trim();
-                if (/background-color:\s*var\(--sheet\)/.test(m[2])) {
-                    expect(value).toBe('var(--text)');
-                    onPaper++;
-                    continue;
-                }
                 expect(['var(--rail-ink)', 'var(--rail-ink-soft)']).toContain(value);
                 if (value === 'var(--rail-ink-soft)') expect(m[1]).toContain('::before');
             }
-            expect(onPaper).toBe(1);
         });
 
         it('holds the chrome band: 13/11px type and a 30px box', () => {
@@ -275,7 +156,7 @@ describe('RailHeaderComponent', () => {
 
         it('withholds a focusable control shadow under focus, so the ADR-140 halo is not out-specified', () => {
             const shadowed = Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g)).filter(m => m[2].includes('box-shadow'));
-            const controls = shadowed.filter(m => m[1].includes('.tile') || m[1].includes('.dots'));
+            const controls = shadowed.filter(m => m[1].includes('.tile'));
             expect(controls.length).toBeGreaterThan(0);
             for (const m of controls) expect(m[1]).toContain(':not(:focus-visible)');
         });

@@ -24,14 +24,23 @@ const SIX: HookRailItem[] = [
 @Component({
     imports: [HookRailComponent],
     template: `<app-hook-rail [items]="items" [value]="value" [hooks]="hooks" [label]="label"
-                              (picked)="picks.push($event)" />`,
+                              [hasTray]="hasTray" (picked)="picks.push($event)"
+                              (trayOpenChange)="opens.push($event)">
+                   <div tray>
+                       <button class="theme">theme</button>
+                       <button class="appearance">appearance</button>
+                       <a class="elsewhere" href="/glossary" (click)="$event.preventDefault()">glossary</a>
+                   </div>
+               </app-hook-rail>`,
 })
 class Host {
     items: HookRailItem[] = SIX;
     value = 'text';
     hooks = true;
     label = 'Screens';
+    hasTray = true;
     picks: string[] = [];
+    opens: boolean[] = [];
 }
 
 describe('HookRailComponent', () => {
@@ -41,6 +50,8 @@ describe('HookRailComponent', () => {
     const railEl = () => el().querySelector('app-hook-rail') as HTMLElement;
     const hooks = () => Array.from(el().querySelectorAll('a.hook')) as HTMLAnchorElement[];
     const current = () => el().querySelector('a.hook.is-current') as HTMLAnchorElement | null;
+    const dots = () => el().querySelector('.dots') as HTMLButtonElement | null;
+    const tray = () => el().querySelector('.tray-panel') as HTMLElement;
 
     const render = () => { fixture.changeDetectorRef.markForCheck(); fixture.detectChanges(); };
 
@@ -169,6 +180,112 @@ describe('HookRailComponent', () => {
         warn.mockRestore();
     });
 
+    // ADR-183 — everything that is not one of the seven screens hangs here, at the foot of the
+    // wall: the rare screens, the theme, Appearance. It is outside the <ul>, so the landmark still
+    // announces hooks and only hooks, and it costs the seven-hook budget nothing.
+    describe('the tray at the foot of the wall', () => {
+        it('is not a hook, and does not join the navigation list', () => {
+            expect(dots()).not.toBeNull();
+            expect(railEl().querySelector('ul .dots')).toBeNull();
+            expect(hooks().length).toBe(6);
+        });
+
+        it('starts closed, and says so', () => {
+            expect(dots()!.getAttribute('aria-expanded')).toBe('false');
+            expect(dots()!.getAttribute('aria-haspopup')).toBe('true');
+            expect(tray().hasAttribute('hidden')).toBe(true);
+        });
+
+        it('opens and closes on the button, reporting each move once', () => {
+            dots()!.click();
+            render();
+            expect(tray().hasAttribute('hidden')).toBe(false);
+            expect(dots()!.getAttribute('aria-expanded')).toBe('true');
+
+            dots()!.click();
+            render();
+            expect(tray().hasAttribute('hidden')).toBe(true);
+            expect(host.opens).toEqual([true, false]);
+        });
+
+        // Only the button that opened it and the panel itself hold it open. A hook clicked beside
+        // it is a navigation, and a panel that survived one would hang over what it opened.
+        it('closes on a click anywhere but its own button and panel', () => {
+            dots()!.click();
+            render();
+            railEl().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            render();
+            expect(tray().hasAttribute('hidden')).toBe(true);
+
+            dots()!.click();
+            render();
+            document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            render();
+            expect(tray().hasAttribute('hidden')).toBe(true);
+        });
+
+        // What separates the two entries is whether the click leaves the page. Theme and
+        // Appearance act on the screen in front of you and the panel stays put.
+        it('stays open under an entry that acts in place, and goes with one that navigates', () => {
+            dots()!.click();
+            render();
+            (el().querySelector('.theme') as HTMLButtonElement).click();
+            render();
+            expect(tray().hasAttribute('hidden')).toBe(false);
+
+            (el().querySelector('.elsewhere') as HTMLAnchorElement).dispatchEvent(
+                new MouseEvent('click', { bubbles: true }));
+            render();
+            expect(tray().hasAttribute('hidden')).toBe(true);
+        });
+
+        // The WAI-ARIA menu-button pattern: Escape closes and hands focus back to the button.
+        // Without it [hidden] takes the focused entry out of the tree and focus lands on <body>.
+        it('closes on Escape and gives focus back to the button that opened it', () => {
+            dots()!.click();
+            render();
+            (el().querySelector('.theme') as HTMLButtonElement).focus();
+
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+            render();
+            expect(tray().hasAttribute('hidden')).toBe(true);
+            expect(document.activeElement).toBe(dots());
+        });
+
+        // Escape belongs to whoever holds focus. A press from elsewhere still shuts the panel, but
+        // pulling focus into the wall would be taking it from that elsewhere.
+        it('shuts on an Escape from outside without reaching for focus', () => {
+            dots()!.click();
+            render();
+            const outside = document.createElement('button');
+            document.body.append(outside);
+            outside.focus();
+
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+            render();
+            expect(tray().hasAttribute('hidden')).toBe(true);
+            expect(document.activeElement).toBe(outside);
+            outside.remove();
+        });
+
+        // The controls the shell hands to this slot own their own state, so the panel is hidden
+        // rather than destroyed and the same elements come back on reopen.
+        it('keeps the projected controls alive while closed', () => {
+            const before = el().querySelector('.theme');
+            dots()!.click();
+            render();
+            dots()!.click();
+            render();
+            expect(el().querySelector('.theme')).toBe(before);
+        });
+
+        it('hasTray=false drops the button', () => {
+            host.hasTray = false;
+            render();
+            expect(dots()).toBeNull();
+        });
+    });
+
     describe('the prompt.md rules, read off the shipped CSS', () => {
         let css: string;
         beforeEach(() => { css = sheetFor('.hook'); });
@@ -198,12 +315,21 @@ describe('HookRailComponent', () => {
             const rules = Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g));
             const inked = rules.filter(m => /(^|[^-])color:/.test(m[2]));
             expect(inked.length).toBeGreaterThan(0);
+            let onPaper = 0;
             for (const m of inked) {
                 const ink = m[2].match(/(^|[^-])color:\s*([^;}]+)/)![2].trim();
+                // The tray panel is paper pinned to the wall, not wall: it declares its own sheet
+                // ground, and the wall's ink rule stops at the edge of what hangs off it.
+                if (/background-color:\s*var\(--sheet\)/.test(m[2])) {
+                    expect(ink).toBe('var(--text)');
+                    onPaper++;
+                    continue;
+                }
                 const ground = m[2].match(/(^|[^-])background:\s*([^;}]+)/)?.[2].trim();
                 expect(ink, `ink on ${ground ?? 'the wall'} in "${m[1].trim()}"`)
                     .toBe(ground ? INK_ON.get(ground) : 'var(--rail-ink)');
             }
+            expect(onPaper).toBe(1);
         });
 
         it('marks the current tool with a shape as well as a fill', () => {
