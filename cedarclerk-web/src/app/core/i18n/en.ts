@@ -851,14 +851,9 @@ export const en = {
             title: 'New draft',
             titlePlaceholder: "What's it about?",
             titleRequired: 'A draft needs a name — it is how you find it later.',
-            moreOptions: 'More options',
             languages: 'Languages',
-            both: 'Both',
+            languageRequired: 'Pick at least one language',
             tagsPlaceholder: 'comma, separated, tags',
-            startFrom: 'Start from',
-            blank: 'Blank',
-            devlog: 'Dev log',
-            photodump: 'Photo dump',
         },
         // Cycled by elapsed seconds while a long action runs, so a slow publish looks like work
         // in progress rather than a stuck spinner. Order matters; length does not.

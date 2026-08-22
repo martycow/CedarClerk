@@ -11,10 +11,11 @@ a popover, is the shelf beside it.-->
     <!--Commands that change the data rather than what the panel shows, so they stay on the page
     (ADR-164). Both imports live here (B22) — the editor topbar keeps only Export/theme/profile.-->
     <div class="drafts-toolbar">
-        <!--Idea #3: the tag set itself is managed here - renaming or deleting a tag rewrites
-        every draft that carries it, and the blog follows automatically.-->
-        <app-tag-picker [tags]="[]" [manage]="true"></app-tag-picker>
         <span class="spacer"></span>
+        <!--Idea #3: the tag set itself is managed here - renaming or deleting a tag rewrites
+        every draft that carries it, and the blog follows automatically. It stands with the other
+        commands rather than alone at the far edge, which is what read as a stray control.-->
+        <app-tag-picker [tags]="[]" [manage]="true"></app-tag-picker>
         <app-button variant="paper" size="sm" [disabled]="importingCedar()" [title]="t().drafts.importCedar"
                     (clicked)="cedarInput.click()">
             <app-icon name="upload-simple" size="sm" [class.spin]="importingCedar()"></app-icon>
@@ -310,17 +311,22 @@ a popover, is the shelf beside it.-->
             <p class="field-hint-inline">{{ t().editor.newDraft.titleRequired }}</p>
             }
 
-        @if (!newDraftExpanded()) {
-        <app-button class="more-options" variant="paper" size="sm" (clicked)="newDraftExpanded.set(true)">{{ t().editor.newDraft.moreOptions }}</app-button>
-        } @else {
-        <div style="margin-top:12px; display:flex; flex-direction:column; gap:12px">
+        <!--Everything the dialog can set is on show: there is nothing here worth a second click,
+        and a "more options" button hid the languages a draft is created in.-->
+        <div class="new-draft-body">
             <div>
                 <span class="tb-caption">{{ t().editor.newDraft.languages }}</span>
+                <!--Every content language, not three fixed combinations. The first picked one is
+                the draft's primary; the rest are created as empty translations.-->
                 <div class="pick-row" role="group" [attr.aria-label]="t().editor.newDraft.languages">
-                    <app-leaf-tag interactive [state]="newDraftLanguages === 'ru' ? 'active' : 'idle'" (activated)="newDraftLanguages = 'ru'">RU</app-leaf-tag>
-                    <app-leaf-tag interactive [state]="newDraftLanguages === 'en' ? 'active' : 'idle'" (activated)="newDraftLanguages = 'en'">EN</app-leaf-tag>
-                    <app-leaf-tag interactive [state]="newDraftLanguages === 'both' ? 'active' : 'idle'" (activated)="newDraftLanguages = 'both'">{{ t().editor.newDraft.both }}</app-leaf-tag>
+                    @for (code of contentLanguages; track code) {
+                    <app-leaf-tag interactive [state]="newDraftLanguages().includes(code) ? 'active' : 'idle'"
+                                  (activated)="toggleNewDraftLanguage(code)">{{ code.toUpperCase() }}</app-leaf-tag>
+                    }
                 </div>
+                @if (!newDraftLanguages().length) {
+                <p class="field-hint-inline">{{ t().editor.newDraft.languageRequired }}</p>
+                }
             </div>
             <div>
                 <span class="tb-caption">{{ t().editor.tags.label }}</span>
@@ -332,18 +338,17 @@ a popover, is the shelf beside it.-->
                 </div>
             </div>
             <div>
-                <span class="tb-caption">{{ t().editor.newDraft.startFrom }}</span>
-                <div class="pick-row" role="group" [attr.aria-label]="t().editor.newDraft.startFrom">
-                    <app-leaf-tag interactive [state]="newDraftTemplate === 'blank' ? 'active' : 'idle'" (activated)="newDraftTemplate = 'blank'">{{ t().editor.newDraft.blank }}</app-leaf-tag>
-                    <app-leaf-tag interactive [state]="newDraftTemplate === 'devlog' ? 'active' : 'idle'" (activated)="newDraftTemplate = 'devlog'">{{ t().editor.newDraft.devlog }}</app-leaf-tag>
-                    <app-leaf-tag interactive [state]="newDraftTemplate === 'photodump' ? 'active' : 'idle'" (activated)="newDraftTemplate = 'photodump'">{{ t().editor.newDraft.photodump }}</app-leaf-tag>
-                </div>
-            </div>
-            <div>
                 <span class="tb-caption">{{ t().editor.tags.folder }}</span>
                 <div style="margin-top:6px">
                     <app-folder-picker [folderId]="newDraftFolderId()" [inline]="true"
                                        (picked)="newDraftFolderId.set($event)"></app-folder-picker>
+                </div>
+            </div>
+            <div>
+                <span class="tb-caption">{{ t().drafts.series.title }}</span>
+                <div style="margin-top:6px">
+                    <app-series-picker [seriesId]="newDraftSeriesId()" [inline]="true"
+                                       (picked)="newDraftSeriesId.set($event)"></app-series-picker>
                 </div>
             </div>
             <label class="field-hint">
@@ -351,12 +356,12 @@ a popover, is the shelf beside it.-->
                 {{ t().drafts.privatePost }}
             </label>
         </div>
-        }
 
         @if (newDraftError()) { <p class="error-box"><app-icon name="warning" size="sm"></app-icon>{{ newDraftError() }}</p> }
 
         <app-button modal-actions variant="paper" (clicked)="closeNewDraftDialog()">{{ t().common.cancel }}</app-button>
-        <app-button modal-actions variant="pine" [disabled]="creatingDraft() || !newDraftTitleValid()"
+        <app-button modal-actions variant="pine"
+                    [disabled]="creatingDraft() || !newDraftTitleValid() || !newDraftLanguages().length"
                     (clicked)="confirmNewDraft()">
             {{ creatingDraft() ? t().common.loading : t().drafts.newDraft }}
         </app-button>

@@ -40,32 +40,6 @@ export const EMPTY_DOC = '{"type":"doc","content":[{"type":"paragraph"}]}';
 // /editor first and open the dialog there, which meant the editor page existed mid-creation with
 // nothing in it yet) and editor.component.ts's own silent fallback creation (empty draft list on
 // load, deleting the last remaining draft), which still runs on the editor page directly.
-export type NewDraftTemplate = 'blank' | 'devlog' | 'photodump';
-export const NEW_DRAFT_TEMPLATES: Record<NewDraftTemplate, string> = {
-    blank: EMPTY_DOC,
-    devlog: JSON.stringify({
-        type: 'doc',
-        content: [
-            { type: 'paragraph', content: [{ type: 'text', text: 'What happened this week…' }] },
-            {
-                type: 'bulletList',
-                content: [
-                    { type: 'listItem', content: [{ type: 'paragraph' }] },
-                    { type: 'listItem', content: [{ type: 'paragraph' }] },
-                ],
-            },
-            { type: 'paragraph', content: [{ type: 'text', text: "What's next." }] },
-        ],
-    }),
-    photodump: JSON.stringify({
-        type: 'doc',
-        content: [
-            { type: 'paragraph', content: [{ type: 'text', text: 'A few photos from…' }] },
-            { type: 'paragraph' },
-        ],
-    }),
-};
-
 export interface ScheduledInfo { scheduledAtUtc: string; chatId: string; status: string; error: string | null; }
 // One stored version of one language of a draft. `kind` is how it came to be: an edit ("save"),
 // or the content actually sent to a destination ("telegram"/"blog") — the latter are the

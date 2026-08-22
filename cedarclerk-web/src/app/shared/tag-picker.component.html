@@ -80,7 +80,12 @@ variable is `tag`, not `t` — `t` is the dictionary accessor here.-->
 <div class="tag-row">
     <ng-container [ngTemplateOutlet]="leaves"></ng-container>
     <app-popover>
-        <app-button trigger variant="paper" size="sm" (clicked)="load()">+ {{ t().editor.tags.label }}</app-button>
+        <!--The plus belongs to the per-draft picker, where the button adds a tag to something.
+        In manage mode it adds nothing — it opens the tag set itself — so it says so instead.-->
+        <app-button trigger variant="paper" size="sm" (clicked)="load()">
+            @if (manage()) { <app-icon name="pencil-simple" size="sm" /> {{ t().editor.tags.manage }} }
+            @else { + {{ t().editor.tags.label }} }
+        </app-button>
         <div panel class="tag-cloud-popover">
             <ng-container [ngTemplateOutlet]="cloud"></ng-container>
         </div>

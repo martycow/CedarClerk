@@ -7,12 +7,14 @@ import { Subscription, TimeoutError } from 'rxjs';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
 import {
-    DraftsService, DraftMeta, DRAFT_TITLE_MAX, EMPTY_DOC, NewDraftTemplate, NEW_DRAFT_TEMPLATES,
+    DraftsService, DraftMeta, DRAFT_TITLE_MAX, EMPTY_DOC,
     CLOUDFLARE_UPLOAD_LIMIT_BYTES,
 } from '../core/drafts.service';
 import { FoldersService } from '../core/folders.service';
 import { FolderPickerComponent } from '../shared/folder-picker.component';
 import { TagPickerComponent } from '../shared/tag-picker.component';
+import { SeriesPickerComponent } from '../shared/series-picker.component';
+import { CONTENT_LANGUAGES, DEFAULT_PRIMARY_LANGUAGE } from '../core/languages';
 import { LocaleService } from '../core/i18n/locale.service';
 import { Dict } from '../core/i18n/en';
 import { ModalComponent } from '../shared/modal.component';
@@ -51,7 +53,9 @@ const TITLE_MIN_WIDTH = 200;
 // left to drift — so if the density tokens move, these move with them.
 const ROW_GAP = 8;
 const ROW_PADDING = 20;
-const ACTIONS_WIDTH = 80;
+// Three controls at the paper box plus the two gaps between them. It was 80 — narrower than the
+// buttons it holds — so the group overflowed left and printed over the UPDATED column beside it.
+const ACTIONS_WIDTH = 3 * 38 + 2 * 4;
 
 // Below this the row would have to scroll sideways to show everything, so it stops showing
 // everything instead: Tags and Activity are the two columns you can lose and still recognise a
@@ -130,7 +134,7 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
     selector: 'app-drafts',
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, ModalComponent, PopoverComponent,
-        FolderPickerComponent, TagPickerComponent, IndexTabsComponent, ShelfPanelComponent,
+        FolderPickerComponent, TagPickerComponent, SeriesPickerComponent, IndexTabsComponent, ShelfPanelComponent,
         InputComponent, ButtonComponent, LeafTagComponent, PaperCardComponent,
     ],
     templateUrl: 'drafts.component.html',
@@ -505,11 +509,13 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     // (Marty, 28.07.2026) — same shape as onImportCedarChosen below, which already worked this way.
     readonly draftTitleMax = DRAFT_TITLE_MAX;
     newDraftOpen = signal(false);
-    newDraftExpanded = signal(false);
     newDraftTitle = '';
-    newDraftLanguages: 'ru' | 'en' | 'both' = 'ru';
+    /** Every content language the account may write in; the dialog offers all of them. */
+    readonly contentLanguages = CONTENT_LANGUAGES;
+    /** Picked languages, in pick order — the first is the draft's primary. */
+    newDraftLanguages = signal<string[]>([DEFAULT_PRIMARY_LANGUAGE]);
     newDraftTagList = signal<string[]>([]);
-    newDraftTemplate: NewDraftTemplate = 'blank';
+    newDraftSeriesId = signal<string | null>(null);
     // Not persisted into newDraftDefaultsJson (unlike languages/tags/template) — "private" and
     // a target folder are per-draft intent, not a preference to repeat on every new draft.
     newDraftPrivate = false;
@@ -518,20 +524,45 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     newDraftError = signal<string | null>(null);
 
     openNewDraftDialog() {
-        let defaults: { languages?: 'ru' | 'en' | 'both'; tags?: string[]; template?: NewDraftTemplate } = {};
+        let defaults: { languages?: unknown; tags?: string[] } = {};
         try {
             defaults = JSON.parse(this.auth.newDraftDefaultsJson() ?? '{}');
         } catch { /* ignore a corrupt/foreign blob, fall back to built-in defaults */ }
 
         this.newDraftTitle = '';
-        this.newDraftLanguages = defaults.languages ?? 'ru';
-        this.newDraftTagList.set(defaults.tags ?? []);
-        this.newDraftTemplate = defaults.template ?? 'blank';
+        this.newDraftLanguages.set(readLanguages(defaults.languages));
+        // At least one tag on show: with nothing remembered, the tag the account uses most is the
+        // one it would have picked anyway, and an empty tag row taught nobody the field exists.
+        const remembered = defaults.tags ?? [];
+        this.newDraftTagList.set(remembered.length ? remembered : this.mostUsedTag());
         this.newDraftPrivate = false;
         this.newDraftFolderId.set(null);
-        this.newDraftExpanded.set(false);
+        this.newDraftSeriesId.set(null);
         this.newDraftError.set(null);
         this.newDraftOpen.set(true);
+    }
+
+    /** Pick order matters: the first language picked is the one the draft is written in. */
+    toggleNewDraftLanguage(code: string) {
+        const picked = this.newDraftLanguages();
+        this.newDraftLanguages.set(picked.includes(code) ? picked.filter(c => c !== code) : [...picked, code]);
+    }
+
+    /** The single tag carried by most drafts, as a one-element list; empty when there are none. */
+    private mostUsedTag(): string[] {
+        const counts = new Map<string, number>();
+        for (const d of this.drafts()) {
+            for (const tag of (d.tags ?? '').split(',')) {
+                const clean = tag.trim().toLowerCase();
+                if (clean) counts.set(clean, (counts.get(clean) ?? 0) + 1);
+            }
+        }
+        let best = '';
+        let bestCount = 0;
+        for (const [tag, count] of counts) {
+            if (count > bestCount) { best = tag; bestCount = count; }
+        }
+        return best ? [best] : [];
     }
 
     closeNewDraftDialog() {
@@ -547,31 +578,35 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     }
 
     async confirmNewDraft() {
-        if (this.creatingDraft() || !this.newDraftTitleValid()) return;
+        const languages = this.newDraftLanguages();
+        if (this.creatingDraft() || !this.newDraftTitleValid() || !languages.length) return;
         const title = this.newDraftTitle.trim();
         const tagList = this.newDraftTagList().map(t => t.trim().toLowerCase()).filter(t => t.length > 0);
         const tags = tagList.join(',');
-        const languages = this.newDraftLanguages;
-        const template = this.newDraftTemplate;
         const isPrivate = this.newDraftPrivate;
         const folderId = this.newDraftFolderId();
+        const seriesId = this.newDraftSeriesId();
 
         this.auth.saveNewDraftDefaults(JSON.stringify({
             languages,
             tags: tagList,
-            template,
         })).catch(() => { /* best-effort — not worth blocking draft creation over */ });
 
         this.creatingDraft.set(true);
         this.newDraftError.set(null);
         try {
-            const created = await this.draftsApi.create(title, NEW_DRAFT_TEMPLATES[template]);
+            const created = await this.draftsApi.create(title, EMPTY_DOC);
             // Same follow-up-call shape as tags on the main list row: create first, then apply
             // the extras the create endpoint doesn't take.
             if (tags) await this.draftsApi.updateTags(created.id, tags);
             if (isPrivate) await this.draftsApi.setDraftPrivate(created.id, true);
             if (folderId) await this.draftsApi.setDraftFolder(created.id, folderId);
-            if (languages === 'both') await this.draftsApi.saveTranslation(created.id, 'en', title, EMPTY_DOC);
+            if (seriesId) await this.draftsApi.setDraftSeries(created.id, seriesId);
+            // The first picked language is the one the draft is created in; each of the rest gets
+            // an empty version so the language tabs are there from the start.
+            for (const code of languages.slice(1)) {
+                await this.draftsApi.saveTranslation(created.id, code, title, EMPTY_DOC);
+            }
 
             this.closeNewDraftDialog();
             this.router.navigate(['/editor'], { queryParams: { draft: created.id } });
@@ -719,4 +754,18 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
             this.busyId.set(null);
         }
     }
+}
+
+/**
+ * The remembered language choice. It used to be one of three words — 'ru' | 'en' | 'both' — and a
+ * stored blob still carries one, so both shapes read back into the list the dialog now works with.
+ */
+function readLanguages(raw: unknown): string[] {
+    if (Array.isArray(raw)) {
+        const picked = raw.filter((c): c is string => typeof c === 'string' && CONTENT_LANGUAGES.includes(c));
+        if (picked.length) return picked;
+    }
+    if (raw === 'both') return ['ru', 'en'];
+    if (typeof raw === 'string' && CONTENT_LANGUAGES.includes(raw)) return [raw];
+    return [DEFAULT_PRIMARY_LANGUAGE];
 }

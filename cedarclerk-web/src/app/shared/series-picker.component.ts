@@ -25,6 +25,8 @@ export class SeriesPickerComponent {
 
     seriesId = input<string | null>(null);
     compact = input(false);
+    /** For a host that cannot carry a popover — see the note in folder-picker.component.html. */
+    inline = input(false);
     picked = output<string | null>();
 
     series = this.seriesApi.series;

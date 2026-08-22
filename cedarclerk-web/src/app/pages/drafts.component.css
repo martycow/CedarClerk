@@ -469,8 +469,13 @@
     white-space: nowrap;
 }
 
-.more-options {
-    margin-top: 10px;
+/* Every field on show, one column. The dialog used to hide all of it behind "more options",
+   which is where the languages a draft is created in were living. */
+.new-draft-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
 }
 
 /* A pick-one is a row of leaves, the same control Settings uses for its language pickers. */

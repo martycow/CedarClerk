@@ -813,14 +813,9 @@ export const ru: Dict = {
             title: 'Новый черновик',
             titlePlaceholder: 'О чём пост?',
             titleRequired: 'Черновику нужно имя — по нему вы его потом найдёте.',
-            moreOptions: 'Больше настроек',
             languages: 'Языки',
-            both: 'Оба',
+            languageRequired: 'Выберите хотя бы один язык',
             tagsPlaceholder: 'теги, через, запятую',
-            startFrom: 'Начать с',
-            blank: 'Пусто',
-            devlog: 'Дневник разработки',
-            photodump: 'Фотодамп',
         },
         statuses: {
             translate: [

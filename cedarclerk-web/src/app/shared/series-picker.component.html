@@ -1,5 +1,5 @@
 <ng-template #menu>
-    <div class="series-menu">
+    <div class="series-menu" [class.inline]="inline()">
         <button class="series-menu-item" [class.active]="seriesId() === null" (click)="pick(null)">
             {{ t().drafts.series.none }}
         </button>
@@ -37,12 +37,18 @@
     </div>
 </ng-template>
 
+<!--Inline for hosts that can't carry a popover: an app-popover nested in app-modal fights the
+modal's own fixed positioning and stacking.-->
+@if (inline()) {
+<ng-container [ngTemplateOutlet]="menu"></ng-container>
+} @else {
 <app-popover>
     <button trigger class="series-trigger" [class.compact]="compact()" (click)="load()" [title]="t().drafts.series.title">
         <app-icon name="list-numbers" size="sm"></app-icon> {{ label() }}
     </button>
     <ng-container panel [ngTemplateOutlet]="menu"></ng-container>
 </app-popover>
+}
 
 @if (deleteTarget(); as s) {
 <app-modal (closed)="deleteConfirmId.set(null)">

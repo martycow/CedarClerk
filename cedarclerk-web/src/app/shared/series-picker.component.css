@@ -51,6 +51,13 @@
     padding: 2px 4px;
 }
 
+.series-menu.inline {
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 6px;
+}
+
 .series-menu {
     display: flex;
     flex-direction: column;
