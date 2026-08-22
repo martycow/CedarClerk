@@ -182,7 +182,7 @@ const MAX_HOOKS = 7;
             border-radius: var(--radius-stamp);
             background: var(--tab-badge);
             color: var(--rail-edge);
-            font-family: var(--font-mono);
+            font-family: var(--font-readout);
             font-size: var(--text-chrome-sm);
             font-weight: 700;
             line-height: 1.5;

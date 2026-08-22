@@ -78,7 +78,7 @@ export type ShelfTone = 'paper' | 'cork';
         /* Cream at full strength: the soft cream measures 3.6:1 on the lit stop of the tile, and a
            counter is read. The mono face against the title's display caps is what sets it back. */
         :host([data-surface="chrome"]) .sp-head .sp-count {
-            font-family: var(--font-mono);
+            font-family: var(--font-readout);
             font-size: var(--text-chrome-sm);
             color: var(--rail-ink);
             white-space: nowrap;

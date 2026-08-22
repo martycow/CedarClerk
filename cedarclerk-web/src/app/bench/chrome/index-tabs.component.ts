@@ -118,7 +118,7 @@ export function indexTabBadgeLabel(badge: number | string | undefined | null): s
             border-radius: var(--radius-stamp);
             background: var(--tab-badge);
             color: var(--rail-edge);
-            font-family: var(--font-mono);
+            font-family: var(--font-readout);
             font-size: var(--text-chrome-sm);
             font-weight: 700;
             letter-spacing: normal;

@@ -254,8 +254,11 @@ describe('RailHeaderComponent', () => {
             expect(css).toMatch(/height:\s*var\(--bench-rail-h\)/);
         });
 
+        // --font-readout is the readout face and falls through to --font-mono behind it (ADR-180),
+        // so either satisfies the rule this asserts: the version is a monospaced reading, never the
+        // display face the brand beside it uses.
         it('numbers are mono', () => {
-            expect(css).toMatch(/\.version[^{]*\{[^}]*font-family:\s*var\(--font-mono\)/);
+            expect(css).toMatch(/\.version[^{]*\{[^}]*font-family:\s*var\(--font-(mono|readout)\)/);
         });
 
         it('is sticky, and never lets the paper card overlap the rail', () => {

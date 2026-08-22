@@ -51,7 +51,7 @@ const NUMERAL = /(\d+(?:[.,:/]\d+)*)/g;
             padding: 0 14px;
             border-top: 1px solid var(--brass-edge);
             box-shadow: inset 0 1px 0 color-mix(in srgb, var(--brass-hi) 70%, transparent);
-            font-family: var(--font-mono);
+            font-family: var(--font-readout);
             font-size: var(--text-chrome-sm);
             white-space: nowrap;
             overflow: hidden;
@@ -97,7 +97,7 @@ const NUMERAL = /(\d+(?:[.,:/]\d+)*)/g;
             /* Every number on the rule is mono, and reads as a scale rather than as prose: the
                figures are the same width, so a count that ticks does not shuffle the bar. */
             .num {
-                font-family: var(--font-mono);
+                font-family: var(--font-readout);
                 font-variant-numeric: tabular-nums;
             }
 

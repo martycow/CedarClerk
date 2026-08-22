@@ -221,7 +221,12 @@ let nextId = 0;
         .gc-slip-title, .gc-slip-value { fill: var(--text); }
         .gc-ev { fill: var(--brass-ink, var(--brass-lo)); font-weight: 700; letter-spacing: .04em; }
 
-        .gc-ax, .gc-end, .gc-slip-name, .gc-slip-value { font-family: var(--font-mono); }
+        .gc-ax, .gc-end, .gc-slip-name { font-family: var(--font-mono); }
+        /* The slip is the chart's instrument reading and the one text here with a stated 11px,
+           so it is the one that takes the readout face (ADR-180 clause 2). The axis and the end
+           labels carry no size of their own — they inherit whatever the page hands the SVG — and
+           a pixel face at an unknown size is exactly what that clause refuses. */
+        .gc-slip-value { font-family: var(--font-readout); }
         .gc-slip-title, .gc-ev { font-family: var(--font-sans); }
         .gc-slip-title { font-weight: 700; }
 

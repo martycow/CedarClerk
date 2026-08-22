@@ -124,6 +124,7 @@ public static partial class DesignTokens
         ["ok-soft"] = "color-mix(in srgb, var(--ok) 13%, var(--surface))",
         ["brass-soft"] = "color-mix(in srgb, var(--brass-ink) 13%, var(--surface))",
         ["font-display"] = "'Vollkorn', Georgia, serif",
+        ["font-readout"] = "'Departure Mono', var(--font-mono)",
         ["rule-ink"] = "rgba(120, 96, 58, .32)",
         ["rule-ink-soft"] = "rgba(120, 96, 58, .15)",
     };

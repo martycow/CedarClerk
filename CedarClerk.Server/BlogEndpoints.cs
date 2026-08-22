@@ -933,7 +933,32 @@ public static class BlogEndpoints
         return new BlogChannelInfo(channel.Title, channel.Username, memberCount);
     }
 
-    private static string RenderHeader(BlogChannelInfo? channel)
+    private sealed record ReadingChrome(
+        string Menu, string Theme, string Day, string Night, string System, string Size);
+
+    // ADR-181 — the reading menu's four labels. English is the fallback for any code not listed,
+    // the same rule the registration gate follows (ADR-050): an untranslated menu in English beats
+    // one in a language the reader definitely did not ask for. Day/Night rather than Light/Dark in
+    // every language on purpose — the product's own word for its two looks is the lamp, not the
+    // luminance, and a reader who sees "Ночь" here reads the same word the app uses.
+    //
+    // T-013's caveat holds for uk/be/ka exactly as it does on the gate: no native speaker has read
+    // them, and they are here because an English menu on a Ukrainian post is the worse default.
+    private static readonly IReadOnlyDictionary<string, ReadingChrome> ReadingLabels =
+        new Dictionary<string, ReadingChrome>
+        {
+            ["ru"] = new("Чтение", "Тема", "День", "Ночь", "Система", "Размер текста"),
+            ["en"] = new("Reading", "Theme", "Day", "Night", "System", "Text size"),
+            ["de"] = new("Lesen", "Design", "Tag", "Nacht", "System", "Textgröße"),
+            ["fr"] = new("Lecture", "Thème", "Jour", "Nuit", "Système", "Taille du texte"),
+            ["es"] = new("Lectura", "Tema", "Día", "Noche", "Sistema", "Tamaño del texto"),
+            ["ja"] = new("表示", "テーマ", "昼", "夜", "システム", "文字サイズ"),
+            ["uk"] = new("Читання", "Тема", "День", "Ніч", "Системна", "Розмір тексту"),
+            ["be"] = new("Чытанне", "Тэма", "Дзень", "Ноч", "Сістэмная", "Памер тэксту"),
+            ["ka"] = new("კითხვა", "თემა", "დღე", "ღამე", "სისტემური", "ტექსტის ზომა"),
+        };
+
+    private static string RenderHeader(BlogChannelInfo? channel, string lang)
     {
         string identity;
         string openInTelegram = "";
@@ -984,16 +1009,53 @@ public static class BlogEndpoints
             </a>
             """;
 
+        var reading = ReadingMenuHtml(lang);
+
         return $"""
             <div class="site-header"><div class="site-header-inner">
             {identity}
             <div class="spacer"></div>
             {rssButton}
             {openInTelegram}
-            <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Toggle theme" aria-label="Toggle theme">
-            <span class="ico-moon">{BlogIcons.Moon}</span><span class="ico-sun">{BlogIcons.Sun}</span>
-            </button>
+            {reading}
             </div></div>
+            """;
+    }
+
+    // ADR-181 — one control for the two things a reader may change about the page, in the place the
+    // theme toggle used to stand alone. Everything it sets is written on <html> and remembered in
+    // localStorage; the head script applies both before the first paint, so neither flashes.
+    private static string ReadingMenuHtml(string lang)
+    {
+        var t = ReadingLabels.TryGetValue(lang, out var found) ? found : ReadingLabels["en"];
+        string Esc(string v) => System.Net.WebUtility.HtmlEncode(v);
+
+        return $"""
+            <div class="reading-anchor">
+            <button type="button" class="reading-btn" id="readingBtn" aria-haspopup="true" aria-expanded="false"
+                    aria-controls="readingMenu" title="{Esc(t.Menu)}" aria-label="{Esc(t.Menu)}">Aa</button>
+            <div class="reading-menu" id="readingMenu" role="group" aria-label="{Esc(t.Menu)}" hidden>
+            <div class="reading-title">{Esc(t.Menu)}</div>
+            <div class="reading-group">
+            <div class="reading-label" id="readingThemeLabel">{Esc(t.Theme)}</div>
+            <div class="seg" role="group" aria-labelledby="readingThemeLabel" data-seg="theme">
+            <button type="button" data-value="light" aria-pressed="false">{Esc(t.Day)}</button>
+            <button type="button" data-value="dark" aria-pressed="false">{Esc(t.Night)}</button>
+            <button type="button" data-value="" aria-pressed="false">{Esc(t.System)}</button>
+            </div>
+            </div>
+            <div class="reading-group">
+            <div class="reading-label" id="readingSizeLabel">{Esc(t.Size)}</div>
+            <!-- The three A's are the control: each is drawn at the size it sets, which says what
+                 the step does without a word that would need translating. -->
+            <div class="seg seg-size" role="group" aria-labelledby="readingSizeLabel" data-seg="read">
+            <button type="button" data-value="s" aria-pressed="false"><span style="font-size:13px">A</span></button>
+            <button type="button" data-value="m" aria-pressed="false"><span style="font-size:15px">A</span></button>
+            <button type="button" data-value="l" aria-pressed="false"><span style="font-size:18px">A</span></button>
+            </div>
+            </div>
+            </div>
+            </div>
             """;
     }
 
@@ -1133,7 +1195,7 @@ public static class BlogEndpoints
             channel?.Title ?? "Cedar Clerk", indexLang,
             [], null, null, null, IsArticle: false), OgMetaPolicy.Full);
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), indexLang, RenderHeader(channel), indexMeta));
+        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), indexLang, RenderHeader(channel, indexLang), indexMeta));
     }
 
     // ADR-125 — the series landing: what the index would show, narrowed to one series and ordered
@@ -1147,7 +1209,7 @@ public static class BlogEndpoints
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             ctx.Response.ContentType = "text/html; charset=utf-8";
-            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Series not found.</p>", Languages.Russian, RenderHeader(channel)));
+            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Series not found.</p>", Languages.Russian, RenderHeader(channel, Languages.Russian)));
             return;
         }
 
@@ -1212,7 +1274,7 @@ public static class BlogEndpoints
             [], null, null, null, IsArticle: false), OgMetaPolicy.Full);
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(series.Name, body, pageLang, RenderHeader(channel), meta));
+        await ctx.Response.WriteAsync(PageShell(series.Name, body, pageLang, RenderHeader(channel, pageLang), meta));
     }
 
     // ADR-134 (T-159) — the public game page. Everything on it is opt-in: the page exists only
@@ -1227,7 +1289,7 @@ public static class BlogEndpoints
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             ctx.Response.ContentType = "text/html; charset=utf-8";
-            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Page not found.</p>", Languages.Russian, RenderHeader(channel)));
+            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Page not found.</p>", Languages.Russian, RenderHeader(channel, Languages.Russian)));
             return;
         }
 
@@ -1345,7 +1407,7 @@ public static class BlogEndpoints
             [], null, null, null, IsArticle: false), OgMetaPolicy.Full);
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(project.Name, body, pageLang, RenderHeader(channel), meta));
+        await ctx.Response.WriteAsync(PageShell(project.Name, body, pageLang, RenderHeader(channel, pageLang), meta));
     }
 
     /// <summary>`Label|https://url` lines; anything not shaped like that is skipped, not rendered.</summary>
@@ -1419,7 +1481,7 @@ public static class BlogEndpoints
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             ctx.Response.ContentType = "text/html; charset=utf-8";
-            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(channel)));
+            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(channel, Languages.Russian)));
             return;
         }
 
@@ -1481,13 +1543,13 @@ public static class BlogEndpoints
                         draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson);
                     await ctx.Response.WriteAsync(PageShell(gateTitle,
                         CedarToBlogHtmlRenderer.RegistrationFormHtml(form, gateTitle, gateLang, gateLanguages),
-                        gateLang, RenderHeader(channel), SemiPublicMeta(gateLang)));
+                        gateLang, RenderHeader(channel, gateLang), SemiPublicMeta(gateLang)));
                     return;
                 }
 
                 ctx.Response.StatusCode = StatusCodes.Status404NotFound;
                 ctx.Response.ContentType = "text/html; charset=utf-8";
-                await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(channel), SemiPublicMeta(Languages.Russian)));
+                await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(channel, Languages.Russian), SemiPublicMeta(Languages.Russian)));
                 return;
             }
 
@@ -1766,7 +1828,7 @@ public static class BlogEndpoints
         }
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(title, html, lang, RenderHeader(channel), metaHtml));
+        await ctx.Response.WriteAsync(PageShell(title, html, lang, RenderHeader(channel, lang), metaHtml));
     }
 
     // Wraps a resolved end-of-post signature (see PlanLimitations.ResolveSignature, Phase 8 Step 5)
@@ -1823,8 +1885,13 @@ public static class BlogEndpoints
         {{META}}
         <script>
         (function () {
-            var saved = localStorage.getItem('cedar-blog-theme');
-            if (saved) document.documentElement.setAttribute('data-theme', saved);
+            /* Both settings, before the first paint: a theme applied after it flashes, and a text
+               size applied after it reflows the article under the reader's eyes. */
+            var el = document.documentElement;
+            var theme = localStorage.getItem('cedar-blog-theme');
+            if (theme) el.setAttribute('data-theme', theme);
+            var size = localStorage.getItem('cedar-blog-text-size');
+            if (size) el.setAttribute('data-read', size);
         })();
         </script>
         <style>
@@ -1842,6 +1909,12 @@ public static class BlogEndpoints
         }
         :root[data-theme="light"] { {{LIGHT_TOKENS}} }
         :root[data-theme="dark"] { {{DARK_TOKENS}} }
+
+        /* ADR-181 — the reader's text size, and the whole of what it moves. It has to sit below the theme
+           blocks: they restate --fs-read at the same specificity, so this wins on order rather than on
+           weight. "m" declares nothing, because 17px is what the token already holds. */
+        :root[data-read="s"] { --fs-read: 16px; }
+        :root[data-read="l"] { --fs-read: 19px; }
 
         /* ADR-178 — the faces this page names, served from stable URLs the bundler does not hash. */
         {{FONT_FACES}}
@@ -1931,22 +2004,34 @@ public static class BlogEndpoints
         /* Secondary next to "Open in Telegram": subscribing to the feed is an offer, not the
            header's main action, and two filled buttons side by side read as two main actions. */
         .rss-btn { background: none; }
-        /* ADR-175 — a tinted face on the rail needs wood under it to read as anything, and at the chrome
-           box the honest answer is paper. The app's doors settled this; the blog does not get to disagree. */
-        .theme-toggle-btn { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex: none; border: 1px solid var(--paper-edge); background: var(--sheet); box-shadow: var(--shadow-paper-sm); border-radius: var(--radius-plaque); color: var(--t2); cursor: pointer; padding: 0; }
-        .theme-toggle-btn:hover { background: var(--alt); color: var(--text); }
-        /* Which glyph shows is the theme's business, not the script's: it was a textContent the toggle
-           had to remember to update, and the attribute already says which way round the page is. */
-        .ico-sun { display: none; }
-        .ico-moon { display: flex; }
-        @media (prefers-color-scheme: dark) {
-            :root:not([data-theme="light"]) .ico-sun { display: flex; }
-            :root:not([data-theme="light"]) .ico-moon { display: none; }
+        /* ── The reading menu (ADR-181) ──────────────────────────────────────────────────────────
+           One control for the two things a reader may change. ADR-175 settled its face: a tinted
+           button on the rail needs wood under it to read as anything, and at the chrome box the
+           honest answer is paper. */
+        .reading-anchor { position: relative; flex: none; }
+        .reading-btn { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1px solid var(--paper-edge); background: var(--sheet); box-shadow: var(--shadow-paper-sm); border-radius: var(--radius-plaque); color: var(--t2); cursor: pointer; padding: 0; font-family: var(--font-display); font-size: 13px; font-weight: 700; line-height: 1; }
+        .reading-btn:hover, .reading-btn[aria-expanded="true"] { background: var(--alt); color: var(--text); }
+        /* It hangs off the rail and lands on paper, so the rail's cream ink stops at the board. */
+        .reading-menu { position: absolute; top: calc(100% + 8px); right: 0; z-index: 20; width: 248px; padding: 14px 16px 16px; background-color: var(--sheet); background-image: var(--tex-paper); border: 1px solid var(--paper-edge); border-radius: var(--radius-paper); box-shadow: var(--shadow-sheet); color: var(--text); text-align: left; }
+        .reading-title { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--t2); margin: 0 0 12px; }
+        .reading-group + .reading-group { margin-top: 14px; }
+        .reading-label { font-size: 14px; font-weight: 600; color: var(--t2); margin: 0 0 6px; }
+        /* A segmented control on paper: one plaque per state, the chosen one in pine. Not a toggle —
+           the theme has three states and a toggle can only ever express two, which is why the old
+           control could never hand the page back to the system setting. */
+        /* Wraps, and the buttons size to their own labels: "Система" is longer than its third of the
+           row and "Сістэмная" is longer still, so an equal split clips the very state it names. A
+           long label takes its own line rather than being cut. */
+        .seg { display: flex; flex-wrap: wrap; gap: 4px; }
+        .seg button { flex: 1 1 auto; min-width: 0; min-height: 34px; padding: 0 10px; border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); background: var(--paper-bright); color: var(--t2); font-family: var(--font-sans); font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+        .seg button:hover { background: var(--alt); color: var(--text); }
+        .seg button[aria-pressed="true"] { border-color: var(--pine-deep); background: var(--grad-pine); color: var(--text-on-pine); box-shadow: var(--shadow-pine-btn); text-shadow: 0 1px 1px rgba(18, 26, 20, .45); }
+        .seg-size button { font-family: var(--font-serif); }
+        .seg-size button span { display: inline-block; line-height: 1; }
+        /* On a phone the popover would hang off the right edge of a 390px viewport. */
+        @media (max-width: 420px) {
+            .reading-menu { right: -8px; width: calc(100vw - 32px); max-width: 260px; }
         }
-        :root[data-theme="dark"] .ico-sun { display: flex; }
-        :root[data-theme="dark"] .ico-moon { display: none; }
-        :root[data-theme="light"] .ico-sun { display: none; }
-        :root[data-theme="light"] .ico-moon { display: flex; }
 
         .site-main { max-width: 760px; margin: 0 auto; padding: 26px 20px 60px; width: 100%; }
         .empty { color: var(--wood-ink); }
@@ -1998,7 +2083,7 @@ public static class BlogEndpoints
         .post-card:hover { transform: translateY(-3px); }
         .post-card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 6px; font-size: 12px; color: var(--t2); }
         .post-card-date { font-family: var(--font-mono); }
-        .post-card-langs { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--brass-ink); background: var(--brass-soft); border: 1px solid var(--brass-lo); border-radius: var(--radius-stamp); padding: 1px 6px; }
+        .post-card-langs { font-family: var(--font-readout); font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--brass-ink); background: var(--brass-soft); border: 1px solid var(--brass-lo); border-radius: var(--radius-stamp); padding: 1px 6px; }
         .post-card-tag { color: var(--t2); }
         .post-card-locked { display: inline-flex; color: var(--t2); }
         .post-card-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; line-height: 1.24; margin: 0 0 6px; }
@@ -2191,8 +2276,8 @@ public static class BlogEndpoints
         .comment-item.comment-reply .comment-text { font-size: 14px; }
         .comment-avatar { width: 28px; height: 28px; border-radius: var(--radius-stamp); color: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 12px; font-weight: 700; flex: none; }
         .comment-meta { display: flex; align-items: baseline; gap: 7px; font-size: 14px; font-weight: 700; }
-        .comment-meta time { font-family: var(--font-mono); font-size: 11px; font-weight: 400; color: var(--t2); }
-        .comment-anchor { font-family: var(--font-mono); font-size: 11px; color: var(--accent); background: var(--asoft); border: 1px solid var(--abord); border-radius: var(--radius-stamp); padding: 1px 7px; display: inline-block; margin: 3px 0 1px; }
+        .comment-meta time { font-family: var(--font-readout); font-size: 11px; font-weight: 400; color: var(--t2); }
+        .comment-anchor { font-family: var(--font-readout); font-size: 11px; color: var(--accent); background: var(--asoft); border: 1px solid var(--abord); border-radius: var(--radius-stamp); padding: 1px 7px; display: inline-block; margin: 3px 0 1px; }
         .comment-text { font-size: 15px; line-height: 1.55; }
         .reply-btn { align-self: flex-start; margin-top: 4px; background: none; border: none; color: var(--t2); font-size: 13px; font-family: inherit; cursor: pointer; padding: 0; }
         .reply-btn:hover { color: var(--accent); text-decoration: underline; }
@@ -2290,7 +2375,7 @@ public static class BlogEndpoints
            while the same badge at the edge reads as a credit. */
         .site-footer-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center;
             justify-content: space-between; gap: 8px 20px; flex-wrap: wrap; min-height: 30px; padding: 6px 20px;
-            font-family: var(--font-mono); font-size: 11px; }
+            font-family: var(--font-readout); font-size: 11px; }
         .footer-brand { display: flex; align-items: center; gap: 8px; }
         .footer-brand a { color: var(--brass-ink); font-weight: 700; }
         .footer-links { display: flex; align-items: center; gap: 14px; }
@@ -2545,22 +2630,69 @@ public static class BlogEndpoints
             });
         })();
 
+        /* ADR-181 — the reading menu. Two segmented controls over the same mechanism: a value goes
+           on <html> as an attribute and into localStorage under its key, and the empty value means
+           "no attribute", which is how the theme reaches its third state — back to the system. */
         (function () {
-            var themeBtn = document.getElementById('themeToggleBtn');
-            if (themeBtn) {
-                var mql = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
-                function currentTheme() {
-                    return document.documentElement.getAttribute('data-theme') || (mql && mql.matches ? 'dark' : 'light');
+            var btn = document.getElementById('readingBtn');
+            var menu = document.getElementById('readingMenu');
+            if (!btn || !menu) return;
+
+            var SETTINGS = {
+                theme: { attr: 'data-theme', key: 'cedar-blog-theme' },
+                read: { attr: 'data-read', key: 'cedar-blog-text-size' }
+            };
+            var el = document.documentElement;
+
+            function apply(name, value) {
+                var s = SETTINGS[name];
+                if (value) {
+                    el.setAttribute(s.attr, value);
+                    localStorage.setItem(s.key, value);
+                } else {
+                    el.removeAttribute(s.attr);
+                    localStorage.removeItem(s.key);
                 }
-                /* Which of the two glyphs shows is decided by data-theme in CSS, not here: it was
-                   a textContent this handler had to remember to keep in step, and the attribute
-                   the handler sets already says which way round the page is. */
-                themeBtn.addEventListener('click', function () {
-                    var next = currentTheme() === 'dark' ? 'light' : 'dark';
-                    document.documentElement.setAttribute('data-theme', next);
-                    localStorage.setItem('cedar-blog-theme', next);
+                mark(name);
+            }
+
+            /* The size control has no "no attribute" state to show — m is the default and declares
+               nothing — so an absent value reads as m there and as the system on the theme row. */
+            function mark(name) {
+                var s = SETTINGS[name];
+                var current = el.getAttribute(s.attr) || (name === 'read' ? 'm' : '');
+                var group = menu.querySelector('[data-seg="' + name + '"]');
+                if (!group) return;
+                Array.prototype.forEach.call(group.querySelectorAll('button'), function (b) {
+                    b.setAttribute('aria-pressed', b.getAttribute('data-value') === current ? 'true' : 'false');
                 });
             }
+
+            Object.keys(SETTINGS).forEach(function (name) {
+                mark(name);
+                var group = menu.querySelector('[data-seg="' + name + '"]');
+                if (!group) return;
+                group.addEventListener('click', function (e) {
+                    var b = e.target.closest ? e.target.closest('button[data-value]') : null;
+                    if (b) apply(name, b.getAttribute('data-value'));
+                });
+            });
+
+            function open(state) {
+                menu.hidden = !state;
+                btn.setAttribute('aria-expanded', state ? 'true' : 'false');
+            }
+
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                open(menu.hidden);
+            });
+            /* A click inside must not close it: the two rows are meant to be tried against the page. */
+            menu.addEventListener('click', function (e) { e.stopPropagation(); });
+            document.addEventListener('click', function () { open(false); });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && !menu.hidden) { open(false); btn.focus(); }
+            });
         })();
 
         (function () {

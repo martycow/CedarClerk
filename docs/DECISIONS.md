@@ -192,3 +192,5 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-177 — Materials cross to the server too: a second generated list beside the contract (22.08.2026)](adr/ADR-177.md)
 - [ADR-178 — The server-rendered pages are served the faces they name, from stable URLs (22.08.2026)](adr/ADR-178.md)
 - [ADR-179 — The blog is a sheet on the wall under a park-sign rail; the reader gets no tools (22.08.2026)](adr/ADR-179.md)
+- [ADR-180 — Departure Mono is the readout face, and it is bound to its 11px grid (22.08.2026)](adr/ADR-180.md)
+- [ADR-181 — A reading menu is not a tool: the blog's theme and text size share one home (22.08.2026)](adr/ADR-181.md)

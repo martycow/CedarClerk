@@ -101,7 +101,7 @@ let nextId = 0;
             .summary {
                 flex: 1;
                 min-width: 0;
-                font-family: var(--font-mono);
+                font-family: var(--font-readout);
                 font-size: var(--text-chrome-sm);
                 white-space: nowrap;
                 overflow: hidden;

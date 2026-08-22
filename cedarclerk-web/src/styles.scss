@@ -21,6 +21,18 @@
 @use '@fontsource/caveat/latin-500.css' as *;
 @use '@fontsource/caveat/cyrillic-500.css' as *;
 
+/* The fifth face (ADR-180): a pixel monospace for instrument readings, from the tree rather
+   than from a package — it has none. One 22 KB file covers latin, cyrillic and greek, so there
+   is no subset to split and no unicode-range to get wrong. Bound to 11px by --font-readout's
+   own rule: off that grid a pixel font goes soft and reads as a fault. */
+@font-face {
+    font-family: 'Departure Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/assets/fonts/departure-mono-1.500.woff2') format('woff2');
+}
+
 /* Cedar Bench, the one look (ADR-136). Two vocabularies share this block. The contract names
    (ADR-137) are an integration surface, not a palette: tools/check-contrast.mjs scores them,
    tools/generate-design-tokens.mjs copies them into DesignTokens for the blog and the landing
@@ -345,6 +357,11 @@
 
     --font-display: 'Vollkorn', Georgia, serif;
     --font-note: 'Caveat', cursive;
+    /* Instrument readings only, and only at 11px or an exact multiple (ADR-180 clause 2) —
+       the rule, the chart axis, journal timestamps, counters. Everything else mono, a code
+       block above all, stays on --font-mono's system stack, which is the face that is good at
+       13px. A declaration naming this token at any other size is wrong. */
+    --font-readout: 'Departure Mono', var(--font-mono);
 
     /* Pencil rules: the worktop is squared paper, the chart is graph paper. */
     --rule-ink: rgba(120, 96, 58, .32);

@@ -1,5 +1,65 @@
 # Changelog
 
+## 2026-08-22 — the readout face, and one menu for reading (branch `UI_V2`)
+
+**Departure Mono is the readout face, bound to 11px (ADR-180).** Marty asked for it; the file was
+read before anything was decided. v1.500, SIL OFL, one weight, and its `cmap` carries А, я, Ё, ё, Ж,
+щ, №, the em dash and the middle dot — the Cyrillic requirement is met in the font, not in a release
+note. 22 KB of woff2 covers every script it has, so there is no subset to split and no
+`unicode-range` to get wrong.
+
+Its README states the constraint that shaped the entry: *pixel-perfect at increments of 11px*. Off
+that grid the strokes go soft and a reader sees a rendering fault, not a style. Measured against the
+tree, **11 of the 53 sized `--font-mono` rules sit at 11px** — `--fs-ui` alone accounts for twenty of
+the rest — so a blanket swap would have put the face off its grid in four call sites out of five.
+It enters as `--font-readout` instead, a named role beside `--font-mono`, used only where the size
+is already 11px: the carpenter's rule and its numerals, the chart's readout slip, the drawer's
+journal summary, the version on the rail, the three counters, and on the blog the footer rule,
+comment timestamps, the language stamp and the comment anchor.
+
+Three things a size test alone would have swept in are deliberately out. `Input`'s chrome field is
+11px mono and is a thing you *type into*. `.path` and `.tile-name` are 11px mono because machine text
+is compared character by character — which a pixel face makes harder. And the chart's axis carries no
+size of its own; it inherits whatever the page hands the SVG, and a pixel face at an unknown size is
+what the rule refuses. `--text-readout` was **not** moved from 21px to 22px to make the big metric
+on-grid: 21 is the kit's own number, the prototype is the law for this port, and one crisp numeral is
+not worth deviating from it.
+
+The file is committed rather than pulled from a package, and that is not a reversal of ADR-178:
+Departure Mono has no npm package, so there is nothing for a copy to fall behind, and a build step
+that downloads a font is the worse dependency. It sits at
+`cedarclerk-web/public/assets/fonts/departure-mono-1.500.woff2` with the OFL text beside it, version
+in the name so a bump shows in a diff.
+
+**One menu for reading, replacing the theme toggle (ADR-181).** ADR-179 refused the tool's chrome on
+the blog because *a reader has no commands* — and a control that changes how the page is read is not
+one of those; the theme toggle had been sitting there for months proving it. The rule that decided
+the shape is `.claude/rules/ui-changes.md`: there was no panel, only a lone button, so the button
+became the panel rather than gaining a neighbour.
+
+An `Aa` trigger opens a paper popover with two segmented rows. **Тема** now has the third state the
+toggle could never express — day, night, and back to the system setting, which a two-way flip could
+not return to once clicked. **Размер текста** has three steps resolving `--fs-read` to 16, 17 and
+19px, and moves the reading column only: chrome, the rule, the leaves and every number stay where
+they are, because a reader scaling an instrument face would break the surface split from outside.
+Both are written on `<html>` and remembered in `localStorage`; the head script applies both before
+the first paint. No face picker, for three reasons the ADR states — the first being that Literata at
+the reading numbers is a measured decision, not a preference.
+
+The header takes the page language now: `RenderHeader` had a channel and nothing else, so its
+strings could only be English, while all nine of its call sites already held the language. The four
+labels join the per-language chrome the gate and the back-link already use.
+
+**Measured and looked at.** `cedar test` 1444 green — one real catch on the way: `rail-header`'s
+*numbers are mono* asserts the token by name, so the swap failed it; the assertion now accepts either
+face and says why, since `--font-readout` falls through to `--font-mono` behind it. Contrast gate
+green with the four standing exceptions. Rendered on the isolated stack: the menu in Russian,
+Belarusian, English and Japanese (Belarusian's «Сістэмная» is the longest of the nine and is what the
+segmented row was widened for), the large text step against a real post, and the readout face on the
+blog's rule and on the app's rail and ruler, Cyrillic included.
+
+`BlogIcons.Sun` and `.Moon` were deleted with the toggle that used them.
+
 ## 2026-08-22 — the blog joins the bench (branch `UI_V2`)
 
 The port had closed every screen of the app and left the one surface a stranger actually sees. The

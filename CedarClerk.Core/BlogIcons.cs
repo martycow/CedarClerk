@@ -4,7 +4,7 @@ namespace CedarClerk.Core;
 /// The stroke glyphs the public pages draw, on the design system's 16px grid (ADR-179 clause 6).
 ///
 /// Inline SVG rather than the app's generated Phosphor set: <c>assets/cedar-icons.js</c> is bundled
-/// with the Angular app and the blog host never loads it, and nine glyphs do not pay for a second
+/// with the Angular app and the blog host never loads it, and seven glyphs do not pay for a second
 /// delivery mechanism. They are here rather than in the server so the renderer and the endpoints
 /// draw one eye, not two.
 /// </summary>
@@ -38,11 +38,4 @@ public static class BlogIcons
     public static readonly string ArrowUp = Glyph("<path d=\"M12 20V5M5 12l7-7 7 7\"/>");
 
     public static readonly string ArrowLeft = Glyph("<path d=\"M20 12H5M12 19l-7-7 7-7\"/>");
-
-    public static readonly string Sun = Glyph(
-        "<circle cx=\"12\" cy=\"12\" r=\"4.2\"/>"
-        + "<path d=\"M12 2.2v2M12 19.8v2M4.4 4.4l1.4 1.4M18.2 18.2l1.4 1.4M2.2 12h2M19.8 12h2M4.4 19.6l1.4-1.4M18.2 5.8l1.4-1.4\"/>");
-
-    public static readonly string Moon = Glyph(
-        "<path d=\"M20.4 14.6A8.6 8.6 0 0 1 9.4 3.6a8.6 8.6 0 1 0 11 11Z\"/>");
 }

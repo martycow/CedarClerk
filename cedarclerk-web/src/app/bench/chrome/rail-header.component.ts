@@ -107,7 +107,7 @@ import { IconComponent } from '../../shared/icon.component';
         }
 
         :host([data-surface="chrome"]) .version {
-            font-family: var(--font-mono);
+            font-family: var(--font-readout);
             font-size: var(--text-chrome-sm);
             white-space: nowrap;
         }

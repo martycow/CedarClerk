@@ -45,8 +45,8 @@ export const MATERIALS = [
     'brass', 'brass-hi', 'brass-lo', 'brass-edge', 'brass-ink', 'grad-brass', 'focus-halo',
     // The state washes a stamp is painted on (ADR-145), and the brass one a version mark takes.
     'ok-soft', 'brass-soft',
-    // Carved lettering, and the pencil rules the wall and the reading column are ruled with.
-    'font-display', 'rule-ink', 'rule-ink-soft',
+    // Carved lettering, the readout face (ADR-180), and the pencil rules the wall is ruled with.
+    'font-display', 'font-readout', 'rule-ink', 'rule-ink-soft',
 ];
 
 /** Everything DesignTokens carries, which is what a server sheet may name. */
