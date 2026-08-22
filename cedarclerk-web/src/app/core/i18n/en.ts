@@ -652,7 +652,6 @@ export const en = {
             footnote: 'Footnote',
             emoji: 'Emoji',
             insert: 'Insert — link, YouTube, email, phone, mention',
-            ai: 'AI actions',
         },
         blocks: {
             paragraph: 'Paragraph',
@@ -889,6 +888,9 @@ export const en = {
                 `Claude will rewrite the current ${lang} version (${words} words) into unhinged schizoposting. The original stays in history.`,
             fixLabel: 'Fix errors',
             schizoLabel: 'Schizo-izer',
+            // Named for the sheet's menu, where the run could be mistaken for the selection's.
+            fixDocument: 'AI · fix errors in the document',
+            schizoDocument: 'AI · schizo-ize the document',
             runIt: 'Run it',
         },
         errors: {

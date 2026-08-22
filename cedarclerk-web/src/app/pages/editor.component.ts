@@ -1,5 +1,5 @@
 import {
-    AfterViewInit, Component, ElementRef, HostListener, OnDestroy,
+    AfterViewInit, Component, ElementRef, OnDestroy,
     ViewChild, computed, effect, inject, signal
 } from '@angular/core';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
@@ -778,18 +778,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     // ─── Glossary term from a selection (Marty, 01.08.2026) ───────────────────────────────────
     private glossaryApi = inject(GlossaryService);
-    termMenu = signal<{ x: number; y: number } | null>(null);
+    termMenu = signal<{ x: number; y: number; hasSelection: boolean } | null>(null);
     termDraft = signal<{ term: string; language: string } | null>(null);
     termBusy = signal(false);
     termError = signal('');
 
+    // ADR-187 — the sheet's menu, not the selection's: the AI entries are always there and the
+    // glossary entry appears only when there is a selection to make a term out of. It used to
+    // bail without a selection, because its one entry needed one.
     onSheetContextMenu(event: MouseEvent) {
-        const selected = this.selectedText();
-        // No selection: leave the browser's own menu alone. Replacing it with one disabled item
-        // would take away spellcheck, copy and paste to offer nothing.
-        if (!selected) return;
         event.preventDefault();
-        this.termMenu.set({ x: event.clientX, y: event.clientY });
+        this.termMenu.set({ x: event.clientX, y: event.clientY, hasSelection: !!this.selectedText() });
     }
 
     private selectedText(): string {
@@ -1263,25 +1262,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // TipTap's "Mod" is Cmd on Apple hardware and Ctrl everywhere else, so the tooltip has to
     // resolve it the same way the binding does.
     private readonly modKey = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent) ? '⌘' : 'Ctrl';
-
-    // I13. Kept in sync with a listener rather than just toggled, because Esc and the browser's
-    // own chrome can leave fullscreen without going through this button.
-    isFullscreen = signal(!!document.fullscreenElement);
-
-    @HostListener('document:fullscreenchange')
-    onFullscreenChange() {
-        this.isFullscreen.set(!!document.fullscreenElement);
-    }
-
-    async toggleFullscreen() {
-        try {
-            if (document.fullscreenElement) await document.exitFullscreen();
-            else await document.documentElement.requestFullscreen();
-        } catch {
-            // Denied by the browser (permissions policy, or not a user gesture) — nothing to
-            // report, the button simply doesn't take effect.
-        }
-    }
 
     // ─── The inspector (ADR-159) ──────────────────────────────────────────────────────────────
     // One subject at a time. Only a ProseMirror NodeSelection counts as an object being selected;

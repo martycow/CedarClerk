@@ -199,3 +199,5 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-184 — The bench's bottom edge is wood, not a brass rule (22.08.2026)](adr/ADR-184.md)
 - [ADR-185 — Settings is a board of papers, and its section index stands on the left (22.08.2026)](adr/ADR-185.md)
 - [ADR-186 — The bench remembers which project is open, and the tile is a real switcher (22.08.2026)](adr/ADR-186.md)
+- [ADR-187 — The AI actions leave the tool strip for the sheet's own context menu (22.08.2026)](adr/ADR-187.md)
+- [ADR-188 — Fullscreen is the window's, not the writer's: it moves to the rail (22.08.2026)](adr/ADR-188.md)

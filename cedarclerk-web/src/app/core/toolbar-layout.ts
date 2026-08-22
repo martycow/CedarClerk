@@ -8,8 +8,7 @@ export type ToolbarButtonId =
     | 'bulletList' | 'orderedList' | 'taskList' | 'indent' | 'outdent'
     | 'inlineCode' | 'codeBlock'
     | 'image' | 'video' | 'gif' | 'audio' | 'carousel' | 'collage' | 'library'
-    | 'table' | 'formula' | 'blockquote' | 'toggle' | 'toc' | 'divider' | 'annotation' | 'poll'
-    | 'aiActions';
+    | 'table' | 'formula' | 'blockquote' | 'toggle' | 'toc' | 'divider' | 'annotation' | 'poll';
 
 export interface ToolbarGroupDef {
     id: string;
@@ -62,11 +61,7 @@ export const TOOLBAR_GROUPS: ToolbarGroupDef[] = [
             { id: 'annotation', label: 'Annotation' }, { id: 'poll', label: 'Poll' },
         ],
     },
-    { id: 'ai', label: 'AI', buttons: [{ id: 'aiActions', label: 'Fix errors / Schizo-izer' }] },
 ];
 
-/**
- * The order the strip renders groups in. `ai` is not among them: it is pinned to the tail of the
- * first row beside the view controls and never wraps, so it is not a group the fit can move.
- */
-export const STRIP_GROUP_IDS: readonly string[] = TOOLBAR_GROUPS.filter(g => g.id !== 'ai').map(g => g.id);
+/** The order the strip renders groups in. */
+export const STRIP_GROUP_IDS: readonly string[] = TOOLBAR_GROUPS.map(g => g.id);

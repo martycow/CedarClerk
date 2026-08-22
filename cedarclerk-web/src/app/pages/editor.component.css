@@ -496,23 +496,6 @@
     letter-spacing: .06em;
 }
 
-.strip button.ai-chip {
-    position: relative;
-    gap: var(--space-1);
-    padding: 0 var(--space-2);
-    border: 1px solid var(--brass-edge);
-    border-radius: var(--radius-stamp);
-    background: var(--rail-edge);
-    color: var(--brass-hi);
-    font-weight: 700;
-    overflow: hidden;
-}
-
-.strip button.ai-chip:hover:not(:disabled) {
-    background: var(--rail-edge);
-    color: var(--brass-hi);
-    filter: brightness(1.1);
-}
 
 .strip button.tb-retry:hover:not(:disabled) {
     background: var(--danger-soft);
@@ -520,20 +503,6 @@
     filter: brightness(1.05);
 }
 
-.ai-chip-progress-track {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 2px;
-    background: var(--rail-lo);
-}
-
-.ai-chip-progress-fill {
-    display: block;
-    height: 100%;
-    background: var(--brass);
-}
 
 /* Only ever drawn inside a group on the strip, so it is milled into the wood rather than ruled
    in the page's own border ink. */
@@ -2026,6 +1995,12 @@
     box-shadow: var(--shadow-md);
     padding: var(--space-1);
     min-width: 220px;
+}
+
+.term-menu-sep {
+    height: 1px;
+    background: var(--border);
+    margin: var(--space-1) 0;
 }
 
 .term-menu button {

@@ -50,10 +50,13 @@ describe('RailActionsService', () => {
 // ADR-150 deleted the stored layout; what is left of core/toolbar-layout.ts is a catalogue, and the
 // strip renders from it. A group added there has to reach the strip, which is what this pins.
 describe('the tool strip catalogue', () => {
-    it('offers every group but AI, which is pinned outside the fit', () => {
+    // Every group in the catalogue reaches the strip. AI is not in it any more: the two actions
+    // moved to the sheet's own context menu (ADR-187), where a command that costs a credit and
+    // takes a confirm dialog belongs, rather than beside the one-press formatting buttons.
+    it('offers every group it holds, and holds no AI group', () => {
         expect(STRIP_GROUP_IDS).toEqual(['text', 'insert', 'lists', 'code', 'media', 'blocks', 'feedback']);
-        expect(TOOLBAR_GROUPS.map(g => g.id)).toContain('ai');
-        expect(STRIP_GROUP_IDS).not.toContain('ai');
+        expect(TOOLBAR_GROUPS.map(g => g.id)).toEqual(STRIP_GROUP_IDS);
+        expect(TOOLBAR_GROUPS.map(g => g.id)).not.toContain('ai');
     });
 
     it('holds no preference of any kind — no preset, no hidden list, no stored rows', () => {

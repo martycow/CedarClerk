@@ -1117,39 +1117,6 @@
                     }
 
                     <span class="tb-trail">
-                        <!--AI (Pro Plus) — one popover group, not two permanent chips. Pinned to the tail
-                        of the first row: it is not a group the fit may move.-->
-                        <span class="tb-group">
-                            <span class="tb-row">
-                                <app-popover align="right">
-                                    <button trigger class="ai-chip" [title]="t().editor.tb.ai">
-                                        <app-icon name="sparkle" size="xs"></app-icon>
-                                        @if (aiEditBusy()) {
-                                            {{ aiEditProgress() }}% · {{ aiEditElapsed() }}s
-                                            <span class="ai-chip-progress-track"><span class="ai-chip-progress-fill" [style.width.%]="aiEditProgress()"></span></span>
-                                        } @else {
-                                            AI
-                                        }
-                                    </button>
-                                    <div panel class="block-menu">
-                                        @if (aiEditBusy()) {
-                                        <button (click)="cancelAiEdit()">
-                                            <app-icon name="x" size="xs"></app-icon> {{ t().common.cancel }}
-                                        </button>
-                                        } @else {
-                                        <button (click)="askAiEdit('fix-errors')">
-                                            <app-icon name="sparkle" size="xs"></app-icon> {{ t().editor.ai.fixLabel }}
-                                        </button>
-                                        <button (click)="askAiEdit('schizo')">
-                                            <app-icon name="sparkle" size="xs"></app-icon> {{ t().editor.ai.schizoLabel }}
-                                        </button>
-                                        }
-                                    </div>
-                                </app-popover>
-                            </span>
-                            <span class="tb-caption accent">AI · Pro Plus</span>
-                        </span>
-
                         <!--The three controls the status bar used to carry (ADR-153). They are controls, so
                         the rule below could not take them: it is read-only by design and offers no slot.-->
                         <!--Only while autosave has given up. It retries on a widening backoff and then
@@ -1160,14 +1127,6 @@
                             <app-icon name="arrow-clockwise" size="xs"></app-icon>
                         </button>
                         }
-                        <!--I13: real browser fullscreen, not a CSS-only "hide the chrome" mode — the ask
-                        was a fullscreen button, and the browser own is the one Esc already exits.-->
-                        <button (click)="toggleFullscreen()"
-                                [title]="isFullscreen() ? t().editor.exitFullscreen : t().editor.enterFullscreen"
-                                [attr.aria-label]="isFullscreen() ? t().editor.exitFullscreen : t().editor.enterFullscreen">
-                            @if (isFullscreen()) { <app-icon name="arrows-in-simple" size="xs"></app-icon> }
-                            @else { <app-icon name="arrows-out-simple" size="xs"></app-icon> }
-                        </button>
                     </span>
                 </div>
 
@@ -1581,13 +1540,35 @@
     </app-modal>
     }
 
+    <!--The sheet's own menu (ADR-187). It opens on a right-click anywhere in the sheet, not only
+    over a selection: the AI entries do not need one, and the glossary entry keeps its own
+    condition. The AI labels name the document because that is what the actions act on — a menu
+    opened from a highlighted sentence would otherwise imply the sentence.-->
     @if (termMenu(); as menu) {
     <button class="term-menu-backdrop" (click)="termMenu.set(null)" [attr.aria-label]="t().common.close"></button>
     <div class="term-menu" [style.left.px]="menu.x" [style.top.px]="menu.y">
+        @if (menu.hasSelection) {
         <button (click)="openTermFromSelection()">
             <app-icon name="book-bookmark" size="sm"></app-icon>
             {{ t().glossary.createFromSelection }}
         </button>
+        <div class="term-menu-sep"></div>
+        }
+        @if (aiEditBusy()) {
+        <button (click)="termMenu.set(null); cancelAiEdit()">
+            <app-icon name="x" size="sm"></app-icon>
+            {{ t().common.cancel }} · {{ aiEditProgress() }}%
+        </button>
+        } @else {
+        <button (click)="termMenu.set(null); askAiEdit('fix-errors')">
+            <app-icon name="sparkle" size="sm"></app-icon>
+            {{ t().editor.ai.fixDocument }}
+        </button>
+        <button (click)="termMenu.set(null); askAiEdit('schizo')">
+            <app-icon name="sparkle" size="sm"></app-icon>
+            {{ t().editor.ai.schizoDocument }}
+        </button>
+        }
     </div>
     }
 

@@ -616,7 +616,6 @@ export const ru: Dict = {
             footnote: 'Сноска',
             emoji: 'Эмодзи',
             insert: 'Вставка — ссылка, YouTube, почта, телефон, упоминание',
-            ai: 'Действия ИИ',
         },
         blocks: {
             paragraph: 'Абзац',
@@ -849,6 +848,8 @@ export const ru: Dict = {
                 `Claude перепишет текущую версию ${lang} (${words} слов) в невменяемый шизопостинг. Оригинал останется в истории.`,
             fixLabel: 'Исправить ошибки',
             schizoLabel: 'Шизофикатор',
+            fixDocument: 'ИИ · исправить ошибки в документе',
+            schizoDocument: 'ИИ · шизофицировать документ',
             runIt: 'Поехали',
         },
         errors: {

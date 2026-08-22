@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { CommentsService } from '../../core/comments.service';
@@ -71,6 +71,13 @@ function matches(path: string, pattern: string): boolean {
                         {{ action.label }}
                     </app-button>
                 }
+
+                <!--The window's own state, so the shell's and not a page's (ADR-188): every screen
+                in here is as worth reading without browser chrome as the writing sheet is.-->
+                <app-button class="rail-fullscreen" variant="paper" size="sm" surface="chrome"
+                            [title]="fullscreenLabel()" (clicked)="toggleFullscreen()">
+                    <app-icon [name]="isFullscreen() ? 'arrows-in-simple' : 'arrows-out-simple'" size="xs" />
+                </app-button>
 
                 <app-account-menu account />
             </app-rail-header>
@@ -236,6 +243,30 @@ export class BenchShellComponent {
         const seg = this.path().split('/').filter(Boolean);
         return seg[0] === 'projects' && seg[1] ? seg[1] : '';
     });
+
+    // Kept in sync with a listener rather than just toggled: Esc and the browser's own chrome can
+    // leave fullscreen without going through this button.
+    protected readonly isFullscreen = signal(!!document.fullscreenElement);
+
+    @HostListener('document:fullscreenchange')
+    protected onFullscreenChange() {
+        this.isFullscreen.set(!!document.fullscreenElement);
+    }
+
+    protected fullscreenLabel(): string {
+        const t = this.t().editor;
+        return this.isFullscreen() ? t.exitFullscreen : t.enterFullscreen;
+    }
+
+    protected async toggleFullscreen() {
+        try {
+            if (document.fullscreenElement) await document.exitFullscreen();
+            else await document.documentElement.requestFullscreen();
+        } catch {
+            // Denied by the browser (permissions policy, or not a user gesture) — nothing to
+            // report, the button simply doesn't take effect.
+        }
+    }
 
     protected readonly versionLabel = computed(() => {
         const v = this.version.version();
