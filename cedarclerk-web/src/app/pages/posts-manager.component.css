@@ -228,19 +228,6 @@
 
 .chat-input {
     width: 100%;
-    /* width:100% with padding and a border and no border-box means the field is wider than its
-       container by exactly 2×padding + 2×border — 22px here — so every input on this screen hung
-       past the right edge of the card holding it. Invisible on a desktop, where there is slack to
-       spend; obvious at 390px. The same class in drafts.component.css has always had this line.
-       Pre-existing, found by the phone capture during the migration. */
-    box-sizing: border-box;
-    border: 1px solid var(--border);
-    background: var(--sheet);
-    color: var(--text);
-    border-radius: var(--radius-sm);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    font-family: inherit;
 }
 
 .pill-row {

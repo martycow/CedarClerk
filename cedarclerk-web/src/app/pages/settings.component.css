@@ -116,31 +116,6 @@
     margin: var(--space-2) 0 0;
 }
 
-.field-group textarea,
-.field-group input,
-.field-group select {
-    border: 1px solid var(--border-strong);
-    background: var(--sheet);
-    color: var(--text);
-    border-radius: var(--radius-md);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font: inherit;
-    font-size: var(--fs-body);
-    line-height: 1.5;
-    box-sizing: border-box;
-}
-
-.field-group textarea {
-    resize: vertical;
-}
-
-/* Border only: a wash here would be a box-shadow out-specifying the global ADR-140 halo. */
-.field-group textarea:focus,
-.field-group input:focus,
-.field-group select:focus {
-    border-color: var(--accent);
-}
-
 .field-group input[type="range"] {
     border: none;
     background: none;

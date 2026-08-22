@@ -219,20 +219,8 @@
 }
 
 .field input {
-    box-sizing: border-box;
     width: 100%;
-    padding: var(--space-2) var(--space-3);
-    border: var(--border-field);
-    border-radius: var(--radius-field);
-    background: var(--paper-bright);
-    color: var(--text);
-    font: inherit;
-    font-size: var(--fs-ui);
 }
-
-/* Withheld while focused: a component's own shadow out-specifies the global rule that draws the
-   ADR-140 halo. */
-.field input:not(:focus-visible) { box-shadow: var(--shadow-field-inset); }
 
 .modal-foot-row {
     display: flex;

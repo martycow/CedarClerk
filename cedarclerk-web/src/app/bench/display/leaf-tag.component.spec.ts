@@ -138,7 +138,7 @@ describe('LeafTagComponent', () => {
             expect(css).toMatch(/is-dried[^{]*\{[^}]*color:\s*var\(--leaf-dried-ink/);
         });
 
-        it('holds the paper floor: 44px targets and 14px type', () => {
+        it('holds the paper floor: 38px targets and 14px type', () => {
             const boxes = Array.from(css.matchAll(/min-(?:height|width):\s*([^;}]+)/g)).map(m => m[1].trim());
             expect(boxes.length).toBeGreaterThan(0);
             for (const b of boxes) expect(b).toBe('var(--hit-target)');

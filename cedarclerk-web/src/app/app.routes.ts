@@ -124,9 +124,11 @@ export const routes: Routes = [
             // tab would be dropped — an old metrics bookmark landing on the posts list. Only a
             // UrlTree carries ?tab=, which is what the manager reads on entry (ADR-148).
             { path: 'stats', redirectTo: () => inject(Router).parseUrl('/posts?tab=stats') },
-            // Drafts, not the editor, is the landing screen — you pick what to work on first.
-            { path: '', pathMatch: 'full', redirectTo: 'drafts' },
-            { path: '**', redirectTo: 'drafts' },
+            // The hub is the landing screen: it is the one page that names the project everything
+            // else hangs off. With the module off, indieDevGuard turns this into /drafts, so the
+            // two builds land on the only screen each of them has.
+            { path: '', pathMatch: 'full', redirectTo: 'projects' },
+            { path: '**', redirectTo: 'projects' },
         ],
     },
 ];

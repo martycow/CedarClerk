@@ -21,7 +21,10 @@ const DENS_FAMILY = /^--dens-/;
 // The chrome parts ADR-138 item 1 names. A file called one of these must spell the attribute.
 const CHROME_PARTS = ['rail-header', 'hook-rail', 'shelf-panel', 'bench-drawer', 'ruler-bar', 'index-tabs'];
 
-const CHROME_HIT = 30, PAPER_HIT = 44;
+// PAPER_HIT is the box a paper control is drawn at; PAPER_TOUCH is the floor a finger is owed
+// under a coarse pointer. One constant answering both is what let the drawing size drift six pixels
+// off the mirror without a rule noticing (ADR-182).
+const CHROME_HIT = 30, PAPER_HIT = 38, PAPER_TOUCH = 44;
 const CHROME_FS_MIN = 11, CHROME_FS_MAX = 13, PAPER_FS_MIN = 14;
 
 function walk(dir, out = []) {
@@ -149,14 +152,14 @@ if (compactBlock) {
 }
 
 // 4. The contract tokens carry the numbers ADR-138 item 2 states.
-const rTokens = rule('contract token values', `--hit-chrome ${CHROME_HIT}px, --hit-target ${PAPER_HIT}px, chrome type ${CHROME_FS_MIN}-${CHROME_FS_MAX}px, --text-readout via the scale`,
+const rTokens = rule('contract token values', `--hit-chrome ${CHROME_HIT}px, --hit-target ${PAPER_HIT}px, --hit-touch ${PAPER_TOUCH}px, chrome type ${CHROME_FS_MIN}-${CHROME_FS_MAX}px, --text-readout via the scale`,
     'none of the contract tokens are declared in styles.scss');
 const tokenLine = k => {
     const m = styles.code.match(new RegExp(`${k}\\s*:`));
     return m ? lineOf(styles.code, m.index) : 1;
 };
 const declared = k => Object.prototype.hasOwnProperty.call(root, k);
-for (const [k, want] of [['--hit-chrome', CHROME_HIT], ['--hit-target', PAPER_HIT]]) {
+for (const [k, want] of [['--hit-chrome', CHROME_HIT], ['--hit-target', PAPER_HIT], ['--hit-touch', PAPER_TOUCH]]) {
     if (!declared(k)) continue;
     rTokens.sites++;
     const v = px(root[k], root);
@@ -262,7 +265,8 @@ function childRules(body) {
     return out;
 }
 
-const FLOOR_HIT = { paper: PAPER_HIT, chrome: CHROME_HIT };
+// The coarse-pointer carrier, so paper's entry is the touch floor and not the drawn box (ADR-182).
+const FLOOR_HIT = { paper: PAPER_TOUCH, chrome: CHROME_HIT };
 
 // The carriers, read once from the global block: styles.scss is where a surface declares its floor,
 // and a component sheet may only spend what it inherits, never mint a carrier of its own.

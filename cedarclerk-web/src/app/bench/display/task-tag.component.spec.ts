@@ -167,7 +167,7 @@ describe('TaskTagComponent', () => {
             for (const m of decorations) expect(m[1].trim()).toBe('none');
         });
 
-        it('holds the paper floor: a 44px box and 14px type', () => {
+        it('holds the paper floor: a 38px box and 14px type', () => {
             expect(css).toMatch(/min-height:\s*var\(--hit-target\)/);
             const sizes = Array.from(css.matchAll(/font-size:\s*([^;}]+)/g)).map(m => m[1].trim());
             expect(sizes.length).toBeGreaterThan(0);

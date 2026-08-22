@@ -479,6 +479,9 @@ pairs.push({ fg: '--rail-ink-dim', bg: '--grad-sign-tile', min: 4.5, note: 'rest
 // The account plaque and the rule both write the rail's darkest wood on the brass ramp.
 pairs.push({ fg: '--rail-edge', bg: '--grad-brass', min: 4.5, note: 'initial on the brass avatar plaque' });
 pairs.push({ fg: '--rail-ink', bg: '--surface-rail', min: 4.5, note: 'brand and crumb on the rail' });
+// The conifer beside the wordmark is a graphical object, so 3:1, and the wood under it is the
+// whole gradient rather than one stop — it is small enough to sit on any of them.
+pairs.push({ fg: '--pine-mark', bg: '--surface-rail', min: 3.0, note: 'the pine on the rail' });
 pairs.push({ fg: '--rail-ink', bg: '--hook-face', under: '--pegboard', min: 4.5, note: 'tool caption on its hook' });
 // The bar that marks the current tool. It is a shape and not a label, so it owes 3:1 as a
 // graphical object, and the surface it owes it against is the wall rather than the tile: it is

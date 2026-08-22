@@ -287,6 +287,11 @@
     --pine-deep: color-mix(in srgb, var(--pine) 76%, #000000);
     --grad-pine: linear-gradient(180deg, var(--pine-hi), var(--pine));
     --text-on-pine: #F2EFE2;
+    /* The conifer on the rail, and the one green painted on wood rather than on paper. It is held
+       rather than mixed from --pine: the accent is the user's to change and a red preset would
+       repaint the tree, and --pine itself is a paper ink dark enough to vanish into the rail. One
+       value for both themes — the wood only darkens at night, so the lighter tone still reads. */
+    --pine-mark: #9CBC7C;
     --moss: #71854F;
     --leaf-bg: #DCE2C4;
     --leaf-bg-2: #C9D3A4;
@@ -394,7 +399,11 @@
        for the bottom chrome and the chrome itself must never be able to disagree. */
     --bench-bottom-h: calc(var(--bench-drawer-lip) + var(--bench-ruler-h));
     --hit-chrome: 30px;
-    --hit-target: 44px;
+    /* Two numbers because they answer two questions (ADR-182): --hit-target is the box a paper
+       control is drawn at, taken from the mirror's .btn-md; --hit-touch is the floor a finger is
+       owed, and it is spent under @media (pointer: coarse) and nowhere else. */
+    --hit-target: 38px;
+    --hit-touch: 44px;
     --text-chrome: var(--fs-13);
     --text-chrome-sm: var(--fs-11);
     --text-readout: var(--fs-21);
@@ -477,8 +486,11 @@
     --brass-ink: #684A1A;
     --brass-edge: #5C4114;
 
-    --rule-ink: rgba(227, 211, 174, .26);
-    --rule-ink-soft: rgba(227, 211, 174, .12);
+    /* Held higher than the mirror's night values. Its worktop is a light sheet with the night ink
+       drawn on it; the app's night paper is deeper, and at .12 the squares composited to a
+       difference of under one step and the grid simply was not there. */
+    --rule-ink: rgba(227, 211, 174, .34);
+    --rule-ink-soft: rgba(227, 211, 174, .2);
 }
 
 /* Compact density (ADR-071 principle 3) — for the table-shaped screens: /posts, /drafts, /admin,
@@ -558,13 +570,37 @@ html, body {
     box-shadow: none;
 }
 
-/* 2. The boundary of a field is an affordance, not decoration, so it uses the stronger token.
-      Component CSS that sets the border in a more specific rule is swept to match (T-082); this
-      rule is the default everything else inherits. Checkbox and radio keep the platform control. */
-input:not([type="checkbox"]):not([type="radio"]),
+/* 2. The field face, once, for every field in the app. It used to set border-colour alone and leave
+      the rest — box, stock, radius, inset — to whichever page remembered to draw it, which is how
+      the settings fields ended up on --sheet at 8px radius while the bench fields sat on
+      --paper-bright at 3px, and how a field on a page that drew nothing arrived looking unpainted.
+      Anything wearing a face of its own still out-specifies this. Checkbox, radio, range, colour and
+      file keep the platform control — a paper stock on any of them is a widget bent out of shape. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
 select,
 textarea {
-    border-color: var(--border-strong);
+    box-sizing: border-box;
+    min-height: var(--hit-target);
+    padding: var(--space-2) var(--space-3);
+    border: var(--border-field);
+    border-radius: var(--radius-field);
+    background: var(--paper-bright);
+    color: var(--text);
+    font-family: inherit;
+    font-size: var(--fs-ui);
+}
+
+/* Withheld while focused: the ADR-140 halo is a box-shadow, and one drawn here would out-specify
+   the global rule that paints it. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not(:focus-visible),
+select:not(:focus-visible),
+textarea:not(:focus-visible) {
+    box-shadow: var(--shadow-field-inset);
+}
+
+textarea {
+    resize: vertical;
+    line-height: 1.5;
 }
 
 /* Placeholder text stays on --t3 deliberately: at --t2 it reads as a filled-in value, which is a
@@ -590,7 +626,7 @@ textarea {
        control three levels deep matched by neither, standing at no floor at all. Inheritance can —
        a custom property takes its value from the nearest ancestor that declares it, whatever the
        depth and whichever way round. So the surface declares the floor and the controls spend it. */
-    [data-surface="paper"] { --hit-surface: var(--hit-target); }
+    [data-surface="paper"] { --hit-surface: var(--hit-touch); }
     [data-surface="chrome"] { --hit-surface: var(--hit-chrome); }
 
     [data-surface] button,

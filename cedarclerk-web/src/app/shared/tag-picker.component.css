@@ -48,20 +48,6 @@
     gap: 6px;
 }
 
-.tag-new-input {
-    border: 1px solid var(--border-strong);
-    background: var(--sheet);
-    color: var(--text);
-    border-radius: var(--radius-md);
-    padding: 7px 10px;
-    font-family: inherit;
-    font-size: var(--fs-ui);
-}
-
-.tag-new-input:focus {
-    border-color: var(--accent);
-}
-
 /* Idea #3 - the tag-management rows: one tag per line with its own rename/delete. */
 .icon-xs { width: 12px; height: 12px; }
 .icon { width: 20px; height: 20px; }

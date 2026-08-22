@@ -24,7 +24,7 @@ import { IconComponent } from '../../shared/icon.component';
         '(document:keydown.escape)': 'onEscape()',
     },
     template: `
-        <app-cedar-logo class="mark" [size]="22" fill="var(--rail-ink)" />
+        <app-cedar-logo class="mark" [size]="22" fill="var(--pine-mark)" />
         <span class="brand">{{ brand() }}</span>
         @if (version()) { <span class="version">{{ version() }}</span> }
 

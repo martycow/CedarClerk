@@ -278,8 +278,6 @@ a.tasks-row:hover { background: var(--hover); }
     min-width: 0;
 }
 
-/* The bench has no select, no textarea and no checkbox, so these three keep the platform control
-   and are dressed to match app-input's field rather than given a second look of their own. */
 .field > label {
     font-family: var(--font-sans);
     font-size: var(--fs-ui);
@@ -291,28 +289,7 @@ a.tasks-row:hover { background: var(--hover); }
 
 .field select,
 .field textarea {
-    box-sizing: border-box;
     width: 100%;
-    min-height: var(--hit-target);
-    padding: var(--space-2) var(--space-3);
-    border: var(--border-field);
-    border-radius: var(--radius-field);
-    background: var(--paper-bright);
-    color: var(--text);
-    font: inherit;
-    font-size: var(--fs-ui);
-}
-
-/* Withheld while focused: a component's own shadow out-specifies the global rule that draws the
-   ADR-140 halo. */
-.field select:not(:focus-visible),
-.field textarea:not(:focus-visible) { box-shadow: var(--shadow-field-inset); }
-
-/* Plain text, deliberately (ADR-106) — so it is a textarea and not the editor. */
-.field textarea {
-    resize: vertical;
-    line-height: 1.6;
-    font-family: inherit;
 }
 
 .roadmap-toggle {

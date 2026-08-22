@@ -37,7 +37,7 @@ export class LoginComponent {
         this.probing.set(true);
         const outcome = await this.auth.refresh();
         this.probing.set(false);
-        if (outcome === 'ok') this.router.navigateByUrl('/drafts');
+        if (outcome === 'ok') this.router.navigateByUrl('/projects');
     }
 
     async submit() {
@@ -46,7 +46,7 @@ export class LoginComponent {
         const result = await this.auth.login(this.email, this.password);
         this.busy.set(false);
         if (result.ok) {
-            void this.router.navigateByUrl('/drafts');
+            void this.router.navigateByUrl('/projects');
             return;
         }
         // The server's own words when it could not reach the installation that holds the identity;
