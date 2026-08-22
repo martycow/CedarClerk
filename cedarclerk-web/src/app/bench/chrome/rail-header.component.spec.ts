@@ -123,9 +123,14 @@ describe('RailHeaderComponent', () => {
         // the same reason it takes a paper surface. Which rule that is comes from what the rule
         // paints, never from its name, and the count is pinned so a second one cannot appear
         // quietly: a cream label on cream paper is invisible, which is the defect this caught.
+        // The switcher panel is the one thing here that is not the rail: it declares
+        // data-surface="paper" and is measured against paper's floors instead (ADR-138).
+        const PAPER = /\[data-surface=["']?paper/;
+        const onRail = (selector: string) => !PAPER.test(selector);
+
         it('paints every colour on the rail with the cream, and spends the soft cream on a separator', () => {
             const rules = Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g));
-            const inked = rules.filter(m => /(^|[^-])color:/.test(m[2]));
+            const inked = rules.filter(m => /(^|[^-])color:/.test(m[2])).filter(m => onRail(m[1]));
             expect(inked.length).toBeGreaterThan(0);
             for (const m of inked) {
                 const value = m[2].match(/(^|[^-])color:\s*([^;}]+)/)![2].trim();
@@ -134,8 +139,23 @@ describe('RailHeaderComponent', () => {
             }
         });
 
+        // The panel is paper and holds paper's own pair: ink on the sheet it declares.
+        it('paints the switcher panel in paper ink on paper stock', () => {
+            const rules = Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g))
+                .filter(m => PAPER.test(m[1]));
+            expect(rules.length).toBeGreaterThan(0);
+            const ground = rules.find(m => /background-color:\s*var\(--sheet\)/.test(m[2]));
+            expect(ground, 'the switcher panel declares its own paper ground').toBeTruthy();
+            for (const m of rules) {
+                const value = m[2].match(/(^|[^-])color:\s*([^;}]+)/)?.[2].trim();
+                if (value) expect(value).toBe('var(--text)');
+            }
+        });
+
         it('holds the chrome band: 13/11px type and a 30px box', () => {
-            const sizes = Array.from(css.matchAll(/font-size:\s*([^;}]+)/g)).map(m => m[1].trim());
+            const sizes = Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g))
+                .filter(m => onRail(m[1]))
+                .flatMap(m => Array.from(m[2].matchAll(/font-size:\s*([^;}]+)/g)).map(f => f[1].trim()));
             expect(sizes.length).toBeGreaterThan(0);
             for (const s of sizes) expect(['var(--text-chrome)', 'var(--text-chrome-sm)']).toContain(s);
             expect(css).toMatch(/min-height:\s*var\(--hit-chrome\)/);

@@ -198,3 +198,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-183 — The overflow menu hangs on the tool wall, not on the sign board (22.08.2026)](adr/ADR-183.md)
 - [ADR-184 — The bench's bottom edge is wood, not a brass rule (22.08.2026)](adr/ADR-184.md)
 - [ADR-185 — Settings is a board of papers, and its section index stands on the left (22.08.2026)](adr/ADR-185.md)
+- [ADR-186 — The bench remembers which project is open, and the tile is a real switcher (22.08.2026)](adr/ADR-186.md)

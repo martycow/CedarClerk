@@ -27,6 +27,15 @@ describe('bench shell', () => {
         fixture.detectChanges();
     }
 
+    /** Answers the one project list the shell asks for per session (ADR-186). */
+    async function flushProjects(list: { id: string; name: string }[]) {
+        TestBed.inject(HttpTestingController).expectOne(r => r.url.startsWith('/api/projects')).flush(list);
+        // The service hands the list back through a promise; without settling it the names signal
+        // is still empty when the view is checked.
+        await fixture.whenStable();
+        fixture.detectChanges();
+    }
+
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [BenchShellComponent],
@@ -37,6 +46,8 @@ describe('bench shell', () => {
             ],
         }).compileComponents();
         router = TestBed.inject(Router);
+        // The open project outlives a reload by design, which means it outlives a test too.
+        localStorage.removeItem('cedar-project');
         fixture = TestBed.createComponent(BenchShellComponent);
         fixture.detectChanges();
     });
@@ -122,9 +133,9 @@ describe('bench shell', () => {
         expect(lit()).toBeUndefined();
     });
 
-    // DraftMeta carries no projectId (ADR-139), so outside /projects/:id the board has no owner to
-    // open. The hook lands on the hub, which is the one screen that can name which board was meant.
-    it('sends the board to the hub when no route names a project', async () => {
+    // Until one has ever been opened there is no board to open, and the hook says so by landing
+    // on the hub — the one screen that can name which board was meant.
+    it('sends the board to the hub while no project has been opened', async () => {
         TestBed.inject(AuthService).indieDev.set(true);
         await go('/drafts');
         const board = hooks().find(a => a.textContent?.trim() === 'Board')!;
@@ -135,22 +146,37 @@ describe('bench shell', () => {
         expect(onProject.getAttribute('href')).toBe('/projects/p1/tasks');
     });
 
-    // Same gap, seen from the switcher: a tile naming a project on /drafts would be a confident
-    // wrong answer, so it says what it can actually vouch for — the account.
-    it('scopes the switcher to the account where the project is unknown', async () => {
+    // ADR-186 — the whole point: which project is open is session state, so it survives leaving
+    // the project's own routes. Before this the hook opened a board on two screens out of eleven.
+    it('keeps the board and the tile on the project after leaving its routes', async () => {
         TestBed.inject(AuthService).indieDev.set(true);
+        await go('/projects/p1/planner');
+        await flushProjects([{ id: 'p1', name: 'Cedar Quest' }, { id: 'p2', name: 'Second' }]);
+
         await go('/drafts');
-        expect(el().querySelector('app-rail-header .tile-name')?.textContent?.trim()).toBe('All projects');
+        expect(hooks().find(a => a.textContent?.trim() === 'Board')!.getAttribute('href'))
+            .toBe('/projects/p1/tasks');
+        expect(el().querySelector('app-rail-header .tile-name')?.textContent?.trim()).toBe('Cedar Quest');
     });
 
-    // The shell is what gives the tile its destination, and the destination is the hub. It is a
-    // link for the reason the hooks are: a middle click opens it in a tab.
-    it('points the switcher at the hub, as a link', async () => {
+    // With nothing to switch between the tile stays the plain link it has always been; hand it a
+    // list and it becomes the switcher the rail's own description calls it.
+    it('turns the tile into a switcher once there are projects to switch to', async () => {
         TestBed.inject(AuthService).indieDev.set(true);
         await go('/drafts');
-        const t = el().querySelector('app-rail-header .tile') as HTMLAnchorElement;
-        expect(t.tagName).toBe('A');
-        expect(t.getAttribute('href')).toBe('/projects');
+        expect((el().querySelector('app-rail-header .tile') as HTMLElement).tagName).toBe('A');
+
+        await flushProjects([{ id: 'p1', name: 'Cedar Quest' }, { id: 'p2', name: 'Second' }]);
+        const tile = el().querySelector('app-rail-header .tile') as HTMLButtonElement;
+        expect(tile.tagName).toBe('BUTTON');
+        expect(tile.getAttribute('aria-haspopup')).toBe('true');
+
+        const entries = [...el().querySelectorAll('app-rail-header .switcher-item')] as HTMLAnchorElement[];
+        expect(entries.map(a => a.textContent?.trim())).toEqual(['Cedar Quest', 'Second', 'All projects']);
+        // Anchors, so a middle click still opens a project in a tab — the reason the tile itself
+        // used to be one, kept where it actually matters.
+        expect(entries.map(a => a.getAttribute('href')))
+            .toEqual(['/projects/p1', '/projects/p2', '/projects']);
     });
 
     it('names what is open inside the project, not the project twice', async () => {

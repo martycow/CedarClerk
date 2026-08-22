@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { CommentsService } from '../../core/comments.service';
 import { DebugLogService } from '../../core/debug-log.service';
 import { LocaleService } from '../../core/i18n/locale.service';
 import { ProjectsService } from '../../core/projects.service';
+import { CurrentProjectService } from '../../core/current-project.service';
 import { RailActionsService } from '../../core/rail-actions.service';
 import { RulerService } from '../../core/ruler.service';
 import { ThemeService } from '../../core/theme.service';
@@ -16,7 +17,7 @@ import { IconComponent } from '../../shared/icon.component';
 import { ButtonComponent } from '../forms/button.component';
 import { ResinDropComponent } from '../display/resin-drop.component';
 import { HookRailComponent, HookRailItem } from './hook-rail.component';
-import { RailHeaderComponent } from './rail-header.component';
+import { RailHeaderComponent, RailProject } from './rail-header.component';
 import { RulerBarComponent, RulerReadout } from './ruler-bar.component';
 
 /** Which hook stands for a path (ADR-139). Longest match first — the board is a child of the hub. */
@@ -53,7 +54,7 @@ function matches(path: string, pattern: string): boolean {
     template: `
         <div class="shell">
             <app-rail-header [version]="versionLabel()" [project]="projectLabel()"
-                             projectLink="/projects"
+                             projectLink="/projects" [projects]="switcher()" [projectId]="openProjectId()"
                              [projectHint]="t().shell.switchProject" [crumbs]="crumbs()"
                              [crumbsLabel]="t().shell.breadcrumb">
                 <!-- The default slot RailHeader.prompt.md reserves for save state and the
@@ -211,6 +212,7 @@ function matches(path: string, pattern: string): boolean {
 export class BenchShellComponent {
     private readonly router = inject(Router);
     private readonly projects = inject(ProjectsService);
+    private readonly current = inject(CurrentProjectService);
     private readonly version = inject(VersionService);
     private readonly feedback = inject(CommentsService);
 
@@ -249,21 +251,34 @@ export class BenchShellComponent {
     // /projects/:id: DraftMeta carries no projectId (ADR-139 consequence), so a draft, a post or a
     // library asset cannot say which project it belongs to. A tile reading a project name there
     // would be a confident wrong answer rather than a missing one.
+    /** The project the session is in: the URL's when it names one, the remembered one otherwise. */
+    protected readonly openProjectId = computed(() => this.projectId() || this.current.id());
+
     protected readonly projectLabel = computed(() => {
         if (!this.auth.indieDev()) return '';
-        const id = this.projectId();
-        return (id && this.projectNames().get(id)) || this.t().shell.allProjects;
+        const id = this.openProjectId();
+        return (id && this.projectNames().get(id)) || this.current.name() || this.t().shell.allProjects;
+    });
+
+    /** Every project, then the hub — which is where "All projects" used to send you (ADR-186). */
+    protected readonly switcher = computed<readonly RailProject[]>(() => {
+        if (!this.auth.indieDev()) return [];
+        const names = this.projectNames();
+        if (!names.size) return [];
+        const items: RailProject[] = [...names].map(([id, name]) => ({ id, name, link: ['/projects', id] }));
+        items.push({ id: '', name: this.t().shell.allProjects, link: '/projects' });
+        return items;
     });
 
     protected readonly hooks = computed<readonly HookRailItem[]>(() => {
         const t = this.t().shell;
-        const id = this.projectId();
+        const open = this.openProjectId();
         const items: HookRailItem[] = [];
         if (this.auth.indieDev()) items.push({ id: 'hub', icon: 'game-controller', label: t.hub, link: '/projects' });
         items.push({ id: 'text', icon: 'pencil-simple', label: t.text, link: '/drafts' });
-        // Without a project in the URL the board has no owner to open, so the hook lands on the
-        // hub — the one screen that can name which board was meant. Same gap as the switcher.
-        if (this.auth.indieDev()) items.push({ id: 'board', icon: 'check-square', label: t.board, link: id ? ['/projects', id, 'tasks'] : '/projects' });
+        // The board of the project the session is in (ADR-186). The hub only when none has ever
+        // been opened, which is true exactly once per account.
+        if (this.auth.indieDev()) items.push({ id: 'board', icon: 'check-square', label: t.board, link: open ? ['/projects', open, 'tasks'] : '/projects' });
         items.push({ id: 'assets', icon: 'images', label: t.assets, link: '/library' });
         items.push({
             id: 'metrics', icon: 'chart-bar', label: t.metrics, link: '/posts',
@@ -307,13 +322,27 @@ export class BenchShellComponent {
             if (e instanceof NavigationEnd) this.url.set(e.urlAfterRedirects);
         });
 
+        // Fetched once a session and on every screen, not only where the URL names a project:
+        // the switcher lists them and the Board hook needs the remembered one to still exist.
         effect(() => {
-            const id = this.projectId();
-            if (!id || !this.auth.indieDev() || this.namesRequested || this.projectNames().has(id)) return;
+            if (!this.auth.indieDev() || this.namesRequested) return;
             this.namesRequested = true;
             this.projects.list(true)
-                .then(list => this.projectNames.set(new Map(list.map(p => [p.id, p.name]))))
+                .then(list => {
+                    this.projectNames.set(new Map(list.map(p => [p.id, p.name])));
+                    this.current.reconcile(list);
+                })
                 .catch(() => { this.namesRequested = false; });
+        });
+
+        // One writer for the session's project, and this is it: the resolved route.
+        effect(() => {
+            const id = this.projectId();
+            const name = this.projectNames().get(id);
+            if (!id) return;
+            // untracked: remember() reads the state it writes, and the service's own session effect
+            // reads it too — tracked, the two would feed each other.
+            untracked(() => this.current.remember(id, name ?? this.current.name()));
         });
     }
 

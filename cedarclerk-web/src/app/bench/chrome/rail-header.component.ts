@@ -1,7 +1,15 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CedarLogoComponent } from '../../shared/cedar-logo.component';
 import { IconComponent } from '../../shared/icon.component';
+
+/** One entry in the switcher: a project, or the hub at the end of the list. */
+export interface RailProject {
+    id: string;
+    name: string;
+    /** Anything routerLink takes. Every entry is an anchor, so a middle click opens it in a tab. */
+    link: string | readonly unknown[];
+}
 
 // The one piece of wood in the chrome: a park-sign board carrying what belongs to the whole
 // screen — brand, project switcher, breadcrumb — and, on the right, the screen's save state, its
@@ -20,23 +28,44 @@ import { IconComponent } from '../../shared/icon.component';
     host: {
         'data-surface': 'chrome',
         'role': 'banner',
+        '(document:click)': 'onDocumentClick($event)',
+        '(document:keydown.escape)': 'onEscape()',
     },
     template: `
         <app-cedar-logo class="mark" [size]="22" fill="var(--pine-mark)" />
         <span class="brand">{{ brand() }}</span>
         @if (version()) { <span class="version">{{ version() }}</span> }
 
-        @if (project() && projectLink()) {
-            <!-- A link, for the reason every hook on the wall is one: a middle click opens the
-                 destination in a tab. It is not aria-haspopup — ARIA 1.2 reads that as "menu",
-                 and what happens here is a navigation.
-                 The project name is the accessible name; an aria-label of "switch project" would
-                 replace visible text that is not inside it, which is the WCAG 2.5.3 failure, so
-                 the purpose rides on the tooltip. -->
-            <a class="tile" [routerLink]="projectLink()" [attr.title]="projectHint() || null">
-                <span class="tile-name">{{ project() }}</span>
-                <app-icon name="caret-down" size="xs" />
-            </a>
+        @if (project()) {
+            <div class="tile-anchor">
+                @if (projects().length) {
+                    <!-- A switcher, so a menu button (ADR-186). The entries inside it are anchors,
+                         which is where the middle-click-opens-a-tab reason actually lives.
+                         The project name is the accessible name; an aria-label of "switch project"
+                         would replace visible text that is not inside it, which is the WCAG 2.5.3
+                         failure, so the purpose rides on the tooltip. -->
+                    <button #switcher type="button" class="tile" aria-haspopup="true"
+                            [attr.aria-expanded]="switcherOpen()" [attr.title]="projectHint() || null"
+                            (click)="toggleSwitcher()">
+                        <span class="tile-name">{{ project() }}</span>
+                        <app-icon name="caret-down" size="xs" />
+                    </button>
+
+                    <div #switcherPanel class="switcher" data-surface="paper" role="group"
+                         [attr.aria-label]="projectHint() || null" [hidden]="!switcherOpen()">
+                        @for (p of projects(); track p.id) {
+                            <a class="switcher-item" [class.is-on]="p.id === projectId()"
+                               [routerLink]="p.link"
+                               [attr.aria-current]="p.id === projectId() ? 'true' : null">{{ p.name }}</a>
+                        }
+                    </div>
+                } @else if (projectLink()) {
+                    <a class="tile" [routerLink]="projectLink()" [attr.title]="projectHint() || null">
+                        <span class="tile-name">{{ project() }}</span>
+                        <app-icon name="caret-down" size="xs" />
+                    </a>
+                }
+            </div>
         }
 
         @if (crumbs().length) {
@@ -134,6 +163,49 @@ import { IconComponent } from '../../shared/icon.component';
             text-overflow: ellipsis;
         }
 
+        :host([data-surface="chrome"]) .tile-anchor { position: relative; flex: none; }
+
+        /* Paper hung off the sign board, and it says so: the rail's ink rule governs the wood, not
+           what is pinned under it, and a list of project names is read at paper's size. Written
+           without the chrome host qualifier for that reason — inside one, these are chrome's
+           numbers and 14px type is out of the band (ADR-138). */
+        .switcher[data-surface="paper"] {
+            position: absolute;
+            top: calc(100% + var(--space-2));
+            left: 0;
+            z-index: 11;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-1);
+            min-width: 200px;
+            padding: var(--space-2);
+            border: var(--border-paper);
+            border-radius: var(--radius-plaque);
+            background-color: var(--sheet);
+            background-image: var(--tex-paper);
+            box-shadow: var(--shadow-paper);
+            color: var(--text);
+        }
+
+        .switcher[data-surface="paper"][hidden] { display: none; }
+
+        .switcher[data-surface="paper"] .switcher-item {
+            display: flex;
+            align-items: center;
+            box-sizing: border-box;
+            min-height: var(--hit-target);
+            padding: var(--space-2) var(--space-3);
+            border-radius: var(--radius-field);
+            color: var(--text);
+            font-family: var(--font-sans);
+            font-size: var(--fs-ui);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .switcher[data-surface="paper"] .switcher-item:hover { background: var(--hover); }
+        .switcher[data-surface="paper"] .switcher-item.is-on { font-weight: 700; background: var(--hover); }
+
         :host([data-surface="chrome"]) .crumbs { min-width: 0; }
 
         :host([data-surface="chrome"]) .crumbs ol {
@@ -179,4 +251,34 @@ export class RailHeaderComponent {
     readonly projectHint = input('');
     readonly crumbs = input<readonly string[]>([]);
     readonly crumbsLabel = input('Breadcrumb');
+    /** Everything the tile can switch to, the hub included. Empty leaves the tile a plain link. */
+    readonly projects = input<readonly RailProject[]>([]);
+    /** Which entry is the one on show — marked, not just styled. */
+    readonly projectId = input('');
+
+    private readonly el = inject(ElementRef<HTMLElement>);
+    private readonly switcher = viewChild<ElementRef<HTMLButtonElement>>('switcher');
+    private readonly switcherPanel = viewChild<ElementRef<HTMLElement>>('switcherPanel');
+
+    private readonly open = signal(false);
+    readonly switcherOpen = this.open.asReadonly();
+
+    toggleSwitcher(): void { this.open.set(!this.open()); }
+
+    // The menu-button pattern: Escape closes and hands focus back to the button. Hiding the panel
+    // first would drop focus on <body> — [hidden] takes the focused entry out of the tree.
+    onEscape(): void {
+        if (!this.open()) return;
+        const held = this.el.nativeElement.contains(document.activeElement);
+        this.open.set(false);
+        if (held) this.switcher()?.nativeElement.focus();
+    }
+
+    onDocumentClick(event: MouseEvent): void {
+        if (!this.open()) return;
+        const target = event.target instanceof Element ? event.target : null;
+        // Every entry is a destination, so any click inside the panel takes it with them.
+        if (target && this.switcher()?.nativeElement.contains(target)) return;
+        this.open.set(false);
+    }
 }
