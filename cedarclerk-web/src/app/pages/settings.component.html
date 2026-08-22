@@ -519,62 +519,69 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                 <h2>{{ t().settings.integrations.title }}</h2>
                 <p class="field-hint">{{ t().settings.integrations.hint }}</p>
 
-                <div class="integration-row">
-                    <span class="integration-icon telegram">
-                        <app-brand-icon name="telegram" [size]="16"></app-brand-icon>
-                    </span>
-                    @if (auth.telegramLinked()) {
-                    <div class="integration-body">
-                        <div class="integration-title">{{ t().settings.integrations.telegramAccount }}</div>
-                        <div class="integration-meta">
-                            {{ t().settings.integrations.linkedTo }} <span class="strong">&#64;{{ auth.telegramUsername() }}</span>
-                            @if (auth.telegramLinkedAt(); as since) { · {{ t().settings.integrations.since }} {{ since | zonedDate:'dd.MM.yyyy' }} }
+                <!--Every network below is drawn the same way (Marty: they all differed): a head
+                carrying icon, name and status with the disconnect on its right, and a body holding
+                whatever it takes to connect. The connect action is always in the body, never in the
+                head — X had it in one place and Bluesky and Discord in the other.-->
+                <div class="integration-block">
+                    <div class="integration-block-head">
+                        <span class="integration-icon telegram">
+                            <app-brand-icon name="telegram" [size]="16"></app-brand-icon>
+                        </span>
+                        <div class="integration-body">
+                            <div class="integration-title">{{ t().settings.integrations.telegramAccount }}</div>
+                            @if (auth.telegramLinked()) {
+                            <div class="integration-meta">
+                                {{ t().settings.integrations.linkedTo }} <span class="strong">&#64;{{ auth.telegramUsername() }}</span>
+                                @if (auth.telegramLinkedAt(); as since) { · {{ t().settings.integrations.since }} {{ since | zonedDate:'dd.MM.yyyy' }} }
+                            </div>
+                            } @else {
+                            <div class="integration-meta muted">{{ t().settings.integrations.notLinked }}</div>
+                            }
                         </div>
+                        @if (auth.telegramLinked() && !askUnlinkTelegram()) {
+                        <app-button variant="danger" size="sm" (clicked)="askUnlinkTelegram.set(true)">{{ t().settings.integrations.unlink }}</app-button>
+                        }
                     </div>
+
+                    @if (auth.telegramLinked()) {
                     @if (askUnlinkTelegram()) {
                     <div class="inline-confirm">
                         <span>{{ t().settings.integrations.sure }}</span>
-                        <app-button variant="danger" (clicked)="unlinkTelegram()" [disabled]="telegramBusy()">{{ t().settings.integrations.unlink }}</app-button>
-                        <app-button variant="paper" (clicked)="askUnlinkTelegram.set(false)">{{ t().common.cancel }}</app-button>
+                        <app-button variant="danger" size="sm" (clicked)="unlinkTelegram()" [disabled]="telegramBusy()">{{ t().settings.integrations.unlink }}</app-button>
+                        <app-button variant="paper" size="sm" (clicked)="askUnlinkTelegram.set(false)">{{ t().common.cancel }}</app-button>
                     </div>
-                    } @else {
-                    <app-button variant="paper" (clicked)="askUnlinkTelegram.set(true)">{{ t().settings.integrations.unlink }}</app-button>
                     }
-                    } @else {
-                    <div class="integration-body">
-                        <div class="integration-title">{{ t().settings.integrations.telegramAccount }}</div>
-                        <div class="integration-meta muted">{{ t().settings.integrations.notLinked }}</div>
-                    </div>
-                    <app-button variant="pine" size="sm" (clicked)="linkTelegram()" [disabled]="telegramBusy()">
-                        {{ telegramBusy() ? t().settings.integrations.waitingForTelegram : t().settings.integrations.linkTelegram }}
-                    </app-button>
-                    }
-                </div>
-                @if (telegramError()) { <p class="field-error">{{ telegramError() }}</p> }
-
-                @if (auth.telegramLinked()) {
-                <div class="integration-row">
                     <label class="field-hint">
                         <input type="checkbox" [checked]="auth.notifyOnEngagement()" (change)="toggleNotifyOnEngagement()" [disabled]="notifyBusy()">
                         {{ t().settings.integrations.notifyOnEngagement }}
                     </label>
-                </div>
-                }
-
-                <div class="integration-row">
-                    <span class="integration-icon bot">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"></rect><path d="M12 8V4"></path><circle cx="12" cy="3" r="1"></circle><line x1="9" y1="13" x2="9" y2="15"></line><line x1="15" y1="13" x2="15" y2="15"></line></svg>
-                    </span>
-                    <div class="integration-body">
-                        <div class="integration-title">&#64;CedarClerkBot</div>
-                        @if (botStatus(); as bs) {
-                        <div class="integration-meta">
-                            <span class="status-dot" [class.down]="!bs.reachable"></span>
-                            {{ bs.reachable ? t().settings.integrations.botReachable : t().settings.integrations.botUnreachable }} · {{ t().settings.integrations.botRole }}
-                        </div>
-                        }
+                    } @else {
+                    <div class="connect-row">
+                        <app-button variant="pine" size="sm" (clicked)="linkTelegram()" [disabled]="telegramBusy()">
+                            {{ telegramBusy() ? t().settings.integrations.waitingForTelegram : t().settings.integrations.linkTelegram }}
+                        </app-button>
                     </div>
-                    <a class="paper-anchor" href="https://t.me/CedarClerkBot" target="_blank" rel="noopener">{{ t().settings.integrations.openBot }}</a>
+                    }
+                    @if (telegramError()) { <p class="field-error">{{ telegramError() }}</p> }
+                </div>
+
+                <div class="integration-block">
+                    <div class="integration-block-head">
+                        <span class="integration-icon bot">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"></rect><path d="M12 8V4"></path><circle cx="12" cy="3" r="1"></circle><line x1="9" y1="13" x2="9" y2="15"></line><line x1="15" y1="13" x2="15" y2="15"></line></svg>
+                        </span>
+                        <div class="integration-body">
+                            <div class="integration-title">&#64;CedarClerkBot</div>
+                            @if (botStatus(); as bs) {
+                            <div class="integration-meta">
+                                <span class="status-dot" [class.down]="!bs.reachable"></span>
+                                {{ bs.reachable ? t().settings.integrations.botReachable : t().settings.integrations.botUnreachable }} · {{ t().settings.integrations.botRole }}
+                            </div>
+                            }
+                        </div>
+                        <a class="paper-anchor" href="https://t.me/CedarClerkBot" target="_blank" rel="noopener">{{ t().settings.integrations.openBot }}</a>
+                    </div>
                 </div>
 
                 <!--ADR-095: channels are managed here now, not behind a disclosure in the export
@@ -701,10 +708,6 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                         <app-button variant="danger" size="sm" (clicked)="disconnectX(account.id)" [disabled]="xBusy()">
                             {{ t().settings.integrations.disconnect }}
                         </app-button>
-                        } @else {
-                        <app-button variant="pine" size="sm" (clicked)="connectX()" [disabled]="xBusy()">
-                            {{ xBusy() ? '…' : t().settings.integrations.xConnect }}
-                        </app-button>
                         }
                     </div>
                     @if (xNotice() === 'connected') {
@@ -712,7 +715,14 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                     } @else if (xNotice() === 'error') {
                     <p class="field-error">{{ t().settings.integrations.xFailed }}</p>
                     }
-                    @if (!xAccount()) { <p class="field-hint">{{ t().settings.integrations.xConnectHint }}</p> }
+                    @if (!xAccount()) {
+                    <p class="field-hint">{{ t().settings.integrations.xConnectHint }}</p>
+                    <div class="connect-row">
+                        <app-button variant="pine" size="sm" (clicked)="connectX()" [disabled]="xBusy()">
+                            {{ xBusy() ? '…' : t().settings.integrations.xConnect }}
+                        </app-button>
+                    </div>
+                    }
                     @if (credits(); as c) {
                     <p class="field-hint">
                         {{ t().settings.integrations.xCreditNote(c.balance) }}
