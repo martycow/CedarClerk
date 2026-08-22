@@ -1247,7 +1247,51 @@
                 <app-spec-row scope="selection" [label]="row.label" [value]="row.value"
                               [field]="!!row.field" [warn]="!!row.warn"></app-spec-row>
                 }
+                <!--The one property here the writer must be able to change: alt reaches a reader as
+                a bare attribute on both Telegram and the blog, so an unfilled one is a real defect
+                and a read-only row naming it is a complaint with no fix.-->
+                @if (sel.altMissing !== undefined) {
+                <app-spec-row scope="selection" [label]="t().editor.inspector.alt" field [warn]="sel.altMissing">
+                    <input class="insp-input" [value]="sel.alt || ''"
+                           [placeholder]="t().editor.inspector.altMissing"
+                           (change)="setSelectedAttr('alt', $any($event.target).value)">
+                </app-spec-row>
                 }
+                }
+            } @else if (inspectorScope() === 'table') {
+                <p class="insp-group is-selection">{{ t().editor.inspector.tableTitle }}</p>
+                <app-spec-row scope="selection" [label]="t().editor.inspector.rows" [value]="'' + tableSize().rows"></app-spec-row>
+                <app-spec-row scope="selection" [label]="t().editor.inspector.columns" [value]="'' + tableSize().cols"></app-spec-row>
+                <div class="insp-actions">
+                    <button class="insp-btn" (click)="cmd(c => c.addRowAfter())" [title]="t().editor.tableMenu.addRowBelow">
+                        <app-icon name="plus" size="xs"></app-icon> {{ t().editor.inspector.rows }}
+                    </button>
+                    <button class="insp-btn" (click)="cmd(c => c.addColumnAfter())" [title]="t().editor.tableMenu.addColumnRight">
+                        <app-icon name="plus" size="xs"></app-icon> {{ t().editor.inspector.columns }}
+                    </button>
+                </div>
+                <div class="insp-actions">
+                    <button class="insp-btn" (click)="cmd(c => c.deleteRow())" [title]="t().editor.tableMenu.deleteRow">
+                        <app-icon name="x" size="xs"></app-icon> {{ t().editor.inspector.rows }}
+                    </button>
+                    <button class="insp-btn" (click)="cmd(c => c.deleteColumn())" [title]="t().editor.tableMenu.deleteColumn">
+                        <app-icon name="x" size="xs"></app-icon> {{ t().editor.inspector.columns }}
+                    </button>
+                    <button class="insp-btn lang-delete" (click)="cmd(c => c.deleteTable())" [title]="t().editor.tableMenu.deleteTable">
+                        <app-icon name="trash" size="xs"></app-icon>
+                    </button>
+                </div>
+            } @else if (inspectorScope() === 'text') {
+                <!--A run of selected text is a subject in its own right; before this the shelf
+                answered "document" while the writer was looking at a sentence.-->
+                <p class="insp-group is-selection">{{ t().editor.inspector.textTitle }}</p>
+                <app-spec-row scope="selection" [label]="t().editor.inspector.blockType" [value]="blockTypeLabel()"></app-spec-row>
+                <app-spec-row scope="selection" [label]="t().editor.inspector.formatting" [value]="activeMarks()"></app-spec-row>
+                @if (activeLinkHref(); as href) {
+                <app-spec-row scope="selection" [label]="t().editor.inspector.link" [value]="href" field></app-spec-row>
+                }
+                <app-spec-row scope="selection" [label]="t().editor.inspector.words" [value]="'' + selectedWordCount()"></app-spec-row>
+                <app-spec-row scope="selection" [label]="t().editor.inspector.characters" [value]="'' + selectedCharCount()"></app-spec-row>
             } @else {
                 <p class="insp-group">{{ t().editor.inspector.document }}</p>
                 @if (breadcrumbs().length) {

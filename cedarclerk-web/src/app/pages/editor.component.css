@@ -728,6 +728,26 @@
     padding: var(--space-1) 0;
 }
 
+/* The alt-text field inside a spec row, and so chrome rather than paper: the row declares that
+   surface itself, and the field replaces the row's own mono value. It takes that value's box
+   rather than the global field face — a 38px control in a ruled line would break the sheet. */
+[data-surface="chrome"] .insp-input {
+    flex: 1;
+    min-width: 0;
+    box-sizing: border-box;
+    min-height: 0;
+    padding: 3px 7px;
+    border: var(--border-field);
+    border-radius: var(--radius-stamp);
+    background: var(--paper-bright);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: var(--text-chrome-sm);
+}
+
+/* The row's warn tint paints its own .text, which the field replaces — so the field carries it. */
+[data-surface="chrome"].warn .insp-input { border-color: var(--danger); }
+
 [data-surface="paper"] .insp-btn {
     display: inline-flex;
     align-items: center;

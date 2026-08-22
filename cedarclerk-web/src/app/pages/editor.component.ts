@@ -1347,13 +1347,90 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return describeSelection(this.selectedNode());
     }
 
-    inspectorScope(): 'selection' | 'document' {
-        return this.selectionSpec() ? 'selection' : 'document';
+    /**
+     * Whose properties the shelf shows. Most specific first: a selected object, then the table the
+     * caret stands in, then a run of selected text. The document is the fallback, and it used to be
+     * the answer for the middle two — selecting a sentence described the whole document instead.
+     */
+    inspectorScope(): 'selection' | 'table' | 'text' | 'document' {
+        if (this.selectionSpec()) return 'selection';
+        if (this.isActive('table')) return 'table';
+        return this.hasTextSelection() ? 'text' : 'document';
     }
 
     inspectorScopeWord(): string {
         const t = this.t().editor.inspector;
-        return this.inspectorScope() === 'selection' ? t.selected : t.documentScope;
+        switch (this.inspectorScope()) {
+            case 'selection': return t.selected;
+            case 'table': return t.tableTitle.toLowerCase();
+            case 'text': return t.textScope;
+            default: return t.documentScope;
+        }
+    }
+
+    hasTextSelection(): boolean {
+        this.tick();
+        const state = this.editor?.state;
+        return !!state && state.selection instanceof TextSelection && !state.selection.empty;
+    }
+
+    /** The block the caret is in, named the way the block dropdown names it. */
+    blockTypeLabel(): string {
+        const t = this.t().editor.blocks;
+        const level = this.currentBlockLevel();
+        return level === 0 ? t.paragraph : t.heading(level);
+    }
+
+    /** Every mark actually applied to the selection, in the order the strip draws them. */
+    activeMarks(): string {
+        this.tick();
+        const tb = this.t().editor.tb;
+        const marks: [string, string][] = [
+            ['bold', tb.bold], ['italic', tb.italic], ['underline', tb.underline],
+            ['strike', tb.strike], ['code', tb.inlineCode], ['spoiler', tb.spoiler],
+        ];
+        const on = marks.filter(([name]) => this.editor?.isActive(name)).map(([, label]) => label);
+        return on.length ? on.join(' · ') : this.t().editor.inspector.plain;
+    }
+
+    /** The href under the caret, when there is one. */
+    activeLinkHref(): string {
+        this.tick();
+        const href = this.editor?.getAttributes('link')?.['href'];
+        return typeof href === 'string' ? href : '';
+    }
+
+    selectedWordCount(): number {
+        this.tick();
+        const text = this.selectedText();
+        return text ? text.split(/\s+/).filter(Boolean).length : 0;
+    }
+
+    selectedCharCount(): number {
+        this.tick();
+        return this.selectedText().length;
+    }
+
+    /** Rows and columns of the table the caret is in. Read off the node, never off a preference. */
+    tableSize(): { rows: number; cols: number } {
+        this.tick();
+        const state = this.editor?.state;
+        if (!state) return { rows: 0, cols: 0 };
+        for (let depth = state.selection.$from.depth; depth > 0; depth--) {
+            const node = state.selection.$from.node(depth);
+            if (node.type.name !== 'table') continue;
+            return { rows: node.childCount, cols: node.firstChild?.childCount ?? 0 };
+        }
+        return { rows: 0, cols: 0 };
+    }
+
+    /** Writes one attribute onto the selected node, leaving the rest of them alone. */
+    setSelectedAttr(name: string, value: string) {
+        const view = this.editor?.view;
+        if (!view || !(view.state.selection instanceof NodeSelection)) return;
+        const { from, node } = view.state.selection;
+        const trimmed = value.trim();
+        view.dispatch(view.state.tr.setNodeMarkup(from, undefined, { ...node.attrs, [name]: trimmed || null }));
     }
 
     selectionKindLabel(): string {
@@ -1378,9 +1455,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const rows: { label: string; value: string; field?: boolean; warn?: boolean }[] = [];
 
         if (spec.source) rows.push({ label: i.source, value: spec.source, field: true });
-        if (spec.altMissing !== undefined) {
-            rows.push({ label: i.alt, value: spec.alt || i.altMissing, field: true, warn: spec.altMissing });
-        }
+        // Alt is drawn by the template instead: it is the one property here the writer has to be
+        // able to change, and a read-only row saying "not filled in" is a complaint with no fix.
         if (spec.caption) rows.push({ label: i.caption, value: spec.caption });
         if (spec.text) rows.push({ label: i.summary, value: spec.text });
         if (spec.count !== undefined) rows.push({ label: this.countLabel(spec.kind), value: String(spec.count) });
