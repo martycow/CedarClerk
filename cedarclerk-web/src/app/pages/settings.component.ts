@@ -775,8 +775,4 @@ export class SettingsComponent implements OnInit {
             this.telegramBusy.set(false);
         }
     }
-
-    logout() {
-        this.auth.logout();
-    }
 }

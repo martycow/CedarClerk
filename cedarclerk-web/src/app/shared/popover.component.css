@@ -8,12 +8,6 @@
     cursor: pointer;
 }
 
-.popover-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 40;
-}
-
 .popover-panel {
     /* Fixed (not absolute) so the panel's containing block is the viewport, letting it escape
        ancestors that clip overflow — e.g. the toolbar, which scrolls horizontally. Position is

@@ -269,7 +269,10 @@ export class RailHeaderComponent {
             if (target.closest('a[href]')) this.setMenu(false);
             return;
         }
-        if (target && this.el.nativeElement.contains(target)) return;
+        // The trigger, and nothing else on the rail. Anything wider kept the panel standing under
+        // the account popover beside it — the two are siblings in this header, so "inside the
+        // header" is true of both and each stayed open while the other opened.
+        if (target && this.trigger()?.nativeElement.contains(target)) return;
         this.setMenu(false);
     }
 

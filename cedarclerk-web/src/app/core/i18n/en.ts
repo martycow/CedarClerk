@@ -731,9 +731,6 @@ export const en = {
             none: 'none',
             nothingSelected: 'Nothing selected',
         },
-        worktop: {
-            sheet: (px: number) => `sheet ${px} px`,
-        },
         outline: {
             title: 'Structure',
             empty: 'The document is empty',
@@ -1518,8 +1515,6 @@ export const en = {
             translateInto: (lang: string) => `Translate into ${lang}`,
             translateTextsHint: 'Fills the signature and both cross-link texts in every other content language from the one selected above. Pro Plus, one AI call.',
             translateFailed: 'Auto-translation failed',
-            doneForToday: 'Done for the day?',
-            logout: 'Log out',
         },
         confirmEmail: {
             title: 'Confirm your email',

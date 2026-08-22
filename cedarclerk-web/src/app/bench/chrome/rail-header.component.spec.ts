@@ -142,10 +142,17 @@ describe('RailHeaderComponent', () => {
             expect(host.opens).toEqual([true, false]);
         });
 
-        it('closes on a click outside, and on nothing else in the rail', () => {
+        // Only the button that opened it and the panel itself hold it open. The account popover is
+        // this component's sibling in the same header, so "somewhere on the rail" kept both panels
+        // standing at once — the one thing a menu button must not do.
+        it('closes on a click anywhere but its own button and panel', () => {
             dots()!.click();
             render();
             rail().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            render();
+            expect(menu().hasAttribute('hidden')).toBe(true);
+
+            dots()!.click();
             render();
             expect(menu().hasAttribute('hidden')).toBe(false);
 

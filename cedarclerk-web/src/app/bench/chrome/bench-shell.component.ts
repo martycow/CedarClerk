@@ -238,13 +238,10 @@ export class BenchShellComponent {
         return v ? `v${v}` : '';
     });
 
-    // The rule ends with the bare version on every screen, as the kit's do; a page that already
-    // printed it is not made to say it twice.
-    protected readonly rulerRight = computed<readonly RulerReadout[]>(() => {
-        const v = this.version.version();
-        const right = this.ruler.right();
-        return v && !right.some(r => r.text === v) ? [...right, { text: v }] : right;
-    });
+    // The rule carries what the page publishes and nothing more. The version is not appended here:
+    // the rail already prints it on every screen, and the same number in two places on one screen
+    // reads as two numbers that happen to agree.
+    protected readonly rulerRight = computed<readonly RulerReadout[]>(() => this.ruler.right());
 
     // The switcher is account-scoped wherever the project is unknown, which is every screen but
     // /projects/:id: DraftMeta carries no projectId (ADR-139 consequence), so a draft, a post or a

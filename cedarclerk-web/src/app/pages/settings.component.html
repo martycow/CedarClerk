@@ -130,11 +130,6 @@
                 @if (signatureError()) { <p class="field-error">{{ signatureError() }}</p> }
                 @if (translateTextsError()) { <p class="field-error">{{ translateTextsError() }}</p> }
             </div>
-
-            <div class="card-footer-row">
-                <span class="field-hint">{{ t().settings.profile.doneForToday }}</span>
-                <app-button variant="danger" (clicked)="logout()">{{ t().settings.profile.logout }}</app-button>
-            </div>
         </section>
         }
 

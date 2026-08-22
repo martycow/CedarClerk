@@ -386,6 +386,7 @@ pairs.push({ fg: '--sheet', bg: '--danger', min: 4.5, note: 'text on a destructi
 pairs.push({ fg: '--accent', bg: '--asoft', min: 4.5, note: 'accent label on its own wash' });
 pairs.push({ fg: '--t2', bg: '--asoft', min: 4.5, note: 'secondary text on the accent wash' });
 pairs.push({ fg: '--text', bg: '--asoft', min: 4.5, note: 'body text on the accent wash' });
+pairs.push({ fg: '--text', bg: '--code-bg', min: 4.5, note: 'inline code on its own wash' });
 // Danger on the accent wash, which is not a colour scheme but a place two of them meet: the poll
 // editor's card is washed in the accent and its remove glyph reddens on hover. The wash follows the
 // user's accent, so this pair is the one place a state ink is scored against a tone it was not

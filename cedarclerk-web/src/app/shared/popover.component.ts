@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, OnDestroy, ViewChild, input, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, ViewChild, inject, input, signal } from '@angular/core';
 
 @Component({
     selector: 'app-popover',
@@ -6,6 +6,8 @@ import { Component, ElementRef, HostListener, OnDestroy, ViewChild, input, signa
     styleUrls: ['popover.component.css'],
 })
 export class PopoverComponent implements OnDestroy {
+    private readonly host = inject(ElementRef<HTMLElement>);
+
     align = input<'left' | 'right'>('left');
 
     isOpen = signal(false);
@@ -66,6 +68,23 @@ export class PopoverComponent implements OnDestroy {
 
     @HostListener('document:keydown.escape')
     onEscape() {
+        this.close();
+    }
+
+    // An outside click closes this, and a full-screen backdrop used to be what caught it. The
+    // backdrop also ate the click: opening the account menu and then reaching for the one beside
+    // it took two presses, and the second menu never saw the first. A document listener closes on
+    // the same gesture and lets it through to whatever it was aimed at.
+    @HostListener('document:click', ['$event'])
+    onDocumentClick(event: MouseEvent) {
+        if (!this.isOpen()) return;
+        const target = event.target instanceof Element ? event.target : null;
+        if (target && this.host.nativeElement.contains(target)) {
+            // An entry that leaves the page takes the panel with it, or it hangs over whatever
+            // was navigated to; one that acts in place leaves it standing.
+            if (target.closest('.popover-panel') && target.closest('a[href]')) this.close();
+            return;
+        }
         this.close();
     }
 }

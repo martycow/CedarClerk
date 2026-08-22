@@ -695,9 +695,6 @@ export const ru: Dict = {
             none: 'нет',
             nothingSelected: 'Ничего не выделено',
         },
-        worktop: {
-            sheet: (px: number) => `лист ${px} px`,
-        },
         outline: {
             title: 'Структура',
             empty: 'Документ пуст',
@@ -1478,8 +1475,6 @@ export const ru: Dict = {
             translateInto: (lang: string) => `Перевести на ${lang}`,
             translateTextsHint: 'Заполнит подпись и оба текста кросс-ссылок на всех остальных языках контента из выбранного выше. Pro Plus, один AI-вызов.',
             translateFailed: 'Не удалось выполнить авто-перевод',
-            doneForToday: 'На сегодня всё?',
-            logout: 'Выйти',
         },
         confirmEmail: {
             title: 'Подтвердите почту',

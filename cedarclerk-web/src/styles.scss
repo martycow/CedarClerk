@@ -101,6 +101,11 @@
 
     /* Hover/pressed wash for rows, menu items and icon buttons. Derived from --text so it follows
        the theme, rather than the per-component rgba literals that belonged to neither. */
+    /* Inline code sat on --alt, which is one step off --sheet: the span it marked was legible and
+       the mark itself was not. Mixed from the ink so it follows the theme instead of holding a
+       second cream that has to be re-picked at night. */
+    --code-bg: color-mix(in srgb, var(--text) 12%, var(--surface));
+
     --hover: color-mix(in srgb, var(--text) 7%, transparent);
     --hover-strong: color-mix(in srgb, var(--text) 13%, transparent);
     --hover-danger: color-mix(in srgb, var(--danger) 12%, transparent);
@@ -806,8 +811,10 @@ body {
 
     blockquote {
         border-left: 3px solid var(--abord);
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        background: var(--asoft);
         margin: 8px 0;
-        padding-left: 12px;
+        padding: 8px 12px;
         color: var(--t2);
     }
 
@@ -818,9 +825,10 @@ body {
     }
 
     code {
-        background: var(--alt);
+        background: var(--code-bg);
+        border: 1px solid var(--border);
         padding: 1px 5px;
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
         font-family: var(--font-mono);
         font-size: 14px;
     }
@@ -833,6 +841,7 @@ body {
 
         code {
             background: none;
+            border: none;
             padding: 0;
             color: inherit;
         }

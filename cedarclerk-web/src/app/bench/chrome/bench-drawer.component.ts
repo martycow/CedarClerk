@@ -120,6 +120,10 @@ let nextId = 0;
                 color: var(--rail-ink-soft);
                 pointer-events: none;
                 transition: transform var(--dur-control, 190ms) var(--ease-settle);
+                /* The drawer grows upward off the bottom edge, so shut it points the way it will
+                   travel — up — and open it points back down. Drawn the other way round it read as
+                   a claim about where the journal is rather than about what the lip does. */
+                transform: rotate(180deg);
             }
 
             .tabs {
@@ -152,7 +156,7 @@ let nextId = 0;
         }
 
         :host([data-surface="chrome"].is-open) .journal { height: var(--bench-drawer-open); }
-        :host([data-surface="chrome"].is-open) .caret { transform: rotate(180deg); }
+        :host([data-surface="chrome"].is-open) .caret { transform: none; }
     `],
 })
 export class BenchDrawerComponent {

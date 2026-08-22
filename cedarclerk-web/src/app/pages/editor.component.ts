@@ -1164,13 +1164,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return this.editor?.getText().length ?? 0;
     }
 
-    worktopLabel(): string {
-        return this.t().editor.worktop.sheet(this.sheetMaxWidthPx());
-    }
-
-    worktopMeta(): string {
-        return `${this.lang().toUpperCase()} · ${this.t().editor.words(this.wordCount())}`;
-    }
 
     blockCount(): number {
         this.tick();

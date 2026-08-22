@@ -1139,7 +1139,7 @@
             </div>
             @if (aiEditError()) { <p class="channel-error strip-error">{{ aiEditError() }}</p> }
 
-            <app-worktop class="wt" scroll [label]="worktopLabel()" [meta]="worktopMeta()">
+            <app-worktop class="wt" scroll>
                 <div class="sheet-column" [style.max-width.px]="sheetMaxWidthPx()">
                     <!--Re-translating an existing version gets the same progress treatment as the
                     first-time auto-translate below (B14).-->
