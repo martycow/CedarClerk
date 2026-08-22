@@ -109,6 +109,7 @@ public static partial class DesignTokens
         ["grad-pine"] = "linear-gradient(180deg, var(--pine-hi), var(--pine))",
         ["text-on-pine"] = "#F2EFE2",
         ["shadow-pine-btn"] = "inset 0 0 0 1px rgba(238, 217, 163, .35), 0 2px 0 var(--pine-deep), 0 4px 8px rgba(46, 28, 10, .25)",
+        ["pine-mark"] = "#9CBC7C",
         ["leaf-bg"] = "#DCE2C4",
         ["leaf-bg-2"] = "#C9D3A4",
         ["leaf-ink"] = "#3D4E2A",
@@ -147,8 +148,8 @@ public static partial class DesignTokens
         ["brass-ink"] = "#684A1A",
         ["ok-soft"] = "color-mix(in srgb, var(--ok) 10%, var(--surface))",
         ["brass-soft"] = "color-mix(in srgb, var(--brass-ink) 10%, var(--surface))",
-        ["rule-ink"] = "rgba(227, 211, 174, .26)",
-        ["rule-ink-soft"] = "rgba(227, 211, 174, .12)",
+        ["rule-ink"] = "rgba(227, 211, 174, .34)",
+        ["rule-ink-soft"] = "rgba(227, 211, 174, .2)",
     };
 
     /// <summary>The declarations of one theme, ready to drop inside a CSS rule.</summary>

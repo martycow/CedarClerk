@@ -2359,16 +2359,15 @@ public static class BlogEndpoints
         .reg-submit:active, .comment-form button:active { transform: translateY(2px); }
         .reg-submit:disabled { opacity: .6; cursor: default; transform: none; }
 
-        /* ── The carpenter's rule (ADR-179 clause 2): the bottom edge of the bench ──────────────────── */
+        /* ── The bench's bottom edge (ADR-179 clause 2, repainted by ADR-184): wood, not brass ──────── */
         .site-footer {
-            border-top: 1px solid var(--brass-edge);
-            box-shadow: inset 0 1px 0 color-mix(in srgb, var(--brass-hi) 70%, transparent);
-            background-image:
-                repeating-linear-gradient(to right, color-mix(in srgb, var(--brass-ink) 45%, transparent) 0 1px, transparent 1px 12px),
-                repeating-linear-gradient(to right, color-mix(in srgb, var(--brass-ink) 55%, transparent) 0 2px, transparent 2px 72px),
-                var(--grad-brass);
-            color: var(--brass-ink);
-            text-shadow: 0 1px 0 color-mix(in srgb, var(--brass-hi) 55%, transparent);
+            border-top: 1px solid var(--rail-edge);
+            box-shadow: inset 0 1px 0 rgba(255, 240, 210, .1);
+            background-color: var(--rail-lo);
+            background-image: var(--tex-wood), var(--surface-rail);
+            background-size: 420px, auto;
+            color: var(--rail-ink);
+            text-shadow: 0 1px 1px var(--rail-edge);
         }
         /* Three groups on one line — brand, links, badge — and the badge is the one that must not be
            centred: a hosted SVG of fixed size in the middle of a footer reads as an advert placed there,
@@ -2377,12 +2376,12 @@ public static class BlogEndpoints
             justify-content: space-between; gap: 8px 20px; flex-wrap: wrap; min-height: 30px; padding: 6px 20px;
             font-family: var(--font-readout); font-size: 11px; }
         .footer-brand { display: flex; align-items: center; gap: 8px; }
-        .footer-brand a { color: var(--brass-ink); font-weight: 700; }
+        .footer-brand a { color: var(--rail-ink); font-weight: 700; }
         .footer-links { display: flex; align-items: center; gap: 14px; }
-        .footer-links a { color: var(--brass-ink); }
+        .footer-links a { color: var(--rail-ink); }
         .footer-links a:hover, .footer-brand a:hover { text-decoration: underline; }
-        /* The badge ships as a white plate, which on brass is the brightest thing on the bar — brighter
-           than the credit beside it. Dimming it to the weight of the text around it keeps it a credit
+        /* The badge ships as a white plate, which on the wood is the brightest thing on the bar —
+           brighter than the credit beside it. Dimming it to the weight of the text around it keeps it a credit
            rather than a banner; it comes back to full on hover. */
         .footer-badge { flex: none; display: block; opacity: 0.72; transition: opacity 120ms; }
         .footer-badge:hover { opacity: 1; }
@@ -2416,7 +2415,7 @@ public static class BlogEndpoints
         </main>
         <div class="site-footer"><div class="site-footer-inner">
         <div class="footer-brand">
-        <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12,2 19,11 5,11" fill="var(--brass-ink)"></polygon><polygon points="12,7 21,18 3,18" fill="var(--brass-ink)" opacity="0.75"></polygon><rect x="10.6" y="18" width="2.8" height="4" rx="1" fill="var(--brass-ink)" opacity="0.9"></rect></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12,2 19,11 5,11" fill="var(--pine-mark)"></polygon><polygon points="12,7 21,18 3,18" fill="var(--pine-mark)" opacity="0.75"></polygon><rect x="10.6" y="18" width="2.8" height="4" rx="1" fill="var(--pine-mark)" opacity="0.9"></rect></svg>
         <span>Made with <a href="https://cedarclerk.mooexe.dev">Cedar Clerk</a> — write here, publish there. Moo.</span>
         </div>
         <!--Terms and Privacy live on the app host, not here: one copy of a legal page, and the blog

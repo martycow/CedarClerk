@@ -18,10 +18,11 @@ interface Part {
 // "11/19", "0.12.0" and "09:51" are each one numeral, not two or three.
 const NUMERAL = /(\d+(?:[.,:/]\d+)*)/g;
 
-// The brass carpenter's rule along the bottom edge of the bench: milled ticks, mono numerals, the
-// status bar. It takes readouts as strings and never as projected content, because the one rule
-// this bar has is that it is read-only — a slot here is an invitation to put a control in it, and
-// the invitation is the violation. Anything clickable belongs on the lip of the drawer above.
+// The bench's cut bottom edge: a plank of the shell's own wood carrying mono numerals, the status
+// bar. Wood rather than the kit's milled brass (ADR-184) — brass is what you take hold of, and this
+// strip is gripped by nothing. It takes readouts as strings and never as projected content, because
+// the one rule this bar has is that it is read-only — a slot here is an invitation to put a control
+// in it, and the invitation is the violation. Anything clickable belongs on the lip above.
 @Component({
     selector: 'app-ruler-bar',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -49,34 +50,22 @@ const NUMERAL = /(\d+(?:[.,:/]\d+)*)/g;
             box-sizing: border-box;
             min-height: var(--bench-ruler-h);
             padding: 0 14px;
-            border-top: 1px solid var(--brass-edge);
-            box-shadow: inset 0 1px 0 color-mix(in srgb, var(--brass-hi) 70%, transparent);
+            border-top: 1px solid var(--rail-edge);
+            box-shadow: inset 0 1px 0 rgba(255, 240, 210, .1);
             font-family: var(--font-readout);
             font-size: var(--text-chrome-sm);
             white-space: nowrap;
             overflow: hidden;
 
-            /* The milled scale. No token family measures divisions of a rule, so the two spacings
-               are named here rather than dropped into the gradient twice. */
-            --tick: 12px;
-            --tick-major: 72px;
+            /* The same wood as the rail and the lip, laid the darker way round: two boards meeting
+               at an edge, not one board with a seam drawn on it. The lip above is a drawer front
+               and has a pull; this is the edge of the bench and has nothing. */
+            background-color: var(--rail-lo);
+            background-image: var(--tex-wood), var(--surface-rail);
+            background-size: 420px, auto;
 
-            /* The rule is the one ground night does not darken: --brass keeps its value and
-               --brass-hi is lighter after dark than before it. So the ink on it is dark in both
-               themes, and --brass-ink is declared once for that reason. */
-            --ink: var(--brass-ink, #4A340F);
-
-            background-image:
-                repeating-linear-gradient(to right,
-                    color-mix(in srgb, var(--ink) 45%, transparent) 0 1px,
-                    transparent 1px var(--tick)),
-                repeating-linear-gradient(to right,
-                    color-mix(in srgb, var(--ink) 55%, transparent) 0 2px,
-                    transparent 2px var(--tick-major)),
-                var(--grad-brass);
-
-            color: var(--ink);
-            text-shadow: 0 1px 0 color-mix(in srgb, var(--brass-hi) 55%, transparent);
+            color: var(--rail-ink);
+            text-shadow: 0 1px 1px var(--rail-edge);
 
             .label {
                 flex: none;

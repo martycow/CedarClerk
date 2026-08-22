@@ -196,3 +196,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-181 — A reading menu is not a tool: the blog's theme and text size share one home (22.08.2026)](adr/ADR-181.md)
 - [ADR-182 — The paper control box is 38px drawn; 44px is the touch floor, not the drawn one (22.08.2026)](adr/ADR-182.md)
 - [ADR-183 — The overflow menu hangs on the tool wall, not on the sign board (22.08.2026)](adr/ADR-183.md)
+- [ADR-184 — The bench's bottom edge is wood, not a brass rule (22.08.2026)](adr/ADR-184.md)

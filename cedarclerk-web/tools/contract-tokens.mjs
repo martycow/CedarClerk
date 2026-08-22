@@ -40,6 +40,9 @@ export const MATERIALS = [
     // The pine ramp. --accent is the flat role and stays on the contract; these are the lit and
     // shaded faces of one button, and they follow the user's preset because they are mixed from it.
     'pine', 'pine-hi', 'pine-deep', 'grad-pine', 'text-on-pine', 'shadow-pine-btn',
+    // The conifer beside the wordmark. Held rather than mixed, because it is the one green painted
+    // on wood and the accent is the user's to change.
+    'pine-mark',
     // Marks: leaves for tags and filters, brass for hardware and the rule.
     'leaf-bg', 'leaf-bg-2', 'leaf-ink', 'leaf-dried-bg', 'leaf-dried-edge',
     'brass', 'brass-hi', 'brass-lo', 'brass-edge', 'brass-ink', 'grad-brass', 'focus-halo',
