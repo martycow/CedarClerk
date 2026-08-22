@@ -128,6 +128,9 @@ could answer and left out what it could not, rather than drawing over a number n
 - [ ] T-264 Twenty-five more orphan dictionary keys — a name-scan of `en.ts` against every template and `.ts` in the app finds 25 key names nothing reads, `backToEditor`, `scheduledPosts`, `staticHtml` and `manageInEditor` among them. Candidates, not proof: a name-scan cannot see a computed lookup, and each has to be read at its own call site before it is deleted from both dictionaries #cleanup #i18n P3
 - [ ] T-260 Glossary "used in N posts" — the term-to-post match happens in the blog renderer at render time and is never stored, so the count the inspector wants does not exist to show. Either the scanner records its hits or the number stays off the screen #api P3
 
+- [ ] T-276 Walk the blog by eye — the port is measured (contrast gate green, census clean but for the rail button the pair table already covers) and four page types were rendered in both themes: index, post, series, gate. Not rendered: the showcase page `/games/{slug}`, a poll, a glossary tooltip, the image viewer and the watermark over the new 3px sheet. Each is a seeded fixture away, and a measurement is not a look #design P2
+- [ ] T-277 The DigitalOcean badge on brass — it ships as a white plate and the footer is now a brass rule, which is the brightest ground it has ever sat on; `opacity: .72` was tuned against a grey footer. Either a darker dim on the rule alone or the badge moves off it #ui P3
+
 - [ ] T-234 Version and merge — bump `Consts.CurrentVersion` to 0.13.0, tag it, merge `UI_V2` into master and deploy; `cedar deploy` refuses anything but master with a clean tree #release P1
 
 ## Improvements
@@ -169,7 +172,7 @@ could answer and left out what it could not, rather than drawing over a number n
 
 ## Bugs
 
-(none open)
+- [ ] T-275 The app's own faces are shadowed by their own cyrillic subset — `styles.scss` `@use`s each face's `latin-*.css` and then its `cyrillic-*.css`, and @fontsource's per-subset sheets carry no `unicode-range` (only its `index.css` does). Two rules with the same family, weight and style and no range means the later one wins for U+0–10FFFF, so every Latin glyph outside the cyrillic subset falls to the next family in the stack: the app draws Latin text in Georgia and system-ui while claiming Vollkorn and Literata. Found while giving the blog the same faces (ADR-178 clause 3, which avoids it server-side). The fix is a `unicode-range` per import, taken from the package's `index.css`; the sixteen `@use` lines cannot carry one, so it is either sixteen small local `@font-face` blocks or the packages' own `index.css` with the payload that implies — a decision, not a one-liner #ui #bug P1
 
 ## Tech debt
 

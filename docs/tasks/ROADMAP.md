@@ -9,7 +9,7 @@ guard: none
 
 Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-saas-plan.md` (v1.7, 15.07.2026) and `Plans/session-brief-v0.8.0-planning.md`, which are now archived under `Plans/OLD/`. **This file is the one live roadmap going forward** — update it when a phase item closes, don't recreate a parallel plan doc. Architectural/product decisions referenced below (why something was built a certain way) live in `docs/DECISIONS.md`, not here — this file tracks *status*, DECISIONS tracks *rationale*.
 
-## Status summary (as of 20.08.2026)
+## Status summary (as of 22.08.2026)
 
 **UI V2 — Cedar Bench becomes the one look; Stages 0 through 6 (19–20.08.2026, branch `UI_V2`, not
 merged, no version bump).** The design system mirrored from Claude Design at `.design-sync/ds-v2/`
@@ -17,6 +17,16 @@ stops being a second palette and becomes the app's only one. The port was planne
 written — `docs/design/UI-V2-PLAN.md` settles ten questions (theming attribute, token namespace,
 component layout, half-pixels, night, density, icons, fonts) and thirty-eight ADRs (136–173) landed
 ahead of the code they govern. Every screen in the app is now drawn from the bench kit.
+
+**The blog joins it (22.08.2026, ADR-177…179).** The last surface still on the old look is the
+one a stranger sees first, and it is ported: the plaster wall as the ground, a park-sign rail for
+a header, the carpenter's rule for a footer, and every post a paper sheet at the reading numbers.
+Two mechanisms had to exist first. The bench materials now cross to the server as a second
+generated list beside the contract (ADR-177), because a contract name may not hold the gradient a
+material is; and the four faces are copied unhashed into `assets/fonts/` and declared in
+`DesignTokens.FontFaces` (ADR-178), which closes the hole ADR-143 left open — the blog had been
+asking for *Source Sans 3* and drawing `system-ui` ever since. What the blog does not take is the
+tool's chrome: no hook rail, no shelves, no drawer, no tabs. A reader has no commands.
 
 - **Stage 0 — the two checks the rest of the port is measured by** (`T-205`, `T-206`).
   `check-contrast.mjs` was rewritten: it composites alpha over the backdrop instead of discarding

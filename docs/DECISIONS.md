@@ -189,3 +189,6 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-174 — The shell owns the viewport and paints the wall: paper is the surface class, not the ground colour (22.08.2026)](adr/ADR-174.md)
 - [ADR-175 — The rail face is a tint that needs wood under it: the doors' theme toggle is a paper button at the chrome box (22.08.2026)](adr/ADR-175.md)
 - [ADR-176 — A leaf that can be picked shows whether it is: idle on the dried stock, active on the green (22.08.2026)](adr/ADR-176.md)
+- [ADR-177 — Materials cross to the server too: a second generated list beside the contract (22.08.2026)](adr/ADR-177.md)
+- [ADR-178 — The server-rendered pages are served the faces they name, from stable URLs (22.08.2026)](adr/ADR-178.md)
+- [ADR-179 — The blog is a sheet on the wall under a park-sign rail; the reader gets no tools (22.08.2026)](adr/ADR-179.md)

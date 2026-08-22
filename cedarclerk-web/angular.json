@@ -27,6 +27,21 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "vollkorn-@(latin|cyrillic)-@(600|700)-normal.woff2",
+                "input": "node_modules/@fontsource/vollkorn/files",
+                "output": "assets/fonts"
+              },
+              {
+                "glob": "source-sans-3-@(latin|cyrillic)-@(400|600)-normal.woff2",
+                "input": "node_modules/@fontsource/source-sans-3/files",
+                "output": "assets/fonts"
+              },
+              {
+                "glob": "literata-@(latin|cyrillic)-@(400|600)-normal.woff2",
+                "input": "node_modules/@fontsource/literata/files",
+                "output": "assets/fonts"
               }
             ],
             "styles": [

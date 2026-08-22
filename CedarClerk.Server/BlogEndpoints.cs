@@ -990,7 +990,9 @@ public static class BlogEndpoints
             <div class="spacer"></div>
             {rssButton}
             {openInTelegram}
-            <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Toggle theme">&#9789;</button>
+            <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Toggle theme" aria-label="Toggle theme">
+            <span class="ico-moon">{BlogIcons.Moon}</span><span class="ico-sun">{BlogIcons.Sun}</span>
+            </button>
             </div></div>
             """;
     }
@@ -1108,14 +1110,15 @@ public static class BlogEndpoints
                     sb.Append("<span class=\"post-card-tag\">· ").Append(System.Net.WebUtility.HtmlEncode(tag)).Append("</span>");
 
                 if (p.IsPrivate)
-                    sb.Append("<span class=\"post-card-locked\">&#128274;</span>");
+                    sb.Append("<span class=\"post-card-locked\">").Append(BlogIcons.Lock).Append("</span>");
 
                 sb.Append("</div>");
                 sb.Append("<div class=\"post-card-title\">").Append(System.Net.WebUtility.HtmlEncode(p.ArticleTitle ?? p.Title)).Append("</div>");
                 if (excerpt.Length > 0)
                     sb.Append("<div class=\"post-card-excerpt\">").Append(System.Net.WebUtility.HtmlEncode(excerpt)).Append("</div>");
-                sb.Append("<div class=\"post-card-stats\">&#128065; ").Append(p.ViewCount)
-                  .Append(" &middot; &#128077; ").Append(likes).Append(" &middot; &#128172; ").Append(comments).Append("</div>");
+                sb.Append("<div class=\"post-card-stats\">").Append(BlogIcons.Eye).Append("<span class=\"num\">").Append(p.ViewCount)
+                  .Append("</span>").Append(BlogIcons.ThumbUp).Append("<span class=\"num\">").Append(likes)
+                  .Append("</span>").Append(BlogIcons.Chat).Append("<span class=\"num\">").Append(comments).Append("</span></div>");
                 sb.Append("</a></div>");
             }
             sb.Append("</div>");
@@ -1187,7 +1190,7 @@ public static class BlogEndpoints
                   .Append(p.BlogPublishedAt is { } cardDate ? BlogDateFormatter.DateLocal(cardDate, pageLang) : "")
                   .Append("</span>");
                 if (p.IsPrivate)
-                    sb.Append("<span class=\"post-card-locked\">&#128274;</span>");
+                    sb.Append("<span class=\"post-card-locked\">").Append(BlogIcons.Lock).Append("</span>");
                 sb.Append("</div>");
                 sb.Append("<div class=\"post-card-title\">").Append(System.Net.WebUtility.HtmlEncode(p.ArticleTitle ?? p.Title)).Append("</div>");
                 if (excerpt.Length > 0)
@@ -1298,7 +1301,7 @@ public static class BlogEndpoints
                   .Append(p.BlogPublishedAt is { } cardDate ? BlogDateFormatter.DateLocal(cardDate, pageLang) : "")
                   .Append("</span>");
                 if (p.IsPrivate)
-                    sb.Append("<span class=\"post-card-locked\">&#128274;</span>");
+                    sb.Append("<span class=\"post-card-locked\">").Append(BlogIcons.Lock).Append("</span>");
                 sb.Append("</div>");
                 sb.Append("<div class=\"post-card-title\">").Append(System.Net.WebUtility.HtmlEncode(p.ArticleTitle ?? p.Title)).Append("</div>");
                 if (excerpt.Length > 0)
@@ -1605,7 +1608,7 @@ public static class BlogEndpoints
         var telegramLink = draft is { LastTelegramUsername: not null, LastTelegramMessageId: not null }
             ? $"<a class=\"telegram-link\" href=\"https://t.me/{draft.LastTelegramUsername}/{draft.LastTelegramMessageId}\" target=\"_blank\" rel=\"noopener\">{viewInTelegramLabel}</a>"
             : "";
-        var viewsLine = $"<span class=\"post-card-views\">&#128065; {viewCount}</span>";
+        var viewsLine = $"<span class=\"post-card-views\">{BlogIcons.Eye}<span class=\"num\">{viewCount}</span></span>";
 
         var metaRow = $"<div class=\"post-meta-row\">{dateLine}{viewsLine}{langSwitch}</div>";
         var footerRow = (signatureBlock.Length > 0 || telegramLink.Length > 0)
@@ -1711,12 +1714,12 @@ public static class BlogEndpoints
         var backToTopLabel = lang == Languages.English ? "Back to top" : "Наверх";
         var floatingNav = $"""
             <div class="floating-nav">
-            <a class="floating-nav-btn" href="/" title="{backLinkLabel}">&#9776;</a>
-            <button type="button" class="floating-nav-btn back-to-top-btn" title="{backToTopLabel}">&#8593;</button>
+            <a class="floating-nav-btn" href="/" title="{backLinkLabel}" aria-label="{backLinkLabel}">{BlogIcons.List}</a>
+            <button type="button" class="floating-nav-btn back-to-top-btn" title="{backToTopLabel}" aria-label="{backToTopLabel}">{BlogIcons.ArrowUp}</button>
             </div>
             """;
         var html = $"""
-            <a class="back-link" href="/">&larr; {backLinkLabel}</a>
+            <a class="back-link" href="/">{BlogIcons.ArrowLeft} {backLinkLabel}</a>
             {postSheet}
             {copyGuard}
             {articleBlock}
@@ -1829,23 +1832,58 @@ public static class BlogEndpoints
             color-scheme: light dark;
             {{LIGHT_TOKENS}}
         }
-        /* T-101 — one palette for the whole product (ADR-071 principle 6). These values are
-           generated from the app's own stylesheet (CedarClerk.Core.DesignTokens), which is what
-           stops the blog from being a shade behind after every colour change — it already was:
-           the contrast pass fixed the app and left this file on the old values. */
+        /* T-101 — one palette for the whole product (ADR-071 principle 6), and since ADR-177 the bench
+           materials travel with it. Both halves are generated from the app's own stylesheet
+           (CedarClerk.Core.DesignTokens), which is what stops the blog from being a shade behind after
+           every colour change — it already was: the contrast pass fixed the app and left this file on the
+           old values. */
         @media (prefers-color-scheme: dark) {
             :root { {{DARK_TOKENS}} }
         }
         :root[data-theme="light"] { {{LIGHT_TOKENS}} }
         :root[data-theme="dark"] { {{DARK_TOKENS}} }
+
+        /* ADR-178 — the faces this page names, served from stable URLs the bundler does not hash. */
+        {{FONT_FACES}}
+
         * { box-sizing: border-box; }
+
         /* T-099 — the footer used to sit wherever the content ended: on a two-post index or a
            private post's gate that is the middle of the screen, with a wide empty band under it.
            A column that is at least the viewport tall, with the main area taking the slack. */
         html { height: 100%; }
-        body { margin: 0; min-height: 100%; display: flex; flex-direction: column; background: var(--surface); color: var(--text); font-family: var(--font-sans); line-height: 1.6; }
+        /* The plaster wall is the ground and the sheet is held off it (ADR-179 clause 1, ADR-174's rule
+           for a page with no shell to own the viewport). The flat colour under the two gradients is
+           --canvas rather than --bg on purpose: it is the darker of the wall's two stops, so the contrast
+           census — which reads the last `background`/`background-color` in this rule — scores every ink on
+           the page against the worse end of the ramp in both themes. */
+        body {
+            margin: 0;
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            background-image: var(--lamp), var(--surface-page);
+            background-attachment: fixed;
+            background-color: var(--canvas);
+            /* The wall carries one ink and it is not --text (ADR-141): at night the wall darkens
+               while paper stays cream, so a page-level --text is invisible on the ground and every
+               paper surface below re-declares it for itself. */
+            color: var(--wood-ink);
+            font-family: var(--font-sans);
+            font-size: 15px;
+            line-height: 1.55;
+        }
         .site-main { flex: 1 0 auto; }
         .site-footer { flex: none; }
+
+        /* ADR-140's pair, copied rather than re-derived: no single colour clears 3:1 on paper and on the
+           rail alike, and this page has both surfaces on it. Never blue, never a glow. */
+        :focus-visible {
+            outline: 2px solid var(--brass-edge);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 5px var(--focus-halo);
+        }
+
         /* T-039 — a post can take likes but no discussion, or the reverse. The block is only
            removed entirely when both are off; otherwise the half that is off simply is not there. */
         .annotation[data-no-reactions] .react-btn { display: none; }
@@ -1853,73 +1891,151 @@ public static class BlogEndpoints
         .annotation[data-no-comments] .comment-box { display: none; }
         /* With reactions gone the control row has nothing left to show but a comment count. */
         .annotation[data-no-reactions][data-no-comments] .annotation-controls { display: none; }
+
         a { color: var(--accent); text-decoration: none; }
         img, video { max-width: 100%; height: auto; }
         .spacer { flex: 1; }
+        [hidden] { display: none !important; }
 
-        .site-header { position: sticky; top: 0; z-index: 10; background: var(--sheet); border-bottom: 1px solid var(--border); }
-        .site-header-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 20px; }
-        .channel-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--sheet); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex: none; }
-        .channel-avatar.brand { background: var(--asoft); color: var(--accent); }
+        /* Every number the page states is mono, and the same number in two places has to agree. */
+        .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+        .gl { flex: none; vertical-align: -2px; }
+
+        /* ── The rail: the one piece of wood in the blog's chrome (ADR-179 clause 2) ─────────────────
+           Chrome may be dense — 30px boxes, 11-13px type (ADR-138) — and its lettering is painted cream
+           like a national-park sign, never an ink-on-paper colour. */
+        .site-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: var(--rail-lo);
+            background-image: var(--tex-wood), var(--surface-rail);
+            background-size: 420px, auto;
+            border-bottom: 2px solid var(--rail-edge);
+            box-shadow: var(--shadow-rail);
+            color: var(--rail-ink);
+        }
+        .site-header-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 20px; }
+        /* A brass plate with the channel's initial struck into it — hardware, and so 3px rather than a
+           circle: the rulebook's roundest object is an 8px plaque. */
+        .channel-avatar { width: 30px; height: 30px; border-radius: var(--radius-stamp); background-image: var(--grad-brass); border: 1px solid var(--brass-edge); color: var(--brass-ink); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 13px; font-weight: 700; flex: none; }
+        /* With no channel the mark is the mark, carved into the board rather than mounted on a plate. */
+        .channel-avatar.brand { background-image: none; border: none; color: var(--rail-ink); }
         .channel-id { min-width: 0; }
-        .channel-name { font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .channel-meta { font-size: 11px; color: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .tg-open-btn { display: flex; align-items: center; gap: 6px; border: 1px solid var(--abord); background: var(--asoft); border-radius: 8px; padding: 5px 12px; font-size: 12.5px; font-weight: 500; color: var(--text); white-space: nowrap; flex: none; }
-        .tg-open-btn:hover { filter: brightness(.97); }
+        .channel-name { font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 1px var(--rail-edge); }
+        /* --rail-ink-soft composites to 4.37:1 on the board and is spent on separators; anything read
+           takes the .8 cream (ADR-138). */
+        .channel-meta { font-size: 11px; color: var(--rail-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tg-open-btn { display: flex; align-items: center; gap: 6px; min-height: 30px; border: var(--border-rail-btn); background: var(--rail-btn-face); border-radius: var(--radius-plaque); padding: 0 11px; font-size: 12px; font-weight: 600; color: var(--rail-ink); white-space: nowrap; flex: none; }
+        .tg-open-btn:hover { background: var(--rail-btn-face-hover); }
         /* Secondary next to "Open in Telegram": subscribing to the feed is an offer, not the
            header's main action, and two filled buttons side by side read as two main actions. */
-        .rss-btn { background: none; border-color: var(--border); color: var(--t2); }
-        .rss-btn:hover { background: var(--alt); color: var(--text); }
-        .theme-toggle-btn { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: none; background: none; border-radius: 8px; color: var(--t2); cursor: pointer; font-size: 15px; }
-        .theme-toggle-btn:hover { background: rgba(128,120,100,.14); }
+        .rss-btn { background: none; }
+        /* ADR-175 — a tinted face on the rail needs wood under it to read as anything, and at the chrome
+           box the honest answer is paper. The app's doors settled this; the blog does not get to disagree. */
+        .theme-toggle-btn { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex: none; border: 1px solid var(--paper-edge); background: var(--sheet); box-shadow: var(--shadow-paper-sm); border-radius: var(--radius-plaque); color: var(--t2); cursor: pointer; padding: 0; }
+        .theme-toggle-btn:hover { background: var(--alt); color: var(--text); }
+        /* Which glyph shows is the theme's business, not the script's: it was a textContent the toggle
+           had to remember to update, and the attribute already says which way round the page is. */
+        .ico-sun { display: none; }
+        .ico-moon { display: flex; }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) .ico-sun { display: flex; }
+            :root:not([data-theme="light"]) .ico-moon { display: none; }
+        }
+        :root[data-theme="dark"] .ico-sun { display: flex; }
+        :root[data-theme="dark"] .ico-moon { display: none; }
+        :root[data-theme="light"] .ico-sun { display: none; }
+        :root[data-theme="light"] .ico-moon { display: flex; }
 
-        .site-main { max-width: 760px; margin: 0 auto; padding: 26px 20px 60px; }
-        .empty { color: var(--t2); }
+        .site-main { max-width: 760px; margin: 0 auto; padding: 26px 20px 60px; width: 100%; }
+        .empty { color: var(--wood-ink); }
 
-        .tag-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; }
-        .tag-chip { display: inline-block; border: 1px solid var(--border); background: var(--sheet); color: var(--t2); border-radius: 999px; padding: 4px 13px; font-size: 12px; font-weight: 500; }
-        .tag-chip:hover { border-color: var(--t3); }
-        .tag-chip.selected { border-color: var(--abord); background: var(--asoft); color: var(--accent); }
+        /* ── Leaves: tags and filters (ADR-179 clause 5, ADR-176's day/night pair) ───────────────────
+           A leaf on paper is the design system's tag. Picked, it is green; unpicked, it lies on the dried
+           stock with its own edge, because border alpha alone does not tell two leaves apart. */
+        .tag-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 20px; }
+        .tag-chip, .post-tag-chip {
+            display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px;
+            border: 1px solid var(--leaf-dried-edge); border-radius: 2px 12px 2px 12px;
+            background-color: var(--leaf-dried-bg); color: var(--leaf-ink);
+            font-size: 14px; font-weight: 700; white-space: nowrap;
+        }
+        /* Unpicked keeps the green ink on the pale stock, which is the pair the table measures at
+           4.5. --leaf-dried-ink is a step below it and means dried — no data, switched off — and a
+           filter the reader is meant to read is neither. */
+        .tag-chip:hover, .post-tag-chip:hover { border-color: var(--leaf-ink); }
+        .tag-chip.selected, .post-tag-chip {
+            background-color: var(--leaf-bg); background-image: linear-gradient(135deg, var(--leaf-bg), var(--leaf-bg-2));
+            border-color: var(--leaf-ink); color: var(--leaf-ink); box-shadow: var(--shadow-paper-sm);
+        }
 
-        .post-list { display: flex; flex-direction: column; gap: 14px; }
-        .post-list.timeline { position: relative; padding-left: 24px; }
-        .post-list.timeline::before { content: ""; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 2px; background: var(--border); }
-        .timeline-month-sep { display: flex; align-items: center; gap: 10px; margin: 4px 0 -2px -24px; }
+        /* ── The index: paper pinned to the wall along a pencil rule ─────────────────────────────────── */
+        .post-list { display: flex; flex-direction: column; gap: 18px; }
+        .post-list.timeline { position: relative; padding-left: 26px; }
+        /* The spine is drawn on the wall, which is the one ground the pencil follows into the dark:
+           --rule-ink turns cream at night because the wall does. A rule on PAPER takes --border
+           instead — cream on cream is not a line. */
+        .post-list.timeline::before { content: ""; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 1px; background: var(--rule-ink); }
+        .timeline-month-sep { display: flex; align-items: center; gap: 10px; margin: 6px 0 -4px -26px; }
         .timeline-month-sep:first-child { margin-top: 0; }
-        .timeline-month-sep .sep-line { flex: 1; height: 1px; background: var(--border); }
-        .timeline-month-sep .sep-label { flex: none; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--t2); background: var(--asoft); border: 1px solid var(--abord); border-radius: 999px; padding: 3px 12px; white-space: nowrap; }
+        .timeline-month-sep .sep-line { flex: 1; height: 1px; background: var(--rule-ink-soft); }
+        /* A rubber stamp: display face, wide tracking, its own ink for a border. The neutral tone carries
+           a word, so it takes --t2 rather than the third tier (ADR-137 rule 5). */
+        .timeline-month-sep .sep-label { flex: none; font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--wood-ink); background: none; border: 1.6px solid currentColor; border-radius: var(--radius-stamp); padding: 2px 9px; white-space: nowrap; opacity: .92; }
         .timeline-item { position: relative; }
-        .timeline-dot { position: absolute; left: -24px; top: 24px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--abord); z-index: 1; }
-        .post-card { display: block; background: var(--sheet); border-radius: 12px; box-shadow: var(--shadow); padding: 20px 24px; border: 1px solid transparent; color: var(--text); }
-        .post-card:hover { border-color: var(--abord); }
-        .post-card-meta { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 11.5px; color: var(--t2); }
-        .post-card-langs { font-size: 10px; font-weight: 600; letter-spacing: .04em; color: var(--accent); background: var(--asoft); border-radius: 4px; padding: 2px 6px; }
-        .post-card-title { font-size: 19px; font-weight: 700; letter-spacing: -.01em; line-height: 1.3; margin: 0 0 6px; }
-        .post-card-excerpt { font-size: 14px; color: var(--t2); line-height: 1.55; margin: 0 0 10px; }
-        .post-card-stats { font-size: 12px; color: var(--t2); }
+        /* A brass pin, not a dot: what holds paper to a board in this system is hardware. */
+        .timeline-dot { position: absolute; left: -26px; top: 26px; width: 11px; height: 11px; border-radius: 50%; background-image: var(--grad-brass); border: 1px solid var(--brass-edge); box-shadow: inset 0 1px 0 var(--brass-hi), 0 1px 2px rgba(30, 18, 6, .45); z-index: 1; }
+        .post-card {
+            display: block; position: relative;
+            background-color: var(--sheet); background-image: var(--tex-paper);
+            border: var(--border-paper); border-radius: var(--radius-paper);
+            box-shadow: var(--shadow-paper); padding: 18px 22px 16px; color: var(--text);
+            /* The lift is the whole hover language of the system — 2-3px, never a glow or a scale. The
+               motion tokens are not served here, so the curve the design system states is written out. */
+            transition: transform 150ms cubic-bezier(.3, 1.3, .5, 1);
+        }
+        .post-card:hover { transform: translateY(-3px); }
+        .post-card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 6px; font-size: 12px; color: var(--t2); }
+        .post-card-date { font-family: var(--font-mono); }
+        .post-card-langs { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--brass-ink); background: var(--brass-soft); border: 1px solid var(--brass-lo); border-radius: var(--radius-stamp); padding: 1px 6px; }
+        .post-card-tag { color: var(--t2); }
+        .post-card-locked { display: inline-flex; color: var(--t2); }
+        .post-card-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; line-height: 1.24; margin: 0 0 6px; }
+        .post-card-excerpt { font-family: var(--font-serif); font-size: 15px; color: var(--t2); line-height: 1.6; margin: 0 0 10px; }
+        .post-card-stats { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--t2); }
+        .post-card-stats .num { margin-right: 9px; }
 
-        .back-link { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; padding: 4px 0; margin: 0 0 12px; }
-        .back-link:hover { text-decoration: underline; }
-        .post-sheet { position: relative; background: var(--sheet); border-radius: 12px; box-shadow: var(--shadow); padding: 32px 40px 28px; }
+        .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--wood-ink); padding: 4px 0; margin: 0 0 14px; }
+        .back-link:hover { color: var(--accent); }
+
+        /* ── The sheet (ADR-179 clause 4) — writer.html's paper at the reading numbers ──────────────── */
+        .post-sheet {
+            position: relative;
+            background-color: var(--paper-bright); background-image: var(--tex-paper);
+            border: 1px solid var(--paper-edge); border-radius: var(--radius-paper);
+            box-shadow: var(--shadow-sheet); padding: 34px 44px 30px; color: var(--text);
+            font-family: var(--font-serif); font-size: var(--fs-read); line-height: var(--lh-read);
+        }
         /* I7 — tiled over the post, not behind it. pointer-events:none so it can't take a click,
            and user-select:none so dragging across the page doesn't select the watermark. The
            tile itself (an SVG data URI) comes from WatermarkRenderer as an inline style. */
-        .watermark-overlay { position: absolute; inset: 0; z-index: 2; pointer-events: none; user-select: none; border-radius: 12px; background-repeat: repeat; }
-        .post-sheet h1 { font-size: 27px; font-weight: 700; letter-spacing: -.015em; line-height: 1.22; margin: 0 0 12px; text-align: center; }
-        .post-header-slots { font-size: 13px; color: var(--t2); margin: 0 0 18px; text-align: center; }
-        .post-header-slots a { color: var(--accent); text-decoration: none; }
+        .watermark-overlay { position: absolute; inset: 0; z-index: 2; pointer-events: none; user-select: none; border-radius: var(--radius-paper); background-repeat: repeat; }
+        .post-sheet h1 { font-family: var(--font-display); font-size: 27px; font-weight: 700; line-height: 1.22; margin: 0 0 12px; text-align: center; }
+        .post-sheet h2 { font-family: var(--font-display); font-size: 21px; font-weight: 700; line-height: 1.3; margin: 28px 0 8px; }
+        .post-sheet h3 { font-family: var(--font-display); font-size: 18px; font-weight: 600; margin: 22px 0 6px; }
+        .post-sheet p { margin: 0 0 16px; }
+        .post-header-slots { font-family: var(--font-sans); font-size: 13px; color: var(--t2); margin: 0 0 18px; text-align: center; }
+        .post-header-slots a { color: var(--accent); }
         .post-header-slots a:hover { text-decoration: underline; }
-        .post-title-divider { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 0 28px; }
+        /* The book divider, in brass: the one bit of hardware the reading column carries. */
+        .post-title-divider { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 0 26px; }
         .post-title-divider .tdl { height: 1px; width: 70px; background: var(--border); }
-        .post-title-divider i { width: 6px; height: 6px; flex: none; display: block; background: var(--accent); opacity: .55; transform: rotate(45deg); }
-        .post-tags-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; padding: 10px 12px; background: var(--alt); border-radius: 9px; }
-        .post-tag-chip { display: inline-block; font-size: 12px; font-weight: 500; color: var(--accent); background: var(--asoft); border: 1px solid var(--abord); border-radius: 999px; padding: 3px 12px; }
-        .post-tag-chip:hover { filter: brightness(1.05); }
-        .post-sheet h2 { font-size: 20px; font-weight: 600; letter-spacing: -.01em; margin: 24px 0 8px; }
-        .post-sheet p { font-size: 16px; line-height: 1.65; margin: 0 0 14px; }
-        .toc { background: var(--asoft); border: 1px solid var(--abord); border-radius: 10px; padding: 14px 18px; margin: 0 0 18px; }
-        .toc-title { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
-        .toc ul { list-style: none; margin: 0; padding: 0; font-size: 14px; line-height: 1.8; }
+        .post-title-divider i { width: 6px; height: 6px; flex: none; display: block; background: var(--brass); border: 1px solid var(--brass-edge); transform: rotate(45deg); }
+        .post-tags-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px; }
+        .toc { background-color: var(--surface); background-image: var(--tex-paper); border: var(--border-paper); border-radius: var(--radius-paper); padding: 14px 18px; margin: 0 0 20px; font-family: var(--font-sans); color: var(--text); }
+        .toc-title { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--t2); margin: 0 0 8px; }
+        .toc ul { list-style: none; margin: 0; padding: 0; font-size: 14px; line-height: 1.9; }
         .toc li a { color: var(--text); }
         .toc li a:hover { color: var(--accent); text-decoration: underline; }
         .toc .toc-lvl-2 { padding-left: 14px; }
@@ -1927,91 +2043,105 @@ public static class BlogEndpoints
         .toc .toc-lvl-4 { padding-left: 42px; }
         .toc .toc-lvl-5 { padding-left: 56px; }
         .toc .toc-lvl-6 { padding-left: 70px; }
-        .not-translated-notice { background: var(--asoft); border: 1px solid var(--abord); border-radius: 10px; padding: 10px 14px; margin: 0 0 14px; font-size: 13px; color: var(--t2); font-style: italic; }
-        .series-line { font-size: 13px; color: var(--t2); margin: 0 0 10px; }
-        .series-line a { color: var(--accent); font-weight: 600; text-decoration: none; }
+        .not-translated-notice { font-family: var(--font-sans); background: var(--asoft); border-left: 3px solid var(--abord); border-radius: var(--radius-paper); padding: 10px 14px; margin: 0 0 16px; font-size: 14px; color: var(--t2); }
+        .series-line { font-family: var(--font-sans); font-size: 13px; color: var(--t2); margin: 0 0 10px; }
+        .series-line a { color: var(--accent); font-weight: 600; }
         .series-line a:hover { text-decoration: underline; }
-        .series-nav { display: flex; justify-content: space-between; gap: 12px; margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--border); }
-        .series-nav a { max-width: 48%; font-size: 13px; color: var(--text); text-decoration: none; }
+        .series-nav { display: flex; justify-content: space-between; gap: 12px; margin: 22px 0 0; padding-top: 16px; border-top: 1px solid var(--border); font-family: var(--font-sans); }
+        .series-nav a { max-width: 48%; font-size: 14px; color: var(--text); }
         .series-nav a:hover { color: var(--accent); }
-        .series-nav .nav-label { display: block; font-size: 11px; color: var(--t2); margin-bottom: 2px; }
+        .series-nav .nav-label { display: block; font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--t2); margin-bottom: 2px; }
         .series-nav .nav-next { text-align: right; margin-left: auto; }
-        .series-head { margin: 0 0 18px; }
-        .series-head h1 { margin: 0 0 6px; }
-        .series-head .series-desc { color: var(--t2); font-size: 14px; margin: 0 0 4px; }
-        .series-head .series-count { color: var(--t2); font-size: 12px; }
-        .series-part-no { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--accent); }
-        .showcase-head { display: flex; gap: 20px; align-items: flex-start; margin: 0 0 24px; }
-        .showcase-cover { width: 180px; border-radius: 12px; box-shadow: var(--shadow); flex: none; }
-        .showcase-head-text h1 { margin: 0 0 6px; }
-        .showcase-desc { color: var(--t2); font-size: 15px; line-height: 1.55; margin: 0 0 12px; }
-        .showcase-links { display: flex; flex-wrap: wrap; gap: 8px; }
-        .showcase-link { display: inline-block; font-size: 13px; font-weight: 600; color: var(--accent); background: var(--asoft); border: 1px solid var(--abord); border-radius: 999px; padding: 6px 16px; text-decoration: none; }
-        .showcase-link:hover { filter: brightness(1.05); }
-        .showcase-section { font-size: 15px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--t2); margin: 28px 0 12px; }
-        .roadmap-list { display: flex; flex-direction: column; gap: 8px; }
-        .roadmap-row { display: flex; align-items: center; gap: 12px; background: var(--sheet); border-radius: 10px; box-shadow: var(--shadow); padding: 12px 18px; }
-        .roadmap-status { flex: none; font-size: 11px; font-weight: 700; letter-spacing: .03em; border-radius: 999px; padding: 3px 11px; }
-        .roadmap-status.now { color: var(--accent); background: var(--asoft); border: 1px solid var(--abord); }
-        .roadmap-status.next, .roadmap-status.later { color: var(--t2); background: var(--alt); border: 1px solid var(--border); }
-        .roadmap-status.done { color: var(--ok); background: var(--alt); border: 1px solid var(--border); }
-        .roadmap-title { font-size: 14px; }
-        @media (max-width: 560px) { .showcase-head { flex-direction: column; } .showcase-cover { width: 100%; } }
-        .floating-nav { position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 50; opacity: 0; pointer-events: none; transition: opacity .15s ease; }
-        .floating-nav.visible { opacity: 1; pointer-events: auto; }
-        .floating-nav-btn { width: 38px; height: 38px; border-radius: 50%; background: var(--sheet); border: 1px solid var(--border); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; color: var(--text); text-decoration: none; cursor: pointer; font-size: 16px; }
-        .floating-nav-btn:hover { background: var(--alt); }
-        .post-meta-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; font-size: 12px; color: var(--t2); }
-        .lang-switch-track { display: flex; gap: 2px; background: var(--alt); border-radius: 7px; padding: 2px; }
-        .lang-switch-btn { border: none; background: none; border-radius: 5px; padding: 3px 11px; font-size: 11.5px; font-weight: 600; color: var(--t2); }
-        .lang-switch-btn.current { background: var(--sheet); box-shadow: var(--shadow); color: var(--text); }
-        .post-footer-row { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--border); padding: 14px 0 0; margin-top: 14px; }
-        .post-signature { font-size: 13.5px; font-style: italic; color: var(--t2); white-space: pre-line; }
-        .telegram-link { font-size: 12.5px; font-weight: 500; color: var(--accent); }
+        .series-head { margin: 0 0 22px; }
+        .series-head h1 { font-family: var(--font-display); font-size: 27px; font-weight: 700; line-height: 1.22; margin: 0 0 6px; }
+        .series-head .series-desc { color: var(--wood-ink); font-size: 15px; margin: 0 0 4px; }
+        .series-head .series-count { color: var(--wood-ink); font-family: var(--font-mono); font-size: 12px; }
+        .series-part-no { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--accent); }
 
-        .spoiler { background: var(--t3); color: transparent; border-radius: 4px; padding: 0 5px; cursor: pointer; transition: background .2s; }
+        /* ── Showcase (ADR-134) — the same materials, a wider head ───────────────────────────────────── */
+        .showcase-head { display: flex; gap: 20px; align-items: flex-start; margin: 0 0 24px; }
+        .showcase-cover { width: 180px; border: 1px solid var(--paper-edge); border-radius: var(--radius-paper); box-shadow: var(--shadow-paper); flex: none; }
+        .showcase-head-text h1 { font-family: var(--font-display); font-size: 27px; font-weight: 700; line-height: 1.22; margin: 0 0 6px; }
+        .showcase-desc { color: var(--wood-ink); font-size: 15px; line-height: 1.55; margin: 0 0 12px; }
+        .showcase-links { display: flex; flex-wrap: wrap; gap: 8px; }
+        /* A pine plaque: the one colour in the system that acts (ADR-169 — a pine button as a link is a
+           pine button). */
+        .showcase-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border: 1px solid var(--pine-deep); border-radius: var(--radius-plaque); background: var(--grad-pine); box-shadow: var(--shadow-pine-btn); color: var(--text-on-pine); font-size: 14px; font-weight: 700; text-shadow: 0 1px 1px rgba(18, 26, 20, .45); }
+        .showcase-link:hover { filter: brightness(1.07); }
+        .showcase-section { font-family: var(--font-display); font-size: 12px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--wood-ink); margin: 30px 0 12px; }
+        .roadmap-list { display: flex; flex-direction: column; gap: 8px; }
+        .roadmap-row { display: flex; align-items: center; gap: 12px; background-color: var(--sheet); background-image: var(--tex-paper); border: var(--border-paper); border-radius: var(--radius-paper); box-shadow: var(--shadow-paper-sm); padding: 12px 18px; color: var(--text); }
+        /* Ink and wash are one pair (ADR-145): each tone takes the wash mixed from its own ink. */
+        .roadmap-status { flex: none; font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; border: 1.6px solid currentColor; border-radius: var(--radius-stamp); padding: 2px 9px; opacity: .92; }
+        .roadmap-status.now { color: var(--accent); background: var(--asoft); }
+        .roadmap-status.next, .roadmap-status.later { color: var(--t2); background: none; }
+        .roadmap-status.done { color: var(--ok); background: var(--ok-soft); }
+        .roadmap-title { font-size: 15px; }
+        @media (max-width: 560px) { .showcase-head { flex-direction: column; } .showcase-cover { width: 100%; } }
+
+        /* ── Floating nav — paper plaques, never discs ───────────────────────────────────────────────── */
+        .floating-nav { position: fixed; right: 20px; bottom: 46px; display: flex; flex-direction: column; gap: 8px; z-index: 50; opacity: 0; pointer-events: none; transition: opacity 150ms ease; }
+        .floating-nav.visible { opacity: 1; pointer-events: auto; }
+        .floating-nav-btn { width: 40px; height: 40px; border-radius: var(--radius-plaque); background: var(--sheet); border: 1px solid var(--paper-edge); box-shadow: var(--shadow-paper); display: flex; align-items: center; justify-content: center; color: var(--t2); cursor: pointer; padding: 0; }
+        .floating-nav-btn:hover { background: var(--alt); color: var(--text); }
+
+        .post-meta-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 12px; font-family: var(--font-sans); font-size: 12px; color: var(--t2); }
+        .post-card-views { display: inline-flex; align-items: center; gap: 5px; }
+        .lang-switch-track { display: flex; gap: 4px; margin-left: auto; }
+        .lang-switch-btn { display: inline-flex; align-items: center; min-height: 30px; padding: 0 11px; border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); background: var(--sheet); font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--t2); }
+        .lang-switch-btn:hover { background: var(--alt); color: var(--text); }
+        .lang-switch-btn.current { border-color: var(--pine-deep); background: var(--grad-pine); color: var(--text-on-pine); box-shadow: var(--shadow-pine-btn); }
+        .post-footer-row { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--border); padding: 16px 0 0; margin-top: 18px; font-family: var(--font-sans); }
+        /* The one place the margin note's hand appears: an author's sign-off is written, not typeset. */
+        .post-signature { font-family: var(--font-serif); font-size: 14px; color: var(--t2); white-space: pre-line; }
+        .telegram-link { font-size: 13px; font-weight: 600; color: var(--accent); }
+
+        /* ── Body vocabulary the renderer emits ─────────────────────────────────────────────────────── */
+        .spoiler { background: var(--t3); color: transparent; border-radius: var(--radius-stamp); padding: 0 5px; cursor: pointer; transition: background 200ms; }
         .spoiler:hover, .spoiler:focus { background: var(--alt); color: inherit; }
-        .post-sheet code { font-family: var(--font-mono); font-size: .85em; background: var(--alt); border-radius: 4px; padding: 1px 6px; }
-        .post-sheet pre { background: #22201A; color: #C9C08C; border-radius: 8px; padding: 12px 14px; overflow-x: auto; }
-        .post-sheet pre code { background: none; padding: 0; font-size: 13.5px; line-height: 1.55; }
-        .post-sheet blockquote { border-left: 3px solid var(--abord); padding: 2px 0 2px 14px; color: var(--t2); margin: 0 0 16px; }
-        .post-sheet hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
-        .post-sheet ul, .post-sheet ol { font-size: 16px; line-height: 1.7; padding-left: 20px; margin: 0 0 16px; }
-        .post-sheet figure { margin: 0 0 16px; }
-        .post-sheet figcaption { text-align: center; font-size: 13px; color: var(--t2); margin-top: 6px; }
-        .audio-title { font-size: 13.5px; font-weight: 600; color: var(--text); margin: 10px 0 4px; }
-        .post-sheet table { width: 100%; border-collapse: collapse; font-size: 14.5px; margin: 0 0 16px; overflow-x: auto; display: block; }
-        .post-sheet th, .post-sheet td { border: 1px solid var(--border); padding: 7px 11px; text-align: left; vertical-align: top; }
-        .post-sheet th { background: var(--alt); font-weight: 600; }
-        .post-sheet tr:nth-child(even) td { background: color-mix(in srgb, var(--alt) 40%, transparent); }
+        .post-sheet code { font-family: var(--font-mono); font-size: .85em; background: var(--surface); border: 1px solid var(--paper-edge); border-radius: var(--radius-stamp); padding: 0 5px; }
+        /* Text never sits on wood grain (rulebook 2), so a code block is the deeper paper rather than the
+           dark plate it used to be — the design system's own log lines are on paper for the same reason. */
+        .post-sheet pre { background-color: var(--surface); background-image: var(--tex-paper); border: var(--border-paper); border-radius: var(--radius-field); box-shadow: var(--shadow-field-inset); padding: 14px 16px; overflow-x: auto; }
+        .post-sheet pre code { background: none; border: none; padding: 0; font-size: 13px; line-height: 1.6; }
+        .post-sheet blockquote { border-left: 3px solid var(--brass); padding: 2px 0 2px 16px; color: var(--t2); margin: 0 0 18px; }
+        .post-sheet hr { border: none; border-top: 1px solid var(--border); margin: 26px 0; }
+        .post-sheet ul, .post-sheet ol { padding-left: 22px; margin: 0 0 18px; }
+        .post-sheet figure { margin: 0 0 18px; }
+        .post-sheet figcaption { text-align: center; font-family: var(--font-sans); font-size: 13px; color: var(--t2); margin-top: 6px; }
+        .audio-title { font-family: var(--font-sans); font-size: 14px; font-weight: 600; color: var(--text); margin: 10px 0 4px; }
+        .post-sheet table { width: 100%; border-collapse: collapse; font-family: var(--font-sans); font-size: 14px; margin: 0 0 18px; overflow-x: auto; display: block; }
+        .post-sheet th, .post-sheet td { border: 1px solid var(--paper-edge); padding: 7px 11px; text-align: left; vertical-align: top; }
+        .post-sheet th { background: var(--surface); font-weight: 700; }
+        .post-sheet tr:nth-child(even) td { background: var(--alt); }
         .math-tex { margin: 16px 0; overflow-x: auto; }
         div.math-tex { text-align: center; }
         .collage { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px; }
-        .collage img { width: 100%; height: 160px; object-fit: cover; border-radius: 6px; }
-        .carousel { position: relative; margin: 16px 0; }
-        .carousel-viewport img { width: 100%; display: block; border-radius: 6px; }
-        .carousel-prev, .carousel-next { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 18px; line-height: 1; }
+        .collage img { width: 100%; height: 160px; object-fit: cover; border-radius: var(--radius-paper); }
+        .carousel { position: relative; margin: 18px 0; }
+        .carousel-viewport img { width: 100%; display: block; border-radius: var(--radius-paper); }
+        .carousel-prev, .carousel-next { position: absolute; top: 50%; transform: translateY(-50%); background: var(--sheet); color: var(--text); border: 1px solid var(--paper-edge); box-shadow: var(--shadow-paper); width: 34px; height: 34px; border-radius: var(--radius-plaque); cursor: pointer; font-size: 18px; line-height: 1; padding: 0; }
         .carousel-prev { left: 8px; }
         .carousel-next { right: 8px; }
         .carousel-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
-        .carousel-dot { width: 8px; height: 8px; border-radius: 50%; border: none; background: rgba(128,128,128,0.4); cursor: pointer; padding: 0; }
-        .carousel-dot.active { background: var(--accent); }
+        .carousel-dot { width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--paper-edge); background: var(--surface); cursor: pointer; padding: 0; }
+        .carousel-dot.active { background-image: var(--grad-brass); border-color: var(--brass-edge); }
 
         /* Image viewer. The zoom cursor is put on by the script, not by a CSS selector, so that
            "this image opens" and "this image is clickable" can never disagree — and so a reader
            with JavaScript off is not invited to click something that will not happen. */
         .post-sheet img.zoomable { cursor: zoom-in; }
-        .lightbox { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 3vh 3vw; background: rgba(0, 0, 0, .93); opacity: 0; transition: opacity .12s ease; }
+        .lightbox { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 3vh 3vw; background: rgba(14, 9, 3, .94); opacity: 0; transition: opacity 120ms ease; }
         .lightbox.open { opacity: 1; }
         /* 100% of a flex item that is already inside the padded box: the image fills what is left
            after the caption row, which is why the caption never pushes it off-screen. */
-        .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; cursor: zoom-out; }
-        .lightbox-cap { flex: none; max-width: 900px; text-align: center; font-size: 13.5px; line-height: 1.5; color: rgba(255, 255, 255, .72); }
-        .lightbox-count { font-variant-numeric: tabular-nums; color: rgba(255, 255, 255, .45); }
-        .lightbox-btn { position: absolute; display: flex; align-items: center; justify-content: center; border: none; border-radius: 50%; background: rgba(255, 255, 255, .12); color: #fff; cursor: pointer; font-family: inherit; line-height: 1; padding: 0; }
-        .lightbox-btn:hover { background: rgba(255, 255, 255, .22); }
-        .lightbox-close { top: 16px; right: 16px; width: 40px; height: 40px; font-size: 26px; }
-        .lightbox-prev, .lightbox-next { top: 50%; transform: translateY(-50%); width: 46px; height: 46px; font-size: 30px; }
+        .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: var(--radius-paper); cursor: zoom-out; }
+        .lightbox-cap { flex: none; max-width: 900px; text-align: center; font-family: var(--font-sans); font-size: 14px; line-height: 1.5; color: rgba(242, 232, 206, .78); }
+        .lightbox-count { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: rgba(242, 232, 206, .5); }
+        .lightbox-btn { position: absolute; display: flex; align-items: center; justify-content: center; border: 1px solid var(--brass-edge); border-radius: var(--radius-plaque); background-image: var(--grad-brass); color: var(--brass-ink); cursor: pointer; font-family: inherit; line-height: 1; padding: 0; }
+        .lightbox-btn:hover { filter: brightness(1.08); }
+        .lightbox-close { top: 16px; right: 16px; width: 40px; height: 40px; font-size: 24px; }
+        .lightbox-prev, .lightbox-next { top: 50%; transform: translateY(-50%); width: 46px; height: 46px; font-size: 28px; }
         .lightbox-prev { left: 16px; }
         .lightbox-next { right: 16px; }
         /* On a phone the arrows would sit on top of the picture itself; there the swipe-sized
@@ -2019,145 +2149,177 @@ public static class BlogEndpoints
         @media (max-width: 600px) {
             .lightbox-prev, .lightbox-next { top: auto; bottom: 16px; transform: none; }
         }
-        .youtube-embed { position: relative; width: 100%; aspect-ratio: 16 / 9; margin: 0 0 16px; border-radius: 6px; overflow: hidden; }
+        .youtube-embed { position: relative; width: 100%; aspect-ratio: 16 / 9; margin: 0 0 18px; border-radius: var(--radius-paper); overflow: hidden; }
         .youtube-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
-        .footnotes { font-size: 12.5px; color: var(--t2); border-top: 1px solid var(--border); padding: 10px 0 0; margin: 0 0 4px; }
-        .footnotes sup, .post-sheet sup { color: var(--accent); font-weight: 600; }
+        .footnotes { font-family: var(--font-sans); font-size: 13px; color: var(--t2); border-top: 1px solid var(--border); padding: 12px 0 0; margin: 0 0 4px; }
+        .footnotes sup, .post-sheet sup { color: var(--accent); font-weight: 700; }
 
-        .poll-block { border: 1px solid var(--border); background: var(--sheet); border-radius: 10px; padding: 16px 18px; margin: 16px 0; }
-        .poll-question { font-weight: 700; font-size: 15px; margin-bottom: 10px; }
+        .poll-block { background-color: var(--surface); background-image: var(--tex-paper); border: var(--border-paper); border-radius: var(--radius-paper); padding: 16px 18px; margin: 18px 0; font-family: var(--font-sans); color: var(--text); }
+        .poll-question { font-family: var(--font-display); font-weight: 700; font-size: 16px; margin-bottom: 12px; }
         .poll-options { display: flex; flex-direction: column; gap: 6px; }
-        .poll-option { position: relative; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 8px 12px; cursor: pointer; font-family: inherit; font-size: 13.5px; color: var(--text); text-align: left; overflow: hidden; }
-        .poll-option:hover { border-color: var(--abord); }
+        .poll-option { position: relative; display: flex; align-items: center; gap: 8px; min-height: 44px; border: 1px solid var(--paper-edge); background: var(--paper-bright); border-radius: var(--radius-field); padding: 8px 12px; cursor: pointer; font-family: inherit; font-size: 14px; color: var(--text); text-align: left; overflow: hidden; }
+        .poll-option:hover { border-color: var(--border-strong); }
         .poll-option.voted { border-color: var(--abord); }
         .poll-option-label { position: relative; z-index: 1; flex: 1; }
         .poll-option-bar { position: absolute; inset: 0; z-index: 0; }
-        .poll-option-fill { display: block; height: 100%; width: 0%; background: var(--asoft); transition: width .3s ease; }
-        .poll-option-pct { position: relative; z-index: 1; font-size: 12px; color: var(--t2); font-variant-numeric: tabular-nums; }
-        .poll-total { font-size: 11.5px; color: var(--t2); margin-top: 8px; }
+        .poll-option-fill { display: block; height: 100%; width: 0%; background: var(--asoft); transition: width 300ms ease; }
+        .poll-option-pct { position: relative; z-index: 1; font-family: var(--font-mono); font-size: 12px; color: var(--t2); font-variant-numeric: tabular-nums; }
+        .poll-total { font-family: var(--font-mono); font-size: 12px; color: var(--t2); margin-top: 10px; }
 
-        .annotation { border-left: 3px solid var(--abord); background: var(--asoft); padding: 10px 14px; margin: 16px 0; border-radius: 4px; }
-        .article-annotation { border-left: none; background: none; padding: 0; margin: 16px 0 0; }
+        /* ── Feedback: it stays under the post it belongs to (ADR-046 clause 4) ─────────────────────── */
+        .annotation { border-left: 3px solid var(--abord); background: var(--asoft); padding: 10px 14px; margin: 18px 0; border-radius: var(--radius-paper); font-family: var(--font-sans); color: var(--text); }
+        .article-annotation { border-left: none; background: none; padding: 0; margin: 20px 0 0; }
         .annotation-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
         .article-annotation > .annotation-controls { margin-bottom: 14px; }
-        .react-btn { display: flex; align-items: center; gap: 7px; border: 1px solid var(--border); background: var(--sheet); border-radius: 999px; padding: 7px 16px; font-size: 14px; cursor: pointer; color: var(--text); font-family: inherit; }
-        .react-btn:hover { border-color: var(--abord); }
-        .react-btn.active { border-color: var(--abord); background: var(--asoft); }
-        .react-btn .count { font-weight: 600; font-variant-numeric: tabular-nums; }
-        .comment-count-label { font-size: 13px; color: var(--t2); }
-        .comment-box { background: var(--sheet); border-radius: 12px; box-shadow: var(--shadow); padding: 20px 24px; }
-        .comment-box-label { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; font-weight: 600; color: var(--t2); margin: 0 0 12px; }
-        .comment-published-line { font-size: 11.5px; color: var(--t2); margin: -8px 0 12px; }
+        .react-btn { display: flex; align-items: center; gap: 7px; min-height: 44px; border: 1px solid var(--paper-edge); background: var(--sheet); box-shadow: var(--shadow-paper-sm); border-radius: var(--radius-plaque); padding: 0 16px; font-size: 14px; font-weight: 600; cursor: pointer; color: var(--t2); font-family: inherit; }
+        .react-btn:hover { background: var(--surface); color: var(--text); }
+        .react-btn.active { border-color: var(--abord); background: var(--asoft); color: var(--accent); }
+        .react-btn .count { font-family: var(--font-mono); font-weight: 700; font-variant-numeric: tabular-nums; }
+        .comment-count-label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--wood-ink); }
+        .comment-count-label .comment-count { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+        .comment-box { background-color: var(--sheet); background-image: var(--tex-paper); border: var(--border-paper); border-radius: var(--radius-paper); box-shadow: var(--shadow-paper); padding: 20px 24px; font-family: var(--font-sans); color: var(--text); }
+        .comment-box-label { font-family: var(--font-display); font-size: 11px; letter-spacing: .13em; text-transform: uppercase; font-weight: 700; color: var(--t2); margin: 0 0 12px; }
+        .comment-published-line { font-family: var(--font-mono); font-size: 12px; color: var(--t2); margin: -6px 0 12px; }
         .comment-list { display: flex; flex-direction: column; gap: 4px; margin: 0 0 14px; }
-        .comment-item { display: flex; gap: 10px; padding: 8px 10px; border-radius: 9px; transition: background .25s; }
+        .comment-item { display: flex; gap: 10px; padding: 8px 10px; border-radius: var(--radius-paper); transition: background 250ms; }
         .comment-item.glow { background: var(--asoft); }
         .comment-item.owner { background: var(--asoft); border: 1px solid var(--abord); }
-        .comment-item.owner .comment-meta::after { content: '★'; color: var(--accent); font-size: 11px; }
+        .comment-item.owner .comment-meta::after { content: '★'; color: var(--brass-ink); font-size: 11px; }
         .comment-item.comment-reply { margin-left: 30px; padding-top: 6px; padding-bottom: 6px; }
-        .comment-item.comment-reply .comment-avatar { width: 22px; height: 22px; font-size: 9.5px; }
-        .comment-item.comment-reply .comment-meta { font-size: 12px; }
-        .comment-item.comment-reply .comment-text { font-size: 13px; }
-        .comment-avatar { width: 28px; height: 28px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex: none; }
-        .comment-meta { display: flex; align-items: baseline; gap: 7px; font-size: 13px; font-weight: 600; }
-        .comment-meta time { font-size: 11px; font-weight: 400; color: var(--t2); }
-        .comment-anchor { font-size: 11px; color: var(--accent); background: var(--asoft); border-radius: 5px; padding: 2px 7px; display: inline-block; margin: 3px 0 1px; }
-        .comment-text { font-size: 14px; line-height: 1.5; }
-        .reply-btn { align-self: flex-start; margin-top: 4px; background: none; border: none; color: var(--t2); font-size: 12px; font-family: inherit; cursor: pointer; padding: 0; }
+        .comment-item.comment-reply .comment-avatar { width: 22px; height: 22px; font-size: 10px; }
+        .comment-item.comment-reply .comment-meta { font-size: 13px; }
+        .comment-item.comment-reply .comment-text { font-size: 14px; }
+        .comment-avatar { width: 28px; height: 28px; border-radius: var(--radius-stamp); color: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 12px; font-weight: 700; flex: none; }
+        .comment-meta { display: flex; align-items: baseline; gap: 7px; font-size: 14px; font-weight: 700; }
+        .comment-meta time { font-family: var(--font-mono); font-size: 11px; font-weight: 400; color: var(--t2); }
+        .comment-anchor { font-family: var(--font-mono); font-size: 11px; color: var(--accent); background: var(--asoft); border: 1px solid var(--abord); border-radius: var(--radius-stamp); padding: 1px 7px; display: inline-block; margin: 3px 0 1px; }
+        .comment-text { font-size: 15px; line-height: 1.55; }
+        .reply-btn { align-self: flex-start; margin-top: 4px; background: none; border: none; color: var(--t2); font-size: 13px; font-family: inherit; cursor: pointer; padding: 0; }
         .reply-btn:hover { color: var(--accent); text-decoration: underline; }
         /* IB5: a `display` rule beats the [hidden] attribute's default `display: none`, so both
            the reply indicator and the load-more button below stayed on screen no matter what the
            script set — the reply target looked impossible to clear, and "show more" was offered
            when there was no more. One global rule rather than a per-class fix, so the next
            element scripted through `hidden` doesn't reintroduce it. */
+        .comment-reply-indicator { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--t2); margin: 0 0 8px; }
+        .comment-reply-indicator .reply-target-name { font-weight: 700; color: var(--text); }
+        .comment-reply-indicator .cancel-reply { background: var(--sheet); border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); padding: 2px 10px; font-size: 12px; color: var(--t2); cursor: pointer; font-family: inherit; }
+        .comment-load-more { display: block; margin: 0 0 10px; background: var(--sheet); border: 1px solid var(--paper-edge); box-shadow: var(--shadow-paper-sm); border-radius: var(--radius-plaque); padding: 6px 12px; cursor: pointer; color: var(--t2); font: inherit; font-size: 13px; }
+        .comment-load-more:hover { background: var(--surface); color: var(--text); }
+
         /* Idea #11 - a glossary term in the body, and the card that explains it. The term is
            focusable so the tooltip is reachable by keyboard and by tap, not only by hover. */
         .glossary-term { border-bottom: 1px dashed var(--abord); cursor: help; }
         .glossary-term:hover, .glossary-term:focus { background: var(--asoft); outline: none; }
         .glossary-pop {
             position: absolute; z-index: 50; max-width: 300px; padding: 12px 14px;
-            background: var(--sheet); border: 1px solid var(--border); border-radius: 10px;
-            box-shadow: 0 6px 24px rgba(40,35,25,.16); font-size: 13.5px; line-height: 1.5;
+            background-color: var(--sheet); background-image: var(--tex-paper);
+            border: var(--border-paper); border-radius: var(--radius-paper);
+            box-shadow: var(--shadow-paper); font-family: var(--font-sans); font-size: 14px; line-height: 1.5; color: var(--text);
         }
-        .glossary-pop-term { font-weight: 700; margin: 0 0 4px; }
+        .glossary-pop-term { font-family: var(--font-display); font-weight: 700; margin: 0 0 4px; }
         .glossary-pop-desc { margin: 0; color: var(--t2); }
-        .glossary-pop img { display: block; width: 100%; border-radius: 6px; margin: 0 0 8px; }
-        [hidden] { display: none !important; }
-        .comment-reply-indicator { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--t2); margin: 0 0 8px; }
-        .comment-reply-indicator .reply-target-name { font-weight: 600; color: var(--text); }
-        .comment-reply-indicator .cancel-reply { background: none; border: 1px solid var(--border); border-radius: 999px; padding: 1px 9px; font-size: 11.5px; color: var(--t2); cursor: pointer; font-family: inherit; }
-        .comment-load-more { display: block; margin: 0 0 10px; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: var(--text); font: inherit; font-size: 12.5px; }
-        /* Registration gate for private posts (B3) — replaces the article body entirely. */
+        .glossary-pop img { display: block; width: 100%; border-radius: var(--radius-paper); margin: 0 0 8px; }
+
+        /* ── Fields and the pine button: the gate (B3) and the comment form ─────────────────────────── */
         .reg-gate { display: flex; justify-content: center; padding: 8px 0 40px; }
-        .reg-card { background: var(--sheet); border-radius: 12px; box-shadow: var(--shadow); padding: 28px 30px; max-width: 460px; width: 100%; }
-        .reg-title { font-size: 22px; margin: 0 0 10px; }
-        .reg-lock { font-size: 12px; letter-spacing: .05em; text-transform: uppercase; font-weight: 600; color: var(--t2); margin-bottom: 10px; }
+        .reg-card { background-color: var(--sheet); background-image: var(--tex-paper); border: 1px solid var(--paper-edge); border-radius: var(--radius-paper); box-shadow: var(--shadow-sheet); padding: 28px 30px; max-width: 460px; width: 100%; color: var(--text); }
+        .reg-title { font-family: var(--font-display); font-size: 24px; font-weight: 700; line-height: 1.22; margin: 0 0 10px; }
+        .reg-lock { display: flex; align-items: center; gap: 6px; font-family: var(--font-display); font-size: 11px; letter-spacing: .13em; text-transform: uppercase; font-weight: 700; color: var(--t2); margin-bottom: 12px; }
         .reg-blurb { font-size: 14px; color: var(--t2); margin: 0 0 6px; }
-        .reg-intro { font-size: 14px; line-height: 1.5; margin: 0 0 16px; }
-        .post-card-locked { font-size: 11px; opacity: .75; }
-        .reg-langs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
-        .reg-lang { border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--t2); text-decoration: none; }
-        .reg-lang:hover { border-color: var(--abord); color: var(--text); }
-        .reg-lang.active { background: var(--asoft); border-color: var(--abord); color: var(--accent); font-weight: 600; }
-        .reg-form { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
-        .reg-input { border: 1px solid var(--border); background: var(--sheet); color: var(--text); border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; outline: none; width: 100%; box-sizing: border-box; }
-        .reg-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--asoft); }
+        .reg-intro { font-family: var(--font-serif); font-size: 15px; line-height: 1.6; margin: 0 0 16px; }
+        .reg-langs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+        .reg-lang { display: inline-flex; align-items: center; min-height: 30px; padding: 0 11px; border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); background: var(--paper-bright); font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--t2); }
+        .reg-lang:hover { background: var(--alt); color: var(--text); }
+        .reg-lang.active { border-color: var(--pine-deep); background: var(--grad-pine); color: var(--text-on-pine); box-shadow: var(--shadow-pine-btn); }
+        .reg-form { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
         .reg-question { display: flex; flex-direction: column; gap: 5px; }
-        .reg-question-label { font-size: 13px; font-weight: 500; }
+        .reg-question-label { font-size: 14px; font-weight: 600; }
         .reg-multi { display: flex; flex-direction: column; gap: 6px; }
-        .reg-multi-option { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+        .reg-multi-option { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 15px; cursor: pointer; }
         .reg-textarea { resize: vertical; min-height: 88px; line-height: 1.5; }
         .reg-static { display: flex; flex-direction: column; gap: 8px; }
-        .reg-static-image { width: 100%; height: auto; border-radius: 8px; display: block; }
-        .reg-static-text { font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap; }
+        .reg-static-image { width: 100%; height: auto; border-radius: var(--radius-paper); display: block; }
+        .reg-static-text { font-size: 15px; line-height: 1.6; margin: 0; white-space: pre-wrap; }
         .reg-consent { display: flex; flex-direction: column; gap: 6px; }
-        .reg-consent-text { font-size: 13px; line-height: 1.5; margin: 0; white-space: pre-wrap; }
-        .reg-consent-check { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
-        .reg-submit { border: none; background: var(--accent); color: var(--sheet); border-radius: 8px; padding: 11px 18px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; margin-top: 4px; }
-        .reg-submit:hover { filter: brightness(1.08); }
-        .reg-submit:disabled { opacity: .6; cursor: default; }
-        .reg-error { color: var(--danger); font-size: 13px; margin: 4px 0 0; }
+        .reg-consent-text { font-size: 14px; line-height: 1.5; margin: 0; white-space: pre-wrap; }
+        .reg-consent-check { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 15px; font-weight: 600; cursor: pointer; }
+        .reg-error { color: var(--danger); font-size: 14px; margin: 4px 0 0; }
+
+        /* One field rule for both forms: paper stock, a boundary the reader is meant to find
+           (--border-strong is the affordance token), a milled inset, and a brass ring on focus. */
+        .reg-input, .comment-form input[type="text"], .comment-form textarea {
+            width: 100%; border: 1px solid var(--border-strong); background: var(--paper-bright); color: var(--text);
+            border-radius: var(--radius-field); box-shadow: var(--shadow-field-inset);
+            padding: 10px 12px; min-height: 44px; font-size: 15px; font-family: inherit; outline: none;
+        }
+        .reg-input::placeholder, .comment-form textarea::placeholder, .comment-form input::placeholder { color: var(--t3); opacity: 1; }
 
         /* IB5: was three stacked full-width rows (name, textarea, a full-width Send slab). The
            comment box is a secondary element on the page, so it now leads with the textarea and
            puts the optional name next to a normal-sized Send button on one row. */
         .comment-form { display: flex; flex-direction: column; gap: 8px; }
-        .comment-form input, .comment-form textarea { border: 1px solid var(--border); background: var(--sheet); color: var(--text); border-radius: 8px; padding: 9px 12px; font-size: 13.5px; font-family: inherit; outline: none; }
         .comment-form textarea { min-height: 62px; resize: vertical; }
-        .comment-form input:focus, .comment-form textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--asoft); }
         .comment-form-row { display: flex; gap: 8px; }
         .comment-form-row .comment-author { flex: 1; min-width: 0; }
-        .comment-form button { flex: none; border: none; background: var(--accent); color: var(--sheet); border-radius: 8px; padding: 9px 18px; font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: inherit; }
-        .comment-form button:hover { filter: brightness(1.08); }
+        /* The pine plaque — the primary action of the one form a reader ever fills in. */
+        .reg-submit, .comment-form button {
+            flex: none; border: 1px solid var(--pine-deep); background: var(--grad-pine);
+            color: var(--text-on-pine); border-radius: var(--radius-plaque); box-shadow: var(--shadow-pine-btn);
+            min-height: 44px; padding: 0 20px; font-size: 15px; font-weight: 700; cursor: pointer;
+            font-family: var(--font-sans); text-shadow: 0 1px 1px rgba(18, 26, 20, .45);
+        }
+        .reg-submit { margin-top: 4px; }
+        .reg-submit:hover, .comment-form button:hover { filter: brightness(1.07); }
+        .reg-submit:active, .comment-form button:active { transform: translateY(2px); }
+        .reg-submit:disabled { opacity: .6; cursor: default; transform: none; }
 
-        .site-footer { border-top: 1px solid var(--border); background: var(--surface); }
+        /* ── The carpenter's rule (ADR-179 clause 2): the bottom edge of the bench ──────────────────── */
+        .site-footer {
+            border-top: 1px solid var(--brass-edge);
+            box-shadow: inset 0 1px 0 color-mix(in srgb, var(--brass-hi) 70%, transparent);
+            background-image:
+                repeating-linear-gradient(to right, color-mix(in srgb, var(--brass-ink) 45%, transparent) 0 1px, transparent 1px 12px),
+                repeating-linear-gradient(to right, color-mix(in srgb, var(--brass-ink) 55%, transparent) 0 2px, transparent 2px 72px),
+                var(--grad-brass);
+            color: var(--brass-ink);
+            text-shadow: 0 1px 0 color-mix(in srgb, var(--brass-hi) 55%, transparent);
+        }
         /* Three groups on one line — brand, links, badge — and the badge is the one that must not be
-           centred (Marty, 13.08.2026): a hosted SVG of fixed size in the middle of a footer reads as
-           an advert placed there, while the same badge at the edge reads as a credit. */
+           centred: a hosted SVG of fixed size in the middle of a footer reads as an advert placed there,
+           while the same badge at the edge reads as a credit. */
         .site-footer-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center;
-            justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; padding: 16px 20px;
-            font-size: 12px; color: var(--t2); }
+            justify-content: space-between; gap: 8px 20px; flex-wrap: wrap; min-height: 30px; padding: 6px 20px;
+            font-family: var(--font-mono); font-size: 11px; }
         .footer-brand { display: flex; align-items: center; gap: 8px; }
+        .footer-brand a { color: var(--brass-ink); font-weight: 700; }
         .footer-links { display: flex; align-items: center; gap: 14px; }
-        .footer-links a { color: var(--t2); }
-        .footer-links a:hover { color: var(--text); }
-        /* The badge ships as a white plate, which on the dark theme is the brightest thing on the
-           page — brighter than the post title. Dimming it to the weight of the text around it keeps
-           it a credit rather than a banner; it comes back to full on hover. */
+        .footer-links a { color: var(--brass-ink); }
+        .footer-links a:hover, .footer-brand a:hover { text-decoration: underline; }
+        /* The badge ships as a white plate, which on brass is the brightest thing on the bar — brighter
+           than the credit beside it. Dimming it to the weight of the text around it keeps it a credit
+           rather than a banner; it comes back to full on hover. */
         .footer-badge { flex: none; display: block; opacity: 0.72; transition: opacity 120ms; }
         .footer-badge:hover { opacity: 1; }
         .footer-badge img { max-width: 100%; height: auto; display: block; }
 
         /* Below this the three groups stack, and the row that was pushed to the edges would look
-           ragged left — so a stacked footer centres instead. */
+           ragged left — so a stacked rule centres instead. */
         @media (max-width: 700px) {
-            .site-footer-inner { flex-direction: column; justify-content: center; text-align: center; gap: 12px; }
+            .site-footer-inner { flex-direction: column; justify-content: center; text-align: center; gap: 10px; padding: 12px 20px; }
             .footer-brand { justify-content: center; }
         }
 
         @media (max-width: 480px) {
-            .post-sheet { padding: 22px 16px 20px; }
+            .post-sheet { padding: 24px 18px 22px; }
+            .post-sheet h1 { font-size: 23px; }
             .comment-box { padding: 16px; }
             .tg-open-btn span.tg-open-label { display: none; }
+        }
+
+        /* The design system's motion is a settle, and the OS setting turns it off entirely. */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
         }
         </style>
         {{MATH_ASSETS}}
@@ -2169,8 +2331,8 @@ public static class BlogEndpoints
         </main>
         <div class="site-footer"><div class="site-footer-inner">
         <div class="footer-brand">
-        <svg width="14" height="14" viewBox="0 0 24 24"><polygon points="12,2 19,11 5,11" fill="var(--accent)"></polygon><polygon points="12,7 21,18 3,18" fill="var(--accent)" opacity="0.75"></polygon><rect x="10.6" y="18" width="2.8" height="4" rx="1" fill="var(--accent)" opacity="0.9"></rect></svg>
-        <span>Made with <a href="https://cedarclerk.mooexe.dev" style="font-weight:500">Cedar Clerk</a> — write here, publish there. Moo.</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12,2 19,11 5,11" fill="var(--brass-ink)"></polygon><polygon points="12,7 21,18 3,18" fill="var(--brass-ink)" opacity="0.75"></polygon><rect x="10.6" y="18" width="2.8" height="4" rx="1" fill="var(--brass-ink)" opacity="0.9"></rect></svg>
+        <span>Made with <a href="https://cedarclerk.mooexe.dev">Cedar Clerk</a> — write here, publish there. Moo.</span>
         </div>
         <!--Terms and Privacy live on the app host, not here: one copy of a legal page, and the blog
         is a second host serving the same product. Status is the uptime page (T-148) — a link a reader
@@ -2390,13 +2552,13 @@ public static class BlogEndpoints
                 function currentTheme() {
                     return document.documentElement.getAttribute('data-theme') || (mql && mql.matches ? 'dark' : 'light');
                 }
-                function updateIcon() { themeBtn.textContent = currentTheme() === 'dark' ? String.fromCharCode(9728) : String.fromCharCode(9789); }
-                updateIcon();
+                /* Which of the two glyphs shows is decided by data-theme in CSS, not here: it was
+                   a textContent this handler had to remember to keep in step, and the attribute
+                   the handler sets already says which way round the page is. */
                 themeBtn.addEventListener('click', function () {
                     var next = currentTheme() === 'dark' ? 'light' : 'dark';
                     document.documentElement.setAttribute('data-theme', next);
                     localStorage.setItem('cedar-blog-theme', next);
-                    updateIcon();
                 });
             }
         })();
@@ -2738,8 +2900,9 @@ public static class BlogEndpoints
         return ShellTemplate
             // T-101 — the palette comes from the app's stylesheet through the generated
             // DesignTokens, so a colour changed there reaches the blog without anyone copying it.
-            .Replace("{{LIGHT_TOKENS}}", DesignTokens.Declarations(DesignTokens.Light))
-            .Replace("{{DARK_TOKENS}}", DesignTokens.Declarations(DesignTokens.Dark))
+            .Replace("{{LIGHT_TOKENS}}", DesignTokens.Declarations(DesignTokens.Light, DesignTokens.MaterialsLight))
+            .Replace("{{DARK_TOKENS}}", DesignTokens.Declarations(DesignTokens.Dark, DesignTokens.MaterialsDark))
+            .Replace("{{FONT_FACES}}", DesignTokens.FontFaces)
             .Replace("{{LANG}}", lang)
             .Replace("{{TITLE}}", System.Net.WebUtility.HtmlEncode(title))
             .Replace("{{META}}", metaHtml)

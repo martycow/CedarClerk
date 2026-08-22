@@ -9,7 +9,7 @@
 // The output is committed, like icon-data.generated.ts, and a test fails if it drifts.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { CONTRACT } from './contract-tokens.mjs';
+import { CONTRACT, MATERIALS } from './contract-tokens.mjs';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const css = readFileSync(resolve(ROOT, 'src/styles.scss'), 'utf8');
@@ -33,7 +33,7 @@ function block(selector) {
 const light = block(':root');
 const dark = block(':root[data-theme="dark"]');
 
-const pick = (vars) => CONTRACT
+const pick = (list, vars) => list
     .filter(name => vars[name] !== undefined)
     .map(name => `        ["${name}"] = ${JSON.stringify(vars[name])},`)
     .join('\n');
@@ -48,25 +48,47 @@ namespace CedarClerk.Core;
 /// The blog used to carry its own copy of the palette, which is why the contrast pass fixed the
 /// app and left the blog a shade behind. There is one source now — the stylesheet — and this file
 /// is generated from it.
+///
+/// Two vocabularies travel (ADR-177): the contract names a role and holds a flat colour, the
+/// material names what a surface is made of and may hold the gradient, texture or shadow it is.
 /// </summary>
-public static class DesignTokens
+public static partial class DesignTokens
 {
     public static readonly IReadOnlyDictionary<string, string> Light = new Dictionary<string, string>
     {
-${pick(light)}
+${pick(CONTRACT, light)}
     };
 
     /// <summary>Only what the dark theme overrides; everything else is inherited from <see cref="Light"/>.</summary>
     public static readonly IReadOnlyDictionary<string, string> Dark = new Dictionary<string, string>
     {
-${pick(dark)}
+${pick(CONTRACT, dark)}
+    };
+
+    /// <summary>The bench materials (ADR-177), for a surface that paints wood, paper and brass.</summary>
+    public static readonly IReadOnlyDictionary<string, string> MaterialsLight = new Dictionary<string, string>
+    {
+${pick(MATERIALS, light)}
+    };
+
+    /// <summary>Only what night moves; the rest is inherited from <see cref="MaterialsLight"/>.</summary>
+    public static readonly IReadOnlyDictionary<string, string> MaterialsDark = new Dictionary<string, string>
+    {
+${pick(MATERIALS, dark)}
     };
 
     /// <summary>The declarations of one theme, ready to drop inside a CSS rule.</summary>
     public static string Declarations(IReadOnlyDictionary<string, string> tokens) =>
         string.Join(" ", tokens.Select(t => $"--{t.Key}: {t.Value};"));
+
+    /// <summary>Contract and materials of one theme together, in that order.</summary>
+    public static string Declarations(
+        IReadOnlyDictionary<string, string> tokens, IReadOnlyDictionary<string, string> materials) =>
+        Declarations(tokens) + " " + Declarations(materials);
 }
 `;
 
 writeFileSync(resolve(ROOT, '../CedarClerk.Core/DesignTokens.generated.cs'), out);
-console.log(`wrote ${Object.keys(light).filter(k => CONTRACT.includes(k)).length} light and ${Object.keys(dark).filter(k => CONTRACT.includes(k)).length} dark tokens`);
+const count = (list, vars) => list.filter(n => vars[n] !== undefined).length;
+console.log(`wrote ${count(CONTRACT, light)} light and ${count(CONTRACT, dark)} dark contract tokens, `
+    + `${count(MATERIALS, light)} light and ${count(MATERIALS, dark)} dark materials`);

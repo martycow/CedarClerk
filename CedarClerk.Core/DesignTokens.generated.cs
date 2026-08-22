@@ -8,8 +8,11 @@ namespace CedarClerk.Core;
 /// The blog used to carry its own copy of the palette, which is why the contrast pass fixed the
 /// app and left the blog a shade behind. There is one source now — the stylesheet — and this file
 /// is generated from it.
+///
+/// Two vocabularies travel (ADR-177): the contract names a role and holds a flat colour, the
+/// material names what a surface is made of and may hold the gradient, texture or shadow it is.
 /// </summary>
-public static class DesignTokens
+public static partial class DesignTokens
 {
     public static readonly IReadOnlyDictionary<string, string> Light = new Dictionary<string, string>
     {
@@ -70,7 +73,89 @@ public static class DesignTokens
         ["asoft"] = "color-mix(in srgb, var(--accent) 10%, var(--surface))",
     };
 
+    /// <summary>The bench materials (ADR-177), for a surface that paints wood, paper and brass.</summary>
+    public static readonly IReadOnlyDictionary<string, string> MaterialsLight = new Dictionary<string, string>
+    {
+        ["wall-hi"] = "var(--bg)",
+        ["wall-lo"] = "var(--canvas)",
+        ["surface-page"] = "linear-gradient(170deg, var(--wall-hi) 0%, var(--wall-lo) 100%)",
+        ["lamp"] = "radial-gradient(1100px 700px at 14% -10%, rgba(255, 228, 170, .34), rgba(255, 228, 170, 0) 60%)",
+        ["rail-hi"] = "#6B4F33",
+        ["rail-mid"] = "#4E3820",
+        ["rail-lo"] = "#3E2C17",
+        ["rail-edge"] = "#241808",
+        ["rail-ink"] = "#F2E8CE",
+        ["surface-rail"] = "linear-gradient(180deg, var(--rail-hi), var(--rail-mid) 58%, var(--rail-lo))",
+        ["rail-btn-face"] = "rgba(0, 0, 0, .16)",
+        ["rail-btn-face-hover"] = "rgba(0, 0, 0, .28)",
+        ["border-rail-btn"] = "1px solid rgba(242, 232, 206, .3)",
+        ["shadow-rail"] = "inset 0 1px 0 rgba(255, 240, 210, .12), 0 2px 8px rgba(30, 18, 6, .4)",
+        ["tex-wood"] = "url('/assets/forest/tex-wood.svg')",
+        ["paper-bright"] = "#FFFDF4",
+        ["paper-edge"] = "#DDD2B8",
+        ["tex-paper"] = "url('/assets/forest/tex-paper.svg')",
+        ["border-paper"] = "1px solid rgba(120, 96, 58, .35)",
+        ["shadow-paper"] = "0 1px 2px rgba(58, 38, 16, .18), 0 10px 26px rgba(58, 38, 16, .2)",
+        ["shadow-paper-sm"] = "0 1px 2px rgba(58, 38, 16, .12)",
+        ["shadow-sheet"] = "0 2px 4px rgba(50, 30, 10, .2), 0 14px 28px rgba(50, 30, 10, .22)",
+        ["shadow-field-inset"] = "inset 0 1px 2px rgba(80, 56, 26, .14)",
+        ["radius-paper"] = "3px",
+        ["radius-stamp"] = "3px",
+        ["radius-plaque"] = "var(--radius-md)",
+        ["radius-field"] = "var(--radius-sm)",
+        ["pine"] = "var(--accent)",
+        ["pine-hi"] = "color-mix(in srgb, var(--pine) 92%, var(--paper-bright))",
+        ["pine-deep"] = "color-mix(in srgb, var(--pine) 76%, #000000)",
+        ["grad-pine"] = "linear-gradient(180deg, var(--pine-hi), var(--pine))",
+        ["text-on-pine"] = "#F2EFE2",
+        ["shadow-pine-btn"] = "inset 0 0 0 1px rgba(238, 217, 163, .35), 0 2px 0 var(--pine-deep), 0 4px 8px rgba(46, 28, 10, .25)",
+        ["leaf-bg"] = "#DCE2C4",
+        ["leaf-bg-2"] = "#C9D3A4",
+        ["leaf-ink"] = "#3D4E2A",
+        ["leaf-dried-bg"] = "rgba(228, 221, 196, .82)",
+        ["leaf-dried-edge"] = "rgba(120, 110, 70, .5)",
+        ["brass"] = "#C69A4E",
+        ["brass-hi"] = "#EED9A3",
+        ["brass-lo"] = "#8A6226",
+        ["brass-edge"] = "#6E4E1B",
+        ["brass-ink"] = "#674A1C",
+        ["grad-brass"] = "linear-gradient(180deg, var(--brass-hi), var(--brass))",
+        ["focus-halo"] = "rgba(238, 217, 163, .85)",
+        ["ok-soft"] = "color-mix(in srgb, var(--ok) 13%, var(--surface))",
+        ["brass-soft"] = "color-mix(in srgb, var(--brass-ink) 13%, var(--surface))",
+        ["font-display"] = "'Vollkorn', Georgia, serif",
+        ["rule-ink"] = "rgba(120, 96, 58, .32)",
+        ["rule-ink-soft"] = "rgba(120, 96, 58, .15)",
+    };
+
+    /// <summary>Only what night moves; the rest is inherited from <see cref="MaterialsLight"/>.</summary>
+    public static readonly IReadOnlyDictionary<string, string> MaterialsDark = new Dictionary<string, string>
+    {
+        ["lamp"] = "radial-gradient(950px 640px at 80% -8%, rgba(255, 182, 94, .32), rgba(255, 182, 94, 0) 62%)",
+        ["rail-hi"] = "#4A3620",
+        ["rail-mid"] = "#33230F",
+        ["rail-lo"] = "#281A0A",
+        ["paper-bright"] = "#EFE6CC",
+        ["paper-edge"] = "#C2B48D",
+        ["leaf-bg"] = "#C6CFA2",
+        ["leaf-bg-2"] = "#B4C08C",
+        ["leaf-ink"] = "#33421F",
+        ["brass-hi"] = "#F0DCA6",
+        ["brass-lo"] = "#7E5A20",
+        ["brass-edge"] = "#5C4114",
+        ["brass-ink"] = "#684A1A",
+        ["ok-soft"] = "color-mix(in srgb, var(--ok) 10%, var(--surface))",
+        ["brass-soft"] = "color-mix(in srgb, var(--brass-ink) 10%, var(--surface))",
+        ["rule-ink"] = "rgba(227, 211, 174, .26)",
+        ["rule-ink-soft"] = "rgba(227, 211, 174, .12)",
+    };
+
     /// <summary>The declarations of one theme, ready to drop inside a CSS rule.</summary>
     public static string Declarations(IReadOnlyDictionary<string, string> tokens) =>
         string.Join(" ", tokens.Select(t => $"--{t.Key}: {t.Value};"));
+
+    /// <summary>Contract and materials of one theme together, in that order.</summary>
+    public static string Declarations(
+        IReadOnlyDictionary<string, string> tokens, IReadOnlyDictionary<string, string> materials) =>
+        Declarations(tokens) + " " + Declarations(materials);
 }

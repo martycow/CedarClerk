@@ -1,5 +1,68 @@
 # Changelog
 
+## 2026-08-22 — the blog joins the bench (branch `UI_V2`)
+
+The port had closed every screen of the app and left the one surface a stranger actually sees. The
+blog already carried the bench *palette* — T-101's generator has fed it since ADR-071 principle 6 —
+and nothing else: 12px card radii, pill chips, a sticky white header, `system-ui` under a token that
+says *Source Sans 3*, and four emoji standing in for the counts.
+
+**Materials now cross to the server (ADR-177).** `tools/contract-tokens.mjs` gained a second list
+beside `CONTRACT`: `MATERIALS`, fifty names for what a surface is *made of* rather than what it is
+*for*. Both are generated into `DesignTokens` — `MaterialsLight`/`MaterialsDark` beside
+`Light`/`Dark` — and a material may be the gradient, texture URL or shadow it actually is, because
+the gradient refusal walks `CONTRACT` and deliberately not this list. The off-contract check and the
+stale check widen to the union, so a material renamed in `styles.scss` still fails the run by name.
+A member with no call site is dead weight, not a reservation: the list was pruned to what the blog
+paints, which is why `--pine` and `--wall-hi` are on it (a served derivation dereferences them) and
+`--paper` and `--ink` are not (they are `--sheet` and `--text` under a second name).
+
+**The blog is served the faces it names (ADR-178).** ADR-143 left this open and said why the obvious
+repair fails — the bundler content-hashes the woff2, so a hand-written URL dies at the next build.
+`angular.json` now copies twelve files out of `node_modules/@fontsource/*/files` into
+`assets/fonts/` unhashed, and `DesignTokens.FontFaces` declares them. Vollkorn 600/700, Source Sans
+3 400/600, Literata 400/600, latin and cyrillic each. Every rule carries an explicit `unicode-range`
+taken from the packages' own `index.css`, because two subsets of one family and weight declared
+without one do not compose — the later rule wins for the whole range.
+
+**The blog is a sheet on the wall under a park-sign rail (ADR-179).** The ground is the plaster wall
+under the lamp; the header is dark wood with cream lettering; the footer is the carpenter's rule,
+milled brass with ticks and mono numerals. A post is `writer.html`'s sheet at the reading numbers —
+paper stock with its noise, a square 3px cut, the two-layer sheet shadow, Vollkorn titles and
+Literata body at `--fs-read`/`--lh-read`. Index cards are the same stock with the kit's 2–3px hover
+lift, hung on brass pins along a pencil rule; each month opens with a stamp. Tags are leaves, the
+roadmap's statuses are stamps, focus is the brass pair from ADR-140, and the `border-radius: 999px`
+that ran through eleven classes is gone. The theme toggle is a paper button at the chrome box
+(ADR-175) whose glyph is chosen by `data-theme` in CSS rather than by the click handler.
+
+What the blog deliberately does **not** take: the hook rail, shelf panels, the drawer, index tabs
+and the worktop grid. Every one is a place to put a command, and a reader has none.
+
+**No emoji.** 👍 👎 💬 👁 🔒 and the `☰`/`↑` dingbats are `CedarClerk.Core.BlogIcons` — nine stroke
+glyphs on the kit's 16px grid, inline in the markup because `assets/cedar-icons.js` ships with the
+Angular bundle and the blog host never loads it. Every count beside them is mono.
+
+**Two defects the port found and fixed on the way.** The page ground carries `--wood-ink`, not
+`--text`: the wall darkens at night while paper stays cream (ADR-141), so a page-level `--text` was
+invisible on the ground — every paper surface re-declares the paper ink for itself. And a rule drawn
+*on* the sheet takes `--border`, never `--rule-ink`: the pencil turns cream at night because the
+wall does, and cream on cream is not a line. It was the title divider, the `<hr>`, and three border
+tops.
+
+**Measured.** The contrast gate is green with the four standing ADR-140/172 exceptions and no new
+ones; the census now reports nothing on the blog but the rail button, whose pair the table already
+covers under wood — the same finding the app's own `.btn.rail` carries, and a limit of the census's
+backdrop inference rather than a defect. `cedar test` 1444 green. Four page types were rendered in
+both themes on an isolated stack (scratch database on 8090, `blog.localhost`, bot confirmed
+disabled): index, post, series, gate, plus the post at phone width.
+
+**Found in the app, not fixed here** (`T-275`): `styles.scss` has the clause-3 problem ADR-178
+avoids server-side. Its sixteen `@fontsource` imports are per-subset sheets with no
+`unicode-range`, latin first and cyrillic second, so the cyrillic rule shadows the latin one for the
+whole range and Latin text in the app is drawn by the fallback stack while the token claims Vollkorn
+and Literata. It is a decision rather than a one-liner — sixteen local `@font-face` blocks, or the
+packages' `index.css` with the payload that implies.
+
 ## 2026-08-22 — the bench fidelity pass (branch `UI_V2`, one commit)
 
 **What was audited.** Marty asked for the port to be checked against the design prototype, because

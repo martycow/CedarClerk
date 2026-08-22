@@ -15,3 +15,39 @@ export const CONTRACT = [
     'shadow', 'asoft', 'abord', 'font-sans', 'font-mono', 'font-serif',
     'fs-read', 'lh-read', 'radius-sm', 'radius-md', 'radius-lg',
 ];
+
+// The bench materials a server-rendered surface paints with (ADR-177).
+//
+// The contract above answers "what is this for" and holds flat colours because the drift test pins
+// it and the appearance service rewrites part of it. This one answers "what is this made of", and
+// a material is allowed to be the gradient, the texture URL or the shadow it actually is — the
+// gradient refusal walks CONTRACT and deliberately not this list.
+//
+// A name earns its place by having a call site today and by holding a value rather than a synonym:
+// --paper and --ink are --sheet and --text under a second name, so they are absent, while
+// --pine-hi/--pine-deep are mixed from the accent and are the only place that ramp exists.
+export const MATERIALS = [
+    // The plaster wall the page stands on, and the lamp over it. The two stops travel because
+    // --surface-page dereferences them.
+    'wall-hi', 'wall-lo', 'surface-page', 'lamp',
+    // Dark park-sign wood: the board a public header is cut from, and the buttons mounted on it.
+    'rail-hi', 'rail-mid', 'rail-lo', 'rail-edge', 'rail-ink',
+    'surface-rail', 'rail-btn-face', 'rail-btn-face-hover', 'border-rail-btn', 'shadow-rail', 'tex-wood',
+    // Paper stock, its edge and its noise; the shadows that hold a sheet off the wall.
+    'paper-bright', 'paper-edge', 'tex-paper', 'border-paper',
+    'shadow-paper', 'shadow-paper-sm', 'shadow-sheet', 'shadow-field-inset',
+    'radius-paper', 'radius-stamp', 'radius-plaque', 'radius-field',
+    // The pine ramp. --accent is the flat role and stays on the contract; these are the lit and
+    // shaded faces of one button, and they follow the user's preset because they are mixed from it.
+    'pine', 'pine-hi', 'pine-deep', 'grad-pine', 'text-on-pine', 'shadow-pine-btn',
+    // Marks: leaves for tags and filters, brass for hardware and the rule.
+    'leaf-bg', 'leaf-bg-2', 'leaf-ink', 'leaf-dried-bg', 'leaf-dried-edge',
+    'brass', 'brass-hi', 'brass-lo', 'brass-edge', 'brass-ink', 'grad-brass', 'focus-halo',
+    // The state washes a stamp is painted on (ADR-145), and the brass one a version mark takes.
+    'ok-soft', 'brass-soft',
+    // Carved lettering, and the pencil rules the wall and the reading column are ruled with.
+    'font-display', 'rule-ink', 'rule-ink-soft',
+];
+
+/** Everything DesignTokens carries, which is what a server sheet may name. */
+export const SERVED = [...CONTRACT, ...MATERIALS];

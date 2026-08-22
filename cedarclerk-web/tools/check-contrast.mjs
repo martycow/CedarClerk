@@ -16,7 +16,7 @@
 // of a control or a graphical object — WCAG 2.2 SC 1.4.3 and 1.4.11.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
-import { CONTRACT } from './contract-tokens.mjs';
+import { CONTRACT, SERVED } from './contract-tokens.mjs';
 
 const src = readFileSync(resolve(import.meta.dirname, '../src/styles.scss'), 'utf8');
 const generatedTokens = readFileSync(
@@ -679,10 +679,10 @@ function runContract() {
     // not run, and nothing notices: DesignTokenDriftTests walks the generated dictionary, so a
     // name missing from it is a name it never visits.
     const served = new Set([...generatedTokens.matchAll(/\["([\w-]+)"\]/g)].map(m => m[1]));
-    for (const name of CONTRACT) {
+    for (const name of SERVED) {
         if (light[`--${name}`] === undefined || served.has(name)) continue;
         stale++;
-        console.log(`\nFAIL  --${name} is on the contract and declared in styles.scss, but DesignTokens does not carry it — run \`npm run tokens:generate\` (ADR-137)`);
+        console.log(`\nFAIL  --${name} is meant to reach the server and is declared in styles.scss, but DesignTokens does not carry it — run \`npm run tokens:generate\` (ADR-137, ADR-177)`);
     }
     // The other half of the same rule the gradient check enforces. A server-rendered page receives
     // the contract names and nothing else, so a var() outside the contract and without a fallback
@@ -846,12 +846,12 @@ function serverSheets() {
     return out;
 }
 
-// What a server-rendered page actually receives. DesignTokens carries the contract names and
-// nothing else (ADR-137), so a name the app resolves through styles.scss — --fs-ui, a hover wash,
-// any private derivation — is simply absent there, and resolving one here would score a colour the
-// reader never gets.
+// What a server-rendered page actually receives. DesignTokens carries the contract names and the
+// bench materials (ADR-137, ADR-177) and nothing else, so a name the app resolves through
+// styles.scss — --fs-ui, a private derivation, anything on neither list — is simply absent there,
+// and resolving one here would score a colour the reader never gets.
 const serverVars = vars => Object.fromEntries(
-    CONTRACT.map(n => [`--${n}`, vars[`--${n}`]]).filter(([, v]) => v !== undefined));
+    SERVED.map(n => [`--${n}`, vars[`--${n}`]]).filter(([, v]) => v !== undefined));
 
 function sheets() {
     const out = [];

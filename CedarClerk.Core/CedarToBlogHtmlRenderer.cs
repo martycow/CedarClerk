@@ -351,9 +351,9 @@ public static class CedarToBlogHtmlRenderer
 
         return $"""
             <div class="annotation-controls">
-            <button type="button" class="react-btn" data-kind="like">&#128077; <span class="count" data-kind-count="like">0</span></button>
-            <button type="button" class="react-btn" data-kind="dislike">&#128078; <span class="count" data-kind-count="dislike">0</span></button>
-            <span class="comment-count-label">&#128172; <span class="comment-count">0</span></span>
+            <button type="button" class="react-btn" data-kind="like">{BlogIcons.ThumbUp} <span class="count" data-kind-count="like">0</span></button>
+            <button type="button" class="react-btn" data-kind="dislike">{BlogIcons.ThumbDown} <span class="count" data-kind-count="dislike">0</span></button>
+            <span class="comment-count-label">{BlogIcons.Chat} <span class="comment-count">0</span></span>
             </div>
             <div class="comment-box"{ownerAttr}>
             <div class="comment-box-label">{comments}</div>
@@ -451,7 +451,7 @@ public static class CedarToBlogHtmlRenderer
         }
 
         sb.Append("<h1 class=\"reg-title\">").Append(Escape(title)).Append("</h1>");
-        sb.Append("<div class=\"reg-lock\">&#128274; ").Append(heading).Append("</div>");
+        sb.Append("<div class=\"reg-lock\">").Append(BlogIcons.Lock).Append(' ').Append(heading).Append("</div>");
         sb.Append("<p class=\"reg-blurb\">").Append(blurb).Append("</p>");
 
         if (!string.IsNullOrWhiteSpace(form.Intro))
