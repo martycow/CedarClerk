@@ -63,7 +63,7 @@ Scope and rationale: `docs/product/INDIEDEV.md`, ADR-101…107. Build order: `do
 
 ## UI V2 — the Cedar Bench port (branch `UI_V2`)
 
-Plan and rationale: `docs/design/UI-V2-PLAN.md`, ADR-136…168. Stages 0 through 5 shipped — the
+Plan and rationale: `docs/design/UI-V2-PLAN.md`, ADR-136…176. Stages 0 through 5 shipped — the
 checks, the palette, the retirement of the skin mechanism, the ten primitives with the kit page that
 proves them, the shell that wraps every authenticated screen, the three reference screens, and then
 every remaining screen in the app; status is in `docs/tasks/ROADMAP.md`. The rows below are Stage 6
@@ -80,6 +80,22 @@ is a thing the kit draws and the database cannot answer.
 - [ ] T-236 Commission narrow-screen designs — Marty's answer to the responsive question (ADR-147): ask Claude Design for the bench shell below desktop width instead of inventing a ladder. The brief is written and ready to run: `docs/design/bench-responsive-prompt.md` — nine questions covering the five chrome pieces, the tool strip, the density contract under a coarse pointer and the breakpoints themselves. Paste fresh token values from `styles.scss` into its marked block before the run. Target widths are T-034's devices: 1180 and 820 on the tablet, 390 on the phone. Blocks T-034 #design #decision P2
 - [ ] T-237 Port the narrow-screen designs — what comes back from T-236: turn the answers into ADRs (the chrome collapse, the touch density resolution and the breakpoint set are three separate decisions), then into the width rules the shell deliberately ships without, and re-run the device captures in `e2e/99-audit.spec.ts`. Unblocks T-034 #shell #ui #mobile P2
 - [ ] T-265 The writer has no sheet on a phone — at 390px the editor's three columns do not collapse: the outline shelf and the inspector shelf take the width and the worktop carrying the document is pushed clean out of the viewport, so there is nothing to write in. `e2e/99-audit.spec.ts` asserts the writing surface is visible on each of T-034's three devices and goes red on the phone alone — 1180 and 820 are fine — and captures `93-editor-iphone13.png` as the evidence before it fails. A port regression, not a tuning gap, but the fix is a width rule ADR-147 forbids inventing here, so it lands with `T-237` #shell #ui #mobile #bug P2
+
+### What the fidelity pass left open
+
+The audit of 22.08 compared the port to the prototype pixel by pixel (ADR-174…176 record what it
+changed). These rows are what it could not close: two are Marty's decisions, the rest are small and
+named.
+
+- [ ] T-273 Rule on the six ADR-bound fidelity divergences — the audit found six places where the app differs from the prototype because an ADR says so, and a fixer may not touch them: `--t2` by day darker than the kit's secondary ink (the pair stands at 3.0 under ADR-145/138); the sheet typeface default `system` where the kit is a serif (ADR-073 keeps the default — a fresh account still writes in Source Sans); the input border at 3:1 (ADR-074 `--border-strong`) against the kit's hairline; the ruler ink (the kit's `#4A340F` cannot share the `--brass-ink` name, so the rule keeps `--rail-edge`); the pegboard hole at a fractional px (ADR-138 item 7 forbids it); the cork tone's ink at night at 1.58:1. Each needs a word — keep, or a new ADR that reverses #design #decision P1
+- [ ] T-274 Revisit the look-changing ADR adaptations against the prototype — the port adapted the kit to the app in five places that change how the screens read, and none was touched by the fidelity pass because each is a decision: ADR-150's adaptive two-row toolbar against the kit's one 36px strip; ADR-138's paper floors making buttons, leaves and inputs — and the 13px brand — larger than drawn; ADR-160/168's four tiles plus a Documents panel plus buttons in the cover against the 3×2 tile wall; ADR-148/149/161's metrics as a tab with a slider against a screen with period segments; ADR-159's Export instead of Publish, the crumb reading "Редактор" instead of the document title, no Preview button, a bare save dot. Each needs an ADR to reverse; say which, if any #design #decision P1
+- [ ] T-266 e2e helpers derive the blog origin from the base URL — `e2e/helpers.ts` hard-codes `BLOG_ORIGIN`/`BLOG_API` on port 8080, so three smoke specs (the audience breakdown, the gate submission, the access link) cannot run against an isolated stack and silently hit whatever answers on 8080. Derive both from `E2E_BASE_URL` and an API-port variable #tests P2
+- [ ] T-267 Settings jump-bar overlaps a field while stuck — the Profile / Cross-links / Header slots / Social links bar is `position: sticky` inside the scrolling `.body` (ADR-174) and floats over the field under it at the stuck position; the save bar had the same shape and went into flow #ui P3
+- [ ] T-268 Night gridlines in the growth chart are invisible — `#DAD1B6` on `#DAD1B8` on the night sheet; pre-existing, the before-shots had the same pair. The stroke needs a night value of its own in `growth-chart.component.ts` #ui #a11y P3
+- [ ] T-269 The remaining glyph characters — the icon set still does not cover the comments' 👍/👎 (thumbs-down is missing from the map), the admin ⭐ and `editor.component.ts`'s sort arrows '↓'/'↑'; each renders in the OS emoji font and follows neither the set's weight nor its colour #ui #cleanup P3
+- [ ] T-270 Inspector "Тип" row — the writer's Document group cannot state the document type: `documentType` is not on the draft DTO the editor loads, so the row the kit draws has nothing to read #editor P3
+- [ ] T-271 Posts-manager titles truncate harder, drafts rows taller — the status stamp's bordered form is wider, so the left list cuts "Devlog #12 — …" where it used to keep "Св…"; and the drafts table's row pitch is ~57px against the kit's one-line rows. Both are the row grids in `posts-manager.component.css` / `drafts.component.css` #ui P3
+- [ ] T-272 Drawer open reflows the hub — the journal reserves its height (ADR-153 clause 6, kept in ADR-174), so the shelves shrink above it and the Documents shelf can be left a 37px viewport; the prototype overlays the drawer instead. Reserve or overlay is the decision #shell #ui #decision P3
 
 ### What the ported screens found missing behind the kit
 

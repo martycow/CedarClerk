@@ -186,3 +186,6 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-171 — A smoke test binds to the role and the name, not to the class (20.08.2026)](adr/ADR-171.md)
 - [ADR-172 — The current-tool bar is measured, and it is the reinforcement rather than the cue (20.08.2026)](adr/ADR-172.md)
 - [ADR-173 — A generated file that is committed is checked, not remembered (20.08.2026)](adr/ADR-173.md)
+- [ADR-174 — The shell owns the viewport and paints the wall: paper is the surface class, not the ground colour (22.08.2026)](adr/ADR-174.md)
+- [ADR-175 — The rail face is a tint that needs wood under it: the doors' theme toggle is a paper button at the chrome box (22.08.2026)](adr/ADR-175.md)
+- [ADR-176 — A leaf that can be picked shows whether it is: idle on the dried stock, active on the green (22.08.2026)](adr/ADR-176.md)

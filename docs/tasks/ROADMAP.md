@@ -272,6 +272,14 @@ ahead of the code they govern. Every screen in the app is now drawn from the ben
   title reads 2.51:1 by day and no flat ink clears the whole ramp — which material those bands are
   is a design call, not a settle-time patch. And the current-tool bar sits at 2.91 by day against a
   3.0 floor, accepted under ADR-172 rather than closed by moving a palette at the end of a port.
+- **Fidelity pass — 22.08.2026, one commit on `UI_V2`, ADR-174…176.** The port was measured against
+  the prototype rather than against its own checks: 48 captures at `1440x900`, both themes, on an
+  isolated stack, 399 raw findings merged to 294, of which 172 defects were applied by file zone and
+  98 were left standing as ADR-bound. The ground is the wall in both themes and the shell owns the
+  viewport (ADR-174); the doors' toggle is a paper face at the chrome box (ADR-175); a pickable leaf
+  draws idle pale and active green (ADR-176). Gates green: 1002 backend, 442 frontend, contrast,
+  density, icons. What it left is on the board as `T-266`…`T-274`, two of them Marty's decisions;
+  `T-234` and `T-235` are unchanged, and nobody has yet opened the screens.
 
 **v0.12.2 — every P1 closed in one session (18–19.08.2026, not yet deployed).** Marty's directive
 was "do everything P1", with five decisions resolved on the way in: T-164 (PRGE) removed outright,

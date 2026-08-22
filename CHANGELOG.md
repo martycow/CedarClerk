@@ -1,5 +1,62 @@
 # Changelog
 
+## 2026-08-22 — the bench fidelity pass (branch `UI_V2`, one commit)
+
+**What was audited.** Marty asked for the port to be checked against the design prototype, because
+the app "must look as much as the design's prototype". A fleet audit captured 48 screenshots at
+`1440x900` — both themes, prototype beside app, the app on an isolated stack (scratch database on
+8090, `ng serve` on 4300, bot disabled) — and compared code and pixels. 399 raw findings merged to
+294 real ones: **172 defects**, 98 deliberate divergences already bound to an ADR, 18 missing
+features already on the board, 6 unsure. The defects were applied by file zone — tokens, bench
+chrome, bench primitives, hub screens, writer and metrics, the other screens, then the
+core/i18n/icon leftovers — and a tester and a regression lane closed what the fixers opened.
+
+**Tokens** (`styles.scss`, both themes where the kit has both; `DesignTokens.generated.cs`
+regenerated). `--fs-34` for the hero title. `--bench-cover-h` 296px, `--bench-dock-w-hub` 262px /
+`-wide` 322px, `--bench-worktop-edge-h` 26px. Three bench durations — `--dur-tap` 150ms,
+`--dur-control` 190ms, `--dur-move` 250ms, 1ms under reduced motion. `--rail-ink-dim`,
+`--rail-btn-face` / `-hover`, `--tile-edge`; `--hook-face` is the kit's `rgba(0,0,0,.16)`.
+`--radius-shelf` 5px; `--radius-lg` now resolves to `--radius-md` — nothing rounder than a plaque.
+`--shadow-sheet`, `--shadow-tag`, `--shadow-worktop` and its inset. `--leaf-dried-bg` / `-edge` /
+`-ink`. **Brass split by job**: `--brass-lo` is back to the kit's metal (`#8A6226` / night
+`#7E5A20`), and a new `--brass-ink` (`#674A1C` / `#684A1A`) is what stamps and chart ticks write
+with; `--brass-soft` mixes from the ink. `body` is set at `--fs-ui`; a global `.margin-note` rule is
+the one place the hand-written face is allowed; `.tiptap h1`–`h3` are in `--font-display`.
+
+**Kit.** The page ground is the plaster wall in both themes — night was light before (ADR-174: the
+shell owns the viewport, `.body` scrolls, the page no longer scrolls as a document). The rail
+header spans the full width with the hook rail below it; shelves stretch full height. Display-serif
+headings: `--fs-34` on the hero, `--fs-27`/`--fs-19` on the sheet. Inspector groups are uppercase,
+stamps are dashed, the settings save bar is in flow. Pickable leaf tags draw idle on the dried
+stock and active green; a label leaf stays green (ADR-176). The doors' theme toggle is a paper face
+at the chrome box, the rail tint having measured ~1.5:1 on the day wall (ADR-175).
+
+**Screens.** The writer's toolbar moved into a compact strip inside the worktop and the title is
+the sheet's first heading. The projects shelf carries its margin note; the stats tab has a
+freshness line, a "Прочие" fold and a slug row in the inspector; planner and builds cards no longer
+clip their labels; dates are `dd.MM` by UI language.
+
+**Icons and i18n.** Six icons — `sun`, `moon`, `arrow-up`, `arrow-down`, `caret-left`,
+`caret-right` — replace glyph characters; `npm run check:icons` is current at 82 icons and 305 call
+sites. `shell.settings` has a short hook caption (`Настр.`), the full word on the tooltip.
+
+**Regressions the tester found, all closed.** The day-theme toggle on the doors (R1), the RU/EN
+leaves sharing one fill (R2), the save bar floating over the signature buttons once the shell took
+the viewport (R4), the clipped settings caption (R6), the strip-meta gap (R7).
+
+**Gates.** `cedar test` green: 1002 backend (guards included), 442 frontend units, contrast 0
+failing with 4 accepted exceptions, density 0 failures, 237 files scanned. Smoke subset against the
+isolated stack 26/29 — the three failures are `e2e/helpers.ts` hard-coding `BLOG_ORIGIN`/`BLOG_API`
+on 8080, environmental (`T-266`). The installed `cedar` predates the icon phase: `.\Scripts\install-cli.ps1`
+is due.
+
+**What is left for Marty.** The eye-checks in `docs/tasks/TASKS.md` — the before/after shots live in
+the session scratchpad only. Two decision rows on the board: a ruling on the six ADR-bound
+divergences the audit could not touch (`T-273`), and whether the look-changing adaptations —
+ADR-150's two-row strip, ADR-138's paper floors, ADR-160/168's tile wall, ADR-148/149/161's metrics
+tab, ADR-159's writer chrome — stay or are reversed towards the prototype (`T-274`). Seven smaller
+rows, `T-266`…`T-272`. `T-234` is still the gate.
+
 ## 2026-08-20 — the Cedar Bench port, end to end (branch `UI_V2`, Stages 0–6)
 
 **This is the entry for the whole port.** The five below it are the sessions it ran in; this one is

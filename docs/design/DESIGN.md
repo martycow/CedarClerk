@@ -80,13 +80,15 @@ Overrides only the listed properties; everything else (`--abord`, radius, spacin
 
 **Night darkens the wood, not the paper** (ADR-141), so two ink polarities travel in opposite directions inside this one block: the paper tokens step towards black while the wall and rail tokens step towards white. A contributor's instinct about a dark theme is wrong here in both directions. `--accent` is deliberately not restated — pine already clears its floor on night cream; only the two chart series that do not are stepped down. The material families move with their own halves: `--wood-*`, `--rail-*`, `--brass-*` and `--rule-ink*` are redeclared here, `--wood-ink` being the one ink that flips, because the wall is dark at night and nothing but chrome draws on it.
 
+**Brass is two tokens by job.** `--brass-lo` is the metal — the dark end of a hook shaft or a pin, the kit's `#8A6226` / night `#7E5A20` — and no pair measures it, because nothing is written in it. `--brass-ink` (`#674A1C` / `#684A1A`) is what a stamp or a chart tick writes with, derived against its wash and the graph crossing (ADR-145), and `--brass-soft` mixes from the ink. A rule that needs brass to be read reaches for the ink; one that needs it to be seen reaches for the metal. The rail carries `--rail-ink-dim` for a resting index tab, the two translucent faces `--rail-btn-face` / `--rail-btn-face-hover` and `--hook-face` are tints that need wood under them (ADR-175), and the shelf and sheet shadows are named — `--shadow-sheet`, `--shadow-tag`, `--shadow-worktop` and its inset — rather than written per component. The dried leaf has its own stock: `--leaf-dried-bg` / `-edge` / `-ink`, one value in both themes, also the idle face of a pickable leaf (ADR-176).
+
 Theme is applied by `ThemeService` (`cedarclerk-web/src/app/core/theme.service.ts`): a signal-backed `Theme = 'light' | 'dark'`, persisted to `localStorage` (key `cedar-theme`), falling back to the `prefers-color-scheme: dark` media query, applied by setting `document.documentElement.dataset['theme']` — i.e. a `data-theme` attribute on `<html>`, matched by the `:root[data-theme="dark"]` selector above. Toggled via a ☾/☀ control in the editor topbar, both auth pages, and the Appearance panel. It is the only styling axis the app has — there is one look (ADR-136), and light/dark is the whole of the choice.
 
 ### Radius
 ```
---radius-sm: 4px;   --radius-md: 8px;   --radius-lg: 12px;
+--radius-sm: 4px;   --radius-md: 8px;   --radius-lg: var(--radius-md);   --radius-shelf: 5px;
 ```
-Paper is cut square and wood is eased: 4px is a field, 8px a plaque. Nothing on the bench is rounder than a plaque, so the card/modal step sits one above it. The material aliases `--radius-field`, `--radius-plaque` (`--radius-sm`/`--radius-md`) and the flat `--radius-stamp`/`--radius-paper` at 3px live beside them.
+Paper is cut square and wood is eased: 4px is a field, 8px a plaque. Nothing on the bench is rounder than a plaque, so `--radius-lg` resolves to `--radius-md` — the name stays for the cards and modals that reach for it, the step above a plaque does not exist. `--radius-shelf` is the shelf board's own corner. The material aliases `--radius-field`, `--radius-plaque` (`--radius-sm`/`--radius-md`) and the flat `--radius-stamp`/`--radius-paper` at 3px live beside them.
 
 ### Spacing
 ```
@@ -125,7 +127,9 @@ author is in one place.
 
 `--font-serif` is for reading surfaces **only** — blog post body and the editor sheet. The four faces it and `--font-sans`/`--font-display`/`--font-note` name — Literata, Source Sans 3, Vollkorn, Caveat — are self-hosted via `@fontsource` (ADR-143), one file per weight per named subset, so the server still serves every byte itself and the explicit list is what bounds the payload.
 
-Font-size scale (ADR-052, extended by ADR-071 and ADR-138): `--fs-9/10/11/12/13/14/15/16/17/18/19/20/21/22/27`. **Integers only** — the scale grows by measured, in-use sizes, and a half-pixel size collapses to the nearest integer. `--fs-21` is the readout size the bench chrome needs (ADR-138); `npm run check:density` fails on a half-pixel `font-size` anywhere under `src/` — in a `.css`, `.scss`, `.html` or a `styles` literal inside a `.ts` alike — and on a fractional `px` in any custom-property value there. Its reach stops at `src/`: the CSS the blog, the landing page and the single-file export write from C# is not scanned, and it still carries half-pixel sizes.
+`--font-display` is the heading face, on the chrome and on the sheet alike: the hub's hero title at `--fs-34`, the worktop and shelf headings, and `.tiptap h1`–`h3` at `--fs-27`/`--fs-19` — a display serif over whichever body face the author chose, which is the bench's letterpress contrast and is independent of the sheet typeface preference (ADR-073 governs the body only). `--font-note` is allowed in exactly one place, the global `.margin-note` rule — `--fs-17`, `--t2`, rotated a degree and a half — for margin notes and empty states; nothing else reaches for the hand-written face. `body` is set at `--fs-ui`, so unstyled text is the control size, not the reading size.
+
+Font-size scale (ADR-052, extended by ADR-071 and ADR-138): `--fs-9/10/11/12/13/14/15/16/17/18/19/20/21/22/27/34`. `--fs-34` is the hero title and nothing else. **Integers only** — the scale grows by measured, in-use sizes, and a half-pixel size collapses to the nearest integer. `--fs-21` is the readout size the bench chrome needs (ADR-138); `npm run check:density` fails on a half-pixel `font-size` anywhere under `src/` — in a `.css`, `.scss`, `.html` or a `styles` literal inside a `.ts` alike — and on a fractional `px` in any custom-property value there. Its reach stops at `src/`: the CSS the blog, the landing page and the single-file export write from C# is not scanned, and it still carries half-pixel sizes.
 
 Semantic roles sit on top, and components reach for **these**, not the numbers — the numbers are the palette, the roles are the meaning, and the roles are what the density switch moves:
 ```
@@ -159,7 +163,15 @@ The tokens were born as the three values `.icon` was declared with across 9 file
 --motion-slow: 280ms;   a full-surface change the eye must follow
 --ease: cubic-bezier(.2, .6, .3, 1);
 ```
-All three drop to 1ms under `prefers-reduced-motion: reduce`, which also clamps every animation/transition globally — 1ms rather than 0 so `transitionend` listeners still fire.
+The bench kit brings its own three, by what moves rather than by how far the eye travels, plus the two settle curves its hardware uses:
+```
+--dur-tap: 150ms;       a press — a button face, a hook, a leaf
+--dur-control: 190ms;   a control changing state — a field focusing, a tab lighting
+--dur-move: 250ms;      something travelling — a drawer, a shelf, a panel
+--dur-publish: 600ms;   the one long one: the resin drop setting after a publish
+--ease-settle / --ease-swing   overshoot curves for brass and resin
+```
+All of them drop to 1ms under `prefers-reduced-motion: reduce`, which also clamps every animation/transition globally — 1ms rather than 0 so `transitionend` listeners still fire.
 
 ## Accessibility (T-082, ADR-074)
 
@@ -246,7 +258,7 @@ Channel colors are a separate hardcoded array in `editor.component.ts`, not toke
 
 ## Editor content styles (`.tiptap` block, `styles.scss`)
 
-Global (not component-scoped, since TipTap content is rendered via `innerHTML` in places): headings in `em` units so they scale with the editor's zoom control (fixed from a past bug — zoom used to be silently overridden by a hardcoded `font-size: 16px`), `blockquote` with a `3px solid var(--abord)` left border, inline `code`/`pre` with `var(--font-mono)`, `tg-spoiler` (spoiler mark → hidden text via `background: var(--t3); color: transparent`, revealed on hover), `.datetime-pill`, `.annotation-block` (comment/reaction anchor), `.toggle-block`, `.media-with-caption`, `.footnote-badge` — one block per custom TipTap node/mark in `tiptap-extensions/`.
+Global (not component-scoped, since TipTap content is rendered via `innerHTML` in places): `h1`–`h3` in `--font-display` at `--fs-27`/`--fs-19` (the sheet's own typeface preference moves the body, never the headings), the body size inherited so the editor's zoom control still works (fixed from a past bug — zoom used to be silently overridden by a hardcoded `font-size: 16px`), `blockquote` with a `3px solid var(--abord)` left border, inline `code`/`pre` with `var(--font-mono)`, `tg-spoiler` (spoiler mark → hidden text via `background: var(--t3); color: transparent`, revealed on hover), `.datetime-pill`, `.annotation-block` (comment/reaction anchor), `.toggle-block`, `.media-with-caption`, `.footnote-badge` — one block per custom TipTap node/mark in `tiptap-extensions/`.
 
 ## Known design debt
 
