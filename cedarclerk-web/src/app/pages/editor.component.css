@@ -1573,14 +1573,38 @@
     width: 260px;
 }
 
+.emoji-search {
+    width: 100%;
+    margin-bottom: var(--space-2);
+}
+
+/* A column of captioned grids, scrolling down and only down. As one 10-column grid the captions
+   were cells in it and the panel ran sideways. */
 .emoji-popover {
-    width: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    max-height: 340px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.emoji-grid {
     display: grid;
-    grid-template-columns: repeat(10, 1fr);
+    grid-template-columns: repeat(8, 1fr);
     gap: 2px;
 }
 
+.emoji-grid-wide {
+    grid-template-columns: repeat(4, 1fr);
+}
+
 .emoji-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
     border: none;
     background: none;
     border-radius: var(--radius-sm);
@@ -1593,6 +1617,15 @@
 
 .emoji-btn:hover {
     background: var(--hover-strong);
+}
+
+/* The country code under a flag: on Windows the glyph itself draws as nothing, so this is the
+   only thing on the button that can be read. */
+.emoji-label {
+    font-family: var(--font-mono);
+    font-size: var(--fs-10);
+    line-height: 1;
+    color: var(--t2);
 }
 
 .dt-flags {

@@ -58,6 +58,7 @@ import { LayoutShortcuts } from '../tiptap-extensions/layout-shortcuts';
 import { PopoverComponent } from '../shared/popover.component';
 import { ModalComponent } from '../shared/modal.component';
 import { AppearanceService, SHEET_WIDTH_PX, TYPEFACE_STACK, MAX_TABLE_SIZE } from '../core/appearance.service';
+import { EMOJI_GROUPS, EmojiGroup, searchEmoji } from '../core/emoji';
 import { TagUsageService } from '../core/tag-usage.service';
 import { TagPickerComponent } from '../shared/tag-picker.component';
 import { FolderPickerComponent } from '../shared/folder-picker.component';
@@ -204,66 +205,6 @@ const BLOG_STATUS_MESSAGES = [
     'Rendering page…',
     'Publishing…',
     'Almost done…',
-];
-
-// B9 - 40 emoji in one unlabelled grid was both too few to find anything in and too wide for
-// the popover, which overflowed to the right. Grouped and much longer now; the popover scrolls
-// rather than growing, and each group is captioned so scanning has something to aim at.
-// Deliberately a hand-picked set rather than a full Unicode table: a picker with every emoji in
-// it needs search, and search needs names in six UI languages.
-const EMOJI_GROUPS: { key: string; emoji: string[]; wide?: boolean }[] = [
-    {
-        key: 'faces',
-        emoji: [
-            '😀', '😃', '😄', '😁', '😅', '😂', '🙂', '😉', '😊', '😇',
-            '😍', '😘', '😋', '😜', '🤪', '🤨', '🧐', '😎', '🥳', '🤩',
-            '😏', '😒', '😞', '😢', '😭', '😤', '😡', '🤯', '😱', '😳',
-            '🥺', '😬', '🙄', '😴', '🤒', '🤢', '🤠', '🥸', '🤖', '👻',
-        ],
-    },
-    {
-        key: 'gestures',
-        emoji: [
-            '👍', '👎', '👌', '✌️', '🤞', '🤙', '👋', '🤝', '🙏', '👏',
-            '💪', '🫡', '🤷', '🤦', '🙌', '👀', '🧠', '🫶', '✍️', '🤌',
-        ],
-    },
-    {
-        key: 'symbols',
-        emoji: [
-            '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔', '💯', '🔥',
-            '✨', '⭐', '🌟', '⚡', '💥', '🎉', '🎊', '🚀', '💡', '🏆',
-            '✅', '❌', '⚠️', '❓', '❗', '➡️', '⬅️', '🔁', '🔒', '🔓',
-        ],
-    },
-    {
-        key: 'objects',
-        emoji: [
-            '📌', '📎', '🔗', '📷', '🎬', '🎧', '🎮', '📚', '📝', '📅',
-            '💻', '🖱️', '⌨️', '🗂️', '📦', '🛠️', '🧪', '🧭', '☕', '🍺',
-            '🐮', '🌲', '🏔️', '🌊', '🌧️', '❄️', '🌙', '☀️', '🕹️', '🎲',
-        ],
-    },
-    {
-        key: 'flags',
-        emoji: [
-            '🇺🇦', '🇧🇾', '🇬🇪', '🇷🇺', '🇦🇲', '🇦🇿', '🇰🇿', '🇰🇬', '🇺🇿', '🇹🇯',
-            '🇹🇲', '🇲🇩', '🇱🇻', '🇱🇹', '🇪🇪', '🇵🇱', '🇩🇪', '🇫🇷', '🇬🇧', '🇺🇸',
-            '🇮🇹', '🇪🇸', '🇵🇹', '🇳🇱', '🇨🇿', '🇸🇰', '🇷🇸', '🇹🇷', '🇮🇱', '🇬🇷',
-            '🇫🇮', '🇸🇪', '🇳🇴', '🇩🇰', '🇨🇭', '🇨🇳', '🇯🇵', '🇰🇷', '🇮🇳', '🇧🇷',
-            '🇨🇦', '🇦🇺', '🇪🇺', '🇺🇳', '🏳️', '🏴', '🏁', '🚩', '🏳️‍🌈', '🏴‍☠️',
-        ],
-    },
-    // Flags Unicode never got: the white-red-white flag and the 1991–1993 Russian tricolour with
-    // its lighter blue. No codepoint exists for either, and how 🇷🇺 renders is the READER'S
-    // platform font's choice, not ours — so these are the colour sequences people actually use in
-    // Telegram, inserted as one button. Plain text end to end: editor, Telegram and blog all pass
-    // them through untouched.
-    {
-        key: 'flagSequences',
-        wide: true,
-        emoji: ['⚪️🔴⚪️', '🤍❤️🤍', '🤍💙❤️', '💙💛'],
-    },
 ];
 
 interface UploadItem {
@@ -1086,7 +1027,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     scheduling = signal(false);
     scheduleResult = signal('');
 
-    readonly emojiGroups = EMOJI_GROUPS;
+    emojiQuery = signal('');
+
+    /** The set the modal draws: every group, or what the query leaves of them. */
+    emojiGroups(): EmojiGroup[] {
+        return searchEmoji(EMOJI_GROUPS, this.emojiQuery());
+    }
+
+    openEmojiModal() {
+        this.emojiQuery.set('');
+        this.emojiOpen.set(true);
+    }
 
     // B13 - reveals where the content actually is: spaces, tabs and paragraph ends. A pure
     // display toggle, nothing about the document changes.

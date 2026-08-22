@@ -682,7 +682,7 @@
                 
 
                 
-                <button (click)="emojiOpen.set(true)" [title]="t().editor.tb.emoji" [attr.aria-label]="t().editor.tb.emoji"><app-icon name="smiley" size="xs"></app-icon></button>
+                <button (click)="openEmojiModal()" [title]="t().editor.tb.emoji" [attr.aria-label]="t().editor.tb.emoji"><app-icon name="smiley" size="xs"></app-icon></button>
                 
 
                 
@@ -840,22 +840,33 @@
     </app-modal>
     }
 
-    <!--Emoji modal: was app-popover, moved 28.07.2026 — the grid genuinely scrolls (120 emoji,
-    4 groups) and PopoverComponent closes on any document scroll, so scrolling the panel closed
-    it. Same fix ADR-057 already applied to the Appearance panel.-->
+    <!--Emoji modal: was a popover, and PopoverComponent closes on any document scroll, so
+    scrolling the panel closed it — the same fix ADR-057 applied to the Appearance panel.
+    The panel scrolls on one axis only: it used to be one 10-column grid holding both the captions
+    and the rows, which put every caption in a cell and drove the whole thing sideways.-->
     @if (emojiOpen()) {
-    <app-modal [width]="320" (closed)="emojiOpen.set(false)">
+    <app-modal [width]="360" (closed)="emojiOpen.set(false)">
         <app-icon modal-icon name="smiley" size="sm"></app-icon>
         <span modal-title>{{ t().editor.tb.emoji }}</span>
 
+        <input class="emoji-search" type="search" [ngModel]="emojiQuery()"
+               (ngModelChange)="emojiQuery.set($event)"
+               [placeholder]="t().editor.emoji['search']" [attr.aria-label]="t().editor.emoji['search']">
+
         <div class="emoji-popover">
-            @for (g of emojiGroups; track g.key) {
+            @for (g of emojiGroups(); track g.key) {
             <span class="emoji-caption">{{ t().editor.emoji[g.key] }}</span>
             <div class="emoji-grid" [class.emoji-grid-wide]="g.wide">
-                @for (e of g.emoji; track e) {
-                <button class="emoji-btn" (click)="insertEmoji(e)">{{ e }}</button>
+                @for (e of g.emoji; track e.ch) {
+                <button class="emoji-btn" [class.has-label]="!!e.label" (click)="insertEmoji(e.ch)"
+                        [title]="e.en">
+                    <span class="emoji-glyph">{{ e.ch }}</span>
+                    @if (e.label) { <span class="emoji-label">{{ e.label }}</span> }
+                </button>
                 }
             </div>
+            } @empty {
+            <p class="field-hint-inline">{{ t().editor.emoji['noMatches'] }}</p>
             }
         </div>
     </app-modal>

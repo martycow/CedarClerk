@@ -598,6 +598,8 @@ export const en = {
             flags: 'Flags',
             // No Unicode emoji exists for these flags — inserted as colour sequences.
             flagSequences: 'Flag sequences',
+            search: 'Search emoji',
+            noMatches: 'Nothing matches',
         } as Record<string, string>,
         account: 'Account',
         postsManager: 'Posts Manager',

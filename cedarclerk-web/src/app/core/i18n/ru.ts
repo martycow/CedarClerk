@@ -563,6 +563,8 @@ export const ru: Dict = {
             flags: 'Флаги',
             // У этих флагов нет Unicode-эмодзи — вставляются как последовательности цветов.
             flagSequences: 'Флаги-сочетания',
+            search: 'Поиск эмодзи',
+            noMatches: 'Ничего не найдено',
         } as Record<string, string>,
         account: 'Аккаунт',
         postsManager: 'Менеджер постов',
