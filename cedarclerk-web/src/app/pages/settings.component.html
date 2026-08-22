@@ -54,7 +54,7 @@
                 <div>
                     <div class="profile-email">{{ auth.userEmail() }}</div>
                     @if (auth.createdAt(); as since) {
-                    <div class="profile-meta">{{ t().settings.profile.memberSince }} {{ since | zonedDate:'MMMM yyyy' }}</div>
+                    <div class="profile-meta">{{ t().settings.profile.memberSince }} {{ since | zonedDate:'MM.yyyy' }}</div>
                     }
                     <div class="avatar-actions">
                         <label class="avatar-pick">
@@ -287,8 +287,8 @@
         </section>
         }
 
-        <!--One Save for the whole tab. It is sticky rather than sitting at the bottom of a long
-        scroll, so editing the profile card at the top never leaves the button off-screen.-->
+        <!--One Save for the whole tab, in flow at its end: a bar stuck to the scrollport floats
+        over the signature buttons above it.-->
         @if (tab() === 'profile') {
         <div class="profile-save-bar">
             <app-button variant="pine" (clicked)="saveProfile()" [disabled]="profileBusy()">
@@ -312,14 +312,14 @@
                 <div>
                     <div class="plan-banner-title">{{ b.planTier }} {{ t().settings.subscription.planSuffix }}</div>
                     @if (auth.planExpiresAt(); as until) {
-                    <div class="plan-banner-meta">{{ t().settings.subscription.renews }} {{ until | zonedDate:'d MMM yyyy' }}</div>
+                    <div class="plan-banner-meta">{{ t().settings.subscription.renews }} {{ until | zonedDate:'dd.MM.yyyy' }}</div>
                     }
                 </div>
                 <span class="spacer"></span>
                 @if (b.stripeCustomerLinked) {
-                <button class="link-btn" (click)="manageStripeBilling()" [disabled]="billingBusy()">
+                <app-button variant="paper" size="sm" (clicked)="manageStripeBilling()" [disabled]="billingBusy()">
                     {{ t().settings.subscription.manageStripe }}
-                </button>
+                </app-button>
                 }
             </div>
 
@@ -336,7 +336,7 @@
                     <div class="plan-card-price">$0</div>
                     <p class="plan-card-desc">{{ t().settings.subscription.freeDesc }}</p>
                     @if (b.planTier === 'Free') {
-                    <button class="plan-card-btn" disabled>{{ t().settings.subscription.currentPlan }}</button>
+                    <app-button variant="paper" size="sm" disabled>{{ t().settings.subscription.currentPlan }}</app-button>
                     }
                 </div>
                 <div class="plan-card" [class.current]="b.planTier === 'Pro'">
@@ -344,9 +344,9 @@
                     <div class="plan-card-price">${{ b.prices.proUsd }}<span>{{ t().settings.subscription.perMonth }}</span></div>
                     <p class="plan-card-desc">{{ t().settings.subscription.proDesc }}</p>
                     @if (b.planTier === 'Pro') {
-                    <button class="plan-card-btn" disabled>{{ t().settings.subscription.currentPlan }}</button>
+                    <app-button variant="paper" size="sm" disabled>{{ t().settings.subscription.currentPlan }}</app-button>
                     } @else if (b.planTier === 'Free') {
-                    <button class="plan-card-btn" (click)="pickPlan('pro')">{{ t().settings.subscription.choosePro }}</button>
+                    <app-button variant="paper" size="sm" (clicked)="pickPlan('pro')">{{ t().settings.subscription.choosePro }}</app-button>
                     }
                 </div>
                 <div class="plan-card" [class.current]="b.planTier === 'ProPlus' || b.planTier === 'Forever'">
@@ -354,15 +354,15 @@
                     <div class="plan-card-price">${{ b.prices.proPlusUsd }}<span>{{ t().settings.subscription.perMonth }}</span></div>
                     <p class="plan-card-desc">{{ t().settings.subscription.proPlusDesc }}</p>
                     @if (b.planTier === 'ProPlus' || b.planTier === 'Forever') {
-                    <button class="plan-card-btn" disabled>{{ t().settings.subscription.currentPlan }}</button>
+                    <app-button variant="paper" size="sm" disabled>{{ t().settings.subscription.currentPlan }}</app-button>
                     } @else {
-                    <button class="plan-card-btn accent" (click)="pickPlan('proplus')">{{ t().settings.subscription.chooseProPlus }}</button>
+                    <app-button variant="pine" size="sm" (clicked)="pickPlan('proplus')">{{ t().settings.subscription.chooseProPlus }}</app-button>
                     }
                 </div>
             </div>
 
             @if (!b.trialUsed && (b.planTier === 'Free' || b.planTier === 'Pro')) {
-            <button class="trial-link" (click)="pickPlan('trial')">{{ t().settings.subscription.tryTrial(b.prices.trialUsd) }}</button>
+            <app-button class="trial-link" variant="paper" size="sm" (clicked)="pickPlan('trial')">{{ t().settings.subscription.tryTrial(b.prices.trialUsd) }}</app-button>
             }
 
             @if (selectedPlan) {
@@ -433,9 +433,9 @@
                 <div class="plan-card" [class.current]="selectedPackId === pack.id">
                     <div class="plan-card-name">{{ t().settings.credits.packCredits(pack.credits) }}</div>
                     <div class="plan-card-price">{{ packPriceUsd(pack.priceUsdCents) }}</div>
-                    <button class="plan-card-btn" (click)="pickPack(pack.id)">
+                    <app-button variant="paper" size="sm" (clicked)="pickPack(pack.id)">
                         {{ t().settings.credits.buy(packPriceUsd(pack.priceUsdCents)) }}
-                    </button>
+                    </app-button>
                 </div>
                 }
             </div>
@@ -478,7 +478,7 @@
                 <li>
                     <span class="ledger-delta" [class.positive]="entry.delta > 0">{{ entry.delta > 0 ? '+' : '' }}{{ entry.delta }}</span>
                     <span class="ledger-reason">{{ creditReasonLabel(entry.reason) }}</span>
-                    <span class="ledger-date">{{ entry.createdAt | zonedDate:'d MMM yyyy, HH:mm' }}</span>
+                    <span class="ledger-date">{{ entry.createdAt | zonedDate:'dd.MM.yyyy, HH:mm' }}</span>
                 </li>
                 }
             </ul>
@@ -504,7 +504,7 @@
                     <div class="integration-title">{{ t().settings.integrations.telegramAccount }}</div>
                     <div class="integration-meta">
                         {{ t().settings.integrations.linkedTo }} <span class="strong">&#64;{{ auth.telegramUsername() }}</span>
-                        @if (auth.telegramLinkedAt(); as since) { · {{ t().settings.integrations.since }} {{ since | zonedDate:'d MMM yyyy' }} }
+                        @if (auth.telegramLinkedAt(); as since) { · {{ t().settings.integrations.since }} {{ since | zonedDate:'dd.MM.yyyy' }} }
                     </div>
                 </div>
                 @if (askUnlinkTelegram()) {
@@ -550,7 +550,7 @@
                     </div>
                     }
                 </div>
-                <a class="link-btn" href="https://t.me/CedarClerkBot" target="_blank" rel="noopener">{{ t().settings.integrations.openBot }}</a>
+                <a class="paper-anchor" href="https://t.me/CedarClerkBot" target="_blank" rel="noopener">{{ t().settings.integrations.openBot }}</a>
             </div>
 
             <!--ADR-095: channels are managed here now, not behind a disclosure in the export
@@ -606,9 +606,9 @@
                 <p class="field-hint">{{ t().settings.integrations.nothingNew }}</p>
                 }
 
-                <button class="link-btn" (click)="manualChannelOpen.set(!manualChannelOpen())">
+                <app-button variant="paper" size="sm" (clicked)="manualChannelOpen.set(!manualChannelOpen())">
                     {{ manualChannelOpen() ? t().settings.integrations.manualHide : t().settings.integrations.manualAdd }}
-                </button>
+                </app-button>
                 @if (manualChannelOpen()) {
                 <div class="connect-row">
                     <input [(ngModel)]="newChannelChatId" [disabled]="channelBusy()"
@@ -631,7 +631,7 @@
                         @if (blueskyAccount(); as account) {
                         <div class="integration-meta">
                             {{ t().settings.integrations.linkedTo }} <span class="strong">&#64;{{ account.displayName }}</span>
-                            @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'d MMM yyyy' }} }
+                            @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'dd.MM.yyyy' }} }
                         </div>
                         } @else {
                         <div class="integration-meta muted">{{ t().settings.integrations.notConnected }}</div>
@@ -667,7 +667,7 @@
                         @if (xAccount(); as account) {
                         <div class="integration-meta">
                             {{ t().settings.integrations.linkedTo }} <span class="strong">{{ account.displayName }}</span>
-                            @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'d MMM yyyy' }} }
+                            @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'dd.MM.yyyy' }} }
                         </div>
                         } @else {
                         <div class="integration-meta muted">{{ t().settings.integrations.notConnected }}</div>
@@ -692,7 +692,7 @@
                 @if (credits(); as c) {
                 <p class="field-hint">
                     {{ t().settings.integrations.xCreditNote(c.balance) }}
-                    <button class="link-btn" (click)="jump('sec-credits')">{{ t().settings.integrations.xCreditsLink }}</button>
+                    <app-button variant="paper" size="sm" (clicked)="jump('sec-credits')">{{ t().settings.integrations.xCreditsLink }}</app-button>
                 </p>
                 }
                 @if (xError()) { <p class="field-error">{{ xError() }}</p> }
@@ -708,7 +708,7 @@
                         @if (discordAccount(); as account) {
                         <div class="integration-meta">
                             {{ t().settings.integrations.linkedTo }} <span class="strong">{{ account.displayName }}</span>
-                            @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'d MMM yyyy' }} }
+                            @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'dd.MM.yyyy' }} }
                         </div>
                         } @else {
                         <div class="integration-meta muted">{{ t().settings.integrations.notConnected }}</div>

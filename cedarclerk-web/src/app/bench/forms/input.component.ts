@@ -70,6 +70,7 @@ let nextId = 0;
         :host([data-surface="chrome"]) .field {
             min-height: var(--hit-chrome);
             padding: var(--space-1) var(--space-2);
+            border-radius: var(--radius-stamp);
             font-family: var(--font-mono);
             font-size: var(--text-chrome-sm);
         }

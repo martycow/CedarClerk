@@ -1,9 +1,10 @@
 <div class="door">
     <!--The rail's dots menu holds the theme toggle everywhere else; there is no rail out here
-    (ADR-166 clause 2).-->
-    <app-button class="theme-toggle" variant="rail" size="sm" [title]="t().common.toggleTheme"
+    (ADR-166 clause 2). Paper stock on a chrome box: the wall is light by day, and the rail's
+    cream ink does not read on it.-->
+    <app-button class="theme-toggle" variant="paper" surface="chrome" size="sm" [title]="t().common.toggleTheme"
                 (clicked)="theme.toggle()">
-        {{ theme.theme() === 'dark' ? '☀' : '☾' }}
+        <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="xs" />
     </app-button>
 
     <app-paper-card class="auth-card" bright [rotate]="-0.4">

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, OnDestroy, booleanAttribute, comput
 
 /** The ground the top is cut from: squared paper, or the plaster the bench stands against. */
 export type WorktopTone = 'paper' | 'wall';
+export type WorktopEdge = 'strip' | 'chips';
 
 let liveTops = 0;
 
@@ -14,6 +15,7 @@ let liveTops = 0;
     host: {
         'data-surface': 'chrome',
         '[attr.data-tone]': 'tone()',
+        '[attr.data-edge]': 'edge()',
         '[class.scrolls]': 'scroll()',
         '[style.--wt-lamp]': `lamp() ? 'var(--lamp)' : null`,
         '[style.--wt-grid]': 'gridLayer()',
@@ -47,15 +49,15 @@ let liveTops = 0;
 
         /* ADR-140 spends the app's one box-shadow on the focus halo, and a second on the same
            element replaces it rather than joining it, so the inset stands down while focused. */
-        :host(:not(:focus-visible)) { box-shadow: var(--shadow-sheet-inset); }
+        :host(:not(:focus-visible)) { box-shadow: var(--shadow-worktop-inset, var(--shadow-sheet-inset)); }
 
         .wt-edge {
             flex: none;
             display: flex;
             align-items: center;
-            gap: var(--space-2);
+            gap: 10px;
             box-sizing: border-box;
-            height: var(--bench-panel-hd);
+            height: var(--bench-worktop-edge-h, 26px);
             padding: 0 var(--space-3);
             border-bottom: 1px dashed var(--rule-ink);
             font-family: var(--font-mono);
@@ -78,7 +80,26 @@ let liveTops = 0;
         /* The surface owns the size, so the lint can score it (ADR-138). */
         :host([data-surface="chrome"]) .wt-edge { font-size: var(--text-chrome-sm); }
 
-        /* Plaster, not paper: the wall carries one measured ink and no pencil rules. */
+        /* The hub's form: two chalk chips floating over the lit paper, no rule across the top. */
+        :host([data-edge="chips"]) .wt-edge {
+            position: absolute;
+            top: 10px;
+            left: 14px;
+            right: 14px;
+            height: auto;
+            padding: 0;
+            border-bottom: none;
+        }
+
+        :host([data-edge="chips"]) .wt-label,
+        :host([data-edge="chips"]) .wt-meta {
+            padding: 2px 7px;
+            border: 1px dashed var(--rule-ink);
+            border-radius: var(--radius-stamp);
+            background: color-mix(in srgb, var(--sheet) 60%, transparent);
+        }
+
+        /* Plaster, not paper: the wall carries one measured ink. */
         :host([data-tone="wall"]) { background-color: var(--canvas); }
         :host([data-tone="wall"]) .wt-edge { color: var(--wood-ink); }
 
@@ -103,12 +124,12 @@ export class WorktopComponent implements OnDestroy {
     /** The warm lamp wash from one corner. */
     readonly lamp = input(true, { transform: booleanAttribute });
     readonly tone = input<WorktopTone>('paper');
+    /** How the chalked edge is drawn: a strip across the top, or two chips floating over it (the hub). */
+    readonly edge = input<WorktopEdge>('strip');
     /** The body scrolls what it holds instead of clipping it. */
     readonly scroll = input(false, { transform: booleanAttribute });
 
-    // Ink is scored over the rules on paper and nowhere else, so a ruled wall would be a surface
-    // no pair in check-contrast can name.
-    readonly gridLayer = computed(() => (this.grid() && this.tone() === 'paper' ? 'var(--grid-worktop)' : null));
+    readonly gridLayer = computed(() => (this.grid() ? 'var(--grid-worktop)' : null));
 
     constructor() {
         if (++liveTops > 1 && isDevMode())

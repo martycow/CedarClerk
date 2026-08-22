@@ -21,10 +21,11 @@
     max-height: calc(100vh - 64px);
     display: flex;
     flex-direction: column;
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    box-shadow: var(--shadow-paper);
     color: var(--text);
 }
 
@@ -33,7 +34,8 @@
     align-items: center;
     gap: 9px;
     padding: 18px 20px 14px;
-    font-size: var(--fs-15);
+    font-family: var(--font-display);
+    font-size: var(--fs-17);
     font-weight: 700;
     letter-spacing: -.01em;
     border-bottom: 1px solid var(--border);

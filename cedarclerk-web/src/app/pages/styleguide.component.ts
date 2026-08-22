@@ -90,7 +90,7 @@ export class StyleguideComponent {
         { token: '--fs-12', px: '12' }, { token: '--fs-13', px: '13' }, { token: '--fs-14', px: '14' },
         { token: '--fs-15', px: '15' }, { token: '--fs-16', px: '16' }, { token: '--fs-17', px: '17' },
         { token: '--fs-18', px: '18' }, { token: '--fs-19', px: '19' }, { token: '--fs-20', px: '20' },
-        { token: '--fs-22', px: '22' }, { token: '--fs-27', px: '27' },
+        { token: '--fs-22', px: '22' }, { token: '--fs-27', px: '27' }, { token: '--fs-34', px: '34' },
     ];
 
     readonly roles = [

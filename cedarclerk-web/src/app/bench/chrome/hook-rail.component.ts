@@ -86,7 +86,7 @@ const MAX_HOOKS = 7;
             flex: 1;
             flex-direction: column;
             align-items: center;
-            gap: var(--space-3);
+            gap: 6px;
             margin: 0;
             padding: var(--space-3) 0;
             list-style: none;
@@ -101,12 +101,12 @@ const MAX_HOOKS = 7;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: var(--space-1);
+            gap: 2px;
             box-sizing: border-box;
-            width: calc(var(--bench-tool-w) - var(--space-2));
+            width: calc(var(--bench-tool-w) - var(--space-1));
             min-height: var(--hit-chrome);
-            padding: var(--space-1) 0;
-            border: var(--border-rail-btn);
+            padding: 5px 0 4px;
+            border: 1px solid rgba(242, 232, 206, .16);
             border-radius: var(--radius-stamp);
             background: var(--hook-face);
             color: var(--rail-ink);
@@ -119,7 +119,7 @@ const MAX_HOOKS = 7;
            of its own up there — the peg is drawn outside the box. */
         :host([data-surface="chrome"]) .peg {
             position: absolute;
-            top: calc(var(--space-3) * -1);
+            top: -11px;
             left: 50%;
             translate: -50%;
         }
@@ -139,11 +139,15 @@ const MAX_HOOKS = 7;
 
         :host([data-surface="chrome"]) .hook.is-current {
             border-color: var(--brass-edge);
-            background: var(--grad-sign-tile);
+            background-color: var(--sign-tile-hi);
+            background-image: var(--tex-wood), var(--grad-sign-tile);
+            background-size: 420px, auto;
             font-weight: 700;
         }
 
-        :host([data-surface="chrome"]) .hook.is-current:not(:focus-visible) { box-shadow: var(--shadow-shelf); }
+        :host([data-surface="chrome"]) .hook.is-current:not(:focus-visible) {
+            box-shadow: inset 0 1px 0 rgba(255, 240, 210, .2), 0 1px 2px rgba(20, 12, 4, .45);
+        }
         :host([data-surface="chrome"]) .hook.is-current .cap { font-weight: 700; }
 
         /* Third cue, and the one that is a shape rather than a colour: a brass bar standing on the

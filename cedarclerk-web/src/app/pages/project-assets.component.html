@@ -200,9 +200,13 @@ shelf too, because linking it to a document means choosing from a list the modal
 
                 @if (p.total > 0) {
                     <div class="pager">
-                        <app-button variant="paper" size="sm" [disabled]="!canPageBack" (clicked)="pageBack()">←</app-button>
+                        <app-button variant="paper" size="sm" [disabled]="!canPageBack" [title]="t().common.pageBack" (clicked)="pageBack()">
+                            <app-icon name="caret-left" size="sm" />
+                        </app-button>
                         <span class="hint">{{ rangeLabel() }}</span>
-                        <app-button variant="paper" size="sm" [disabled]="!canPageForward" (clicked)="pageForward()">→</app-button>
+                        <app-button variant="paper" size="sm" [disabled]="!canPageForward" [title]="t().common.pageForward" (clicked)="pageForward()">
+                            <app-icon name="caret-right" size="sm" />
+                        </app-button>
                     </div>
                 }
             </app-shelf-panel>

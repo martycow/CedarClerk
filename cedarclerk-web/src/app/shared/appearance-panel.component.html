@@ -6,9 +6,9 @@
     <div class="ap-body">
         <div class="ap-field">
             <label>{{ t().settings.appearance.themeLabel }}</label>
-            <div class="ap-toggle">
-                <button [class.on]="theme.theme() === 'light'" (click)="theme.set('light')">{{ t().settings.appearance.light }}</button>
-                <button [class.on]="theme.theme() === 'dark'" (click)="theme.set('dark')">{{ t().settings.appearance.dark }}</button>
+            <div class="ap-leaves" role="group" [attr.aria-label]="t().settings.appearance.themeLabel">
+                <app-leaf-tag interactive [state]="theme.theme() === 'light' ? 'active' : 'idle'" (activated)="theme.set('light')">{{ t().settings.appearance.light }}</app-leaf-tag>
+                <app-leaf-tag interactive [state]="theme.theme() === 'dark' ? 'active' : 'idle'" (activated)="theme.set('dark')">{{ t().settings.appearance.dark }}</app-leaf-tag>
             </div>
         </div>
 
@@ -23,22 +23,22 @@
 
         <div class="ap-field">
             <label>{{ t().settings.appearance.sheetWidth }}</label>
-            <div class="ap-toggle">
-                <button [class.on]="appearance.prefs().sheetWidth === 'narrow'" (click)="setSheetWidth('narrow')">{{ t().settings.appearance.narrow }}</button>
-                <button [class.on]="appearance.prefs().sheetWidth === 'normal'" (click)="setSheetWidth('normal')">{{ t().settings.appearance.normal }}</button>
-                <button [class.on]="appearance.prefs().sheetWidth === 'wide'" (click)="setSheetWidth('wide')">{{ t().settings.appearance.wide }}</button>
-                <button [class.on]="appearance.prefs().sheetWidth === 'full'" (click)="setSheetWidth('full')">{{ t().settings.appearance.full }}</button>
+            <div class="ap-leaves" role="group" [attr.aria-label]="t().settings.appearance.sheetWidth">
+                <app-leaf-tag interactive [state]="appearance.prefs().sheetWidth === 'narrow' ? 'active' : 'idle'" (activated)="setSheetWidth('narrow')">{{ t().settings.appearance.narrow }}</app-leaf-tag>
+                <app-leaf-tag interactive [state]="appearance.prefs().sheetWidth === 'normal' ? 'active' : 'idle'" (activated)="setSheetWidth('normal')">{{ t().settings.appearance.normal }}</app-leaf-tag>
+                <app-leaf-tag interactive [state]="appearance.prefs().sheetWidth === 'wide' ? 'active' : 'idle'" (activated)="setSheetWidth('wide')">{{ t().settings.appearance.wide }}</app-leaf-tag>
+                <app-leaf-tag interactive [state]="appearance.prefs().sheetWidth === 'full' ? 'active' : 'idle'" (activated)="setSheetWidth('full')">{{ t().settings.appearance.full }}</app-leaf-tag>
             </div>
         </div>
 
         <div class="ap-field">
             <label>{{ t().settings.appearance.typeface }}</label>
-            <div class="ap-chip-grid">
-                <button [class.on]="appearance.prefs().typeface === 'system'" (click)="setTypeface('system')">{{ t().settings.appearance.system }}</button>
-                <button [class.on]="appearance.prefs().typeface === 'serif'" (click)="setTypeface('serif')">{{ t().settings.appearance.serif }}</button>
-                <button [class.on]="appearance.prefs().typeface === 'serifClassic'" (click)="setTypeface('serifClassic')">{{ t().settings.appearance.serifClassic }}</button>
-                <button [class.on]="appearance.prefs().typeface === 'mono'" (click)="setTypeface('mono')">{{ t().settings.appearance.mono }}</button>
-                <button [class.on]="appearance.prefs().typeface === 'rounded'" (click)="setTypeface('rounded')">{{ t().settings.appearance.rounded }}</button>
+            <div class="ap-leaves" role="group" [attr.aria-label]="t().settings.appearance.typeface">
+                <app-leaf-tag interactive [state]="appearance.prefs().typeface === 'system' ? 'active' : 'idle'" (activated)="setTypeface('system')">{{ t().settings.appearance.system }}</app-leaf-tag>
+                <app-leaf-tag interactive [state]="appearance.prefs().typeface === 'serif' ? 'active' : 'idle'" (activated)="setTypeface('serif')">{{ t().settings.appearance.serif }}</app-leaf-tag>
+                <app-leaf-tag interactive [state]="appearance.prefs().typeface === 'serifClassic' ? 'active' : 'idle'" (activated)="setTypeface('serifClassic')">{{ t().settings.appearance.serifClassic }}</app-leaf-tag>
+                <app-leaf-tag interactive [state]="appearance.prefs().typeface === 'mono' ? 'active' : 'idle'" (activated)="setTypeface('mono')">{{ t().settings.appearance.mono }}</app-leaf-tag>
+                <app-leaf-tag interactive [state]="appearance.prefs().typeface === 'rounded' ? 'active' : 'idle'" (activated)="setTypeface('rounded')">{{ t().settings.appearance.rounded }}</app-leaf-tag>
             </div>
         </div>
 

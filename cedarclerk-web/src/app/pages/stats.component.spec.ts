@@ -145,13 +145,13 @@ describe('stats screen (Posts Manager tab)', () => {
     });
 
     it('states the window rather than leaving it to the axis, because it moves with the selection', async () => {
-        expect(page().windowLabel()).toBe('3 points · 9 Aug — 11 Aug');
+        expect(page().windowLabel()).toBe('3 points · 09.08 — 11.08');
 
         page().toggle('c1');
         await settle();
 
         expect(page().axis().days.length).toBe(4);
-        expect(page().windowLabel()).toBe('4 points · 8 Aug — 11 Aug');
+        expect(page().windowLabel()).toBe('4 points · 08.08 — 11.08');
     });
 
     it('tells the chart the tail is closed: a running total is complete the moment it is read', () => {
@@ -160,13 +160,18 @@ describe('stats screen (Posts Manager tab)', () => {
         expect((chart.componentInstance as GrowthChartComponent).plotted()).toBe(3);
     });
 
-    it('washes one line and no more — four overlapping washes are mud', async () => {
-        expect(page().series().every(s => s.wash === false)).toBe(true);
+    it('washes the blog and only the blog, however many lines are drawn', async () => {
+        expect(page().series().map(s => [s.name, s.wash])).toEqual([['Blog', true], ['Devlog', false]]);
 
-        page().toggle('c1');
+        page().toggle('blog');
         await settle();
 
-        expect(page().series().map(s => s.wash)).toEqual([true]);
+        expect(page().series().map(s => s.wash)).toEqual([false]);
+    });
+
+    it('rests the readout slip on the latest day', () => {
+        const chart = fixture.debugElement.query(By.directive(GrowthChartComponent));
+        expect((chart.componentInstance as GrowthChartComponent).markerIndex()).toBe(2);
     });
 
     it('gives the table the same numbers the chart is drawn from', async () => {

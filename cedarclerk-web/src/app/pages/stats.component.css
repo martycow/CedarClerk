@@ -1,20 +1,24 @@
 /* The tab body is paper (ADR-154); every rule below is scoped to that so tools/check-density.mjs
    holds this screen to paper's floors instead of finding an unmeasured page root. */
+/* The tab fills the box the manager gives it, so both boards run down to the drawer lip and the
+   plot takes whatever is left under the readouts. */
 :host([data-surface="paper"]) {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 
-    /* No token owns a plot's height or a shelf column's width — the kit states 320px and the
-       design system stops there — so both are named here rather than dropped into a rule. */
+    /* No token owns a shelf column's width — the kit states 320px and the design system stops
+       there — so it is named here rather than dropped into a rule. */
     --stats-shelf-w: 320px;
-    --stats-plot-h: 420px;
-    --stats-panel-max: 620px;
 }
 
 :host([data-surface="paper"]) .stats-tab {
     display: grid;
     grid-template-columns: minmax(0, 1fr) var(--stats-shelf-w);
     gap: var(--space-3);
-    align-items: start;
+    flex: 1;
+    min-height: 0;
+    align-items: stretch;
 }
 
 :host([data-surface="paper"]) .stats-main {
@@ -22,6 +26,7 @@
     flex-direction: column;
     gap: var(--space-3);
     min-width: 0;
+    min-height: 0;
 }
 
 @media (max-width: 720px) {
@@ -53,6 +58,15 @@
 
 :host([data-surface="paper"]) .strip-gap { flex: 1; }
 
+/* Bare text beside the slider's bare value: the strip's own gap reads as one line. */
+:host([data-surface="paper"]) .strip-meta {
+    margin-right: var(--space-4);
+    font-family: var(--font-mono);
+    font-size: var(--fs-ui);
+    color: var(--t2);
+    white-space: nowrap;
+}
+
 :host([data-surface="paper"]) .leaf-note {
     margin-left: var(--space-1);
     font-family: var(--font-mono);
@@ -82,12 +96,41 @@
     padding-bottom: var(--space-5);
 }
 
+/* Drawn by the bench, not the browser: the audience bar's track and the drawer's brass pull. */
 :host([data-surface="paper"]) .range-track input[type="range"] {
+    appearance: none;
+    -webkit-appearance: none;
     width: 100%;
-    height: var(--space-5);
-    accent-color: var(--accent);
+    height: var(--space-2);
+    margin: var(--space-2) 0;
+    box-sizing: border-box;
+    background: var(--paper-2);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-stamp);
     position: relative;
     z-index: 1;
+    cursor: pointer;
+}
+
+:host([data-surface="paper"]) .range-track input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 26px;
+    height: var(--space-4);
+    border-radius: var(--radius-sm);
+    background: var(--grad-brass);
+    border: 1px solid var(--brass-edge);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--brass-hi) 70%, transparent);
+}
+
+:host([data-surface="paper"]) .range-track input[type="range"]::-moz-range-thumb {
+    appearance: none;
+    width: 26px;
+    height: var(--space-4);
+    border-radius: var(--radius-sm);
+    background: var(--grad-brass);
+    border: 1px solid var(--brass-edge);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--brass-hi) 70%, transparent);
 }
 
 /* Ticks sit under the thumb, purely as landmarks — the magnet is in the snapping, not here. */
@@ -143,17 +186,33 @@
 /* ---------- Readouts: one card per drawn source, never a total ---------- */
 :host([data-surface="paper"]) .readouts {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--space-3);
 }
 
-:host([data-surface="paper"]) .readouts app-paper-card { --paper-card-pad: var(--space-3) var(--space-4); }
+/* A flat tile in the filter strip's own material, a quarter of the row however many are drawn. */
+:host([data-surface="paper"]) .ro {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    box-sizing: border-box;
+    padding: var(--space-2) var(--space-3);
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    box-shadow: var(--shadow-paper-sm);
+}
 
 :host([data-surface="paper"]) .ro-label {
     display: flex;
     align-items: center;
     gap: var(--space-2);
+    font-family: var(--font-display);
     font-size: var(--fs-ui);
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
     color: var(--t2);
 }
 
@@ -182,6 +241,7 @@
 :host([data-surface="paper"]) .ro-delta {
     font-family: var(--font-mono);
     font-size: var(--fs-ui);
+    font-weight: 700;
     color: var(--t2);
     font-variant-numeric: tabular-nums;
 }
@@ -190,14 +250,25 @@
 :host([data-surface="paper"]) .ro-delta.down { color: var(--danger); }
 
 /* ---------- Chart panel: one dataset, two views ---------- */
-/* The plot is drawn to a height; the table is as long as the period, so the panel is capped and
-   the sheet scrolls rather than the tab body growing to six months of rows. */
-:host([data-surface="paper"]) .chart-panel { max-height: var(--stats-panel-max); }
+/* The panel takes the column's remaining height: the chart measures its host and follows, and
+   the table scrolls inside the panel's sheet rather than growing it to six months of rows. */
+:host([data-surface="paper"]) .chart-panel {
+    flex: 1;
+    min-height: 0;
+}
 
 :host([data-surface="paper"]) .chart {
     display: block;
-    height: var(--stats-plot-h);
+    height: 100%;
+    min-height: 0;
 }
+
+/* Two strips, two controls: the view strip stands off the metric strip, so a view tile cannot
+   read as a fourth metric. */
+:host([data-surface="paper"]) app-index-tabs[actions] + app-index-tabs[actions] { margin-left: var(--space-3); }
+
+/* The lit tile overflows the 30px header upward instead of stretching it past the shelf beside it. */
+:host([data-surface="paper"]) .chart-panel app-index-tabs { height: var(--bench-panel-hd); }
 
 :host([data-surface="paper"]) .series-table {
     width: 100%;
@@ -272,11 +343,6 @@
     font-size: var(--fs-ui);
 }
 
-:host([data-surface="paper"]) .audience-flag {
-    flex: none;
-    line-height: 1;
-}
-
 /* Fixed so the bars start on one line down the list — a bar chart whose baseline moves per row
    can't be read by length, which is the only thing it's for. */
 :host([data-surface="paper"]) .audience-label {
@@ -291,24 +357,24 @@
 :host([data-surface="paper"]) .audience-bar {
     flex: 1;
     min-width: 0;
-    height: var(--space-2);
-    background: var(--alt);
+    height: 7px;
+    background: var(--surface);
     border: 1px solid var(--paper-edge);
-    border-radius: var(--radius-stamp);
+    border-radius: 2px;
     overflow: hidden;
 }
 
 :host([data-surface="paper"]) .audience-bar-fill {
     display: block;
     height: 100%;
-    background: var(--pine);
+    background: var(--grad-pine);
 }
 
-:host([data-surface="paper"]) .audience-views {
-    flex: none;
-    font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
-    color: var(--text);
+/* The folded remainder is the kit's pine at .45, mixed into the track rather than laid over it as
+   opacity: an opaque fill is one paint per theme that the census can read, a translucent one is
+   composited against whatever lies beneath and measured by nothing (ADR-145). */
+:host([data-surface="paper"]) .audience-row.is-other .audience-bar-fill {
+    background: color-mix(in srgb, var(--pine) 45%, var(--surface));
 }
 
 :host([data-surface="paper"]) .audience-share {
@@ -319,16 +385,3 @@
     font-variant-numeric: tabular-nums;
     color: var(--t2);
 }
-
-:host([data-surface="paper"]) .audience-more {
-    margin-top: var(--space-2);
-    border: none;
-    background: none;
-    padding: 0;
-    font-family: inherit;
-    font-size: var(--fs-ui);
-    color: var(--t2);
-    cursor: pointer;
-}
-
-:host([data-surface="paper"]) .audience-more:hover { color: var(--text); }

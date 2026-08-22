@@ -19,27 +19,29 @@ export type StampTone = 'pine' | 'brass' | 'rust' | 'ink';
             display: inline-flex;
             align-items: center;
             white-space: nowrap;
-            border: 2px solid currentColor;
+            border: var(--stamp-border-w, 1px) solid currentColor;
             border-radius: var(--radius-stamp);
             font-family: var(--font-display);
             font-weight: 700;
-            letter-spacing: .13em;
+            letter-spacing: var(--stamp-tracking, .13em);
             text-transform: uppercase;
             opacity: .92;
             color: var(--accent);
             background: var(--asoft);
         }
 
-        /* The surface owns the size, so the lint can score it (ADR-138). */
+        /* The surface owns the size, so the lint can score it (ADR-138). The --stamp-* hooks are
+           how a line or a tag shrinks the stamp it projects without reaching into it; the font
+           size is not one of them, because 11px is chrome's floor. */
         :host([data-surface="chrome"]) {
-            padding: calc(var(--space-1) / 2) var(--space-2);
+            padding: var(--stamp-pad, calc(var(--space-1) / 2) var(--space-2));
             font-size: var(--text-chrome-sm);
         }
 
         /* Ink and wash are one pair, so each tone takes the wash mixed from its own ink
            (ADR-145) rather than a hand-picked percentage over whatever paper it lands on. */
         :host([data-tone="brass"]) {
-            color: var(--brass-lo);
+            color: var(--brass-ink, var(--brass-lo));
             background: var(--brass-soft);
         }
 

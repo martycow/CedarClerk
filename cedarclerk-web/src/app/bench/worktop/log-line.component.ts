@@ -24,7 +24,7 @@ const TONES: Record<LogLevel, StampTone> = { ok: 'pine', warn: 'rust', info: 'in
         @if (time()) {
             <span class="ll-time">{{ time() }}</span>
         }
-        <app-stamp-badge class="ll-mark" [tone]="resolvedTone()" [rotate]="-1">{{ stamp() }}</app-stamp-badge>
+        <app-stamp-badge class="ll-mark" [tone]="resolvedTone()" [rotate]="-1.2">{{ stamp() }}</app-stamp-badge>
         <span class="ll-msg"><ng-content /></span>
         @if (at()) {
             <span class="ll-at">{{ at() }}</span>
@@ -40,6 +40,13 @@ const TONES: Record<LogLevel, StampTone> = { ok: 'pine', warn: 'rust', info: 'in
         }
 
         .ll-time, .ll-mark, .ll-at { flex: none; }
+
+        /* A stamp on a line is pressed smaller; the hooks inherit into the badge. */
+        .ll-mark {
+            --stamp-pad: 1px 6px;
+            --stamp-border-w: 1px;
+            --stamp-tracking: .1em;
+        }
 
         /* The message is held to one line by the component and not by the consumer's discipline:
            the kit's rule is that the anchor goes in the at input rather than into the sentence, and a

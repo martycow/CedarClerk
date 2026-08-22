@@ -271,7 +271,7 @@ describe('GrowthChartComponent', () => {
 
         it('takes the ruled ground by its token and never draws a rule of its own', () => {
             expect(css).toMatch(/background-image:\s*var\(--grid-graph\),\s*var\(--tex-paper\)/);
-            expect(css).toMatch(/background-color:\s*var\(--surface\)/);
+            expect(css).toMatch(/background-color:\s*var\(--sheet\)/);
             expect(css).not.toMatch(/repeating-linear-gradient/);
             expect(css).not.toMatch(/--grid-graph\s*:/);
         });

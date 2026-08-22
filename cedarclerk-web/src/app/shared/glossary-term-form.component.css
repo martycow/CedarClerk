@@ -29,12 +29,60 @@
 
 .form-field-label { font-size: var(--fs-meta); color: var(--t2); }
 
+.suggest {
+    align-self: flex-start;
+}
+
+/* A <label> around a hidden file input: a button cannot open a file dialog, so this wears the
+   paper face of app-button rather than becoming one. */
 .image-pick {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    gap: var(--space-2);
     align-self: flex-start;
+    box-sizing: border-box;
+    min-height: var(--hit-target);
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid rgba(110, 86, 50, .4);
+    border-radius: var(--radius-plaque);
+    background: var(--sheet);
+    box-shadow: var(--shadow-paper-sm);
+    color: var(--t2);
+    font-family: var(--font-sans);
+    font-size: var(--fs-ui);
+    font-weight: 600;
+    line-height: 1.2;
     cursor: pointer;
+}
+
+.image-pick:hover {
+    background: var(--surface);
+    color: var(--text);
+}
+
+.image-pick:active {
+    transform: translateY(1px);
+}
+
+.field-hint-inline {
+    margin: 0;
+    font-size: var(--fs-ui);
+    color: var(--t2);
+}
+
+.channel-error {
+    margin: 0;
+    font-size: var(--fs-ui);
+    color: var(--danger);
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 .term-image-row {
@@ -49,8 +97,6 @@
     border-radius: var(--radius-md);
     border: 1px solid var(--border);
 }
-
-    .form-row-2 { grid-template-columns: 1fr; }
 
 .term-case-toggle {
     display: flex;

@@ -19,7 +19,10 @@ import { ModalComponent } from '../shared/modal.component';
 import { PopoverComponent } from '../shared/popover.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import { IconComponent } from '../shared/icon.component';
+import { IconName } from '../shared/icon-data.generated';
 import { ButtonComponent } from '../bench/forms/button.component';
+import { LeafTagComponent } from '../bench/display/leaf-tag.component';
+import { PaperCardComponent } from '../bench/display/paper-card.component';
 import { InputComponent } from '../bench/forms/input.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
@@ -128,7 +131,7 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, ModalComponent, PopoverComponent,
         FolderPickerComponent, TagPickerComponent, IndexTabsComponent, ShelfPanelComponent,
-        InputComponent, ButtonComponent,
+        InputComponent, ButtonComponent, LeafTagComponent, PaperCardComponent,
     ],
     templateUrl: 'drafts.component.html',
     styleUrls: ['drafts.component.css'],
@@ -272,9 +275,9 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
         }
     }
 
-    sortMark(key: SortKey): string {
+    sortMark(key: SortKey): IconName | '' {
         if (this.sortKey() !== key) return '';
-        return this.sortDir() === 'asc' ? '↑' : '↓';
+        return this.sortDir() === 'asc' ? 'arrow-up' : 'arrow-down';
     }
 
     // Which columns are actually drawn. The template, the row's min-width and the `@if`s in the

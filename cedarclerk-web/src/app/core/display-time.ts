@@ -3,10 +3,21 @@
 // place a per-user timezone would replace.
 export const DISPLAY_TIME_ZONE = 'America/Los_Angeles';
 
+// LocaleService writes the UI language onto <html lang>; reading it back here keeps every date the
+// app prints — through the pipe or a direct call — in that language without threading a service
+// through a pure formatter.
+const MONTHS_SHORT: Record<string, readonly string[]> = {
+    en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    ru: ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'],
+};
+
+function monthsShort(): readonly string[] {
+    const lang = typeof document === 'undefined' ? '' : document.documentElement.lang;
+    return MONTHS_SHORT[lang] ?? MONTHS_SHORT['en'];
+}
+
 // A named zone, not a fixed -8: Los Angeles is on PDT from March to November, and a fixed offset
 // would be an hour wrong for most of the year.
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
 // hourCycle rather than hour12: false — with hour12: false some engines print midnight as 24:00.
 const PARTS = new Intl.DateTimeFormat('en-US', {
     timeZone: DISPLAY_TIME_ZONE,
@@ -52,7 +63,7 @@ export function formatInZone(value: string | number | Date | null | undefined, p
         switch (token) {
             case 'yyyy': case 'y': return String(year);
             case 'yy': return pad(year % 100);
-            case 'MMM': return MONTHS_SHORT[month - 1];
+            case 'MMM': return monthsShort()[month - 1];
             case 'MM': return pad(month);
             case 'M': return String(month);
             case 'dd': return pad(day);

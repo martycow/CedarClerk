@@ -42,8 +42,8 @@ export const DEFAULT_APPEARANCE: AppearancePrefs = {
     accentDark: BENCH_ACCENT.hex,
     sheetWidth: 'normal',
     typeface: 'system',
-    fontSize: 16,
-    lineHeight: 1.6,
+    fontSize: 17,
+    lineHeight: 1.75,
     showParagraphNumbers: false,
     showLineRules: false,
     tableRows: 3,
@@ -58,14 +58,14 @@ export const DEFAULT_APPEARANCE: AppearancePrefs = {
 export const MAX_TABLE_SIZE = 10;
 
 export const SHEET_WIDTH_PX: Record<AppearancePrefs['sheetWidth'], number> = {
-    narrow: 560, normal: 680, wide: 820, full: 1040,
+    narrow: 560, normal: 640, wide: 820, full: 1040,
 };
 
-// System stacks only (FI1) — no webfonts ship (see docs/design/DESIGN.md), so "more typefaces" means
-// more of what the OS already has, not a new loading path.
+// The three named faces are the self-hosted ones (ADR-143); the other two stacks are what the OS
+// already has, not a new loading path.
 export const TYPEFACE_STACK: Record<AppearancePrefs['typeface'], string> = {
     system: 'var(--font-sans)',
-    serif: 'Georgia, "Iowan Old Style", serif',
+    serif: 'var(--font-serif)',
     serifClassic: '"Times New Roman", Times, "Liberation Serif", serif',
     mono: 'var(--font-mono)',
     rounded: 'ui-rounded, "SF Pro Rounded", "Segoe UI Rounded", var(--font-sans)',

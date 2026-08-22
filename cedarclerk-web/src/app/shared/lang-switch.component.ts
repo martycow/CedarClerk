@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { LocaleService, UiLang } from '../core/i18n/locale.service';
+import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 
 // I1 — language picker for the login/register screens, which are the only place the UI language
 // can't be changed otherwise: the Settings picker needs an account, and picking a language is
@@ -13,12 +14,12 @@ import { LocaleService, UiLang } from '../core/i18n/locale.service';
 // the next screen; RegisterComponent additionally pushes it onto the new profile.
 @Component({
     selector: 'app-lang-switch',
+    imports: [LeafTagComponent],
     template: `
         <div class="lang-switch">
             @for (o of options; track o.lang) {
-            <button type="button" class="lang-code" [class.on]="locale.uiLang() === o.lang"
-                    (click)="locale.set(o.lang)" [title]="o.label" [attr.aria-label]="o.label"
-                    [attr.aria-pressed]="locale.uiLang() === o.lang">{{ o.code }}</button>
+            <app-leaf-tag interactive [state]="locale.uiLang() === o.lang ? 'active' : 'idle'"
+                          [hint]="o.label" (activated)="locale.set(o.lang)">{{ o.code }}</app-leaf-tag>
             }
         </div>
     `,
@@ -28,30 +29,6 @@ import { LocaleService, UiLang } from '../core/i18n/locale.service';
             justify-content: center;
             gap: 6px;
             margin-top: 18px;
-        }
-
-        .lang-code {
-            border: 1px solid transparent;
-            background: none;
-            border-radius: var(--radius-md);
-            padding: 4px 10px;
-            font-family: inherit;
-            font-size: var(--fs-13);
-            font-weight: 700;
-            letter-spacing: .04em;
-            color: var(--t2);
-            cursor: pointer;
-            transition: color .12s, background .12s;
-        }
-
-        .lang-code:hover {
-            color: var(--text);
-        }
-
-        .lang-code.on {
-            color: var(--accent);
-            border-color: var(--abord);
-            background: var(--asoft);
         }
     `],
 })

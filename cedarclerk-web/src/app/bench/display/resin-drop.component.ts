@@ -49,7 +49,7 @@ export type ResinState = 'forming' | 'set';
                 color-mix(in srgb, var(--resin) 55%, var(--wood-edge)) 95%);
             box-shadow:
                 inset 0 -2px 3px color-mix(in srgb, var(--wood-edge) 45%, transparent),
-                var(--shadow-paper-sm);
+                0 1px 2px color-mix(in srgb, var(--rail-edge) 40%, transparent);
         }
 
         .gloss {

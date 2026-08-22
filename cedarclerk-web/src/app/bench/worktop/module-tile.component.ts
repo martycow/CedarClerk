@@ -61,7 +61,7 @@ import { IconName } from '../../shared/icon-data.generated';
             flex-direction: column;
             align-items: flex-start;
             justify-content: center;
-            gap: var(--space-1);
+            gap: 3px;
             min-width: 0;
             min-height: var(--hit-target);
             box-sizing: border-box;
@@ -86,12 +86,12 @@ import { IconName } from '../../shared/icon-data.generated';
                is a motion token, which is the whole of honouring prefers-reduced-motion —
                styles.scss drops those to 1ms globally, and a second media query here would be a
                second answer. */
-            transition: translate var(--motion-fast) var(--ease-swing);
+            transition: translate var(--dur-tap, 150ms) var(--ease-swing);
 
             .mt-head {
                 display: flex;
                 align-items: center;
-                gap: var(--space-2);
+                gap: 7px;
                 min-width: 0;
                 max-width: 100%;
                 color: var(--accent);
@@ -100,7 +100,7 @@ import { IconName } from '../../shared/icon-data.generated';
             .mt-name {
                 min-width: 0;
                 font-family: var(--font-display);
-                font-size: var(--fs-body);
+                font-size: var(--fs-ui);
                 font-weight: 700;
                 letter-spacing: .01em;
                 color: var(--text);

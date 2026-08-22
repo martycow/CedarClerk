@@ -12,15 +12,18 @@ import { Component, input } from '@angular/core';
     },
     template: `
         <svg width="14" height="14" viewBox="0 0 14 14">
-            <ellipse cx="7" cy="11.5" rx="3.4" ry="1.4" fill="var(--brass-edge)" opacity="0.3"></ellipse>
+            <ellipse class="pin-ground" cx="7" cy="11.5" rx="3.4" ry="1.4"></ellipse>
             <circle cx="7" cy="6" r="4.4" fill="var(--brass)"></circle>
             <circle cx="7" cy="6" r="4.4" fill="none" stroke="var(--brass-edge)" stroke-width="0.8"></circle>
-            <circle cx="5.4" cy="4.5" r="1.4" fill="var(--brass-hi)"></circle>
+            <circle class="pin-spark" cx="5.4" cy="4.5" r="1.4"></circle>
         </svg>
     `,
     styles: [`
         :host { display: inline-flex; flex: none; }
         svg { display: block; }
+        /* Near-black on the ground and near-white on the dome: neither is brass. */
+        .pin-ground { fill: var(--rail-edge); opacity: .3; }
+        .pin-spark { fill: var(--paper-bright); opacity: .8; }
     `],
 })
 export class BrassPinComponent {

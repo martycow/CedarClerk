@@ -33,59 +33,11 @@
     accent-color: var(--accent);
 }
 
-.ap-toggle {
-    display: flex;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-}
-
-.ap-toggle button {
-    flex: 1;
-    border: none;
-    background: var(--sheet);
-    color: var(--t2);
-    font-family: inherit;
-    font-size: var(--fs-11);
-    padding: 5px 2px;
-    cursor: pointer;
-}
-
-.ap-toggle button + button {
-    border-left: 1px solid var(--border);
-}
-
-.ap-toggle button.on {
-    background: var(--accent);
-    color: var(--sheet);
-}
-
-/* Typeface row has 5 options — too many for one seamless strip at 268px, unlike every other 2-4
-   option toggle in this panel (FI1). A separate chip grid rather than a `.ap-toggle` variant: the
-   seamless-strip look (shared borders, overflow:hidden) doesn't wrap cleanly, so this wraps as
-   individually-bordered chips instead. */
-.ap-chip-grid {
+/* A pick-one is a row of leaves, the same control Settings uses for its language pickers. */
+.ap-leaves {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
-}
-
-.ap-chip-grid button {
-    flex: 1 1 calc(33.333% - 3px);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--sheet);
-    color: var(--t2);
-    font-family: inherit;
-    font-size: var(--fs-11);
-    padding: 5px 2px;
-    cursor: pointer;
-}
-
-.ap-chip-grid button.on {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--sheet);
+    gap: var(--space-1);
 }
 
 .ap-accents {

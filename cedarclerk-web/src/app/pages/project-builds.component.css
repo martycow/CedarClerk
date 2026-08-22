@@ -42,7 +42,7 @@
 .head-title {
     margin: 0;
     font-family: var(--font-display);
-    font-size: var(--fs-27);
+    font-size: var(--fs-34);
     font-weight: 700;
     letter-spacing: -.01em;
 }
@@ -139,9 +139,9 @@
 
 .tags {
     display: grid;
-    /* No token owns a tag's minimum, and a px default would be one. A ch keeps the track
-       proportional to the title printed on it. */
-    grid-template-columns: repeat(auto-fill, minmax(20ch, 1fr));
+    /* The kit cuts a task tag 250px wide (TaskTag.jsx); a narrower track clips the projected
+       status stamp and the due date. */
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: var(--space-3);
     padding-top: var(--space-3);
 }
@@ -211,14 +211,19 @@
     box-sizing: border-box;
     width: 100%;
     padding: var(--space-2) var(--space-3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface);
+    border: var(--border-field);
+    border-radius: var(--radius-field);
+    background: var(--paper-bright);
     color: var(--text);
     font: inherit;
     font-size: var(--fs-ui);
     line-height: 1.6;
 }
+
+/* Withheld while focused: a component's own shadow out-specifies the global rule that draws the
+   ADR-140 halo. */
+.field input:not(:focus-visible),
+.field textarea:not(:focus-visible) { box-shadow: var(--shadow-field-inset); }
 
 .field textarea {
     resize: vertical;

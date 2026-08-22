@@ -123,7 +123,7 @@ export class AdminComponent implements OnInit {
 
     // Payments are stored in minor units (cents/stars), like everywhere else in billing.
     formatAmount(amount: number, currency: string): string {
-        return currency.toUpperCase() === 'XTR' ? `${amount} ⭐` : `${(amount / 100).toFixed(2)} ${currency.toUpperCase()}`;
+        return currency.toUpperCase() === 'XTR' ? `${amount} Stars` : `${(amount / 100).toFixed(2)} ${currency.toUpperCase()}`;
     }
 
     isSelf(u: AdminUser): boolean {

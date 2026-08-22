@@ -16,6 +16,10 @@ manager's business or nobody's, so this file starts at the filter strip.-->
 
             <span class="strip-gap"></span>
 
+            @if (updatedAt(); as at) {
+            <span class="strip-meta">{{ t().stats.updated(at) }} · {{ t().stats.stepDay }}</span>
+            }
+
             <!--N9: free 7…180-day range with magnetic notches at the common values. The fetch
             fires on release, not on every pixel of the drag. The kit's five fixed period
             segments are deliberately not ported (ADR-149).-->
@@ -34,10 +38,14 @@ manager's business or nobody's, so this file starts at the filter strip.-->
                         <span class="range-notch" [style.left.%]="notchOffset(n)"></span>
                         }
                     </div>
+                    <!--The minimum has no label of its own: it sits 17px from the next notch and the
+                    readout beside the track already states it.-->
                     <div class="range-notch-labels">
                         @for (n of rangeNotches; track n) {
+                        @if (n !== rangeMin) {
                         <button class="range-notch-label" [style.left.%]="notchOffset(n)"
                                 [class.on]="rangeDays() === n" (click)="onRangeCommit(n)">{{ n }}</button>
+                        }
                         }
                     </div>
                 </div>
@@ -48,7 +56,7 @@ manager's business or nobody's, so this file starts at the filter strip.-->
         total against each of them, so a cross-source readout would double-count (ADR-025/ADR-149).-->
         <div class="readouts">
             @for (r of readouts(); track r.id) {
-            <app-paper-card [rotate]="0">
+            <div class="ro">
                 <span class="ro-label">
                     <span class="ro-swatch" [style.background]="r.color"></span>{{ r.name }}
                 </span>
@@ -60,7 +68,7 @@ manager's business or nobody's, so this file starts at the filter strip.-->
                     </span>
                     }
                 </span>
-            </app-paper-card>
+            </div>
             }
         </div>
 
@@ -77,8 +85,10 @@ manager's business or nobody's, so this file starts at the filter strip.-->
             } @else if (view() === 'chart') {
             <!--A running total is complete the moment it is read, so no bucket is left unfinished
             here; a per-day delta series would answer openTail differently (ADR-161).-->
+            <!--The slip rests on the latest day; hover and the arrow keys still take over (ADR-158).-->
             <app-growth-chart class="chart" [label]="chartLabel()" [series]="series()" [openTail]="false"
-                              [xLabels]="axis().labels" [strings]="t().stats.chart" [pending]="pending()" />
+                              [xLabels]="axis().labels" [markerIndex]="axis().days.length - 1"
+                              [strings]="t().stats.chart" [pending]="pending()" />
             } @else {
             <table class="series-table">
                 <caption class="visually-hidden">{{ chartLabel() }}</caption>
@@ -111,38 +121,25 @@ manager's business or nobody's, so this file starts at the filter strip.-->
         @if (hasAudience()) {
         <h3 class="group-head">{{ t().stats.audience.countries }}</h3>
         <ul class="audience-list">
-            @for (row of visibleCountries(); track row.code) {
-            <li class="audience-row">
-                <span class="audience-flag">{{ row.flag }}</span>
-                <span class="audience-label" [title]="row.label">{{ row.label }}</span>
+            @for (row of countryRows(); track row.code) {
+            <li class="audience-row" [class.is-other]="row.code === otherCode">
+                <span class="audience-label" [title]="row.label + ' · ' + row.views">{{ row.label }}</span>
                 <span class="audience-bar"><span class="audience-bar-fill" [style.width.%]="row.bar"></span></span>
-                <span class="audience-views">{{ row.views }}</span>
                 <span class="audience-share">{{ row.share }}%</span>
             </li>
             }
         </ul>
-        @if (hiddenCount(countryRows()) > 0) {
-        <button class="audience-more" (click)="countriesExpanded.set(!countriesExpanded())">
-            {{ countriesExpanded() ? t().stats.audience.showLess : t().stats.audience.showAll(hiddenCount(countryRows())) }}
-        </button>
-        }
 
         <h3 class="group-head">{{ t().stats.audience.languages }}</h3>
         <ul class="audience-list">
-            @for (row of visibleLanguages(); track row.code) {
-            <li class="audience-row">
-                <span class="audience-label" [title]="row.label">{{ row.label }}</span>
+            @for (row of languageRows(); track row.code) {
+            <li class="audience-row" [class.is-other]="row.code === otherCode">
+                <span class="audience-label" [title]="row.label + ' · ' + row.views">{{ row.label }}</span>
                 <span class="audience-bar"><span class="audience-bar-fill" [style.width.%]="row.bar"></span></span>
-                <span class="audience-views">{{ row.views }}</span>
                 <span class="audience-share">{{ row.share }}%</span>
             </li>
             }
         </ul>
-        @if (hiddenCount(languageRows()) > 0) {
-        <button class="audience-more" (click)="languagesExpanded.set(!languagesExpanded())">
-            {{ languagesExpanded() ? t().stats.audience.showLess : t().stats.audience.showAll(hiddenCount(languageRows())) }}
-        </button>
-        }
         } @else {
         <p class="stats-hint">{{ t().stats.audience.empty }}</p>
         }

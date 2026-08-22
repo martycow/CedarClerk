@@ -1,7 +1,7 @@
 <div class="door">
-    <app-button class="theme-toggle" variant="rail" size="sm" [title]="t().common.toggleTheme"
+    <app-button class="theme-toggle" variant="paper" surface="chrome" size="sm" [title]="t().common.toggleTheme"
                 (clicked)="theme.toggle()">
-        {{ theme.theme() === 'dark' ? '☀' : '☾' }}
+        <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="xs" />
     </app-button>
 
     <app-paper-card class="auth-card" bright [rotate]="0.4">

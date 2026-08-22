@@ -4,22 +4,6 @@
     display: block;
     font-family: var(--font-sans);
 
-    /* Two columns of a log line that must not shuffle as entries arrive: the verb and the
-       duration are read down the page, so they are given a width rather than their content's. */
-    --method-w: 44px;
-    --duration-w: 60px;
-}
-
-.icon-sm { width: 14px; height: 14px; }
-.icon-xs { width: 12px; height: 12px; }
-
-.spin {
-    animation: spin calc(var(--motion-slow) * 3) linear infinite;
-}
-
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
 }
 
 .spacer { flex: 1; }
@@ -58,8 +42,6 @@
 .debug-row {
     border-top: 1px solid var(--paper-edge);
     cursor: pointer;
-    font-family: var(--font-mono);
-    font-size: var(--text-chrome-sm);
 }
 
 .debug-row:hover {
@@ -67,45 +49,8 @@
 }
 
 .debug-row-summary {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-1) var(--space-3);
-}
-
-.debug-method {
-    flex: none;
-    width: var(--method-w);
-    font-weight: 700;
-    color: var(--accent);
-}
-
-.debug-url {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: var(--text);
-}
-
-.debug-status {
-    flex: none;
-    font-weight: 600;
-    color: var(--ok);
-}
-
-.debug-status.pending {
-    color: var(--t2);
-}
-
-.debug-status.error {
-    color: var(--danger);
-}
-
-.debug-duration {
-    flex: none;
-    width: var(--duration-w);
-    text-align: right;
-    color: var(--t2);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .debug-row-detail {

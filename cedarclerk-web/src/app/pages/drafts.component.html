@@ -82,22 +82,22 @@ a popover, is the shelf beside it.-->
                 longer line up with colWidths, and a 5px pointer target is not something a finger hits
                 anyway.-->
                 <div class="drafts-row drafts-row-head" [style.gridTemplateColumns]="gridTemplate()" [style.minWidth]="rowMinWidth()">
-                    <button class="col-head" (click)="sortBy('title')">{{ t().drafts.columns.title }} {{ sortMark('title') }}</button>
-                    <button class="col-head" (click)="sortBy('state')">{{ t().drafts.columns.state }} {{ sortMark('state') }}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(0, $event)"></span>}</button>
+                    <button class="col-head" (click)="sortBy('title')">{{ t().drafts.columns.title }} @if (sortMark('title'); as mark) {<app-icon [name]="mark" size="xs" />}</button>
+                    <button class="col-head" (click)="sortBy('state')">{{ t().drafts.columns.state }} @if (sortMark('state'); as mark) {<app-icon [name]="mark" size="xs" />}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(0, $event)"></span>}</button>
                     @if (!phone()) {
-                    <button class="col-head" (click)="sortBy('languages')">{{ t().drafts.columns.languages }} {{ sortMark('languages') }}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(1, $event)"></span>}</button>
+                    <button class="col-head" (click)="sortBy('languages')">{{ t().drafts.columns.languages }} @if (sortMark('languages'); as mark) {<app-icon [name]="mark" size="xs" />}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(1, $event)"></span>}</button>
                     }
                     @if (!tight()) {
-                    <button class="col-head" (click)="sortBy('folder')">{{ t().drafts.columns.folder }} {{ sortMark('folder') }}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(2, $event)"></span>}</button>
+                    <button class="col-head" (click)="sortBy('folder')">{{ t().drafts.columns.folder }} @if (sortMark('folder'); as mark) {<app-icon [name]="mark" size="xs" />}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(2, $event)"></span>}</button>
                     }
                     @if (!compact()) {
-                    <button class="col-head" (click)="sortBy('tags')">{{ t().drafts.columns.tags }} {{ sortMark('tags') }}<span class="col-resize" (pointerdown)="startColResize(3, $event)"></span></button>
-                    <button class="col-head" (click)="sortBy('activity')">{{ t().drafts.columns.activity }} {{ sortMark('activity') }}<span class="col-resize" (pointerdown)="startColResize(4, $event)"></span></button>
+                    <button class="col-head" (click)="sortBy('tags')">{{ t().drafts.columns.tags }} @if (sortMark('tags'); as mark) {<app-icon [name]="mark" size="xs" />}<span class="col-resize" (pointerdown)="startColResize(3, $event)"></span></button>
+                    <button class="col-head" (click)="sortBy('activity')">{{ t().drafts.columns.activity }} @if (sortMark('activity'); as mark) {<app-icon [name]="mark" size="xs" />}<span class="col-resize" (pointerdown)="startColResize(4, $event)"></span></button>
                     }
                     @if (!tight()) {
-                    <button class="col-head right" (click)="sortBy('updated')">{{ t().drafts.columns.updated }} {{ sortMark('updated') }}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(5, $event)"></span>}</button>
+                    <button class="col-head right" (click)="sortBy('updated')">{{ t().drafts.columns.updated }} @if (sortMark('updated'); as mark) {<app-icon [name]="mark" size="xs" />}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(5, $event)"></span>}</button>
                     }
-                    <button class="col-head col-reset" (click)="resetColWidths()" [title]="t().drafts.resetColumns">⤢</button>
+                    <button class="col-head col-reset" (click)="resetColWidths()" [title]="t().drafts.resetColumns" [attr.aria-label]="t().drafts.resetColumns"><app-icon name="arrows-out-simple" size="xs"></app-icon></button>
                 </div>
                 @for (d of filteredDrafts(); track d.id) {
                 <div class="drafts-row" [class.busy]="busyId() === d.id" [style.gridTemplateColumns]="gridTemplate()" [style.minWidth]="rowMinWidth()" (click)="openDraft(d.id)">
@@ -146,7 +146,7 @@ a popover, is the shelf beside it.-->
                     </div>
                     }
                     @if (!tight()) {
-                    <div class="right">{{ d.updatedAt | zonedDate:'d MMM, HH:mm' }}</div>
+                    <div class="right">{{ d.updatedAt | zonedDate:'dd.MM, HH:mm' }}</div>
                     }
                     <div class="row-actions">
                         <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate" [attr.aria-label]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">
@@ -187,9 +187,9 @@ a popover, is the shelf beside it.-->
                     <span class="spacer"></span>
                     <span class="row-actions" (click)="$event.stopPropagation()">
                         <button class="mini" (click)="moveUp(row.d, $event)" [disabled]="busyId() === row.d.id"
-                                [title]="t().drafts.tree.moveUp" [attr.aria-label]="t().drafts.tree.moveUp">↑</button>
+                                [title]="t().drafts.tree.moveUp" [attr.aria-label]="t().drafts.tree.moveUp"><app-icon name="arrow-up" size="sm" /></button>
                         <button class="mini" (click)="moveDown(row.d, $event)" [disabled]="busyId() === row.d.id"
-                                [title]="t().drafts.tree.moveDown" [attr.aria-label]="t().drafts.tree.moveDown">↓</button>
+                                [title]="t().drafts.tree.moveDown" [attr.aria-label]="t().drafts.tree.moveDown"><app-icon name="arrow-down" size="sm" /></button>
                         <app-popover>
                             <button trigger class="mini" [title]="t().drafts.tree.move" [attr.aria-label]="t().drafts.tree.move">
                                 <app-icon name="tree-structure" size="sm"></app-icon>
@@ -215,8 +215,10 @@ a popover, is the shelf beside it.-->
             </div>
             } @else {
             <div class="drafts-grid-cards">
-                @for (d of filteredDrafts(); track d.id) {
-                <div class="draft-card" [class.busy]="busyId() === d.id" (click)="openDraft(d.id)">
+                @for (d of filteredDrafts(); track d.id; let i = $index) {
+                <app-paper-card class="draft-card" deckled interactive [seed]="i + 1" [rotate]="i % 2 ? 0.6 : -0.6"
+                                [class.busy]="busyId() === d.id" (activated)="openDraft(d.id)">
+                    <div class="draft-card-body">
                     <div class="drafts-title">
                         @if (d.isPrivate) { <app-icon name="lock" size="xs" class="private-lock" [attr.title]="t().drafts.privatePost"></app-icon> }
                         {{ d.title || t().drafts.untitled }}
@@ -226,7 +228,7 @@ a popover, is the shelf beside it.-->
                     </span>
                     @if (status(d).detail) { <div class="status-detail">{{ status(d).detail }}</div> }
                     @if (d.folderId) {
-                    <div class="folder-cell" (click)="$event.stopPropagation()">
+                    <div class="folder-cell" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
                         <app-folder-picker [folderId]="d.folderId" [compact]="true"
                                            (picked)="assignFolder(d, $event)"></app-folder-picker>
                     </div>
@@ -244,8 +246,8 @@ a popover, is the shelf beside it.-->
                     </div>
                     }
                     <div class="drafts-card-foot">
-                        <span>{{ d.updatedAt | zonedDate:'d MMM, HH:mm' }}</span>
-                        <span class="row-actions">
+                        <span>{{ d.updatedAt | zonedDate:'dd.MM, HH:mm' }}</span>
+                        <span class="row-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
                             <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate" [attr.aria-label]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">
                                 <app-icon name="layout" size="sm"></app-icon>
                             </button>
@@ -257,7 +259,8 @@ a popover, is the shelf beside it.-->
                             </button>
                         </span>
                     </div>
-                </div>
+                    </div>
+                </app-paper-card>
                 } @empty {
                 <p class="hint pad">{{ t().common.nothingHere }}</p>
                 }
@@ -308,15 +311,15 @@ a popover, is the shelf beside it.-->
             }
 
         @if (!newDraftExpanded()) {
-        <button class="tag-add-btn" style="margin-top:10px" (click)="newDraftExpanded.set(true)">{{ t().editor.newDraft.moreOptions }}</button>
+        <app-button class="more-options" variant="paper" size="sm" (clicked)="newDraftExpanded.set(true)">{{ t().editor.newDraft.moreOptions }}</app-button>
         } @else {
         <div style="margin-top:12px; display:flex; flex-direction:column; gap:12px">
             <div>
                 <span class="tb-caption">{{ t().editor.newDraft.languages }}</span>
-                <div class="format-toggle" style="margin-top:6px">
-                    <button [class.on]="newDraftLanguages === 'ru'" (click)="newDraftLanguages = 'ru'">RU</button>
-                    <button [class.on]="newDraftLanguages === 'en'" (click)="newDraftLanguages = 'en'">EN</button>
-                    <button [class.on]="newDraftLanguages === 'both'" (click)="newDraftLanguages = 'both'">{{ t().editor.newDraft.both }}</button>
+                <div class="pick-row" role="group" [attr.aria-label]="t().editor.newDraft.languages">
+                    <app-leaf-tag interactive [state]="newDraftLanguages === 'ru' ? 'active' : 'idle'" (activated)="newDraftLanguages = 'ru'">RU</app-leaf-tag>
+                    <app-leaf-tag interactive [state]="newDraftLanguages === 'en' ? 'active' : 'idle'" (activated)="newDraftLanguages = 'en'">EN</app-leaf-tag>
+                    <app-leaf-tag interactive [state]="newDraftLanguages === 'both' ? 'active' : 'idle'" (activated)="newDraftLanguages = 'both'">{{ t().editor.newDraft.both }}</app-leaf-tag>
                 </div>
             </div>
             <div>
@@ -330,10 +333,10 @@ a popover, is the shelf beside it.-->
             </div>
             <div>
                 <span class="tb-caption">{{ t().editor.newDraft.startFrom }}</span>
-                <div class="format-toggle" style="margin-top:6px">
-                    <button [class.on]="newDraftTemplate === 'blank'" (click)="newDraftTemplate = 'blank'">{{ t().editor.newDraft.blank }}</button>
-                    <button [class.on]="newDraftTemplate === 'devlog'" (click)="newDraftTemplate = 'devlog'">{{ t().editor.newDraft.devlog }}</button>
-                    <button [class.on]="newDraftTemplate === 'photodump'" (click)="newDraftTemplate = 'photodump'">{{ t().editor.newDraft.photodump }}</button>
+                <div class="pick-row" role="group" [attr.aria-label]="t().editor.newDraft.startFrom">
+                    <app-leaf-tag interactive [state]="newDraftTemplate === 'blank' ? 'active' : 'idle'" (activated)="newDraftTemplate = 'blank'">{{ t().editor.newDraft.blank }}</app-leaf-tag>
+                    <app-leaf-tag interactive [state]="newDraftTemplate === 'devlog' ? 'active' : 'idle'" (activated)="newDraftTemplate = 'devlog'">{{ t().editor.newDraft.devlog }}</app-leaf-tag>
+                    <app-leaf-tag interactive [state]="newDraftTemplate === 'photodump' ? 'active' : 'idle'" (activated)="newDraftTemplate = 'photodump'">{{ t().editor.newDraft.photodump }}</app-leaf-tag>
                 </div>
             </div>
             <div>

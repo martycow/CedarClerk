@@ -48,7 +48,7 @@ const NUMERAL = /(\d+(?:[.,:/]\d+)*)/g;
             gap: var(--space-4);
             box-sizing: border-box;
             min-height: var(--bench-ruler-h);
-            padding: 0 var(--space-3);
+            padding: 0 14px;
             border-top: 1px solid var(--brass-edge);
             box-shadow: inset 0 1px 0 color-mix(in srgb, var(--brass-hi) 70%, transparent);
             font-family: var(--font-mono);
@@ -61,19 +61,21 @@ const NUMERAL = /(\d+(?:[.,:/]\d+)*)/g;
             --tick: 12px;
             --tick-major: 72px;
 
+            /* The rule is the one ground night does not darken: --brass keeps its value and
+               --brass-hi is lighter after dark than before it. So the ink on it is dark in both
+               themes, and --brass-ink is declared once for that reason. */
+            --ink: var(--brass-ink, #4A340F);
+
             background-image:
                 repeating-linear-gradient(to right,
-                    color-mix(in srgb, var(--brass-edge) 45%, transparent) 0 1px,
+                    color-mix(in srgb, var(--ink) 45%, transparent) 0 1px,
                     transparent 1px var(--tick)),
                 repeating-linear-gradient(to right,
-                    color-mix(in srgb, var(--brass-edge) 55%, transparent) 0 2px,
+                    color-mix(in srgb, var(--ink) 55%, transparent) 0 2px,
                     transparent 2px var(--tick-major)),
                 var(--grad-brass);
 
-            /* The rule is the one ground night does not darken: --brass keeps its value and
-               --brass-hi is lighter after dark than before it. So the ink on it is dark in both
-               themes, and --rail-edge is declared once for that reason. */
-            color: var(--rail-edge);
+            color: var(--ink);
             text-shadow: 0 1px 0 color-mix(in srgb, var(--brass-hi) 55%, transparent);
 
             .label {
@@ -82,6 +84,7 @@ const NUMERAL = /(\d+(?:[.,:/]\d+)*)/g;
                 font-size: var(--text-chrome-sm);
                 font-weight: 700;
                 letter-spacing: .1em;
+                text-transform: uppercase;
             }
 
             .readout {

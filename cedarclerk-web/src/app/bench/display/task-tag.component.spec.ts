@@ -175,7 +175,7 @@ describe('TaskTagComponent', () => {
         });
 
         it('casts its shadow as a filter, because a clipped corner cuts a box-shadow away', () => {
-            expect(css).toMatch(/filter:\s*var\(--shadow-card-drop\)/);
+            expect(css).toMatch(/filter:\s*var\(--shadow-tag/);
             expect(css).toMatch(/clip-path:\s*polygon/);
         });
 

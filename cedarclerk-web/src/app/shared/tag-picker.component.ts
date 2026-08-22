@@ -6,6 +6,9 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { PopoverComponent } from './popover.component';
 import { ModalComponent } from './modal.component';
 import { IconComponent } from './icon.component';
+import { ButtonComponent } from '../bench/forms/button.component';
+import { LeafTagComponent } from '../bench/display/leaf-tag.component';
+import { BrassPinComponent } from '../bench/scenery/brass-pin.component';
 
 const MOST_USED_COUNT = 8;
 
@@ -15,7 +18,7 @@ const MOST_USED_COUNT = 8;
 // saves on its Save button, and the new-draft dialog has nothing to save to yet.
 @Component({
     selector: 'app-tag-picker',
-    imports: [IconComponent, FormsModule, NgTemplateOutlet, PopoverComponent, ModalComponent],
+    imports: [IconComponent, FormsModule, NgTemplateOutlet, PopoverComponent, ModalComponent, ButtonComponent, LeafTagComponent, BrassPinComponent],
     templateUrl: './tag-picker.component.html',
     styleUrl: './tag-picker.component.css',
 })

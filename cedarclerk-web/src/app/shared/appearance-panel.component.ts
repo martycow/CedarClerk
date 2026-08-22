@@ -5,6 +5,7 @@ import { ThemeService } from '../core/theme.service';
 import { ModalComponent } from './modal.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import { IconComponent } from './icon.component';
+import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 
 // Long enough that a slider drag is one write, short enough that closing the modal right after a
 // click never races the save (the modal's own close path flushes it anyway — see apply()).
@@ -21,7 +22,7 @@ const APPEARANCE_COMMIT_DEBOUNCE_MS = 600;
 // changed) rather than requiring Apply-then-close to see anything.
 @Component({
     selector: 'app-appearance-panel',
-    imports: [IconComponent, ModalComponent],
+    imports: [IconComponent, ModalComponent, LeafTagComponent],
     templateUrl: 'appearance-panel.component.html',
     styleUrls: ['appearance-panel.component.css'],
 })

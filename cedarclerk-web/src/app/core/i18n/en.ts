@@ -19,6 +19,8 @@ export const en = {
         close: 'Close',
         toggleTheme: 'Toggle theme',
         nothingHere: 'Nothing here.',
+        pageBack: 'Previous page',
+        pageForward: 'Next page',
     },
     // The bench shell's own chrome: the tool wall, the sign board and the dots menu. Screen names
     // rather than route names — the wall says what you work on, not where the URL goes.
@@ -33,6 +35,7 @@ export const en = {
         board: 'Board',
         assets: 'Assets',
         metrics: 'Metrics',
+        settings: 'Settings',
         editorCrumb: 'Editor',
         styleguide: 'Style guide',
         icons: 'Icons',
@@ -138,6 +141,7 @@ export const en = {
             rulerAssets: (n: number) => `assets ${n}`,
             rulerDocs: (n: number) => `documents ${n}`,
             rulerTasks: (n: number) => `open tasks ${n}`,
+            benchNote: (n: number) => `${n} ${n === 1 ? 'bench' : 'benches'} — one per game`,
         },
         // T-123 — the task tracker.
         tasks: {
@@ -713,6 +717,7 @@ export const en = {
             folder: 'Folder',
             series: 'Series',
             tags: 'Tags',
+            slug: 'Slug',
             location: 'Location',
             backlinks: 'Backlinks',
             visibility: 'Visibility',
@@ -1038,6 +1043,7 @@ export const en = {
         console: 'Console',
         requests: (n: number) => `${n} request${n === 1 ? '' : 's'}`,
         inFlight: (n: number) => `${n} in flight`,
+        pending: 'WAIT',
         errors: (n: number) => `${n} error${n === 1 ? '' : 's'}`,
         clear: 'Clear',
         request: 'Request',
@@ -1412,7 +1418,7 @@ export const en = {
             title: 'Summary',
             users: 'Accounts',
             paidUsers: 'On a paid plan',
-            published: 'Published / drafts',
+            published: 'Posts / drafts',
             comments: 'Comments',
             reactions: 'Reactions',
             channels: 'Channels',
@@ -1462,6 +1468,8 @@ export const en = {
         },
         window: (points: number, from: string, to: string) => `${points} points · ${from} — ${to}`,
         perWeek: '/ 7d',
+        updated: (time: string) => `updated ${time}`,
+        stepDay: 'step 1 day',
         chart: {
             period: 'Day',
             empty: 'Nothing to draw for this period.',
@@ -1474,8 +1482,7 @@ export const en = {
             languages: 'Views by reader language',
             unknown: 'Unknown',
             empty: 'No blog views in this period yet. The breakdown starts filling in from the day this feature shipped.',
-            showAll: (n: number) => `Show all (${n} more)`,
-            showLess: 'Collapse',
+            other: 'Other',
         },
     },
     settings: {

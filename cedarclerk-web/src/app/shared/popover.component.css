@@ -22,10 +22,11 @@
     z-index: 50;
     min-width: 240px;
     max-width: calc(100vw - 24px);
-    background: var(--sheet, #fff);
-    border: 1px solid var(--border, #e2e2e2);
-    border-radius: var(--radius-md, 10px);
-    box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.12));
-    padding: 12px;
-    color: var(--text, #222);
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
+    border: var(--border-paper);
+    border-radius: var(--radius-plaque);
+    box-shadow: var(--shadow-paper);
+    padding: var(--space-2);
+    color: var(--text);
 }

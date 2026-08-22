@@ -3,7 +3,6 @@ import { formatInZone } from '../core/display-time';
 import { ChannelsService, Channel, ChannelStats, BlogStats, AudienceSlice } from '../core/channels.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { LeafState, LeafTagComponent } from '../bench/display/leaf-tag.component';
-import { PaperCardComponent } from '../bench/display/paper-card.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { GrowthChartComponent, GrowthSeries, SeriesSlot, seriesColor } from '../bench/worktop/growth-chart.component';
@@ -27,25 +26,18 @@ interface Source {
 interface AudienceRow {
     code: string;
     label: string;
-    flag: string;
     views: number;
     share: number;
     bar: number;
 }
 
-// How many rows a breakdown shows before the "show all" toggle — a long tail of one-view
-// countries is noise on first read, but it's real data, so it folds rather than disappears.
+// How many rows a breakdown shows before the tail folds into one «Other» row — a long tail of
+// one-view countries is noise on first read, but it's real data, so it folds rather than disappears.
 const AUDIENCE_VISIBLE = 8;
+const OTHER_CODE = 'other';
 
 // The server's bucket for a view Cloudflare or the browser didn't identify (Consts.General.UnknownGeo).
 const UNKNOWN_GEO = '??';
-
-// 'DE' -> 🇩🇪. Regional indicators are just the letters offset into their own block, so any
-// alpha-2 gets a flag without a sprite sheet or an icon dependency.
-function flagOf(code: string): string {
-    if (code === UNKNOWN_GEO) return '🌐';
-    return String.fromCodePoint(...[...code.toUpperCase()].map(c => 0x1f1a5 + c.charCodeAt(0)));
-}
 
 // Stats range (N9): a week to half a year, with the ranges people actually ask for as magnets.
 const RANGE_MIN = 7;
@@ -71,7 +63,7 @@ const BLOG_SLOT: SeriesSlot = 2;
 const CHANNEL_SLOTS: readonly SeriesSlot[] = [1, 3, 4, 5, 6];
 
 const DAY_KEY = 'yyyy-MM-dd';
-const DAY_LABEL = 'd MMM';
+const DAY_LABEL = 'dd.MM';
 
 const group = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
@@ -104,7 +96,7 @@ function normalize(snapshots: readonly unknown[], tracked: readonly MetricKey[])
 @Component({
     selector: 'app-stats',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [LeafTagComponent, PaperCardComponent, IndexTabsComponent, ShelfPanelComponent, GrowthChartComponent],
+    imports: [LeafTagComponent, IndexTabsComponent, ShelfPanelComponent, GrowthChartComponent],
     // The tab body is the reading surface the shell hands over (ADR-154); the two shelves declare
     // their own chrome from inside.
     host: { 'data-surface': 'paper' },
@@ -127,16 +119,24 @@ export class StatsComponent implements OnInit {
     view = signal<PanelView>('chart');
     rangeDays = signal(90);
 
-    countriesExpanded = signal(false);
-    languagesExpanded = signal(false);
-
     // Geography only exists for the blog: Telegram's Bot API reports no per-country breakdown,
     // so the shelf names the source it is answering about (ADR-097, ADR-149 item 4).
     countryRows = computed(() => this.audienceRows(this.blogStats()?.countries ?? [], 'region'));
     languageRows = computed(() => this.audienceRows(this.blogStats()?.languages ?? [], 'language'));
     hasAudience = computed(() => this.countryRows().length > 0);
 
+    // The newest reading over every source, so the strip says how fresh the whole board is.
+    updatedAt = computed(() => {
+        const taken = [
+            ...(this.blogStats()?.snapshots ?? []),
+            ...[...this.channelStats().values()].flatMap(s => s.snapshots),
+        ].map(s => s.takenAt);
+        const latest = taken.reduce((max, at) => (at > max ? at : max), '');
+        return latest ? formatInZone(latest, 'HH:mm') : '';
+    });
+
     readonly group = group;
+    readonly otherCode = OTHER_CODE;
     readonly rangeNotches = RANGE_NOTCHES;
     readonly rangeMin = RANGE_MIN;
     readonly rangeMax = RANGE_MAX;
@@ -199,9 +199,9 @@ export class StatsComponent implements OnInit {
         return drawn.map(source => ({
             slot: source.slot,
             name: source.name,
-            // One line washes cleanly; four overlapping washes are mud, so the fill is a property
-            // of the drawing and not of the entity here.
-            wash: drawn.length === 1,
+            // The wash belongs to one entity (ADR-158 clause 6): the blog, first in sources(),
+            // keeps it however many lines are drawn and takes it away when it is switched off.
+            wash: source.id === BLOG_ID,
             points: this.carryForward(source, days, metric),
         }));
     });
@@ -336,17 +336,6 @@ export class StatsComponent implements OnInit {
         return ((days - RANGE_MIN) / (RANGE_MAX - RANGE_MIN)) * 100;
     }
 
-    visibleCountries = computed(() => this.slice(this.countryRows(), this.countriesExpanded()));
-    visibleLanguages = computed(() => this.slice(this.languageRows(), this.languagesExpanded()));
-
-    private slice(rows: AudienceRow[], expanded: boolean): AudienceRow[] {
-        return expanded ? rows : rows.slice(0, AUDIENCE_VISIBLE);
-    }
-
-    hiddenCount(rows: AudienceRow[]): number {
-        return Math.max(0, rows.length - AUDIENCE_VISIBLE);
-    }
-
     /**
      * A day with no snapshot takes the source's previous reading. The series are running totals,
      * so the last reading is what is known until the next one is taken; the window's start is what
@@ -391,14 +380,22 @@ export class StatsComponent implements OnInit {
     private audienceRows(slices: AudienceSlice[], type: 'region' | 'language'): AudienceRow[] {
         const total = slices.reduce((sum, s) => sum + s.views, 0);
         if (total === 0) return [];
-        const top = Math.max(...slices.map(s => s.views));
-        return slices.map(s => ({
-            code: s.code,
-            label: s.code === UNKNOWN_GEO ? this.t().stats.audience.unknown : this.displayName(s.code, type),
-            flag: type === 'region' ? flagOf(s.code) : '',
-            views: s.views,
-            share: Math.round((s.views / total) * 100),
-            bar: Math.max(2, Math.round((s.views / top) * 100)),
-        }));
+        const head = slices.slice(0, AUDIENCE_VISIBLE);
+        const rest = slices.slice(AUDIENCE_VISIBLE).reduce((sum, s) => sum + s.views, 0);
+        const top = Math.max(...head.map(s => s.views), rest);
+        const row = (code: string, label: string, views: number): AudienceRow => ({
+            code,
+            label,
+            views,
+            share: Math.round((views / total) * 100),
+            bar: Math.max(2, Math.round((views / top) * 100)),
+        });
+        const rows = head.map(s => row(
+            s.code,
+            s.code === UNKNOWN_GEO ? this.t().stats.audience.unknown : this.displayName(s.code, type),
+            s.views,
+        ));
+        if (rest > 0) rows.push(row(OTHER_CODE, this.t().stats.audience.other, rest));
+        return rows;
     }
 }

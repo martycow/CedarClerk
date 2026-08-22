@@ -293,7 +293,7 @@ a.tasks-row:hover { background: var(--hover); }
 .field textarea {
     box-sizing: border-box;
     width: 100%;
-    min-height: var(--hit-surface);
+    min-height: var(--hit-target);
     padding: var(--space-2) var(--space-3);
     border: var(--border-field);
     border-radius: var(--radius-field);

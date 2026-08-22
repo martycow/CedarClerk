@@ -39,17 +39,16 @@ name the smoke suite binds.-->
                         </span>
                         <!--Exactly one publish state per post, never two: archived wins over
                         live, live over unpublished.-->
-                        <span class="state-chip" [class.live]="publishState(d) === 'live'"
-                              [class.muted]="publishState(d) !== 'live'">{{ publishStateLabel(d) }}</span>
+                        <app-stamp-badge [tone]="publishState(d) === 'live' ? 'pine' : 'ink'" [rotate]="-1">{{ publishStateLabel(d) }}</app-stamp-badge>
                     </span>
                     <span class="post-card-langs">
-                        @for (l of visibleLanguages(d); track l) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
+                        @for (l of visibleLanguages(d); track l) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
                         @if (extraLanguageCount(d); as extra) {
-                        <span class="state-chip lang" [title]="extraLanguageTitle(d)">+{{ extra }}</span>
+                        <span class="post-card-lang" [title]="extraLanguageTitle(d)">+{{ extra }}</span>
                         }
-                        @if (d.isPrivate) { <span class="state-chip private">{{ t().manager.privateChip }}</span> }
+                        @if (d.isPrivate) { <app-stamp-badge tone="rust" [rotate]="1">{{ t().manager.privateChip }}</app-stamp-badge> }
                         <span class="spacer"></span>
-                        @if (newFeedbackFor(d.id); as n) { <span class="state-chip new">+{{ n }}</span> }
+                        @if (newFeedbackFor(d.id); as n) { <app-stamp-badge tone="brass" [rotate]="0">+{{ n }}</app-stamp-badge> }
                     </span>
                 </button>
                 } @empty {
@@ -376,9 +375,9 @@ name the smoke suite binds.-->
                         </app-stamp-badge>
                     </app-spec-row>
                     <app-spec-row scope="selection" [label]="t().manager.inspector.languages">
-                        @for (l of visibleLanguages(d); track l) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
+                        @for (l of visibleLanguages(d); track l) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
                         @if (extraLanguageCount(d); as extra) {
-                        <span class="state-chip lang" [title]="extraLanguageTitle(d)">+{{ extra }}</span>
+                        <span class="post-card-lang" [title]="extraLanguageTitle(d)">+{{ extra }}</span>
                         }
                     </app-spec-row>
                     <app-spec-row scope="selection" [label]="t().manager.inspector.visibility"
@@ -465,7 +464,7 @@ name the smoke suite binds.-->
                     </span>
                     <!--ADR-060: every language the preset carries text for, first = primary.-->
                     <span class="post-card-langs">
-                        @for (l of presetLanguagesOf(p); track l) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
+                        @for (l of presetLanguagesOf(p); track l) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
                     </span>
                 </button>
                 } @empty {
@@ -530,7 +529,7 @@ name the smoke suite binds.-->
                     @for (l of presetLangs(); track l) {
                     <label class="form-field">
                         <span class="form-field-label">{{ t().manager.forms.introLabel }}
-                            @if (presetLangs().length > 1) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
+                            @if (presetLangs().length > 1) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
                         </span>
                         <input class="chat-input" [value]="form.intro[l] || ''" (change)="setIntro(l, $any($event.target).value)"
                                [placeholder]="t().manager.forms.introPlaceholder" maxlength="500">
@@ -546,7 +545,7 @@ name the smoke suite binds.-->
                     @for (l of presetLangs(); track l) {
                     <label class="form-field">
                         <span class="form-field-label">{{ t().manager.forms.replySubject }}
-                            @if (presetLangs().length > 1) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
+                            @if (presetLangs().length > 1) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
                         </span>
                         <input class="chat-input" [value]="form.responseEmailSubject[l] || ''"
                                (change)="setReplySubject(l, $any($event.target).value)"
@@ -583,7 +582,7 @@ name the smoke suite binds.-->
                             <div class="q-label-stack">
                                 @for (l of presetLangs(); track l) {
                                 <div class="q-label-row">
-                                    @if (presetLangs().length > 1) { <span class="state-chip lang">{{ l.toUpperCase() }}</span> }
+                                    @if (presetLangs().length > 1) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
                                     @if (q.type === 'consent' || q.type === 'static') {
                                     <textarea class="chat-input" rows="2" [value]="q.label[l] || ''" (change)="setQuestionLabel(q.id, l, $any($event.target).value)"
                                               [placeholder]="q.type === 'static' ? t().manager.forms.staticPlaceholder : t().manager.forms.consentPlaceholder"

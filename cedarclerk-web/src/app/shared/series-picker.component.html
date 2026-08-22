@@ -52,7 +52,7 @@
         @if (s.count > 0) { {{ t().drafts.series.deleteOrphans(s.count) }} }
         {{ t().drafts.series.deleteKeepsDrafts }}
     </p>
-    <button modal-actions class="btn-ghost" (click)="deleteConfirmId.set(null)">{{ t().common.cancel }}</button>
-    <button modal-actions class="btn-accent" (click)="confirmDelete()">{{ t().drafts.series.deleteConfirm }}</button>
+    <app-button modal-actions variant="paper" (clicked)="deleteConfirmId.set(null)">{{ t().common.cancel }}</app-button>
+    <app-button modal-actions variant="danger" (clicked)="confirmDelete()">{{ t().drafts.series.deleteConfirm }}</app-button>
 </app-modal>
 }

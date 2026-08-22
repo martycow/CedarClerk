@@ -101,5 +101,11 @@
   "chart-bar": "chart-bar",
   "flag": "flag",
   "text-h": "text-h",
-  "tree-evergreen": "tree-evergreen"
+  "tree-evergreen": "tree-evergreen",
+  "sun": "sun",
+  "moon": "moon",
+  "arrow-up": "arrow-up",
+  "arrow-down": "arrow-down",
+  "caret-left": "caret-left",
+  "caret-right": "caret-right"
 }

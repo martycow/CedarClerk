@@ -58,7 +58,7 @@ import { IconComponent } from '../../shared/icon.component';
             @if (hasMenu()) {
                 <button #trigger type="button" class="dots" [attr.aria-label]="menuLabel()"
                         aria-haspopup="true" [attr.aria-expanded]="menuOpen()" (click)="toggleMenu()">
-                    <app-icon name="dots-three" size="sm" />
+                    <app-icon name="dots-three" size="xs" />
                 </button>
             }
             <!-- Never behind @if: the slot is what holds the projected controls, and a control
@@ -115,26 +115,34 @@ import { IconComponent } from '../../shared/icon.component';
         :host([data-surface="chrome"]) .tile {
             display: inline-flex;
             align-items: center;
-            gap: var(--space-2);
+            gap: 7px;
             min-height: var(--hit-chrome);
-            padding: 0 var(--space-3);
-            border: 1px solid var(--rail-edge);
+            padding: 0 10px;
+            border: 1px solid var(--tile-edge, rgba(20, 12, 4, .5));
             border-radius: var(--radius-stamp);
-            background: var(--grad-sign-tile);
+            background-color: var(--sign-tile-hi);
+            background-image: var(--tex-wood), var(--grad-sign-tile);
+            background-size: 420px, auto;
             color: var(--rail-ink);
             font-family: var(--font-display);
             font-size: var(--text-chrome);
             font-weight: 700;
+            letter-spacing: .01em;
             white-space: nowrap;
             text-decoration: none;
             cursor: pointer;
-            text-shadow: 0 1px 1px var(--rail-edge);
+            text-shadow: 0 1px 1px color-mix(in srgb, var(--rail-edge) 50%, transparent);
         }
 
         /* Withheld while focused: the ADR-140 ring spends its second layer on a box-shadow, and a
            component's own shadow out-specifies the global rule that draws it. */
-        :host([data-surface="chrome"]) .tile:not(:focus-visible) { box-shadow: var(--shadow-shelf); }
+        :host([data-surface="chrome"]) .tile:not(:focus-visible) {
+            box-shadow: inset 0 1px 0 rgba(255, 240, 210, .16), 0 1px 2px rgba(20, 12, 4, .4);
+        }
         :host([data-surface="chrome"]) .tile:hover { filter: brightness(1.08); }
+
+        /* The kit's caret is a 10px glyph; the icon takes that size through its own token. */
+        :host([data-surface="chrome"]) .tile app-icon { --icon-xs: var(--fs-10); opacity: .65; }
 
         :host([data-surface="chrome"]) .tile-name {
             overflow: hidden;
@@ -181,13 +189,13 @@ import { IconComponent } from '../../shared/icon.component';
             min-width: var(--hit-chrome);
             min-height: var(--hit-chrome);
             border: var(--border-rail-btn);
-            border-radius: var(--radius-stamp);
-            background: var(--rail-lo);
+            border-radius: var(--radius-plaque);
+            background: var(--rail-btn-face, rgba(0, 0, 0, .16));
             color: var(--rail-ink);
             cursor: pointer;
         }
 
-        :host([data-surface="chrome"]) .dots:hover { background: var(--rail-edge); }
+        :host([data-surface="chrome"]) .dots:hover { background: var(--rail-btn-face-hover, rgba(0, 0, 0, .28)); }
 
         /* The panel hangs off the rail and lands on paper: the rail's ink rule governs the board,
            not what is pinned under it. */

@@ -44,7 +44,7 @@ public static class DesignTokens
         ["lh-read"] = "1.75",
         ["radius-sm"] = "4px",
         ["radius-md"] = "8px",
-        ["radius-lg"] = "12px",
+        ["radius-lg"] = "var(--radius-md)",
     };
 
     /// <summary>Only what the dark theme overrides; everything else is inherited from <see cref="Light"/>.</summary>

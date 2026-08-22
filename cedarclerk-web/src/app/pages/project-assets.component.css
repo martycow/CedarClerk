@@ -142,6 +142,7 @@
 
 .pick-card h2 {
     margin: 0;
+    font-family: var(--font-display);
     font-size: var(--fs-19);
     font-weight: 700;
 }
@@ -254,6 +255,7 @@
 
 .pick-card h2 {
     margin: 0;
+    font-family: var(--font-display);
     font-size: var(--fs-19);
     font-weight: 700;
 }
@@ -397,12 +399,11 @@
     border-radius: var(--radius-sm);
     /* Over a thumbnail, so it carries its own ground — a caption relying on the tile's background
        becomes unreadable the moment a light sprite sits under it. */
-    background: color-mix(in srgb, var(--surface) 82%, transparent);
-    border: 1px solid var(--abord);
+    background: var(--paper-bright);
+    border: var(--border-paper);
     color: var(--t2);
     font-size: var(--fs-caption);
     line-height: 1.4;
-    backdrop-filter: blur(2px);
 }
 
 /* The thumbnail fills its frame; the striped ground stays visible behind a transparent PNG, which

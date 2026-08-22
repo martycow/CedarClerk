@@ -1056,9 +1056,12 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
         return this.inspectorScope() === 'selection' ? t.post : t.library;
     }
 
+    // The count slot names the object only when the title does not already: «ПОСТ пост» is one
+    // word said twice.
     inspectorScopeWord(): string {
         const t = this.t().manager.inspector;
-        return this.inspectorScope() === 'selection' ? t.scopePost : t.scopeLibrary;
+        const word = this.inspectorScope() === 'selection' ? t.scopePost : t.scopeLibrary;
+        return word.toLowerCase() === this.inspectorTitle().toLowerCase() ? '' : word;
     }
 
     /** Chalked on the top edge of the sheet: which post is lying on it, and how it stands. */

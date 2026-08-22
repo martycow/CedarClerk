@@ -17,6 +17,7 @@ export type LeafState = 'active' | 'idle' | 'dried';
         'data-surface': 'paper',
         '[class.is-active]': 'state() === "active"',
         '[class.is-dried]': 'state() === "dried"',
+        '[class.is-pickable]': 'pickable()',
         '[class.has-remove]': 'removable()',
         '[attr.title]': 'hint() || null',
     },
@@ -50,8 +51,8 @@ export type LeafState = 'active' | 'idle' | 'dried';
             box-sizing: border-box;
             min-height: var(--hit-target);
             padding: 0 var(--space-3) 0 var(--space-2);
-            border: 1px solid color-mix(in srgb, var(--leaf-ink) 35%, transparent);
-            border-radius: var(--radius-paper) var(--radius-lg) var(--radius-paper) var(--radius-lg);
+            border: 1px solid rgba(90, 110, 60, .5);
+            border-radius: 2px 12px 2px 12px;
             background-image: linear-gradient(135deg, var(--leaf-bg), var(--leaf-bg-2));
             color: var(--leaf-ink);
             font-family: var(--font-sans);
@@ -70,9 +71,9 @@ export type LeafState = 'active' | 'idle' | 'dried';
 
             .lt-swatch {
                 flex: none;
-                width: var(--space-2);
-                height: var(--space-2);
-                border-radius: var(--radius-stamp);
+                width: 9px;
+                height: 9px;
+                border-radius: 2px;
                 box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--leaf-ink) 40%, transparent);
             }
 
@@ -92,17 +93,26 @@ export type LeafState = 'active' | 'idle' | 'dried';
         }
 
         :host([data-surface="paper"].is-active) {
-            border-color: color-mix(in srgb, var(--leaf-ink) 55%, transparent);
-            box-shadow: var(--shadow-paper-sm);
+            border-color: rgba(90, 110, 60, .65);
+            box-shadow: 0 1px 3px rgba(40, 22, 6, .3);
+        }
+
+        /* A leaf that can be picked has to show whether it is: the kit tells active from idle by
+           border alpha alone, which two RU/EN leaves side by side do not survive. Unpicked, it lies
+           on the dried leaf's pale stock with its own green ink and edge; a leaf that only labels
+           keeps the green, idle being its only state. */
+        :host([data-surface="paper"].is-pickable:not(.is-active)) {
+            background-image: none;
+            background-color: var(--leaf-dried-bg);
         }
 
         /* Dried means no data or switched off, never an error — an error is a rust stamp, and
-           nothing in here reaches for --danger. --t3 is the app's disabled tier by definition. */
+           nothing in here reaches for --danger. */
         :host([data-surface="paper"].is-dried) {
             background-image: none;
-            background-color: var(--alt);
-            border-color: var(--border);
-            color: var(--t3);
+            background-color: var(--leaf-dried-bg, rgba(228, 221, 196, .82));
+            border-color: var(--leaf-dried-edge, rgba(120, 110, 70, .5));
+            color: var(--leaf-dried-ink, #7A7050);
         }
 
         /* The remove button owns its own 44px target, so the leaf gives up its right padding

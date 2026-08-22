@@ -85,7 +85,7 @@
     /* Brass is a metal in the chrome ramp and a state ink on paper — a version stamp, a build
        number. Only the second job needs a wash, and it takes the same formula as the three above
        rather than the tint a stamp would otherwise mix for itself. */
-    --brass-soft: color-mix(in srgb, var(--brass-lo) 13%, var(--surface));
+    --brass-soft: color-mix(in srgb, var(--brass-ink) 13%, var(--surface));
 
     /* Hover/pressed wash for rows, menu items and icon buttons. Derived from --text so it follows
        the theme, rather than the per-component rgba literals that belonged to neither. */
@@ -123,10 +123,10 @@
     --avatar-ink: #FFFFFF;
 
     /* Paper is cut square and wood is eased: 4px is a field, 8px a plaque. Nothing in the design
-       system is rounder than a plaque, so the card/modal step is one above it. */
+       system is rounder than a plaque, so the contract's card/modal step is held at it. */
     --radius-sm: 4px;
     --radius-md: 8px;
-    --radius-lg: 12px;
+    --radius-lg: var(--radius-md);
 
     --space-1: 4px;
     --space-2: 8px;
@@ -174,6 +174,7 @@
     --fs-21: 21px;
     --fs-22: 22px;
     --fs-27: 27px;
+    --fs-34: 34px;
 
     /* Semantic type roles. Components reach for THESE, not the numeric scale above — the numbers
        are the palette, these are the meanings, and that is what makes a density switch possible
@@ -207,6 +208,9 @@
     --ease-settle: cubic-bezier(.3, 1.4, .45, 1);
     --ease-swing: cubic-bezier(.3, 1.3, .5, 1);
     --dur-publish: 600ms;
+    --dur-tap: 150ms;
+    --dur-control: 190ms;
+    --dur-move: 250ms;
 
     /* "Cedar Aero" chrome materials (ADR-035) — toolbars, popovers and modals only; content
        sheets stay solid for readability. */
@@ -245,6 +249,9 @@
     --rail-edge: #241808;
     --rail-ink: #F2E8CE;
     --rail-ink-soft: rgba(242, 232, 206, .6);
+    /* A resting index tab recedes; the kit's .6 cream measures 3.56:1 on the lit tile stop, under
+       the 4.5 chrome type owes (ADR-138), and .8 is the lightest step that clears it. */
+    --rail-ink-dim: rgba(242, 232, 206, .8);
     --sign-tile-hi: #66492E;
     --sign-tile-lo: #4A351D;
     --surface-rail: linear-gradient(180deg, var(--rail-hi), var(--rail-mid) 58%, var(--rail-lo));
@@ -272,10 +279,19 @@
     --leaf-bg: #DCE2C4;
     --leaf-bg-2: #C9D3A4;
     --leaf-ink: #3D4E2A;
+    /* A dried leaf is a switched-off filter: its label stands at the floor disabled carries, 3:1,
+       on the paler stock the kit draws it from. One value for both themes, as the kit has it. */
+    --leaf-dried-bg: rgba(228, 221, 196, .82);
+    --leaf-dried-edge: rgba(120, 110, 70, .5);
+    --leaf-dried-ink: #7A7050;
 
     --brass: #C69A4E;
     --brass-hi: #EED9A3;
-    --brass-lo: #674A1C;
+    --brass-lo: #8A6226;
+    /* Brass splits by job: --brass-lo is the metal of a hook shaft, which no pair measures, and
+       --brass-ink is what a stamp or a chart tick writes with, derived against its wash and the
+       graph crossing rather than bare paper (ADR-145). */
+    --brass-ink: #674A1C;
     --brass-edge: #6E4E1B;
     --grad-brass: linear-gradient(180deg, var(--brass-hi), var(--brass));
     --resin: #D89A3E;
@@ -297,6 +313,10 @@
     --shadow-field-inset: inset 0 1px 2px rgba(80, 56, 26, .14);
     --shadow-shelf: inset 0 1px 0 rgba(255, 240, 210, .14), 0 2px 7px rgba(30, 18, 6, .34);
     --shadow-sheet-inset: inset 0 1px 3px rgba(58, 38, 16, .3);
+    --shadow-sheet: 0 2px 4px rgba(50, 30, 10, .2), 0 14px 28px rgba(50, 30, 10, .22);
+    --shadow-tag: drop-shadow(0 1px 2px rgba(50, 30, 10, .3)) drop-shadow(0 6px 12px rgba(50, 30, 10, .24));
+    --shadow-worktop-inset: inset 0 1px 3px rgba(58, 38, 16, .28), inset 0 0 0 1px rgba(255, 248, 225, .18);
+    --shadow-worktop: var(--shadow-worktop-inset);
 
     --border-paper: 1px solid rgba(120, 96, 58, .35);
     --border-field: 1px solid rgba(110, 86, 50, .5);
@@ -311,13 +331,17 @@
     /* Two translucent faces that carry a caption, named because a surface with text on it has to
        be reachable by the contrast pair table, and a color-mix written inline in a component is
        not. Both let their own board show through, which is why neither is a flat token. */
-    --hook-face: color-mix(in srgb, var(--rail-edge) 45%, transparent);
+    --hook-face: rgba(0, 0, 0, .16);
     --tab-badge: color-mix(in srgb, var(--resin) 90%, transparent);
+    --rail-btn-face: rgba(0, 0, 0, .16);
+    --rail-btn-face-hover: rgba(0, 0, 0, .28);
+    --tile-edge: rgba(20, 12, 4, .5);
 
     --radius-plaque: var(--radius-md);
     --radius-field: var(--radius-sm);
     --radius-stamp: 3px;
     --radius-paper: 3px;
+    --radius-shelf: 5px;
 
     --font-display: 'Vollkorn', Georgia, serif;
     --font-note: 'Caveat', cursive;
@@ -341,9 +365,13 @@
     --bench-dock-w-narrow: 224px;
     --bench-dock-w: 300px;
     --bench-dock-w-wide: 340px;
+    --bench-dock-w-hub: 262px;
+    --bench-dock-w-hub-wide: 322px;
     --bench-panel-hd: 30px;
+    --bench-worktop-edge-h: 26px;
     --bench-drawer-lip: 32px;
     --bench-drawer-open: 172px;
+    --bench-cover-h: 296px;
     --bench-ruler-h: 30px;
     /* What the shut drawer and the rule take together. Derived, because a page reserving room
        for the bottom chrome and the chrome itself must never be able to disagree. */
@@ -392,7 +420,7 @@
     --ok-soft: color-mix(in srgb, var(--ok) 10%, var(--surface));
     --warn-soft: color-mix(in srgb, var(--warn) 10%, var(--surface));
     --danger-soft: color-mix(in srgb, var(--danger) 10%, var(--surface));
-    --brass-soft: color-mix(in srgb, var(--brass-lo) 10%, var(--surface));
+    --brass-soft: color-mix(in srgb, var(--brass-ink) 10%, var(--surface));
 
     /* Pine already clears its floor on night cream, so --accent is not restated: night does not
        need a lighter green, it needs the same green on a dimmer sheet. The two series that do
@@ -428,7 +456,8 @@
     --leaf-ink: #33421F;
 
     --brass-hi: #F0DCA6;
-    --brass-lo: #684A1A;
+    --brass-lo: #7E5A20;
+    --brass-ink: #684A1A;
     --brass-edge: #5C4114;
 
     --rule-ink: rgba(227, 211, 174, .26);
@@ -470,6 +499,9 @@ html, body {
         --motion-base: 1ms;
         --motion-slow: 1ms;
         --dur-publish: 1ms;
+        --dur-tap: 1ms;
+        --dur-control: 1ms;
+        --dur-move: 1ms;
     }
 
     *, *::before, *::after {
@@ -586,8 +618,18 @@ textarea {
 body {
     margin: 0;
     font-family: var(--font-sans);
+    font-size: var(--fs-ui);
     background: var(--surface);
     color: var(--text);
+}
+
+/* Margin notes and empty states — the one place the hand-written face is allowed. On the wall the
+   ink is --wood-ink (ADR-141). */
+.margin-note {
+    font-family: var(--font-note);
+    font-size: var(--fs-17);
+    color: var(--t2);
+    transform: rotate(-1.4deg);
 }
 
 /* Paragraph numbers in the gutter (Settings → Appearance). These MUST be global: they were
@@ -664,14 +706,49 @@ body {
        font-size was already inherited, which is why *that* slider worked. */
     line-height: inherit;
 
+    h1,
+    h2,
+    h3 {
+        font-family: var(--font-display);
+        font-weight: 700;
+    }
+
     h1 {
-        font-size: 1.625em;
+        font-size: var(--fs-27);
+        line-height: 1.22;
         margin: 18px 0 8px;
     }
 
     h2 {
-        font-size: 1.3125em;
+        font-size: var(--fs-19);
         margin: 16px 0 6px;
+    }
+
+    /* ProseMirror marks a NodeSelection with this class and nothing else; the outline is what
+       makes a picked media block read as picked on the sheet and not only in the inspector. The
+       stamp draws only once a node view writes data-kind, so an unlabelled node gets no empty pill. */
+    .ProseMirror-selectednode {
+        position: relative;
+        outline: 2px solid var(--accent);
+        outline-offset: 4px;
+        border-radius: 2px;
+    }
+
+    .ProseMirror-selectednode[data-kind]::before {
+        content: attr(data-kind);
+        position: absolute;
+        top: -21px;
+        left: -5px;
+        font-family: var(--font-display);
+        font-size: var(--fs-10);
+        font-weight: 700;
+        letter-spacing: .11em;
+        text-transform: uppercase;
+        color: var(--text-on-pine);
+        background: var(--grad-pine);
+        border: 1px solid var(--pine-deep);
+        padding: 2px 7px;
+        border-radius: 2px;
     }
 
     blockquote {
@@ -974,7 +1051,9 @@ body {
             box-sizing: border-box;
             border: none;
             background: transparent;
+            font-family: var(--font-sans);
             font-size: 13px;
+            line-height: 1.5;
             color: var(--t2);
             text-align: center;
             margin-top: 4px;
@@ -1059,5 +1138,6 @@ body {
 
 .tiptap img {
     max-width: 100%;
-    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--moss) 50%, transparent);
+    border-radius: var(--radius-paper);
 }

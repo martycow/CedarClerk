@@ -190,11 +190,10 @@ let nextId = 0;
             min-width: 0;
             box-sizing: border-box;
             overflow: hidden;
-            border-radius: var(--radius-sm);
             cursor: crosshair;
             /* The ruled ground is the token the checker scores ink over. A rule drawn here instead
                would be a surface nothing measures. */
-            background-color: var(--surface);
+            background-color: var(--sheet);
             background-image: var(--grid-graph), var(--tex-paper);
         }
 
@@ -214,13 +213,13 @@ let nextId = 0;
         .gc-wash { fill-opacity: .12; }
         /* The ring is the ground the dots lie on, so two lines crossing stay two lines. */
         .gc-dot { stroke: var(--surface); stroke-width: 2; }
-        .gc-tick { stroke: var(--brass-lo); stroke-width: 1; }
+        .gc-tick { stroke: var(--brass-ink, var(--brass-lo)); stroke-width: 1; }
         .gc-cross { stroke: var(--t2); stroke-width: 1; stroke-dasharray: 3 3; }
         .gc-slip { fill: var(--paper-bright); stroke: var(--paper-edge); }
 
         .gc-ax, .gc-end, .gc-slip-name { fill: var(--t2); }
         .gc-slip-title, .gc-slip-value { fill: var(--text); }
-        .gc-ev { fill: var(--brass-lo); font-weight: 700; letter-spacing: .04em; }
+        .gc-ev { fill: var(--brass-ink, var(--brass-lo)); font-weight: 700; letter-spacing: .04em; }
 
         .gc-ax, .gc-end, .gc-slip-name, .gc-slip-value { font-family: var(--font-mono); }
         .gc-slip-title, .gc-ev { font-family: var(--font-sans); }
@@ -371,10 +370,15 @@ export class GrowthChartComponent implements OnDestroy {
         return marks;
     });
 
+    // Thinned here and not in the labels handed over: the table rows and the slip title read every
+    // entry, and only the axis runs out of room. Seven ticks is the kit's cadence.
     readonly xTicks = computed(() => {
         const g = this.geom(), labels = this.xLabels();
+        const widest = Math.max(0, ...labels.slice(0, g.n).map(l => l.length)) * CH + LABEL_GAP;
+        const fit = g.step > 0 ? Math.ceil(widest / g.step) : 1;
+        const every = Math.max(1, fit, Math.ceil(g.n / 7));
         const out: { i: number; x: number; text: string }[] = [];
-        for (let i = 0; i < g.n && i < labels.length; i++) {
+        for (let i = 0; i < g.n && i < labels.length; i += every) {
             if (labels[i]) out.push({ i, x: xAt(g, i), text: labels[i] });
         }
         return out;

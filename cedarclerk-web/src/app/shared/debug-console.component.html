@@ -10,19 +10,10 @@
     @if (open()) {
     @for (e of entries(); track e.id) {
     <div class="debug-row" [class.expanded]="expandedId() === e.id" (click)="toggleExpand(e.id)">
-        <div class="debug-row-summary">
-            <span class="debug-method">{{ e.method }}</span>
-            <span class="debug-url">{{ e.url }}</span>
-            <span class="spacer"></span>
-            @if (e.inFlight) {
-            <span class="debug-status pending"><app-icon name="arrow-clockwise" size="xs" class="spin"></app-icon></span>
-            } @else {
-            <span class="debug-status" [class.error]="e.isError">{{ e.status }}</span>
-            }
-            @if (e.durationMs !== undefined) {
-            <span class="debug-duration">{{ e.durationMs }}ms</span>
-            }
-        </div>
+        <app-log-line class="debug-row-summary" surface="paper"
+                      [level]="e.inFlight ? 'info' : e.isError ? 'warn' : 'ok'"
+                      [word]="e.inFlight ? t().debug.pending : '' + e.status"
+                      [at]="e.durationMs !== undefined ? e.durationMs + 'ms' : ''">{{ e.method }} {{ e.url }}</app-log-line>
         @if (expandedId() === e.id) {
         <div class="debug-row-detail" (click)="$event.stopPropagation()">
             @if (e.requestBody !== undefined) {

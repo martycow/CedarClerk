@@ -39,16 +39,16 @@ import { booleanAttribute, Component, computed, input, numberAttribute, output }
                the sheet's shadow has to be a filter on a wrapper or the torn edge loses its lift. */
             .pc-drop {
                 filter: var(--shadow-card-drop);
-                transition: transform var(--motion-fast) var(--ease-swing);
+                transition: transform var(--dur-tap, 150ms) var(--ease-swing);
             }
 
             .pc-sheet {
                 position: relative;
                 box-sizing: border-box;
-                padding: var(--paper-card-pad, var(--space-4) var(--space-4) var(--space-5));
+                padding: var(--paper-card-pad, var(--space-4) var(--space-4) calc(var(--space-4) + var(--space-1)));
                 background-color: var(--sheet);
                 background-image: var(--tex-paper);
-                transition: transform var(--motion-fast) var(--ease-swing);
+                transition: transform var(--dur-tap, 150ms) var(--ease-swing);
             }
 
             .pc-bright { background-color: var(--paper-bright); }

@@ -1,9 +1,8 @@
-/* The shell owns the rail above and the drawer plus rule below; this is what is left of the
-   viewport between them, the same arithmetic the writer uses (ADR-153 clause 6). */
 :host {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - var(--bench-rail-h) - var(--bench-bottom-h));
+    flex: 1;
+    min-height: 0;
     color: var(--text);
     font-family: var(--font-sans);
 }
@@ -51,6 +50,7 @@
     width: var(--bench-dock-w-wide);
 }
 
+/* The writer's sheet: reading matter lies on paper, never on the worktop's grid. */
 .sheet-column {
     display: flex;
     flex-direction: column;
@@ -58,8 +58,14 @@
     box-sizing: border-box;
     width: 100%;
     max-width: 780px;
-    margin: 0 auto;
+    margin: var(--space-5) auto 0;
     padding: var(--space-4) var(--space-4) var(--space-8);
+    background-color: var(--paper-bright);
+    background-image: var(--tex-paper);
+    border: 1px solid var(--paper-edge);
+    border-bottom: none;
+    border-radius: var(--radius-paper) var(--radius-paper) 0 0;
+    box-shadow: var(--shadow-paper);
 }
 
 /* ---------- Sheet ---------- */
@@ -196,12 +202,13 @@
     white-space: nowrap;
 }
 
+/* Paper keeps its 44px target on a mouse as well as a finger (ADR-138 item 2). */
 .mini, .mini-remove {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
+    min-width: var(--hit-target);
+    min-height: var(--hit-target);
     border: none;
     background: none;
     border-radius: var(--radius-sm);

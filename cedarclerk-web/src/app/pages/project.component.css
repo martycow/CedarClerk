@@ -1,10 +1,30 @@
+/* The shell owns the viewport: the hub fills what the body hands it, and the sheets scroll rather
+   than the page. */
+:host {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
 .hub {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    box-sizing: border-box;
     padding: var(--space-3);
 }
 
 .hint {
     color: var(--t2);
     font-size: var(--fs-ui);
+}
+
+/* Text left straight on the plaster takes the wall's one ink (ADR-141 clause 4). */
+.hub > .hint,
+.hub > .load-error {
+    color: var(--wood-ink);
 }
 
 .spacer {
@@ -21,13 +41,16 @@
 }
 
 /* ---------- The three columns ---------- */
-/* The kit's proportions, and no width breakpoint of its own (ADR-147): a narrow layout for this
-   screen is commissioned from Claude Design, not guessed at here. */
+/* The hub's own columns, narrower than the generic docks (ADR-162 rule 8's precedent), and no
+   width breakpoint of its own (ADR-147): a narrow layout for this screen is commissioned from
+   Claude Design, not guessed at here. */
 .hub-grid {
     display: grid;
-    grid-template-columns: var(--bench-dock-w) minmax(0, 1fr) var(--bench-dock-w-wide);
+    flex: 1;
+    grid-template-columns: var(--bench-dock-w-hub) minmax(0, 1fr) var(--bench-dock-w-hub-wide);
     gap: var(--space-3);
-    align-items: start;
+    align-items: stretch;
+    min-height: 0;
 }
 
 .hub-mid {
@@ -35,29 +58,29 @@
     flex-direction: column;
     gap: var(--space-3);
     min-width: 0;
+    min-height: 0;
+}
+
+.hub-mid .docs {
+    flex: 1;
+    min-height: 0;
 }
 
 /* ---------- Left shelf: the projects switcher ---------- */
-.shelf-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: var(--hit-surface);
-    min-width: var(--hit-surface);
-    border: var(--border-rail-btn);
-    border-radius: var(--radius-stamp);
-    background: var(--rail-lo);
-    color: var(--rail-ink);
-}
-
-.shelf-action:hover {
-    background: var(--rail-edge);
+.proj-sheet {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
 }
 
 .proj-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-1);
+    gap: calc(var(--space-1) / 2);
+}
+
+.margin-note {
+    margin: auto 0 calc(var(--space-3) / 2) var(--space-1);
 }
 
 .proj {
@@ -65,7 +88,9 @@
     align-items: center;
     gap: var(--space-2);
     min-width: 0;
-    padding: var(--space-1) var(--space-2);
+    min-height: var(--hit-target);
+    box-sizing: border-box;
+    padding: var(--space-2);
     border-radius: var(--radius-paper);
     color: var(--text);
     text-decoration: none;
@@ -90,10 +115,11 @@
     height: var(--space-6);
     border: 1px solid var(--wood-edge);
     border-radius: var(--radius-paper);
-    background: linear-gradient(180deg, var(--wood-lo), var(--wood-edge));
+    background: linear-gradient(160deg, var(--wood-hi), var(--wood-lo));
     color: var(--rail-ink);
     font-family: var(--font-mono);
     font-size: var(--fs-ui);
+    text-shadow: 0 1px 1px var(--wood-edge);
 }
 
 .proj-text {
@@ -120,17 +146,25 @@
 }
 
 /* ---------- The lit top ---------- */
+/* A tall lit cover with the name at its foot: the body fills the top and sinks its stack. */
+.hero {
+    flex: none;
+    height: var(--bench-cover-h);
+}
+
 .hero-body {
     display: flex;
+    flex: 1;
     flex-direction: column;
+    justify-content: flex-end;
     gap: var(--space-2);
-    padding: var(--space-5);
+    padding: var(--space-4);
 }
 
 .hero-title {
     margin: 0;
     font-family: var(--font-display);
-    font-size: var(--fs-27);
+    font-size: var(--fs-34);
     font-weight: 700;
     letter-spacing: -.01em;
 }
@@ -165,11 +199,19 @@
 }
 
 /* ---------- Continue ---------- */
-.resume-row {
+/* A flat pine-edged strip, not a paper card: no tilt, no drop shadow. */
+.resume {
     display: flex;
+    flex: none;
     align-items: center;
     gap: var(--space-3);
     min-width: 0;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--abord);
+    border-radius: var(--radius-paper);
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
+    box-shadow: var(--shadow-paper-sm);
 }
 
 .resume-icon {
@@ -204,6 +246,7 @@
    a hole open for two doors the app has nothing behind (ADR-160). */
 .tiles {
     display: grid;
+    flex: none;
     /* No token owns a plate's minimum, and a px default would be one. A ch keeps the track
        proportional to the name and the number printed on it. */
     grid-template-columns: repeat(auto-fit, minmax(16ch, 1fr));
@@ -275,9 +318,6 @@
 
 /* ---------- Right shelf: today ---------- */
 .grp {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
     margin: var(--space-3) 0 var(--space-1);
     font-family: var(--font-display);
     font-size: var(--fs-ui);
@@ -291,25 +331,10 @@
     margin-top: 0;
 }
 
-.grp-link {
-    font-family: var(--font-sans);
-    font-size: var(--fs-ui);
-    font-weight: 400;
-    letter-spacing: normal;
-    text-transform: none;
-    color: var(--accent);
-    text-decoration: none;
-    white-space: nowrap;
-}
-
-.grp-link:hover {
-    text-decoration: underline;
-}
-
 .bar {
     display: block;
-    height: var(--space-2);
-    margin-bottom: var(--space-2);
+    height: calc(var(--space-3) / 2);
+    margin: calc(var(--space-1) / 2) 0 var(--space-2);
     border: 1px solid var(--paper-edge);
     border-radius: var(--radius-stamp);
     background: var(--surface);
@@ -510,14 +535,18 @@
     width: 100%;
     box-sizing: border-box;
     padding: var(--dens-control-y) var(--dens-control-x);
-    border: 1px solid var(--border);
-    border-radius: var(--dens-radius);
-    background: var(--sheet);
+    border: var(--border-field);
+    border-radius: var(--radius-field);
+    background: var(--paper-bright);
     color: var(--text);
     font: inherit;
     font-size: var(--fs-body);
     resize: vertical;
 }
+
+/* Withheld while focused: a component's own shadow out-specifies the global rule that draws the
+   ADR-140 halo. */
+.text-input:not(:focus-visible) { box-shadow: var(--shadow-field-inset); }
 
 .danger-row {
     display: flex;

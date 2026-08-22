@@ -36,7 +36,7 @@ covering the list its 409 answer talks about.-->
                                 </span>
                                 <span class="tile-meta">
                                     <span class="tile-name" [title]="a.fileName">{{ a.fileName }}</span>
-                                    <span class="tile-sub">{{ bytes(a.sizeBytes) }} · {{ a.createdAt | zonedDate:'d MMM' }}</span>
+                                    <span class="tile-sub">{{ bytes(a.sizeBytes) }} · {{ a.createdAt | zonedDate:'dd.MM' }}</span>
                                 </span>
                             </button>
                         }
@@ -50,7 +50,7 @@ covering the list its 409 answer talks about.-->
                                 <span class="tile-name" [title]="a.fileName">{{ a.fileName }}</span>
                                 <span class="list-type">{{ a.contentType }}</span>
                                 <span class="list-size">{{ bytes(a.sizeBytes) }}</span>
-                                <span class="list-date">{{ a.createdAt | zonedDate:'d MMM yyyy' }}</span>
+                                <span class="list-date">{{ a.createdAt | zonedDate:'dd.MM.yyyy' }}</span>
                             </button>
                         }
                     </div>
@@ -58,9 +58,13 @@ covering the list its 409 answer talks about.-->
 
                 @if (p.total > p.items.length || skip() > 0) {
                     <div class="pager">
-                        <app-button variant="paper" size="sm" [disabled]="!canPageBack" (clicked)="pageBack()">←</app-button>
+                        <app-button variant="paper" size="sm" [disabled]="!canPageBack" [title]="t().common.pageBack" (clicked)="pageBack()">
+                            <app-icon name="caret-left" size="sm" />
+                        </app-button>
                         <span class="hint">{{ rangeLabel() }}</span>
-                        <app-button variant="paper" size="sm" [disabled]="!canPageForward" (clicked)="pageForward()">→</app-button>
+                        <app-button variant="paper" size="sm" [disabled]="!canPageForward" [title]="t().common.pageForward" (clicked)="pageForward()">
+                            <app-icon name="caret-right" size="sm" />
+                        </app-button>
                     </div>
                 }
             </app-shelf-panel>
@@ -95,7 +99,7 @@ covering the list its 409 answer talks about.-->
                         <app-spec-row [label]="t().media.fileType" [value]="a.contentType" />
                         <app-spec-row [label]="t().media.fileSize" [value]="bytes(a.sizeBytes)" />
                         <app-spec-row [label]="t().media.added"
-                                      [value]="a.createdAt | zonedDate:'d MMM yyyy, HH:mm'" />
+                                      [value]="a.createdAt | zonedDate:'dd.MM.yyyy, HH:mm'" />
 
                         <p class="hint">{{ t().media.insertHint }}</p>
                         <p class="hint">{{ t().media.deleteForever }}</p>

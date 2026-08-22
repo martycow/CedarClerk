@@ -86,7 +86,7 @@ export function indexTabBadgeLabel(badge: number | string | undefined | null): s
             background-color: var(--sign-tile-hi);
             background-image: var(--tex-wood), var(--grad-sign-tile);
             filter: brightness(.86);
-            color: var(--rail-ink);
+            color: var(--rail-ink-dim, rgba(242, 232, 206, .8));
             font-family: var(--font-display);
             font-size: var(--text-chrome-sm);
             font-weight: 700;
@@ -106,6 +106,7 @@ export function indexTabBadgeLabel(badge: number | string | undefined | null): s
             min-height: calc(var(--hit-chrome) + var(--space-1));
             border-bottom: 2px solid var(--brass);
             filter: brightness(1.16);
+            color: var(--rail-ink);
         }
 
         :host([data-surface="chrome"]) .it-badge {

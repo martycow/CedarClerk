@@ -11,32 +11,37 @@
             and creating a project stay on /projects, which the header action links to — a second
             create modal here is the second home .claude/rules/ui-changes.md rule 1 forbids.-->
             <app-shelf-panel class="shelf-left" [title]="t().projects.title" [count]="projects().length">
-                <a actions class="shelf-action" routerLink="/projects" [title]="t().projects.hub.allProjects">
+                <app-button actions variant="rail" size="sm" link="/projects" [title]="t().projects.hub.allProjects">
                     <app-icon name="list" size="xs" />
-                </a>
-                <nav class="proj-list" [attr.aria-label]="t().projects.title">
-                    @for (item of projects(); track item.id) {
-                        <a class="proj" [class.on]="item.id === p.id" [routerLink]="['/projects', item.id]"
-                           [attr.aria-current]="item.id === p.id ? 'page' : null">
-                            <span class="thumb" aria-hidden="true">{{ initials(item.name) }}</span>
-                            <span class="proj-text">
-                                <span class="proj-n">{{ item.name }}</span>
-                                <span class="proj-m">
-                                    {{ t().projects.projectTypes[item.projectType].name }}
-                                    @if (item.archivedAt) { · {{ t().projects.stateArchived }} }
+                </app-button>
+                <div class="proj-sheet">
+                    <nav class="proj-list" [attr.aria-label]="t().projects.title">
+                        @for (item of projects(); track item.id) {
+                            <a class="proj" [class.on]="item.id === p.id" [routerLink]="['/projects', item.id]"
+                               [attr.aria-current]="item.id === p.id ? 'page' : null">
+                                <span class="thumb" aria-hidden="true">{{ initials(item.name) }}</span>
+                                <span class="proj-text">
+                                    <span class="proj-n">{{ item.name }}</span>
+                                    <span class="proj-m">
+                                        {{ t().projects.projectTypes[item.projectType].name }}
+                                        @if (item.archivedAt) { · {{ t().projects.stateArchived }} }
+                                    </span>
                                 </span>
-                            </span>
-                        </a>
-                    } @empty {
-                        <p class="hint">{{ t().projects.hub.noProjects }}</p>
+                            </a>
+                        } @empty {
+                            <p class="hint">{{ t().projects.hub.noProjects }}</p>
+                        }
+                    </nav>
+                    @if (projects().length) {
+                        <p class="margin-note">{{ t().projects.hub.benchNote(projects().length) }}</p>
                     }
-                </nav>
+                </div>
             </app-shelf-panel>
 
             <div class="hub-mid">
-                <!--The lit top of the bench. The chalked strip carries the last edit; the kit's
+                <!--The lit top of the bench. The chalk chips carry the last edit; the kit's
                 engine and target-platform tag has nothing behind it in this API (ADR-160 rule 7).-->
-                <app-worktop class="hero" [label]="t().projects.hub.activeProject" [meta]="heroMeta()">
+                <app-worktop class="hero" edge="chips" [label]="t().projects.hub.activeProject" [meta]="heroMeta()">
                     <div class="hero-body">
                         <h1 class="hero-title">{{ p.name }}</h1>
                         <p class="hero-sub">
@@ -70,23 +75,21 @@
                 </app-worktop>
 
                 @if (resumeDoc(); as doc) {
-                    <app-paper-card class="resume" [rotate]="-0.4">
-                        <div class="resume-row">
-                            <app-icon name="pencil-simple" size="md" class="resume-icon" />
-                            <span class="resume-text">
-                                <span class="resume-l">{{ t().projects.hub.resume }}</span>
-                                <span class="resume-t">{{ doc.title }}</span>
-                            </span>
-                            <span class="spacer"></span>
-                            <app-stamp-badge [tone]="documentTone(doc)" [rotate]="-1.5">
-                                {{ documentState(doc) }}
-                            </app-stamp-badge>
-                            <app-button variant="pine" [link]="['/editor']"
-                                        [queryParams]="{ draft: doc.id }">
-                                {{ t().projects.hub.open }}
-                            </app-button>
-                        </div>
-                    </app-paper-card>
+                    <div class="resume" data-surface="paper">
+                        <app-icon name="pencil-simple" size="md" class="resume-icon" />
+                        <span class="resume-text">
+                            <span class="resume-l">{{ t().projects.hub.resume }}</span>
+                            <span class="resume-t">{{ doc.title }}</span>
+                        </span>
+                        <span class="spacer"></span>
+                        <app-stamp-badge [tone]="documentTone(doc)" [rotate]="-1.5">
+                            {{ documentState(doc) }}
+                        </app-stamp-badge>
+                        <app-button variant="pine" [link]="['/editor']"
+                                    [queryParams]="{ draft: doc.id }">
+                            {{ t().projects.hub.open }}
+                        </app-button>
+                    </div>
                 }
 
                 <!--Four plates, not the kit's six: Documents is the panel below rather than a door
@@ -108,7 +111,7 @@
                                 <app-icon [name]="docIcons[doc.documentType]" size="sm" class="doc-icon" />
                                 <span class="doc-title">{{ doc.title }}</span>
                                 <span class="doc-type">{{ t().projects.docTypes[doc.documentType].name }}</span>
-                                <span class="doc-meta">{{ doc.updatedAt | zonedDate:'d MMM, HH:mm' }}</span>
+                                <span class="doc-meta">{{ doc.updatedAt | zonedDate:'dd.MM, HH:mm' }}</span>
                             </a>
                         } @empty {
                             <p class="hint">{{ t().projects.hub.noDocuments }}</p>
@@ -118,7 +121,7 @@
             </div>
 
             <app-shelf-panel class="shelf-right" [title]="t().projects.hub.today"
-                             [count]="today | zonedDate:'d MMM'">
+                             [count]="today | zonedDate:'dd.MM'">
                 <!--T-124 — the sprint covering today, or the honest statement that none does.
                 "No sprint covers today" is a fact about the calendar, not a missing feature.-->
                 @if (p.currentSprint; as s) {
@@ -138,22 +141,14 @@
                 } @else {
                     <div class="grp">{{ t().projects.railPendingTitle }}</div>
                     <p class="hint">{{ t().projects.planner.noCurrentSprint }}</p>
-                    <a class="grp-link" [routerLink]="['/projects', p.id, 'planner']">
-                        {{ t().projects.planner.planSprint }} →
-                    </a>
                 }
 
-                <!--T-123 — server-sorted by urgency. Overdue reddens the date only, never the row.-->
-                <div class="grp">
-                    {{ t().projects.tasks.upNext }}
-                    <span class="spacer"></span>
-                    <a class="grp-link" [routerLink]="['/projects', p.id, 'tasks']">
-                        {{ t().projects.tasks.board }} →
-                    </a>
-                </div>
+                <!--T-123 — server-sorted by urgency. Overdue reddens the date only, never the row.
+                No board link on the heading: the tags beneath and the Tasks plate are the doors.-->
+                <div class="grp">{{ t().projects.tasks.upNext }}</div>
                 @for (task of p.upNext; track task.id) {
                     <app-task-tag class="up-next" [prio]="task.priority"
-                                  [due]="task.dueAt ? (task.dueAt | zonedDate:'d MMM') : t().projects.tasks.noDueDate"
+                                  [due]="task.dueAt ? (task.dueAt | zonedDate:'dd.MM') : t().projects.tasks.noDueDate"
                                   [overdue]="overdue(task)" [rotate]="$even ? -0.8 : 0.6"
                                   [hint]="task.title" [link]="['/projects', task.projectId, 'tasks']"
                                   [queryParams]="{ task: task.id }">

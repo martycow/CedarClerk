@@ -1,30 +1,40 @@
+/* The shell's body is the scroll container; the page fills it and never sizes itself from the
+   viewport (ADR-153 clause 6). */
+:host {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
 .app {
     display: flex;
     flex-direction: column;
-    /* The shell owns the rail above and the drawer plus rule below; this is what is left of the
-       viewport between them (ADR-153 clause 6). */
-    height: calc(100vh - var(--bench-rail-h) - var(--bench-bottom-h));
+    flex: 1;
+    min-height: 0;
     color: var(--text);
     font-family: var(--font-sans);
 }
 
 /* The draft title is the sheet's first line rather than a field in a bar (ADR-159 clause 4): the
    frame appears on hover and focus, so a title being typed looks like a title and not a form.
-   Qualified by the surface it stands on — the worktop body — which is what holds its size to
-   paper's floor and what lets tools/check-density.mjs score it. */
+   Qualified by the surface it stands on — the sheet — which is what holds its size to paper's
+   floor and what lets tools/check-density.mjs score it. The side margins pull the frame's padding
+   back out, so the words sit on the body's own left edge. */
 [data-surface="paper"] .title {
-    width: 100%;
+    display: block;
+    width: calc(100% + 2 * var(--space-2));
     box-sizing: border-box;
-    margin: 0 0 var(--space-2);
+    margin: 0 calc(-1 * var(--space-2)) var(--space-3);
     border: 1px solid transparent;
     border-radius: var(--radius-sm);
     padding: var(--space-1) var(--space-2);
     background: none;
     color: var(--text);
     font-family: var(--font-display);
-    font-size: var(--fs-22);
+    font-size: var(--fs-27);
     font-weight: 700;
-    line-height: 1.25;
+    line-height: 1.22;
 }
 
 .title::placeholder { color: var(--t3); }
@@ -40,8 +50,8 @@
 
 /* ---------- Buttons / icons ---------- */
 .icon {
-    width: 15px;
-    height: 15px;
+    width: 13px;
+    height: 13px;
 }
 
 .icon-sm {
@@ -272,11 +282,10 @@
     flex: none;
     box-sizing: border-box;
     min-width: 0;
-    width: 100%;
-    padding: var(--space-1) var(--space-3);
-    border-bottom: 1px solid var(--wood-edge);
-    background-color: var(--rail-lo);
-    background-image: var(--tex-wood), var(--surface-rail);
+    padding: 0 var(--space-2);
+    border: 1px solid var(--rail-edge);
+    border-radius: var(--radius-sm);
+    background: var(--pegboard);
     box-shadow: var(--shadow-rail);
     color: var(--rail-ink);
     font-size: var(--text-chrome-sm);
@@ -318,7 +327,7 @@
     justify-content: center;
     gap: 1px;
     flex: none;
-    border-left: 1px solid var(--rail-edge);
+    border-left: 1px solid color-mix(in srgb, var(--rail-ink) 20%, transparent);
     padding-left: var(--space-2);
 }
 
@@ -423,6 +432,11 @@
     color: var(--rail-ink);
 }
 
+/* Written :not(:focus-visible) so the ring cannot out-specify the global focus halo (ADR-140). */
+.strip button.on:not(:focus-visible) {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brass-hi) 35%, transparent);
+}
+
 .strip button:disabled {
     opacity: .45;
     cursor: default;
@@ -513,8 +527,9 @@
    in the page's own border ink. */
 .sep {
     width: 1px;
-    align-self: stretch;
-    background: var(--rail-edge);
+    height: 18px;
+    align-self: center;
+    background: color-mix(in srgb, var(--rail-ink) 20%, transparent);
     margin: var(--space-1) 0;
 }
 
@@ -643,14 +658,25 @@
     display: flex;
     flex: 1;
     min-height: 0;
-    gap: var(--space-2);
-    padding: var(--space-2);
+    gap: 10px;
+    padding: var(--space-3);
     box-sizing: border-box;
+}
+
+/* The strip over the worktop, one column between the two shelves. */
+.mid {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    gap: var(--space-2);
 }
 
 .wt {
     flex: 1;
     min-width: 0;
+    min-height: 0;
 }
 
 .outline {
@@ -694,13 +720,15 @@
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
-    border: 1px solid var(--border);
+    border: var(--border-paper);
     border-radius: var(--radius-sm);
     background: var(--sheet);
+    box-shadow: var(--shadow-paper-sm);
     padding: var(--space-1) var(--space-2);
     font-family: var(--font-sans);
     font-size: var(--fs-ui);
-    color: var(--accent);
+    font-weight: 600;
+    color: var(--t2);
     cursor: pointer;
 }
 
@@ -823,7 +851,7 @@
 .sheet-column {
     width: 100%;
     margin: 0 auto;
-    padding: var(--space-5) var(--space-4) var(--space-8);
+    padding: var(--space-5) var(--space-4) 0;
     box-sizing: content-box;
 }
 
@@ -831,6 +859,10 @@
     font-size: var(--text-chrome-sm);
     color: var(--t2);
     text-decoration: none;
+}
+
+[data-surface="chrome"] .insp-off {
+    color: var(--t2);
 }
 
 .state-link:hover {
@@ -920,33 +952,26 @@
     margin: 0;
 }
 
-.draft-lang-badge {
-    display: inline-block;
-    font-size: var(--fs-10);
-    font-weight: 600;
-    letter-spacing: .05em;
-    color: var(--t2);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 0 6px;
-    margin-left: 5px;
-    vertical-align: 1px;
-}
-
+/* A bright textured page with a hard edge, open at the bottom: it runs off the worktop's lower
+   edge rather than floating on it. */
 .sheet {
     min-height: 60vh;
-    background: var(--sheet);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow);
-    padding: 28px 36px 36px;
-    font-family: var(--sheet-typeface, var(--font-sans));
-    font-size: var(--sheet-font-size, 16px);
-    line-height: var(--sheet-line-height, 1.6);
+    background-color: var(--paper-bright);
+    background-image: var(--tex-paper);
+    border: 1px solid var(--paper-edge);
+    border-bottom: none;
+    border-radius: var(--radius-paper) var(--radius-paper) 0 0;
+    box-shadow: var(--shadow-sheet);
+    padding: 30px 40px;
+    font-family: var(--sheet-typeface, var(--font-serif));
+    font-size: var(--sheet-font-size, var(--fs-read));
+    line-height: var(--sheet-line-height, var(--lh-read));
 }
 
 /* "Sheet without the paper card" (Settings → Appearance) — merges with the canvas instead */
 .sheet.flush {
     background: none;
+    border: none;
     box-shadow: none;
     border-radius: 0;
 }
@@ -965,7 +990,7 @@
     padding-top: 0;
     padding-bottom: 0;
     overflow: hidden;
-    border-bottom: none;
+    border-width: 0;
     opacity: 0;
     transition: height .15s ease, opacity .1s ease;
 }

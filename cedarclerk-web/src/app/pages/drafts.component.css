@@ -9,6 +9,15 @@
     padding: var(--space-3);
 }
 
+/* The index tiles hang off the panel's top edge: the strip overlaps its border by a hair so a lit
+   tile reads as raised out of it, the way the glossary and the posts manager already draw it. */
+.drafts-page > app-index-tabs {
+    position: relative;
+    z-index: 1;
+    padding: 0 var(--space-1);
+    margin-bottom: calc(-1px - var(--space-3));
+}
+
 /* The kit's proportions and no width breakpoint of its own (ADR-147). The tree is structure and
    the folder filter does not apply to it (ADR-128), so its shelf is absent and the panel takes
    the whole board. */
@@ -100,13 +109,11 @@
     pointer-events: none;
 }
 
-/* Was 9.5px — a half-pixel, and the smallest text anywhere in the app. --fs-10 is the integer step
-   nearest it; below --fs-11 a header this cramped is barely a label anyway, which is worth
-   revisiting once the mockups exist (T-076). */
 .drafts-row-head {
     cursor: default;
     background: var(--alt);
-    font-size: var(--fs-10);
+    font-family: var(--font-mono);
+    font-size: var(--fs-ui);
     letter-spacing: .07em;
     text-transform: uppercase;
     font-weight: 600;
@@ -281,12 +288,13 @@
     justify-content: flex-end;
 }
 
+/* Paper keeps its 44px target on a mouse as well as a finger (ADR-138 item 2). */
 .mini, .mini-remove {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
+    min-width: var(--hit-target);
+    min-height: var(--hit-target);
     border: none;
     background: none;
     border-radius: var(--radius-sm);
@@ -322,20 +330,10 @@
     padding: var(--space-3);
 }
 
-.draft-card {
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-    padding: 14px;
-    cursor: pointer;
+.draft-card-body {
     display: flex;
     flex-direction: column;
     gap: 6px;
-}
-
-.draft-card:hover {
-    border-color: var(--abord);
 }
 
 .draft-card.busy {
@@ -479,42 +477,16 @@
     white-space: nowrap;
 }
 
-.tag-add-btn {
-    border: 1px dashed var(--abord);
-    background: none;
-    border-radius: 999px;
-    padding: 2px 10px;
-    font-size: var(--fs-caption);
-    color: var(--accent);
-    cursor: pointer;
-    font-family: var(--font-sans);
+.more-options {
+    margin-top: 10px;
 }
 
-.tag-add-btn:hover {
-    background: var(--asoft);
-}
-
-.format-toggle {
+/* A pick-one is a row of leaves, the same control Settings uses for its language pickers. */
+.pick-row {
     display: flex;
-    gap: 4px;
-    margin-top: 4px;
-}
-
-.format-toggle button {
-    flex: 1;
-    border: 1px solid var(--border);
-    background: var(--sheet);
-    border-radius: var(--radius-sm);
-    padding: 5px 0;
-    cursor: pointer;
-    font-size: var(--fs-meta);
-    color: var(--text);
-    font-family: inherit;
-}
-
-.format-toggle button.on {
-    background: var(--asoft);
-    border-color: var(--abord);
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin-top: 6px;
 }
 
 .field-hint {
@@ -565,16 +537,17 @@
 
 .upload-bar {
     flex: 1;
-    height: 6px;
-    background: var(--alt);
-    border-radius: 3px;
+    height: var(--space-2);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-stamp);
+    background: var(--surface);
     overflow: hidden;
 }
 
 .upload-fill {
     height: 100%;
-    background: var(--accent);
-    transition: width 0.15s ease;
+    background: var(--grad-pine);
+    transition: width var(--motion-base) var(--ease);
 }
 
 .translate-status {
@@ -606,21 +579,6 @@
        dead space to its right, because the track cannot grow past its own content box here. */
     .drafts-grid-cards {
         grid-template-columns: 1fr;
-    }
-}
-
-/* Touch pointers, any width. 26px is a comfortable mouse target and a poor finger one; T-082 puts
-   the floor at 44px. Keyed off the pointer, not the viewport, so an iPad in landscape — which is
-   wide enough to miss a width query — still gets targets a thumb can hit. */
-@media (pointer: coarse) {
-    [data-surface] .mini,
-    [data-surface] .mini-remove {
-        min-width: var(--hit-surface);
-        min-height: var(--hit-surface);
-    }
-
-    [data-surface="paper"] .row-actions {
-        gap: var(--space-1);
     }
 }
 

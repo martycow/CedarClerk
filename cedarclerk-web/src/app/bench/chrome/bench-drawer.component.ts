@@ -29,9 +29,9 @@ let nextId = 0;
                 @if (summary()) {
                     <span class="summary">{{ summary() }}</span>
                 }
-                <span class="caret" aria-hidden="true"><app-icon name="caret-down" size="xs" /></span>
             </button>
             <span class="tabs"><ng-content select="[drawerTabs]" /></span>
+            <span class="caret" aria-hidden="true"><app-icon name="caret-down" size="xs" /></span>
         </div>
 
         <div class="journal" data-surface="paper" [id]="journalId" [attr.inert]="open() ? null : ''">
@@ -56,7 +56,7 @@ let nextId = 0;
                 min-height: var(--bench-drawer-lip);
                 border-top: 1px solid var(--wood-edge);
                 background-image: var(--tex-wood), var(--shelf-frame);
-                box-shadow: var(--shadow-shelf);
+                box-shadow: inset 0 1px 0 rgba(255, 240, 210, .14);
             }
 
             /* Transparent on purpose: the lip carries the material, so the pull carries no shadow
@@ -65,7 +65,7 @@ let nextId = 0;
                 display: flex;
                 flex: 1;
                 align-items: center;
-                gap: var(--space-2);
+                gap: 10px;
                 min-width: 0;
                 padding: 0 var(--space-3);
                 border: none;
@@ -83,6 +83,7 @@ let nextId = 0;
                 border: 1px solid var(--brass-edge);
                 border-radius: var(--radius-sm);
                 background: var(--grad-brass);
+                box-shadow: inset 0 1px 0 rgba(255, 248, 225, .7);
             }
 
             .title {
@@ -94,6 +95,7 @@ let nextId = 0;
                 text-transform: uppercase;
                 white-space: nowrap;
                 color: var(--rail-ink);
+                text-shadow: 0 1px 1px color-mix(in srgb, var(--rail-edge) 60%, transparent);
             }
 
             .summary {
@@ -107,12 +109,17 @@ let nextId = 0;
                 color: var(--rail-ink-soft);
             }
 
+            /* Scenery at the lip's end, outside the pull: it shows the drawer's state and is not
+               a second control for it. */
             .caret {
                 flex: none;
-                margin-left: auto;
                 display: inline-flex;
+                align-items: center;
+                padding: 0 var(--space-3);
+                --icon-xs: var(--text-chrome-sm);
                 color: var(--rail-ink-soft);
-                transition: transform var(--motion-base) var(--ease-settle);
+                pointer-events: none;
+                transition: transform var(--dur-control, 190ms) var(--ease-settle);
             }
 
             .tabs {

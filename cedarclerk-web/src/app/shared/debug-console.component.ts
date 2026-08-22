@@ -3,6 +3,7 @@ import { BenchDrawerComponent } from '../bench/chrome/bench-drawer.component';
 import { DebugLogService } from '../core/debug-log.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { IconComponent } from './icon.component';
+import { LogLineComponent } from '../bench/worktop/log-line.component';
 
 const MAX_BODY_CHARS = 4000;
 
@@ -12,7 +13,7 @@ const MAX_BODY_CHARS = 4000;
 // available on every screen rather than only where a page thought to host it.
 @Component({
     selector: 'app-debug-console',
-    imports: [BenchDrawerComponent, IconComponent],
+    imports: [BenchDrawerComponent, IconComponent, LogLineComponent],
     templateUrl: './debug-console.component.html',
     styleUrl: './debug-console.component.css',
 })

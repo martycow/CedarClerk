@@ -6,11 +6,11 @@
         <div class="picker-toolbar">
             <input class="picker-search" type="search" [ngModel]="search()" (ngModelChange)="onSearch($event)"
                    [placeholder]="t().media.searchPlaceholder" [attr.aria-label]="t().media.searchPlaceholder">
-            <div class="picker-tabs">
-                <button [class.active]="type() === null" (click)="setType(null)">{{ t().media.all }}</button>
-                <button [class.active]="type() === 'image'" (click)="setType('image')">{{ t().media.images }}</button>
-                <button [class.active]="type() === 'video'" (click)="setType('video')">{{ t().media.videos }}</button>
-                <button [class.active]="type() === 'audio'" (click)="setType('audio')">{{ t().media.audio }}</button>
+            <div class="picker-leaves" role="group" [attr.aria-label]="t().media.typeStrip">
+                <app-leaf-tag interactive [state]="type() === null ? 'active' : 'idle'" (activated)="setType(null)">{{ t().media.all }}</app-leaf-tag>
+                <app-leaf-tag interactive [state]="type() === 'image' ? 'active' : 'idle'" (activated)="setType('image')">{{ t().media.images }}</app-leaf-tag>
+                <app-leaf-tag interactive [state]="type() === 'video' ? 'active' : 'idle'" (activated)="setType('video')">{{ t().media.videos }}</app-leaf-tag>
+                <app-leaf-tag interactive [state]="type() === 'audio' ? 'active' : 'idle'" (activated)="setType('audio')">{{ t().media.audio }}</app-leaf-tag>
             </div>
         </div>
 
@@ -39,13 +39,17 @@
                 </div>
                 @if (p.total > p.items.length || skip() > 0) {
                 <div class="picker-pager">
-                    <button class="picker-page-btn" [disabled]="!canPageBack" (click)="pageBack()">←</button>
-                    <button class="picker-page-btn" [disabled]="!canPageForward" (click)="pageForward()">→</button>
+                    <app-button variant="paper" size="sm" [disabled]="!canPageBack" [title]="t().common.pageBack" (clicked)="pageBack()">
+                        <app-icon name="caret-left" size="sm" />
+                    </app-button>
+                    <app-button variant="paper" size="sm" [disabled]="!canPageForward" [title]="t().common.pageForward" (clicked)="pageForward()">
+                        <app-icon name="caret-right" size="sm" />
+                    </app-button>
                 </div>
                 }
             }
         }
     </div>
 
-    <button modal-actions class="btn-ghost" (click)="closed.emit()">{{ t().common.cancel }}</button>
+    <app-button modal-actions variant="paper" (clicked)="closed.emit()">{{ t().common.cancel }}</app-button>
 </app-modal>

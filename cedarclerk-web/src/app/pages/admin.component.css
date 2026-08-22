@@ -6,6 +6,14 @@
     padding: var(--space-3);
 }
 
+/* The index tiles hang off the panel's top edge, overlapping its border by a hair. */
+.admin-page > app-index-tabs {
+    position: relative;
+    z-index: 1;
+    padding: 0 var(--space-1);
+    margin-bottom: calc(-1px - var(--space-3));
+}
+
 /* The kit's proportions and no width breakpoint of its own (ADR-147). */
 .admin-grid {
     display: grid;
@@ -45,28 +53,26 @@
 
 /* ---------- Users ---------- */
 .admin-section-title {
-    font-size: var(--dens-fs);
+    font-family: var(--font-display);
+    font-size: var(--fs-ui);
     font-weight: 700;
-    letter-spacing: .05em;
+    letter-spacing: .1em;
     text-transform: uppercase;
     color: var(--t2);
     margin: 0 0 10px;
 }
 
 .user-table {
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    box-shadow: var(--shadow-paper-sm);
     /* The row grid has a minimum width; below it the table scrolls rather than crushing the
        columns — same lesson as B24 on the drafts table. */
     overflow-x: auto;
 }
 
-/* ---------- Users (Priority Fixes 01, Claude Design 28.07.2026) ----------
-   Table rows -> a sheet-card list, matching the --sheet+--border+--shadow+radius-lg pattern
-   used everywhere else (Posts Manager's post cards, Settings' settings-card, this page's own
-   summary-card). Still one expandable card at a time, same as the table row did. */
 .user-cards {
     display: flex;
     flex-direction: column;
@@ -74,10 +80,11 @@
 }
 
 .user-card {
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    box-shadow: var(--shadow-paper-sm);
     padding: 12px 16px;
     cursor: pointer;
 }
@@ -205,7 +212,7 @@
     padding: 12px 16px 14px;
     border-top: 1px solid var(--border);
     background: var(--alt);
-    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    border-radius: 0 0 var(--radius-paper) var(--radius-paper);
     cursor: default;
 }
 
@@ -305,10 +312,11 @@
 }
 
 .invite-row.head {
-    font-size: var(--fs-caption);
-    font-weight: 700;
-    letter-spacing: .05em;
+    font-family: var(--font-mono);
+    font-size: var(--fs-ui);
+    letter-spacing: .07em;
     text-transform: uppercase;
+    font-weight: 600;
     color: var(--t2);
     background: var(--alt);
 }
@@ -340,10 +348,11 @@
 .post-row.head,
 .payment-row.head,
 .usage-row.head {
-    font-size: var(--fs-caption);
-    font-weight: 700;
-    letter-spacing: .05em;
+    font-family: var(--font-mono);
+    font-size: var(--fs-ui);
+    letter-spacing: .07em;
     text-transform: uppercase;
+    font-weight: 600;
     color: var(--t2);
     background: var(--alt);
 }

@@ -677,7 +677,7 @@ export class SettingsComponent implements OnInit {
                 window.location.href = res.url; // PayPal approval page
             } else {
                 await this.billingApi.starsInvoice(plan);
-                this.billingMessage.set('✓ Invoice sent to your Telegram — open the bot chat and confirm the payment there.');
+                this.billingMessage.set('Invoice sent to your Telegram — open the bot chat and confirm the payment there.');
                 this.selectedPlan = null;
             }
         } catch (e) {

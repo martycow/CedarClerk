@@ -7,6 +7,8 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { IconComponent } from './icon.component';
 import { ModalComponent } from './modal.component';
+import { ButtonComponent } from '../bench/forms/button.component';
+import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 
 const PAGE_SIZE = 60;
 
@@ -15,7 +17,7 @@ const PAGE_SIZE = 60;
 // editor.component is large enough without hosting a whole page inside it.
 @Component({
     selector: 'app-media-picker',
-    imports: [IconComponent, FormsModule, ModalComponent],
+    imports: [IconComponent, FormsModule, ModalComponent, ButtonComponent, LeafTagComponent],
     templateUrl: './media-picker.component.html',
     styleUrl: './media-picker.component.css',
 })

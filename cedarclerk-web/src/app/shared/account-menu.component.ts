@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { LocaleService } from '../core/i18n/locale.service';
+import { ButtonComponent } from '../bench/forms/button.component';
 import { PopoverComponent } from './popover.component';
 import { IconComponent } from './icon.component';
 
@@ -14,7 +14,7 @@ import { IconComponent } from './icon.component';
 // where it applies, and Logout — the three things that are about the account rather than the app.
 @Component({
     selector: 'app-account-menu',
-    imports: [IconComponent, RouterLink, PopoverComponent],
+    imports: [IconComponent, ButtonComponent, PopoverComponent],
     template: `
         <app-popover align="right">
             <button trigger class="account-trigger" [title]="t().editor.account">
@@ -30,22 +30,22 @@ import { IconComponent } from './icon.component';
                 <div class="popover-divider"></div>
                 <!--I12: the profile half of Settings opens from here — "clicking the user" is
                 where a profile belongs; the topbar's Settings button goes to the general page.-->
-                <a class="account-action-btn" routerLink="/settings" [queryParams]="{ tab: 'profile' }">
+                <app-button variant="paper" size="sm" link="/settings" [queryParams]="{ tab: 'profile' }">
                     <app-icon name="user" size="sm"></app-icon>
                     {{ t().settings.tabs.profile }}
-                </a>
+                </app-button>
                 <!--IF2: only rendered for an admin, and only as a shortcut — /api/admin is gated
                 server-side, so hiding it here is convenience, not security.-->
                 @if (auth.isAdmin()) {
-                <a class="account-action-btn" routerLink="/admin">
+                <app-button variant="paper" size="sm" link="/admin">
                     <app-icon name="shield-check" size="sm"></app-icon>
                     {{ t().admin.open }}
-                </a>
+                </app-button>
                 }
-                <button class="logout-btn" (click)="auth.logout()">
+                <app-button variant="danger" size="sm" (clicked)="auth.logout()">
                     <app-icon name="sign-out" size="sm"></app-icon>
                     {{ t().editor.logout }}
-                </button>
+                </app-button>
             </div>
         </app-popover>
     `,

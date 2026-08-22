@@ -4,9 +4,9 @@
         <span class="form-ref-status">{{ regForm() ? onLabel() : offLabel() }}</span>
         <span class="spacer"></span>
         @if (manageRoute()) {
-        <a class="form-ref-manage" [routerLink]="manageRoute()" [queryParams]="manageQueryParams()">{{ manageLabel() }}</a>
+        <app-button class="form-ref-manage" variant="paper" size="sm" [link]="manageRoute()" [queryParams]="manageQueryParams()">{{ manageLabel() }}</app-button>
         } @else {
-        <button class="form-ref-manage" (click)="manage.emit()">{{ manageLabel() }}</button>
+        <app-button class="form-ref-manage" variant="paper" size="sm" (clicked)="manage.emit()">{{ manageLabel() }}</app-button>
         }
     </div>
 

@@ -85,7 +85,7 @@ import { Params, RouterLink } from '@angular/router';
             .tt-drop {
                 display: block;
                 width: 100%;
-                filter: var(--shadow-card-drop);
+                filter: var(--shadow-tag, drop-shadow(0 1px 2px rgba(50, 30, 10, .3)) drop-shadow(0 6px 12px rgba(50, 30, 10, .24)));
             }
 
             .tt-tag {
@@ -93,26 +93,26 @@ import { Params, RouterLink } from '@angular/router';
                 position: relative;
                 box-sizing: border-box;
                 min-height: var(--hit-target);
-                padding: var(--space-5) var(--space-3) var(--space-3);
+                padding: 19px 14px var(--space-3);
                 background-color: var(--sheet);
                 background-image: var(--tex-paper);
                 clip-path: polygon(
                     var(--space-2) 0, calc(100% - var(--space-2)) 0, 100% var(--space-2),
                     100% 100%, 0 100%, 0 var(--space-2));
-                transition: transform var(--motion-fast) var(--ease-swing);
+                transition: transform var(--dur-control, 190ms) var(--ease-swing);
             }
 
             .tt-eyelet {
                 position: absolute;
-                top: var(--space-1);
+                top: 5px;
                 left: 50%;
                 translate: -50%;
-                width: var(--space-3);
-                height: var(--space-3);
+                width: 10px;
+                height: 10px;
                 border-radius: 50%;
                 background: var(--wood);
                 box-shadow:
-                    inset 0 1px 2px var(--wood-edge),
+                    inset 0 1px 2px rgba(30, 16, 4, .6),
                     0 0 0 2px var(--brass),
                     0 0 0 3px var(--brass-edge);
             }
@@ -128,26 +128,37 @@ import { Params, RouterLink } from '@angular/router';
 
             .tt-meta {
                 display: flex;
+                flex-wrap: wrap;
                 align-items: center;
                 gap: var(--space-2);
                 margin-top: var(--space-2);
             }
 
-            .tt-stamp { display: inline-flex; }
+            /* A stamp inside a tag is pressed smaller; the hooks inherit into the projected badge. */
+            .tt-stamp {
+                display: inline-flex;
+                --stamp-pad: 1px 6px;
+                --stamp-border-w: 1px;
+                --stamp-tracking: .1em;
+            }
             .tt-spacer { flex: 1; }
 
             /* The chip is a small plaque, so its ink is the cream that goes on wood. It is cut from
                the two dark wood steps and not the mirror's lit ones: cream on --wood-hi is 2.4:1,
-               and this label is read rather than looked at. */
+               and this label is read rather than looked at. No min-width: paper's 44px floor is a
+               control's floor, and a chip is not a control — the padding is what makes it a plaque. */
             .tt-prio {
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
+                height: 18px;
                 padding: 0 var(--space-2);
                 border: 1px solid var(--wood-edge);
                 border-radius: var(--radius-stamp);
                 background: linear-gradient(180deg, var(--wood-lo), var(--wood-edge));
                 color: var(--rail-ink);
+                text-shadow: 0 1px 1px rgba(40, 22, 6, .5);
+                box-shadow: 0 1px 0 var(--wood-edge);
                 font-family: var(--font-mono);
                 font-size: var(--fs-ui);
                 font-weight: 700;

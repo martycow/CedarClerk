@@ -49,7 +49,7 @@
 .hero-title {
     margin: 0;
     font-family: var(--font-display);
-    font-size: var(--fs-27);
+    font-size: var(--fs-34);
     font-weight: 700;
     letter-spacing: -.01em;
 }
@@ -77,7 +77,7 @@
 
 .row {
     display: grid;
-    grid-template-columns: var(--space-8) minmax(220px, 1fr) 80px 80px 80px 150px 110px;
+    grid-template-columns: var(--space-6) minmax(220px, 1fr) 80px 80px 80px 150px 110px;
     gap: var(--dens-gap);
     align-items: center;
     box-sizing: border-box;
@@ -112,14 +112,15 @@
     justify-content: center;
     overflow: hidden;
     box-sizing: border-box;
-    width: var(--space-8);
+    width: var(--space-6);
     height: var(--space-6);
     border: 1px solid var(--wood-edge);
     border-radius: var(--radius-paper);
-    background: linear-gradient(180deg, var(--wood-lo), var(--wood-edge));
+    background: linear-gradient(160deg, var(--wood-hi), var(--wood-lo));
     color: var(--rail-ink);
     font-family: var(--font-mono);
     font-size: var(--fs-ui);
+    text-shadow: 0 1px 1px var(--wood-edge);
 }
 
 .thumb img {
@@ -269,13 +270,17 @@
     width: 100%;
     box-sizing: border-box;
     padding: var(--dens-control-y) var(--dens-control-x);
-    border: 1px solid var(--border);
-    border-radius: var(--dens-radius);
-    background: var(--sheet);
+    border: var(--border-field);
+    border-radius: var(--radius-field);
+    background: var(--paper-bright);
     color: var(--text);
     font: inherit;
     font-size: var(--fs-body);
 }
+
+/* Withheld while focused: a component's own shadow out-specifies the global rule that draws the
+   ADR-140 halo. */
+.text-input:not(:focus-visible) { box-shadow: var(--shadow-field-inset); }
 
 .btn-accent {
     display: flex;

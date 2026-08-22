@@ -6,17 +6,21 @@
     flex: 1;
 }
 
+/* The same brass name plate the rail wears, at the profile's size. */
 .avatar {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: var(--accent);
-    color: var(--sheet);
+    width: 28px;
+    height: 28px;
+    box-sizing: border-box;
+    border-radius: var(--radius-stamp);
+    background: var(--grad-brass);
+    border: 1px solid var(--brass-edge);
+    color: var(--rail-edge);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: var(--fs-caption);
-    font-weight: 600;
+    font-family: var(--font-display);
+    font-size: var(--fs-12);
+    font-weight: 700;
     flex: none;
 }
 
@@ -56,7 +60,8 @@
 }
 
 .settings-card h2 {
-    font-size: var(--fs-15);
+    font-family: var(--font-display);
+    font-size: var(--fs-17);
     font-weight: 700;
     letter-spacing: -.01em;
     margin: 0 0 var(--space-4);
@@ -173,21 +178,31 @@
     margin-top: var(--space-4);
 }
 
-.link-btn {
-    border: none;
-    background: none;
-    color: var(--accent);
-    font-size: var(--fs-meta);
-    font-weight: 500;
-    cursor: pointer;
-    font-family: inherit;
+/* An outbound <a>: app-button takes a route and never an href (ADR-169), so the one external
+   link wears the paper face itself. */
+.paper-anchor {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-height: var(--hit-target);
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid rgba(110, 86, 50, .4);
+    border-radius: var(--radius-plaque);
+    background: var(--sheet);
+    box-shadow: var(--shadow-paper-sm);
+    color: var(--t2);
+    font-family: var(--font-sans);
+    font-size: var(--fs-ui);
+    font-weight: 600;
+    line-height: 1.2;
     text-decoration: none;
     white-space: nowrap;
 }
 
-.link-btn:disabled {
-    opacity: .6;
-    cursor: default;
+.paper-anchor:hover {
+    background: var(--surface);
+    color: var(--text);
 }
 
 /* ---------- Subscription ---------- */
@@ -316,47 +331,12 @@
     margin: 0;
 }
 
-.plan-card-btn {
-    border: 1px solid var(--border);
-    background: var(--sheet);
-    color: var(--text);
-    border-radius: var(--radius-md);
-    padding: var(--space-2);
-    font-size: var(--fs-meta);
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.plan-card-btn:disabled {
-    color: var(--t3);
-    cursor: default;
-}
-
-.plan-card-btn.accent {
-    border-color: transparent;
-    background: var(--accent);
-    color: var(--sheet);
-}
-
-.plan-card-btn.accent:hover {
-    filter: brightness(1.08);
+.plan-card app-button {
+    display: flex;
 }
 
 .trial-link {
-    display: block;
-    border: none;
-    background: none;
-    color: var(--accent);
-    font-size: var(--fs-meta);
-    font-weight: 500;
-    cursor: pointer;
-    font-family: inherit;
-    padding: var(--space-2) 0 0;
-}
-
-.trial-link:hover {
-    text-decoration: underline;
+    margin-top: var(--space-2);
 }
 
 .payment-step {
@@ -532,7 +512,7 @@
     gap: var(--space-3);
 }
 
-.integration-block > .link-btn {
+.integration-block > app-button {
     align-self: flex-start;
 }
 
@@ -635,14 +615,18 @@
     color: var(--t2);
 }
 
+/* Paper keeps its 44px target on a mouse as well as a finger (ADR-138 item 2). */
 .mini {
     border: 1px solid var(--border);
     background: none;
     color: var(--t2);
     border-radius: var(--radius-sm);
-    padding: var(--space-2) var(--space-2);
+    min-width: var(--hit-target);
+    min-height: var(--hit-target);
+    padding: 0;
     display: flex;
     align-items: center;
+    justify-content: center;
     cursor: pointer;
     font-family: inherit;
 }
@@ -728,20 +712,20 @@
     cursor: pointer;
 }
 
+.avatar-pick {
+    text-shadow: 0 1px 1px var(--pine-deep);
+    box-shadow: var(--shadow-pine-btn);
+}
+
 .avatar-pick:hover { filter: brightness(1.06); }
 
-/* One Save for the whole Profile tab. Sticky, because the tab is a long scroll and
-   the sections above it all write through the same request - a button at the very bottom would
-   be off-screen exactly when the fields at the top are being edited. */
+/* One Save for the whole Profile tab, in flow at its end: stuck to the scrollport's edge it
+   floated over the signature buttons above it. */
 .profile-save-bar {
-    position: sticky;
-    bottom: 0;
-    z-index: 5;
     display: flex;
     align-items: center;
     gap: var(--space-3);
     padding: var(--space-3) 0;
-    background: linear-gradient(to top, var(--surface) 70%, transparent);
 }
 
 /* The cross-link and UI language pickers: a leaf is the app's pick-one-of-a-few control. */
@@ -764,16 +748,17 @@
 
 .translate-progress-track {
     flex: 1;
-    height: 4px;
-    border-radius: 999px;
-    background: var(--alt);
+    height: var(--space-2);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-stamp);
+    background: var(--surface);
     overflow: hidden;
 }
 
 .translate-progress-fill {
     display: block;
     height: 100%;
-    background: var(--accent);
+    background: var(--grad-pine);
     transition: width var(--motion-base) var(--ease);
 }
 

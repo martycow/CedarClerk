@@ -2,48 +2,15 @@
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: var(--space-1);
     min-width: 0;
 }
 
-.tag-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    font-size: var(--fs-caption);
-    color: var(--t2);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 1px 4px 1px 8px;
-}
-
-.tag-x {
-    border: none;
-    background: none;
-    color: var(--t2);
-    cursor: pointer;
-    font-size: var(--fs-meta);
-    line-height: 1;
-    padding: 1px 3px;
-}
-
-.tag-x:hover {
-    color: var(--danger);
-}
-
-.tag-add-btn {
-    border: 1px dashed var(--abord);
-    background: none;
-    border-radius: 999px;
-    padding: 2px 10px;
-    font-size: var(--fs-caption);
-    color: var(--accent);
-    cursor: pointer;
-    font-family: var(--font-sans);
-}
-
-.tag-add-btn:hover {
-    background: var(--asoft);
+.leaf-note {
+    margin-left: var(--space-1);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    opacity: .75;
 }
 
 .tag-cloud-popover {
@@ -81,40 +48,6 @@
     gap: 6px;
 }
 
-.tag-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    border: 1px solid var(--border);
-    background: none;
-    border-radius: 999px;
-    padding: 3px 9px;
-    font-size: var(--fs-meta);
-    color: var(--t2);
-    cursor: pointer;
-    font-family: var(--font-sans);
-}
-
-.tag-pill:hover {
-    border-color: var(--abord);
-}
-
-.tag-pill.on {
-    background: var(--asoft);
-    border-color: var(--abord);
-    color: var(--accent);
-    font-weight: 600;
-}
-
-.tag-pill-count {
-    color: var(--t2);
-    font-size: var(--fs-caption);
-}
-
-.tag-pill.on .tag-pill-count {
-    color: var(--accent);
-}
-
 .tag-new-input {
     border: 1px solid var(--border-strong);
     background: var(--sheet);
@@ -148,8 +81,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    min-width: var(--hit-target);
+    min-height: var(--hit-target);
     flex: none;
     border: none;
     background: none;

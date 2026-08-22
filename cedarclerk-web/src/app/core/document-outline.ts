@@ -51,7 +51,7 @@ const KINDS: Record<string, OutlineKind> = {
 };
 
 const ICONS: Record<OutlineKind, IconName> = {
-    heading: 'text-h', paragraph: 'text-aa', list: 'list-bullets', quote: 'quotes',
+    heading: 'text-h', paragraph: 'text-align-left', list: 'list-bullets', quote: 'quotes',
     code: 'code-block', divider: 'list-dashes', image: 'image', video: 'video-camera',
     audio: 'waveform', gallery: 'images', embed: 'cube', table: 'table', block: 'file',
 };

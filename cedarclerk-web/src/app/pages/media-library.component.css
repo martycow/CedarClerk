@@ -7,6 +7,14 @@
     padding: var(--space-3);
 }
 
+/* The index tiles hang off the panel's top edge, overlapping its border by a hair. */
+.media-page > app-index-tabs {
+    position: relative;
+    z-index: 1;
+    padding: 0 var(--space-1);
+    margin-bottom: calc(-1px - var(--space-3));
+}
+
 .hint {
     color: var(--t2);
     font-size: var(--fs-meta);
@@ -39,16 +47,17 @@
 
 .usage-bar {
     width: 100%;
-    height: var(--space-1);
+    box-sizing: border-box;
+    height: var(--space-2);
+    border: 1px solid var(--paper-edge);
     border-radius: var(--radius-stamp);
-    background: var(--alt);
+    background: var(--surface);
     overflow: hidden;
 }
 
 .usage-fill {
     height: 100%;
-    background: var(--accent);
-    border-radius: var(--radius-stamp);
+    background: var(--grad-pine);
 }
 
 .file-name {
@@ -80,9 +89,11 @@
 .tile {
     display: flex;
     flex-direction: column;
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    box-shadow: var(--shadow-paper-sm);
     padding: 0;
     overflow: hidden;
     cursor: pointer;
@@ -101,7 +112,10 @@
     background: var(--asoft);
 }
 
-.tile.is-on:not(:focus-visible),
+.tile.is-on:not(:focus-visible) {
+    box-shadow: inset 2px 0 0 var(--accent), var(--shadow-paper-sm);
+}
+
 .list-row.is-on:not(:focus-visible) {
     box-shadow: inset 2px 0 0 var(--accent);
 }

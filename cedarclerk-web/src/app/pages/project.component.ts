@@ -25,7 +25,6 @@ import { IconName } from '../shared/icon-data.generated';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
 import { ButtonComponent } from '../bench/forms/button.component';
-import { PaperCardComponent } from '../bench/display/paper-card.component';
 import { StampBadgeComponent, StampTone } from '../bench/display/stamp-badge.component';
 import { TaskTagComponent } from '../bench/display/task-tag.component';
 import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
@@ -61,7 +60,7 @@ const MS_PER_DAY = 86_400_000;
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, RouterLink, ModalComponent,
         WorktopComponent, ShelfPanelComponent, ModuleTileComponent, SpecRowComponent,
-        PaperCardComponent, StampBadgeComponent, TaskTagComponent, ButtonComponent,
+        StampBadgeComponent, TaskTagComponent, ButtonComponent,
     ],
     templateUrl: 'project.component.html',
     styleUrls: ['project.component.css'],
@@ -147,13 +146,13 @@ export class ProjectComponent implements OnDestroy {
 
         const plates: ModulePlate[] = [
             {
-                id: 'tasks', icon: 'kanban', name: t.tasks.title,
+                id: 'tasks', icon: 'check-square', name: t.tasks.title,
                 count: p.openTaskCount,
                 sub: t.hub.tasksSub(p.taskCounts.in_progress ?? 0),
                 link: ['/projects', p.id, 'tasks'], rotate: 0,
             },
             {
-                id: 'sprint', icon: 'timer', name: t.railPendingTitle,
+                id: 'sprint', icon: 'flag', name: t.railPendingTitle,
                 count: sprint ? `S${sprint.number}` : '—',
                 sub: sprint ? t.planner.progress(sprint.doneCount, sprint.taskCount) : t.planner.noCurrentSprint,
                 link: ['/projects', p.id, 'planner'], rotate: 0,
@@ -165,7 +164,7 @@ export class ProjectComponent implements OnDestroy {
                 link: ['/projects', p.id, 'assets'], rotate: 0,
             },
             {
-                id: 'builds', icon: 'rocket-launch', name: t.builds.title,
+                id: 'builds', icon: 'cube', name: t.builds.title,
                 count: builds ? builds.length : '—',
                 sub: build ? t.hub.buildsSub(build.version) : builds ? t.hub.buildsNone : '',
                 link: ['/projects', p.id, 'builds'], rotate: 0,
@@ -174,15 +173,15 @@ export class ProjectComponent implements OnDestroy {
         return plates.map((plate, i) => ({ ...plate, rotate: TILT[i % TILT.length] }));
     });
 
-    /** The chalked strip along the top edge of the bench: when this project was last written to. */
+    /** The right-hand chalk chip on the bench top: when this project was last written to. */
     heroMeta = computed(() => {
         const at = this.summary()?.lastActivityAt;
-        return at ? `${this.t().projects.hub.lastEdit} ${formatInZone(at, 'd MMM')}` : '';
+        return at ? `${this.t().projects.hub.lastEdit} ${formatInZone(at, 'dd.MM')}` : '';
     });
 
     sprintLeft = computed(() => {
         const sprint = this.project()?.currentSprint;
-        return sprint ? this.t().projects.hub.sprintLeftValue(this.sprintDaysLeft(), formatInZone(sprint.endsAt, 'd MMM')) : '';
+        return sprint ? this.t().projects.hub.sprintLeftValue(this.sprintDaysLeft(), formatInZone(sprint.endsAt, 'dd.MM')) : '';
     });
 
     constructor() {
@@ -247,9 +246,9 @@ export class ProjectComponent implements OnDestroy {
         }
     }
 
+    /** Brass is the build number's; a draft is pressed as a faint outline (StampBadge.prompt.md). */
     documentTone(doc: ProjectDocument): StampTone {
-        if (doc.isArchived) return 'ink';
-        return doc.isBlogPublished ? 'pine' : 'brass';
+        return doc.isBlogPublished && !doc.isArchived ? 'pine' : 'ink';
     }
 
     documentState(doc: ProjectDocument): string {

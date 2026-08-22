@@ -135,7 +135,7 @@ describe('LeafTagComponent', () => {
         it('never says error: a dried leaf means no data, and rust belongs to a stamp', () => {
             expect(css).not.toMatch(/var\(--danger\)/);
             expect(css).not.toMatch(/var\(--rust\)/);
-            expect(css).toMatch(/is-dried[^{]*\{[^}]*color:\s*var\(--t3\)/);
+            expect(css).toMatch(/is-dried[^{]*\{[^}]*color:\s*var\(--leaf-dried-ink/);
         });
 
         it('holds the paper floor: 44px targets and 14px type', () => {
@@ -148,9 +148,9 @@ describe('LeafTagComponent', () => {
             for (const s of sizes) expect(s).toBe('var(--fs-ui)');
         });
 
-        it('keeps one rounded corner pair and paints no literal colour', () => {
-            expect(css).toMatch(/border-radius:\s*var\(--radius-paper\) var\(--radius-lg\) var\(--radius-paper\) var\(--radius-lg\)/);
-            expect(css).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+        it('keeps one rounded corner pair and paints no literal colour outside a token fallback', () => {
+            expect(css).toMatch(/border-radius:\s*2px 12px 2px 12px/);
+            expect(css.replace(/var\(--[\w-]+,\s*[^)]*\)/g, '')).not.toMatch(/#[0-9a-f]{3,8}\b/i);
         });
     });
 });

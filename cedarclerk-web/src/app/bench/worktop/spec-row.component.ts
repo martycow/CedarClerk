@@ -32,9 +32,9 @@ export type SpecScope = 'selection' | 'document';
         :host {
             display: flex;
             align-items: center;
-            gap: var(--space-2);
+            gap: 9px;
             min-width: 0;
-            padding: var(--space-1) calc(var(--space-1) / 2);
+            padding: 5px calc(var(--space-1) / 2);
             border-bottom: 1px solid var(--rule-ink-soft);
         }
 
@@ -42,7 +42,7 @@ export type SpecScope = 'selection' | 'document';
             flex: none;
             /* No token owns an inspector column, and a px default would be one. A ch keeps the
                column proportional to the type it holds. */
-            width: var(--spec-label-w, 13ch);
+            width: var(--spec-label-w, 18ch);
             font-family: var(--font-sans);
             color: var(--t2);
         }
@@ -76,9 +76,9 @@ export type SpecScope = 'selection' | 'document';
         :host(.field) .text {
             flex: 1;
             box-sizing: border-box;
-            padding: calc(var(--space-1) / 2) var(--space-1);
+            padding: 3px 7px;
             border: var(--border-field);
-            border-radius: var(--radius-field);
+            border-radius: var(--radius-stamp);
             background: var(--paper-bright);
             box-shadow: var(--shadow-field-inset);
         }

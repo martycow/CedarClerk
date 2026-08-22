@@ -69,6 +69,7 @@ import { httpErrorMessage } from '../core/http-error.util';
 import { pseudoProgress } from '../core/pseudo-progress.util';
 import { BrandIconComponent } from '../shared/brand-icon.component';
 import { IconComponent } from '../shared/icon.component';
+import { IconName } from '../shared/icon-data.generated';
 import { avatarFill, avatarInitial } from '../core/avatar-color.util';
 import { RulerReadout } from '../bench/chrome/ruler-bar.component';
 import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
@@ -163,6 +164,14 @@ const KEEPALIVE_MAX_CHARS = 30_000;
 class AiJobTimeoutError extends Error {}
 
 const BLOG_HOST = 'blog.mooexe.dev';
+
+// The glyph the block chip leads with for a picked node; the paragraph/heading pair is derived.
+const BLOCK_CHIP_ICONS: Partial<Record<SelectionKind, IconName>> = {
+    image: 'image', carousel: 'images', collage: 'images', video: 'video-camera', audio: 'waveform',
+    youtube: 'video-camera', table: 'table', codeBlock: 'code-block', poll: 'check-square',
+    toggle: 'list-dashes', annotation: 'chat-teardrop', footnote: 'text-superscript',
+    wikilink: 'link', datetime: 'clock',
+};
 
 // Extra timezones shown alongside the local time when scheduling a post; will move to user settings later
 const EXTRA_TIMEZONES: { label: string; zone: string }[] = [
@@ -297,7 +306,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             right.push({ text: t.editor.blockOf(this.blockIndex(), this.blockCount()) });
         }
         right.push({ text: this.syncWord() });
-        this.ruler.publish({ right });
+        this.ruler.publish({
+            label: this.currentBlog()?.slug || this.title,
+            left: [{ text: this.lang().toUpperCase() }],
+            right,
+        });
     });
 
     // The rail's own two slots (ADR-159): the save drop, and the one primary action. Published
@@ -1156,8 +1169,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     worktopMeta(): string {
-        const state = this.t().editor.state;
-        return `${this.lang().toUpperCase()} · ${this.isLive() ? state.live : state.notPublished}`;
+        return `${this.lang().toUpperCase()} · ${this.t().editor.words(this.wordCount())}`;
     }
 
     blockCount(): number {
@@ -1346,6 +1358,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     selectionKindLabel(): string {
         const spec = this.selectionSpec();
         return spec ? this.t().editor.inspector.kinds[spec.kind] : '';
+    }
+
+    blockChipIcon(): IconName {
+        const spec = this.selectionSpec();
+        if (spec) return BLOCK_CHIP_ICONS[spec.kind] ?? 'cube';
+        return this.currentBlockLevel() === 0 ? 'text-align-left' : 'text-h';
     }
 
     /**
@@ -2440,6 +2458,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     blogUrl(): string | null {
         const b = this.currentBlog();
         return b ? `https://${BLOG_HOST}/${b.slug}` : null;
+    }
+
+    blogHost(): string {
+        return BLOG_HOST;
+    }
+
+    telegramUsername(): string | null {
+        return this.drafts().find(d => d.id === this.currentId())?.lastTelegramUsername ?? null;
     }
 
     async publishToBlog() {

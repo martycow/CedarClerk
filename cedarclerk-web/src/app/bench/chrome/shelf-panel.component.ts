@@ -43,9 +43,9 @@ export type ShelfTone = 'paper' | 'cork';
             min-width: 0;
             min-height: 0;
             box-sizing: border-box;
-            padding: var(--space-1);
+            padding: 3px;
             border: 1px solid var(--wood-edge);
-            border-radius: var(--radius-sm);
+            border-radius: 5px;
             background: var(--shelf-frame);
             box-shadow: var(--shadow-shelf);
         }
@@ -57,7 +57,7 @@ export type ShelfTone = 'paper' | 'cork';
             flex: none;
             box-sizing: border-box;
             min-height: var(--bench-panel-hd);
-            padding: 0 var(--space-2) 0 var(--space-3);
+            padding: 0 var(--space-2) 0 10px;
             border-bottom: 1px solid var(--wood-edge);
             background-color: var(--sign-tile-hi);
             background-image: var(--tex-wood), var(--grad-sign-tile);
@@ -110,10 +110,9 @@ export type ShelfTone = 'paper' | 'cork';
         /* Lists and tables that rule their own rows to the panel's edge. */
         .sp-sheet.is-flush { padding: 0; }
 
-        /* Cork has no colour token of its own; the board takes the lit wood face, which is what
-           keeps it moving with the theme instead of staying a light-mode tan on a dark bench. */
+        /* One tan in both themes: cork is a material, and ADR-140 measured the ring against it. */
         .sp-sheet.is-cork {
-            background-color: var(--wood-hi);
+            background-color: var(--cork, #C9A46B);
             background-image: var(--tex-cork);
             color: var(--wood-ink);
         }

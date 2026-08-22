@@ -182,9 +182,9 @@ describe('project hub', () => {
         const resume = el().querySelector('.resume-t')?.textContent?.trim();
         expect(resume).toBe('Devlog #12');
 
-        const open = el().querySelector('.resume-row app-button a') as HTMLAnchorElement;
+        const open = el().querySelector('.resume app-button a') as HTMLAnchorElement;
         expect(open.getAttribute('href')).toBe('/editor?draft=d-new');
-        expect(el().querySelector('.resume-row app-button button')).toBeNull();
+        expect(el().querySelector('.resume app-button button')).toBeNull();
     });
 
     // Same rule one panel down: the editor addresses a document by query, so each row's href

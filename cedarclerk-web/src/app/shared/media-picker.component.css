@@ -28,27 +28,10 @@
     font-size: var(--fs-ui);
 }
 
-.picker-tabs {
+.picker-leaves {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-1);
-}
-
-.picker-tabs button {
-    border: 1px solid var(--border);
-    background: var(--sheet);
-    color: var(--t2);
-    border-radius: 999px;
-    padding: 3px 10px;
-    font-size: var(--fs-caption);
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.picker-tabs button.active {
-    background: var(--asoft);
-    border-color: var(--abord);
-    color: var(--accent);
-    font-weight: 600;
 }
 
 .picker-hint {
@@ -126,23 +109,3 @@
     justify-content: center;
     gap: var(--space-2);
 }
-
-.picker-page-btn,
-.btn-ghost {
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: var(--radius-md);
-    padding: 4px 12px;
-    font-size: var(--fs-ui);
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.picker-page-btn:hover:not(:disabled),
-.btn-ghost:hover {
-    color: var(--text);
-    border-color: var(--border-strong);
-}
-
-.picker-page-btn:disabled { opacity: .5; cursor: default; }

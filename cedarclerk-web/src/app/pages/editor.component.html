@@ -655,17 +655,17 @@
     <ng-template #tplText>
         <div class="tb-group" data-tb-group="text">
             <div class="tb-row">
-                 <button (click)="cmd(c => c.toggleBold())" [class.on]="isActive('bold')" [title]="tip(t().editor.tb.bold, 'bold')"><app-icon name="text-b" size="sm"></app-icon></button> 
-                 <button (click)="cmd(c => c.toggleItalic())" [class.on]="isActive('italic')" [title]="tip(t().editor.tb.italic, 'italic')"><app-icon name="text-italic" size="sm"></app-icon></button> 
-                 <button (click)="cmd(c => c.toggleUnderline())" [class.on]="isActive('underline')" [title]="tip(t().editor.tb.underline, 'underline')"><app-icon name="text-underline" size="sm"></app-icon></button> 
-                 <button (click)="cmd(c => c.toggleStrike())" [class.on]="isActive('strike')" [title]="tip(t().editor.tb.strike, 'strike')"><app-icon name="text-strikethrough" size="sm"></app-icon></button> 
-                 <button (click)="cmd(c => c.toggleMark('spoiler'))" [class.on]="isActive('spoiler')" [title]="t().editor.tb.spoiler"><app-icon name="eye-slash" size="sm"></app-icon></button> 
+                 <button (click)="cmd(c => c.toggleBold())" [class.on]="isActive('bold')" [title]="tip(t().editor.tb.bold, 'bold')"><app-icon name="text-b" size="xs"></app-icon></button> 
+                 <button (click)="cmd(c => c.toggleItalic())" [class.on]="isActive('italic')" [title]="tip(t().editor.tb.italic, 'italic')"><app-icon name="text-italic" size="xs"></app-icon></button> 
+                 <button (click)="cmd(c => c.toggleUnderline())" [class.on]="isActive('underline')" [title]="tip(t().editor.tb.underline, 'underline')"><app-icon name="text-underline" size="xs"></app-icon></button> 
+                 <button (click)="cmd(c => c.toggleStrike())" [class.on]="isActive('strike')" [title]="tip(t().editor.tb.strike, 'strike')"><app-icon name="text-strikethrough" size="xs"></app-icon></button> 
+                 <button (click)="cmd(c => c.toggleMark('spoiler'))" [class.on]="isActive('spoiler')" [title]="t().editor.tb.spoiler"><app-icon name="eye-slash" size="xs"></app-icon></button> 
                 
                 <span class="sep"></span>
-                <button (click)="setAlign('left')" [class.on]="isActive('paragraph', {textAlign:'left'}) || isActive('heading', {textAlign:'left'})" [title]="t().editor.tb.alignLeft" [attr.aria-label]="t().editor.tb.alignLeft"><app-icon name="text-align-left" size="sm"></app-icon></button>
-                <button (click)="setAlign('center')" [class.on]="isActive('paragraph', {textAlign:'center'}) || isActive('heading', {textAlign:'center'})" [title]="t().editor.tb.alignCenter" [attr.aria-label]="t().editor.tb.alignCenter"><app-icon name="text-align-center" size="sm"></app-icon></button>
-                <button (click)="setAlign('right')" [class.on]="isActive('paragraph', {textAlign:'right'}) || isActive('heading', {textAlign:'right'})" [title]="t().editor.tb.alignRight" [attr.aria-label]="t().editor.tb.alignRight"><app-icon name="text-align-right" size="sm"></app-icon></button>
-                <button (click)="setAlign('justify')" [class.on]="isActive('paragraph', {textAlign:'justify'}) || isActive('heading', {textAlign:'justify'})" [title]="t().editor.tb.alignJustify" [attr.aria-label]="t().editor.tb.alignJustify"><app-icon name="text-align-justify" size="sm"></app-icon></button>
+                <button (click)="setAlign('left')" [class.on]="isActive('paragraph', {textAlign:'left'}) || isActive('heading', {textAlign:'left'})" [title]="t().editor.tb.alignLeft" [attr.aria-label]="t().editor.tb.alignLeft"><app-icon name="text-align-left" size="xs"></app-icon></button>
+                <button (click)="setAlign('center')" [class.on]="isActive('paragraph', {textAlign:'center'}) || isActive('heading', {textAlign:'center'})" [title]="t().editor.tb.alignCenter" [attr.aria-label]="t().editor.tb.alignCenter"><app-icon name="text-align-center" size="xs"></app-icon></button>
+                <button (click)="setAlign('right')" [class.on]="isActive('paragraph', {textAlign:'right'}) || isActive('heading', {textAlign:'right'})" [title]="t().editor.tb.alignRight" [attr.aria-label]="t().editor.tb.alignRight"><app-icon name="text-align-right" size="xs"></app-icon></button>
+                <button (click)="setAlign('justify')" [class.on]="isActive('paragraph', {textAlign:'justify'}) || isActive('heading', {textAlign:'justify'})" [title]="t().editor.tb.alignJustify" [attr.aria-label]="t().editor.tb.alignJustify"><app-icon name="text-align-justify" size="xs"></app-icon></button>
                 
             </div>
             <span class="tb-caption">{{ t().editor.groups.text }}</span>
@@ -677,21 +677,21 @@
             <div class="tb-row">
                 
                 <button (click)="openInsertModal()" [class.on]="isActive('link')" [title]="t().editor.tb.insert" [attr.aria-label]="t().editor.tb.insert">
-                    <app-icon name="link" size="sm"></app-icon>
+                    <app-icon name="link" size="xs"></app-icon>
                 </button>
                 
 
                 
-                <button (click)="emojiOpen.set(true)" [title]="t().editor.tb.emoji" [attr.aria-label]="t().editor.tb.emoji"><app-icon name="smiley" size="sm"></app-icon></button>
+                <button (click)="emojiOpen.set(true)" [title]="t().editor.tb.emoji" [attr.aria-label]="t().editor.tb.emoji"><app-icon name="smiley" size="xs"></app-icon></button>
                 
 
                 
-                <button (click)="datetimeOpen.set(true)" [title]="t().editor.tb.datetime" [attr.aria-label]="t().editor.tb.datetime"><app-icon name="clock" size="sm"></app-icon></button>
+                <button (click)="datetimeOpen.set(true)" [title]="t().editor.tb.datetime" [attr.aria-label]="t().editor.tb.datetime"><app-icon name="clock" size="xs"></app-icon></button>
                 
 
                 
                 <app-popover>
-                    <button trigger [title]="t().editor.tb.footnote" [attr.aria-label]="t().editor.tb.footnote"><app-icon name="text-superscript" size="sm"></app-icon></button>
+                    <button trigger [title]="t().editor.tb.footnote" [attr.aria-label]="t().editor.tb.footnote"><app-icon name="text-superscript" size="xs"></app-icon></button>
                     <div panel class="link-popover">
                         <textarea class="chat-input" rows="3" [placeholder]="t().editor.groups.footnotePlaceholder" [(ngModel)]="footnoteText"></textarea>
                         <button class="export-btn full" style="margin-top:8px" (click)="insertFootnote()" [disabled]="!footnoteText.trim()">{{ t().editor.groups.insert }}</button>
@@ -706,11 +706,11 @@
     <ng-template #tplLists>
         <div class="tb-group" data-tb-group="lists">
             <div class="tb-row">
-                 <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')" [title]="tip(t().editor.tb.bulletList, 'bulletList')"><app-icon name="list" size="sm"></app-icon></button> 
-                 <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')" [title]="tip(t().editor.tb.orderedList, 'orderedList')"><app-icon name="list-numbers" size="sm"></app-icon></button> 
-                 <button (click)="cmd(c => c.toggleTaskList())" [class.on]="isActive('taskList')" [title]="tip(t().editor.tb.taskList, 'taskList')"><app-icon name="list-checks" size="sm"></app-icon></button> 
-                 <button (click)="indent()" [title]="t().editor.tb.indent" [attr.aria-label]="t().editor.tb.indent"><app-icon name="text-indent" size="sm"></app-icon></button> 
-                 <button (click)="outdent()" [title]="t().editor.tb.outdent" [attr.aria-label]="t().editor.tb.outdent"><app-icon name="text-outdent" size="sm"></app-icon></button> 
+                 <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')" [title]="tip(t().editor.tb.bulletList, 'bulletList')"><app-icon name="list" size="xs"></app-icon></button> 
+                 <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')" [title]="tip(t().editor.tb.orderedList, 'orderedList')"><app-icon name="list-numbers" size="xs"></app-icon></button> 
+                 <button (click)="cmd(c => c.toggleTaskList())" [class.on]="isActive('taskList')" [title]="tip(t().editor.tb.taskList, 'taskList')"><app-icon name="list-checks" size="xs"></app-icon></button> 
+                 <button (click)="indent()" [title]="t().editor.tb.indent" [attr.aria-label]="t().editor.tb.indent"><app-icon name="text-indent" size="xs"></app-icon></button> 
+                 <button (click)="outdent()" [title]="t().editor.tb.outdent" [attr.aria-label]="t().editor.tb.outdent"><app-icon name="text-outdent" size="xs"></app-icon></button> 
             </div>
             <span class="tb-caption">{{ t().editor.groups.lists }}</span>
         </div>
@@ -719,8 +719,8 @@
     <ng-template #tplCode>
         <div class="tb-group" data-tb-group="code">
             <div class="tb-row">
-                 <button (click)="cmd(c => c.toggleCode())" [class.on]="isActive('code')" [title]="tip(t().editor.tb.inlineCode, 'inlineCode')"><app-icon name="code" size="sm"></app-icon></button> 
-                 <button (click)="cmd(c => c.toggleCodeBlock())" [class.on]="isActive('codeBlock')" [title]="tip(t().editor.tb.codeBlock, 'codeBlock')"><app-icon name="code-block" size="sm"></app-icon></button> 
+                 <button (click)="cmd(c => c.toggleCode())" [class.on]="isActive('code')" [title]="tip(t().editor.tb.inlineCode, 'inlineCode')"><app-icon name="code" size="xs"></app-icon></button> 
+                 <button (click)="cmd(c => c.toggleCodeBlock())" [class.on]="isActive('codeBlock')" [title]="tip(t().editor.tb.codeBlock, 'codeBlock')"><app-icon name="code-block" size="xs"></app-icon></button> 
             </div>
             <span class="tb-caption">{{ t().editor.groups.code }}</span>
         </div>
@@ -730,12 +730,12 @@
         <div class="tb-group" data-tb-group="media">
             <div class="tb-row">
                 
-                <button (click)="fileInput.click()" [title]="t().editor.tb.image" [attr.aria-label]="t().editor.tb.image"><app-icon name="image" size="sm"></app-icon></button>
+                <button (click)="fileInput.click()" [title]="t().editor.tb.image" [attr.aria-label]="t().editor.tb.image"><app-icon name="image" size="xs"></app-icon></button>
                 <input #fileInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onFileChosen($event)">
                 
 
                 
-                <button (click)="videoInput.click()" [title]="t().editor.tb.video" [attr.aria-label]="t().editor.tb.video"><app-icon name="video-camera" size="sm"></app-icon></button>
+                <button (click)="videoInput.click()" [title]="t().editor.tb.video" [attr.aria-label]="t().editor.tb.video"><app-icon name="video-camera" size="xs"></app-icon></button>
                 <input #videoInput type="file" accept="video/mp4" multiple hidden (change)="onVideoChosen($event)">
                 
 
@@ -745,22 +745,22 @@
                 
 
                 
-                <button (click)="audioInput.click()" [title]="t().editor.tb.audio" [attr.aria-label]="t().editor.tb.audio"><app-icon name="waveform" size="sm"></app-icon></button>
+                <button (click)="audioInput.click()" [title]="t().editor.tb.audio" [attr.aria-label]="t().editor.tb.audio"><app-icon name="waveform" size="xs"></app-icon></button>
                 <input #audioInput type="file" accept="audio/mpeg,audio/ogg" multiple hidden (change)="onAudioChosen($event)">
                 
 
                 
-                <button (click)="carouselInput.click()" [title]="t().editor.tb.carousel" [attr.aria-label]="t().editor.tb.carousel"><app-icon name="images" size="sm"></app-icon></button>
+                <button (click)="carouselInput.click()" [title]="t().editor.tb.carousel" [attr.aria-label]="t().editor.tb.carousel"><app-icon name="images" size="xs"></app-icon></button>
                 <input #carouselInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCarouselChosen($event)">
                 
 
                 
-                <button (click)="collageInput.click()" [title]="t().editor.tb.collage" [attr.aria-label]="t().editor.tb.collage"><app-icon name="squares-four" size="sm"></app-icon></button>
+                <button (click)="collageInput.click()" [title]="t().editor.tb.collage" [attr.aria-label]="t().editor.tb.collage"><app-icon name="squares-four" size="xs"></app-icon></button>
                 <input #collageInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCollageChosen($event)">
                 
 
                 
-                <button (click)="libraryOpen.set(true)" [title]="t().editor.tb.library" [attr.aria-label]="t().editor.tb.library"><app-icon name="archive" size="sm"></app-icon></button>
+                <button (click)="libraryOpen.set(true)" [title]="t().editor.tb.library" [attr.aria-label]="t().editor.tb.library"><app-icon name="archive" size="xs"></app-icon></button>
                 
 
                 
@@ -778,7 +778,7 @@
             <div class="tb-row">
                 
                 <app-popover>
-                    <button trigger [title]="t().editor.tb.table" [attr.aria-label]="t().editor.tb.table"><app-icon name="table" size="sm"></app-icon></button>
+                    <button trigger [title]="t().editor.tb.table" [attr.aria-label]="t().editor.tb.table"><app-icon name="table" size="xs"></app-icon></button>
                     <div panel class="block-menu">
                         @if (isActive('table')) {
                         <button (click)="cmd(c => c.addRowBefore())"><app-icon name="plus" size="xs"></app-icon> Add row above</button>
@@ -797,7 +797,7 @@
 
                 
                 <app-popover>
-                    <button trigger [title]="t().editor.tb.formula" [attr.aria-label]="t().editor.tb.formula"><app-icon name="sigma" size="sm"></app-icon></button>
+                    <button trigger [title]="t().editor.tb.formula" [attr.aria-label]="t().editor.tb.formula"><app-icon name="sigma" size="xs"></app-icon></button>
                     <div panel class="block-menu">
                         <button (click)="insertInlineMath()"><app-icon name="sigma" size="xs"></app-icon> Inline formula</button>
                         <button (click)="insertBlockMath()"><app-icon name="sigma" size="xs"></app-icon> Block formula</button>
@@ -805,10 +805,10 @@
                 </app-popover>
                 
 
-                 <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" [title]="tip(t().editor.tb.blockquote, 'blockquote')"><app-icon name="quotes" size="sm"></app-icon></button> 
-                 <button (click)="insertToggle()" [title]="t().editor.tb.toggleBlock" [attr.aria-label]="t().editor.tb.toggleBlock"><app-icon name="list-dashes" size="sm"></app-icon></button> 
-                 <button (click)="insertTableOfContents()" [title]="t().editor.tb.toc" [attr.aria-label]="t().editor.tb.toc"><app-icon name="list-bullets" size="sm"></app-icon></button> 
-                 <button (click)="insertDivider()" [title]="t().editor.tb.divider" [attr.aria-label]="t().editor.tb.divider"><app-icon name="rows" size="sm"></app-icon></button> 
+                 <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" [title]="tip(t().editor.tb.blockquote, 'blockquote')"><app-icon name="quotes" size="xs"></app-icon></button> 
+                 <button (click)="insertToggle()" [title]="t().editor.tb.toggleBlock" [attr.aria-label]="t().editor.tb.toggleBlock"><app-icon name="list-dashes" size="xs"></app-icon></button> 
+                 <button (click)="insertTableOfContents()" [title]="t().editor.tb.toc" [attr.aria-label]="t().editor.tb.toc"><app-icon name="list-bullets" size="xs"></app-icon></button> 
+                 <button (click)="insertDivider()" [title]="t().editor.tb.divider" [attr.aria-label]="t().editor.tb.divider"><app-icon name="rows" size="xs"></app-icon></button> 
             </div>
             <span class="tb-caption">{{ t().editor.groups.blocks }}</span>
         </div>
@@ -821,119 +821,15 @@
             <div class="tb-row">
                 
                 <button (click)="insertAnnotation()" [disabled]="!canAnnotate()" [title]="t().editor.tb.annotation" [attr.aria-label]="t().editor.tb.annotation">
-                    <app-icon name="chat-teardrop" size="sm"></app-icon>
+                    <app-icon name="chat-teardrop" size="xs"></app-icon>
                 </button>
                 
-                 <button (click)="insertPoll()" [title]="t().editor.tb.poll" [attr.aria-label]="t().editor.tb.poll"><app-icon name="check-square" size="sm"></app-icon></button> 
+                 <button (click)="insertPoll()" [title]="t().editor.tb.poll" [attr.aria-label]="t().editor.tb.poll"><app-icon name="check-square" size="xs"></app-icon></button> 
             </div>
             <span class="tb-caption">{{ t().editor.groups.feedback }}</span>
         </div>
     </ng-template>
 
-    <!--The tool strip fits itself (ADR-150). Rows and captions are read off measured widths in
-    measureToolbar(); nothing here is stored and nothing is a width breakpoint (ADR-147). The
-    pinned head and tail never wrap, so a fit only ever moves the groups between them.-->
-    <div class="strip" data-surface="chrome" #toolStrip
-         [class.no-captions]="!toolbarFit().captions"
-         [class.hidden-for-focus]="focusModeActive()">
-        <div class="tb-line">
-            <span class="tb-lead">
-                <span class="tb-group">
-                    <app-popover>
-                        <button trigger class="block-dropdown">
-                            {{ currentBlockLevel() === 0 ? t().editor.blocks.paragraph : t().editor.blocks.heading(currentBlockLevel()) }}
-                            <app-icon name="caret-down" size="xs"></app-icon>
-                        </button>
-                        <div panel class="block-menu">
-                            <button [class.on]="currentBlockLevel() === 0" (click)="setBlockType(0)">{{ t().editor.blocks.paragraph }}</button>
-                            <button [class.on]="currentBlockLevel() === 1" (click)="setBlockType(1)">{{ t().editor.blocks.heading(1) }}</button>
-                            <button [class.on]="currentBlockLevel() === 2" (click)="setBlockType(2)">{{ t().editor.blocks.heading(2) }}</button>
-                            <button [class.on]="currentBlockLevel() === 3" (click)="setBlockType(3)">{{ t().editor.blocks.heading(3) }}</button>
-                            <button [class.on]="currentBlockLevel() === 4" (click)="setBlockType(4)">{{ t().editor.blocks.heading(4) }}</button>
-                            <button [class.on]="currentBlockLevel() === 5" (click)="setBlockType(5)">{{ t().editor.blocks.heading(5) }}</button>
-                            <button [class.on]="currentBlockLevel() === 6" (click)="setBlockType(6)">{{ t().editor.blocks.heading(6) }}</button>
-                        </div>
-                    </app-popover>
-                    <span class="tb-caption">{{ t().editor.groups.block }}</span>
-                </span>
-                <button (click)="cmd(c => c.undo())" [disabled]="!canUndo()" [title]="tip(t().editor.tb.undo, 'undo')"><app-icon name="arrow-u-up-left" size="sm"></app-icon></button>
-                <button (click)="cmd(c => c.redo())" [disabled]="!canRedo()" [title]="tip(t().editor.tb.redo, 'redo')"><app-icon name="arrow-u-up-right" size="sm"></app-icon></button>
-            </span>
-
-            @for (g of row1Groups(); track g) {
-            <ng-container *ngTemplateOutlet="tplGroup; context: { $implicit: g }"></ng-container>
-            }
-
-            <span class="tb-trail">
-                <!--AI (Pro Plus) — one popover group, not two permanent chips. Pinned to the tail
-                of the first row: it is not a group the fit may move.-->
-                <span class="tb-group">
-                    <span class="tb-row">
-                        <app-popover align="right">
-                            <button trigger class="ai-chip" [title]="t().editor.tb.ai">
-                                <app-icon name="sparkle" size="xs"></app-icon>
-                                @if (aiEditBusy()) {
-                                    {{ aiEditProgress() }}% · {{ aiEditElapsed() }}s
-                                    <span class="ai-chip-progress-track"><span class="ai-chip-progress-fill" [style.width.%]="aiEditProgress()"></span></span>
-                                } @else {
-                                    AI
-                                }
-                            </button>
-                            <div panel class="block-menu">
-                                @if (aiEditBusy()) {
-                                <button (click)="cancelAiEdit()">
-                                    <app-icon name="x" size="xs"></app-icon> {{ t().common.cancel }}
-                                </button>
-                                } @else {
-                                <button (click)="askAiEdit('fix-errors')">
-                                    <app-icon name="sparkle" size="xs"></app-icon> {{ t().editor.ai.fixLabel }}
-                                </button>
-                                <button (click)="askAiEdit('schizo')">
-                                    <app-icon name="sparkle" size="xs"></app-icon> {{ t().editor.ai.schizoLabel }}
-                                </button>
-                                }
-                            </div>
-                        </app-popover>
-                    </span>
-                    <span class="tb-caption accent">AI · Pro Plus</span>
-                </span>
-
-                <!--The three controls the status bar used to carry (ADR-153). They are controls, so
-                the rule below could not take them: it is read-only by design and offers no slot.-->
-                <!--Only while autosave has given up. It retries on a widening backoff and then
-                stops, so this button is the last way to save the draft, not a convenience.-->
-                @if (saveState() === 'error') {
-                <button class="tb-retry" (click)="retrySave()"
-                        [title]="t().editor.syncFailedRetry" [attr.aria-label]="t().editor.syncFailedRetry">
-                    <app-icon name="arrow-clockwise" size="sm"></app-icon>
-                </button>
-                }
-                <!--B13: reveals spaces, tabs and paragraph ends, so it is clear where the content
-                really sits. Display only - the document is untouched.-->
-                <button [class.on]="showInvisibles()" (click)="showInvisibles.set(!showInvisibles())"
-                        [title]="t().editor.showInvisibles" [attr.aria-label]="t().editor.showInvisibles">
-                    <span class="invisibles-glyph">¶</span>
-                </button>
-                <!--I13: real browser fullscreen, not a CSS-only "hide the chrome" mode — the ask
-                was a fullscreen button, and the browser own is the one Esc already exits.-->
-                <button (click)="toggleFullscreen()"
-                        [title]="isFullscreen() ? t().editor.exitFullscreen : t().editor.enterFullscreen"
-                        [attr.aria-label]="isFullscreen() ? t().editor.exitFullscreen : t().editor.enterFullscreen">
-                    @if (isFullscreen()) { <app-icon name="arrows-in-simple" size="sm"></app-icon> }
-                    @else { <app-icon name="arrows-out-simple" size="sm"></app-icon> }
-                </button>
-            </span>
-        </div>
-
-        @if (row2Groups().length) {
-        <div class="tb-line tb-line-2">
-            @for (g of row2Groups(); track g) {
-            <ng-container *ngTemplateOutlet="tplGroup; context: { $implicit: g }"></ng-container>
-            }
-        </div>
-        }
-    </div>
-    @if (aiEditError()) { <p class="channel-error strip-error">{{ aiEditError() }}</p> }
 
     <!--One switch shared by both rows, so a group's markup exists once and the rows differ
     only in which ids the fit puts in them.-->
@@ -1038,7 +934,7 @@
 
         @if (insertType === 'auto' && insertValue.trim()) {
         <div class="insert-detected">
-            <span class="draft-lang-badge">{{ effectiveInsertType() === 'youtube' ? 'YouTube' : 'Link' }}</span>
+            <app-stamp-badge tone="ink" [rotate]="0">{{ effectiveInsertType() === 'youtube' ? 'YouTube' : 'Link' }}</app-stamp-badge>
             detected
         </div>
         }
@@ -1136,70 +1032,183 @@
             <app-document-outline [entries]="outline()" [active]="outlineActive()" (pick)="goToBlock($event)" />
         </app-shelf-panel>
 
-        <app-worktop class="wt" scroll [label]="worktopLabel()" [meta]="worktopMeta()">
-            <div class="sheet-column" [style.max-width.px]="sheetMaxWidthPx()">
-                <input class="title" [(ngModel)]="title" (ngModelChange)="markDirty()"
-                       [maxlength]="draftTitleMax" [placeholder]="t().editor.draftTitle">
+        <div class="mid">
+            <!--The tool strip fits itself (ADR-150). Rows and captions are read off measured widths in
+            measureToolbar(); nothing here is stored and nothing is a width breakpoint (ADR-147). The
+            pinned head and tail never wrap, so a fit only ever moves the groups between them.-->
+            <div class="strip" data-surface="chrome" #toolStrip
+                 [class.no-captions]="!toolbarFit().captions"
+                 [class.hidden-for-focus]="focusModeActive()">
+                <div class="tb-line">
+                    <span class="tb-lead">
+                        <span class="tb-group">
+                            <app-popover>
+                                <button trigger class="block-dropdown">
+                                    <app-icon [name]="blockChipIcon()" size="xs"></app-icon>
+                                    {{ selectionSpec() ? selectionKindLabel() : currentBlockLevel() === 0 ? t().editor.blocks.paragraph : t().editor.blocks.heading(currentBlockLevel()) }}
+                                    <app-icon name="caret-down" size="xs"></app-icon>
+                                </button>
+                                <div panel class="block-menu">
+                                    <button [class.on]="currentBlockLevel() === 0" (click)="setBlockType(0)">{{ t().editor.blocks.paragraph }}</button>
+                                    <button [class.on]="currentBlockLevel() === 1" (click)="setBlockType(1)">{{ t().editor.blocks.heading(1) }}</button>
+                                    <button [class.on]="currentBlockLevel() === 2" (click)="setBlockType(2)">{{ t().editor.blocks.heading(2) }}</button>
+                                    <button [class.on]="currentBlockLevel() === 3" (click)="setBlockType(3)">{{ t().editor.blocks.heading(3) }}</button>
+                                    <button [class.on]="currentBlockLevel() === 4" (click)="setBlockType(4)">{{ t().editor.blocks.heading(4) }}</button>
+                                    <button [class.on]="currentBlockLevel() === 5" (click)="setBlockType(5)">{{ t().editor.blocks.heading(5) }}</button>
+                                    <button [class.on]="currentBlockLevel() === 6" (click)="setBlockType(6)">{{ t().editor.blocks.heading(6) }}</button>
+                                </div>
+                            </app-popover>
+                            <span class="tb-caption">{{ t().editor.groups.block }}</span>
+                        </span>
+                        <button (click)="cmd(c => c.undo())" [disabled]="!canUndo()" [title]="tip(t().editor.tb.undo, 'undo')"><app-icon name="arrow-u-up-left" size="xs"></app-icon></button>
+                        <button (click)="cmd(c => c.redo())" [disabled]="!canRedo()" [title]="tip(t().editor.tb.redo, 'redo')"><app-icon name="arrow-u-up-right" size="xs"></app-icon></button>
+                    </span>
 
-                <!--Re-translating an existing version gets the same progress treatment as the
-                first-time auto-translate below (B14).-->
-                @if (autoTranslating() && !showEmptyState()) {
-                <div class="translate-progress">
-                    <div class="upload-bar"><div class="upload-fill" [style.width.%]="autoTranslateProgress()"></div></div>
-                    <p class="translate-status">{{ translateStatusMessage() }} — {{ autoTranslateProgress() }}% · {{ autoTranslateElapsed() }}s</p>
-                    <button class="btn-ghost" (click)="cancelAutoTranslate()">{{ t().common.cancel }}</button>
+                    @for (g of row1Groups(); track g) {
+                    <ng-container *ngTemplateOutlet="tplGroup; context: { $implicit: g }"></ng-container>
+                    }
+
+                    <span class="tb-trail">
+                        <!--AI (Pro Plus) — one popover group, not two permanent chips. Pinned to the tail
+                        of the first row: it is not a group the fit may move.-->
+                        <span class="tb-group">
+                            <span class="tb-row">
+                                <app-popover align="right">
+                                    <button trigger class="ai-chip" [title]="t().editor.tb.ai">
+                                        <app-icon name="sparkle" size="xs"></app-icon>
+                                        @if (aiEditBusy()) {
+                                            {{ aiEditProgress() }}% · {{ aiEditElapsed() }}s
+                                            <span class="ai-chip-progress-track"><span class="ai-chip-progress-fill" [style.width.%]="aiEditProgress()"></span></span>
+                                        } @else {
+                                            AI
+                                        }
+                                    </button>
+                                    <div panel class="block-menu">
+                                        @if (aiEditBusy()) {
+                                        <button (click)="cancelAiEdit()">
+                                            <app-icon name="x" size="xs"></app-icon> {{ t().common.cancel }}
+                                        </button>
+                                        } @else {
+                                        <button (click)="askAiEdit('fix-errors')">
+                                            <app-icon name="sparkle" size="xs"></app-icon> {{ t().editor.ai.fixLabel }}
+                                        </button>
+                                        <button (click)="askAiEdit('schizo')">
+                                            <app-icon name="sparkle" size="xs"></app-icon> {{ t().editor.ai.schizoLabel }}
+                                        </button>
+                                        }
+                                    </div>
+                                </app-popover>
+                            </span>
+                            <span class="tb-caption accent">AI · Pro Plus</span>
+                        </span>
+
+                        <!--The three controls the status bar used to carry (ADR-153). They are controls, so
+                        the rule below could not take them: it is read-only by design and offers no slot.-->
+                        <!--Only while autosave has given up. It retries on a widening backoff and then
+                        stops, so this button is the last way to save the draft, not a convenience.-->
+                        @if (saveState() === 'error') {
+                        <button class="tb-retry" (click)="retrySave()"
+                                [title]="t().editor.syncFailedRetry" [attr.aria-label]="t().editor.syncFailedRetry">
+                            <app-icon name="arrow-clockwise" size="xs"></app-icon>
+                        </button>
+                        }
+                        <!--B13: reveals spaces, tabs and paragraph ends, so it is clear where the content
+                        really sits. Display only - the document is untouched.-->
+                        <button [class.on]="showInvisibles()" (click)="showInvisibles.set(!showInvisibles())"
+                                [title]="t().editor.showInvisibles" [attr.aria-label]="t().editor.showInvisibles">
+                            <span class="invisibles-glyph">¶</span>
+                        </button>
+                        <!--I13: real browser fullscreen, not a CSS-only "hide the chrome" mode — the ask
+                        was a fullscreen button, and the browser own is the one Esc already exits.-->
+                        <button (click)="toggleFullscreen()"
+                                [title]="isFullscreen() ? t().editor.exitFullscreen : t().editor.enterFullscreen"
+                                [attr.aria-label]="isFullscreen() ? t().editor.exitFullscreen : t().editor.enterFullscreen">
+                            @if (isFullscreen()) { <app-icon name="arrows-in-simple" size="xs"></app-icon> }
+                            @else { <app-icon name="arrows-out-simple" size="xs"></app-icon> }
+                        </button>
+                    </span>
+                </div>
+
+                @if (row2Groups().length) {
+                <div class="tb-line tb-line-2">
+                    @for (g of row2Groups(); track g) {
+                    <ng-container *ngTemplateOutlet="tplGroup; context: { $implicit: g }"></ng-container>
+                    }
                 </div>
                 }
-                @if (autoTranslateError() && !showEmptyState()) {
-                <p class="channel-error">{{ autoTranslateError() }}</p>
-                }
-                @if (showEmptyState()) {
-                <div class="sheet en-empty">
-                    <p class="en-empty-title">{{ t().editor.lang.noVersionYet(lang().toUpperCase()) }}</p>
-                    <div class="en-empty-actions">
-                        <button class="export-btn" (click)="autoTranslate()" [disabled]="autoTranslating()">
-                            {{ autoTranslating() ? 'Translating…' : '✦ Auto-translate' }}
-                        </button>
-                        <button class="export-btn" (click)="startVersion(true)" [disabled]="autoTranslating()">{{ t().editor.lang.copyFromPrimary }}</button>
-                        <button class="export-btn" (click)="startVersion(false)" [disabled]="autoTranslating()">{{ t().editor.lang.startEmpty }}</button>
-                    </div>
-                    @if (autoTranslating()) {
+            </div>
+            @if (aiEditError()) { <p class="channel-error strip-error">{{ aiEditError() }}</p> }
+
+            <app-worktop class="wt" scroll [label]="worktopLabel()" [meta]="worktopMeta()">
+                <div class="sheet-column" [style.max-width.px]="sheetMaxWidthPx()">
+                    <!--Re-translating an existing version gets the same progress treatment as the
+                    first-time auto-translate below (B14).-->
+                    @if (autoTranslating() && !showEmptyState()) {
                     <div class="translate-progress">
                         <div class="upload-bar"><div class="upload-fill" [style.width.%]="autoTranslateProgress()"></div></div>
                         <p class="translate-status">{{ translateStatusMessage() }} — {{ autoTranslateProgress() }}% · {{ autoTranslateElapsed() }}s</p>
                         <button class="btn-ghost" (click)="cancelAutoTranslate()">{{ t().common.cancel }}</button>
                     </div>
                     }
-                    @if (autoTranslateError()) { <p class="channel-error">{{ autoTranslateError() }}</p> }
-                </div>
-                }
-
-                <div class="sheet-wrap" [style.display]="showEmptyState() ? 'none' : ''">
-                    <!--Right-click over a selection offers to turn it into a glossary term (Marty,
-                    01.08.2026). Only over a selection: with nothing selected the browser own menu is
-                    the more useful one, and taking it away to show a single disabled item would be a
-                    worse trade. The form inside is the shared app-glossary-term-form, so it is the
-                    same one /glossary shows, not a copy of it.-->
-                    <div class="sheet" data-surface="paper" [class.show-invisibles]="showInvisibles()" #editorHost
-                        (contextmenu)="onSheetContextMenu($event)"
-                        [class.flush]="appearance.prefs().sheetFlush"
-                        [class.show-para-numbers]="appearance.prefs().showParagraphNumbers"
-                        [class.show-line-rules]="appearance.prefs().showLineRules"
-                        [style.--sheet-typeface]="sheetTypefaceStack()"
-                        [style.--sheet-font-size.px]="appearance.prefs().fontSize"
-                        [style.--sheet-line-height]="appearance.prefs().lineHeight"></div>
-                    @if (lang() === 'ru' && ruDiffMarkers().length) {
-                    <div class="ru-diff-gutter" [title]="t().editor.lang.diffTitle(lang().toUpperCase())">
-                        @for (m of ruDiffMarkers(); track $index) {
-                        <div class="diff-marker" [class]="m.kind" [style.top.px]="m.top" [style.height.px]="m.height"></div>
+                    @if (autoTranslateError() && !showEmptyState()) {
+                    <p class="channel-error">{{ autoTranslateError() }}</p>
+                    }
+                    @if (showEmptyState()) {
+                    <div class="sheet en-empty">
+                        <p class="en-empty-title">{{ t().editor.lang.noVersionYet(lang().toUpperCase()) }}</p>
+                        <div class="en-empty-actions">
+                            <button class="export-btn" (click)="autoTranslate()" [disabled]="autoTranslating()">
+                                {{ autoTranslating() ? 'Translating…' : '✦ Auto-translate' }}
+                            </button>
+                            <button class="export-btn" (click)="startVersion(true)" [disabled]="autoTranslating()">{{ t().editor.lang.copyFromPrimary }}</button>
+                            <button class="export-btn" (click)="startVersion(false)" [disabled]="autoTranslating()">{{ t().editor.lang.startEmpty }}</button>
+                        </div>
+                        @if (autoTranslating()) {
+                        <div class="translate-progress">
+                            <div class="upload-bar"><div class="upload-fill" [style.width.%]="autoTranslateProgress()"></div></div>
+                            <p class="translate-status">{{ translateStatusMessage() }} — {{ autoTranslateProgress() }}% · {{ autoTranslateElapsed() }}s</p>
+                            <button class="btn-ghost" (click)="cancelAutoTranslate()">{{ t().common.cancel }}</button>
+                        </div>
                         }
+                        @if (autoTranslateError()) { <p class="channel-error">{{ autoTranslateError() }}</p> }
                     </div>
                     }
+
+                    <div class="sheet-wrap" [style.display]="showEmptyState() ? 'none' : ''">
+                        <!--Right-click over a selection offers to turn it into a glossary term (Marty,
+                        01.08.2026). Only over a selection: with nothing selected the browser own menu is
+                        the more useful one, and taking it away to show a single disabled item would be a
+                        worse trade. The form inside is the shared app-glossary-term-form, so it is the
+                        same one /glossary shows, not a copy of it.-->
+                        <div class="sheet" data-surface="paper" [class.show-invisibles]="showInvisibles()" #editorHost
+                            (contextmenu)="onSheetContextMenu($event)"
+                            [class.flush]="appearance.prefs().sheetFlush"
+                            [class.show-para-numbers]="appearance.prefs().showParagraphNumbers"
+                            [class.show-line-rules]="appearance.prefs().showLineRules"
+                            [style.--sheet-typeface]="sheetTypefaceStack()"
+                            [style.--sheet-font-size.px]="appearance.prefs().fontSize"
+                            [style.--sheet-line-height]="appearance.prefs().lineHeight">
+                            <!--The sheet's first line (ADR-159 clause 4). TipTap appends its own root
+                            after whatever the host already holds, so the title stays above the body.-->
+                            <input class="title" [(ngModel)]="title" (ngModelChange)="markDirty()"
+                                   [maxlength]="draftTitleMax" [placeholder]="t().editor.draftTitle">
+                        </div>
+                        @if (lang() === 'ru' && ruDiffMarkers().length) {
+                        <div class="ru-diff-gutter" [title]="t().editor.lang.diffTitle(lang().toUpperCase())">
+                            @for (m of ruDiffMarkers(); track $index) {
+                            <div class="diff-marker" [class]="m.kind" [style.top.px]="m.top" [style.height.px]="m.height"></div>
+                            }
+                        </div>
+                        }
+                    </div>
                 </div>
-            </div>
-        </app-worktop>
+            </app-worktop>
+        </div>
 
         <app-shelf-panel class="inspector" [title]="t().editor.inspector.title" [count]="inspectorScopeWord()">
+            <!--The sheet's surface is restated on an element of this template: the shelf's own paper
+            sheet carries another component's scope attribute, which the inspector's rules cannot see.-->
+            <div class="insp-sheet" data-surface="paper">
             @if (inspectorScope() === 'selection') {
                 @if (selectionSpec(); as sel) {
                 <p class="insp-group is-selection">{{ selectionKindLabel() }}</p>
@@ -1209,6 +1218,53 @@
                 }
                 }
             } @else {
+                <p class="insp-group">{{ t().editor.inspector.document }}</p>
+                @if (breadcrumbs().length) {
+                <!--ADR-128 — where this document sits in the tree; a crumb opens that document.-->
+                <app-spec-row scope="document" [label]="t().editor.inspector.location">
+                    <span class="doc-crumbs">
+                        @for (crumb of breadcrumbs(); track crumb.id) {
+                        <button class="doc-crumb" (click)="openDraft(crumb.id)" [title]="crumb.title">{{ crumb.title }}</button>
+                        <span class="doc-crumb-sep">/</span>
+                        }
+                    </span>
+                </app-spec-row>
+                }
+                <!--FI3.2/FI3.3: the tag cloud and the folder menu are shared components, so this
+                panel, the new-draft dialog, /drafts and the posts manager all offer the same
+                control instead of four variations on it.-->
+                <app-spec-row scope="document" [label]="t().editor.inspector.folder">
+                    <app-folder-picker [folderId]="currentFolderId()" [compact]="true"
+                                       (picked)="assignFolder($event)"></app-folder-picker>
+                </app-spec-row>
+                <app-spec-row scope="document" [label]="t().editor.inspector.series">
+                    <app-series-picker [seriesId]="currentSeriesId()" [compact]="true"
+                                       (picked)="assignSeries($event)"></app-series-picker>
+                </app-spec-row>
+                <app-spec-row scope="document" [label]="t().editor.inspector.tags">
+                    <app-tag-picker [tags]="tagList()" (tagsChange)="setTags($event)"></app-tag-picker>
+                </app-spec-row>
+                @if (currentBlog(); as blog) {
+                <app-spec-row scope="document" [label]="t().editor.inspector.slug" [value]="blog.slug" field></app-spec-row>
+                }
+                @if (backlinks().length) {
+                <!--Its own row on the sheet rather than a control projected into a spec row: the
+                row declares itself chrome, and a popover full of document titles is reading matter
+                on paper.-->
+                <div class="insp-actions">
+                    <app-popover>
+                        <button trigger class="insp-btn" [title]="t().editor.wikilink.backlinksTitle(backlinks().length)">
+                            {{ t().editor.wikilink.backlinks(backlinks().length) }}
+                        </button>
+                        <div panel class="backlinks-menu">
+                            @for (b of backlinks(); track b.id) {
+                            <button class="backlinks-item" (click)="openDraft(b.id)">{{ b.title || t().drafts.untitled }}</button>
+                            }
+                        </div>
+                    </app-popover>
+                </div>
+                }
+
                 <p class="insp-group">{{ t().editor.inspector.languages }}</p>
                 <!--NF2: one leaf per language that exists, plus a picker for the rest. The leaf is
                 the switcher, exactly as the tab row was.-->
@@ -1272,50 +1328,6 @@
                             [title]="t().editor.versions.historyTitle(lang().toUpperCase())">◷ {{ t().editor.inspector.history }}</button>
                 </div>
 
-                <p class="insp-group">{{ t().editor.inspector.document }}</p>
-                @if (breadcrumbs().length) {
-                <!--ADR-128 — where this document sits in the tree; a crumb opens that document.-->
-                <app-spec-row scope="document" [label]="t().editor.inspector.location">
-                    <span class="doc-crumbs">
-                        @for (crumb of breadcrumbs(); track crumb.id) {
-                        <button class="doc-crumb" (click)="openDraft(crumb.id)" [title]="crumb.title">{{ crumb.title }}</button>
-                        <span class="doc-crumb-sep">/</span>
-                        }
-                    </span>
-                </app-spec-row>
-                }
-                <!--FI3.2/FI3.3: the tag cloud and the folder menu are shared components, so this
-                panel, the new-draft dialog, /drafts and the posts manager all offer the same
-                control instead of four variations on it.-->
-                <app-spec-row scope="document" [label]="t().editor.inspector.folder">
-                    <app-folder-picker [folderId]="currentFolderId()" [compact]="true"
-                                       (picked)="assignFolder($event)"></app-folder-picker>
-                </app-spec-row>
-                <app-spec-row scope="document" [label]="t().editor.inspector.series">
-                    <app-series-picker [seriesId]="currentSeriesId()" [compact]="true"
-                                       (picked)="assignSeries($event)"></app-series-picker>
-                </app-spec-row>
-                <app-spec-row scope="document" [label]="t().editor.inspector.tags">
-                    <app-tag-picker [tags]="tagList()" (tagsChange)="setTags($event)"></app-tag-picker>
-                </app-spec-row>
-                @if (backlinks().length) {
-                <!--Its own row on the sheet rather than a control projected into a spec row: the
-                row declares itself chrome, and a popover full of document titles is reading matter
-                on paper.-->
-                <div class="insp-actions">
-                    <app-popover>
-                        <button trigger class="insp-btn" [title]="t().editor.wikilink.backlinksTitle(backlinks().length)">
-                            {{ t().editor.wikilink.backlinks(backlinks().length) }}
-                        </button>
-                        <div panel class="backlinks-menu">
-                            @for (b of backlinks(); track b.id) {
-                            <button class="backlinks-item" (click)="openDraft(b.id)">{{ b.title || t().drafts.untitled }}</button>
-                            }
-                        </div>
-                    </app-popover>
-                </div>
-                }
-
                 @if (currentId()) {
                 <!--Draft state (B25): private/public, live-or-not, and where it is live.-->
                 <p class="insp-group">{{ t().editor.inspector.destination }}</p>
@@ -1336,16 +1348,33 @@
                 </app-spec-row>
                 @if (currentBlog()?.isPublished) {
                 <app-spec-row scope="document" [label]="t().editor.inspector.blog">
-                    <a class="state-link" [href]="blogUrl()" target="_blank" rel="noopener">{{ t().editor.state.blogLink }}</a>
+                    <a class="state-link" [href]="blogUrl()" target="_blank" rel="noopener" [title]="t().editor.state.blogLink">
+                        <app-stamp-badge tone="pine" [rotate]="1">{{ blogHost() }}</app-stamp-badge>
+                    </a>
                 </app-spec-row>
                 }
                 @if (telegramPostUrl(); as tg) {
                 <app-spec-row scope="document" [label]="t().editor.inspector.telegram">
-                    <a class="state-link" [href]="tg" target="_blank" rel="noopener">{{ t().editor.state.telegramLink }}</a>
+                    <a class="state-link" [href]="tg" target="_blank" rel="noopener" [title]="t().editor.state.telegramLink">
+                        <app-stamp-badge tone="pine" [rotate]="-1">@{{ telegramUsername() }}</app-stamp-badge>
+                    </a>
                 </app-spec-row>
                 }
+                <app-spec-row scope="document" label="X">
+                    @if (xAccount(); as a) { <span>{{ a.displayName }}</span> }
+                    @else { <span class="insp-off">{{ t().manager.inspector.none }}</span> }
+                </app-spec-row>
+                <app-spec-row scope="document" label="Bluesky">
+                    @if (blueskyAccount(); as a) { <span>{{ a.displayName }}</span> }
+                    @else { <span class="insp-off">{{ t().manager.inspector.none }}</span> }
+                </app-spec-row>
+                <app-spec-row scope="document" label="Discord">
+                    @if (discordAccount(); as a) { <span>{{ a.displayName }}</span> }
+                    @else { <span class="insp-off">{{ t().manager.inspector.none }}</span> }
+                </app-spec-row>
                 }
             }
+            </div>
         </app-shelf-panel>
     </div>
 

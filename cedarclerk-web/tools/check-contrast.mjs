@@ -392,7 +392,7 @@ pairs.push({ fg: '--text', bg: '--asoft', min: 4.5, note: 'body text on the acce
 // derived from, and the darkest preset is what sets --danger's value.
 pairs.push({ fg: '--danger', bg: '--asoft', min: 4.5, note: 'destructive glyph on the accent wash' });
 for (const [ink, wash] of [['--ok', '--ok-soft'], ['--warn', '--warn-soft'], ['--danger', '--danger-soft'],
-    ['--brass-lo', '--brass-soft']]) {
+    ['--brass-ink', '--brass-soft']]) {
     pairs.push({ fg: ink, bg: wash, min: 4.5, note: 'state label on its own wash' });
     pairs.push({ fg: '--text', bg: wash, min: 4.5, note: 'body text on a state wash' });
 }
@@ -436,6 +436,10 @@ for (const grid of ['--grid-worktop', '--grid-graph']) {
     pairs.push({ fg: '--text', bg: grid, under: '--surface', min: 4.5, note: 'body text on ruled paper' });
     pairs.push({ fg: '--t2', bg: grid, under: '--surface', min: 4.5, note: 'secondary text on ruled paper' });
 }
+// The chart's graph paper is painted on the shelf sheet, so the ground that is scored is the one
+// the ink actually lands on as well as the deeper cream ADR-158 names.
+pairs.push({ fg: '--text', bg: '--grid-graph', under: '--sheet', min: 4.5, note: 'body text on the chart sheet' });
+pairs.push({ fg: '--t2', bg: '--grid-graph', under: '--sheet', min: 4.5, note: 'secondary text on the chart sheet' });
 
 // The bench stocks and plaques, none of which is paper and none of which takes a paper ink. A leaf
 // is dyed card carrying its own green; a rail button and a wood plaque are chrome, so the cream
@@ -445,8 +449,20 @@ for (const grid of ['--grid-worktop', '--grid-graph']) {
 // ratio, and a failing stop is named instead of a gradient being named for it.
 pairs.push({ fg: '--leaf-ink', bg: '--leaf-bg', min: 4.5, note: 'leaf label on its lit stop' });
 pairs.push({ fg: '--leaf-ink', bg: '--leaf-bg-2', min: 4.5, note: 'leaf label on its shaded stop' });
+// A dried leaf is a filter switched off, and its label stands at the floor a disabled control
+// carries rather than at a live label's; the stock is translucent, so every paper is under it.
+for (const s of PAPER) {
+    pairs.push({ fg: '--leaf-dried-ink', bg: '--leaf-dried-bg', under: s, min: 3.0, note: 'dried leaf label' });
+    pairs.push({ fg: '--leaf-ink', bg: '--leaf-dried-bg', under: s, min: 4.5, note: 'unpicked leaf label' });
+}
 pairs.push({ fg: '--rail-ink', bg: '--rail-lo', min: 4.5, note: 'rail button label' });
 pairs.push({ fg: '--rail-ink', bg: '--rail-edge', min: 4.5, note: 'rail button label, pressed or hovered' });
+// The rail button's resting and hovered faces are tints over whichever wood is behind them — the
+// rail itself, or a shelf header's sign tile when the action sits in the header.
+for (const wood of ['--surface-rail', '--grad-sign-tile']) {
+    pairs.push({ fg: '--rail-ink', bg: '--rail-btn-face', under: wood, min: 4.5, note: 'rail button label on its resting face' });
+    pairs.push({ fg: '--rail-ink', bg: '--rail-btn-face-hover', under: wood, min: 4.5, note: 'rail button label on its hovered face' });
+}
 pairs.push({ fg: '--rail-ink', bg: '--wood-lo', min: 4.5, note: 'priority chip on the lit stop of its plaque' });
 pairs.push({ fg: '--rail-ink', bg: '--wood-edge', min: 4.5, note: 'priority chip on the shaded stop of its plaque' });
 pairs.push({ fg: '--rail-edge', bg: '--resin-hi', min: 4.5, note: 'priority-one chip on the lit stop of its resin' });
@@ -459,6 +475,9 @@ pairs.push({ fg: '--rail-edge', bg: '--resin', min: 4.5, note: 'priority-one chi
 // tokens rather than inline color-mixes for exactly this reason: a surface carrying text has to be
 // nameable here, and `under` is what it is painted on rather than a guess at the page ground.
 pairs.push({ fg: '--rail-ink', bg: '--grad-sign-tile', min: 4.5, note: 'caption carved into a sign tile' });
+pairs.push({ fg: '--rail-ink-dim', bg: '--grad-sign-tile', min: 4.5, note: 'resting index tab' });
+// The account plaque and the rule both write the rail's darkest wood on the brass ramp.
+pairs.push({ fg: '--rail-edge', bg: '--grad-brass', min: 4.5, note: 'initial on the brass avatar plaque' });
 pairs.push({ fg: '--rail-ink', bg: '--surface-rail', min: 4.5, note: 'brand and crumb on the rail' });
 pairs.push({ fg: '--rail-ink', bg: '--hook-face', under: '--pegboard', min: 4.5, note: 'tool caption on its hook' });
 // The bar that marks the current tool. It is a shape and not a label, so it owes 3:1 as a
@@ -505,9 +524,11 @@ pairs.push({ fg: '--danger-soft', bg: '--surface-rail', min: 3.0, note: 'a stamp
 // two rules cross: at an intersection the ink is laid twice, which is the darkest the ground gets
 // and the only stop worth scoring a line against. Every line in the categorical palette is
 // measured there, not just the ones the reference screen happens to plot.
-pairs.push({ fg: '--brass-lo', bg: '--grid-graph', under: '--surface', min: 4.5, note: 'event label pencilled on the axis' });
-for (let i = 1; i <= 6; i++) {
-    pairs.push({ fg: `--series-${i}`, bg: '--grid-graph', under: '--surface', min: 3.0, note: 'chart series on ruled paper' });
+for (const ground of ['--surface', '--sheet']) {
+    pairs.push({ fg: '--brass-ink', bg: '--grid-graph', under: ground, min: 4.5, note: 'event label pencilled on the axis' });
+    for (let i = 1; i <= 6; i++) {
+        pairs.push({ fg: `--series-${i}`, bg: '--grid-graph', under: ground, min: 3.0, note: 'chart series on ruled paper' });
+    }
 }
 
 // The two bars the ported screens draw — an audience row on the stats shelf and a sprint's

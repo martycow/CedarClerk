@@ -97,8 +97,8 @@ import { IconComponent } from './icon.component';
         :host([data-surface="paper"]) .ol-row app-icon { color: var(--t3); }
         :host([data-surface="paper"]) .ol-row.is-current app-icon { color: var(--accent); }
 
-        :host([data-surface="paper"]) .ol-row.is-indent-1 { padding-left: var(--space-5); }
-        :host([data-surface="paper"]) .ol-row.is-indent-2 { padding-left: var(--space-7); }
+        :host([data-surface="paper"]) .ol-row.is-indent-1 { padding-left: var(--space-4); }
+        :host([data-surface="paper"]) .ol-row.is-indent-2 { padding-left: var(--space-6); }
 
         :host([data-surface="paper"]) .ol-label {
             flex: 1;

@@ -5,6 +5,7 @@ import { AssetsService } from '../core/assets.service';
 import { GlossaryService, GlossaryTermInput } from '../core/glossary.service';
 import { CONTENT_LANGUAGES, DEFAULT_PRIMARY_LANGUAGE } from '../core/languages';
 import { IconComponent } from './icon.component';
+import { ButtonComponent } from '../bench/forms/button.component';
 
 /**
  * The glossary term form, in one place (Marty, 01.08.2026: "the menu must be exactly the one in
@@ -16,7 +17,7 @@ import { IconComponent } from './icon.component';
  */
 @Component({
     selector: 'app-glossary-term-form',
-    imports: [FormsModule, IconComponent],
+    imports: [FormsModule, IconComponent, ButtonComponent],
     template: `
         <div class="form-row-2">
             <label class="form-field">
@@ -48,11 +49,11 @@ import { IconComponent } from './icon.component';
         <!--T-040 — proposes the Russian forms of the term. They land in the field above, where the
         author reads them and deletes what is wrong: a suffix rule may suggest, never decide.-->
         @if (canSuggest()) {
-        <button type="button" class="btn-ghost" (click)="suggestForms()" [disabled]="suggesting()">
+        <app-button class="suggest" variant="paper" size="sm" (clicked)="suggestForms()" [disabled]="suggesting()">
             @if (suggesting()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
             @else { <app-icon name="sparkle" size="sm"></app-icon> }
             {{ t().glossary.suggestForms }}
-        </button>
+        </app-button>
         @if (suggestedNothing()) { <p class="field-hint-inline">{{ t().glossary.suggestNothing }}</p> }
         }
 
@@ -70,13 +71,12 @@ import { IconComponent } from './icon.component';
             @if (imageUrl(); as url) {
             <div class="term-image-row">
                 <img [src]="url" alt="">
-                <button class="mini-remove" (click)="imageUrl.set(null)" [title]="t().common.delete"
-                        [attr.aria-label]="t().common.delete">
-                    <app-icon name="x" size="sm"></app-icon>
-                </button>
+                <app-button variant="paper" size="sm" [title]="t().common.delete" (clicked)="imageUrl.set(null)">
+                    <app-icon name="x" size="sm" [label]="t().common.delete"></app-icon>
+                </app-button>
             </div>
             }
-            <label class="btn-ghost image-pick">
+            <label class="image-pick">
                 @if (uploading()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
                 @else { <app-icon name="image" size="sm"></app-icon> }
                 {{ imageUrl() ? t().glossary.replaceImage : t().glossary.addImage }}

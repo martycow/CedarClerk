@@ -12,9 +12,9 @@
                    (keydown.enter)="commitRename()" (keydown.escape)="cancelRename()" (blur)="commitRename()"
                    maxlength="30">
             } @else {
-            <button class="tag-pill" [class.on]="has(u.tag)" (click)="toggle(u.tag)">
-                #{{ u.tag }} <span class="tag-pill-count">{{ u.count }}</span>
-            </button>
+            <app-leaf-tag interactive [state]="has(u.tag) ? 'active' : 'idle'" (activated)="toggle(u.tag)">
+                #{{ u.tag }}<span class="leaf-note">{{ u.count }}</span>
+            </app-leaf-tag>
             <span class="tag-manage-spacer"></span>
             <button class="tag-manage-btn" (click)="startRename(u.tag, $event)" [title]="t().editor.tags.rename" [attr.aria-label]="t().editor.tags.rename" [disabled]="busy()">
                 <app-icon name="pencil-simple" size="xs"></app-icon>
@@ -34,9 +34,9 @@
         <span class="tb-caption">{{ t().editor.tags.mostUsed }}</span>
         <div class="tag-cloud">
             @for (u of mostUsed(); track u.tag) {
-            <button class="tag-pill" [class.on]="has(u.tag)" (click)="toggle(u.tag)">
-                #{{ u.tag }} <span class="tag-pill-count">{{ u.count }}</span>
-            </button>
+            <app-leaf-tag interactive [state]="has(u.tag) ? 'active' : 'idle'" (activated)="toggle(u.tag)">
+                #{{ u.tag }}<span class="leaf-note">{{ u.count }}</span>
+            </app-leaf-tag>
             }
         </div>
     </div>
@@ -46,7 +46,7 @@
         <span class="tb-caption">{{ t().editor.tags.everythingElse }}</span>
         <div class="tag-cloud">
             @for (u of rest(); track u.tag) {
-            <button class="tag-pill" [class.on]="has(u.tag)" (click)="toggle(u.tag)">#{{ u.tag }}</button>
+            <app-leaf-tag interactive [state]="has(u.tag) ? 'active' : 'idle'" (activated)="toggle(u.tag)">#{{ u.tag }}</app-leaf-tag>
             }
         </div>
     </div>
@@ -56,26 +56,31 @@
            [placeholder]="t().editor.tags.newPlaceholder" maxlength="30">
 </ng-template>
 
+<!--A draft's tags are pinned leaves; the pin is what says they are fastened to this draft. Loop
+variable is `tag`, not `t` — `t` is the dictionary accessor here.-->
+<ng-template #leaves>
+    @for (tag of tags(); track tag) {
+    <app-leaf-tag removable [removeLabel]="t().editor.tags.remove" (removed)="remove(tag)">
+        <app-brass-pin pin />#{{ tag }}
+    </app-leaf-tag>
+    }
+</ng-template>
+
 <!--Inline for hosts that can't carry a popover — see the note in folder-picker.component.html.-->
 @if (inline()) {
 <div class="tag-cloud-popover inline">
     @if (tags().length) {
     <div class="tag-row">
-        @for (tag of tags(); track tag) {
-        <span class="tag-chip">#{{ tag }}<button class="tag-x" (click)="remove(tag)" [title]="t().editor.tags.remove">×</button></span>
-        }
+        <ng-container [ngTemplateOutlet]="leaves"></ng-container>
     </div>
     }
     <ng-container [ngTemplateOutlet]="cloud"></ng-container>
 </div>
 } @else {
 <div class="tag-row">
-    <!--Loop variable is `tag`, not `t` — `t` is the dictionary accessor here.-->
-    @for (tag of tags(); track tag) {
-    <span class="tag-chip">#{{ tag }}<button class="tag-x" (click)="remove(tag)" [title]="t().editor.tags.remove">×</button></span>
-    }
+    <ng-container [ngTemplateOutlet]="leaves"></ng-container>
     <app-popover>
-        <button trigger class="tag-add-btn" (click)="load()">+ {{ t().editor.tags.label }}</button>
+        <app-button trigger variant="paper" size="sm" (clicked)="load()">+ {{ t().editor.tags.label }}</app-button>
         <div panel class="tag-cloud-popover">
             <ng-container [ngTemplateOutlet]="cloud"></ng-container>
         </div>
@@ -90,7 +95,7 @@ stray click - and unlike a folder there is nothing left behind to restore it fro
     <app-icon modal-icon name="trash" size="sm"></app-icon>
     <span modal-title>{{ t().editor.tags.deleteTitle(tag) }}</span>
     <p>{{ t().editor.tags.deleteBody }}</p>
-    <button modal-actions class="btn-ghost" (click)="confirmDeleteTag.set(null)">{{ t().common.cancel }}</button>
-    <button modal-actions class="btn-accent" (click)="confirmDelete()">{{ t().common.delete }}</button>
+    <app-button modal-actions variant="paper" (clicked)="confirmDeleteTag.set(null)">{{ t().common.cancel }}</app-button>
+    <app-button modal-actions variant="danger" (clicked)="confirmDelete()">{{ t().common.delete }}</app-button>
 </app-modal>
 }

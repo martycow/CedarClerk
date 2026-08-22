@@ -8,13 +8,14 @@ import { httpErrorMessage } from '../core/http-error.util';
 import { PopoverComponent } from './popover.component';
 import { ModalComponent } from './modal.component';
 import { IconComponent } from './icon.component';
+import { ButtonComponent } from '../bench/forms/button.component';
 
 // ADR-125 — the folder-picker pattern applied to series: the picker reports the choice (`picked`),
 // persisting stays with the host; series management goes through SeriesService so every picker
 // sees a new series immediately.
 @Component({
     selector: 'app-series-picker',
-    imports: [IconComponent, FormsModule, NgTemplateOutlet, PopoverComponent, ModalComponent],
+    imports: [IconComponent, FormsModule, NgTemplateOutlet, PopoverComponent, ModalComponent, ButtonComponent],
     templateUrl: './series-picker.component.html',
     styleUrl: './series-picker.component.css',
 })

@@ -7,13 +7,17 @@
     align-items: center;
     gap: 6px;
     max-width: 100%;
-    border: 1px solid var(--border);
-    background: var(--surface);
+    box-sizing: border-box;
+    min-height: var(--hit-target);
+    border: 1px solid rgba(110, 86, 50, .4);
+    background: var(--sheet);
     color: var(--t2);
-    border-radius: var(--radius-md);
-    padding: 5px 10px;
-    font-family: inherit;
+    border-radius: var(--radius-plaque);
+    box-shadow: var(--shadow-paper-sm);
+    padding: var(--space-1) var(--space-3);
+    font-family: var(--font-sans);
     font-size: var(--fs-ui);
+    font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
     overflow: hidden;
@@ -22,13 +26,28 @@
 
 .series-trigger:hover {
     color: var(--text);
-    border-color: var(--abord);
+    background: var(--surface);
+}
+
+.series-trigger:active {
+    transform: translateY(1px);
+}
+
+/* Inside a spec row the trigger stands on chrome and takes chrome's numbers (ADR-159). */
+:host-context([data-surface="chrome"]) .series-trigger {
+    min-height: var(--hit-chrome);
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-stamp);
+    font-family: var(--font-mono);
+    font-size: var(--text-chrome-sm);
 }
 
 /* Table cells and toolbars carry their own framing — a second border there reads as a field. */
 .series-trigger.compact {
+    min-height: 0;
     border-color: transparent;
     background: none;
+    box-shadow: none;
     padding: 2px 4px;
 }
 
@@ -93,8 +112,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    min-width: var(--hit-target);
+    min-height: var(--hit-target);
     flex: none;
     border: none;
     background: none;

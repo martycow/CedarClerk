@@ -7,6 +7,7 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { LangSwitchComponent } from '../shared/lang-switch.component';
 import { ButtonComponent } from '../bench/forms/button.component';
+import { IconComponent } from '../shared/icon.component';
 import { InputComponent } from '../bench/forms/input.component';
 import { PaperCardComponent } from '../bench/display/paper-card.component';
 
@@ -14,7 +15,7 @@ import { PaperCardComponent } from '../bench/display/paper-card.component';
     selector: 'app-register',
     imports: [
         RouterLink, CedarLogoComponent, LangSwitchComponent,
-        ButtonComponent, InputComponent, PaperCardComponent,
+        ButtonComponent, InputComponent, PaperCardComponent, IconComponent,
     ],
     templateUrl: 'register.component.html',
     styleUrls: ['register.component.css']

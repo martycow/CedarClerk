@@ -107,17 +107,23 @@ describe('WorktopComponent', () => {
         expect(top().classList.contains('scrolls')).toBe(true);
     });
 
-    // check-contrast scores --text and --t2 over --grid-worktop under --surface, and nothing over
-    // rules on the wall. A ruled plaster surround would be ink on a surface no pair can name.
-    it('keeps the pencil rules on the paper they are measured over', () => {
+    // Worktop.jsx: the wall tone swaps the ground and keeps the lamp and the rules.
+    it('keeps the pencil rules on either tone, and drops them only when asked', () => {
         fixture.componentRef.setInput('tone', 'wall');
         fixture.detectChanges();
         expect(top().getAttribute('data-tone')).toBe('wall');
-        expect(top().style.getPropertyValue('--wt-grid')).toBe('');
-
-        fixture.componentRef.setInput('tone', 'paper');
-        fixture.detectChanges();
         expect(top().style.getPropertyValue('--wt-grid')).toBe('var(--grid-worktop)');
+
+        fixture.componentRef.setInput('grid', false);
+        fixture.detectChanges();
+        expect(top().style.getPropertyValue('--wt-grid')).toBe('');
+    });
+
+    it('draws the edge as a strip unless the screen asks for chips', () => {
+        expect(top().getAttribute('data-edge')).toBe('strip');
+        fixture.componentRef.setInput('edge', 'chips');
+        fixture.detectChanges();
+        expect(top().getAttribute('data-edge')).toBe('chips');
     });
 
     // "Only one Worktop per screen — a bench has one top."
@@ -176,20 +182,24 @@ describe('WorktopComponent', () => {
 
         it('sizes the strip from the surface, so the density lint can score it', () => {
             expect(css).toMatch(/\[data-surface=chrome\][^{]*\.wt-edge\s*\{[^}]*font-size:\s*var\(--text-chrome-sm\)/);
-            expect(css).toMatch(/height:\s*var\(--bench-panel-hd\)/);
+            expect(css).toMatch(/height:\s*var\(--bench-worktop-edge-h/);
         });
 
         it('spends one box-shadow, and withholds it while focused so the global halo stands', () => {
             const shadowed = [...css.matchAll(/([^{}]+)\{([^{}]*box-shadow[^{}]*)\}/g)];
             expect(shadowed.length).toBe(1);
             expect(shadowed[0][1]).toContain(':not(:focus-visible)');
-            expect(shadowed[0][2]).toMatch(/box-shadow:\s*var\(--shadow-sheet-inset\)/);
+            expect(shadowed[0][2]).toMatch(/box-shadow:\s*var\(--shadow-worktop-inset/);
         });
 
-        it('paints no literal colour, and spends pixels only on hairlines', () => {
+        it('paints no literal colour, and spends pixels only on hairlines and the chalk strip', () => {
             expect(css).not.toMatch(/#[0-9a-f]{3,8}\b/i);
             expect(css).not.toMatch(/rgba?\(/);
-            for (const [, value] of css.matchAll(/(\d+(?:\.\d+)?)px/g)) expect(value).toBe('1');
+            // A token fallback is the kit's value waiting for its token; the strip's own geometry
+            // (Worktop.jsx:21, hub.html:77-78) has no token in either system.
+            const bare = css.replace(/var\(--[\w-]+,\s*[^)]*\)/g, '');
+            const strip = new Set(['1', '2', '7', '10', '14']);
+            for (const [, value] of bare.matchAll(/(\d+(?:\.\d+)?)px/g)) expect(strip.has(value), `${value}px`).toBe(true);
         });
     });
 });

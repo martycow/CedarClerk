@@ -140,17 +140,18 @@ describe('IndexTabsComponent', () => {
         let css: string;
         beforeEach(() => { create(); css = sheetFor('.it-tile'); });
 
-        // A tile label is read, so it gets the cream at full strength: the soft cream measures
-        // 3.2:1 on an unlit tile, which the recede filter darkens further. What sets a tile back is
-        // that filter, the raise and the brass underline — never the ink.
+        // A tile label is read, so it never takes the soft cream: that measures 3.2:1 on an unlit
+        // tile, which the recede filter darkens further. A resting tile may dim to the cream that
+        // still clears 4.5:1 on the lit stop (ADR-138 item 6); the lit tile is full cream.
         it('never spends the soft cream on a label', () => {
             const inked = Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g))
                 .filter(m => /(^|[^-])color:/.test(m[2]));
             expect(inked.length).toBeGreaterThan(0);
             for (const m of inked) {
-                const value = m[2].match(/(^|[^-])color:\s*([^;}]+)/)![2].trim();
-                expect(['var(--rail-ink)', 'var(--rail-edge)'], m[1].trim()).toContain(value);
+                const value = m[2].match(/(^|[^-])color:\s*([^;}]+)/)![2].trim().replace(/^(var\(--[\w-]+),.*\)$/, '$1)');
+                expect(['var(--rail-ink)', 'var(--rail-ink-dim)', 'var(--rail-edge)'], m[1].trim()).toContain(value);
             }
+            expect(css).toMatch(/is-on[^{]*\{[^}]*color:\s*var\(--rail-ink\)/);
         });
 
         it('holds 11px type on a 30px box', () => {

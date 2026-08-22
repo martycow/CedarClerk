@@ -35,6 +35,15 @@ describe('display-time', () => {
         expect(formatInZone(instant, 'd MMM y, HH:mm')).toBe('11 Aug 2026, 14:05');
     });
 
+    it('names the month in the UI language <html lang> carries', () => {
+        document.documentElement.lang = 'ru';
+        try {
+            expect(formatInZone('2026-08-11T21:05:00Z', 'd MMM, HH:mm')).toBe('11 авг, 14:05');
+        } finally {
+            document.documentElement.lang = '';
+        }
+    });
+
     it('returns an empty string for nothing rather than "Invalid Date"', () => {
         expect(formatInZone(null)).toBe('');
         expect(formatInZone(undefined)).toBe('');

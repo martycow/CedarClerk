@@ -380,9 +380,9 @@ export class GlossaryComponent implements OnInit, OnDestroy {
         return this.previewTerm() ? 'selection' : 'document';
     }
 
+    /** The sign names the sheet; the count slot names what is on it. */
     inspectorTitle(): string {
-        const t = this.t().glossary.inspector;
-        return this.inspectorScope() === 'selection' ? t.term : t.glossary;
+        return this.t().editor.inspector.title;
     }
 
     inspectorScopeWord(): string {

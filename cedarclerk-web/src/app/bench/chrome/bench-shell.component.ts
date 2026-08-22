@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, v
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { CommentsService } from '../../core/comments.service';
+import { DebugLogService } from '../../core/debug-log.service';
 import { LocaleService } from '../../core/i18n/locale.service';
 import { ProjectsService } from '../../core/projects.service';
 import { RailActionsService } from '../../core/rail-actions.service';
@@ -16,7 +17,7 @@ import { ButtonComponent } from '../forms/button.component';
 import { ResinDropComponent } from '../display/resin-drop.component';
 import { HookRailComponent, HookRailItem } from './hook-rail.component';
 import { RailHeaderComponent } from './rail-header.component';
-import { RulerBarComponent } from './ruler-bar.component';
+import { RulerBarComponent, RulerReadout } from './ruler-bar.component';
 
 /** Which hook stands for a path (ADR-139). Longest match first — the board is a child of the hub. */
 const HOOK_PREFIXES: readonly (readonly [string, string])[] = [
@@ -43,6 +44,7 @@ function matches(path: string, pattern: string): boolean {
 @Component({
     selector: 'app-bench-shell',
     changeDetection: ChangeDetectionStrategy.OnPush,
+    host: { '[class.drawer-open]': 'log.open()' },
     imports: [
         RouterOutlet, RouterLink, IconComponent, HookRailComponent, RailHeaderComponent,
         RulerBarComponent, AccountMenuComponent, AppearancePanelComponent, DebugConsoleComponent,
@@ -50,57 +52,58 @@ function matches(path: string, pattern: string): boolean {
     ],
     template: `
         <div class="shell">
-            <app-hook-rail [items]="hooks()" [value]="activeHook()" [label]="t().shell.screens" />
-
-            <div class="column">
-                <app-rail-header [version]="versionLabel()" [project]="projectLabel()"
-                                 projectLink="/projects"
-                                 [projectHint]="t().shell.switchProject" [crumbs]="crumbs()"
-                                 [crumbsLabel]="t().shell.breadcrumb" [menuLabel]="t().shell.more">
-                    <div menu class="menu-items">
-                        <button type="button" class="menu-item theme-toggle" (click)="theme.toggle()">
-                            <span class="glyph" aria-hidden="true">{{ theme.theme() === 'dark' ? '☀' : '☾' }}</span>
-                            {{ t().common.toggleTheme }}
-                        </button>
-                        <button type="button" class="menu-item" (click)="appearance().open.set(true)">
-                            <app-icon name="palette" size="sm" />
-                            {{ t().settings.appearance.title }}
-                        </button>
-                        <a class="menu-item" routerLink="/glossary">
-                            <app-icon name="book-bookmark" size="sm" />
-                            {{ t().glossary.crumb }}
+            <app-rail-header [version]="versionLabel()" [project]="projectLabel()"
+                             projectLink="/projects"
+                             [projectHint]="t().shell.switchProject" [crumbs]="crumbs()"
+                             [crumbsLabel]="t().shell.breadcrumb" [menuLabel]="t().shell.more">
+                <div menu class="menu-items">
+                    <button type="button" class="menu-item theme-toggle" (click)="theme.toggle()">
+                        <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="sm" />
+                        {{ t().common.toggleTheme }}
+                    </button>
+                    <button type="button" class="menu-item" (click)="appearance().open.set(true)">
+                        <app-icon name="palette" size="sm" />
+                        {{ t().settings.appearance.title }}
+                    </button>
+                    <a class="menu-item" routerLink="/glossary">
+                        <app-icon name="book-bookmark" size="sm" />
+                        {{ t().glossary.crumb }}
+                    </a>
+                    @if (auth.isAdmin()) {
+                        <a class="menu-item" routerLink="/admin">
+                            <app-icon name="shield-check" size="sm" />
+                            {{ t().admin.crumb }}
                         </a>
-                        @if (auth.isAdmin()) {
-                            <a class="menu-item" routerLink="/admin">
-                                <app-icon name="shield-check" size="sm" />
-                                {{ t().admin.crumb }}
-                            </a>
-                        }
-                        <a class="menu-item" routerLink="/dev/styleguide">
-                            <app-icon name="palette" size="sm" />
-                            {{ t().shell.styleguide }}
-                        </a>
-                        <a class="menu-item" routerLink="/dev/icons">
-                            <app-icon name="squares-four" size="sm" />
-                            {{ t().shell.icons }}
-                        </a>
-                    </div>
-                    <!-- The default slot RailHeader.prompt.md reserves for save state and the
-                         screen's one primary action. Neither is the shell's: a page publishes them
-                         and the rail renders them, as data and never as a template (ADR-159). -->
-                    @if (rail.save(); as s) {
-                        <app-resin-drop [state]="s.state" [label]="s.label || ''" [title]="s.hint || ''" />
                     }
-                    @if (rail.primary(); as action) {
-                        <app-button class="rail-primary" variant="pine" size="sm" [disabled]="!!action.disabled"
-                                    [title]="action.hint || ''" (clicked)="action.run()">
-                            <app-icon [name]="action.icon" size="xs" />
-                            {{ action.label }}
-                        </app-button>
-                    }
+                    <a class="menu-item" routerLink="/dev/styleguide">
+                        <app-icon name="palette" size="sm" />
+                        {{ t().shell.styleguide }}
+                    </a>
+                    <a class="menu-item" routerLink="/dev/icons">
+                        <app-icon name="squares-four" size="sm" />
+                        {{ t().shell.icons }}
+                    </a>
+                </div>
+                <!-- The default slot RailHeader.prompt.md reserves for save state and the
+                     screen's one primary action. Neither is the shell's: a page publishes them
+                     and the rail renders them, as data and never as a template (ADR-159). -->
+                @if (rail.save(); as s) {
+                    <app-resin-drop [state]="s.state" [label]="s.label || ''" [title]="s.hint || ''" />
+                }
+                @if (rail.primary(); as action) {
+                    <app-button class="rail-primary" variant="pine" size="sm" surface="chrome"
+                                [disabled]="!!action.disabled"
+                                [title]="action.hint || ''" (clicked)="action.run()">
+                        <app-icon [name]="action.icon" size="xs" />
+                        {{ action.label }}
+                    </app-button>
+                }
 
-                    <app-account-menu account />
-                </app-rail-header>
+                <app-account-menu account />
+            </app-rail-header>
+
+            <div class="row">
+                <app-hook-rail [items]="hooks()" [value]="activeHook()" [label]="t().shell.screens" />
 
                 <!-- The ground every screen stands on. ADR-138 item 5's carve-out keys on this
                      attribute: the touch floor reaches what is under here and stops at the chrome
@@ -115,7 +118,7 @@ function matches(path: string, pattern: string): boolean {
              the rule on the screen's edge and slides the lip up off it. -->
         <div class="bench-bottom">
             <app-debug-console />
-            <app-ruler-bar [label]="ruler.label()" [left]="ruler.left()" [right]="ruler.right()" />
+            <app-ruler-bar [label]="ruler.label()" [left]="ruler.left()" [right]="rulerRight()" />
         </div>
 
         <!-- Hoisted out of the editor (ADR-151 clause 2): a trigger in shared chrome cannot open a
@@ -128,31 +131,39 @@ function matches(path: string, pattern: string): boolean {
             padding-bottom: var(--bench-bottom-h);
         }
 
+        /* The open journal is reserved, not overlaid (ADR-153 clause 6): every height below that
+           subtracts the bottom chrome follows this one property. */
+        :host.drawer-open {
+            --bench-bottom-h: calc(var(--bench-drawer-lip) + var(--bench-ruler-h) + var(--bench-drawer-open));
+        }
+
+        /* The shell owns the viewport: a page scrolls inside .body, never as a document under the
+           rail. Rail, hooks, drawer and rule paint their own wood over the plaster. */
         .shell {
             display: flex;
-            align-items: stretch;
-            min-height: calc(100vh - var(--bench-bottom-h));
-        }
-
-        /* The wall runs the full height of the viewport and stays there while the page scrolls
-           under it; the sign board does the same from its own sticky rule. */
-        app-hook-rail {
-            position: sticky;
-            top: 0;
-            align-self: flex-start;
+            flex-direction: column;
             height: calc(100vh - var(--bench-bottom-h));
+            background: var(--surface-page);
         }
 
-        .column {
+        .row {
+            display: flex;
+            flex: 1;
+            align-items: stretch;
+            min-height: 0;
+        }
+
+        app-hook-rail {
+            height: calc(100vh - var(--bench-rail-h) - var(--bench-bottom-h));
+        }
+
+        .body {
             display: flex;
             flex: 1;
             flex-direction: column;
             min-width: 0;
-        }
-
-        .body {
-            flex: 1;
-            min-width: 0;
+            min-height: 0;
+            overflow: auto;
         }
 
         .bench-bottom {
@@ -193,12 +204,6 @@ function matches(path: string, pattern: string): boolean {
         }
 
         .menu-item:hover { background: var(--hover-strong); }
-
-        .glyph {
-            display: inline-flex;
-            width: 15px;
-            justify-content: center;
-        }
     `],
 })
 export class BenchShellComponent {
@@ -211,6 +216,7 @@ export class BenchShellComponent {
     protected readonly theme = inject(ThemeService);
     protected readonly rail = inject(RailActionsService);
     protected readonly ruler = inject(RulerService);
+    protected readonly log = inject(DebugLogService);
     protected readonly t = inject(LocaleService).t;
 
     protected readonly appearance = viewChild.required(AppearancePanelComponent);
@@ -232,6 +238,14 @@ export class BenchShellComponent {
         return v ? `v${v}` : '';
     });
 
+    // The rule ends with the bare version on every screen, as the kit's do; a page that already
+    // printed it is not made to say it twice.
+    protected readonly rulerRight = computed<readonly RulerReadout[]>(() => {
+        const v = this.version.version();
+        const right = this.ruler.right();
+        return v && !right.some(r => r.text === v) ? [...right, { text: v }] : right;
+    });
+
     // The switcher is account-scoped wherever the project is unknown, which is every screen but
     // /projects/:id: DraftMeta carries no projectId (ADR-139 consequence), so a draft, a post or a
     // library asset cannot say which project it belongs to. A tile reading a project name there
@@ -247,17 +261,18 @@ export class BenchShellComponent {
         const id = this.projectId();
         const items: HookRailItem[] = [];
         if (this.auth.indieDev()) items.push({ id: 'hub', icon: 'game-controller', label: t.hub, link: '/projects' });
-        items.push({ id: 'text', icon: 'files', label: t.text, link: '/drafts' });
+        items.push({ id: 'text', icon: 'pencil-simple', label: t.text, link: '/drafts' });
         // Without a project in the URL the board has no owner to open, so the hook lands on the
         // hub — the one screen that can name which board was meant. Same gap as the switcher.
-        if (this.auth.indieDev()) items.push({ id: 'board', icon: 'kanban', label: t.board, link: id ? ['/projects', id, 'tasks'] : '/projects' });
+        if (this.auth.indieDev()) items.push({ id: 'board', icon: 'check-square', label: t.board, link: id ? ['/projects', id, 'tasks'] : '/projects' });
         items.push({ id: 'assets', icon: 'images', label: t.assets, link: '/library' });
         items.push({
             id: 'metrics', icon: 'chart-bar', label: t.metrics, link: '/posts',
             badge: this.feedback.newComments() + this.feedback.newReactions(),
             badgeTitle: this.t().editor.newBadge,
         });
-        items.push({ id: 'settings', icon: 'gear', label: this.t().settings.crumb, link: '/settings', end: true });
+        // The caption is the wall's short form — the full word clips on it — and the tooltip carries the word.
+        items.push({ id: 'settings', icon: 'gear', label: t.settings, title: this.t().settings.crumb, link: '/settings', end: true });
         return items;
     });
 

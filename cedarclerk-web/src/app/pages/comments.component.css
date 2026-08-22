@@ -36,16 +36,27 @@
     display: flex;
     align-items: baseline;
     gap: var(--space-2);
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    box-shadow: var(--shadow-paper-sm);
     padding: var(--space-3) var(--space-4);
     margin: 0 0 var(--space-2);
 }
 
 .reactions-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
     font-size: var(--fs-body);
     font-weight: 700;
+}
+
+.feedback-group-reactions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
 }
 
 .reactions-hint {
@@ -54,9 +65,11 @@
 }
 
 .comment-card {
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    box-shadow: var(--shadow-paper-sm);
     padding: var(--space-3) var(--space-4);
     font-size: var(--fs-ui);
 }
@@ -66,7 +79,7 @@
 .comment-card.is-new,
 .reactions-card.has-new {
     border-color: var(--abord);
-    background: var(--asoft);
+    background-color: var(--asoft);
     transition: background var(--motion-slow) var(--ease), border-color var(--motion-slow) var(--ease);
 }
 
@@ -118,6 +131,7 @@
     word-break: break-word;
 }
 
+/* Paper keeps its 44px target on a mouse as well as a finger (ADR-138 item 2). */
 .mini-remove {
     display: flex;
     align-items: center;
@@ -125,8 +139,8 @@
     border: none;
     background: none;
     border-radius: var(--radius-sm);
-    width: 22px;
-    height: 22px;
+    min-width: var(--hit-target);
+    min-height: var(--hit-target);
     cursor: pointer;
     color: var(--t2);
     flex: none;

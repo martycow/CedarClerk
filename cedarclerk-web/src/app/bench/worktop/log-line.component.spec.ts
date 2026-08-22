@@ -161,9 +161,10 @@ describe('LogLineComponent', () => {
         }
     });
 
-    it('paints no literal colour and no loose pixel', () => {
+    it('paints no literal colour and no loose pixel beyond the stamp hooks', () => {
         const css = renderedCss();
         expect(css).not.toMatch(/#[0-9a-f]{3,8}\b/i);
-        expect(css).not.toMatch(/\d+px/);
+        // The --stamp-* hooks carry the kit's compact stamp geometry (LogLine.jsx:20) into the badge.
+        expect(css.replace(/--stamp-[\w-]+:\s*[^;}]+/g, '')).not.toMatch(/\d+px/);
     });
 });
