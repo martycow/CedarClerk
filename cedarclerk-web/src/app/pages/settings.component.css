@@ -30,24 +30,50 @@
     font-size: var(--fs-18);
 }
 
-/* ---------- Body layout ---------- */
-/* Priority Fixes 02 (Claude Design): container widths converge to two buckets — a
-   ~700px reading width for text-form pages, ~1150px workspace width for list/grid pages. */
-.settings-body {
-    max-width: 700px;
+/* ---------- Board layout (ADR-185) ---------- */
+:host { padding: var(--space-3); box-sizing: border-box; }
+
+/* A shelf, in the shell's own words: a wooden frame with a paper sheet dropped into it. The board
+   is 940px so the sheet beside a 180px index is still the ~700px reading measure a text-form page
+   is owed (ADR-071's two buckets). */
+.settings-board {
+    max-width: 940px;
     margin: 0 auto;
-    padding: var(--space-5) var(--space-5) var(--space-8);
+    box-sizing: border-box;
+    padding: var(--space-1);
+    border: 1px solid var(--wood-edge);
+    border-radius: 5px;
+    background: var(--shelf-frame);
+    box-shadow: var(--shadow-shelf);
+}
+
+.settings-sheet {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: var(--space-5);
+    box-sizing: border-box;
+    padding: var(--space-5);
+    background-color: var(--surface);
+    background-image: var(--tex-paper);
+    box-shadow: var(--shadow-sheet-inset);
+}
+
+/* Sticky against its own column, which is the axis an index belongs on: it can follow the scroll
+   the whole way down without ever crossing the cards it points at. */
+.anchor-rail {
+    position: sticky;
+    top: var(--space-3);
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.settings-stack {
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
-}
-
-.anchor-chips {
-    display: flex;
-    gap: var(--space-2);
-    position: sticky;
-    top: 64px;
-    z-index: 5;
+    min-width: 0;
 }
 
 .settings-card {
@@ -620,10 +646,26 @@
    its desktop measurements.
    No density switch here: /settings is a form screen, so it stays comfortable (ADR-071). What
    changes on a phone is the frame around the form, not the form's own breathing room. */
-@media (max-width: 700px) {
-    .settings-body {
-        padding: var(--space-4) var(--space-3) var(--space-6);
+/* A 180px rail beside a 320px sheet is neither, so under 900px the board is one column again and
+   the index goes back to being a row. */
+@media (max-width: 900px) {
+    .settings-sheet {
+        grid-template-columns: minmax(0, 1fr);
         gap: var(--space-4);
+    }
+
+    .anchor-rail {
+        position: static;
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 700px) {
+    :host { padding: var(--space-2); }
+
+    .settings-sheet {
+        padding: var(--space-3);
     }
 
     /* A card's own side padding inside an already-padded body left under 300px of usable width on
@@ -632,19 +674,13 @@
         padding: var(--space-4);
     }
 
-    /* Sticky chips over a short screen cost more than they give: they cover the very content they
-       scroll to. They also wrapped to three rows at this width. */
-    .anchor-chips {
-        position: static;
-        flex-wrap: wrap;
-    }
-
 }
 
 /* I12 — two groups instead of one long scroll. Painted index tiles, which is what switches what a
-   panel shows anywhere on the bench. */
+   panel shows anywhere on the bench — and here they stand on the board's own wood, which is the
+   ground they were cut for. */
 .settings-tabs {
-    margin-bottom: var(--space-3);
+    padding: var(--space-1) var(--space-2) 0;
 }
 
 /* IF1 — avatar picker in the profile card. */

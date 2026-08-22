@@ -80,6 +80,12 @@ export class SettingsComponent implements OnInit {
     socialFacebookUrlText = '';
     socialYoutubeUrlText = '';
     socialGithubUrlText = '';
+    socialTelegramUrlText = '';
+    socialThreadsUrlText = '';
+    socialBlueskyUrlText = '';
+    socialRedditUrlText = '';
+    socialSteamUrlText = '';
+    socialItchUrlText = '';
 
     languageError = signal<string | null>(null);
 
@@ -186,6 +192,18 @@ export class SettingsComponent implements OnInit {
         this.socialFacebookUrlText = this.auth.socialFacebookUrl() ?? '';
         this.socialYoutubeUrlText = this.auth.socialYoutubeUrl() ?? '';
         this.socialGithubUrlText = this.auth.socialGithubUrl() ?? '';
+        this.socialTelegramUrlText = this.auth.socialTelegramUrl() ?? '';
+        this.socialThreadsUrlText = this.auth.socialThreadsUrl() ?? '';
+        this.socialBlueskyUrlText = this.auth.socialBlueskyUrl() ?? '';
+        this.socialRedditUrlText = this.auth.socialRedditUrl() ?? '';
+        this.socialSteamUrlText = this.auth.socialSteamUrl() ?? '';
+        this.socialItchUrlText = this.auth.socialItchUrl() ?? '';
+        this.socialTelegramUrlText = this.auth.socialTelegramUrl() ?? '';
+        this.socialThreadsUrlText = this.auth.socialThreadsUrl() ?? '';
+        this.socialBlueskyUrlText = this.auth.socialBlueskyUrl() ?? '';
+        this.socialRedditUrlText = this.auth.socialRedditUrl() ?? '';
+        this.socialSteamUrlText = this.auth.socialSteamUrl() ?? '';
+        this.socialItchUrlText = this.auth.socialItchUrl() ?? '';
         try { this.billing.set(await this.billingApi.status()); } catch { /* non-critical */ }
         try { this.credits.set(await this.billingApi.credits()); } catch { /* non-critical */ }
         try { this.botStatus.set(await this.telegramLink.botStatus()); } catch { /* non-critical */ }
@@ -618,6 +636,12 @@ export class SettingsComponent implements OnInit {
                 socialFacebookUrl: this.socialFacebookUrlText,
                 socialYoutubeUrl: this.socialYoutubeUrlText,
                 socialGithubUrl: this.socialGithubUrlText,
+                socialTelegramUrl: this.socialTelegramUrlText,
+                socialThreadsUrl: this.socialThreadsUrlText,
+                socialBlueskyUrl: this.socialBlueskyUrlText,
+                socialRedditUrl: this.socialRedditUrlText,
+                socialSteamUrl: this.socialSteamUrlText,
+                socialItchUrl: this.socialItchUrlText,
                 blogLinkText: this.linkTextDrafts[DEFAULT_PRIMARY_LANGUAGE]?.blog ?? '',
                 telegramLinkText: this.linkTextDrafts[DEFAULT_PRIMARY_LANGUAGE]?.telegram ?? '',
                 blogLinkTexts: this.linkTextMap('blog'),

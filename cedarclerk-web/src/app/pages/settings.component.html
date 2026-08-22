@@ -1,32 +1,18 @@
+<!--ADR-185: a board with papers laid on it. The tabs stand on the board's own wood, and the
+section index is a column down the left of the sheet rather than a row across the top of it —
+a sticky row in a vertical flow travels over the very cards it indexes.-->
 <div class="settings-page">
-    <div class="settings-body">
+    <div class="settings-board">
         <!--I12: split in two. "Profile" is everything about the author and what gets published
         under their name — it's reached from the account menu, which is where a profile belongs.
         "Account" is the machinery: language, plan, connected services. Appearance is neither: it
-        is a panel of the shell, opened from the rail's dots menu (ADR-151).-->
+        is a panel of the shell, opened from the hook rail's tray (ADR-183).-->
         <app-index-tabs class="settings-tabs" [items]="tabItems()" [value]="tab()"
                         [label]="t().settings.crumb" (selected)="setTab($any($event))" />
 
-        <!--T-002 — a reminder, not a wall: the account works unconfirmed, and blocking one would
-        lock out every account that predates this. It disappears the moment the address is confirmed.
-        Outside the anchor-chips nav on purpose: that row is a flex row, and a card inside it is
-        stretched to the row's height along with every chip beside it.-->
-        @if (!auth.emailConfirmed()) {
-        <section class="settings-card confirm-card">
-            <h2>{{ t().settings.confirmEmail.title }}</h2>
-            <p class="field-hint">{{ t().settings.confirmEmail.hint(auth.userEmail() ?? '') }}</p>
-            <div class="field-actions">
-                <app-button variant="pine" (clicked)="resendConfirmation()" [disabled]="confirmBusy()">
-                    {{ confirmBusy() ? '…' : t().settings.confirmEmail.resend }}
-                </app-button>
-                @if (confirmSent()) {
-                <span class="saved-check"><app-icon name="check" size="xs"></app-icon>{{ t().settings.confirmEmail.sent }}</span>
-                }
-            </div>
-        </section>
-        }
+        <div class="settings-sheet" data-surface="paper">
 
-        <nav class="anchor-chips">
+        <nav class="anchor-rail">
             @if (tab() === 'profile') {
             <app-button variant="paper" size="sm" (clicked)="jump('sec-profile')">{{ t().settings.profile.nav }}</app-button>
             <app-button variant="paper" size="sm" (clicked)="jump('sec-cross-links')">{{ t().settings.crossLinks.nav }}</app-button>
@@ -40,704 +26,749 @@
             }
         </nav>
 
-        <!-- ============ PROFILE ============ -->
-        @if (tab() === 'profile') {
-        <section id="sec-profile" class="settings-card">
-            <h2>{{ t().settings.profile.title }}</h2>
-            <div class="profile-row">
-                <!--IF1: uploaded picture when set, the initial letter otherwise.-->
-                @if (auth.avatarUrl(); as url) {
-                <img class="avatar lg avatar-img" [src]="url" alt="">
-                } @else {
-                <span class="avatar lg">{{ avatarInitial() }}</span>
-                }
-                <div>
-                    <div class="profile-email">{{ auth.userEmail() }}</div>
-                    @if (auth.createdAt(); as since) {
-                    <div class="profile-meta">{{ t().settings.profile.memberSince }} {{ since | zonedDate:'MM.yyyy' }}</div>
+        <div class="settings-stack">
+            <!--T-002 — a reminder, not a wall: the account works unconfirmed, and blocking one
+            would lock out every account that predates this. It disappears the moment the address
+            is confirmed.-->
+            @if (!auth.emailConfirmed()) {
+            <section class="settings-card confirm-card">
+                <h2>{{ t().settings.confirmEmail.title }}</h2>
+                <p class="field-hint">{{ t().settings.confirmEmail.hint(auth.userEmail() ?? '') }}</p>
+                <div class="field-actions">
+                    <app-button variant="pine" (clicked)="resendConfirmation()" [disabled]="confirmBusy()">
+                        {{ confirmBusy() ? '…' : t().settings.confirmEmail.resend }}
+                    </app-button>
+                    @if (confirmSent()) {
+                    <span class="saved-check"><app-icon name="check" size="xs"></app-icon>{{ t().settings.confirmEmail.sent }}</span>
                     }
-                    <div class="avatar-actions">
-                        <label class="avatar-pick">
-                            {{ avatarBusy() ? '…' : t().settings.profile.changeAvatar }}
-                            <input type="file" accept="image/*" (change)="onAvatarPicked($event)" [disabled]="avatarBusy()" hidden>
-                        </label>
-                        @if (auth.avatarUrl()) {
-                        <app-button variant="danger" (clicked)="clearAvatar()" [disabled]="avatarBusy()">
-                            {{ t().settings.profile.removeAvatar }}
-                        </app-button>
+                </div>
+            </section>
+            }
+
+            <!-- ============ PROFILE ============ -->
+            @if (tab() === 'profile') {
+            <section id="sec-profile" class="settings-card">
+                <h2>{{ t().settings.profile.title }}</h2>
+                <div class="profile-row">
+                    <!--IF1: uploaded picture when set, the initial letter otherwise.-->
+                    @if (auth.avatarUrl(); as url) {
+                    <img class="avatar lg avatar-img" [src]="url" alt="">
+                    } @else {
+                    <span class="avatar lg">{{ avatarInitial() }}</span>
+                    }
+                    <div>
+                        <div class="profile-email">{{ auth.userEmail() }}</div>
+                        @if (auth.createdAt(); as since) {
+                        <div class="profile-meta">{{ t().settings.profile.memberSince }} {{ since | zonedDate:'MM.yyyy' }}</div>
+                        }
+                        <div class="avatar-actions">
+                            <label class="avatar-pick">
+                                {{ avatarBusy() ? '…' : t().settings.profile.changeAvatar }}
+                                <input type="file" accept="image/*" (change)="onAvatarPicked($event)" [disabled]="avatarBusy()" hidden>
+                            </label>
+                            @if (auth.avatarUrl()) {
+                            <app-button variant="danger" (clicked)="clearAvatar()" [disabled]="avatarBusy()">
+                                {{ t().settings.profile.removeAvatar }}
+                            </app-button>
+                            }
+                        </div>
+                        @if (avatarError()) { <p class="field-error">{{ avatarError() }}</p> }
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label for="cc-sig">{{ t().settings.profile.signature }} @if (!hasProSignature()) { <span class="pro-lock-badge"><app-icon name="lock" size="xs"></app-icon>PRO</span> }</label>
+                    @if (hasProSignature()) {
+                    <p class="field-hint">{{ t().settings.profile.signatureHintPro }}</p>
+                    } @else {
+                    <p class="field-hint">{{ t().settings.profile.signatureHintFree(freeAttributionText) }}</p>
+                    }
+                    <!--FI5: the text (not the URL, which reads the same in every language) can differ
+                    per content language — same per-language-drafts pattern as the cross-links below.-->
+                    <div class="lang-pick-row">
+                        @for (l of contentLanguages; track l) {
+                        <app-leaf-tag interactive [state]="signatureLanguage() === l ? 'active' : 'idle'"
+                                      (activated)="setSignatureLanguage(l)">{{ l.toUpperCase() }}</app-leaf-tag>
                         }
                     </div>
-                    @if (avatarError()) { <p class="field-error">{{ avatarError() }}</p> }
+                    <textarea id="cc-sig" [(ngModel)]="signatureText" rows="2" [placeholder]="t().settings.profile.signaturePlaceholder"
+                        [disabled]="!hasProSignature()" [title]="hasProSignature() ? '' : t().settings.profile.signatureUpgrade"></textarea>
+                    @if (hasProSignature()) {
+                    <input [(ngModel)]="signatureUrlText" [placeholder]="t().settings.profile.signatureUrlPlaceholder">
+                    }
+                    <div class="field-actions">
+                        <app-button variant="pine" (clicked)="saveSignature()" [disabled]="signatureBusy() || !hasProSignature()">
+                            {{ signatureBusy() ? '…' : t().settings.profile.saveSignature }}
+                        </app-button>
+                        <!--One press fills the signature AND both cross-link texts — they are written
+                        together and read together, so translating them apart would be three presses for
+                        one thought. Two buttons because there are two real cases: fill everything, or
+                        redo the one language that came back wrong.-->
+                        <app-button variant="paper" (clicked)="translateProfileTexts()"
+                                [disabled]="translatingTexts() || !hasProSignature()">
+                            <app-icon name="translate" size="sm"></app-icon>
+                            {{ t().settings.profile.translateTexts }}
+                        </app-button>
+                        @if (canTranslateCurrent()) {
+                        <app-button variant="paper" (clicked)="translateCurrentLanguage()"
+                                [disabled]="translatingTexts() || !hasProSignature()">
+                            <app-icon name="translate" size="sm"></app-icon>
+                            {{ t().settings.profile.translateInto(signatureLanguage().toUpperCase()) }}
+                        </app-button>
+                        }
+                        @if (signatureSaved()) {
+                        <span class="saved-check"><app-icon name="check" size="xs"></app-icon>{{ t().settings.saved }}</span>
+                        }
+                        @if (translateTextsDone()) {
+                        <span class="saved-check"><app-icon name="check" size="xs"></app-icon>{{ t().settings.saved }}</span>
+                        }
+                    </div>
+                    @if (translatingTexts()) {
+                    <div class="translate-progress">
+                        <span class="translate-progress-track">
+                            <span class="translate-progress-fill" [style.width.%]="translateProgress()"></span>
+                        </span>
+                        <span class="field-hint-inline">{{ translateProgress() }}% · {{ translateElapsed() }}s</span>
+                    </div>
+                    }
+                    <p class="field-hint">{{ t().settings.profile.translateTextsHint }}</p>
+                    @if (signatureError()) { <p class="field-error">{{ signatureError() }}</p> }
+                    @if (translateTextsError()) { <p class="field-error">{{ translateTextsError() }}</p> }
                 </div>
-            </div>
+            </section>
+            }
 
-            <div class="field-group">
-                <label for="cc-sig">{{ t().settings.profile.signature }} @if (!hasProSignature()) { <span class="pro-lock-badge"><app-icon name="lock" size="xs"></app-icon>PRO</span> }</label>
-                @if (hasProSignature()) {
-                <p class="field-hint">{{ t().settings.profile.signatureHintPro }}</p>
-                } @else {
-                <p class="field-hint">{{ t().settings.profile.signatureHintFree(freeAttributionText) }}</p>
-                }
-                <!--FI5: the text (not the URL, which reads the same in every language) can differ
-                per content language — same per-language-drafts pattern as the cross-links below.-->
+            <!-- ============ LANGUAGE ============ -->
+            @if (tab() === 'account') {
+            <section id="sec-language" class="settings-card">
+                <h2>{{ t().settings.language.title }}</h2>
+                <p class="field-hint">{{ t().settings.language.hint }}</p>
+                <!--DB3.1: was a flag emoji beside the endonym; Windows ships no regional-indicator
+                glyphs, so it rendered as two letters regardless. A two-letter code says the same
+                thing on every platform, and matches the editor's content-language tabs.-->
+                <div class="lang-pick-row">
+                    <app-leaf-tag interactive [state]="locale.uiLang() === 'en' ? 'active' : 'idle'"
+                                  (activated)="setUiLanguage('en')">EN · English</app-leaf-tag>
+                    <app-leaf-tag interactive [state]="locale.uiLang() === 'ru' ? 'active' : 'idle'"
+                                  (activated)="setUiLanguage('ru')">RU · Русский</app-leaf-tag>
+                </div>
+                @if (languageError()) { <p class="field-error">{{ languageError() }}</p> }
+            </section>
+            }
+
+            <!-- Appearance is a panel of the shell, opened from the rail's dots menu (ADR-151), and it
+                 has no signpost here: a settings card whose only content is "this setting is somewhere
+                 else" is a dead end that has to be read every time to be dismissed. -->
+
+            <!-- ============ HEADER SLOTS ============ -->
+            @if (tab() === 'profile') {
+            <section id="sec-header-slots" class="settings-card">
+                <h2>{{ t().settings.headerSlots.title }}</h2>
+                <p class="field-hint">{{ t().settings.headerSlots.hint }}</p>
+
+                <div class="field-group">
+                    <label for="cc-author-name">{{ t().settings.headerSlots.authorName }}</label>
+                    <input id="cc-author-name" [(ngModel)]="authorDisplayNameText" [placeholder]="t().settings.headerSlots.authorNamePlaceholder">
+                </div>
+                <div class="field-group">
+                    <label for="cc-profile-url">{{ t().settings.headerSlots.profileUrl }}</label>
+                    <input id="cc-profile-url" [(ngModel)]="profileUrlText" placeholder="https://example.com">
+                </div>
+                <div class="field-group">
+                    <label for="cc-profile-location">{{ t().settings.headerSlots.location }}</label>
+                    <input id="cc-profile-location" [(ngModel)]="profileLocationText" [placeholder]="t().settings.headerSlots.locationPlaceholder">
+                </div>
+
+                <div class="field-group">
+                    <label for="cc-slot-1">{{ t().settings.headerSlots.slot(1) }}</label>
+                    <select id="cc-slot-1" [(ngModel)]="headerSlot1">
+                        <option [ngValue]="null">{{ t().settings.headerSlots.none }}</option>
+                        <option value="AuthorSignature">{{ t().settings.headerSlots.typeAuthorSignature }}</option>
+                        <option value="Url">{{ t().settings.headerSlots.typeUrl }}</option>
+                        <option value="MapLocation">{{ t().settings.headerSlots.typeMapLocation }}</option>
+                        <option value="PublishedDate">{{ t().settings.headerSlots.typePublishedDate }}</option>
+                        <option value="Length">{{ t().settings.headerSlots.typeLength }}</option>
+                        <option value="TimeToRead">{{ t().settings.headerSlots.typeTimeToRead }}</option>
+                        <option value="WordCount">{{ t().settings.headerSlots.typeWordCount }}</option>
+                        <option value="ViewCount">{{ t().settings.headerSlots.typeViewCount }}</option>
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label for="cc-slot-2">{{ t().settings.headerSlots.slot(2) }}</label>
+                    <select id="cc-slot-2" [(ngModel)]="headerSlot2">
+                        <option [ngValue]="null">{{ t().settings.headerSlots.none }}</option>
+                        <option value="AuthorSignature">{{ t().settings.headerSlots.typeAuthorSignature }}</option>
+                        <option value="Url">{{ t().settings.headerSlots.typeUrl }}</option>
+                        <option value="MapLocation">{{ t().settings.headerSlots.typeMapLocation }}</option>
+                        <option value="PublishedDate">{{ t().settings.headerSlots.typePublishedDate }}</option>
+                        <option value="Length">{{ t().settings.headerSlots.typeLength }}</option>
+                        <option value="TimeToRead">{{ t().settings.headerSlots.typeTimeToRead }}</option>
+                        <option value="WordCount">{{ t().settings.headerSlots.typeWordCount }}</option>
+                        <option value="ViewCount">{{ t().settings.headerSlots.typeViewCount }}</option>
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label for="cc-slot-3">{{ t().settings.headerSlots.slot(3) }} @if (!hasProHeaderSlot()) { <span class="pro-lock-badge"><app-icon name="lock" size="xs"></app-icon>PRO</span> }</label>
+                    <select id="cc-slot-3" [(ngModel)]="headerSlot3" [disabled]="!hasProHeaderSlot()"
+                            [title]="hasProHeaderSlot() ? '' : t().settings.headerSlots.slotUpgrade">
+                        <option [ngValue]="null">{{ t().settings.headerSlots.none }}</option>
+                        <option value="AuthorSignature">{{ t().settings.headerSlots.typeAuthorSignature }}</option>
+                        <option value="Url">{{ t().settings.headerSlots.typeUrl }}</option>
+                        <option value="MapLocation">{{ t().settings.headerSlots.typeMapLocation }}</option>
+                        <option value="PublishedDate">{{ t().settings.headerSlots.typePublishedDate }}</option>
+                        <option value="Length">{{ t().settings.headerSlots.typeLength }}</option>
+                        <option value="TimeToRead">{{ t().settings.headerSlots.typeTimeToRead }}</option>
+                        <option value="WordCount">{{ t().settings.headerSlots.typeWordCount }}</option>
+                        <option value="ViewCount">{{ t().settings.headerSlots.typeViewCount }}</option>
+                    </select>
+                </div>
+
+            </section>
+            }
+
+            <!-- ============ CROSS-LINKS (I15) ============ -->
+            @if (tab() === 'profile') {
+            <section id="sec-cross-links" class="settings-card">
+                <h2>{{ t().settings.crossLinks.title }}</h2>
+                <p class="field-hint">{{ t().settings.crossLinks.hint }}</p>
+
+                <!--Per language: this line is read by whoever reads that language's version of the
+                post. Switching tabs saves what is in the fields first.-->
                 <div class="lang-pick-row">
                     @for (l of contentLanguages; track l) {
-                    <app-leaf-tag interactive [state]="signatureLanguage() === l ? 'active' : 'idle'"
-                                  (activated)="setSignatureLanguage(l)">{{ l.toUpperCase() }}</app-leaf-tag>
+                    <app-leaf-tag interactive [state]="linkTextLanguage() === l ? 'active' : 'idle'"
+                                  (activated)="setLinkTextLanguage(l)">{{ l.toUpperCase() }}</app-leaf-tag>
                     }
                 </div>
-                <textarea id="cc-sig" [(ngModel)]="signatureText" rows="2" [placeholder]="t().settings.profile.signaturePlaceholder"
-                    [disabled]="!hasProSignature()" [title]="hasProSignature() ? '' : t().settings.profile.signatureUpgrade"></textarea>
-                @if (hasProSignature()) {
-                <input [(ngModel)]="signatureUrlText" [placeholder]="t().settings.profile.signatureUrlPlaceholder">
-                }
-                <div class="field-actions">
-                    <app-button variant="pine" (clicked)="saveSignature()" [disabled]="signatureBusy() || !hasProSignature()">
-                        {{ signatureBusy() ? '…' : t().settings.profile.saveSignature }}
-                    </app-button>
-                    <!--One press fills the signature AND both cross-link texts — they are written
-                    together and read together, so translating them apart would be three presses for
-                    one thought. Two buttons because there are two real cases: fill everything, or
-                    redo the one language that came back wrong.-->
-                    <app-button variant="paper" (clicked)="translateProfileTexts()"
-                            [disabled]="translatingTexts() || !hasProSignature()">
-                        <app-icon name="translate" size="sm"></app-icon>
-                        {{ t().settings.profile.translateTexts }}
-                    </app-button>
-                    @if (canTranslateCurrent()) {
-                    <app-button variant="paper" (clicked)="translateCurrentLanguage()"
-                            [disabled]="translatingTexts() || !hasProSignature()">
-                        <app-icon name="translate" size="sm"></app-icon>
-                        {{ t().settings.profile.translateInto(signatureLanguage().toUpperCase()) }}
-                    </app-button>
-                    }
-                    @if (signatureSaved()) {
-                    <span class="saved-check"><app-icon name="check" size="xs"></app-icon>{{ t().settings.saved }}</span>
-                    }
-                    @if (translateTextsDone()) {
-                    <span class="saved-check"><app-icon name="check" size="xs"></app-icon>{{ t().settings.saved }}</span>
-                    }
+
+                <div class="field-group">
+                    <label for="cc-blog-link">{{ t().settings.crossLinks.blogLink }}</label>
+                    <input id="cc-blog-link" [(ngModel)]="blogLinkText" [placeholder]="t().settings.crossLinks.blogLinkDefault" maxlength="80">
                 </div>
-                @if (translatingTexts()) {
-                <div class="translate-progress">
-                    <span class="translate-progress-track">
-                        <span class="translate-progress-fill" [style.width.%]="translateProgress()"></span>
-                    </span>
-                    <span class="field-hint-inline">{{ translateProgress() }}% · {{ translateElapsed() }}s</span>
+                <div class="field-group">
+                    <label for="cc-tg-link">{{ t().settings.crossLinks.telegramLink }}</label>
+                    <input id="cc-tg-link" [(ngModel)]="telegramLinkText" [placeholder]="t().settings.crossLinks.telegramLinkDefault" maxlength="80">
                 </div>
-                }
-                <p class="field-hint">{{ t().settings.profile.translateTextsHint }}</p>
-                @if (signatureError()) { <p class="field-error">{{ signatureError() }}</p> }
-                @if (translateTextsError()) { <p class="field-error">{{ translateTextsError() }}</p> }
-            </div>
-        </section>
-        }
-
-        <!-- ============ LANGUAGE ============ -->
-        @if (tab() === 'account') {
-        <section id="sec-language" class="settings-card">
-            <h2>{{ t().settings.language.title }}</h2>
-            <p class="field-hint">{{ t().settings.language.hint }}</p>
-            <!--DB3.1: was a flag emoji beside the endonym; Windows ships no regional-indicator
-            glyphs, so it rendered as two letters regardless. A two-letter code says the same
-            thing on every platform, and matches the editor's content-language tabs.-->
-            <div class="lang-pick-row">
-                <app-leaf-tag interactive [state]="locale.uiLang() === 'en' ? 'active' : 'idle'"
-                              (activated)="setUiLanguage('en')">EN · English</app-leaf-tag>
-                <app-leaf-tag interactive [state]="locale.uiLang() === 'ru' ? 'active' : 'idle'"
-                              (activated)="setUiLanguage('ru')">RU · Русский</app-leaf-tag>
-            </div>
-            @if (languageError()) { <p class="field-error">{{ languageError() }}</p> }
-        </section>
-        }
-
-        <!-- Appearance is a panel of the shell, opened from the rail's dots menu (ADR-151), and it
-             has no signpost here: a settings card whose only content is "this setting is somewhere
-             else" is a dead end that has to be read every time to be dismissed. -->
-
-        <!-- ============ HEADER SLOTS ============ -->
-        @if (tab() === 'profile') {
-        <section id="sec-header-slots" class="settings-card">
-            <h2>{{ t().settings.headerSlots.title }}</h2>
-            <p class="field-hint">{{ t().settings.headerSlots.hint }}</p>
-
-            <div class="field-group">
-                <label for="cc-author-name">{{ t().settings.headerSlots.authorName }}</label>
-                <input id="cc-author-name" [(ngModel)]="authorDisplayNameText" [placeholder]="t().settings.headerSlots.authorNamePlaceholder">
-            </div>
-            <div class="field-group">
-                <label for="cc-profile-url">{{ t().settings.headerSlots.profileUrl }}</label>
-                <input id="cc-profile-url" [(ngModel)]="profileUrlText" placeholder="https://example.com">
-            </div>
-            <div class="field-group">
-                <label for="cc-profile-location">{{ t().settings.headerSlots.location }}</label>
-                <input id="cc-profile-location" [(ngModel)]="profileLocationText" [placeholder]="t().settings.headerSlots.locationPlaceholder">
-            </div>
-
-            <div class="field-group">
-                <label for="cc-slot-1">{{ t().settings.headerSlots.slot(1) }}</label>
-                <select id="cc-slot-1" [(ngModel)]="headerSlot1">
-                    <option [ngValue]="null">{{ t().settings.headerSlots.none }}</option>
-                    <option value="AuthorSignature">{{ t().settings.headerSlots.typeAuthorSignature }}</option>
-                    <option value="Url">{{ t().settings.headerSlots.typeUrl }}</option>
-                    <option value="MapLocation">{{ t().settings.headerSlots.typeMapLocation }}</option>
-                    <option value="PublishedDate">{{ t().settings.headerSlots.typePublishedDate }}</option>
-                    <option value="Length">{{ t().settings.headerSlots.typeLength }}</option>
-                    <option value="TimeToRead">{{ t().settings.headerSlots.typeTimeToRead }}</option>
-                    <option value="WordCount">{{ t().settings.headerSlots.typeWordCount }}</option>
-                    <option value="ViewCount">{{ t().settings.headerSlots.typeViewCount }}</option>
-                </select>
-            </div>
-            <div class="field-group">
-                <label for="cc-slot-2">{{ t().settings.headerSlots.slot(2) }}</label>
-                <select id="cc-slot-2" [(ngModel)]="headerSlot2">
-                    <option [ngValue]="null">{{ t().settings.headerSlots.none }}</option>
-                    <option value="AuthorSignature">{{ t().settings.headerSlots.typeAuthorSignature }}</option>
-                    <option value="Url">{{ t().settings.headerSlots.typeUrl }}</option>
-                    <option value="MapLocation">{{ t().settings.headerSlots.typeMapLocation }}</option>
-                    <option value="PublishedDate">{{ t().settings.headerSlots.typePublishedDate }}</option>
-                    <option value="Length">{{ t().settings.headerSlots.typeLength }}</option>
-                    <option value="TimeToRead">{{ t().settings.headerSlots.typeTimeToRead }}</option>
-                    <option value="WordCount">{{ t().settings.headerSlots.typeWordCount }}</option>
-                    <option value="ViewCount">{{ t().settings.headerSlots.typeViewCount }}</option>
-                </select>
-            </div>
-            <div class="field-group">
-                <label for="cc-slot-3">{{ t().settings.headerSlots.slot(3) }} @if (!hasProHeaderSlot()) { <span class="pro-lock-badge"><app-icon name="lock" size="xs"></app-icon>PRO</span> }</label>
-                <select id="cc-slot-3" [(ngModel)]="headerSlot3" [disabled]="!hasProHeaderSlot()"
-                        [title]="hasProHeaderSlot() ? '' : t().settings.headerSlots.slotUpgrade">
-                    <option [ngValue]="null">{{ t().settings.headerSlots.none }}</option>
-                    <option value="AuthorSignature">{{ t().settings.headerSlots.typeAuthorSignature }}</option>
-                    <option value="Url">{{ t().settings.headerSlots.typeUrl }}</option>
-                    <option value="MapLocation">{{ t().settings.headerSlots.typeMapLocation }}</option>
-                    <option value="PublishedDate">{{ t().settings.headerSlots.typePublishedDate }}</option>
-                    <option value="Length">{{ t().settings.headerSlots.typeLength }}</option>
-                    <option value="TimeToRead">{{ t().settings.headerSlots.typeTimeToRead }}</option>
-                    <option value="WordCount">{{ t().settings.headerSlots.typeWordCount }}</option>
-                    <option value="ViewCount">{{ t().settings.headerSlots.typeViewCount }}</option>
-                </select>
-            </div>
-
-        </section>
-        }
-
-        <!-- ============ CROSS-LINKS (I15) ============ -->
-        @if (tab() === 'profile') {
-        <section id="sec-cross-links" class="settings-card">
-            <h2>{{ t().settings.crossLinks.title }}</h2>
-            <p class="field-hint">{{ t().settings.crossLinks.hint }}</p>
-
-            <!--Per language: this line is read by whoever reads that language's version of the
-            post. Switching tabs saves what is in the fields first.-->
-            <div class="lang-pick-row">
-                @for (l of contentLanguages; track l) {
-                <app-leaf-tag interactive [state]="linkTextLanguage() === l ? 'active' : 'idle'"
-                              (activated)="setLinkTextLanguage(l)">{{ l.toUpperCase() }}</app-leaf-tag>
-                }
-            </div>
-
-            <div class="field-group">
-                <label for="cc-blog-link">{{ t().settings.crossLinks.blogLink }}</label>
-                <input id="cc-blog-link" [(ngModel)]="blogLinkText" [placeholder]="t().settings.crossLinks.blogLinkDefault" maxlength="80">
-            </div>
-            <div class="field-group">
-                <label for="cc-tg-link">{{ t().settings.crossLinks.telegramLink }}</label>
-                <input id="cc-tg-link" [(ngModel)]="telegramLinkText" [placeholder]="t().settings.crossLinks.telegramLinkDefault" maxlength="80">
-            </div>
-            <!--Saved by the same button as the rest of the profile — these live in the same
-            request, so a second Save here would be a lie about what it does.-->
-            <p class="field-hint">{{ t().settings.crossLinks.savedWithProfile }}</p>
-        </section>
-        }
-
-        <!-- ============ SOCIAL LINKS ============ -->
-        @if (tab() === 'profile') {
-        <section id="sec-social-links" class="settings-card">
-            <h2>{{ t().settings.social.title }}</h2>
-            <p class="field-hint">{{ t().settings.social.hint }}</p>
-
-            <div class="field-group">
-                <label for="cc-social-twitter"><app-brand-icon name="twitter" [size]="12"></app-brand-icon> Twitter / X</label>
-                <input id="cc-social-twitter" [(ngModel)]="socialTwitterUrlText" placeholder="https://x.com/yourhandle">
-            </div>
-            <div class="field-group">
-                <label for="cc-social-instagram"><app-brand-icon name="instagram" [size]="12"></app-brand-icon> Instagram</label>
-                <input id="cc-social-instagram" [(ngModel)]="socialInstagramUrlText" placeholder="https://instagram.com/yourhandle">
-            </div>
-            <div class="field-group">
-                <label for="cc-social-facebook"><app-brand-icon name="facebook" [size]="12"></app-brand-icon> Facebook</label>
-                <input id="cc-social-facebook" [(ngModel)]="socialFacebookUrlText" placeholder="https://facebook.com/yourpage">
-            </div>
-            <div class="field-group">
-                <label for="cc-social-youtube"><app-brand-icon name="youtube" [size]="14"></app-brand-icon> YouTube</label>
-                <input id="cc-social-youtube" [(ngModel)]="socialYoutubeUrlText" placeholder="https://youtube.com/@yourchannel">
-            </div>
-            <div class="field-group">
-                <label for="cc-social-github"><app-brand-icon name="github" [size]="12"></app-brand-icon> GitHub</label>
-                <input id="cc-social-github" [(ngModel)]="socialGithubUrlText" placeholder="https://github.com/yourname">
-            </div>
-
-            <!--No Save of its own: every section of this tab goes to the same endpoint in one
-            request, and a per-section button wrote null over the sections it didn't send.-->
-        </section>
-        }
-
-        <!--One Save for the whole tab, in flow at its end: a bar stuck to the scrollport floats
-        over the signature buttons above it.-->
-        @if (tab() === 'profile') {
-        <div class="profile-save-bar">
-            <app-button variant="pine" (clicked)="saveProfile()" [disabled]="profileBusy()">
-                {{ profileBusy() ? '…' : t().settings.saveProfile }}
-            </app-button>
-            @if (profileSaved()) {
-            <span class="saved-check"><app-icon name="check" size="xs"></app-icon>{{ t().settings.saved }}</span>
+                <!--Saved by the same button as the rest of the profile — these live in the same
+                request, so a second Save here would be a lie about what it does.-->
+                <p class="field-hint">{{ t().settings.crossLinks.savedWithProfile }}</p>
+            </section>
             }
-            @if (profileError()) { <span class="field-error">{{ profileError() }}</span> }
-        </div>
-        }
 
-        <!-- ============ SUBSCRIPTION ============ -->
-        @if (tab() === 'account') {
-        <section id="sec-subscription" class="settings-card">
-            <h2>{{ t().settings.subscription.title }}</h2>
+            <!-- ============ SOCIAL LINKS ============ -->
+            @if (tab() === 'profile') {
+            <section id="sec-social-links" class="settings-card">
+                <h2>{{ t().settings.social.title }}</h2>
+                <p class="field-hint">{{ t().settings.social.hint }}</p>
 
-            @if (billing(); as b) {
-            <div class="plan-banner">
-                <span class="status-dot"></span>
-                <div>
-                    <div class="plan-banner-title">{{ b.planTier }} {{ t().settings.subscription.planSuffix }}</div>
-                    @if (auth.planExpiresAt(); as until) {
-                    <div class="plan-banner-meta">{{ t().settings.subscription.renews }} {{ until | zonedDate:'dd.MM.yyyy' }}</div>
-                    }
+                <div class="field-group">
+                    <label for="cc-social-twitter"><app-brand-icon name="twitter" [size]="12"></app-brand-icon> Twitter / X</label>
+                    <input id="cc-social-twitter" [(ngModel)]="socialTwitterUrlText" placeholder="https://x.com/yourhandle">
                 </div>
-                <span class="spacer"></span>
-                @if (b.stripeCustomerLinked) {
-                <app-button variant="paper" size="sm" (clicked)="manageStripeBilling()" [disabled]="billingBusy()">
-                    {{ t().settings.subscription.manageStripe }}
+                <div class="field-group">
+                    <label for="cc-social-instagram"><app-brand-icon name="instagram" [size]="12"></app-brand-icon> Instagram</label>
+                    <input id="cc-social-instagram" [(ngModel)]="socialInstagramUrlText" placeholder="https://instagram.com/yourhandle">
+                </div>
+                <div class="field-group">
+                    <label for="cc-social-facebook"><app-brand-icon name="facebook" [size]="12"></app-brand-icon> Facebook</label>
+                    <input id="cc-social-facebook" [(ngModel)]="socialFacebookUrlText" placeholder="https://facebook.com/yourpage">
+                </div>
+                <div class="field-group">
+                    <label for="cc-social-youtube"><app-brand-icon name="youtube" [size]="14"></app-brand-icon> YouTube</label>
+                    <input id="cc-social-youtube" [(ngModel)]="socialYoutubeUrlText" placeholder="https://youtube.com/@yourchannel">
+                </div>
+                <div class="field-group">
+                    <label for="cc-social-github"><app-brand-icon name="github" [size]="12"></app-brand-icon> GitHub</label>
+                    <input id="cc-social-github" [(ngModel)]="socialGithubUrlText" placeholder="https://github.com/yourname">
+                </div>
+                <div class="field-group">
+                    <label for="cc-social-telegram"><app-brand-icon name="telegram" [size]="12"></app-brand-icon> Telegram</label>
+                    <input id="cc-social-telegram" [(ngModel)]="socialTelegramUrlText" placeholder="https://t.me/yourchannel">
+                </div>
+                <div class="field-group">
+                    <label for="cc-social-threads"><app-brand-icon name="threads" [size]="12"></app-brand-icon> Threads</label>
+                    <input id="cc-social-threads" [(ngModel)]="socialThreadsUrlText" placeholder="https://threads.net/@yourhandle">
+                </div>
+                <div class="field-group">
+                    <label for="cc-social-bluesky"><app-brand-icon name="bluesky" [size]="12"></app-brand-icon> Bluesky</label>
+                    <input id="cc-social-bluesky" [(ngModel)]="socialBlueskyUrlText" placeholder="https://bsky.app/profile/yourhandle">
+                </div>
+                <div class="field-group">
+                    <label for="cc-social-reddit"><app-brand-icon name="reddit" [size]="12"></app-brand-icon> Reddit</label>
+                    <input id="cc-social-reddit" [(ngModel)]="socialRedditUrlText" placeholder="https://reddit.com/user/yourname">
+                </div>
+                <div class="field-group">
+                    <label for="cc-social-steam"><app-brand-icon name="steam" [size]="12"></app-brand-icon> Steam</label>
+                    <input id="cc-social-steam" [(ngModel)]="socialSteamUrlText" placeholder="https://store.steampowered.com/app/000000">
+                </div>
+                <div class="field-group">
+                    <label for="cc-social-itch"><app-brand-icon name="itch" [size]="12"></app-brand-icon> itch.io</label>
+                    <input id="cc-social-itch" [(ngModel)]="socialItchUrlText" placeholder="https://yourname.itch.io">
+                </div>
+
+                <!--No Save of its own: every section of this tab goes to the same endpoint in one
+                request, and a per-section button wrote null over the sections it didn't send.-->
+            </section>
+            }
+
+            <!--One Save for the whole tab, in flow at its end: a bar stuck to the scrollport floats
+            over the signature buttons above it.-->
+            @if (tab() === 'profile') {
+            <div class="profile-save-bar">
+                <app-button variant="pine" (clicked)="saveProfile()" [disabled]="profileBusy()">
+                    {{ profileBusy() ? '…' : t().settings.saveProfile }}
                 </app-button>
+                @if (profileSaved()) {
+                <span class="saved-check"><app-icon name="check" size="xs"></app-icon>{{ t().settings.saved }}</span>
                 }
-            </div>
-
-            @if (billingMessage()) {
-            <div class="success-banner">
-                <app-icon name="check" size="xs"></app-icon>
-                {{ billingMessage() }}
+                @if (profileError()) { <span class="field-error">{{ profileError() }}</span> }
             </div>
             }
 
-            <div class="plan-grid">
-                <div class="plan-card" [class.current]="b.planTier === 'Free'">
-                    <div class="plan-card-name">Free</div>
-                    <div class="plan-card-price">$0</div>
-                    <p class="plan-card-desc">{{ t().settings.subscription.freeDesc }}</p>
-                    @if (b.planTier === 'Free') {
-                    <app-button variant="paper" size="sm" disabled>{{ t().settings.subscription.currentPlan }}</app-button>
-                    }
-                </div>
-                <div class="plan-card" [class.current]="b.planTier === 'Pro'">
-                    <div class="plan-card-name">Pro</div>
-                    <div class="plan-card-price">${{ b.prices.proUsd }}<span>{{ t().settings.subscription.perMonth }}</span></div>
-                    <p class="plan-card-desc">{{ t().settings.subscription.proDesc }}</p>
-                    @if (b.planTier === 'Pro') {
-                    <app-button variant="paper" size="sm" disabled>{{ t().settings.subscription.currentPlan }}</app-button>
-                    } @else if (b.planTier === 'Free') {
-                    <app-button variant="paper" size="sm" (clicked)="pickPlan('pro')">{{ t().settings.subscription.choosePro }}</app-button>
-                    }
-                </div>
-                <div class="plan-card" [class.current]="b.planTier === 'ProPlus' || b.planTier === 'Forever'">
-                    <div class="plan-card-name">Pro Plus <span class="ai-badge">AI</span></div>
-                    <div class="plan-card-price">${{ b.prices.proPlusUsd }}<span>{{ t().settings.subscription.perMonth }}</span></div>
-                    <p class="plan-card-desc">{{ t().settings.subscription.proPlusDesc }}</p>
-                    @if (b.planTier === 'ProPlus' || b.planTier === 'Forever') {
-                    <app-button variant="paper" size="sm" disabled>{{ t().settings.subscription.currentPlan }}</app-button>
-                    } @else {
-                    <app-button variant="pine" size="sm" (clicked)="pickPlan('proplus')">{{ t().settings.subscription.chooseProPlus }}</app-button>
-                    }
-                </div>
-            </div>
+            <!-- ============ SUBSCRIPTION ============ -->
+            @if (tab() === 'account') {
+            <section id="sec-subscription" class="settings-card">
+                <h2>{{ t().settings.subscription.title }}</h2>
 
-            @if (!b.trialUsed && (b.planTier === 'Free' || b.planTier === 'Pro')) {
-            <app-button class="trial-link" variant="paper" size="sm" (clicked)="pickPlan('trial')">{{ t().settings.subscription.tryTrial(b.prices.trialUsd) }}</app-button>
-            }
-
-            @if (selectedPlan) {
-            <div class="payment-step">
-                <div class="field-hint">{{ t().settings.subscription.payFor(selectedPlan === 'proplus' ? t().settings.subscription.planProPlus : selectedPlan === 'pro' ? t().settings.subscription.planPro : t().settings.subscription.planTrial) }}</div>
-                <div class="pay-methods">
-                    <button class="pay-method" [class.selected]="payMethod === 'stripe'" [disabled]="!b.providers.stripe"
-                            [title]="b.providers.stripe ? '' : t().settings.subscription.stripeUnavailable" (click)="payMethod = 'stripe'">
-                        <span class="radio-dot"></span>
-                        <span>
-                            <span class="pay-method-label">{{ t().settings.subscription.stripeLabel }}</span>
-                            <span class="pay-method-desc">{{ t().settings.subscription.stripeDesc }}</span>
-                        </span>
-                    </button>
-                    <button class="pay-method" [class.selected]="payMethod === 'paypal'" [disabled]="!b.providers.paypal"
-                            [title]="b.providers.paypal ? '' : t().settings.subscription.paypalUnavailable" (click)="payMethod = 'paypal'">
-                        <span class="radio-dot"></span>
-                        <span>
-                            <span class="pay-method-label">{{ t().settings.subscription.paypalLabel }}</span>
-                            <span class="pay-method-desc">{{ t().settings.subscription.paypalDesc }}</span>
-                        </span>
-                    </button>
-                    <button class="pay-method" [class.selected]="payMethod === 'stars'"
-                            [disabled]="!b.providers.telegramStars || !auth.telegramLinked()"
-                            [title]="!b.providers.telegramStars ? t().settings.subscription.starsUnavailable : (!auth.telegramLinked() ? t().settings.subscription.starsNeedsLink : '')"
-                            (click)="payMethod = 'stars'">
-                        <span class="radio-dot"></span>
-                        <span>
-                            <span class="pay-method-label">{{ t().settings.subscription.starsLabel }}</span>
-                            <span class="pay-method-desc">{{ t().settings.subscription.starsDesc }}</span>
-                        </span>
-                    </button>
-                </div>
-                <app-button variant="pine" (clicked)="confirmUpgrade()" [disabled]="billingBusy()">
-                    <app-icon name="paper-plane-tilt" size="xs"></app-icon>
-                    {{ billingBusy() ? '…' : (selectedPlan === 'trial' ? t().settings.subscription.startTrial(priceFor(selectedPlan)) : t().settings.subscription.upgrade(priceFor(selectedPlan))) }}
-                </app-button>
-            </div>
-            }
-            }
-        </section>
-        }
-
-        <!-- ============ CREDITS (ADR-092) ============ -->
-        @if (tab() === 'account') {
-        <section id="sec-credits" class="settings-card">
-            <h2>{{ t().settings.credits.title }}</h2>
-            <p class="field-hint">{{ t().settings.credits.hint }}</p>
-
-            @if (credits(); as c) {
-            <div class="plan-banner">
-                <span class="status-dot"></span>
-                <div>
-                    <div class="plan-banner-title">{{ t().settings.credits.balance(c.balance) }}</div>
-                    <div class="plan-banner-meta">{{ t().settings.credits.balanceLabel }}</div>
-                </div>
-            </div>
-
-            @if (creditsMessage()) {
-            <div class="success-banner">
-                <app-icon name="check" size="xs"></app-icon>
-                {{ creditsMessage() }}
-            </div>
-            }
-
-            <div class="plan-grid">
-                @for (pack of c.packs; track pack.id) {
-                <div class="plan-card" [class.current]="selectedPackId === pack.id">
-                    <div class="plan-card-name">{{ t().settings.credits.packCredits(pack.credits) }}</div>
-                    <div class="plan-card-price">{{ packPriceUsd(pack.priceUsdCents) }}</div>
-                    <app-button variant="paper" size="sm" (clicked)="pickPack(pack.id)">
-                        {{ t().settings.credits.buy(packPriceUsd(pack.priceUsdCents)) }}
+                @if (billing(); as b) {
+                <div class="plan-banner">
+                    <span class="status-dot"></span>
+                    <div>
+                        <div class="plan-banner-title">{{ b.planTier }} {{ t().settings.subscription.planSuffix }}</div>
+                        @if (auth.planExpiresAt(); as until) {
+                        <div class="plan-banner-meta">{{ t().settings.subscription.renews }} {{ until | zonedDate:'dd.MM.yyyy' }}</div>
+                        }
+                    </div>
+                    <span class="spacer"></span>
+                    @if (b.stripeCustomerLinked) {
+                    <app-button variant="paper" size="sm" (clicked)="manageStripeBilling()" [disabled]="billingBusy()">
+                        {{ t().settings.subscription.manageStripe }}
                     </app-button>
+                    }
+                </div>
+
+                @if (billingMessage()) {
+                <div class="success-banner">
+                    <app-icon name="check" size="xs"></app-icon>
+                    {{ billingMessage() }}
                 </div>
                 }
-            </div>
 
-            @if (selectedPackId) {
-            <div class="payment-step">
-                <div class="field-hint">{{ t().settings.credits.payWith }}</div>
-                <div class="pay-methods">
-                    <button class="pay-method" [class.selected]="creditsPayMethod === 'stripe'" [disabled]="!c.providers.stripe"
-                            [title]="c.providers.stripe ? '' : t().settings.subscription.stripeUnavailable" (click)="creditsPayMethod = 'stripe'">
-                        <span class="radio-dot"></span>
-                        <span>
-                            <span class="pay-method-label">{{ t().settings.subscription.stripeLabel }}</span>
-                            <span class="pay-method-desc">{{ t().settings.subscription.stripeDesc }}</span>
-                        </span>
-                    </button>
-                    <button class="pay-method" [class.selected]="creditsPayMethod === 'stars'"
-                            [disabled]="!c.providers.telegramStars || !auth.telegramLinked()"
-                            [title]="!c.providers.telegramStars ? t().settings.subscription.starsUnavailable : (!auth.telegramLinked() ? t().settings.subscription.starsNeedsLink : '')"
-                            (click)="creditsPayMethod = 'stars'">
-                        <span class="radio-dot"></span>
-                        <span>
-                            <span class="pay-method-label">{{ t().settings.subscription.starsLabel }}</span>
-                            <span class="pay-method-desc">{{ t().settings.subscription.starsDesc }}</span>
-                        </span>
-                    </button>
-                </div>
-                <app-button variant="pine" (clicked)="buyCredits()" [disabled]="creditsBusy()">
-                    <app-icon name="paper-plane-tilt" size="xs"></app-icon>
-                    {{ creditsBusy() ? '…' : t().settings.credits.buy(packPriceUsd(selectedPackPriceCents())) }}
-                </app-button>
-                @if (creditsError()) { <span class="field-error">{{ creditsError() }}</span> }
-            </div>
-            }
-
-            @if (c.ledger.length > 0) {
-            <h3 class="ledger-title">{{ t().settings.credits.ledgerTitle }}</h3>
-            <ul class="credit-ledger">
-                @for (entry of c.ledger; track $index) {
-                <li>
-                    <span class="ledger-delta" [class.positive]="entry.delta > 0">{{ entry.delta > 0 ? '+' : '' }}{{ entry.delta }}</span>
-                    <span class="ledger-reason">{{ creditReasonLabel(entry.reason) }}</span>
-                    <span class="ledger-date">{{ entry.createdAt | zonedDate:'dd.MM.yyyy, HH:mm' }}</span>
-                </li>
-                }
-            </ul>
-            } @else {
-            <p class="field-hint">{{ t().settings.credits.ledgerEmpty }}</p>
-            }
-            }
-        </section>
-        }
-
-        <!-- ============ INTEGRATIONS ============ -->
-        @if (tab() === 'account') {
-        <section id="sec-integrations" class="settings-card">
-            <h2>{{ t().settings.integrations.title }}</h2>
-            <p class="field-hint">{{ t().settings.integrations.hint }}</p>
-
-            <div class="integration-row">
-                <span class="integration-icon telegram">
-                    <app-brand-icon name="telegram" [size]="16"></app-brand-icon>
-                </span>
-                @if (auth.telegramLinked()) {
-                <div class="integration-body">
-                    <div class="integration-title">{{ t().settings.integrations.telegramAccount }}</div>
-                    <div class="integration-meta">
-                        {{ t().settings.integrations.linkedTo }} <span class="strong">&#64;{{ auth.telegramUsername() }}</span>
-                        @if (auth.telegramLinkedAt(); as since) { · {{ t().settings.integrations.since }} {{ since | zonedDate:'dd.MM.yyyy' }} }
+                <div class="plan-grid">
+                    <div class="plan-card" [class.current]="b.planTier === 'Free'">
+                        <div class="plan-card-name">Free</div>
+                        <div class="plan-card-price">$0</div>
+                        <p class="plan-card-desc">{{ t().settings.subscription.freeDesc }}</p>
+                        @if (b.planTier === 'Free') {
+                        <app-button variant="paper" size="sm" disabled>{{ t().settings.subscription.currentPlan }}</app-button>
+                        }
+                    </div>
+                    <div class="plan-card" [class.current]="b.planTier === 'Pro'">
+                        <div class="plan-card-name">Pro</div>
+                        <div class="plan-card-price">${{ b.prices.proUsd }}<span>{{ t().settings.subscription.perMonth }}</span></div>
+                        <p class="plan-card-desc">{{ t().settings.subscription.proDesc }}</p>
+                        @if (b.planTier === 'Pro') {
+                        <app-button variant="paper" size="sm" disabled>{{ t().settings.subscription.currentPlan }}</app-button>
+                        } @else if (b.planTier === 'Free') {
+                        <app-button variant="paper" size="sm" (clicked)="pickPlan('pro')">{{ t().settings.subscription.choosePro }}</app-button>
+                        }
+                    </div>
+                    <div class="plan-card" [class.current]="b.planTier === 'ProPlus' || b.planTier === 'Forever'">
+                        <div class="plan-card-name">Pro Plus <span class="ai-badge">AI</span></div>
+                        <div class="plan-card-price">${{ b.prices.proPlusUsd }}<span>{{ t().settings.subscription.perMonth }}</span></div>
+                        <p class="plan-card-desc">{{ t().settings.subscription.proPlusDesc }}</p>
+                        @if (b.planTier === 'ProPlus' || b.planTier === 'Forever') {
+                        <app-button variant="paper" size="sm" disabled>{{ t().settings.subscription.currentPlan }}</app-button>
+                        } @else {
+                        <app-button variant="pine" size="sm" (clicked)="pickPlan('proplus')">{{ t().settings.subscription.chooseProPlus }}</app-button>
+                        }
                     </div>
                 </div>
-                @if (askUnlinkTelegram()) {
-                <div class="inline-confirm">
-                    <span>{{ t().settings.integrations.sure }}</span>
-                    <app-button variant="danger" (clicked)="unlinkTelegram()" [disabled]="telegramBusy()">{{ t().settings.integrations.unlink }}</app-button>
-                    <app-button variant="paper" (clicked)="askUnlinkTelegram.set(false)">{{ t().common.cancel }}</app-button>
-                </div>
-                } @else {
-                <app-button variant="paper" (clicked)="askUnlinkTelegram.set(true)">{{ t().settings.integrations.unlink }}</app-button>
-                }
-                } @else {
-                <div class="integration-body">
-                    <div class="integration-title">{{ t().settings.integrations.telegramAccount }}</div>
-                    <div class="integration-meta muted">{{ t().settings.integrations.notLinked }}</div>
-                </div>
-                <app-button variant="pine" size="sm" (clicked)="linkTelegram()" [disabled]="telegramBusy()">
-                    {{ telegramBusy() ? t().settings.integrations.waitingForTelegram : t().settings.integrations.linkTelegram }}
-                </app-button>
-                }
-            </div>
-            @if (telegramError()) { <p class="field-error">{{ telegramError() }}</p> }
 
-            @if (auth.telegramLinked()) {
-            <div class="integration-row">
-                <label class="field-hint">
-                    <input type="checkbox" [checked]="auth.notifyOnEngagement()" (change)="toggleNotifyOnEngagement()" [disabled]="notifyBusy()">
-                    {{ t().settings.integrations.notifyOnEngagement }}
-                </label>
-            </div>
+                @if (!b.trialUsed && (b.planTier === 'Free' || b.planTier === 'Pro')) {
+                <app-button class="trial-link" variant="paper" size="sm" (clicked)="pickPlan('trial')">{{ t().settings.subscription.tryTrial(b.prices.trialUsd) }}</app-button>
+                }
+
+                @if (selectedPlan) {
+                <div class="payment-step">
+                    <div class="field-hint">{{ t().settings.subscription.payFor(selectedPlan === 'proplus' ? t().settings.subscription.planProPlus : selectedPlan === 'pro' ? t().settings.subscription.planPro : t().settings.subscription.planTrial) }}</div>
+                    <div class="pay-methods">
+                        <button class="pay-method" [class.selected]="payMethod === 'stripe'" [disabled]="!b.providers.stripe"
+                                [title]="b.providers.stripe ? '' : t().settings.subscription.stripeUnavailable" (click)="payMethod = 'stripe'">
+                            <span class="radio-dot"></span>
+                            <span>
+                                <span class="pay-method-label">{{ t().settings.subscription.stripeLabel }}</span>
+                                <span class="pay-method-desc">{{ t().settings.subscription.stripeDesc }}</span>
+                            </span>
+                        </button>
+                        <button class="pay-method" [class.selected]="payMethod === 'paypal'" [disabled]="!b.providers.paypal"
+                                [title]="b.providers.paypal ? '' : t().settings.subscription.paypalUnavailable" (click)="payMethod = 'paypal'">
+                            <span class="radio-dot"></span>
+                            <span>
+                                <span class="pay-method-label">{{ t().settings.subscription.paypalLabel }}</span>
+                                <span class="pay-method-desc">{{ t().settings.subscription.paypalDesc }}</span>
+                            </span>
+                        </button>
+                        <button class="pay-method" [class.selected]="payMethod === 'stars'"
+                                [disabled]="!b.providers.telegramStars || !auth.telegramLinked()"
+                                [title]="!b.providers.telegramStars ? t().settings.subscription.starsUnavailable : (!auth.telegramLinked() ? t().settings.subscription.starsNeedsLink : '')"
+                                (click)="payMethod = 'stars'">
+                            <span class="radio-dot"></span>
+                            <span>
+                                <span class="pay-method-label">{{ t().settings.subscription.starsLabel }}</span>
+                                <span class="pay-method-desc">{{ t().settings.subscription.starsDesc }}</span>
+                            </span>
+                        </button>
+                    </div>
+                    <app-button variant="pine" (clicked)="confirmUpgrade()" [disabled]="billingBusy()">
+                        <app-icon name="paper-plane-tilt" size="xs"></app-icon>
+                        {{ billingBusy() ? '…' : (selectedPlan === 'trial' ? t().settings.subscription.startTrial(priceFor(selectedPlan)) : t().settings.subscription.upgrade(priceFor(selectedPlan))) }}
+                    </app-button>
+                </div>
+                }
+                }
+            </section>
             }
 
-            <div class="integration-row">
-                <span class="integration-icon bot">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"></rect><path d="M12 8V4"></path><circle cx="12" cy="3" r="1"></circle><line x1="9" y1="13" x2="9" y2="15"></line><line x1="15" y1="13" x2="15" y2="15"></line></svg>
-                </span>
-                <div class="integration-body">
-                    <div class="integration-title">&#64;CedarClerkBot</div>
-                    @if (botStatus(); as bs) {
-                    <div class="integration-meta">
-                        <span class="status-dot" [class.down]="!bs.reachable"></span>
-                        {{ bs.reachable ? t().settings.integrations.botReachable : t().settings.integrations.botUnreachable }} · {{ t().settings.integrations.botRole }}
-                    </div>
-                    }
-                </div>
-                <a class="paper-anchor" href="https://t.me/CedarClerkBot" target="_blank" rel="noopener">{{ t().settings.integrations.openBot }}</a>
-            </div>
+            <!-- ============ CREDITS (ADR-092) ============ -->
+            @if (tab() === 'account') {
+            <section id="sec-credits" class="settings-card">
+                <h2>{{ t().settings.credits.title }}</h2>
+                <p class="field-hint">{{ t().settings.credits.hint }}</p>
 
-            <!--ADR-095: channels are managed here now, not behind a disclosure in the export
-            window. The list is the section — a count with "manage elsewhere" was a signpost to a
-            place that no longer exists.-->
-            <div class="integration-block">
-                <div class="integration-block-head">
-                    <span class="integration-icon telegram"><app-brand-icon name="telegram" [size]="16"></app-brand-icon></span>
-                    <div class="integration-body">
-                        <div class="integration-title">{{ t().settings.integrations.channels }}</div>
-                        <div class="integration-meta">
-                            @if (channels().length) { {{ t().settings.integrations.channelsConnected(channels().length) }} } @else { {{ t().settings.integrations.noChannels }} }
-                        </div>
+                @if (credits(); as c) {
+                <div class="plan-banner">
+                    <span class="status-dot"></span>
+                    <div>
+                        <div class="plan-banner-title">{{ t().settings.credits.balance(c.balance) }}</div>
+                        <div class="plan-banner-meta">{{ t().settings.credits.balanceLabel }}</div>
                     </div>
-                    <button class="mini" (click)="refreshKnownChats()" [disabled]="knownChatsRefreshing()"
-                            [title]="t().settings.integrations.refresh" [attr.aria-label]="t().settings.integrations.refresh">
-                        <app-icon name="arrow-clockwise" size="sm" [class.spin]="knownChatsRefreshing()"></app-icon>
-                    </button>
                 </div>
 
-                @if (channels().length) {
-                <ul class="target-list">
-                    @for (c of channels(); track c.id) {
-                    <li class="target-row">
-                        <span class="target-name">{{ c.title }}</span>
-                        @if (c.username) { <span class="target-handle">&#64;{{ c.username }}</span> }
-                        <app-button variant="danger" size="sm" (clicked)="removeChannel(c.id)" [disabled]="channelBusy()">
-                            {{ t().settings.integrations.disconnect }}
+                @if (creditsMessage()) {
+                <div class="success-banner">
+                    <app-icon name="check" size="xs"></app-icon>
+                    {{ creditsMessage() }}
+                </div>
+                }
+
+                <div class="plan-grid">
+                    @for (pack of c.packs; track pack.id) {
+                    <div class="plan-card" [class.current]="selectedPackId === pack.id">
+                        <div class="plan-card-name">{{ t().settings.credits.packCredits(pack.credits) }}</div>
+                        <div class="plan-card-price">{{ packPriceUsd(pack.priceUsdCents) }}</div>
+                        <app-button variant="paper" size="sm" (clicked)="pickPack(pack.id)">
+                            {{ t().settings.credits.buy(packPriceUsd(pack.priceUsdCents)) }}
                         </app-button>
+                    </div>
+                    }
+                </div>
+
+                @if (selectedPackId) {
+                <div class="payment-step">
+                    <div class="field-hint">{{ t().settings.credits.payWith }}</div>
+                    <div class="pay-methods">
+                        <button class="pay-method" [class.selected]="creditsPayMethod === 'stripe'" [disabled]="!c.providers.stripe"
+                                [title]="c.providers.stripe ? '' : t().settings.subscription.stripeUnavailable" (click)="creditsPayMethod = 'stripe'">
+                            <span class="radio-dot"></span>
+                            <span>
+                                <span class="pay-method-label">{{ t().settings.subscription.stripeLabel }}</span>
+                                <span class="pay-method-desc">{{ t().settings.subscription.stripeDesc }}</span>
+                            </span>
+                        </button>
+                        <button class="pay-method" [class.selected]="creditsPayMethod === 'stars'"
+                                [disabled]="!c.providers.telegramStars || !auth.telegramLinked()"
+                                [title]="!c.providers.telegramStars ? t().settings.subscription.starsUnavailable : (!auth.telegramLinked() ? t().settings.subscription.starsNeedsLink : '')"
+                                (click)="creditsPayMethod = 'stars'">
+                            <span class="radio-dot"></span>
+                            <span>
+                                <span class="pay-method-label">{{ t().settings.subscription.starsLabel }}</span>
+                                <span class="pay-method-desc">{{ t().settings.subscription.starsDesc }}</span>
+                            </span>
+                        </button>
+                    </div>
+                    <app-button variant="pine" (clicked)="buyCredits()" [disabled]="creditsBusy()">
+                        <app-icon name="paper-plane-tilt" size="xs"></app-icon>
+                        {{ creditsBusy() ? '…' : t().settings.credits.buy(packPriceUsd(selectedPackPriceCents())) }}
+                    </app-button>
+                    @if (creditsError()) { <span class="field-error">{{ creditsError() }}</span> }
+                </div>
+                }
+
+                @if (c.ledger.length > 0) {
+                <h3 class="ledger-title">{{ t().settings.credits.ledgerTitle }}</h3>
+                <ul class="credit-ledger">
+                    @for (entry of c.ledger; track $index) {
+                    <li>
+                        <span class="ledger-delta" [class.positive]="entry.delta > 0">{{ entry.delta > 0 ? '+' : '' }}{{ entry.delta }}</span>
+                        <span class="ledger-reason">{{ creditReasonLabel(entry.reason) }}</span>
+                        <span class="ledger-date">{{ entry.createdAt | zonedDate:'dd.MM.yyyy, HH:mm' }}</span>
                     </li>
                     }
                 </ul>
+                } @else {
+                <p class="field-hint">{{ t().settings.credits.ledgerEmpty }}</p>
+                }
+                }
+            </section>
+            }
+
+            <!-- ============ INTEGRATIONS ============ -->
+            @if (tab() === 'account') {
+            <section id="sec-integrations" class="settings-card">
+                <h2>{{ t().settings.integrations.title }}</h2>
+                <p class="field-hint">{{ t().settings.integrations.hint }}</p>
+
+                <div class="integration-row">
+                    <span class="integration-icon telegram">
+                        <app-brand-icon name="telegram" [size]="16"></app-brand-icon>
+                    </span>
+                    @if (auth.telegramLinked()) {
+                    <div class="integration-body">
+                        <div class="integration-title">{{ t().settings.integrations.telegramAccount }}</div>
+                        <div class="integration-meta">
+                            {{ t().settings.integrations.linkedTo }} <span class="strong">&#64;{{ auth.telegramUsername() }}</span>
+                            @if (auth.telegramLinkedAt(); as since) { · {{ t().settings.integrations.since }} {{ since | zonedDate:'dd.MM.yyyy' }} }
+                        </div>
+                    </div>
+                    @if (askUnlinkTelegram()) {
+                    <div class="inline-confirm">
+                        <span>{{ t().settings.integrations.sure }}</span>
+                        <app-button variant="danger" (clicked)="unlinkTelegram()" [disabled]="telegramBusy()">{{ t().settings.integrations.unlink }}</app-button>
+                        <app-button variant="paper" (clicked)="askUnlinkTelegram.set(false)">{{ t().common.cancel }}</app-button>
+                    </div>
+                    } @else {
+                    <app-button variant="paper" (clicked)="askUnlinkTelegram.set(true)">{{ t().settings.integrations.unlink }}</app-button>
+                    }
+                    } @else {
+                    <div class="integration-body">
+                        <div class="integration-title">{{ t().settings.integrations.telegramAccount }}</div>
+                        <div class="integration-meta muted">{{ t().settings.integrations.notLinked }}</div>
+                    </div>
+                    <app-button variant="pine" size="sm" (clicked)="linkTelegram()" [disabled]="telegramBusy()">
+                        {{ telegramBusy() ? t().settings.integrations.waitingForTelegram : t().settings.integrations.linkTelegram }}
+                    </app-button>
+                    }
+                </div>
+                @if (telegramError()) { <p class="field-error">{{ telegramError() }}</p> }
+
+                @if (auth.telegramLinked()) {
+                <div class="integration-row">
+                    <label class="field-hint">
+                        <input type="checkbox" [checked]="auth.notifyOnEngagement()" (change)="toggleNotifyOnEngagement()" [disabled]="notifyBusy()">
+                        {{ t().settings.integrations.notifyOnEngagement }}
+                    </label>
+                </div>
                 }
 
-                @if (connectableChats().length) {
-                <div class="panel-label">{{ t().settings.integrations.available }}</div>
-                <ul class="target-list">
-                    @for (k of connectableChats(); track k.telegramChatId) {
-                    <li class="target-row">
-                        <span class="target-name">{{ k.title }}</span>
-                        @if (k.username) { <span class="target-handle">&#64;{{ k.username }}</span> }
-                        <app-button variant="pine" size="sm" (clicked)="connectChannel(k.telegramChatId + '')" [disabled]="channelBusy()">
+                <div class="integration-row">
+                    <span class="integration-icon bot">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"></rect><path d="M12 8V4"></path><circle cx="12" cy="3" r="1"></circle><line x1="9" y1="13" x2="9" y2="15"></line><line x1="15" y1="13" x2="15" y2="15"></line></svg>
+                    </span>
+                    <div class="integration-body">
+                        <div class="integration-title">&#64;CedarClerkBot</div>
+                        @if (botStatus(); as bs) {
+                        <div class="integration-meta">
+                            <span class="status-dot" [class.down]="!bs.reachable"></span>
+                            {{ bs.reachable ? t().settings.integrations.botReachable : t().settings.integrations.botUnreachable }} · {{ t().settings.integrations.botRole }}
+                        </div>
+                        }
+                    </div>
+                    <a class="paper-anchor" href="https://t.me/CedarClerkBot" target="_blank" rel="noopener">{{ t().settings.integrations.openBot }}</a>
+                </div>
+
+                <!--ADR-095: channels are managed here now, not behind a disclosure in the export
+                window. The list is the section — a count with "manage elsewhere" was a signpost to a
+                place that no longer exists.-->
+                <div class="integration-block">
+                    <div class="integration-block-head">
+                        <span class="integration-icon telegram"><app-brand-icon name="telegram" [size]="16"></app-brand-icon></span>
+                        <div class="integration-body">
+                            <div class="integration-title">{{ t().settings.integrations.channels }}</div>
+                            <div class="integration-meta">
+                                @if (channels().length) { {{ t().settings.integrations.channelsConnected(channels().length) }} } @else { {{ t().settings.integrations.noChannels }} }
+                            </div>
+                        </div>
+                        <button class="mini" (click)="refreshKnownChats()" [disabled]="knownChatsRefreshing()"
+                                [title]="t().settings.integrations.refresh" [attr.aria-label]="t().settings.integrations.refresh">
+                            <app-icon name="arrow-clockwise" size="sm" [class.spin]="knownChatsRefreshing()"></app-icon>
+                        </button>
+                    </div>
+
+                    @if (channels().length) {
+                    <ul class="target-list">
+                        @for (c of channels(); track c.id) {
+                        <li class="target-row">
+                            <span class="target-name">{{ c.title }}</span>
+                            @if (c.username) { <span class="target-handle">&#64;{{ c.username }}</span> }
+                            <app-button variant="danger" size="sm" (clicked)="removeChannel(c.id)" [disabled]="channelBusy()">
+                                {{ t().settings.integrations.disconnect }}
+                            </app-button>
+                        </li>
+                        }
+                    </ul>
+                    }
+
+                    @if (connectableChats().length) {
+                    <div class="panel-label">{{ t().settings.integrations.available }}</div>
+                    <ul class="target-list">
+                        @for (k of connectableChats(); track k.telegramChatId) {
+                        <li class="target-row">
+                            <span class="target-name">{{ k.title }}</span>
+                            @if (k.username) { <span class="target-handle">&#64;{{ k.username }}</span> }
+                            <app-button variant="pine" size="sm" (clicked)="connectChannel(k.telegramChatId + '')" [disabled]="channelBusy()">
+                                {{ t().settings.integrations.connect }}
+                            </app-button>
+                        </li>
+                        }
+                    </ul>
+                    } @else if (!channels().length) {
+                    <p class="field-hint">
+                        {{ auth.telegramLinked() ? t().settings.integrations.noChannelsYet : t().settings.integrations.linkTelegramFirst }}
+                    </p>
+                    } @else {
+                    <p class="field-hint">{{ t().settings.integrations.nothingNew }}</p>
+                    }
+
+                    <app-button variant="paper" size="sm" (clicked)="manualChannelOpen.set(!manualChannelOpen())">
+                        {{ manualChannelOpen() ? t().settings.integrations.manualHide : t().settings.integrations.manualAdd }}
+                    </app-button>
+                    @if (manualChannelOpen()) {
+                    <div class="connect-row">
+                        <input [(ngModel)]="newChannelChatId" [disabled]="channelBusy()"
+                               [placeholder]="t().settings.integrations.manualPlaceholder" (keyup.enter)="connectChannel()">
+                        <app-button variant="pine" size="sm" (clicked)="connectChannel()" [disabled]="channelBusy() || !newChannelChatId.trim()">
                             {{ t().settings.integrations.connect }}
                         </app-button>
-                    </li>
+                    </div>
                     }
-                </ul>
-                } @else if (!channels().length) {
-                <p class="field-hint">
-                    {{ auth.telegramLinked() ? t().settings.integrations.noChannelsYet : t().settings.integrations.linkTelegramFirst }}
-                </p>
-                } @else {
-                <p class="field-hint">{{ t().settings.integrations.nothingNew }}</p>
-                }
-
-                <app-button variant="paper" size="sm" (clicked)="manualChannelOpen.set(!manualChannelOpen())">
-                    {{ manualChannelOpen() ? t().settings.integrations.manualHide : t().settings.integrations.manualAdd }}
-                </app-button>
-                @if (manualChannelOpen()) {
-                <div class="connect-row">
-                    <input [(ngModel)]="newChannelChatId" [disabled]="channelBusy()"
-                           [placeholder]="t().settings.integrations.manualPlaceholder" (keyup.enter)="connectChannel()">
-                    <app-button variant="pine" size="sm" (clicked)="connectChannel()" [disabled]="channelBusy() || !newChannelChatId.trim()">
-                        {{ t().settings.integrations.connect }}
-                    </app-button>
+                    @if (channelError()) { <p class="field-error">{{ channelError() }}</p> }
                 </div>
-                }
-                @if (channelError()) { <p class="field-error">{{ channelError() }}</p> }
-            </div>
 
-            <!--Bluesky: an app password, never the account password — it is revocable from Bluesky
-            itself, which is the whole reason storing one is defensible (ADR-079).-->
-            <div class="integration-block">
-                <div class="integration-block-head">
-                    <span class="integration-icon bluesky"><app-brand-icon name="bluesky" [size]="16"></app-brand-icon></span>
-                    <div class="integration-body">
-                        <div class="integration-title">{{ t().settings.integrations.bluesky }}</div>
+                <!--Bluesky: an app password, never the account password — it is revocable from Bluesky
+                itself, which is the whole reason storing one is defensible (ADR-079).-->
+                <div class="integration-block">
+                    <div class="integration-block-head">
+                        <span class="integration-icon bluesky"><app-brand-icon name="bluesky" [size]="16"></app-brand-icon></span>
+                        <div class="integration-body">
+                            <div class="integration-title">{{ t().settings.integrations.bluesky }}</div>
+                            @if (blueskyAccount(); as account) {
+                            <div class="integration-meta">
+                                {{ t().settings.integrations.linkedTo }} <span class="strong">&#64;{{ account.displayName }}</span>
+                                @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'dd.MM.yyyy' }} }
+                            </div>
+                            } @else {
+                            <div class="integration-meta muted">{{ t().settings.integrations.notConnected }}</div>
+                            }
+                        </div>
                         @if (blueskyAccount(); as account) {
-                        <div class="integration-meta">
-                            {{ t().settings.integrations.linkedTo }} <span class="strong">&#64;{{ account.displayName }}</span>
-                            @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'dd.MM.yyyy' }} }
-                        </div>
-                        } @else {
-                        <div class="integration-meta muted">{{ t().settings.integrations.notConnected }}</div>
+                        <app-button variant="danger" size="sm" (clicked)="disconnectBluesky(account.id)" [disabled]="blueskyBusy()">
+                            {{ t().settings.integrations.disconnect }}
+                        </app-button>
                         }
                     </div>
-                    @if (blueskyAccount(); as account) {
-                    <app-button variant="danger" size="sm" (clicked)="disconnectBluesky(account.id)" [disabled]="blueskyBusy()">
-                        {{ t().settings.integrations.disconnect }}
-                    </app-button>
+                    @if (!blueskyAccount()) {
+                    <p class="field-hint">{{ t().settings.integrations.blueskyConnectHint }}</p>
+                    <div class="connect-row">
+                        <input [(ngModel)]="blueskyHandle" [placeholder]="t().settings.integrations.blueskyHandle">
+                        <input type="password" [(ngModel)]="blueskyAppPassword" [placeholder]="t().settings.integrations.blueskyAppPassword">
+                        <app-button variant="pine" size="sm" (clicked)="connectBluesky()"
+                                [disabled]="blueskyBusy() || !blueskyHandle.trim() || !blueskyAppPassword.trim()">
+                            {{ blueskyBusy() ? '…' : t().settings.integrations.connect }}
+                        </app-button>
+                    </div>
                     }
+                    @if (blueskyError()) { <p class="field-error">{{ blueskyError() }}</p> }
                 </div>
-                @if (!blueskyAccount()) {
-                <p class="field-hint">{{ t().settings.integrations.blueskyConnectHint }}</p>
-                <div class="connect-row">
-                    <input [(ngModel)]="blueskyHandle" [placeholder]="t().settings.integrations.blueskyHandle">
-                    <input type="password" [(ngModel)]="blueskyAppPassword" [placeholder]="t().settings.integrations.blueskyAppPassword">
-                    <app-button variant="pine" size="sm" (clicked)="connectBluesky()"
-                            [disabled]="blueskyBusy() || !blueskyHandle.trim() || !blueskyAppPassword.trim()">
-                        {{ blueskyBusy() ? '…' : t().settings.integrations.connect }}
-                    </app-button>
-                </div>
-                }
-                @if (blueskyError()) { <p class="field-error">{{ blueskyError() }}</p> }
-            </div>
 
-            <!--X: one button out to x.com and back (ADR-093). The callback returns to this section
-            with ?x=, which is the only sign the round trip finished at all.-->
-            <div class="integration-block">
-                <div class="integration-block-head">
-                    <span class="integration-icon x"><app-brand-icon name="twitter" [size]="14"></app-brand-icon></span>
-                    <div class="integration-body">
-                        <div class="integration-title">{{ t().settings.integrations.x }}</div>
+                <!--X: one button out to x.com and back (ADR-093). The callback returns to this section
+                with ?x=, which is the only sign the round trip finished at all.-->
+                <div class="integration-block">
+                    <div class="integration-block-head">
+                        <span class="integration-icon x"><app-brand-icon name="twitter" [size]="14"></app-brand-icon></span>
+                        <div class="integration-body">
+                            <div class="integration-title">{{ t().settings.integrations.x }}</div>
+                            @if (xAccount(); as account) {
+                            <div class="integration-meta">
+                                {{ t().settings.integrations.linkedTo }} <span class="strong">{{ account.displayName }}</span>
+                                @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'dd.MM.yyyy' }} }
+                            </div>
+                            } @else {
+                            <div class="integration-meta muted">{{ t().settings.integrations.notConnected }}</div>
+                            }
+                        </div>
                         @if (xAccount(); as account) {
-                        <div class="integration-meta">
-                            {{ t().settings.integrations.linkedTo }} <span class="strong">{{ account.displayName }}</span>
-                            @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'dd.MM.yyyy' }} }
-                        </div>
+                        <app-button variant="danger" size="sm" (clicked)="disconnectX(account.id)" [disabled]="xBusy()">
+                            {{ t().settings.integrations.disconnect }}
+                        </app-button>
                         } @else {
-                        <div class="integration-meta muted">{{ t().settings.integrations.notConnected }}</div>
+                        <app-button variant="pine" size="sm" (clicked)="connectX()" [disabled]="xBusy()">
+                            {{ xBusy() ? '…' : t().settings.integrations.xConnect }}
+                        </app-button>
                         }
                     </div>
-                    @if (xAccount(); as account) {
-                    <app-button variant="danger" size="sm" (clicked)="disconnectX(account.id)" [disabled]="xBusy()">
-                        {{ t().settings.integrations.disconnect }}
-                    </app-button>
-                    } @else {
-                    <app-button variant="pine" size="sm" (clicked)="connectX()" [disabled]="xBusy()">
-                        {{ xBusy() ? '…' : t().settings.integrations.xConnect }}
-                    </app-button>
+                    @if (xNotice() === 'connected') {
+                    <div class="success-banner"><app-icon name="check" size="xs"></app-icon>{{ t().settings.integrations.xConnected }}</div>
+                    } @else if (xNotice() === 'error') {
+                    <p class="field-error">{{ t().settings.integrations.xFailed }}</p>
                     }
+                    @if (!xAccount()) { <p class="field-hint">{{ t().settings.integrations.xConnectHint }}</p> }
+                    @if (credits(); as c) {
+                    <p class="field-hint">
+                        {{ t().settings.integrations.xCreditNote(c.balance) }}
+                        <app-button variant="paper" size="sm" (clicked)="jump('sec-credits')">{{ t().settings.integrations.xCreditsLink }}</app-button>
+                    </p>
+                    }
+                    @if (xError()) { <p class="field-error">{{ xError() }}</p> }
                 </div>
-                @if (xNotice() === 'connected') {
-                <div class="success-banner"><app-icon name="check" size="xs"></app-icon>{{ t().settings.integrations.xConnected }}</div>
-                } @else if (xNotice() === 'error') {
-                <p class="field-error">{{ t().settings.integrations.xFailed }}</p>
-                }
-                @if (!xAccount()) { <p class="field-hint">{{ t().settings.integrations.xConnectHint }}</p> }
-                @if (credits(); as c) {
-                <p class="field-hint">
-                    {{ t().settings.integrations.xCreditNote(c.balance) }}
-                    <app-button variant="paper" size="sm" (clicked)="jump('sec-credits')">{{ t().settings.integrations.xCreditsLink }}</app-button>
-                </p>
-                }
-                @if (xError()) { <p class="field-error">{{ xError() }}</p> }
-            </div>
 
-            <!--Discord: a channel webhook pasted whole (ADR-131) — the URL is the credential, so it
-            is verified against Discord before being stored encrypted, and never shown back.-->
-            <div class="integration-block">
-                <div class="integration-block-head">
-                    <span class="integration-icon discord"><app-brand-icon name="discord" [size]="15"></app-brand-icon></span>
-                    <div class="integration-body">
-                        <div class="integration-title">{{ t().settings.integrations.discord }}</div>
+                <!--Discord: a channel webhook pasted whole (ADR-131) — the URL is the credential, so it
+                is verified against Discord before being stored encrypted, and never shown back.-->
+                <div class="integration-block">
+                    <div class="integration-block-head">
+                        <span class="integration-icon discord"><app-brand-icon name="discord" [size]="15"></app-brand-icon></span>
+                        <div class="integration-body">
+                            <div class="integration-title">{{ t().settings.integrations.discord }}</div>
+                            @if (discordAccount(); as account) {
+                            <div class="integration-meta">
+                                {{ t().settings.integrations.linkedTo }} <span class="strong">{{ account.displayName }}</span>
+                                @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'dd.MM.yyyy' }} }
+                            </div>
+                            } @else {
+                            <div class="integration-meta muted">{{ t().settings.integrations.notConnected }}</div>
+                            }
+                        </div>
                         @if (discordAccount(); as account) {
-                        <div class="integration-meta">
-                            {{ t().settings.integrations.linkedTo }} <span class="strong">{{ account.displayName }}</span>
-                            @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'dd.MM.yyyy' }} }
-                        </div>
-                        } @else {
-                        <div class="integration-meta muted">{{ t().settings.integrations.notConnected }}</div>
+                        <app-button variant="danger" size="sm" (clicked)="disconnectDiscord(account.id)" [disabled]="discordBusy()">
+                            {{ t().settings.integrations.disconnect }}
+                        </app-button>
                         }
                     </div>
-                    @if (discordAccount(); as account) {
-                    <app-button variant="danger" size="sm" (clicked)="disconnectDiscord(account.id)" [disabled]="discordBusy()">
-                        {{ t().settings.integrations.disconnect }}
-                    </app-button>
+                    @if (!discordAccount()) {
+                    <p class="field-hint">{{ t().settings.integrations.discordConnectHint }}</p>
+                    <div class="connect-row">
+                        <input [(ngModel)]="discordWebhookUrl" [placeholder]="t().settings.integrations.discordWebhookUrl">
+                        <app-button variant="pine" size="sm" (clicked)="connectDiscord()"
+                                [disabled]="discordBusy() || !discordWebhookUrl.trim()">
+                            {{ discordBusy() ? '…' : t().settings.integrations.connect }}
+                        </app-button>
+                    </div>
                     }
+                    @if (discordError()) { <p class="field-error">{{ discordError() }}</p> }
                 </div>
-                @if (!discordAccount()) {
-                <p class="field-hint">{{ t().settings.integrations.discordConnectHint }}</p>
-                <div class="connect-row">
-                    <input [(ngModel)]="discordWebhookUrl" [placeholder]="t().settings.integrations.discordWebhookUrl">
-                    <app-button variant="pine" size="sm" (clicked)="connectDiscord()"
-                            [disabled]="discordBusy() || !discordWebhookUrl.trim()">
-                        {{ discordBusy() ? '…' : t().settings.integrations.connect }}
-                    </app-button>
-                </div>
-                }
-                @if (discordError()) { <p class="field-error">{{ discordError() }}</p> }
-            </div>
 
-            <div class="integration-block dashed">
-                <div class="panel-label">{{ t().settings.integrations.planned }}</div>
-                <div class="planned-row">
-                    @for (name of plannedNetworks; track name) {
-                    <span class="planned-chip">{{ name }}</span>
-                    }
+                <div class="integration-block dashed">
+                    <div class="panel-label">{{ t().settings.integrations.planned }}</div>
+                    <div class="planned-row">
+                        @for (name of plannedNetworks; track name) {
+                        <span class="planned-chip">{{ name }}</span>
+                        }
+                    </div>
+                    <p class="field-hint">{{ t().settings.integrations.plannedHint }}</p>
                 </div>
-                <p class="field-hint">{{ t().settings.integrations.plannedHint }}</p>
+            </section>
+            }
             </div>
-        </section>
-        }
+        </div>
     </div>
 </div>

@@ -126,6 +126,14 @@ public class ApplicationUser : IdentityUser
     public string? SocialFacebookUrl { get; set; }
     public string? SocialYoutubeUrl { get; set; }
     public string? SocialGithubUrl { get; set; }
+    public string? SocialTelegramUrl { get; set; }
+    public string? SocialThreadsUrl { get; set; }
+    public string? SocialBlueskyUrl { get; set; }
+    public string? SocialRedditUrl { get; set; }
+    // The two an indie developer publishes a build on, which is what makes them belong on a fixed
+    // list beside the five social networks rather than in a free-form row (Phase 13).
+    public string? SocialSteamUrl { get; set; }
+    public string? SocialItchUrl { get; set; }
 
     // Editor redesign (ADR-035, docs/DECISIONS.md) — null always means "use the built-in
     // default", so existing accounts are unaffected until they opt in. JSON blobs rather than

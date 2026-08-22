@@ -25,6 +25,8 @@ public static class AuthEndpoints
         string? HeaderSlot1Type, string? HeaderSlot2Type, string? HeaderSlot3Type,
         string? SocialTwitterUrl = null, string? SocialInstagramUrl = null, string? SocialFacebookUrl = null,
         string? SocialYoutubeUrl = null, string? SocialGithubUrl = null,
+        string? SocialTelegramUrl = null, string? SocialThreadsUrl = null, string? SocialBlueskyUrl = null,
+        string? SocialRedditUrl = null, string? SocialSteamUrl = null, string? SocialItchUrl = null,
         string? BlogLinkText = null, string? TelegramLinkText = null,
         // The same two labels in the other content languages, keyed by language code. Sent whole
         // rather than one language per request: the page has a single Save, and a request per
@@ -225,6 +227,12 @@ public static class AuthEndpoints
                 socialFacebookUrl = appUser?.SocialFacebookUrl,
                 socialYoutubeUrl = appUser?.SocialYoutubeUrl,
                 socialGithubUrl = appUser?.SocialGithubUrl,
+                socialTelegramUrl = appUser?.SocialTelegramUrl,
+                socialThreadsUrl = appUser?.SocialThreadsUrl,
+                socialBlueskyUrl = appUser?.SocialBlueskyUrl,
+                socialRedditUrl = appUser?.SocialRedditUrl,
+                socialSteamUrl = appUser?.SocialSteamUrl,
+                socialItchUrl = appUser?.SocialItchUrl,
                 avatarUrl = appUser?.AvatarUrl,
                 blogLinkText = appUser?.BlogLinkText,
                 blogLinkTexts = LocalizedTextMap.All(appUser?.BlogLinkTextTranslationsJson),
@@ -499,6 +507,12 @@ public static class AuthEndpoints
             user.SocialFacebookUrl = string.IsNullOrWhiteSpace(req.SocialFacebookUrl) ? null : req.SocialFacebookUrl.Trim();
             user.SocialYoutubeUrl = string.IsNullOrWhiteSpace(req.SocialYoutubeUrl) ? null : req.SocialYoutubeUrl.Trim();
             user.SocialGithubUrl = string.IsNullOrWhiteSpace(req.SocialGithubUrl) ? null : req.SocialGithubUrl.Trim();
+            user.SocialTelegramUrl = string.IsNullOrWhiteSpace(req.SocialTelegramUrl) ? null : req.SocialTelegramUrl.Trim();
+            user.SocialThreadsUrl = string.IsNullOrWhiteSpace(req.SocialThreadsUrl) ? null : req.SocialThreadsUrl.Trim();
+            user.SocialBlueskyUrl = string.IsNullOrWhiteSpace(req.SocialBlueskyUrl) ? null : req.SocialBlueskyUrl.Trim();
+            user.SocialRedditUrl = string.IsNullOrWhiteSpace(req.SocialRedditUrl) ? null : req.SocialRedditUrl.Trim();
+            user.SocialSteamUrl = string.IsNullOrWhiteSpace(req.SocialSteamUrl) ? null : req.SocialSteamUrl.Trim();
+            user.SocialItchUrl = string.IsNullOrWhiteSpace(req.SocialItchUrl) ? null : req.SocialItchUrl.Trim();
             // I15 — cross-link wording. Not Pro-gated: it replaces one of our strings with the
             // author's, it doesn't remove attribution the way the signature does.
             //
@@ -526,6 +540,12 @@ public static class AuthEndpoints
                 socialFacebookUrl = user.SocialFacebookUrl,
                 socialYoutubeUrl = user.SocialYoutubeUrl,
                 socialGithubUrl = user.SocialGithubUrl,
+                socialTelegramUrl = user.SocialTelegramUrl,
+                socialThreadsUrl = user.SocialThreadsUrl,
+                socialBlueskyUrl = user.SocialBlueskyUrl,
+                socialRedditUrl = user.SocialRedditUrl,
+                socialSteamUrl = user.SocialSteamUrl,
+                socialItchUrl = user.SocialItchUrl,
                 blogLinkText = user.BlogLinkText,
                 telegramLinkText = user.TelegramLinkText,
                 blogLinkTexts = LocalizedTextMap.All(user.BlogLinkTextTranslationsJson),

@@ -17,6 +17,7 @@ interface MeResponse {
     headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
     socialTwitterUrl: string | null; socialInstagramUrl: string | null; socialFacebookUrl: string | null;
     socialYoutubeUrl: string | null; socialGithubUrl: string | null;
+    socialTelegramUrl: string | null; socialThreadsUrl: string | null; socialBlueskyUrl: string | null; socialRedditUrl: string | null; socialSteamUrl: string | null; socialItchUrl: string | null;
     toolbarLayoutJson: string | null; appearancePrefsJson: string | null; newDraftDefaultsJson: string | null;
     uiLanguage: string | null;
     avatarUrl: string | null;
@@ -69,6 +70,12 @@ export class AuthService {
     readonly socialFacebookUrl = signal<string | null>(null);
     readonly socialYoutubeUrl = signal<string | null>(null);
     readonly socialGithubUrl = signal<string | null>(null);
+    readonly socialTelegramUrl = signal<string | null>(null);
+    readonly socialThreadsUrl = signal<string | null>(null);
+    readonly socialBlueskyUrl = signal<string | null>(null);
+    readonly socialRedditUrl = signal<string | null>(null);
+    readonly socialSteamUrl = signal<string | null>(null);
+    readonly socialItchUrl = signal<string | null>(null);
     readonly appearancePrefsJson = signal<string | null>(null);
     readonly newDraftDefaultsJson = signal<string | null>(null);
     readonly uiLanguage = signal<string | null>(null);
@@ -178,6 +185,12 @@ export class AuthService {
         this.socialFacebookUrl.set(me.socialFacebookUrl);
         this.socialYoutubeUrl.set(me.socialYoutubeUrl);
         this.socialGithubUrl.set(me.socialGithubUrl);
+        this.socialTelegramUrl.set(me.socialTelegramUrl);
+        this.socialThreadsUrl.set(me.socialThreadsUrl);
+        this.socialBlueskyUrl.set(me.socialBlueskyUrl);
+        this.socialRedditUrl.set(me.socialRedditUrl);
+        this.socialSteamUrl.set(me.socialSteamUrl);
+        this.socialItchUrl.set(me.socialItchUrl);
         this.appearancePrefsJson.set(me.appearancePrefsJson);
         this.newDraftDefaultsJson.set(me.newDraftDefaultsJson);
         this.uiLanguage.set(me.uiLanguage);
@@ -216,6 +229,12 @@ export class AuthService {
         this.socialFacebookUrl.set(null);
         this.socialYoutubeUrl.set(null);
         this.socialGithubUrl.set(null);
+        this.socialTelegramUrl.set(null);
+        this.socialThreadsUrl.set(null);
+        this.socialBlueskyUrl.set(null);
+        this.socialRedditUrl.set(null);
+        this.socialSteamUrl.set(null);
+        this.socialItchUrl.set(null);
         this.appearancePrefsJson.set(null);
         this.newDraftDefaultsJson.set(null);
         this.uiLanguage.set(null);
@@ -247,6 +266,7 @@ export class AuthService {
         headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
         socialTwitterUrl?: string; socialInstagramUrl?: string; socialFacebookUrl?: string;
         socialYoutubeUrl?: string; socialGithubUrl?: string;
+        socialTelegramUrl?: string; socialThreadsUrl?: string; socialBlueskyUrl?: string; socialRedditUrl?: string; socialSteamUrl?: string; socialItchUrl?: string;
         blogLinkText?: string; telegramLinkText?: string;
         // The other languages, whole — one Save sends every language it edited.
         blogLinkTexts?: Record<string, string>; telegramLinkTexts?: Record<string, string>;
@@ -256,6 +276,7 @@ export class AuthService {
             headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
             socialTwitterUrl: string | null; socialInstagramUrl: string | null; socialFacebookUrl: string | null;
             socialYoutubeUrl: string | null; socialGithubUrl: string | null;
+            socialTelegramUrl: string | null; socialThreadsUrl: string | null; socialBlueskyUrl: string | null; socialRedditUrl: string | null; socialSteamUrl: string | null; socialItchUrl: string | null;
             blogLinkText: string | null; telegramLinkText: string | null;
             blogLinkTexts?: Record<string, string>; telegramLinkTexts?: Record<string, string>;
         }>('/api/auth/profile', profile));
@@ -274,6 +295,12 @@ export class AuthService {
         this.socialFacebookUrl.set(res.socialFacebookUrl);
         this.socialYoutubeUrl.set(res.socialYoutubeUrl);
         this.socialGithubUrl.set(res.socialGithubUrl);
+        this.socialTelegramUrl.set(res.socialTelegramUrl);
+        this.socialThreadsUrl.set(res.socialThreadsUrl);
+        this.socialBlueskyUrl.set(res.socialBlueskyUrl);
+        this.socialRedditUrl.set(res.socialRedditUrl);
+        this.socialSteamUrl.set(res.socialSteamUrl);
+        this.socialItchUrl.set(res.socialItchUrl);
     }
 
     async saveNotificationPrefs(notifyOnEngagement: boolean): Promise<void> {
