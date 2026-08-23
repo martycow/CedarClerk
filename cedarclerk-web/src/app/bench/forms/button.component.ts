@@ -7,9 +7,9 @@ export type ButtonSize = 'md' | 'sm';
 export type ButtonSurface = 'paper' | 'chrome';
 
 // ADR-138 — the surface decides the box and the type: chrome is the 30px box and 13px type,
-// paper is 44px and 14px. Unless the consumer names the stock the control stands on, it is read
-// off the variant: `rail` is painted on wood, everything else sits on paper. `size="sm"` on paper
-// only tightens the padding; it cannot take a paper control under the touch floor.
+// paper is 38px and 14px. Unless the consumer names the stock the control stands on, it is read
+// off the variant: `rail` is painted on wood, everything else sits on paper. A small paper control
+// uses the chrome-sized desktop box; the coarse-pointer floor is still enforced globally.
 //
 // A button handed a route is an anchor and looks exactly the same (ADR-169): every variant's face
 // is painted on `.btn`, and the tag it is painted on is the consumer's business.
@@ -61,7 +61,11 @@ export type ButtonSurface = 'paper' | 'chrome';
 
         :host([data-surface="paper"]) .btn { min-height: var(--hit-target); font-size: var(--fs-ui); }
         :host([data-surface="paper"]) .btn.md { padding: var(--space-2) var(--space-4); }
-        :host([data-surface="paper"]) .btn.sm { padding: var(--space-1) var(--space-3); }
+        :host([data-surface="paper"]) .btn.sm {
+            min-height: var(--hit-chrome);
+            padding: var(--space-1) var(--space-3);
+            font-size: var(--text-chrome);
+        }
 
         :host([data-surface="chrome"]) .btn { min-height: var(--hit-chrome); }
         :host([data-surface="chrome"]) .btn.md { padding: var(--space-1) var(--space-3); font-size: var(--text-chrome); }

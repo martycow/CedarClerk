@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, booleanAttribute, computed, effect, inject, input, isDevMode, output, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, booleanAttribute, inject, input, output, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { BrassHookComponent } from '../scenery/brass-hook.component';
 import { IconComponent } from '../../shared/icon.component';
@@ -25,9 +25,6 @@ export interface HookRailItem {
     badgeTitle?: string;
 }
 
-/** The legibility limit HookRail.prompt.md sets: "a wall with everything on it is a wall you stop reading." */
-const MAX_HOOKS = 7;
-
 // The tool wall: a pegboard strip down the left edge where the screens hang from brass hooks.
 // It is how the user moves between screens, so each hook is a real link and the current one is
 // marked three ways that survive a colourblind eye — aria-current, a raised sign tile, and a
@@ -37,9 +34,9 @@ const MAX_HOOKS = 7;
 // covers two paths (Text is /drafts and /editor) and another a child path, so the shell computes
 // it from a route-prefix table (ADR-139).
 //
-// At the foot of the wall, under the tail hook, hangs the tray: one dots control holding everything
-// that is not one of the seven — the rare screens, the theme, Appearance (ADR-183). It is outside
-// the list, so the landmark announces hooks and only hooks and the seven-hook budget is untouched.
+// At the foot of the wall, under the tail hook, hangs the tray for display preferences and
+// development surfaces. The navigation list scrolls independently when the active context has
+// more tools than fit on the wall.
 @Component({
     selector: 'app-hook-rail',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -113,6 +110,8 @@ const MAX_HOOKS = 7;
             gap: 6px;
             margin: 0;
             padding: var(--space-3) 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
             list-style: none;
         }
 
@@ -283,8 +282,6 @@ export class HookRailComponent {
     private readonly open = signal(false);
     readonly trayOpen = this.open.asReadonly();
 
-    private readonly overBudget = computed(() => this.items().length > MAX_HOOKS);
-
     toggleTray(): void { this.setTray(!this.open()); }
 
     closeTray(): void { this.setTray(false); }
@@ -325,10 +322,4 @@ export class HookRailComponent {
         return indexTabBadgeLabel(item.badge);
     }
 
-    constructor() {
-        effect(() => {
-            if (!this.overBudget() || !isDevMode()) return;
-            console.warn(`app-hook-rail: ${this.items().length} hooks — the wall holds ${MAX_HOOKS}.`);
-        });
-    }
 }

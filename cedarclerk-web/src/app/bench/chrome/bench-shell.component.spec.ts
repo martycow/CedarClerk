@@ -95,28 +95,28 @@ describe('bench shell', () => {
 
     it('hangs no project tool on the wall while the module is off', () => {
         const ids = hooks().map(a => a.textContent?.trim());
-        expect(ids).toEqual(['Text', 'Assets', 'Metrics', 'Settings']);
+        expect(ids).toEqual(['Docs', 'Assets', 'Metrics', 'Settings']);
         expect(el().querySelector('app-rail-header .tile')).toBeFalsy();
     });
 
-    it('keeps the wall inside its budget with the module on', () => {
+    it('keeps project tools off the wall until a project has been selected', () => {
         TestBed.inject(AuthService).indieDev.set(true);
         fixture.detectChanges();
         const labels = hooks().map(a => a.textContent?.trim());
-        expect(labels).toEqual(['Hub', 'Text', 'Board', 'Assets', 'Metrics', 'Settings']);
-        expect(labels.length).toBeLessThanOrEqual(7);
+        expect(labels).toEqual(['Hub', 'Settings']);
         // Settings is the tail, and it is anchored inside the one list rather than a second one.
         expect(hooks().at(-1)!.closest('li')!.classList).toContain('is-tail');
     });
 
-    it('lights the hook the route belongs to, including the two paths Text covers', async () => {
+    it('lights every project tool and the account-wide routes it belongs to', async () => {
         const lit = () => hooks().find(a => a.getAttribute('aria-current') === 'page')?.textContent?.trim();
         TestBed.inject(AuthService).indieDev.set(true);
 
+        await go('/projects/p1');
         await go('/drafts');
-        expect(lit()).toBe('Text');
+        expect(lit()).toBe('Docs');
         await go('/editor');
-        expect(lit()).toBe('Text');
+        expect(lit()).toBe('Docs');
         await go('/library');
         expect(lit()).toBe('Assets');
         await go('/posts');
@@ -128,27 +128,32 @@ describe('bench shell', () => {
         expect(lit()).toBe('Hub');
         await go('/projects/p1/tasks');
         expect(lit()).toBe('Board');
+        await go('/projects/p1/planner');
+        expect(lit()).toBe('Planner');
+        await go('/projects/p1/builds');
+        expect(lit()).toBe('Builds');
+        await go('/projects/p1/assets');
+        expect(lit()).toBe('Assets');
         // Everything behind the dots menu leaves the wall unlit rather than guessing a hook.
         await go('/glossary');
         expect(lit()).toBeUndefined();
     });
 
-    // Until one has ever been opened there is no board to open, and the hook says so by landing
-    // on the hub — the one screen that can name which board was meant.
-    it('sends the board to the hub while no project has been opened', async () => {
+    it('adds the complete project tool set after a project has been opened', async () => {
         TestBed.inject(AuthService).indieDev.set(true);
         await go('/drafts');
-        const board = hooks().find(a => a.textContent?.trim() === 'Board')!;
-        expect(board.getAttribute('href')).toBe('/projects');
+        expect(hooks().find(a => a.textContent?.trim() === 'Board')).toBeUndefined();
 
         await go('/projects/p1/planner');
-        const onProject = hooks().find(a => a.textContent?.trim() === 'Board')!;
-        expect(onProject.getAttribute('href')).toBe('/projects/p1/tasks');
+        expect(hooks().map(a => a.textContent?.trim()))
+            .toEqual(['Hub', 'Docs', 'Board', 'Planner', 'Builds', 'Assets', 'Metrics', 'Settings']);
+        expect(hooks().find(a => a.textContent?.trim() === 'Board')!.getAttribute('href'))
+            .toBe('/projects/p1/tasks');
     });
 
     // ADR-186 — the whole point: which project is open is session state, so it survives leaving
     // the project's own routes. Before this the hook opened a board on two screens out of eleven.
-    it('keeps the board and the tile on the project after leaving its routes', async () => {
+    it('keeps project tools but removes the switcher tile after leaving project routes', async () => {
         TestBed.inject(AuthService).indieDev.set(true);
         await go('/projects/p1/planner');
         await flushProjects([{ id: 'p1', name: 'Cedar Quest' }, { id: 'p2', name: 'Second' }]);
@@ -156,14 +161,14 @@ describe('bench shell', () => {
         await go('/drafts');
         expect(hooks().find(a => a.textContent?.trim() === 'Board')!.getAttribute('href'))
             .toBe('/projects/p1/tasks');
-        expect(el().querySelector('app-rail-header .tile-name')?.textContent?.trim()).toBe('Cedar Quest');
+        expect(el().querySelector('app-rail-header .tile')).toBeFalsy();
     });
 
     // With nothing to switch between the tile stays the plain link it has always been; hand it a
     // list and it becomes the switcher the rail's own description calls it.
     it('turns the tile into a switcher once there are projects to switch to', async () => {
         TestBed.inject(AuthService).indieDev.set(true);
-        await go('/drafts');
+        await go('/projects/p1');
         expect((el().querySelector('app-rail-header .tile') as HTMLElement).tagName).toBe('A');
 
         await flushProjects([{ id: 'p1', name: 'Cedar Quest' }, { id: 'p2', name: 'Second' }]);
@@ -177,6 +182,16 @@ describe('bench shell', () => {
         // used to be one, kept where it actually matters.
         expect(entries.map(a => a.getAttribute('href')))
             .toEqual(['/projects/p1', '/projects/p2', '/projects']);
+    });
+
+    it('puts Admin on the wall and nowhere in either account menu', () => {
+        TestBed.inject(AuthService).isAdmin.set(true);
+        fixture.detectChanges();
+        expect(hooks().map(a => a.textContent?.trim())).toContain('Admin');
+        expect(menuItems().map(menuText)).not.toContain('Admin');
+        (el().querySelector('app-account-menu .account-trigger') as HTMLButtonElement).click();
+        fixture.detectChanges();
+        expect(el().querySelector('app-account-menu .account-popover')?.textContent).not.toContain('Admin');
     });
 
     it('names what is open inside the project, not the project twice', async () => {

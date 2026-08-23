@@ -12,8 +12,10 @@ export class PopoverComponent implements OnDestroy {
 
     isOpen = signal(false);
     panelTop = signal(0);
+    panelBottom = signal<number | null>(null);
     panelLeft = signal<number | null>(null);
     panelRight = signal<number | null>(null);
+    panelMaxHeight = signal(0);
 
     @ViewChild('triggerEl') triggerRef!: ElementRef<HTMLElement>;
 
@@ -51,12 +53,19 @@ export class PopoverComponent implements OnDestroy {
     // plain absolutely-positioned panel nested in the toolbar always gets cut off).
     private updatePosition() {
         const rect = this.triggerRef.nativeElement.getBoundingClientRect();
-        this.panelTop.set(rect.bottom + 8);
+        const edge = 12;
+        const gap = 8;
+        const below = window.innerHeight - rect.bottom - gap - edge;
+        const above = rect.top - gap - edge;
+        const opensAbove = below < 240 && above > below;
+        this.panelTop.set(opensAbove ? 0 : rect.bottom + gap);
+        this.panelBottom.set(opensAbove ? window.innerHeight - rect.top + gap : null);
+        this.panelMaxHeight.set(Math.max(120, opensAbove ? above : below));
         if (this.align() === 'right') {
             this.panelLeft.set(null);
-            this.panelRight.set(window.innerWidth - rect.right);
+            this.panelRight.set(Math.max(edge, window.innerWidth - rect.right));
         } else {
-            this.panelLeft.set(rect.left);
+            this.panelLeft.set(Math.max(edge, Math.min(rect.left, window.innerWidth - 252)));
             this.panelRight.set(null);
         }
     }

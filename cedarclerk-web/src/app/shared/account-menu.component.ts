@@ -10,8 +10,7 @@ import { IconComponent } from './icon.component';
 // is the only page-chrome element with real behaviour (routing, logout, a live badge), so it
 // becomes one component rather than markup copied four times.
 //
-// Navigation is the hook rail's (ADR-139), so this popover carries none of it: Profile, Admin
-// where it applies, and Logout — the three things that are about the account rather than the app.
+// Navigation is the hook rail's (ADR-139), so this popover carries only Profile and Logout.
 @Component({
     selector: 'app-account-menu',
     imports: [IconComponent, ButtonComponent, PopoverComponent],
@@ -34,14 +33,6 @@ import { IconComponent } from './icon.component';
                     <app-icon name="user" size="sm"></app-icon>
                     {{ t().settings.tabs.profile }}
                 </app-button>
-                <!--IF2: only rendered for an admin, and only as a shortcut — /api/admin is gated
-                server-side, so hiding it here is convenience, not security.-->
-                @if (auth.isAdmin()) {
-                <app-button variant="paper" size="sm" link="/admin">
-                    <app-icon name="shield-check" size="sm"></app-icon>
-                    {{ t().admin.open }}
-                </app-button>
-                }
                 <app-button variant="danger" size="sm" (clicked)="auth.logout()">
                     <app-icon name="sign-out" size="sm"></app-icon>
                     {{ t().editor.logout }}

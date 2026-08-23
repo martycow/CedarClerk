@@ -22,8 +22,8 @@
 /* The kit's brass name plate: the one brass fill that is a trigger, settled by all three
    reference screens drawing it so. */
 .avatar {
-    width: 28px;
-    height: 28px;
+    width: var(--hit-chrome);
+    height: var(--hit-chrome);
     box-sizing: border-box;
     border-radius: var(--radius-stamp);
     background: var(--grad-brass);

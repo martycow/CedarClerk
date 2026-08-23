@@ -23,11 +23,16 @@ import { RulerBarComponent, RulerReadout } from './ruler-bar.component';
 /** Which hook stands for a path (ADR-139). Longest match first — the board is a child of the hub. */
 const HOOK_PREFIXES: readonly (readonly [string, string])[] = [
     ['board', '/projects/:id/tasks'],
+    ['assets', '/projects/:id/assets'],
+    ['planner', '/projects/:id/planner'],
+    ['builds', '/projects/:id/builds'],
+    ['documents', '/projects/:id'],
     ['hub', '/projects'],
-    ['text', '/drafts'],
-    ['text', '/editor'],
+    ['documents', '/drafts'],
+    ['documents', '/editor'],
     ['assets', '/library'],
     ['metrics', '/posts'],
+    ['admin', '/admin'],
     ['settings', '/settings'],
 ];
 
@@ -98,12 +103,6 @@ function matches(path: string, pattern: string): boolean {
                             <app-icon name="book-bookmark" size="sm" />
                             {{ t().glossary.crumb }}
                         </a>
-                        @if (auth.isAdmin()) {
-                            <a class="menu-item" routerLink="/admin">
-                                <app-icon name="shield-check" size="sm" />
-                                {{ t().admin.crumb }}
-                            </a>
-                        }
                         <a class="menu-item" routerLink="/dev/styleguide">
                             <app-icon name="palette" size="sm" />
                             {{ t().shell.styleguide }}
@@ -278,22 +277,18 @@ export class BenchShellComponent {
     // reads as two numbers that happen to agree.
     protected readonly rulerRight = computed<readonly RulerReadout[]>(() => this.ruler.right());
 
-    // The switcher is account-scoped wherever the project is unknown, which is every screen but
-    // /projects/:id: DraftMeta carries no projectId (ADR-139 consequence), so a draft, a post or a
-    // library asset cannot say which project it belongs to. A tile reading a project name there
-    // would be a confident wrong answer rather than a missing one.
     /** The project the session is in: the URL's when it names one, the remembered one otherwise. */
     protected readonly openProjectId = computed(() => this.projectId() || this.current.id());
 
     protected readonly projectLabel = computed(() => {
-        if (!this.auth.indieDev()) return '';
+        if (!this.auth.indieDev() || !this.projectId()) return '';
         const id = this.openProjectId();
         return (id && this.projectNames().get(id)) || this.current.name() || this.t().shell.allProjects;
     });
 
     /** Every project, then the hub — which is where "All projects" used to send you (ADR-186). */
     protected readonly switcher = computed<readonly RailProject[]>(() => {
-        if (!this.auth.indieDev()) return [];
+        if (!this.auth.indieDev() || !this.projectId()) return [];
         const names = this.projectNames();
         if (!names.size) return [];
         const items: RailProject[] = [...names].map(([id, name]) => ({ id, name, link: ['/projects', id] }));
@@ -306,16 +301,29 @@ export class BenchShellComponent {
         const open = this.openProjectId();
         const items: HookRailItem[] = [];
         if (this.auth.indieDev()) items.push({ id: 'hub', icon: 'game-controller', label: t.hub, link: '/projects' });
-        items.push({ id: 'text', icon: 'pencil-simple', label: t.text, link: '/drafts' });
-        // The board of the project the session is in (ADR-186). The hub only when none has ever
-        // been opened, which is true exactly once per account.
-        if (this.auth.indieDev()) items.push({ id: 'board', icon: 'check-square', label: t.board, link: open ? ['/projects', open, 'tasks'] : '/projects' });
-        items.push({ id: 'assets', icon: 'images', label: t.assets, link: '/library' });
-        items.push({
-            id: 'metrics', icon: 'chart-bar', label: t.metrics, link: '/posts',
-            badge: this.feedback.newComments() + this.feedback.newReactions(),
-            badgeTitle: this.t().editor.newBadge,
-        });
+        if (!this.auth.indieDev()) {
+            items.push({ id: 'documents', icon: 'pencil-simple', label: t.documents, link: '/drafts' });
+            items.push({ id: 'assets', icon: 'images', label: t.assets, link: '/library' });
+            items.push({
+                id: 'metrics', icon: 'chart-bar', label: t.metrics, link: '/posts',
+                badge: this.feedback.newComments() + this.feedback.newReactions(),
+                badgeTitle: this.t().editor.newBadge,
+            });
+        } else if (open) {
+            items.push({ id: 'documents', icon: 'pencil-simple', label: t.documents, link: ['/projects', open] });
+            items.push({ id: 'board', icon: 'check-square', label: t.board, link: ['/projects', open, 'tasks'] });
+            items.push({ id: 'planner', icon: 'flag', label: t.planner, link: ['/projects', open, 'planner'] });
+            items.push({ id: 'builds', icon: 'cube', label: t.builds, link: ['/projects', open, 'builds'] });
+            items.push({ id: 'assets', icon: 'images', label: t.assets, link: ['/projects', open, 'assets'] });
+            items.push({
+                id: 'metrics', icon: 'chart-bar', label: t.metrics, link: '/posts',
+                badge: this.feedback.newComments() + this.feedback.newReactions(),
+                badgeTitle: this.t().editor.newBadge,
+            });
+        }
+        if (this.auth.isAdmin()) {
+            items.push({ id: 'admin', icon: 'shield-check', label: t.admin, link: '/admin' });
+        }
         // The caption is the wall's short form — the full word clips on it — and the tooltip carries the word.
         items.push({ id: 'settings', icon: 'gear', label: t.settings, title: this.t().settings.crumb, link: '/settings', end: true });
         return items;

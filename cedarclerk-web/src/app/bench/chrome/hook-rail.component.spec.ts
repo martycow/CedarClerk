@@ -161,23 +161,12 @@ describe('HookRailComponent', () => {
         expect(host.picks).toEqual(['assets']);
     });
 
-    // "Keep it to 5-7 tools; a wall with everything on it is a wall you stop reading."
-    it('says so when the wall is overloaded', () => {
-        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    it('keeps every context tool and lets the wall scroll when the list grows', () => {
         host.items = [...SIX, { id: 'x', icon: 'flag', label: 'X', link: '/x' },
                               { id: 'y', icon: 'flask', label: 'Y', link: '/y' }];
         render();
-        expect(warn).toHaveBeenCalledTimes(1);
-        expect(warn.mock.calls[0][0]).toContain('8 hooks');
-        warn.mockRestore();
-    });
-
-    it('stays quiet inside the budget', () => {
-        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-        host.value = 'hub';
-        render();
-        expect(warn).not.toHaveBeenCalled();
-        warn.mockRestore();
+        expect(hooks().length).toBe(8);
+        expect(sheetFor('.wall')).toMatch(/\.wall[^}]*overflow-y:\s*auto/s);
     });
 
     // ADR-183 — everything that is not one of the seven screens hangs here, at the foot of the
