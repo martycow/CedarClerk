@@ -39,12 +39,7 @@ public static class BlogIcons
 
     public static readonly string ArrowLeft = Glyph("<path d=\"M20 12H5M12 19l-7-7 7-7\"/>");
 
-    public static readonly string ArrowRight = Glyph("<path d=\"M4 12h15M12 5l7 7-7 7\"/>");
-
-    public static readonly string Search = Glyph(
-        "<circle cx=\"10.5\" cy=\"10.5\" r=\"6.5\"/><path d=\"M20 20l-4.3-4.3\"/>");
-
-    // Two arrows, one up one down — the sort toggle flips which one is bold at the call site rather
+    // Two arrows, one up one down — the sort control flips which one is bold at the call site rather
     // than this glyph having two states of its own.
     public static readonly string Sort = Glyph(
         "<path d=\"M7 3v14M7 3l-3.5 3.5M7 3l3.5 3.5\"/><path d=\"M17 21V7M17 21l3.5-3.5M17 21l-3.5-3.5\"/>");

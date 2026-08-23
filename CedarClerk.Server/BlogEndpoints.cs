@@ -423,34 +423,6 @@ public static class BlogEndpoints
         });
     }
 
-    // ADR-192 — the site-wide language toggle in the header. A reader who clicks "EN" gets EN pages
-    // from then on, on any device that keeps this cookie, until they click "RU" again. Read once per
-    // page, only as the fallback when the URL itself carries no ?lang= — an explicit link (a shared
-    // post URL, a translation link) always wins over a stale preference.
-    private static string? ReadLangCookie(HttpContext ctx) =>
-        ctx.Request.Cookies[Consts.General.BlogLangCookieName] is { } v && Languages.IsContentLanguage(v) ? v : null;
-
-    private static void SetLangCookie(HttpContext ctx, string lang) =>
-        ctx.Response.Cookies.Append(Consts.General.BlogLangCookieName, lang, new CookieOptions
-        {
-            MaxAge = TimeSpan.FromDays(365),
-            HttpOnly = true,
-            IsEssential = true,
-            SameSite = SameSiteMode.Lax
-        });
-
-    // The header's RU/EN buttons toggle the language of whatever page the reader is already on,
-    // keeping every other query parameter (tags, q, sort) intact — a filtered/searched index stays
-    // filtered/searched after the reader switches language.
-    private static string CurrentPathWithLang(HttpContext ctx, string lang)
-    {
-        var pairs = ctx.Request.Query
-            .Where(kv => kv.Key != "lang")
-            .SelectMany(kv => kv.Value, (kv, v) => new KeyValuePair<string, string?>(kv.Key, v))
-            .Append(new KeyValuePair<string, string?>("lang", lang));
-        return ctx.Request.Path + QueryString.Create(pairs).ToUriComponent();
-    }
-
     // Folds one counted view into today's (country, language) bucket. Hand-rolled upsert: EF has
     // no INSERT..ON CONFLICT, so bump first and insert only when no bucket existed yet. Two first
     // views of the same day can race into the insert — the unique index rejects the loser, which
@@ -918,15 +890,17 @@ public static class BlogEndpoints
         return list.Count == 0 ? "/" : "/?tags=" + string.Join(",", list.Select(Uri.EscapeDataString));
     }
 
-    // ADR-192 — the index toolbar (search box, sort toggle, tag chips) all link back into the same
-    // three parameters, so any one of them can change without the other two being lost.
-    private static string IndexFilterUrl(IEnumerable<string> tags, string? q, string? sort)
+    // ADR-192/193 — the index toolbar (sort dropdown, language filter, tag chips, "show more") all
+    // link back into the same parameters, so any one of them can change without the others resetting.
+    // Changing a filter drops `shown` on purpose — a narrower list should start from its own top.
+    private static string IndexFilterUrl(IEnumerable<string> tags, string sort, string? avail, int? shown = null)
     {
         var parts = new List<string>();
         var tagList = tags.Distinct().ToList();
         if (tagList.Count > 0) parts.Add("tags=" + string.Join(",", tagList.Select(Uri.EscapeDataString)));
-        if (!string.IsNullOrWhiteSpace(q)) parts.Add("q=" + Uri.EscapeDataString(q));
-        if (sort == "old") parts.Add("sort=old");
+        if (sort != "new") parts.Add("sort=" + sort);
+        if (avail is not null) parts.Add("avail=" + Uri.EscapeDataString(avail));
+        if (shown is > 10) parts.Add("shown=" + shown);
         return parts.Count == 0 ? "/" : "/?" + string.Join("&", parts);
     }
 
@@ -1002,19 +976,7 @@ public static class BlogEndpoints
             ["ka"] = new("კითხვა", "თემა", "დღე", "ღამე", "სისტემური", "ტექსტის ზომა", "შრიფტი"),
         };
 
-    // ADR-192 — RU/EN, the only two the site itself is ever written in (a post may carry more
-    // translations, but the chrome around it — this menu, the gate, the reading labels — only ever
-    // speaks these two). A reader whose browser asks for a third language already falls through to
-    // English everywhere else in this file (ReadingLabels, RegistrationFormSet); the header toggle
-    // does not need a third button for a state nothing else in the chrome can reach.
-    private static string LangToggleHtml(HttpContext ctx, string lang)
-    {
-        string Btn(string code, string label) =>
-            $"<a class=\"site-lang-btn{(lang == code ? " current" : "")}\" href=\"{CurrentPathWithLang(ctx, code)}\">{label}</a>";
-        return $"<div class=\"site-lang-toggle\">{Btn(Languages.Russian, "RU")}{Btn(Languages.English, "EN")}</div>";
-    }
-
-    private static string RenderHeader(HttpContext ctx, BlogChannelInfo? channel, string lang)
+    private static string RenderHeader(BlogChannelInfo? channel, string lang)
     {
         string identity;
         string openInTelegram = "";
@@ -1066,13 +1028,11 @@ public static class BlogEndpoints
             """;
 
         var reading = ReadingMenuHtml(lang);
-        var langToggle = LangToggleHtml(ctx, lang);
 
         return $"""
             <div class="site-header"><div class="site-header-inner">
             {identity}
             <div class="spacer"></div>
-            {langToggle}
             {rssButton}
             {openInTelegram}
             {reading}
@@ -1127,25 +1087,12 @@ public static class BlogEndpoints
 
     private static async Task RenderIndexAsync(HttpContext ctx, CedarDbContext db)
     {
-        // T-094 — the index had no language at all: a hardcoded Russian month heading above an
-        // English card date. It takes the one the reader asked for, and falls back to Russian,
-        // which is what every existing post is written in.
-        // ADR-192 widens the fallback chain: an explicit ?lang= still wins and now also refreshes
-        // the site-wide cookie the header toggle set, but absent that, a reader who already chose a
-        // language on another page gets it back here instead of Russian again.
-        string? explicitLang = ctx.Request.Query["lang"].ToString() is { Length: > 0 } requested
-                        && Languages.IsContentLanguage(requested)
-            ? requested
-            : null;
-        if (explicitLang is not null) SetLangCookie(ctx, explicitLang);
-        var indexLang = explicitLang ?? ReadLangCookie(ctx) ?? Languages.Russian;
+        // ADR-193 — the index has no language picker any more (ADR-192's site-wide toggle is gone);
+        // it reads in English, and a post whose primary language is something else previews in
+        // English too when it has that translation. A post's own language set stays its own — the
+        // per-post switch on the post page is untouched.
+        const string indexLang = Languages.English;
 
-        // ADR-192 — a substring search over the title and tags, server-side: the index is server-
-        // rendered with no post content shipped to the client to filter, and the tag bar right next
-        // to it already works this way, so a second, JS-only mechanism would be a second pattern for
-        // one job.
-        var q = (ctx.Request.Query["q"].FirstOrDefault() ?? "").Trim();
-        var sort = ctx.Request.Query["sort"].FirstOrDefault() == "old" ? "old" : "new";
         // Private posts never appear in the public list (see the ADR following ADR-040,
         // docs/DECISIONS.md) — listing one would leak its existence even though the single-post
         // page itself 404s for anyone not invited.
@@ -1160,6 +1107,14 @@ public static class BlogEndpoints
                 TranslationLanguages = db.DraftTranslations.Where(t => t.DraftId == d.Id).Select(t => t.Language).ToList(),
             })
             .ToListAsync();
+
+        var postIds = posts.Select(p => p.Id).ToList();
+        // One batched lookup for every post's English translation, not N+1 — the same shape as the
+        // wikilink-target query below it in RenderPostAsync.
+        var previews = postIds.Count == 0
+            ? new Dictionary<Guid, DraftTranslation>()
+            : await db.DraftTranslations.Where(t => postIds.Contains(t.DraftId) && t.Language == indexLang)
+                .ToDictionaryAsync(t => t.DraftId, t => t);
 
         var likeCounts = await db.Reactions.Where(r => r.Kind == "like")
             .GroupBy(r => r.DraftId)
@@ -1176,45 +1131,79 @@ public static class BlogEndpoints
             .Distinct()
             .ToList();
 
+        // Every language any post is either written in or translated into — what "available in
+        // language X" in the sort dropdown can actually mean.
+        var allLanguages = posts.Select(p => p.PrimaryLanguage).Concat(posts.SelectMany(p => p.TranslationLanguages))
+            .Distinct().OrderBy(l => l).ToList();
+        var avail = ctx.Request.Query["avail"].FirstOrDefault();
+        avail = avail is not null && allLanguages.Contains(avail) ? avail : null;
+
+        var sortOptions = new (string Key, string Label)[]
+        {
+            ("new", "Newest first"), ("old", "Oldest first"),
+            ("popular", "Most popular"), ("unpopular", "Least popular"),
+        };
+        var sort = ctx.Request.Query["sort"].FirstOrDefault();
+        sort = sortOptions.Any(o => o.Key == sort) ? sort! : "new";
+
         var filtered = selectedTags.Count == 0
             ? posts
             : posts.Where(p => { var pt = SplitTags(p.Tags); return selectedTags.All(pt.Contains); }).ToList();
 
-        if (q.Length > 0)
-        {
-            filtered = filtered.Where(p =>
-                    (p.ArticleTitle ?? p.Title).Contains(q, StringComparison.OrdinalIgnoreCase)
-                    || SplitTags(p.Tags).Any(t => t.Contains(q, StringComparison.OrdinalIgnoreCase)))
-                .ToList();
-        }
+        if (avail is not null)
+            filtered = filtered.Where(p => p.PrimaryLanguage == avail || p.TranslationLanguages.Contains(avail)).ToList();
 
-        // The DB query above already sorts newest-first, which "new" (the default) keeps; "old"
-        // reverses the already-filtered, already-materialized list rather than re-querying, since
+        // The DB query above already sorts newest-first, which "new" keeps as-is; the others
+        // reorder the already-filtered, already-materialized list rather than re-querying, since
         // the whole set is small enough that a second round trip would buy nothing.
-        if (sort == "old")
-            filtered.Reverse();
+        filtered = sort switch
+        {
+            "old" => Enumerable.Reverse(filtered).ToList(),
+            "popular" => filtered.OrderByDescending(p => p.ViewCount).ToList(),
+            "unpopular" => filtered.OrderBy(p => p.ViewCount).ToList(),
+            _ => filtered,
+        };
+
+        // The index used to render every published post on one page, which got slow as the list
+        // grew. "Show 10 more" reveals the next batch via a plain link (?shown=), not client-side
+        // JS: the HTML this page sends is only ever as big as what the reader asked to see.
+        var shown = int.TryParse(ctx.Request.Query["shown"].FirstOrDefault(), out var shownParsed) && shownParsed > 10
+            ? shownParsed
+            : 10;
+        var pageItems = filtered.Take(shown).ToList();
+        var remaining = filtered.Count - pageItems.Count;
 
         var sb = new StringBuilder();
 
-        // ADR-192 — a GET form, not a JS filter-as-you-type: the index is otherwise plain links and
-        // full page loads, and a form fits that without a second delivery mechanism for one box.
-        sb.Append("<form class=\"index-toolbar\" method=\"get\" action=\"/\">");
-        if (selectedTags.Count > 0)
-            sb.Append("<input type=\"hidden\" name=\"tags\" value=\"")
-              .Append(System.Net.WebUtility.HtmlEncode(string.Join(",", selectedTags))).Append("\">");
-        if (sort == "old")
-            sb.Append("<input type=\"hidden\" name=\"sort\" value=\"old\">");
-        var searchLabel = indexLang == Languages.English ? "Search posts" : "Поиск по записям";
-        sb.Append("<label class=\"index-search\">").Append(BlogIcons.Search)
-          .Append("<input type=\"search\" name=\"q\" value=\"").Append(System.Net.WebUtility.HtmlEncode(q))
-          .Append("\" placeholder=\"").Append(searchLabel).Append("\" aria-label=\"").Append(searchLabel).Append("\"></label>");
-        var sortUrl = IndexFilterUrl(selectedTags, q, sort == "old" ? "new" : "old");
-        var sortLabel = sort == "old"
-            ? (indexLang == Languages.English ? "Oldest first" : "Сначала старые")
-            : (indexLang == Languages.English ? "Newest first" : "Сначала новые");
-        sb.Append("<a class=\"index-sort-btn\" href=\"").Append(sortUrl).Append("\">")
-          .Append(BlogIcons.Sort).Append("<span>").Append(sortLabel).Append("</span></a>");
-        sb.Append("</form>");
+        // ADR-193 — the sort/filter control: a paper popover off one button, the same open/close
+        // mechanism the reading menu already uses, extended to cover order and language-availability
+        // together rather than as two separate controls.
+        var currentSortLabel = sortOptions.First(o => o.Key == sort).Label;
+        sb.Append("<div class=\"index-toolbar\"><div class=\"sort-anchor\">");
+        sb.Append("<button type=\"button\" class=\"index-sort-btn\" id=\"sortBtn\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-controls=\"sortMenu\">")
+          .Append(BlogIcons.Sort).Append("<span>").Append(currentSortLabel).Append("</span></button>");
+        sb.Append("<div class=\"sort-menu\" id=\"sortMenu\" role=\"group\" hidden>");
+        sb.Append("<div class=\"reading-label\">Order</div><div class=\"sort-menu-group\">");
+        foreach (var (key, label) in sortOptions)
+        {
+            sb.Append("<a class=\"sort-menu-item").Append(key == sort ? " current" : "").Append("\" href=\"")
+              .Append(IndexFilterUrl(selectedTags, key, avail)).Append("\">").Append(label).Append("</a>");
+        }
+        sb.Append("</div>");
+        if (allLanguages.Count > 1)
+        {
+            sb.Append("<div class=\"reading-label\">Language</div><div class=\"sort-menu-group\">");
+            sb.Append("<a class=\"sort-menu-item").Append(avail is null ? " current" : "").Append("\" href=\"")
+              .Append(IndexFilterUrl(selectedTags, sort, null)).Append("\">All languages</a>");
+            foreach (var l in allLanguages)
+            {
+                sb.Append("<a class=\"sort-menu-item").Append(avail == l ? " current" : "").Append("\" href=\"")
+                  .Append(IndexFilterUrl(selectedTags, sort, l)).Append("\">")
+                  .Append(l.ToUpperInvariant()).Append(" available</a>");
+            }
+            sb.Append("</div>");
+        }
+        sb.Append("</div></div></div>");
 
         if (allTags.Count > 0)
         {
@@ -1224,13 +1213,13 @@ public static class BlogEndpoints
                 var isSelected = selectedTags.Contains(tag);
                 var toggled = isSelected ? selectedTags.Where(t => t != tag) : selectedTags.Append(tag);
                 sb.Append("<a class=\"tag-chip").Append(isSelected ? " selected" : "").Append("\" href=\"")
-                  .Append(IndexFilterUrl(toggled, q, sort)).Append("\">#")
+                  .Append(IndexFilterUrl(toggled, sort, avail)).Append("\">#")
                   .Append(System.Net.WebUtility.HtmlEncode(tag)).Append(isSelected ? " &times;" : "").Append("</a>");
             }
             sb.Append("</div>");
         }
 
-        if (filtered.Count == 0)
+        if (pageItems.Count == 0)
         {
             sb.Append(posts.Count == 0
                 ? "<p class=\"empty\">Nothing published yet.</p>"
@@ -1240,27 +1229,39 @@ public static class BlogEndpoints
         {
             sb.Append("<div class=\"post-list timeline\">");
             string? lastMonthKey = null;
-            foreach (var p in filtered)
+            foreach (var p in pageItems)
             {
-                var monthKey = DisplayTime.ToZone(p.BlogPublishedAt)?.ToString("yyyy-MM") ?? "";
-                if (monthKey != lastMonthKey)
+                // The month spine only makes sense under "newest/oldest first" — under a popularity
+                // sort, consecutive cards are not chronologically adjacent, so a heading here would
+                // claim an order the list is not actually in.
+                if (sort is "new" or "old")
                 {
-                    lastMonthKey = monthKey;
-                    if (p.BlogPublishedAt is { } monthDate)
+                    var monthKey = DisplayTime.ToZone(p.BlogPublishedAt)?.ToString("yyyy-MM") ?? "";
+                    if (monthKey != lastMonthKey)
                     {
-                        var monthLabel = BlogDateFormatter.MonthHeadingLocal(monthDate, indexLang);
-                        sb.Append("<div class=\"timeline-month-sep\"><span class=\"sep-line\"></span><span class=\"sep-label\">")
-                          .Append(monthLabel).Append("</span><span class=\"sep-line\"></span></div>");
+                        lastMonthKey = monthKey;
+                        if (p.BlogPublishedAt is { } monthDate)
+                        {
+                            var monthLabel = BlogDateFormatter.MonthHeadingLocal(monthDate, indexLang);
+                            sb.Append("<div class=\"timeline-month-sep\"><span class=\"sep-line\"></span><span class=\"sep-label\">")
+                              .Append(monthLabel).Append("</span><span class=\"sep-line\"></span></div>");
+                        }
                     }
                 }
 
                 var tags = SplitTags(p.Tags);
                 var likes = likeCounts.GetValueOrDefault(p.Id);
                 var comments = commentCounts.GetValueOrDefault(p.Id);
+                // I1 — an English reader sees an English preview when the post has one, the same
+                // translation `RenderPostAsync` would show them; the primary-language draft is what
+                // renders when there is no translation, exactly as it always has.
+                var preview = p.PrimaryLanguage != indexLang && previews.TryGetValue(p.Id, out var t) ? t : null;
+                var cardTitle = preview?.Title ?? (p.ArticleTitle ?? p.Title);
+                var cardCedarJson = preview?.CedarJson ?? p.CedarJson;
                 // No teaser for a gated post: the card says a post exists and what it is called,
                 // and the excerpt is the one part of it that would be actual content. Deliberate,
                 // and the easy thing to reverse if the teaser turns out to be the point.
-                var excerpt = p.IsPrivate ? "" : Excerpt(p.CedarJson);
+                var excerpt = p.IsPrivate ? "" : Excerpt(cardCedarJson);
 
                 sb.Append("<div class=\"timeline-item\"><span class=\"timeline-dot\"></span>");
                 sb.Append("<a class=\"post-card\" href=\"/").Append(p.BlogSlug).Append("\">");
@@ -1287,7 +1288,7 @@ public static class BlogEndpoints
                     sb.Append("<span class=\"post-card-locked\">").Append(BlogIcons.Lock).Append("</span>");
 
                 sb.Append("</div>");
-                sb.Append("<div class=\"post-card-title\">").Append(System.Net.WebUtility.HtmlEncode(p.ArticleTitle ?? p.Title)).Append("</div>");
+                sb.Append("<div class=\"post-card-title\">").Append(System.Net.WebUtility.HtmlEncode(cardTitle)).Append("</div>");
                 if (excerpt.Length > 0)
                     sb.Append("<div class=\"post-card-excerpt\">").Append(System.Net.WebUtility.HtmlEncode(excerpt)).Append("</div>");
                 sb.Append("<div class=\"post-card-stats\">").Append(BlogIcons.Eye).Append("<span class=\"num\">").Append(p.ViewCount)
@@ -1296,6 +1297,13 @@ public static class BlogEndpoints
                 sb.Append("</a></div>");
             }
             sb.Append("</div>");
+
+            if (remaining > 0)
+            {
+                var moreUrl = IndexFilterUrl(selectedTags, sort, avail, shown + 10);
+                sb.Append("<div class=\"show-more-row\"><a class=\"show-more-btn\" href=\"").Append(moreUrl)
+                  .Append("\">Show ").Append(Math.Min(10, remaining)).Append(" more of ").Append(remaining).Append("</a></div>");
+            }
         }
 
         var channel = await GetBlogChannelInfoAsync(db);
@@ -1307,7 +1315,7 @@ public static class BlogEndpoints
             channel?.Title ?? "Cedar Clerk", indexLang,
             [], null, null, null, IsArticle: false), OgMetaPolicy.Full);
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), indexLang, RenderHeader(ctx, channel, indexLang), indexMeta));
+        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), indexLang, RenderHeader(channel, indexLang), indexMeta));
     }
 
     // ADR-125 — the series landing: what the index would show, narrowed to one series and ordered
@@ -1321,7 +1329,7 @@ public static class BlogEndpoints
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             ctx.Response.ContentType = "text/html; charset=utf-8";
-            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Series not found.</p>", Languages.Russian, RenderHeader(ctx, channel, Languages.Russian)));
+            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Series not found.</p>", Languages.Russian, RenderHeader(channel, Languages.Russian)));
             return;
         }
 
@@ -1386,7 +1394,7 @@ public static class BlogEndpoints
             [], null, null, null, IsArticle: false), OgMetaPolicy.Full);
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(series.Name, body, pageLang, RenderHeader(ctx, channel, pageLang), meta));
+        await ctx.Response.WriteAsync(PageShell(series.Name, body, pageLang, RenderHeader(channel, pageLang), meta));
     }
 
     // ADR-134 (T-159) — the public game page. Everything on it is opt-in: the page exists only
@@ -1401,7 +1409,7 @@ public static class BlogEndpoints
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             ctx.Response.ContentType = "text/html; charset=utf-8";
-            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Page not found.</p>", Languages.Russian, RenderHeader(ctx, channel, Languages.Russian)));
+            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Page not found.</p>", Languages.Russian, RenderHeader(channel, Languages.Russian)));
             return;
         }
 
@@ -1519,7 +1527,7 @@ public static class BlogEndpoints
             [], null, null, null, IsArticle: false), OgMetaPolicy.Full);
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(project.Name, body, pageLang, RenderHeader(ctx, channel, pageLang), meta));
+        await ctx.Response.WriteAsync(PageShell(project.Name, body, pageLang, RenderHeader(channel, pageLang), meta));
     }
 
     /// <summary>`Label|https://url` lines; anything not shaped like that is skipped, not rendered.</summary>
@@ -1593,7 +1601,7 @@ public static class BlogEndpoints
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             ctx.Response.ContentType = "text/html; charset=utf-8";
-            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(ctx, channel, Languages.Russian)));
+            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(channel, Languages.Russian)));
             return;
         }
 
@@ -1655,13 +1663,13 @@ public static class BlogEndpoints
                         draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson);
                     await ctx.Response.WriteAsync(PageShell(gateTitle,
                         CedarToBlogHtmlRenderer.RegistrationFormHtml(form, gateTitle, gateLang, gateLanguages),
-                        gateLang, RenderHeader(ctx, channel, gateLang), SemiPublicMeta(gateLang)));
+                        gateLang, RenderHeader(channel, gateLang), SemiPublicMeta(gateLang)));
                     return;
                 }
 
                 ctx.Response.StatusCode = StatusCodes.Status404NotFound;
                 ctx.Response.ContentType = "text/html; charset=utf-8";
-                await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(ctx, channel, Languages.Russian), SemiPublicMeta(Languages.Russian)));
+                await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(channel, Languages.Russian), SemiPublicMeta(Languages.Russian)));
                 return;
             }
 
@@ -1693,13 +1701,7 @@ public static class BlogEndpoints
             .Select(t => t.Language)
             .ToListAsync();
 
-        // ADR-192 — an explicit ?lang= (a shared link, the header toggle, the in-post switch below)
-        // always wins and refreshes the site-wide cookie; with neither present the reader's earlier
-        // choice from elsewhere on the site applies here too, same as it does on the index.
-        var explicitPostLang = ctx.Request.Query["lang"].FirstOrDefault();
-        if (explicitPostLang is not null && Languages.ContentLanguages.Contains(explicitPostLang))
-            SetLangCookie(ctx, explicitPostLang);
-        var requestedLang = explicitPostLang ?? ReadLangCookie(ctx);
+        var requestedLang = ctx.Request.Query["lang"].FirstOrDefault();
         var lang = draft.PrimaryLanguage;
         // Idea #4 - the reader sees the article title when one is set; draft.Title is the name
         // the owner files it under, which is not the same thing.
@@ -1790,8 +1792,8 @@ public static class BlogEndpoints
             : "";
         var viewsLine = $"<span class=\"post-card-views\">{BlogIcons.Eye}<span class=\"num\">{viewCount}</span></span>";
 
-        // ADR-192 — a plain client-side copy, next to the Telegram link rather than replacing it:
-        // the two answer different questions ("read this on Telegram" vs. "give me this URL").
+        // ADR-192/193 — a plain client-side copy, at the top of the post rather than the bottom
+        // (feedback: a reader who wants the link rarely wants to scroll for it first).
         var copyLinkLabel = lang == Languages.English ? "Copy link" : "Скопировать ссылку";
         var copiedLabel = lang == Languages.English ? "Copied!" : "Скопировано!";
         var copyLinkBtn = $"""
@@ -1800,8 +1802,10 @@ public static class BlogEndpoints
             </button>
             """;
 
-        var metaRow = $"<div class=\"post-meta-row\">{dateLine}{viewsLine}{langSwitch}</div>";
-        var footerRow = $"<div class=\"post-footer-row\">{signatureBlock}<div class=\"spacer\"></div>{telegramLink}{copyLinkBtn}</div>";
+        var metaRow = $"<div class=\"post-meta-row\">{dateLine}{viewsLine}{langSwitch}<div class=\"spacer\"></div>{copyLinkBtn}</div>";
+        var footerRow = (signatureBlock.Length > 0 || telegramLink.Length > 0)
+            ? $"<div class=\"post-footer-row\">{signatureBlock}<div class=\"spacer\"></div>{telegramLink}</div>"
+            : "";
 
         // ADR-125 — the series line and prev/next: numbered over the *visible* ordered members,
         // so an unlisted private part never shifts the numbering a stranger sees. A member that is
@@ -1992,7 +1996,7 @@ public static class BlogEndpoints
         }
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(title, html, lang, RenderHeader(ctx, channel, lang), metaHtml));
+        await ctx.Response.WriteAsync(PageShell(title, html, lang, RenderHeader(channel, lang), metaHtml, mainClass: "site-main--post"));
     }
 
     // Wraps a resolved end-of-post signature (see PlanLimitations.ResolveSignature, Phase 8 Step 5)
@@ -2171,13 +2175,6 @@ public static class BlogEndpoints
         .channel-meta { font-size: 11px; color: var(--rail-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .tg-open-btn { display: flex; align-items: center; gap: 6px; min-height: 30px; border: var(--border-rail-btn); background: var(--rail-btn-face); border-radius: var(--radius-plaque); padding: 0 11px; font-size: 12px; font-weight: 600; color: var(--rail-ink); white-space: nowrap; flex: none; }
         .tg-open-btn:hover { background: var(--rail-btn-face-hover); }
-        /* ADR-192 — RU/EN, mounted the same way the wood board mounts everything: two plates in one
-           frame, the current one struck like the project switcher's own plaque. */
-        .site-lang-toggle { display: flex; align-items: center; flex: none; border: var(--border-rail-btn); border-radius: var(--radius-plaque); overflow: hidden; }
-        .site-lang-btn { display: flex; align-items: center; justify-content: center; min-width: 32px; height: 30px; padding: 0 9px; background: var(--rail-btn-face); color: var(--rail-ink); font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .04em; }
-        .site-lang-btn + .site-lang-btn { border-left: var(--border-rail-btn); }
-        .site-lang-btn:hover { background: var(--rail-btn-face-hover); }
-        .site-lang-btn.current { background-image: var(--grad-brass); color: var(--brass-ink); }
         /* Secondary next to "Open in Telegram": subscribing to the feed is an offer, not the
            header's main action, and two filled buttons side by side read as two main actions. */
         .rss-btn { background: none; }
@@ -2212,26 +2209,42 @@ public static class BlogEndpoints
         }
 
         .site-main { max-width: 760px; margin: 0 auto; padding: 26px 20px 60px; width: 100%; }
+        /* Feedback: the post reader read as mobile-width on a desktop screen. A little wider than
+           the rest of the blog, not a second column width — 760px is still the index's measured
+           line length (ADR-179), this is only the reader's own frame. */
+        .site-main--post { max-width: 820px; }
         .empty { color: var(--wood-ink); }
 
         /* ── Leaves: tags and filters (ADR-179 clause 5, ADR-176's day/night pair) ───────────────────
            A leaf on paper is the design system's tag. Picked, it is green; unpicked, it lies on the dried
            stock with its own edge, because border alpha alone does not tell two leaves apart. */
-        /* ── The index toolbar: search and sort, plain links and a GET form ─────────────────────────── */
-        .index-toolbar { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; }
-        .index-search { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: var(--radius-field); background: var(--paper-bright); box-shadow: var(--shadow-field-inset); color: var(--t2); }
-        .index-search input { flex: 1; min-width: 0; border: none; background: none; outline: none; font-family: var(--font-sans); font-size: 14px; color: var(--text); }
-        .index-search input::placeholder { color: var(--t2); }
-        .index-sort-btn { display: inline-flex; align-items: center; gap: 7px; flex: none; min-height: 44px; padding: 0 14px; border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); background: var(--sheet); box-shadow: var(--shadow-paper-sm); font-family: var(--font-sans); font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; }
+        /* ── The index toolbar: one sort/filter button off a paper popover, the reading menu's own
+           open/close mechanism ─────────────────────────────────────────────────────────────────── */
+        .index-toolbar { display: flex; justify-content: flex-end; margin: 0 0 16px; }
+        .sort-anchor { position: relative; flex: none; }
+        .index-sort-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 14px; border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); background: var(--sheet); box-shadow: var(--shadow-paper-sm); font-family: var(--font-sans); font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; cursor: pointer; }
         .index-sort-btn:hover { background: var(--alt); }
-        @media (max-width: 560px) { .index-sort-btn span { display: none; } }
+        .sort-menu { position: absolute; top: calc(100% + 8px); right: 0; z-index: 20; width: 220px; padding: 14px 16px 16px; background-color: var(--sheet); background-image: var(--tex-paper); border: 1px solid var(--paper-edge); border-radius: var(--radius-paper); box-shadow: var(--shadow-sheet); color: var(--text); text-align: left; }
+        .sort-menu .reading-label:not(:first-child) { margin-top: 14px; }
+        .sort-menu-group { display: flex; flex-direction: column; gap: 2px; }
+        .sort-menu-item { display: block; padding: 7px 9px; border-radius: var(--radius-field); font-family: var(--font-sans); font-size: 13px; font-weight: 600; color: var(--text); }
+        .sort-menu-item:hover { background: var(--alt); }
+        .sort-menu-item.current { background: var(--grad-pine); color: var(--text-on-pine); box-shadow: var(--shadow-pine-btn); }
+        @media (max-width: 420px) { .sort-menu { right: -8px; width: calc(100vw - 32px); max-width: 260px; } }
+
+        /* ── "Show N more" — a plain link, the same paper-button family as the sort control ──────────── */
+        .show-more-row { display: flex; justify-content: center; margin-top: 8px; }
+        .show-more-btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); background: var(--sheet); background-image: var(--tex-paper); box-shadow: var(--shadow-paper-sm); font-family: var(--font-sans); font-size: 13.5px; font-weight: 700; color: var(--text); }
+        .show-more-btn:hover { background: var(--alt); }
 
         .tag-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 20px; }
+        /* A leaf is read in passing, not aimed at — it keeps its own compact height rather than the
+           44px paper touch-floor a standalone control needs. */
         .tag-chip, .post-tag-chip {
-            display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px;
+            display: inline-flex; align-items: center; min-height: 28px; padding: 4px 13px;
             border: 1px solid var(--leaf-dried-edge); border-radius: 2px 12px 2px 12px;
             background-color: var(--leaf-dried-bg); color: var(--leaf-ink);
-            font-size: 14px; font-weight: 700; white-space: nowrap;
+            font-size: 13px; font-weight: 700; white-space: nowrap;
         }
         /* Unpicked keeps the green ink on the pale stock, which is the pair the table measures at
            4.5. --leaf-dried-ink is a step below it and means dried — no data, switched off — and a
@@ -2634,7 +2647,7 @@ public static class BlogEndpoints
         </head>
         <body>
         {{HEADER}}
-        <main class="site-main">
+        <main class="site-main{{MAIN_CLASS}}">
         {{BODY}}
         </main>
         <div class="site-footer"><div class="site-footer-inner">
@@ -2912,6 +2925,30 @@ public static class BlogEndpoints
                 open(menu.hidden);
             });
             /* A click inside must not close it: the two rows are meant to be tried against the page. */
+            menu.addEventListener('click', function (e) { e.stopPropagation(); });
+            document.addEventListener('click', function () { open(false); });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && !menu.hidden) { open(false); btn.focus(); }
+            });
+        })();
+
+        /* ADR-193 — the index sort/filter dropdown, the same open/close mechanism as the reading
+           menu above, kept separate rather than shared: two anchors, two buttons, and the two never
+           appear on the same page (one is index-only, the other on every page). */
+        (function () {
+            var btn = document.getElementById('sortBtn');
+            var menu = document.getElementById('sortMenu');
+            if (!btn || !menu) return;
+
+            function open(state) {
+                menu.hidden = !state;
+                btn.setAttribute('aria-expanded', state ? 'true' : 'false');
+            }
+
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                open(menu.hidden);
+            });
             menu.addEventListener('click', function (e) { e.stopPropagation(); });
             document.addEventListener('click', function () { open(false); });
             document.addEventListener('keydown', function (e) {
@@ -3271,7 +3308,7 @@ public static class BlogEndpoints
 
     // metaHtml defaults empty so the pages that must reveal nothing to crawlers — 404 and the
     // registration gate — emit nothing by construction rather than by remembering to (ADR-124).
-    private static string PageShell(string title, string bodyHtml, string lang, string headerHtml, string metaHtml = "")
+    private static string PageShell(string title, string bodyHtml, string lang, string headerHtml, string metaHtml = "", string mainClass = "")
     {
         var mathAssets = bodyHtml.Contains("math-tex") ? MathAssets : "";
         return ShellTemplate
@@ -3285,6 +3322,7 @@ public static class BlogEndpoints
             .Replace("{{META}}", metaHtml)
             .Replace("{{MATH_ASSETS}}", mathAssets)
             .Replace("{{HEADER}}", headerHtml)
+            .Replace("{{MAIN_CLASS}}", mainClass.Length == 0 ? "" : " " + mainClass)
             .Replace("{{BODY}}", bodyHtml);
     }
 }

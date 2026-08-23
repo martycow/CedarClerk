@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-23 — ADR-192 follow-up (ADR-193)
+
+**Nine pieces of feedback on the just-shipped blog redesign, acted on the same day.** The site-wide
+RU/EN cookie toggle is gone — its "RU does nothing" report turned out to be an explicit-link-always-
+wins no-op rather than a real bug, and rather than fix the sync, the toggle itself is deleted: the
+index now reads in English by default (with a translated preview per card when a post has an English
+translation), and each post keeps exactly the language switch it already had. Search is deleted too —
+it only ever matched titles and tags, never body text, which is why a real word from a post's body
+came up empty. The plain sort link became a proper dropdown: newest/oldest, most/least popular (by
+view count), and "posts available in language X." The index now paginates 10 at a time with a "Show
+10 more" link instead of rendering the whole list every load. Smaller fixes: tag chips are noticeably
+shorter, the copy-link button moved from the bottom of a post to the top, and the post reader is a bit
+wider than the rest of the blog on desktop.
+
 ## 2026-08-23 — The blog reader moves to the wood board (ADR-192)
 
 **Imported a Claude Design brief for the blog and built its real features.** The single-post reader
