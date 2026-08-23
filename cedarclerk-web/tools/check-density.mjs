@@ -184,7 +184,9 @@ if (declared('--text-readout')) rTokens.sites++;
 if (declared('--text-readout') && !/^var\(--fs-[\w-]+\)$/.test(root['--text-readout']))
     fail(rTokens, 'styles.scss', tokenLine('--text-readout'), `--text-readout is ${root['--text-readout']} — it must alias a --fs-* step`);
 
-// 5. Each surface's floors hold inside anything scoped to it (ADR-138 item 7).
+// 5. Each surface's floors hold inside anything scoped to it (ADR-138 item 7). ADR-196 names two
+// exact desktop exceptions: the shared `sm` paper button and Stats' discrete range select use the
+// chrome drawing size, while the global coarse-pointer rule still lifts both to 44px.
 const rFloors = rule('surface floors', `chrome ${CHROME_HIT}px / ${CHROME_FS_MIN}-${CHROME_FS_MAX}px, paper ${PAPER_HIT}px / >= ${PAPER_FS_MIN}px`,
     'no [data-surface="chrome"] or [data-surface="paper"] block in the tree yet — the shell has not landed');
 for (const f of files) {
@@ -192,9 +194,13 @@ for (const f of files) {
         for (const b of blocks(f.code, `[data-surface="${surface}"]`)) {
             rFloors.sites++;
             const base = b.open + 1;
+            const selector = f.code.slice(b.at, b.open);
+            const paperCompact = surface === 'paper'
+                && (selector.includes('.btn.sm') || selector.includes('.range-picker select'));
             for (const m of b.body.matchAll(/font-size\s*:\s*([^;{}]+)/g)) {
                 const v = px(m[1], root);
                 if (v === null) continue;
+                if (paperCompact && v >= CHROME_FS_MIN && v <= CHROME_FS_MAX) continue;
                 const want = fsMax === Infinity ? `>= ${fsMin}px` : `${fsMin}-${fsMax}px`;
                 if (v < fsMin || v > fsMax) fail(rFloors, f.rel, lineOf(f.code, base + m.index), `${surface}: font-size ${v}px, ${surface} type is ${want}`);
             }
@@ -202,6 +208,7 @@ for (const f of files) {
             // dock's dimension as a control's box.
             for (const m of b.body.matchAll(/min-(height|width)\s*:\s*([^;{}]+)/g)) {
                 const v = px(m[2], root);
+                if (paperCompact && v === CHROME_HIT) continue;
                 if (v !== null && v < hit) fail(rFloors, f.rel, lineOf(f.code, base + m.index), `${surface}: min-${m[1]} ${v}px below the ${hit}px floor`);
             }
         }

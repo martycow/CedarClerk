@@ -76,6 +76,14 @@ export interface RevisionDiff {
     removedLines: number[];
     changedLines: number;
     totalChanged: number;
+    lines: RevisionDiffLine[];
+}
+
+export interface RevisionDiffLine {
+    kind: 'context' | 'added' | 'removed';
+    beforeLine: number | null;
+    afterLine: number | null;
+    text: string;
 }
 
 export interface DraftMeta {

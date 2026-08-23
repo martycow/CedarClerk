@@ -2,6 +2,7 @@ using CedarClerk.Localization;
 using CedarClerk.Server;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace CedarClerk.Tests;
 
@@ -9,6 +10,21 @@ namespace CedarClerk.Tests;
 // silently overwriting a live post, so both are pinned here rather than trusted to review.
 public class DraftRevisionServiceTests
 {
+    [Fact]
+    public void Diff_carries_readable_added_removed_and_context_lines()
+    {
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(
+            DraftRevisionService.Diff(Doc("kept", "removed"), Doc("kept", "added"))));
+        var lines = json.RootElement.GetProperty("lines").EnumerateArray().ToList();
+
+        Assert.Contains(lines, line => line.GetProperty("kind").GetString() == "context"
+            && line.GetProperty("text").GetString() == "kept");
+        Assert.Contains(lines, line => line.GetProperty("kind").GetString() == "removed"
+            && line.GetProperty("text").GetString() == "removed");
+        Assert.Contains(lines, line => line.GetProperty("kind").GetString() == "added"
+            && line.GetProperty("text").GetString() == "added");
+    }
+
     private static CedarDbContext NewDb()
     {
         var connection = new SqliteConnection("Data Source=:memory:");

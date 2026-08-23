@@ -13,6 +13,7 @@ public static class GlossaryEndpoints
     // ProjectId is nullable and optional: absent means a global term, which is what every term
     // written before T-125 is and what the glossary screen still defaults to.
     public record UpsertTermRequest(string Term, string Description, string? Aliases, string? ImageUrl, string? Language, bool IsCaseSensitive = false, Guid? ProjectId = null);
+    public record SetDraftTermRequest(bool Excluded);
 
     private const int TermMaxLength = 80;
     private const int DescriptionMaxLength = 1000;
@@ -50,6 +51,62 @@ public static class GlossaryEndpoints
                 ? RussianDeclensions.Suggest(req.Term ?? "")
                 : [];
             return Results.Ok(new { forms });
+        });
+
+        group.MapGet("/for-draft/{draftId:guid}/{language}", async (
+            Guid draftId, string language, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            if (!Languages.IsContentLanguage(language)) return Results.BadRequest(new { error = $"Unsupported language: {language}" });
+
+            var draft = await db.Drafts.Where(d => d.Id == draftId && d.OwnerId == uid)
+                .Select(d => new { d.PrimaryLanguage, d.CedarJson, d.ProjectId }).FirstOrDefaultAsync();
+            if (draft is null) return Results.NotFound();
+
+            var cedarJson = draft.CedarJson;
+            if (language != draft.PrimaryLanguage)
+                cedarJson = await db.DraftTranslations.Where(t => t.DraftId == draftId && t.Language == language)
+                    .Select(t => t.CedarJson).FirstOrDefaultAsync() ?? "";
+
+            var text = string.Join('\n', CedarPlainText.Paragraphs(cedarJson));
+            var excluded = await db.DraftGlossaryExclusions
+                .Where(x => x.DraftId == draftId && x.OwnerId == uid && x.Language == language)
+                .Select(x => x.GlossaryTermId).ToListAsync();
+            var excludedSet = excluded.ToHashSet();
+            var terms = await db.GlossaryTerms
+                .Where(t => t.OwnerId == uid && t.Language == language
+                            && (t.ProjectId == null || t.ProjectId == draft.ProjectId))
+                .OrderBy(t => t.Term)
+                .Select(t => new { t.Id, t.Term, t.Aliases, t.IsCaseSensitive })
+                .ToListAsync();
+
+            return Results.Ok(terms
+                .Where(t => t.Aliases.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Prepend(t.Term).Any(alias => ContainsWholeWord(text, alias, t.IsCaseSensitive)))
+                .Select(t => new { t.Id, t.Term, Excluded = excludedSet.Contains(t.Id) }));
+        });
+
+        group.MapPut("/for-draft/{draftId:guid}/{language}/{termId:guid}", async (
+            Guid draftId, string language, Guid termId, SetDraftTermRequest req,
+            ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.Where(d => d.Id == draftId && d.OwnerId == uid)
+                .Select(d => new { d.ProjectId }).FirstOrDefaultAsync();
+            if (draft is null) return Results.NotFound();
+            var validTerm = await db.GlossaryTerms.AnyAsync(t => t.Id == termId && t.OwnerId == uid
+                && t.Language == language && (t.ProjectId == null || t.ProjectId == draft.ProjectId));
+            if (!validTerm) return Results.NotFound();
+
+            var row = await db.DraftGlossaryExclusions.FirstOrDefaultAsync(x => x.DraftId == draftId
+                && x.GlossaryTermId == termId && x.Language == language);
+            if (req.Excluded && row is null)
+                db.DraftGlossaryExclusions.Add(new DraftGlossaryExclusion
+                    { OwnerId = uid, DraftId = draftId, GlossaryTermId = termId, Language = language });
+            else if (!req.Excluded && row is not null)
+                db.DraftGlossaryExclusions.Remove(row);
+            await db.SaveChangesAsync();
+            return Results.NoContent();
         });
 
         group.MapPost("/", async (UpsertTermRequest req, ClaimsPrincipal user, CedarDbContext db) =>
@@ -98,6 +155,8 @@ public static class GlossaryEndpoints
         group.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            await db.DraftGlossaryExclusions
+                .Where(x => x.GlossaryTermId == id && x.OwnerId == uid).ExecuteDeleteAsync();
             var deleted = await db.GlossaryTerms.Where(t => t.Id == id && t.OwnerId == uid).ExecuteDeleteAsync();
             return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });
@@ -312,11 +371,16 @@ public static class GlossaryEndpoints
     /// scope is a more precise definition, which is the reason to write one.
     /// </summary>
     internal static async Task<IReadOnlyList<GlossaryEntry>> LoadForAsync(
-        CedarDbContext db, string ownerId, string language, Guid? projectId = null)
+        CedarDbContext db, string ownerId, string language, Guid? projectId = null, Guid? draftId = null)
     {
+        var excluded = draftId is null
+            ? []
+            : await db.DraftGlossaryExclusions
+                .Where(x => x.OwnerId == ownerId && x.DraftId == draftId && x.Language == language)
+                .Select(x => x.GlossaryTermId).ToListAsync();
         var rows = await db.GlossaryTerms
             .Where(t => t.OwnerId == ownerId && t.Language == language
-                        && (t.ProjectId == null || t.ProjectId == projectId))
+                        && (t.ProjectId == null || t.ProjectId == projectId) && !excluded.Contains(t.Id))
             .Select(t => new { t.Term, t.Description, t.Aliases, t.ImageUrl, t.IsCaseSensitive, t.ProjectId })
             .ToListAsync();
 
@@ -333,6 +397,24 @@ public static class GlossaryEndpoints
                 r.IsCaseSensitive))
             .ToList();
     }
+
+    private static bool ContainsWholeWord(string text, string candidate, bool caseSensitive)
+    {
+        if (string.IsNullOrWhiteSpace(candidate)) return false;
+        var comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+        var from = 0;
+        while ((from = text.IndexOf(candidate, from, comparison)) >= 0)
+        {
+            var before = from == 0 || !IsWordChar(text[from - 1]);
+            var afterAt = from + candidate.Length;
+            var after = afterAt >= text.Length || !IsWordChar(text[afterAt]);
+            if (before && after) return true;
+            from++;
+        }
+        return false;
+    }
+
+    private static bool IsWordChar(char value) => char.IsLetterOrDigit(value) || value == '_';
 
     public record SuggestFormsRequest(string Term, string? Language);
 

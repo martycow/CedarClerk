@@ -23,7 +23,7 @@
             @if (currentId(); as id) {
 
             <!-- ============ 1 · VERSION ============ -->
-            <app-shelf-panel class="export-step" [title]="'1 · ' + t().editor.exportModal.stepVersion"
+            <app-shelf-panel class="export-step export-global" [title]="'1 · ' + t().editor.exportModal.stepVersion"
                              [count]="exportLangs().length">
                 <div class="export-step-body">
                 <div class="lang-check-row">
@@ -46,20 +46,22 @@
             </app-shelf-panel>
 
             <!-- ============ 2 · DESTINATIONS ============ -->
-            <app-shelf-panel class="export-step" [title]="'2 · ' + t().editor.exportModal.stepWhere"
+            <app-shelf-panel class="export-step export-destinations" [title]="'2 · ' + t().editor.exportModal.stepWhere"
                              [count]="tickedDestinationCount()">
                 <div class="export-step-body">
                 <!--A network with no account stays visible and stays honest: it is not hidden, not
                 silently tickable, and the way out is the one place that can fix it (ADR-095).-->
                 <div class="dest-cards">
-                    <label class="dest-card" [class.on]="destBlog()">
+                    <label class="dest-card" [class.on]="destBlog()" [class.active]="activeExportDestination() === 'blog'"
+                           (click)="activeExportDestination.set('blog')">
                         <input type="checkbox" [checked]="destBlog()" (change)="destBlog.set(!destBlog())">
                         <app-icon name="newspaper" size="sm"></app-icon>
                         <span class="dest-card-name">{{ t().editor.exportModal.destinationBlog }}</span>
                         @if (currentBlog()?.isPublished) { <span class="state-chip live">LIVE</span> }
                     </label>
 
-                    <label class="dest-card" [class.on]="destTelegram()">
+                    <label class="dest-card" [class.on]="destTelegram()" [class.active]="activeExportDestination() === 'telegram'"
+                           (click)="activeExportDestination.set('telegram')">
                         <input type="checkbox" [checked]="destTelegram()" (change)="destTelegram.set(!destTelegram())">
                         <app-brand-icon name="telegram" [size]="15"></app-brand-icon>
                         <span class="dest-card-name">{{ t().editor.exportModal.destinationTelegram }}</span>
@@ -68,7 +70,8 @@
 
                     @for (network of microNetworks; track network) {
                         @if (account(network); as acc) {
-                        <label class="dest-card" [class.on]="destination(network)()">
+                        <label class="dest-card" [class.on]="destination(network)()" [class.active]="activeExportDestination() === network"
+                               (click)="activeExportDestination.set(network)">
                             <input type="checkbox" [checked]="destination(network)()"
                                    (change)="destination(network).set(!destination(network)())">
                             <app-brand-icon [name]="brandOf(network)" [size]="14"></app-brand-icon>
@@ -76,7 +79,10 @@
                             <span class="dest-card-meta">{{ acc.displayName }}</span>
                         </label>
                         } @else {
-                        <div class="dest-card off">
+                        <div class="dest-card off" role="button" tabindex="0"
+                             [class.active]="activeExportDestination() === network"
+                             (click)="activeExportDestination.set(network)"
+                             (keydown.enter)="activeExportDestination.set(network)">
                             <app-brand-icon [name]="brandOf(network)" [size]="14"></app-brand-icon>
                             <span class="dest-card-name">{{ microLabels[network] }}</span>
                             <span class="dest-card-meta">{{ t().editor.exportModal.notConnected }}</span>
@@ -86,6 +92,16 @@
                         </div>
                         }
                     }
+                    @for (network of unsupportedDestinations; track network.id) {
+                    <div class="dest-card off unsupported" role="button" tabindex="0"
+                         [class.active]="activeExportDestination() === network.id"
+                         (click)="activeExportDestination.set(network.id)"
+                         (keydown.enter)="activeExportDestination.set(network.id)">
+                        <app-brand-icon [name]="network.icon" [size]="14"></app-brand-icon>
+                        <span class="dest-card-name">{{ network.name }}</span>
+                        <span class="dest-card-meta">{{ t().editor.exportModal.notSupported }}</span>
+                    </div>
+                    }
                 </div>
                 @if (!anyDestination()) {
                 <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.noDestination }}</p>
@@ -94,12 +110,12 @@
             </app-shelf-panel>
 
             <!-- ============ 3 · PER-DESTINATION SETTINGS ============ -->
-            @if (anyDestination()) {
-            <app-shelf-panel class="export-step" [title]="'3 · ' + t().editor.exportModal.stepParams">
+            @if (activeExportDestination()) {
+            <app-shelf-panel class="export-step export-settings" [title]="'3 · ' + t().editor.exportModal.stepParams">
                 <div class="export-step-body">
                 <div class="export-panels">
 
-                @if (destBlog()) {
+                @if (activeExportDestination() === 'blog') {
                 <div class="export-section">
                     <div class="export-section-title">
                         <app-icon name="newspaper" size="sm"></app-icon>{{ t().editor.exportModal.siteBlog }}
@@ -172,7 +188,7 @@
                 </div>
                 }
 
-                @if (destTelegram()) {
+                @if (activeExportDestination() === 'telegram') {
                 <div class="export-section">
                     <div class="export-section-title">
                         <app-brand-icon name="telegram" [size]="15"></app-brand-icon>Telegram
@@ -288,7 +304,7 @@
                 <!--ADR-096 — X and Bluesky are one panel with the network as a parameter: an
                 account, a mode, and the fields that mode actually uses.-->
                 @for (network of microNetworks; track network) {
-                    @if (destination(network)() && account(network); as acc) {
+                    @if (activeExportDestination() === network && account(network); as acc) {
                     <div class="export-section">
                         <div class="export-section-title">
                             <app-brand-icon [name]="brandOf(network)" [size]="14"></app-brand-icon>
@@ -376,6 +392,27 @@
                     </div>
                     }
                 }
+                @if (activeMicroNetwork(); as activeNetwork) {
+                    @if (!account(activeNetwork)) {
+                    <div class="export-section destination-unavailable">
+                        <div class="export-section-title">
+                            <app-brand-icon [name]="brandOf(activeNetwork)" [size]="14"></app-brand-icon>
+                            {{ microLabels[activeNetwork] }}
+                        </div>
+                        <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.notConnected }}</p>
+                        <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'account' }">{{ t().editor.exportModal.connectInSettings }}</a>
+                    </div>
+                    }
+                }
+                @if (activeUnsupportedDestination(); as unavailable) {
+                <div class="export-section destination-unavailable">
+                    <div class="export-section-title">
+                        <app-brand-icon [name]="unavailable.icon" [size]="14"></app-brand-icon>
+                        {{ unavailable.name }}
+                    </div>
+                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.notSupported }}</p>
+                </div>
+                }
                 </div>
                 </div>
             </app-shelf-panel>
@@ -387,7 +424,7 @@
             with four destinations that stopped being true. Shown only when something schedulable
             is ticked — the blog is not a publish target and has nothing to postpone.-->
             @if (anyNetworkDestination()) {
-            <app-shelf-panel class="export-step" [title]="'4 · ' + t().editor.exportModal.stepWhen">
+            <app-shelf-panel class="export-step export-global" [title]="'4 · ' + t().editor.exportModal.stepWhen">
                 <div class="export-step-body">
                 <!--ADR-190 — the sentence that used to sit beside the title lives on the paper now:
                 wood carries labels and counters, paper carries prose.-->
@@ -424,7 +461,7 @@
             it is true of the private page whether or not this window is publishing anywhere, so it
             is not gated behind ticking the blog.-->
             @if (isPrivate()) {
-            <app-shelf-panel class="export-step" [title]="t().editor.exportModal.privateAccess">
+            <app-shelf-panel class="export-step export-global" [title]="t().editor.exportModal.privateAccess">
                 <div class="export-step-body">
                 <p class="field-hint-inline">{{ t().editor.exportModal.privateAccessHint }}</p>
                 <div class="export-panels">
@@ -1070,7 +1107,8 @@
     either what is selected on that sheet or the document itself, never both (ADR-159).-->
     <div class="main">
         <app-shelf-panel class="outline" [title]="t().editor.outline.title" [count]="blockCount()">
-            <app-document-outline [entries]="outline()" [active]="outlineActive()" (pick)="goToBlock($event)" />
+            <app-document-outline [entries]="outline()" [active]="outlineActive()"
+                                  (documentPick)="selectDocument()" (pick)="goToBlock($event)" />
         </app-shelf-panel>
 
         <div class="mid">
@@ -1101,8 +1139,13 @@
                             </app-popover>
                             <span class="tb-caption">{{ t().editor.groups.block }}</span>
                         </span>
-                        <button (click)="cmd(c => c.undo())" [disabled]="!canUndo()" [title]="tip(t().editor.tb.undo, 'undo')"><app-icon name="arrow-u-up-left" size="xs"></app-icon></button>
-                        <button (click)="cmd(c => c.redo())" [disabled]="!canRedo()" [title]="tip(t().editor.tb.redo, 'redo')"><app-icon name="arrow-u-up-right" size="xs"></app-icon></button>
+                        <span class="tb-group">
+                            <span class="tb-row">
+                                <button (click)="cmd(c => c.undo())" [disabled]="!canUndo()" [title]="tip(t().editor.tb.undo, 'undo')"><app-icon name="arrow-u-up-left" size="xs"></app-icon></button>
+                                <button (click)="cmd(c => c.redo())" [disabled]="!canRedo()" [title]="tip(t().editor.tb.redo, 'redo')"><app-icon name="arrow-u-up-right" size="xs"></app-icon></button>
+                            </span>
+                            <span class="tb-caption">{{ t().editor.groups.history }}</span>
+                        </span>
                     </span>
 
                     @for (g of row1Groups(); track g) {
@@ -1133,17 +1176,10 @@
             </div>
             @if (aiEditError()) { <p class="channel-error strip-error">{{ aiEditError() }}</p> }
 
-            <app-worktop class="wt" scroll>
+            <app-worktop class="wt" scroll (click)="onWorktopClick($event)">
                 <div class="sheet-column" [style.max-width.px]="sheetMaxWidthPx()">
                     <!--Re-translating an existing version gets the same progress treatment as the
                     first-time auto-translate below (B14).-->
-                    @if (autoTranslating() && !showEmptyState()) {
-                    <div class="translate-progress">
-                        <div class="upload-bar"><div class="upload-fill" [style.width.%]="autoTranslateProgress()"></div></div>
-                        <p class="translate-status">{{ translateStatusMessage() }} — {{ autoTranslateProgress() }}% · {{ autoTranslateElapsed() }}s</p>
-                        <button class="btn-ghost" (click)="cancelAutoTranslate()">{{ t().common.cancel }}</button>
-                    </div>
-                    }
                     @if (autoTranslateError() && !showEmptyState()) {
                     <p class="channel-error">{{ autoTranslateError() }}</p>
                     }
@@ -1331,6 +1367,19 @@
                     }
                 </div>
 
+                @if (draftGlossaryTerms().length) {
+                <p class="insp-group">{{ t().editor.inspector.glossary }}</p>
+                <div class="insp-glossary">
+                    @for (term of draftGlossaryTerms(); track term.id) {
+                    <label class="insp-glossary-term">
+                        <input type="checkbox" [checked]="!term.excluded" [disabled]="draftGlossaryBusy()"
+                               (change)="toggleDraftGlossaryTerm(term)">
+                        <span>{{ term.term }}</span>
+                    </label>
+                    }
+                </div>
+                }
+
                 <div class="insp-actions">
                     @if (lang() !== primaryLanguage && translationOf(lang())) {
                     <!--Always offered, not only while the stale dot is lit (B14): the dot clears
@@ -1384,20 +1433,20 @@
                     <app-stamp-badge tone="ink" [rotate]="1">{{ t().editor.state.notPublished }}</app-stamp-badge>
                     }
                 </app-spec-row>
-                @if (currentBlog()?.isPublished) {
                 <app-spec-row scope="document" [label]="t().editor.inspector.blog">
+                    @if (currentBlog()?.isPublished) {
                     <a class="state-link" [href]="blogUrl()" target="_blank" rel="noopener" [title]="t().editor.state.blogLink">
                         <app-stamp-badge tone="pine" [rotate]="1">{{ blogHost() }}</app-stamp-badge>
                     </a>
+                    } @else { <span class="insp-off">{{ t().manager.inspector.none }}</span> }
                 </app-spec-row>
-                }
-                @if (telegramPostUrl(); as tg) {
                 <app-spec-row scope="document" [label]="t().editor.inspector.telegram">
+                    @if (telegramPostUrl(); as tg) {
                     <a class="state-link" [href]="tg" target="_blank" rel="noopener" [title]="t().editor.state.telegramLink">
                         <app-stamp-badge tone="pine" [rotate]="-1">@{{ telegramUsername() }}</app-stamp-badge>
                     </a>
+                    } @else { <span class="insp-off">{{ t().manager.inspector.none }}</span> }
                 </app-spec-row>
-                }
                 <app-spec-row scope="document" label="X">
                     @if (xAccount(); as a) { <span>{{ a.displayName }}</span> }
                     @else { <span class="insp-off">{{ t().manager.inspector.none }}</span> }
@@ -1454,12 +1503,16 @@
                     <span>{{ t().editor.versions.changedBlocks(diff.totalChanged) }}</span>
                     <span class="muted">{{ t().editor.versions.wasNowLines(diff.beforeLines, diff.afterLines) }}</span>
                 </p>
-                @if (diff.addedLines.length) {
-                <p class="publish-diff-line added">{{ t().editor.versions.addedLines }}: {{ diff.addedLines.join(', ') }}</p>
-                }
-                @if (diff.removedLines.length) {
-                <p class="publish-diff-line removed">{{ t().editor.versions.removedLines }}: {{ diff.removedLines.join(', ') }}</p>
-                }
+                <div class="revision-unified">
+                    @for (line of diff.lines; track $index) {
+                    <div class="revision-diff-row" [class]="line.kind">
+                        <span class="revision-line-no">{{ line.beforeLine ?? '' }}</span>
+                        <span class="revision-line-no">{{ line.afterLine ?? '' }}</span>
+                        <span class="revision-sign">{{ line.kind === 'added' ? '+' : line.kind === 'removed' ? '−' : ' ' }}</span>
+                        <span class="revision-line-text">{{ line.text }}</span>
+                    </div>
+                    }
+                </div>
                 }
 
                 <p class="revision-preview-title">{{ t().editor.versions.preview }}</p>
@@ -1516,12 +1569,16 @@
                     }
                 </p>
                 @if (preview.diff; as diff) {
-                @if (diff.addedLines.length) {
-                <p class="publish-diff-line added">{{ t().editor.versions.addedLines }}: {{ diff.addedLines.join(', ') }}</p>
-                }
-                @if (diff.removedLines.length) {
-                <p class="publish-diff-line removed">{{ t().editor.versions.removedLines }}: {{ diff.removedLines.join(', ') }}</p>
-                }
+                <div class="revision-unified compact">
+                    @for (line of diff.lines; track $index) {
+                    <div class="revision-diff-row" [class]="line.kind">
+                        <span class="revision-line-no">{{ line.beforeLine ?? '' }}</span>
+                        <span class="revision-line-no">{{ line.afterLine ?? '' }}</span>
+                        <span class="revision-sign">{{ line.kind === 'added' ? '+' : line.kind === 'removed' ? '−' : ' ' }}</span>
+                        <span class="revision-line-text">{{ line.text }}</span>
+                    </div>
+                    }
+                </div>
                 } @else {
                 <p class="publish-diff-line">{{ t().editor.versions.noBaseline }}</p>
                 }
@@ -1579,6 +1636,30 @@
             @if (termBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
             {{ t().common.save }}
         </button>
+    </app-modal>
+    }
+
+    @if (autoTranslating()) {
+    <app-modal [width]="460" (closed)="cancelAutoTranslate()">
+        <app-icon modal-icon name="sparkle" size="sm"></app-icon>
+        <span modal-title>{{ t().editor.lang.translateAllRunning }}</span>
+        <div class="translate-progress modal-progress">
+            <div class="upload-bar"><div class="upload-fill" [style.width.%]="autoTranslateProgress()"></div></div>
+            <p class="translate-status">{{ translateStatusMessage() }} — {{ autoTranslateProgress() }}% · {{ autoTranslateElapsed() }}s</p>
+        </div>
+        <button modal-actions class="btn-ghost" (click)="cancelAutoTranslate()">{{ t().common.cancel }}</button>
+    </app-modal>
+    }
+
+    @if (aiEditBusy()) {
+    <app-modal [width]="460" (closed)="cancelAiEdit()">
+        <app-icon modal-icon name="sparkle" size="sm"></app-icon>
+        <span modal-title>{{ t().editor.ai.working }}</span>
+        <div class="translate-progress modal-progress">
+            <div class="upload-bar"><div class="upload-fill" [style.width.%]="aiEditProgress()"></div></div>
+            <p class="translate-status">{{ t().editor.ai.working }} — {{ aiEditProgress() }}% · {{ aiEditElapsed() }}s</p>
+        </div>
+        <button modal-actions class="btn-ghost" (click)="cancelAiEdit()">{{ t().common.cancel }}</button>
     </app-modal>
     }
 </div>

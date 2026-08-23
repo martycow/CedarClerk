@@ -22,7 +22,7 @@ import { FormPresetsService, FormPreset } from '../core/form-presets.service';
 import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { GlossaryTermFormComponent } from '../shared/glossary-term-form.component';
-import { GlossaryService, GlossaryTermInput } from '../core/glossary.service';
+import { DraftGlossaryTerm, GlossaryService, GlossaryTermInput } from '../core/glossary.service';
 import { NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, CompressionLevel, UpdatePreview } from '../core/posts.service';
 import { PublishService, PublishAccount, PublishJob, ThreadPart } from '../core/publish.service';
@@ -68,7 +68,7 @@ import { LibraryAsset } from '../core/assets.service';
 import { FormRefComponent } from '../shared/form-ref.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import { pseudoProgress } from '../core/pseudo-progress.util';
-import { BrandIconComponent } from '../shared/brand-icon.component';
+import { BrandIconComponent, BrandIconName } from '../shared/brand-icon.component';
 import { IconComponent } from '../shared/icon.component';
 import { IconName } from '../shared/icon-data.generated';
 import { avatarFill, avatarInitial } from '../core/avatar-color.util';
@@ -132,6 +132,8 @@ type PublishRunStatus = 'waiting' | 'running' | 'done' | 'failed';
 
 /** The networks that derive a short post rather than taking the document (ADR-077). */
 type MicroNetwork = 'bluesky' | 'x' | 'discord';
+type UnsupportedDestination = 'instagram' | 'threads' | 'youtube' | 'steam' | 'itch';
+type ExportDestination = 'blog' | 'telegram' | MicroNetwork | UnsupportedDestination;
 /** ADR-096 — an announcement carrying a link, or the document itself as a reply chain. */
 type MicroMode = 'link' | 'thread';
 
@@ -413,6 +415,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private publishApi = inject(PublishService);
     private billingApi = inject(BillingService);
     readonly microNetworks: MicroNetwork[] = ['bluesky', 'x', 'discord'];
+    readonly unsupportedDestinations: { id: UnsupportedDestination; name: string; icon: BrandIconName }[] = [
+        { id: 'instagram', name: 'Instagram', icon: 'instagram' },
+        { id: 'threads', name: 'Threads', icon: 'threads' },
+        { id: 'youtube', name: 'YouTube', icon: 'youtube' },
+        { id: 'steam', name: 'Steam', icon: 'steam' },
+        { id: 'itch', name: 'itch.io', icon: 'itch' },
+    ];
+    activeExportDestination = signal<ExportDestination>('blog');
     readonly microLimits: Record<MicroNetwork, number> = { bluesky: 300, x: 280, discord: 2000 };
     readonly microLabels: Record<MicroNetwork, string> = { bluesky: 'Bluesky', x: 'X', discord: 'Discord' };
     /** Discord never threads (ADR-131) — a webhook message has no reply structure to chain. */
@@ -495,6 +505,16 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             case 'discord': return this.destDiscord;
             default: return this.destBluesky;
         }
+    }
+
+    activeMicroNetwork(): MicroNetwork | null {
+        const active = this.activeExportDestination();
+        return this.microNetworks.includes(active as MicroNetwork) ? active as MicroNetwork : null;
+    }
+
+    activeUnsupportedDestination() {
+        const active = this.activeExportDestination();
+        return this.unsupportedDestinations.find(destination => destination.id === active) ?? null;
     }
 
     /** The brand mark for a short-post network — X's is still served under the `twitter` key. */
@@ -788,6 +808,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     termDraft = signal<{ term: string; language: string } | null>(null);
     termBusy = signal(false);
     termError = signal('');
+    draftGlossaryTerms = signal<DraftGlossaryTerm[]>([]);
+    draftGlossaryBusy = signal(false);
 
     // ADR-187 — the sheet's menu, not the selection's: the AI entries are always there and the
     // glossary entry appears only when there is a selection to make a term out of. It used to
@@ -820,10 +842,36 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         try {
             await this.glossaryApi.create(input);
             this.termDraft.set(null);
+            await this.loadDraftGlossary();
         } catch (e) {
             this.termError.set(httpErrorMessage(e, this.t().glossary.saveFailed));
         } finally {
             this.termBusy.set(false);
+        }
+    }
+
+    private async loadDraftGlossary() {
+        const id = this.currentId();
+        if (!id || this.showEmptyState()) { this.draftGlossaryTerms.set([]); return; }
+        const language = this.lang();
+        try {
+            const terms = await this.glossaryApi.listForDraft(id, language);
+            if (this.currentId() === id && this.lang() === language) this.draftGlossaryTerms.set(terms);
+        } catch {
+            this.draftGlossaryTerms.set([]);
+        }
+    }
+
+    async toggleDraftGlossaryTerm(term: DraftGlossaryTerm) {
+        const id = this.currentId();
+        if (!id || this.draftGlossaryBusy()) return;
+        const excluded = !term.excluded;
+        this.draftGlossaryBusy.set(true);
+        try {
+            await this.glossaryApi.setDraftTerm(id, this.lang(), term.id, excluded);
+            this.draftGlossaryTerms.update(list => list.map(item => item.id === term.id ? { ...item, excluded } : item));
+        } finally {
+            this.draftGlossaryBusy.set(false);
         }
     }
     private tick = signal(0);
@@ -1142,6 +1190,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // highlight is derived from, and there is no second copy to loop through.
     private outlineVersion = signal(0);
     private outlineTimer?: ReturnType<typeof setTimeout>;
+    readonly documentSelected = signal(false);
 
     readonly outline = computed<OutlineEntry[]>(() => {
         this.outlineVersion();
@@ -1150,7 +1199,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     /** -1 while the document has no blocks, so no row lights on an empty sheet. */
     outlineActive(): number {
-        return this.blockIndex() - 1;
+        return this.documentSelected() ? -1 : this.blockIndex() - 1;
     }
 
     private scheduleOutlineRebuild() {
@@ -1173,6 +1222,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     goToBlock(entry: OutlineEntry) {
+        this.documentSelected.set(false);
         const view = this.editor?.view;
         if (!view) return;
         const { doc } = view.state;
@@ -1199,6 +1249,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const dom = view.nodeDOM(pos) ?? view.domAtPos(pos + 1).node;
         const box = dom instanceof HTMLElement ? dom : dom?.parentElement ?? null;
         box?.scrollIntoView({ block: 'center', inline: 'nearest' });
+    }
+
+    selectDocument() {
+        this.documentSelected.set(true);
+        this.editor?.commands.blur();
+    }
+
+    onWorktopClick(event: MouseEvent) {
+        const target = event.target as HTMLElement;
+        if (target.closest('.sheet, button, input, textarea, select, a')) return;
+        this.selectDocument();
     }
 
     syncWord(): string {
@@ -1290,6 +1351,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
      * the answer for the middle two — selecting a sentence described the whole document instead.
      */
     inspectorScope(): 'selection' | 'table' | 'text' | 'document' {
+        if (this.documentSelected()) return 'document';
         if (this.selectionSpec()) return 'selection';
         if (this.isActive('table')) return 'table';
         return this.hasTextSelection() ? 'text' : 'document';
@@ -1545,7 +1607,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 if (transaction.docChanged) this.scheduleOutlineRebuild();
             },
             onUpdate: () => this.markDirty(),
-            onFocus: () => this.editorFocused.set(true),
+            onFocus: () => {
+                this.documentSelected.set(false);
+                this.editorFocused.set(true);
+            },
             onBlur: () => this.editorFocused.set(false),
         });
 
@@ -1647,6 +1712,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             }
             this.saveAttempt = 0;
             this.saveState.set('saved');
+            void this.loadDraftGlossary();
         } catch (e) {
             // A refusal is not a failure to reach the server — the server understood and said no.
             // Retrying it would just fail identically; the author decides (T-018.1/T-018.3).
@@ -1852,6 +1918,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
         this.saveState.set('saved');
         this.scheduleRuDiffRecompute();
+        await this.loadDraftGlossary();
     }
 
     async makePrimary(language: string) {
@@ -2376,6 +2443,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.saveState.set('saved');
             this.currentBlog.set(draft.blogSlug ? { slug: draft.blogSlug, isPublished: draft.isBlogPublished } : null);
             this.blogError.set(null);
+            void this.loadDraftGlossary();
 
             // Fetch the EN translation's source snapshot in the background (not blocking open)
             // just to populate the RU-tab diff gutter — the list endpoint only returns TranslationMeta.

@@ -9,7 +9,16 @@ guard: none
 
 Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-saas-plan.md` (v1.7, 15.07.2026) and `Plans/session-brief-v0.8.0-planning.md`, which are now archived under `Plans/OLD/`. **This file is the one live roadmap going forward** — update it when a phase item closes, don't recreate a parallel plan doc. Architectural/product decisions referenced below (why something was built a certain way) live in `docs/DECISIONS.md`, not here — this file tracks *status*, DECISIONS tracks *rationale*.
 
-## Status summary (as of 22.08.2026)
+## Status summary (as of 23.08.2026)
+
+**Annotated screen correction pass (`T-280`, ADR-194…199).** All 25 annotated screenshots and the
+cross-screen notes were reconciled across navigation, projects, tasks, posts, registration,
+settings, statistics, glossary, credits and Writer. The final Writer slice adds Document as the
+Structure root, explicit document selection, compact grouped history controls, per-language
+Glossary exclusions, a unified Git-like revision diff, independent AI progress modals, persistent
+destination rows in Inspector and a two-column Export destination rack that keeps unsupported
+networks visible. The authenticated visual pass still needs a signed-in local browser session; the
+production build, component suite and backend suite are green.
 
 **UI V2 — Cedar Bench becomes the one look; Stages 0 through 6 (19–20.08.2026, branch `UI_V2`, not
 merged, no version bump).** The design system mirrored from Claude Design at `.design-sync/ds-v2/`

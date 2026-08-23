@@ -21,9 +21,19 @@ import { IconComponent } from './icon.component';
         'data-surface': 'paper',
     },
     template: `
-        @if (entries().length) {
-            <ul class="ol-list" role="list" [attr.aria-label]="t().editor.outline.title"
-                (keydown)="onKeydown($event)" (focusout)="onFocusOut($event)">
+        <ul class="ol-list" role="list" [attr.aria-label]="t().editor.outline.title"
+            (keydown)="onKeydown($event)" (focusout)="onFocusOut($event)">
+            <li>
+                <button #row type="button" class="ol-row ol-root"
+                        [class.is-current]="active() === -1"
+                        [attr.aria-current]="active() === -1 ? 'true' : null"
+                        [attr.tabindex]="anchor() === 0 ? 0 : -1"
+                        (click)="documentPick.emit()">
+                    <app-icon name="file-text" size="xs" />
+                    <span class="ol-label">{{ t().editor.inspector.document }}</span>
+                </button>
+            </li>
+            @if (entries().length) {
                 @for (entry of entries(); track entry.index) {
                     <li>
                         <button #row type="button" class="ol-row"
@@ -31,7 +41,7 @@ import { IconComponent } from './icon.component';
                                 [class.is-indent-1]="entry.indent === 1"
                                 [class.is-indent-2]="entry.indent >= 2"
                                 [attr.aria-current]="entry.index === active() ? 'true' : null"
-                                [attr.tabindex]="entry.index === anchor() ? 0 : -1"
+                                [attr.tabindex]="entry.index + 1 === anchor() ? 0 : -1"
                                 [attr.title]="label(entry)"
                                 (click)="pick.emit(entry)">
                             <app-icon [name]="entry.icon" size="xs" />
@@ -40,10 +50,10 @@ import { IconComponent } from './icon.component';
                         </button>
                     </li>
                 }
-            </ul>
-        } @else {
-            <p class="ol-empty">{{ t().editor.outline.empty }}</p>
-        }
+            } @else {
+                <li><p class="ol-empty">{{ t().editor.outline.empty }}</p></li>
+            }
+        </ul>
     `,
     styles: [`
         /* The surface is in the selector, not only on the host: tools/check-density.mjs reads
@@ -135,6 +145,7 @@ export class DocumentOutlineComponent {
     /** Top-level index of the block the caret is in. -1 when the document is empty. */
     readonly active = input(-1);
     readonly pick = output<OutlineEntry>();
+    readonly documentPick = output<void>();
 
     private readonly rows = viewChildren<ElementRef<HTMLButtonElement>>('row');
 
@@ -149,7 +160,7 @@ export class DocumentOutlineComponent {
         const browsing = this.browsing();
         if (browsing !== null) return browsing;
         const active = this.active();
-        return active >= 0 && active < this.entries().length ? active : 0;
+        return active >= 0 && active < this.entries().length ? active + 1 : 0;
     });
 
     constructor() {
@@ -159,7 +170,7 @@ export class DocumentOutlineComponent {
         effect(() => {
             const active = this.active();
             if (this.browsing() !== null) return;
-            const row = this.rows()[active]?.nativeElement;
+            const row = this.rows()[active + 1]?.nativeElement;
             row?.scrollIntoView({ block: 'nearest' });
         });
     }
@@ -176,7 +187,7 @@ export class DocumentOutlineComponent {
     }
 
     onKeydown(event: KeyboardEvent) {
-        const last = this.entries().length - 1;
+        const last = this.entries().length;
         const from = this.anchor();
         let to: number;
         switch (event.key) {

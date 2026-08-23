@@ -34,6 +34,7 @@ export interface PublishDiff {
     removedLines: number[];
     changedLines: number;
     totalChanged: number;
+    lines: { kind: 'context' | 'added' | 'removed'; beforeLine: number | null; afterLine: number | null; text: string }[];
 }
 
 // ADR-065 — one per language being published. `fingerprint` names the exact version the owner

@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-08-23 — annotated screens correction pass
+
+**All 25 annotated Cedar Clerk screenshots were reconciled as one cross-product pass.** The shared
+shell now keeps project tools contextual and account tools global, compact controls obey their
+surface density, overlays stay inside the viewport, and project workflows gained Blog projects,
+cover images and task attachments. Posts, registration, settings, statistics, glossary and credit
+activity were corrected in the same pass rather than as isolated screenshot patches.
+
+The Writer closes the deepest annotations: Structure has a selectable Document root; clicking the
+worktop outside the sheet selects the Document; Undo/Redo is a labelled group; Inspector always
+names Blog, Telegram, X, Bluesky and Discord; detected Glossary terms can be excluded for one
+Document language without changing the global term; revision history shows readable unified
+added/removed/context lines; long AI work owns a modal progress surface; and Export is a wooden
+destination rack with configured, unconfigured and unsupported networks all visible. A migration
+adds the owner-scoped `DraftGlossaryExclusion` rows used by blog rendering.
+
+Verification: production build succeeded; Angular tests 462/462, backend tests 888/888, CLI tests
+127/127. Public local pages were opened in the in-app browser; authenticated Writer click-through
+remains pending a signed-in local browser session.
+
 ## 2026-08-23 — ADR-192 follow-up (ADR-193)
 
 **Nine pieces of feedback on the just-shipped blog redesign, acted on the same day.** The site-wide

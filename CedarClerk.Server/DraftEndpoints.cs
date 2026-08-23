@@ -1100,7 +1100,11 @@ public static class DraftEndpoints
             // ADR-065 — a deleted language must not leave full copies of its text behind in the
             // revision history (and in every nightly backup generation of it).
             if (deleted > 0)
+            {
+                await db.DraftGlossaryExclusions
+                    .Where(x => x.DraftId == id && x.OwnerId == uid && x.Language == lang).ExecuteDeleteAsync();
                 await db.DraftRevisions.Where(r => r.DraftId == id && r.Language == lang).ExecuteDeleteAsync();
+            }
             return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });
         
@@ -1316,6 +1320,8 @@ public static class DraftEndpoints
                 .ExecuteDeleteAsync();
             if (deleted > 0)
             {
+                await db.DraftGlossaryExclusions
+                    .Where(x => x.DraftId == id && x.OwnerId == uid).ExecuteDeleteAsync();
                 // ADR-128 — children move up to the grandparent: the subtree survives its root.
                 await db.Drafts.Where(x => x.OwnerId == uid && x.ParentDraftId == id)
                     .ExecuteUpdateAsync(s => s.SetProperty(d => d.ParentDraftId, info!.ParentDraftId));

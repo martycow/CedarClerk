@@ -29,6 +29,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<Series> Series => Set<Series>();
     public DbSet<DocumentLink> DocumentLinks => Set<DocumentLink>();
     public DbSet<GlossaryTerm> GlossaryTerms => Set<GlossaryTerm>();
+    public DbSet<DraftGlossaryExclusion> DraftGlossaryExclusions => Set<DraftGlossaryExclusion>();
     public DbSet<DraftStatSeen> DraftStatSeens => Set<DraftStatSeen>();
     public DbSet<FormPreset> FormPresets => Set<FormPreset>();
     public DbSet<PostInvite> PostInvites => Set<PostInvite>();
@@ -176,6 +177,9 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         builder.Entity<Build>().HasIndex(b => new { b.ProjectId, b.Version }).IsUnique();
         // T-125 — a document renders with global terms plus its project's, so both are one query.
         builder.Entity<GlossaryTerm>().HasIndex(t => new { t.OwnerId, t.ProjectId, t.Language });
+        builder.Entity<DraftGlossaryExclusion>()
+            .HasIndex(x => new { x.DraftId, x.GlossaryTermId, x.Language })
+            .IsUnique();
         // The project list query: this owner's projects, active ones first by their own order.
         builder.Entity<Project>().HasIndex(p => new { p.OwnerId, p.ArchivedAt });
         // "What is in this project" — the dashboard's only real question, and the one the drafts

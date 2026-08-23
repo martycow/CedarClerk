@@ -279,6 +279,7 @@
    attribute is what puts the 30px touch floor and the 11-13px type under everything in here — and
    what lets tools/check-density.mjs score them. */
 .strip[data-surface="chrome"] {
+    --icon-xs: var(--icon-sm);
     flex: none;
     box-sizing: border-box;
     min-width: 0;
@@ -697,6 +698,24 @@
     padding: var(--space-1) 0;
 }
 
+.insp-glossary {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.insp-glossary-term {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-ui);
+    cursor: pointer;
+}
+
+.insp-glossary-term:hover { background: var(--alt); }
+
 /* The alt-text field inside a spec row, and so chrome rather than paper: the row declares that
    surface itself, and the field replaces the row's own mono value. It takes that value's box
    rather than the global field face — a 38px control in a ruled line would break the sheet. */
@@ -1042,10 +1061,15 @@
    Sections keep their own height (align-items:start), and the grid collapses to a single column
    on its own below ~2 columns' worth of space, so the narrow case needs no media query. */
 .export-grid {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
     gap: var(--space-3);
+    align-items: start;
 }
+
+.export-global { grid-column: 1 / -1; }
+.export-destinations { grid-column: 1; }
+.export-settings { grid-column: 2; }
 
 /* ADR-096 gave the window a numbered sequence; ADR-190 gives each step the shape every other panel
    in the app already has. The step number is carved into the sign tile with the title, because
@@ -1066,7 +1090,7 @@
    unnoticed for a release. */
 .dest-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: 1fr;
     gap: 8px;
 }
 
@@ -1086,10 +1110,27 @@
     background: var(--asoft);
 }
 
+.dest-card.active {
+    box-shadow: inset 3px 0 0 var(--accent);
+    border-color: var(--abord);
+}
+
 .dest-card.off {
     background: var(--alt);
     cursor: default;
     flex-wrap: wrap;
+}
+
+.dest-card.unsupported {
+    opacity: .72;
+    border-style: dashed;
+}
+
+@media (max-width: 760px) {
+    .export-grid { grid-template-columns: 1fr; }
+    .export-global,
+    .export-destinations,
+    .export-settings { grid-column: 1; }
 }
 
 .dest-card-name {
@@ -1922,6 +1963,36 @@
     white-space: pre-wrap;
     word-break: break-word;
 }
+
+.revision-unified {
+    max-height: 280px;
+    overflow: auto;
+    margin-top: var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--sheet);
+    font-family: var(--font-mono);
+    font-size: var(--fs-12);
+}
+
+.revision-unified.compact { max-height: 180px; }
+
+.revision-diff-row {
+    display: grid;
+    grid-template-columns: 3ch 3ch 2ch minmax(0, 1fr);
+    min-height: 24px;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.5;
+}
+
+.revision-diff-row:last-child { border-bottom: 0; }
+.revision-diff-row.added { background: color-mix(in srgb, var(--ok) 11%, var(--sheet)); }
+.revision-diff-row.removed { background: color-mix(in srgb, var(--danger) 10%, var(--sheet)); }
+.revision-line-no { padding: 3px var(--space-1); text-align: right; color: var(--t3); user-select: none; }
+.revision-sign { padding: 3px var(--space-1); text-align: center; font-weight: 700; }
+.revision-diff-row.added .revision-sign { color: var(--ok); }
+.revision-diff-row.removed .revision-sign { color: var(--danger); }
+.revision-line-text { padding: 3px var(--space-2); white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .publish-diff {
     margin-top: 12px;

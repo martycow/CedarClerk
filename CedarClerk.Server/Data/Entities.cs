@@ -501,6 +501,17 @@ public class GlossaryTerm
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 
+// ADR-197 — one local publishing exception. A term remains in the owner's glossary, but this
+// document-language pair can deliberately omit it without changing any other document.
+public class DraftGlossaryExclusion
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public Guid DraftId { get; set; }
+    public Guid GlossaryTermId { get; set; }
+    public string Language { get; set; } = Languages.Russian;
+}
+
 // A real, named, user-managed entity (create/rename/delete) — unlike Tags, which stay a flat
 // unmanaged string. See the ADR following ADR-038, docs/DECISIONS.md.
 public class Folder

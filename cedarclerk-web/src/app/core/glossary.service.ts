@@ -34,6 +34,12 @@ export interface GlossaryTermInput {
     projectId?: string | null;
 }
 
+export interface DraftGlossaryTerm {
+    id: string;
+    term: string;
+    excluded: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class GlossaryService {
     private http = inject(HttpClient);
@@ -49,6 +55,16 @@ export class GlossaryService {
      */
     listForProject(projectId: string) {
         return firstValueFrom(this.http.get<GlossaryTerm[]>(`/api/glossary?projectId=${projectId}`));
+    }
+
+    listForDraft(draftId: string, language: string) {
+        return firstValueFrom(this.http.get<DraftGlossaryTerm[]>(
+            `/api/glossary/for-draft/${draftId}/${language}`));
+    }
+
+    setDraftTerm(draftId: string, language: string, termId: string, excluded: boolean) {
+        return firstValueFrom(this.http.put<void>(
+            `/api/glossary/for-draft/${draftId}/${language}/${termId}`, { excluded }));
     }
 
     create(input: GlossaryTermInput) {

@@ -29,7 +29,20 @@ describe('DocumentOutlineComponent', () => {
     }
 
     const rows = (fixture: { nativeElement: HTMLElement }) =>
-        Array.from(fixture.nativeElement.querySelectorAll<HTMLButtonElement>('.ol-row'));
+        Array.from(fixture.nativeElement.querySelectorAll<HTMLButtonElement>('.ol-row:not(.ol-root)'));
+    const root = (fixture: { nativeElement: HTMLElement }) =>
+        fixture.nativeElement.querySelector<HTMLButtonElement>('.ol-root')!;
+
+    it('keeps Document as the selectable root above every block', () => {
+        const fixture = create(buildOutline(DOC), -1);
+        let picked = false;
+        fixture.componentInstance.documentPick.subscribe(() => picked = true);
+
+        expect(root(fixture).querySelector('.ol-label')!.textContent!.trim()).toBe('Document');
+        expect(root(fixture).getAttribute('aria-current')).toBe('true');
+        root(fixture).click();
+        expect(picked).toBe(true);
+    });
 
     it('draws one row per block, labelled by its words or by its kind', () => {
         const fixture = create();
@@ -67,9 +80,10 @@ describe('DocumentOutlineComponent', () => {
         expect(rows(fixture)[3].classList.contains('is-current')).toBe(true);
     });
 
-    it('lights nothing on an empty document', () => {
+    it('lights the document root when no block is selected', () => {
         const fixture = create(buildOutline(DOC), -1);
         expect(rows(fixture).some(r => r.hasAttribute('aria-current'))).toBe(false);
+        expect(root(fixture).getAttribute('aria-current')).toBe('true');
     });
 
     // ─── click → selection ────────────────────────────────────────────────────────────────────
@@ -128,7 +142,7 @@ describe('DocumentOutlineComponent', () => {
 
         list.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
         fixture.detectChanges();
-        expect(rows(fixture)[0].getAttribute('tabindex')).toBe('0');
+        expect(root(fixture).getAttribute('tabindex')).toBe('0');
     });
 
     it('stops at both ends rather than wrapping', () => {
@@ -137,7 +151,7 @@ describe('DocumentOutlineComponent', () => {
 
         list.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
         fixture.detectChanges();
-        expect(rows(fixture)[0].getAttribute('tabindex')).toBe('0');
+        expect(root(fixture).getAttribute('tabindex')).toBe('0');
 
         for (let i = 0; i < 9; i++) list.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
         fixture.detectChanges();

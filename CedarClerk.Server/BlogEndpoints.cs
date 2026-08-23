@@ -1768,7 +1768,7 @@ public static class BlogEndpoints
         // Idea #11 - the owner's glossary for the language being shown. Empty for an owner who
         // never defined one, which costs a single indexed read and changes nothing downstream.
         // T-125 — a post in a project also renders with that project's own terms.
-        var glossary = await GlossaryEndpoints.LoadForAsync(db, draft.OwnerId, lang, draft.ProjectId);
+        var glossary = await GlossaryEndpoints.LoadForAsync(db, draft.OwnerId, lang, draft.ProjectId, draft.Id);
         // ADR-128 — wikilink targets this page may link to: one query over the referenced ids,
         // filtered by exactly the index visibility rule. Anything not in the map renders as text.
         var wikiIds = WikiLinkRefs.Collect(cedarJson);

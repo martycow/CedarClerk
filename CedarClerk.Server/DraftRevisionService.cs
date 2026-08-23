@@ -141,28 +141,80 @@ public static class DraftRevisionService
             dp[i, j] = before[i] == after[j] ? dp[i + 1, j + 1] : Math.Max(dp[i + 1, j], dp[i, j + 1]);
 
         var added = new List<int>(); var removed = new List<int>();
+        var lines = new List<object>();
         var x = 0; var y = 0;
         while (x < n && y < m)
         {
-            if (before[x] == after[y]) { x++; y++; }
-            else if (dp[x + 1, y] >= dp[x, y + 1]) { removed.Add(x + 1); x++; }
-            else { added.Add(y + 1); y++; }
+            if (before[x].Json == after[y].Json)
+            {
+                lines.Add(new { kind = "context", beforeLine = x + 1, afterLine = y + 1, text = before[x].Text });
+                x++; y++;
+            }
+            else if (dp[x + 1, y] >= dp[x, y + 1])
+            {
+                removed.Add(x + 1);
+                lines.Add(new { kind = "removed", beforeLine = x + 1, afterLine = (int?)null, text = before[x].Text });
+                x++;
+            }
+            else
+            {
+                added.Add(y + 1);
+                lines.Add(new { kind = "added", beforeLine = (int?)null, afterLine = y + 1, text = after[y].Text });
+                y++;
+            }
         }
-        while (x++ < n) removed.Add(x);
-        while (y++ < m) added.Add(y);
+        while (x < n)
+        {
+            removed.Add(x + 1);
+            lines.Add(new { kind = "removed", beforeLine = x + 1, afterLine = (int?)null, text = before[x].Text });
+            x++;
+        }
+        while (y < m)
+        {
+            added.Add(y + 1);
+            lines.Add(new { kind = "added", beforeLine = (int?)null, afterLine = y + 1, text = after[y].Text });
+            y++;
+        }
         var changed = Math.Min(added.Count, removed.Count);
         return new { beforeLines = n, afterLines = m, addedLines = added, removedLines = removed,
-            changedLines = changed, totalChanged = Math.Max(added.Count, removed.Count) };
+            changedLines = changed, totalChanged = Math.Max(added.Count, removed.Count), lines };
     }
 
-    private static List<string> Blocks(string json)
+    private sealed record DiffBlock(string Json, string Text);
+
+    private static List<DiffBlock> Blocks(string json)
     {
         try
         {
             using var doc = JsonDocument.Parse(json);
             return doc.RootElement.TryGetProperty("content", out var content) && content.ValueKind == JsonValueKind.Array
-                ? content.EnumerateArray().Select(x => x.GetRawText()).ToList() : [];
+                ? content.EnumerateArray().Select(x => new DiffBlock(x.GetRawText(), BlockText(x))).ToList() : [];
         }
         catch (JsonException) { return []; }
+    }
+
+    private static string BlockText(JsonElement block)
+    {
+        var text = new StringBuilder();
+        CollectText(block, text);
+        if (text.Length > 0) return text.ToString();
+        return block.TryGetProperty("type", out var type) ? $"[{type.GetString()}]" : "[block]";
+    }
+
+    private static void CollectText(JsonElement node, StringBuilder text)
+    {
+        if (node.ValueKind == JsonValueKind.Object)
+        {
+            if (node.TryGetProperty("text", out var value) && value.ValueKind == JsonValueKind.String)
+                text.Append(value.GetString());
+            if (node.TryGetProperty("attrs", out var attrs) && attrs.ValueKind == JsonValueKind.Object
+                && attrs.TryGetProperty("label", out var label) && label.ValueKind == JsonValueKind.String)
+                text.Append(label.GetString());
+            if (node.TryGetProperty("content", out var content)) CollectText(content, text);
+        }
+        else if (node.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var child in node.EnumerateArray()) CollectText(child, text);
+        }
     }
 }
