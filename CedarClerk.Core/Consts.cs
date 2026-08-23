@@ -117,6 +117,11 @@ public static class Consts
         // within a visit.
         public const string PrivateAccessCookiePrefix = "cedar_access_";
 
+        // ADR-192 — a site-wide reading-language preference, set whenever a reader follows an
+        // explicit ?lang= link and read as the fallback when a page gets none. One cookie, not
+        // per-post, since the preference is "read me in Russian", not "read this post in Russian".
+        public const string BlogLangCookieName = "cedar_blog_lang";
+
         // A real bucket, not a null: "unknown" is an honest share of the audience.
         public const string UnknownGeo = "??";
     }

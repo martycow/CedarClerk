@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-08-23 — The blog reader moves to the wood board (ADR-192)
+
+**Imported a Claude Design brief for the blog and built its real features.** The single-post reader
+now sits on the same wood the header and footer already use, held by two brass pins — `.post-sheet`
+itself keeps ADR-179's flat, unrotated paper untouched. Everything the brief's script assumed but the
+blog didn't have got built for real rather than skipped: a `?q=` search and a newest/oldest sort on
+the index (both server-side, round-tripping through the URL alongside the existing tag filter), a
+site-wide RU/EN toggle in the header backed by a `cedar_blog_lang` cookie, blog-wide prev/next
+neighbour cards below a post (shown only when it isn't in a series — a series already has its own
+prev/next), a copy-link button beside the Telegram cross-link, and a Literata/Source Sans 3 face
+toggle added to the existing reading menu.
+
 ## 2026-08-23 — Martian Mono is `--font-mono` (ADR-191)
 
 **`--font-mono` gets a real face, product-wide.** It was `ui-monospace, Menlo, Consolas, monospace`

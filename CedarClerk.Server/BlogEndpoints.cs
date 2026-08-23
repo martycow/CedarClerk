@@ -423,6 +423,34 @@ public static class BlogEndpoints
         });
     }
 
+    // ADR-192 — the site-wide language toggle in the header. A reader who clicks "EN" gets EN pages
+    // from then on, on any device that keeps this cookie, until they click "RU" again. Read once per
+    // page, only as the fallback when the URL itself carries no ?lang= — an explicit link (a shared
+    // post URL, a translation link) always wins over a stale preference.
+    private static string? ReadLangCookie(HttpContext ctx) =>
+        ctx.Request.Cookies[Consts.General.BlogLangCookieName] is { } v && Languages.IsContentLanguage(v) ? v : null;
+
+    private static void SetLangCookie(HttpContext ctx, string lang) =>
+        ctx.Response.Cookies.Append(Consts.General.BlogLangCookieName, lang, new CookieOptions
+        {
+            MaxAge = TimeSpan.FromDays(365),
+            HttpOnly = true,
+            IsEssential = true,
+            SameSite = SameSiteMode.Lax
+        });
+
+    // The header's RU/EN buttons toggle the language of whatever page the reader is already on,
+    // keeping every other query parameter (tags, q, sort) intact — a filtered/searched index stays
+    // filtered/searched after the reader switches language.
+    private static string CurrentPathWithLang(HttpContext ctx, string lang)
+    {
+        var pairs = ctx.Request.Query
+            .Where(kv => kv.Key != "lang")
+            .SelectMany(kv => kv.Value, (kv, v) => new KeyValuePair<string, string?>(kv.Key, v))
+            .Append(new KeyValuePair<string, string?>("lang", lang));
+        return ctx.Request.Path + QueryString.Create(pairs).ToUriComponent();
+    }
+
     // Folds one counted view into today's (country, language) bucket. Hand-rolled upsert: EF has
     // no INSERT..ON CONFLICT, so bump first and insert only when no bucket existed yet. Two first
     // views of the same day can race into the insert — the unique index rejects the loser, which
@@ -890,6 +918,18 @@ public static class BlogEndpoints
         return list.Count == 0 ? "/" : "/?tags=" + string.Join(",", list.Select(Uri.EscapeDataString));
     }
 
+    // ADR-192 — the index toolbar (search box, sort toggle, tag chips) all link back into the same
+    // three parameters, so any one of them can change without the other two being lost.
+    private static string IndexFilterUrl(IEnumerable<string> tags, string? q, string? sort)
+    {
+        var parts = new List<string>();
+        var tagList = tags.Distinct().ToList();
+        if (tagList.Count > 0) parts.Add("tags=" + string.Join(",", tagList.Select(Uri.EscapeDataString)));
+        if (!string.IsNullOrWhiteSpace(q)) parts.Add("q=" + Uri.EscapeDataString(q));
+        if (sort == "old") parts.Add("sort=old");
+        return parts.Count == 0 ? "/" : "/?" + string.Join("&", parts);
+    }
+
     private static string Excerpt(string cedarJson)
     {
         string text;
@@ -934,7 +974,7 @@ public static class BlogEndpoints
     }
 
     private sealed record ReadingChrome(
-        string Menu, string Theme, string Day, string Night, string System, string Size);
+        string Menu, string Theme, string Day, string Night, string System, string Size, string Face);
 
     // ADR-181 — the reading menu's four labels. English is the fallback for any code not listed,
     // the same rule the registration gate follows (ADR-050): an untranslated menu in English beats
@@ -944,21 +984,37 @@ public static class BlogEndpoints
     //
     // T-013's caveat holds for uk/be/ka exactly as it does on the gate: no native speaker has read
     // them, and they are here because an English menu on a Ukrainian post is the worse default.
+    //
+    // ADR-192 adds Face — the group label above the serif/sans row. The two buttons underneath it
+    // are not translated: they read "Literata" and "Source Sans 3", the faces' own names, the same
+    // choice the app's own typeface picker makes.
     private static readonly IReadOnlyDictionary<string, ReadingChrome> ReadingLabels =
         new Dictionary<string, ReadingChrome>
         {
-            ["ru"] = new("Чтение", "Тема", "День", "Ночь", "Система", "Размер текста"),
-            ["en"] = new("Reading", "Theme", "Day", "Night", "System", "Text size"),
-            ["de"] = new("Lesen", "Design", "Tag", "Nacht", "System", "Textgröße"),
-            ["fr"] = new("Lecture", "Thème", "Jour", "Nuit", "Système", "Taille du texte"),
-            ["es"] = new("Lectura", "Tema", "Día", "Noche", "Sistema", "Tamaño del texto"),
-            ["ja"] = new("表示", "テーマ", "昼", "夜", "システム", "文字サイズ"),
-            ["uk"] = new("Читання", "Тема", "День", "Ніч", "Системна", "Розмір тексту"),
-            ["be"] = new("Чытанне", "Тэма", "Дзень", "Ноч", "Сістэмная", "Памер тэксту"),
-            ["ka"] = new("კითხვა", "თემა", "დღე", "ღამე", "სისტემური", "ტექსტის ზომა"),
+            ["ru"] = new("Чтение", "Тема", "День", "Ночь", "Система", "Размер текста", "Гарнитура"),
+            ["en"] = new("Reading", "Theme", "Day", "Night", "System", "Text size", "Face"),
+            ["de"] = new("Lesen", "Design", "Tag", "Nacht", "System", "Textgröße", "Schriftart"),
+            ["fr"] = new("Lecture", "Thème", "Jour", "Nuit", "Système", "Taille du texte", "Police"),
+            ["es"] = new("Lectura", "Tema", "Día", "Noche", "Sistema", "Tamaño del texto", "Tipografía"),
+            ["ja"] = new("表示", "テーマ", "昼", "夜", "システム", "文字サイズ", "書体"),
+            ["uk"] = new("Читання", "Тема", "День", "Ніч", "Системна", "Розмір тексту", "Гарнітура"),
+            ["be"] = new("Чытанне", "Тэма", "Дзень", "Ноч", "Сістэмная", "Памер тэксту", "Гарнітура"),
+            ["ka"] = new("კითხვა", "თემა", "დღე", "ღამე", "სისტემური", "ტექსტის ზომა", "შრიფტი"),
         };
 
-    private static string RenderHeader(BlogChannelInfo? channel, string lang)
+    // ADR-192 — RU/EN, the only two the site itself is ever written in (a post may carry more
+    // translations, but the chrome around it — this menu, the gate, the reading labels — only ever
+    // speaks these two). A reader whose browser asks for a third language already falls through to
+    // English everywhere else in this file (ReadingLabels, RegistrationFormSet); the header toggle
+    // does not need a third button for a state nothing else in the chrome can reach.
+    private static string LangToggleHtml(HttpContext ctx, string lang)
+    {
+        string Btn(string code, string label) =>
+            $"<a class=\"site-lang-btn{(lang == code ? " current" : "")}\" href=\"{CurrentPathWithLang(ctx, code)}\">{label}</a>";
+        return $"<div class=\"site-lang-toggle\">{Btn(Languages.Russian, "RU")}{Btn(Languages.English, "EN")}</div>";
+    }
+
+    private static string RenderHeader(HttpContext ctx, BlogChannelInfo? channel, string lang)
     {
         string identity;
         string openInTelegram = "";
@@ -1010,11 +1066,13 @@ public static class BlogEndpoints
             """;
 
         var reading = ReadingMenuHtml(lang);
+        var langToggle = LangToggleHtml(ctx, lang);
 
         return $"""
             <div class="site-header"><div class="site-header-inner">
             {identity}
             <div class="spacer"></div>
+            {langToggle}
             {rssButton}
             {openInTelegram}
             {reading}
@@ -1054,6 +1112,14 @@ public static class BlogEndpoints
             <button type="button" data-value="l" aria-pressed="false"><span style="font-size:18px">A</span></button>
             </div>
             </div>
+            <div class="reading-group">
+            <div class="reading-label" id="readingFaceLabel">{Esc(t.Face)}</div>
+            <!-- ADR-192 — the two names are the faces' own, unlocalized, same as the app's own picker. -->
+            <div class="seg seg-face" role="group" aria-labelledby="readingFaceLabel" data-seg="face">
+            <button type="button" data-value="" aria-pressed="false" style="font-family:var(--font-serif)">Literata</button>
+            <button type="button" data-value="sans" aria-pressed="false" style="font-family:var(--font-sans)">Source Sans 3</button>
+            </div>
+            </div>
             </div>
             </div>
             """;
@@ -1064,10 +1130,22 @@ public static class BlogEndpoints
         // T-094 — the index had no language at all: a hardcoded Russian month heading above an
         // English card date. It takes the one the reader asked for, and falls back to Russian,
         // which is what every existing post is written in.
-        var indexLang = ctx.Request.Query["lang"].ToString() is { Length: > 0 } requested
+        // ADR-192 widens the fallback chain: an explicit ?lang= still wins and now also refreshes
+        // the site-wide cookie the header toggle set, but absent that, a reader who already chose a
+        // language on another page gets it back here instead of Russian again.
+        string? explicitLang = ctx.Request.Query["lang"].ToString() is { Length: > 0 } requested
                         && Languages.IsContentLanguage(requested)
             ? requested
-            : Languages.Russian;
+            : null;
+        if (explicitLang is not null) SetLangCookie(ctx, explicitLang);
+        var indexLang = explicitLang ?? ReadLangCookie(ctx) ?? Languages.Russian;
+
+        // ADR-192 — a substring search over the title and tags, server-side: the index is server-
+        // rendered with no post content shipped to the client to filter, and the tag bar right next
+        // to it already works this way, so a second, JS-only mechanism would be a second pattern for
+        // one job.
+        var q = (ctx.Request.Query["q"].FirstOrDefault() ?? "").Trim();
+        var sort = ctx.Request.Query["sort"].FirstOrDefault() == "old" ? "old" : "new";
         // Private posts never appear in the public list (see the ADR following ADR-040,
         // docs/DECISIONS.md) — listing one would leak its existence even though the single-post
         // page itself 404s for anyone not invited.
@@ -1102,7 +1180,41 @@ public static class BlogEndpoints
             ? posts
             : posts.Where(p => { var pt = SplitTags(p.Tags); return selectedTags.All(pt.Contains); }).ToList();
 
+        if (q.Length > 0)
+        {
+            filtered = filtered.Where(p =>
+                    (p.ArticleTitle ?? p.Title).Contains(q, StringComparison.OrdinalIgnoreCase)
+                    || SplitTags(p.Tags).Any(t => t.Contains(q, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+        }
+
+        // The DB query above already sorts newest-first, which "new" (the default) keeps; "old"
+        // reverses the already-filtered, already-materialized list rather than re-querying, since
+        // the whole set is small enough that a second round trip would buy nothing.
+        if (sort == "old")
+            filtered.Reverse();
+
         var sb = new StringBuilder();
+
+        // ADR-192 — a GET form, not a JS filter-as-you-type: the index is otherwise plain links and
+        // full page loads, and a form fits that without a second delivery mechanism for one box.
+        sb.Append("<form class=\"index-toolbar\" method=\"get\" action=\"/\">");
+        if (selectedTags.Count > 0)
+            sb.Append("<input type=\"hidden\" name=\"tags\" value=\"")
+              .Append(System.Net.WebUtility.HtmlEncode(string.Join(",", selectedTags))).Append("\">");
+        if (sort == "old")
+            sb.Append("<input type=\"hidden\" name=\"sort\" value=\"old\">");
+        var searchLabel = indexLang == Languages.English ? "Search posts" : "Поиск по записям";
+        sb.Append("<label class=\"index-search\">").Append(BlogIcons.Search)
+          .Append("<input type=\"search\" name=\"q\" value=\"").Append(System.Net.WebUtility.HtmlEncode(q))
+          .Append("\" placeholder=\"").Append(searchLabel).Append("\" aria-label=\"").Append(searchLabel).Append("\"></label>");
+        var sortUrl = IndexFilterUrl(selectedTags, q, sort == "old" ? "new" : "old");
+        var sortLabel = sort == "old"
+            ? (indexLang == Languages.English ? "Oldest first" : "Сначала старые")
+            : (indexLang == Languages.English ? "Newest first" : "Сначала новые");
+        sb.Append("<a class=\"index-sort-btn\" href=\"").Append(sortUrl).Append("\">")
+          .Append(BlogIcons.Sort).Append("<span>").Append(sortLabel).Append("</span></a>");
+        sb.Append("</form>");
 
         if (allTags.Count > 0)
         {
@@ -1112,7 +1224,7 @@ public static class BlogEndpoints
                 var isSelected = selectedTags.Contains(tag);
                 var toggled = isSelected ? selectedTags.Where(t => t != tag) : selectedTags.Append(tag);
                 sb.Append("<a class=\"tag-chip").Append(isSelected ? " selected" : "").Append("\" href=\"")
-                  .Append(TagFilterUrl(toggled)).Append("\">#")
+                  .Append(IndexFilterUrl(toggled, q, sort)).Append("\">#")
                   .Append(System.Net.WebUtility.HtmlEncode(tag)).Append(isSelected ? " &times;" : "").Append("</a>");
             }
             sb.Append("</div>");
@@ -1122,7 +1234,7 @@ public static class BlogEndpoints
         {
             sb.Append(posts.Count == 0
                 ? "<p class=\"empty\">Nothing published yet.</p>"
-                : "<p class=\"empty\">No posts match the selected tags.</p>");
+                : "<p class=\"empty\">No posts match.</p>");
         }
         else
         {
@@ -1195,7 +1307,7 @@ public static class BlogEndpoints
             channel?.Title ?? "Cedar Clerk", indexLang,
             [], null, null, null, IsArticle: false), OgMetaPolicy.Full);
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), indexLang, RenderHeader(channel, indexLang), indexMeta));
+        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), indexLang, RenderHeader(ctx, channel, indexLang), indexMeta));
     }
 
     // ADR-125 — the series landing: what the index would show, narrowed to one series and ordered
@@ -1209,7 +1321,7 @@ public static class BlogEndpoints
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             ctx.Response.ContentType = "text/html; charset=utf-8";
-            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Series not found.</p>", Languages.Russian, RenderHeader(channel, Languages.Russian)));
+            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Series not found.</p>", Languages.Russian, RenderHeader(ctx, channel, Languages.Russian)));
             return;
         }
 
@@ -1274,7 +1386,7 @@ public static class BlogEndpoints
             [], null, null, null, IsArticle: false), OgMetaPolicy.Full);
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(series.Name, body, pageLang, RenderHeader(channel, pageLang), meta));
+        await ctx.Response.WriteAsync(PageShell(series.Name, body, pageLang, RenderHeader(ctx, channel, pageLang), meta));
     }
 
     // ADR-134 (T-159) — the public game page. Everything on it is opt-in: the page exists only
@@ -1289,7 +1401,7 @@ public static class BlogEndpoints
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             ctx.Response.ContentType = "text/html; charset=utf-8";
-            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Page not found.</p>", Languages.Russian, RenderHeader(channel, Languages.Russian)));
+            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Page not found.</p>", Languages.Russian, RenderHeader(ctx, channel, Languages.Russian)));
             return;
         }
 
@@ -1407,7 +1519,7 @@ public static class BlogEndpoints
             [], null, null, null, IsArticle: false), OgMetaPolicy.Full);
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(project.Name, body, pageLang, RenderHeader(channel, pageLang), meta));
+        await ctx.Response.WriteAsync(PageShell(project.Name, body, pageLang, RenderHeader(ctx, channel, pageLang), meta));
     }
 
     /// <summary>`Label|https://url` lines; anything not shaped like that is skipped, not rendered.</summary>
@@ -1481,7 +1593,7 @@ public static class BlogEndpoints
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             ctx.Response.ContentType = "text/html; charset=utf-8";
-            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(channel, Languages.Russian)));
+            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(ctx, channel, Languages.Russian)));
             return;
         }
 
@@ -1543,13 +1655,13 @@ public static class BlogEndpoints
                         draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson);
                     await ctx.Response.WriteAsync(PageShell(gateTitle,
                         CedarToBlogHtmlRenderer.RegistrationFormHtml(form, gateTitle, gateLang, gateLanguages),
-                        gateLang, RenderHeader(channel, gateLang), SemiPublicMeta(gateLang)));
+                        gateLang, RenderHeader(ctx, channel, gateLang), SemiPublicMeta(gateLang)));
                     return;
                 }
 
                 ctx.Response.StatusCode = StatusCodes.Status404NotFound;
                 ctx.Response.ContentType = "text/html; charset=utf-8";
-                await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(channel, Languages.Russian), SemiPublicMeta(Languages.Russian)));
+                await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(ctx, channel, Languages.Russian), SemiPublicMeta(Languages.Russian)));
                 return;
             }
 
@@ -1581,7 +1693,13 @@ public static class BlogEndpoints
             .Select(t => t.Language)
             .ToListAsync();
 
-        var requestedLang = ctx.Request.Query["lang"].FirstOrDefault();
+        // ADR-192 — an explicit ?lang= (a shared link, the header toggle, the in-post switch below)
+        // always wins and refreshes the site-wide cookie; with neither present the reader's earlier
+        // choice from elsewhere on the site applies here too, same as it does on the index.
+        var explicitPostLang = ctx.Request.Query["lang"].FirstOrDefault();
+        if (explicitPostLang is not null && Languages.ContentLanguages.Contains(explicitPostLang))
+            SetLangCookie(ctx, explicitPostLang);
+        var requestedLang = explicitPostLang ?? ReadLangCookie(ctx);
         var lang = draft.PrimaryLanguage;
         // Idea #4 - the reader sees the article title when one is set; draft.Title is the name
         // the owner files it under, which is not the same thing.
@@ -1672,10 +1790,18 @@ public static class BlogEndpoints
             : "";
         var viewsLine = $"<span class=\"post-card-views\">{BlogIcons.Eye}<span class=\"num\">{viewCount}</span></span>";
 
+        // ADR-192 — a plain client-side copy, next to the Telegram link rather than replacing it:
+        // the two answer different questions ("read this on Telegram" vs. "give me this URL").
+        var copyLinkLabel = lang == Languages.English ? "Copy link" : "Скопировать ссылку";
+        var copiedLabel = lang == Languages.English ? "Copied!" : "Скопировано!";
+        var copyLinkBtn = $"""
+            <button type="button" class="copy-link-btn" data-copied-label="{System.Net.WebUtility.HtmlEncode(copiedLabel)}">
+            {BlogIcons.Link}<span>{System.Net.WebUtility.HtmlEncode(copyLinkLabel)}</span>
+            </button>
+            """;
+
         var metaRow = $"<div class=\"post-meta-row\">{dateLine}{viewsLine}{langSwitch}</div>";
-        var footerRow = (signatureBlock.Length > 0 || telegramLink.Length > 0)
-            ? $"<div class=\"post-footer-row\">{signatureBlock}<div class=\"spacer\"></div>{telegramLink}</div>"
-            : "";
+        var footerRow = $"<div class=\"post-footer-row\">{signatureBlock}<div class=\"spacer\"></div>{telegramLink}{copyLinkBtn}</div>";
 
         // ADR-125 — the series line and prev/next: numbered over the *visible* ordered members,
         // so an unlisted private part never shifts the numbering a stranger sees. A member that is
@@ -1712,6 +1838,36 @@ public static class BlogEndpoints
                           + System.Net.WebUtility.HtmlEncode(next.ArticleTitle ?? next.Title) + "</a>";
                     seriesNav = $"<div class=\"series-nav\">{prevHtml}{nextHtml}</div>";
                 }
+            }
+        }
+
+        // ADR-192 — blog-wide prev/next, by publish date, for the post that is not in a series.
+        // A post already inside one has --series-nav for exactly this job, scoped to that series;
+        // showing both here would be two navigations answering the same question at once.
+        var neighboursHtml = "";
+        if (draft.SeriesId is null && draft.BlogPublishedAt is { } thisPublished)
+        {
+            var neighbourRows = await db.Drafts
+                .Where(d => d.IsBlogPublished && d.Id != draft.Id && (!d.IsPrivate || d.IsListedWhilePrivate) && d.BlogPublishedAt != null)
+                .Select(d => new { d.BlogSlug, d.Title, d.ArticleTitle, d.BlogPublishedAt })
+                .ToListAsync();
+            var newer = neighbourRows.Where(n => n.BlogPublishedAt > thisPublished).OrderBy(n => n.BlogPublishedAt).FirstOrDefault();
+            var older = neighbourRows.Where(n => n.BlogPublishedAt < thisPublished).OrderByDescending(n => n.BlogPublishedAt).FirstOrDefault();
+            if (newer is not null || older is not null)
+            {
+                var isEn = lang == Languages.English;
+                string Card(string blogSlug, string title2, DateTime publishedUtc, string dirLabel) => $"""
+                    <a class="neighbour-card" href="/{blogSlug}">
+                    <div class="neighbour-dir">{dirLabel}</div>
+                    <div class="neighbour-title">{System.Net.WebUtility.HtmlEncode(title2)}</div>
+                    <div class="neighbour-date">{BlogDateFormatter.DateLocal(publishedUtc, lang)}</div>
+                    </a>
+                    """;
+                var newerCard = newer is null ? "<span></span>"
+                    : Card(newer.BlogSlug!, newer.ArticleTitle ?? newer.Title, newer.BlogPublishedAt!.Value, isEn ? "Newer post" : "Следующая запись");
+                var olderCard = older is null ? ""
+                    : Card(older.BlogSlug!, older.ArticleTitle ?? older.Title, older.BlogPublishedAt!.Value, isEn ? "Older post" : "Предыдущая запись");
+                neighboursHtml = $"<div class=\"post-neighbours\">{newerCard}{olderCard}</div>";
             }
         }
 
@@ -1780,9 +1936,17 @@ public static class BlogEndpoints
             <button type="button" class="floating-nav-btn back-to-top-btn" title="{backToTopLabel}" aria-label="{backToTopLabel}">{BlogIcons.ArrowUp}</button>
             </div>
             """;
+        // ADR-192 — the reader sits on the wood board, the one material the header and footer
+        // already stood on; the sheet itself keeps ADR-179's flat, unrotated paper (a published
+        // post is finished, not a draft pinned up to be worked on).
         var html = $"""
             <a class="back-link" href="/">{BlogIcons.ArrowLeft} {backLinkLabel}</a>
+            <div class="post-reader">
+            <span class="post-pin left" aria-hidden="true"></span>
+            <span class="post-pin right" aria-hidden="true"></span>
             {postSheet}
+            {neighboursHtml}
+            </div>
             {copyGuard}
             {articleBlock}
             {floatingNav}
@@ -1828,7 +1992,7 @@ public static class BlogEndpoints
         }
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(title, html, lang, RenderHeader(channel, lang), metaHtml));
+        await ctx.Response.WriteAsync(PageShell(title, html, lang, RenderHeader(ctx, channel, lang), metaHtml));
     }
 
     // Wraps a resolved end-of-post signature (see PlanLimitations.ResolveSignature, Phase 8 Step 5)
@@ -1892,6 +2056,8 @@ public static class BlogEndpoints
             if (theme) el.setAttribute('data-theme', theme);
             var size = localStorage.getItem('cedar-blog-text-size');
             if (size) el.setAttribute('data-read', size);
+            var face = localStorage.getItem('cedar-blog-face');
+            if (face) el.setAttribute('data-face', face);
         })();
         </script>
         <style>
@@ -1915,6 +2081,10 @@ public static class BlogEndpoints
            weight. "m" declares nothing, because 17px is what the token already holds. */
         :root[data-read="s"] { --fs-read: 16px; }
         :root[data-read="l"] { --fs-read: 19px; }
+
+        /* ADR-192 — the face toggle. Absent (the default) is Literata, same as --font-serif already
+           declares on .post-sheet; the attribute only ever needs to say the one thing that differs. */
+        :root[data-face="sans"] .post-sheet { font-family: var(--font-sans); }
 
         /* ADR-178 — the faces this page names, served from stable URLs the bundler does not hash. */
         {{FONT_FACES}}
@@ -2001,6 +2171,13 @@ public static class BlogEndpoints
         .channel-meta { font-size: 11px; color: var(--rail-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .tg-open-btn { display: flex; align-items: center; gap: 6px; min-height: 30px; border: var(--border-rail-btn); background: var(--rail-btn-face); border-radius: var(--radius-plaque); padding: 0 11px; font-size: 12px; font-weight: 600; color: var(--rail-ink); white-space: nowrap; flex: none; }
         .tg-open-btn:hover { background: var(--rail-btn-face-hover); }
+        /* ADR-192 — RU/EN, mounted the same way the wood board mounts everything: two plates in one
+           frame, the current one struck like the project switcher's own plaque. */
+        .site-lang-toggle { display: flex; align-items: center; flex: none; border: var(--border-rail-btn); border-radius: var(--radius-plaque); overflow: hidden; }
+        .site-lang-btn { display: flex; align-items: center; justify-content: center; min-width: 32px; height: 30px; padding: 0 9px; background: var(--rail-btn-face); color: var(--rail-ink); font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .04em; }
+        .site-lang-btn + .site-lang-btn { border-left: var(--border-rail-btn); }
+        .site-lang-btn:hover { background: var(--rail-btn-face-hover); }
+        .site-lang-btn.current { background-image: var(--grad-brass); color: var(--brass-ink); }
         /* Secondary next to "Open in Telegram": subscribing to the feed is an offer, not the
            header's main action, and two filled buttons side by side read as two main actions. */
         .rss-btn { background: none; }
@@ -2028,6 +2205,7 @@ public static class BlogEndpoints
         .seg button[aria-pressed="true"] { border-color: var(--pine-deep); background: var(--grad-pine); color: var(--text-on-pine); box-shadow: var(--shadow-pine-btn); text-shadow: 0 1px 1px rgba(18, 26, 20, .45); }
         .seg-size button { font-family: var(--font-serif); }
         .seg-size button span { display: inline-block; line-height: 1; }
+        .seg-face button { font-size: 12.5px; }
         /* On a phone the popover would hang off the right edge of a 390px viewport. */
         @media (max-width: 420px) {
             .reading-menu { right: -8px; width: calc(100vw - 32px); max-width: 260px; }
@@ -2039,6 +2217,15 @@ public static class BlogEndpoints
         /* ── Leaves: tags and filters (ADR-179 clause 5, ADR-176's day/night pair) ───────────────────
            A leaf on paper is the design system's tag. Picked, it is green; unpicked, it lies on the dried
            stock with its own edge, because border alpha alone does not tell two leaves apart. */
+        /* ── The index toolbar: search and sort, plain links and a GET form ─────────────────────────── */
+        .index-toolbar { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; }
+        .index-search { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: var(--radius-field); background: var(--paper-bright); box-shadow: var(--shadow-field-inset); color: var(--t2); }
+        .index-search input { flex: 1; min-width: 0; border: none; background: none; outline: none; font-family: var(--font-sans); font-size: 14px; color: var(--text); }
+        .index-search input::placeholder { color: var(--t2); }
+        .index-sort-btn { display: inline-flex; align-items: center; gap: 7px; flex: none; min-height: 44px; padding: 0 14px; border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); background: var(--sheet); box-shadow: var(--shadow-paper-sm); font-family: var(--font-sans); font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; }
+        .index-sort-btn:hover { background: var(--alt); }
+        @media (max-width: 560px) { .index-sort-btn span { display: none; } }
+
         .tag-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 20px; }
         .tag-chip, .post-tag-chip {
             display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px;
@@ -2094,6 +2281,28 @@ public static class BlogEndpoints
         .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--wood-ink); padding: 4px 0; margin: 0 0 14px; }
         .back-link:hover { color: var(--accent); }
 
+        /* ── The reader (ADR-192) — the sheet on the wood board the header and footer already stand
+           on; the same material, not a lighter plank invented for the occasion. */
+        .post-reader {
+            position: relative;
+            padding: 22px;
+            border: 1px solid var(--rail-edge);
+            border-radius: 4px;
+            background-color: var(--rail-lo);
+            background-image: var(--tex-wood), var(--surface-rail);
+            background-size: 420px, auto;
+            box-shadow: var(--shadow-rail);
+            margin: 0 0 20px;
+        }
+        .post-pin {
+            position: absolute; top: -7px; width: 14px; height: 14px; border-radius: 50%; z-index: 3;
+            background-image: var(--grad-brass); border: 1px solid var(--brass-edge);
+            box-shadow: inset 0 1px 0 var(--brass-hi), 0 1px 3px rgba(20, 12, 4, .5);
+        }
+        .post-pin.left { left: 20%; }
+        .post-pin.right { left: 80%; margin-left: -14px; }
+        @media (max-width: 480px) { .post-reader { padding: 12px; } }
+
         /* ── The sheet (ADR-179 clause 4) — writer.html's paper at the reading numbers ──────────────── */
         .post-sheet {
             position: relative;
@@ -2137,6 +2346,16 @@ public static class BlogEndpoints
         .series-nav a:hover { color: var(--accent); }
         .series-nav .nav-label { display: block; font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--t2); margin-bottom: 2px; }
         .series-nav .nav-next { text-align: right; margin-left: auto; }
+
+        /* ── Blog-wide prev/next (ADR-192) — two small sheets under the reader, cut from the same
+           paper as the index cards, for the post that has no series to navigate by instead. */
+        .post-neighbours { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+        .neighbour-card { display: block; background-color: var(--sheet); background-image: var(--tex-paper); border: var(--border-paper); border-radius: var(--radius-paper); box-shadow: var(--shadow-paper-sm); padding: 12px 16px 14px; color: var(--text); transition: transform 150ms cubic-bezier(.3, 1.3, .5, 1); }
+        .neighbour-card:hover { transform: translateY(-2px); }
+        .neighbour-dir { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--t2); margin-bottom: 4px; }
+        .neighbour-title { font-family: var(--font-serif); font-size: 15px; line-height: 1.35; }
+        .neighbour-date { font-family: var(--font-mono); font-size: 11px; color: var(--t2); margin-top: 6px; }
+        @media (max-width: 560px) { .post-neighbours { grid-template-columns: 1fr; } }
         .series-head { margin: 0 0 22px; }
         .series-head h1 { font-family: var(--font-display); font-size: 27px; font-weight: 700; line-height: 1.22; margin: 0 0 6px; }
         .series-head .series-desc { color: var(--wood-ink); font-size: 15px; margin: 0 0 4px; }
@@ -2180,6 +2399,11 @@ public static class BlogEndpoints
         /* The one place the margin note's hand appears: an author's sign-off is written, not typeset. */
         .post-signature { font-family: var(--font-serif); font-size: 14px; color: var(--t2); white-space: pre-line; }
         .telegram-link { font-size: 13px; font-weight: 600; color: var(--accent); }
+        /* ADR-192 — a plain paper button, the same family the index's "show more" and sort control
+           use, so a copy action does not read as a bigger deal than a link. */
+        .copy-link-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 12px; border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); background: var(--sheet); box-shadow: var(--shadow-paper-sm); font-family: var(--font-sans); font-size: 12.5px; font-weight: 600; color: var(--text); cursor: pointer; }
+        .copy-link-btn:hover { background: var(--alt); }
+        .copy-link-btn.copied { border-color: var(--pine-deep); background: var(--grad-pine); color: var(--text-on-pine); box-shadow: var(--shadow-pine-btn); }
 
         /* ── Body vocabulary the renderer emits ─────────────────────────────────────────────────────── */
         .spoiler { background: var(--t3); color: transparent; border-radius: var(--radius-stamp); padding: 0 5px; cursor: pointer; transition: background 200ms; }
@@ -2639,7 +2863,8 @@ public static class BlogEndpoints
 
             var SETTINGS = {
                 theme: { attr: 'data-theme', key: 'cedar-blog-theme' },
-                read: { attr: 'data-read', key: 'cedar-blog-text-size' }
+                read: { attr: 'data-read', key: 'cedar-blog-text-size' },
+                face: { attr: 'data-face', key: 'cedar-blog-face' }
             };
             var el = document.documentElement;
 
@@ -2691,6 +2916,27 @@ public static class BlogEndpoints
             document.addEventListener('click', function () { open(false); });
             document.addEventListener('keydown', function (e) {
                 if (e.key === 'Escape' && !menu.hidden) { open(false); btn.focus(); }
+            });
+        })();
+
+        /* ADR-192 — copy the URL the reader is actually looking at (whatever ?lang= it carries),
+           exactly as the address bar shows it, rather than a cleaned-up variant of it. */
+        (function () {
+            var btn = document.querySelector('.copy-link-btn');
+            if (!btn || !navigator.clipboard) return;
+            var label = btn.querySelector('span');
+            var original = label ? label.textContent : '';
+            var timer = null;
+            btn.addEventListener('click', function () {
+                navigator.clipboard.writeText(location.href).then(function () {
+                    btn.classList.add('copied');
+                    if (label) label.textContent = btn.getAttribute('data-copied-label') || original;
+                    if (timer) clearTimeout(timer);
+                    timer = setTimeout(function () {
+                        btn.classList.remove('copied');
+                        if (label) label.textContent = original;
+                    }, 1800);
+                });
             });
         })();
 
