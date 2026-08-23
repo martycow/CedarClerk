@@ -75,112 +75,20 @@
     opacity: .8;
 }
 
-/* ---------- Range slider (N9 / I8) ---------- */
-:host([data-surface="paper"]) .range-slider {
+/* ---------- Period picker ---------- */
+:host([data-surface="paper"]) .range-picker {
     display: flex;
     align-items: center;
     gap: var(--space-2);
+    font-size: var(--fs-ui);
+    color: var(--t2);
 }
 
-:host([data-surface="paper"]) .range-value {
-    font-size: var(--fs-ui);
+:host([data-surface="paper"]) .range-picker select {
+    min-width: 130px;
+    min-height: var(--hit-chrome);
+    padding: 0 var(--space-3);
     font-weight: 600;
-    color: var(--t2);
-    text-align: right;
-}
-
-:host([data-surface="paper"]) .range-track {
-    position: relative;
-    width: 420px;
-    max-width: 100%;
-    padding-bottom: var(--space-5);
-}
-
-/* Drawn by the bench, not the browser: the audience bar's track and the drawer's brass pull. */
-:host([data-surface="paper"]) .range-track input[type="range"] {
-    appearance: none;
-    -webkit-appearance: none;
-    width: 100%;
-    height: var(--space-2);
-    margin: var(--space-2) 0;
-    box-sizing: border-box;
-    background: var(--paper-2);
-    border: 1px solid var(--paper-edge);
-    border-radius: var(--radius-stamp);
-    position: relative;
-    z-index: 1;
-    cursor: pointer;
-}
-
-:host([data-surface="paper"]) .range-track input[type="range"]::-webkit-slider-thumb {
-    appearance: none;
-    -webkit-appearance: none;
-    width: 26px;
-    height: var(--space-4);
-    border-radius: var(--radius-sm);
-    background: var(--grad-brass);
-    border: 1px solid var(--brass-edge);
-    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--brass-hi) 70%, transparent);
-}
-
-:host([data-surface="paper"]) .range-track input[type="range"]::-moz-range-thumb {
-    appearance: none;
-    width: 26px;
-    height: var(--space-4);
-    border-radius: var(--radius-sm);
-    background: var(--grad-brass);
-    border: 1px solid var(--brass-edge);
-    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--brass-hi) 70%, transparent);
-}
-
-/* Ticks sit under the thumb, purely as landmarks — the magnet is in the snapping, not here. */
-:host([data-surface="paper"]) .range-notches {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: var(--space-5);
-    height: var(--space-2);
-    pointer-events: none;
-}
-
-:host([data-surface="paper"]) .range-notch {
-    position: absolute;
-    top: 0;
-    width: 2px;
-    height: var(--space-2);
-    background: var(--t3);
-    transform: translateX(-50%);
-    border-radius: 1px;
-}
-
-/* Clickable as well as readable: if a value is worth marking it is worth jumping to. */
-:host([data-surface="paper"]) .range-notch-labels {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: var(--space-5);
-}
-
-:host([data-surface="paper"]) .range-notch-label {
-    position: absolute;
-    top: 0;
-    transform: translateX(-50%);
-    border: none;
-    background: none;
-    padding: 0 var(--space-1);
-    font-family: var(--font-mono);
-    font-size: var(--fs-ui);
-    line-height: var(--space-5);
-    color: var(--t2);
-    cursor: pointer;
-}
-
-:host([data-surface="paper"]) .range-notch-label:hover { color: var(--text); }
-
-:host([data-surface="paper"]) .range-notch-label.on {
-    color: var(--text);
-    font-weight: 700;
 }
 
 /* ---------- Readouts: one card per drawn source, never a total ---------- */

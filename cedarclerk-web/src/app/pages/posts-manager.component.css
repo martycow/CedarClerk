@@ -52,8 +52,12 @@
     display: flex;
     align-items: flex-end;
     flex: none;
-    margin-bottom: -1px;
-    padding: 0 var(--space-1);
+    margin-bottom: var(--space-2);
+    padding: var(--space-2) var(--space-2) 0;
+    border: 1px solid var(--wood-edge);
+    border-radius: var(--radius-plaque);
+    background: var(--shelf-frame);
+    box-shadow: var(--shadow-paper-sm);
 }
 
 .mg-grid {

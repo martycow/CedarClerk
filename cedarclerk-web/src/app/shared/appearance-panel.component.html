@@ -39,12 +39,14 @@
                 <app-leaf-tag interactive [state]="appearance.prefs().typeface === 'serifClassic' ? 'active' : 'idle'" (activated)="setTypeface('serifClassic')">{{ t().settings.appearance.serifClassic }}</app-leaf-tag>
                 <app-leaf-tag interactive [state]="appearance.prefs().typeface === 'mono' ? 'active' : 'idle'" (activated)="setTypeface('mono')">{{ t().settings.appearance.mono }}</app-leaf-tag>
                 <app-leaf-tag interactive [state]="appearance.prefs().typeface === 'rounded' ? 'active' : 'idle'" (activated)="setTypeface('rounded')">{{ t().settings.appearance.rounded }}</app-leaf-tag>
+                <app-leaf-tag interactive [state]="appearance.prefs().typeface === 'departure' ? 'active' : 'idle'" (activated)="setTypeface('departure')">Departure Mono</app-leaf-tag>
             </div>
         </div>
 
         <div class="ap-field">
             <label>{{ t().settings.appearance.textSize }} — {{ appearance.prefs().fontSize }}px</label>
-            <input type="range" min="13" max="22" step="0.5"
+            <input type="range" [min]="appearance.prefs().typeface === 'departure' ? 11 : 13"
+                max="22" [step]="appearance.prefs().typeface === 'departure' ? 11 : 0.5"
                 [value]="appearance.prefs().fontSize"
                 (input)="setFontSize(+$any($event.target).value)">
         </div>

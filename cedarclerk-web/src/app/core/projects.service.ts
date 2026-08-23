@@ -14,8 +14,8 @@ import { Sprint } from './sprints.service';
 // endpoints simply are not mapped when it is off.
 
 /** One of CedarClerk.Core.ProjectTypes — decides the project's starter document and nothing else. */
-export type ProjectType = 'fullgame' | 'jam' | 'prototype' | 'released';
-export const PROJECT_TYPES: ProjectType[] = ['fullgame', 'jam', 'prototype', 'released'];
+export type ProjectType = 'fullgame' | 'jam' | 'prototype' | 'released' | 'blog';
+export const PROJECT_TYPES: ProjectType[] = ['fullgame', 'jam', 'prototype', 'released', 'blog'];
 
 /** One of CedarClerk.Core.DocumentTypes. `post` is what every draft written before the module is. */
 export type DocumentType = 'post' | 'design' | 'script' | 'plot' | 'changelog' | 'note';
@@ -37,6 +37,7 @@ export const PROJECT_TYPE_ICONS: Record<ProjectType, IconName> = {
     jam: 'timer',
     prototype: 'flask',
     released: 'rocket-launch',
+    blog: 'newspaper',
 };
 
 /** Which document type a project of each type starts with — mirrors ProjectTypes.StarterDocumentType. */
@@ -45,6 +46,7 @@ export const STARTER_DOCUMENT_TYPE: Record<ProjectType, DocumentType> = {
     jam: 'design',
     prototype: 'note',
     released: 'changelog',
+    blog: 'post',
 };
 
 export interface ProjectSummary {

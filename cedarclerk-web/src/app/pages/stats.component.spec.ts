@@ -247,6 +247,13 @@ describe('stats screen (Posts Manager tab)', () => {
         expect(page().series().some(s => s.name === 'Blog')).toBe(false);
     });
 
+    it('uses a discrete period picker and names the display timezone', () => {
+        const options = [...el().querySelectorAll('.range-picker option')] as HTMLOptionElement[];
+        expect(options.map(option => Number(option.value))).toEqual([7, 14, 30, 60, 90, 180]);
+        expect(el().querySelector('input[type="range"]')).toBeNull();
+        expect(page().updatedAt()).toMatch(/^\d{2}:\d{2} \S+$/);
+    });
+
     it('names the source the audience shelf is answering about', () => {
         const shelves = [...el().querySelectorAll('app-shelf-panel')];
         const audience = shelves.find(s => s.classList.contains('audience-shelf'))!;
@@ -255,7 +262,7 @@ describe('stats screen (Posts Manager tab)', () => {
     });
 
     it('holds every size on the sheet to paper\'s floor, and writes no colour as a literal', () => {
-        const css = sheetFor('.range-notch-label');
+        const css = sheetFor('.range-picker');
 
         const sizes = [...css.matchAll(/font-size\s*:\s*([^;}]+)/g)].map(m => m[1].trim());
         expect(sizes.length).toBeGreaterThan(0);

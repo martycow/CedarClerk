@@ -20,36 +20,14 @@ manager's business or nobody's, so this file starts at the filter strip.-->
             <span class="strip-meta">{{ t().stats.updated(at) }} · {{ t().stats.stepDay }}</span>
             }
 
-            <!--N9: free 7…180-day range with magnetic notches at the common values. The fetch
-            fires on release, not on every pixel of the drag. The kit's five fixed period
-            segments are deliberately not ported (ADR-149).-->
-            <div class="range-slider">
-                <span class="range-value">{{ rangeLabel() }}</span>
-                <div class="range-track">
-                    <input type="range" [min]="rangeMin" [max]="rangeMax" step="1" [value]="rangeDays()"
-                           [attr.aria-label]="t().stats.period"
-                           (input)="onRangeInput(+$any($event.target).value)"
-                           (change)="onRangeCommit(+$any($event.target).value)">
-                    <!--I8: the notches were unlabelled 1px ticks packed into a 200px track, so they
-                    marked something without saying what. Labelled and on a much wider track now —
-                    a magnet you can't read isn't a landmark.-->
-                    <div class="range-notches">
-                        @for (n of rangeNotches; track n) {
-                        <span class="range-notch" [style.left.%]="notchOffset(n)"></span>
-                        }
-                    </div>
-                    <!--The minimum has no label of its own: it sits 17px from the next notch and the
-                    readout beside the track already states it.-->
-                    <div class="range-notch-labels">
-                        @for (n of rangeNotches; track n) {
-                        @if (n !== rangeMin) {
-                        <button class="range-notch-label" [style.left.%]="notchOffset(n)"
-                                [class.on]="rangeDays() === n" (click)="onRangeCommit(n)">{{ n }}</button>
-                        }
-                        }
-                    </div>
-                </div>
-            </div>
+            <label class="range-picker">
+                <span>{{ t().stats.period }}</span>
+                <select [value]="rangeDays()" (change)="onRangeCommit(+$any($event.target).value)">
+                    @for (n of rangeNotches; track n) {
+                    <option [value]="n">{{ rangeLabel(n) }}</option>
+                    }
+                </select>
+            </label>
         </div>
 
         <!--Per source, never their sum: a draft published to several channels counts its full view

@@ -5,7 +5,7 @@ export interface AppearancePrefs {
     accentLight: string;
     accentDark: string;
     sheetWidth: 'narrow' | 'normal' | 'wide' | 'full';
-    typeface: 'system' | 'serif' | 'serifClassic' | 'mono' | 'rounded';
+    typeface: 'system' | 'serif' | 'serifClassic' | 'mono' | 'rounded' | 'departure';
     fontSize: number; // px, sheet base (before zoom)
     lineHeight: number;
     showParagraphNumbers: boolean;
@@ -71,6 +71,7 @@ export const TYPEFACE_STACK: Record<AppearancePrefs['typeface'], string> = {
     serifClassic: '"Times New Roman", Times, "Liberation Serif", serif',
     mono: 'var(--font-mono)',
     rounded: 'ui-rounded, "SF Pro Rounded", "Segoe UI Rounded", var(--font-sans)',
+    departure: 'var(--font-readout)',
 };
 
 // Personal editor preferences (ADR-035, revised by FI1) — deliberately scoped to the authoring

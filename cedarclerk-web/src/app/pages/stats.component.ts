@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { formatInZone } from '../core/display-time';
+import { formatInZone, zoneAbbreviation } from '../core/display-time';
 import { ChannelsService, Channel, ChannelStats, BlogStats, AudienceSlice } from '../core/channels.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { LeafState, LeafTagComponent } from '../bench/display/leaf-tag.component';
@@ -39,18 +39,7 @@ const OTHER_CODE = 'other';
 // The server's bucket for a view Cloudflare or the browser didn't identify (Consts.General.UnknownGeo).
 const UNKNOWN_GEO = '??';
 
-// Stats range (N9): a week to half a year, with the ranges people actually ask for as magnets.
-const RANGE_MIN = 7;
-const RANGE_MAX = 180;
 const RANGE_NOTCHES = [7, 14, 30, 60, 90, 180];
-const NOTCH_PULL_DAYS = 4;
-
-function snapToNotch(days: number): number {
-    const value = Math.min(RANGE_MAX, Math.max(RANGE_MIN, Math.round(days)));
-    const nearest = RANGE_NOTCHES.reduce((best, n) =>
-        Math.abs(n - value) < Math.abs(best - value) ? n : best, RANGE_NOTCHES[0]);
-    return Math.abs(nearest - value) <= NOTCH_PULL_DAYS ? nearest : value;
-}
 
 const BLOG_ID = 'blog';
 const BLOG_METRICS: readonly MetricKey[] = ['viewCount', 'likeCount', 'commentCount'];
@@ -132,14 +121,12 @@ export class StatsComponent implements OnInit {
             ...[...this.channelStats().values()].flatMap(s => s.snapshots),
         ].map(s => s.takenAt);
         const latest = taken.reduce((max, at) => (at > max ? at : max), '');
-        return latest ? formatInZone(latest, 'HH:mm') : '';
+        return latest ? `${formatInZone(latest, 'HH:mm')} ${zoneAbbreviation(latest)}` : '';
     });
 
     readonly group = group;
     readonly otherCode = OTHER_CODE;
     readonly rangeNotches = RANGE_NOTCHES;
-    readonly rangeMin = RANGE_MIN;
-    readonly rangeMax = RANGE_MAX;
 
     sources = computed<Source[]>(() => {
         const out: Source[] = [];
@@ -314,26 +301,14 @@ export class StatsComponent implements OnInit {
         this.view.set(id as PanelView);
     }
 
-    // Free 7…180-day slider with the common ranges as magnets (N9). Dragging updates the label
-    // live; the fetch waits for the drag to end, so one drag is one request, not sixty.
-    onRangeInput(raw: number) {
-        this.rangeDays.set(snapToNotch(raw));
-    }
-
     async onRangeCommit(raw: number) {
-        const days = snapToNotch(raw);
+        const days = RANGE_NOTCHES.includes(raw) ? raw : 90;
         this.rangeDays.set(days);
         await this.load(days);
     }
 
-    rangeLabel(): string {
-        const d = this.rangeDays();
+    rangeLabel(d = this.rangeDays()): string {
         return d % 30 === 0 && d >= 30 ? this.t().stats.months(d / 30) : this.t().stats.days(d);
-    }
-
-    // Percentage along the track, so a notch tick lines up with the value it snaps to.
-    notchOffset(days: number): number {
-        return ((days - RANGE_MIN) / (RANGE_MAX - RANGE_MIN)) * 100;
     }
 
     /**

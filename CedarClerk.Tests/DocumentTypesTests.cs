@@ -77,6 +77,7 @@ public class DocumentTypesTests
     [InlineData(ProjectTypes.Jam, DocumentTypes.Design)]
     [InlineData(ProjectTypes.Prototype, DocumentTypes.Note)]
     [InlineData(ProjectTypes.Released, DocumentTypes.Changelog)]
+    [InlineData(ProjectTypes.Blog, DocumentTypes.Post)]
     public void Each_project_type_starts_with_its_own_document(string projectType, string expected)
     {
         Assert.Equal(expected, ProjectTypes.StarterDocumentType(projectType));

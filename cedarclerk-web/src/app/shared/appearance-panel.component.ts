@@ -80,7 +80,7 @@ export class AppearancePanelComponent {
     }
 
     setTypeface(value: AppearancePrefs['typeface']) {
-        this.previewAndSave({ typeface: value });
+        this.previewAndSave(value === 'departure' ? { typeface: value, fontSize: 22 } : { typeface: value });
     }
 
     setFontSize(px: number) {

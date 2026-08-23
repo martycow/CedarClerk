@@ -9,6 +9,7 @@ import { PublishService } from '../core/publish.service';
 import { CommentsService } from '../core/comments.service';
 import { RulerService } from '../core/ruler.service';
 import { RailActionsService } from '../core/rail-actions.service';
+import { LocaleService } from '../core/i18n/locale.service';
 import { en } from '../core/i18n/en';
 
 function draft(id: string, over: Partial<DraftMeta> = {}): DraftMeta {
@@ -50,7 +51,20 @@ const SNAPSHOTS = [
 class FakeDrafts {
     async list() { return structuredClone([LIVE, EARLIER, DRAFTED, OLD]); }
     async listFolders() { return []; }
-    async get(id: string) { return { id, articleTitle: '', registrationFormJson: null, formLanguages: [], cedarJson: '{}' } as never; }
+    async get(id: string) {
+        return {
+            id, articleTitle: '', cedarJson: '{}', formLanguages: ['ru', 'en'],
+            registrationFormJson: JSON.stringify({
+                v: 2, languages: ['ru', 'en'], requireName: true,
+                intro: { ru: 'Русское вступление', en: 'English intro' },
+                questions: [{
+                    id: 'q1', type: 'choice', required: true,
+                    label: { ru: 'Русский вопрос', en: 'English question' },
+                    options: [{ id: 'yes', label: { ru: 'Да', en: 'Yes' } }],
+                }],
+            }),
+        } as never;
+    }
     async listRegistrations() { return []; }
 }
 
@@ -125,6 +139,7 @@ describe('posts manager', () => {
         feedback = TestBed.inject(CommentsService);
         ruler = TestBed.inject(RulerService);
         rail = TestBed.inject(RailActionsService);
+        TestBed.inject(LocaleService).set('en');
         fixture = TestBed.createComponent(PostsManagerComponent);
         await settle();
     });
@@ -195,6 +210,14 @@ describe('posts manager', () => {
             'https://bsky.app/p/1',
         ]);
         expect(sheet().querySelectorAll('a[href^="http"]').length).toBe(0);
+    });
+
+    it('resolves submission questions and options in the current UI language', async () => {
+        card('Notes').click();
+        await settle();
+        expect(page().regForm()?.intro).toBe('English intro');
+        expect(page().regForm()?.questions[0]?.label).toBe('English question');
+        expect(page().regForm()?.questions[0]?.options?.[0]?.label).toBe('Yes');
     });
 
     // ADR-163/ADR-169 — the one action here that opens something carries its address, and the

@@ -128,4 +128,15 @@ describe('project index', () => {
         const buttons = [...el().querySelectorAll('.empty-state app-button')].map(b => b.textContent?.trim());
         expect(buttons).toEqual([t.newProject, t.exampleProject]);
     });
+
+    it('offers Blog with a post starter and an explicit name hint', () => {
+        fixture.componentInstance.startCreate();
+        fixture.detectChanges();
+        const types = [...el().querySelectorAll('.type-name')].map(x => x.textContent?.trim());
+        expect(types).toEqual(['Full game', 'Game jam entry', 'Prototype', 'Released game', 'Blog']);
+        expect(el().querySelector('.type-row:last-child .type-starter')?.textContent)
+            .toContain(t.create.startsWith(t.projectTypes.blog.starter));
+        expect((el().querySelector('#project-name') as HTMLInputElement).placeholder)
+            .toBe('Enter project name here');
+    });
 });

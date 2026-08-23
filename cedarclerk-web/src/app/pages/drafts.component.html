@@ -18,13 +18,13 @@ a popover, is the shelf beside it.-->
         <app-tag-picker [tags]="[]" [manage]="true"></app-tag-picker>
         <app-button variant="paper" size="sm" [disabled]="importingCedar()" [title]="t().drafts.importCedar"
                     (clicked)="cedarInput.click()">
-            <app-icon name="upload-simple" size="sm" [class.spin]="importingCedar()"></app-icon>
+            <app-icon name="download-simple" size="sm" [class.spin]="importingCedar()"></app-icon>
             {{ t().drafts.importCedar }}
         </app-button>
         <input #cedarInput type="file" accept=".cedar" hidden (change)="onImportCedarChosen($event)">
         <app-button variant="paper" size="sm" [disabled]="importingMarkdown()" [title]="t().drafts.importZipTitle"
                     (clicked)="markdownInput.click()">
-            <app-icon name="file-arrow-up" size="sm" [class.spin]="importingMarkdown()"></app-icon>
+            <app-icon name="archive" size="sm" [class.spin]="importingMarkdown()"></app-icon>
             {{ t().drafts.importZip }}
         </app-button>
         <input #markdownInput type="file" accept=".zip" hidden (change)="onImportMarkdownChosen($event)">
@@ -45,7 +45,7 @@ a popover, is the shelf beside it.-->
     same as every other modal in the app.-->
     @if (importingMarkdown()) {
     <app-modal [width]="360" (closed)="cancelImportMarkdown()">
-        <app-icon modal-icon name="file-arrow-up" size="sm"></app-icon>
+        <app-icon modal-icon name="archive" size="sm"></app-icon>
         <span modal-title>{{ t().drafts.importZipTitle }}</span>
 
         <div class="translate-progress">
@@ -62,19 +62,21 @@ a popover, is the shelf beside it.-->
 
     <!--ADR-128: the tree shows structure — a status/folder filter that hides a parent would
     take its visible subtree with it, so both filters step aside in tree view.-->
-    @if (view() !== 'tree') {
-    <app-index-tabs [items]="stateTabs()" [value]="filter()" [label]="t().drafts.stateStrip"
-                    (selected)="filter.set($any($event))" />
-    }
+    <div class="drafts-view-row">
+        @if (view() !== 'tree') {
+        <app-index-tabs [items]="stateTabs()" [value]="filter()" [label]="t().drafts.stateStrip"
+                        (selected)="filter.set($any($event))" />
+        }
+        <span class="view-spacer"></span>
+        <app-index-tabs class="view-tabs" [items]="viewTabs()" [value]="view()"
+                        [label]="t().drafts.viewStrip" (selected)="view.set($any($event))" />
+    </div>
 
     <div class="drafts-grid" [class.no-shelf]="view() === 'tree'">
         <app-shelf-panel class="list" [title]="t().drafts.title"
                          [count]="t().drafts.postsCount(filteredDrafts().length)" flush>
             <app-input actions class="search" [dense]="true" type="search" [value]="search"
                        [placeholder]="t().drafts.search" (valueChange)="search = $any($event) ?? ''" />
-            <app-index-tabs actions [items]="viewTabs()" [value]="view()"
-                            [label]="t().drafts.viewStrip" (selected)="view.set($any($event))" />
-
             @if (view() === 'table') {
             <div class="drafts-table">
                 <!--N1: headers sort, and the 5px handle on each fixed column resizes it. Title takes

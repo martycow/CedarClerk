@@ -73,6 +73,15 @@
     flex-wrap: wrap;
 }
 
+.drafts-view-row {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+.view-spacer { flex: 1; }
+
 .drafts-table {
     /* Was overflow:hidden (only there to clip the rounded corners), which meant the fixed-width
        column grid below simply got cut off on iPad with no way to reach it — B24. */

@@ -70,7 +70,8 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
     private tagUsageApi = inject(TagUsageService);
     private foldersApi = inject(FoldersService);
     private ruler = inject(RulerService);
-    t = inject(LocaleService).t;
+    private locale = inject(LocaleService);
+    t = this.locale.t;
 
     tab = signal<ManagerTab>('posts');
     loading = signal(true);
@@ -634,7 +635,7 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
                 this.draftsApi.get(d.id),
                 this.draftsApi.listRegistrations(d.id),
             ]);
-            this.regForm.set(parseRegistrationForm(full.registrationFormJson));
+            this.regForm.set(parseRegistrationForm(full.registrationFormJson, this.locale.uiLang()));
             this.postFormLanguages.set(full.formLanguages ?? []);
             this.registrations.set(regs);
         } catch (e) {
@@ -674,7 +675,7 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
         try {
             const res = await this.draftsApi.setRegistrationForm(d.id, formJson, language);
             this.postFormLanguages.set(res.formLanguages ?? []);
-            this.regForm.set(parseRegistrationForm(res.registrationFormJson));
+            this.regForm.set(parseRegistrationForm(res.registrationFormJson, this.locale.uiLang()));
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().manager.errors.saveForm));
         } finally {

@@ -15,8 +15,8 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
         <nav class="anchor-rail">
             @if (tab() === 'profile') {
             <app-button variant="paper" size="sm" (clicked)="jump('sec-profile')">{{ t().settings.profile.nav }}</app-button>
-            <app-button variant="paper" size="sm" (clicked)="jump('sec-cross-links')">{{ t().settings.crossLinks.nav }}</app-button>
             <app-button variant="paper" size="sm" (clicked)="jump('sec-header-slots')">{{ t().settings.headerSlots.nav }}</app-button>
+            <app-button variant="paper" size="sm" (clicked)="jump('sec-cross-links')">{{ t().settings.crossLinks.nav }}</app-button>
             <app-button variant="paper" size="sm" (clicked)="jump('sec-social-links')">{{ t().settings.social.nav }}</app-button>
             } @else {
             <app-button variant="paper" size="sm" (clicked)="jump('sec-language')">{{ t().settings.language.nav }}</app-button>

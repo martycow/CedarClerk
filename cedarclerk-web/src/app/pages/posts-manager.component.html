@@ -2,7 +2,7 @@
 post's facts on the shelf beside it. The tab strip keeps its class so it stays addressable by the
 name the smoke suite binds.-->
 <div class="manager">
-    <div class="mg-index">
+    <div class="mg-index" data-surface="chrome">
         <app-index-tabs class="manager-tabs" [items]="tabs()" [value]="tab()"
                         [label]="t().manager.tabStrip" (selected)="pickTab($event)" />
     </div>

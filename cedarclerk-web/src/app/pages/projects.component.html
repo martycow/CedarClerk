@@ -52,7 +52,7 @@
                             <span class="right">{{ t().projects.colDocs }}</span>
                             <span class="right">{{ t().projects.colTasks }}</span>
                             <span class="right">{{ t().projects.colAssets }}</span>
-                            <span>{{ t().projects.colActivity }}</span>
+                            <span class="when-head">{{ t().projects.colActivity }}</span>
                             <span>{{ t().projects.colState }}</span>
                         </div>
 
@@ -127,10 +127,10 @@
         @if (createError(); as err) { <p class="load-error">{{ err }}</p> }
 
         <ng-container modal-actions>
-            <button class="btn-ghost" (click)="creating.set(false)">{{ t().common.cancel }}</button>
-            <button class="btn-accent" [disabled]="createName().trim().length === 0 || saving()" (click)="create()">
+            <app-button variant="paper" size="sm" (clicked)="creating.set(false)">{{ t().common.cancel }}</app-button>
+            <app-button variant="pine" size="sm" [disabled]="createName().trim().length === 0 || saving()" (clicked)="create()">
                 {{ t().projects.create.submit }}
-            </button>
+            </app-button>
         </ng-container>
     </app-modal>
 }

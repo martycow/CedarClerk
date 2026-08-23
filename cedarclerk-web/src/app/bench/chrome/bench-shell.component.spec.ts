@@ -197,7 +197,7 @@ describe('bench shell', () => {
     it('names what is open inside the project, not the project twice', async () => {
         TestBed.inject(AuthService).indieDev.set(true);
         await go('/drafts');
-        expect(crumbs()).toEqual(['Drafts']);
+        expect(crumbs()).toEqual(['Documents']);
         await go('/projects/p1/builds');
         expect(crumbs()).toEqual(['Builds']);
         await go('/projects/p1');
