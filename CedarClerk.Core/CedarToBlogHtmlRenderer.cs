@@ -19,7 +19,6 @@ public static class CedarToBlogHtmlRenderer
         // The set lives on the context rather than per text node so "first occurrence only"
         // holds across the whole page.
         public IReadOnlyList<GlossaryEntry> Glossary { get; init; } = [];
-        public HashSet<string> MarkedTerms { get; } = new(StringComparer.OrdinalIgnoreCase);
         // Suppressed inside code and inside links: a term in a code sample is code, and a
         // <span> tooltip nested in an <a> gives the reader two different things one click apart.
         public int SuppressGlossaryDepth;
@@ -685,7 +684,7 @@ public static class CedarToBlogHtmlRenderer
             }
         }
 
-        if (markable) text = GlossaryScanner.Mark(text, ctx.Glossary, ctx.MarkedTerms);
+        if (markable) text = GlossaryScanner.Mark(text, ctx.Glossary);
         sb.Append(open).Append(text).Append(close);
     }
 

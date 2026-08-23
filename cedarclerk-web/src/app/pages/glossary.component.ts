@@ -75,6 +75,8 @@ export class GlossaryComponent implements OnInit, OnDestroy {
 
     // Terms are listed per language, because that is how they are matched.
     languageFilter = signal<string>(DEFAULT_PRIMARY_LANGUAGE);
+    readonly pageSize = 20;
+    page = signal(1);
 
     async ngOnInit() {
         try {
@@ -105,6 +107,40 @@ export class GlossaryComponent implements OnInit, OnDestroy {
             // A project's view includes the global terms, because that is what its documents see.
             return !t.projectId || t.projectId === scope;
         });
+    }
+
+    pageCount(): number {
+        return Math.max(1, Math.ceil(this.visibleTerms().length / this.pageSize));
+    }
+
+    pageNumber(): number {
+        return Math.min(this.page(), this.pageCount());
+    }
+
+    pagedTerms(): GlossaryTerm[] {
+        const start = (this.pageNumber() - 1) * this.pageSize;
+        return this.visibleTerms().slice(start, start + this.pageSize);
+    }
+
+    selectLanguage(language: string) {
+        this.languageFilter.set(language);
+        this.page.set(1);
+    }
+
+    selectScope(scope: string | null) {
+        this.scopeFilter.set(scope);
+        this.page.set(1);
+    }
+
+    setPage(page: number) {
+        this.page.set(Math.max(1, Math.min(page, this.pageCount())));
+    }
+
+    groupLanguages(term: GlossaryTerm): string[] {
+        const root = term.sourceTermId ?? term.id;
+        const group = this.terms().filter(t => (t.sourceTermId ?? t.id) === root);
+        return this.contentLanguages.filter(language =>
+            group.some(t => (t.language || DEFAULT_PRIMARY_LANGUAGE) === language));
     }
 
     scopeCount(scope: string | null): number {
@@ -177,7 +213,7 @@ export class GlossaryComponent implements OnInit, OnDestroy {
                 const created = await this.api.create({ ...input, projectId: this.newTermScope() });
                 this.terms.update(list => [...list, created].sort((a, b) => a.term.localeCompare(b.term)));
             }
-            this.languageFilter.set(input.language);
+            this.selectLanguage(input.language);
             this.editing.set(false);
             this.selectedId.set(null);
         } catch (e) {

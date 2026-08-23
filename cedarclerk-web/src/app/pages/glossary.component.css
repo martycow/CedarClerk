@@ -160,6 +160,30 @@
     font-size: var(--fs-body);
 }
 
+.term-languages {
+    display: inline-flex;
+    gap: 2px;
+}
+
+.term-languages span {
+    padding: 0 var(--space-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: var(--fs-caption);
+    color: var(--t2);
+}
+
+.glossary-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    font-family: var(--font-mono);
+    font-size: var(--fs-meta);
+    color: var(--t2);
+}
+
 .term-alias {
     font-size: var(--fs-caption);
     color: var(--t2);

@@ -514,14 +514,30 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                 @if (c.ledger.length > 0) {
                 <h3 class="ledger-title">{{ t().settings.credits.ledgerTitle }}</h3>
                 <ul class="credit-ledger">
-                    @for (entry of c.ledger; track $index) {
+                    @for (entry of ledgerRows(); track entry.createdAt + entry.reason) {
                     <li>
                         <span class="ledger-delta" [class.positive]="entry.delta > 0">{{ entry.delta > 0 ? '+' : '' }}{{ entry.delta }}</span>
-                        <span class="ledger-reason">{{ creditReasonLabel(entry.reason) }}</span>
+                        <span class="ledger-reason">
+                            {{ creditReasonLabel(entry.reason) }}
+                            @if (entry.count > 1) { <span class="ledger-count">×{{ entry.count }}</span> }
+                        </span>
                         <span class="ledger-date">{{ entry.createdAt | zonedDate:'dd.MM.yyyy, HH:mm' }}</span>
                     </li>
                     }
                 </ul>
+                @if (ledgerPages() > 1) {
+                <nav class="ledger-pager" [attr.aria-label]="t().settings.credits.ledgerPagination">
+                    <app-button variant="paper" size="sm" [disabled]="ledgerPageNumber() === 1"
+                                (clicked)="setLedgerPage(ledgerPageNumber() - 1)">
+                        <app-icon name="caret-left" size="xs"></app-icon>
+                    </app-button>
+                    <span>{{ t().settings.credits.ledgerPage(ledgerPageNumber(), ledgerPages()) }}</span>
+                    <app-button variant="paper" size="sm" [disabled]="ledgerPageNumber() === ledgerPages()"
+                                (clicked)="setLedgerPage(ledgerPageNumber() + 1)">
+                        <app-icon name="caret-right" size="xs"></app-icon>
+                    </app-button>
+                </nav>
+                }
                 } @else {
                 <p class="field-hint">{{ t().settings.credits.ledgerEmpty }}</p>
                 }

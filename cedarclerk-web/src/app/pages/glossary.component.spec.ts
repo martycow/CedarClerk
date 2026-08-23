@@ -146,6 +146,22 @@ describe('glossary screen', () => {
         expect(shelf().querySelectorAll('.preview-langs app-leaf-tag').length).toBe(0);
     });
 
+    it('shows each term translation coverage and pages a large language set', async () => {
+        expect(cards()[0].querySelector('.term-languages')?.textContent?.replace(/\s/g, '')).toBe('RUEN');
+
+        page().terms.set(Array.from({ length: 45 }, (_, i) => term({
+            id: `ru-${i}`, term: `Термин ${String(i).padStart(2, '0')}`,
+        })));
+        fixture.detectChanges();
+
+        expect(cards().length).toBe(20);
+        expect(page().pageCount()).toBe(3);
+        page().setPage(3);
+        fixture.detectChanges();
+        expect(cards().length).toBe(5);
+        expect(el().querySelector('.glossary-pager')?.textContent).toContain(t.page(3, 3));
+    });
+
     // ADR-167 clause 7 and ADR-159 clause 1: the screen's one command goes to the rail as data,
     // and the rule carries what it measures. Both are cleared when the screen goes away.
     it('publishes its one action and its counts to the shell, and clears them on the way out', () => {

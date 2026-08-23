@@ -13,16 +13,13 @@ public sealed record GlossaryEntry(string Term, string Description, string? Imag
 // 1. It runs on ALREADY-ESCAPED text and never introduces unescaped content. Escaping afterwards
 //    would escape the markup this adds; the cost is that the matcher must not read "&amp;" as five
 //    letters, which is why entities are skipped below.
-// 2. Only the FIRST occurrence of a term is marked — twenty underlines of one word is noise.
+// 2. Every eligible occurrence is marked so readers can open the definition wherever they meet it.
 public static class GlossaryScanner
 {
     /// <summary>
-    /// Wraps the first occurrence of each not-yet-seen term in <paramref name="escapedText"/>.
-    /// <paramref name="alreadyMarked"/> carries the terms marked earlier on the same page and is
-    /// updated in place, so the "first occurrence only" rule holds across the whole document
-    /// rather than per text node.
+    /// Wraps every eligible occurrence of a glossary term in <paramref name="escapedText"/>.
     /// </summary>
-    public static string Mark(string escapedText, IReadOnlyList<GlossaryEntry> glossary, HashSet<string> alreadyMarked)
+    public static string Mark(string escapedText, IReadOnlyList<GlossaryEntry> glossary)
     {
         if (glossary.Count == 0 || escapedText.Length == 0) return escapedText;
 
@@ -55,10 +52,8 @@ public static class GlossaryScanner
             {
                 foreach (var (alias, entry) in candidates)
                 {
-                    if (alreadyMarked.Contains(entry.Term)) continue;
                     if (!MatchesAt(escapedText, i, alias, entry.IsCaseSensitive)) continue;
 
-                    alreadyMarked.Add(entry.Term);
                     AppendMarked(sb, escapedText.Substring(i, alias.Length), entry);
                     i += alias.Length;
                     matched = true;

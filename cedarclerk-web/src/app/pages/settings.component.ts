@@ -5,6 +5,7 @@ import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
 import { LocaleService, UiLang } from '../core/i18n/locale.service';
 import { BillingService, BillingStatus, CreditsStatus, PlanId } from '../core/billing.service';
+import { groupCreditLedger } from '../core/credit-ledger';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES } from '../core/languages';
 import { TelegramLinkService } from '../core/telegram-link.service';
 import { ChannelsService, Channel, KnownChat } from '../core/channels.service';
@@ -112,6 +113,15 @@ export class SettingsComponent implements OnInit {
     // ADR-092 — the credit wallet. Same shape as the plan purchase above: pick a pack, pick a
     // method, go. Stars has no redirect, so its confirmation is a message rather than a page.
     credits = signal<CreditsStatus | null>(null);
+    readonly ledgerPageSize = 8;
+    ledgerPage = signal(1);
+    ledgerGroups = computed(() => groupCreditLedger(this.credits()?.ledger ?? []));
+    ledgerPages = computed(() => Math.max(1, Math.ceil(this.ledgerGroups().length / this.ledgerPageSize)));
+    ledgerPageNumber = computed(() => Math.min(this.ledgerPage(), this.ledgerPages()));
+    ledgerRows = computed(() => {
+        const start = (this.ledgerPageNumber() - 1) * this.ledgerPageSize;
+        return this.ledgerGroups().slice(start, start + this.ledgerPageSize);
+    });
     creditsBusy = signal(false);
     creditsMessage = signal<string | null>(null);
     creditsError = signal<string | null>(null);
@@ -785,6 +795,10 @@ export class SettingsComponent implements OnInit {
 
     creditReasonLabel(reason: string): string {
         return this.t().settings.credits.reasons[reason] ?? reason;
+    }
+
+    setLedgerPage(page: number) {
+        this.ledgerPage.set(Math.max(1, Math.min(page, this.ledgerPages())));
     }
 
     async manageStripeBilling() {

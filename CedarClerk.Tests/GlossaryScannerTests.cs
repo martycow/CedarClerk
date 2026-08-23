@@ -11,7 +11,7 @@ public class GlossaryScannerTests
         new(term, desc, img, aliases);
 
     private static string Mark(string text, params GlossaryEntry[] entries) =>
-        GlossaryScanner.Mark(text, entries, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+        GlossaryScanner.Mark(text, entries);
 
     [Fact]
     public void Marks_a_term_it_finds()
@@ -43,23 +43,22 @@ public class GlossaryScannerTests
     }
 
     [Fact]
-    public void Only_the_first_occurrence_is_marked()
+    public void Every_occurrence_is_marked()
     {
         var html = Mark("Unity and Unity and Unity", Entry("Unity"));
-        Assert.Equal(1, CountOccurrences(html, "glossary-term"));
+        Assert.Equal(3, CountOccurrences(html, "glossary-term"));
     }
 
     [Fact]
-    public void The_first_occurrence_rule_spans_several_calls()
+    public void Every_text_node_marks_the_term_again()
     {
         // One page renders through many text nodes; the shared set is what makes "first
         // occurrence on the page" mean the page and not the paragraph.
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var entries = new[] { Entry("Unity") };
-        var first = GlossaryScanner.Mark("Unity is here", entries, seen);
-        var second = GlossaryScanner.Mark("Unity again", entries, seen);
+        var first = GlossaryScanner.Mark("Unity is here", entries);
+        var second = GlossaryScanner.Mark("Unity again", entries);
         Assert.Contains("glossary-term", first);
-        Assert.DoesNotContain("glossary-term", second);
+        Assert.Contains("glossary-term", second);
     }
 
     [Fact]
@@ -112,7 +111,7 @@ public class GlossaryScannerTests
     [Fact]
     public void An_empty_glossary_changes_nothing()
     {
-        Assert.Equal("Unity", GlossaryScanner.Mark("Unity", [], []));
+        Assert.Equal("Unity", GlossaryScanner.Mark("Unity", []));
     }
 
     [Fact]
@@ -216,4 +215,3 @@ public class GlossaryRendererTests
         Assert.DoesNotContain("glossary-term", html);
     }
 }
-

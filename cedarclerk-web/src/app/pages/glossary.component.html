@@ -6,7 +6,7 @@
     stands beside them because it acts on the language they select (ADR-167 clause 7).-->
     <div class="gl-index">
         <app-index-tabs [items]="languageTabs()" [value]="languageFilter()"
-                        [label]="t().glossary.langStrip" (selected)="languageFilter.set($event)" />
+                        [label]="t().glossary.langStrip" (selected)="selectLanguage($event)" />
         <span class="spacer"></span>
         @if (countFor(languageFilter())) {
         <app-button variant="paper" size="sm" (clicked)="openTranslateAll()">
@@ -29,16 +29,16 @@
                 @if (projects().length) {
                 <div class="scope-strip" role="group" [attr.aria-label]="t().glossary.scopeStrip">
                     <app-leaf-tag interactive [state]="scopeFilter() === null ? 'active' : 'idle'"
-                                  (activated)="scopeFilter.set(null)">
+                                  (activated)="selectScope(null)">
                         {{ t().glossary.scopeAll }}<span class="leaf-note">{{ scopeCount(null) }}</span>
                     </app-leaf-tag>
                     <app-leaf-tag interactive [state]="scopeFilter() === '' ? 'active' : 'idle'"
-                                  (activated)="scopeFilter.set('')">
+                                  (activated)="selectScope('')">
                         {{ t().glossary.scopeGlobal }}<span class="leaf-note">{{ scopeCount('') }}</span>
                     </app-leaf-tag>
                     @for (p of projects(); track p.id) {
                     <app-leaf-tag interactive [state]="scopeFilter() === p.id ? 'active' : 'idle'"
-                                  [hint]="p.name" (activated)="scopeFilter.set(p.id)">
+                                  [hint]="p.name" (activated)="selectScope(p.id)">
                         {{ p.name }}<span class="leaf-note">{{ scopeCount(p.id) }}</span>
                     </app-leaf-tag>
                     }
@@ -85,7 +85,7 @@
                 }
 
                 <div class="term-list">
-                    @for (term of visibleTerms(); track term.id) {
+                    @for (term of pagedTerms(); track term.id) {
                     @if (editing() && selectedId() === term.id) {
                     <ng-container *ngTemplateOutlet="termForm"></ng-container>
                     } @else {
@@ -97,6 +97,11 @@
                         <div class="term-body">
                             <div class="term-head">
                                 <span class="term-name">{{ term.term }}</span>
+                                <span class="term-languages" [title]="t().glossary.availableLanguages">
+                                    @for (language of groupLanguages(term); track language) {
+                                        <span>{{ language.toUpperCase() }}</span>
+                                    }
+                                </span>
                                 @if (term.isCaseSensitive) { <span class="term-flag" [title]="t().glossary.caseSensitiveHint">Aa</span> }
                                 @for (a of aliasList(term); track a) { <span class="term-alias">{{ a }}</span> }
                                 <span class="spacer"></span>
@@ -118,6 +123,21 @@
                     <p class="hint">{{ t().glossary.empty }}</p>
                     }
                 </div>
+                @if (pageCount() > 1) {
+                <nav class="glossary-pager" [attr.aria-label]="t().glossary.pagination">
+                    <app-button variant="paper" size="sm" [disabled]="pageNumber() === 1"
+                                (clicked)="setPage(pageNumber() - 1)">
+                        <app-icon name="caret-left" size="xs"></app-icon>
+                        {{ t().glossary.previous }}
+                    </app-button>
+                    <span>{{ t().glossary.page(pageNumber(), pageCount()) }}</span>
+                    <app-button variant="paper" size="sm" [disabled]="pageNumber() === pageCount()"
+                                (clicked)="setPage(pageNumber() + 1)">
+                        {{ t().glossary.next }}
+                        <app-icon name="caret-right" size="xs"></app-icon>
+                    </app-button>
+                </nav>
+                }
                 }
             </div>
         </app-worktop>
