@@ -1044,49 +1044,21 @@
 .export-grid {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-3);
 }
 
-/* ADR-096 — the window is a numbered sequence, not a set of columns: which version, where, with
-   what. A step is a titled band; the panels inside it are what still needs two columns' width. */
+/* ADR-096 gave the window a numbered sequence; ADR-190 gives each step the shape every other panel
+   in the app already has. The step number is carved into the sign tile with the title, because
+   ShelfPanel's header has three slots and a fourth would be this screen growing the kit. The rule
+   the band used to draw is now the shelf's own frame. */
 .export-step {
+    display: block;
+}
+
+.export-step-body {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    border-top: 1px solid var(--border);
-    padding-top: 14px;
-}
-
-.export-step:first-child {
-    border-top: none;
-    padding-top: 0;
-}
-
-.export-step-head {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-}
-
-.export-step-no {
-    width: 22px;
-    height: 22px;
-    flex: none;
-    border-radius: 50%;
-    background: var(--asoft);
-    border: 1px solid var(--abord);
-    color: var(--accent);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--fs-caption);
-    font-weight: 700;
-}
-
-.export-step-title {
-    margin: 0;
-    font-size: var(--fs-body);
-    font-weight: 600;
 }
 
 /* One card per destination, ticked or not. A card is deliberately the same size whether the
@@ -1197,9 +1169,13 @@
     }
 }
 
+/* A destination's settings are a second sheet laid on the shelf's own (ADR-190): one step down in
+   paper stock, so the panels read as objects on the sheet rather than as ruled-off regions of it. */
 .export-section {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    background-color: var(--surface);
+    box-shadow: var(--shadow-paper-sm);
     padding: 12px 14px;
     margin-bottom: 0;
 }

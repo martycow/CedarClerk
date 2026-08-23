@@ -23,11 +23,9 @@
             @if (currentId(); as id) {
 
             <!-- ============ 1 · VERSION ============ -->
-            <section class="export-step">
-                <div class="export-step-head">
-                    <span class="export-step-no">1</span>
-                    <h3 class="export-step-title">{{ t().editor.exportModal.stepVersion }}</h3>
-                </div>
+            <app-shelf-panel class="export-step" [title]="'1 · ' + t().editor.exportModal.stepVersion"
+                             [count]="exportLangs().length">
+                <div class="export-step-body">
                 <div class="lang-check-row">
                     <label class="lang-check" [title]="endonym(primaryLanguage)">
                         <input type="checkbox" [checked]="isExportLang(primaryLanguage)" (change)="toggleExportLang(primaryLanguage)">
@@ -44,14 +42,13 @@
                 @if (missingLanguages().length) {
                 <p class="field-hint-inline">{{ t().editor.exportModal.versionMissing(missingLanguagesLabel()) }}</p>
                 }
-            </section>
+                </div>
+            </app-shelf-panel>
 
             <!-- ============ 2 · DESTINATIONS ============ -->
-            <section class="export-step">
-                <div class="export-step-head">
-                    <span class="export-step-no">2</span>
-                    <h3 class="export-step-title">{{ t().editor.exportModal.stepWhere }}</h3>
-                </div>
+            <app-shelf-panel class="export-step" [title]="'2 · ' + t().editor.exportModal.stepWhere"
+                             [count]="tickedDestinationCount()">
+                <div class="export-step-body">
                 <!--A network with no account stays visible and stays honest: it is not hidden, not
                 silently tickable, and the way out is the one place that can fix it (ADR-095).-->
                 <div class="dest-cards">
@@ -93,15 +90,13 @@
                 @if (!anyDestination()) {
                 <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.noDestination }}</p>
                 }
-            </section>
+                </div>
+            </app-shelf-panel>
 
             <!-- ============ 3 · PER-DESTINATION SETTINGS ============ -->
             @if (anyDestination()) {
-            <section class="export-step">
-                <div class="export-step-head">
-                    <span class="export-step-no">3</span>
-                    <h3 class="export-step-title">{{ t().editor.exportModal.stepParams }}</h3>
-                </div>
+            <app-shelf-panel class="export-step" [title]="'3 · ' + t().editor.exportModal.stepParams">
+                <div class="export-step-body">
                 <div class="export-panels">
 
                 @if (destBlog()) {
@@ -382,7 +377,8 @@
                     }
                 }
                 </div>
-            </section>
+                </div>
+            </app-shelf-panel>
             }
 
             <!-- ============ 4 · WHEN ============ -->
@@ -391,12 +387,11 @@
             with four destinations that stopped being true. Shown only when something schedulable
             is ticked — the blog is not a publish target and has nothing to postpone.-->
             @if (anyNetworkDestination()) {
-            <section class="export-step">
-                <div class="export-step-head">
-                    <app-icon name="clock" size="sm"></app-icon>
-                    <h3 class="export-step-title">{{ t().editor.exportModal.stepWhen }}</h3>
-                    <span class="field-hint-inline">{{ t().editor.exportModal.stepWhenHint }}</span>
-                </div>
+            <app-shelf-panel class="export-step" [title]="'4 · ' + t().editor.exportModal.stepWhen">
+                <div class="export-step-body">
+                <!--ADR-190 — the sentence that used to sit beside the title lives on the paper now:
+                wood carries labels and counters, paper carries prose.-->
+                <p class="field-hint-inline">{{ t().editor.exportModal.stepWhenHint }}</p>
                 <div class="quick-schedule">
                     <button (click)="quickSchedule('1m')">{{ t().editor.exportModal.in1m }}</button>
                     <button (click)="quickSchedule('5m')">{{ t().editor.exportModal.in5m }}</button>
@@ -421,19 +416,17 @@
                 <a class="state-link" routerLink="/posts">{{ t().editor.exportModal.manageInManager }}</a>
                 }
                 @if (scheduleResult()) { <p class="export-result">{{ scheduleResult() }}</p> }
-            </section>
+                </div>
+            </app-shelf-panel>
             }
 
             <!--ADR-096 — who may open this post, and what their copy looks like. Not a destination:
             it is true of the private page whether or not this window is publishing anywhere, so it
             is not gated behind ticking the blog.-->
             @if (isPrivate()) {
-            <section class="export-step">
-                <div class="export-step-head">
-                    <app-icon name="lock" size="sm"></app-icon>
-                    <h3 class="export-step-title">{{ t().editor.exportModal.privateAccess }}</h3>
-                    <span class="field-hint-inline">{{ t().editor.exportModal.privateAccessHint }}</span>
-                </div>
+            <app-shelf-panel class="export-step" [title]="t().editor.exportModal.privateAccess">
+                <div class="export-step-body">
+                <p class="field-hint-inline">{{ t().editor.exportModal.privateAccessHint }}</p>
                 <div class="export-panels">
                 <div class="export-section">
                     <div class="export-section-title">{{ t().editor.exportModal.invitations }}</div>
@@ -482,16 +475,15 @@
                     <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.watermarkHint }}</p>
                 </div>
                 </div>
-            </section>
+                </div>
+            </app-shelf-panel>
             }
 
             <!-- ============ FILES ============ -->
-            <section class="export-step">
-                <div class="export-step-head">
-                    <app-icon name="download-simple" size="sm"></app-icon>
-                    <h3 class="export-step-title">{{ t().editor.exportModal.filesPanel }}</h3>
-                    <span class="field-hint-inline">{{ t().editor.exportModal.filesPanelHint }}</span>
-                </div>
+            <app-shelf-panel class="export-step" [title]="t().editor.exportModal.filesPanel"
+                             [count]="draftAssets().length">
+                <div class="export-step-body">
+                <p class="field-hint-inline">{{ t().editor.exportModal.filesPanelHint }}</p>
                 <div class="export-panels">
                 <!--FI2.10: two buttons. The per-language .html links they replace produced a page
                 whose images all pointed back at the blog — a saved page only while the blog is up.-->
@@ -557,7 +549,8 @@
                     }
                 </div>
                 </div>
-            </section>
+                </div>
+            </app-shelf-panel>
             }
             </div>
 

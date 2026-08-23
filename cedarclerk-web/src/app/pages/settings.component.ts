@@ -17,6 +17,9 @@ import { BrandIconComponent } from '../shared/brand-icon.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { LeafTagComponent } from '../bench/display/leaf-tag.component';
+import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
+import { SpecRowComponent } from '../bench/worktop/spec-row.component';
+import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
 
 type PayMethod = 'stripe' | 'paypal' | 'stars';
 export type SettingsTab = 'profile' | 'account';
@@ -26,6 +29,7 @@ export type SettingsTab = 'profile' | 'account';
     imports: [
         IconComponent, FormsModule, ZonedDatePipe, BrandIconComponent,
         ButtonComponent, IndexTabsComponent, LeafTagComponent,
+        ShelfPanelComponent, SpecRowComponent, StampBadgeComponent,
     ],
     templateUrl: 'settings.component.html',
     styleUrls: ['settings.component.css']

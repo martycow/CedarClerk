@@ -475,6 +475,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return this.destBlog() || this.destTelegram() || this.destBluesky() || this.destX() || this.destDiscord();
     }
 
+    /** The counter carved beside step 2's title (ADR-190). Shown as written, zero included. */
+    tickedDestinationCount(): number {
+        return [this.destBlog(), this.destTelegram(), this.destBluesky(), this.destX(), this.destDiscord()]
+            .filter(Boolean).length;
+    }
+
     account(network: MicroNetwork): PublishAccount | null {
         switch (network) {
             case 'x': return this.xAccount();

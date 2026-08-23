@@ -477,32 +477,53 @@
     color: var(--t2);
 }
 
-/* One shape for every network: a head that names it and says whether it is connected, and a body
-   holding whatever connecting takes. Telegram used to be a one-line row of its own and the rest
-   blocks, which is what read as five different controls. */
-.integration-block {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: var(--space-3) var(--space-4);
-    margin: 0 0 var(--space-3);
+/* One shape for every network, and since ADR-190 that shape is the bench's own panel. Telegram and
+   its channel list run the width of the sheet — one is the prerequisite for the other and the other
+   is a list; the three short account panels sat in a 700px column with two thirds of it empty. */
+.integration-rack {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+    align-items: start;
+}
+
+.integration-rack .wide {
+    grid-column: 1 / -1;
+}
+
+/* A 340px half-column is not a panel, it is a squeeze — below this the rack is one file. */
+@media (max-width: 720px) {
+    .integration-rack {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.net-sheet {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+    align-items: flex-start;
 }
 
-.integration-block > app-button {
+.net-sheet > app-button {
     align-self: flex-start;
 }
 
-.integration-block.dashed {
-    border-style: dashed;
-    margin-bottom: 0;
-}
-
-.integration-block-head {
+/* The first line of every network's sheet: the mark, the stamp, the account, the way out. Reading
+   down the rack, the stamps line up — which is the whole reason the state left the prose. */
+.net-head {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
+    gap: var(--space-2);
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+.planned-strip {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
 }
 
 /* Brand colours, same rule as .integration-icon.telegram above: a mark that shifts hue between
@@ -575,14 +596,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
-}
-
-.planned-chip {
-    border: 1px dashed var(--border);
-    border-radius: var(--radius-sm);
-    padding: var(--space-1) var(--space-3);
-    font-size: var(--fs-caption);
-    color: var(--t2);
 }
 
 .panel-label {
