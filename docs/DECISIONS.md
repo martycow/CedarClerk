@@ -211,3 +211,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-196 — Compact controls stay reachable and long collections scroll or page](adr/ADR-196.md)
 - [ADR-197 — Glossary coverage and revision comparison are explicit](adr/ADR-197.md)
 - [ADR-198 — Export is a destination rack with one active work area](adr/ADR-198.md)
+- [ADR-199 — Departure Mono is an opt-in editor face](adr/ADR-199.md)
