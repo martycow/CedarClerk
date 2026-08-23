@@ -206,3 +206,8 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-191 — Martian Mono replaces --font-mono's system stack, product-wide (23.08.2026)](adr/ADR-191.md)
 - [ADR-192 — The blog reader moves to the wood board, and gets search, sort, a site-wide language toggle, blog-wide prev/next and a copy-link button (23.08.2026)](adr/ADR-192.md)
 - [ADR-193 — ADR-192 follow-up: no site-wide language toggle, English by default, pagination, dropdown sort (23.08.2026)](adr/ADR-193.md)
+- [ADR-194 — The tool wall follows the active project context](adr/ADR-194.md)
+- [ADR-195 — Blog projects, task files, and Project covers reuse existing primitives](adr/ADR-195.md)
+- [ADR-196 — Compact controls stay reachable and long collections scroll or page](adr/ADR-196.md)
+- [ADR-197 — Glossary coverage and revision comparison are explicit](adr/ADR-197.md)
+- [ADR-198 — Export is a destination rack with one active work area](adr/ADR-198.md)
