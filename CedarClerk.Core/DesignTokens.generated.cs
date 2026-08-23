@@ -41,7 +41,7 @@ public static partial class DesignTokens
         ["asoft"] = "color-mix(in srgb, var(--accent) 13%, var(--surface))",
         ["abord"] = "color-mix(in srgb, var(--accent) 38%, var(--border))",
         ["font-sans"] = "'Source Sans 3', -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, system-ui, sans-serif",
-        ["font-mono"] = "ui-monospace, Menlo, Consolas, monospace",
+        ["font-mono"] = "'Martian Mono', ui-monospace, Menlo, Consolas, monospace",
         ["font-serif"] = "'Literata', Georgia, \"Iowan Old Style\", serif",
         ["fs-read"] = "17px",
         ["lh-read"] = "1.75",

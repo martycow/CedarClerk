@@ -114,7 +114,7 @@ Comfortable is the default, declared in `:root`; `[data-density="compact"]` over
 ### Typography
 ```
 --font-sans:    'Source Sans 3', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
---font-mono:    ui-monospace, Menlo, Consolas, monospace;
+--font-mono:    'Martian Mono', ui-monospace, Menlo, Consolas, monospace;
 --font-serif:   'Literata', Georgia, "Iowan Old Style", serif;
 --font-display: 'Vollkorn', Georgia, serif;
 --font-note:    'Caveat', cursive;
@@ -125,7 +125,7 @@ Patterns stay the ones already in use (`d MMM`, `d MMM, HH:mm`, `d MMM yyyy, HH:
 spelled out (`14:05 PDT`) on the blog and left unspoken in the app: a reader could be anywhere, the
 author is in one place.
 
-`--font-serif` is for reading surfaces **only** — blog post body and the editor sheet. The four faces it and `--font-sans`/`--font-display`/`--font-note` name — Literata, Source Sans 3, Vollkorn, Caveat — are self-hosted via `@fontsource` (ADR-143), one file per weight per named subset, so the server still serves every byte itself and the explicit list is what bounds the payload.
+`--font-serif` is for reading surfaces **only** — blog post body and the editor sheet. The five faces it and `--font-sans`/`--font-mono`/`--font-display`/`--font-note` name — Literata, Source Sans 3, Martian Mono, Vollkorn, Caveat — are self-hosted via `@fontsource` (ADR-143, ADR-191), one file per weight per named subset, so the server still serves every byte itself and the explicit list is what bounds the payload. `--font-readout` is a sixth, Departure Mono, committed rather than a package (ADR-180) and fenced to 11px call sites only — `--font-mono` covers everything else mono, code blocks included, regardless of size (ADR-191 supersedes ADR-180's rejection of that).
 
 `--font-display` is the heading face, on the chrome and on the sheet alike: the hub's hero title at `--fs-34`, the worktop and shelf headings, and `.tiptap h1`–`h3` at `--fs-27`/`--fs-19` — a display serif over whichever body face the author chose, which is the bench's letterpress contrast and is independent of the sheet typeface preference (ADR-073 governs the body only). `--font-note` is allowed in exactly one place, the global `.margin-note` rule — `--fs-17`, `--t2`, rotated a degree and a half — for margin notes and empty states; nothing else reaches for the hand-written face. `body` is set at `--fs-ui`, so unstyled text is the control size, not the reading size.
 

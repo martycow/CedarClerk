@@ -203,3 +203,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-188 — Fullscreen is the window's, not the writer's: it moves to the rail (22.08.2026)](adr/ADR-188.md)
 - [ADR-189 — Credits can be bought by the number, at the list rate; the packs stay a discount (22.08.2026)](adr/ADR-189.md)
 - [ADR-190 — The Export window and the Integrations panel are shelves, and a stamp says which account is live (22.08.2026)](adr/ADR-190.md)
+- [ADR-191 — Martian Mono replaces --font-mono's system stack, product-wide (23.08.2026)](adr/ADR-191.md)

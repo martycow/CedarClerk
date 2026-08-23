@@ -42,6 +42,11 @@
                 "glob": "literata-@(latin|cyrillic)-@(400|600)-normal.woff2",
                 "input": "node_modules/@fontsource/literata/files",
                 "output": "assets/fonts"
+              },
+              {
+                "glob": "martian-mono-@(latin|cyrillic)-@(400|600|700)-normal.woff2",
+                "input": "node_modules/@fontsource/martian-mono/files",
+                "output": "assets/fonts"
               }
             ],
             "styles": [

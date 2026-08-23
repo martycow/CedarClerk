@@ -1,9 +1,8 @@
-/* The four self-hosted faces (ADR-143) — one file per weight per named subset, because the
-   explicit list is what bounds the payload and a whole-family import is what it was chosen
-   against. Nothing above the base blocks may spell a base-block selector, in code or in prose:
-   tools/check-contrast.mjs and tools/generate-design-tokens.mjs each anchor a block on the first
-   occurrence of its selector text, and a mention up here once pointed the dark check at the
-   light block. */
+/* The self-hosted faces — one file per weight per named subset, because the explicit list is
+   what bounds the payload and a whole-family import is what it was chosen against. Nothing above
+   the base blocks may spell a base-block selector, in code or in prose: tools/check-contrast.mjs
+   and tools/generate-design-tokens.mjs each anchor a block on the first occurrence of its
+   selector text, and a mention up here once pointed the dark check at the light block. */
 @use '@fontsource/vollkorn/latin-600.css' as *;
 @use '@fontsource/vollkorn/latin-700.css' as *;
 @use '@fontsource/vollkorn/cyrillic-600.css' as *;
@@ -20,6 +19,14 @@
 @use '@fontsource/literata/cyrillic-600.css' as *;
 @use '@fontsource/caveat/latin-500.css' as *;
 @use '@fontsource/caveat/cyrillic-500.css' as *;
+
+/* --font-mono's face (ADR-191) — 400/600/700, the three weights every call site actually uses. */
+@use '@fontsource/martian-mono/latin-400.css' as *;
+@use '@fontsource/martian-mono/latin-600.css' as *;
+@use '@fontsource/martian-mono/latin-700.css' as *;
+@use '@fontsource/martian-mono/cyrillic-400.css' as *;
+@use '@fontsource/martian-mono/cyrillic-600.css' as *;
+@use '@fontsource/martian-mono/cyrillic-700.css' as *;
 
 /* The fifth face (ADR-180): a pixel monospace for instrument readings, from the tree rather
    than from a package — it has none. One 22 KB file covers latin, cyrillic and greek, so there
@@ -170,7 +177,7 @@
     --dens-elev: var(--shadow);
 
     --font-sans: 'Source Sans 3', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
-    --font-mono: ui-monospace, Menlo, Consolas, monospace;
+    --font-mono: 'Martian Mono', ui-monospace, Menlo, Consolas, monospace;
     --font-serif: 'Literata', Georgia, "Iowan Old Style", serif;
 
     /* Font-size scale, INTEGERS ONLY. Half-pixels round per element at render time, so 12.5 and
@@ -368,9 +375,9 @@
     --font-display: 'Vollkorn', Georgia, serif;
     --font-note: 'Caveat', cursive;
     /* Instrument readings only, and only at 11px or an exact multiple (ADR-180 clause 2) —
-       the rule, the chart axis, journal timestamps, counters. Everything else mono, a code
-       block above all, stays on --font-mono's system stack, which is the face that is good at
-       13px. A declaration naming this token at any other size is wrong. */
+       the rule, the chart axis, journal timestamps, counters. A declaration naming this token
+       at any other size is wrong; everything else mono, code blocks included, is --font-mono
+       (ADR-191) regardless of size. */
     --font-readout: 'Departure Mono', var(--font-mono);
 
     /* Pencil rules: the worktop is squared paper, the chart is graph paper. */

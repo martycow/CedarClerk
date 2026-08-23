@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-23 — Martian Mono is `--font-mono` (ADR-191)
+
+**`--font-mono` gets a real face, product-wide.** It was `ui-monospace, Menlo, Consolas, monospace`
+since the token's introduction — ADR-180 considered swapping it directly for Departure Mono and
+rejected that (a pixel face off its 11px grid reads as broken in a 13px code block), giving Departure
+Mono its own `--font-readout` role instead. Marty asked for Martian Mono specifically, and this time
+chose the direct swap over a second role: dates, counts, tags, code blocks — everywhere `--font-mono`
+is read, app and blog alike.
+
+Self-hosted the same way the other four faces are (ADR-143): `@fontsource/martian-mono`, six files
+(latin/cyrillic × 400/600/700, the three weights any call site actually uses), copied unhashed into
+`assets/fonts` for the blog and landing page per ADR-178's mechanism, `DesignTokens.FontFaces` growing
+six matching `@font-face` rules with the `index.css` unicode-ranges.
+
 ## 2026-08-22 — the readout face, and one menu for reading (branch `UI_V2`)
 
 **Departure Mono is the readout face, bound to 11px (ADR-180).** Marty asked for it; the file was
