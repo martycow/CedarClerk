@@ -103,6 +103,12 @@
 
 .empty-state .hint { max-width: 46ch; }
 
+.empty-panel {
+    width: 100%;
+    max-width: 720px;
+    align-self: center;
+}
+
 .empty-filtered {
     padding: var(--space-5);
     text-align: center;
@@ -347,6 +353,39 @@ a.tasks-row:hover { background: var(--hover); }
     align-items: center;
     gap: var(--space-2);
     width: 100%;
+}
+
+.file-actions,
+.file-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.file-actions { flex-wrap: wrap; }
+
+.file-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.file-row {
+    min-width: 0;
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+}
+
+.file-row app-icon { flex: none; color: var(--accent); }
+
+.file-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* The board scrolls sideways rather than squeezing four columns into a phone: a 60px-wide kanban

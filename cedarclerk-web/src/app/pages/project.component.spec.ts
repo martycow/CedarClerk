@@ -6,6 +6,7 @@ import { ProjectDetail, ProjectSummary, ProjectsService } from '../core/projects
 import { Build, BuildsService } from '../core/builds.service';
 import { RulerService } from '../core/ruler.service';
 import { en } from '../core/i18n/en';
+import { AssetsService } from '../core/assets.service';
 
 const SUMMARY: ProjectSummary = {
     id: 'p1', name: 'Cedar Quest', description: '', projectType: 'fullgame', coverUrl: null,
@@ -48,8 +49,16 @@ const BUILDS: Build[] = [
 class FakeProjects {
     detail: ProjectDetail | null = DETAIL;
     list_: ProjectSummary[] | null = [SUMMARY, OTHER];
+    updates: unknown[] = [];
     async get() { if (!this.detail) throw new Error('nope'); return structuredClone(this.detail); }
     async list() { if (!this.list_) throw new Error('nope'); return structuredClone(this.list_); }
+    async update(id: string, name: string, description: string, coverUrl: string | null) {
+        this.updates.push({ id, name, description, coverUrl });
+        return { ...SUMMARY, id, name, description, coverUrl };
+    }
+    async setShowcase(_id: string, _enabled: boolean, slug: string | null, _links: string) {
+        return { showcaseSlug: slug };
+    }
 }
 
 class FakeBuilds {
@@ -57,10 +66,19 @@ class FakeBuilds {
     async list() { if (!this.builds) throw new Error('nope'); return structuredClone(this.builds); }
 }
 
+class FakeAssets {
+    uploaded: File[] = [];
+    async upload(file: File) {
+        this.uploaded.push(file);
+        return { id: 'cover-asset', url: '/media/project-cover.png' };
+    }
+}
+
 describe('project hub', () => {
     let fixture: ComponentFixture<ProjectComponent>;
     let projects: FakeProjects;
     let builds: FakeBuilds;
+    let assets: FakeAssets;
     const t = en.projects;
 
     const el = () => fixture.nativeElement as HTMLElement;
@@ -76,11 +94,13 @@ describe('project hub', () => {
     async function create() {
         projects = new FakeProjects();
         builds = new FakeBuilds();
+        assets = new FakeAssets();
         TestBed.configureTestingModule({
             providers: [
                 provideRouter([]),
                 { provide: ProjectsService, useValue: projects },
                 { provide: BuildsService, useValue: builds },
+                { provide: AssetsService, useValue: assets },
                 { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'p1' })) } },
             ],
         });
@@ -234,5 +254,20 @@ describe('project hub', () => {
 
     it('keeps the project type on this screen — it is the only one that shows it', () => {
         expect(el().querySelector('.hero-sub')?.textContent).toContain(t.projectTypes.fullgame.name);
+    });
+
+    it('uploads and saves a project logo through the existing cover field', async () => {
+        const component = fixture.componentInstance;
+        component.startEdit();
+        component.editCoverFile.set(new File(['cover'], 'cover.png', { type: 'image/png' }));
+        fixture.detectChanges();
+
+        expect(el().querySelector('.cover-field')?.textContent).toContain(t.edit.logoLabel);
+        await component.saveEdit();
+
+        expect(assets.uploaded.map(file => file.name)).toEqual(['cover.png']);
+        expect(projects.updates).toEqual([expect.objectContaining({ coverUrl: '/media/project-cover.png' })]);
+        expect(component.project()?.coverUrl).toBe('/media/project-cover.png');
+        expect(component.summary()?.coverUrl).toBe('/media/project-cover.png');
     });
 });

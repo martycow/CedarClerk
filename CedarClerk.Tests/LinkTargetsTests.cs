@@ -43,6 +43,7 @@ public class LinkTargetsTests
     public void Known_types_are_the_ones_the_endpoints_accept()
     {
         Assert.True(LinkTargets.IsKnown(LinkTargets.Asset));
+        Assert.True(LinkTargets.IsKnown(LinkTargets.Attachment));
         Assert.True(LinkTargets.IsKnown(LinkTargets.Document));
         Assert.True(LinkTargets.IsKnown(LinkTargets.Task));
         Assert.False(LinkTargets.IsKnown("sprint"));

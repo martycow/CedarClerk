@@ -535,6 +535,55 @@
     width: 100%;
 }
 
+.cover-field { margin-top: var(--space-3); }
+
+.cover-row,
+.cover-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.cover-preview {
+    width: 52px;
+    height: 52px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--t2);
+    font-family: var(--font-display);
+    font-weight: 700;
+}
+
+.cover-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.cover-controls {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+}
+
+.cover-file {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--fs-ui);
+    color: var(--text);
+}
+
+.cover-actions { flex-wrap: wrap; }
+
 .danger-row {
     display: flex;
     gap: var(--space-2);

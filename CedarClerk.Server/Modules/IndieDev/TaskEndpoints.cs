@@ -58,8 +58,9 @@ public static class TaskEndpoints
                 db, uid, LinkTargets.Task, tasks.Select(t => t.Id).ToList());
 
             var labels = await ResolveLabelsAsync(db, uid, links.Values.SelectMany(v => v));
+            var urls = await ResolveUrlsAsync(db, uid, links.Values.SelectMany(v => v));
 
-            return Results.Ok(Sorted(tasks).Select(t => Describe(t, links, labels)));
+            return Results.Ok(Sorted(tasks).Select(t => Describe(t, links, labels, urls)));
         });
 
         group.MapPost("/", async (
@@ -138,8 +139,9 @@ public static class TaskEndpoints
 
             var links = await ProjectLinks.LinkedIdsForManyAsync(db, uid, LinkTargets.Task, [task.Id]);
             var labels = await ResolveLabelsAsync(db, uid, links.Values.SelectMany(v => v));
+            var urls = await ResolveUrlsAsync(db, uid, links.Values.SelectMany(v => v));
 
-            return Results.Ok(Describe(task, links, labels));
+            return Results.Ok(Describe(task, links, labels, urls));
         });
 
         single.MapPut("/", async (Guid id, UpdateTaskRequest req, ClaimsPrincipal user, CedarDbContext db) =>
@@ -229,7 +231,8 @@ public static class TaskEndpoints
 
             var links = await ProjectLinks.LinkedIdsForManyAsync(db, uid, LinkTargets.Task, [task.Id]);
             var labels = await ResolveLabelsAsync(db, uid, links.Values.SelectMany(v => v));
-            return Results.Ok(Describe(task, links, labels));
+            var urls = await ResolveUrlsAsync(db, uid, links.Values.SelectMany(v => v));
+            return Results.Ok(Describe(task, links, labels, urls));
         });
 
         single.MapDelete("/", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
@@ -314,7 +317,8 @@ public static class TaskEndpoints
     public static object Describe(
         GameTask t,
         IReadOnlyDictionary<Guid, List<(string Type, Guid Id)>> links,
-        IReadOnlyDictionary<(string Type, Guid Id), string> labels) => new
+        IReadOnlyDictionary<(string Type, Guid Id), string> labels,
+        IReadOnlyDictionary<(string Type, Guid Id), string>? urls = null) => new
     {
         t.Id,
         t.ProjectId,
@@ -340,6 +344,7 @@ public static class TaskEndpoints
                 // document takes its links with it, so this is the disappearing case that route
                 // does not cover — a row written before that rule existed, or a future one.
                 label = labels.GetValueOrDefault(l, ""),
+                url = urls?.GetValueOrDefault(l),
             })
             .OrderBy(l => l.type)
             .ThenBy(l => l.label)
@@ -377,6 +382,16 @@ public static class TaskEndpoints
                 labels[(LinkTargets.Asset, a.Id)] = a.FileName;
         }
 
+        var attachmentIds = wanted.Where(t => t.Type == LinkTargets.Attachment).Select(t => t.Id).ToList();
+        if (attachmentIds.Count > 0)
+        {
+            foreach (var a in await db.Assets
+                         .Where(a => attachmentIds.Contains(a.Id) && a.OwnerId == ownerId)
+                         .Select(a => new { a.Id, a.FileName })
+                         .ToListAsync())
+                labels[(LinkTargets.Attachment, a.Id)] = a.FileName;
+        }
+
         var taskIds = wanted.Where(t => t.Type == LinkTargets.Task).Select(t => t.Id).ToList();
         if (taskIds.Count > 0)
         {
@@ -390,6 +405,21 @@ public static class TaskEndpoints
         return labels;
     }
 
+    private static async Task<Dictionary<(string Type, Guid Id), string>> ResolveUrlsAsync(
+        CedarDbContext db, string ownerId, IEnumerable<(string Type, Guid Id)> targets)
+    {
+        var ids = targets.Where(t => t.Type == LinkTargets.Attachment).Select(t => t.Id).Distinct().ToList();
+        var urls = new Dictionary<(string, Guid), string>();
+        if (ids.Count == 0) return urls;
+
+        foreach (var a in await db.Assets
+                     .Where(a => ids.Contains(a.Id) && a.OwnerId == ownerId)
+                     .Select(a => new { a.Id, a.LocalPath })
+                     .ToListAsync())
+            urls[(LinkTargets.Attachment, a.Id)] = $"/media/{a.LocalPath}";
+        return urls;
+    }
+
     private static Task<bool> OwnsProjectAsync(CedarDbContext db, Guid projectId, string ownerId) =>
         db.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == ownerId);
 
@@ -397,6 +427,7 @@ public static class TaskEndpoints
     {
         LinkTargets.Document => db.Drafts.AnyAsync(d => d.Id == id && d.OwnerId == ownerId),
         LinkTargets.Asset => db.AssetEntries.AnyAsync(a => a.Id == id && a.OwnerId == ownerId),
+        LinkTargets.Attachment => db.Assets.AnyAsync(a => a.Id == id && a.OwnerId == ownerId),
         LinkTargets.Task => db.GameTasks.AnyAsync(t => t.Id == id && t.OwnerId == ownerId),
         _ => Task.FromResult(false),
     };

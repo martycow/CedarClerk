@@ -16,11 +16,12 @@ export type TaskPriority = 1 | 2 | 3;
 export const TASK_PRIORITIES: TaskPriority[] = [1, 2, 3];
 
 /** One of CedarClerk.Core.LinkTargets. */
-export type LinkTarget = 'document' | 'asset' | 'task';
+export type LinkTarget = 'document' | 'asset' | 'attachment' | 'task';
 
 export const LINK_TARGET_ICONS: Record<LinkTarget, IconName> = {
     document: 'file-text',
     asset: 'image',
+    attachment: 'file',
     task: 'check-square',
 };
 
@@ -29,6 +30,8 @@ export interface TaskLink {
     id: string;
     /** Empty when the target is gone — the chip says so rather than rendering blank. */
     label: string;
+    /** Only byte-backed attachments have a direct address. */
+    url?: string | null;
 }
 
 export interface GameTask {

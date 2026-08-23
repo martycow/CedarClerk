@@ -18,6 +18,16 @@ public static class AssetEndpoints
         ["video/mp4"]  = (".mp4", Consts.FileSizes.MediaMaxBytes),
         ["audio/mpeg"] = (".mp3", Consts.FileSizes.MediaMaxBytes),
         ["audio/ogg"]  = (".ogg", Consts.FileSizes.MediaMaxBytes),
+        ["application/pdf"] = (".pdf", Consts.FileSizes.MediaMaxBytes),
+        ["application/zip"] = (".zip", Consts.FileSizes.MediaMaxBytes),
+        ["application/x-zip-compressed"] = (".zip", Consts.FileSizes.MediaMaxBytes),
+        ["text/plain"] = (".txt", Consts.FileSizes.MediaMaxBytes),
+        ["text/markdown"] = (".md", Consts.FileSizes.MediaMaxBytes),
+        ["text/csv"] = (".csv", Consts.FileSizes.MediaMaxBytes),
+        ["application/json"] = (".json", Consts.FileSizes.MediaMaxBytes),
+        ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"] = (".docx", Consts.FileSizes.MediaMaxBytes),
+        ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"] = (".xlsx", Consts.FileSizes.MediaMaxBytes),
+        ["application/vnd.openxmlformats-officedocument.presentationml.presentation"] = (".pptx", Consts.FileSizes.MediaMaxBytes),
     };
 
     public static void MapAssetEndpoints(this WebApplication app)
@@ -144,6 +154,13 @@ public static class AssetEndpoints
                     return Results.Json(new { error = ErrorMessages.AssetInUse, usedBy },
                         statusCode: StatusCodes.Status409Conflict);
                 }
+
+                await Modules.IndieDev.ProjectLinks.RemoveAllForAsync(
+                    db, uid, LinkTargets.Attachment, asset.Id);
+                var publicUrl = $"/media/{asset.LocalPath}";
+                await db.Projects
+                    .Where(p => p.OwnerId == uid && p.CoverUrl == publicUrl)
+                    .ExecuteUpdateAsync(update => update.SetProperty(p => p.CoverUrl, (string?)null));
 
                 DeleteIfExists(Path.Combine(media.Dir, asset.LocalPath));
                 if (asset.TelegramLocalPath is not null)

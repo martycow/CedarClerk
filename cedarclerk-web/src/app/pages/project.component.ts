@@ -31,6 +31,7 @@ import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { ModuleTileComponent } from '../bench/worktop/module-tile.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 import { WorktopComponent } from '../bench/worktop/worktop.component';
+import { AssetsService } from '../core/assets.service';
 
 /** One plate on the wall. `link` is the screen it opens — ADR-160 rule 1: no door, no plate. */
 interface ModulePlate {
@@ -67,6 +68,7 @@ const MS_PER_DAY = 86_400_000;
 })
 export class ProjectComponent implements OnDestroy {
     private api = inject(ProjectsService);
+    private assets = inject(AssetsService);
     private buildsApi = inject(BuildsService);
     private route = inject(ActivatedRoute);
     private router = inject(Router);
@@ -93,6 +95,8 @@ export class ProjectComponent implements OnDestroy {
     editing = signal(false);
     editName = signal('');
     editDescription = signal('');
+    editCoverUrl = signal<string | null>(null);
+    editCoverFile = signal<File | null>(null);
     editShowcase = signal(false);
     editShowcaseSlug = signal('');
     editShowcaseLinks = signal('');
@@ -279,6 +283,8 @@ export class ProjectComponent implements OnDestroy {
         if (!project) return;
         this.editName.set(project.name);
         this.editDescription.set(project.description);
+        this.editCoverUrl.set(project.coverUrl);
+        this.editCoverFile.set(null);
         this.editShowcase.set(!!project.showcaseSlug);
         this.editShowcaseSlug.set(project.showcaseSlug ?? '');
         this.editShowcaseLinks.set(project.showcaseLinks ?? '');
@@ -301,7 +307,10 @@ export class ProjectComponent implements OnDestroy {
         this.busy.set(true);
         this.actionError.set(null);
         try {
-            await this.api.update(project.id, name, this.editDescription().trim(), project.coverUrl);
+            let coverUrl = this.editCoverUrl();
+            const coverFile = this.editCoverFile();
+            if (coverFile) coverUrl = (await this.assets.upload(coverFile)).url;
+            await this.api.update(project.id, name, this.editDescription().trim(), coverUrl);
             // T-159 — the showcase saves with the same button; the server slugifies and may rename.
             const showcase = await this.api.setShowcase(project.id,
                 this.editShowcase(), this.editShowcaseSlug().trim() || null, this.editShowcaseLinks().trim());
@@ -309,15 +318,30 @@ export class ProjectComponent implements OnDestroy {
                 ...project,
                 name,
                 description: this.editDescription().trim(),
+                coverUrl,
                 showcaseSlug: showcase.showcaseSlug,
                 showcaseLinks: this.editShowcaseLinks().trim(),
             });
+            this.projects.update(rows => rows.map(row => row.id === project.id
+                ? { ...row, name, description: this.editDescription().trim(), coverUrl }
+                : row));
             this.editing.set(false);
         } catch (e) {
             this.actionError.set(httpErrorMessage(e, this.t().projects.actionFailed));
         } finally {
             this.busy.set(false);
         }
+    }
+
+    chooseCover(event: Event) {
+        const input = event.target as HTMLInputElement;
+        this.editCoverFile.set(input.files?.[0] ?? null);
+        input.value = '';
+    }
+
+    removeCover() {
+        this.editCoverFile.set(null);
+        this.editCoverUrl.set(null);
     }
 
     async toggleArchived() {

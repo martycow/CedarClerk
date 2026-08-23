@@ -64,15 +64,13 @@
         } @else if (loadError(); as e) {
             <p class="error-line">{{ e }}</p>
         } @else if (empty()) {
-            <div class="empty-state">
-                <app-icon name="check-square" size="lg"></app-icon>
-                <p class="empty-title">{{ t().projects.tasks.empty }}</p>
-                <p class="hint">{{ t().projects.tasks.emptyHint }}</p>
-                <app-button variant="pine" (clicked)="startCreating()">
-                    <app-icon name="plus" size="sm"></app-icon>
-                    {{ t().projects.tasks.newTask }}
-                </app-button>
-            </div>
+            <app-shelf-panel class="empty-panel" [title]="t().projects.tasks.title" [count]="0">
+                <div class="empty-state">
+                    <app-icon name="check-square" size="lg"></app-icon>
+                    <p class="empty-title">{{ t().projects.tasks.empty }}</p>
+                    <p class="hint">{{ t().projects.tasks.emptyHint }}</p>
+                </div>
+            </app-shelf-panel>
         } @else if (view() === 'board') {
             <div class="board">
                 @for (status of statuses; track status) {
@@ -256,9 +254,15 @@
                         @for (link of task.links; track link.type + link.id) {
                             <div class="link-row">
                                 <app-icon [name]="linkIcons[link.type]" size="sm"></app-icon>
-                                <span class="link-label" [class.gone]="!link.label">
-                                    {{ link.label || t().projects.tasks.linkGone }}
-                                </span>
+                                @if (link.url) {
+                                    <a class="link-label" [href]="link.url" target="_blank" rel="noopener">
+                                        {{ link.label || t().projects.tasks.linkGone }}
+                                    </a>
+                                } @else {
+                                    <span class="link-label" [class.gone]="!link.label">
+                                        {{ link.label || t().projects.tasks.linkGone }}
+                                    </span>
+                                }
                                 <span class="spacer"></span>
                                 <app-button variant="paper" size="sm" [disabled]="busy()"
                                             [title]="t().projects.tasks.unlink"
@@ -307,7 +311,7 @@
             @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
         </div>
 
-        <div modal-footer class="modal-foot-row">
+        <div modal-actions class="modal-foot-row">
             <app-button variant="danger" [disabled]="busy()" (clicked)="remove(task)">
                 {{ t().projects.tasks.delete }}
             </app-button>
@@ -333,10 +337,17 @@
             <!--Enter submits, as it did on the field this replaces: the event bubbles from the
             field to this host.-->
             <app-input class="task-title-input" [serif]="true" inputId="new-task-title"
+                       [label]="t().projects.tasks.fieldName"
                        [placeholder]="t().projects.tasks.titlePlaceholder"
                        [value]="newTitle()" (valueChange)="newTitle.set($any($event) ?? '')"
                        (keydown.enter)="create()" />
-            <label class="named-elsewhere" for="new-task-title">{{ t().projects.tasks.titlePlaceholder }}</label>
+
+            <div class="field">
+                <label for="new-task-description">{{ t().projects.tasks.fieldDescription }}</label>
+                <textarea id="new-task-description" rows="4" [ngModel]="newDescription()"
+                          (ngModelChange)="newDescription.set($event)"
+                          [placeholder]="t().projects.tasks.descriptionPlaceholder"></textarea>
+            </div>
 
             <div class="field-grid">
                 <div class="field">
@@ -357,10 +368,39 @@
                 </div>
             </div>
 
+            <div class="field">
+                <label>{{ t().projects.tasks.fieldFiles }}</label>
+                <input #taskFiles type="file" multiple hidden
+                       accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,audio/mpeg,audio/ogg,application/pdf,application/zip,application/x-zip-compressed,text/plain,text/markdown,text/csv,application/json,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                       (change)="chooseFiles($event)">
+                <div class="file-actions">
+                    <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="taskFiles.click()">
+                        <app-icon name="file-arrow-up" size="sm"></app-icon>
+                        {{ t().projects.tasks.addFiles }}
+                    </app-button>
+                    <span class="hint">{{ t().projects.tasks.fileTypesHint }}</span>
+                </div>
+                @if (newFiles().length) {
+                    <div class="file-list">
+                        @for (file of newFiles(); track file.name + file.size; let i = $index) {
+                            <div class="file-row">
+                                <app-icon name="file" size="sm"></app-icon>
+                                <span class="file-name" [title]="file.name">{{ file.name }}</span>
+                                <app-button variant="paper" size="sm" [disabled]="busy()"
+                                            [title]="t().projects.tasks.removeFile"
+                                            (clicked)="removeNewFile(i)">
+                                    <app-icon name="x" size="xs" [label]="t().projects.tasks.removeFile"></app-icon>
+                                </app-button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
             @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
         </div>
 
-        <div modal-footer class="modal-foot-row">
+        <div modal-actions class="modal-foot-row">
             <span class="spacer"></span>
             <app-button variant="paper" (clicked)="creating.set(false)">{{ t().projects.tasks.cancel }}</app-button>
             <app-button variant="pine" [disabled]="busy()" (clicked)="create()">{{ t().projects.tasks.newTask }}</app-button>

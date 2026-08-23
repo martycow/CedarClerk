@@ -8,6 +8,7 @@ import { SprintsService } from '../core/sprints.service';
 import { BuildsService } from '../core/builds.service';
 import { RulerService } from '../core/ruler.service';
 import { en } from '../core/i18n/en';
+import { AssetsService } from '../core/assets.service';
 
 const DETAIL: ProjectDetail = {
     id: 'p1', name: 'Cedar Quest', description: '', projectType: 'fullgame', coverUrl: null,
@@ -31,12 +32,29 @@ const TASKS: GameTask[] = [
 ];
 
 class FakeTasks {
+    created: unknown[] = [];
+    links: unknown[] = [];
     async list() { return structuredClone(TASKS); }
+    async create(_projectId: string, input: unknown) {
+        this.created.push(input);
+        return task({ id: 'created', ...(input as Partial<GameTask>) });
+    }
+    async link(taskId: string, type: string, id: string) { this.links.push({ taskId, type, id }); }
+}
+
+class FakeAssets {
+    uploaded: File[] = [];
+    async upload(file: File) {
+        this.uploaded.push(file);
+        return { id: `asset-${this.uploaded.length}`, url: '/media/file' };
+    }
 }
 
 describe('project tasks', () => {
     let fixture: ComponentFixture<ProjectTasksComponent>;
     let ruler: RulerService;
+    let tasksApi: FakeTasks;
+    let assetsApi: FakeAssets;
     const t = en.projects.tasks;
 
     const el = () => fixture.nativeElement as HTMLElement;
@@ -48,10 +66,13 @@ describe('project tasks', () => {
 
     async function create() {
         localStorage.removeItem('cedar.taskView');
+        tasksApi = new FakeTasks();
+        assetsApi = new FakeAssets();
         TestBed.configureTestingModule({
             providers: [
                 provideRouter([]),
-                { provide: TasksService, useValue: new FakeTasks() },
+                { provide: TasksService, useValue: tasksApi },
+                { provide: AssetsService, useValue: assetsApi },
                 { provide: ProjectsService, useValue: { async get() { return structuredClone(DETAIL); } } },
                 { provide: SprintsService, useValue: { async list() { return []; } } },
                 { provide: BuildsService, useValue: { async list() { return []; } } },
@@ -134,5 +155,44 @@ describe('project tasks', () => {
         fixture.destroy();
         expect(ruler.left()).toEqual([]);
         expect(ruler.label()).toBe('');
+    });
+
+    it('keeps the empty board on a shelf and offers New task only once', () => {
+        fixture.componentInstance.tasks.set([]);
+        fixture.detectChanges();
+
+        const createButtons = [...el().querySelectorAll('app-button')]
+            .filter(button => button.textContent?.trim() === t.newTask);
+        expect(createButtons.length).toBe(1);
+        expect(el().querySelector('app-shelf-panel.empty-panel')?.getAttribute('aria-label')).toBe(t.title);
+    });
+
+    it('creates a named, described task and links every uploaded file', async () => {
+        const component = fixture.componentInstance;
+        component.startCreating();
+        component.newTitle.set('Record trailer');
+        component.newDescription.set('Capture the release build.');
+        component.newFiles.set([
+            new File(['poster'], 'poster.png', { type: 'image/png' }),
+            new File(['notes'], 'notes.pdf', { type: 'application/pdf' }),
+        ]);
+        fixture.detectChanges();
+
+        const labels = [...el().querySelectorAll('.task-modal label')].map(x => x.textContent?.trim());
+        expect(labels).toContain(t.fieldName);
+        expect(labels).toContain(t.fieldDescription);
+        expect(labels).toContain(t.fieldFiles);
+
+        await component.create();
+
+        expect(tasksApi.created).toEqual([expect.objectContaining({
+            title: 'Record trailer', description: 'Capture the release build.',
+        })]);
+        expect(assetsApi.uploaded.map(file => file.name)).toEqual(['poster.png', 'notes.pdf']);
+        expect(tasksApi.links).toEqual([
+            { taskId: 'created', type: 'attachment', id: 'asset-1' },
+            { taskId: 'created', type: 'attachment', id: 'asset-2' },
+        ]);
+        expect(component.creating()).toBe(false);
     });
 });

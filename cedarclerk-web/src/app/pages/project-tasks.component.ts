@@ -30,6 +30,7 @@ import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 import { StampBadgeComponent, StampTone } from '../bench/display/stamp-badge.component';
 import { TaskTagComponent } from '../bench/display/task-tag.component';
+import { AssetsService } from '../core/assets.service';
 
 const VIEW_KEY = 'cedar.taskView';
 
@@ -56,6 +57,7 @@ type SortKey = 'title' | 'status' | 'priority' | 'dueAt';
 })
 export class ProjectTasksComponent implements OnDestroy {
     private api = inject(TasksService);
+    private assets = inject(AssetsService);
     private projects = inject(ProjectsService);
     private sprintsApi = inject(SprintsService);
     private buildsApi = inject(BuildsService);
@@ -93,6 +95,8 @@ export class ProjectTasksComponent implements OnDestroy {
 
     creating = signal(false);
     newTitle = signal('');
+    newDescription = signal('');
+    newFiles = signal<File[]>([]);
     newStatus = signal<TaskStatus>('backlog');
     newPriority = signal<TaskPriority>(2);
 
@@ -316,6 +320,8 @@ export class ProjectTasksComponent implements OnDestroy {
 
     startCreating(status: TaskStatus = 'backlog') {
         this.newTitle.set('');
+        this.newDescription.set('');
+        this.newFiles.set([]);
         this.newStatus.set(status);
         this.newPriority.set(2);
         this.actionError.set(null);
@@ -326,12 +332,39 @@ export class ProjectTasksComponent implements OnDestroy {
         const title = this.newTitle().trim();
         if (!title) { this.actionError.set(this.t().projects.tasks.titleRequired); return; }
 
-        const created = await this.run(() => this.api.create(this.projectId(), {
-            title,
-            status: this.newStatus(),
-            priority: this.newPriority(),
-        }));
-        if (created) this.creating.set(false);
+        this.busy.set(true);
+        this.actionError.set(null);
+        let created: GameTask | null = null;
+        try {
+            created = await this.api.create(this.projectId(), {
+                title,
+                description: this.newDescription(),
+                status: this.newStatus(),
+                priority: this.newPriority(),
+            });
+            for (const file of this.newFiles()) {
+                const asset = await this.assets.upload(file);
+                await this.api.link(created.id, 'attachment', asset.id);
+            }
+            this.creating.set(false);
+        } catch (e) {
+            this.actionError.set(httpErrorMessage(e, this.t().projects.tasks.actionFailed));
+            // A successfully created task must not be submitted twice if a later upload failed.
+            if (created) this.creating.set(false);
+        } finally {
+            try { this.tasks.set(await this.api.list(this.projectId())); } catch { /* keep the mutation error */ }
+            this.busy.set(false);
+        }
+    }
+
+    chooseFiles(event: Event) {
+        const input = event.target as HTMLInputElement;
+        this.newFiles.set(Array.from(input.files ?? []));
+        input.value = '';
+    }
+
+    removeNewFile(index: number) {
+        this.newFiles.update(files => files.filter((_, i) => i !== index));
     }
 
     // ---- plumbing ---------------------------------------------------------
@@ -398,7 +431,7 @@ export class ProjectTasksComponent implements OnDestroy {
     linkCounts(task: GameTask) {
         return {
             document: task.links.filter(l => l.type === 'document').length,
-            asset: task.links.filter(l => l.type === 'asset').length,
+            asset: task.links.filter(l => l.type === 'asset' || l.type === 'attachment').length,
             task: task.links.filter(l => l.type === 'task').length,
         };
     }

@@ -216,6 +216,38 @@
         <textarea id="edit-description" class="text-input" rows="3" maxlength="2000"
                   [ngModel]="editDescription()" (ngModelChange)="editDescription.set($event)"></textarea>
 
+        <div class="cover-field">
+            <span class="field-label">{{ t().projects.edit.logoLabel }}</span>
+            <input #coverInput type="file" accept="image/jpeg,image/png,image/gif,image/webp" hidden
+                   (change)="chooseCover($event)">
+            <div class="cover-row">
+                <span class="cover-preview" [class.has-image]="!!editCoverUrl()">
+                    @if (editCoverUrl(); as coverUrl) {
+                        <img [src]="coverUrl" alt="">
+                    } @else {
+                        {{ initials(editName()) }}
+                    }
+                </span>
+                <div class="cover-controls">
+                    @if (editCoverFile(); as file) {
+                        <span class="cover-file" [title]="file.name">{{ file.name }}</span>
+                    }
+                    <span class="hint">{{ t().projects.edit.logoHint }}</span>
+                    <div class="cover-actions">
+                        <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="coverInput.click()">
+                            <app-icon name="image" size="sm"></app-icon>
+                            {{ t().projects.edit.chooseLogo }}
+                        </app-button>
+                        @if (editCoverUrl() || editCoverFile()) {
+                            <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="removeCover()">
+                                {{ t().projects.edit.removeLogo }}
+                            </app-button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!--T-159 (ADR-134) — the public game page. Off by default; the slug is the URL.-->
         <label class="field-label spaced checkbox-row">
             <input type="checkbox" [ngModel]="editShowcase()" (ngModelChange)="editShowcase.set($event)">

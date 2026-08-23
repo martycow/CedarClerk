@@ -6,13 +6,14 @@ public static class LinkTargets
 {
     public const string Document = "document";
     public const string Asset = "asset";
+    public const string Attachment = "attachment";
     public const string Task = "task";
 
     // T-126 — documents attach to a released version through a link; tasks use a column instead
     // (ADR-112), because "which build did this ship in" is one answer worth filtering by.
     public const string Build = "build";
 
-    public static readonly IReadOnlyList<string> All = [Asset, Build, Document, Task];
+    public static readonly IReadOnlyList<string> All = [Asset, Attachment, Build, Document, Task];
 
     public static bool IsKnown(string? type) => type is not null && All.Contains(type);
 

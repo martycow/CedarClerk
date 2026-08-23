@@ -265,20 +265,24 @@ public class TaskTrackerTests
         var project = Guid.NewGuid();
         var draft = new Draft { OwnerId = "u1", Title = "Ferry terminal layout", ProjectId = project };
         var asset = new AssetEntry { OwnerId = "u1", ProjectId = project, FileName = "opossum_idle.png" };
+        var attachment = new Asset { OwnerId = "u1", FileName = "capture-notes.pdf", LocalPath = "asset_notes.pdf" };
         var other = Task(project, "Bake lightmaps");
         db.Drafts.Add(draft);
         db.AssetEntries.Add(asset);
+        db.Assets.Add(attachment);
         db.GameTasks.Add(other);
         await db.SaveChangesAsync();
 
         var labels = await TaskEndpoints.ResolveLabelsAsync(db, "u1", [
             (LinkTargets.Document, draft.Id),
             (LinkTargets.Asset, asset.Id),
+            (LinkTargets.Attachment, attachment.Id),
             (LinkTargets.Task, other.Id),
         ]);
 
         Assert.Equal("Ferry terminal layout", labels[(LinkTargets.Document, draft.Id)]);
         Assert.Equal("opossum_idle.png", labels[(LinkTargets.Asset, asset.Id)]);
+        Assert.Equal("capture-notes.pdf", labels[(LinkTargets.Attachment, attachment.Id)]);
         Assert.Equal("Bake lightmaps", labels[(LinkTargets.Task, other.Id)]);
     }
 

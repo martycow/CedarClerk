@@ -174,7 +174,7 @@
             @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
         </div>
 
-        <div modal-footer class="modal-foot-row">
+        <div modal-actions class="modal-foot-row">
             @if (editing(); as s) {
                 <button class="btn-ghost danger" (click)="remove(s)" [disabled]="busy()">
                     {{ t().projects.planner.deleteSprint }}
