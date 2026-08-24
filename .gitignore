@@ -75,3 +75,9 @@ docs/INPUT_PROMPT.md
 
 # Mirror of the Claude Design system — re-fetchable from the project id in config.json
 .design-sync/
+
+# === Marty's review drops ===
+# Screenshots, annotations and a design-system copy handed over for a correction round. Review
+# material rather than source: it is read once and replaced, and the decisions it produced live in
+# docs/adr/ and CHANGELOG.md. Same reasoning as the prompt inbox above.
+CedarClerk_BAD/
