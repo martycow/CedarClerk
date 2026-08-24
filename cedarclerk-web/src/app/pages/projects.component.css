@@ -83,11 +83,11 @@
 
 .row {
     display: grid;
-    grid-template-columns: var(--space-6) minmax(220px, 1fr) 80px 80px 80px 150px 110px;
+    grid-template-columns: var(--space-6) minmax(220px, 1fr) 80px 80px 80px 190px 110px;
     gap: var(--dens-gap);
     align-items: center;
     box-sizing: border-box;
-    min-width: 760px;
+    min-width: 800px;
     min-height: var(--hit-target);
     padding: var(--dens-row-y) var(--space-3);
     border-bottom: 1px solid var(--rule-ink-soft);

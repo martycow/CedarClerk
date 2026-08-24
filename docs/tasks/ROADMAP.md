@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-08-20
+last_verified: 2026-08-24
 source_of_truth_for: phase-by-phase status — what shipped and when
 guard: none
 ---
@@ -9,7 +9,20 @@ guard: none
 
 Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-saas-plan.md` (v1.7, 15.07.2026) and `Plans/session-brief-v0.8.0-planning.md`, which are now archived under `Plans/OLD/`. **This file is the one live roadmap going forward** — update it when a phase item closes, don't recreate a parallel plan doc. Architectural/product decisions referenced below (why something was built a certain way) live in `docs/DECISIONS.md`, not here — this file tracks *status*, DECISIONS tracks *rationale*.
 
-## Status summary (as of 23.08.2026)
+## Status summary (as of 24.08.2026)
+
+**Second annotated round (`T-281`, ADR-200…203, v0.14.0).** Nineteen screenshots and six product
+notes, closed as one pass. The bulk of it was a single missing box: ADR-200's trim tier (24px) for
+chips and for controls riding a chrome band, which is what every "too tall" note was pointing at.
+Index tiles are now cut into the board they switch on every screen that has them; a panel's name
+and counter share a baseline; the fullscreen toggle moved to the drawer lip (ADR-201); the blog
+index carries its own language pick again, scoped to the index (ADR-202); a post can be filed into
+a project from the Posts Manager (ADR-203); Telegram channel pictures are copied down and drawn in
+the blog header and in Settings; and numeric dates read MM/DD/YYYY across the app. Three unreported
+defects were found and fixed on the way — `app-input`'s dense mode had never been dense, a small
+paper button kept its desktop box under a coarse pointer, and a dialog's actions could sit under
+the drawer lip. `cedar test --smoke` is green end to end (1551), which it had not been: five smoke
+tests were failing on stale expectations and were brought up to what ships.
 
 **Annotated screen correction pass (`T-280`, ADR-194…199).** All 25 annotated screenshots and the
 cross-screen notes were reconciled across navigation, projects, tasks, posts, registration,

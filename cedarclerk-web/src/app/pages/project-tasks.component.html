@@ -4,7 +4,7 @@
             <!--app-input names its field with a visible label or with nothing; this one is a
             toolbar search that has never had a caption, so the name is given from outside.-->
             <label class="named-elsewhere" for="tasks-search">{{ t().projects.tasks.search }}</label>
-            <app-input class="search-input" inputId="tasks-search" type="search"
+            <app-input class="search-input" inputId="tasks-search" type="search" [dense]="true"
                        [placeholder]="t().projects.tasks.search"
                        [value]="search()" (valueChange)="search.set($any($event) ?? '')" />
 

@@ -1,5 +1,52 @@
 # Changelog
 
+## 2026-08-24 — the trim tier, panel-edge tabs and the blog's own language (0.14.0)
+
+**A second annotated-screens round, and the answer to most of it was one missing box.** Every
+"too tall" note pointed at the same thing: the port drew chips and band passengers at a paper
+control's height. ADR-200 adds `--hit-trim` (24px) with two jurisdictions — chips, and anything
+riding a chrome band — so filter leaves, index tiles, the compact field and a panel header's own
+controls read at the mirror's proportions instead of at button scale. `tools/check-density.mjs`
+scores the tier rather than trusting it.
+
+**Index tiles are cut into the board they switch, never floating above it.** The Hub, the task
+board, the Stats chart and the Posts Manager all had a step between the tiles and the panel; the
+strips now sit on the edge, and the manager's three tabs stand on one board that holds whichever
+body is lit. A panel's name and its counter share a baseline, so the number no longer sits below
+the word it counts.
+
+**Two decisions moved.** The fullscreen toggle left the rail for the drawer lip (ADR-201) — the
+rail's right side is the save state and the screen's one primary action, and a window control
+standing among them read as a third thing the page offered. The blog index carries a language pick
+again (ADR-202), this time scoped to the index alone: it sets the index chrome and which
+translation a card previews in, and a post page still has no such control. The reading size and
+face controls now reach the card teaser, which is what made them look broken from the page they
+open on.
+
+**A post can be filed into a project** (ADR-203) from the Posts Manager's Placement group — the
+API existed since the module landed and no screen ever called it, so every post written before it
+belonged to nothing. **Telegram channel pictures are copied down and kept as files**, drawn in the
+blog header and beside every connected channel in Settings; a fresh copy is taken nightly and
+whenever Refresh is pressed.
+
+Also: numeric dates read MM/DD/YYYY everywhere in the app (the blog keeps its readable form); the
+audience shelf states the share of views that reported no reading language instead of ranking
+"Unknown" among real ones; the account popover became an identity row plus three rows rather than
+a centred address over two plaques; the tool wall drops project tools on the Hub, where no project
+is open; the RSS button is resin; the blog's order control stands on one line with the tag leaves;
+and the month rule no longer crosses the timeline spine.
+
+**Three defects found on the way, none of them reported.** `app-input`'s dense mode had never once
+been dense: the global field face sits at (0,6,1) and no component selector could beat it, so it
+repainted every ported field — `.field` is now an exclusion and the component owns its face. A
+small paper button kept its 30px box under a coarse pointer for the same reason, so the controls
+that name their own box now name it as the floor carrier's fallback. And a dialog's action row
+could sit under the drawer lip, which is what intercepted the click.
+
+Verification: `cedar test --smoke` all green — 1015 backend, 462 frontend, 74 smoke. Five smoke
+tests were red before this round on stale expectations (the landing route, two renamed labels, a
+reworked dialog, a hook that is no longer on that wall) and were brought up to what ships.
+
 ## 2026-08-23 — annotated screens correction pass
 
 **All 25 annotated Cedar Clerk screenshots were reconciled as one cross-product pass.** The shared

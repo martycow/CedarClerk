@@ -589,9 +589,15 @@ html, body {
       the rest — box, stock, radius, inset — to whichever page remembered to draw it, which is how
       the settings fields ended up on --sheet at 8px radius while the bench fields sat on
       --paper-bright at 3px, and how a field on a page that drew nothing arrived looking unpainted.
-      Anything wearing a face of its own still out-specifies this. Checkbox, radio, range, colour and
-      file keep the platform control — a paper stock on any of them is a widget bent out of shape. */
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+      Checkbox, radio, range, colour and file keep the platform control — a paper stock on any of
+      them is a widget bent out of shape.
+
+      `.field` is the opt-out, and it is an exclusion rather than a matter of out-specifying this:
+      six :not() clauses put this rule at (0,6,1), which no `:host([data-surface=…]) .field` in a
+      component can beat. app-input painted its own box, type and density and lost every one of
+      them here — its dense mode had never once been dense. A field wearing the class owns its
+      whole face and must declare it. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not(.field),
 select,
 textarea {
     box-sizing: border-box;
@@ -607,7 +613,7 @@ textarea {
 
 /* Withheld while focused: the ADR-140 halo is a box-shadow, and one drawn here would out-specify
    the global rule that paints it. */
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not(:focus-visible),
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not(.field):not(:focus-visible),
 select:not(:focus-visible),
 textarea:not(:focus-visible) {
     box-shadow: var(--shadow-field-inset);

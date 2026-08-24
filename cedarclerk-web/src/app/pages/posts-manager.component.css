@@ -224,6 +224,16 @@
 
 .action-row + .btn-ghost { margin-top: var(--space-3); }
 
+/* A filter over the list it sits on, drawn at the compact box the tiles above it take rather than
+   at a paper field's — a full-height field was the tallest thing in the column. */
+.post-search {
+    min-height: var(--hit-surface, var(--hit-chrome));
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-stamp);
+    font-family: var(--font-mono);
+    font-size: var(--text-chrome-sm);
+}
+
 .post-list {
     display: flex;
     flex-direction: column;

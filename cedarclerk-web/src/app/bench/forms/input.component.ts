@@ -37,8 +37,9 @@ let nextId = 0;
             margin-bottom: var(--space-1);
         }
 
-        /* The class carries the border so it outranks the global input rule at styles.scss, which
-           is the default for a bare field and would otherwise repaint this one --border-strong. */
+        /* The class is the opt-out from the global field face in styles.scss: that rule sits at
+           (0,6,1) and nothing here could out-specify it, so it excludes .field instead and this
+           component owns the whole face — box, stock, radius, inset, type and density. */
         .field {
             width: 100%;
             box-sizing: border-box;
@@ -59,7 +60,7 @@ let nextId = 0;
         .hint { margin: var(--space-1) 0 0; font-family: var(--font-sans); color: var(--t2); }
 
         :host([data-surface="paper"]) .field {
-            min-height: var(--hit-target);
+            min-height: var(--hit-surface, var(--hit-target));
             padding: var(--space-2) var(--space-3);
             font-size: var(--fs-ui);
         }
@@ -68,7 +69,7 @@ let nextId = 0;
         :host([data-surface="paper"]) .hint { font-size: var(--fs-ui); }
 
         :host([data-surface="chrome"]) .field {
-            min-height: var(--hit-chrome);
+            min-height: var(--hit-surface, var(--hit-chrome));
             padding: var(--space-1) var(--space-2);
             border-radius: var(--radius-stamp);
             font-family: var(--font-mono);
