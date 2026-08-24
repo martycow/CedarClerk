@@ -1,85 +1,89 @@
 ---
 owner: marty
 last_verified: 2026-08-18
-source_of_truth_for: словарь продуктовых событий, вывод четырёх метрик BUSINESS §4 из данных
+source_of_truth_for: product event dictionary, derivation of the four BUSINESS §4 metrics from data
 guard: none
 ---
 
-# Метрики: словарь событий и как они считаются
+# Metrics: event dictionary and how they're calculated
 
-Контракт для T-153 (ADR-126): имена событий стабильны, провайдер аналитики только транспортирует.
-`BUSINESS.md` §4 владеет списком «какие метрики важны»; этот файл — «как именно они считаются
-и из чего». Обновляется в том же коммите, что добавляет или переименовывает событие.
+Contract for T-153 (ADR-126): event names are stable, the analytics provider only transports them.
+`BUSINESS.md` §4 owns the list of "which metrics matter"; this file owns "exactly how they're
+calculated and from what." Updated in the same commit that adds or renames an event.
 
-Главный принцип записан на самих сущностях-снапшотах («History starts the day this ships»):
-**счётчик без измерений задним числом не раскладывается**. Что уже пишется — минабельно за всю
-историю; чего не пишется — начнёт существовать только с момента подключения.
+The core principle is written on the snapshot entities themselves ("History starts the day this
+ships"): **a counter with no measurements can't be decomposed retroactively**. What's already being
+written is mineable across all history; what isn't will only start existing from the moment it's
+wired up.
 
-## 1. Что уже пишется в базу
+## 1. What's already being written to the database
 
-Всё ниже — собственное, без кук и без третьих сторон (`VisitorHash` с солью — ADR-016;
-`BlogViewGeoDaily` — агрегат, не трейл посещений). Снапшоты пишет `SnapshotChannelStatsJob`
-ежедневно в **04:00 UTC** (`Program.cs`, cron `0 0 4 * * ?`).
+Everything below is self-owned, no cookies and no third parties (`VisitorHash` with a salt —
+ADR-016; `BlogViewGeoDaily` — an aggregate, not a visit trail). Snapshots are written by
+`SnapshotChannelStatsJob` daily at **04:00 UTC** (`Program.cs`, cron `0 0 4 * * ?`).
 
-| Событие / ряд | Где живёт | Что даёт | Задним числом |
+| Event / series | Where it lives | What it gives | Retroactively |
 |---|---|---|---|
-| Регистрация | `AspNetUsers.CreatedAt` | Когорты по дате регистрации | ✔ вся история |
-| Создание черновика | `Draft.CreatedAt` | «Дошёл ли до редактора» | ✔ |
-| Публикация (каждая) | `PublishJob` — append-only, полный лог, без retention: владелец, сеть, язык, статус, `FinishedAt` | Кто, куда и когда публикует; первая публикация | ✔ вся история |
-| Публикация в блог | `Draft.BlogPublishedAt` — first-publish семантика (не перезаписывается) | Первый выход поста в блог | ✔ |
-| Отправка в Telegram-канал | `ChannelPost` — append-only лог удачных отправок | Привязка постов к каналам для снапшотов | ✔ |
-| Просмотры/реакции поста | `Draft.ViewCount` + реакции — бегущие тоталы | Только «сколько всего сейчас» | ✘ без измерений |
-| Динамика по посту | `DraftStatSnapshot` — ежедневно на черновик | График роста поста (8.6) | с даты запуска |
-| Динамика по блогу | `BlogStatSnapshot` — ежедневно на владельца | Тренд блога целиком | с даты запуска |
-| Динамика по каналу | `ChannelStatSnapshot` — ежедневно, MemberCount + агрегат постов (аппроксимация, ADR-025) | Тренд канала, подписчики | с даты запуска |
-| География/язык читателей | `BlogViewGeoDaily` — (владелец, UTC-день, страна, язык) | Откуда и на каком языке читают | с даты запуска |
-| «Новое с прошлого визита» | `DraftStatSeen` — базлайны на владельца×черновик (B23) | Дельты в списке черновиков | не метрика — UI-механика |
-| AI-использование | `AiUsage` — счётчик вызовов на владельца×UTC-день | Расход AI, стоимость на Pro Plus | с даты запуска |
-| Движение кредитов | `CreditEntry` — леджер, (Reason, Ref) уникальна | Покупки паков, списания за публикации | ✔ вся история |
-| Платёж | `Payment` — провайдер, план, сумма, валюта, статус | Всё денежное ниже | ✔ вся история |
-| Действия админа | `AdminAuditEntry` | Аудит ручных вмешательств (план, лок, гранты) | ✔ |
+| Registration | `AspNetUsers.CreatedAt` | Cohorts by registration date | ✔ full history |
+| Draft created | `Draft.CreatedAt` | "Did they reach the editor" | ✔ |
+| Publication (each one) | `PublishJob` — append-only, full log, no retention: owner, network, language, status, `FinishedAt` | Who publishes, where and when; first publication | ✔ full history |
+| Blog publication | `Draft.BlogPublishedAt` — first-publish semantics (not overwritten) | The post's first appearance in the blog | ✔ |
+| Send to Telegram channel | `ChannelPost` — append-only log of successful sends | Linking posts to channels for snapshots | ✔ |
+| Post views/reactions | `Draft.ViewCount` + reactions — running totals | Only "how many total right now" | ✘ no measurements |
+| Per-post dynamics | `DraftStatSnapshot` — daily per draft | Post growth chart (8.6) | from the launch date |
+| Per-blog dynamics | `BlogStatSnapshot` — daily per owner | Trend for the whole blog | from the launch date |
+| Per-channel dynamics | `ChannelStatSnapshot` — daily, MemberCount + post aggregate (approximation, ADR-025) | Channel trend, subscribers | from the launch date |
+| Reader geography/language | `BlogViewGeoDaily` — (owner, UTC day, country, language) | Where from and in what language people read | from the launch date |
+| "New since last visit" | `DraftStatSeen` — baselines per owner×draft (B23) | Deltas in the drafts list | not a metric — UI mechanics |
+| AI usage | `AiUsage` — call counter per owner×UTC day | AI spend, cost per Pro Plus | from the launch date |
+| Credit movement | `CreditEntry` — ledger, (Reason, Ref) unique | Pack purchases, publication charges | ✔ full history |
+| Payment | `Payment` — provider, plan, amount, currency, status | Everything money-related below | ✔ full history |
+| Admin actions | `AdminAuditEntry` | Audit of manual interventions (plan, lock, grants) | ✔ |
 
-## 2. Чего не пишется (появится только с T-153)
+## 2. What's not being written (will appear only with T-153)
 
-- **Воронка до регистрации**: заходы на лендинг, начатые и брошенные регистрации, источник
-  перехода. Сегодня виден только итог — строка в `AspNetUsers`.
-- **Feature-usage**: какие возможности вообще трогают (экспорт `.cedar`, приватные посты, формы,
-  слоты шапки). Единственный след — сами данные фичи, а «открыл и не воспользовался» не виден.
-- **Явное событие первой публикации** — не нужно как спасение данных: выводится join'ом (§3.1);
-  в провайдере станет оптимизацией на живых дашбордах.
+- **Funnel up to registration**: landing page visits, started and abandoned registrations, referral
+  source. Today only the outcome is visible — a row in `AspNetUsers`.
+- **Feature usage**: which capabilities get touched at all (`.cedar` export, private posts, forms,
+  header slots). The only trace is the feature's own data — "opened it and didn't use it" isn't
+  visible.
+- **An explicit first-publication event** — not needed as a data-rescue measure: it's derived via a
+  join (§3.1); in the provider it will become an optimization for live dashboards.
 
-## 3. Четыре метрики §4 — вывод из имеющегося
+## 3. The four metrics from §4 — derived from what exists
 
-1. **Активация** — доля зарегистрировавшихся, опубликовавших хотя бы раз за первую неделю:
-   `AspNetUsers.CreatedAt` × min(первый `PublishJob.FinishedAt` со `Status = Succeeded`,
-   `Draft.BlogPublishedAt`) по владельцу; в числителе те, у кого разница ≤ 7 дней. Минабельна
-   за всю историю. Вспомогательная — **TTFP** (time to first publish {время до первой
-   публикации}): медиана той же разницы; активация говорит «сколько дошло», TTFP — «как долго шли».
-2. **Конверсия Free → платный** — по `Payment` (план, статус, `CreatedAt`), Trial за $1 — отдельный
-   шаг воронки, не слагаемое конверсии в Pro.
-3. **Отток** — по последовательности `Payment` на владельца: платящий без следующего списания за
-   месяц — ушёл. Первоисточник продлений — Stripe (ритуал §5 BUSINESS); `Payment` — его локальный
-   след, по которому цифра воспроизводима без входа в дашборд.
-4. **MRR** — сумма активных подписок (последний успешный `Payment` на подписочный план в окне
-   продления); Trial и покупки кредитов не входят по определению §4.
+1. **Activation** — the share of registered users who published at least once within the first
+   week: `AspNetUsers.CreatedAt` × min(first `PublishJob.FinishedAt` with `Status = Succeeded`,
+   `Draft.BlogPublishedAt`) per owner; the numerator counts those with a difference ≤ 7 days.
+   Mineable across all history. A supporting metric — **TTFP** (time to first publish): the median
+   of the same difference; activation says "how many made it," TTFP says "how long it took."
+2. **Free → paid conversion** — from `Payment` (plan, status, `CreatedAt`); the $1 Trial is a
+   separate funnel step, not a component of conversion to Pro.
+3. **Churn** — from the sequence of `Payment` rows per owner: a paying user with no next charge
+   within a month has churned. The primary source for renewals is Stripe (ritual §5 in BUSINESS);
+   `Payment` is its local trace, from which the number is reproducible without logging into the
+   dashboard.
+4. **MRR** — the sum of active subscriptions (the last successful `Payment` on a subscription plan
+   within the renewal window); Trial and credit purchases are excluded by the §4 definition.
 
-## 4. Словарь имён для провайдера
+## 4. Name dictionary for the provider
 
-`snake_case`, объект действия первым. Провайдер транспортирует ровно эти имена; смена провайдера
-словарь не меняет. Колонка «источник» говорит, откуда событие берётся при подключении.
+`snake_case`, action's object first. The provider transports exactly these names; switching
+providers doesn't change the dictionary. The "source" column says where the event comes from once
+wired up.
 
-| Имя | Метрика | Источник |
+| Name | Metric | Source |
 |---|---|---|
-| `signup_started` | активация (воронка) | только клиент — сегодня не существует |
-| `signup_completed` | активация, когорты | `AspNetUsers.CreatedAt` |
-| `draft_created` | активация (шаг) | `Draft.CreatedAt` |
-| `post_published` | активация, привычка | `PublishJob` (Succeeded) / `BlogPublishedAt` |
-| `post_published_first` | активация, TTFP | выводимо join'ом §3.1 |
-| `trial_started` | конверсия (шаг) | `Payment` (план trial) |
-| `plan_purchased` | конверсия, MRR | `Payment` (pro/proplus) |
-| `plan_renewed` | отток, MRR | `Payment` (повторный) |
-| `credits_purchased` | доход вне MRR | `CreditEntry` (+Delta, purchase) |
-| `ai_used` | стоимость Pro Plus | `AiUsage` |
+| `signup_started` | activation (funnel) | client-only — doesn't exist today |
+| `signup_completed` | activation, cohorts | `AspNetUsers.CreatedAt` |
+| `draft_created` | activation (step) | `Draft.CreatedAt` |
+| `post_published` | activation, habit | `PublishJob` (Succeeded) / `BlogPublishedAt` |
+| `post_published_first` | activation, TTFP | derivable via the §3.1 join |
+| `trial_started` | conversion (step) | `Payment` (trial plan) |
+| `plan_purchased` | conversion, MRR | `Payment` (pro/proplus) |
+| `plan_renewed` | churn, MRR | `Payment` (repeat) |
+| `credits_purchased` | revenue outside MRR | `CreditEntry` (+Delta, purchase) |
+| `ai_used` | Pro Plus cost | `AiUsage` |
 
-Чего специально нет: лайки, охваты, посещаемость лендинга как самоцель — §4 прямо запрещает
-мерить приятное вместо решающего, пока платящих меньше десяти.
+What's deliberately absent: likes, reach, landing-page traffic as an end in itself — §4 explicitly
+forbids measuring the pleasant instead of the decisive while there are fewer than ten paying users.

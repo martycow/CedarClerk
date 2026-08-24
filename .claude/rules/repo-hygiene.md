@@ -7,7 +7,7 @@ could open the file next commit, and there's nothing to unwind later.
 rule of thumb: if it's a key, token, password, or a real ping/webhook URL, it goes in the systemd
 drop-in or an untracked local file, never in a tracked one.
 
-**Local paths and machine identity** — covered by `docs/DOCS-FLOW.md` §Размещение: no drive letters
+**Local paths and machine identity** — covered by `docs/DOCS-FLOW.md` §File placement: no drive letters
 or absolute local paths in docs (`D:\Moo.exe\...`); portable forms (`%APPDATA%\…`) and the droplet's
 own paths (`/home/martycow/…`) are fine, since the droplet's layout is already documented elsewhere.
 

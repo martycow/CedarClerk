@@ -1,169 +1,185 @@
 ---
 owner: marty
 last_verified: 2026-08-18
-source_of_truth_for: гейты регистрации, юнит-экономика, метрики, ритуалы
+source_of_truth_for: registration gates, unit economics, metrics, rituals
 guard: none
 ---
 
-# Бизнес: чек-листы, метрики и ритуалы
+# Business: checklists, metrics and rituals
 
-Что нужно делать, чтобы Cedar Clerk приносил деньги, а не только работал. Продукт, аудитория и
-тарифы — в `docs/product/PRODUCT.md`; здесь только операционная часть.
+What needs to be done for Cedar Clerk to earn money, not just work. Product, audience and pricing
+tiers are in `docs/product/PRODUCT.md`; this file covers only the operational side.
 
-Правило этого файла: **каждая строка либо проверяема, либо помечена как решение Марти.** Если пункт
-нельзя проверить командой или открыть в чужой панели — он не пункт, а благое пожелание.
+Rule of this file: **every line is either verifiable, or marked as a decision for Marty.** If an
+item can't be checked with a command or opened in someone else's dashboard — it isn't an item, it's
+wishful thinking.
 
 ---
 
-## 1. Перед открытием публичной регистрации
+## 1. Before opening public registration
 
-Сейчас регистрация закрыта: `Cedar:Registration:Open` выключен, вход только по инвайт-коду
-(`AuthEndpoints.cs`). Это правильное состояние — открывать её стоит, когда закрыт весь список.
+Registration is currently closed: `Cedar:Registration:Open` is off, entry only by invite code
+(`AuthEndpoints.cs`). This is the right state — it's worth opening once the whole list below is
+closed.
 
-| | Пункт | Как проверить | Статус |
+| | Item | How to verify | Status |
 |---|---|---|---|
-| 1 | Terms и Privacy без заглушек | `/terms`, `/privacy` — ни одной `[СКОБКИ]` | ✅ 13.08.2026 (`T-052`) |
-| 2 | Юрист прочитал оба документа | — | ❌ не сделано, единственный оставшийся юр-пункт |
-| 3 | Ночной бэкап базы | `cedar backup verify` → зелёный | ✅ (`T-071`) |
-| 4 | Копия за пределами дроплета | `~/bin/rclone size r2:cedar-backup` отвечает | ⏳ `T-147`, ждёт ключей R2 |
-| 5 | Внешний мониторинг + алерты | UptimeRobot, три монитора зелёные | ✅ 13.08.2026, статус-страница на `stats.uptimerobot.com/jKcnizZ9vU` (свой домен там платный) |
-| 6 | Восстановление проверено | развернуть вчерашний дамп в пустую базу локально и открыть | ❌ **никогда не делалось** — `T-149` |
-| 7 | Платёжные ключи живут на проде | тестовая покупка своей картой, деньги дошли | ✅ **Stripe проверен деньгами** (первый реальный платёж 26.07.2026; галочка поставлена 13.08 — платежи проходят и приходят на банковский счёт Марти). Кошелёк кредитов идёт теми же флоу. PayPal и Telegram Stars живыми деньгами не проверялись |
-| 8 | Налоги на подписки настроены | Stripe Tax включён, зарегистрированы юрисдикции | ❌ решение Марти, см. §2 |
-| 9 | Адрес поддержки работает | письмо на `cedarworks@mooexe.dev` доходит и читается | ⏳ проверить |
-| 10 | Понятно, что делать при отказе оплаты | описан путь: подписка не продлилась → что видит юзер | ❌ не описано |
-| 11 | Превью ссылок на посты работают | ссылка на пост блога в Telegram/X/Discord разворачивается с картинкой и описанием | ❌ **OG-тегов на страницах постов нет вообще** (есть только на лендинге) — `T-174`. Ломает канал №1 из §6: каждый расшаренный пост сейчас — голая ссылка |
-| 12 | Лендинг говорит с целевой аудиторией | `/` — EN, devlog-first, waitlist | ❌ `T-154`; без него привлечение из §6 ведёт на RU-страницу «универсального паблишера» |
+| 1 | Terms and Privacy have no placeholders | `/terms`, `/privacy` — not a single `[BRACKETS]` | ✅ 13.08.2026 (`T-052`) |
+| 2 | Lawyer has read both documents | — | ❌ not done, the only remaining legal item |
+| 3 | Nightly database backup | `cedar backup verify` → green | ✅ (`T-071`) |
+| 4 | Off-droplet copy | `~/bin/rclone size r2:cedar-backup` responds | ⏳ `T-147`, waiting on R2 keys |
+| 5 | External monitoring + alerts | UptimeRobot, three monitors green | ✅ 13.08.2026, status page at `stats.uptimerobot.com/jKcnizZ9vU` (a custom domain there is paid) |
+| 6 | Restore verified | deploy yesterday's dump into an empty database locally and open it | ❌ **never done** — `T-149` |
+| 7 | Payment keys live on prod | a test purchase with your own card, money arrived | ✅ **Stripe verified with real money** (first real payment on 26.07.2026; checked off on 13.08 — payments go through and land on Marty's bank account). The credits wallet goes through the same flows. PayPal and Telegram Stars have not been verified with real money |
+| 8 | Subscription taxes configured | Stripe Tax enabled, jurisdictions registered | ❌ Marty's decision, see §2 |
+| 9 | Support address works | mail to `cedarworks@mooexe.dev` arrives and gets read | ⏳ to verify |
+| 10 | Clear what to do on payment failure | the path is documented: subscription didn't renew → what the user sees | ❌ not documented |
+| 11 | Post link previews work | a blog post link unfurls in Telegram/X/Discord with an image and description | ❌ **there are no OG tags on post pages at all** (only on the landing page) — `T-174`. Breaks channel #1 from §6: every shared post right now is a bare link |
+| 12 | Landing page speaks to the target audience | `/` — EN, devlog-first, waitlist | ❌ `T-154`; without it, acquisition from §6 leads to the RU page for a "universal publisher" |
 
-**Пункт 6 — самый недооценённый.** Бэкап, который никогда не восстанавливали, это не бэкап, а
-надежда. Проверка занимает десять минут: скачать дневную копию, `gunzip`, открыть локально с
-`CEDAR_DATA_DIR`, убедиться, что посты на месте.
+**Item 6 is the most underrated.** A backup that has never been restored isn't a backup, it's hope.
+The check takes ten minutes: download the daily copy, `gunzip`, open it locally with
+`CEDAR_DATA_DIR`, make sure the posts are there.
 
-**Пункт 7 закрыт наполовину**: Stripe проведён реальными деньгами и они дошли до банковского счёта
-— то есть главный путь оплаты работает целиком, а не только в коде. PayPal и Telegram Stars остаются
-непроверенными, и проверять их надо так же: своей картой и своими звёздами, до первого клиента. У
-клиента не будет доступа к логам, он просто уйдёт.
-
----
-
-## 2. Деньги и налоги — то, что решается один раз
-
-Ничего из этого не пишется в код, но всё влияет на то, останутся ли деньги после.
-
-- **Кто получает платежи.** Оператор — физлицо (Орегон, США). Stripe для физлица в США требует SSN
-  или EIN и банковский счёт. EIN бесплатно получают на сайте IRS; он же избавляет от необходимости
-  светить SSN контрагентам. **Решение Марти: получать EIN или обойтись SSN.**
-- **Sales tax.** В Орегоне его нет, но налог платится по месту клиента, а не продавца: у большинства
-  штатов есть порог (economic nexus) в районе $100k или 200 транзакций в год. До порога — ничего не
-  нужно; после — регистрация в каждом штате. **Пока продажи малы, это неактуально, но порог надо
-  знать заранее**, потому что он наступает молча.
-- **VAT/GST.** Продажа цифрового сервиса физлицу в ЕС/UK облагается НДС по ставке страны покупателя
-  с первого евро — порога нет. Stripe Tax считает и удерживает это автоматически (галочка в панели +
-  регистрация в OSS), иначе разбираться придётся вручную.
-- **Telegram Stars и PayPal** налоговую сторону за тебя не решают — это тот же доход.
-- **1099-K.** Stripe пришлёт форму, если оборот перевалит пороги; это не новый налог, а отчётность.
-
-Ничто из перечисленного не является юридической или налоговой консультацией: это список тем, с
-которыми идут к бухгалтеру, а не решают гуглением.
+**Item 7 is half closed**: Stripe has been run with real money and it reached the bank account —
+meaning the main payment path works end to end, not just in code. PayPal and Telegram Stars remain
+unverified, and they need to be checked the same way: with your own card and your own stars, before
+the first customer. A customer won't have access to the logs — they'll just leave.
 
 ---
 
-## 3. Юнит-экономика: где деньги утекают
+## 2. Money and taxes — things decided once
 
-Постоянные расходы (проверять по счетам, а не по памяти):
+None of this gets written into code, but all of it affects whether money is left over afterward.
 
-| Статья | Сколько | Где смотреть |
+- **Who receives the payments.** The operator is an individual (Oregon, USA). Stripe for a US
+  individual requires an SSN or EIN and a bank account. An EIN is obtained for free on the IRS
+  website; it also avoids having to expose the SSN to counterparties. **Marty's decision: get an EIN
+  or make do with the SSN.**
+- **Sales tax.** Oregon has none, but tax is paid based on the customer's location, not the seller's:
+  most states have a threshold (economic nexus) around $100k or 200 transactions a year. Below the
+  threshold — nothing is needed; above it — registration in that state. **While sales are small this
+  isn't relevant, but the threshold needs to be known in advance**, because it arrives silently.
+- **VAT/GST.** Selling a digital service to an individual in the EU/UK is subject to VAT at the
+  buyer's country rate from the first euro — there is no threshold. Stripe Tax calculates and
+  withholds this automatically (a checkbox in the dashboard + OSS registration), otherwise it has to
+  be handled by hand.
+- **Telegram Stars and PayPal** don't resolve the tax side for you — it's the same income.
+- **1099-K.** Stripe will send the form if turnover crosses the thresholds; it's not a new tax, just
+  reporting.
+
+None of the above is legal or tax advice: it's a list of topics you take to an accountant, not
+resolve by googling.
+
+---
+
+## 3. Unit economics: where the money leaks
+
+Fixed costs (check against the actual bills, not from memory):
+
+| Item | How much | Where to check |
 |---|---|---|
-| Дроплет `cedarclerk-periwinkle` | 1 vCPU / 2 ГБ | панель DigitalOcean |
-| Недельные образы дроплета | ~20% от цены дроплета | там же |
-| Cloudflare R2 | $0 до 10 ГБ — **ещё не включён**, выгрузка ждёт ключей (`T-147`) | панель Cloudflare |
-| Домен `mooexe.dev` | раз в год | регистратор |
-| Комиссии Stripe/PayPal | ~2.9% + $0.30 с платежа | панель Stripe |
-| Anthropic (AI-функции Pro Plus) | **переменная** | console.anthropic.com |
+| Droplet `cedarclerk-periwinkle` | 1 vCPU / 2 GB | DigitalOcean dashboard |
+| Weekly droplet images | ~20% of the droplet price | same place |
+| Cloudflare R2 | $0 up to 10 GB — **not enabled yet**, the upload is waiting on keys (`T-147`) | Cloudflare dashboard |
+| Domain `mooexe.dev` | once a year | registrar |
+| Stripe/PayPal fees | ~2.9% + $0.30 per payment | Stripe dashboard |
+| Anthropic (Pro Plus AI features) | **variable** | console.anthropic.com |
 
-**Единственная статья, способная сделать тариф убыточным, — последняя.** Pro Plus стоит $6/мес и
-включает автоперевод и AI-правку, а `PlanLimitations.AiDailyLimit` разрешает 20 вызовов в сутки —
-это до 600 вызовов в месяц на $6, из которых Stripe заберёт ~$0.50 комиссии.
+**The only line item that can make the plan unprofitable is the last one.** Pro Plus costs $6/mo and
+includes auto-translation and AI editing, and `PlanLimitations.AiDailyLimit` allows 20 calls a day —
+that's up to 600 calls a month for $6, out of which Stripe takes ~$0.50 in fees.
 
-Посчитать надо один раз и по фактическому счёту: **средняя стоимость вызова × 600 должна быть
-заметно меньше $5.50**. Автоперевод — самый дорогой вызов в приложении (документ целиком, до 64 000
-токенов на выходе), так что считать надо по нему, а не по «исправить ошибки». Если не сходится —
-варианта три: снизить дневной лимит, поднять цену Pro Plus, или увести все AI-операции на кредиты
-(`T-152`, поверх уже работающего кошелька `T-109`), где пользователь платит за расход отдельно.
-
----
-
-## 4. Метрики: четыре штуки, а не двадцать
-
-Соло-проекту нужны те, что меняют решения. Три из четырёх (конверсия, отток, MRR) считаются по данным, которые уже есть в базе; активация — только наполовину: публикации в базе есть, а воронка до первой публикации (откуда пришёл, где отвалился) появится вместе с аналитикой (`T-153`) — противоречие между этой строкой и T-153 снято 18.08.2026 в пользу честной формулировки.
-
-1. **Активация**: доля зарегистрировавшихся, кто опубликовал хотя бы один пост за первую неделю.
-   Низкая активация означает, что проблема в онбординге, а не в привлечении, и покупать трафик рано.
-2. **Конверсия Free → платный** (включая Trial за $1 как отдельный шаг). Trial здесь работает как
-   фильтр намерения: заплативший доллар и заплативший ноль — разные люди.
-3. **Отток (churn)**: сколько платящих не продлилось за месяц. Для сервиса, куда переносят свою
-   работу, отток выше 5% в месяц означает, что продукт не стал привычкой.
-4. **MRR** — сумма активных подписок. Не выручка за месяц, а именно повторяющаяся часть: разовые
-   Trial и покупки кредитов в неё не входят.
-
-Чего специально **не** мерить на этом этапе: посещаемость лендинга, лайки, «охваты». Они приятны и
-ничего не решают, пока платящих меньше десяти.
+This needs to be calculated once, against the actual bill: **average cost per call × 600 must be
+noticeably less than $5.50**. Auto-translation is the most expensive call in the app (the whole
+document, up to 64 000 output tokens), so the calculation should be based on it, not on "fix
+errors." If it doesn't add up, there are three options: lower the daily limit, raise the Pro Plus
+price, or move all AI operations onto credits (`T-152`, on top of the already-working wallet
+`T-109`), where the user pays for usage separately.
 
 ---
 
-## 5. Ритуалы
+## 4. Metrics: four things, not twenty
 
-**Раз в неделю** (пятнадцать минут):
-- `cedar status` — диск, память, версия, возраст бэкапа;
-- `cedar backup verify` — копия свежая, расписание на месте;
-- UptimeRobot — были ли падения, и почему;
-- Stripe — прошли ли продления, нет ли зависших платежей;
-- журнал ошибок: `ssh … "journalctl -q -u cedarclerk -n 200 --no-pager | grep -i error"`.
+A solo project needs the ones that change decisions. Three of the four (conversion, churn, MRR) are
+calculated from data that's already in the database; activation only half so: publications are in
+the database, but the funnel up to the first publication (where they came from, where they dropped
+off) will appear together with analytics (`T-153`) — the contradiction between this line and T-153
+was resolved on 18.08.2026 in favor of the honest phrasing.
 
-**Раз в месяц**:
-- посчитать четыре метрики выше;
-- сверить расходы со счетами (§3) и посчитать стоимость AI на одного Pro Plus;
-- проверить, что дневной бэкап **восстанавливается** (пункт 6 из §1) — раз в месяц, не раз в год.
+1. **Activation**: the share of registered users who published at least one post within the first
+   week. Low activation means the problem is in onboarding, not acquisition, and it's too early to
+   buy traffic.
+2. **Free → paid conversion** (including the $1 Trial as a separate step). Trial here works as an
+   intent filter: someone who paid a dollar and someone who paid nothing are different people.
+3. **Churn**: how many paying users didn't renew within a month. For a service where people move
+   their work into, churn above 5% a month means the product hasn't become a habit.
+4. **MRR** — the sum of active subscriptions. Not monthly revenue, but specifically the recurring
+   part: one-off Trials and credit purchases are not included.
 
-**Раз в квартал**:
-- перечитать Terms/Privacy: не разошлись ли они с тем, что делает код (новые интеграции = новые
-  третьи стороны в политике);
-- проверить сроки: платёжные ключи, токены X/Bluesky, срок домена;
-- обновить `docs/product/PRODUCT.md`, если тарифы или лимиты менялись.
-
----
-
-## 6. Как приходят первые пользователи
-
-Аудитория — инди-разработчики, и у них есть конкретные места обитания. Порядок здесь по
-соотношению «усилие → результат» для соло-основателя без бюджета:
-
-1. **Собственный devlog как витрина.** Dev Diary Марти ведётся *в самом продукте*: каждый пост —
-   демонстрация. Это единственный канал, который работает, пока ты спишь, и он уже существует.
-2. **itch.io devlogs и Steam-анонсы** — там читают именно те, кто ведёт девлоги, то есть уже имеет
-   боль, которую решает продукт. Публикация туда — это `T-127` (сначала ресёрч, есть ли write-API).
-3. **Сообщества**: r/gamedev, r/indiegames, gamedev-Discord'ы, локальные джемы. Правило одно —
-   приходить с рассказом о том, как сделана вещь, а не с рекламой.
-4. **Тематические джемы** — раздать Founder-коды (ADR-022) участникам конкретного джема: узкая,
-   мотивированная аудитория, и повод для разговора.
-
-Чего не делать: платная реклама до того, как активация из §4 станет приличной. Купленный трафик
-через дырявый онбординг — это оплаченный уход.
+What deliberately **not** to measure at this stage: landing page traffic, likes, "reach." They're
+nice and decide nothing while there are fewer than ten paying users.
 
 ---
 
-## 7. Опасные места, которые уже видно
+## 5. Rituals
 
-- **Открыть регистрацию до проверки платежей** — самая дорогая из возможных ошибок: первые
-  пользователи придут ровно один раз.
-- **Обещать SLA или гарантии сохранности сверх того, что есть.** Сейчас честно: ночная копия базы,
-  недельный образ машины, один сервер без резервирования. Так и написано в Privacy.
-- **AI-функции без потолка расходов.** Дневной лимит есть, месячного потолка на аккаунт — нет.
-- **Один человек — единственная точка отказа.** Бэкапы, ключи и доступы должны быть восстановимы
-  кем-то ещё, если ситуация того потребует. Сейчас всё завязано на один ноутбук и один аккаунт.
-- **Один ключ безопасности.** 13.08.2026 основные аккаунты переведены на PassKey/Security Key с
-  YubiKey 5 — это правильный шаг, и он же превращает одну железку в единственный путь к DigitalOcean,
-  Cloudflare, Stripe и почте. Второй ключ или распечатанные recovery-коды в другом месте — `T-157`.
-- **Медиа живут на диске дроплета.** Квоты срезаны до обеспеченных диском (ADR-129), но файлы
-  по-прежнему на одной машине — до переноса в объектное хранилище (шаг 2 `T-172`) диск остаётся
-  потолком. Разбор — `docs/product/MULTITENANCY.md` §1.
+**Weekly** (fifteen minutes):
+- `cedar status` — disk, memory, version, backup age;
+- `cedar backup verify` — the copy is fresh, the schedule is in place;
+- UptimeRobot — were there any outages, and why;
+- Stripe — did renewals go through, are there any stuck payments;
+- error log: `ssh … "journalctl -q -u cedarclerk -n 200 --no-pager | grep -i error"`.
+
+**Monthly**:
+- calculate the four metrics above;
+- reconcile costs against the bills (§3) and calculate the AI cost per Pro Plus user;
+- verify that the daily backup **actually restores** (item 6 from §1) — once a month, not once a
+  year.
+
+**Quarterly**:
+- reread Terms/Privacy: have they diverged from what the code does (new integrations = new third
+  parties in the policy);
+- check expiry dates: payment keys, X/Bluesky tokens, domain expiration;
+- update `docs/product/PRODUCT.md` if pricing tiers or limits changed.
+
+---
+
+## 6. How the first users arrive
+
+The audience is indie developers, and they have specific places they hang out. The order here is by
+"effort → result" ratio for a solo founder with no budget:
+
+1. **Your own devlog as a showcase.** Marty's Dev Diary is run *inside the product itself*: every
+   post is a demonstration. It's the only channel that works while you sleep, and it already exists.
+2. **itch.io devlogs and Steam announcements** — the readers there are exactly the people who run
+   devlogs, meaning they already have the pain the product solves. Publishing there is `T-127`
+   (research first whether a write API exists).
+3. **Communities**: r/gamedev, r/indiegames, gamedev Discords, local jams. One rule — show up with a
+   story about how the thing was made, not with an ad.
+4. **Themed jams** — hand out Founder codes (ADR-022) to participants of a specific jam: a narrow,
+   motivated audience, and a reason to talk.
+
+What not to do: paid advertising before activation from §4 becomes decent. Bought traffic through a
+leaky onboarding is paid-for churn.
+
+---
+
+## 7. Danger spots already visible
+
+- **Opening registration before payments are verified** — the most expensive possible mistake: the
+  first users will show up exactly once.
+- **Promising an SLA or data-safety guarantees beyond what actually exists.** Right now, honestly: a
+  nightly database copy, a weekly machine image, one server with no redundancy. That's exactly what's
+  written in Privacy.
+- **AI features with no spending ceiling.** There's a daily limit, but no monthly cap per account.
+- **One person is the single point of failure.** Backups, keys and access need to be recoverable by
+  someone else if the situation demands it. Right now everything is tied to one laptop and one
+  account.
+- **One security key.** On 13.08.2026 the main accounts were switched to PassKey/Security Key with a
+  YubiKey 5 — the right move, and it also turns one piece of hardware into the only path to
+  DigitalOcean, Cloudflare, Stripe and email. A second key or printed recovery codes kept elsewhere —
+  `T-157`.
+- **Media lives on the droplet's disk.** Quotas have been cut down to what the disk can back
+  (ADR-129), but the files are still on one machine — until the move to object storage (step 2 of
+  `T-172`), the disk remains the ceiling. Detailed breakdown — `docs/product/MULTITENANCY.md` §1.

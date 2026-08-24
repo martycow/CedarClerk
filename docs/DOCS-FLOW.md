@@ -1,105 +1,105 @@
 ---
 owner: marty
 last_verified: 2026-08-24
-source_of_truth_for: карта владения, потоков и размещения документации
+source_of_truth_for: map of ownership, flows and placement of documentation
 guard: DocsFlowGraphTests
 ---
 
-# Как устроена документация Cedar Clerk
+# How Cedar Clerk's documentation is organized
 
-Схема потоков между документами: кто первоисточник, что куда переносится и в какой момент. Существует, чтобы не повторялся рассинхрон — когда BACKLOG считает фичу открытой, ROADMAP «не начатой», а в коде она с прошлой недели.
+A diagram of the flows between documents: who is the primary source, what moves where, and at what point. It exists so desynchronization doesn't repeat itself — like BACKLOG considering a feature open, ROADMAP calling it "not started", while the code has had it since last week.
 
-## Схема
+## Diagram
 
 ```mermaid
 flowchart TB
-    subgraph SRC["Первоисточники — истина рождается здесь"]
-        OWNER(["Владелец: голосом, в чате"])
-        INPUTP["docs/INPUT_PROMPT.md<br/><i>в docs/, вне git</i><br/>динамический промпт-инбокс"]
-        CODE["Код + git log<br/><i>что на самом деле работает</i>"]
+    subgraph SRC["Primary sources — truth is born here"]
+        OWNER(["Owner: by voice, in chat"])
+        INPUTP["docs/INPUT_PROMPT.md<br/><i>in docs/, outside git</i><br/>dynamic prompt inbox"]
+        CODE["Code + git log<br/><i>what actually works</i>"]
     end
 
-    subgraph PLAN["Планирование — что делаем"]
-        BACKLOG["docs/tasks/BACKLOG.md<br/><b>таск-борда</b><br/>только ОТКРЫТОЕ<br/>ID · Имя · Приоритет · Теги · Описание"]
-        TASKS["docs/tasks/TASKS.md<br/><b>сейчас в работе</b><br/>короткий горизонт"]
+    subgraph PLAN["Planning — what we're doing"]
+        BACKLOG["docs/tasks/BACKLOG.md<br/><b>task board</b><br/>OPEN items only<br/>ID · Name · Priority · Tags · Description"]
+        TASKS["docs/tasks/TASKS.md<br/><b>currently in progress</b><br/>short horizon"]
     end
 
-    subgraph WHY["Обоснования — почему именно так"]
-        DECISIONS["docs/DECISIONS.md<br/><b>ADR-лог: индекс</b><br/>тексты — docs/adr/, файл на ADR"]
-        RULES[".claude/rules/*.md<br/><b>жёсткие правила</b><br/>что уже ломалось"]
-        PRODENV[".claude/rules/production-environment.md<br/><b>истина о проде</b><br/>переписан с живой машины"]
-        CLAUDE["CLAUDE.md<br/>как со мной работать"]
+    subgraph WHY["Rationale — why exactly this way"]
+        DECISIONS["docs/DECISIONS.md<br/><b>ADR log: index</b><br/>full text — docs/adr/, one file per ADR"]
+        RULES[".claude/rules/*.md<br/><b>hard rules</b><br/>what has already broken"]
+        PRODENV[".claude/rules/production-environment.md<br/><b>truth about production</b><br/>rewritten from the live machine"]
+        CLAUDE["CLAUDE.md<br/>how to work with me"]
     end
 
-    subgraph REF["Справочники — какое оно есть"]
-        PRODUCT["docs/product/PRODUCT.md<br/>продукт, ЦА, прайсинг"]
-        PRD["docs/product/PRD.md<br/>требования"]
-        ARCH["docs/tech/ARCHITECTURE.md<br/>устройство системы"]
-        DESIGN["docs/design/DESIGN.md<br/>токены, паттерны UI"]
-        UIINV["docs/design/UI-INVENTORY.md<br/>инвентарь элементов UI"]
-        STACK["docs/knowledge_base/STACK.md<br/>стек и расходы"]
-        BIZ["docs/product/BUSINESS.md<br/>деньги: гейты, метрики, ритуалы"]
-        METRICS["docs/product/METRICS.md<br/>словарь событий, вывод метрик §4"]
-        MULTI["docs/product/MULTITENANCY.md<br/>что будет при пользователях"]
-        LEGAL["Terms + Privacy<br/>/terms, /privacy — Angular-компоненты<br/>заполнены 13.08, юрист не смотрел"]
+    subgraph REF["References — how things actually are"]
+        PRODUCT["docs/product/PRODUCT.md<br/>product, target audience, pricing"]
+        PRD["docs/product/PRD.md<br/>requirements"]
+        ARCH["docs/tech/ARCHITECTURE.md<br/>system design"]
+        DESIGN["docs/design/DESIGN.md<br/>tokens, UI patterns"]
+        UIINV["docs/design/UI-INVENTORY.md<br/>inventory of UI elements"]
+        STACK["docs/knowledge_base/STACK.md<br/>stack and costs"]
+        BIZ["docs/product/BUSINESS.md<br/>money: gates, metrics, rituals"]
+        METRICS["docs/product/METRICS.md<br/>event dictionary, metrics derivation §4"]
+        MULTI["docs/product/MULTITENANCY.md<br/>what happens once there are users"]
+        LEGAL["Terms + Privacy<br/>/terms, /privacy — Angular components<br/>filled in 13.08, not reviewed by a lawyer"]
     end
 
-    subgraph USR["docs/for_user — инструкции и мануалы"]
-        INTEG["docs/for_user/integrations-setup.md<br/>ранбук ключей провайдеров"]
+    subgraph USR["docs/for_user — instructions and manuals"]
+        INTEG["docs/for_user/integrations-setup.md<br/>provider-key setup runbook"]
     end
 
-    subgraph MOD["Модуль инди-геймдева — Phase 13"]
-        INDIE["docs/product/INDIEDEV.md<br/><b>скоуп модуля</b><br/>MUST / MIGHT, модель данных"]
-        DESKTOP["docs/tech/DESKTOP.md<br/>устройство десктоп-сборки"]
-        DPROMPT["docs/design/indiedev-design-prompt.md<br/>бриф для Claude Design"]
-        UIV2["docs/design/UI-V2-PLAN.md<br/>план переноса на Cedar Bench"]
-        RPROMPT["docs/design/bench-responsive-prompt.md<br/>бриф для Claude Design:<br/>узкие экраны Cedar Bench"]
-        BPROMPT["docs/design/bench-board-prompt.md<br/>бриф для Claude Design:<br/>четвёртый экран — доска задач"]
+    subgraph MOD["Indie-gamedev module — Phase 13"]
+        INDIE["docs/product/INDIEDEV.md<br/><b>module scope</b><br/>MUST / MIGHT, data model"]
+        DESKTOP["docs/tech/DESKTOP.md<br/>how the desktop build works"]
+        DPROMPT["docs/design/indiedev-design-prompt.md<br/>brief for Claude Design"]
+        UIV2["docs/design/UI-V2-PLAN.md<br/>plan for the port to Cedar Bench"]
+        RPROMPT["docs/design/bench-responsive-prompt.md<br/>brief for Claude Design:<br/>Cedar Bench narrow screens"]
+        BPROMPT["docs/design/bench-board-prompt.md<br/>brief for Claude Design:<br/>fourth screen — task board"]
     end
 
-    CHANGELOG["docs/tasks/CHANGELOG.md<br/><b>история сессий</b><br/>человекочитаемо, по датам"]
+    CHANGELOG["docs/tasks/CHANGELOG.md<br/><b>session history</b><br/>human-readable, by date"]
 
-    OWNER -->|"пишет сам"| INPUTP
-    OWNER -->|"говорит в сессии"| BACKLOG
-    INPUTP -->|"Input sweep:<br/>сверка с кодом → борда"| BACKLOG
+    OWNER -->|"writes it himself"| INPUTP
+    OWNER -->|"says it in session"| BACKLOG
+    INPUTP -->|"Input sweep:<br/>checked against code → board"| BACKLOG
 
-    BACKLOG -->|"взяли в работу →<br/>строка УДАЛЯЕТСЯ отсюда"| TASKS
-    TASKS -->|"сделано, итог сессии"| CHANGELOG
+    BACKLOG -->|"taken into work →<br/>row is DELETED from here"| TASKS
+    TASKS -->|"done, session summary"| CHANGELOG
 
-    BACKLOG -.->|"вопрос Q-xx требует<br/>решения владельца"| OWNER
+    BACKLOG -.->|"a Q-xx question needs<br/>the owner's decision"| OWNER
 
-    TASKS ==>|"ПЕРЕД кодом:<br/>решение записывается"| DECISIONS
-    DECISIONS ==>|"только потом"| CODE
-    CODE -->|"сломалось больно →<br/>становится правилом"| RULES
-    CODE -->|"прод: снято с машины,<br/>не по памяти (11.08)"| PRODENV
-    RULES -.->|"читаются перед<br/>работой в этой зоне"| DECISIONS
+    TASKS ==>|"BEFORE the code:<br/>the decision gets written down"| DECISIONS
+    DECISIONS ==>|"only after that"| CODE
+    CODE -->|"broke painfully →<br/>becomes a rule"| RULES
+    CODE -->|"prod: read off the machine,<br/>not from memory (11.08)"| PRODENV
+    RULES -.->|"read before<br/>working in that area"| DECISIONS
 
-    CODE -.->|"сверка: доки врут?"| CHANGELOG
-    CODE -.->|"сверка"| BACKLOG
+    CODE -.->|"check: are the docs lying?"| CHANGELOG
+    CODE -.->|"check"| BACKLOG
 
-    ARCH -.->|"читается ПЕРЕД<br/>любой реализацией"| DECISIONS
-    PRD -.->|"то же"| DECISIONS
-    PRODUCT -->|"кому и зачем"| BACKLOG
+    ARCH -.->|"read BEFORE<br/>any implementation"| DECISIONS
+    PRD -.->|"same"| DECISIONS
+    PRODUCT -->|"who for and why"| BACKLOG
     DESIGN --> UIINV
-    LEGAL -.->|"юрист до открытия<br/>регистрации — гейт §1"| BIZ
-    BIZ -->|"§4: какие метрики важны →<br/>как считаются (ADR-126)"| METRICS
+    LEGAL -.->|"lawyer before opening<br/>registration — gate §1"| BIZ
+    BIZ -->|"§4: which metrics matter →<br/>how they're computed (ADR-126)"| METRICS
 
-    CODE -->|"меняли UI →<br/>обновить"| UIINV
-    CODE -->|"поменяли устройство"| ARCH
+    CODE -->|"UI changed →<br/>update it"| UIINV
+    CODE -->|"the design changed"| ARCH
 
-    DECISIONS -->|"ADR-101…107<br/>решения модуля"| INDIE
-    INDIE -->|"строки T-120…T-137"| BACKLOG
-    UIV2 ==>|"каждое решение —<br/>сперва ADR"| DECISIONS
-    UIV2 -->|"строки T-205…T-235"| BACKLOG
+    DECISIONS -->|"ADR-101…107<br/>module decisions"| INDIE
+    INDIE -->|"rows T-120…T-137"| BACKLOG
+    UIV2 ==>|"every decision —<br/>an ADR first"| DECISIONS
+    UIV2 -->|"rows T-205…T-235"| BACKLOG
     INDIE --> DESKTOP
-    DESIGN -->|"правила токенов; значения —<br/>из styles.scss перед запуском"| DPROMPT
-    INDIE -->|"какие экраны нужны"| DPROMPT
-    UIV2 -->|"чего киты не отвечают:<br/>хрома уже узкой"| RPROMPT
-    DESIGN -->|"те же правила токенов;<br/>значения — перед запуском"| RPROMPT
-    RPROMPT -->|"когда экраны придут —<br/>строки T-236…T-237"| BACKLOG
-    UIV2 -->|"чего киты не отвечают:<br/>доски задач в наборе нет"| BPROMPT
-    DESIGN -->|"те же правила токенов;<br/>значения — перед запуском"| BPROMPT
-    BPROMPT -->|"когда экран придёт —<br/>строка T-229"| BACKLOG
+    DESIGN -->|"token rules; values —<br/>from styles.scss before each run"| DPROMPT
+    INDIE -->|"which screens are needed"| DPROMPT
+    UIV2 -->|"what the kits don't answer:<br/>chrome at narrow widths"| RPROMPT
+    DESIGN -->|"the same token rules;<br/>values — before each run"| RPROMPT
+    RPROMPT -->|"when the screens arrive —<br/>rows T-236…T-237"| BACKLOG
+    UIV2 -->|"what the kits don't answer:<br/>no task board in the set"| BPROMPT
+    DESIGN -->|"the same token rules;<br/>values — before each run"| BPROMPT
+    BPROMPT -->|"when the screen arrives —<br/>row T-229"| BACKLOG
 
     classDef source fill:#5B6E46,stroke:#3E4A2F,color:#fff
     classDef plan fill:#E8E3D6,stroke:#B8B0A0,color:#26231D
@@ -113,78 +113,78 @@ flowchart TB
     class INDIE,DESKTOP,DPROMPT,UIV2,RPROMPT,BPROMPT mod
 ```
 
-**Легенда рёбер** (введена 18.08.2026 — раньше три типа читались одинаково): **сплошная `-->`** — поток истины: содержимое или факт переносится по стрелке; **толстая `==>`** — жёсткий гейт, перепрыгивать нельзя (сначала ADR — только потом код); **пунктирная `-.->`** — сверка или порядок чтения: ничего не переносится, стрелка говорит «посмотри туда до/после».
+**Edge legend** (introduced 18.08.2026 — before that the three types read the same): **solid `-->`** — flow of truth: content or a fact moves along the arrow; **thick `==>`** — a hard gate, can't be skipped (ADR first — only then code); **dotted `-.->`** — a check or reading order: nothing moves, the arrow says "look there before/after".
 
-## Первоисточники (истина рождается только здесь)
+## Primary sources (truth is born only here)
 
-| Источник | Что в нём | Важное |
+| Source | What it holds | What matters |
 |---|---|---|
-| **Владелец** | Все хотелки и приоритеты | Единственный источник целей. Вопросы к нему копятся в BACKLOG как `Q-xx` |
-| **`docs/INPUT_PROMPT.md`** | Динамический промпт-инбокс (появился 18.08.2026): «considered as a new prompt every time» — целые документы-брифы, скоупы, сессионные задания | **Единственный инбокс** (старый внерепозиторный `Input.md` отставлен 18.08.2026) и **не коммитится** (в `.gitignore`) — владелец периодически переписывает файл целиком; момент перезаписи восстанавливается по mtime против последней «Input sweep» в `docs/tasks/CHANGELOG.md`. Разбор: сверка с кодом (брифы бывают старше кода) → борда, запись «Input sweep» в CHANGELOG. Содержимое может быть старым — дату внутри документа читать раньше, чем сам документ |
-| **Код + `git log`** | Что реально работает | **Главный арбитр.** Если док и код расходятся — прав код, док чинится |
+| **Owner** | All the wants and priorities | The only source of goals. Questions for him pile up in BACKLOG as `Q-xx` |
+| **`docs/INPUT_PROMPT.md`** | Dynamic prompt inbox (appeared 18.08.2026): "considered as a new prompt every time" — whole brief documents, scopes, session assignments | **The only inbox** (the old out-of-repo `Input.md` was retired 18.08.2026) and **not committed** (in `.gitignore`) — the owner periodically rewrites the whole file; the moment of the rewrite is recovered from mtime against the last "Input sweep" in `docs/tasks/CHANGELOG.md`. Processing: check against the code (briefs can be older than the code) → board, an "Input sweep" entry logged in CHANGELOG. The content can be stale — read the date inside the document before the document itself |
+| **Code + `git log`** | What actually works | **The final arbiter.** If a doc and the code disagree, the code is right and the doc gets fixed |
 
-## Планирование
+## Planning
 
-**`docs/tasks/BACKLOG.md` — таск-борда.** Только открытое. Формат: `ID · Имя · Приоритет · Теги · Описание`, ID стабильные (`T-xxx` задачи, `Q-xx` вопросы), исходные номера владельца (B*, N*, I*, NF*, FI*) — в скобках в описании. **Сделанные строки удаляются**, не вычёркиваются: история живёт в git, а борда должна читаться за минуту.
+**`docs/tasks/BACKLOG.md` — the task board.** Open items only. Format: `ID · Name · Priority · Tags · Description`, IDs are stable (`T-xxx` tasks, `Q-xx` questions), the owner's original numbers (B*, N*, I*, NF*, FI*) go in parentheses in the description. **Done rows are deleted**, not struck through: history lives in git, and the board has to read in a minute.
 
-**`docs/tasks/TASKS.md` — короткий горизонт.** Что прямо сейчас в работе + чек-лист «не проверено вживую», плюс раздел **Notes** с текущей версией на проде и активной веткой — самое быстрое место посмотреть «что сейчас происходит». Самый быстро протухающий файл. Копию в корне репозитория не заводить: Cowtext-борда ищет файл сначала там, и корневая копия перекроет настоящую.
+**`docs/tasks/TASKS.md` — short horizon.** What's being worked on right now + a "not verified live" checklist, plus a **Notes** section with the current version in production and the active branch — the fastest place to see "what's happening right now." The fastest-staling file. Don't create a copy in the repo root: the Cowtext board looks for the file there first, and a root copy would shadow the real one.
 
-**`docs/tasks/CHANGELOG.md` — по датам, человекочитаемо.** Пишется в конце сессии. До 24.08.2026 статус по фазам дублировался отдельным `ROADMAP.md` — файл отставлен как почти дубль этого лога; история фаз 0–13 архивирована в `docs/archive/roadmap-phases-0-13.md`.
+**`docs/tasks/CHANGELOG.md` — by date, human-readable.** Written at the end of a session. Until 24.08.2026 phase status was duplicated in a separate `ROADMAP.md` — that file was retired as an almost-duplicate of this log; the phase 0–13 history is archived in `docs/archive/roadmap-phases-0-13.md`.
 
-## Обоснования
+## Rationale
 
-**`docs/DECISIONS.md` (ADR-лог)** — жёсткое правило из AGENTS.md: **меняешь решение → сначала ADR, потом код.** Отменённые решения не стираются, а перекрываются новым ADR (например ADR-065 исправляет ADR-064) — видно не только «как есть», но и «как думали раньше и почему передумали». **С 18.08.2026 лог распилен**: тексты — по файлу на ADR в `docs/adr/`, `DECISIONS.md` — индекс, на который продолжают вести все старые ссылки; новый ADR = новый файл + строка индекса.
+**`docs/DECISIONS.md` (ADR log)** — a hard rule from AGENTS.md: **change a decision → ADR first, then code.** Superseded decisions aren't erased, they're overridden by a new ADR (e.g. ADR-065 corrects ADR-064) — so you can see not just "how it is" but also "how we thought before and why we changed our mind." **Since 18.08.2026 the log has been split**: full text — one file per ADR in `docs/adr/`, `DECISIONS.md` — an index that all the old links still point to; a new ADR = a new file + an index row.
 
-**`.claude/rules/*.md`** — то, что уже больно ломалось: Telegram-бот, EF-миграции, рендереры, деструктивные операции, секреты, прод. Читаются **перед** работой в зоне.
+**`.claude/rules/*.md`** — things that have already broken painfully: the Telegram bot, EF migrations, renderers, destructive operations, secrets, production. Read **before** working in that area.
 
-## Три правила против рассинхрона
+## Three rules against desynchronization
 
-1. **Задача живёт ровно в одном месте.** Открыта → BACKLOG. Взяли → TASKS. Сделали → CHANGELOG, из BACKLOG **удалить**.
-2. **Перед реализацией — ARCHITECTURE и PRD; при смене решения — сперва DECISIONS.**
-3. **Не доверять доку про статус — сверить с кодом.** Так нашлись: админ-панель, месяцами числившаяся «не начатой» при готовности с 27.07; `I15`, закрытый, но висевший открытым; `N6`/`N11`, сделанные до того, как их завели.
+1. **A task lives in exactly one place.** Open → BACKLOG. Taken → TASKS. Done → CHANGELOG, **delete** from BACKLOG.
+2. **Before implementation — ARCHITECTURE and PRD; when changing a decision — DECISIONS first.**
+3. **Don't trust a doc's status claim — check it against the code.** That's how these were found: the admin panel, listed as "not started" for months while it had been ready since 27.07; `I15`, closed but still hanging open; `N6`/`N11`, done before they were even filed.
 
-## Модуль инди-геймдева (Phase 13, с 10.08.2026)
+## Indie-gamedev module (Phase 13, since 10.08.2026)
 
-Три новых документа не меняют правила выше, а занимают в них конкретные места:
+Three new documents don't change the rules above — they occupy specific places within them:
 
-- **`docs/product/INDIEDEV.md`** — справочник по модулю: скоуп, модель данных, MUST/MIGHT. Читается **перед** реализацией любой строки `T-120…T-137`, ровно как `ARCHITECTURE.md` и `PRD.md` по правилу 2.
-- **`docs/tech/DESKTOP.md`** — устройство десктоп-сборки. Отдельный файл, а не раздел `ARCHITECTURE.md`, потому что описывает вторую среду исполнения со своими рисками; `ARCHITECTURE.md` ссылается на него.
-- **`docs/design/UI-V2-PLAN.md`** — план переноса фронтенда на дизайн-систему Cedar Bench. Живёт только на ветке `UI_V2`, источник истины на время порта; по мере выхода ADR каждое его решение переезжает в `docs/adr/`, и документ отмирает. Сама дизайн-система зеркалится из Claude Design в `.design-sync/ds-v2/` — вне `docs/`, потому что это выкачиваемый кэш, а не документ.
-- **`docs/design/indiedev-design-prompt.md`** — бриф для Claude Design. Односторонний потребитель: токены копируются в него из `DESIGN.md` дословно, обратно ничего не течёт. **Значит он протухает молча** — при изменении `styles.scss` сверять перед запуском.
-- **`docs/design/bench-responsive-prompt.md`** — второй бриф для Claude Design, по ADR-147: узкие экраны Cedar Bench. Тот же односторонний тип, что и брифом выше, и по той же причине **без дословного блока токенов** — только пометка «вставить перед запуском» с указателем на `styles.scss`. Отличие в предмете: спрашивается не набор новых экранов, а поведение хромы (рейка, крючковая планка, полки, ящик, линейка) ниже десктопной ширины, плюс контракт плотности при грубом указателе и сами брейкпоинты. Пока ответа нет, `T-034` закрыть нельзя, и ветка порта сознательно живёт без единого `@media` по ширине.
-- **`docs/design/bench-board-prompt.md`** — третий бриф для Claude Design, по ADR-165: четвёртый эталонный экран, доска задач. Того же одностороннего типа и так же без дословного блока токенов. Отдельный файл, а не раздел в брифе выше, потому что предмет другой: не поведение существующих экранов на узких ширинах, а экран, которого в наборе нет, на десктопной ширине — один прогон на двоих дал бы ответы, которые нельзя принять или отклонить по отдельности. Пока ответа нет, `T-229` закрыть нельзя, и `project-tasks` живёт на материалах верстака со своей прежней геометрией.
+- **`docs/product/INDIEDEV.md`** — the module reference: scope, data model, MUST/MIGHT. Read **before** implementing any `T-120…T-137` row, exactly like `ARCHITECTURE.md` and `PRD.md` under rule 2.
+- **`docs/tech/DESKTOP.md`** — how the desktop build works. A separate file rather than a section of `ARCHITECTURE.md`, because it describes a second runtime environment with its own risks; `ARCHITECTURE.md` links to it.
+- **`docs/design/UI-V2-PLAN.md`** — the plan for porting the frontend to the Cedar Bench design system. Lives only on the `UI_V2` branch, the source of truth for the duration of the port; as ADRs get written, each of its decisions moves into `docs/adr/`, and the document dies off. The design system itself is mirrored from Claude Design into `.design-sync/ds-v2/` — outside `docs/`, because it's a pulled-down cache, not a document.
+- **`docs/design/indiedev-design-prompt.md`** — a brief for Claude Design. A one-way consumer: tokens are copied into it verbatim from `DESIGN.md`, nothing flows back. **Which means it goes stale silently** — check it against `styles.scss` before each run whenever that file changes.
+- **`docs/design/bench-responsive-prompt.md`** — a second brief for Claude Design, per ADR-147: Cedar Bench narrow screens. The same one-way type as the brief above, and for the same reason **carries no verbatim token block** — only an "insert before each run" note pointing at `styles.scss`. It differs in subject: it doesn't ask for a set of new screens, but for how the chrome (rail, pegboard, shelves, drawer, ruler) behaves below desktop width, plus the density contract under a coarse pointer and the breakpoints themselves. Until it's answered, `T-034` can't be closed, and the port branch deliberately lives without a single width-based `@media`.
+- **`docs/design/bench-board-prompt.md`** — a third brief for Claude Design, per ADR-165: the fourth reference screen, the task board. The same one-way type, and likewise carries no verbatim token block. A separate file rather than a section in the brief above, because the subject is different: not how existing screens behave at narrow widths, but a screen that isn't in the set at all, at desktop width — running both through one pass would produce answers that couldn't be accepted or rejected separately. Until it's answered, `T-229` can't be closed, and `project-tasks` lives on workbench materials with its own earlier geometry.
 
-Правило «задача живёт ровно в одном месте» действует и здесь: MUST/MIGHT-списки в `INDIEDEV.md` — это *состав* модуля, а строки задач живут в `BACKLOG.md`. Список в `INDIEDEV.md` не вычёркивается по мере работы — статус ведёт `docs/tasks/CHANGELOG.md`.
+The rule "a task lives in exactly one place" applies here too: the MUST/MIGHT lists in `INDIEDEV.md` are the module's *composition*, while the task rows live in `BACKLOG.md`. The list in `INDIEDEV.md` isn't struck through as work proceeds — status is tracked by `docs/tasks/CHANGELOG.md`.
 
-## Размещение файлов (таксономия, 18.08.2026)
+## File placement (taxonomy, 18.08.2026)
 
-Корень `docs/` — только высокоуровневое: `DOCS-FLOW.md` (эта карта), `DECISIONS.md` (ADR-индекс — путь намеренно стабилен: на него ссылаются ~40 файлов, половина из кода) и нетрекаемый `INPUT_PROMPT.md` (по правилу владельца — в корне). Всё остальное — по подкатегориям:
+The `docs/` root holds only high-level material: `DOCS-FLOW.md` (this map), `DECISIONS.md` (the ADR index — the path is deliberately stable: ~40 files link to it, half of them from code) and the untracked `INPUT_PROMPT.md` (by the owner's rule — in the root). Everything else is sorted into subcategories:
 
-| Папка | Что кладётся | Сейчас там |
+| Folder | What goes there | Currently there |
 |---|---|---|
-| **`product/`** | Самые высокоуровневые контексты продукта: продукт в целом, бизнес-модель, требования | PRODUCT, PRD, BUSINESS, METRICS, MULTITENANCY, INDIEDEV |
-| **`tasks/`** | Всё, что связано с задачами | TASKS (короткий горизонт), BACKLOG (борда), CHANGELOG (история по датам) |
-| **`design/`** | Дизайн, UI, UX | DESIGN (токены), UI-INVENTORY, UI-V2-PLAN, indiedev-design-prompt, bench-responsive-prompt, bench-board-prompt |
-| **`tech/`** | Техническая составляющая | ARCHITECTURE, DESKTOP |
-| **`adr/`** | Тексты решений, файл на ADR (+ ownership-audit) | 205 ADR. Индекс — в корне; своя папка, а не `tech/adr/`, потому что ADR бывают и продуктовые (ADR-092, ADR-101), и технические |
-| **`fleet/`** | Оркестрация агентов (Cowtext / FleetView) | пока только `docs/fleet/README.md` — определения агентов живут в `.claude/agents/` |
-| **`knowledge_base/`** | База знаний: терминология, технологии и стек, таблицы локализации, списки внедрённых фич | STACK; `docs/knowledge_base/TERMINOLOGY.md` (словарь проектных терминов, извлечён из кода 18.08.2026) |
-| **`for_user/`** | Все инструкции, мануалы и прочее, что важно пользователю | integrations-setup (ранбук провайдеров) |
-| **`archive/`** | Архив старых .md — живёт в репо, **текст не редактируется** (запись момента), периодически чистится целиком (24.08.2026: журнал переезда на DO, ROADMAP-фазы 0–10 и аудит доков — удалены как отслужившие) | `roadmap-phases-0-13.md` (ROADMAP-статус фаз 0–13, архивирован 24.08.2026) |
-| **`misc/`** | Всё остальное | папка появится с первым файлом, который никуда выше не лёг |
+| **`product/`** | The highest-level product context: the product as a whole, the business model, requirements | PRODUCT, PRD, BUSINESS, METRICS, MULTITENANCY, INDIEDEV |
+| **`tasks/`** | Everything related to tasks | TASKS (short horizon), BACKLOG (board), CHANGELOG (history by date) |
+| **`design/`** | Design, UI, UX | DESIGN (tokens), UI-INVENTORY, UI-V2-PLAN, indiedev-design-prompt, bench-responsive-prompt, bench-board-prompt |
+| **`tech/`** | The technical side | ARCHITECTURE, DESKTOP |
+| **`adr/`** | Decision texts, one file per ADR (+ ownership-audit) | 205 ADRs. The index is in the root; its own folder rather than `tech/adr/`, because ADRs can be product decisions (ADR-092, ADR-101) as well as technical ones |
+| **`fleet/`** | Agent orchestration (Cowtext / FleetView) | so far only `docs/fleet/README.md` — agent definitions live in `.claude/agents/` |
+| **`knowledge_base/`** | Knowledge base: terminology, technologies and stack, localization tables, lists of shipped features | STACK; `docs/knowledge_base/TERMINOLOGY.md` (project terminology dictionary, extracted from the code on 18.08.2026) |
+| **`for_user/`** | All instructions, manuals and everything else that matters to the user | integrations-setup (provider runbook) |
+| **`archive/`** | Archive of old .md files — lives in the repo, **text isn't edited** (a record of a moment), periodically cleared out wholesale (24.08.2026: the DO-migration log, ROADMAP phases 0–10 and the docs audit — deleted as having served their purpose) | `roadmap-phases-0-13.md` (ROADMAP status for phases 0–13, archived 24.08.2026) |
+| **`misc/`** | Everything else | the folder will appear with the first file that doesn't fit anywhere above |
 
-Новый док обязан получить узел в схеме выше **в том же коммите** — STACK/BUSINESS/MULTITENANCY когда-то не были внесены вовсе, и это нашлось только аудитом (18.08).
+A new doc must get a node in the diagram above **in the same commit** — STACK/BUSINESS/MULTITENANCY were once not entered at all, and that was found only by an audit (18.08).
 
-**Абсолютные локальные пути, буквы дисков и пути к внерепозиторным папкам в документации не упоминаются** (правило от 18.08.2026): примеры путей пишутся без диска (`MyGame/Assets`); переносимые формы (`%APPDATA%\…`) и пути дроплета (`/home/martycow/…`) — можно. Внерепозиторные материалы (брифы, дизайн-пакеты, заметки) упоминаются описательно — «внерепозиторный бриф владельца», имя файла без пути; где они лежат, знает только он.
+**Absolute local paths, drive letters and paths to out-of-repo folders are not mentioned in documentation** (rule from 18.08.2026): example paths are written without a drive (`MyGame/Assets`); portable forms (`%APPDATA%\…`) and droplet paths (`/home/martycow/…`) are fine. Out-of-repo material (briefs, design packages, notes) is referenced descriptively — "the owner's out-of-repo brief," a filename without a path; only he knows where they live.
 
-## Известные слабые места
+## Known weak spots
 
-- **`docs/product/PRD.md` склонен отставать сильнее прочих справочников** — чинился 10.08 (языки) и снова 18.08 (Phase 13 числился «open» при закрытом MUST, языков «шесть» при девяти в коде, платежи «not yet live» при проверенном деньгами Stripe). Сверять при каждом большом разборе, не верить статусам без кода.
-- **`docs/design/UI-INVENTORY.md`** обновляется вручную; с 12.08.2026 грубый дрейф ловит `UiInventoryDriftTests` (экран без единого упоминания = красный `dotnet test`), но точность *строк* гард проверить не может. Экраны модуля заведены (последние два — `projects`/`project`, 18.08.2026).
-- **Инбокс не виден в git-истории** — `docs/INPUT_PROMPT.md` сознательно не коммитится (правило: «коммитить не надо»), так что момент перезаписи восстанавливается только по mtime против последней «Input sweep» в `docs/tasks/CHANGELOG.md`. Старые внерепозиторные инбоксы (`Input.md`, бриф `Gamedev_Focused_Rework.md`) отставлены 18.08.2026 — упоминания в истории остаются записью того времени.
-- ~~**`docs/design/indiedev-design-prompt.md` дублирует токены**~~ — **починено 18.08.2026**: дословный блок значений заменён указателем на `styles.scss` после того, как дубль успел разойтись с кодом (роли шрифтов и размеры иконок сдвинулись 01.08, бриф остался со старыми).
-- **Архив чистится без предупреждения** — найдено 24.08.2026: three files in `docs/archive/` (the DO-migration checklist, ROADMAP-phases-0-10, and the docs audit) were deleted with the commit message «Removed outdated docs», and references to them in this map and in `.claude/rules/production-environment.md` were left dangling — `DocsFlowGraphTests.Every_mapped_path_exists` caught it only now, not at deletion time, because the test wasn't run between commits. If a file under `archive/` has gone missing, check `git log --diff-filter=D -- docs/archive/` before fixing the references.
+- **`docs/product/PRD.md` tends to lag behind the other references more than most** — fixed on 10.08 (languages) and again on 18.08 (Phase 13 was listed "open" while MUST was closed, "six" languages while the code had nine, payments "not yet live" while Stripe had been verified with real money). Check it against the code at every large review — don't trust status claims without the code.
+- **`docs/design/UI-INVENTORY.md`** is updated by hand; since 12.08.2026 `UiInventoryDriftTests` catches coarse drift (a screen with not a single mention = a red `dotnet test`), but the guard can't check the accuracy of individual *rows*. The module's screens are entered (the last two — `projects`/`project`, 18.08.2026).
+- **The inbox is invisible in git history** — `docs/INPUT_PROMPT.md` is deliberately not committed (rule: "no need to commit it"), so the moment of a rewrite can only be recovered from mtime against the last "Input sweep" in `docs/tasks/CHANGELOG.md`. The old out-of-repo inboxes (`Input.md`, the `Gamedev_Focused_Rework.md` brief) were retired 18.08.2026 — mentions of them in history remain a record of that time.
+- ~~**`docs/design/indiedev-design-prompt.md` duplicates tokens**~~ — **fixed 18.08.2026**: the verbatim block of values was replaced with a pointer to `styles.scss` after the duplicate had drifted out of sync with the code (font roles and icon sizes shifted on 01.08, the brief was left with the old ones).
+- **The archive gets cleaned without warning** — found 24.08.2026: three files in `docs/archive/` (the DO-migration checklist, ROADMAP-phases-0-10, and the docs audit) were deleted with the commit message «Removed outdated docs», and references to them in this map and in `.claude/rules/production-environment.md` were left dangling — `DocsFlowGraphTests.Every_mapped_path_exists` caught it only now, not at deletion time, because the test wasn't run between commits. If a file under `archive/` has gone missing, check `git log --diff-filter=D -- docs/archive/` before fixing the references.
 
-## Прод-переезд на DigitalOcean (11.08.2026) — история без живого чек-листа
+## Prod move to DigitalOcean (11.08.2026) — history with no living checklist
 
-Чек-лист переезда прода с Raspberry Pi на DigitalOcean, снятый с фактического состояния машины, жил в архиве под именем `migration-to-digitalocean.md` и был удалён 24.08.2026 в чистке архива (см. пункт выше) — сам факт переезда и его результат остаются в `docs/tasks/CHANGELOG.md`/`docs/DECISIONS.md` как запись момента. Источник истины о текущем состоянии прода — `.claude/rules/production-environment.md`, переписанный по факту с живой машины 11.08.2026.
+The checklist for moving production from the Raspberry Pi to DigitalOcean, taken from the machine's actual state, lived in the archive under the name `migration-to-digitalocean.md` and was deleted 24.08.2026 in the archive cleanup (see the point above) — the fact of the move and its outcome remain in `docs/tasks/CHANGELOG.md`/`docs/DECISIONS.md` as a record of that moment. The source of truth for production's current state is `.claude/rules/production-environment.md`, rewritten from the live machine's actual state on 11.08.2026.

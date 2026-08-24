@@ -1,141 +1,141 @@
 ---
 owner: marty
 last_verified: 2026-08-18
-source_of_truth_for: терминология проекта — что значат слова, которыми говорят код и доки
+source_of_truth_for: project terminology — what the words the code and docs use mean
 guard: none
 ---
 
-# Терминология Cedar Clerk
+# Cedar Clerk Terminology
 
-Словарь проектных терминов — того, что не гуглится, потому что значение здешнее. Извлечён из кода и
-живых доков 18.08.2026 (пять параллельных проходов + слияние); каждый термин подтверждён источником.
-Общетехнические слова (SQLite, OAuth) сюда не входят. Пользовательский глоссарий постов — другая
-вещь: это фича блога (`GlossaryTerm`), а не этот файл.
+A glossary of project terms — things that can't be googled, because the meaning is local to this project.
+Extracted from the code and the live docs on 18.08.2026 (five parallel passes + a merge); every term is
+confirmed against a source. General technical words (SQLite, OAuth) are not included here. The reader-facing
+post glossary is a different thing: it's a blog feature (`GlossaryTerm`), not this file.
 
-## Документ и публикация
+## Document and publishing
 
-| Термин | По-русски | Значение | Источник |
+| Term | Russian | Meaning | Source |
 |---|---|---|---|
-| Draft | черновик | Центральная сущность контента: TipTap-документ с автосейвом, ревизиями, переводами, тегами и папкой; с ADR-102 — документ любого типа внутри Project, а не только пост | `Entities.cs`, ARCHITECTURE §Data model |
-| CedarJson | — | Канонический внутренний формат документа — TipTap JSON в `Draft.CedarJson`; хранится как есть и никогда не переписывается под конкретную сеть | `Entities.cs:256` |
-| DocumentType | тип документа | Строка на Draft (ADR-102): `post/design/script/plot/changelog/note`; default `post`, публикуемы только `post` и `changelog` | `Core/DocumentTypes.cs` |
-| One document, many renderers | «один документ, много рендереров» | Ядро архитектуры: один CedarJson рендерится во все выходы; ни одна поверхность не ведёт параллельный ручной контент (единственное исключение — override text) | ARCHITECTURE §Core idea |
-| Renderer | рендерер | Чистый C#-класс в Core, превращающий CedarJson в формат назначения; канонический для Telegram — `CedarToTelegramBlocksRenderer`; инварианты: экранирование `< > &` + тест на каждый узел | ARCHITECTURE:29-33, rules/renderers.md |
-| PublishTarget / IPublishTarget | таргет | Сущность: подключённый аккаунт владельца в одной сети («куда может уйти пост»); интерфейс: назваться, описать лимиты, отправить — и ничего больше | `Publishing/IPublishTarget.cs`, `Entities.cs:843` |
-| PublishNetworks | сеть | Строковые ключи сетей — `"telegram"`, `"bluesky"`, `"x"`; строки, а не enum: значение живёт в SQLite, API и Angular (ADR-078) | `Core/PublishCapabilities.cs:5-14` |
-| PublishCapabilities | возможности сети | Лимиты сети как данные, а не поведение: MaxCharacters, MaxMediaItems, Supports*, DerivesShortPost — редактор читает их и предупреждает до отправки | `Core/PublishCapabilities.cs` |
-| PublishJob | джоб очереди публикаций | Durable-строка «одна публикация в один таргет» (ADR-081): Pending→Running→Succeeded\|Failed\|**Unknown**; Unknown (процесс умер во время отправки) не ретраится — слепой ретрай превращает один пост в два | `Entities.cs:767+`, `Publishing/PublishJobRunner.cs` |
-| PublishOutcome / Receipt | — | Результат отправки вместо исключения: Receipt (RemoteId; PublicUrl может быть null) либо читаемая ошибка + статус-код | `Publishing/IPublishTarget.cs:46,66` |
-| Micro-thread | микроблог-тред | ADR-094: документ целиком уходит в X/Bluesky цепочкой reply — резка в родных единицах сети, нумерация «N/M», ссылка на блог в последней части | `Core/MicroThreadSplitter.cs` |
-| Thread part | часть треда | Один PublishJob на **часть**, а не на тред (T-106): упавший на части 4 тред возобновляется с части 4; ThreadPartRef несёт ReplyTo и Root | `Entities.cs:779-787` |
-| Override text | авторский текст под сеть | `DraftTargetText` per (draft, network, language): кросс-пост — самостоятельный пост, а не анонс (ADR-077); пусто → тизер, публикация никогда не блокируется | `Entities.cs:818-835` |
-| Teaser | тизер | Автоматический короткий пост со ссылкой на блог — fallback при пустом override; capability DerivesShortPost превращает «слишком длинно» из отказа в информацию | `Entities.cs:823-825`, ADR-093 |
-| PrimaryLanguage | основной язык | Основной язык черновика (ADR-064): документ на самом Draft канонический и написан на нём; по умолчанию русский | `Entities.cs:257-259` |
-| DraftTranslation | перевод черновика | Версия документа на другом языке: свои Title и CedarJson на (DraftId, Language) | `Entities.cs:494-511` |
-| SourceSnapshotJson | снапшот исходника перевода | Снимок исходного CedarJson на момент синхронизации перевода — даёт поблочный дифф «что изменилось с тех пор» вместо булева «устарел» | `Entities.cs:504-510` |
-| DraftRevision | ревизия | Неизменяемая история по языкам: строка на каждый явный сейв и публикацию (Kind: save\|telegram\|blog) — история правок и безопасный дифф перед публикацией | `Entities.cs:513-525` |
-| ShrinkGuard | — | Когда сейв требует явного подтверждения: инцидент 29.07 — автосейв сохранил мгновенно-пустой редактор; «подозрительно» = было ≥200 видимых символов и осталось ≤20% | `Core/ShrinkGuard.cs` |
-| .cedar (CedarPackage) | формат .cedar | Экспорт/импорт документа: zip-контейнер (аналог .docx) с document.json + assets/; переводы в экспорт сознательно не входят | `Core/CedarPackage.cs`, ARCHITECTURE:130-132 |
+| Draft | черновик | The central content entity: a TipTap document with autosave, revisions, translations, tags and a folder; since ADR-102 — a document of any type inside a Project, not just a post | `Entities.cs`, ARCHITECTURE §Data model |
+| CedarJson | — | The canonical internal document format — TipTap JSON in `Draft.CedarJson`; stored as-is and never rewritten for a specific network | `Entities.cs:256` |
+| DocumentType | тип документа | A string on Draft (ADR-102): `post/design/script/plot/changelog/note`; default `post`, only `post` and `changelog` are publishable | `Core/DocumentTypes.cs` |
+| One document, many renderers | «один документ, много рендереров» | The core of the architecture: one CedarJson is rendered into every output; no surface carries parallel hand-maintained content (the sole exception is override text) | ARCHITECTURE §Core idea |
+| Renderer | рендерер | A pure C# class in Core that turns CedarJson into a destination format; the canonical one for Telegram is `CedarToTelegramBlocksRenderer`; invariants: escaping `< > &` + a test for every node | ARCHITECTURE:29-33, rules/renderers.md |
+| PublishTarget / IPublishTarget | таргет | Entity: the owner's connected account on one network ("where a post can go"); interface: name itself, describe its limits, send — and nothing more | `Publishing/IPublishTarget.cs`, `Entities.cs:843` |
+| PublishNetworks | сеть | String keys for networks — `"telegram"`, `"bluesky"`, `"x"`; strings, not an enum: the value lives in SQLite, the API and Angular (ADR-078) | `Core/PublishCapabilities.cs:5-14` |
+| PublishCapabilities | возможности сети | A network's limits as data, not behavior: MaxCharacters, MaxMediaItems, Supports*, DerivesShortPost — the editor reads them and warns before sending | `Core/PublishCapabilities.cs` |
+| PublishJob | джоб очереди публикаций | A durable row for "one publish to one target" (ADR-081): Pending→Running→Succeeded\|Failed\|**Unknown**; Unknown (the process died mid-send) is never retried — a blind retry would turn one post into two | `Entities.cs:767+`, `Publishing/PublishJobRunner.cs` |
+| PublishOutcome / Receipt | — | A send result in place of an exception: a Receipt (RemoteId; PublicUrl may be null) or a readable error + status code | `Publishing/IPublishTarget.cs:46,66` |
+| Micro-thread | микроблог-тред | ADR-094: the whole document goes out as an X/Bluesky reply chain — split in the network's own units, numbered "N/M", with a blog link on the last part | `Core/MicroThreadSplitter.cs` |
+| Thread part | часть треда | One PublishJob per **part**, not per thread (T-106): a thread that failed on part 4 resumes from part 4; ThreadPartRef carries ReplyTo and Root | `Entities.cs:779-787` |
+| Override text | авторский текст под сеть | `DraftTargetText` per (draft, network, language): a cross-post is a standalone post, not an announcement (ADR-077); empty → a teaser, publishing is never blocked | `Entities.cs:818-835` |
+| Teaser | тизер | An automatic short post with a link to the blog — the fallback when override text is empty; the DerivesShortPost capability turns "too long" from a rejection into information | `Entities.cs:823-825`, ADR-093 |
+| PrimaryLanguage | основной язык | The draft's primary language (ADR-064): the document on the Draft itself is canonical and written in it; Russian by default | `Entities.cs:257-259` |
+| DraftTranslation | перевод черновика | A version of the document in another language: its own Title and CedarJson at (DraftId, Language) | `Entities.cs:494-511` |
+| SourceSnapshotJson | снапшот исходника перевода | A snapshot of the source CedarJson taken at the moment a translation was synced — gives a block-by-block "what changed since then" diff instead of a boolean "stale" flag | `Entities.cs:504-510` |
+| DraftRevision | ревизия | An immutable history broken down by language: a row for every explicit save and every publish (Kind: save\|telegram\|blog) — an edit history and a safe diff before publishing | `Entities.cs:513-525` |
+| ShrinkGuard | — | When a save requires explicit confirmation: an incident on 29.07 where autosave saved an instantaneously-empty editor; "suspicious" means there were ≥200 visible characters and ≤20% remain | `Core/ShrinkGuard.cs` |
+| .cedar (CedarPackage) | формат .cedar | Document export/import: a zip container (analogous to .docx) with document.json + assets/; translations are deliberately not included in the export | `Core/CedarPackage.cs`, ARCHITECTURE:130-132 |
 
-## Блог и читатели
+## Blog and readers
 
-| Термин | По-русски | Значение | Источник |
+| Term | Russian | Meaning | Source |
 |---|---|---|---|
-| annotation | аннотация | TipTap-узел, помечающий фрагмент статьи для якорных реакций/комментариев; null = «вся статья»; понятие только блоговое | `Core/CedarToBlogHtmlRenderer.cs` |
-| article title | читательский заголовок | `Draft.ArticleTitle`: заголовок для читателя отдельно от рабочего имени драфта («devlog 14 (final final)» — имя файла, не заголовок) | `Entities.cs` |
-| private post | приватный пост | Пост с `IsPrivate`, опубликованный в блог, но доступный по инвайту/регистрации; остальным страница неотличима от 404 | `BlogEndpoints.cs` |
-| semi-public post | полупубличный пост | `IsListedWhilePrivate`: приватный пост виден в индексе карточкой с замком и без тизера — меняется «что рекламируется», не «что читаемо» | `Entities.cs`, `BlogEndpoints.cs` |
-| registration gate | регистрационный гейт | Форма (B3) незваному посетителю приватного поста вместо 404; отправка сразу ставит cookie — сбор аудитории, не верификация | `BlogEndpoints.cs`, `Core/RegistrationFormSet.cs` |
-| form preset | пресет формы | Именованная переиспользуемая форма (N12): применение **копирует** JSON в драфт — правка пресета не меняет живой пост | `Entities.cs` (FormPreset) |
-| invite | инвайт на приватный пост | `PostInvite` — строка на приглашённый email; токен `?invite=` выдаёт подписанную cookie; удаление строки отзывает доступ немедленно | `Entities.cs`, `BlogEndpoints.cs` |
-| reader access token | токен доступа читателя | `PostRegistration.AccessToken` (T-064): accessUrl после формы, чтобы доступ переносился в другой браузер; отзыв — на одного читателя | `Entities.cs` |
-| revoked registration | отозванная регистрация | `PostRegistration.IsRevoked`: доступ отозван, строка остаётся для истории | `Entities.cs` |
-| watermark | водяной знак | `WatermarkText`, замощённый поверх листа приватного поста (SVG-тайл base64 в CSS-фоне): отпугивание, не защита | `Core/WatermarkRenderer.cs` |
-| copy protection | защита от копирования | `DisableCopy`: блок выделения/copy/контекст-меню на листе приватного поста; из той же семьи сдерживания, что watermark | `BlogEndpoints.cs` |
-| visitor hash | хеш посетителя | SHA-256 от IP с солью — анонимная идентичность без хранения сырых IP: дедуп реакций (ADR-016), «один голос», троттлинг форм | `BlogEndpoints.cs` |
-| reaction | реакция | Анонимный like/dislike на статью или аннотацию, одна на (draft, annotation, visitor); повторный клик снимает | `Entities.cs` |
-| poll vote | голос в опросе | Опросы — блок только для блога (ADR-055): один голос на (poll, visitor), смена ответа обновляет строку | `Entities.cs`, `BlogEndpoints.cs` |
-| view counter | счётчик просмотров | `ViewCount`: атомарный UPDATE + дедуп 30-минутной cookie, общий для всех языков поста (ADR-023) | `BlogEndpoints.cs` |
-| geo rollup | гео-сводка | `BlogViewGeoDaily`: дневной агрегат по (владелец, день, страна, язык) из CF-IPCountry/Accept-Language; агрегат, не журнал визитов (ADR-097) | `Entities.cs`, `Core/ReaderGeo.cs` |
-| header slots | слоты шапки | До 3 настраиваемых элементов подзаголовка (подпись/URL/локация/дата/длина/время чтения/слова/просмотры); третий — Pro | `Core/HeaderSlotRenderer.cs` |
-| cross-link | кросс-ссылка | Взаимные ссылки поста между поверхностями («Смотреть в Telegram» ↔ «Read on the blog»), тексты владельца локализуемы (I15) | `Consts.CrossLinks` |
-| user glossary | пользовательский глоссарий | `GlossaryTerm` — термины владельца (per-owner, per-language, алиасы под падежи), подсвечиваются в блоге с тултипом; только первое вхождение | `Core/GlossaryScanner.cs` |
+| annotation | аннотация | A TipTap node marking a fragment of an article for anchored reactions/comments; null = "the whole article"; a blog-only concept | `Core/CedarToBlogHtmlRenderer.cs` |
+| article title | читательский заголовок | `Draft.ArticleTitle`: the title shown to the reader, kept separate from the draft's working name ("devlog 14 (final final)" is a filename, not a title) | `Entities.cs` |
+| private post | приватный пост | A post with `IsPrivate`, published to the blog but reachable only by invite/registration; to anyone else the page is indistinguishable from a 404 | `BlogEndpoints.cs` |
+| semi-public post | полупубличный пост | `IsListedWhilePrivate`: a private post shown in the index as a card with a lock icon and no teaser — it changes "what gets advertised," not "what's readable" | `Entities.cs`, `BlogEndpoints.cs` |
+| registration gate | регистрационный гейт | A form (B3) shown to an uninvited visitor of a private post instead of a 404; submitting it immediately sets a cookie — audience collection, not verification | `BlogEndpoints.cs`, `Core/RegistrationFormSet.cs` |
+| form preset | пресет формы | A named, reusable form (N12): applying it **copies** JSON into the draft — editing the preset afterward does not change the live post | `Entities.cs` (FormPreset) |
+| invite | инвайт на приватный пост | `PostInvite` — a row per invited email; the `?invite=` token issues a signed cookie; deleting the row revokes access immediately | `Entities.cs`, `BlogEndpoints.cs` |
+| reader access token | токен доступа читателя | `PostRegistration.AccessToken` (T-064): an accessUrl generated after the form so access can carry over to another browser; revocation targets one reader | `Entities.cs` |
+| revoked registration | отозванная регистрация | `PostRegistration.IsRevoked`: access has been revoked, the row stays for history | `Entities.cs` |
+| watermark | водяной знак | `WatermarkText`, tiled across a private post's sheet (a base64 SVG tile in the CSS background): deterrence, not protection | `Core/WatermarkRenderer.cs` |
+| copy protection | защита от копирования | `DisableCopy`: blocks selection/copy/context-menu on a private post's sheet; from the same deterrence family as the watermark | `BlogEndpoints.cs` |
+| visitor hash | хеш посетителя | SHA-256 of the IP with a salt — an anonymous identity without storing raw IPs: reaction dedup (ADR-016), "one vote," form throttling | `BlogEndpoints.cs` |
+| reaction | реакция | An anonymous like/dislike on an article or annotation, one per (draft, annotation, visitor); clicking again removes it | `Entities.cs` |
+| poll vote | голос в опросе | Polls — a blog-only block (ADR-055): one vote per (poll, visitor), changing the answer updates the row | `Entities.cs`, `BlogEndpoints.cs` |
+| view counter | счётчик просмотров | `ViewCount`: an atomic UPDATE plus a 30-minute cookie for dedup, shared across all languages of a post (ADR-023) | `BlogEndpoints.cs` |
+| geo rollup | гео-сводка | `BlogViewGeoDaily`: a daily aggregate by (owner, day, country, language) from CF-IPCountry/Accept-Language; an aggregate, not a visit log (ADR-097) | `Entities.cs`, `Core/ReaderGeo.cs` |
+| header slots | слоты шапки | Up to 3 configurable subheading elements (byline/URL/location/date/length/read time/word count/views); the third is Pro | `Core/HeaderSlotRenderer.cs` |
+| cross-link | кросс-ссылка | Mutual links between a post's surfaces ("Watch on Telegram" ↔ "Read on the blog"), with owner-facing text that is localizable (I15) | `Consts.CrossLinks` |
+| user glossary | пользовательский глоссарий | `GlossaryTerm` — the owner's own terms (per-owner, per-language, with case-form aliases), highlighted in the blog with a tooltip; only on first occurrence | `Core/GlossaryScanner.cs` |
 
-## Тарифы и деньги
+## Plans and money
 
-| Термин | По-русски | Значение | Источник |
+| Term | Russian | Meaning | Source |
 |---|---|---|---|
-| PlanTiers | уровни тарифа | Byte-enum Free(0)/Pro(1)/ProPlus(2)/Forever(3); строки планов: pro $3, proplus $6, trial → tier ProPlus | `Core/PlanTiers.cs`, `Consts.Plans` |
-| TTFP | время до первой публикации | Time to first publish — медиана от `AspNetUsers.CreatedAt` до первой публикации (min по Succeeded `PublishJob` и `BlogPublishedAt`); вспомогательная к активации из BUSINESS §4 | METRICS §3.1 (ADR-126) |
-| PlanLimitations | лимиты тарифов | Центральный гейт по tier: каналы 1/3/10, подпись с Pro, AI с ProPlus, слоты 3 против 2, квоты хранилища | `Core/PlanLimitations.cs` |
-| storage quota | квота хранилища | 100 МБ / 1 ГБ / 3 ГБ / 100 ГБ (ADR-129); остаток риска — медиа на диске машины до шага 2 T-172 | `PlanLimitations.cs`, MULTITENANCY §1 |
-| Trial | триал за $1 | $1 за 7 дней ProPlus, один раз на аккаунт (`TrialUsedAt`); в метриках — «фильтр намерения» | `Consts.Plans`, BUSINESS §4 |
-| Forever / Founder-код | вечный тариф основателя | Постоянный Pro (100 ГБ, без AI) отдельным founder-инвайтом без платёжки; «навсегда» = PlanExpiresAt=null; раздача на джемах | ADR-022, BUSINESS §6 |
-| Grace | грейс-период | 2 дня поверх 30-дневной подписки — лаг renewal-вебхука не «мигает» пользователем в Free | `Core/SubscriptionPlanHelper.cs` |
-| credit | кредит | Внутренняя валюта за то, что стоит реальных денег за использование (X-пост = 1 кредит, себестоимость ~$0.20); цена ~2× себестоимости | `Core/CreditPacks.cs` |
-| credit wallet | кошелёк кредитов | Предоплаченный кошелёк (ADR-092): баланс = SUM(Delta) по леджеру; пополнение теми же платёжными флоу, что подписки | `CreditWallet.cs` |
-| CreditEntry | леджер кредитов | Одно движение (+покупка/−публиш); леджер, а не счётчик — у баланса есть аудит-трейл; уникальная пара (Reason, Ref) = идемпотентность | `Entities.cs` |
-| CreditReasons | причины движения | Словарь леджера, общий с UI: purchase / x-post / admin-grant | `Core/CreditPacks.cs` |
-| credit pack | пакет кредитов | 10/$4, 50/$18, 100/$30 (Stars 200/900/1500⭐); payload «credits-{pack}:{user}» — та же схема {what}:{who}, что у планов | `Core/CreditPacks.cs` |
-| AiDailyLimit / AiUsage | дневная AI-квота | 20 вызовов/сутки на пользователя; до 600/мес на $6 ProPlus — единственная статья, способная сделать тариф убыточным | `PlanLimitations.cs`, BUSINESS §3 |
-| attribution signature | подпись-атрибуция | Free всегда получает «Published with Cedar Clerk» со ссылкой (апгрейд-крючок); Pro+ заменяет или убирает; гейт централизован в `ResolveSignature` (ADR-034) | `PlanLimitations.cs` |
-| InviteCode | инвайт-код | Реальные коды (IF2): Code/Label/MaxUses/ExpiresAt; деактивируются, не удаляются — иначе стирается атрибуция; fallback — конфиг | `Entities.cs`, ADR-122 |
-| Payment.ExternalId | дедуп платежа | Stripe session / Stars charge / PayPal order id — защита от дублей при повторных вебхуках | `Entities.cs`, `BillingEndpoints.cs` |
-| FreeChannelSwitchCooldown | кулдаун смены канала | На Free канал меняется не чаще раза в 7 дней — иначе один аккаунт обслуживал бы несколько каналов по очереди | `PlanLimitations.cs` |
-| активация | — | Метрика №1: доля зарегистрировавшихся, опубликовавших ≥1 пост за первую неделю; низкая = проблема онбординга, трафик покупать рано | BUSINESS §4 |
-| отток (churn) | — | Метрика №3: платящие, не продлившиеся за месяц; порог 5%/мес (рядом №2 — конверсия Free→платный, №4 — MRR без разовых) | BUSINESS §4 |
+| PlanTiers | уровни тарифа | A byte enum Free(0)/Pro(1)/ProPlus(2)/Forever(3); plan strings: pro $3, proplus $6, trial → tier ProPlus | `Core/PlanTiers.cs`, `Consts.Plans` |
+| TTFP | время до первой публикации | Time to first publish — the median from `AspNetUsers.CreatedAt` to the first publish (the min over Succeeded `PublishJob` and `BlogPublishedAt`); an aid to the activation metric from BUSINESS §4 | METRICS §3.1 (ADR-126) |
+| PlanLimitations | лимиты тарифов | The central gate by tier: 1/3/10 channels, signature from Pro, AI from ProPlus, 3 slots vs. 2, storage quotas | `Core/PlanLimitations.cs` |
+| storage quota | квота хранилища | 100 MB / 1 GB / 3 GB / 100 GB (ADR-129); the residual risk is media sitting on the machine's disk until step 2 of T-172 | `PlanLimitations.cs`, MULTITENANCY §1 |
+| Trial | триал за $1 | $1 for 7 days of ProPlus, once per account (`TrialUsedAt`); in the metrics it's an "intent filter" | `Consts.Plans`, BUSINESS §4 |
+| Forever / Founder code | вечный тариф основателя | A permanent Pro plan (100 GB, no AI) granted through a separate founder invite with no payment flow; "forever" = PlanExpiresAt=null; given out at jams | ADR-022, BUSINESS §6 |
+| Grace | грейс-период | 2 days on top of the 30-day subscription — so renewal-webhook lag doesn't "flicker" a user down to Free | `Core/SubscriptionPlanHelper.cs` |
+| credit | кредит | An internal currency for usage that costs real money (an X post = 1 credit, cost basis ~$0.20); priced at ~2× cost | `Core/CreditPacks.cs` |
+| credit wallet | кошелёк кредитов | A prepaid wallet (ADR-092): balance = SUM(Delta) over the ledger; topped up through the same payment flows as subscriptions | `CreditWallet.cs` |
+| CreditEntry | леджер кредитов | A single movement (+purchase/−publish); a ledger, not a counter — the balance has an audit trail; a unique (Reason, Ref) pair gives idempotency | `Entities.cs` |
+| CreditReasons | причины движения | The ledger's dictionary, shared with the UI: purchase / x-post / admin-grant | `Core/CreditPacks.cs` |
+| credit pack | пакет кредитов | 10/$4, 50/$18, 100/$30 (Stars 200/900/1500⭐); payload "credits-{pack}:{user}" — the same {what}:{who} scheme as plans | `Core/CreditPacks.cs` |
+| AiDailyLimit / AiUsage | дневная AI-квота | 20 calls/day per user; up to 600/month on the $6 ProPlus plan — the only line item able to make the plan unprofitable | `PlanLimitations.cs`, BUSINESS §3 |
+| attribution signature | подпись-атрибуция | Free always gets "Published with Cedar Clerk" with a link (an upgrade hook); Pro+ replaces or removes it; the gate is centralized in `ResolveSignature` (ADR-034) | `PlanLimitations.cs` |
+| InviteCode | инвайт-код | Real codes (IF2): Code/Label/MaxUses/ExpiresAt; deactivated, not deleted — deleting would erase attribution; falls back to config | `Entities.cs`, ADR-122 |
+| Payment.ExternalId | дедуп платежа | The Stripe session / Stars charge / PayPal order id — protection against duplicates on repeated webhooks | `Entities.cs`, `BillingEndpoints.cs` |
+| FreeChannelSwitchCooldown | кулдаун смены канала | On Free the channel can be switched no more than once every 7 days — otherwise one account could serve several channels in rotation | `PlanLimitations.cs` |
+| activation | активация | Metric #1: the share of signups who published ≥1 post within their first week; low = an onboarding problem, too early to buy traffic | BUSINESS §4 |
+| churn (отток) | — | Metric #3: paying users who didn't renew within a month; threshold 5%/month (nearby: #2 is Free→paid conversion, #4 is MRR excluding one-off payments) | BUSINESS §4 |
 
-## Инди-модуль и десктоп
+## Indie module and desktop
 
-| Термин | По-русски | Значение | Источник |
+| Term | Russian | Meaning | Source |
 |---|---|---|---|
-| Project | проект | Игра как контейнер документов, задач, спринтов и индекса ассетов; всегда содержит ≥1 документ, архивируется, а не удаляется | `Entities.IndieDev.cs` |
-| ProjectType | тип проекта | fullgame/jam/prototype/released — решает только стартовый документ при создании, и ничего после | `Core/ProjectTypes.cs` |
-| GameTask | задача | Набор фиксированных полей, не документ (граница ADR-106): Description — plain text; имя GameTask, потому что Task занято async | `Entities.IndieDev.cs` |
-| Sprint | спринт | Имя + две даты + невозобновляемый номер из счётчика проекта (не MAX+1); статуса-колонки нет — planned/current/finished выводится из дат (ADR-111) | `Entities.IndieDev.cs`, `Core/SprintStates.cs` |
-| Build | билд | Запись о версии игры: номер, заметки, дата, состав; сущность, а не тег, о гите не знает (ADR-112) | `Entities.IndieDev.cs` |
-| changelog generator | генератор чейнджлога | `POST /api/builds/{id}/changelog`: из заметок билда и закрытых задач собирается документ типа changelog — дальше обычный документ | `Modules/IndieDev/BuildEndpoints.cs` |
-| EntityLink | связь сущностей | Ручная связь двух вещей проекта (обобщение TaskLink, T-141); «используется в» нельзя обнаружить — только указать руками | `Entities.IndieDev.cs` |
-| asset index | индекс ассетов | Облачное описание папки проекта: один корень (`AssetRootPath`), скан агентом, батчи по 500; пропавший файл помечается MissingSince, не удаляется | `Entities.IndieDev.cs`, INDIEDEV |
-| AssetEntry | строка индекса | Один файл: путь + метаданные + превью; байты не копируются. Сознательно не `Asset` — тот является загруженным медиа с квотой | `Entities.IndieDev.cs` |
-| AssetKinds | вид ассета | Вид по расширению (image/model/audio/…): открывать десятки тысяч файлов нельзя; движковые кэши отсекает SkippedDirectories; у `.blend` — встроенное превью | `Core/AssetKinds.cs`, `Core/BlendThumbnail.cs` |
-| агент ФС | агент файловой системы | Тот же `CedarClerk.Server.exe` с `Cedar:Agent:Enabled`: ранний выход в Program.cs — ни базы, ни Identity, только `/agent/*`; читает диск, ничего не пишет и не запускает (ADR-117) | `Modules/Agent/`, DESKTOP |
-| bearer token per launch | токен на запуск | Первый замок агента: 32 байта на каждый запуск, через env, на диск не пишется; без токена отказ во всём | `Modules/Agent/AgentEndpoints.cs` |
-| granted roots | выданные корни | Второй замок: папки, разрешённые жестом человека (диалог ОС), сравнение по пути с завершающим разделителем; лежат у оболочки, с сервера не берутся | `Modules/Agent/AgentGrants.cs` |
-| fingerprint | отпечаток | Превью+метаданные вместо файла с другой машины: чип «Отпечаток», «Показать в проводнике» скрыт; обычное состояние экрана, раз индекс общий | DESKTOP §«Файл или отпечаток» |
-| файл или отпечаток | — | Центральный вопрос экрана ассетов: `isLocal()` сравнивает sourceMachine.id с машиной моста и по умолчанию отвечает «ложь» — у браузера моста нет | DESKTOP, UI-INVENTORY |
-| sourceMachine | машина-источник | Стабильный GUID машины из `machine.json` (имя обновляется, id — никогда) в `Project.AssetRootMachineId/Name` | `CedarClerk.Desktop/main.js` |
-| thumbs budget | бюджет превью | Потолок объёма `thumbs/` в облаке (по умолчанию 2 ГБ на владельца) — один из числовых пределов открытого канала записи индекса | `Consts.cs:91`, DESKTOP |
-| working material | рабочий материал | Непубликуемые типы (design/script/plot/note): отказ на общем пути публикации для всех сетей сразу | `Core/DocumentTypes.cs` |
-| Cedar:Modules:IndieDev | флаг модуля | Включает весь модуль; выключение возвращает приложение до модуля целиком — обратимость во флаге, не в ветке (ADR-101) | `Program.cs`, INDIEDEV |
+| Project | проект | A game as a container for documents, tasks, sprints and an asset index; always holds ≥1 document, is archived rather than deleted | `Entities.IndieDev.cs` |
+| ProjectType | тип проекта | fullgame/jam/prototype/released — decides only the starting document at creation, and nothing after | `Core/ProjectTypes.cs` |
+| GameTask | задача | A set of fixed fields, not a document (ADR-106 boundary): Description is plain text; named GameTask because Task is taken by async | `Entities.IndieDev.cs` |
+| Sprint | спринт | A name + two dates + a non-reusable number from the project's counter (not MAX+1); no status column — planned/current/finished is derived from the dates (ADR-111) | `Entities.IndieDev.cs`, `Core/SprintStates.cs` |
+| Build | билд | A record of a game version: number, notes, date, contents; an entity, not a tag, and knows nothing about git (ADR-112) | `Entities.IndieDev.cs` |
+| changelog generator | генератор чейнджлога | `POST /api/builds/{id}/changelog`: assembles a changelog-type document from the build's notes and its closed tasks — an ordinary document from there on | `Modules/IndieDev/BuildEndpoints.cs` |
+| EntityLink | связь сущностей | A manual link between two things in a project (a generalization of TaskLink, T-141); "used in" can't be detected — only stated by hand | `Entities.IndieDev.cs` |
+| asset index | индекс ассетов | A cloud-side description of the project folder: a single root (`AssetRootPath`), scanned by the agent, in batches of 500; a missing file is flagged MissingSince, not deleted | `Entities.IndieDev.cs`, INDIEDEV |
+| AssetEntry | строка индекса | One file: path + metadata + preview; the bytes are not copied. Deliberately not `Asset` — that's uploaded media with its own quota | `Entities.IndieDev.cs` |
+| AssetKinds | вид ассета | A kind by extension (image/model/audio/…): opening tens of thousands of files isn't feasible; `SkippedDirectories` filters out engine caches; `.blend` has a built-in preview | `Core/AssetKinds.cs`, `Core/BlendThumbnail.cs` |
+| filesystem agent (агент ФС) | агент файловой системы | The same `CedarClerk.Server.exe`, run with `Cedar:Agent:Enabled`: an early exit in Program.cs — no database, no Identity, only `/agent/*`; reads the disk, writes and launches nothing (ADR-117) | `Modules/Agent/`, DESKTOP |
+| bearer token per launch | токен на запуск | The agent's first lock: 32 bytes per launch, passed via env, never written to disk; without the token everything is refused | `Modules/Agent/AgentEndpoints.cs` |
+| granted roots | выданные корни | The second lock: folders granted by a human gesture (an OS dialog), compared by path with a trailing separator; these live in the shell, never fetched from the server | `Modules/Agent/AgentGrants.cs` |
+| fingerprint | отпечаток | A preview + metadata standing in for a file from a different machine; the "Fingerprint" chip, "Show in Explorer" hidden; the normal screen state once the index is shared | DESKTOP §"File or fingerprint" |
+| file or fingerprint (файл или отпечаток) | — | The asset screen's central question: `isLocal()` compares sourceMachine.id against the bridge's machine, defaulting to "false" — a browser has no bridge | DESKTOP, UI-INVENTORY |
+| sourceMachine | машина-источник | A stable machine GUID from `machine.json` (the name updates, the id never does), stored in `Project.AssetRootMachineId/Name` | `CedarClerk.Desktop/main.js` |
+| thumbs budget | бюджет превью | The ceiling on `thumbs/` volume in the cloud (2 GB per owner by default) — one of the numeric limits on the open write channel of the index | `Consts.cs:91`, DESKTOP |
+| working material | рабочий материал | Non-publishable types (design/script/plot/note): rejected on the shared publish path for every network at once | `Core/DocumentTypes.cs` |
+| Cedar:Modules:IndieDev | флаг модуля | Turns the whole module on; turning it off returns the app to its pre-module state entirely — reversibility lives in the flag, not in a branch (ADR-101) | `Program.cs`, INDIEDEV |
 
-## Операции и процесс
+## Operations and process
 
-| Термин | По-русски | Значение | Источник |
+| Term | Russian | Meaning | Source |
 |---|---|---|---|
-| cedar CLI | операционная консоль | Единственный вход для build/test/deploy с ADR-119 (Spectre.Console); ставится `Scripts/install-cli.ps1` первой на свежем клоне | CLAUDE.md, ADR-118/119 |
-| pipeline | пайплайн | Логика build/test/deploy, переехавшая из `.ps1` в C# с тестами: Build/Test/DeployPipeline в `CedarClerk.Cli/Pipelines/` | ADR-119 |
-| preflight | префлайт | `cedar deploy --preflight`: все проверки (ветка, тег, согласие LIVE с версией прода, удалённый зонд) — и стоп, ничего не трогая | CLAUDE.md |
-| GitGuard | — | Проверки перед деплоем: только master, не detached, чистое дерево, тег с CurrentVersion; `test`/`build` их сознательно не применяют | `Pipelines/GitGuard.cs` |
-| LIVE / LIVE-PREV | теги LIVE | Локальные теги (никогда не пушатся): LIVE = коммит в проде, переносится после health-check; вытесненный остаётся LIVE-PREV; `--rollback` возвращает | CLAUDE.md, ADR-118 |
-| StageBoard | доска этапов | Экран долгой операции в cedar: весь план шагов рисуется заранее и отмечается по ходу; шаги о доске не знают | `Pipelines/StageBoard.cs` |
-| droplet / periwinkle | дроплет | Прод: DigitalOcean `cedarclerk-periwinkle` (fra1, 1 vCPU / 2 GB без swap, Ubuntu 24.04), заменил Pi 11.08.2026 | rules/production-environment.md |
-| Cloudflare Tunnel | туннель | Единственный вход к проду: cloudflared → Kestrel на loopback:8080; наружу у дроплета один SSH | rules/production-environment.md |
-| healthchecks ping | пинг сторожа | Сигнал в healthchecks.io в конце ночного backup.sh — молчаливый провал бэкапа поднимает алерт; у off-box-половины свой чек | rules/production-environment.md §Backups |
-| off-box backup / R2 | внешний бэкап | Вторая половина backup.sh (T-147): rclone в Cloudflare R2 — намеренно не DO Spaces (не жить в одном аккаунте с дроплетом); молчит, пока нет ключей | rules/production-environment.md |
-| smoke suite | smoke-сьют | Playwright через `Scripts/e2e.ps1`: скрипт владеет сервером, scratch-БД и браузером, бот выключен; `cedar test --smoke` | CLAUDE.md, ADR-070 |
-| contrast check | контраст-чек | `check-contrast.mjs` в `cedar test`: цветовые пары в обеих темах по всем таблицам стилей под `src/` и по CSS, который сервер пишет из C#; правило судится в той палитре, чьи условия несёт его собственная цепочка селекторов, и акцент прогоняется по всем пресетам | ADR-137, ADR-152 |
-| live-verify | живая верификация | Проверка руками поверх тестов; чек-лист «не проверено вживую» живёт в TASKS.md | ADR-070, DOCS-FLOW |
-| pseudo-locale | псевдо-локаль | Раздутые строки вместо переводов для проверки вёрстки (`?pseudo=1`); в профиль не попадает | UI-INVENTORY |
-| Cedar Bench | Cedar Bench | Единственный вид приложения: бумага, дерево, сосна, латунь. Значения — оба базовых блока `styles.scss`; продолжает направление набора «Cabin», который переписан на месте, а не поставлен рядом | ADR-136, ADR-137 |
-| density mode | режим плотности | Две плотности (ADR-071): comfortable по умолчанию, `[data-density="compact"]` на табличных экранах; различаются только отступы/размеры — ни один цвет | DESIGN |
-| surface class | класс поверхности | `data-surface` со значением `chrome` или `paper` на элементе — вторая ось плотности, а не палитры: у хрома минимальный бокс `--hit-chrome` 30px, у бумаги `--hit-target` 44px. Наследуется через `--hit-surface`, никогда не выбирается прикалыванием поверхности | ADR-138, ADR-156 |
-| fidelity contract | контракт соответствия | Список расхождений порта с прототипом Cedar Bench, сверенный по коду и пикселям и разбитый по файловым зонам (токены, хрома, примитивы, экраны); каждая строка — дефект для фиксера либо ADR-bound расхождение, которое фиксер не трогает | CHANGELOG 22.08, ADR-174…176 |
-| brass ink | латунные чернила | `--brass-ink` — то, чем пишет штамп или тик графика; измеряется парой. Не путать с `--brass-lo` — металлом крючка, который никто не читает и ни одна пара не меряет; `--brass-soft` смешивается из чернил | `styles.scss`, DESIGN §Color — dark |
-| pickable leaf | выбираемый лист | `app-leaf-tag` с `interactive`, не `dried`: фильтр, который можно нажать — в покое лежит на бледной «сухой» бумаге, активный — зелёный. Лист-ярлык (не interactive) остаётся зелёным в единственном состоянии | `leaf-tag.component.ts`, ADR-176 |
-| margin note | заметка на полях | Глобальное правило `.margin-note` — единственное место, где разрешён рукописный шрифт `--font-note`: подписи на полях и пустые состояния, `--fs-17`, `--t2`, с наклоном | `styles.scss`, DESIGN §Typography |
-| ADR / индекс | ADR-лог | «Сначала ADR, потом код»: тексты — файл на ADR в `docs/adr/`, `DECISIONS.md` — индекс; отмена решения — новый ADR поверх, не правка | DECISIONS, DOCS-FLOW |
-| борда | таск-борда | `docs/tasks/BACKLOG.md` — единственный список открытого; сделанные строки удаляются, история в git | DOCS-FLOW |
-| T-xxx / Q-xx | ID борды | Стабильные идентификаторы: T — задачи, Q — вопросы к Марти; исходные номера (B*, N*, I*…) в скобках описаний | DOCS-FLOW |
-| Input sweep | разбор инбокса | Сверка брифов инбокса с кодом (они бывают старше кода) → борда/ROADMAP + запись «Input sweep» в ROADMAP; по ней датируется перезапись файла | DOCS-FLOW |
-| INPUT_PROMPT inbox | промпт-инбокс | `docs/INPUT_PROMPT.md` — единственный инбокс с 18.08.2026; сознательно не коммитится, Марти переписывает целиком | DOCS-FLOW |
+| cedar CLI | операционная консоль | The single entry point for build/test/deploy since ADR-119 (Spectre.Console); installed by `Scripts/install-cli.ps1` first on a fresh clone | CLAUDE.md, ADR-118/119 |
+| pipeline | пайплайн | The build/test/deploy logic that moved from `.ps1` into C# with tests: Build/Test/DeployPipeline in `CedarClerk.Cli/Pipelines/` | ADR-119 |
+| preflight | префлайт | `cedar deploy --preflight`: runs every check (branch, tag, LIVE agreeing with the version, a remote probe) — and stops, touching nothing | CLAUDE.md |
+| GitGuard | — | The pre-deploy checks: master only, not detached, a clean tree, a tag matching CurrentVersion; `test`/`build` deliberately do not apply them | `Pipelines/GitGuard.cs` |
+| LIVE / LIVE-PREV | теги LIVE | Local-only tags (never pushed): LIVE = the commit in production, moved after a health check; the one it displaces stays as LIVE-PREV; `--rollback` moves it back | CLAUDE.md, ADR-118 |
+| StageBoard | доска этапов | The long-running-operation screen in cedar: the whole step plan is drawn up front and checked off as it goes; the steps themselves know nothing about the board | `Pipelines/StageBoard.cs` |
+| droplet / periwinkle | дроплет | Production: the DigitalOcean droplet `cedarclerk-periwinkle` (fra1, 1 vCPU / 2 GB, no swap, Ubuntu 24.04), which replaced the Pi on 11.08.2026 | rules/production-environment.md |
+| Cloudflare Tunnel | туннель | The only way into production: cloudflared → Kestrel on loopback:8080; the droplet exposes nothing but SSH | rules/production-environment.md |
+| healthchecks ping | пинг сторожа | A ping to healthchecks.io at the end of the nightly backup.sh — a silent backup failure raises an alert; the off-box half has its own check | rules/production-environment.md §Backups |
+| off-box backup / R2 | внешний бэкап | The second half of backup.sh (T-147): rclone into Cloudflare R2 — deliberately not DO Spaces (so it doesn't live in the same account as the droplet); stays silent while there are no keys | rules/production-environment.md |
+| smoke suite | smoke-сьют | Playwright via `Scripts/e2e.ps1`: the script owns the server process, a scratch database and the browser, with the bot off; `cedar test --smoke` | CLAUDE.md, ADR-070 |
+| contrast check | контраст-чек | `check-contrast.mjs` inside `cedar test`: color pairs in both themes across every stylesheet under `src/` and the CSS the server writes from C#; a rule is judged in whichever palette its own selector chain's conditions carry, and the accent is run against every preset | ADR-137, ADR-152 |
+| live-verify | живая верификация | Manual verification on top of the automated tests; the "not verified live" checklist lives in TASKS.md | ADR-070, DOCS-FLOW |
+| pseudo-locale | псевдо-локаль | Padded-out strings standing in for translations to check layout (`?pseudo=1`); never lands in a profile | UI-INVENTORY |
+| Cedar Bench | Cedar Bench | The app's single look: paper, wood, pine, brass. The values are both base blocks of `styles.scss`; a continuation of the "Cabin" set's direction, rewritten in place rather than added alongside it | ADR-136, ADR-137 |
+| density mode | режим плотности | Two densities (ADR-071): comfortable by default, `[data-density="compact"]` on table-heavy screens; only spacing/sizes differ — never a color | DESIGN |
+| surface class | класс поверхности | `data-surface` set to `chrome` or `paper` on an element — a second axis of density, not of palette: chrome has a minimum hit box of `--hit-chrome` (30px), paper has `--hit-target` (44px). Inherited via `--hit-surface`, never chosen by pinning a surface | ADR-138, ADR-156 |
+| fidelity contract | контракт соответствия | A list of divergences between the port and the Cedar Bench prototype, checked against both code and pixels and broken down by file zone (tokens, chrome, primitives, screens); each row is either a defect for the fixer or an ADR-bound divergence the fixer must not touch | CHANGELOG 22.08, ADR-174…176 |
+| brass ink | латунные чернила | `--brass-ink` — what a stamp or a tick graphic is drawn with; measured as a pair. Not to be confused with `--brass-lo` — the hook's metal, which nobody reads and no pair measures; `--brass-soft` is mixed from the ink | `styles.scss`, DESIGN §Color — dark |
+| pickable leaf | выбираемый лист | `app-leaf-tag` with `interactive`, not `dried`: a filter that can be clicked — at rest it sits on pale "dry" paper, active it turns green. A leaf-tag (not interactive) stays green in its single state | `leaf-tag.component.ts`, ADR-176 |
+| margin note | заметка на полях | The global `.margin-note` rule — the only place the handwritten `--font-note` font is allowed: margin captions and empty states, `--fs-17`, `--t2`, with a tilt | `styles.scss`, DESIGN §Typography |
+| ADR / index | ADR-лог | "ADR first, then code": the texts are one file per ADR in `docs/adr/`, `DECISIONS.md` is the index; reversing a decision is a new ADR on top, not an edit | DECISIONS, DOCS-FLOW |
+| board (борда) | таск-борда | `docs/tasks/BACKLOG.md` — the only list of what's open; finished rows are deleted, the history lives in git | DOCS-FLOW |
+| T-xxx / Q-xx | ID борды | Stable identifiers: T for tasks, Q for questions to Marty; the original numbering (B*, N*, I*…) is kept in parentheses in the descriptions | DOCS-FLOW |
+| Input sweep | разбор инбокса | Reconciling the inbox's briefs against the code (they can be older than the code) → board/ROADMAP + an "Input sweep" entry in ROADMAP; the file's rewrite is dated by that entry | DOCS-FLOW |
+| INPUT_PROMPT inbox | промпт-инбокс | `docs/INPUT_PROMPT.md` — the single inbox since 18.08.2026; deliberately not committed, Marty rewrites it wholesale | DOCS-FLOW |
