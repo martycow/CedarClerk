@@ -32,10 +32,10 @@ code reference). Use these names exactly; never invent synonyms for existing ter
 - **Renderer invariants** — user text always escaped (`< > &`); every node/mark
   has a unit test; a node missing from `TipTapTextNodes`/`CedarPlainText`/
   `PublishValidator` is *silently dropped* from teasers or refused at publish —
-  new nodes must be added to all three (`.Codex/rules/renderers.md`).
+  new nodes must be added to all three (`.claude/rules/renderers.md`).
 - **Blocks is canon** — Telegram sends via `InputRichMessage.Blocks`
   (`CedarToTelegramBlocksRenderer`); the HTML/MD renderers are kept but NOT used
-  for sending (`.Codex/rules/telegram-bot.md`).
+  for sending (`.claude/rules/telegram-bot.md`).
 - **PublishJob** — durable row, one publish into one target (one per *thread
   part*); `Pending→Running→Succeeded|Failed|Unknown`; Unknown never retries.
   **PublishTarget / PublishNetworks** — connected account / string network keys

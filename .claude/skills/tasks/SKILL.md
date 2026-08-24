@@ -1,31 +1,32 @@
 ---
 name: tasks
-description: Показать таблицу последних добавленных ОТКРЫТЫХ задач из docs/tasks/BACKLOG.md (новые сверху, по номеру T-ID). Использовать всегда, когда Марти вводит /tasks или просит показать таски, свежие задачи, «что в бэклоге», последние строки борды — даже если слово «таблица» не прозвучало.
+description: Show a table of the most recently added OPEN tasks from docs/tasks/BACKLOG.md (newest first, by T-ID number). Use whenever the user runs /tasks or asks to see tasks, recent items, "what's in the backlog", the latest board rows — even if the word "table" isn't said.
 ---
 
-# /tasks — последние открытые задачи борды
+# /tasks — latest open board tasks
 
-Запусти скрипт и покажи его вывод как есть (это готовая markdown-таблица):
+Run the script and show its output as-is (it's a ready-made markdown table):
 
 ```
 pwsh -File .claude/skills/tasks/scripts/tasks.ps1
 ```
 
-Если Марти передал число («/tasks 20») — это количество строк: добавь `-Count 20`.
-Без аргумента скрипт показывает 35 (середина запрошенного диапазона 30–40).
+If a number is passed (`/tasks 20`) that's the row count: add `-Count 20`.
+With no argument the script shows 35 (the middle of the requested 30–40 range).
 
-Что делает скрипт и почему именно так:
+What the script does and why:
 
-- **Сортировка по номеру ID вниз = «последние добавленные»**: T-номера выдаются
-  последовательно и не переиспользуются (правило борды в шапке BACKLOG.md), так что
-  номер — честный признак свежести. Дат добавления борда не хранит, а git-архология
-  на каждый вызов — дорого и медленно.
-- **«Открытые» = всё, что не помечено сделанным**: строки с зачёркнутым именем (`~~`)
-  или «Сделано»/«Снят»/«Закрыт» в колонке приоритета пропускаются. По правилам борды
-  такие строки удаляются, но между сессиями они иногда висят с пометкой.
-- Показываются только `T-xxx`-строки; вопросы `Q-xx` — не задачи, их скрипт не берёт.
-- Описания в таблицу не входят намеренно — 35 строк с полными описаниями нечитаемы;
-  последняя строка вывода напоминает, что описания живут в `docs/tasks/BACKLOG.md`.
+- **Sorted by ID number descending = "most recently added"**: T-numbers are issued
+  sequentially and never reused (the board rule in BACKLOG.md's header), so the
+  number is an honest freshness signal. The board doesn't store an added-date, and
+  a git archaeology pass on every call would be slow and expensive.
+- **"Open" = anything not marked done**: rows checked `[x]` are skipped. Per the
+  board's own rules such rows get deleted rather than left checked, but between
+  sessions they sometimes hang around marked.
+- Only `T-xxx` rows are shown; `Q-xx` questions aren't tasks, the script doesn't pick them up.
+- Descriptions are deliberately left out of the table — 35 rows with full
+  descriptions would be unreadable; the last output line reminds that descriptions
+  live in `docs/tasks/BACKLOG.md`.
 
-Если скрипт упал (например, BACKLOG.md переехал) — почини причину, а не собирай
-таблицу руками: рукописная выборка разойдётся с бордой при следующем же вызове.
+If the script fails (e.g. BACKLOG.md moved) — fix the cause, don't assemble the
+table by hand: a hand-picked selection will drift from the board on the very next call.

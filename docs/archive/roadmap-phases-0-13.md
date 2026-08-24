@@ -1,13 +1,19 @@
 ---
 owner: marty
 last_verified: 2026-08-24
-source_of_truth_for: phase-by-phase status — what shipped and when
+source_of_truth_for: closed record — phase-by-phase status through Phase 13, superseded by CHANGELOG
 guard: none
 ---
 
-# Roadmap
+# Roadmap (archived 24.08.2026)
 
-Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-saas-plan.md` (v1.7, 15.07.2026) and `Plans/session-brief-v0.8.0-planning.md`, which are now archived under `Plans/OLD/`. **This file is the one live roadmap going forward** — update it when a phase item closes, don't recreate a parallel plan doc. Architectural/product decisions referenced below (why something was built a certain way) live in `docs/DECISIONS.md`, not here — this file tracks *status*, DECISIONS tracks *rationale*.
+Retired as a live doc: it had come to narrate the same shipped work as `docs/tasks/CHANGELOG.md`,
+by phase instead of by date. Current status now lives in `docs/tasks/TASKS.md` §Notes (production
+version, active branch) and the latest `docs/tasks/CHANGELOG.md` entry (what shipped last). This
+file is kept as the phase-by-phase record through Phase 13 — read as history, not as a plan; nothing
+below is updated going forward.
+
+Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-saas-plan.md` (v1.7, 15.07.2026) and `Plans/session-brief-v0.8.0-planning.md`, which are now archived under `Plans/OLD/`. Architectural/product decisions referenced below (why something was built a certain way) live in `docs/DECISIONS.md`, not here — this file tracked *status*, DECISIONS tracks *rationale*.
 
 ## Status summary (as of 24.08.2026)
 
@@ -568,9 +574,3 @@ waves of agents) with the ultracode keyword. Executed the same evening, verifica
   incidents index, Q-xx aging). **No agent was created today** — Marty's own order puts Wave 1 at
   week 1, and his warning (every agent is one more drifting .md file; add them one at a time) is
   taken as binding.
-
----
-
-## Backlog
-
-Not-yet-started ideas, deferred items, tech debt, and open questions moved to `docs/tasks/BACKLOG.md` (25.07.2026) — kept separate so backlog isn't mixed in with phase status here.

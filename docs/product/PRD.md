@@ -1,18 +1,18 @@
 ---
 owner: marty
 last_verified: 2026-08-18
-source_of_truth_for: требования-инварианты, non-requirements, blocked
+source_of_truth_for: requirement invariants, non-requirements, blocked items
 guard: none
 ---
 
 # Product Requirements
 
-A thin requirements skeleton, slimmed on 18.08.2026 by Marty's call after the docs audit: this file
+A thin requirements skeleton, slimmed on 18.08.2026 after the docs audit: this file
 had the project's worst drift record (statuses corrected 10.08 and again 18.08), because it
-duplicated shipped-feature enumerations that `docs/tasks/ROADMAP.md` already tracks. What remains here is
+duplicated shipped-feature enumerations that `docs/tasks/CHANGELOG.md` already tracks. What remains here is
 what no other file holds: **requirement-level invariants** (what must stay true, not what was
 built when), the explicit non-requirements, and the blocked items. For "what shipped and when" read
-`docs/tasks/ROADMAP.md`; for "what the product is" read `docs/product/PRODUCT.md`; for the indie module
+`docs/tasks/CHANGELOG.md`; for "what the product is" read `docs/product/PRODUCT.md`; for the indie module
 `docs/product/INDIEDEV.md`; for hard invariants that have bitten before, `.claude/rules/*.md`.
 
 ## Requirements the product must keep satisfying
@@ -69,4 +69,5 @@ built when), the explicit non-requirements, and the blocked items. For "what shi
   percentages ADR-055, geo rollups ADR-097).
 
 Resolved (16.07.2026): no formal acceptance criteria / success metrics — the phase checklists in
-`docs/tasks/ROADMAP.md` are the definition of done for this project.
+`docs/tasks/CHANGELOG.md` (history through Phase 13: `docs/archive/roadmap-phases-0-13.md`) are the
+definition of done for this project.

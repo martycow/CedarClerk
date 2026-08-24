@@ -1,7 +1,7 @@
 ---
 owner: marty
 last_verified: 2026-08-18
-source_of_truth_for: что такое продукт, для кого, прайсинг-снимок
+source_of_truth_for: what the product is, who it's for, pricing snapshot
 guard: none
 ---
 

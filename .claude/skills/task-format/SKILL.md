@@ -11,13 +11,29 @@ files, searched in this directory order (first hit per name wins):
 **project root → docs/ → docs/tasks/** — `TASKS.md`, `SPRINT.md`,
 `BACKLOG.md`, `ROADMAP.md`. Anything else is invisible to the board.
 
-In Cedar Clerk all three existing files live in **`docs/tasks/`** (TASKS, BACKLOG,
-ROADMAP; there is no SPRINT.md) — never recreate one in the root: the root copy
-would shadow the real file for the board. Cedar Clerk's own board conventions stay
-binding when reformatting: `T-xxx` ids are stable and never reused, BACKLOG holds
-open items only, done rows are deleted (history lives in ROADMAP/CHANGELOG).
+In Cedar Clerk two of the four convention files exist, both in **`docs/tasks/`**:
+`TASKS.md` and `BACKLOG.md` — no `SPRINT.md`, and `ROADMAP.md` was retired
+24.08.2026 (it had drifted into a near-duplicate of `docs/tasks/CHANGELOG.md`; its
+history is archived at `docs/archive/roadmap-phases-0-13.md`). Never recreate a
+convention file in the root: the root copy would shadow the real file for the
+board. Cedar Clerk's own board conventions stay binding when reformatting: `T-xxx`
+ids are stable and never reused, BACKLOG holds open items only, done rows are
+deleted (history lives in `docs/tasks/CHANGELOG.md`).
 
-## The canonical checklist line (preferred form)
+## The line Cedar Clerk actually writes
+
+`BACKLOG.md` and `TASKS.md` already agree with each other, and it's narrower than
+what the parser below tolerates — don't "upgrade" a line to `[>]`/`[?]`/`@agent`
+just because the parser accepts them; that would just diverge the two docs again:
+
+```
+- [ ] T-xxx Name — description #tag1 #tag2 P1
+```
+
+Only `[ ]` (open) and `[x]` (done) are used. The `T-xxx`/`Q-xx` id is folded into
+the start of Name, not a separate token. No `@agent` token is in use here.
+
+## The canonical checklist line (what the Cowtext parser accepts, generically)
 
 ```
 - [m] Name — description #tag1 #tag2 @agent P1

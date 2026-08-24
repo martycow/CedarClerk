@@ -10,7 +10,7 @@ allowed-tools: Read, Grep, Glob, Agent, Edit, Write, Bash
 
 Orchestrate the task in `$ARGUMENTS` through the Cedar Clerk agent fleet. You
 dispatch and integrate; the agents do the work. (Borrowed from Cowtext and adapted:
-the fleet definitions in `.Codex/agents/` are Cowtext-managed and untracked —
+the fleet definitions in `.claude/agents/` are Cowtext-managed and untracked —
 never commit or rewrite them from here.)
 
 ## Procedure
@@ -40,16 +40,16 @@ never commit or rewrite them from here.)
 
 4. **Every agent's prompt must carry**: the goal, its FILE ZONE (exact paths it
    may touch — leaving the zone is forbidden), the acceptance criteria, and the
-   binding project rules for that zone (`.Codex/rules/*.md`, ADR-before-code,
+   binding project rules for that zone (`.claude/rules/*.md`, ADR-before-code,
    commit style: 3–4 words, no trailers).
 
 5. **Conflict resolution**: architecture and module boundaries — `tech-lead`'s
    verdict wins; interface matters — `tech-ui`'s verdict wins.
 
 6. **The final agent is always `project-manager`** — it records the session per
-   Cedar Clerk convention: `CHANGELOG.md` section, board rows closed/added in
-   `docs/tasks/BACKLOG.md`, `docs/tasks/ROADMAP.md` status when a phase item
-   moved, new terms into `docs/knowledge_base/TERMINOLOGY.md`.
+   Cedar Clerk convention: `docs/tasks/CHANGELOG.md` section, board rows
+   closed/added in `docs/tasks/BACKLOG.md`, new terms into
+   `docs/knowledge_base/TERMINOLOGY.md`.
 
 ## Rules
 
@@ -59,4 +59,4 @@ never commit or rewrite them from here.)
   not fixed by the dispatcher.
 - `product-analyst` is OUTSIDE this pipeline — never launched by ultracode.
 - Deploy and anything on the droplet stay out of every lane — writing commands
-  on production are handed to Marty (`.Codex/rules/production-environment.md`).
+  on production are handed to the maintainer (`.claude/rules/production-environment.md`).

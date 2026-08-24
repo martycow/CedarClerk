@@ -1,7 +1,7 @@
 ---
 owner: marty
 last_verified: 2026-08-18
-source_of_truth_for: принципы дизайн-системы и карта токенов (значения — styles.scss)
+source_of_truth_for: design-system principles and the token map (values live in styles.scss)
 guard: none
 ---
 

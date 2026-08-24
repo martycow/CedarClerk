@@ -1,6 +1,6 @@
 # Renderer invariants
 
-`CedarClerk.Core` holds the renderers that turn one TipTap JSON document into multiple outputs — this is the architectural core of the app (see `docs/tech/ARCHITECTURE.md` §"One document, many renderers"). Current renderers: `CedarToTelegramHtmlRenderer`, `CedarToTelegramMarkdownRenderer`, `CedarToBlogHtmlRenderer`.
+`CedarClerk.Core` holds the renderers that turn one TipTap JSON document into multiple outputs — this is the architectural core of the app (see `docs/tech/ARCHITECTURE.md` §"One document, many renderers"). Current renderers: `CedarToTelegramBlocksRenderer` (canonical for sending, see `.claude/rules/telegram-bot.md`), `CedarToBlogHtmlRenderer`, plus the legacy `CedarToTelegramHtmlRenderer`/`CedarToTelegramMarkdownRenderer` (kept, no longer used for sending).
 
 Invariants that must hold for every renderer:
 1. **User text is always escaped** (`< > &`) before being placed into HTML or Telegram markup — this is the only thing standing between a post body and injection into the rendered output.

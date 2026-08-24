@@ -1,5 +1,5 @@
 ---
-source_of_truth_for: план переноса фронтенда на Design System V2 (Cedar Bench) — закрытый; истина по решениям в docs/adr/
+source_of_truth_for: the frontend's port plan to Design System V2 (Cedar Bench) — closed; decision truth lives in docs/adr/
 guard: none — plan document, superseded by the ADRs that landed; where the two disagree the ADR wins
 ---
 
@@ -84,7 +84,7 @@ beside it is why the ADR reads as it does.
 
 ## 3. Work breakdown
 
-Task lines follow the board format `- [ ] T-xxx Name — description #tags P1..P3`, and carry the ids the rows hold on the board. Everything through Stage 5 is ticked here because it shipped; the account of what each stage actually did is `docs/tasks/ROADMAP.md`, and the rows still open — Stage 6, and `T-235` out of Stage 1 — live in `docs/tasks/BACKLOG.md`, which is the only place they are open. Where a row's description here and its description on the board differ, the board is the one that was rewritten against the finished code.
+Task lines follow the board format `- [ ] T-xxx Name — description #tags P1..P3`, and carry the ids the rows hold on the board. Everything through Stage 5 is ticked here because it shipped; the account of what each stage actually did is `docs/archive/roadmap-phases-0-13.md`, and the rows still open — Stage 6, and `T-235` out of Stage 1 — live in `docs/tasks/BACKLOG.md`, which is the only place they are open. Where a row's description here and its description on the board differ, the board is the one that was rewritten against the finished code.
 
 ### Stage 0 — tooling before tokens
 

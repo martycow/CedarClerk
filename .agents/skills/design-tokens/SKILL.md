@@ -80,7 +80,7 @@ renders nothing**. Before using a name, verify it exists (`grep icon-map.json`
 or an existing `app-icon name="…"` usage); adding a new one means editing the
 map and regenerating, not just typing the name.
 
-## The inventory-first law (`.Codex/rules/ui-changes.md`)
+## The inventory-first law (`.claude/rules/ui-changes.md`)
 
 Before ADDING any UI element, grep `docs/design/UI-INVENTORY.md` for the area —
 most controls already have a home, and a second home for the same concern is how

@@ -4,7 +4,7 @@
 
 **Before adding any UI element — a button, a field, a panel, an indicator, a settings block — search that file for the feature it belongs to.** Most new controls already have a home: a settings block, a step of the Export modal, a tab of the Posts Manager. Adding a second place for the same kind of thing is how the UI comes apart.
 
-This is Marty's own complaint (12.08.2026), and it has a concrete history: **X and Bluesky connection controls were first built inside the Export modal, then moved to Settings → Integrations** in ADR-095 (07.08.2026) — a rebuild that existed only because nobody looked at where the Telegram connection already lived. The inventory records both the move and the reason, on the `sec-integrations` rows.
+This has been raised before, and it has a concrete history: **X and Bluesky connection controls were first built inside the Export modal, then moved to Settings → Integrations** in ADR-095 (07.08.2026) — a rebuild that existed only because nobody looked at where the Telegram connection already lived. The inventory records both the move and the reason, on the `sec-integrations` rows.
 
 Rules:
 

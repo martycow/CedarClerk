@@ -1,7 +1,7 @@
 ---
 owner: marty
 last_verified: 2026-08-18
-source_of_truth_for: устройство системы — слои, данные, API, деплой
+source_of_truth_for: system layout — layers, data, API, deploy
 guard: none
 ---
 

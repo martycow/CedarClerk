@@ -1,8 +1,8 @@
 ---
 owner: marty
 last_verified: 2026-08-20
-source_of_truth_for: поэлементный инвентарь фронтенд-UI
-guard: UiInventoryDriftTests + PreToolUse-хук ui-inventory-reminder
+source_of_truth_for: per-element inventory of the frontend UI
+guard: UiInventoryDriftTests + PreToolUse hook ui-inventory-reminder
 ---
 
 # UI Inventory
@@ -46,7 +46,7 @@ The main writing surface — by far the most complex page. It carries no chrome 
 | Code group (`tplCode`) | tool strip, placed by the fit | buttons | Inline code, code block | N/A | |
 | Media group (`tplMedia`) | tool strip, placed by the fit | buttons + file pickers | Image/video/GIF/audio/carousel/collage upload, media library | Needed & present — see Upload-progress panel below | The standalone YouTube button is gone: the Insert modal already carries YouTube, and two buttons for one insert is the duplication `.claude/rules/ui-changes.md` rule 1 refuses |
 | Blocks group (`tplBlocks`) | tool strip, placed by the fit | buttons/popovers/modals | Table row/column ops (popover, only over a table), blockquote, toggle block, table of contents, divider, annotation anchor | N/A | Inserting a table and inserting a formula are **dialogs** now: the size used to come from an Appearance preference with no dialog at all, and the LaTeX came from `window.prompt`. Panel entries inside the strip re-assert paper ink — `.strip button` and `.block-menu button` are the same specificity and the strip's block came second, so every popover entry was painted the soft cream on a cream sheet |
-| AI actions popover | tool strip, pinned tail, `.ai-chip` | popover | Fix errors / "schizo-izer" rewrite (Pro Plus gated) | Present — asymptotic pseudo-progress % + elapsed time, 3-min timeout, real Cancel (ADR-038, `pseudo-progress.util.ts`; this cell said "elapsed-time only" until 18.08 — stale since 26.07) | What the popover *is* remains Q-7 (T-048); overlaps Backlog #6 and #14 (move AI features elsewhere) |
+| AI actions | sheet context menu (right-click) | menu entries | Fix errors / "schizo-izer" rewrite (Pro Plus gated) | Present — a running job reports via the status rule at the foot of the screen; the menu entry becomes Cancel while it runs (ADR-038 progress model, unchanged) | Moved off the tool strip's `.ai-chip` popover onto the sheet's own context menu (ADR-187, 22.08.2026) — resolves the old Q-7/T-048 complaint |
 | Upload-progress panel | editor sheet area | panel | Per-file upload progress bars for media inserts | Present | |
 | Selected-node ring | `styles.scss`, `.tiptap .ProseMirror-selectednode` (+ `[data-kind]::before` stamp) | state cue | A picked media block (a `NodeSelection`, ADR-159 clause 5 / ADR-162 clause 4) is lit on the sheet with a 2px accent outline, and carries a small display-face stamp naming its kind once the node view writes `data-kind` | N/A | Global rather than in `editor.component.css` for the B12/DB2 reason: ProseMirror nodes never carry the `_ngcontent` attribute. Until a node view writes `data-kind` only the outline shows |
 | AI-confirm modal | `app-modal`, `cancelAiConfirm()` | modal | Confirm before running an AI edit (replaces old `window.confirm()`) | See AI progress modal below | |
@@ -385,7 +385,7 @@ IF2, built 27.07.2026 in five steps (scoping doc absorbed into ADR-122, 18.08.20
 
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|
-| Summary shelf | `app-shelf-panel.summary` → seven `app-spec-row` | panel | Seven counts: users, paid, published/drafts, comments, reactions, channels, storage | Page-level `loading()` only | Was the `.summary-grid` of cards across the top. Not a dashboard — no history, no deltas; the data-collection layer that would allow them doesn't exist (see the Channel Analysis dependency in `docs/tasks/ROADMAP.md`) |
+| Summary shelf | `app-shelf-panel.summary` → seven `app-spec-row` | panel | Seven counts: users, paid, published/drafts, comments, reactions, channels, storage | Page-level `loading()` only | Was the `.summary-grid` of cards across the top. Not a dashboard — no history, no deltas; the data-collection layer that would allow them doesn't exist (see the Channel Analysis dependency in `docs/archive/roadmap-phases-0-13.md`) |
 | Tab strip | `app-index-tabs` | tab | Users · Invites · Posts · Reports, with users / invites / posts counts as badges | N/A | Was `.admin-tabs`, and it is now the **same component** as every other strip in the app — the cross-screen inconsistency the 28.07 design handoff flagged is closed. **Reports carries no badge**: it is three tables and a journal, not a countable set |
 | User card | `.user-card`, expands on click | panel | Email, plan chip, admin/locked/lapsed chips, meta | N/A | Paper (`--tex-paper`, `--border-paper`, `--radius-paper`, `--shadow-paper-sm`), as are the invite/posts/payments/usage tables (`.user-table`); their head rows share one recipe — mono, uppercase, `.07em`, `--fs-ui`, `--t2`. Expansion is click-anywhere; the action row stops propagation so a button press doesn't collapse the card |
 | Plan + expiry | `.action-row`, date input + Save | button | Set tier and expiry; blank means forever | Present — `busy()` disables Save | Free has no expiry; the hint line says which rule applies |

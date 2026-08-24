@@ -2,8 +2,9 @@
 
 **Production moved from the Raspberry Pi to a DigitalOcean droplet on 11.08.2026.** Everything below
 was read off the running machine that day, not remembered. The Pi is no longer production; anything
-in `CHANGELOG.md`, `docs/DECISIONS.md` or `TASKS.md` that talks about "the Pi" is history, and the
-checklist the move followed is `docs/archive/migration-to-digitalocean.md`.
+in `docs/tasks/CHANGELOG.md`, `docs/DECISIONS.md` or `TASKS.md` that talks about "the Pi" is history.
+The checklist the move followed no longer exists as a doc (`docs/archive/migration-to-digitalocean.md`,
+purged 24.08.2026 in the archive cleanup) — this file is the surviving source of truth about the result.
 
 - **Host**: DigitalOcean droplet `cedarclerk-periwinkle` (hostname `cedarclerk-ubuntu-s-1vcpu-2gb-fra1`),
   region **fra1**, 1 vCPU / 2 GB RAM / 48 GB disk (45 GB free), **Ubuntu 24.04.4 LTS, x86_64**.
@@ -25,9 +26,9 @@ checklist the move followed is `docs/archive/migration-to-digitalocean.md`.
   `ExecStart=/home/martycow/.dotnet/dotnet CedarClerk.Server.dll`, `Restart=always`, `RestartSec=5`.
   Two drop-ins in `/etc/systemd/system/cedarclerk.service.d/`: `data.conf` (secrets, see `secrets.md`)
   and `override.conf`.
-- **The unit is `enabled`** since 12.08.2026 (`T-143`, done by Marty — it needed his sudo password), so
-  it comes back after a DigitalOcean maintenance reboot. It was `disabled` for the first day after the
-  move, which would have left the site down until someone noticed.
+- **The unit is `enabled`** since 12.08.2026 (`T-143`, done by hand on the server — it needed the sudo
+  password), so it comes back after a DigitalOcean maintenance reboot. It was `disabled` for the first
+  day after the move, which would have left the site down until someone noticed.
 - **sudo is scoped**: `NOPASSWD` covers exactly `/bin/systemctl start|stop|restart cedarclerk` and
   nothing else. Every other privileged command prompts for a password, which over a non-interactive
   `ssh` simply fails. Use `ssh -t` when a password prompt is genuinely wanted.
@@ -46,8 +47,8 @@ checklist the move followed is `docs/archive/migration-to-digitalocean.md`.
   (`Program.cs` `MapWhen` on `Host.Host`).
 - **SSH**: key-based to `martycow@periwinkle.mooexe.dev` (165.227.155.148). **The name changed on
   12.08.2026** — it was `deploy.mooexe.dev`, whose DNS record is gone, so anything still saying
-  `deploy.` fails at resolution, not at login. `CHANGELOG.md` and `docs/DECISIONS.md` still carry the
-  old name because they record what was true then; everywhere else was updated. The record must stay
+  `deploy.` fails at resolution, not at login. `docs/tasks/CHANGELOG.md` and `docs/DECISIONS.md` still
+  carry the old name because they record what was true then; everywhere else was updated. The record must stay
   **DNS only** in Cloudflare — a proxied record answers with Cloudflare's IPs, which do not take SSH.
   `raspberrypi.local` is dead as a deploy target; `cedar deploy` reads the host from
   `%APPDATA%\cedar\config.json` (`cedar config`) and takes `--host` to override it for one run.
@@ -64,8 +65,8 @@ runs is `~/bin/backup.sh` on the droplet, installed **by hand** — `cedar deplo
 directory and nothing else, so a change here reaches production only when someone copies it across.
 `~/bin/backup.sh.prev` holds the version before that.
 
-**Nightly database copy** — `T-071`, closed 12.08.2026 by Marty on the server.
-`~/bin/backup.sh` runs from his crontab at **03:30 UTC** (the droplet is UTC — that is 03:30 UTC, not
+**Nightly database copy** — `T-071`, closed 12.08.2026 by hand on the server.
+`~/bin/backup.sh` runs from crontab at **03:30 UTC** (the droplet is UTC — that is 03:30 UTC, not
 local): `sqlite3 .backup` → gzip → `cedar-<YYYY-MM-DD>.db.gz`, `-mtime +13 -delete` keeping fourteen
 days, then a ping to healthchecks.io so that a *silent* failure raises an alert instead of nothing.
 First copy verified by hand the same day: 15 MB database → 2.8 MB gz. The ping URL lives in the script
@@ -91,7 +92,7 @@ Two things about it that are easy to get wrong:
 **Weekly whole-machine image** — DigitalOcean's paid droplet backup (enabled 11.08.2026), retained four
 weeks, taken by the platform.
 
-**Off-box copy — live** (T-147; keys created by Marty, verified against R2 18.08.2026: daily
+**Off-box copy — live** (T-147; keys created by hand, verified against R2 18.08.2026: daily
 `cedar-*.db.gz` in `db/`, ~935 MB of media synced). `rclone` v1.75 is installed at
 `~/bin/rclone` (a static binary, no sudo needed) and `backup.sh` runs the second half: `rclone copy` of
 the day's database into `db/`, kept 30 days there, and `rclone sync` of `media/` with `--backup-dir`
@@ -122,7 +123,7 @@ stopped; media restore is `rclone copy` back from R2.
 - `T-070` (Pi OS Bullseye → 64-bit, planned for ~August 2026 to get arm64 and a newer .NET) is **moot**:
   the new host is a supported 64-bit Ubuntu already. Closed on the backlog for that reason, not done.
 - The microSD backup target, `/mnt/backup`, and `~/bin/cedar-backup.sh` — see above.
-- The coordination constraint that the same machine ran Marty's Freenove electronics projects.
+- The coordination constraint that the same machine ran an unrelated electronics-hobby project.
 
 See `docs/tech/ARCHITECTURE.md` for the deploy pipeline that targets this environment, ADR-113 for why that
 pipeline is shaped the way it is, and `docs/for_user/integrations-setup.md` for provider-key setup on top of it.
