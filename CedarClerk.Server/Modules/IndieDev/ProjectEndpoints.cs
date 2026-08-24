@@ -430,8 +430,22 @@ public static class ProjectEndpoints
                 return LastDocumentRefusal();
 
             draft.ProjectId = id;
+            // ADR-204 — the pictures inside it come along, unless another project already claimed them.
+            var filed = await AssetFiling.FileAsync(db, uid, id, draft.Id);
             await db.SaveChangesAsync();
-            return Results.Ok(new { draft.Id, draft.ProjectId });
+            return Results.Ok(new { draft.Id, draft.ProjectId, filedAssets = filed });
+        });
+
+        // ADR-204 — the backlog, on demand and never silently: a filing rule applied retroactively
+        // without asking is indistinguishable from files moving on their own.
+        group.MapPost("/{id:guid}/assets/refile", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            if (!await db.Projects.AnyAsync(p => p.Id == id && p.OwnerId == uid)) return Results.NotFound();
+
+            var filed = await AssetFiling.SweepProjectAsync(db, uid, id);
+            if (filed > 0) await db.SaveChangesAsync();
+            return Results.Ok(new { filed });
         });
 
         group.MapDelete("/{id:guid}/documents/{draftId:guid}", async (Guid id, Guid draftId, ClaimsPrincipal user, CedarDbContext db) =>

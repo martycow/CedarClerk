@@ -1,5 +1,6 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { MediaLibraryComponent } from './media-library.component';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -44,7 +45,7 @@ const RECENT_FOLDERS_KEY = 'cedar.assetFolders';
     selector: 'app-project-assets',
     imports: [
         IconComponent, ZonedDatePipe, IndexTabsComponent, ShelfPanelComponent,
-        SpecRowComponent, InputComponent, ButtonComponent,
+        SpecRowComponent, InputComponent, ButtonComponent, MediaLibraryComponent,
     ],
     templateUrl: 'project-assets.component.html',
     styleUrls: ['project-assets.component.css'],
@@ -53,6 +54,7 @@ export class ProjectAssetsComponent implements OnDestroy {
     private api = inject(AssetIndexService);
     private projects = inject(ProjectsService);
     private route = inject(ActivatedRoute);
+    private projectsApi = inject(ProjectsService);
     auth = inject(AuthService);
     sync = inject(AssetSyncService);
     t = inject(LocaleService).t;
@@ -64,6 +66,12 @@ export class ProjectAssetsComponent implements OnDestroy {
     readonly desktop = desktopBridge();
 
     projectId = signal<string>('');
+
+    // ADR-204 — which half of the word is on screen. Uploaded is the default because it is the one
+    // that needs no folder picked and no machine reachable: a project always has its own pictures.
+    source = signal<'uploaded' | 'disk'>('uploaded');
+    refiling = signal(false);
+    refileNote = signal('');
     project = signal<ProjectDetail | null>(null);
     page = signal<AssetPage | null>(null);
     loading = signal(true);
@@ -223,6 +231,30 @@ export class ProjectAssetsComponent implements OnDestroy {
             items.push({ id: 'missing', label: labels.filterMissing, badge: page!.missingCount });
         return items;
     });
+
+    readonly sourceTabs = computed<IndexTabItem[]>(() => [
+        { id: 'uploaded', label: this.t().projects.assets.sourceUploaded },
+        { id: 'disk', label: this.t().projects.assets.sourceDisk },
+    ]);
+
+    setSource(id: 'uploaded' | 'disk') {
+        this.source.set(id);
+        this.refileNote.set('');
+    }
+
+    async refile() {
+        const id = this.projectId();
+        if (!id) return;
+        this.refiling.set(true);
+        try {
+            const { filed } = await this.projectsApi.refileAssets(id);
+            this.refileNote.set(this.t().media.refiled(filed));
+        } catch (e) {
+            this.refileNote.set(httpErrorMessage(e, this.t().media.refileFailed));
+        } finally {
+            this.refiling.set(false);
+        }
+    }
 
     readonly viewTabs = computed<IndexTabItem[]>(() => [
         { id: 'grid', label: this.t().projects.assets.viewGrid },

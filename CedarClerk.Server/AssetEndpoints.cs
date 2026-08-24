@@ -84,13 +84,29 @@ public static class AssetEndpoints
 
         // ADR-127 — the owner-wide library behind /media. One response carries the page, the
         // unfiltered type counts (chips must not shrink when a filter is on) and the quota line.
-        app.MapGet("/api/assets", async (ClaimsPrincipal user, CedarDbContext db, string? q, string? type, int skip = 0, int take = 60) =>
+        // ADR-204 — `project` is a guid, or the literal "none" for the files that belong to no
+        // project. Absent means every bucket, which is what the library page opens on.
+        app.MapGet("/api/assets", async (ClaimsPrincipal user, CedarDbContext db, string? q, string? type, string? project, int skip = 0, int take = 60) =>
             {
                 var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
                 skip = Math.Max(0, skip);
                 take = Math.Clamp(take, 1, 200);
 
-                var owned = db.Assets.AsNoTracking().Where(a => a.OwnerId == uid);
+                // `all` is every file the owner has and is what the quota is measured over; `owned`
+                // is the bucket being looked at, and the type chips and the list read off it.
+                var all = db.Assets.AsNoTracking().Where(a => a.OwnerId == uid);
+
+                // Buckets are counted over everything, like the type counts below: a strip whose
+                // numbers move when a filter is on cannot be read as a total.
+                var bucketRows = await all.GroupBy(a => a.ProjectId)
+                    .Select(g => new { ProjectId = g.Key, Count = g.Count() }).ToListAsync();
+                var buckets = bucketRows.Select(b => new { projectId = b.ProjectId, count = b.Count }).ToList();
+
+                var owned = all;
+                if (project is "none")
+                    owned = owned.Where(a => a.ProjectId == null);
+                else if (Guid.TryParse(project, out var projectId))
+                    owned = owned.Where(a => a.ProjectId == projectId);
 
                 var typeCounts = await owned.GroupBy(a => a.ContentType)
                     .Select(g => new { g.Key, Count = g.Count() }).ToListAsync();
@@ -110,13 +126,13 @@ public static class AssetEndpoints
                 var total = await filtered.CountAsync();
                 var items = await filtered.OrderByDescending(a => a.CreatedAt)
                     .Skip(skip).Take(take)
-                    .Select(a => new { a.Id, a.FileName, a.LocalPath, a.ContentType, a.SizeBytes, a.CreatedAt })
+                    .Select(a => new { a.Id, a.FileName, a.LocalPath, a.ContentType, a.SizeBytes, a.CreatedAt, a.ProjectId })
                     .ToListAsync();
 
-                var usedBytes = await owned.SumAsync(a => (long?)a.SizeBytes) ?? 0;
+                var usedBytes = await all.SumAsync(a => (long?)a.SizeBytes) ?? 0;
                 var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
 
-                return Results.Ok(new { items, total, counts, usedBytes, limitBytes = PlanLimitations.StorageLimitBytes(tier) });
+                return Results.Ok(new { items, total, counts, buckets, usedBytes, limitBytes = PlanLimitations.StorageLimitBytes(tier) });
             })
             .RequireAuthorization();
 

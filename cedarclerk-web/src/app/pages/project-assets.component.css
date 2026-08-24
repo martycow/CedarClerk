@@ -7,9 +7,32 @@
     padding: var(--space-3);
 }
 
+/* The source strip stands above everything, including the "pick a folder" state: which kind of
+   asset is on screen is not a property of one of the states below it. */
+.source-strip {
+    display: flex;
+    padding: 0 var(--space-1);
+}
+
+.uploaded-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
+.refile-note {
+    color: var(--t2);
+    font-size: var(--fs-meta);
+}
+
+/* The library is a page in its own right and brings its own padding; inside this board it is a
+   panel among panels, so the outer one is dropped rather than doubled. */
+.uploaded { margin: calc(-1 * var(--space-3)); }
+
 /* The tiles are cut into the board's own edge, so the column's gap is cancelled here rather than
    left to lift them a step above it (ADR-200). */
-.assets-page > app-index-tabs {
+.assets-page > app-index-tabs:not(.source-strip) {
     position: relative;
     z-index: 1;
     padding: 0 var(--space-1);

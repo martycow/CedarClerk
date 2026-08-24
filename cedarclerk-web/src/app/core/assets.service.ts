@@ -21,11 +21,20 @@ export interface LibraryAsset {
     contentType: string;
     sizeBytes: number;
     createdAt: string;
+    /** ADR-204 — the project whose documents use this file; null means it belongs to none. */
+    projectId: string | null;
+}
+
+/** One row per bucket, counted over every file the owner has rather than over the filtered page. */
+export interface LibraryBucket {
+    projectId: string | null;
+    count: number;
 }
 export interface LibraryPage {
     items: LibraryAsset[];
     total: number;
     counts: Record<LibraryKind, number>;
+    buckets: LibraryBucket[];
     usedBytes: number;
     limitBytes: number;
 }
@@ -55,10 +64,12 @@ export class AssetsService {
         return firstValueFrom(this.http.get<DraftAsset[]>(`/api/drafts/${draftId}/assets`));
     }
 
-    list(query: { q?: string; type?: LibraryKind | null; skip: number; take: number }) {
+    /** `project`: a project id, the literal 'none' for the unfiled bucket, or null for every one. */
+    list(query: { q?: string; type?: LibraryKind | null; project?: string | null; skip: number; take: number }) {
         const params: Record<string, string | number> = { skip: query.skip, take: query.take };
         if (query.q) params['q'] = query.q;
         if (query.type) params['type'] = query.type;
+        if (query.project) params['project'] = query.project;
         return firstValueFrom(this.http.get<LibraryPage>('/api/assets', { params }));
     }
 

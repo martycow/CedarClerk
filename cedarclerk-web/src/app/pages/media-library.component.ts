@@ -1,5 +1,7 @@
-import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, effect, inject, input, signal } from '@angular/core';
 import { AssetsService, LibraryAsset, LibraryKind, LibraryPage } from '../core/assets.service';
+import { ProjectsService, ProjectSummary } from '../core/projects.service';
+import { AuthService } from '../core/auth.service';
 import { formatBytes } from '../core/asset-index.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
@@ -29,7 +31,16 @@ const PAGE_SIZE = 60;
 })
 export class MediaLibraryComponent implements OnDestroy {
     private api = inject(AssetsService);
+    private projectsApi = inject(ProjectsService);
+    private auth = inject(AuthService);
     t = inject(LocaleService).t;
+
+    /**
+     * ADR-204 — the bucket this instance is pinned to. Set, the strip is gone and the list is one
+     * project's files: that is how the project's Assets screen shows its uploaded half without a
+     * second copy of this component. Unset, the page owns the strip and opens on every bucket.
+     */
+    readonly pinnedProject = input<string | null>(null);
 
     readonly bytes = formatBytes;
     readonly kinds: LibraryKind[] = ['image', 'video', 'audio'];
@@ -44,6 +55,10 @@ export class MediaLibraryComponent implements OnDestroy {
     search = signal('');
     skip = signal(0);
 
+    /** null = every bucket · 'none' = the files that belong to no project · a guid = that project. */
+    bucket = signal<string | null>(null);
+    projects = signal<ProjectSummary[]>([]);
+
     selected = signal<LibraryAsset | null>(null);
     busy = signal(false);
     deleteError = signal<string | null>(null);
@@ -53,7 +68,18 @@ export class MediaLibraryComponent implements OnDestroy {
     private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor() {
-        void this.load();
+        // The names behind the strip. Absent while the module is off, which is what leaves the
+        // strip out of a build that has no projects to sort files into.
+        if (this.auth.indieDev()) {
+            void this.projectsApi.list(true).then(list => this.projects.set(list)).catch(() => { });
+        }
+        // A pinned instance reloads when the project it is pinned to changes; the page's own
+        // instance pins nothing and this settles once.
+        effect(() => {
+            this.pinnedProject();
+            this.skip.set(0);
+            void this.load();
+        });
     }
 
     ngOnDestroy() {
@@ -76,9 +102,37 @@ export class MediaLibraryComponent implements OnDestroy {
         return {
             q: this.search().trim() || undefined,
             type: this.type(),
+            project: this.pinnedProject() ?? this.bucket(),
             skip: this.skip(),
             take: PAGE_SIZE,
         };
+    }
+
+    /** All · No project · one per project that actually holds files, with its count as the badge. */
+    readonly bucketTabs = computed<IndexTabItem[]>(() => {
+        const labels = this.t().media;
+        const buckets = this.page()?.buckets ?? [];
+        if (!buckets.length) return [];
+        const items: IndexTabItem[] = [
+            { id: 'all', label: labels.bucketAll, badge: buckets.reduce((sum, b) => sum + b.count, 0) },
+        ];
+        const unfiled = buckets.find(b => b.projectId === null);
+        if (unfiled) items.push({ id: 'none', label: labels.bucketNone, badge: unfiled.count, hint: labels.bucketNoneHint });
+        for (const b of buckets) {
+            if (b.projectId === null) continue;
+            const name = this.projects().find(p => p.id === b.projectId)?.name;
+            items.push({ id: b.projectId, label: name ?? labels.bucketGone, badge: b.count });
+        }
+        return items;
+    });
+
+    readonly bucketTab = computed(() => this.bucket() ?? 'all');
+
+    pickBucket(id: string) {
+        this.bucket.set(id === 'all' ? null : id);
+        this.skip.set(0);
+        this.selected.set(null);
+        void this.load();
     }
 
     private async reload() {

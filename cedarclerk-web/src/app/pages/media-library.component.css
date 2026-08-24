@@ -7,7 +7,17 @@
     padding: var(--space-3);
 }
 
+/* Two strips, one above the other: the bucket says whose files these are, the type says what they
+   are. Only the lower one is cut into the board, so they do not read as one row of eight tiles. */
+.bucket-strip {
+    display: flex;
+    padding: 0 var(--space-1);
+    margin-bottom: var(--space-1);
+}
+
 /* The index tiles hang off the panel's top edge, overlapping its border by a hair. */
+.media-page > app-index-tabs.bucket-strip { margin-bottom: var(--space-1); }
+
 .media-page > app-index-tabs {
     position: relative;
     z-index: 1;

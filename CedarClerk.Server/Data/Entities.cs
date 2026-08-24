@@ -708,6 +708,13 @@ public class Asset
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string OwnerId { get; set; } = default!;
+
+    /// <summary>
+    /// ADR-204 — the project whose documents use this file. Null is an answer, not a gap: a
+    /// glossary illustration or a signature image belongs to no project and the library shows that
+    /// as its own bucket. The first project to claim a file keeps it.
+    /// </summary>
+    public Guid? ProjectId { get; set; }
 }
 
 public class Reaction

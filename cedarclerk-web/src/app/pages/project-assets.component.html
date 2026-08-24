@@ -2,6 +2,21 @@
 that used to trail the page title is the Index shelf beside it. The file the author opened is a
 shelf too, because linking it to a document means choosing from a list the modal was covering.-->
 <div class="assets-page" data-density="compact">
+    <!--ADR-204 — the word means two things and the strip says which one is on screen: files
+    uploaded through the editor, and the index of a folder on the author's own machine.-->
+    <app-index-tabs class="source-strip" [items]="sourceTabs()" [value]="source()"
+                    [label]="t().projects.assets.sourceStrip" (selected)="setSource($any($event))" />
+
+    @if (source() === 'uploaded') {
+    <div class="uploaded-toolbar">
+        <app-button variant="paper" size="sm" [disabled]="refiling()" (clicked)="refile()">
+            <app-icon name="images" size="sm"></app-icon>
+            {{ t().media.refile }}
+        </app-button>
+        <span class="refile-note">{{ refileNote() || t().media.refileHint }}</span>
+    </div>
+    <app-media-library class="uploaded" [pinnedProject]="projectId()" />
+    } @else {
     <!-- Scanning banner. Two phases, because they cost wildly different amounts: the index is
          fast (small rows) and the preview pass is slow (every image decoded once). One bar across
          both would crawl and then leap, so the second phase reports counts and megabytes instead.
@@ -327,5 +342,6 @@ shelf too, because linking it to a document means choosing from a list the modal
                 }
             </div>
         </div>
+    }
     }
 </div>

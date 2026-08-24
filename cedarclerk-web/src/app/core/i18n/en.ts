@@ -313,6 +313,9 @@ export const en = {
         },
         // T-122 — the asset index. Every string here has to keep one promise: nothing is uploaded.
         assets: {
+            sourceStrip: 'Which kind of asset is on screen',
+            sourceUploaded: 'Uploaded',
+            sourceDisk: 'On disk',
             crumb: 'Assets',
             title: 'Assets',
             sub: (n: number) => `${n} ${n === 1 ? 'file' : 'files'} indexed`,
@@ -1110,6 +1113,15 @@ export const en = {
         empty: 'No requests yet.',
     },
     media: {
+        bucketStrip: 'Which project these files belong to',
+        bucketAll: 'All',
+        bucketNone: 'No project',
+        bucketNoneHint: 'Files no project’s documents use — a glossary illustration, a signature image',
+        bucketGone: 'Deleted project',
+        refile: 'File images from this project’s documents',
+        refileHint: 'Files every picture this project’s documents use, unless another project already claimed it.',
+        refiled: (n: number) => n === 0 ? 'Nothing to file — every picture already belongs somewhere.' : `${n} ${n === 1 ? 'file' : 'files'} filed into this project.`,
+        refileFailed: 'Could not file the images',
         crumb: 'Media',
         open: 'Media library',
         pickTitle: 'Insert from library',

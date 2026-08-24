@@ -6,7 +6,7 @@ import { en } from '../core/i18n/en';
 function asset(id: string, contentType: string): LibraryAsset {
     return {
         id, fileName: `${id}.bin`, localPath: `x/${id}`, contentType,
-        sizeBytes: 1024, createdAt: '2026-08-01T09:00:00',
+        sizeBytes: 1024, createdAt: '2026-08-01T09:00:00', projectId: null,
     };
 }
 
@@ -17,13 +17,16 @@ const PAGE: LibraryPage = {
     // cap can only show up on the "All" tile — and that tile's badge is then a number no kind
     // carries on its own, which is the only way it says "the sum" rather than "one of these".
     counts: { image: 60, video: 45, audio: 0 },
+    // One bucket only, so the project strip stays out of the way of the tests below: it is drawn
+    // from two buckets up, which is what makes it a control rather than a label (ADR-204).
+    buckets: [{ projectId: null, count: 2 }],
     usedBytes: 500, limitBytes: 1000,
 };
 
 class FakeAssets {
     page: LibraryPage = PAGE;
-    queries: { q?: string; type?: LibraryKind | null; skip: number; take: number }[] = [];
-    async list(query: { q?: string; type?: LibraryKind | null; skip: number; take: number }) {
+    queries: { q?: string; type?: LibraryKind | null; project?: string | null; skip: number; take: number }[] = [];
+    async list(query: { q?: string; type?: LibraryKind | null; project?: string | null; skip: number; take: number }) {
         this.queries.push(query);
         return structuredClone(this.page);
     }

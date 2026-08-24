@@ -156,6 +156,11 @@ export class ProjectsService {
         return firstValueFrom(this.http.delete<void>(`/api/projects/${projectId}/documents/${draftId}`));
     }
 
+    /** ADR-204 — files every unfiled picture this project's documents use. Idempotent. */
+    refileAssets(projectId: string) {
+        return firstValueFrom(this.http.post<{ filed: number }>(`/api/projects/${projectId}/assets/refile`, {}));
+    }
+
     attachDocument(projectId: string, draftId: string) {
         return firstValueFrom(this.http.put<{ id: string; projectId: string }>(`/api/projects/${projectId}/documents/${draftId}`, {}));
     }

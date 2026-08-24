@@ -7,6 +7,13 @@ covering the list its 409 answer talks about.-->
     @if (loading()) {
         <p class="hint">{{ t().common.loading }}</p>
     } @else if (page(); as p) {
+        <!--ADR-204 — which project's files these are. Absent when the component is pinned to one
+        (the project's own Assets screen renders it that way) or when there is nothing to sort.-->
+        @if (!pinnedProject() && bucketTabs().length > 1) {
+        <app-index-tabs class="bucket-strip" [items]="bucketTabs()" [value]="bucketTab()"
+                        [label]="t().media.bucketStrip" (selected)="pickBucket($event)" />
+        }
+
         <app-index-tabs [items]="typeTabs()" [value]="typeTab()" [label]="t().media.typeStrip"
                         (selected)="pickType($event)" />
 
