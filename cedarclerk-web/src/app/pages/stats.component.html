@@ -20,6 +20,10 @@ manager's business or nobody's, so this file starts at the filter strip.-->
             <span class="strip-meta">{{ t().stats.updated(at) }} · {{ t().stats.stepDay }}</span>
             }
 
+            @if (metricNote(); as note) {
+            <span class="strip-meta metric-note">{{ note }}</span>
+            }
+
             <label class="range-picker">
                 <span>{{ t().stats.period }}</span>
                 <select [value]="rangeDays()" (change)="onRangeCommit(+$any($event.target).value)">

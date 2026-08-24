@@ -217,3 +217,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-202 — The index reads in one language; a post page does not ask](adr/ADR-202.md)
 - [ADR-203 — A post's project is set where the post is, not where the project is](adr/ADR-203.md)
 - [ADR-204 — An uploaded file belongs to a project, or to nobody, and follows the document that uses it](adr/ADR-204.md)
+- [ADR-205 — Telegram reactions and comments are counted from updates; views are not available at all](adr/ADR-205.md)

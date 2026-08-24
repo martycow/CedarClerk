@@ -1,5 +1,38 @@
 # Changelog
 
+## 2026-08-24 — Telegram reports its own engagement; an uploaded file belongs to a project (0.14.2)
+
+**Two reports, and neither was a bug — both were features that had never been built.**
+
+**The bot was not picking up likes and comments from Telegram because it never had.** The numbers on
+a channel's row were the blog's own reactions and comments, summed over every draft ever sent there
+— ADR-025 said so in its own consequence and left `message_reaction_count` "unbuilt". ADR-205 builds
+it, and splits the answer three ways because the Bot API helps three different amounts. **Views are
+not available at all**: a channel post's view counter is not in the Bot API, only in the client
+protocol under a user account, so a Telegram source no longer offers that metric and the strip says
+why. **Reactions** arrive as `message_reaction_count`, which Telegram sends only to an administrator
+bot that names the update in `allowed_updates` — it is left out of the default set, and the library's
+event API has nowhere to name it, so the service moved to `StartReceiving` with `ReceiverOptions` and
+dispatches messages itself. **Comments** are counted in the channel's linked discussion group, as
+replies to the post's automatic forward. All of it is counted from updates and none of it can be
+fetched, so history starts at this deploy and the number is a floor whenever the service has been
+down — stated on the screen rather than left to be found.
+
+**An uploaded file now belongs to a project, or to nobody** (ADR-204). Filing a post into a project
+moved the document and left its pictures behind, because `Asset` had no project at all; and with the
+indie module on, the Assets hook pointed at the folder index while `/library` — where every uploaded
+file actually lives — had no entry point on any screen, so a glossary illustration was reachable by
+nothing. `Asset` gains a nullable `ProjectId` where null is a real bucket rather than a gap, a file
+follows the document that uses it (first project to claim it keeps it), and the backlog is swept by
+a button that says how many moved, never silently. The library grew a project strip; the project's
+Assets screen grew a source strip — **Uploaded** beside **On disk** — with the uploaded half rendered
+by the library component scoped to that project rather than by a second copy of it.
+
+Verification: `cedar test --smoke` all green — 1015 backend, 463 frontend, 74 smoke. Two additive
+migrations, no column redefined: `AddAssetProject`, and `AddTelegramEngagementCounts`, which adds new
+snapshot columns rather than changing what the two ADR-025 ones mean — that would have put a cliff in
+the middle of an existing chart at the day the meaning changed.
+
 ## 2026-08-24 — the trim tier, panel-edge tabs and the blog's own language (0.14.1)
 
 **A second annotated-screens round, and the answer to most of it was one missing box.** Every

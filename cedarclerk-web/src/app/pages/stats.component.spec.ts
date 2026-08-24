@@ -3,6 +3,7 @@ import { By } from '@angular/platform-browser';
 import { StatsComponent } from './stats.component';
 import { ChannelsService } from '../core/channels.service';
 import { GrowthChartComponent } from '../bench/worktop/growth-chart.component';
+import { en } from '../core/i18n/en';
 
 // The component's own stylesheet, read back out of the document. Two claims this screen makes are
 // claims about CSS — paper's floor holds every size on it, and no colour is written as a literal —
@@ -19,18 +20,20 @@ function sheetFor(marker: string): string {
 
 const day = (d: string) => `2026-08-${d}T12:00:00Z`;
 
-const blogSnapshot = (d: string, views: number) =>
-    ({ takenAt: day(d), viewCount: views, likeCount: views / 10, commentCount: 1 });
+// ADR-205 — the varying number sits on likeCount, which is the one metric both a blog and a
+// channel track: views are the blog's alone, since Telegram reports none to a bot.
+const blogSnapshot = (d: string, n: number) =>
+    ({ takenAt: day(d), viewCount: n, likeCount: n, commentCount: 1 });
 
-const channelSnapshot = (d: string, views: number) =>
-    ({ takenAt: day(d), memberCount: 400 + views, viewCount: views, likeCount: 2, commentCount: 0 });
+const channelSnapshot = (d: string, n: number) =>
+    ({ takenAt: day(d), memberCount: 400 + n, viewCount: 0, likeCount: n, commentCount: 0 });
 
 // The blog has read since the 8th; the channel only since the 9th, and it missed the 10th. Both
 // facts are load-bearing: the first is what the window's start rule exists for, the second what
 // carry-forward answers.
 const BLOG = {
     currentViews: 130, deltaWeekViews: 30,
-    currentLikes: 13, deltaWeekLikes: 3,
+    currentLikes: 130, deltaWeekLikes: 30,
     currentComments: 1, deltaWeekComments: 0,
     snapshots: [blogSnapshot('08', 100), blogSnapshot('09', 110), blogSnapshot('10', 120), blogSnapshot('11', 130)],
     countries: [], languages: [],
@@ -38,8 +41,8 @@ const BLOG = {
 
 const DEVLOG = {
     current: 440, deltaWeek: 30,
-    currentViews: 40, deltaWeekViews: 30,
-    currentLikes: 2, deltaWeekLikes: 0,
+    currentViews: 0, deltaWeekViews: 0,
+    currentLikes: 40, deltaWeekLikes: 30,
     currentComments: 0, deltaWeekComments: 0,
     snapshots: [channelSnapshot('09', 10), channelSnapshot('11', 40)],
 };
@@ -94,6 +97,10 @@ describe('stats screen (Posts Manager tab)', () => {
         TestBed.configureTestingModule({ providers: [{ provide: ChannelsService, useValue: api }] });
         fixture = TestBed.createComponent(StatsComponent);
         await settle();
+        // Every test below that is about the axis, the ink or the wash needs a metric both kinds of
+        // source track; the screen opens on the blog's own headline number instead (ADR-205).
+        fixture.componentInstance.setMetric('likeCount');
+        await settle();
     });
 
     it('is paper, and says so where the density lint and the touch carve-out can read it', () => {
@@ -115,6 +122,17 @@ describe('stats screen (Posts Manager tab)', () => {
         expect(quiet.state).toBe('dried');
         expect(quiet.note).toBe('no data yet');
         expect(page().series().some(s => s.name === 'Quiet')).toBe(false);
+    });
+
+    it('dries a channel under views, because Telegram reports none to a bot', async () => {
+        page().setMetric('viewCount');
+        await settle();
+
+        const devlog = page().leaves().find(l => l.name === 'Devlog')!;
+        expect(devlog.state).toBe('dried');
+        expect(devlog.note).toBe('not tracked');
+        expect(page().series().map(s => s.name)).toEqual(['Blog']);
+        expect(page().metricNote()).toBe(en.stats.sources.notTrackedWhy);
     });
 
     it('dries a source that does not track the picked metric instead of blanking a card', async () => {

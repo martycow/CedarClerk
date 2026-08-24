@@ -11,6 +11,16 @@ Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-
 
 ## Status summary (as of 24.08.2026)
 
+**Telegram engagement and project-scoped assets (`T-282`, `T-283`, ADR-204…205, v0.14.2).** Two
+reports that both turned out to be unbuilt features rather than defects. A channel's likes and
+comments were the blog's numbers attributed to it (ADR-025's own stated gap); reactions now come from
+`message_reaction_count` — which meant naming the update in `allowed_updates` and leaving the
+library's event API for `StartReceiving` — comments from the linked discussion group, and views are
+withdrawn for a Telegram source because the Bot API reports none. And an uploaded file now belongs to
+a project or to nobody: filing a post moved the document and left its pictures behind, while
+`/library` had no entry point at all while the module was on, which is why nothing showed the
+glossary's images. Both halves ship with additive migrations only.
+
 **Second annotated round (`T-281`, ADR-200…203, v0.14.1).** Nineteen screenshots and six product
 notes, closed as one pass. The bulk of it was a single missing box: ADR-200's trim tier (24px) for
 chips and for controls riding a chrome band, which is what every "too tall" note was pointing at.

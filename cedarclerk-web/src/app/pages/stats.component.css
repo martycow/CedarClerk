@@ -67,6 +67,15 @@
     white-space: nowrap;
 }
 
+/* A sentence, not a readout: it wraps, it is set in the reading face, and it gives up the mono
+   the numbers beside it keep. */
+:host([data-surface="paper"]) .metric-note {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-sans);
+    white-space: normal;
+}
+
 :host([data-surface="paper"]) .leaf-note {
     margin-left: var(--space-1);
     font-family: var(--font-mono);

@@ -129,7 +129,15 @@ public static class ChannelEndpoints
                 .OrderByDescending(s => s.TakenAt)
                 .Take(days)
                 .OrderBy(s => s.TakenAt)
-                .Select(s => new { s.TakenAt, s.MemberCount, s.ViewCount, s.LikeCount, s.CommentCount })
+                .Select(s => new
+                {
+                    s.TakenAt, s.MemberCount, s.ViewCount,
+                    // ADR-205 — a channel's likes and comments are the channel's. The two blog-
+                    // attributed columns stay in the table for the history they already hold and
+                    // are not served under a Telegram source's name any more.
+                    LikeCount = s.TelegramReactionCount,
+                    CommentCount = s.TelegramCommentCount,
+                })
                 .ToListAsync();
 
             var now = DateTime.UtcNow;

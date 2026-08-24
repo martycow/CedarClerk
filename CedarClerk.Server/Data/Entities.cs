@@ -613,6 +613,12 @@ public class ChannelStatSnapshot
     public int LikeCount { get; set; }
     public int CommentCount { get; set; }
 
+    // ADR-205 — the channel's own numbers, summed over its ChannelPosts. New columns rather than a
+    // new meaning for the two above: those hold ADR-025's blog attribution, and redefining a stored
+    // column would put a cliff in the middle of an existing chart at the day the meaning changed.
+    public int TelegramReactionCount { get; set; }
+    public int TelegramCommentCount { get; set; }
+
     public DateTime TakenAt { get; set; } = DateTime.UtcNow;
 }
 
@@ -663,6 +669,15 @@ public class ChannelPost
     public Guid DraftId { get; set; }
     public int TelegramMessageId { get; set; }
     public DateTime PublishedAt { get; set; } = DateTime.UtcNow;
+
+    // ADR-205 — what the bot has SEEN on this post in Telegram, which is not the same as what
+    // Telegram holds: there is no call that asks for a post's current reactions, so an update
+    // missed while the service was down is missed for good. Both are floors, never totals.
+    public int ReactionCount { get; set; }
+    public int CommentCount { get; set; }
+
+    /// <summary>When an update last moved either number; null while the bot has seen none.</summary>
+    public DateTime? StatsSeenAt { get; set; }
 }
 
 /// <summary>

@@ -1542,6 +1542,8 @@ export const en = {
             legend: 'Sources — the legend is the filter',
             noData: 'no data yet',
             notTracked: 'not tracked',
+            notTrackedWhy: 'Telegram does not report a post’s view count to a bot — only the blog counts views.',
+            telegramSince: 'Reactions and comments are counted from the moment Telegram tells the bot about them; nothing before that can be recovered.',
             noneSelected: 'Every source is switched off — pick one to draw.',
             nothingToDraw: 'None of the picked sources has this metric yet.',
         },

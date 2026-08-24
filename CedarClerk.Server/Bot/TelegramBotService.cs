@@ -46,10 +46,28 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
         
         _sw.Start();
 
-        client.OnError += OnError;
-        client.OnMessage += OnMessageReceived;
-        client.OnUpdate += OnUpdate;
         _client = client;
+
+        // ADR-205 — the reaction updates are why this is StartReceiving and not the OnMessage/
+        // OnUpdate events: Telegram leaves MessageReaction and MessageReactionCount out of the
+        // default set and only sends them to a bot that names them here, and the event API has
+        // nowhere to name them. Every other kind on the list is one this service already handled,
+        // spelled out rather than inherited — an allow-list that is written down is the only kind
+        // that can be read.
+        client.StartReceiving(
+            (_, update, _) => OnUpdate(update),
+            (_, exception, source, _) => OnError(exception, source),
+            new ReceiverOptions
+            {
+                AllowedUpdates =
+                [
+                    UpdateType.Message,
+                    UpdateType.MyChatMember,
+                    UpdateType.PreCheckoutQuery,
+                    UpdateType.MessageReactionCount,
+                ],
+            },
+            ct);
 
         await Task.Delay(Timeout.Infinite, ct);
     }
@@ -60,10 +78,8 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
             return base.StopAsync(cancellationToken);
         
         _sw.Stop();
-        
-        _client.OnError -= OnError;
-        _client.OnMessage -= OnMessageReceived;
-        _client.OnUpdate -= OnUpdate;
+        // The polling loop stops with the token StartReceiving was handed; there is no handler to
+        // detach any more.
         return base.StopAsync(cancellationToken);
     }
 
@@ -93,11 +109,6 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
         catch (OperationCanceledException)
         {
         }
-    }
-    
-    private Task OnMessageReceived(Message message, UpdateType type)
-    {
-        return SafeHandle(() => ProcessMessage(message), "message");
     }
     
     private Task OnUpdate(Update update)
@@ -208,6 +219,18 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
         await handler(message.Chat, arg);
     }
 
+    // ADR-205 — a comment on a channel post is a message in the linked discussion group replying to
+    // the post's automatic forward. Every other message falls straight through.
+    private async Task CountCommentAsync(Message message)
+    {
+        if (message.ReplyToMessage is null) return;
+
+        using var scope = scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
+        if (await TelegramEngagement.ApplyCommentAsync(db, message))
+            await db.SaveChangesAsync();
+    }
+
     private async Task HandleStartCommand(Chat chat, string arg)
     {
         var startMsg = $"Cedar Clerk Bot v{Consts.CurrentVersion}\n" +
@@ -221,10 +244,30 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
     
     private async Task OnUpdateReceived(Update update)
     {
+        // Dispatched here rather than by an OnMessage handler since ADR-205 moved the service off
+        // the event API; a message is one update kind among the four the allow-list names.
+        if (update.Message is { } message)
+        {
+            await ProcessMessage(message);
+            await CountCommentAsync(message);
+            return;
+        }
+
         // Telegram asks to confirm before charging the user with Stars. Nothing to validate on our side, so we approve.
         if (update.PreCheckoutQuery is { } pcq)
         {
             await Client.AnswerPreCheckoutQuery(pcq.Id);
+            return;
+        }
+
+        // ADR-205 — the anonymous reaction tally on a channel post. The update carries the whole
+        // current count, so nothing here adds up deltas.
+        if (update.MessageReactionCount is { } reactions)
+        {
+            using var reactionScope = scopeFactory.CreateScope();
+            var reactionDb = reactionScope.ServiceProvider.GetRequiredService<CedarDbContext>();
+            if (await TelegramEngagement.ApplyReactionsAsync(reactionDb, reactions))
+                await reactionDb.SaveChangesAsync();
             return;
         }
 

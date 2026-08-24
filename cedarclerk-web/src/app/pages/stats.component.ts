@@ -43,7 +43,15 @@ const RANGE_NOTCHES = [7, 14, 30, 60, 90, 180];
 
 const BLOG_ID = 'blog';
 const BLOG_METRICS: readonly MetricKey[] = ['viewCount', 'likeCount', 'commentCount'];
-const CHANNEL_METRICS: readonly MetricKey[] = ['memberCount', 'viewCount', 'likeCount', 'commentCount'];
+// ADR-205 — no viewCount: a channel post's view counter is not in the Bot API at all, so a
+// Telegram source has nothing honest to draw under that metric and says "not tracked"
+// rather than showing the blog's number under its name.
+const CHANNEL_METRICS: readonly MetricKey[] = ['memberCount', 'likeCount', 'commentCount'];
+
+// Every metric the strip can offer, in the order it offers them. Separate from the two lists
+// above, which say what a KIND of source answers: the strip is the union, and reading it off
+// CHANNEL_METRICS made a metric only the blog answers disappear from it entirely.
+const ALL_METRICS: readonly MetricKey[] = ['memberCount', 'viewCount', 'likeCount', 'commentCount'];
 
 // A slot belongs to the entity, not to its place in the list, so switching a source off cannot
 // repaint the survivors (ADR-158). The blog holds ink blue; channels take the rest in list order
@@ -242,9 +250,22 @@ export class StatsComponent implements OnInit {
 
     metricTabs = computed<IndexTabItem[]>(() => {
         const labels = this.t().stats.metrics;
-        return CHANNEL_METRICS
+        return ALL_METRICS
             .filter(metric => this.sources().some(s => s.tracked.includes(metric)))
             .map(metric => ({ id: metric, label: labels[metric] }));
+    });
+
+    /**
+     * ADR-205 — the line under the strip that says why a leaf is dried, or where a number starts.
+     * One sentence at a time: it explains the metric being looked at, not every metric there is.
+     */
+    metricNote = computed(() => {
+        const strings = this.t().stats.sources;
+        const metric = this.metric();
+        const anyDried = this.leaves().some(l => l.state === 'dried');
+        if (metric === 'viewCount' && anyDried) return strings.notTrackedWhy;
+        if (metric === 'likeCount' || metric === 'commentCount') return strings.telegramSince;
+        return '';
     });
 
     viewTabs = computed<IndexTabItem[]>(() => [

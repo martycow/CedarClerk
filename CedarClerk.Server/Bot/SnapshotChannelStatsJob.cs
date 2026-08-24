@@ -33,6 +33,13 @@ public class SnapshotChannelStatsJob(CedarDbContext db, TelegramBotService bot, 
                 var likeCount = draftIds.Count == 0 ? 0 : await db.Reactions.CountAsync(r => draftIds.Contains(r.DraftId) && r.Kind == "like");
                 var commentCount = draftIds.Count == 0 ? 0 : await db.Comments.CountAsync(c => draftIds.Contains(c.DraftId));
 
+                // ADR-205 — the channel's own numbers, summed over what the bot has seen happen to
+                // its posts. Beside the blog attribution above, never instead of it.
+                var telegram = await db.ChannelPosts.Where(p => p.ChannelId == channel.Id)
+                    .GroupBy(p => 1)
+                    .Select(g => new { Reactions = g.Sum(p => p.ReactionCount), Comments = g.Sum(p => p.CommentCount) })
+                    .FirstOrDefaultAsync();
+
                 db.ChannelStatSnapshots.Add(new ChannelStatSnapshot
                 {
                     ChannelId = channel.Id,
@@ -40,6 +47,8 @@ public class SnapshotChannelStatsJob(CedarDbContext db, TelegramBotService bot, 
                     ViewCount = viewCount,
                     LikeCount = likeCount,
                     CommentCount = commentCount,
+                    TelegramReactionCount = telegram?.Reactions ?? 0,
+                    TelegramCommentCount = telegram?.Comments ?? 0,
                     TakenAt = now,
                 });
             }
