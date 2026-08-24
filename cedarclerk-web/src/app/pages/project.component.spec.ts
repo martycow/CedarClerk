@@ -173,14 +173,14 @@ describe('project hub', () => {
     // The three regions, by the accessible name each panel carries.
     it('lays the bench out as projects, the top, and today', () => {
         expect(panels().length).toBe(3);
-        expect(panel(t.title)).toBeTruthy();
+        expect(panel(t.shelfTitle)).toBeTruthy();
         expect(panel(t.hub.documentsPanel)).toBeTruthy();
         expect(panel(t.hub.today)).toBeTruthy();
         expect(el().querySelectorAll('app-worktop').length).toBe(1);
     });
 
     it('marks the open project in the switcher and links every row to its own hub', () => {
-        const rows = [...panel(t.title).querySelectorAll('a.proj')] as HTMLAnchorElement[];
+        const rows = [...panel(t.shelfTitle).querySelectorAll('a.proj')] as HTMLAnchorElement[];
         expect(rows.length).toBe(2);
         expect(rows[0].getAttribute('aria-current')).toBe('page');
         expect(rows[1].getAttribute('aria-current')).toBeNull();

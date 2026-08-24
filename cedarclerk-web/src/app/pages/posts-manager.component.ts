@@ -25,6 +25,7 @@ import { FolderPickerComponent } from '../shared/folder-picker.component';
 import { FormRefComponent } from '../shared/form-ref.component';
 import { TagUsageService } from '../core/tag-usage.service';
 import { FoldersService } from '../core/folders.service';
+import { ProjectsService, ProjectSummary } from '../core/projects.service';
 import { StatsComponent } from './stats.component';
 import { IconComponent } from '../shared/icon.component';
 import { ButtonComponent } from '../bench/forms/button.component';
@@ -69,6 +70,7 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
     feedback = inject(CommentsService);
     private tagUsageApi = inject(TagUsageService);
     private foldersApi = inject(FoldersService);
+    private projectsApi = inject(ProjectsService);
     private ruler = inject(RulerService);
     private locale = inject(LocaleService);
     t = this.locale.t;
@@ -80,6 +82,11 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
 
     drafts = signal<DraftMeta[]>([]);
     selectedId = signal<string | null>(null);
+
+    // ADR-203 — a post written before the module existed belongs to no project, and there was no
+    // screen that could put it in one: the project hub only offers documents it created itself.
+    // Empty while the module is off, which is what keeps the control off the sheet entirely.
+    projects = signal<ProjectSummary[]>([]);
 
     // Minimal edits (Marty's wording) — everything here changes metadata only. Body text stays
     // the editor's job; the rename below still has to round-trip cedarJson because the save
@@ -144,6 +151,7 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
         // this eager load a plain landing here never fetched the presets at all — the form
         // dropdown then claimed "no saved presets yet" over a non-empty library.
         this.loadPresets();
+        this.loadProjects();
         try {
             this.drafts.set(await this.draftsApi.list());
             this.loadPublished();
@@ -1117,6 +1125,38 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
             ],
         });
     });
+
+    private async loadProjects() {
+        if (!this.auth.indieDev()) return;
+        try {
+            this.projects.set(await this.projectsApi.list(true));
+        } catch {
+            // A hub that will not answer is not a reason to fail the whole manager: the picker
+            // simply does not appear, exactly as it does when the module is off.
+        }
+    }
+
+    projectName(id: string | null): string {
+        if (!id) return this.t().manager.noProject;
+        return this.projects().find(p => p.id === id)?.name ?? this.t().manager.noProject;
+    }
+
+    async setProject(draftId: string, projectId: string) {
+        const current = this.drafts().find(d => d.id === draftId)?.projectId ?? null;
+        const next = projectId || null;
+        if (next === current) return;
+        this.busy.set(true);
+        this.error.set('');
+        try {
+            if (next) await this.projectsApi.attachDocument(next, draftId);
+            else if (current) await this.projectsApi.detachDocument(current, draftId);
+            this.drafts.update(list => list.map(d => (d.id === draftId ? { ...d, projectId: next } : d)));
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().manager.errors.load));
+        } finally {
+            this.busy.set(false);
+        }
+    }
 
     ngOnDestroy() {
         this.ruler.clear();

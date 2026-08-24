@@ -571,6 +571,28 @@
     border-style: dashed;
 }
 
+/* The channel as Telegram draws it. The letter plate is what stands in until the bot has been
+   asked — the Refresh button on this panel is what asks. */
+.target-face {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-stamp);
+    object-fit: cover;
+}
+
+.target-face.is-letter {
+    background: var(--grad-brass);
+    border: 1px solid var(--brass-edge);
+    color: var(--brass-ink);
+    font-family: var(--font-display);
+    font-size: var(--fs-11);
+    font-weight: 700;
+}
+
 .target-name {
     font-weight: 500;
     color: var(--text);

@@ -113,6 +113,22 @@ name the smoke suite binds.-->
                     </label>
                 </div>
 
+                <!--ADR-203 — which project this post belongs to. The last document cannot be taken
+                out of a project, so the server refuses that and the error is what says so.-->
+                @if (projects().length) {
+                <div class="detail-field">
+                    <label for="post-project">{{ t().manager.project }}</label>
+                    <select id="post-project" [value]="d.projectId ?? ''" [disabled]="busy()"
+                            (change)="setProject(d.id, $any($event.target).value)">
+                        <option value="">{{ t().manager.noProject }}</option>
+                        @for (p of projects(); track p.id) {
+                        <option [value]="p.id">{{ p.name }}</option>
+                        }
+                    </select>
+                    <p class="field-hint">{{ t().manager.projectHint }}</p>
+                </div>
+                }
+
                 <div class="detail-actions">
                     <button class="btn-ghost" (click)="togglePrivate()" [disabled]="busy()">
                         <app-icon name="lock" size="sm"></app-icon>

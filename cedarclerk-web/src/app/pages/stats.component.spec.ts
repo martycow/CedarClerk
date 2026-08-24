@@ -145,13 +145,13 @@ describe('stats screen (Posts Manager tab)', () => {
     });
 
     it('states the window rather than leaving it to the axis, because it moves with the selection', async () => {
-        expect(page().windowLabel()).toBe('3 points · 09.08 — 11.08');
+        expect(page().windowLabel()).toBe('3 points · 08/09 — 08/11');
 
         page().toggle('c1');
         await settle();
 
         expect(page().axis().days.length).toBe(4);
-        expect(page().windowLabel()).toBe('4 points · 08.08 — 11.08');
+        expect(page().windowLabel()).toBe('4 points · 08/08 — 08/11');
     });
 
     it('tells the chart the tail is closed: a running total is complete the moment it is read', () => {

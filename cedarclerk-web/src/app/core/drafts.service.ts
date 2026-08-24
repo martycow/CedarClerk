@@ -104,6 +104,7 @@ export interface DraftMeta {
     scheduled: ScheduledInfo | null; // most recent Pending/Failed ScheduledPost row, if any
     folderId: string | null; // at most one folder per draft — see the ADR following ADR-038
     seriesId: string | null; // at most one series per draft — ADR-125
+    projectId: string | null; // the project this document belongs to, null = loose (ADR-203)
     parentDraftId: string | null; // ADR-128 — the document tree; null = root
     siblingOrder: number;
     isPrivate: boolean; // blog page gated behind PostInvite tokens — see ADR-041

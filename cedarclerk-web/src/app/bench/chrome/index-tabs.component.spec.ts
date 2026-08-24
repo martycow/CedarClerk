@@ -154,11 +154,13 @@ describe('IndexTabsComponent', () => {
             expect(css).toMatch(/is-on[^{]*\{[^}]*color:\s*var\(--rail-ink\)/);
         });
 
-        it('holds 11px type on a 30px box', () => {
+        // ADR-200 — an index tile rides a chrome band, so it is drawn at trim: a 30px tile inside
+        // a 30px header fills the wood it is supposed to be cut into.
+        it('holds 11px type on a 24px box', () => {
             const sizes = Array.from(css.matchAll(/font-size:\s*([^;}]+)/g)).map(m => m[1].trim());
             expect(sizes.length).toBeGreaterThan(0);
             for (const size of sizes) expect(['var(--text-chrome)', 'var(--text-chrome-sm)']).toContain(size);
-            expect(css).toMatch(/min-height:\s*var\(--hit-chrome\)/);
+            expect(css).toMatch(/min-height:\s*var\(--hit-trim\)/);
         });
     });
 

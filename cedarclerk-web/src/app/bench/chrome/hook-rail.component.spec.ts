@@ -166,7 +166,9 @@ describe('HookRailComponent', () => {
                               { id: 'y', icon: 'flask', label: 'Y', link: '/y' }];
         render();
         expect(hooks().length).toBe(8);
-        expect(sheetFor('.wall')).toMatch(/\.wall[^}]*overflow-y:\s*auto/s);
+        // Down only: a hook is drawn at the wall's full width, so the vertical bar taking that
+        // width back must not produce a horizontal one under the last tool.
+        expect(sheetFor('.wall')).toMatch(/\.wall[^}]*overflow:\s*hidden auto/s);
     });
 
     // ADR-183 — everything that is not one of the seven screens hangs here, at the foot of the

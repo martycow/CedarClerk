@@ -215,3 +215,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-200 — Trim: the third box, for chips and for controls riding a chrome band](adr/ADR-200.md)
 - [ADR-201 — The window's own controls hang on the drawer lip](adr/ADR-201.md)
 - [ADR-202 — The index reads in one language; a post page does not ask](adr/ADR-202.md)
+- [ADR-203 — A post's project is set where the post is, not where the project is](adr/ADR-203.md)

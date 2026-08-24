@@ -138,14 +138,17 @@ describe('LeafTagComponent', () => {
             expect(css).toMatch(/is-dried[^{]*\{[^}]*color:\s*var\(--leaf-dried-ink/);
         });
 
-        it('holds the paper floor: 38px targets and 14px type', () => {
+        // ADR-200 — a leaf is a chip, so it is drawn at trim and not at the box a paper button
+        // takes. The floor a finger is owed is still paper's, and is spent from the surface under
+        // @media (pointer: coarse) rather than declared here.
+        it('holds the trim box: 24px targets and 12px type', () => {
             const boxes = Array.from(css.matchAll(/min-(?:height|width):\s*([^;}]+)/g)).map(m => m[1].trim());
             expect(boxes.length).toBeGreaterThan(0);
-            for (const b of boxes) expect(b).toBe('var(--hit-target)');
+            for (const b of boxes) expect(b).toBe('var(--hit-trim)');
 
             const sizes = Array.from(css.matchAll(/font-size:\s*([^;}]+)/g)).map(m => m[1].trim());
             expect(sizes.length).toBeGreaterThan(0);
-            for (const s of sizes) expect(s).toBe('var(--fs-ui)');
+            for (const s of sizes) expect(s).toBe('var(--fs-12)');
         });
 
         it('keeps one rounded corner pair and paints no literal colour outside a token fallback', () => {

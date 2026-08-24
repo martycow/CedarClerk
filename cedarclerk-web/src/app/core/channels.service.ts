@@ -7,6 +7,8 @@ export interface Channel {
     title: string;
     telegramChatId: number;
     username: string | null;
+    /** The channel's own picture, copied down from Telegram; null until the bot has fetched one. */
+    avatarUrl: string | null;
 }
 
 export interface ChannelStatSnapshotDto {

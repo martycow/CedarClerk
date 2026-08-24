@@ -168,7 +168,7 @@ public static class DraftEndpoints
                 .Select(d => new
                 {
                     d.Id, d.Title, d.PrimaryLanguage, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
-                    d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.SeriesId, d.IsPrivate, d.IsTemplate,
+                    d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.SeriesId, d.ProjectId, d.IsPrivate, d.IsTemplate,
                     d.ParentDraftId, d.SiblingOrder,
                     d.DisableCopy, d.DisableReactions, d.DisableComments, d.ViewCount,
                     Translations = db.DraftTranslations.Where(t => t.DraftId == d.Id)
@@ -237,7 +237,7 @@ public static class DraftEndpoints
             return drafts.Select(d => new
             {
                 d.Id, d.Title, d.PrimaryLanguage, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
-                d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.SeriesId, d.IsPrivate, d.IsTemplate,
+                d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.SeriesId, d.ProjectId, d.IsPrivate, d.IsTemplate,
                 d.ParentDraftId, d.SiblingOrder,
                 d.DisableCopy, d.DisableReactions, d.DisableComments, d.ViewCount,
                 ReactionCount = reactionCounts.GetValueOrDefault(d.Id),
@@ -284,7 +284,7 @@ public static class DraftEndpoints
             return Results.Ok(new
             {
                 draft.Id, draft.Title, draft.PrimaryLanguage, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug,
-                draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.FolderId, draft.IsPrivate,
+                draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.FolderId, draft.ProjectId, draft.IsPrivate,
                 draft.WatermarkText, draft.ArticleTitle, draft.IsListedWhilePrivate, draft.DisableCopy,
                 draft.DisableReactions, draft.DisableComments,
                 draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson,

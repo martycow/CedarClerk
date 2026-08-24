@@ -617,6 +617,11 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                             <ul class="target-list">
                                 @for (c of channels(); track c.id) {
                                 <li class="target-row">
+                                    @if (c.avatarUrl) {
+                                    <img class="target-face" [src]="c.avatarUrl" alt="" width="24" height="24">
+                                    } @else {
+                                    <span class="target-face is-letter">{{ (c.title || '?').charAt(0).toUpperCase() }}</span>
+                                    }
                                     <span class="target-name">{{ c.title }}</span>
                                     @if (c.username) { <span class="target-handle">&#64;{{ c.username }}</span> }
                                     <app-button variant="danger" size="sm" (clicked)="removeChannel(c.id)" [disabled]="channelBusy()">
