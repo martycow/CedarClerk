@@ -57,7 +57,7 @@ describe('bench Button', () => {
 
     it('draws a small paper button at the compact desktop height', () => {
         const css = (ButtonComponent as any).ɵcmp.styles.join('');
-        expect(css).toMatch(/data-surface=paper[^}]*\.btn\.sm[^}]*min-height:\s*var\(--hit-chrome\)/s);
+        expect(css).toMatch(/data-surface=paper[^}]*\.btn\.sm[^}]*min-height:\s*var\(--hit-surface, var\(--hit-chrome\)\)/s);
     });
 
     // Both halves of the port's own rules, read off the compiled stylesheet. The length assertion

@@ -86,7 +86,8 @@
 
 :host([data-surface="paper"]) .range-picker select {
     min-width: 130px;
-    min-height: var(--hit-chrome);
+    /* The drawn box as the carrier's fallback, so a coarse pointer still lifts it (ADR-196). */
+    min-height: var(--hit-surface, var(--hit-chrome));
     padding: 0 var(--space-3);
     font-weight: 600;
 }

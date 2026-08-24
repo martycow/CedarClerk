@@ -81,7 +81,7 @@ test('the shipped shell resolves the same two floors the fixture assumes', async
     // control in it at all — so the paper half of this measurement read "no button on the sheet"
     // once in five runs. Waiting for a control that is actually on the sheet is what removes the
     // race; it cannot hide one going missing, because then this line is what goes red.
-    await expect(page.getByRole('button', { name: 'New draft' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'New document' })).toBeVisible();
 
     // Both the floor the surface hands down and the height the control ends up with. min-height
     // alone measured the mechanism on the sheet and something else in the rail: rail-header sizes

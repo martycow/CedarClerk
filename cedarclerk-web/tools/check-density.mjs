@@ -83,6 +83,14 @@ const compactBlock = blocks(styles.code, '[data-density="compact"]')[0];
 function px(value, vars, seen = new Set()) {
     if (value == null) return null;
     const v = String(value).trim();
+    // A carrier with a fallback is how a control names its drawn box without fighting the
+    // coarse-pointer floor (ADR-196, ADR-200): --hit-surface exists only under that media query,
+    // so off it the fallback is what ships, and the fallback is what this check scores.
+    const withFallback = v.match(/^var\((--[\w-]+),\s*(.+)\)$/);
+    if (withFallback) {
+        const named = vars[withFallback[1]];
+        return named !== undefined ? px(named, vars, seen) : px(withFallback[2], vars, seen);
+    }
     const ref = v.match(/^var\((--[\w-]+)\)$/);
     if (ref) {
         if (seen.has(ref[1])) return null;

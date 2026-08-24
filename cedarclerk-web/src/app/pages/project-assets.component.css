@@ -7,6 +7,15 @@
     padding: var(--space-3);
 }
 
+/* The tiles are cut into the board's own edge, so the column's gap is cancelled here rather than
+   left to lift them a step above it (ADR-200). */
+.assets-page > app-index-tabs {
+    position: relative;
+    z-index: 1;
+    padding: 0 var(--space-1);
+    margin-bottom: calc(-1px - var(--space-3));
+}
+
 /* The kit's proportions and no width breakpoint of its own (ADR-147). */
 .assets-grid {
     display: grid;

@@ -52,7 +52,7 @@ export type LeafState = 'active' | 'idle' | 'dried';
             align-items: center;
             gap: var(--space-1);
             box-sizing: border-box;
-            min-height: var(--hit-trim);
+            min-height: var(--hit-surface, var(--hit-trim));
             padding: 0 11px 0 6px;
             border: 1px solid rgba(90, 110, 60, .5);
             border-radius: 2px 12px 2px 12px;
@@ -67,7 +67,7 @@ export type LeafState = 'active' | 'idle' | 'dried';
                 display: inline-flex;
                 align-items: center;
                 gap: 5px;
-                min-height: var(--hit-trim);
+                min-height: var(--hit-surface, var(--hit-trim));
             }
 
             .lt-pick[role="button"] { cursor: pointer; }
@@ -84,8 +84,8 @@ export type LeafState = 'active' | 'idle' | 'dried';
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                min-width: var(--hit-trim);
-                min-height: var(--hit-trim);
+                min-width: var(--hit-surface, var(--hit-trim));
+                min-height: var(--hit-surface, var(--hit-trim));
                 padding: 0;
                 border: none;
                 background: none;

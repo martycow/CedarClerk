@@ -177,7 +177,7 @@
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    min-height: var(--hit-target);
+    min-height: var(--hit-surface, var(--hit-target));
     padding: var(--space-1) var(--space-3);
     border: 1px solid rgba(110, 86, 50, .4);
     border-radius: var(--radius-plaque);
@@ -645,7 +645,7 @@
     color: var(--t2);
     border-radius: var(--radius-sm);
     min-width: var(--hit-target);
-    min-height: var(--hit-target);
+    min-height: var(--hit-surface, var(--hit-target));
     padding: 0;
     display: flex;
     align-items: center;
@@ -733,7 +733,7 @@
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    min-height: var(--hit-target);
+    min-height: var(--hit-surface, var(--hit-target));
     padding: var(--space-2) var(--space-4);
     border: 1px solid var(--pine-deep);
     border-radius: var(--radius-plaque);

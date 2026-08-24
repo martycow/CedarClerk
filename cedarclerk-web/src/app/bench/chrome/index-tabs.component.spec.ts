@@ -160,7 +160,7 @@ describe('IndexTabsComponent', () => {
             const sizes = Array.from(css.matchAll(/font-size:\s*([^;}]+)/g)).map(m => m[1].trim());
             expect(sizes.length).toBeGreaterThan(0);
             for (const size of sizes) expect(['var(--text-chrome)', 'var(--text-chrome-sm)']).toContain(size);
-            expect(css).toMatch(/min-height:\s*var\(--hit-trim\)/);
+            expect(css).toMatch(/min-height:\s*var\(--hit-surface, var\(--hit-trim\)\)/);
         });
     });
 

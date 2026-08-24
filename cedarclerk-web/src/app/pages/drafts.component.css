@@ -10,8 +10,10 @@
 }
 
 /* The index tiles hang off the panel's top edge: the strip overlaps its border by a hair so a lit
-   tile reads as raised out of it, the way the glossary and the posts manager already draw it. */
-.drafts-page > app-index-tabs {
+   tile reads as raised out of it, the way the glossary and the posts manager already draw it. The
+   column's own gap is cancelled here, or the tiles float a step above the board they switch — the
+   threshold ADR-200 names. */
+.drafts-view-row {
     position: relative;
     z-index: 1;
     padding: 0 var(--space-1);

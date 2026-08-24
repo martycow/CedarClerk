@@ -3,12 +3,13 @@ import { ADMIN, pinEnglish, signIn } from './helpers';
 
 test.beforeEach(async ({ context }) => pinEnglish(context));
 
-test('login form signs in and lands on /drafts', async ({ page }) => {
+test('login form signs in and lands on the hub', async ({ page }) => {
     await page.goto('/login');
     await page.locator('#cc-login-email').fill(ADMIN.email);
     await page.locator('#cc-login-pass').fill(ADMIN.password);
     await page.locator('.primary-btn').click();
-    await expect(page).toHaveURL(/\/drafts/);
+    // The hub, not /drafts: a signed-in session lands on the project board (ADR-186).
+    await expect(page).toHaveURL(/\/projects/);
 });
 
 // v0.9.16/0.9.17: the cookie is 30 days and the ticket's ExpireTimeSpan was raised to match, so a
@@ -27,7 +28,7 @@ test('session survives a reload', async ({ page, context }) => {
 test('a signed-in browser is redirected away from /login', async ({ page, context }) => {
     await signIn(context);
     await page.goto('/login');
-    await expect(page).toHaveURL(/\/drafts/);
+    await expect(page).toHaveURL(/\/projects/);
 });
 
 test('an unauthenticated browser is sent to /login', async ({ page }) => {

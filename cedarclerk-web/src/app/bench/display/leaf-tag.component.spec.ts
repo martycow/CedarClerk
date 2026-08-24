@@ -144,7 +144,9 @@ describe('LeafTagComponent', () => {
         it('holds the trim box: 24px targets and 12px type', () => {
             const boxes = Array.from(css.matchAll(/min-(?:height|width):\s*([^;}]+)/g)).map(m => m[1].trim());
             expect(boxes.length).toBeGreaterThan(0);
-            for (const b of boxes) expect(b).toBe('var(--hit-trim)');
+            // The carrier with the drawn box as its fallback: off a coarse pointer nothing
+            // declares --hit-surface and trim is what ships; on one the surface hands down its floor.
+            for (const b of boxes) expect(b).toBe('var(--hit-surface, var(--hit-trim))');
 
             const sizes = Array.from(css.matchAll(/font-size:\s*([^;}]+)/g)).map(m => m[1].trim());
             expect(sizes.length).toBeGreaterThan(0);

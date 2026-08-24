@@ -61,8 +61,12 @@ export type ButtonSurface = 'paper' | 'chrome';
 
         :host([data-surface="paper"]) .btn { min-height: var(--hit-target); font-size: var(--fs-ui); }
         :host([data-surface="paper"]) .btn.md { padding: var(--space-2) var(--space-4); }
+        /* The floor is read, not fought: a component rule out-specifies the global coarse-pointer
+           one whatever that one says, so a control that names its own box has to name it as the
+           fallback of the carrier. Off a coarse pointer no surface declares --hit-surface and the
+           drawn box wins; on one the nearest surface hands down 44px or 30px (ADR-196, ADR-200). */
         :host([data-surface="paper"]) .btn.sm {
-            min-height: var(--hit-chrome);
+            min-height: var(--hit-surface, var(--hit-chrome));
             padding: var(--space-1) var(--space-3);
             font-size: var(--text-chrome);
         }

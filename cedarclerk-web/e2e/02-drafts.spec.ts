@@ -6,20 +6,20 @@ test.beforeEach(async ({ context }) => {
     await signIn(context);
 });
 
-test('new draft dialog creates a draft and opens the editor', async ({ page }) => {
+test('new document dialog creates a draft and opens the editor', async ({ page }) => {
     await page.goto('/drafts');
-    await page.getByRole('button', { name: 'New draft' }).click();
+    await page.getByRole('button', { name: 'New document' }).click();
 
     const dialog = page.locator('app-modal');
-    // The collapsed dialog holds exactly one field, so the role says which one without naming a
-    // placeholder that is about to be re-worded.
-    await dialog.getByRole('textbox').fill('Created by Playwright');
+    // The dialog holds several textboxes — a title, a tag field, a new-folder and a new-series
+    // name — so the name is taken from the first one rather than from the role alone.
+    await dialog.getByRole('textbox').first().fill('Created by Playwright');
     // The confirm button repeats the dialog's own name rather than saying "Create" — scoped to the
     // modal so it can't match the toolbar button that opened it.
-    await dialog.getByRole('button', { name: 'New draft' }).click();
+    await dialog.getByRole('button', { name: 'New document' }).click();
 
     await expect(page).toHaveURL(/\/editor/);
-    await expect(page.getByPlaceholder('Draft title')).toHaveValue('Created by Playwright');
+    await expect(page.getByPlaceholder('Document title')).toHaveValue('Created by Playwright');
 });
 
 // The round-trip that matters most: what the browser shows after a reload is what the server
@@ -36,9 +36,12 @@ test('typed text survives a reload', async ({ page, context }) => {
 test('renaming a draft shows up in the list without a reload', async ({ page, context }) => {
     const id = await createDraft(context, 'Before rename');
     await openDraft(page, id);
-    await withSave(page, () => page.getByPlaceholder('Draft title').fill('After rename'));
+    await withSave(page, () => page.getByPlaceholder('Document title').fill('After rename'));
 
-    await page.locator('app-hook-rail a[href="/drafts"]').click();
+    // Straight to the list rather than through the wall: with the module on and no project open,
+    // the wall carries the hub and not the loose-document list, so the hook it used to click is
+    // not on this screen.
+    await page.goto('/drafts');
     await expect(page.locator('.drafts-title', { hasText: 'After rename' })).toBeVisible();
     await expect(page.locator('.drafts-title', { hasText: 'Before rename' })).toHaveCount(0);
 });

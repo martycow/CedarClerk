@@ -84,7 +84,7 @@ export function indexTabBadgeLabel(badge: number | string | undefined | null): s
             align-items: center;
             gap: var(--space-1);
             box-sizing: border-box;
-            min-height: var(--hit-trim);
+            min-height: var(--hit-surface, var(--hit-trim));
             padding: 0 11px;
             border: 1px solid var(--wood-edge);
             border-radius: var(--radius-sm) var(--radius-sm) 0 0;
@@ -108,7 +108,7 @@ export function indexTabBadgeLabel(badge: number | string | undefined | null): s
         /* The raise is height, not a shadow: a tile sits on the shelf edge, and the lit one stands
            a step proud of the ones behind it. */
         :host([data-surface="chrome"][data-box="trim"]) .it-tile.is-on {
-            min-height: calc(var(--hit-trim) + 3px);
+            min-height: calc(var(--hit-surface, var(--hit-trim)) + 3px);
             border-bottom: 2px solid var(--brass);
             filter: brightness(1.16);
             color: var(--rail-ink);
