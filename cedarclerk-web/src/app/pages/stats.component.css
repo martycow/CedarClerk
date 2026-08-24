@@ -192,7 +192,7 @@
     overflow-x: auto;
 }
 
-:host([data-surface="paper"]) .index-gap { flex: 1; min-width: var(--space-3); }
+:host([data-surface="paper"]) .index-gap { flex: 1 0 var(--space-3); }
 
 :host([data-surface="paper"]) .series-table {
     width: 100%;
@@ -253,7 +253,7 @@
 :host([data-surface="paper"]) .audience-note {
     margin: var(--space-2) 0 0;
     color: var(--t2);
-    font-size: var(--fs-meta);
+    font-size: var(--fs-ui);
 }
 
 :host([data-surface="paper"]) .audience-list {

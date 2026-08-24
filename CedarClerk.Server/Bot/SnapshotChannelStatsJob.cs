@@ -10,7 +10,7 @@ namespace CedarClerk.Server;
 /// A job which is used to collect statistics about channels
 /// </summary>
 [DisallowConcurrentExecution]
-public class SnapshotChannelStatsJob(CedarDbContext db, TelegramBotService bot, ILogger<SnapshotChannelStatsJob> logger) : IJob
+public class SnapshotChannelStatsJob(CedarDbContext db, TelegramBotService bot, MediaPaths media, ILogger<SnapshotChannelStatsJob> logger) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -25,6 +25,7 @@ public class SnapshotChannelStatsJob(CedarDbContext db, TelegramBotService bot, 
             try
             {
                 var count = await bot.Client.GetChatMemberCount(new ChatId(channel.TelegramChatId));
+                await ChannelAvatar.RefreshAsync(bot.Client, channel, media.Dir, logger);
 
                 var draftIds = await db.ChannelPosts.Where(p => p.ChannelId == channel.Id)
                     .Select(p => p.DraftId).Distinct().ToListAsync();

@@ -588,6 +588,15 @@ public class Channel
     public string? Username { get; set; }
     public string OwnerId { get; set; } = default!;
     public ApplicationUser? Owner { get; set; }
+
+    /// <summary>
+    /// The channel's own picture, copied down from Telegram and stored under the media directory
+    /// (a path relative to it, as Asset.LocalPath is). Telegram's file ids expire, so what is kept
+    /// is the file and not the id.
+    /// </summary>
+    public string? AvatarPath { get; set; }
+
+    public DateTime? AvatarFetchedAt { get; set; }
 }
 
 public class ChannelStatSnapshot

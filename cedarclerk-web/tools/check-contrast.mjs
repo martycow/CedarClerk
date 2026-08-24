@@ -457,6 +457,10 @@ for (const s of PAPER) {
     pairs.push({ fg: '--leaf-ink', bg: '--leaf-dried-bg', under: s, min: 4.5, note: 'unpicked leaf label' });
 }
 pairs.push({ fg: '--rail-ink', bg: '--rail-lo', min: 4.5, note: 'rail button label' });
+// The one painted button on the public header: the feed offer wears resin, so its label is read on
+// resin and on the lit stop it takes when hovered.
+pairs.push({ fg: '--rail-edge', bg: '--resin', min: 4.5, note: 'feed button label on resin' });
+pairs.push({ fg: '--rail-edge', bg: '--resin-hi', min: 4.5, note: 'feed button label on lit resin' });
 pairs.push({ fg: '--rail-ink', bg: '--rail-edge', min: 4.5, note: 'rail button label, pressed or hovered' });
 // The rail button's resting and hovered faces are tints over whichever wood is behind them — the
 // rail itself, or a shelf header's sign tile when the action sits in the header.

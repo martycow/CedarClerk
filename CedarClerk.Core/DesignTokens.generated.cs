@@ -122,6 +122,8 @@ public static partial class DesignTokens
         ["brass-ink"] = "#674A1C",
         ["grad-brass"] = "linear-gradient(180deg, var(--brass-hi), var(--brass))",
         ["focus-halo"] = "rgba(238, 217, 163, .85)",
+        ["resin"] = "#D89A3E",
+        ["resin-hi"] = "#F2C878",
         ["ok-soft"] = "color-mix(in srgb, var(--ok) 13%, var(--surface))",
         ["brass-soft"] = "color-mix(in srgb, var(--brass-ink) 13%, var(--surface))",
         ["font-display"] = "'Vollkorn', Georgia, serif",

@@ -27,7 +27,7 @@ public static class BlogEndpoints
     private record PollVoteRequest(string PollId, string Option);
     private record CommentRequest(string? AnnotationId, string? AuthorName, string Text, Guid? ParentCommentId = null);
     private record RegistrationRequest(string? Name, string? Nickname, string? Email, string? SocialLink, Dictionary<string, string>? Answers);
-    private record BlogChannelInfo(string Title, string? Username, int? MemberCount);
+    private record BlogChannelInfo(string Title, string? Username, int? MemberCount, string? AvatarUrl);
     private record MarkSeenRequest(DateTime? SeenAt);
     // ADR-065 — language → the fingerprint of the version the owner was shown before confirming.
     public record PublishBlogRequest(Dictionary<string, string>? ConfirmedFingerprints = null);
@@ -884,6 +884,25 @@ public static class BlogEndpoints
     internal static List<string> SplitTags(string tags) =>
         tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
+    // The index's own chrome, in the language the reader picked (ADR-202). Only the languages this
+    // table names can be offered as an index language — an English "Newest first" over a Russian
+    // list is the mixed page the site-wide toggle was removed for.
+    private sealed record IndexChrome(
+        string Order, string SortNew, string SortOld, string SortPopular, string SortUnpopular,
+        string LanguageGroup, string AllLanguages, string Available,
+        string ShowMore, string NothingYet, string NoMatch, string ReadIn);
+
+    private static readonly IReadOnlyDictionary<string, IndexChrome> IndexLabels =
+        new Dictionary<string, IndexChrome>
+        {
+            ["en"] = new("Order", "Newest first", "Oldest first", "Most popular", "Least popular",
+                "Language", "All languages", "available",
+                "Show {0} more of {1}", "Nothing published yet.", "No posts match.", "Read in"),
+            ["ru"] = new("Порядок", "Сначала новые", "Сначала старые", "Самые читаемые", "Наименее читаемые",
+                "Язык", "Все языки", "есть перевод",
+                "Показать ещё {0} из {1}", "Пока ничего не опубликовано.", "Ничего не найдено.", "Читать на"),
+        };
+
     private static string TagFilterUrl(IEnumerable<string> tags)
     {
         var list = tags.Distinct().ToList();
@@ -893,7 +912,7 @@ public static class BlogEndpoints
     // ADR-192/193 — the index toolbar (sort dropdown, language filter, tag chips, "show more") all
     // link back into the same parameters, so any one of them can change without the others resetting.
     // Changing a filter drops `shown` on purpose — a narrower list should start from its own top.
-    private static string IndexFilterUrl(IEnumerable<string> tags, string sort, string? avail, int? shown = null)
+    private static string IndexFilterUrl(IEnumerable<string> tags, string sort, string? avail, int? shown = null, string? lang = null)
     {
         var parts = new List<string>();
         var tagList = tags.Distinct().ToList();
@@ -901,6 +920,8 @@ public static class BlogEndpoints
         if (sort != "new") parts.Add("sort=" + sort);
         if (avail is not null) parts.Add("avail=" + Uri.EscapeDataString(avail));
         if (shown is > 10) parts.Add("shown=" + shown);
+        // English is the default and says nothing, so the plain address stays the plain address.
+        if (lang is not null && lang != Languages.English) parts.Add("lang=" + Uri.EscapeDataString(lang));
         return parts.Count == 0 ? "/" : "/?" + string.Join("&", parts);
     }
 
@@ -944,7 +965,7 @@ public static class BlogEndpoints
             .Select(s => (int?)s.MemberCount)
             .FirstOrDefaultAsync();
 
-        return new BlogChannelInfo(channel.Title, channel.Username, memberCount);
+        return new BlogChannelInfo(channel.Title, channel.Username, memberCount, channel.AvatarPath is null ? null : "/media/" + channel.AvatarPath);
     }
 
     private sealed record ReadingChrome(
@@ -998,8 +1019,14 @@ public static class BlogEndpoints
                 : channel.MemberCount is { } mc
                     ? $"@{System.Net.WebUtility.HtmlEncode(channel.Username)} · {mc} subscribers"
                     : $"@{System.Net.WebUtility.HtmlEncode(channel.Username)}";
+            // The channel's own picture when it has been copied down, the initial letter as the
+            // plate it always had otherwise — a header that waits for a download is worse than a
+            // header with a letter in it.
+            var face = channel.AvatarUrl is null
+                ? $"<div class=\"channel-avatar\">{System.Net.WebUtility.HtmlEncode(initial)}</div>"
+                : $"<img class=\"channel-avatar channel-photo\" src=\"{System.Net.WebUtility.HtmlEncode(channel.AvatarUrl)}\" alt=\"\" width=\"30\" height=\"30\">";
             identity = $"""
-                <div class="channel-avatar">{System.Net.WebUtility.HtmlEncode(initial)}</div>
+                {face}
                 <div class="channel-id">
                 <div class="channel-name">{System.Net.WebUtility.HtmlEncode(channel.Title)}</div>
                 {(meta.Length == 0 ? "" : $"<div class=\"channel-meta\">{meta}</div>")}
@@ -1087,11 +1114,10 @@ public static class BlogEndpoints
 
     private static async Task RenderIndexAsync(HttpContext ctx, CedarDbContext db)
     {
-        // ADR-193 — the index has no language picker any more (ADR-192's site-wide toggle is gone);
-        // it reads in English, and a post whose primary language is something else previews in
-        // English too when it has that translation. A post's own language set stays its own — the
-        // per-post switch on the post page is untouched.
-        const string indexLang = Languages.English;
+        // ADR-202 — the index, and only the index, carries a language pick again: it sets the chrome
+        // and which translation a card previews in. English is the default and the fallback, and a
+        // post page still has no such control — there the post's own switch is the answer.
+        var pickedLang = ctx.Request.Query["lang"].FirstOrDefault();
 
         // Private posts never appear in the public list (see the ADR following ADR-040,
         // docs/DECISIONS.md) — listing one would leak its existence even though the single-post
@@ -1108,9 +1134,17 @@ public static class BlogEndpoints
             })
             .ToListAsync();
 
+        // Every language any post is either written in or translated into, narrowed to the ones the
+        // index chrome has words for: offering a language the toolbar cannot speak would produce
+        // exactly the half-translated page ADR-193 removed.
+        var offeredLangs = posts.Select(p => p.PrimaryLanguage).Concat(posts.SelectMany(p => p.TranslationLanguages))
+            .Where(IndexLabels.ContainsKey).Distinct().OrderBy(l => l == Languages.English ? 0 : 1).ThenBy(l => l).ToList();
+        var indexLang = pickedLang is not null && offeredLangs.Contains(pickedLang) ? pickedLang : Languages.English;
+        var chrome = IndexLabels[IndexLabels.ContainsKey(indexLang) ? indexLang : Languages.English];
+
         var postIds = posts.Select(p => p.Id).ToList();
-        // One batched lookup for every post's English translation, not N+1 — the same shape as the
-        // wikilink-target query below it in RenderPostAsync.
+        // One batched lookup for every post's translation into the index language, not N+1 — the
+        // same shape as the wikilink-target query below it in RenderPostAsync.
         var previews = postIds.Count == 0
             ? new Dictionary<Guid, DraftTranslation>()
             : await db.DraftTranslations.Where(t => postIds.Contains(t.DraftId) && t.Language == indexLang)
@@ -1140,8 +1174,8 @@ public static class BlogEndpoints
 
         var sortOptions = new (string Key, string Label)[]
         {
-            ("new", "Newest first"), ("old", "Oldest first"),
-            ("popular", "Most popular"), ("unpopular", "Least popular"),
+            ("new", chrome.SortNew), ("old", chrome.SortOld),
+            ("popular", chrome.SortPopular), ("unpopular", chrome.SortUnpopular),
         };
         var sort = ctx.Request.Query["sort"].FirstOrDefault();
         sort = sortOptions.Any(o => o.Key == sort) ? sort! : "new";
@@ -1179,51 +1213,66 @@ public static class BlogEndpoints
         // mechanism the reading menu already uses, extended to cover order and language-availability
         // together rather than as two separate controls.
         var currentSortLabel = sortOptions.First(o => o.Key == sort).Label;
-        sb.Append("<div class=\"index-toolbar\"><div class=\"sort-anchor\">");
-        sb.Append("<button type=\"button\" class=\"index-sort-btn\" id=\"sortBtn\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-controls=\"sortMenu\">")
-          .Append(BlogIcons.Sort).Append("<span>").Append(currentSortLabel).Append("</span></button>");
-        sb.Append("<div class=\"sort-menu\" id=\"sortMenu\" role=\"group\" hidden>");
-        sb.Append("<div class=\"reading-label\">Order</div><div class=\"sort-menu-group\">");
-        foreach (var (key, label) in sortOptions)
+        // The order control and the tag leaves are one row: they are the two things a reader may
+        // change about this list, and stacking them put a lone button on a line of its own above a
+        // block of chips that answered the same question.
+        sb.Append("<div class=\"index-bar\">");
+        // The pick lives here and only here: on a post page the language is the post's own, and a
+        // second control saying the same thing differently is how the site-wide one went wrong.
+        if (offeredLangs.Count > 1)
         {
-            sb.Append("<a class=\"sort-menu-item").Append(key == sort ? " current" : "").Append("\" href=\"")
-              .Append(IndexFilterUrl(selectedTags, key, avail)).Append("\">").Append(label).Append("</a>");
-        }
-        sb.Append("</div>");
-        if (allLanguages.Count > 1)
-        {
-            sb.Append("<div class=\"reading-label\">Language</div><div class=\"sort-menu-group\">");
-            sb.Append("<a class=\"sort-menu-item").Append(avail is null ? " current" : "").Append("\" href=\"")
-              .Append(IndexFilterUrl(selectedTags, sort, null)).Append("\">All languages</a>");
-            foreach (var l in allLanguages)
+            sb.Append("<div class=\"index-lang\" role=\"group\" aria-label=\"").Append(chrome.ReadIn).Append("\">");
+            foreach (var l in offeredLangs)
             {
-                sb.Append("<a class=\"sort-menu-item").Append(avail == l ? " current" : "").Append("\" href=\"")
-                  .Append(IndexFilterUrl(selectedTags, sort, l)).Append("\">")
-                  .Append(l.ToUpperInvariant()).Append(" available</a>");
+                sb.Append("<a class=\"lang-chip").Append(l == indexLang ? " current" : "").Append("\"")
+                  .Append(l == indexLang ? " aria-current=\"true\"" : "")
+                  .Append(" href=\"").Append(IndexFilterUrl(selectedTags, sort, avail, null, l)).Append("\">")
+                  .Append(l.ToUpperInvariant()).Append("</a>");
             }
             sb.Append("</div>");
         }
-        sb.Append("</div></div></div>");
-
         if (allTags.Count > 0)
         {
             sb.Append("<div class=\"tag-bar\">");
             foreach (var tag in allTags)
             {
-                var isSelected = selectedTags.Contains(tag);
-                var toggled = isSelected ? selectedTags.Where(t => t != tag) : selectedTags.Append(tag);
-                sb.Append("<a class=\"tag-chip").Append(isSelected ? " selected" : "").Append("\" href=\"")
-                  .Append(IndexFilterUrl(toggled, sort, avail)).Append("\">#")
-                  .Append(System.Net.WebUtility.HtmlEncode(tag)).Append(isSelected ? " &times;" : "").Append("</a>");
+                var chipSelected = selectedTags.Contains(tag);
+                var chipToggled = chipSelected ? selectedTags.Where(t => t != tag) : selectedTags.Append(tag);
+                sb.Append("<a class=\"tag-chip").Append(chipSelected ? " selected" : "").Append("\" href=\"")
+                  .Append(IndexFilterUrl(chipToggled, sort, avail, null, indexLang)).Append("\">#")
+                  .Append(System.Net.WebUtility.HtmlEncode(tag)).Append(chipSelected ? " &times;" : "").Append("</a>");
             }
             sb.Append("</div>");
         }
+        sb.Append("<div class=\"index-toolbar\"><div class=\"sort-anchor\">");
+        sb.Append("<button type=\"button\" class=\"index-sort-btn\" id=\"sortBtn\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-controls=\"sortMenu\">")
+          .Append(BlogIcons.Sort).Append("<span>").Append(currentSortLabel).Append("</span></button>");
+        sb.Append("<div class=\"sort-menu\" id=\"sortMenu\" role=\"group\" hidden>");
+        sb.Append("<div class=\"reading-label\">").Append(chrome.Order).Append("</div><div class=\"sort-menu-group\">");
+        foreach (var (key, label) in sortOptions)
+        {
+            sb.Append("<a class=\"sort-menu-item").Append(key == sort ? " current" : "").Append("\" href=\"")
+              .Append(IndexFilterUrl(selectedTags, key, avail, null, indexLang)).Append("\">").Append(label).Append("</a>");
+        }
+        sb.Append("</div>");
+        if (allLanguages.Count > 1)
+        {
+            sb.Append("<div class=\"reading-label\">").Append(chrome.LanguageGroup).Append("</div><div class=\"sort-menu-group\">");
+            sb.Append("<a class=\"sort-menu-item").Append(avail is null ? " current" : "").Append("\" href=\"")
+              .Append(IndexFilterUrl(selectedTags, sort, null, null, indexLang)).Append("\">").Append(chrome.AllLanguages).Append("</a>");
+            foreach (var l in allLanguages)
+            {
+                sb.Append("<a class=\"sort-menu-item").Append(avail == l ? " current" : "").Append("\" href=\"")
+                  .Append(IndexFilterUrl(selectedTags, sort, l, null, indexLang)).Append("\">")
+                  .Append(l.ToUpperInvariant()).Append(' ').Append(chrome.Available).Append("</a>");
+            }
+            sb.Append("</div>");
+        }
+        sb.Append("</div></div></div></div>");
 
         if (pageItems.Count == 0)
         {
-            sb.Append(posts.Count == 0
-                ? "<p class=\"empty\">Nothing published yet.</p>"
-                : "<p class=\"empty\">No posts match.</p>");
+            sb.Append("<p class=\"empty\">").Append(posts.Count == 0 ? chrome.NothingYet : chrome.NoMatch).Append("</p>");
         }
         else
         {
@@ -1300,9 +1349,11 @@ public static class BlogEndpoints
 
             if (remaining > 0)
             {
-                var moreUrl = IndexFilterUrl(selectedTags, sort, avail, shown + 10);
+                var moreUrl = IndexFilterUrl(selectedTags, sort, avail, shown + 10, indexLang);
                 sb.Append("<div class=\"show-more-row\"><a class=\"show-more-btn\" href=\"").Append(moreUrl)
-                  .Append("\">Show ").Append(Math.Min(10, remaining)).Append(" more of ").Append(remaining).Append("</a></div>");
+                  .Append("\">")
+                  .Append(string.Format(chrome.ShowMore, Math.Min(10, remaining), remaining))
+                  .Append("</a></div>");
             }
         }
 
@@ -2088,7 +2139,8 @@ public static class BlogEndpoints
 
         /* ADR-192 — the face toggle. Absent (the default) is Literata, same as --font-serif already
            declares on .post-sheet; the attribute only ever needs to say the one thing that differs. */
-        :root[data-face="sans"] .post-sheet { font-family: var(--font-sans); }
+        :root[data-face="sans"] .post-sheet,
+        :root[data-face="sans"] .post-card-excerpt { font-family: var(--font-sans); }
 
         /* ADR-178 — the faces this page names, served from stable URLs the bundler does not hash. */
         {{FONT_FACES}}
@@ -2168,6 +2220,7 @@ public static class BlogEndpoints
         .channel-avatar { width: 30px; height: 30px; border-radius: var(--radius-stamp); background-image: var(--grad-brass); border: 1px solid var(--brass-edge); color: var(--brass-ink); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 13px; font-weight: 700; flex: none; }
         /* With no channel the mark is the mark, carved into the board rather than mounted on a plate. */
         .channel-avatar.brand { background-image: none; border: none; color: var(--rail-ink); }
+        .channel-photo { background-image: none; object-fit: cover; }
         .channel-id { min-width: 0; }
         .channel-name { font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 1px var(--rail-edge); }
         /* --rail-ink-soft composites to 4.37:1 on the board and is spent on separators; anything read
@@ -2175,9 +2228,10 @@ public static class BlogEndpoints
         .channel-meta { font-size: 11px; color: var(--rail-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .tg-open-btn { display: flex; align-items: center; gap: 6px; min-height: 30px; border: var(--border-rail-btn); background: var(--rail-btn-face); border-radius: var(--radius-plaque); padding: 0 11px; font-size: 12px; font-weight: 600; color: var(--rail-ink); white-space: nowrap; flex: none; }
         .tg-open-btn:hover { background: var(--rail-btn-face-hover); }
-        /* Secondary next to "Open in Telegram": subscribing to the feed is an offer, not the
-           header's main action, and two filled buttons side by side read as two main actions. */
-        .rss-btn { background: none; }
+        /* The feed's own colour, which is orange everywhere a feed is offered: the mark is what a
+           reader recognises, so it is painted rather than set back into the wood. */
+        .rss-btn { background: var(--resin); border-color: var(--brass-edge); color: var(--rail-edge); }
+        .rss-btn:hover { background: var(--resin-hi); }
         /* ── The reading menu (ADR-181) ──────────────────────────────────────────────────────────
            One control for the two things a reader may change. ADR-175 settled its face: a tinted
            button on the rail needs wood under it to read as anything, and at the chrome box the
@@ -2220,7 +2274,16 @@ public static class BlogEndpoints
            stock with its own edge, because border alpha alone does not tell two leaves apart. */
         /* ── The index toolbar: one sort/filter button off a paper popover, the reading menu's own
            open/close mechanism ─────────────────────────────────────────────────────────────────── */
-        .index-toolbar { display: flex; justify-content: flex-end; margin: 0 0 16px; }
+        /* Leaves on the reading edge, the order control on the far one, both on one baseline. */
+        .index-bar { display: flex; align-items: flex-start; gap: 12px; margin: 0 0 20px; }
+        /* Two or three letters, one lit: the index reads in one language at a time, so this is a
+           segmented pick and not a set of filters that combine the way the leaves beside it do. */
+        .index-lang { display: inline-flex; flex: none; border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); background: var(--sheet); box-shadow: var(--shadow-paper-sm); overflow: hidden; }
+        .lang-chip { display: inline-flex; align-items: center; min-height: 30px; padding: 0 11px; font-family: var(--font-readout); font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--t2); }
+        .lang-chip + .lang-chip { border-left: 1px solid var(--paper-edge); }
+        .lang-chip:hover { background: var(--alt); color: var(--text); }
+        .lang-chip.current { background-image: var(--grad-pine); color: var(--text-on-pine); box-shadow: var(--shadow-pine-btn); }
+        .index-toolbar { display: flex; justify-content: flex-end; margin: 0; margin-left: auto; flex: none; }
         .sort-anchor { position: relative; flex: none; }
         .index-sort-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 14px; border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); background: var(--sheet); box-shadow: var(--shadow-paper-sm); font-family: var(--font-sans); font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; cursor: pointer; }
         .index-sort-btn:hover { background: var(--alt); }
@@ -2231,13 +2294,14 @@ public static class BlogEndpoints
         .sort-menu-item:hover { background: var(--alt); }
         .sort-menu-item.current { background: var(--grad-pine); color: var(--text-on-pine); box-shadow: var(--shadow-pine-btn); }
         @media (max-width: 420px) { .sort-menu { right: -8px; width: calc(100vw - 32px); max-width: 260px; } }
+        @media (max-width: 560px) { .index-bar { flex-direction: column; } .index-toolbar { margin-left: 0; } }
 
         /* ── "Show N more" — a plain link, the same paper-button family as the sort control ──────────── */
         .show-more-row { display: flex; justify-content: center; margin-top: 8px; }
         .show-more-btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); background: var(--sheet); background-image: var(--tex-paper); box-shadow: var(--shadow-paper-sm); font-family: var(--font-sans); font-size: 13.5px; font-weight: 700; color: var(--text); }
         .show-more-btn:hover { background: var(--alt); }
 
-        .tag-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 20px; }
+        .tag-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; min-width: 0; }
         /* A leaf is read in passing, not aimed at — it keeps its own compact height rather than the
            44px paper touch-floor a standalone control needs. */
         .tag-chip, .post-tag-chip {
@@ -2261,8 +2325,13 @@ public static class BlogEndpoints
         /* The spine is drawn on the wall, which is the one ground the pencil follows into the dark:
            --rule-ink turns cream at night because the wall does. A rule on PAPER takes --border
            instead — cream on cream is not a line. */
-        .post-list.timeline::before { content: ""; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 1px; background: var(--rule-ink); }
-        .timeline-month-sep { display: flex; align-items: center; gap: 10px; margin: 6px 0 -4px -26px; }
+        /* Starts at the first dot, not at the top of the list: a spine that begins level with the
+           month rule reads as one line turning a corner into the other. */
+        .post-list.timeline::before { content: ""; position: absolute; left: 4px; top: 32px; bottom: 6px; width: 1px; background: var(--rule-ink); }
+        /* Kept inside the padded column rather than pulled out to the page edge: at -26px its rule
+           ran straight through the spine and the two lines crossed in a corner that read as a
+           mistake. The spine passes behind the gap between the rule and the plate instead. */
+        .timeline-month-sep { display: flex; align-items: center; gap: 10px; margin: 6px 0 -4px; }
         .timeline-month-sep:first-child { margin-top: 0; }
         .timeline-month-sep .sep-line { flex: 1; height: 1px; background: var(--rule-ink-soft); }
         /* A rubber stamp: display face, wide tracking, its own ink for a border. The neutral tone carries
@@ -2287,7 +2356,10 @@ public static class BlogEndpoints
         .post-card-tag { color: var(--t2); }
         .post-card-locked { display: inline-flex; color: var(--t2); }
         .post-card-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; line-height: 1.24; margin: 0 0 6px; }
-        .post-card-excerpt { font-family: var(--font-serif); font-size: 15px; color: var(--t2); line-height: 1.6; margin: 0 0 10px; }
+        /* The teaser is reading matter, so the reading controls reach it: it is the one thing on
+           the index a reader actually reads, and a size control that moved nothing on the page it
+           was opened from read as broken. Two steps under the body measure, so a card stays a card. */
+        .post-card-excerpt { font-family: var(--font-serif); font-size: calc(var(--fs-read) - 2px); color: var(--t2); line-height: 1.6; margin: 0 0 10px; }
         .post-card-stats { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--t2); }
         .post-card-stats .num { margin-right: 9px; }
 

@@ -24,11 +24,11 @@ public static class ChannelEndpoints
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             return await db.Channels.Where(c => c.OwnerId == uid)
-                .Select(c => new { c.Id, c.Title, c.TelegramChatId, c.Username })
+                .Select(c => new { c.Id, c.Title, c.TelegramChatId, c.Username, AvatarUrl = c.AvatarPath == null ? null : "/media/" + c.AvatarPath })
                 .ToListAsync();
         });
 
-        group.MapPost("/", async (ConnectChannelRequest req, ClaimsPrincipal user, CedarDbContext db, TelegramBotService bot, ILogger<Channel> logger) =>
+        group.MapPost("/", async (ConnectChannelRequest req, ClaimsPrincipal user, CedarDbContext db, TelegramBotService bot, MediaPaths media, ILogger<Channel> logger) =>
         {
             if (!bot.IsRunning)
                 return Results.Json(new { error = ErrorMessages.BotNotRunningNoToken }, statusCode: StatusCodes.Status503ServiceUnavailable);
@@ -84,6 +84,7 @@ public static class ChannelEndpoints
             {
                 var count = await bot.Client.GetChatMemberCount(new ChatId(channel.TelegramChatId));
                 db.ChannelStatSnapshots.Add(new ChannelStatSnapshot { ChannelId = channel.Id, MemberCount = count });
+                await ChannelAvatar.RefreshAsync(bot.Client, channel, media.Dir, logger);
             }
             catch (Exception ex)
             {
@@ -181,10 +182,18 @@ public static class ChannelEndpoints
         // discover chats the bot was already in before this feature started tracking
         // my_chat_member updates — for those, connecting still works the old way (type
         // @username/chat id manually).
-        group.MapPost("/refresh-known-chats", async (CedarDbContext db, TelegramBotService bot, ILogger<Channel> logger) =>
+        group.MapPost("/refresh-known-chats", async (CedarDbContext db, TelegramBotService bot, MediaPaths media, ILogger<Channel> logger) =>
         {
             if (!bot.IsRunning)
                 return Results.Json(new { error = ErrorMessages.BotNotRunningNoToken }, statusCode: StatusCodes.Status503ServiceUnavailable);
+
+            // The connected channels' pictures ride along: this is the button a reader presses
+            // when the list looks stale, and a stale picture is one of the ways it looks stale.
+            foreach (var channel in await db.Channels.ToListAsync())
+            {
+                channel.AvatarFetchedAt = null;
+                await ChannelAvatar.RefreshAsync(bot.Client, channel, media.Dir, logger);
+            }
 
             var known = await db.BotKnownChats.ToListAsync();
             foreach (var chat in known)

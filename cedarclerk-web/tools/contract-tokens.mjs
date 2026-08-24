@@ -46,6 +46,9 @@ export const MATERIALS = [
     // Marks: leaves for tags and filters, brass for hardware and the rule.
     'leaf-bg', 'leaf-bg-2', 'leaf-ink', 'leaf-dried-bg', 'leaf-dried-edge',
     'brass', 'brass-hi', 'brass-lo', 'brass-edge', 'brass-ink', 'grad-brass', 'focus-halo',
+    // Resin: attention, and the one orange the product has — the feed button on the blog is
+    // painted with it because a feed mark is recognised by its colour before its shape.
+    'resin', 'resin-hi',
     // The state washes a stamp is painted on (ADR-145), and the brass one a version mark takes.
     'ok-soft', 'brass-soft',
     // Carved lettering, the readout face (ADR-180), and the pencil rules the wall is ruled with.

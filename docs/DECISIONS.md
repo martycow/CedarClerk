@@ -213,3 +213,5 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-198 — Export is a destination rack with one active work area](adr/ADR-198.md)
 - [ADR-199 — Departure Mono is an opt-in editor face](adr/ADR-199.md)
 - [ADR-200 — Trim: the third box, for chips and for controls riding a chrome band](adr/ADR-200.md)
+- [ADR-201 — The window's own controls hang on the drawer lip](adr/ADR-201.md)
+- [ADR-202 — The index reads in one language; a post page does not ask](adr/ADR-202.md)
