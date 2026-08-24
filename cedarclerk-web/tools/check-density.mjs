@@ -26,6 +26,10 @@ const CHROME_PARTS = ['rail-header', 'hook-rail', 'shelf-panel', 'bench-drawer',
 // off the mirror without a rule noticing (ADR-182).
 const CHROME_HIT = 30, PAPER_HIT = 38, PAPER_TOUCH = 44;
 const CHROME_FS_MIN = 11, CHROME_FS_MAX = 13, PAPER_FS_MIN = 14;
+// ADR-200's third box. A block that draws at it says so in its selector — the tier is named, never
+// inferred from the number, which is the same shape ADR-196's two exceptions take.
+const TRIM_HIT = 24, TRIM_FS_MIN = 11, TRIM_FS_MAX = 12;
+const TRIM_PIN = '[data-box="trim"]';
 
 function walk(dir, out = []) {
     for (const name of readdirSync(dir)) {
@@ -152,14 +156,14 @@ if (compactBlock) {
 }
 
 // 4. The contract tokens carry the numbers ADR-138 item 2 states.
-const rTokens = rule('contract token values', `--hit-chrome ${CHROME_HIT}px, --hit-target ${PAPER_HIT}px, --hit-touch ${PAPER_TOUCH}px, chrome type ${CHROME_FS_MIN}-${CHROME_FS_MAX}px, --text-readout via the scale`,
+const rTokens = rule('contract token values', `--hit-chrome ${CHROME_HIT}px, --hit-target ${PAPER_HIT}px, --hit-touch ${PAPER_TOUCH}px, --hit-trim ${TRIM_HIT}px, chrome type ${CHROME_FS_MIN}-${CHROME_FS_MAX}px, --text-readout via the scale`,
     'none of the contract tokens are declared in styles.scss');
 const tokenLine = k => {
     const m = styles.code.match(new RegExp(`${k}\\s*:`));
     return m ? lineOf(styles.code, m.index) : 1;
 };
 const declared = k => Object.prototype.hasOwnProperty.call(root, k);
-for (const [k, want] of [['--hit-chrome', CHROME_HIT], ['--hit-target', PAPER_HIT], ['--hit-touch', PAPER_TOUCH]]) {
+for (const [k, want] of [['--hit-chrome', CHROME_HIT], ['--hit-target', PAPER_HIT], ['--hit-touch', PAPER_TOUCH], ['--hit-trim', TRIM_HIT]]) {
     if (!declared(k)) continue;
     rTokens.sites++;
     const v = px(root[k], root);
@@ -187,7 +191,7 @@ if (declared('--text-readout') && !/^var\(--fs-[\w-]+\)$/.test(root['--text-read
 // 5. Each surface's floors hold inside anything scoped to it (ADR-138 item 7). ADR-196 names two
 // exact desktop exceptions: the shared `sm` paper button and Stats' discrete range select use the
 // chrome drawing size, while the global coarse-pointer rule still lifts both to 44px.
-const rFloors = rule('surface floors', `chrome ${CHROME_HIT}px / ${CHROME_FS_MIN}-${CHROME_FS_MAX}px, paper ${PAPER_HIT}px / >= ${PAPER_FS_MIN}px`,
+const rFloors = rule('surface floors', `chrome ${CHROME_HIT}px / ${CHROME_FS_MIN}-${CHROME_FS_MAX}px, paper ${PAPER_HIT}px / >= ${PAPER_FS_MIN}px, trim ${TRIM_HIT}px / ${TRIM_FS_MIN}-${TRIM_FS_MAX}px`,
     'no [data-surface="chrome"] or [data-surface="paper"] block in the tree yet — the shell has not landed');
 for (const f of files) {
     for (const [surface, hit, fsMin, fsMax] of [['chrome', CHROME_HIT, CHROME_FS_MIN, CHROME_FS_MAX], ['paper', PAPER_HIT, PAPER_FS_MIN, Infinity]]) {
@@ -197,10 +201,19 @@ for (const f of files) {
             const selector = f.code.slice(b.at, b.open);
             const paperCompact = surface === 'paper'
                 && (selector.includes('.btn.sm') || selector.includes('.range-picker select'));
+            // ADR-200: the selector names the tier, so a trim block is scored against trim's own
+            // numbers instead of the surface's. It still stands on a surface, because that is where
+            // the coarse-pointer floor it spends is declared.
+            const trim = selector.includes(TRIM_PIN);
             for (const m of b.body.matchAll(/font-size\s*:\s*([^;{}]+)/g)) {
                 const v = px(m[1], root);
                 if (v === null) continue;
                 if (paperCompact && v >= CHROME_FS_MIN && v <= CHROME_FS_MAX) continue;
+                if (trim) {
+                    if (v < TRIM_FS_MIN || v > TRIM_FS_MAX)
+                        fail(rFloors, f.rel, lineOf(f.code, base + m.index), `trim: font-size ${v}px, trim type is ${TRIM_FS_MIN}-${TRIM_FS_MAX}px`);
+                    continue;
+                }
                 const want = fsMax === Infinity ? `>= ${fsMin}px` : `${fsMin}-${fsMax}px`;
                 if (v < fsMin || v > fsMax) fail(rFloors, f.rel, lineOf(f.code, base + m.index), `${surface}: font-size ${v}px, ${surface} type is ${want}`);
             }
@@ -209,7 +222,8 @@ for (const f of files) {
             for (const m of b.body.matchAll(/min-(height|width)\s*:\s*([^;{}]+)/g)) {
                 const v = px(m[2], root);
                 if (paperCompact && v === CHROME_HIT) continue;
-                if (v !== null && v < hit) fail(rFloors, f.rel, lineOf(f.code, base + m.index), `${surface}: min-${m[1]} ${v}px below the ${hit}px floor`);
+                const floor = trim ? TRIM_HIT : hit;
+                if (v !== null && v < floor) fail(rFloors, f.rel, lineOf(f.code, base + m.index), `${trim ? 'trim' : surface}: min-${m[1]} ${v}px below the ${floor}px floor`);
             }
         }
     }

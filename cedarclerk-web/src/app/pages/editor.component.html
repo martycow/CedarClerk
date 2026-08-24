@@ -491,7 +491,7 @@
                                 <input class="chat-input" [(ngModel)]="inviteEmailInput" (keydown.enter)="addInvite()"
                                     [placeholder]="t().editor.exportModal.invitePlaceholder" type="email">
                                 <button class="mini" (click)="addInvite()" [disabled]="inviteBusy() || !inviteEmailInput.trim()" [title]="t().editor.exportModal.invite" [attr.aria-label]="t().editor.exportModal.invite">
-                                    <app-icon name="plus" size="sm"></app-icon>
+                                    <app-icon name="plus" weight="bold" size="sm"></app-icon>
                                 </button>
                             </div>
                         }
@@ -801,11 +801,11 @@
                     <button trigger [title]="t().editor.tb.table" [attr.aria-label]="t().editor.tb.table"><app-icon name="table" size="xs"></app-icon></button>
                     <div panel class="block-menu">
                         @if (isActive('table')) {
-                        <button (click)="cmd(c => c.addRowBefore())"><app-icon name="plus" size="xs"></app-icon> {{ t().editor.tableMenu.addRowAbove }}</button>
-                        <button (click)="cmd(c => c.addRowAfter())"><app-icon name="plus" size="xs"></app-icon> {{ t().editor.tableMenu.addRowBelow }}</button>
+                        <button (click)="cmd(c => c.addRowBefore())"><app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.tableMenu.addRowAbove }}</button>
+                        <button (click)="cmd(c => c.addRowAfter())"><app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.tableMenu.addRowBelow }}</button>
                         <button (click)="cmd(c => c.deleteRow())"><app-icon name="x" size="xs"></app-icon> {{ t().editor.tableMenu.deleteRow }}</button>
-                        <button (click)="cmd(c => c.addColumnBefore())"><app-icon name="plus" size="xs"></app-icon> {{ t().editor.tableMenu.addColumnLeft }}</button>
-                        <button (click)="cmd(c => c.addColumnAfter())"><app-icon name="plus" size="xs"></app-icon> {{ t().editor.tableMenu.addColumnRight }}</button>
+                        <button (click)="cmd(c => c.addColumnBefore())"><app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.tableMenu.addColumnLeft }}</button>
+                        <button (click)="cmd(c => c.addColumnAfter())"><app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.tableMenu.addColumnRight }}</button>
                         <button (click)="cmd(c => c.deleteColumn())"><app-icon name="x" size="xs"></app-icon> {{ t().editor.tableMenu.deleteColumn }}</button>
                         <button (click)="cmd(c => c.deleteTable())"><app-icon name="trash" size="xs"></app-icon> {{ t().editor.tableMenu.deleteTable }}</button>
                         } @else {
@@ -1263,10 +1263,10 @@
                 <app-spec-row scope="selection" [label]="t().editor.inspector.columns" [value]="'' + tableSize().cols"></app-spec-row>
                 <div class="insp-actions">
                     <button class="insp-btn" (click)="cmd(c => c.addRowAfter())" [title]="t().editor.tableMenu.addRowBelow">
-                        <app-icon name="plus" size="xs"></app-icon> {{ t().editor.inspector.rows }}
+                        <app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.inspector.rows }}
                     </button>
                     <button class="insp-btn" (click)="cmd(c => c.addColumnAfter())" [title]="t().editor.tableMenu.addColumnRight">
-                        <app-icon name="plus" size="xs"></app-icon> {{ t().editor.inspector.columns }}
+                        <app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.inspector.columns }}
                     </button>
                 </div>
                 <div class="insp-actions">

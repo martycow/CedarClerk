@@ -31,7 +31,7 @@
                    [placeholder]="t().drafts.folders.newPlaceholder" (keydown.enter)="add()">
             <button class="folder-icon-btn" (click)="add()" [disabled]="busy() || !newName.trim()"
                     [title]="t().drafts.folders.add" [attr.aria-label]="t().drafts.folders.add">
-                <app-icon name="plus" size="xs"></app-icon>
+                <app-icon name="plus" weight="bold" size="xs"></app-icon>
             </button>
         </div>
     </div>

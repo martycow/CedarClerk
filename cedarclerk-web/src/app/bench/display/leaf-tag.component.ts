@@ -15,6 +15,7 @@ export type LeafState = 'active' | 'idle' | 'dried';
     imports: [IconComponent],
     host: {
         'data-surface': 'paper',
+        'data-box': 'trim',
         '[class.is-active]': 'state() === "active"',
         '[class.is-dried]': 'state() === "dried"',
         '[class.is-pickable]': 'pickable()',
@@ -43,28 +44,30 @@ export type LeafState = 'active' | 'idle' | 'dried';
     `,
     styles: [`
         /* The surface is in the selector and not only on the host element: tools/check-density.mjs
-           reads declared CSS, so this is what puts its 44px targets and its 14px type under it. */
-        :host([data-surface="paper"]) {
+           reads declared CSS, so this is what puts its floors and its type under it. A leaf is a
+           chip, so the box it is drawn at is trim and not paper's own (ADR-200); the coarse-pointer
+           floor is still spent from the surface, which is why the surface is still named. */
+        :host([data-surface="paper"][data-box="trim"]) {
             display: inline-flex;
             align-items: center;
             gap: var(--space-1);
             box-sizing: border-box;
-            min-height: var(--hit-target);
-            padding: 0 var(--space-3) 0 var(--space-2);
+            min-height: var(--hit-trim);
+            padding: 0 11px 0 6px;
             border: 1px solid rgba(90, 110, 60, .5);
             border-radius: 2px 12px 2px 12px;
             background-image: linear-gradient(135deg, var(--leaf-bg), var(--leaf-bg-2));
             color: var(--leaf-ink);
             font-family: var(--font-sans);
-            font-size: var(--fs-ui);
+            font-size: var(--fs-12);
             font-weight: 700;
             white-space: nowrap;
 
             .lt-pick {
                 display: inline-flex;
                 align-items: center;
-                gap: var(--space-1);
-                min-height: var(--hit-target);
+                gap: 5px;
+                min-height: var(--hit-trim);
             }
 
             .lt-pick[role="button"] { cursor: pointer; }
@@ -81,8 +84,8 @@ export type LeafState = 'active' | 'idle' | 'dried';
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                min-width: var(--hit-target);
-                min-height: var(--hit-target);
+                min-width: var(--hit-trim);
+                min-height: var(--hit-trim);
                 padding: 0;
                 border: none;
                 background: none;
@@ -92,7 +95,7 @@ export type LeafState = 'active' | 'idle' | 'dried';
             }
         }
 
-        :host([data-surface="paper"].is-active) {
+        :host([data-surface="paper"][data-box="trim"].is-active) {
             border-color: rgba(90, 110, 60, .65);
             box-shadow: 0 1px 3px rgba(40, 22, 6, .3);
         }
@@ -101,14 +104,14 @@ export type LeafState = 'active' | 'idle' | 'dried';
            border alpha alone, which two RU/EN leaves side by side do not survive. Unpicked, it lies
            on the dried leaf's pale stock with its own green ink and edge; a leaf that only labels
            keeps the green, idle being its only state. */
-        :host([data-surface="paper"].is-pickable:not(.is-active)) {
+        :host([data-surface="paper"][data-box="trim"].is-pickable:not(.is-active)) {
             background-image: none;
             background-color: var(--leaf-dried-bg);
         }
 
         /* Dried means no data or switched off, never an error — an error is a rust stamp, and
            nothing in here reaches for --danger. */
-        :host([data-surface="paper"].is-dried) {
+        :host([data-surface="paper"][data-box="trim"].is-dried) {
             background-image: none;
             background-color: var(--leaf-dried-bg, rgba(228, 221, 196, .82));
             border-color: var(--leaf-dried-edge, rgba(120, 110, 70, .5));
@@ -117,7 +120,7 @@ export type LeafState = 'active' | 'idle' | 'dried';
 
         /* The remove button owns its own 44px target, so the leaf gives up its right padding
            rather than adding to it. */
-        :host([data-surface="paper"].has-remove) { padding-right: 0; }
+        :host([data-surface="paper"][data-box="trim"].has-remove) { padding-right: 0; }
     `],
 })
 export class LeafTagComponent {

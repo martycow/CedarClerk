@@ -50,12 +50,18 @@ manager's business or nobody's, so this file starts at the filter strip.-->
             }
         </div>
 
-        <app-shelf-panel class="chart-panel" [title]="t().stats.bySource" [count]="windowLabel()" flush>
-            <app-index-tabs actions [items]="metricTabs()" [value]="metric()"
+        <!--The two strips are cut into the chart board's own top edge, not laid inside its header:
+        a header carries the board's name and its commands, and a tab is neither (ADR-200).-->
+        <div class="chart-stack">
+        <div class="chart-index">
+            <app-index-tabs [items]="metricTabs()" [value]="metric()"
                             [label]="t().stats.metricStrip" (selected)="setMetric($event)" />
-            <app-index-tabs actions [items]="viewTabs()" [value]="view()"
+            <span class="index-gap"></span>
+            <app-index-tabs [items]="viewTabs()" [value]="view()"
                             [label]="t().stats.viewStrip" (selected)="setView($event)" />
+        </div>
 
+        <app-shelf-panel class="chart-panel" [title]="t().stats.bySource" [count]="windowLabel()" flush>
             @if (!drawable().length) {
             <p class="stats-hint stats-hint-pad">
                 {{ anySelected() ? t().stats.sources.nothingToDraw : t().stats.sources.noneSelected }}
@@ -91,6 +97,7 @@ manager's business or nobody's, so this file starts at the filter strip.-->
             </table>
             }
         </app-shelf-panel>
+        </div>
     </div>
 
     <!--Audience split (Marty, 08.08.2026). Blog only: Telegram reports no per-country numbers, so

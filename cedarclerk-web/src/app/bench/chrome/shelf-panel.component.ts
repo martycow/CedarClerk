@@ -24,10 +24,15 @@ export type ShelfTone = 'paper' | 'cork';
     },
     template: `
         <header class="sp-head">
-            <span class="sp-title">{{ title() }}</span>
-            @if (hasCount()) {
-                <span class="sp-count">{{ count() }}</span>
-            }
+            <!--Name and count share one baseline: the display caps and the mono digits have
+            different metrics, and centring each in the band separately sat the number visibly
+            below the word it counts.-->
+            <span class="sp-name">
+                <span class="sp-title">{{ title() }}</span>
+                @if (hasCount()) {
+                    <span class="sp-count">{{ count() }}</span>
+                }
+            </span>
             <span class="sp-spacer"></span>
             <span class="sp-actions"><ng-content select="[actions]" /></span>
         </header>
@@ -64,6 +69,13 @@ export type ShelfTone = 'paper' | 'cork';
             box-shadow: inset 0 1px 0 color-mix(in srgb, var(--rail-ink) 15%, transparent);
         }
 
+        :host([data-surface="chrome"]) .sp-head .sp-name {
+            display: inline-flex;
+            align-items: baseline;
+            gap: var(--space-2);
+            min-width: 0;
+        }
+
         :host([data-surface="chrome"]) .sp-head .sp-title {
             font-family: var(--font-display);
             font-size: var(--text-chrome-sm);
@@ -86,10 +98,16 @@ export type ShelfTone = 'paper' | 'cork';
 
         :host([data-surface="chrome"]) .sp-spacer { flex: 1; }
 
+        /* A band draws its own furniture below its own height (ADR-200): the header is 30px, so a
+           search field or an action button projected into it is drawn at trim. The two box tokens
+           are shadowed rather than the controls being asked to opt in, because the placement is
+           what decides the size and the placement is known here and nowhere else. */
         :host([data-surface="chrome"]) .sp-actions {
             display: inline-flex;
             align-items: center;
             gap: var(--space-1);
+            --hit-chrome: var(--hit-trim);
+            --hit-target: var(--hit-trim);
         }
 
         /* Outside every chrome-scoped rule above on purpose: this is the paper half of the density

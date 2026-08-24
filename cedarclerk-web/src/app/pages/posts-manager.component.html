@@ -7,6 +7,9 @@ name the smoke suite binds.-->
                         [label]="t().manager.tabStrip" (selected)="pickTab($event)" />
     </div>
 
+    <!--One board under the strip, whichever tab is lit: the tiles are cut into its top edge, so
+    the two are one object and nothing floats above bare wall (ADR-200).-->
+    <div class="mg-body">
     @if (error()) { <p class="channel-error">{{ error() }}</p> }
 
     @if (tab() === 'posts') {
@@ -452,7 +455,7 @@ name the smoke suite binds.-->
                              [count]="presets().length" flush>
                 <app-button actions variant="rail" size="sm" (clicked)="newPreset()"
                             [title]="t().manager.forms.newPreset">
-                    <app-icon name="plus" size="xs"></app-icon>
+                    <app-icon name="plus" weight="bold" size="xs"></app-icon>
                 </app-button>
                 <div class="post-list">
                 @for (p of presets(); track p.id) {
@@ -678,6 +681,7 @@ name the smoke suite binds.-->
             </app-worktop>
         </div>
     }
+    </div>
 
     @if (deleteConfirmId()) {
     <app-modal (closed)="deleteConfirmId.set(null)">

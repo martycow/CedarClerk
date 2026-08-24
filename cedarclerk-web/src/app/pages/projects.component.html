@@ -7,19 +7,22 @@
                     <h1 class="hero-title">{{ t().projects.title }}</h1>
                     <div class="hero-actions">
                         <app-button variant="pine" (clicked)="startCreate()">
-                            <app-icon name="plus" size="sm" />
+                            <app-icon name="plus" weight="bold" size="sm" />
                             {{ t().projects.newProject }}
                         </app-button>
                     </div>
                 </div>
             </app-worktop>
 
+            <!--The tiles are cut into the board's own edge, so the two are one stack and the
+            column's gap never gets between them (ADR-200).-->
+            <div class="list-stack">
             <!--The state filter, with its counts as tab badges (ADR-164 rule 1): nothing is drawn
             at zero, and the shelf beside the list prints every count including the zeros.-->
             <app-index-tabs [items]="filterTabs()" [value]="filter()" [label]="t().projects.colState"
                             (selected)="pickFilter($event)" />
 
-            <app-shelf-panel class="list-panel" [title]="t().projects.title" [count]="visible().length" flush>
+            <app-shelf-panel class="list-panel" [title]="t().projects.shelfTitle" [count]="visible().length" flush>
                 <app-input actions class="search" [dense]="true" type="search"
                            [placeholder]="t().projects.search"
                            [ngModel]="search()" (ngModelChange)="search.set($event)" />
@@ -34,7 +37,7 @@
                         <p class="empty-title">{{ t().projects.empty }}</p>
                         <p class="hint">{{ t().projects.emptyHint }}</p>
                         <app-button variant="pine" (clicked)="startCreate()">
-                            <app-icon name="plus" size="sm" />
+                            <app-icon name="plus" weight="bold" size="sm" />
                             {{ t().projects.newProject }}
                         </app-button>
                         <!--T-160 (ADR-133) — a filled example on demand, never seeded silently.-->
@@ -85,6 +88,7 @@
                     </div>
                 }
             </app-shelf-panel>
+            </div>
         </div>
 
         <!--Sums over the rows already on screen: the shelf asks the API for nothing (ADR-168).-->

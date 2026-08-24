@@ -25,9 +25,9 @@
 }
 
 .avatar.lg {
-    width: 46px;
-    height: 46px;
-    font-size: var(--fs-18);
+    width: 72px;
+    height: 72px;
+    font-size: var(--fs-27);
 }
 
 /* ---------- Board layout (ADR-185) ---------- */
@@ -551,14 +551,24 @@
     gap: var(--space-2);
 }
 
+/* A drawn edge, not a fill one step off the sheet: --alt against --sheet is two greys apart in the
+   day theme and all but the same board at night, which left a list of connected channels reading
+   as one block of text. */
 .target-row {
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    background: var(--alt);
+    background: var(--paper-bright);
+    border: 1px solid var(--rule-ink-soft);
     border-radius: var(--radius-sm);
     padding: var(--space-2) var(--space-3);
     font-size: var(--fs-meta);
+}
+
+/* A chat the bot can see but is not posting to: the same row, set back. */
+.target-row.dormant {
+    background: var(--alt);
+    border-style: dashed;
 }
 
 .target-name {

@@ -92,6 +92,9 @@ export class ProjectPlannerComponent implements OnDestroy {
 
     openCount = computed(() => this.tasks().filter(t => t.status !== 'done').length);
 
+    /** The state the empty sheet is drawn for; the header drops its own copy of the action there. */
+    isEmpty = computed(() => !this.loading() && !this.loadError() && !this.sprints().length && !this.tasks().length);
+
     /** The standing summary on the right: counts over what is already loaded (ADR-168 rule 5). */
     currentSprint = computed(() => this.sprints().find(s => s.state === 'current') ?? null);
     plannedCount = computed(() => this.sprints().filter(s => s.state === 'planned').length);

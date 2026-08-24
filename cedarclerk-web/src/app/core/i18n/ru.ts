@@ -80,8 +80,9 @@ export const ru: Dict = {
     },
     // Phase 13 — модуль для инди-геймдева (T-120).
     projects: {
-        crumb: 'Проекты',
-        title: 'Проекты',
+        crumb: 'Хаб проектов',
+        title: 'Хаб проектов',
+        shelfTitle: 'Проекты',
         sub: (total: number, active: number) => `${total} ${plural(total, 'проект', 'проекта', 'проектов')} · ${active} активных`,
         search: 'Поиск по проектам…',
         newProject: 'Новый проект',

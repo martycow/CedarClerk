@@ -109,8 +109,11 @@ export interface HookRailItem {
             align-items: center;
             gap: 6px;
             margin: 0;
-            padding: var(--space-3) 0;
-            overflow-y: auto;
+            padding: var(--space-3) var(--space-1);
+            /* Clipped across, scrolled down: a hook is drawn at the wall's full width, so the
+               moment the vertical bar appears it takes the width back and the wall grows a second,
+               horizontal bar under the last tool. */
+            overflow: hidden auto;
             overscroll-behavior: contain;
             list-style: none;
         }
@@ -126,7 +129,8 @@ export interface HookRailItem {
             align-items: center;
             gap: 2px;
             box-sizing: border-box;
-            width: calc(var(--bench-tool-w) - var(--space-1));
+            width: 100%;
+            max-width: calc(var(--bench-tool-w) - var(--space-1));
             min-height: var(--hit-chrome);
             padding: 5px 0 4px;
             border: 1px solid rgba(242, 232, 206, .16);
@@ -226,7 +230,8 @@ export interface HookRailItem {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: calc(var(--bench-tool-w) - var(--space-1));
+            width: 100%;
+            max-width: calc(var(--bench-tool-w) - var(--space-1));
             min-height: var(--hit-chrome);
             border: var(--border-rail-btn);
             border-radius: var(--radius-stamp);

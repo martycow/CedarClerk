@@ -297,7 +297,7 @@ shelf too, because linking it to a document means choosing from a list the modal
                         @if (linking()) {
                             @for (doc of linkableDocuments(); track doc.id) {
                                 <button class="link-option" [disabled]="busy()" (click)="addLink(doc.id)">
-                                    <app-icon name="plus" size="sm"></app-icon>
+                                    <app-icon name="plus" weight="bold" size="sm"></app-icon>
                                     <span class="link-title">{{ doc.title }}</span>
                                 </button>
                             } @empty {

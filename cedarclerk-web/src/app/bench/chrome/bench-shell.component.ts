@@ -280,10 +280,19 @@ export class BenchShellComponent {
     /** The project the session is in: the URL's when it names one, the remembered one otherwise. */
     protected readonly openProjectId = computed(() => this.projectId() || this.current.id());
 
+    /** The hub is the one screen where no project is open — the remembered one does not count
+        there, or the wall would offer a board, a planner and a build list for a project the
+        reader has just stepped out of. */
+    private readonly onHub = computed(() => this.path().replace(/\/+$/, '') === '/projects');
+
     protected readonly projectLabel = computed(() => {
         if (!this.auth.indieDev() || !this.projectId()) return '';
         const id = this.openProjectId();
-        return (id && this.projectNames().get(id)) || this.current.name() || this.t().shell.allProjects;
+        // The remembered name answers for the remembered project and no other: while the name map
+        // is still in flight it used to stand in for whichever project the URL named, which put a
+        // different project's name on the rail than the one on the page.
+        const remembered = this.current.id() === id ? this.current.name() : '';
+        return (id && this.projectNames().get(id)) || remembered || this.t().shell.allProjects;
     });
 
     /** Every project, then the hub — which is where "All projects" used to send you (ADR-186). */
@@ -309,7 +318,7 @@ export class BenchShellComponent {
                 badge: this.feedback.newComments() + this.feedback.newReactions(),
                 badgeTitle: this.t().editor.newBadge,
             });
-        } else if (open) {
+        } else if (open && !this.onHub()) {
             items.push({ id: 'documents', icon: 'pencil-simple', label: t.documents, link: ['/projects', open] });
             items.push({ id: 'board', icon: 'check-square', label: t.board, link: ['/projects', open, 'tasks'] });
             items.push({ id: 'planner', icon: 'flag', label: t.planner, link: ['/projects', open, 'planner'] });

@@ -416,6 +416,9 @@
        owed, and it is spent under @media (pointer: coarse) and nowhere else. */
     --hit-target: 38px;
     --hit-touch: 44px;
+    /* The third box (ADR-200): a chip, and anything projected into a chrome band. A band draws its
+       own furniture below its own height, so this is under --hit-chrome on purpose. */
+    --hit-trim: 24px;
     --text-chrome: var(--fs-13);
     --text-chrome-sm: var(--fs-11);
     --text-readout: var(--fs-21);

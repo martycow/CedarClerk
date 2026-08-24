@@ -10,12 +10,12 @@
             <!--The projects list absorbed as a switcher (ADR-160 rule 5). Search, the filter chips
             and creating a project stay on /projects, which the header action links to — a second
             create modal here is the second home .claude/rules/ui-changes.md rule 1 forbids.-->
-            <app-shelf-panel class="shelf-left" [title]="t().projects.title" [count]="projects().length">
+            <app-shelf-panel class="shelf-left" [title]="t().projects.shelfTitle" [count]="projects().length">
                 <app-button actions variant="rail" size="sm" link="/projects" [title]="t().projects.hub.allProjects">
                     <app-icon name="list" size="xs" />
                 </app-button>
                 <div class="proj-sheet">
-                    <nav class="proj-list" [attr.aria-label]="t().projects.title">
+                    <nav class="proj-list" [attr.aria-label]="t().projects.shelfTitle">
                         @for (item of projects(); track item.id) {
                             <a class="proj" [class.on]="item.id === p.id" [routerLink]="['/projects', item.id]"
                                [attr.aria-current]="item.id === p.id ? 'page' : null">
@@ -63,7 +63,7 @@
 
                         <div class="hero-actions">
                             <app-button variant="pine" (clicked)="addingDocument.set(true)">
-                                <app-icon name="plus" size="sm" />
+                                <app-icon name="plus" weight="bold" size="sm" />
                                 {{ t().projects.newDocument }}
                             </app-button>
                             <app-button variant="paper" (clicked)="startEdit()">

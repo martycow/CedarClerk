@@ -31,7 +31,7 @@
                    [placeholder]="t().drafts.series.newPlaceholder" (keydown.enter)="add()">
             <button class="series-icon-btn" (click)="add()" [disabled]="busy() || !newName.trim()"
                     [title]="t().drafts.series.add" [attr.aria-label]="t().drafts.series.add">
-                <app-icon name="plus" size="xs"></app-icon>
+                <app-icon name="plus" weight="bold" size="xs"></app-icon>
             </button>
         </div>
     </div>

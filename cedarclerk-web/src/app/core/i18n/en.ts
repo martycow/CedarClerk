@@ -80,8 +80,11 @@ export const en = {
     // module is enabled: a dictionary that changes shape by configuration would defeat the
     // `ru.ts is typeof en` check that keeps the two in step.
     projects: {
-        crumb: 'Projects',
-        title: 'Projects',
+        crumb: 'Projects Hub',
+        title: 'Projects Hub',
+        // The board itself, when a panel or a list is named after what it holds rather than after
+        // the screen the reader is on.
+        shelfTitle: 'Projects',
         // Plural forms differ per language, so these are functions — see the note on drafts below.
         sub: (total: number, active: number) => `${total} ${total === 1 ? 'project' : 'projects'} · ${active} active`,
         search: 'Search projects…',

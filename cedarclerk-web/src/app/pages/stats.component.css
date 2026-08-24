@@ -171,12 +171,28 @@
     min-height: 0;
 }
 
-/* Two strips, two controls: the view strip stands off the metric strip, so a view tile cannot
-   read as a fourth metric. */
-:host([data-surface="paper"]) app-index-tabs[actions] + app-index-tabs[actions] { margin-left: var(--space-3); }
+/* The strips and the board they switch are one object, so the column's gap never gets between
+   them. */
+:host([data-surface="paper"]) .chart-stack {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+}
 
-/* The lit tile overflows the 30px header upward instead of stretching it past the shelf beside it. */
-:host([data-surface="paper"]) .chart-panel app-index-tabs { height: var(--bench-panel-hd); }
+/* Two strips, two controls: the metric strip picks what is plotted and sits at the reading edge,
+   the view strip picks how and sits at the far one, so a view tile cannot read as a fourth
+   metric. */
+:host([data-surface="paper"]) .chart-index {
+    display: flex;
+    align-items: flex-end;
+    flex: none;
+    min-width: 0;
+    overflow-x: auto;
+}
+
+:host([data-surface="paper"]) .index-gap { flex: 1; min-width: var(--space-3); }
 
 :host([data-surface="paper"]) .series-table {
     width: 100%;

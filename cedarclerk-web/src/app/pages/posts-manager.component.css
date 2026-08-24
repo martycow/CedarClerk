@@ -47,17 +47,31 @@
 
 /* ---------- Layout ---------- */
 /* The index tiles hang off the top edge of the boards below them, which is where IndexTabs is
-   drawn to sit: the strip overlaps their border by a hair so a lit tile reads as raised out of it. */
+   drawn to sit. The strip is the shelf rail those boards stand on, so it is welded to them: square
+   at the bottom, no gap under it, and the boards' own gap starts below the rail (ADR-200). */
 .mg-index {
     display: flex;
     align-items: flex-end;
     flex: none;
-    margin-bottom: var(--space-2);
     padding: var(--space-2) var(--space-2) 0;
     border: 1px solid var(--wood-edge);
-    border-radius: var(--radius-plaque);
+    border-bottom: none;
+    border-radius: var(--radius-plaque) var(--radius-plaque) 0 0;
     background: var(--shelf-frame);
     box-shadow: var(--shadow-paper-sm);
+}
+
+.mg-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    box-sizing: border-box;
+    padding: var(--space-2);
+    border: 1px solid var(--wood-edge);
+    border-top: none;
+    border-radius: 0 0 var(--radius-plaque) var(--radius-plaque);
+    background: var(--shelf-frame);
 }
 
 .mg-grid {
@@ -124,8 +138,10 @@
     gap: var(--space-1);
     width: 100%;
     text-align: left;
-    border: 1px solid transparent;
-    background: none;
+    /* Drawn, not implied: with a transparent edge and no fill, an unpicked post was a block of
+       text among blocks of text and the list read as one paragraph. */
+    border: 1px solid var(--rule-ink-soft);
+    background: var(--paper-bright);
     color: var(--text);
     font-family: inherit;
     font-size: var(--fs-ui);
@@ -140,6 +156,7 @@
 
 .post-card.on {
     background: var(--asoft);
+    border-color: var(--abord);
 }
 
 /* The same pine rule down the row's edge the other shelves use; :not(:focus-visible) so it cannot
@@ -195,6 +212,18 @@
 /* 8.1 — the list scrolls in its own box instead of growing the page. With thirty posts the detail
    pane's own content used to start below the fold, so picking a post meant scrolling back up to
    see what you had picked. The search field stays pinned at the top of the scroller. */
+/* The slug and the button that saves it are one control, and the button that takes the post down
+   is not: without this the three stacked edge to edge and read as one column of parts. */
+.action-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.action-row .chat-input { flex: 1; min-width: 0; }
+
+.action-row + .btn-ghost { margin-top: var(--space-3); }
+
 .post-list {
     display: flex;
     flex-direction: column;

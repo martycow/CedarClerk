@@ -72,6 +72,9 @@ export class ProjectBuildsComponent implements OnDestroy {
     draftReleased = signal('');
 
     unreleasedCount = computed(() => this.builds().filter(b => !b.released).length);
+
+    /** The state the empty sheet is drawn for; the header drops its own copy of the action there. */
+    isEmpty = computed(() => !this.loading() && !this.loadError() && !this.builds().length);
     releasedCount = computed(() => this.builds().filter(b => b.released).length);
 
     /** The newest version that is actually out — an unreleased record is a plan, not a version. */

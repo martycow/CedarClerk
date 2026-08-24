@@ -62,6 +62,12 @@
 }
 
 /* ---------- The list ---------- */
+.list-stack {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
 .search {
     width: 200px;
 }

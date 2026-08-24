@@ -43,6 +43,7 @@ export function indexTabBadgeLabel(badge: number | string | undefined | null): s
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: {
         'data-surface': 'chrome',
+        'data-box': 'trim',
         'role': 'tablist',
         '[attr.aria-label]': 'label() || null',
     },
@@ -69,18 +70,22 @@ export function indexTabBadgeLabel(badge: number | string | undefined | null): s
         :host([data-surface="chrome"]) {
             display: flex;
             align-items: flex-end;
-            gap: var(--space-1);
+            gap: 3px;
             flex: none;
             min-width: 0;
+            /* The strip stands ON the board it switches, never above it with a gap: a tile is an
+               index tile cut into the shelf edge, and a step between the two is the defect Marty
+               called a threshold. The hair of overlap is what welds the tile to the frame. */
+            margin-bottom: -1px;
         }
 
-        :host([data-surface="chrome"]) .it-tile {
+        :host([data-surface="chrome"][data-box="trim"]) .it-tile {
             display: inline-flex;
             align-items: center;
             gap: var(--space-1);
             box-sizing: border-box;
-            min-height: var(--hit-chrome);
-            padding: 0 var(--space-3);
+            min-height: var(--hit-trim);
+            padding: 0 11px;
             border: 1px solid var(--wood-edge);
             border-radius: var(--radius-sm) var(--radius-sm) 0 0;
             background-color: var(--sign-tile-hi);
@@ -98,18 +103,18 @@ export function indexTabBadgeLabel(badge: number | string | undefined | null): s
             transition: filter var(--motion-fast) var(--ease-settle);
         }
 
-        :host([data-surface="chrome"]) .it-tile:hover { filter: brightness(1); }
+        :host([data-surface="chrome"][data-box="trim"]) .it-tile:hover { filter: brightness(1); }
 
         /* The raise is height, not a shadow: a tile sits on the shelf edge, and the lit one stands
            a step proud of the ones behind it. */
-        :host([data-surface="chrome"]) .it-tile.is-on {
-            min-height: calc(var(--hit-chrome) + var(--space-1));
+        :host([data-surface="chrome"][data-box="trim"]) .it-tile.is-on {
+            min-height: calc(var(--hit-trim) + 3px);
             border-bottom: 2px solid var(--brass);
             filter: brightness(1.16);
             color: var(--rail-ink);
         }
 
-        :host([data-surface="chrome"]) .it-badge {
+        :host([data-surface="chrome"][data-box="trim"]) .it-badge {
             flex: none;
             display: inline-flex;
             align-items: center;

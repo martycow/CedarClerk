@@ -10,11 +10,8 @@
 
             <span class="spacer"></span>
 
-            <app-index-tabs [items]="viewTabs()" [value]="view()" [label]="t().projects.tasks.title"
-                            (selected)="setView($any($event))" />
-
             <app-button variant="pine" [disabled]="busy()" (clicked)="startCreating()">
-                <app-icon name="plus" size="sm"></app-icon>
+                <app-icon name="plus" weight="bold" size="sm"></app-icon>
                 {{ t().projects.tasks.newTask }}
             </app-button>
         </div>
@@ -59,6 +56,12 @@
 
         @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
 
+        <!--The tiles are cut into the edge of the board they switch (ADR-200), so the strip and
+        the board are one stack and the column's gap never gets between them.-->
+        <div class="view-stack">
+        <app-index-tabs [items]="viewTabs()" [value]="view()" [label]="t().projects.tasks.title"
+                        (selected)="setView($any($event))" />
+
         @if (loading()) {
             <p class="hint">{{ t().projects.loading }}</p>
         } @else if (loadError(); as e) {
@@ -78,7 +81,7 @@
                                      [count]="columnCount(status)">
                         <app-button actions variant="rail" size="sm" [disabled]="busy()"
                                     [title]="t().projects.tasks.newTask" (clicked)="startCreating(status)">
-                            <app-icon name="plus" size="xs" [label]="t().projects.tasks.newTask"></app-icon>
+                            <app-icon name="plus" weight="bold" size="xs" [label]="t().projects.tasks.newTask"></app-icon>
                         </app-button>
 
                         <div class="column-cards">
@@ -154,6 +157,7 @@
                 }
             </div>
         }
+        </div>
     </div>
 </div>
 

@@ -103,10 +103,17 @@
 
 .empty-state .hint { max-width: 46ch; }
 
+/* The strip and the board it switches are one object. */
+.view-stack {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* Full width: a board that holds nothing is still the same board, and a narrow plate centred under
+   a full-width toolbar reads as a different screen. */
 .empty-panel {
     width: 100%;
-    max-width: 720px;
-    align-self: center;
 }
 
 .empty-filtered {
