@@ -149,7 +149,7 @@ a popover, is the shelf beside it.-->
                     </div>
                     }
                     @if (!tight()) {
-                    <div class="right">{{ d.updatedAt | zonedDate:'dd.MM, HH:mm' }}</div>
+                    <div class="right">{{ d.updatedAt | zonedDate:'MM/dd, HH:mm' }}</div>
                     }
                     <div class="row-actions">
                         <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate" [attr.aria-label]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">
@@ -249,7 +249,7 @@ a popover, is the shelf beside it.-->
                     </div>
                     }
                     <div class="drafts-card-foot">
-                        <span>{{ d.updatedAt | zonedDate:'dd.MM, HH:mm' }}</span>
+                        <span>{{ d.updatedAt | zonedDate:'MM/dd, HH:mm' }}</span>
                         <span class="row-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
                             <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate" [attr.aria-label]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">
                                 <app-icon name="layout" size="sm"></app-icon>

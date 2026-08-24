@@ -41,9 +41,9 @@ used to run across the top are the shelf beside it (ADR-164).-->
                             <div class="user-card-meta muted">
                                 {{ u.telegramUsername ? '@' + u.telegramUsername : t().admin.columns.telegram + ': —' }}
                                 · {{ t().admin.contentSummary(u.published, u.drafts, u.channels) }}
-                                · {{ u.createdAt | zonedDate:'dd.MM.yyyy' }}
+                                · {{ u.createdAt | zonedDate:'MM/dd/yyyy' }}
                                 @if (u.planExpiresAt) {
-                                · {{ u.planExpiresAt | zonedDate:'dd.MM.yyyy' }}
+                                · {{ u.planExpiresAt | zonedDate:'MM/dd/yyyy' }}
                                 } @else if (u.effectiveTier !== 'Free') {
                                 · {{ t().admin.neverExpires }}
                                 }
@@ -158,7 +158,7 @@ used to run across the top are the shelf beside it (ADR-164).-->
                     <!--Joined is counted from accounts; uses is the code's own counter. They agree
                     unless something went wrong, which is worth being able to see.-->
                     <span class="muted">{{ t().admin.invites.usageValue(c.joined, c.maxUses) }}</span>
-                    <span class="muted">{{ c.expiresAt ? (c.expiresAt | zonedDate:'dd.MM.yyyy') : t().admin.invites.noExpiry }}</span>
+                    <span class="muted">{{ c.expiresAt ? (c.expiresAt | zonedDate:'MM/dd/yyyy') : t().admin.invites.noExpiry }}</span>
                     <span>
                         <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="toggleInvite(c)">
                             {{ c.isActive ? t().admin.invites.disable : t().admin.invites.enable }}
@@ -226,7 +226,7 @@ used to run across the top are the shelf beside it (ADR-164).-->
                 </div>
                 @for (p of b.payments; track p.id) {
                 <div class="payment-row">
-                    <span class="muted">{{ p.createdAt | zonedDate:'dd.MM.yyyy, HH:mm' }}</span>
+                    <span class="muted">{{ p.createdAt | zonedDate:'MM/dd/yyyy, HH:mm' }}</span>
                     <span class="muted">{{ p.ownerEmail }}</span>
                     <span>{{ p.plan }} · {{ p.provider }}</span>
                     <span>{{ formatAmount(p.amount, p.currency) }}</span>
@@ -261,7 +261,7 @@ used to run across the top are the shelf beside it (ADR-164).-->
             <h2 class="admin-section-title audit-title">{{ t().admin.auditTitle }}</h2>
             <div class="audit-list">
                 @for (a of audit(); track a.id) {
-                <app-log-line [time]="a.createdAt | zonedDate:'dd.MM, HH:mm'" [word]="a.action"
+                <app-log-line [time]="a.createdAt | zonedDate:'MM/dd, HH:mm'" [word]="a.action"
                               [at]="t().admin.byActor(a.actorEmail)">
                     {{ a.targetEmail || '—' }} · {{ a.details }}
                 </app-log-line>

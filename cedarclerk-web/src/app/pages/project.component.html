@@ -111,7 +111,7 @@
                                 <app-icon [name]="docIcons[doc.documentType]" size="sm" class="doc-icon" />
                                 <span class="doc-title">{{ doc.title }}</span>
                                 <span class="doc-type">{{ t().projects.docTypes[doc.documentType].name }}</span>
-                                <span class="doc-meta">{{ doc.updatedAt | zonedDate:'dd.MM, HH:mm' }}</span>
+                                <span class="doc-meta">{{ doc.updatedAt | zonedDate:'MM/dd, HH:mm' }}</span>
                             </a>
                         } @empty {
                             <p class="hint">{{ t().projects.hub.noDocuments }}</p>
@@ -121,7 +121,7 @@
             </div>
 
             <app-shelf-panel class="shelf-right" [title]="t().projects.hub.today"
-                             [count]="today | zonedDate:'dd.MM'">
+                             [count]="today | zonedDate:'MM/dd'">
                 <!--T-124 — the sprint covering today, or the honest statement that none does.
                 "No sprint covers today" is a fact about the calendar, not a missing feature.-->
                 @if (p.currentSprint; as s) {
@@ -148,7 +148,7 @@
                 <div class="grp">{{ t().projects.tasks.upNext }}</div>
                 @for (task of p.upNext; track task.id) {
                     <app-task-tag class="up-next" [prio]="task.priority"
-                                  [due]="task.dueAt ? (task.dueAt | zonedDate:'dd.MM') : t().projects.tasks.noDueDate"
+                                  [due]="task.dueAt ? (task.dueAt | zonedDate:'MM/dd') : t().projects.tasks.noDueDate"
                                   [overdue]="overdue(task)" [rotate]="$even ? -0.8 : 0.6"
                                   [hint]="task.title" [link]="['/projects', task.projectId, 'tasks']"
                                   [queryParams]="{ task: task.id }">

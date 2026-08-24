@@ -44,7 +44,7 @@
                                     <span class="sprint-number">S{{ s.number }}</span>
                                     <span class="sprint-name">{{ s.name }}</span>
                                     <span class="sprint-dates">
-                                        {{ s.startsAt | zonedDate:'d MMM' }} – {{ s.endsAt | zonedDate:'d MMM' }}
+                                        {{ s.startsAt | zonedDate:'MM/dd' }} – {{ s.endsAt | zonedDate:'MM/dd' }}
                                     </span>
                                     <app-stamp-badge [tone]="sprintTones[s.state]" [rotate]="-1.5">
                                         {{ t().projects.planner.state[s.state] }}
@@ -97,7 +97,7 @@
                                     opens in a tab from a middle click (ADR-163).-->
                                     @for (task of group.tasks; track task.id) {
                                         <app-task-tag [prio]="task.priority" [done]="task.status === 'done'"
-                                                      [due]="dueLabel(task, (task.dueAt | zonedDate:'d MMM'))"
+                                                      [due]="dueLabel(task, (task.dueAt | zonedDate:'MM/dd'))"
                                                       [overdue]="overdue(task)" [rotate]="$even ? -0.7 : 0.5"
                                                       [hint]="task.title"
                                                       [link]="['/projects', projectId(), 'tasks']"

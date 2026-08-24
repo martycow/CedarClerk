@@ -1,5 +1,9 @@
 <app-bench-drawer [open]="open()" [heading]="t().debug.console" [summary]="summary()"
                   (toggled)="log.open.set($event)">
+    <!--Passed straight through: the drawer owns the lip, the shell owns what hangs on it, and the
+    console is only what happens to be behind it.-->
+    <ng-container lipActions><ng-content select="[lipActions]" /></ng-container>
+
     <div class="journal-head">
         <span class="spacer"></span>
         <button class="mini" (click)="clear()" [title]="t().debug.clear" [attr.aria-label]="t().debug.clear"><app-icon name="trash" size="sm"></app-icon></button>

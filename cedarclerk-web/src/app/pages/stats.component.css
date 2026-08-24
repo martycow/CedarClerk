@@ -250,6 +250,12 @@
 
 :host([data-surface="paper"]) .group-head:first-child { margin-top: 0; }
 
+:host([data-surface="paper"]) .audience-note {
+    margin: var(--space-2) 0 0;
+    color: var(--t2);
+    font-size: var(--fs-meta);
+}
+
 :host([data-surface="paper"]) .audience-list {
     list-style: none;
     margin: 0;

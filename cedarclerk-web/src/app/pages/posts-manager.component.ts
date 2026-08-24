@@ -308,7 +308,7 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
     }
 
     growthLabels(): string[] {
-        return this.history().map(r => formatInZone(r.takenAt, 'd MMM'));
+        return this.history().map(r => formatInZone(r.takenAt, 'MM/dd'));
     }
 
     // One publish state per post, resolved in a fixed order (Marty, 01.08.2026): an archived post

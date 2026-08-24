@@ -17,7 +17,7 @@ export const ICON_USAGE: IconUsageRow[] = [
         "count": 34,
         "labels": [
             "a.fileName",
-            "a.fileName a.contentType bytes(a.sizeBytes) a.createdAt | zonedDate:'dd.MM.yyyy'",
+            "a.fileName a.contentType bytes(a.sizeBytes) a.createdAt | zonedDate:'MM/dd/yyyy'",
             "item.label ? null : (item.title || null)",
             "t().common.toggleTheme",
             "t().drafts.columns.activity",
@@ -27,7 +27,7 @@ export const ICON_USAGE: IconUsageRow[] = [
             "t().drafts.columns.tags",
             "t().drafts.columns.title",
             "t().drafts.columns.updated",
-            "t().projects.assets.notFoundAtPath t().projects.assets.previewPending t().projects.assets.noPreview(t().projects.assets.kindOne[a.kind]) t().projects.assets.fingerprint a.fileName detailsOf(a) · a.modifiedAt | zonedDate:'d MMM'",
+            "t().projects.assets.notFoundAtPath t().projects.assets.previewPending t().projects.assets.noPreview(t().projects.assets.kindOne[a.kind]) t().projects.assets.fingerprint a.fileName detailsOf(a) · a.modifiedAt | zonedDate:'MM/dd'",
             "t().projects.docTypes[type].name t().projects.docTypes[type].blurb",
             "t().projects.openDocument",
             "t().projects.projectTypes[type].name t().projects.projectTypes[type].blurb t().projects.create.startsWith(t().projects.projectTypes[type].starter)"
@@ -237,7 +237,7 @@ export const ICON_USAGE: IconUsageRow[] = [
         "icon": "warning",
         "count": 7,
         "labels": [
-            "t().projects.assets.notFoundAtPath t().projects.assets.previewPending t().projects.assets.noPreview(t().projects.assets.kindOne[a.kind]) t().projects.assets.fingerprint a.fileName detailsOf(a) · a.modifiedAt | zonedDate:'d MMM'"
+            "t().projects.assets.notFoundAtPath t().projects.assets.previewPending t().projects.assets.noPreview(t().projects.assets.kindOne[a.kind]) t().projects.assets.fingerprint a.fileName detailsOf(a) · a.modifiedAt | zonedDate:'MM/dd'"
         ],
         "files": [
             "pages/drafts.component.html",

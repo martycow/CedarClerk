@@ -79,6 +79,9 @@ export const ru: Dict = {
         legalPrivacy: 'Политикой конфиденциальности',
     },
     // Phase 13 — модуль для инди-геймдева (T-120).
+    // The subscription tiers by name, for anywhere that prints which one an account is on.
+    plans: { Free: 'Free', Pro: 'Pro', ProPlus: 'Pro Plus', Forever: 'Forever' },
+
     projects: {
         crumb: 'Хаб проектов',
         title: 'Хаб проектов',
@@ -1497,6 +1500,7 @@ export const ru: Dict = {
             countries: 'Просмотры по странам',
             languages: 'Просмотры по языку читателя',
             unknown: 'Неизвестно',
+            unreported: (share: number) => `${share}% просмотров пришли без языка чтения — его не присылают ни сборщик превью ссылок, ни читалка лент, ни встроенный браузер.`,
             empty: 'За этот период просмотров блога пока нет. Разбивка начинает копиться со дня, когда появилась эта функция.',
             other: 'Прочие',
         },

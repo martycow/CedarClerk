@@ -79,6 +79,9 @@ export const en = {
     // Phase 13 — the indie-gamedev module (T-120). Present in the dictionary whether or not the
     // module is enabled: a dictionary that changes shape by configuration would defeat the
     // `ru.ts is typeof en` check that keeps the two in step.
+    // The subscription tiers by name, for anywhere that prints which one an account is on.
+    plans: { Free: 'Free', Pro: 'Pro', ProPlus: 'Pro Plus', Forever: 'Forever' },
+
     projects: {
         crumb: 'Projects Hub',
         title: 'Projects Hub',
@@ -1542,6 +1545,7 @@ export const en = {
             countries: 'Views by country',
             languages: 'Views by reader language',
             unknown: 'Unknown',
+            unreported: (share: number) => `${share}% of views arrived without a reading language — a link preview fetcher, a feed reader or an in-app browser sends none.`,
             empty: 'No blog views in this period yet. The breakdown starts filling in from the day this feature shipped.',
             other: 'Other',
         },

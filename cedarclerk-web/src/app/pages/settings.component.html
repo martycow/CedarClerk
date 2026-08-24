@@ -59,7 +59,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                     <div>
                         <div class="profile-email">{{ auth.userEmail() }}</div>
                         @if (auth.createdAt(); as since) {
-                        <div class="profile-meta">{{ t().settings.profile.memberSince }} {{ since | zonedDate:'MM.yyyy' }}</div>
+                        <div class="profile-meta">{{ t().settings.profile.memberSince }} {{ since | zonedDate:'MM/yyyy' }}</div>
                         }
                         <div class="avatar-actions">
                             <label class="avatar-pick">
@@ -336,7 +336,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                     <div>
                         <div class="plan-banner-title">{{ b.planTier }} {{ t().settings.subscription.planSuffix }}</div>
                         @if (auth.planExpiresAt(); as until) {
-                        <div class="plan-banner-meta">{{ t().settings.subscription.renews }} {{ until | zonedDate:'dd.MM.yyyy' }}</div>
+                        <div class="plan-banner-meta">{{ t().settings.subscription.renews }} {{ until | zonedDate:'MM/dd/yyyy' }}</div>
                         }
                     </div>
                     <span class="spacer"></span>
@@ -521,7 +521,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                             {{ creditReasonLabel(entry.reason) }}
                             @if (entry.count > 1) { <span class="ledger-count">×{{ entry.count }}</span> }
                         </span>
-                        <span class="ledger-date">{{ entry.createdAt | zonedDate:'dd.MM.yyyy, HH:mm' }}</span>
+                        <span class="ledger-date">{{ entry.createdAt | zonedDate:'MM/dd/yyyy, HH:mm' }}</span>
                     </li>
                     }
                 </ul>
@@ -567,7 +567,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                                 <app-stamp-badge tone="pine">{{ t().settings.integrations.linked }}</app-stamp-badge>
                                 <span class="integration-meta">
                                     &#64;{{ auth.telegramUsername() }}
-                                    @if (auth.telegramLinkedAt(); as since) { · {{ t().settings.integrations.since }} {{ since | zonedDate:'dd.MM.yyyy' }} }
+                                    @if (auth.telegramLinkedAt(); as since) { · {{ t().settings.integrations.since }} {{ since | zonedDate:'MM/dd/yyyy' }} }
                                 </span>
                                 } @else {
                                 <app-stamp-badge tone="ink">{{ t().settings.integrations.notConnected }}</app-stamp-badge>
@@ -674,7 +674,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                                 <app-stamp-badge tone="pine">{{ t().settings.integrations.connected }}</app-stamp-badge>
                                 <span class="integration-meta">
                                     &#64;{{ account.displayName }}
-                                    @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'dd.MM.yyyy' }} }
+                                    @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'MM/dd/yyyy' }} }
                                 </span>
                                 <span class="spacer"></span>
                                 <app-button variant="danger" size="sm" (clicked)="disconnectBluesky(account.id)" [disabled]="blueskyBusy()">
@@ -709,7 +709,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                                 <app-stamp-badge tone="pine">{{ t().settings.integrations.connected }}</app-stamp-badge>
                                 <span class="integration-meta">
                                     {{ account.displayName }}
-                                    @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'dd.MM.yyyy' }} }
+                                    @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'MM/dd/yyyy' }} }
                                 </span>
                                 <span class="spacer"></span>
                                 <app-button variant="danger" size="sm" (clicked)="disconnectX(account.id)" [disabled]="xBusy()">
@@ -752,7 +752,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                                 <app-stamp-badge tone="pine">{{ t().settings.integrations.connected }}</app-stamp-badge>
                                 <span class="integration-meta">
                                     {{ account.displayName }}
-                                    @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'dd.MM.yyyy' }} }
+                                    @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'MM/dd/yyyy' }} }
                                 </span>
                                 <span class="spacer"></span>
                                 <app-button variant="danger" size="sm" (clicked)="disconnectDiscord(account.id)" [disabled]="discordBusy()">

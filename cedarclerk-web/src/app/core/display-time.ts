@@ -43,7 +43,7 @@ export function toInstant(value: string | number | Date | null | undefined): Dat
  * Formats an instant in the display zone. Patterns are the subset of Angular's that this app
  * actually used before the switch — `d MMM yyyy, HH:mm` and friends — so templates read the same.
  */
-export function formatInZone(value: string | number | Date | null | undefined, pattern = 'd MMM yyyy, HH:mm'): string {
+export function formatInZone(value: string | number | Date | null | undefined, pattern = 'MM/dd/yyyy, HH:mm'): string {
     const date = toInstant(value);
     if (!date) return '';
 

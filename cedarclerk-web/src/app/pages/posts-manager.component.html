@@ -186,7 +186,7 @@ name the smoke suite binds.-->
                             <!--ADR-099: a schedule can be any network now, so the row names it —
                             "Bluesky · EN" and "Telegram · EN" are otherwise indistinguishable.-->
                             <div class="field-hint-inline">
-                                {{ p.scheduledAtUtc | zonedDate:'d MMM yyyy, HH:mm' }} ·
+                                {{ p.scheduledAtUtc | zonedDate:'MM/dd/yyyy, HH:mm' }} ·
                                 {{ scheduledNetworkLabel(p) }} · {{ p.targetName || p.chatId }} ·
                                 {{ p.language.toUpperCase() }} · {{ p.status }}
                             </div>
@@ -337,7 +337,7 @@ name the smoke suite binds.-->
                     <button type="button" class="registration-row" (click)="selectedRegistration.set(r)">
                         <div class="registration-head">
                             <span class="invite-email">{{ r.name || r.nickname || r.email || t().manager.forms.anonymous }}</span>
-                            <span class="field-hint-inline">{{ r.createdAt | zonedDate:'d MMM, HH:mm' }}</span>
+                            <span class="field-hint-inline">{{ r.createdAt | zonedDate:'MM/dd/yyyy, HH:mm' }}</span>
                         </div>
                         <div class="field-hint-inline">
                             @if (r.email) { {{ r.email }} }
@@ -402,7 +402,7 @@ name the smoke suite binds.-->
                     </app-spec-row>
                     @if (d.blogPublishedAt) {
                     <app-spec-row scope="selection" [label]="t().manager.publishedOn"
-                                  [value]="d.blogPublishedAt | zonedDate:'d MMM yyyy, HH:mm'"></app-spec-row>
+                                  [value]="d.blogPublishedAt | zonedDate:'MM/dd/yyyy, HH:mm'"></app-spec-row>
                     }
                     @if (telegramUrl(d); as url) {
                     <app-spec-row scope="selection" [label]="t().manager.telegram">
@@ -698,7 +698,7 @@ name the smoke suite binds.-->
     <app-modal [width]="520" (closed)="selectedRegistration.set(null)">
         <h2 modal-title>{{ r.name || r.nickname || r.email || t().manager.forms.anonymous }}</h2>
         <div modal-body>
-            <p class="field-hint-inline">{{ r.createdAt | zonedDate:'d MMM yyyy, HH:mm' }}</p>
+            <p class="field-hint-inline">{{ r.createdAt | zonedDate:'MM/dd/yyyy, HH:mm' }}</p>
             @if (r.name) { <p class="answer-line"><span class="answer-label">{{ t().manager.forms.fieldName }}:</span> {{ r.name }}</p> }
             @if (r.nickname) { <p class="answer-line"><span class="answer-label">{{ t().manager.forms.fieldNickname }}:</span> {{ r.nickname }}</p> }
             @if (r.email) { <p class="answer-line"><span class="answer-label">{{ t().manager.forms.fieldEmail }}:</span> {{ r.email }}</p> }

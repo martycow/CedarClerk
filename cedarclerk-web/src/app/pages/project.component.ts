@@ -180,12 +180,12 @@ export class ProjectComponent implements OnDestroy {
     /** The right-hand chalk chip on the bench top: when this project was last written to. */
     heroMeta = computed(() => {
         const at = this.summary()?.lastActivityAt;
-        return at ? `${this.t().projects.hub.lastEdit} ${formatInZone(at, 'dd.MM')}` : '';
+        return at ? `${this.t().projects.hub.lastEdit} ${formatInZone(at, 'MM/dd')}` : '';
     });
 
     sprintLeft = computed(() => {
         const sprint = this.project()?.currentSprint;
-        return sprint ? this.t().projects.hub.sprintLeftValue(this.sprintDaysLeft(), formatInZone(sprint.endsAt, 'dd.MM')) : '';
+        return sprint ? this.t().projects.hub.sprintLeftValue(this.sprintDaysLeft(), formatInZone(sprint.endsAt, 'MM/dd')) : '';
     });
 
     constructor() {

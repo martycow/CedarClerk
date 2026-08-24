@@ -233,7 +233,7 @@ export class ProjectTasksComponent implements OnDestroy {
     /** The tag draws the date rust when it is late; the word is what says so without colour. */
     dueLabel(task: GameTask): string {
         if (!task.dueAt) return '';
-        const date = formatInZone(task.dueAt, 'd MMM');
+        const date = formatInZone(task.dueAt, 'MM/dd');
         return isOverdue(task) ? `${date} · ${this.t().projects.tasks.overdue}` : date;
     }
 

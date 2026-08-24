@@ -123,8 +123,13 @@ manager's business or nobody's, so this file starts at the filter strip.-->
                 <span class="audience-bar"><span class="audience-bar-fill" [style.width.%]="row.bar"></span></span>
                 <span class="audience-share">{{ row.share }}%</span>
             </li>
+            } @empty {
+            <li class="audience-row"><span class="audience-label">{{ t().stats.audience.empty }}</span></li>
             }
         </ul>
+        @if (unreportedLanguageShare(); as share) {
+        <p class="audience-note">{{ t().stats.audience.unreported(share) }}</p>
+        }
         } @else {
         <p class="stats-hint">{{ t().stats.audience.empty }}</p>
         }

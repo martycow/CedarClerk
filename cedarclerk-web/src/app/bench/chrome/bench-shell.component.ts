@@ -77,13 +77,6 @@ function matches(path: string, pattern: string): boolean {
                     </app-button>
                 }
 
-                <!--The window's own state, so the shell's and not a page's (ADR-188): every screen
-                in here is as worth reading without browser chrome as the writing sheet is.-->
-                <app-button class="rail-fullscreen" variant="paper" size="sm" surface="chrome"
-                            [title]="fullscreenLabel()" (clicked)="toggleFullscreen()">
-                    <app-icon [name]="isFullscreen() ? 'arrows-in-simple' : 'arrows-out-simple'" size="xs" />
-                </app-button>
-
                 <app-account-menu account />
             </app-rail-header>
 
@@ -126,7 +119,15 @@ function matches(path: string, pattern: string): boolean {
         <!-- No top: the strip grows upward from the bottom edge as the drawer opens, which keeps
              the rule on the screen's edge and slides the lip up off it. -->
         <div class="bench-bottom">
-            <app-debug-console />
+            <app-debug-console>
+                <!--The window's own state, so the shell's and not a page's (ADR-188). It hangs on
+                the drawer lip rather than in the rail (ADR-201): the top rail is where a screen's
+                work is, and a window control standing among a page's actions read as one of them.-->
+                <app-button lipActions class="lip-fullscreen" variant="paper" size="sm" surface="chrome"
+                            [title]="fullscreenLabel()" (clicked)="toggleFullscreen()">
+                    <app-icon [name]="isFullscreen() ? 'arrows-in-simple' : 'arrows-out-simple'" size="xs" />
+                </app-button>
+            </app-debug-console>
             <app-ruler-bar [label]="ruler.label()" [left]="ruler.left()" [right]="rulerRight()" />
         </div>
 

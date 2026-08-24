@@ -41,7 +41,7 @@
                                     {{ build.released ? t().projects.builds.released : t().projects.builds.unreleased }}
                                 </app-stamp-badge>
                                 @if (build.releasedAt) {
-                                    <span class="build-date">{{ build.releasedAt | zonedDate:'d MMM yyyy' }}</span>
+                                    <span class="build-date">{{ build.releasedAt | zonedDate:'MM/dd/yyyy' }}</span>
                                 }
                                 @if (build.taskCount) {
                                     <span class="build-count">{{ t().projects.planner.progress(build.doneCount, build.taskCount) }}</span>
@@ -75,7 +75,7 @@
                             <div class="tags">
                                 @for (task of tasksOf(build); track task.id) {
                                     <app-task-tag [prio]="task.priority" [done]="task.status === 'done'"
-                                                  [due]="dueLabel(task, (task.dueAt | zonedDate:'d MMM'))"
+                                                  [due]="dueLabel(task, (task.dueAt | zonedDate:'MM/dd'))"
                                                   [overdue]="overdue(task)" [rotate]="$even ? -0.7 : 0.5"
                                                   [hint]="task.title"
                                                   [link]="['/projects', projectId(), 'tasks']"
@@ -100,7 +100,7 @@
             @if (latestReleased(); as b) {
                 <app-spec-row [label]="t().projects.builds.latest" [value]="b.version" />
                 <app-spec-row [label]="t().projects.builds.fieldReleased"
-                              value="{{ b.releasedAt | zonedDate:'d MMM yyyy' }}" />
+                              value="{{ b.releasedAt | zonedDate:'MM/dd/yyyy' }}" />
             }
             <!--No "latest" rows until something is out: the counts below say Released 0, which is
             the same fact without a dash that would read as "could not ask".-->

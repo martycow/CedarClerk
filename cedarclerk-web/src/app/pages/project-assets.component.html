@@ -161,7 +161,7 @@ shelf too, because linking it to a document means choosing from a list the modal
                                     }
                                 </span>
                                 <span class="tile-name" [title]="a.relativePath">{{ a.fileName }}</span>
-                                <span class="tile-meta">{{ detailsOf(a) }} · {{ a.modifiedAt | zonedDate:'d MMM' }}</span>
+                                <span class="tile-meta">{{ detailsOf(a) }} · {{ a.modifiedAt | zonedDate:'MM/dd' }}</span>
                             </button>
                         }
                     </div>
@@ -181,7 +181,7 @@ shelf too, because linking it to a document means choosing from a list the modal
                                     <span class="path" [title]="a.relativePath">{{ a.relativePath }}</span>
                                 </div>
                                 <div>{{ t().projects.assets.kindOne[a.kind] }}</div>
-                                <div class="right">{{ detailsOf(a) }} · {{ a.modifiedAt | zonedDate:'d MMM, HH:mm' }}</div>
+                                <div class="right">{{ detailsOf(a) }} · {{ a.modifiedAt | zonedDate:'MM/dd/yyyy, HH:mm' }}</div>
                                 <!-- "On disk" is a claim about *this* disk, and from a browser it would be
                                      false. Three states, not two. -->
                                 <div [class.danger]="!!a.missingSince" [class.ok]="!a.missingSince && isLocal()">
@@ -220,7 +220,7 @@ shelf too, because linking it to a document means choosing from a list the modal
                     <app-spec-row [label]="t().projects.assets.machineLabel" [value]="sourceMachineName()" />
                     @if (p.indexedAt) {
                         <app-spec-row [label]="t().projects.assets.indexedLabel"
-                                      [value]="p.indexedAt | zonedDate:'d MMM, HH:mm'" />
+                                      [value]="p.indexedAt | zonedDate:'MM/dd/yyyy, HH:mm'" />
                     } @else {
                         <app-spec-row warn [label]="t().projects.assets.indexedLabel"
                                       [value]="t().projects.assets.neverIndexed" />
@@ -260,7 +260,7 @@ shelf too, because linking it to a document means choosing from a list the modal
                         <p class="asset-name" [title]="a.relativePath">{{ a.fileName }}</p>
                         <app-spec-row [label]="t().projects.assets.colDetails" [value]="detailsOf(a)" />
                         <app-spec-row [label]="t().drafts.columns.updated"
-                                      [value]="a.modifiedAt | zonedDate:'d MMM y, HH:mm'" />
+                                      [value]="a.modifiedAt | zonedDate:'MM/dd/yyyy, HH:mm'" />
                         <app-spec-row [warn]="!!a.missingSince" [label]="t().projects.assets.colStatus"
                                       [value]="a.missingSince ? t().projects.assets.notFoundAtPath
                                                : (isLocal() ? t().projects.assets.onDisk : t().projects.assets.fingerprint)" />
@@ -269,7 +269,7 @@ shelf too, because linking it to a document means choosing from a list the modal
                                           [value]="a.sourceMachine.name ?? t().projects.assets.unknownMachine" />
                         }
                         <app-spec-row [label]="t().projects.assets.indexedLabel"
-                                      [value]="a.indexedAt | zonedDate:'d MMM, HH:mm'" />
+                                      [value]="a.indexedAt | zonedDate:'MM/dd/yyyy, HH:mm'" />
 
                         @if (a.missingSince) { <p class="hint">{{ t().projects.assets.missingHint }}</p> }
                         <!-- Said plainly on the one screen showing a single file: what is here is a preview and

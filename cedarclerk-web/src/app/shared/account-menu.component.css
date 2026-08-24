@@ -38,26 +38,89 @@
     flex: none;
 }
 
-.profile-email {
-    font-size: var(--fs-ui);
-    color: var(--text);
-    margin: 6px 0 12px;
-    word-break: break-all;
-}
-
-.popover-divider {
-    border-top: 1px solid var(--border);
-    margin: 14px 0;
-}
-
-.account-popover app-button {
+/* ---------- The panel ---------- */
+.account-popover {
     display: flex;
-    width: 100%;
-    margin-bottom: 6px;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 232px;
 }
 
-.account-popover app-button:last-child {
-    margin-bottom: 0;
+.who {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--border);
+}
+
+.who-face {
+    width: 36px;
+    height: 36px;
+    font-size: var(--fs-16);
+}
+
+.who-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+    min-width: 0;
+}
+
+.who-email {
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--fs-meta);
+    font-weight: 600;
+    color: var(--text);
+}
+
+.account-actions {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* One row shape for all three, so the menu reads as a list of places and not as a stack of
+   plaques: the plaque face is what made "Profile" look like a form's submit button. */
+.account-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    box-sizing: border-box;
+    min-height: var(--hit-target);
+    padding: 0 var(--space-2);
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--fs-ui);
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.account-item:hover {
+    background: var(--hover);
+}
+
+.account-item app-icon {
+    color: var(--t2);
+    flex: none;
+}
+
+.account-item.is-danger,
+.account-item.is-danger app-icon {
+    color: var(--danger);
 }
 
 .avatar-img {

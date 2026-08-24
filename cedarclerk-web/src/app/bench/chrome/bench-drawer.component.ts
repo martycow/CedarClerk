@@ -31,6 +31,9 @@ let nextId = 0;
                 }
             </button>
             <span class="tabs"><ng-content select="[drawerTabs]" /></span>
+            <!--The lip is the bottom chrome's one clickable strip, so a control that belongs to the
+            window rather than to a page hangs here (ADR-201) — beside the pull, never inside it.-->
+            <span class="lip-actions"><ng-content select="[lipActions]" /></span>
             <span class="caret" aria-hidden="true"><app-icon name="caret-down" size="xs" /></span>
         </div>
 
@@ -130,6 +133,16 @@ let nextId = 0;
                 flex: none;
                 display: inline-flex;
                 align-items: flex-end;
+            }
+
+            .lip-actions {
+                flex: none;
+                display: inline-flex;
+                align-items: center;
+                gap: var(--space-1);
+                padding-right: var(--space-1);
+                --hit-chrome: var(--hit-trim);
+                --hit-target: var(--hit-trim);
             }
 
             /* The slide is a height, not a display swap: the journal stays in the tree so the

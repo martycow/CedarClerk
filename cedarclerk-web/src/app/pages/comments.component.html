@@ -59,7 +59,7 @@ list of every post. Feedback is grouped per post: a flat stream answered "what's
                             <app-icon name="trash" size="sm"></app-icon>
                         </button>
                     </div>
-                    <div class="comment-row-meta">{{ c.authorName || t().feedback.anonymous }} · {{ c.createdAt | zonedDate:'dd.MM, HH:mm' }}</div>
+                    <div class="comment-row-meta">{{ c.authorName || t().feedback.anonymous }} · {{ c.createdAt | zonedDate:'MM/dd, HH:mm' }}</div>
                     <div class="comment-row-text">{{ c.text }}</div>
                 </div>
                 }

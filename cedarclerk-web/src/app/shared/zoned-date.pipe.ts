@@ -10,7 +10,7 @@ import { formatInZone } from '../core/display-time';
  */
 @Pipe({ name: 'zonedDate', standalone: true })
 export class ZonedDatePipe implements PipeTransform {
-    transform(value: string | number | Date | null | undefined, pattern = 'd MMM yyyy, HH:mm'): string {
+    transform(value: string | number | Date | null | undefined, pattern = 'MM/dd/yyyy, HH:mm'): string {
         return formatInZone(value, pattern);
     }
 }

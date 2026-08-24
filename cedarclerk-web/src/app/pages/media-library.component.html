@@ -36,7 +36,7 @@ covering the list its 409 answer talks about.-->
                                 </span>
                                 <span class="tile-meta">
                                     <span class="tile-name" [title]="a.fileName">{{ a.fileName }}</span>
-                                    <span class="tile-sub">{{ bytes(a.sizeBytes) }} · {{ a.createdAt | zonedDate:'dd.MM' }}</span>
+                                    <span class="tile-sub">{{ bytes(a.sizeBytes) }} · {{ a.createdAt | zonedDate:'MM/dd' }}</span>
                                 </span>
                             </button>
                         }
@@ -50,7 +50,7 @@ covering the list its 409 answer talks about.-->
                                 <span class="tile-name" [title]="a.fileName">{{ a.fileName }}</span>
                                 <span class="list-type">{{ a.contentType }}</span>
                                 <span class="list-size">{{ bytes(a.sizeBytes) }}</span>
-                                <span class="list-date">{{ a.createdAt | zonedDate:'dd.MM.yyyy' }}</span>
+                                <span class="list-date">{{ a.createdAt | zonedDate:'MM/dd/yyyy' }}</span>
                             </button>
                         }
                     </div>
@@ -99,7 +99,7 @@ covering the list its 409 answer talks about.-->
                         <app-spec-row [label]="t().media.fileType" [value]="a.contentType" />
                         <app-spec-row [label]="t().media.fileSize" [value]="bytes(a.sizeBytes)" />
                         <app-spec-row [label]="t().media.added"
-                                      [value]="a.createdAt | zonedDate:'dd.MM.yyyy, HH:mm'" />
+                                      [value]="a.createdAt | zonedDate:'MM/dd/yyyy, HH:mm'" />
 
                         <p class="hint">{{ t().media.insertHint }}</p>
                         <p class="hint">{{ t().media.deleteForever }}</p>

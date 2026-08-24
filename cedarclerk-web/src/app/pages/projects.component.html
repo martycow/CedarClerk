@@ -75,7 +75,7 @@
                                 number on the day it stopped having anything left to do.-->
                                 <span class="right num">{{ p.openTaskCount }}</span>
                                 <span class="right num">{{ p.assetCount }}</span>
-                                <span class="when">{{ p.lastActivityAt | zonedDate:'d MMM, HH:mm' }}</span>
+                                <span class="when">{{ p.lastActivityAt | zonedDate:'MM/dd/yyyy, HH:mm' }}</span>
                                 <span>
                                     <app-stamp-badge [tone]="p.archivedAt ? 'ink' : 'pine'" [rotate]="0">
                                         {{ p.archivedAt ? t().projects.stateArchived : t().projects.stateActive }}

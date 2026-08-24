@@ -52,7 +52,7 @@ const BLOG_SLOT: SeriesSlot = 2;
 const CHANNEL_SLOTS: readonly SeriesSlot[] = [1, 3, 4, 5, 6];
 
 const DAY_KEY = 'yyyy-MM-dd';
-const DAY_LABEL = 'dd.MM';
+const DAY_LABEL = 'MM/dd';
 
 const group = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
@@ -111,7 +111,23 @@ export class StatsComponent implements OnInit {
     // Geography only exists for the blog: Telegram's Bot API reports no per-country breakdown,
     // so the shelf names the source it is answering about (ADR-097, ADR-149 item 4).
     countryRows = computed(() => this.audienceRows(this.blogStats()?.countries ?? [], 'region'));
-    languageRows = computed(() => this.audienceRows(this.blogStats()?.languages ?? [], 'language'));
+
+    // A reading language is what a browser volunteers in Accept-Language, and a great many clients
+    // volunteer nothing — a link preview fetcher, a feed reader, an in-app webview. Ranked among
+    // real languages that bucket wins the list and reads as a language people speak, which is the
+    // one thing it is not. It is stated underneath instead, as the share of views the question was
+    // never answered for.
+    languageRows = computed(() => this.audienceRows(
+        (this.blogStats()?.languages ?? []).filter(s => s.code !== UNKNOWN_GEO), 'language'));
+
+    unreportedLanguageShare = computed(() => {
+        const slices = this.blogStats()?.languages ?? [];
+        const total = slices.reduce((sum, s) => sum + s.views, 0);
+        if (!total) return 0;
+        const unknown = slices.filter(s => s.code === UNKNOWN_GEO).reduce((sum, s) => sum + s.views, 0);
+        return Math.round((unknown / total) * 100);
+    });
+
     hasAudience = computed(() => this.countryRows().length > 0);
 
     // The newest reading over every source, so the strip says how fresh the whole board is.
