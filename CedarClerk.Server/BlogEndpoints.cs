@@ -2275,11 +2275,15 @@ public static class BlogEndpoints
         /* ── The index toolbar: one sort/filter button off a paper popover, the reading menu's own
            open/close mechanism ─────────────────────────────────────────────────────────────────── */
         /* Leaves on the reading edge, the order control on the far one, both on one baseline. */
+        /* One height for everything on this bar — the two controls and the leaves between them.
+           A 44px order button beside a 28px leaf on one line reads as two rows that failed to
+           separate; 32px clears the 24px minimum target and is what the row is drawn at. */
         .index-bar { display: flex; align-items: flex-start; gap: 12px; margin: 0 0 20px; }
+        .index-bar .tag-chip, .index-bar .lang-chip, .index-bar .index-sort-btn { min-height: 32px; }
         /* Two or three letters, one lit: the index reads in one language at a time, so this is a
            segmented pick and not a set of filters that combine the way the leaves beside it do. */
         .index-lang { display: inline-flex; flex: none; border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); background: var(--sheet); box-shadow: var(--shadow-paper-sm); overflow: hidden; }
-        .lang-chip { display: inline-flex; align-items: center; min-height: 30px; padding: 0 11px; font-family: var(--font-readout); font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--t2); }
+        .lang-chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 11px; font-family: var(--font-readout); font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--t2); }
         .lang-chip + .lang-chip { border-left: 1px solid var(--paper-edge); }
         .lang-chip:hover { background: var(--alt); color: var(--text); }
         .lang-chip.current { background-image: var(--grad-pine); color: var(--text-on-pine); box-shadow: var(--shadow-pine-btn); }
