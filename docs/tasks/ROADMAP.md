@@ -11,7 +11,7 @@ Live phase-by-phase execution log, folded in from the former `Plans/cedar-clerk-
 
 ## Status summary (as of 24.08.2026)
 
-**Second annotated round (`T-281`, ADR-200…203, v0.14.0).** Nineteen screenshots and six product
+**Second annotated round (`T-281`, ADR-200…203, v0.14.1).** Nineteen screenshots and six product
 notes, closed as one pass. The bulk of it was a single missing box: ADR-200's trim tier (24px) for
 chips and for controls riding a chrome band, which is what every "too tall" note was pointing at.
 Index tiles are now cut into the board they switch on every screen that has them; a panel's name

@@ -1,6 +1,6 @@
 # Changelog
 
-## 2026-08-24 — the trim tier, panel-edge tabs and the blog's own language (0.14.0)
+## 2026-08-24 — the trim tier, panel-edge tabs and the blog's own language (0.14.1)
 
 **A second annotated-screens round, and the answer to most of it was one missing box.** Every
 "too tall" note pointed at the same thing: the port drew chips and band passengers at a paper
