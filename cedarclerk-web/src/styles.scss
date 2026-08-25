@@ -1,32 +1,33 @@
-/* The self-hosted faces — one file per weight per named subset, because the explicit list is
-   what bounds the payload and a whole-family import is what it was chosen against. Nothing above
-   the base blocks may spell a base-block selector, in code or in prose: tools/check-contrast.mjs
-   and tools/generate-design-tokens.mjs each anchor a block on the first occurrence of its
-   selector text, and a mention up here once pointed the dark check at the light block. */
-@use '@fontsource/vollkorn/latin-600.css' as *;
-@use '@fontsource/vollkorn/latin-700.css' as *;
-@use '@fontsource/vollkorn/cyrillic-600.css' as *;
-@use '@fontsource/vollkorn/cyrillic-700.css' as *;
-@use '@fontsource/source-sans-3/latin-400.css' as *;
-@use '@fontsource/source-sans-3/latin-600.css' as *;
-@use '@fontsource/source-sans-3/latin-700.css' as *;
-@use '@fontsource/source-sans-3/cyrillic-400.css' as *;
-@use '@fontsource/source-sans-3/cyrillic-600.css' as *;
-@use '@fontsource/source-sans-3/cyrillic-700.css' as *;
-@use '@fontsource/literata/latin-400.css' as *;
-@use '@fontsource/literata/latin-600.css' as *;
-@use '@fontsource/literata/cyrillic-400.css' as *;
-@use '@fontsource/literata/cyrillic-600.css' as *;
-@use '@fontsource/caveat/latin-500.css' as *;
-@use '@fontsource/caveat/cyrillic-500.css' as *;
+/* The self-hosted faces — one file per weight, which is the per-weight sheet carrying every
+   subset the family has, each with its own unicode-range.
+
+   Not the per-subset sheets (latin-600.css, cyrillic-600.css): those carry no range at all, so
+   two of them for one weight are two rules with the same family, weight and style covering all of
+   U+0-10FFFF, and the later one wins outright. Importing latin and then cyrillic therefore drew
+   every Latin glyph from the cyrillic file, which does not have them — so the text fell to the
+   next family in the stack while the app claimed Vollkorn and Literata (T-275).
+
+   The range is also what bounds the payload, and bounds it better than the explicit list did: a
+   subset whose characters never appear on the page is never fetched, so greek and vietnamese cost
+   a rule each and no bytes.
+
+   Nothing above the base blocks may spell a base-block selector, in code or in prose:
+   tools/check-contrast.mjs and tools/generate-design-tokens.mjs each anchor a block on the first
+   occurrence of its selector text, and a mention up here once pointed the dark check at the light
+   block. */
+@use '@fontsource/vollkorn/600.css' as *;
+@use '@fontsource/vollkorn/700.css' as *;
+@use '@fontsource/source-sans-3/400.css' as *;
+@use '@fontsource/source-sans-3/600.css' as *;
+@use '@fontsource/source-sans-3/700.css' as *;
+@use '@fontsource/literata/400.css' as *;
+@use '@fontsource/literata/600.css' as *;
+@use '@fontsource/caveat/500.css' as *;
 
 /* --font-mono's face (ADR-191) — 400/600/700, the three weights every call site actually uses. */
-@use '@fontsource/martian-mono/latin-400.css' as *;
-@use '@fontsource/martian-mono/latin-600.css' as *;
-@use '@fontsource/martian-mono/latin-700.css' as *;
-@use '@fontsource/martian-mono/cyrillic-400.css' as *;
-@use '@fontsource/martian-mono/cyrillic-600.css' as *;
-@use '@fontsource/martian-mono/cyrillic-700.css' as *;
+@use '@fontsource/martian-mono/400.css' as *;
+@use '@fontsource/martian-mono/600.css' as *;
+@use '@fontsource/martian-mono/700.css' as *;
 
 /* The fifth face (ADR-180): a pixel monospace for instrument readings, from the tree rather
    than from a package — it has none. One 22 KB file covers latin, cyrillic and greek, so there
