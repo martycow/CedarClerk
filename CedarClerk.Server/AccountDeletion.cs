@@ -1,3 +1,4 @@
+using CedarClerk.Server.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
@@ -19,7 +20,8 @@ public static class AccountDeletion
     /// Deletes the account, its rows and its media files. Returns false when there is no such
     /// account, which is not an error — the caller asked for a state that already holds.
     /// </summary>
-    public static async Task<bool> DeleteAsync(CedarDbContext db, string ownerId, string? mediaDir)
+    public static async Task<bool> DeleteAsync(CedarDbContext db, string ownerId, string? mediaDir,
+        TenantOwnerCache.ForHosts hosts)
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == ownerId);
         if (user is null) return false;
@@ -71,6 +73,10 @@ public static class AccountDeletion
 
         db.Users.Remove(user);
         await db.SaveChangesAsync();
+
+        // Before the files, and after the rows: the subdomain must stop answering as soon as the
+        // account behind it is gone, rather than serving an empty blog until the entry expires.
+        if (user.TenantUsername is { } name) hosts.Forget(name);
 
         if (mediaDir is not null) DeleteFiles(mediaDir, files);
         return true;

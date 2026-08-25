@@ -43,6 +43,16 @@ public class TenantOwnerCache(TimeProvider? time = null)
     /// <summary>Readable so a test can hold the cache to its own bound.</summary>
     public int Count => entries.Count;
 
+    /// <summary>
+    /// Drop one name. Expiry is still what keeps an entry honest in general — this is for the one
+    /// change that cannot wait for it: a deleted account whose subdomain would otherwise keep
+    /// answering, with an empty blog, until the entry aged out (T-292).
+    /// </summary>
+    public void Forget(string name)
+    {
+        if (entries.TryRemove(name, out _)) Interlocked.Decrement(ref estimate);
+    }
+
     public async ValueTask<string?> GetAsync(
         string name, Func<CancellationToken, Task<string?>> load, CancellationToken ct = default)
     {

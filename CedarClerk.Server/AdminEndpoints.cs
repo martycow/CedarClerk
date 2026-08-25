@@ -195,7 +195,8 @@ public static class AdminEndpoints
         // survives and why. The audit row is written before the delete, since the account it names
         // will not be there to read afterwards.
         group.MapDelete("/users/{id}", async (string id, ClaimsPrincipal principal,
-            UserManager<ApplicationUser> users, CedarDbContext db, MediaPaths media, ILogger<Program> logger) =>
+            UserManager<ApplicationUser> users, CedarDbContext db, MediaPaths media,
+            TenantOwnerCache.ForHosts hosts, ILogger<Program> logger) =>
         {
             var actor = (await users.GetUserAsync(principal))!;
             // Same reasoning as locking yourself out, one step further: there is no way back at all.
@@ -215,7 +216,7 @@ public static class AdminEndpoints
                 $"{counts.drafts} drafts, {counts.assets} files, {counts.channels} channels");
             await db.SaveChangesAsync();
 
-            await AccountDeletion.DeleteAsync(db, id, media.Dir);
+            await AccountDeletion.DeleteAsync(db, id, media.Dir, hosts);
             logger.LogWarning("Account {Email} deleted by {Actor} — {Drafts} drafts, {Assets} files",
                 target.Email, actor.Email, counts.drafts, counts.assets);
 

@@ -26,15 +26,22 @@ public class TenantRoutingTests : IDisposable
 
     private readonly string _webRoot = Path.Combine(Path.GetTempPath(), "cedar-routing-" + Guid.NewGuid().ToString("N"));
 
+    private readonly string _downloads = Path.Combine(Path.GetTempPath(), "cedar-downloads-" + Guid.NewGuid().ToString("N"));
+
     public TenantRoutingTests()
     {
+        Directory.CreateDirectory(_downloads);
         Directory.CreateDirectory(Path.Combine(_webRoot, "assets", "fonts"));
         File.WriteAllText(Path.Combine(_webRoot, "index.html"), Shell);
         File.WriteAllText(Path.Combine(_webRoot, "og-default.png"), "PNG");
         File.WriteAllText(Path.Combine(_webRoot, "assets", "fonts", "inter.woff2"), Font);
     }
 
-    public void Dispose() => Directory.Delete(_webRoot, recursive: true);
+    public void Dispose()
+    {
+        Directory.Delete(_webRoot, recursive: true);
+        Directory.Delete(_downloads, recursive: true);
+    }
 
     private sealed record Answer(int Status, string Body);
 
@@ -78,6 +85,7 @@ public class TenantRoutingTests : IDisposable
         app.UseLanding();
         app.UseWhen(ctx => !TenantRouting.IsTenantRequest(ctx), appHost => appHost.UseDefaultFiles());
         app.UseStaticFiles();
+        app.UseDesktopDownloadFiles(_downloads);
         app.MapWhen(ctx => TenantRouting.IsTenantRequest(ctx),
             blogApp => blogApp.Run(ctx => ctx.Response.WriteAsync($"{Blog} {ctx.Request.Path}")));
 
@@ -210,4 +218,22 @@ public class TenantRoutingTests : IDisposable
         Assert.Contains("waitlist-form", answer.Body);
     }
 
+
+    // T-290. The installers are public artifacts, so this is consistency rather than disclosure:
+    // a host that serves one account's blog should not also be a download mirror.
+    [Fact]
+    public async Task A_tenant_subdomain_does_not_serve_desktop_downloads()
+    {
+        File.WriteAllText(Path.Combine(_downloads, "latest.yml"), "version: 1.0.0");
+
+        var appHost = await RequestAsync("cedarclerk.app", "/downloads/latest.yml");
+        Assert.Equal(StatusCodes.Status200OK, appHost.Status);
+        Assert.Contains("version: 1.0.0", appHost.Body);
+
+        // On a subdomain the request falls through to the blog, which is what serves a path it does
+        // not know as a 404. What matters here is that the file itself never reached the reader.
+        var tenant = await RequestAsync("a.cedarclerk.app", "/downloads/latest.yml", resolvedTenant: true);
+        Assert.DoesNotContain("version: 1.0.0", tenant.Body);
+        Assert.StartsWith(Blog, tenant.Body);
+    }
 }

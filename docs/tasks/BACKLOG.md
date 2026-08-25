@@ -166,7 +166,10 @@ Built and recorded in ADR-206…213 (session in `docs/tasks/CHANGELOG.md`, 25.08
 holds — 1170 backend tests green plus a live three-tenant matrix — but **nothing here has been deployed**.
 Backend, migrations and the live matrix were verified locally.
 
-Closed after that review: T-285 (an unrecognised `Host:` no longer switches the boundary off — a
+Closed after that review: T-290 (the desktop-download files are skipped on a tenant subdomain —
+the convenience route needed no guard, `UseBlogOnlyHost` had already dropped its endpoint),
+T-292 (deleting an account forgets its host→owner entry immediately instead of leaving the
+subdomain to answer with an empty blog until the entry aged out), T-285 (an unrecognised `Host:` no longer switches the boundary off — a
 file is public, gated, or the owner's own, and which name the reader typed does not enter into it;
 Telegram's anonymous fetcher gets a signed short-lived grant per file instead of every unclaimed
 file being readable), T-288 (the host and media caches are separate registered types, so a flood of
@@ -177,8 +180,6 @@ private posts whether or not they are published), T-286 (cross-post links carryi
 the legacy blog host: that host no longer exists in the code at all. A blog is reached at
 `{username}.{tenant domain}` and nowhere else, so `Cedar:BlogHost` and `Cedar:BlogOwner` are gone too.
 
-- [ ] T-290 `/downloads/*` answers on every host, including tenant subdomains — `UseDesktopDownloads` is registered unconditionally and typed `this WebApplication`, so it cannot enter a `UseWhen`. With a file present: 200 on `alpha.cedarclerk.app`, `blog.mooexe.dev` and `evil.example.com`. Public installers, so no disclosure — but it is the one thing left contradicting "a blog host serves a blog and nothing else" (ADR-210) #tenancy P3
-- [ ] T-292 A deleted account's subdomain answers for up to 30s — measured: root stayed 200 with an empty blog at t+1s/+6s/+18s and 404ed at ~38s. No rows leak (the cascade has already run). Accepted consequence of expiry-only invalidation, filed because it is the one case where "nothing invalidates an entry" is visible; rename cannot cause it (there is no username-rename endpoint anywhere in the server), so the reachable variant is delete-then-re-register inside the window (ADR-212) #tenancy P3
 - [ ] T-293 The tenant domain is live; what is left is the checklist around it — `cedarclerk.app` is registered, a wildcard answers (`*.cedarclerk.app` reaches Kestrel: an unregistered name gets the app's own 404, not Cloudflare's), TLS is valid and the apex serves the application. Verified 25.08 from outside. What remains is not infrastructure: the app host moved to the apex while `Cedar:MainHost` still defaulted to the old name (now fixed in code, so the `Cedar__MainHost` override in the drop-in is redundant), `blog.mooexe.dev` has no ingress rule and answers Cloudflare's 404 — decide whether it is retired for good or redirected to `martycow.cedarclerk.app`, and the dead `Cedar__BlogHost`/`Cedar__BlogOwner` keys can come out of `data.conf` #infra P2
 
 ## Bugs

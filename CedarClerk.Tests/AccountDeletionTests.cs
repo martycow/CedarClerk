@@ -6,6 +6,8 @@ namespace CedarClerk.Tests;
 
 public class AccountDeletionTests
 {
+    private static readonly TenantOwnerCache.ForHosts Hosts = new();
+
     private const string Keep = "keeper";
     private const string Drop = "doomed";
 
@@ -59,7 +61,7 @@ public class AccountDeletionTests
         using var connection = Seeded();
 
         using (var db = Platform(connection))
-            await AccountDeletion.DeleteAsync(db, Drop, mediaDir: null);
+            await AccountDeletion.DeleteAsync(db, Drop, mediaDir: null, Hosts);
 
         using var check = Platform(connection);
         Assert.Empty(check.Drafts.Where(x => x.OwnerId == Drop));
@@ -90,7 +92,7 @@ public class AccountDeletionTests
         using var connection = Seeded();
 
         using (var db = Platform(connection))
-            await AccountDeletion.DeleteAsync(db, Drop, mediaDir: null);
+            await AccountDeletion.DeleteAsync(db, Drop, mediaDir: null, Hosts);
 
         using var check = Platform(connection);
         Assert.Single(check.Drafts.Where(x => x.OwnerId == Keep));
@@ -119,7 +121,7 @@ public class AccountDeletionTests
                 TargetUserId = Drop, TargetEmail = "d@x.test",
             });
             db.SaveChanges();
-            await AccountDeletion.DeleteAsync(db, Drop, mediaDir: null);
+            await AccountDeletion.DeleteAsync(db, Drop, mediaDir: null, Hosts);
         }
 
         using var check = Platform(connection);
@@ -133,7 +135,7 @@ public class AccountDeletionTests
         using var connection = Seeded();
         using var db = Platform(connection);
 
-        Assert.False(await AccountDeletion.DeleteAsync(db, "nobody", mediaDir: null));
+        Assert.False(await AccountDeletion.DeleteAsync(db, "nobody", mediaDir: null, Hosts));
         Assert.Equal(2, db.Users.Count());
     }
 
@@ -149,7 +151,7 @@ public class AccountDeletionTests
         try
         {
             using var db = Platform(connection);
-            await AccountDeletion.DeleteAsync(db, Drop, mediaDir);
+            await AccountDeletion.DeleteAsync(db, Drop, mediaDir, Hosts);
 
             Assert.False(File.Exists(Path.Combine(mediaDir, Drop + ".png")));
             Assert.True(File.Exists(Path.Combine(mediaDir, Keep + ".png")));
@@ -177,7 +179,7 @@ public class AccountDeletionTests
             {
                 db.Assets.Add(new Asset { OwnerId = Drop, FileName = "evil", LocalPath = "../important.txt" });
                 db.SaveChanges();
-                await AccountDeletion.DeleteAsync(db, Drop, mediaDir);
+                await AccountDeletion.DeleteAsync(db, Drop, mediaDir, Hosts);
             }
 
             Assert.True(File.Exists(outsider));
@@ -186,5 +188,39 @@ public class AccountDeletionTests
         {
             Directory.Delete(root, recursive: true);
         }
+    }
+
+    // T-292. Expiry is what keeps a host→owner entry honest in general, but a deleted account is
+    // the one change that cannot wait for it: the subdomain would keep answering, with an empty
+    // blog, for as long as the entry had left.
+    [Fact]
+    public async Task Deleting_an_account_stops_its_subdomain_answering_at_once()
+    {
+        using var connection = Seeded();
+        var hosts = new TenantOwnerCache.ForHosts();
+
+        using (var db = Platform(connection))
+        {
+            db.Users.Single(u => u.Id == Drop).TenantUsername = "doomed";
+            db.SaveChanges();
+        }
+
+        var asked = 0;
+        ValueTask<string?> Lookup() => hosts.GetAsync("doomed", _ =>
+        {
+            asked++;
+            using var db = Platform(connection);
+            return Task.FromResult(db.Users.Where(u => u.TenantUsername == "doomed").Select(u => u.Id).FirstOrDefault());
+        });
+
+        Assert.Equal(Drop, await Lookup());
+        Assert.Equal(Drop, await Lookup());
+        Assert.Equal(1, asked);
+
+        using (var db = Platform(connection))
+            await AccountDeletion.DeleteAsync(db, Drop, mediaDir: null, hosts);
+
+        Assert.Null(await Lookup());
+        Assert.Equal(2, asked);
     }
 }

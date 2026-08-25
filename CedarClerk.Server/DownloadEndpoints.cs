@@ -33,14 +33,25 @@ public static class DownloadEndpoints
     public static void UseDesktopDownloads(this WebApplication app, string downloadsDir)
     {
         Directory.CreateDirectory(downloadsDir);
+        app.UseDesktopDownloadFiles(downloadsDir);
+        app.MapDesktopDownloadRoute(downloadsDir);
+    }
 
+    /// <summary>
+    /// The files themselves. Skipped on a tenant subdomain: that host serves one account's blog,
+    /// and a download mirror is not part of one (T-290). The convenience route below needs no such
+    /// guard — <c>UseBlogOnlyHost</c> has already dropped the endpoint by then.
+    /// </summary>
+    public static void UseDesktopDownloadFiles(this IApplicationBuilder app, string downloadsDir)
+    {
         // Neither extension is in the default map, and the static-file middleware answers 404 for a
         // type it cannot name — which would look exactly like "no update was published".
         var contentTypes = new FileExtensionContentTypeProvider();
         contentTypes.Mappings[".yml"] = "text/yaml";
         contentTypes.Mappings[".blockmap"] = "application/octet-stream";
 
-        app.UseStaticFiles(new StaticFileOptions
+        app.UseWhen(ctx => !Tenancy.TenantRouting.IsTenantRequest(ctx), downloads =>
+            downloads.UseStaticFiles(new StaticFileOptions
         {
             FileProvider = new PhysicalFileProvider(downloadsDir),
             RequestPath = RequestPath,
@@ -56,12 +67,18 @@ public static class DownloadEndpoints
                         ? "no-cache, must-revalidate"
                         : "public, max-age=604800";
             }
-        });
+        }));
 
-        // A link Marty can hand out that does not change with every release. It reads the version
-        // out of the manifest rather than out of Consts, because the installer is shipped by
-        // `deploy -Desktop` and the server by every deploy: the two versions legitimately differ,
-        // and guessing from the running server's version would 404 exactly when they do.
+    }
+
+    /// <summary>
+    /// A link Marty can hand out that does not change with every release. It reads the version out
+    /// of the manifest rather than out of Consts, because the installer is shipped by
+    /// `deploy -Desktop` and the server by every deploy: the two versions legitimately differ, and
+    /// guessing from the running server's version would 404 exactly when they do.
+    /// </summary>
+    public static void MapDesktopDownloadRoute(this WebApplication app, string downloadsDir)
+    {
         app.MapGet($"{RequestPath}/latest", () =>
         {
             var manifestPath = Path.Combine(downloadsDir, Manifest);
