@@ -326,9 +326,10 @@ public static class BlogEndpoints
         var db = ctx.RequestServices.GetRequiredService<CedarDbContext>();
 
         // Whose blog this is, named in every query below rather than left to the ambient filter.
-        if (await BlogTenant.SiteOfAsync(ctx, db) is not { } site)
+        // Only a resolved subdomain reaches here, so this cannot fail without the routing being wrong.
+        if (BlogTenant.SiteOf(ctx) is not { } site)
         {
-            ctx.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
         }
 
@@ -2739,14 +2740,14 @@ public static class BlogEndpoints
         <div class="site-footer"><div class="site-footer-inner">
         <div class="footer-brand">
         <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12,2 19,11 5,11" fill="var(--pine-mark)"></polygon><polygon points="12,7 21,18 3,18" fill="var(--pine-mark)" opacity="0.75"></polygon><rect x="10.6" y="18" width="2.8" height="4" rx="1" fill="var(--pine-mark)" opacity="0.9"></rect></svg>
-        <span>Made with <a href="https://cedarclerk.mooexe.dev">Cedar Clerk</a> — write here, publish there. Moo.</span>
+        <span>Made with <a href="https://cedarclerk.app">Cedar Clerk</a> — write here, publish there. Moo.</span>
         </div>
         <!--Terms and Privacy live on the app host, not here: one copy of a legal page, and the blog
         is a second host serving the same product. Status is the uptime page (T-148) — a link a reader
         can reach precisely when the blog itself cannot answer, which is why it is not self-hosted.-->
         <nav class="footer-links">
-        <a href="https://cedarclerk.mooexe.dev/terms">Terms</a>
-        <a href="https://cedarclerk.mooexe.dev/privacy">Privacy</a>
+        <a href="https://cedarclerk.app/terms">Terms</a>
+        <a href="https://cedarclerk.app/privacy">Privacy</a>
         <!--UptimeRobot's own domain, not status.mooexe.dev: a custom domain is a paid feature there
         (13.08.2026). Swap the href when the plan changes; the DNS record already points at them.-->
         <a href="https://stats.uptimerobot.com/jKcnizZ9vU" target="_blank" rel="noopener">Status</a>

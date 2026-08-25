@@ -10,6 +10,7 @@ import { CommentsService } from '../core/comments.service';
 import { RulerService } from '../core/ruler.service';
 import { RailActionsService } from '../core/rail-actions.service';
 import { LocaleService } from '../core/i18n/locale.service';
+import { AuthService } from '../core/auth.service';
 import { en } from '../core/i18n/en';
 
 function draft(id: string, over: Partial<DraftMeta> = {}): DraftMeta {
@@ -140,6 +141,8 @@ describe('posts manager', () => {
         ruler = TestBed.inject(RulerService);
         rail = TestBed.inject(RailActionsService);
         TestBed.inject(LocaleService).set('en');
+        // A blog lives at its owner's subdomain, and the component asks the server which one.
+        TestBed.inject(AuthService).blogUrl.set('https://martycow.cedarclerk.app');
         fixture = TestBed.createComponent(PostsManagerComponent);
         await settle();
     });
@@ -205,7 +208,7 @@ describe('posts manager', () => {
 
         const hrefs = [...shelf().querySelectorAll('a.insp-link')].map(a => a.getAttribute('href'));
         expect(hrefs).toEqual([
-            'https://blog.mooexe.dev/devlog-12',
+            'https://martycow.cedarclerk.app/devlog-12',
             'https://t.me/testingandfun/42',
             'https://bsky.app/p/1',
         ]);

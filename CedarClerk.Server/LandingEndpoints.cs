@@ -32,20 +32,12 @@ public static class LandingEndpoints
     /// static-file pipeline that already serves the app. An endpoint would have to know where
     /// index.html lives and hand it back itself — which is the SPA host's job, not this page's.
     /// </summary>
-    /// <param name="blogHost">
-    /// Excluded by name. The blog serves its own index at "/" on its own host, and the first
-    /// version of this middleware matched the path alone — quietly replacing the blog's homepage
-    /// with a marketing page. Caught by the smoke suite, which is what it is for. A tenant
-    /// subdomain is excluded on the same grounds, by <see cref="TenantRouting.ServesBlog"/>: it has
-    /// a blog index of its own, and a marketing page there would be one cacheable, indexable copy
-    /// of this page per registered account.
-    /// </param>
-    public static void UseLanding(this IApplicationBuilder app, string blogHost)
+    public static void UseLanding(this IApplicationBuilder app)
     {
         app.Use(async (ctx, next) =>
         {
             var isRoot = ctx.Request.Path == "/" || ctx.Request.Path == "";
-            if (!isRoot || TenantRouting.ServesBlog(ctx, blogHost)
+            if (!isRoot || TenantRouting.IsTenantRequest(ctx)
                 || ctx.Request.Method != HttpMethods.Get || ctx.Request.Cookies.ContainsKey(AuthCookie))
             {
                 await next();
@@ -56,7 +48,7 @@ public static class LandingEndpoints
             ctx.Response.ContentType = "text/html; charset=utf-8";
             // A marketing page is worth caching at the edge, but not for long: it carries prices.
             ctx.Response.Headers.CacheControl = "public, max-age=300";
-            await ctx.Response.WriteAsync(Render(ru));
+            await ctx.Response.WriteAsync(Render(ru, ctx.RequestServices.GetRequiredService<IConfiguration>()[Consts.General.ShowcaseBlogCfg]));
         });
     }
 
@@ -230,7 +222,7 @@ public static class LandingEndpoints
         .Replace("%%DONE%%", ru ? "Вы в списке — инвайт придёт на эту почту." : "You are on the list — the invite will land in this inbox.")
         .Replace("%%FAIL%%", ru ? "Не получилось отправить — попробуйте ещё раз." : "Could not send — try again.");
 
-    private static string Render(bool ru)
+    private static string Render(bool ru, string? showcaseBlog)
     {
         string T(string russian, string english) => ru ? russian : english;
 
@@ -342,9 +334,11 @@ public static class LandingEndpoints
                     </form>
                     <p class="hero-note" id="waitlist-note">{T("Регистрация пока по инвайтам — оставьте почту, и инвайт придёт, когда двери откроются.",
                         "Registration is invite-only for now — leave an email and get an invite when the doors open.")}</p>
+                    {(showcaseBlog is null ? "" : $"""
                     <div class="hero-actions">
-                        <a class="btn btn-ghost" href="https://{Consts.URLs.BlogHost}">{T("Посмотреть живой блог", "See a live blog")}</a>
+                        <a class="btn btn-ghost" href="https://{showcaseBlog}">{T("Посмотреть живой блог", "See a live blog")}</a>
                     </div>
+                    """)}
                 </section>
 
                 <section>
@@ -386,7 +380,7 @@ public static class LandingEndpoints
                 <span class="spacer"></span>
                 <a href="/terms">{T("Условия", "Terms")}</a>
                 <a href="/privacy">{T("Приватность", "Privacy")}</a>
-                <a href="https://{Consts.URLs.BlogHost}">{T("Блог", "Blog")}</a>
+                {(showcaseBlog is null ? "" : $"""<a href="https://{showcaseBlog}">{T("Блог", "Blog")}</a>""")}
             </div></footer>
             <script>{WaitlistScript(ru)}</script>
             </body>

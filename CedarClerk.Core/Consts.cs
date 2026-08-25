@@ -12,7 +12,7 @@ public static class Consts
     public const string DataProtectionApplicationName = "CedarClerk.Server";
     
     // Prohibited subdomains to prevent users to use them
-    public static string[] ReservedSubdomains =
+    public static readonly string[] ReservedSubdomains =
     [
         "www", "app", "api", "admin", "mail", "blog", "docs", "status", "cdn",
         "static", "assets", "help", "support", "billing", "auth", "login",
@@ -50,10 +50,7 @@ public static class Consts
 
     public static class URLs
     {
-        public const string MainHost = "https://cedarclerk.mooexe.dev";
-        public const string BlogHost = "blog.mooexe.dev";
-
-        // Tenant blogs live at <username>.cedarclerk.app (ADR-020).
+        public const string MainHost = "https://cedarclerk.app";
         public const string TenantHost = "cedarclerk.app";
         public const string Localhost = "http://localhost:8080";
     }
@@ -79,12 +76,14 @@ public static class Consts
         public const string DisplayTimeZoneDaylight = "PDT";
 
         public const string MainHostCfg = "Cedar:MainHost";
-        public const string BlogHostCfg = "Cedar:BlogHost";
         public const string TenantHostCfg = "Cedar:TenantHost";
+
+        // A blog to show a stranger on the landing page, as a full host. Unset hides the link
+        // rather than guessing an account.
+        public const string ShowcaseBlogCfg = "Cedar:ShowcaseBlog";
 
         // The TenantUsername of the account whose blog answers on the legacy blog host. Unset means
         // "the one admin account", which is what a single-tenant install already is.
-        public const string BlogOwnerCfg = "Cedar:BlogOwner";
         public const string InviteCodeCfg = "Cedar:InviteCode";
 
         // Set ONLY by the desktop shell, which binds to 127.0.0.1 and serves one person on their own

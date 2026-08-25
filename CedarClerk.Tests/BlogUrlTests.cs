@@ -8,7 +8,7 @@ using Microsoft.Extensions.Configuration;
 namespace CedarClerk.Tests;
 
 // Slugs are per-owner, so a URL is only a URL together with the host that serves it. Built against
-// the legacy host instead, "devlog-1" resolves to the legacy owner's post for everybody — and
+// somebody else's host instead, "devlog-1" resolves to that account's post for everybody — and
 // these links leave the app for good: into channel history, into an invite mail, into a blog page.
 public class BlogUrlTests
 {
@@ -40,7 +40,7 @@ public class BlogUrlTests
         var legacy = await MicroThreadPlan.BlogUrlAsync(Post("legacy"), Languages.Russian, db, Config());
         var writer = await MicroThreadPlan.BlogUrlAsync(Post("writer"), Languages.Russian, db, Config());
 
-        Assert.Equal($"https://{Consts.URLs.BlogHost}/{Slug}", legacy);
+        Assert.Equal($"https://martycow.{Consts.URLs.TenantHost}/{Slug}", legacy);
         Assert.Equal($"https://writer.{Consts.URLs.TenantHost}/{Slug}", writer);
     }
 
@@ -54,7 +54,7 @@ public class BlogUrlTests
         Assert.Equal($"https://writer.{Consts.URLs.TenantHost}/{Slug}?lang=en", url);
     }
 
-    // Not the legacy host as a fallback: that would name a domain belonging to another account.
+    // No fallback host: any default would name a domain belonging to another account.
     [Fact]
     public async Task An_owner_with_no_host_gets_no_cross_link()
     {
@@ -83,13 +83,13 @@ public class BlogUrlTests
     }
 
     [Fact]
-    public async Task The_legacy_owners_invite_links_stay_on_the_legacy_host()
+    public async Task An_invite_link_carries_its_own_owners_host()
     {
         using var db = TwoOwners();
 
         var site = await BlogTenant.SiteForOwnerAsync(db, Config(), "legacy");
 
-        Assert.Equal($"https://{Consts.URLs.BlogHost}/{Slug}?invite=TOKEN",
+        Assert.Equal($"https://martycow.{Consts.URLs.TenantHost}/{Slug}?invite=TOKEN",
             DraftEndpoints.BuildInviteUrl(site, Post("legacy"), "TOKEN"));
     }
 
@@ -104,7 +104,7 @@ public class BlogUrlTests
         Assert.Null(DraftEndpoints.BuildInviteUrl(site, Post("nameless"), "TOKEN"));
     }
 
-    // The admin post list spans owners; resolving the legacy owner once per row would be an N+1.
+    // The admin post list spans owners, and one query has to answer for all of them.
     [Fact]
     public async Task Hosts_for_a_mixed_set_of_owners_come_back_in_one_batch()
     {
@@ -112,7 +112,7 @@ public class BlogUrlTests
 
         var hosts = await BlogTenant.HostsForOwnersAsync(db, Config(), ["legacy", "writer", "nameless", "writer"]);
 
-        Assert.Equal(Consts.URLs.BlogHost, hosts["legacy"]);
+        Assert.Equal($"martycow.{Consts.URLs.TenantHost}", hosts["legacy"]);
         Assert.Equal($"writer.{Consts.URLs.TenantHost}", hosts["writer"]);
         Assert.False(hosts.ContainsKey("nameless"));
     }

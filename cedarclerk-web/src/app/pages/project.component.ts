@@ -21,6 +21,7 @@ import { isOverdue } from '../core/tasks.service';
 import { sprintProgress } from '../core/sprints.service';
 import { RulerReadout } from '../bench/chrome/ruler-bar.component';
 import { RulerService } from '../core/ruler.service';
+import { AuthService } from '../core/auth.service';
 import { IconName } from '../shared/icon-data.generated';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
@@ -73,6 +74,7 @@ export class ProjectComponent implements OnDestroy {
     private route = inject(ActivatedRoute);
     private router = inject(Router);
     private ruler = inject(RulerService);
+    private auth = inject(AuthService);
     t = inject(LocaleService).t;
 
     readonly docTypes = DOCUMENT_TYPES;
@@ -296,7 +298,8 @@ export class ProjectComponent implements OnDestroy {
     /** The live public URL, shown under the toggle so the page is one click away once it exists. */
     showcaseUrl(): string | null {
         const slug = this.project()?.showcaseSlug;
-        return slug ? `https://blog.mooexe.dev/games/${slug}` : null;
+        const base = this.auth.blogUrl();
+        return slug && base ? `${base}/games/${slug}` : null;
     }
 
     async saveEdit() {

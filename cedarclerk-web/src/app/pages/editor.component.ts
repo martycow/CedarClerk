@@ -166,7 +166,6 @@ const KEEPALIVE_MAX_CHARS = 30_000;
 // same role TimeoutError used to play for the old RxJS-based autoTranslate$/aiEdit$.
 class AiJobTimeoutError extends Error {}
 
-const BLOG_HOST = 'blog.mooexe.dev';
 
 // The glyph the block chip leads with for a picked node; the paragraph/heading pair is derived.
 const BLOCK_CHIP_ICONS: Partial<Record<SelectionKind, IconName>> = {
@@ -2539,11 +2538,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     blogUrl(): string | null {
         const b = this.currentBlog();
-        return b ? `https://${BLOG_HOST}/${b.slug}` : null;
+        const base = this.auth.blogUrl();
+        return b && base ? `${base}/${b.slug}` : null;
     }
 
     blogHost(): string {
-        return BLOG_HOST;
+        return this.auth.blogUrl()?.replace(/^https?:\/\//, '') ?? '';
     }
 
     telegramUsername(): string | null {

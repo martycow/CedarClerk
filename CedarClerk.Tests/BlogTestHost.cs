@@ -16,7 +16,7 @@ internal static class BlogTestHost
 {
     public static HttpContext Request(
         string method, string path, CedarDbContext db, string query = "",
-        string host = Consts.URLs.BlogHost, string? tenantOwnerId = null,
+        string? host = null, string? tenantOwnerId = null,
         Dictionary<string, string?>? config = null)
     {
         var services = new ServiceCollection();
@@ -26,11 +26,17 @@ internal static class BlogTestHost
         services.AddDataProtection();
         services.AddSingleton<PrivateAccess>();
 
-        // What TenantResolutionMiddleware would have written for a subdomain request; left empty
-        // for the legacy blog host, which has to look its owner up instead.
+        // What TenantResolutionMiddleware would have written. A blog only ever renders for a
+        // resolved subdomain now, so a test that names no owner gets the database's first account —
+        // which is what every single-owner fixture here means.
+        var owner = db.Users.OrderBy(u => u.Id).FirstOrDefault();
+        var ownerId = tenantOwnerId ?? owner?.Id;
+        var username = (tenantOwnerId is not null ? null : owner?.TenantUsername) ?? "tenant";
+        host ??= $"{username}.{Consts.URLs.TenantHost}";
+
         var tenant = new TenantContext();
-        if (tenantOwnerId is not null)
-            tenant.Resolve(host.Split('.')[0], tenantOwnerId);
+        if (ownerId is not null)
+            tenant.Resolve(host.Split('.')[0], ownerId);
         services.AddSingleton(tenant);
 
         var ctx = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };

@@ -15,7 +15,6 @@ namespace CedarClerk.Tests;
 public class TenantScopeTests
 {
     private const string Domain = "cedarclerk.app";
-    private const string BlogHost = Consts.URLs.BlogHost;
 
     private sealed class FakeClock(DateTimeOffset start) : TimeProvider
     {
@@ -302,13 +301,11 @@ public class TenantScopeTests
 
         var tenant = new TenantProvider();
         var reached = false;
-        var fromUser = new TenantFromUserMiddleware(
-            _ => { reached = true; return Task.CompletedTask; }, BlogHost);
+        var fromUser = new TenantFromUserMiddleware(_ => { reached = true; return Task.CompletedTask; });
 
         await new TenantScopeMiddleware(
-                c => fromUser.InvokeAsync(c, tenant, NullLogger<TenantFromUserMiddleware>.Instance),
-                BlogHost, new TenantOwnerCache())
-            .InvokeAsync(ctx, tenant, resolved, cfg, NullLogger<TenantScopeMiddleware>.Instance);
+                c => fromUser.InvokeAsync(c, tenant, NullLogger<TenantFromUserMiddleware>.Instance))
+            .InvokeAsync(ctx, tenant, resolved);
 
         return new Outcome(reached, tenant.TenantId, ctx.User);
     }
@@ -341,19 +338,6 @@ public class TenantScopeTests
         Assert.Null(outcome.ActsAs);
     }
 
-    [Fact]
-    public async Task A_signed_in_visitor_on_the_legacy_blog_host_acts_as_nobody()
-    {
-        using var db = Database();
-        var blogOwner = SeedUser(db, "marty", admin: true);
-        var visitor = SeedUser(db, "sasha");
-
-        var outcome = await RunAsync(BlogHost, db, SignedInAs(visitor));
-
-        Assert.True(outcome.Reached);
-        Assert.False(outcome.Authenticated);
-        Assert.Equal(blogOwner, outcome.TenantId);
-    }
 
     [Fact]
     public async Task On_the_application_host_a_signed_in_user_is_still_their_own_tenant()
@@ -393,39 +377,6 @@ public class TenantScopeTests
         Assert.Equal(subdomainOwner, outcome.TenantId);
     }
 
-    [Fact]
-    public async Task The_legacy_blog_host_looks_its_owner_up_once()
-    {
-        using var db = Database();
-        var blogOwner = SeedUser(db, "marty", admin: true);
-
-        var cfg = new ConfigurationBuilder().Build();
-        var services = new ServiceCollection();
-        services.AddSingleton(db);
-        services.AddSingleton<IConfiguration>(cfg);
-        var counting = new CountingServices(services.BuildServiceProvider());
-
-        var cache = new TenantOwnerCache(Clock());
-        var tenants = new List<string?>();
-
-        for (var i = 0; i < 25; i++)
-        {
-            var tenant = new TenantProvider();
-            var ctx = new DefaultHttpContext { RequestServices = counting };
-            ctx.Request.Host = new HostString(BlogHost);
-            ctx.Request.Path = "/fonts/inter.woff2";
-            ctx.Response.Body = new MemoryStream();
-
-            await new TenantScopeMiddleware(_ => Task.CompletedTask, BlogHost, cache)
-                .InvokeAsync(ctx, tenant, new TenantContext(), cfg,
-                    NullLogger<TenantScopeMiddleware>.Instance);
-
-            tenants.Add(tenant.TenantId);
-        }
-
-        Assert.All(tenants, id => Assert.Equal(blogOwner, id));
-        Assert.Equal(1, counting.DbResolutions);
-    }
 
     #endregion
 }

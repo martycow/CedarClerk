@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using CedarClerk.Server;
 using CedarClerk.Server.Tenancy;
 using Microsoft.AspNetCore.Builder;
@@ -15,7 +16,6 @@ namespace CedarClerk.Tests;
 // stub in place of the blog — and drive requests through it.
 public class TenantRoutingTests : IDisposable
 {
-    private const string BlogHost = "blog.mooexe.dev";
     private const string AppHost = "cedarclerk.mooexe.dev";
     private const string TenantHost = "beta.cedarclerk.app";
 
@@ -54,6 +54,7 @@ public class TenantRoutingTests : IDisposable
         if (resolvedTenant) tenant.Resolve(host.Split('.')[0], "owner-of-" + host);
 
         var services = new ServiceCollection();
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
         services.AddLogging();
         services.AddSingleton(tenant);
         services.AddSingleton<IWebHostEnvironment>(new WebRoot(_webRoot));
@@ -74,10 +75,10 @@ public class TenantRoutingTests : IDisposable
         });
 
         app.UseBlogOnlyHost();
-        app.UseLanding(BlogHost);
+        app.UseLanding();
         app.UseWhen(ctx => !TenantRouting.IsTenantRequest(ctx), appHost => appHost.UseDefaultFiles());
         app.UseStaticFiles();
-        app.MapWhen(ctx => TenantRouting.ServesBlog(ctx, BlogHost),
+        app.MapWhen(ctx => TenantRouting.IsTenantRequest(ctx),
             blogApp => blogApp.Run(ctx => ctx.Response.WriteAsync($"{Blog} {ctx.Request.Path}")));
 
         app.Run(async ctx =>
@@ -169,13 +170,6 @@ public class TenantRoutingTests : IDisposable
         Assert.Equal(expected, answer.Body);
     }
 
-    [Fact]
-    public async Task The_legacy_blog_host_still_serves_its_blog()
-    {
-        var answer = await RequestAsync(BlogHost, "/");
-
-        Assert.Equal($"{Blog} /", answer.Body);
-    }
 
     [Fact]
     public async Task The_application_host_still_serves_the_landing_page()
@@ -216,22 +210,4 @@ public class TenantRoutingTests : IDisposable
         Assert.Contains("waitlist-form", answer.Body);
     }
 
-    [Theory]
-    [InlineData(BlogHost, false, true)]
-    [InlineData("BLOG.mooexe.dev", false, true)]
-    [InlineData(TenantHost, true, true)]
-    [InlineData(TenantHost, false, false)]
-    [InlineData(AppHost, false, false)]
-    public void ServesBlog_matches_the_legacy_host_and_every_resolved_tenant(string host, bool resolved, bool expected)
-    {
-        var tenant = new TenantContext();
-        if (resolved) tenant.Resolve(host.Split('.')[0], "owner");
-
-        var services = new ServiceCollection();
-        services.AddSingleton(tenant);
-        var ctx = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
-        ctx.Request.Host = new HostString(host);
-
-        Assert.Equal(expected, TenantRouting.ServesBlog(ctx, BlogHost));
-    }
 }

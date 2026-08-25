@@ -411,7 +411,8 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
     }
 
     blogUrl(d: DraftMeta): string | null {
-        return d.blogSlug ? `https://blog.mooexe.dev/${d.blogSlug}` : null;
+        const base = this.auth.blogUrl();
+        return d.blogSlug && base ? `${base}/${d.blogSlug}` : null;
     }
 
     /**

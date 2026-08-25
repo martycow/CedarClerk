@@ -48,9 +48,9 @@ public class BlogMetaTests
         Assert.Contains("og:title\" content=\"Devlog 1\"", body);
         Assert.Contains("og:type\" content=\"article\"", body);
         Assert.Contains("og:description\" content=\"Первый абзац девлога.\"", body);
-        Assert.Contains("rel=\"canonical\" href=\"https://blog.mooexe.dev/devlog-1\"", body);
+        Assert.Contains("rel=\"canonical\" href=\"https://tenant.cedarclerk.app/devlog-1\"", body);
         Assert.Contains("article:published_time", body);
-        Assert.Contains("og:image\" content=\"https://blog.mooexe.dev/og-default.png\"", body);
+        Assert.Contains("og:image\" content=\"https://tenant.cedarclerk.app/og-default.png\"", body);
         Assert.Contains("twitter:card\" content=\"summary_large_image\"", body);
     }
 
@@ -96,7 +96,7 @@ public class BlogMetaTests
         var body = await Get(db, "/devlog-1");
 
         Assert.Contains("og:title\" content=\"Devlog 1\"", body);
-        Assert.Contains("og:image\" content=\"https://blog.mooexe.dev/og-default.png\"", body);
+        Assert.Contains("og:image\" content=\"https://tenant.cedarclerk.app/og-default.png\"", body);
         Assert.DoesNotContain("og:description", body);
         Assert.DoesNotContain("article:", body);
         Assert.DoesNotContain("hreflang", body);
@@ -116,10 +116,10 @@ public class BlogMetaTests
         var ru = await Get(db, "/devlog-1");
         var en = await Get(db, "/devlog-1", "?lang=en");
 
-        Assert.Contains("rel=\"canonical\" href=\"https://blog.mooexe.dev/devlog-1\"", ru);
-        Assert.Contains("rel=\"canonical\" href=\"https://blog.mooexe.dev/devlog-1?lang=en\"", en);
-        Assert.Contains("hreflang=\"en\" href=\"https://blog.mooexe.dev/devlog-1?lang=en\"", ru);
-        Assert.Contains("hreflang=\"x-default\" href=\"https://blog.mooexe.dev/devlog-1\"", ru);
+        Assert.Contains("rel=\"canonical\" href=\"https://tenant.cedarclerk.app/devlog-1\"", ru);
+        Assert.Contains("rel=\"canonical\" href=\"https://tenant.cedarclerk.app/devlog-1?lang=en\"", en);
+        Assert.Contains("hreflang=\"en\" href=\"https://tenant.cedarclerk.app/devlog-1?lang=en\"", ru);
+        Assert.Contains("hreflang=\"x-default\" href=\"https://tenant.cedarclerk.app/devlog-1\"", ru);
     }
 
     [Fact]
@@ -131,6 +131,6 @@ public class BlogMetaTests
         var body = await Get(db, "/");
 
         Assert.Contains("og:type\" content=\"website\"", body);
-        Assert.Contains("og:image\" content=\"https://blog.mooexe.dev/og-default.png\"", body);
+        Assert.Contains("og:image\" content=\"https://tenant.cedarclerk.app/og-default.png\"", body);
     }
 }

@@ -164,7 +164,7 @@ app.UseTenantResolution();
 app.UseTenantScope();
 app.UseBlogOnlyHost();
 
-app.UseLanding(builder.Configuration[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost);
+app.UseLanding();
 
 // The rewrite "/" → index.html belongs to the application's own host: on a subdomain "/" is the
 // blog index, which the branch below renders.
@@ -198,8 +198,7 @@ app.Use(async (ctx, next) =>
 // Every host that renders a blog, not only the legacy one: /api/auth/me and publish-blog hand out
 // a subdomain URL for every account, and a host the server advertises has to be a host it serves.
 // After the static files above, because the rendered pages ask wwwroot for their fonts and OG image.
-var blogHost = builder.Configuration[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost;
-app.MapWhen(ctx => TenantRouting.ServesBlog(ctx, blogHost),
+app.MapWhen(TenantRouting.IsTenantRequest,
     blogApp => blogApp.Run(BlogEndpoints.HandleRequest));
 
 app.MapAuthEndpoints();
@@ -317,11 +316,6 @@ namespace CedarClerk.Server.Tenancy
 
         public static bool IsTenantRequest(HttpContext ctx) =>
             ctx.RequestServices.GetService<TenantContext>() is { IsTenantRequest: true };
-
-        /// <summary>A host that renders somebody's blog: a resolved subdomain, or the legacy blog host.</summary>
-        public static bool ServesBlog(HttpContext ctx, string blogHost) =>
-            IsTenantRequest(ctx)
-            || string.Equals(ctx.Request.Host.Host, blogHost, StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
         /// A tenant subdomain is one account's public blog and nothing else. Routing has already

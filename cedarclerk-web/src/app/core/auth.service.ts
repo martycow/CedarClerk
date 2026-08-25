@@ -9,7 +9,7 @@ interface MeResponse {
     // Phase 13 — which optional modules this installation runs (ADR-101). Optional in the type
     // because an older server simply omits it, and an absent module must read as "off".
     modules?: { indieDev?: boolean };
-    email: string; createdAt: string | null; emailConfirmed?: boolean; isAdmin: boolean; planTier: string | null; planExpiresAt: string | null; trialUsed: boolean;
+    email: string; blogUrl?: string | null; createdAt: string | null; emailConfirmed?: boolean; isAdmin: boolean; planTier: string | null; planExpiresAt: string | null; trialUsed: boolean;
     telegramLinked: boolean; telegramUsername: string | null; telegramLinkedAt: string | null;
     notifyOnEngagement: boolean;
     postSignature: string | null; postSignatureUrl: string | null; postSignatureTexts?: Record<string, string>;
@@ -42,6 +42,8 @@ export class AuthService {
     private locale = inject(LocaleService);
 
     readonly userEmail = signal<string | null>(null);
+    /** This account's blog, as the server resolves it. Null until a name is picked. */
+    readonly blogUrl = signal<string | null>(null);
     readonly createdAt = signal<string | null>(null);
     // IF2 — hides the /admin entry point. The real gate is server-side on /api/admin.
     readonly isAdmin = signal(false);
@@ -174,6 +176,7 @@ export class AuthService {
 
     private applyMe(me: MeResponse): void {
         this.userEmail.set(me.email);
+        this.blogUrl.set(me.blogUrl ?? null);
         this.emailConfirmed.set(me.emailConfirmed ?? true);
         this.createdAt.set(me.createdAt);
         this.isAdmin.set(me.isAdmin);
@@ -219,6 +222,7 @@ export class AuthService {
 
     private clearSession(): void {
         this.userEmail.set(null);
+        this.blogUrl.set(null);
         this.createdAt.set(null);
         this.isAdmin.set(false);
         this.indieDev.set(false);
