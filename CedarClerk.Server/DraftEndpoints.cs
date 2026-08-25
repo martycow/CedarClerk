@@ -558,8 +558,8 @@ public static class DraftEndpoints
             if (slug.Length == 0)
                 return Results.BadRequest(new { error = ErrorMessages.SlugHasNoUsableCharacters });
 
-            // Blog lookup is by slug across all owners, so uniqueness has to be global — not
-            // per-owner like most things here.
+            // Owner-scoped, like the query filter and IX_Drafts_OwnerId_BlogSlug behind it: each
+            // blog answers on its own host, so two accounts may hold the same slug.
             if (await db.Drafts.AnyAsync(d => d.Id != id && d.BlogSlug == slug))
                 return Results.BadRequest(new { error = ErrorMessages.SlugTaken });
 
@@ -720,7 +720,8 @@ public static class DraftEndpoints
             if (draft is null) return Results.NotFound();
 
             var invites = await db.PostInvites.Where(pi => pi.DraftId == id).OrderBy(pi => pi.CreatedAt).ToListAsync();
-            return Results.Ok(invites.Select(pi => new { pi.Id, pi.Email, pi.CreatedAt, Url = BuildInviteUrl(cfg, draft, pi.Token) }));
+            var site = await BlogTenant.SiteForOwnerAsync(db, cfg, draft.OwnerId);
+            return Results.Ok(invites.Select(pi => new { pi.Id, pi.Email, pi.CreatedAt, Url = BuildInviteUrl(site, draft, pi.Token) }));
         });
 
         // Always creates the invite + returns a copyable link even if the email fails to send
@@ -742,8 +743,10 @@ public static class DraftEndpoints
             db.PostInvites.Add(invite);
             await db.SaveChangesAsync();
 
-            var url = BuildInviteUrl(cfg, draft, invite.Token);
-            var emailSent = await email.SendAsync(emailAddr, $"You're invited to read \"{draft.Title}\"",
+            // The invite is real either way; without a blog host there is simply no address to
+            // put in the mail, and naming one that belongs to another account is worse than none.
+            var url = BuildInviteUrl(await BlogTenant.SiteForOwnerAsync(db, cfg, draft.OwnerId), draft, invite.Token);
+            var emailSent = url is not null && await email.SendAsync(emailAddr, $"You're invited to read \"{draft.Title}\"",
                 $"<p>You've been invited to a private post: <a href=\"{url}\">{System.Net.WebUtility.HtmlEncode(draft.Title)}</a></p>");
 
             return Results.Ok(new { invite.Id, invite.Email, invite.CreatedAt, Url = url, EmailSent = emailSent });
@@ -772,8 +775,8 @@ public static class DraftEndpoints
             var invite = await db.PostInvites.FirstOrDefaultAsync(pi => pi.Id == inviteId && pi.DraftId == id);
             if (invite is null) return Results.NotFound();
 
-            var url = BuildInviteUrl(cfg, draft, invite.Token);
-            var emailSent = await email.SendAsync(invite.Email, $"You're invited to read \"{draft.Title}\"",
+            var url = BuildInviteUrl(await BlogTenant.SiteForOwnerAsync(db, cfg, draft.OwnerId), draft, invite.Token);
+            var emailSent = url is not null && await email.SendAsync(invite.Email, $"You're invited to read \"{draft.Title}\"",
                 $"<p>You've been invited to a private post: <a href=\"{url}\">{System.Net.WebUtility.HtmlEncode(draft.Title)}</a></p>");
 
             return Results.Ok(new { EmailSent = emailSent });
@@ -1380,7 +1383,11 @@ public static class DraftEndpoints
                 cedarJson = translation.CedarJson;
             }
 
-            var blogHost = cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost;
+            // Media in the exported page is absolute, so it has to name the host that serves this
+            // owner's files; falling back to the main host keeps a nameless account's export
+            // pointing somewhere real rather than at another blog.
+            var blogHost = await BlogTenant.HostForOwnerAsync(db, cfg, draft.OwnerId)
+                ?? cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
             var body = CedarToBlogHtmlRenderer.Render(cedarJson, $"https://{blogHost}", language);
             var owner = await db.Users.Where(u => u.Id == uid)
                 .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PostSignatureTranslationsJson, u.PlanTier, u.PlanExpiresAt })
@@ -1723,8 +1730,9 @@ public static class DraftEndpoints
         return true;
     }
 
-    private static string BuildInviteUrl(IConfiguration cfg, Draft draft, string token) =>
-        $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}/{draft.BlogSlug}?invite={token}";
+    /// <summary>Null when the draft has no slug yet, or its owner no host to serve one on.</summary>
+    public static string? BuildInviteUrl(BlogSite? site, Draft draft, string token) =>
+        site is { } blog && draft.BlogSlug is { } slug ? blog.InviteUrl(slug, token) : null;
 
     private static string SanitizeFileName(string title)
     {

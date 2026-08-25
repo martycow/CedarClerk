@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.FileProviders;
 using Quartz;
 
 const int passwordRequiredLength = 8;
@@ -94,6 +93,8 @@ builder.Services.ConfigureApplicationCookie(AuthCookie.Configure);
 builder.Services.AddScoped<TenantContext>();
 builder.Services.AddSingleton<TelegramBotService>();
 builder.Services.AddSingleton(new MediaPaths(mediaDir));
+builder.Services.AddSingleton<MediaOwnerIndex>();
+builder.Services.AddSingleton<MediaVisibilityIndex>();
 builder.Services.AddSingleton(new ImportTmpPaths(importTmpDir));
 builder.Services.AddSingleton<AiJobService>();
 builder.Services.AddSingleton(new ThumbnailPaths(thumbnailsDir));
@@ -161,16 +162,15 @@ var indexNoCache = new StaticFileOptions
 
 app.UseTenantResolution();
 app.UseTenantScope();
+app.UseBlogOnlyHost();
 
 app.UseLanding(builder.Configuration[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost);
 
-app.UseDefaultFiles();
+// The rewrite "/" → index.html belongs to the application's own host: on a subdomain "/" is the
+// blog index, which the branch below renders.
+app.UseWhen(ctx => !TenantRouting.IsTenantRequest(ctx), appHost => appHost.UseDefaultFiles());
 app.UseStaticFiles(indexNoCache);
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(mediaDir),
-    RequestPath = "/media"
-});
+app.UseTenantMedia(mediaDir);
 
 // ADR-116 — updates for the desktop shell. Unconditional since ADR-117: the process that used to
 // need this switched off is now an agent, and an agent leaves this file before reaching here.
@@ -195,8 +195,11 @@ app.Use(async (ctx, next) =>
     await next();
 });
 
+// Every host that renders a blog, not only the legacy one: /api/auth/me and publish-blog hand out
+// a subdomain URL for every account, and a host the server advertises has to be a host it serves.
+// After the static files above, because the rendered pages ask wwwroot for their fonts and OG image.
 var blogHost = builder.Configuration[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost;
-app.MapWhen(ctx => string.Equals(ctx.Request.Host.Host, blogHost, StringComparison.OrdinalIgnoreCase),
+app.MapWhen(ctx => TenantRouting.ServesBlog(ctx, blogHost),
     blogApp => blogApp.Run(BlogEndpoints.HandleRequest));
 
 app.MapAuthEndpoints();
@@ -300,3 +303,50 @@ else if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCO
     app.Run();  // no argument: let Kestrel read ASPNETCORE_URLS itself, which may list several
 else
     app.Run(Consts.URLs.Localhost);
+
+namespace CedarClerk.Server.Tenancy
+{
+    /// <summary>
+    /// Which of the two sites a request belongs to. The blog branch, the landing page and the
+    /// static-file segment all ask this question, and asking it in three shapes is how a registered
+    /// subdomain came to answer with a cacheable marketing page while the API advertised it as a blog.
+    /// </summary>
+    public static class TenantRouting
+    {
+        private const string AppShell = "/index.html";
+
+        public static bool IsTenantRequest(HttpContext ctx) =>
+            ctx.RequestServices.GetService<TenantContext>() is { IsTenantRequest: true };
+
+        /// <summary>A host that renders somebody's blog: a resolved subdomain, or the legacy blog host.</summary>
+        public static bool ServesBlog(HttpContext ctx, string blogHost) =>
+            IsTenantRequest(ctx)
+            || string.Equals(ctx.Request.Host.Host, blogHost, StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// A tenant subdomain is one account's public blog and nothing else. Routing has already
+        /// picked the SPA fallback or an /api/* handler by this point; dropping that pick is what
+        /// turns the application's endpoints on a subdomain from a 401 into the 404 they are, and
+        /// leaves every path that is not a static asset to the blog branch. wwwroot keeps answering,
+        /// because the blog's own pages ask it for fonts and the OG image — all but the one file
+        /// that would boot an application whose API does not live on this host.
+        /// </summary>
+        public static void UseBlogOnlyHost(this IApplicationBuilder app) => app.Use(async (ctx, next) =>
+        {
+            if (!IsTenantRequest(ctx))
+            {
+                await next();
+                return;
+            }
+
+            ctx.SetEndpoint(null);
+            if (string.Equals(ctx.Request.Path.Value, AppShell, StringComparison.OrdinalIgnoreCase))
+            {
+                ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+
+            await next();
+        });
+    }
+}

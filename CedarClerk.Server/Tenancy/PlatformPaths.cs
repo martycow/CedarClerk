@@ -10,7 +10,8 @@ namespace CedarClerk.Server.Tenancy;
 /// </summary>
 public static class PlatformPaths
 {
-    private static readonly string[] Prefixes =
+    /// <summary>The gate itself, readable so a test can hold it to its own shape.</summary>
+    public static readonly IReadOnlyList<string> Prefixes =
     [
         // ADR-122 — every cross-owner read in the app lives behind this one gate.
         "/api/admin",

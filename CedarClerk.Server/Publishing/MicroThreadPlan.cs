@@ -1,4 +1,5 @@
 using CedarClerk.Core;
+using CedarClerk.Server.Tenancy;
 
 namespace CedarClerk.Server.Publishing;
 
@@ -10,11 +11,20 @@ namespace CedarClerk.Server.Publishing;
 /// </summary>
 public static class MicroThreadPlan
 {
-    public static string? BlogUrl(Draft draft, string language, IConfiguration cfg) =>
-        draft.IsBlogPublished && draft.BlogSlug is not null
-            ? $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}/{draft.BlogSlug}"
-              + (language == draft.PrimaryLanguage ? "" : $"?lang={language}")
-            : null;
+    /// <summary>
+    /// The link the last part carries, on the host that actually serves this draft. Slugs are
+    /// per-owner, so the legacy host would resolve another account's post under the same name —
+    /// and this link goes out into post history that cannot be edited afterwards.
+    /// </summary>
+    public static async Task<string?> BlogUrlAsync(Draft draft, string language, CedarDbContext db,
+        IConfiguration cfg, CancellationToken ct = default)
+    {
+        if (!draft.IsBlogPublished || draft.BlogSlug is null) return null;
+        if (await BlogTenant.HostForOwnerAsync(db, cfg, draft.OwnerId, ct) is not { } host) return null;
+
+        return $"https://{host}/{draft.BlogSlug}"
+               + (language == draft.PrimaryLanguage ? "" : $"?lang={language}");
+    }
 
     /// <summary>The last part's budget for "\n\n" plus the link, in the network's own units.</summary>
     public static int LinkReserve(string network, string? blogUrl) => blogUrl is null ? 0 : network switch

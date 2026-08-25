@@ -12,7 +12,7 @@ public class BlogSeriesTests
 
     private static (Series Series, Draft[] Parts) Seed(CedarDbContext db, int parts = 3, Action<Draft, int>? mutate = null)
     {
-        db.Users.Add(new ApplicationUser { Id = "o1", UserName = "o1" });
+        db.Users.Add(new ApplicationUser { Id = "o1", UserName = "o1", IsAdmin = true });
         var series = new Series { OwnerId = "o1", Name = "Devlog", Slug = "devlog" };
         db.Series.Add(series);
         var drafts = new Draft[parts];
@@ -61,7 +61,7 @@ public class BlogSeriesTests
     [Fact]
     public async Task An_unknown_series_is_404()
     {
-        using var db = BlogTestHost.EmptyDatabase();
+        using var db = BlogTestHost.EmptyDatabase().WithOwner();
         var (status, _) = await Get(db, "/series/nope");
 
         Assert.Equal(StatusCodes.Status404NotFound, status);

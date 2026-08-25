@@ -6,6 +6,7 @@ using System.Text;
 using CedarClerk.Server.Bot;
 using CedarClerk.Server.Email;
 using Microsoft.AspNetCore.WebUtilities;
+using CedarClerk.Server.Tenancy;
 using CedarClerk.Server.Translation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,7 @@ namespace CedarClerk.Server;
 
 public static class AuthEndpoints
 {
-    public record RegisterRequest(string Email, string Password, string InviteCode, string? Username = null);
+    public record RegisterRequest(string Email, string Password, string InviteCode, string Username);
     public record LoginRequest(string Email, string Password);
     public record SignatureRequest(string? Signature, string? SignatureUrl = null,
         // FI5 — the same signature in the other content languages, keyed by language code. Same
@@ -87,16 +88,9 @@ public static class AuthEndpoints
             if (!openRegistration && !codeUsable && !configMatches)
                 return Results.BadRequest(new { error = ErrorMessages.InvalidInviteCode });
 
-            // Optional for now: existing accounts have none either, and the subdomain a name
-            // buys does not exist until the tenant blog does.
             var username = Usernames.Normalize(req.Username);
-            if (username is not null)
-            {
-                if (!Usernames.IsAssignable(username))
-                    return Results.BadRequest(new { error = ErrorMessages.UsernameInvalid });
-                if (await db.Users.AnyAsync(u => u.TenantUsername == username))
-                    return Results.BadRequest(new { error = ErrorMessages.UsernameTaken(username) });
-            }
+            if (await VerdictAsync(db, req.Username) is var verdict && verdict != UsernameVerdict.Free)
+                return Results.BadRequest(new { error = Refusal(verdict, username) });
 
             var user = new ApplicationUser
             {
@@ -108,7 +102,17 @@ public static class AuthEndpoints
                 InviteCodeId = codeUsable ? code!.Id : null,
             };
 
-            var result = await users.CreateAsync(user, req.Password);
+            IdentityResult result;
+            try
+            {
+                result = await users.CreateAsync(user, req.Password);
+            }
+            // The filtered-unique index is the real guarantee; the check above only buys the friendly
+            // wording, and two registrations racing for one name both pass it.
+            catch (DbUpdateException)
+            {
+                return Results.BadRequest(new { error = ErrorMessages.UsernameTaken(username!) });
+            }
             if (!result.Succeeded)
                 return Results.BadRequest(new { errors = result.Errors.Select(e => e.Description) });
 
@@ -134,6 +138,15 @@ public static class AuthEndpoints
 
             return Results.Ok(new { message = "Registered" });
         });
+
+        // What the register form asks while the name is being typed. Anonymous because registration
+        // is, and it discloses nothing an account does not already publish: a name is a subdomain,
+        // so "taken" is readable from DNS. It never says whose it is.
+        groupBuilder.MapGet("/username-available", async (string? name, CedarDbContext db, CancellationToken ct) =>
+        {
+            var verdict = await VerdictAsync(db, name, ct);
+            return Results.Ok(new { available = verdict == UsernameVerdict.Free, reason = Reason(verdict) });
+        }).AllowAnonymous();
 
         // Opened from the mail. Redirects rather than answering JSON: this URL is clicked in a mail
         // client, so what has to come back is a page, not a payload.
@@ -192,12 +205,17 @@ public static class AuthEndpoints
             return Results.Ok();
         }).RequireAuthorization();
 
-        groupBuilder.MapGet("/me", async (ClaimsPrincipal user, UserManager<ApplicationUser> users, IConfiguration config) =>
+        groupBuilder.MapGet("/me", async (ClaimsPrincipal user, UserManager<ApplicationUser> users, IConfiguration config, CedarDbContext db) =>
         {
             var appUser = await users.GetUserAsync(user);
+            var blogHost = appUser is null ? null : await BlogTenant.HostForOwnerAsync(db, config, appUser.Id);
             return Results.Ok(new
             {
                 id = appUser?.Id,
+                // The subdomain the account answers at. Null on the accounts that predate names —
+                // they keep working, they simply have no blog address to show.
+                username = appUser?.TenantUsername,
+                blogUrl = blogHost is null ? null : $"https://{blogHost}",
                 // Which optional modules this installation runs (ADR-101). Not a security boundary —
                 // the endpoints themselves are simply not mapped when the flag is off; this is what
                 // lets the client hide the menu entries instead of linking to a 404.
@@ -631,6 +649,42 @@ public static class AuthEndpoints
     // Unknown codes and blanks are dropped rather than rejected: the map is a set of optional
     // labels, and refusing the whole profile save over one stray key would be out of proportion.
     public record TranslateProfileTextsRequest(string SourceLanguage, List<string>? TargetLanguages);
+
+    /// <summary>
+    /// <see cref="Usernames.Check"/> plus the one question only the database can answer. Registration
+    /// and the availability check share it so the form cannot show a green tick over a name the
+    /// server would refuse.
+    /// </summary>
+    public static async Task<UsernameVerdict> VerdictAsync(CedarDbContext db, string? raw, CancellationToken ct = default)
+    {
+        var verdict = Usernames.Check(raw);
+        if (verdict != UsernameVerdict.Free) return verdict;
+
+        var name = Usernames.Normalize(raw);
+        return await db.Users.AnyAsync(u => u.TenantUsername == name, ct)
+            ? UsernameVerdict.Taken
+            : UsernameVerdict.Free;
+    }
+
+    /// <summary>Why registration said no, or null when it did not.</summary>
+    public static string? Refusal(UsernameVerdict verdict, string? name) => verdict switch
+    {
+        UsernameVerdict.Missing => ErrorMessages.UsernameRequired,
+        // One message for both: the wording already says some names are spoken for, and splitting
+        // it would tell a stranger which of our own subdomains exist.
+        UsernameVerdict.Invalid or UsernameVerdict.Reserved => ErrorMessages.UsernameInvalid,
+        UsernameVerdict.Taken => ErrorMessages.UsernameTaken(name ?? ""),
+        _ => null,
+    };
+
+    /// <summary>The machine-readable half of the availability answer; null exactly when it is free.</summary>
+    public static string? Reason(UsernameVerdict verdict) => verdict switch
+    {
+        UsernameVerdict.Free => null,
+        UsernameVerdict.Taken => "taken",
+        UsernameVerdict.Reserved => "reserved",
+        _ => "invalid",
+    };
 
     /// <summary>
     /// Sends the confirmation mail, and never lets a mail failure break the flow it is part of:

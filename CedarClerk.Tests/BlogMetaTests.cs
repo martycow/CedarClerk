@@ -13,7 +13,7 @@ public class BlogMetaTests
 
     private static Draft Seed(CedarDbContext db, Action<Draft>? mutate = null)
     {
-        db.Users.Add(new ApplicationUser { Id = "o1", UserName = "o1" });
+        db.Users.Add(new ApplicationUser { Id = "o1", UserName = "o1", IsAdmin = true });
         var draft = new Draft
         {
             Title = "Devlog 1",

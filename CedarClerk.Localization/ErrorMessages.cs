@@ -152,6 +152,9 @@ public static class ErrorMessages
     public static string ShowcaseSlugEmpty => Ru(
         "Слаг получился пустым — используйте латинские буквы или цифры.",
         "The slug came out empty — use latin letters or digits.");
+    public static string UsernameRequired => Ru(
+        "Выберите имя — оно станет адресом вашего блога.",
+        "Pick a name — it becomes the address of your blog.");
     public static string UsernameInvalid => Ru(
         "Имя может состоять только из латинских букв, цифр и дефисов внутри — до 63 символов, и некоторые имена зарезервированы.",
         "A name may hold only latin letters, digits and inner hyphens — up to 63 characters, and some names are reserved.");

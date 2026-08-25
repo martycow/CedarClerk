@@ -65,7 +65,7 @@ public partial class DiscordPublishTarget(
                 StatusCodes.Status422UnprocessableEntity);
 
         var draft = await db.Drafts.FirstAsync(d => d.Id == request.DraftId, ct);
-        var blogUrl = MicroThreadPlan.BlogUrl(draft, request.Language, cfg);
+        var blogUrl = await MicroThreadPlan.BlogUrlAsync(draft, request.Language, db, cfg, ct);
         var content = DiscordPostBuilder.Build(request.AuthorText, request.CedarJson, blogUrl);
         if (content.Trim().Length == 0)
             return PublishOutcome.Fail("Nothing to post — write a Discord version or some body text");

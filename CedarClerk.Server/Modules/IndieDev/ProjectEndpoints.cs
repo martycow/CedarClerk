@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CedarClerk.Core;
 using CedarClerk.Localization;
+using CedarClerk.Server.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server.Modules.IndieDev;
@@ -350,8 +351,10 @@ public static class ProjectEndpoints
             project.ShowcaseSlug = slug;
             await db.SaveChangesAsync();
 
-            var blogBase = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}";
-            return Results.Ok(new { showcaseSlug = slug, url = $"{blogBase}/games/{slug}" });
+            // Showcase slugs are per-owner like blog slugs, so the page only exists on this
+            // owner's own host; an account with no host yet has a slug but no address.
+            var blogHost = await BlogTenant.HostForOwnerAsync(db, cfg, project.OwnerId);
+            return Results.Ok(new { showcaseSlug = slug, url = blogHost is null ? null : $"https://{blogHost}/games/{slug}" });
         });
 
         group.MapPost("/{id:guid}/archive", async (Guid id, ArchiveProjectRequest req, ClaimsPrincipal user, CedarDbContext db) =>

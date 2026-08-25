@@ -351,7 +351,7 @@ public static class PublishEndpoints
             {
                 var (measure, _) = MicroThreadSplitter.ForNetwork(network);
                 var microParts = MicroThreadPlan.Parts(document.Value.CedarJson, network,
-                    MicroThreadPlan.BlogUrl(draft, lang, cfg));
+                    await MicroThreadPlan.BlogUrlAsync(draft, lang, db, cfg));
                 return Results.Ok(new
                 {
                     parts = microParts.Select((p, i) => new
@@ -470,7 +470,7 @@ public static class PublishEndpoints
                     if (implementation.Capabilities.DerivesShortPost)
                     {
                         partCount = MicroThreadSplitter.CountParts(document.Value.CedarJson, target.Network,
-                            MicroThreadPlan.LinkReserve(target.Network, MicroThreadPlan.BlogUrl(draft, language, cfg)));
+                            MicroThreadPlan.LinkReserve(target.Network, await MicroThreadPlan.BlogUrlAsync(draft, language, db, cfg)));
                     }
                     else
                     {

@@ -6,6 +6,7 @@ using System.Text.Json;
 using CedarClerk.Core;
 using CedarClerk.Localization;
 using CedarClerk.Server.Bot;
+using CedarClerk.Server.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 
@@ -69,7 +70,7 @@ public static class BlogEndpoints
                 return Results.Json(new { error = ErrorMessages.PublishConfirmationStale, previews = stale }, statusCode: StatusCodes.Status409Conflict);
 
             if (!draft.IsBlogPublished || draft.BlogSlug is null)
-                draft.BlogSlug = await GenerateUniqueSlugAsync(db, draft.Id, draft.Title);
+                draft.BlogSlug = await GenerateUniqueSlugAsync(db, uid, draft.Id, draft.Title);
 
             draft.BlogPublishedAt ??= DateTime.UtcNow;
             draft.IsBlogPublished = true;
@@ -78,8 +79,11 @@ public static class BlogEndpoints
                 await DraftRevisionService.RecordAsync(db, id, translation.Language, translation.Title, translation.CedarJson, DraftRevisionService.Kinds.Blog);
             await db.SaveChangesAsync();
 
-            var blogHost = cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost;
-            return Results.Ok(new { slug = draft.BlogSlug, url = $"https://{blogHost}/{draft.BlogSlug}" });
+            // An account with no name of its own has no blog host to point at yet; the post is
+            // published, the URL is simply not knowable, and inventing one would name a domain that
+            // belongs to somebody else.
+            var host = await BlogTenant.HostForOwnerAsync(db, cfg, uid);
+            return Results.Ok(new { slug = draft.BlogSlug, url = host is null ? null : $"https://{host}/{draft.BlogSlug}" });
         });
 
         group.MapPost("/{id:guid}/unpublish-blog", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
@@ -304,12 +308,12 @@ public static class BlogEndpoints
         });
     }
 
-    private static async Task<string> GenerateUniqueSlugAsync(CedarDbContext db, Guid draftId, string title)
+    private static async Task<string> GenerateUniqueSlugAsync(CedarDbContext db, string ownerId, Guid draftId, string title)
     {
         var baseSlug = SlugGenerator.Slugify(title);
         var candidate = baseSlug;
         var n = 2;
-        while (await db.Drafts.AnyAsync(d => d.BlogSlug == candidate && d.Id != draftId))
+        while (await db.Drafts.AnyAsync(d => d.BlogSlug == candidate && d.OwnerId == ownerId && d.Id != draftId))
         {
             candidate = $"{baseSlug}-{n}";
             n++;
@@ -320,21 +324,29 @@ public static class BlogEndpoints
     public static async Task HandleRequest(HttpContext ctx)
     {
         var db = ctx.RequestServices.GetRequiredService<CedarDbContext>();
+
+        // Whose blog this is, named in every query below rather than left to the ambient filter.
+        if (await BlogTenant.SiteOfAsync(ctx, db) is not { } site)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            return;
+        }
+
         var path = ctx.Request.Path.Value?.Trim('/') ?? "";
         var segments = path.Length == 0 ? [] : path.Split('/');
 
         if (segments is ["api", "posts", var slug, var action])
         {
             if (action == "annotations" && ctx.Request.Method == HttpMethods.Get)
-                await GetAnnotationsAsync(ctx, db, slug);
+                await GetAnnotationsAsync(ctx, db, site, slug);
             else if (action == "react" && ctx.Request.Method == HttpMethods.Post)
-                await PostReactionAsync(ctx, db, slug);
+                await PostReactionAsync(ctx, db, site, slug);
             else if (action == "comments" && ctx.Request.Method == HttpMethods.Post)
-                await PostCommentAsync(ctx, db, slug);
+                await PostCommentAsync(ctx, db, site, slug);
             else if (action == "register" && ctx.Request.Method == HttpMethods.Post)
-                await PostRegistrationAsync(ctx, db, slug);
+                await PostRegistrationAsync(ctx, db, site, slug);
             else if (action == "poll" && ctx.Request.Method == HttpMethods.Post)
-                await PostPollVoteAsync(ctx, db, slug);
+                await PostPollVoteAsync(ctx, db, site, slug);
             else
                 ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
@@ -352,33 +364,33 @@ public static class BlogEndpoints
 
         if (segments.Length == 0)
         {
-            await RenderIndexAsync(ctx, db);
+            await RenderIndexAsync(ctx, db, site);
             return;
         }
 
         if (segments is ["rss.xml"])
         {
-            await RenderRssAsync(ctx, db);
+            await RenderRssAsync(ctx, db, site);
             return;
         }
 
         if (segments.Length == 1)
         {
-            await RenderPostAsync(ctx, db, segments[0]);
+            await RenderPostAsync(ctx, db, site, segments[0]);
             return;
         }
 
         // ADR-125 — the series landing is the first (and so far only) two-segment page.
         if (segments is ["series", var seriesSlug])
         {
-            await RenderSeriesAsync(ctx, db, seriesSlug);
+            await RenderSeriesAsync(ctx, db, site, seriesSlug);
             return;
         }
 
         // ADR-134 — the public project showcase (T-159).
         if (segments is ["games", var gameSlug])
         {
-            await RenderShowcaseAsync(ctx, db, gameSlug);
+            await RenderShowcaseAsync(ctx, db, site, gameSlug);
             return;
         }
 
@@ -452,9 +464,9 @@ public static class BlogEndpoints
         }
     }
 
-    private static async Task GetAnnotationsAsync(HttpContext ctx, CedarDbContext db, string slug)
+    private static async Task GetAnnotationsAsync(HttpContext ctx, CedarDbContext db, BlogSite site, string slug)
     {
-        var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.IsBlogPublished);
+        var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.OwnerId == site.OwnerId && d.IsBlogPublished);
         if (draft is null || !HasPrivateAccess(ctx, draft))
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -505,20 +517,19 @@ public static class BlogEndpoints
     // Opt-in DM to the post owner via the bot on genuinely new engagement (see the ADR following
     // ADR-039, docs/DECISIONS.md) — not on a toggled-off reaction, not on "dislike". Never lets a
     // failed/unreachable DM affect the anonymous visitor's request; only logs.
-    private static async Task NotifyOwnerAsync(HttpContext ctx, CedarDbContext db, string ownerId, string slug, string message)
+    private static async Task NotifyOwnerAsync(HttpContext ctx, CedarDbContext db, BlogSite site, string slug, string message)
     {
         var bot = ctx.RequestServices.GetRequiredService<TelegramBotService>();
         if (!bot.IsRunning) return;
 
+        var ownerId = site.OwnerId;
         var owner = await db.Users.Where(u => u.Id == ownerId)
             .Select(u => new { u.TelegramUserId, u.NotifyOnEngagement }).FirstOrDefaultAsync();
         if (owner is not { NotifyOnEngagement: true, TelegramUserId: { } chatId }) return;
 
         try
         {
-            var cfg = ctx.RequestServices.GetRequiredService<IConfiguration>();
-            var url = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}/{slug}";
-            await bot.Client.SendMessage(chatId, $"{message}\n{url}");
+            await bot.Client.SendMessage(chatId, $"{message}\n{site.PostUrl(slug)}");
         }
         catch (Exception ex)
         {
@@ -529,9 +540,9 @@ public static class BlogEndpoints
 
     private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max] + "…";
 
-    private static async Task PostReactionAsync(HttpContext ctx, CedarDbContext db, string slug)
+    private static async Task PostReactionAsync(HttpContext ctx, CedarDbContext db, BlogSite site, string slug)
     {
-        var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.IsBlogPublished);
+        var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.OwnerId == site.OwnerId && d.IsBlogPublished);
         if (draft is null || !HasPrivateAccess(ctx, draft))
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -578,7 +589,7 @@ public static class BlogEndpoints
         await db.SaveChangesAsync();
 
         if (isNewLike)
-            await NotifyOwnerAsync(ctx, db, draft.OwnerId, slug, $"👍 Someone liked your post \"{draft.Title}\"");
+            await NotifyOwnerAsync(ctx, db, site, slug, $"👍 Someone liked your post \"{draft.Title}\"");
 
         var group = await db.Reactions.Where(r => r.DraftId == draft.Id && r.AnnotationId == annotationId).ToListAsync();
         var counts = group.GroupBy(r => r.Kind).ToDictionary(g => g.Key, g => g.Count());
@@ -591,9 +602,9 @@ public static class BlogEndpoints
     // NF5 — one vote per (poll, visitor). Changing your answer updates the existing row; there is
     // no "unvote", unlike a reaction toggle — a poll has no meaningful "no answer" state to return
     // to once you've picked one, the way a like does.
-    private static async Task PostPollVoteAsync(HttpContext ctx, CedarDbContext db, string slug)
+    private static async Task PostPollVoteAsync(HttpContext ctx, CedarDbContext db, BlogSite site, string slug)
     {
-        var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.IsBlogPublished);
+        var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.OwnerId == site.OwnerId && d.IsBlogPublished);
         if (draft is null || !HasPrivateAccess(ctx, draft))
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -637,9 +648,9 @@ public static class BlogEndpoints
     // Registration-form submission on a private post (B3). Grants access immediately by setting
     // the same cookie a valid invite token sets — the form collects an audience, it isn't a
     // verification step (nothing confirms the email). See the ADR following ADR-041.
-    private static async Task PostRegistrationAsync(HttpContext ctx, CedarDbContext db, string slug)
+    private static async Task PostRegistrationAsync(HttpContext ctx, CedarDbContext db, BlogSite site, string slug)
     {
-        var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.IsBlogPublished);
+        var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.OwnerId == site.OwnerId && d.IsBlogPublished);
         // Only private posts that actually have a form configured accept submissions.
         // Validated against the form the visitor was actually shown (FI4.1) — a required question
         // that only exists in one language must not be enforced against a reader of another.
@@ -745,7 +756,7 @@ public static class BlogEndpoints
         // N11 — same opt-in plumbing as comment/like notifications (ADR-040): a failed or
         // unreachable DM only logs, it never turns a successful registration into an error.
         var who = name ?? nickname ?? email ?? "Someone";
-        await NotifyOwnerAsync(ctx, db, draft.OwnerId, slug, $"📝 {who} filled in the form for \"{draft.Title}\"");
+        await NotifyOwnerAsync(ctx, db, site, slug, $"📝 {who} filled in the form for \"{draft.Title}\"");
 
         // T-033 — the respondent's copy, when they left an address and the owner wrote something
         // to send. Same rule as the owner's DM above: a mail failure never turns a successful
@@ -796,9 +807,9 @@ public static class BlogEndpoints
         await JsonSerializer.SerializeAsync(ctx.Response.Body, new { error = message }, JsonOpts);
     }
 
-    private static async Task PostCommentAsync(HttpContext ctx, CedarDbContext db, string slug)
+    private static async Task PostCommentAsync(HttpContext ctx, CedarDbContext db, BlogSite site, string slug)
     {
-        var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.IsBlogPublished);
+        var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.OwnerId == site.OwnerId && d.IsBlogPublished);
         if (draft is null || !HasPrivateAccess(ctx, draft))
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -865,7 +876,7 @@ public static class BlogEndpoints
         db.Comments.Add(comment);
         await db.SaveChangesAsync();
 
-        await NotifyOwnerAsync(ctx, db, draft.OwnerId, slug, $"💬 New comment on \"{draft.Title}\": {Truncate(text, 100)}");
+        await NotifyOwnerAsync(ctx, db, site, slug, $"💬 New comment on \"{draft.Title}\": {Truncate(text, 100)}");
 
         ctx.Response.ContentType = "application/json";
         ctx.Response.StatusCode = StatusCodes.Status201Created;
@@ -948,15 +959,15 @@ public static class BlogEndpoints
         return cut + "…";
     }
 
-    // The blog is single-channel per self-hosted instance: whichever channel belongs to an
-    // owner with at least one published post represents the header identity.
-    private static async Task<BlogChannelInfo?> GetBlogChannelInfoAsync(CedarDbContext db)
+    // The header identity is the blog owner's first channel by title. Ordered rather than "whichever
+    // comes back first" so a second channel cannot rename the blog; letting an owner pick which one
+    // speaks for the blog is a separate job and would need a column.
+    private static async Task<BlogChannelInfo?> GetBlogChannelInfoAsync(CedarDbContext db, BlogSite site)
     {
-        var ownerIds = await db.Drafts.Where(d => d.IsBlogPublished).Select(d => d.OwnerId).Distinct().ToListAsync();
-        if (ownerIds.Count == 0)
-            return null;
-
-        var channel = await db.Channels.FirstOrDefaultAsync(c => ownerIds.Contains(c.OwnerId));
+        var channel = await db.Channels
+            .Where(c => c.OwnerId == site.OwnerId)
+            .OrderBy(c => c.Title).ThenBy(c => c.Id)
+            .FirstOrDefaultAsync();
         if (channel is null)
             return null;
 
@@ -1113,7 +1124,7 @@ public static class BlogEndpoints
             """;
     }
 
-    private static async Task RenderIndexAsync(HttpContext ctx, CedarDbContext db)
+    private static async Task RenderIndexAsync(HttpContext ctx, CedarDbContext db, BlogSite site)
     {
         // ADR-202 — the index, and only the index, carries a language pick again: it sets the chrome
         // and which translation a card previews in. English is the default and the fallback, and a
@@ -1125,7 +1136,7 @@ public static class BlogEndpoints
         // page itself 404s for anyone not invited.
         // A private post is listed only when its owner asked for it (IsListedWhilePrivate) — the
         // card advertises that the post exists, the gate still decides who reads it.
-        var posts = await db.Drafts.Where(d => d.IsBlogPublished && (!d.IsPrivate || d.IsListedWhilePrivate))
+        var posts = await db.Drafts.Where(d => d.OwnerId == site.OwnerId && d.IsBlogPublished && (!d.IsPrivate || d.IsListedWhilePrivate))
             .OrderByDescending(d => d.BlogPublishedAt)
             .Select(d => new
             {
@@ -1151,10 +1162,10 @@ public static class BlogEndpoints
             : await db.DraftTranslations.Where(t => postIds.Contains(t.DraftId) && t.Language == indexLang)
                 .ToDictionaryAsync(t => t.DraftId, t => t);
 
-        var likeCounts = await db.Reactions.Where(r => r.Kind == "like")
+        var likeCounts = await db.Reactions.Where(r => r.OwnerId == site.OwnerId && r.Kind == "like")
             .GroupBy(r => r.DraftId)
             .ToDictionaryAsync(g => g.Key, g => g.Count());
-        var commentCounts = await db.Comments
+        var commentCounts = await db.Comments.Where(c => c.OwnerId == site.OwnerId)
             .GroupBy(c => c.DraftId)
             .ToDictionaryAsync(g => g.Key, g => g.Count());
 
@@ -1358,9 +1369,8 @@ public static class BlogEndpoints
             }
         }
 
-        var channel = await GetBlogChannelInfoAsync(db);
-        var cfg = ctx.RequestServices.GetRequiredService<IConfiguration>();
-        var blogBase = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}";
+        var channel = await GetBlogChannelInfoAsync(db, site);
+        var blogBase = site.BaseUrl;
         var indexMeta = OgMetaBuilder.Build(new OgMetaInput(
             channel?.Title ?? "Blog", null, blogBase + "/",
             $"{blogBase}/og-default.png", 1200, 630,
@@ -1373,10 +1383,11 @@ public static class BlogEndpoints
     // ADR-125 — the series landing: what the index would show, narrowed to one series and ordered
     // by its own order rather than by date. An empty (or fully invisible) series is an honest
     // empty page, not a 404 — the URL is printed on every member post.
-    private static async Task RenderSeriesAsync(HttpContext ctx, CedarDbContext db, string slug)
+    private static async Task RenderSeriesAsync(HttpContext ctx, CedarDbContext db, BlogSite site, string slug)
     {
-        var channel = await GetBlogChannelInfoAsync(db);
-        var series = await db.Series.FirstOrDefaultAsync(s => s.Slug == slug);
+        var channel = await GetBlogChannelInfoAsync(db, site);
+        // Series.Slug is unique per owner, so the owner is part of the lookup and not an extra check.
+        var series = await db.Series.FirstOrDefaultAsync(s => s.Slug == slug && s.OwnerId == site.OwnerId);
         if (series is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -1392,7 +1403,7 @@ public static class BlogEndpoints
         var en = pageLang == Languages.English;
 
         var posts = await db.Drafts
-            .Where(d => d.SeriesId == series.Id && d.IsBlogPublished && (!d.IsPrivate || d.IsListedWhilePrivate))
+            .Where(d => d.OwnerId == site.OwnerId && d.SeriesId == series.Id && d.IsBlogPublished && (!d.IsPrivate || d.IsListedWhilePrivate))
             .OrderBy(d => d.SeriesOrder).ThenBy(d => d.BlogPublishedAt)
             .Select(d => new { d.Title, d.ArticleTitle, d.BlogSlug, d.BlogPublishedAt, d.CedarJson, d.IsPrivate, d.ViewCount })
             .ToListAsync();
@@ -1437,8 +1448,7 @@ public static class BlogEndpoints
         var backLinkLabel = en ? "All posts" : "Все посты";
         var body = $"<a class=\"back-link\" href=\"/\">&larr; {backLinkLabel}</a>{sb}";
 
-        var cfg = ctx.RequestServices.GetRequiredService<IConfiguration>();
-        var blogBase = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}";
+        var blogBase = site.BaseUrl;
         var meta = OgMetaBuilder.Build(new OgMetaInput(
             series.Name, series.Description, $"{blogBase}/series/{series.Slug}",
             $"{blogBase}/og-default.png", 1200, 630,
@@ -1453,10 +1463,10 @@ public static class BlogEndpoints
     // while ShowcaseSlug is set and the project is not archived; the feed reuses the index's exact
     // visibility filter, so this surface shows nothing the index does not; the roadmap carries only
     // ticked tasks, title and status — a task's description is working material and never leaves.
-    private static async Task RenderShowcaseAsync(HttpContext ctx, CedarDbContext db, string slug)
+    private static async Task RenderShowcaseAsync(HttpContext ctx, CedarDbContext db, BlogSite site, string slug)
     {
-        var channel = await GetBlogChannelInfoAsync(db);
-        var project = await db.Projects.FirstOrDefaultAsync(p => p.ShowcaseSlug == slug && p.ArchivedAt == null);
+        var channel = await GetBlogChannelInfoAsync(db, site);
+        var project = await db.Projects.FirstOrDefaultAsync(p => p.ShowcaseSlug == slug && p.OwnerId == site.OwnerId && p.ArchivedAt == null);
         if (project is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -1472,13 +1482,13 @@ public static class BlogEndpoints
         var en = pageLang != Languages.Russian;
 
         var posts = await db.Drafts
-            .Where(d => d.ProjectId == project.Id && d.IsBlogPublished && (!d.IsPrivate || d.IsListedWhilePrivate))
+            .Where(d => d.OwnerId == site.OwnerId && d.ProjectId == project.Id && d.IsBlogPublished && (!d.IsPrivate || d.IsListedWhilePrivate))
             .OrderByDescending(d => d.BlogPublishedAt)
             .Select(d => new { d.Title, d.ArticleTitle, d.BlogSlug, d.BlogPublishedAt, d.CedarJson, d.IsPrivate })
             .ToListAsync();
 
         var roadmap = (await db.GameTasks
-            .Where(t => t.ProjectId == project.Id && t.IsPublicRoadmap && t.ArchivedAt == null)
+            .Where(t => t.OwnerId == site.OwnerId && t.ProjectId == project.Id && t.IsPublicRoadmap && t.ArchivedAt == null)
             .Select(t => new { t.Title, t.Status })
             .ToListAsync())
             // A reader's order, not the board's: what is moving now, then what is planned, then done.
@@ -1568,7 +1578,7 @@ public static class BlogEndpoints
         var backLinkLabel = en ? "All posts" : "Все посты";
         var body = $"<a class=\"back-link\" href=\"/\">&larr; {backLinkLabel}</a>{sb}";
 
-        var blogBase = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}";
+        var blogBase = site.BaseUrl;
         var ogImage = project.CoverUrl is { Length: > 0 } c
             ? (c.StartsWith('/') ? mainBase + c : c)
             : $"{blogBase}/og-default.png";
@@ -1599,20 +1609,20 @@ public static class BlogEndpoints
         return links;
     }
 
-    private static async Task RenderRssAsync(HttpContext ctx, CedarDbContext db)
+    private static async Task RenderRssAsync(HttpContext ctx, CedarDbContext db, BlogSite site)
     {
         // Public posts only, including the listed-private ones: an RSS item carries an excerpt
         // and is pulled by readers that never see the gate, so listing a gated post here would
         // hand out the thing the gate exists to withhold.
-        var posts = await db.Drafts.Where(d => d.IsBlogPublished && !d.IsPrivate)
+        var posts = await db.Drafts.Where(d => d.OwnerId == site.OwnerId && d.IsBlogPublished && !d.IsPrivate)
             .OrderByDescending(d => d.BlogPublishedAt)
             .Take(RssItemLimit)
             .Select(d => new { d.Title, d.ArticleTitle, d.BlogSlug, d.BlogPublishedAt, d.CedarJson })
             .ToListAsync();
 
-        var channel = await GetBlogChannelInfoAsync(db);
+        var channel = await GetBlogChannelInfoAsync(db, site);
         var siteTitle = System.Net.WebUtility.HtmlEncode(channel?.Title ?? "Cedar Clerk Blog");
-        var siteUrl = $"https://{ctx.RequestServices.GetRequiredService<IConfiguration>()[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}/";
+        var siteUrl = $"{site.BaseUrl}/";
 
         var sb = new StringBuilder();
         sb.Append("""<?xml version="1.0" encoding="UTF-8"?>""").Append('\n');
@@ -1645,10 +1655,10 @@ public static class BlogEndpoints
         await ctx.Response.WriteAsync(sb.ToString());
     }
 
-    private static async Task RenderPostAsync(HttpContext ctx, CedarDbContext db, string slug)
+    private static async Task RenderPostAsync(HttpContext ctx, CedarDbContext db, BlogSite site, string slug)
     {
-        var channel = await GetBlogChannelInfoAsync(db);
-        var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.IsBlogPublished);
+        var channel = await GetBlogChannelInfoAsync(db, site);
+        var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.OwnerId == site.OwnerId && d.IsBlogPublished);
         if (draft is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -1657,8 +1667,7 @@ public static class BlogEndpoints
             return;
         }
 
-        var cfg = ctx.RequestServices.GetRequiredService<IConfiguration>();
-        var blogBase = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}";
+        var blogBase = site.BaseUrl;
 
         // ADR-124 — the gate and the private not-found page are exactly what a crawler sees: a
         // *listed* private post still advertises its title and the stock image there; an unlisted
@@ -1865,10 +1874,10 @@ public static class BlogEndpoints
         var seriesLine = "";
         var seriesNav = "";
         if (draft.SeriesId is { } draftSeriesId
-            && await db.Series.FirstOrDefaultAsync(s => s.Id == draftSeriesId) is { } series)
+            && await db.Series.FirstOrDefaultAsync(s => s.Id == draftSeriesId && s.OwnerId == site.OwnerId) is { } series)
         {
             var members = await db.Drafts
-                .Where(d => d.SeriesId == draftSeriesId && d.IsBlogPublished && (!d.IsPrivate || d.IsListedWhilePrivate))
+                .Where(d => d.OwnerId == site.OwnerId && d.SeriesId == draftSeriesId && d.IsBlogPublished && (!d.IsPrivate || d.IsListedWhilePrivate))
                 .OrderBy(d => d.SeriesOrder).ThenBy(d => d.BlogPublishedAt)
                 .Select(d => new { d.Id, d.BlogSlug, d.Title, d.ArticleTitle })
                 .ToListAsync();
@@ -1904,7 +1913,7 @@ public static class BlogEndpoints
         if (draft.SeriesId is null && draft.BlogPublishedAt is { } thisPublished)
         {
             var neighbourRows = await db.Drafts
-                .Where(d => d.IsBlogPublished && d.Id != draft.Id && (!d.IsPrivate || d.IsListedWhilePrivate) && d.BlogPublishedAt != null)
+                .Where(d => d.OwnerId == site.OwnerId && d.IsBlogPublished && d.Id != draft.Id && (!d.IsPrivate || d.IsListedWhilePrivate) && d.BlogPublishedAt != null)
                 .Select(d => new { d.BlogSlug, d.Title, d.ArticleTitle, d.BlogPublishedAt })
                 .ToListAsync();
             var newer = neighbourRows.Where(n => n.BlogPublishedAt > thisPublished).OrderBy(n => n.BlogPublishedAt).FirstOrDefault();

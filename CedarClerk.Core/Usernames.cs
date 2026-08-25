@@ -1,5 +1,16 @@
 namespace CedarClerk.Core;
 
+/// <summary>Why a name cannot be taken, or <see cref="Free"/> when it can.</summary>
+public enum UsernameVerdict
+{
+    Free,
+    Missing,
+    Invalid,
+    Reserved,
+    /// <summary>Well-formed and allowed, but another account already holds it.</summary>
+    Taken,
+}
+
 /// <summary>
 /// The rules a tenant name obeys. Used by the Host-header resolver and by registration, so that a
 /// name which can be typed as a subdomain is exactly a name which can be registered.
@@ -31,10 +42,18 @@ public static class Usernames
     public static bool IsReserved(string? name) =>
         name is not null && Consts.ReservedSubdomains.Contains(name.Trim().ToLowerInvariant());
 
-    /// <summary>What registration asks before writing the name down.</summary>
-    public static bool IsAssignable(string? name)
+    /// <summary>
+    /// Everything that can be decided without asking the database. <see cref="UsernameVerdict.Taken"/>
+    /// is the caller's to add — it is the only verdict a rule cannot reach on its own.
+    /// </summary>
+    public static UsernameVerdict Check(string? name)
     {
         var normalized = Normalize(name);
-        return IsValidFormat(normalized) && !IsReserved(normalized);
+        if (normalized is null) return UsernameVerdict.Missing;
+        if (!IsValidFormat(normalized)) return UsernameVerdict.Invalid;
+        return IsReserved(normalized) ? UsernameVerdict.Reserved : UsernameVerdict.Free;
     }
+
+    /// <summary>What registration asks before writing the name down.</summary>
+    public static bool IsAssignable(string? name) => Check(name) == UsernameVerdict.Free;
 }

@@ -65,7 +65,7 @@ public class BlueskyPublishTarget(
             return PublishOutcome.Fail(ErrorMessages.BlueskyReconnect, StatusCodes.Status401Unauthorized);
 
         var draft = await db.Drafts.FirstAsync(d => d.Id == request.DraftId, ct);
-        var blogUrl = MicroThreadPlan.BlogUrl(draft, request.Language, cfg);
+        var blogUrl = await MicroThreadPlan.BlogUrlAsync(draft, request.Language, db, cfg, ct);
 
         // ADR-094 — a thread carries the document itself (recomputed, T-106's principle); a
         // single post carries the author's override or the teaser (ADR-077).

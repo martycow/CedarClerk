@@ -54,6 +54,22 @@
 
     app-input { margin-bottom: var(--space-3); }
 
+    /* The note belongs to the field, so the wrapper carries the gap and the field gives it up. */
+    .username-field {
+        margin-bottom: var(--space-3);
+
+        app-input { margin-bottom: 0; }
+    }
+
+    .username-note {
+        margin-top: var(--space-1);
+        font-size: var(--fs-ui);
+        color: var(--t2);
+    }
+
+    .username-note.ok { color: var(--ok); }
+    .username-note.bad { color: var(--danger); }
+
     .primary-btn { display: flex; }
 
     .field-error {

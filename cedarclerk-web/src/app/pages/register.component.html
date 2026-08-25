@@ -25,6 +25,20 @@
         <app-input inputId="cc-reg-pass" type="password" [label]="t().register.password"
                    [placeholder]="t().register.passwordPlaceholder" autocomplete="new-password"
                    [value]="password" (valueChange)="password = $any($event) ?? ''" />
+        <!--A name is a public address the moment it is taken, and there is no rename yet — hence
+        the live preview under the field rather than a confirmation after the fact.-->
+        <div class="username-field">
+            <app-input inputId="cc-reg-username" [label]="t().register.username"
+                       placeholder="martycow" autocomplete="off"
+                       [hint]="t().register.usernameHint(blogHost())"
+                       [value]="username()" (valueChange)="onUsernameInput($any($event) ?? '')"
+                       (keyup.enter)="submit()" />
+            @if (usernameNote()) {
+            <div class="username-note" [class.ok]="usernameTone() === 'ok'"
+                 [class.bad]="usernameTone() === 'bad'">{{ usernameNote() }}</div>
+            }
+        </div>
+
         @if (!version.openRegistration()) {
         <!--Enter submits, as it did on the field this replaces: the event bubbles from the field
         to this host.-->

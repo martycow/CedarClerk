@@ -1,6 +1,11 @@
+using CedarClerk.Core;
 using CedarClerk.Server;
 using CedarClerk.Server.Tenancy;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CedarClerk.Tests;
 
@@ -203,5 +208,61 @@ public class TenantIsolationTests
         using var db = AsTenant(connection, A);
         Assert.Empty(db.ChannelStatSnapshots.Where(s => s.ChannelId == bsChannel).ToList());
         Assert.Empty(db.ChannelPosts.Where(p => p.ChannelId == bsChannel).ToList());
+    }
+
+    // The blog host used to be given a platform scope — a public surface with no owner filter in
+    // its model at all. It is one account's blog now, and it is scoped like one.
+    private static (HttpContext Ctx, TenantProvider Tenant, bool[] Reached) BlogHostRequest(
+        Microsoft.Data.Sqlite.SqliteConnection connection, string path = "/")
+    {
+        var tenant = new TenantProvider();
+        var services = new ServiceCollection();
+        services.AddSingleton(AsPlatform(connection));
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+
+        var ctx = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
+        ctx.Request.Host = new HostString(Consts.URLs.BlogHost);
+        ctx.Request.Path = path;
+        ctx.Response.Body = new MemoryStream();
+        return (ctx, tenant, new bool[1]);
+    }
+
+    private static Task RunScope(HttpContext ctx, TenantProvider tenant, bool[] reached) =>
+        new TenantScopeMiddleware(_ => { reached[0] = true; return Task.CompletedTask; }, Consts.URLs.BlogHost)
+            .InvokeAsync(ctx, tenant, new TenantContext(),
+                ctx.RequestServices.GetRequiredService<IConfiguration>(),
+                NullLogger<TenantScopeMiddleware>.Instance);
+
+    [Fact]
+    public async Task The_blog_host_is_scoped_to_its_owner_and_not_to_the_platform()
+    {
+        using var connection = Seeded();
+        using (var platform = AsPlatform(connection))
+        {
+            platform.Users.Single(u => u.Id == A).IsAdmin = true;
+            platform.SaveChanges();
+        }
+
+        var (ctx, tenant, reached) = BlogHostRequest(connection);
+        await RunScope(ctx, tenant, reached);
+
+        Assert.True(reached[0]);
+        Assert.Equal(A, tenant.TenantId);
+        Assert.False(tenant.IsPlatform);
+    }
+
+    [Fact]
+    public async Task A_blog_host_with_no_resolvable_owner_serves_nothing()
+    {
+        using var connection = Seeded();
+
+        var (ctx, tenant, reached) = BlogHostRequest(connection);
+        await RunScope(ctx, tenant, reached);
+
+        ctx.Response.Body.Position = 0;
+        Assert.False(reached[0]);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, ctx.Response.StatusCode);
+        Assert.Equal("Blog owner is not configured.", new StreamReader(ctx.Response.Body).ReadToEnd());
+        Assert.Null(tenant.TenantId);
     }
 }

@@ -1,6 +1,7 @@
 using System.Net;
 using CedarClerk.Core;
 using CedarClerk.Localization;
+using CedarClerk.Server.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
@@ -34,15 +35,18 @@ public static class LandingEndpoints
     /// <param name="blogHost">
     /// Excluded by name. The blog serves its own index at "/" on its own host, and the first
     /// version of this middleware matched the path alone — quietly replacing the blog's homepage
-    /// with a marketing page. Caught by the smoke suite, which is what it is for.
+    /// with a marketing page. Caught by the smoke suite, which is what it is for. A tenant
+    /// subdomain is excluded on the same grounds, by <see cref="TenantRouting.ServesBlog"/>: it has
+    /// a blog index of its own, and a marketing page there would be one cacheable, indexable copy
+    /// of this page per registered account.
     /// </param>
-    public static void UseLanding(this WebApplication app, string blogHost)
+    public static void UseLanding(this IApplicationBuilder app, string blogHost)
     {
         app.Use(async (ctx, next) =>
         {
             var isRoot = ctx.Request.Path == "/" || ctx.Request.Path == "";
-            var isBlog = string.Equals(ctx.Request.Host.Host, blogHost, StringComparison.OrdinalIgnoreCase);
-            if (!isRoot || isBlog || ctx.Request.Method != HttpMethods.Get || ctx.Request.Cookies.ContainsKey(AuthCookie))
+            if (!isRoot || TenantRouting.ServesBlog(ctx, blogHost)
+                || ctx.Request.Method != HttpMethods.Get || ctx.Request.Cookies.ContainsKey(AuthCookie))
             {
                 await next();
                 return;

@@ -28,6 +28,10 @@ interface MeResponse {
 // 'unavailable' means the server didn't answer, NOT that nobody is signed in — see refresh().
 export type RefreshOutcome = 'ok' | 'unauthenticated' | 'unavailable';
 
+export type UsernameRejection = 'invalid' | 'reserved' | 'taken';
+
+export interface UsernameAvailability { available: boolean; reason?: UsernameRejection | null; }
+
 // Backoff between /me attempts; the sum is how long a guard waits before giving up (T-062).
 const MeRetryDelaysMs = [400, 1200, 3000];
 
@@ -111,13 +115,23 @@ export class AuthService {
         }
     }
 
-    async register(email: string, password: string, inviteCode: string): Promise<{ ok: true } | { ok: false; error: string }> {
+    async register(email: string, password: string, inviteCode: string, username: string): Promise<{ ok: true } | { ok: false; error: string }> {
         try {
-            await firstValueFrom(this.http.post('/api/auth/register', { email, password, inviteCode }));
+            await firstValueFrom(this.http.post('/api/auth/register', { email, password, inviteCode, username }));
             await this.refresh();
             return this.userEmail() !== null ? { ok: true } : { ok: false, error: 'Registration failed' };
         } catch (e) {
             return { ok: false, error: this.extractRegisterError(e) };
+        }
+    }
+
+    /** null when the server could not be asked — an unknown answer must not read as "taken". */
+    async checkUsername(name: string): Promise<UsernameAvailability | null> {
+        try {
+            return await firstValueFrom(this.http.get<UsernameAvailability>(
+                '/api/auth/username-available', { params: { name } }));
+        } catch {
+            return null;
         }
     }
 

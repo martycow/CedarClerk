@@ -133,12 +133,11 @@ public class TelegramPublishTarget(
                     : new RichRunLink(new RichRunBold(new RichRunText(l)), sig.Href))));
         }
 
-        // Cross-link to the blog at the end of the Telegram post.
-        if (isLastPart && draft.IsBlogPublished && draft.BlogSlug is not null)
+        // Cross-link to the blog at the end of the Telegram post. The host comes from the draft's
+        // owner, never from the request: this runs from the queue too, and a channel message is
+        // history that cannot be corrected once a per-owner slug has pointed at the wrong blog.
+        if (isLastPart && await MicroThreadPlan.BlogUrlAsync(draft, request.Language, db, cfg, ct) is { } blogUrl)
         {
-            var langSuffix = request.Language == draft.PrimaryLanguage ? "" : $"?lang={request.Language}";
-            var blogUrl = $"https://{cfg[Consts.General.BlogHostCfg] ?? Consts.URLs.BlogHost}/{draft.BlogSlug}{langSuffix}";
-
             // I15 — the author's own wording when they set one, the built-in otherwise. Per
             // language: this line is read by whoever reads that language's version of the post.
             var blogLinkText = LocalizedTextMap.Pick(owner.BlogLinkText, owner.BlogLinkTextTranslationsJson, request.Language)

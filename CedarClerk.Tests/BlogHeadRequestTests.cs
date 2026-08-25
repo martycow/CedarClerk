@@ -13,7 +13,7 @@ public class BlogHeadRequestTests
     [InlineData("GET")]
     public async Task The_index_answers_reads(string method)
     {
-        using var db = BlogTestHost.EmptyDatabase();
+        using var db = BlogTestHost.EmptyDatabase().WithOwner();
         var ctx = BlogTestHost.Request(method, "/", db);
 
         await BlogEndpoints.HandleRequest(ctx);
@@ -24,7 +24,7 @@ public class BlogHeadRequestTests
     [Fact]
     public async Task A_write_to_a_page_is_still_refused()
     {
-        using var db = BlogTestHost.EmptyDatabase();
+        using var db = BlogTestHost.EmptyDatabase().WithOwner();
         var ctx = BlogTestHost.Request("POST", "/", db);
 
         await BlogEndpoints.HandleRequest(ctx);
@@ -38,7 +38,7 @@ public class BlogHeadRequestTests
         // T-186 — the card badge said "RU" for every post while the primary language has been
         // per-draft since ADR-064.
         using var db = BlogTestHost.EmptyDatabase();
-        db.Users.Add(new ApplicationUser { Id = "o1", UserName = "o1" });
+        db.Users.Add(new ApplicationUser { Id = "o1", UserName = "o1", IsAdmin = true });
         var draft = new Draft
         {
             Title = "Hello",

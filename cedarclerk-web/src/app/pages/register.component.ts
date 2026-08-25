@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
@@ -21,6 +21,10 @@ import { PaperCardComponent } from '../bench/display/paper-card.component';
     styleUrls: ['register.component.css']
 })
 export class RegisterComponent {
+    /** Consts.URLs.TenantHost — where <name> becomes an address. */
+    private static readonly TenantHost = 'cedarclerk.app';
+    private static readonly CheckDebounceMs = 400;
+
     private auth = inject(AuthService);
     private router = inject(Router);
     theme = inject(ThemeService);
@@ -36,10 +40,47 @@ export class RegisterComponent {
     busy = signal(false);
     error = signal('');
 
+    username = signal('');
+    usernameState = signal<'idle' | 'checking' | 'free' | 'invalid' | 'reserved' | 'taken'>('idle');
+    private checkTimer?: ReturnType<typeof setTimeout>;
+
+    blogHost = computed(() => `${this.username() || 'name'}.${RegisterComponent.TenantHost}`);
+
+    usernameNote = computed(() => {
+        const s = this.usernameState();
+        if (s === 'idle') return '';
+        const dict = this.t().register;
+        return { checking: dict.usernameChecking, free: dict.usernameFree, invalid: dict.usernameInvalid, reserved: dict.usernameReserved, taken: dict.usernameTaken }[s];
+    });
+
+    usernameTone = computed(() => {
+        const s = this.usernameState();
+        if (s === 'free') return 'ok';
+        return s === 'idle' || s === 'checking' ? '' : 'bad';
+    });
+
+    // The same shape Usernames.IsValidFormat accepts, so what can be typed is what can be
+    // registered. The server still decides; this only keeps the address preview honest.
+    onUsernameInput(raw: string) {
+        const name = raw.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+        this.username.set(name);
+        clearTimeout(this.checkTimer);
+        if (!name) { this.usernameState.set('idle'); return; }
+        this.usernameState.set('checking');
+        this.checkTimer = setTimeout(() => this.checkUsername(name), RegisterComponent.CheckDebounceMs);
+    }
+
+    private async checkUsername(name: string) {
+        const answer = await this.auth.checkUsername(name);
+        if (this.username() !== name) return;
+        if (!answer) { this.usernameState.set('idle'); return; }
+        this.usernameState.set(answer.available ? 'free' : answer.reason ?? 'invalid');
+    }
+
     async submit() {
         this.busy.set(true);
         this.error.set('');
-        const result = await this.auth.register(this.email, this.password, this.inviteCode);
+        const result = await this.auth.register(this.email, this.password, this.inviteCode, this.username());
         this.busy.set(false);
         if (result.ok) {
             // I1: the language picked on this screen becomes the account's own setting, so

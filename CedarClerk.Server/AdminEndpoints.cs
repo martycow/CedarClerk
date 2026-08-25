@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CedarClerk.Core;
+using CedarClerk.Server.Tenancy;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -384,7 +385,7 @@ public static class AdminEndpoints
         //
         // READ-ONLY by decision: the panel links out to the live post rather than editing anyone
         // else's content. Nothing here writes.
-        group.MapGet("/posts", async (CedarDbContext db) =>
+        group.MapGet("/posts", async (CedarDbContext db, IConfiguration cfg) =>
         {
             var owners = await db.Users.Select(u => new { u.Id, u.Email })
                 .ToDictionaryAsync(u => u.Id, u => u.Email);
@@ -405,6 +406,10 @@ public static class AdminEndpoints
                 .GroupBy(c => c.DraftId).Select(g => new { Id = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.Id, x => x.Count);
 
+            // This list spans owners and slugs are per-owner, so the host is per row — resolved in
+            // one batch, in keeping with the grouped-query rule the /users list follows.
+            var blogHosts = await BlogTenant.HostsForOwnersAsync(db, cfg, posts.Select(p => p.OwnerId));
+
             return Results.Ok(posts.Select(p => new
             {
                 p.Id,
@@ -416,7 +421,9 @@ public static class AdminEndpoints
                 p.IsArchived,
                 p.ViewCount,
                 Comments = commentCounts.GetValueOrDefault(p.Id),
-                BlogUrl = p.IsBlogPublished && p.BlogSlug != null ? $"https://{Consts.URLs.BlogHost}/{p.BlogSlug}" : null,
+                BlogUrl = p.IsBlogPublished && p.BlogSlug != null && blogHosts.TryGetValue(p.OwnerId, out var blogHost)
+                    ? $"https://{blogHost}/{p.BlogSlug}"
+                    : null,
                 TelegramUrl = p.LastTelegramUsername != null && p.LastTelegramMessageId != null
                     ? $"https://t.me/{p.LastTelegramUsername}/{p.LastTelegramMessageId}"
                     : null,

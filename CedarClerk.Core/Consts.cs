@@ -81,6 +81,10 @@ public static class Consts
         public const string MainHostCfg = "Cedar:MainHost";
         public const string BlogHostCfg = "Cedar:BlogHost";
         public const string TenantHostCfg = "Cedar:TenantHost";
+
+        // The TenantUsername of the account whose blog answers on the legacy blog host. Unset means
+        // "the one admin account", which is what a single-tenant install already is.
+        public const string BlogOwnerCfg = "Cedar:BlogOwner";
         public const string InviteCodeCfg = "Cedar:InviteCode";
 
         // Set ONLY by the desktop shell, which binds to 127.0.0.1 and serves one person on their own
