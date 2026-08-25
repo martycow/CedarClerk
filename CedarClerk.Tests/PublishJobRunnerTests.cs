@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
+using CedarClerk.Server.Tenancy;
 
 namespace CedarClerk.Tests;
 
@@ -36,11 +37,12 @@ public class PublishJobRunnerTests
 
         var target = new FakeTarget(PublishNetworks.Telegram);
         var services = new ServiceCollection();
+        services.AddScoped<TenantProvider>();
         services.AddDbContext<CedarDbContext>(o => o.UseSqlite(connection));
         services.AddSingleton<IPublishTarget>(target);
         var provider = services.BuildServiceProvider();
 
-        using (var scope = provider.CreateScope())
+        using (var scope = provider.CreatePlatformScope())
             scope.ServiceProvider.GetRequiredService<CedarDbContext>().Database.EnsureCreated();
 
         return (provider, connection, target);
@@ -48,7 +50,7 @@ public class PublishJobRunnerTests
 
     private static async Task<(Guid DraftId, Guid TargetId)> SeedAsync(ServiceProvider provider)
     {
-        using var scope = provider.CreateScope();
+        using var scope = provider.CreatePlatformScope();
         var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
         db.Users.Add(new ApplicationUser { Id = "owner-1", UserName = "owner-1", Email = "owner-1@test.local" });
         var draft = new Draft { OwnerId = "owner-1", Title = "T", CedarJson = "{}" };
@@ -64,7 +66,7 @@ public class PublishJobRunnerTests
 
     private static async Task<PublishJob> QueueAsync(ServiceProvider provider, Guid draftId, Guid targetId)
     {
-        using var scope = provider.CreateScope();
+        using var scope = provider.CreatePlatformScope();
         var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
         var job = new PublishJob
         {
@@ -78,7 +80,7 @@ public class PublishJobRunnerTests
 
     private static async Task<PublishJob> ReadAsync(ServiceProvider provider, Guid jobId)
     {
-        using var scope = provider.CreateScope();
+        using var scope = provider.CreatePlatformScope();
         return await scope.ServiceProvider.GetRequiredService<CedarDbContext>()
             .PublishJobs.AsNoTracking().FirstAsync(j => j.Id == jobId);
     }
@@ -172,7 +174,7 @@ public class PublishJobRunnerTests
         for (var i = 0; i < PublishJobRunner.MaxAttempts + 2; i++)
         {
             // Pull each backoff forward rather than sleeping through it.
-            using (var scope = provider.CreateScope())
+            using (var scope = provider.CreatePlatformScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
                 var row = await db.PublishJobs.FirstAsync(j => j.Id == job.Id);
@@ -198,7 +200,7 @@ public class PublishJobRunnerTests
         var (draftId, targetId) = await SeedAsync(provider);
         var job = await QueueAsync(provider, draftId, targetId);
 
-        using (var scope = provider.CreateScope())
+        using (var scope = provider.CreatePlatformScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
             var row = await db.PublishJobs.FirstAsync(j => j.Id == job.Id);
@@ -243,7 +245,7 @@ public class PublishJobRunnerTests
 
     private static async Task<List<PublishJob>> QueueThreadAsync(ServiceProvider provider, Guid draftId, Guid targetId, int parts)
     {
-        using var scope = provider.CreateScope();
+        using var scope = provider.CreatePlatformScope();
         var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
         var threadId = Guid.NewGuid();
         var jobs = Enumerable.Range(0, parts).Select(i => new PublishJob

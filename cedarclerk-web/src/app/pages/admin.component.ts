@@ -6,6 +6,8 @@ import {
 } from '../core/admin.service';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { ButtonComponent } from '../bench/forms/button.component';
+import { ModalComponent } from '../shared/modal.component';
+import { IconComponent } from '../shared/icon.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
@@ -24,7 +26,7 @@ export type AdminTab = 'users' | 'invites' | 'posts' | 'reports';
     selector: 'app-admin',
     imports: [
         ZonedDatePipe, FormsModule, IndexTabsComponent, ShelfPanelComponent, SpecRowComponent,
-        LogLineComponent, PaperCardComponent, ButtonComponent,
+        LogLineComponent, PaperCardComponent, ButtonComponent, ModalComponent, IconComponent,
     ],
     templateUrl: 'admin.component.html',
     styleUrls: ['admin.component.css'],
@@ -59,6 +61,7 @@ export class AdminComponent implements OnInit {
     // Step 2 — one expanded row at a time; the actions are destructive-adjacent enough that
     // having six accounts' worth of controls on screen at once invites a misclick.
     expandedId = signal<string | null>(null);
+    deleteTarget = signal<AdminUser | null>(null);
     busy = signal(false);
     readonly tiers = ['Free', 'Pro', 'ProPlus', 'Forever'];
     planTier = 'Free';
@@ -200,6 +203,26 @@ export class AdminComponent implements OnInit {
 
     toggleAdmin(u: AdminUser) {
         return this.run(() => this.api.setAdmin(u.id, !u.isAdmin));
+    }
+
+    // Two steps, like deleting a draft: the modal names the account so the wrong row cannot be
+    // dismissed with a reflex click.
+    askDelete(u: AdminUser) {
+        this.deleteTarget.set(u);
+    }
+
+    cancelDelete() {
+        this.deleteTarget.set(null);
+    }
+
+    async confirmDelete() {
+        const target = this.deleteTarget();
+        if (!target) return;
+        this.deleteTarget.set(null);
+        await this.run(async () => {
+            await this.api.deleteAccount(target.id);
+            this.users.update(list => list.filter(u => u.id !== target.id));
+        });
     }
 
     // ---------- Step 3: invite codes ----------

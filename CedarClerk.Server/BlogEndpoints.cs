@@ -570,7 +570,7 @@ public static class BlogEndpoints
 
         var isNewLike = existing is null && req.Kind == "like";
         if (existing is null)
-            db.Reactions.Add(new Reaction { DraftId = draft.Id, AnnotationId = annotationId, Kind = req.Kind, VisitorHash = visitor });
+            db.Reactions.Add(new Reaction { DraftId = draft.Id, OwnerId = draft.OwnerId, AnnotationId = annotationId, Kind = req.Kind, VisitorHash = visitor });
         else if (existing.Kind == req.Kind)
             db.Reactions.Remove(existing);
         else
@@ -621,7 +621,7 @@ public static class BlogEndpoints
             v.DraftId == draft.Id && v.PollId == req.PollId && v.VisitorHash == visitor);
 
         if (existing is null)
-            db.PollVotes.Add(new PollVote { DraftId = draft.Id, PollId = req.PollId, Option = req.Option, VisitorHash = visitor });
+            db.PollVotes.Add(new PollVote { DraftId = draft.Id, OwnerId = draft.OwnerId, PollId = req.PollId, Option = req.Option, VisitorHash = visitor });
         else
             existing.Option = req.Option;
         await db.SaveChangesAsync();
@@ -729,6 +729,7 @@ public static class BlogEndpoints
 
         var registration = new PostRegistration
         {
+            OwnerId = draft.OwnerId,
             AccessToken = PrivateAccess.NewToken(),
             DraftId = draft.Id,
             Name = name,
@@ -860,7 +861,7 @@ public static class BlogEndpoints
                 parentCommentId = pid;
         }
 
-        var comment = new Comment { DraftId = draft.Id, AnnotationId = annotationId, AuthorName = authorName, Text = text, ParentCommentId = parentCommentId };
+        var comment = new Comment { DraftId = draft.Id, OwnerId = draft.OwnerId, AnnotationId = annotationId, AuthorName = authorName, Text = text, ParentCommentId = parentCommentId };
         db.Comments.Add(comment);
         await db.SaveChangesAsync();
 

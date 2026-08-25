@@ -1441,7 +1441,11 @@ export const en = {
             grantAdmin: 'Make admin',
             revokeAdmin: 'Remove admin',
             notOnSelf: 'Not available on your own account',
-            noDeleteNote: 'Accounts are never deleted from here — locking is the reversible equivalent.',
+            deleteAccount: 'Delete account',
+            deleteNote: 'Deleting removes the account and everything it owns. Locking is the reversible alternative.',
+            deleteTitle: 'Delete this account?',
+            deleteBody: (email: string) =>
+                `${email} and every document, file, channel and payment record it owns will be removed. This cannot be undone.`,
         },
         posts: {
             title: 'Posts',

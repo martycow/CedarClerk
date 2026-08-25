@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Quartz;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using CedarClerk.Server.Tenancy;
 
 namespace CedarClerk.Server;
 
@@ -10,10 +11,14 @@ namespace CedarClerk.Server;
 /// A job which is used to collect statistics about channels
 /// </summary>
 [DisallowConcurrentExecution]
-public class SnapshotChannelStatsJob(CedarDbContext db, TelegramBotService bot, MediaPaths media, ILogger<SnapshotChannelStatsJob> logger) : IJob
+public class SnapshotChannelStatsJob(CedarDbContext db, TenantProvider tenant, TelegramBotService bot, MediaPaths media, ILogger<SnapshotChannelStatsJob> logger) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
+        // Runs on a timer, not in a request: there is no Host and no signed-in user, and the
+        // work is over every owner's rows at once.
+        tenant.UsePlatform();
+
         if (!bot.IsRunning) 
             return;
 
@@ -43,6 +48,7 @@ public class SnapshotChannelStatsJob(CedarDbContext db, TelegramBotService bot, 
                 db.ChannelStatSnapshots.Add(new ChannelStatSnapshot
                 {
                     ChannelId = channel.Id,
+                    OwnerId = channel.OwnerId,
                     MemberCount = count,
                     ViewCount = viewCount,
                     LikeCount = likeCount,
@@ -97,7 +103,7 @@ public class SnapshotChannelStatsJob(CedarDbContext db, TelegramBotService bot, 
             try
             {
                 var views = await db.Drafts.Where(d => trackedIds.Contains(d.Id))
-                    .Select(d => new { d.Id, d.ViewCount }).ToListAsync();
+                    .Select(d => new { d.Id, d.ViewCount, d.OwnerId }).ToListAsync();
                 var reactions = await db.Reactions.Where(r => trackedIds.Contains(r.DraftId))
                     .GroupBy(r => new { r.DraftId, r.Kind })
                     .Select(g => new { g.Key.DraftId, g.Key.Kind, Count = g.Count() }).ToListAsync();
@@ -110,6 +116,7 @@ public class SnapshotChannelStatsJob(CedarDbContext db, TelegramBotService bot, 
                     db.DraftStatSnapshots.Add(new DraftStatSnapshot
                     {
                         DraftId = draft.Id,
+                        OwnerId = draft.OwnerId,
                         ViewCount = draft.ViewCount,
                         LikeCount = reactions.FirstOrDefault(r => r.DraftId == draft.Id && r.Kind == "like")?.Count ?? 0,
                         DislikeCount = reactions.FirstOrDefault(r => r.DraftId == draft.Id && r.Kind == "dislike")?.Count ?? 0,

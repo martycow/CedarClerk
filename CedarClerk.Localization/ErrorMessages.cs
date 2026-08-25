@@ -83,6 +83,7 @@ public static class ErrorMessages
     public static string WatermarkTooLong => Ru("Текст водяного знака слишком длинный.", "Watermark text is too long");
     public static string CannotChangeOwnAdmin => Ru("Нельзя менять собственные права администратора.", "You cannot change your own admin rights");
     public static string CannotLockOwnAccount => Ru("Нельзя заблокировать собственный аккаунт.", "You cannot lock your own account");
+    public static string CannotDeleteOwnAccount => Ru("Нельзя удалить собственный аккаунт.", "You cannot delete your own account");
 
     public static string StripePlanNotConfigured => Ru("Stripe не настроен для этого плана — см. docs/integrations-setup.md", "Stripe is not configured for this plan — see docs/integrations-setup.md");
     public static string StripeNotConfigured => Ru("Stripe не настроен — см. docs/integrations-setup.md", "Stripe is not configured — see docs/integrations-setup.md");
@@ -151,6 +152,12 @@ public static class ErrorMessages
     public static string ShowcaseSlugEmpty => Ru(
         "Слаг получился пустым — используйте латинские буквы или цифры.",
         "The slug came out empty — use latin letters or digits.");
+    public static string UsernameInvalid => Ru(
+        "Имя может состоять только из латинских букв, цифр и дефисов внутри — до 63 символов, и некоторые имена зарезервированы.",
+        "A name may hold only latin letters, digits and inner hyphens — up to 63 characters, and some names are reserved.");
+    public static string UsernameTaken(string username) => Ru(
+        $"«{username}» уже занято — выберите другое имя.",
+        $"'{username}' is already taken — pick another name.");
     public static string ShowcaseSlugTaken(string slug) => Ru(
         $"«{slug}» уже занят — выберите другой слаг.",
         $"'{slug}' is already taken — pick another slug.");

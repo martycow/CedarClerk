@@ -1,4 +1,5 @@
 using CedarClerk.Server;
+using CedarClerk.Server.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Tests;
@@ -22,7 +23,7 @@ public class SchemaDriftGuardTests
         // snapshot, so no real database (and no connection) is involved.
         var opts = new DbContextOptionsBuilder<CedarDbContext>()
             .UseSqlite("Data Source=:memory:").Options;
-        using var db = new CedarDbContext(opts);
+        using var db = new CedarDbContext(opts, TenantProvider.Platform());
 
         Assert.False(db.Database.HasPendingModelChanges(),
             "Entities.cs changed without a matching migration. Run: dotnet ef migrations add <Name> --project CedarClerk.Server");

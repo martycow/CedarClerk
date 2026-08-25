@@ -1,5 +1,6 @@
 using CedarClerk.Core;
 using CedarClerk.Server;
+using CedarClerk.Server.Tenancy;
 using CedarClerk.Server.Publishing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,7 @@ public class TelegramTargetProjectionTests
         var connection = new SqliteConnection("Data Source=:memory:");
         connection.Open();
         var opts = new DbContextOptionsBuilder<CedarDbContext>().UseSqlite(connection).Options;
-        var db = new CedarDbContext(opts);
+        var db = new CedarDbContext(opts, TenantProvider.Platform());
         db.Database.EnsureCreated();
         return db;
     }
@@ -126,7 +127,7 @@ public class TelegramTargetProjectionTests
         connection.Open();
         var opts = new DbContextOptionsBuilder<CedarDbContext>().UseSqlite(connection).Options;
 
-        using (var db = new CedarDbContext(opts))
+        using (var db = new CedarDbContext(opts, TenantProvider.Platform()))
         {
             db.Database.EnsureCreated();
             SeedChannel(db, "owner-1", -100111);
@@ -136,7 +137,7 @@ public class TelegramTargetProjectionTests
             Assert.Equal(2, await db.PublishTargets.CountAsync());
         }
 
-        using (var restarted = new CedarDbContext(opts))
+        using (var restarted = new CedarDbContext(opts, TenantProvider.Platform()))
         {
             Assert.Equal(0, await TelegramTargetProjection.BackfillAsync(restarted));
             Assert.Equal(2, await restarted.PublishTargets.CountAsync());

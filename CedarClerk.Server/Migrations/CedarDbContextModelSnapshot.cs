@@ -247,6 +247,9 @@ namespace CedarClerk.Server.Migrations
                     b.Property<string>("TelegramUsername")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("TenantUsername")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ToolbarLayoutJson")
                         .HasColumnType("TEXT");
 
@@ -279,6 +282,10 @@ namespace CedarClerk.Server.Migrations
                     b.HasIndex("TelegramUserId")
                         .IsUnique()
                         .HasFilter("\"TelegramUserId\" IS NOT NULL");
+
+                    b.HasIndex("TenantUsername")
+                        .IsUnique()
+                        .HasFilter("\"TenantUsername\" IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -595,6 +602,10 @@ namespace CedarClerk.Server.Migrations
                     b.Property<Guid>("DraftId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("PublishedAt")
                         .HasColumnType("TEXT");
 
@@ -608,6 +619,8 @@ namespace CedarClerk.Server.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "ChannelId");
 
                     b.ToTable("ChannelPosts");
                 });
@@ -630,6 +643,10 @@ namespace CedarClerk.Server.Migrations
                     b.Property<int>("MemberCount")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("TakenAt")
                         .HasColumnType("TEXT");
 
@@ -645,6 +662,8 @@ namespace CedarClerk.Server.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ChannelId");
+
+                    b.HasIndex("OwnerId", "ChannelId");
 
                     b.ToTable("ChannelStatSnapshots");
                 });
@@ -667,6 +686,10 @@ namespace CedarClerk.Server.Migrations
                     b.Property<Guid>("DraftId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("ParentCommentId")
                         .HasColumnType("TEXT");
 
@@ -675,6 +698,8 @@ namespace CedarClerk.Server.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "DraftId");
 
                     b.ToTable("Comments");
                 });
@@ -913,11 +938,17 @@ namespace CedarClerk.Server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "DraftId");
 
                     b.HasIndex("DraftId", "Language", "Kind", "Destination", "CreatedAt");
 
@@ -975,6 +1006,10 @@ namespace CedarClerk.Server.Migrations
                     b.Property<int>("LikeCount")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("TakenAt")
                         .HasColumnType("TEXT");
 
@@ -984,6 +1019,8 @@ namespace CedarClerk.Server.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DraftId", "TakenAt");
+
+                    b.HasIndex("OwnerId", "DraftId");
 
                     b.ToTable("DraftStatSnapshots");
                 });
@@ -1005,6 +1042,10 @@ namespace CedarClerk.Server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Text")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -1013,6 +1054,8 @@ namespace CedarClerk.Server.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "DraftId");
 
                     b.HasIndex("DraftId", "Network", "Language")
                         .IsUnique();
@@ -1037,6 +1080,10 @@ namespace CedarClerk.Server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("SourceLanguage")
                         .HasColumnType("TEXT");
 
@@ -1054,6 +1101,8 @@ namespace CedarClerk.Server.Migrations
 
                     b.HasIndex("DraftId", "Language")
                         .IsUnique();
+
+                    b.HasIndex("OwnerId", "DraftId");
 
                     b.ToTable("DraftTranslations");
                 });
@@ -1362,6 +1411,10 @@ namespace CedarClerk.Server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("PollId")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -1371,6 +1424,8 @@ namespace CedarClerk.Server.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "DraftId");
 
                     b.ToTable("PollVotes");
                 });
@@ -1391,11 +1446,17 @@ namespace CedarClerk.Server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Token")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "DraftId");
 
                     b.ToTable("PostInvites");
                 });
@@ -1431,6 +1492,10 @@ namespace CedarClerk.Server.Migrations
                     b.Property<string>("Nickname")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("SocialLink")
                         .HasColumnType("TEXT");
 
@@ -1439,6 +1504,8 @@ namespace CedarClerk.Server.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "DraftId");
 
                     b.ToTable("PostRegistrations");
                 });
@@ -1650,11 +1717,17 @@ namespace CedarClerk.Server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("VisitorHash")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "DraftId");
 
                     b.ToTable("Reactions");
                 });

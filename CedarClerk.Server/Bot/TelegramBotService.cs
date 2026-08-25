@@ -1,10 +1,11 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using CedarClerk.Core;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using CedarClerk.Server.Tenancy;
 
 namespace CedarClerk.Server.Bot;
 
@@ -137,7 +138,7 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
                 ? (payloadParts[0], payloadParts[1])
                 : (Consts.Plans.Pro, payment.InvoicePayload); // legacy payload without plan
 
-            using var scope = scopeFactory.CreateScope();
+            using var scope = scopeFactory.CreatePlatformScope();
             var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
 
             if (await db.Payments.AnyAsync(p => p.ExternalId == payment.TelegramPaymentChargeId))
@@ -225,7 +226,7 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
     {
         if (message.ReplyToMessage is null) return;
 
-        using var scope = scopeFactory.CreateScope();
+        using var scope = scopeFactory.CreatePlatformScope();
         var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
         if (await TelegramEngagement.ApplyCommentAsync(db, message))
             await db.SaveChangesAsync();
@@ -264,7 +265,7 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
         // current count, so nothing here adds up deltas.
         if (update.MessageReactionCount is { } reactions)
         {
-            using var reactionScope = scopeFactory.CreateScope();
+            using var reactionScope = scopeFactory.CreatePlatformScope();
             var reactionDb = reactionScope.ServiceProvider.GetRequiredService<CedarDbContext>();
             if (await TelegramEngagement.ApplyReactionsAsync(reactionDb, reactions))
                 await reactionDb.SaveChangesAsync();
@@ -275,7 +276,7 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
         if (update.MyChatMember is not { } cm) 
             return;
 
-        using var scope = scopeFactory.CreateScope();
+        using var scope = scopeFactory.CreatePlatformScope();
         var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
 
         var known = await db.BotKnownChats.FirstOrDefaultAsync(k => k.TelegramChatId == cm.Chat.Id);

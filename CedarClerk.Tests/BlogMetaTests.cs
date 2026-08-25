@@ -109,7 +109,7 @@ public class BlogMetaTests
         var draft = Seed(db);
         db.DraftTranslations.Add(new DraftTranslation
         {
-            DraftId = draft.Id, Language = "en", Title = "Devlog 1 EN", CedarJson = ParagraphJson,
+            DraftId = draft.Id, OwnerId = draft.OwnerId, Language = "en", Title = "Devlog 1 EN", CedarJson = ParagraphJson,
         });
         db.SaveChanges();
 

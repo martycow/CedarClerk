@@ -1,6 +1,7 @@
 using CedarClerk.Server.Publishing;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
+using CedarClerk.Server.Tenancy;
 
 namespace CedarClerk.Server;
 
@@ -8,10 +9,14 @@ namespace CedarClerk.Server;
 /// A job that checks if schedule posts should be posted
 /// </summary>
 [DisallowConcurrentExecution]
-public class PublishDueScheduledPostsJob(CedarDbContext db, IEnumerable<IPublishTarget> targets, ILogger<PublishDueScheduledPostsJob> logger) : IJob
+public class PublishDueScheduledPostsJob(CedarDbContext db, TenantProvider tenant, IEnumerable<IPublishTarget> targets, ILogger<PublishDueScheduledPostsJob> logger) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
+        // Runs on a timer, not in a request: there is no Host and no signed-in user, and the
+        // work is over every owner's rows at once.
+        tenant.UsePlatform();
+
         var now = DateTime.UtcNow;
         var due = await db.ScheduledPosts
             .Where(p => p.Status == "Pending" && p.ScheduledAtUtc <= now)

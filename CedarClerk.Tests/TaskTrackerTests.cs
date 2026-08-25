@@ -1,5 +1,6 @@
 using CedarClerk.Core;
 using CedarClerk.Server;
+using CedarClerk.Server.Tenancy;
 using CedarClerk.Server.Modules.IndieDev;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +17,7 @@ public class TaskTrackerTests
         var connection = new SqliteConnection("Data Source=:memory:");
         connection.Open();
         var opts = new DbContextOptionsBuilder<CedarDbContext>().UseSqlite(connection).Options;
-        var db = new CedarDbContext(opts);
+        var db = new CedarDbContext(opts, TenantProvider.Platform());
         db.Database.EnsureCreated();
         return db;
     }

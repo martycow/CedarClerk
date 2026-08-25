@@ -2,17 +2,22 @@ namespace CedarClerk.Core;
 
 public static class Consts
 {
-    public const string CurrentVersion = "0.14.2";
+    public const string CurrentVersion = "0.15.0";
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
 
     // Must equal the auth ticket's own expiry — see Program.cs.
     public static readonly TimeSpan AuthCookieLifetime = TimeSpan.FromDays(30);
-
-    // Part of the data-protection purpose string, so changing it signs everyone out. Pinned to the
-    // value ASP.NET derived implicitly, so a project rename cannot do that silently (T-074).
+    
     public const string DataProtectionApplicationName = "CedarClerk.Server";
-
+    
+    // Prohibited subdomains to prevent users to use them
+    public static string[] ReservedSubdomains =
+    [
+        "www", "app", "api", "admin", "mail", "blog", "docs", "status", "cdn",
+        "static", "assets", "help", "support", "billing", "auth", "login",
+        "smtp", "imap", "mx", "ftp", "ns1", "ns2", "dev", "staging", "test", "root"
+    ];
 
     public static class ContentTypes
     {
@@ -33,17 +38,13 @@ public static class Consts
 
         public const string Trial = "trial";
         public const int TrialPrice = 1;
-
-        // "credits-{packId}:{userId}" — the same {what}:{who} shape as the plan payloads (ADR-092).
+        
         public const string CreditPackPrefix = "credits-";
-        /// <summary>ADR-189 — what follows CreditPackPrefix when the purchase was a bare number
-        /// of credits rather than a pack: "credits-custom:27".</summary>
         public const string CustomCreditsPrefix = "custom:";
     }
 
     public static class Signatures
     {
-        // Free tier gets this instead of a custom PostSignature — the upgrade hook for Pro.
         public const string FreeAttributionText = "Published with Cedar Clerk";
     }
 
@@ -51,6 +52,9 @@ public static class Consts
     {
         public const string MainHost = "https://cedarclerk.mooexe.dev";
         public const string BlogHost = "blog.mooexe.dev";
+
+        // Tenant blogs live at <username>.cedarclerk.app (ADR-020).
+        public const string TenantHost = "cedarclerk.app";
         public const string Localhost = "http://localhost:8080";
     }
 
@@ -61,8 +65,6 @@ public static class Consts
 
     public static class Documents
     {
-        // ADR-128 — the document tree's depth cap: enough for a ГДД outline, shallow enough that
-        // breadcrumbs and the tree view never degenerate.
         public const int MaxTreeDepth = 10;
     }
 
@@ -70,9 +72,7 @@ public static class Consts
     {
         // Not a secret — just enough to avoid storing raw visitor IPs directly.
         public const string VisitorHashSalt = "cedar-clerk-visitor-v1";
-
-        // Display only; the server runs in UTC (ADR-115). A named zone, not a fixed -8: Los Angeles
-        // is on PDT March–November. The frontend keeps the same value in core/display-time.ts.
+        
         public const string DisplayTimeZone = "America/Los_Angeles";
         public const string DisplayTimeZoneWindows = "Pacific Standard Time";
         public const string DisplayTimeZoneStandard = "PST";
@@ -80,6 +80,7 @@ public static class Consts
 
         public const string MainHostCfg = "Cedar:MainHost";
         public const string BlogHostCfg = "Cedar:BlogHost";
+        public const string TenantHostCfg = "Cedar:TenantHost";
         public const string InviteCodeCfg = "Cedar:InviteCode";
 
         // Set ONLY by the desktop shell, which binds to 127.0.0.1 and serves one person on their own
@@ -95,44 +96,31 @@ public static class Consts
         // enumerates folders is open to every process on the machine and to any page that can reach
         // 127.0.0.1; the agent has no Identity cookie to close it (ADR-117 decision 6).
         public const string AgentTokenCfg = "Cedar:Agent:Token";
-
-        // ADR-117 — Marty chose "every preview, no limit" for the author; the droplet still gets a
-        // ceiling, because filling a 48 GB disk silently is denial of service dressed as generosity.
+        
         public const string ThumbBudgetCfg = "Cedar:AssetIndex:ThumbBudgetBytes";
         public const long ThumbBudgetDefaultBytes = 2L * 1024 * 1024 * 1024;
-
-        // ADR-104 — empty everywhere except the desktop shell, which takes a free port from the OS:
-        // two instances cannot both hold 8080, and production's port is fixed by the tunnel config.
+        
         public const string UrlsCfg = "Cedar:Urls";
-
-        // The first admin cannot be made through the admin panel, and this works on a fresh database
-        // or a restored backup without hand-editing SQL on the server (IF2).
+        
         public const string AdminEmailCfg = "Cedar:AdminEmail";
 
         public const string ProviderKeyCfg = "Cedar:Translate:Provider";
 
         public const string ViewedCookiePrefix = "cedar_viewed_";
-
-        // An access grant, much longer-lived than ViewedCookiePrefix, which only dedups view counts
-        // within a visit.
+        
         public const string PrivateAccessCookiePrefix = "cedar_access_";
-
-        // A real bucket, not a null: "unknown" is an honest share of the audience.
+        
         public const string UnknownGeo = "??";
     }
 
     public static class FileSizes
     {
-        public const long ImageMaxBytes = 50L * 1024 * 1024;
-        public const long MediaMaxBytes = 1000L * 1024 * 1024;
-
-        // Above this, Telegram rejects a URL-fetched photo with a misleading "wrong type of the web
-        // page content". Measured 19.07.2026 against @testingandfun: 9.88MB failed, 0.94MB passed.
-        public const long TelegramSafeImageBytes = 4L * 1024 * 1024;
-
-        // The other two compression presets in the export modal; "standard" is the constant above.
-        public const long TelegramCompressSmallBytes = 2L * 1024 * 1024;
-        public const long TelegramCompressHighBytes = 6L * 1024 * 1024;
+        public const long ImageMaxBytes = 50L * 1024 * 1024;                // 50MB
+        public const long MediaMaxBytes = 1000L * 1024 * 1024;              // 1GB
+        
+        public const long TelegramSafeImageBytes = 4L * 1024 * 1024;        // 4MB
+        public const long TelegramCompressSmallBytes = 2L * 1024 * 1024;    // 2MB
+        public const long TelegramCompressHighBytes = 6L * 1024 * 1024;     // 6MD
     }
 
     public static class X
@@ -165,9 +153,9 @@ public static class Consts
         public const string ProPlusStarsPriceCfg = "Cedar:Telegram:ProPlusStarsPrice";
         public const string TrialStarsPriceCfg = "Cedar:Telegram:TrialStarsPrice";
 
-        public const int DefaultProStarsPrice = 150; // ~ $3.00
-        public const int DefaultProPlusStarsPrice = 250; // ~ $5.00
-        public const int DefaultTrialStarsPrice = 50; // ~ $1.00
+        public const int DefaultProStarsPrice = 150;        // ~ $3.00
+        public const int DefaultProPlusStarsPrice = 250;    // ~ $5.00
+        public const int DefaultTrialStarsPrice = 50;       // ~ $1.00
 
         // The editor's status bar carries its own copy inside a localized string ("6 / 32,768").
         public const int MaxPostChars = 32_768;
@@ -210,18 +198,6 @@ public static class Consts
         // translation output" (29.07.2026): the response must hold the entire translated document as
         // one JSON object, and the output was cut off mid-JSON.
         public const int MaxOutputTokens = 64_000;
-    }
-
-    public static class OpenAi
-    {
-        public const string ApiKeyCfg = "Cedar:OpenAi:ApiKey";
-        public const string ModelCfg = "Cedar:OpenAi:Model";
-        public const string DefaultModel = "gpt-4o";
-    }
-
-    public static class DeepL
-    {
-        public const string ApiKeyCfg = "Cedar:DeepL:ApiKey";
     }
 
     public static class Email

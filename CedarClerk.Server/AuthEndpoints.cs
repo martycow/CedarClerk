@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using System.Text.Json.Serialization;
 using CedarClerk.Core;
 using CedarClerk.Localization;
@@ -14,7 +14,7 @@ namespace CedarClerk.Server;
 
 public static class AuthEndpoints
 {
-    public record RegisterRequest(string Email, string Password, string InviteCode);
+    public record RegisterRequest(string Email, string Password, string InviteCode, string? Username = null);
     public record LoginRequest(string Email, string Password);
     public record SignatureRequest(string? Signature, string? SignatureUrl = null,
         // FI5 — the same signature in the other content languages, keyed by language code. Same
@@ -87,10 +87,22 @@ public static class AuthEndpoints
             if (!openRegistration && !codeUsable && !configMatches)
                 return Results.BadRequest(new { error = ErrorMessages.InvalidInviteCode });
 
+            // Optional for now: existing accounts have none either, and the subdomain a name
+            // buys does not exist until the tenant blog does.
+            var username = Usernames.Normalize(req.Username);
+            if (username is not null)
+            {
+                if (!Usernames.IsAssignable(username))
+                    return Results.BadRequest(new { error = ErrorMessages.UsernameInvalid });
+                if (await db.Users.AnyAsync(u => u.TenantUsername == username))
+                    return Results.BadRequest(new { error = ErrorMessages.UsernameTaken(username) });
+            }
+
             var user = new ApplicationUser
             {
                 UserName = req.Email,
                 Email = req.Email,
+                TenantUsername = username,
                 // Null when the config fallback was used: there is no code row to point at, and
                 // inventing one would make the attribution list lie.
                 InviteCodeId = codeUsable ? code!.Id : null,

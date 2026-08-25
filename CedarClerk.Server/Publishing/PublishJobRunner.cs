@@ -1,6 +1,7 @@
 using CedarClerk.Core;
 using CedarClerk.Localization;
 using Microsoft.EntityFrameworkCore;
+using CedarClerk.Server.Tenancy;
 
 namespace CedarClerk.Server.Publishing;
 
@@ -63,7 +64,7 @@ public class PublishJobRunner(
     /// <summary>Picks up whatever is due — after a restart, after a backoff, or after a missed kick.</summary>
     public async Task SweepAsync(CancellationToken ct)
     {
-        using var scope = scopes.CreateScope();
+        using var scope = scopes.CreatePlatformScope();
         var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
         var now = DateTime.UtcNow;
 
@@ -98,7 +99,7 @@ public class PublishJobRunner(
 
     private async Task RunOneAsync(Guid jobId, bool kickSuccessor, CancellationToken ct)
     {
-        using var scope = scopes.CreateScope();
+        using var scope = scopes.CreatePlatformScope();
         var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
         var targets = scope.ServiceProvider.GetRequiredService<IEnumerable<IPublishTarget>>();
 

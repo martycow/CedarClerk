@@ -1,5 +1,6 @@
 using CedarClerk.Localization;
 using CedarClerk.Server;
+using CedarClerk.Server.Tenancy;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -30,7 +31,7 @@ public class DraftRevisionServiceTests
         var connection = new SqliteConnection("Data Source=:memory:");
         connection.Open();
         var opts = new DbContextOptionsBuilder<CedarDbContext>().UseSqlite(connection).Options;
-        var db = new CedarDbContext(opts);
+        var db = new CedarDbContext(opts, TenantProvider.Platform());
         db.Database.EnsureCreated();
         return db;
     }
@@ -54,7 +55,7 @@ public class DraftRevisionServiceTests
     public async Task Record_skips_a_save_that_repeats_the_previous_content()
     {
         using var db = NewDb();
-        var id = Guid.NewGuid();
+        var id = (await SeedDraftAsync(db, Doc("seed"))).Id;
 
         await DraftRevisionService.RecordAsync(db, id, Languages.Russian, "T", Doc("a"));
         await db.SaveChangesAsync();
@@ -68,7 +69,7 @@ public class DraftRevisionServiceTests
     public async Task Record_keeps_a_save_whose_title_alone_changed()
     {
         using var db = NewDb();
-        var id = Guid.NewGuid();
+        var id = (await SeedDraftAsync(db, Doc("seed"))).Id;
 
         await DraftRevisionService.RecordAsync(db, id, Languages.Russian, "T", Doc("a"));
         await db.SaveChangesAsync();
@@ -82,7 +83,7 @@ public class DraftRevisionServiceTests
     public async Task Record_does_not_confuse_two_languages_of_one_draft()
     {
         using var db = NewDb();
-        var id = Guid.NewGuid();
+        var id = (await SeedDraftAsync(db, Doc("seed"))).Id;
 
         await DraftRevisionService.RecordAsync(db, id, Languages.Russian, "T", Doc("a"));
         await db.SaveChangesAsync();
@@ -98,7 +99,7 @@ public class DraftRevisionServiceTests
     public async Task Save_revisions_are_pruned_but_published_ones_are_kept()
     {
         using var db = NewDb();
-        var id = Guid.NewGuid();
+        var id = (await SeedDraftAsync(db, Doc("seed"))).Id;
 
         await DraftRevisionService.RecordAsync(db, id, Languages.Russian, "T", Doc("published"),
             DraftRevisionService.Kinds.Telegram, "@chan");
@@ -123,7 +124,7 @@ public class DraftRevisionServiceTests
     public async Task Restore_markers_survive_the_save_pruning()
     {
         using var db = NewDb();
-        var id = Guid.NewGuid();
+        var id = (await SeedDraftAsync(db, Doc("seed"))).Id;
 
         await DraftRevisionService.RecordAsync(db, id, Languages.Russian, "T", Doc("rewound here"),
             DraftRevisionService.Kinds.Restore);
@@ -230,7 +231,7 @@ public class DraftRevisionServiceTests
         var draft = await SeedDraftAsync(db, Doc("english body"), Languages.English);
         db.DraftTranslations.Add(new DraftTranslation
         {
-            DraftId = draft.Id, Language = Languages.Russian, Title = "Ru", CedarJson = Doc("russian body"),
+            DraftId = draft.Id, OwnerId = draft.OwnerId, Language = Languages.Russian, Title = "Ru", CedarJson = Doc("russian body"),
         });
         await db.SaveChangesAsync();
 

@@ -1,4 +1,4 @@
-﻿using CedarClerk.Core;
+using CedarClerk.Core;
 using CedarClerk.Localization;
 using Microsoft.AspNetCore.Identity;
 
@@ -7,6 +7,17 @@ namespace CedarClerk.Server;
 public class ApplicationUser : IdentityUser
 {
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// The tenant name this account's public blog answers at — <c>marty.cedarclerk.app</c>. Stored
+    /// lowercase; <see cref="Usernames"/> holds the rules both this and the Host resolver obey.
+    ///
+    /// Deliberately not called <c>Username</c>: Identity already owns <c>UserName</c> (which holds
+    /// the email here), and EF's migration differ matched the two case-insensitively and generated a
+    /// column rename that would have emptied every account's login identity.
+    /// Null means the account has no subdomain, which is every account that predates this column.
+    /// </summary>
+    public string? TenantUsername { get; set; }
 
     /// <summary>
     /// Admin panel access (IF2). A plain flag rather than ASP.NET Identity roles: there is one
@@ -377,6 +388,10 @@ public class Draft
 // property/FK constraint, matching Draft.FolderId's convention above.
 public class PostInvite
 {
+    /// <summary>Denormalized from the post it grants access to, so the owner filter can reach this row
+    /// directly instead of through a join it has no index for.</summary>
+    public string OwnerId { get; set; } = default!;
+
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid DraftId { get; set; }
     public string Email { get; set; } = "";
@@ -390,6 +405,10 @@ public class PostInvite
 // AnswersJson holds the custom questionnaire answers keyed by question id.
 public class PostRegistration
 {
+    /// <summary>Denormalized from the post it registered for, so the owner filter can reach this row
+    /// directly instead of through a join it has no index for.</summary>
+    public string OwnerId { get; set; } = default!;
+
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid DraftId { get; set; }
     public string? Name { get; set; }
@@ -549,6 +568,10 @@ public class DocumentLink
 
 public class DraftTranslation
 {
+    /// <summary>Denormalized from the document it translates, so the owner filter can reach this row
+    /// directly instead of through a join it has no index for.</summary>
+    public string OwnerId { get; set; } = default!;
+
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid DraftId { get; set; }
     public Draft? Draft { get; set; }
@@ -570,6 +593,10 @@ public class DraftTranslation
 // when a version is published, so the UI can show both edit history and a safe publish diff.
 public class DraftRevision
 {
+    /// <summary>Denormalized from the document it is a version of, so the owner filter can reach this row
+    /// directly instead of through a join it has no index for.</summary>
+    public string OwnerId { get; set; } = default!;
+
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid DraftId { get; set; }
     public string Language { get; set; } = Languages.Russian;
@@ -601,6 +628,10 @@ public class Channel
 
 public class ChannelStatSnapshot
 {
+    /// <summary>Denormalized from the channel it measures, so the owner filter can reach this row
+    /// directly instead of through a join it has no index for.</summary>
+    public string OwnerId { get; set; } = default!;
+
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ChannelId { get; set; }
     public Channel? Channel { get; set; }
@@ -664,6 +695,10 @@ public class BlogViewGeoDaily
 // which channel — Draft only tracks its single *most recent* Telegram send otherwise.
 public class ChannelPost
 {
+    /// <summary>Denormalized from the channel it was sent to, so the owner filter can reach this row
+    /// directly instead of through a join it has no index for.</summary>
+    public string OwnerId { get; set; } = default!;
+
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ChannelId { get; set; }
     public Guid DraftId { get; set; }
@@ -692,6 +727,10 @@ public class ChannelPost
 /// </summary>
 public class DraftStatSnapshot
 {
+    /// <summary>Denormalized from the post it measures, so the owner filter can reach this row
+    /// directly instead of through a join it has no index for.</summary>
+    public string OwnerId { get; set; } = default!;
+
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid DraftId { get; set; }
     public int ViewCount { get; set; }
@@ -734,6 +773,10 @@ public class Asset
 
 public class Reaction
 {
+    /// <summary>Denormalized from the post it was left on, so the owner filter can reach this row
+    /// directly instead of through a join it has no index for.</summary>
+    public string OwnerId { get; set; } = default!;
+
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid DraftId { get; set; }
     
@@ -756,6 +799,10 @@ public class Reaction
 // there is no equivalent on that surface to keep in sync.
 public class PollVote
 {
+    /// <summary>Denormalized from the post it was cast on, so the owner filter can reach this row
+    /// directly instead of through a join it has no index for.</summary>
+    public string OwnerId { get; set; } = default!;
+
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid DraftId { get; set; }
 
@@ -768,6 +815,10 @@ public class PollVote
 
 public class Comment
 {
+    /// <summary>Denormalized from the post it was left on, so the owner filter can reach this row
+    /// directly instead of through a join it has no index for.</summary>
+    public string OwnerId { get; set; } = default!;
+
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid DraftId { get; set; }
     
@@ -912,6 +963,10 @@ public static class PublishJobStatus
 /// </summary>
 public class DraftTargetText
 {
+    /// <summary>Denormalized from the document it belongs to, so the owner filter can reach this row
+    /// directly instead of through a join it has no index for.</summary>
+    public string OwnerId { get; set; } = default!;
+
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid DraftId { get; set; }
     /// <summary>One of <see cref="CedarClerk.Core.PublishNetworks"/> — the network, not one account of it.</summary>

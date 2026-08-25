@@ -1,4 +1,5 @@
 using CedarClerk.Server;
+using CedarClerk.Server.Tenancy;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -34,7 +35,7 @@ internal static class BlogTestHost
     {
         var connection = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
         connection.Open();
-        var db = new CedarDbContext(new DbContextOptionsBuilder<CedarDbContext>().UseSqlite(connection).Options);
+        var db = new CedarDbContext(new DbContextOptionsBuilder<CedarDbContext>().UseSqlite(connection).Options, TenantProvider.Platform());
         db.Database.EnsureCreated();
         return db;
     }

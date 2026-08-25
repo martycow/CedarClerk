@@ -105,6 +105,13 @@ used to run across the top are the shelf beside it (ADR-164).-->
                                         [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''" (clicked)="toggleAdmin(u)">
                                 {{ u.isAdmin ? t().admin.actions.revokeAdmin : t().admin.actions.grantAdmin }}
                             </app-button>
+
+                            <!--The only irreversible action in the app, so it is the only one that
+                            asks twice.-->
+                            <app-button variant="paper" size="sm" [disabled]="busy() || isSelf(u)"
+                                        [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''" (clicked)="askDelete(u)">
+                                {{ t().admin.actions.deleteAccount }}
+                            </app-button>
                         </div>
 
                         <div class="action-group">
@@ -120,7 +127,7 @@ used to run across the top are the shelf beside it (ADR-164).-->
                             <p class="field-hint-inline">{{ t().admin.invites.attributionHint }}</p>
                         </div>
 
-                        <p class="field-hint-inline">{{ t().admin.actions.noDeleteNote }}</p>
+                        <p class="field-hint-inline">{{ t().admin.actions.deleteNote }}</p>
                     </div>
                     }
                 </div>
@@ -293,3 +300,13 @@ used to run across the top are the shelf beside it (ADR-164).-->
     </div>
     }
 </div>
+
+@if (deleteTarget(); as target) {
+<app-modal (closed)="cancelDelete()">
+    <app-icon modal-icon name="trash" size="sm"></app-icon>
+    <span modal-title>{{ t().admin.actions.deleteTitle }}</span>
+    <p>{{ t().admin.actions.deleteBody(target.email ?? target.id) }}</p>
+    <app-button modal-actions variant="paper" (clicked)="cancelDelete()">{{ t().common.cancel }}</app-button>
+    <app-button modal-actions variant="pine" (clicked)="confirmDelete()">{{ t().common.delete }}</app-button>
+</app-modal>
+}

@@ -1,11 +1,25 @@
-﻿using CedarClerk.Core;
+using CedarClerk.Core;
+using CedarClerk.Server.Tenancy;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace CedarClerk.Server;
 
-public class CedarDbContext(DbContextOptions<CedarDbContext> options) : IdentityDbContext<ApplicationUser>(options)
+public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProvider tenant)
+    : IdentityDbContext<ApplicationUser>(options)
 {
+    /// <summary>Read by <see cref="TenantModelCacheKeyFactory"/> while the model is compiled.</summary>
+    public bool IsPlatformModel => tenant.IsPlatform;
+
+    /// <summary>
+    /// The value every owner filter compares against. A property rather than a captured constant:
+    /// EF turns it into a query parameter and re-reads it per query, so a tenant resolved after the
+    /// context was created (an ordinary request, whose owner is only known after authentication)
+    /// still filters correctly.
+    /// </summary>
+    public string? TenantId => tenant.TenantId;
+
     public DbSet<Draft> Drafts => Set<Draft>();
     public DbSet<Channel> Channels => Set<Channel>();
     public DbSet<Asset> Assets => Set<Asset>();
@@ -49,9 +63,61 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
     public DbSet<Sprint> Sprints => Set<Sprint>();
     public DbSet<Build> Builds => Set<Build>();
 
+    // Here rather than at the AddDbContext call, so that no way of building this context can miss
+    // it. Without the factory, EF caches one model per context type and the first one compiled —
+    // tenant or platform — is silently handed to every later context of the other kind.
+    protected override void OnConfiguring(DbContextOptionsBuilder options)
+    {
+        base.OnConfiguring(options);
+        options.ReplaceService<IModelCacheKeyFactory, TenantModelCacheKeyFactory>();
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        StampOwners();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken ct = default)
+    {
+        StampOwners();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, ct);
+    }
+
+    /// <summary>
+    /// Gives every new owned row the tenant it was created under, and refuses to write one that
+    /// would belong to nobody.
+    ///
+    /// The refusal is the point. A row saved with an empty OwnerId matches no tenant, so it would
+    /// be written successfully and then be invisible to the person who just created it — a bug
+    /// that looks like data loss and cannot be found by reading the endpoint that caused it. The
+    /// seven places whose owner does not come from the request (the stats job, the public blog's
+    /// reader rows, a channel post sent by the queue) set it themselves and never reach the throw.
+    /// </summary>
+    private void StampOwners()
+    {
+        foreach (var entry in ChangeTracker.Entries())
+        {
+            if (entry.State != EntityState.Added) continue;
+
+            var owner = entry.Metadata.FindProperty("OwnerId");
+            if (owner is null || owner.ClrType != typeof(string)) continue;
+
+            var property = entry.Property("OwnerId");
+            if (property.CurrentValue is string { Length: > 0 }) continue;
+
+            if (TenantId is null)
+                throw new InvalidOperationException(
+                    $"{entry.Metadata.DisplayName()} was added with no OwnerId, in a scope that has no tenant to take one from. Set it explicitly.");
+
+            property.CurrentValue = TenantId;
+        }
+    }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        ApplyTenantFilters(builder);
         builder.Entity<ApplicationUser>()
             .HasIndex(u => u.TelegramUserId)
             .IsUnique()
@@ -62,6 +128,12 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
             .HasIndex(u => u.RemoteUserId)
             .IsUnique()
             .HasFilter("\"RemoteUserId\" IS NOT NULL");
+        // The tenant lookup on every subdomain request, and the guard against two accounts
+        // claiming one subdomain. Filtered: null is "no subdomain", which most accounts are.
+        builder.Entity<ApplicationUser>()
+            .HasIndex(u => u.TenantUsername)
+            .IsUnique()
+            .HasFilter("\"TenantUsername\" IS NOT NULL");
         builder.Entity<BotKnownChat>()
             .HasIndex(c => c.TelegramChatId)
             .IsUnique();
@@ -71,6 +143,19 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         builder.Entity<DraftTranslation>()
             .HasIndex(t => new { t.DraftId, t.Language })
             .IsUnique();
+        // The owner filter is now the leading predicate on every query against these tables, so it
+        // leads their indexes too — a key starting with DraftId cannot serve "this owner's rows".
+        builder.Entity<DraftTranslation>().HasIndex(t => new { t.OwnerId, t.DraftId });
+        builder.Entity<DraftRevision>().HasIndex(r => new { r.OwnerId, r.DraftId });
+        builder.Entity<DraftStatSnapshot>().HasIndex(s => new { s.OwnerId, s.DraftId });
+        builder.Entity<DraftTargetText>().HasIndex(t => new { t.OwnerId, t.DraftId });
+        builder.Entity<Comment>().HasIndex(c => new { c.OwnerId, c.DraftId });
+        builder.Entity<Reaction>().HasIndex(r => new { r.OwnerId, r.DraftId });
+        builder.Entity<PollVote>().HasIndex(v => new { v.OwnerId, v.DraftId });
+        builder.Entity<PostInvite>().HasIndex(i => new { i.OwnerId, i.DraftId });
+        builder.Entity<PostRegistration>().HasIndex(r => new { r.OwnerId, r.DraftId });
+        builder.Entity<ChannelPost>().HasIndex(p => new { p.OwnerId, p.ChannelId });
+        builder.Entity<ChannelStatSnapshot>().HasIndex(s => new { s.OwnerId, s.ChannelId });
         builder.Entity<DraftRevision>()
             .HasIndex(r => new { r.DraftId, r.Language, r.Kind, r.Destination, r.CreatedAt });
         builder.Entity<AiUsage>()
@@ -185,5 +270,63 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options) : Identity
         // "What is in this project" — the dashboard's only real question, and the one the drafts
         // list asks back when it shows which project a document belongs to.
         builder.Entity<Draft>().HasIndex(d => new { d.OwnerId, d.ProjectId });
+    }
+
+    /// <summary>
+    /// Owner-scoped entities, and the reason each of the others is not one.
+    ///
+    /// Skipped entirely for a platform context, so the filter is absent from the query rather than
+    /// disabled inside it — see <see cref="TenantModelCacheKeyFactory"/>.
+    /// </summary>
+    private void ApplyTenantFilters(ModelBuilder builder)
+    {
+        if (tenant.IsPlatform) return;
+
+        builder.Entity<AiUsage>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<Asset>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<AssetEntry>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<BlogStatSnapshot>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<BlogViewGeoDaily>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<Build>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<Channel>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<CreditEntry>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<DocumentLink>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<Draft>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<DraftGlossaryExclusion>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<DraftStatSeen>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<EntityLink>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<Folder>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<FormPreset>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<GameTask>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<GlossaryTerm>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<Payment>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<Project>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<PublishJob>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<PublishTarget>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<ScheduledPost>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<Series>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<Sprint>().HasQueryFilter(e => e.OwnerId == TenantId);
+
+        // Rows that belong to a draft or a channel rather than carrying an owner of their own.
+        // Every endpoint reaches them by parent id, never through the parent's navigation, so a
+        // filter on the parent would not have covered them.
+        builder.Entity<ChannelPost>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<ChannelStatSnapshot>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<Comment>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<DraftRevision>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<DraftStatSnapshot>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<DraftTargetText>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<DraftTranslation>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<PollVote>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<PostInvite>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<PostRegistration>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<Reaction>().HasQueryFilter(e => e.OwnerId == TenantId);
+
+        // ApplicationUser carries no filter on purpose: Identity reads AspNetUsers on every
+        // authorized request, and sign-in happens before anyone knows which tenant the request is
+        // for. Filtering it would lock every account out of its own login.
+        //
+        // InviteCode, WaitlistEntry, AdminAuditEntry, BotKnownChat and BotKnownChatAdmin belong to
+        // the platform, not to any tenant — one shared bot, one invite list, one audit log.
     }
 }

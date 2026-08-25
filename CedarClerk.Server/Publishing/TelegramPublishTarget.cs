@@ -228,7 +228,7 @@ public class TelegramPublishTarget(
         draft.LastTelegramMessageId = msg.MessageId;
         draft.LastTelegramUsername = username;
         if (request.Target.ChannelId is { } channelId)
-            db.ChannelPosts.Add(new ChannelPost { ChannelId = channelId, DraftId = request.DraftId, TelegramMessageId = msg.MessageId });
+            db.ChannelPosts.Add(new ChannelPost { ChannelId = channelId, OwnerId = draft.OwnerId, DraftId = request.DraftId, TelegramMessageId = msg.MessageId });
 
         // The revision is the baseline for "what would an update overwrite", so it is recorded once
         // per publication — on the last part, when the whole document has actually gone out.

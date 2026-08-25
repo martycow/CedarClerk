@@ -39,9 +39,17 @@ public static class DraftRevisionService
         // one row per *distinct* version, and two saves a second apart usually differ by nothing.
         if (latest is not null && latest.Title == title && latest.CedarJson == cedarJson) return;
 
+        // From the draft rather than from the ambient tenant: this is also called by the publish
+        // queue, which runs with no tenant at all.
+        // Local first: a caller that created the draft in this same unit of work has not written
+        // it yet, so a query would not find it.
+        var ownerId = db.Drafts.Local.FirstOrDefault(d => d.Id == draftId)?.OwnerId
+                      ?? await db.Drafts.Where(d => d.Id == draftId).Select(d => d.OwnerId).FirstOrDefaultAsync(ct)
+                      ?? "";
+
         db.DraftRevisions.Add(new DraftRevision
         {
-            DraftId = draftId, Language = language, Title = title, CedarJson = cedarJson,
+            DraftId = draftId, OwnerId = ownerId, Language = language, Title = title, CedarJson = cedarJson,
             Kind = kind, Destination = destination,
         });
 

@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using CedarClerk.Server.Publishing;
 using CedarClerk.Core;
 using CedarClerk.Server.Bot;
@@ -113,6 +113,7 @@ public static class ChannelEndpoints
             // Deactivated, not deleted (T-085): the target row carries LastPublishedAt and is the
             // remaining answer to "where did this post go" once the channel row is gone.
             await TelegramTargetProjection.DeactivateAsync(db, channel);
+            await ChannelDeletion.CascadeAsync(db, uid, channel.Id);
             db.Channels.Remove(channel);
             await db.SaveChangesAsync();
             return Results.NoContent();

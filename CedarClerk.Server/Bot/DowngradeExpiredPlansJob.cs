@@ -1,6 +1,7 @@
 using CedarClerk.Core;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
+using CedarClerk.Server.Tenancy;
 
 namespace CedarClerk.Server.Bot;
 
@@ -10,10 +11,14 @@ namespace CedarClerk.Server.Bot;
 /// users (Stripe/Stars) never get here unless renewal actually failed or was cancelled.
 /// </summary>
 [DisallowConcurrentExecution]
-public class DowngradeExpiredPlansJob(CedarDbContext db, ILogger<DowngradeExpiredPlansJob> logger) : IJob
+public class DowngradeExpiredPlansJob(CedarDbContext db, TenantProvider tenant, ILogger<DowngradeExpiredPlansJob> logger) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
+        // Runs on a timer, not in a request: there is no Host and no signed-in user, and the
+        // work is over every owner's rows at once.
+        tenant.UsePlatform();
+
         var now = DateTime.UtcNow;
         var expired = await db.Users
             .Where(u => (u.PlanTier == PlanTiers.Pro || u.PlanTier == PlanTiers.ProPlus)

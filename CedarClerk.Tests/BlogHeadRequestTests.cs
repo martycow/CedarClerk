@@ -50,7 +50,7 @@ public class BlogHeadRequestTests
             BlogPublishedAt = DateTime.UtcNow,
         };
         db.Drafts.Add(draft);
-        db.DraftTranslations.Add(new DraftTranslation { DraftId = draft.Id, Language = "ru", Title = "Привет" });
+        db.DraftTranslations.Add(new DraftTranslation { DraftId = draft.Id, OwnerId = draft.OwnerId, Language = "ru", Title = "Привет" });
         db.SaveChanges();
 
         var ctx = BlogTestHost.Request("GET", "/", db);

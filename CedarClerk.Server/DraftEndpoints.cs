@@ -1,4 +1,4 @@
-﻿using System.IO.Compression;
+using System.IO.Compression;
 using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -11,6 +11,7 @@ using CedarClerk.Server.Translation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using CedarClerk.Server.Tenancy;
 
 namespace CedarClerk.Server;
 
@@ -896,7 +897,7 @@ public static class DraftEndpoints
                 string? existingTranslationJson;
                 var existingTitle = sourceTitle;
                 string? snapshotJson;
-                using (var readScope = scopeFactory.CreateScope())
+                using (var readScope = scopeFactory.CreateTenantScope(uid))
                 {
                     var readDb = readScope.ServiceProvider.GetRequiredService<CedarDbContext>();
                     var existing = await readDb.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang, ct);
@@ -947,7 +948,7 @@ public static class DraftEndpoints
 
                 // Fresh scope: the request's own `db` is disposed once this HTTP request returns,
                 // long before this background work finishes.
-                using var scope = scopeFactory.CreateScope();
+                using var scope = scopeFactory.CreateTenantScope(uid);
                 var scopedDb = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
                 var scopedDraft = await scopedDb.Drafts.FirstOrDefaultAsync(d => d.Id == id, ct);
                 if (scopedDraft is null) return AiJobOutcome.Fail("Draft was deleted", StatusCodes.Status404NotFound);
@@ -1059,7 +1060,7 @@ public static class DraftEndpoints
                     return AiJobOutcome.Fail("AI returned invalid JSON — try again", StatusCodes.Status502BadGateway);
                 }
 
-                using var scope = scopeFactory.CreateScope();
+                using var scope = scopeFactory.CreateTenantScope(uid);
                 var scopedDb = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
                 if (!isTranslation)
                 {
@@ -1320,23 +1321,13 @@ public static class DraftEndpoints
                 .ExecuteDeleteAsync();
             if (deleted > 0)
             {
-                await db.DraftGlossaryExclusions
-                    .Where(x => x.DraftId == id && x.OwnerId == uid).ExecuteDeleteAsync();
                 // ADR-128 — children move up to the grandparent: the subtree survives its root.
                 await db.Drafts.Where(x => x.OwnerId == uid && x.ParentDraftId == id)
                     .ExecuteUpdateAsync(s => s.SetProperty(d => d.ParentDraftId, info!.ParentDraftId));
-                // ADR-128 — derived links die with either endpoint; a surviving row would render
-                // a backlink to a document that is gone.
-                await db.DocumentLinks.Where(l => l.FromDraftId == id || l.ToDraftId == id).ExecuteDeleteAsync();
-                await db.DraftStatSeens.Where(x => x.DraftId == id && x.OwnerId == uid).ExecuteDeleteAsync();
-                // ADR-065 — revisions hold complete copies of the document, and unlike
-                // DraftTranslation (which has a real navigation property, so EF cascades it)
-                // DraftRevision is keyed by a bare Guid. Without this a deleted private post lives
-                // on in the database and in every backup generation of it.
-                await db.DraftRevisions.Where(r => r.DraftId == id).ExecuteDeleteAsync();
-                // T-141/T-123 — the links a document was on either side of. Same reasoning as the
-                // revisions above, one level out: EntityLink holds bare Guids, so nothing cascades,
-                // and a surviving row renders as a chip pointing at a document that is gone.
+                await DraftDeletion.CascadeAsync(db, uid, id);
+                // T-141/T-123 — the links a document was on either side of. EntityLink holds bare
+                // Guids, so nothing cascades, and a surviving row renders as a chip pointing at a
+                // document that is gone.
                 await Modules.IndieDev.ProjectLinks.RemoveAllForAsync(db, uid, CedarClerk.Core.LinkTargets.Document, id);
             }
             return deleted > 0 ? Results.NoContent() : Results.NotFound();

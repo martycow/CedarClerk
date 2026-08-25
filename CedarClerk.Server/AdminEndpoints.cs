@@ -189,6 +189,61 @@ public static class AdminEndpoints
             return Results.Ok(new { balance = after });
         });
 
+        // Irreversible, and the only endpoint in the app that is. Deleting an account takes its
+        // documents, media, channels and payment records with it — see AccountDeletion for what
+        // survives and why. The audit row is written before the delete, since the account it names
+        // will not be there to read afterwards.
+        group.MapDelete("/users/{id}", async (string id, ClaimsPrincipal principal,
+            UserManager<ApplicationUser> users, CedarDbContext db, MediaPaths media, ILogger<Program> logger) =>
+        {
+            var actor = (await users.GetUserAsync(principal))!;
+            // Same reasoning as locking yourself out, one step further: there is no way back at all.
+            if (actor.Id == id) return Results.BadRequest(new { error = ErrorMessages.CannotDeleteOwnAccount });
+
+            var target = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
+            if (target is null) return Results.NotFound();
+
+            var counts = new
+            {
+                drafts = await db.Drafts.CountAsync(x => x.OwnerId == id),
+                assets = await db.Assets.CountAsync(x => x.OwnerId == id),
+                channels = await db.Channels.CountAsync(x => x.OwnerId == id),
+            };
+
+            Audit(db, actor, "delete-account", target,
+                $"{counts.drafts} drafts, {counts.assets} files, {counts.channels} channels");
+            await db.SaveChangesAsync();
+
+            await AccountDeletion.DeleteAsync(db, id, media.Dir);
+            logger.LogWarning("Account {Email} deleted by {Actor} — {Drafts} drafts, {Assets} files",
+                target.Email, actor.Email, counts.drafts, counts.assets);
+
+            return Results.Ok(new { deleted = true, counts.drafts, counts.assets, counts.channels });
+        });
+
+        // Rows whose parent is gone (see OrphanSweep). Counting and removing are separate calls so
+        // the number can be looked at before anything is deleted.
+        group.MapGet("/maintenance/orphans", async (CedarDbContext db) =>
+            Results.Ok(await OrphanSweep.CountAsync(db)));
+
+        group.MapPost("/maintenance/orphans/purge", async (ClaimsPrincipal principal,
+            UserManager<ApplicationUser> users, CedarDbContext db, ILogger<Program> logger) =>
+        {
+            var actor = (await users.GetUserAsync(principal))!;
+            var removed = await OrphanSweep.RemoveAsync(db);
+            var total = removed.Values.Sum();
+
+            if (total > 0)
+            {
+                Audit(db, actor, "purge-orphans", details: string.Join(", ",
+                    removed.Where(r => r.Value > 0).Select(r => $"{r.Key} {r.Value}")));
+                await db.SaveChangesAsync();
+                logger.LogWarning("Purged {Total} orphaned rows on behalf of {Actor}", total, actor.Email);
+            }
+
+            return Results.Ok(new { removed, total });
+        });
+
         group.MapPost("/users/{id}/reset-trial", async (string id,
             ClaimsPrincipal principal, UserManager<ApplicationUser> users, CedarDbContext db) =>
         {

@@ -144,6 +144,12 @@ export class AdminService {
         return firstValueFrom(this.http.post(`/api/admin/users/${userId}/admin`, { isAdmin }));
     }
 
+    /** Irreversible: takes the account's documents, files, channels and payment records with it. */
+    deleteAccount(userId: string) {
+        return firstValueFrom(this.http.delete<{ drafts: number; assets: number; channels: number }>(
+            `/api/admin/users/${userId}`));
+    }
+
     listPosts() {
         return firstValueFrom(this.http.get<AdminPost[]>('/api/admin/posts'));
     }
