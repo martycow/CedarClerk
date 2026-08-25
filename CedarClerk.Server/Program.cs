@@ -93,6 +93,8 @@ builder.Services.ConfigureApplicationCookie(AuthCookie.Configure);
 builder.Services.AddScoped<TenantContext>();
 builder.Services.AddSingleton<TelegramBotService>();
 builder.Services.AddSingleton(new MediaPaths(mediaDir));
+builder.Services.AddSingleton<TenantOwnerCache.ForHosts>();
+builder.Services.AddSingleton<TenantOwnerCache.ForMedia>();
 builder.Services.AddSingleton<MediaOwnerIndex>();
 builder.Services.AddSingleton<MediaVisibilityIndex>();
 builder.Services.AddSingleton(new ImportTmpPaths(importTmpDir));
@@ -103,6 +105,7 @@ builder.Services.AddHttpClient(); // named clients used by billing (Stripe), tra
 builder.Services.AddSingleton<ResendEmailProvider>();
 builder.Services.AddSingleton<PublishTargetSecrets>();
 builder.Services.AddSingleton<PrivateAccess>();
+builder.Services.AddSingleton<MediaGrant>();
 builder.Services.AddScoped<TelegramPublishTarget>();
 builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<TelegramPublishTarget>());
 builder.Services.AddScoped<BlueskyPublishTarget>();

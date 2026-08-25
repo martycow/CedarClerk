@@ -13,11 +13,8 @@ namespace CedarClerk.Server.Tenancy;
 /// Every stylesheet, font and image a blog page asks for comes back through here, which is why the
 /// lookup goes through <see cref="TenantOwnerCache"/> rather than straight to the database.
 /// </summary>
-public sealed class TenantResolutionMiddleware(RequestDelegate next, string tenantDomain, TenantOwnerCache owners)
+public sealed class TenantResolutionMiddleware(RequestDelegate next, string tenantDomain, TenantOwnerCache.ForHosts owners)
 {
-    public TenantResolutionMiddleware(RequestDelegate next, string tenantDomain)
-        : this(next, tenantDomain, new TenantOwnerCache()) { }
-
     public async Task InvokeAsync(HttpContext ctx)
     {
         var result = TenantHost.Resolve(ctx.Request.Host.Host, tenantDomain);
@@ -55,6 +52,7 @@ public static class TenantResolutionExtensions
     public static void UseTenantResolution(this WebApplication app)
     {
         var domain = app.Configuration[Consts.General.TenantHostCfg] ?? Consts.URLs.TenantHost;
-        app.UseMiddleware<TenantResolutionMiddleware>(domain, new TenantOwnerCache());
+        app.UseMiddleware<TenantResolutionMiddleware>(domain,
+            app.Services.GetRequiredService<TenantOwnerCache.ForHosts>());
     }
 }

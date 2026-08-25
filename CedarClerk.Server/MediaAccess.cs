@@ -66,9 +66,8 @@ public static class MediaFileNames
 /// the same caller: a page pulls every image on it through here, and a name nobody owns used to
 /// cost a fresh context and a fresh SQLite connection on every repeat of the same guess.
 /// </summary>
-public sealed class MediaOwnerIndex(IServiceScopeFactory scopes, TenantOwnerCache? cache = null)
+public sealed class MediaOwnerIndex(IServiceScopeFactory scopes, TenantOwnerCache.ForMedia owners)
 {
-    private readonly TenantOwnerCache owners = cache ?? new TenantOwnerCache();
 
     public ValueTask<string?> OwnerOfAsync(MediaRef reference, CancellationToken ct = default) =>
         owners.GetAsync(Key(reference), token => LoadAsync(reference, token), ct);
@@ -108,33 +107,53 @@ public sealed class MediaVisibilityIndex(IServiceScopeFactory scopes, TimeProvid
 {
     public static readonly TimeSpan Lifetime = TimeSpan.FromSeconds(30);
 
-    private static readonly IReadOnlyDictionary<Guid, Guid[]> Nothing = new Dictionary<Guid, Guid[]>();
+    private static readonly Visibility Nothing =
+        new(new Dictionary<Guid, Guid[]>(), new HashSet<Guid>());
 
     private readonly TimeProvider clock = time ?? TimeProvider.System;
     private readonly ConcurrentDictionary<string, Snapshot> byOwner = new(StringComparer.Ordinal);
 
-    private sealed record Snapshot(IReadOnlyDictionary<Guid, Guid[]> Gated, long ExpiresAt);
+    private sealed record Snapshot(Visibility Visibility, long ExpiresAt);
 
-    /// <summary>The private posts this file belongs to, or null when nothing gates it.</summary>
-    public async ValueTask<Guid[]?> GateOfAsync(string ownerId, Guid fileId, CancellationToken ct = default)
+    /// <summary>
+    /// What an owner's files are, as three answers rather than two. "Nothing claims this" used to
+    /// be indistinguishable from "public", which is what let a draft's pictures and an untouched
+    /// library be read by anyone holding the GUID.
+    /// </summary>
+    public sealed record Visibility(IReadOnlyDictionary<Guid, Guid[]> Gated, IReadOnlySet<Guid> Public);
+
+    /// <summary>How this owner's files may be read.</summary>
+    public async ValueTask<Visibility> OfAsync(string ownerId, CancellationToken ct = default)
     {
         var now = clock.GetUtcNow().UtcTicks;
         byOwner.TryGetValue(ownerId, out var known);
 
-        if (known is not null && known.ExpiresAt > now)
-            return known.Gated.TryGetValue(fileId, out var current) ? current : null;
+        if (known is not null && known.ExpiresAt > now) return known.Visibility;
 
         // The previous answer keeps being handed out while one caller refreshes it. A page whose
         // images all expire together would otherwise start that pass once per image.
         if (known is not null)
             byOwner[ownerId] = known with { ExpiresAt = now + Lifetime.Ticks };
 
-        var loaded = new Snapshot(await LoadAsync(ownerId, ct), clock.GetUtcNow().UtcTicks + Lifetime.Ticks);
+        Snapshot loaded;
+        try
+        {
+            loaded = new Snapshot(await LoadAsync(ownerId, ct), clock.GetUtcNow().UtcTicks + Lifetime.Ticks);
+        }
+        catch
+        {
+            // The reload's token is the caller's, so this is reachable by aborting a request. Put
+            // the expiry back: an extension that outlives the read it was covering would let a
+            // reader hold an out-of-date verdict open by aborting at each boundary.
+            if (known is not null) byOwner.TryUpdate(ownerId, known, known with { ExpiresAt = now + Lifetime.Ticks });
+            throw;
+        }
+
         byOwner[ownerId] = loaded;
-        return loaded.Gated.TryGetValue(fileId, out var gate) ? gate : null;
+        return loaded.Visibility;
     }
 
-    private async Task<IReadOnlyDictionary<Guid, Guid[]>> LoadAsync(string ownerId, CancellationToken ct)
+    private async Task<Visibility> LoadAsync(string ownerId, CancellationToken ct)
     {
         using var scope = scopes.CreatePlatformScope();
         var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
@@ -146,7 +165,6 @@ public sealed class MediaVisibilityIndex(IServiceScopeFactory scopes, TimeProvid
             .Where(d => d.OwnerId == ownerId && (d.IsBlogPublished || d.IsPrivate))
             .Select(d => new { d.Id, d.IsPrivate, d.LastTelegramChatId, d.CedarJson })
             .ToListAsync(ct);
-        if (posts.Count == 0) return Nothing;
 
         // A post already sent to a channel counts as public whatever its blog page says: channel
         // history cannot be edited, so its media is out regardless of who may open the article.
@@ -184,7 +202,40 @@ public sealed class MediaVisibilityIndex(IServiceScopeFactory scopes, TimeProvid
                 Fold(translation.DraftId, translation.CedarJson);
 
         foreach (var id in open) gated.Remove(id);
-        return gated.Count == 0 ? Nothing : gated.ToDictionary(e => e.Key, e => e.Value.ToArray());
+
+        // Pictures a public page draws for a stranger, and which no post claims: the author's
+        // avatar in a blog header, a channel's picture beside it, a showcase project's cover.
+        // A project with no public page is not one of them.
+        foreach (var name in await PublicChromeAsync(db, ownerId, ct))
+            if (MediaFileNames.TryParse(name, out var reference))
+                open.Add(reference.Id);
+
+        return gated.Count == 0 && open.Count == 0
+            ? Nothing
+            : new Visibility(gated.ToDictionary(e => e.Key, e => e.Value.ToArray()), open);
+    }
+
+    private static async Task<List<string>> PublicChromeAsync(CedarDbContext db, string ownerId, CancellationToken ct)
+    {
+        var avatar = await db.Users.AsNoTracking().Where(u => u.Id == ownerId)
+            .Select(u => u.AvatarUrl).FirstOrDefaultAsync(ct);
+
+        var covers = await db.Projects.AsNoTracking()
+            .Where(p => p.OwnerId == ownerId && p.ShowcaseSlug != null && p.CoverUrl != null)
+            .Select(p => p.CoverUrl!)
+            .ToListAsync(ct);
+
+        // A channel's picture sits in the blog header beside the author's.
+        var channels = await db.Channels.AsNoTracking()
+            .Where(c => c.OwnerId == ownerId && c.AvatarPath != null)
+            .Select(c => c.AvatarPath!)
+            .ToListAsync(ct);
+
+        var names = covers;
+        names.AddRange(channels);
+        if (avatar is not null) names.Add(avatar);
+        return names.Select(n => n.StartsWith(MediaAccessExtensions.Prefix + "/", StringComparison.Ordinal)
+            ? n[(MediaAccessExtensions.Prefix.Length + 1)..] : n).ToList();
     }
 }
 
@@ -206,7 +257,7 @@ public sealed class MediaVisibilityIndex(IServiceScopeFactory scopes, TimeProvid
 public sealed class MediaOwnershipMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext ctx, TenantProvider blog, MediaOwnerIndex owners,
-        MediaVisibilityIndex visibility, PrivateAccess access)
+        MediaVisibilityIndex visibility, PrivateAccess access, MediaGrant grants)
     {
         if (!ctx.Request.Path.StartsWithSegments(MediaAccessExtensions.Prefix, out var remainder))
         {
@@ -236,19 +287,27 @@ public sealed class MediaOwnershipMiddleware(RequestDelegate next)
             return;
         }
 
-        var gate = await visibility.GateOfAsync(ownerId, reference.Id, ctx.RequestAborted);
-        if (gate is not null)
-        {
-            if (!HasGrant(ctx, access, gate) && !await IsOwnerAsync(ctx, ownerId))
-            {
-                ctx.Response.StatusCode = StatusCodes.Status404NotFound;
-                return;
-            }
+        var files = await visibility.OfAsync(ownerId, ctx.RequestAborted);
 
-            // The edge caches by URL, and this one is answered differently for two readers.
-            ctx.Response.Headers.CacheControl = "private, no-store";
+        if (files.Public.Contains(reference.Id))
+        {
+            await next(ctx);
+            return;
         }
 
+        // Gated by a private post, or claimed by nothing at all — a draft's picture, a library
+        // upload. Both answer to the same two keys, and neither is public because the reader
+        // happened to ask on a host that names no tenant.
+        var gate = files.Gated.TryGetValue(reference.Id, out var posts) ? posts : null;
+        var signed = grants.Allows(ctx.Request.Query[MediaGrant.QueryKey], remainder.Value?.TrimStart('/') ?? "");
+        if (!signed && (gate is null || !HasGrant(ctx, access, gate)) && !await IsOwnerAsync(ctx, ownerId))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        // The edge caches by URL, and this one is answered differently for two readers.
+        ctx.Response.Headers.CacheControl = "private, no-store";
         await next(ctx);
     }
 

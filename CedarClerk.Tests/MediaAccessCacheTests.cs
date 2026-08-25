@@ -73,6 +73,13 @@ public class MediaAccessCacheTests : IDisposable
             SizeBytes = 3,
             LocalPath = $"asset_{asset}.jpg",
         });
+        // Published, so the file is public — this suite measures cost, not the access rule.
+        db.Drafts.Add(new Draft
+        {
+            OwnerId = Owner, Title = "post", BlogSlug = "post", IsBlogPublished = true,
+            CedarJson = "{\"type\":\"doc\",\"content\":[{\"type\":\"image\",\"attrs\":{\"src\":\"/media/asset_" + asset + ".jpg\"}}]}",
+        });
+
         db.SaveChanges();
         File.WriteAllBytes(Path.Combine(mediaDir, $"asset_{asset}.jpg"), "abc"u8.ToArray());
 
@@ -84,11 +91,12 @@ public class MediaAccessCacheTests : IDisposable
         services.AddSingleton(db);
         services.AddScoped<TenantProvider>();
         services.AddSingleton<PrivateAccess>();
+        services.AddSingleton<MediaGrant>();
 
         var inner = services.BuildServiceProvider();
         scopes = new CountingScopes(inner);
 
-        services.AddSingleton(new MediaOwnerIndex(scopes));
+        services.AddSingleton(new MediaOwnerIndex(scopes, new TenantOwnerCache.ForMedia()));
         services.AddSingleton(new MediaVisibilityIndex(scopes));
         provider = services.BuildServiceProvider();
     }
@@ -156,7 +164,7 @@ public class MediaAccessCacheTests : IDisposable
     public async Task A_guess_is_asked_about_again_once_the_cache_has_let_it_go()
     {
         var clock = new FakeClock(new DateTimeOffset(2026, 8, 25, 12, 0, 0, TimeSpan.Zero));
-        var index = new MediaOwnerIndex(scopes, new TenantOwnerCache(clock));
+        var index = new MediaOwnerIndex(scopes, new TenantOwnerCache.ForMedia(clock));
         var missing = new MediaRef(MediaRefKind.AssetOriginal, Guid.NewGuid());
 
         Assert.Null(await index.OwnerOfAsync(missing));
@@ -172,7 +180,7 @@ public class MediaAccessCacheTests : IDisposable
     [Fact]
     public async Task A_file_that_has_an_owner_is_looked_up_once()
     {
-        var index = new MediaOwnerIndex(scopes);
+        var index = new MediaOwnerIndex(scopes, new TenantOwnerCache.ForMedia());
         var reference = new MediaRef(MediaRefKind.AssetOriginal, asset);
 
         for (var i = 0; i < 25; i++)
@@ -189,13 +197,51 @@ public class MediaAccessCacheTests : IDisposable
         var clock = new FakeClock(new DateTimeOffset(2026, 8, 25, 12, 0, 0, TimeSpan.Zero));
         var index = new MediaVisibilityIndex(scopes, clock);
 
-        Assert.Null(await index.GateOfAsync(Owner, asset));
-        Assert.Null(await index.GateOfAsync(Owner, Guid.NewGuid()));
+        Assert.False((await index.OfAsync(Owner)).Gated.ContainsKey(asset));
+        Assert.Null((await index.OfAsync(Owner)).Gated.GetValueOrDefault(Guid.NewGuid()));
         Assert.Equal(1, scopes.Opened);
 
         clock.Advance(MediaVisibilityIndex.Lifetime + TimeSpan.FromSeconds(1));
-        Assert.Null(await index.GateOfAsync(Owner, asset));
+        Assert.False((await index.OfAsync(Owner)).Gated.ContainsKey(asset));
 
         Assert.Equal(2, scopes.Opened);
+    }
+
+    private sealed class FailingScopes(IServiceProvider inner) : IServiceScopeFactory
+    {
+        public bool Fail { get; set; }
+        public int Opened { get; private set; }
+
+        public IServiceScope CreateScope()
+        {
+            Opened++;
+            if (Fail) throw new InvalidOperationException("load failed");
+            return inner.CreateScope();
+        }
+    }
+
+    // The stale snapshot is extended before the reload is awaited, so that one caller refreshes
+    // while the rest keep reading. A reload that throws must not leave that extension standing:
+    // the reload's token is the client's, so a reader who aborts at each expiry could otherwise
+    // hold a "not gated" verdict open for as long as it kept aborting.
+    [Fact]
+    public async Task A_failed_refresh_does_not_extend_the_answer_it_failed_to_replace()
+    {
+        var clock = new FakeClock(new DateTimeOffset(2026, 8, 25, 12, 0, 0, TimeSpan.Zero));
+        var failing = new FailingScopes(provider);
+        var index = new MediaVisibilityIndex(failing, clock);
+
+        Assert.False((await index.OfAsync(Owner)).Gated.ContainsKey(asset));
+        var afterFirst = failing.Opened;
+
+        clock.Advance(MediaVisibilityIndex.Lifetime + TimeSpan.FromSeconds(1));
+        failing.Fail = true;
+        await Assert.ThrowsAnyAsync<Exception>(() => index.OfAsync(Owner).AsTask());
+
+        // Still expired: the next caller must try again rather than be handed the old answer.
+        failing.Fail = false;
+        Assert.False((await index.OfAsync(Owner)).Gated.ContainsKey(asset));
+        Assert.True(failing.Opened > afterFirst + 1,
+            "a failed reload left the expired snapshot extended, so nobody re-read it");
     }
 }

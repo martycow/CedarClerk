@@ -158,7 +158,7 @@ public class TenantScopeTests
         using var db = Database();
         var ownerId = SeedUser(db, "beta");
 
-        var middleware = new TenantResolutionMiddleware(_ => Task.CompletedTask, Domain, new TenantOwnerCache(Clock()));
+        var middleware = new TenantResolutionMiddleware(_ => Task.CompletedTask, Domain, new TenantOwnerCache.ForHosts(Clock()));
         var owners = new List<string?>();
         var queries = 0;
 
@@ -182,8 +182,8 @@ public class TenantScopeTests
         SeedUser(db, "alpha");
         var ownerId = SeedUser(db, "beta");
 
-        var cached = new TenantResolutionMiddleware(_ => Task.CompletedTask, Domain, new TenantOwnerCache(Clock()));
-        var uncached = new TenantResolutionMiddleware(_ => Task.CompletedTask, Domain, new TenantOwnerCache(Clock()));
+        var cached = new TenantResolutionMiddleware(_ => Task.CompletedTask, Domain, new TenantOwnerCache.ForHosts(Clock()));
+        var uncached = new TenantResolutionMiddleware(_ => Task.CompletedTask, Domain, new TenantOwnerCache.ForHosts(Clock()));
 
         var fromCache = new TenantContext();
         var (warm, _) = Request("beta.cedarclerk.app", db, fromCache);
@@ -206,7 +206,7 @@ public class TenantScopeTests
     public async Task An_unknown_subdomain_costs_one_query_for_the_whole_flood()
     {
         using var db = Database();
-        var middleware = new TenantResolutionMiddleware(_ => Task.CompletedTask, Domain, new TenantOwnerCache(Clock()));
+        var middleware = new TenantResolutionMiddleware(_ => Task.CompletedTask, Domain, new TenantOwnerCache.ForHosts(Clock()));
         var queries = 0;
 
         for (var i = 0; i < 25; i++)
@@ -227,7 +227,7 @@ public class TenantScopeTests
         var ownerId = SeedUser(db, "beta");
 
         var clock = Clock();
-        var middleware = new TenantResolutionMiddleware(_ => Task.CompletedTask, Domain, new TenantOwnerCache(clock));
+        var middleware = new TenantResolutionMiddleware(_ => Task.CompletedTask, Domain, new TenantOwnerCache.ForHosts(clock));
 
         var before = new TenantContext();
         var (first, _) = Request("beta.cedarclerk.app", db, before);
@@ -252,7 +252,7 @@ public class TenantScopeTests
     {
         using var db = Database();
         var clock = Clock();
-        var middleware = new TenantResolutionMiddleware(_ => Task.CompletedTask, Domain, new TenantOwnerCache(clock));
+        var middleware = new TenantResolutionMiddleware(_ => Task.CompletedTask, Domain, new TenantOwnerCache.ForHosts(clock));
 
         var (cold, _) = Request("beta.cedarclerk.app", db);
         await middleware.InvokeAsync(cold);
@@ -296,7 +296,7 @@ public class TenantScopeTests
         ctx.Response.Body = new MemoryStream();
         if (user is not null) ctx.User = user;
 
-        await new TenantResolutionMiddleware(_ => Task.CompletedTask, Domain, new TenantOwnerCache())
+        await new TenantResolutionMiddleware(_ => Task.CompletedTask, Domain, new TenantOwnerCache.ForHosts())
             .InvokeAsync(ctx);
 
         var tenant = new TenantProvider();

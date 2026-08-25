@@ -46,7 +46,8 @@ public class TenantResolutionTests
         seed?.Invoke(harness.Db);
 
         var middleware = new TenantResolutionMiddleware(
-            _ => { harness.NextCalled = true; return Task.CompletedTask; }, Domain);
+            _ => { harness.NextCalled = true; return Task.CompletedTask; }, Domain,
+            new TenantOwnerCache.ForHosts());
         await middleware.InvokeAsync(harness.Context);
 
         return harness;

@@ -68,7 +68,8 @@ public class MediaOwnershipTests : IDisposable
         SeedChannel(channelA, OwnerA);
         SeedChannel(channelB, OwnerB);
 
-        SeedPost(Guid.NewGuid(), OwnerA, isPrivate: false, publicAsset, sharedAsset);
+        SeedPost(Guid.NewGuid(), OwnerA, isPrivate: false, publicAsset, sharedAsset, assetA);
+        SeedPost(Guid.NewGuid(), Legacy, isPrivate: false, assetLegacy);
         SeedPost(privatePost, OwnerA, isPrivate: true, privateAsset, sharedAsset);
         SeedPost(Guid.NewGuid(), OwnerA, isPrivate: true, sentToTelegram: true, channelPostAsset);
 
@@ -175,7 +176,8 @@ public class MediaOwnershipTests : IDisposable
             services.AddSingleton(db);
             services.AddScoped<TenantProvider>();
             services.AddSingleton<PrivateAccess>();
-            services.AddSingleton(sp => new MediaOwnerIndex(scopes ?? sp.GetRequiredService<IServiceScopeFactory>()));
+            services.AddSingleton<MediaGrant>();
+            services.AddSingleton(sp => new MediaOwnerIndex(scopes ?? sp.GetRequiredService<IServiceScopeFactory>(), new TenantOwnerCache.ForMedia()));
             services.AddSingleton(sp => new MediaVisibilityIndex(scopes ?? sp.GetRequiredService<IServiceScopeFactory>()));
 
             provider = services.BuildServiceProvider();
@@ -186,6 +188,9 @@ public class MediaOwnershipTests : IDisposable
         }
 
         public PrivateAccess Access => provider.GetRequiredService<PrivateAccess>();
+        public MediaGrant Grants => provider.GetRequiredService<MediaGrant>();
+        public MediaVisibilityIndex Visibility => provider.GetRequiredService<MediaVisibilityIndex>();
+        public MediaOwnerIndex Owners => provider.GetRequiredService<MediaOwnerIndex>();
 
         /// <param name="blogOwner">
         /// Whose blog this host renders — a tenant subdomain or the legacy blog host. Null is the
@@ -270,17 +275,22 @@ public class MediaOwnershipTests : IDisposable
         Assert.Equal(StatusCodes.Status404NotFound, foreign.Response.StatusCode);
     }
 
-    // Telegram's fetcher and every OG scraper are anonymous, have no cookie and arrive at the
-    // application host by a URL built on Cedar:MainHost. Whose account the file belongs to is not a
-    // question they can answer, so what is published stays readable there.
+    // The application host is the origin advertised to Telegram's fetcher and to OG scrapers, so
+    // it stays open — but only for what is genuinely public. It used to serve anything nothing
+    // gated, which meant a stranger with a GUID could read a draft's pictures and an untouched
+    // library from a host that names no tenant.
     [Fact]
-    public async Task The_application_host_serves_a_published_file_anonymously()
+    public async Task The_application_host_serves_what_is_public_and_nothing_else()
     {
         var published = await GetAsync($"/media/asset_{publicAsset}.jpg", blogOwner: null);
-        var unpublished = await GetAsync($"/media/asset_{assetB}.jpg", blogOwner: null);
-
         Assert.Equal(StatusCodes.Status200OK, published.Response.StatusCode);
-        Assert.Equal(StatusCodes.Status200OK, unpublished.Response.StatusCode);
+
+        var unclaimed = await GetAsync($"/media/asset_{assetB}.jpg", blogOwner: null);
+        Assert.Equal(StatusCodes.Status404NotFound, unclaimed.Response.StatusCode);
+
+        var owner = await GetAsync($"/media/asset_{assetB}.jpg", blogOwner: null,
+            c => c.Request.Headers["X-Test-User"] = OwnerB);
+        Assert.Equal(StatusCodes.Status200OK, owner.Response.StatusCode);
     }
 
     [Fact]
@@ -341,7 +351,7 @@ public class MediaOwnershipTests : IDisposable
         services.AddScoped<TenantProvider>();
         var scopes = new RecordingScopes(services.BuildServiceProvider());
 
-        var owner = await new MediaOwnerIndex(scopes).OwnerOfAsync(new MediaRef(MediaRefKind.AssetOriginal, assetB));
+        var owner = await new MediaOwnerIndex(scopes, new TenantOwnerCache.ForMedia()).OwnerOfAsync(new MediaRef(MediaRefKind.AssetOriginal, assetB));
 
         Assert.Equal(OwnerB, owner);
         Assert.True(scopes.Opened?.IsPlatform);
@@ -496,5 +506,101 @@ public class MediaOwnershipTests : IDisposable
 
         var ctx = await GetAsync($"/media/asset_{asset}.jpg", OwnerA, c => c.Request.Headers["X-Test-User"] = OwnerA);
         Assert.Equal(StatusCodes.Status200OK, ctx.Response.StatusCode);
+    }
+
+    // T-285. The narrowing used to be switched on by the host: a tenant subdomain refused another
+    // account's file while the application host — same process, same tunnel — served it to anyone
+    // with the GUID. What a file is must not depend on which name the reader typed.
+    [Fact]
+    public async Task A_file_no_published_post_claims_is_the_owners_alone_on_every_host()
+    {
+        var loose = Guid.NewGuid();
+        File.WriteAllBytes(Path.Combine(mediaDir, $"asset_{loose}.jpg"), Bytes);
+        db.Assets.Add(new Asset { Id = loose, OwnerId = OwnerB, FileName = "draft.jpg", LocalPath = $"asset_{loose}.jpg" });
+        db.SaveChanges();
+
+        foreach (var host in new string?[] { null, OwnerA })
+        {
+            var ctx = await GetAsync($"/media/asset_{loose}.jpg", host);
+            Assert.Equal(StatusCodes.Status404NotFound, ctx.Response.StatusCode);
+        }
+
+        var owner = await GetAsync($"/media/asset_{loose}.jpg", null, c => c.Request.Headers["X-Test-User"] = OwnerB);
+        Assert.Equal(StatusCodes.Status200OK, owner.Response.StatusCode);
+    }
+
+    // The things a blog page draws for a stranger: they belong to no post, and they must stay open.
+    [Fact]
+    public async Task An_avatar_is_public_because_a_blog_header_draws_it()
+    {
+        var avatar = Guid.NewGuid();
+        File.WriteAllBytes(Path.Combine(mediaDir, $"asset_{avatar}.jpg"), Bytes);
+        db.Assets.Add(new Asset { Id = avatar, OwnerId = OwnerB, FileName = "me.jpg", LocalPath = $"asset_{avatar}.jpg" });
+        db.Users.Single(u => u.Id == OwnerB).AvatarUrl = $"/media/asset_{avatar}.jpg";
+        db.SaveChanges();
+
+        var ctx = await GetAsync($"/media/asset_{avatar}.jpg", null);
+        Assert.Equal(StatusCodes.Status200OK, ctx.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_showcase_projects_cover_is_public()
+    {
+        var cover = Guid.NewGuid();
+        File.WriteAllBytes(Path.Combine(mediaDir, $"asset_{cover}.jpg"), Bytes);
+        db.Assets.Add(new Asset { Id = cover, OwnerId = OwnerB, FileName = "cover.jpg", LocalPath = $"asset_{cover}.jpg" });
+        db.Projects.Add(new Project
+        {
+            OwnerId = OwnerB, Name = "Game", ShowcaseSlug = "game",
+            CoverUrl = $"/media/asset_{cover}.jpg",
+        });
+        db.SaveChanges();
+
+        var ctx = await GetAsync($"/media/asset_{cover}.jpg", null);
+        Assert.Equal(StatusCodes.Status200OK, ctx.Response.StatusCode);
+    }
+
+    // A project with no public page is not a public page, so its cover is not public either.
+    [Fact]
+    public async Task A_private_projects_cover_is_not_public()
+    {
+        var cover = Guid.NewGuid();
+        File.WriteAllBytes(Path.Combine(mediaDir, $"asset_{cover}.jpg"), Bytes);
+        db.Assets.Add(new Asset { Id = cover, OwnerId = OwnerB, FileName = "wip.jpg", LocalPath = $"asset_{cover}.jpg" });
+        db.Projects.Add(new Project { OwnerId = OwnerB, Name = "WIP", CoverUrl = $"/media/asset_{cover}.jpg" });
+        db.SaveChanges();
+
+        var ctx = await GetAsync($"/media/asset_{cover}.jpg", null);
+        Assert.Equal(StatusCodes.Status404NotFound, ctx.Response.StatusCode);
+    }
+
+
+    // Telegram's fetcher is anonymous and pulls a file while the post is still a draft, so nothing
+    // published claims it yet. The send hands it a signed key instead of leaving every unclaimed
+    // file readable, which is what T-285 was.
+    [Fact]
+    public async Task A_signed_grant_opens_one_file_and_only_that_one()
+    {
+        var loose = Guid.NewGuid();
+        File.WriteAllBytes(Path.Combine(mediaDir, $"asset_{loose}.jpg"), Bytes);
+        db.Assets.Add(new Asset { Id = loose, OwnerId = OwnerB, FileName = "d.jpg", LocalPath = $"asset_{loose}.jpg" });
+        db.SaveChanges();
+
+        var name = $"asset_{loose}.jpg";
+        var refused = await GetAsync($"/media/{name}", null);
+        Assert.Equal(StatusCodes.Status404NotFound, refused.Response.StatusCode);
+
+        var granted = await GetAsync($"/media/{name}", null,
+            c => c.Request.QueryString = new QueryString($"?{MediaGrant.QueryKey}={Uri.EscapeDataString(harness.Grants.Issue(name))}"));
+        Assert.Equal(StatusCodes.Status200OK, granted.Response.StatusCode);
+
+        // A key for one file is not a key for the next.
+        var elsewhere = await GetAsync($"/media/asset_{assetB}.jpg", null,
+            c => c.Request.QueryString = new QueryString($"?{MediaGrant.QueryKey}={Uri.EscapeDataString(harness.Grants.Issue(name))}"));
+        Assert.Equal(StatusCodes.Status404NotFound, elsewhere.Response.StatusCode);
+
+        var forged = await GetAsync($"/media/{name}", null,
+            c => c.Request.QueryString = new QueryString($"?{MediaGrant.QueryKey}=not-a-real-token"));
+        Assert.Equal(StatusCodes.Status404NotFound, forged.Response.StatusCode);
     }
 }

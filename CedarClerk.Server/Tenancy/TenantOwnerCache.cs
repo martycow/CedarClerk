@@ -14,8 +14,17 @@ namespace CedarClerk.Server.Tenancy;
 /// seconds rather than minutes. A name that moves between accounts would otherwise serve one blog
 /// under another's host, and this way no rename or deletion path has to remember this class exists.
 /// </summary>
-public sealed class TenantOwnerCache(TimeProvider? time = null)
+public class TenantOwnerCache(TimeProvider? time = null)
 {
+    /// <summary>
+    /// The Host → owner cache. Separate from the media one on purpose: a flood of invented
+    /// subdomains fills its own budget and cannot evict the asset answers a blog page depends on.
+    /// </summary>
+    public sealed class ForHosts(TimeProvider? time = null) : TenantOwnerCache(time);
+
+    /// <summary>The file → owner cache. Separate from the host one, same reason.</summary>
+    public sealed class ForMedia(TimeProvider? time = null) : TenantOwnerCache(time);
+
     public static readonly TimeSpan HitLifetime = TimeSpan.FromSeconds(30);
 
     /// <summary>Shorter than a hit: a subdomain that has just become real should start answering.</summary>

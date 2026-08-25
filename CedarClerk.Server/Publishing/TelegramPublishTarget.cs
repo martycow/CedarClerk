@@ -26,6 +26,7 @@ public class TelegramPublishTarget(
     TelegramBotService bot,
     IConfiguration cfg,
     MediaPaths media,
+    MediaGrant grants,
     ILogger<TelegramPublishTarget> logger) : IPublishTarget
 {
     public string Network => PublishNetworks.Telegram;
@@ -176,7 +177,7 @@ public class TelegramPublishTarget(
         InputFile ResolveMedia(string url) =>
             !TryLocalMediaFileName(url, out var fileName) ? new InputFileUrl(url)
             : fileIds.TryGetValue(fileName, out var fileId) ? InputFile.FromFileId(fileId)
-            : StampUrl(url, cacheStamp);
+            : new InputFileUrl(StampUrl(url, cacheStamp, grants.Issue(fileName)));
 
         var content = new InputRichMessage { Blocks = blocks.Select(b => ToInputRichBlock(b, ResolveMedia)).ToList() };
 
@@ -395,9 +396,15 @@ public class TelegramPublishTarget(
         return true;
     }
 
-    /// <summary>ADR-087 — the per-send cache-buster, now for URL-delivered media only.</summary>
-    public static string StampUrl(string url, string stamp) =>
-        url.Contains('?') ? $"{url}&v={stamp}" : $"{url}?v={stamp}";
+    /// <summary>
+    /// ADR-087's per-send cache-buster, plus the grant that lets Telegram's fetcher — anonymous,
+    /// and pulling a file no published post claims yet — read it at all (T-285).
+    /// </summary>
+    public static string StampUrl(string url, string stamp, string? grant = null)
+    {
+        var stamped = url.Contains('?') ? $"{url}&v={stamp}" : $"{url}?v={stamp}";
+        return grant is null ? stamped : $"{stamped}&{MediaGrant.QueryKey}={Uri.EscapeDataString(grant)}";
+    }
 
     public static RichBlockCaption? ToCaption(RichRun? caption) =>
         caption is null ? null : new RichBlockCaption { Text = ToRichText(caption) };
