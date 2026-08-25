@@ -61,6 +61,21 @@ post glossary is a different thing: it's a blog feature (`GlossaryTerm`), not th
 | cross-link | кросс-ссылка | Mutual links between a post's surfaces ("Watch on Telegram" ↔ "Read on the blog"), with owner-facing text that is localizable (I15) | `Consts.CrossLinks` |
 | user glossary | пользовательский глоссарий | `GlossaryTerm` — the owner's own terms (per-owner, per-language, with case-form aliases), highlighted in the blog with a tooltip; only on first occurrence | `Core/GlossaryScanner.cs` |
 
+## Tenancy and hosts
+
+| Term | Russian | Meaning | Source |
+|---|---|---|---|
+| tenant | тенант | The account itself: there is no `Tenant` table and no `TenantId` column — `OwnerId` **is** the tenant id, and everything a tenant owns is everything carrying that id (ADR-206) | `Tenancy/TenantContext.cs`, ADR-206 |
+| TenantUsername | имя тенанта | The account's DNS label (`marty` in `marty.cedarclerk.app`), lowercase, under a filtered unique index. Deliberately not `Username`: Identity owns `UserName`, and EF's differ matched the two case-insensitively. Required at registration, and there is no rename endpoint | `Entities.cs`, `Core/Usernames.cs` |
+| tenant subdomain | поддомен тенанта | `<name>.<Cedar:TenantHost>` — one account's public blog and nothing else: routing's endpoint pick is dropped there, `/index.html` is 404, and a signed-in identity is discarded (ADR-210) | `Tenancy/TenantHost.cs`, `Program.cs` §TenantRouting |
+| reserved subdomain | зарезервированный поддомен | Labels the platform keeps for itself (`www`, `api`, `admin`, `blog`, mail and DNS names): never assignable at registration, never resolved as a tenant | `Consts.ReservedSubdomains` |
+| owner filter | фильтр владельца | The EF query filter `e.OwnerId == TenantId` on 34 entities. A tenant context and a platform context compile to **two different models**, so a platform query has no owner predicate in it rather than a disabled one (ADR-207) | `CedarDbContext.ApplyTenantFilters`, `Tenancy/TenantModelCacheKeyFactory.cs` |
+| platform scope | платформенный скоуп | A scope that legitimately reads across owners — the admin panel, the publish queue, Quartz jobs, the bot, provider webhooks, startup — and has to declare itself: `PlatformPaths` for requests, `CreatePlatformScope()` off the request thread. **Unset is not platform**: it reads nothing (ADR-208) | `Tenancy/TenantProvider.cs`, `Tenancy/TenantScopes.cs`, `Tenancy/PlatformPaths.cs` |
+| BlogSite | блог-сайт | Owner + host as one value, threaded explicitly through every blog render path in addition to the ambient filter, so a page's scoping can be tested rather than assumed | `Tenancy/BlogTenant.cs` |
+| legacy blog host | легаси-хост блога | `blog.mooexe.dev` — one account's blog like any other, except its owner is looked up (`Cedar:BlogOwner`, a name) instead of read off the hostname. That owner keeps that host in every URL the app hands out (ADR-209) | `Tenancy/BlogTenant.cs` |
+| media gate | гейт медиа | A file inherits the audience of the published posts that reference it: referenced by a public post it is public, referenced only by private ones it needs their grant. Keyed by asset, so a `_tg` derivative is no way around it; every refusal is a 404 (ADR-211) | `MediaAccess.cs` |
+| orphan sweep | уборка сирот | `GET/POST /api/admin/maintenance/orphans` — rows whose parent is already gone, left by earlier incomplete deletes. Counted and purged by two separate calls, so the number can be looked at first | `OrphanSweep.cs`, ADR-213 |
+
 ## Plans and money
 
 | Term | Russian | Meaning | Source |

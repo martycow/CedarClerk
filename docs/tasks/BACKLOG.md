@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-08-24
+last_verified: 2026-08-25
 source_of_truth_for: the only list of open tasks and questions (T-xxx, Q-xx)
 guard: none
 ---
@@ -160,6 +160,25 @@ could answer and left out what it could not, rather than drawing over a number n
 - [ ] T-200 Media library v2: folders/tags, alt, dedup — deferred from ADR-127: asset folders/tags, alt texts, content-hash dedup on upload (the same file twice = two rows and double quota today), a usage table instead of the on-demand scan if delete gets slow at real volume #media #editor P3
 - [ ] T-201 Document tree: drag&drop moves — deferred from ADR-128 (v1 is the "Move under…" menu + up/down). Moving a node by dragging: cdk has no tree drop-list, so it needs custom drag-x→depth math — which is why it was deferred #phase13 #editor P3
 
+## Multitenancy — what the review left open
+
+Built and recorded in ADR-206…213 (session in `docs/tasks/CHANGELOG.md`, 25.08). The boundary itself
+holds — 1170 backend tests green plus a live three-tenant matrix — but **nothing here has been deployed**.
+Backend, migrations and the live matrix were verified locally.
+
+T-284 (un-publishing opened a private post's media) and T-286 (cross-post links carrying the legacy
+host) were closed after that review: the gate now counts private posts whether or not they are
+published, and `MicroThreadPlan.BlogUrl` is gone — `dotnet build -t:Rebuild` reports 0 warnings.
+
+- [ ] T-285 An unrecognised `Host:` switches off tenant narrowing on `/media` — `MediaAccess.cs` narrows on the resolved blog owner, which is null for any host that is neither a tenant subdomain nor the configured blog host. Verified: bravo's file 404s on `alpha.cedarclerk.app` and 200s on `notcedarclerk.app` and `evil.example.com`. Reaches past blog images — project attachments (`TaskEndpoints.cs`), `ApplicationUser.AvatarUrl` and project covers are referenced by no published post, so nothing gates them, and they are served anonymously on the application host to any caller with the GUID. The decision to make is what the media rule does on a host it does not recognise (ADR-211) #security #media #bug P1
+- [ ] T-287 The legacy blog host is not held to the blog-only rule — `UseBlogOnlyHost` gates on `IsTenantRequest` rather than on `ServesBlog`, so `blog.mooexe.dev` never gets `SetEndpoint(null)`: `/index.html` answers 200 with the SPA shell (404 on a subdomain) and `/api/auth/me` and `/api/drafts` answer 401 rather than 404, because `UseAuthorization` short-circuits before the blog `MapWhen` can take the request. Login/register do reach the blog branch and correctly 404 (ADR-210) #tenancy #bug P2
+- [ ] T-288 `TenantOwnerCache` is not DI-registered — five `new TenantOwnerCache()` sites and no registration, so three live independent instances each carry their own 10 000-entry budget. Compounds the enumeration cost the cache was meant to cut: 25 identical guesses cost 1 `AspNetUsers` query (was 25), but 25 *distinct* well-formed guesses still cost 25 and now also occupy the bound, whose sweep evicts oldest-first — so random-name enumeration evicts the legitimate host→owner and asset→owner entries the cache exists to hold (ADR-212) #tenancy #performance P2
+- [ ] T-289 A failed visibility refresh renews the stale verdict — `MediaAccess.cs` extends an expired snapshot by a full `Lifetime` *before* awaiting the reload, and the reload's `ct` is `ctx.RequestAborted`. A throwing load leaves the extension in place, renewably, so a reader aborting the request that crosses each expiry boundary could in principle hold a "not gated" verdict open after the post was made private. Hammered for 75s with aborted requests and not reproduced on a 4-row scratch database — the code path is real, the exploit is not demonstrated. The same line is the thundering-herd guard (30 concurrent requests on an expired snapshot = 3 DbCommands), so the fix is `try`/restore, not removal (ADR-211) #security #media P2
+- [ ] T-290 `/downloads/*` answers on every host, including tenant subdomains — `UseDesktopDownloads` is registered unconditionally and typed `this WebApplication`, so it cannot enter a `UseWhen`. With a file present: 200 on `alpha.cedarclerk.app`, `blog.mooexe.dev` and `evil.example.com`. Public installers, so no disclosure — but it is the one thing left contradicting "a blog host serves a blog and nothing else" (ADR-210) #tenancy P3
+- [ ] T-291 The legacy blog host resolves its owner twice per render — `BlogTenant.SiteOfAsync` re-resolves it uncached: 5 warm renders of a post cost 10 `AspNetUsers` queries on `blog.mooexe.dev` against 5 on a subdomain. The rest of ADR-212's win is real and measured — warm static assets and warm `/media` on a blog host cost 0 DbCommands (ADR-209, ADR-212) #tenancy #performance P3
+- [ ] T-292 A deleted account's subdomain answers for up to 30s — measured: root stayed 200 with an empty blog at t+1s/+6s/+18s and 404ed at ~38s. No rows leak (the cascade has already run). Accepted consequence of expiry-only invalidation, filed because it is the one case where "nothing invalidates an entry" is visible; rename cannot cause it (there is no username-rename endpoint anywhere in the server), so the reachable variant is delete-then-re-register inside the window (ADR-212) #tenancy P3
+- [ ] T-293 The tenant domain itself: registration, wildcard DNS, tunnel, TLS — the code defaults `Cedar:TenantHost` to `cedarclerk.app` and hands out `name.cedarclerk.app` URLs, and none of the platform side exists: the domain, a `*.cedarclerk.app` record, a Cloudflare Tunnel ingress rule for it and a certificate. Blocked by Q-5 (register the domain? does `blog.mooexe.dev` migrate?), and blocking any deploy of the subdomain work regardless of the three defect rows above #infra #decision P1
+
 ## Bugs
 
 - [ ] T-275 The app's own faces are shadowed by their own cyrillic subset — `styles.scss` `@use`s each face's `latin-*.css` and then its `cyrillic-*.css`, and @fontsource's per-subset sheets carry no `unicode-range` (only its `index.css` does). Two rules with the same family, weight and style and no range means the later one wins for U+0–10FFFF, so every Latin glyph outside the cyrillic subset falls to the next family in the stack: the app draws Latin text in Georgia and system-ui while claiming Vollkorn and Literata. Found while giving the blog the same faces (ADR-178 clause 3, which avoids it server-side). The fix is a `unicode-range` per import, taken from the package's `index.css`; the sixteen `@use` lines cannot carry one, so it is either sixteen small local `@font-face` blocks or the packages' own `index.css` with the payload that implies — a decision, not a one-liner #ui #bug P1
@@ -196,7 +215,7 @@ could answer and left out what it could not, rather than drawing over a number n
 | Q-2 | Editor tabs (30.07, item 7): 2–3 isolated working tabs with their own history/state. Claude's take in the 30.07 report — optimistic concurrency (T-018.3) first, otherwise tabs are new data-loss paths |
 | Q-3 | Old FI6.2: collapse tiers into one paid plan? Contradicts ADR-012/013/014; deferred by Marty 27.07 |
 | Q-4 | Public name of the shared Cedar Clerk bot |
-| Q-5 | Tenant-blog domain (working name `cedarclerk.app`, ADR-020): register it? Does `blog.mooexe.dev` migrate? |
+| Q-5 | Tenant-blog domain (working name `cedarclerk.app`, ADR-020): register it? Does `blog.mooexe.dev` migrate? Now urgent rather than theoretical — the subdomain work (ADR-206…213) ships that name as the default `Cedar:TenantHost` and hands it out in real URLs, and ADR-209 already answers the second half for the existing blog: the legacy owner keeps the legacy host. Blocks T-293 |
 | Q-6 | "Progressive reveal" — what exactly is wanted (impossible for channels via `SendRichMessageDraft`) |
 | Q-8 | Private-post watermark: fixed text or per-viewer (embedding the viewer's email = leak traceability)? |
 | Q-9 | Old FI6 (account settings): sub-items 1/3/4/5 were lost when the old inbox was overwritten — needs re-specification |

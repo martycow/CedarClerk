@@ -1,5 +1,71 @@
 # Changelog
 
+## 2026-08-25 — Every account gets a subdomain, and the database stops answering questions nobody asked (0.15.0)
+
+**Subdomain multitenancy, built over several sessions in seven phases, then a closeout round on the
+defects the review found.** The app has had accounts and an `OwnerId` on every row since the
+beginning, and neither meant anything: the queries were scoped by whatever `Where` the endpoint
+remembered to write, `/media` was a flat directory served to anyone with a GUID, and `blog.mooexe.dev`
+was the only blog there was. `name.cedarclerk.app` for every account needs all three to be wrong.
+
+**The tenant is the account** (ADR-206). No `Tenant` table and no `TenantId` column — `OwnerId` *is*
+the tenant id, and what the account gains is a name: `TenantUsername`, a DNS label under a filtered
+unique index, required at registration, with one rule set in Core shared by the Host resolver and by
+the registration form, so a name that can be typed as a subdomain is exactly a name that can be
+registered. Eleven child tables that belonged to a draft or a channel and to nothing else gained
+their own `OwnerId`, indexed and backfilled, because every endpoint reaches them by parent id and a
+filter on the parent would never have run. Uniqueness that used to be global went per owner: two
+accounts can both publish `/hello-world`, which is the point of giving each one a host.
+
+**Two compiled models, not one filter with an off switch** (ADR-207). A tenant context and a
+platform context key different EF models, so the owner predicate is absent from a platform query
+rather than disabled inside it. The one-model alternative — `platform || OwnerId == id` —
+parameterises a value that is constant for the life of the context, and SQLite plans that as a table
+scan, retiring every owner-leading index in the schema on every query. **An unset tenant reads
+nothing** (ADR-208): the strict default means a forgotten call site produces an empty list somebody
+notices, never somebody else's rows, and the paths that legitimately span owners have to say so —
+`PlatformPaths` as a prefix list for requests, `CreatePlatformScope()` for jobs, the bot and startup.
+Writes are held to the same rule: `SaveChanges` refuses a new row with no owner instead of storing
+one nobody can ever see again.
+
+**The legacy blog host is an account too** (ADR-209), named by `Cedar:BlogOwner` and resolved rather
+than special-cased — an owner that cannot be told is a 503, not a cacheable 404 that reads as a blog
+taken down — and it keeps its own host in every URL the app hands out, because those links are
+indexed and sit in channel history that cannot be edited. **A subdomain serves a blog and nothing
+else** (ADR-210): routing's endpoint pick is dropped, so the API and the app shell are the 404 they
+should be rather than a 401; a signed-in identity is dropped on any blog host and logged, because
+the tenant there is the host's owner and every row that session wrote would land stamped with it;
+the auth cookie is host-only by explicit setting, not by default. **A file inherits the audience of
+the posts that publish it** (ADR-211) — a door in front of `/media`, not a re-layout of 489 files
+whose paths are fingerprinted in revision bodies. **The host → owner answer is cached by expiry
+alone** (ADR-212), misses included, which is what makes a blog page cost zero database commands warm
+instead of a dozen. And **an account can now be deleted whole** (ADR-213), with the audit row
+outliving it and the orphaned rows earlier incomplete deletes stranded counted before they are
+purged.
+
+**Verified, with the numbers that were actually observed.** Backend `dotnet test` **1170/1170**, 0
+failed, 0 skipped, against a 1108 baseline; CLI tests 127/127; the Angular development build
+succeeds. Guard suites run individually: SchemaDrift 1/1, UiInventoryDrift 2/2,
+ErrorMessageLocalization 11/11, DocsFlowGraph 2/2, TenantIsolation 11/11, TenantFilterGuard 6/6,
+PlatformPaths 24/24. Three migrations — `AddTenantUsername`, `AddOwnerIdToChildEntities`,
+`PerOwnerBlogSlugs` — round-tripped on a scratch database, apply → revert → re-apply, each `Down` a
+real inverse. A live three-tenant matrix on a local server with the bot confirmed off: `alpha`,
+`bravo` and the legacy owner all holding the slug `shared-slug` at once, each host serving its own
+post and 404ing the others', with drafts by id, RSS, the blog index, private gates, invite grants
+and scraper user-agents all landing where they should.
+
+**It is not deployable, and the version bump to 0.15.0 is not a release.** Two disclosure defects
+survive the closeout round and one data defect is already written into other people's immutable
+history: unpublishing a private post — or never publishing it — makes its media world-readable to
+anyone holding the GUID (`T-284`); an arbitrary `Host:` header switches tenant narrowing off on
+`/media`, which also leaves project attachments, avatars and covers ungated (`T-285`); and five
+call sites still stamp the legacy blog host onto every owner's X, Bluesky and Discord cross-links,
+so those URLs resolve to another account's post (`T-286`). The third has a compiler-enforced finish
+line — `dotnet build -t:Rebuild` reports exactly five `CS0618` warnings today, one per unconverted
+call site, and an incremental build reports zero, which is how they went unnoticed. Four smaller
+findings are on the board as `T-287`…`T-292`. Nothing here has run on the droplet, and the platform
+side of the tenant domain — registration, wildcard DNS, the tunnel — is still `Q-5` (`T-293`).
+
 ## 2026-08-24 — Telegram reports its own engagement; an uploaded file belongs to a project (0.14.2)
 
 **Two reports, and neither was a bug — both were features that had never been built.**
