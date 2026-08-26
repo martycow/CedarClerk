@@ -39,8 +39,17 @@ hosts are ruled out; a miss is not a 404, because an unknown Host header is usua
 under a name nobody told the server about. **The DNS record and the certificate are still set by
 hand** — the code answers, Cloudflare has to route.
 
-`dotnet test` 1220/1221 (the one red is `DocsFlowGraphTests`, red on `master` too: DOCS-FLOW names
-`docs/archive/roadmap-phases-0-13.md`, which is not on disk). Frontend 463/463.
+`dotnet test` 1225/1226 (the one red is `DocsFlowGraphTests`, red on `master` too: DOCS-FLOW names
+`docs/archive/roadmap-phases-0-13.md`, which is not on disk). Frontend 463/463, contrast and density
+clean. Verified by running it against a scratch database: both addresses render, a click counts and
+redirects, a view counts once per reader, the follow form writes an unconfirmed row, and the owner
+reads the numbers back off the project.
+
+**Two defects that run found**, both in the half no unit test had reached yet: the showcase path was
+read off the project rather than off the request, so claiming a domain turned the *subdomain* page's
+links root-relative; and the domain lookup ran on the request's own context, whose tenant is exactly
+what the lookup is trying to find — it answered "no project" for every domain and failed closed.
+Both now have tests.
 
 ## 2026-08-25 — Every account gets a subdomain, and the database stops answering questions nobody asked (0.15.0)
 
