@@ -170,6 +170,27 @@ public static class ErrorMessages
     public static string UsernameTaken(string username) => Ru(
         $"«{username}» уже занято — выберите другое имя.",
         $"'{username}' is already taken — pick another name.");
+    public static string BuildDownloadUrlInvalid => Ru(
+        "Ссылка на скачивание должна начинаться с http:// или https://.",
+        "A download link has to start with http:// or https://.");
+    public static string BuildPublicNeedsUrl => Ru(
+        "Чтобы выложить сборку, нужна ссылка на скачивание.",
+        "Offering a build for download needs a link to it.");
+    public static string ShowcaseGalleryTooLong(int maxChars) => Ru(
+        $"Список картинок слишком длинный — не больше {maxChars} символов.",
+        $"The image list is too long — {maxChars} characters at most.");
+    public static string ShowcaseTrailerNotYouTube => Ru(
+        "Это не ссылка на видео YouTube.",
+        "That is not a link to a YouTube video.");
+    public static string ShowcaseDomainInvalid => Ru(
+        "Это не похоже на доменное имя — например, mygame.com.",
+        "That does not look like a domain name — mygame.com, for example.");
+    public static string ShowcaseDomainIsOurs => Ru(
+        "Этот домен и так наш — свой домен нужен другой.",
+        "That domain is already ours — a domain of your own is a different one.");
+    public static string ShowcaseDomainTaken(string domain) => Ru(
+        $"«{domain}» уже занят другим проектом.",
+        $"'{domain}' is already claimed by another project.");
     public static string ShowcaseSlugTaken(string slug) => Ru(
         $"«{slug}» уже занят — выберите другой слаг.",
         $"'{slug}' is already taken — pick another slug.");

@@ -61,6 +61,8 @@ public static class AccountDeletion
         await db.PublishJobs.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.PublishTargets.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.ScheduledPosts.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
+        await db.ShowcaseFollowers.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
+        await db.ShowcaseStatDailies.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.Sprints.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.Assets.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.Folders.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();

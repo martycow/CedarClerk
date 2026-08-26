@@ -14,7 +14,8 @@ namespace CedarClerk.Server.Modules.IndieDev;
 // recording is turn that into a real changelog document.
 public static class BuildEndpoints
 {
-    public record SaveBuildRequest(string Version, string? Notes, DateTime? ReleasedAt);
+    public record SaveBuildRequest(string Version, string? Notes, DateTime? ReleasedAt,
+        bool IsPublic = false, string? DownloadUrl = null);
     public record ChangelogRequest(string? Title, string? Language);
 
     private const int VersionMaxLength = 40;
@@ -72,6 +73,8 @@ public static class BuildEndpoints
                 Version = version,
                 Notes = req.Notes?.Trim() ?? "",
                 ReleasedAt = req.ReleasedAt,
+                IsPublic = req.IsPublic,
+                DownloadUrl = Download(req),
             };
 
             db.Builds.Add(build);
@@ -95,6 +98,8 @@ public static class BuildEndpoints
             build.Version = version;
             build.Notes = req.Notes?.Trim() ?? "";
             build.ReleasedAt = req.ReleasedAt;
+            build.IsPublic = req.IsPublic;
+            build.DownloadUrl = Download(req);
             await db.SaveChangesAsync();
 
             return Results.Ok(Describe(build, null, NoLinks, NoLabels));
@@ -193,6 +198,8 @@ public static class BuildEndpoints
         b.Notes,
         b.ReleasedAt,
         b.CreatedAt,
+        b.IsPublic,
+        b.DownloadUrl,
         released = b.ReleasedAt.HasValue,
         taskCount = tasks?.Total ?? 0,
         doneCount = tasks?.Done ?? 0,
@@ -210,6 +217,20 @@ public static class BuildEndpoints
             return Results.BadRequest(new { error = ErrorMessages.BuildVersionLength(VersionMaxLength) });
         if ((req.Notes ?? "").Trim().Length > NotesMaxLength)
             return Results.BadRequest(new { error = ErrorMessages.BuildNotesLength(NotesMaxLength) });
+        // T-299 — the showcase only offers a build that has somewhere to be got from, so a public
+        // build without a working link is refused here rather than rendered as a dead row.
+        var url = (req.DownloadUrl ?? "").Trim();
+        if (url.Length > Consts.Showcase.DownloadUrlMaxLength || (url.Length > 0 && !IsHttpUrl(url)))
+            return Results.BadRequest(new { error = ErrorMessages.BuildDownloadUrlInvalid });
+        if (req.IsPublic && url.Length == 0)
+            return Results.BadRequest(new { error = ErrorMessages.BuildPublicNeedsUrl });
         return null;
     }
+
+    private static string? Download(SaveBuildRequest req) =>
+        (req.DownloadUrl ?? "").Trim() is { Length: > 0 } url ? url : null;
+
+    private static bool IsHttpUrl(string url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 }

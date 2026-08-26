@@ -18,7 +18,8 @@ public static class ProjectEndpoints
     // .StarterDocumentType); it stays overridable so the rule never becomes a wall.
     public record CreateProjectRequest(string Name, string? Description, string? ProjectType, string? DocumentType, string? DocumentTitle, string? Language = null);
     public record CreateExampleRequest(string? Language);
-    public record ShowcaseRequest(bool Enabled, string? Slug, string? Links);
+    public record ShowcaseRequest(bool Enabled, string? Slug, string? Links, string? Gallery,
+        string? TrailerUrl, string? CustomDomain);
     public record UpdateProjectRequest(string Name, string? Description, string? CoverUrl);
     public record ArchiveProjectRequest(bool Archived);
     public record CreateDocumentRequest(string? DocumentType, string? Title);
@@ -29,6 +30,7 @@ public static class ProjectEndpoints
     private const int NameMaxLength = 80;
     private const int DescriptionMaxLength = 2000;
     private const int ShowcaseLinksMaxLength = 2000;
+    private const int ShowcaseStatsDays = 30;
 
     public static bool IsEnabled(IConfiguration config) => config.IsOn(EnabledKey);
 
@@ -140,6 +142,9 @@ public static class ProjectEndpoints
                 project.ArchivedAt,
                 project.ShowcaseSlug,
                 project.ShowcaseLinks,
+                project.ShowcaseGallery,
+                project.ShowcaseTrailerUrl,
+                project.CustomDomain,
                 documents,
                 upNext = upNext.Select(t => TaskEndpoints.Describe(t, upNextLinks, upNextLabels)),
                 // T-124 — the rail's sprint card. Null means no sprint covers today, which the
@@ -335,11 +340,35 @@ public static class ProjectEndpoints
                 return Results.BadRequest(new { error = $"Store links are too long ({ShowcaseLinksMaxLength} characters maximum)" });
             project.ShowcaseLinks = links;
 
+            // ADR-216 — the gallery is stored the way it will be read: parsing here means a line the
+            // page would skip is a line the owner never sees saved, instead of one that vanishes
+            // silently at render time.
+            if ((req.Gallery ?? "").Length > Consts.Showcase.GalleryMaxLength)
+                return Results.BadRequest(new { error = ErrorMessages.ShowcaseGalleryTooLong(Consts.Showcase.GalleryMaxLength) });
+            project.ShowcaseGallery = string.Join("\n", ShowcaseGallery.Parse(req.Gallery));
+
+            var trailer = (req.TrailerUrl ?? "").Trim();
+            if (trailer.Length > 0 && YouTubeLink.VideoId(trailer) is null)
+                return Results.BadRequest(new { error = ErrorMessages.ShowcaseTrailerNotYouTube });
+            project.ShowcaseTrailerUrl = trailer.Length == 0 ? null : trailer;
+
+            if (ShowcaseDomain.Normalize(req.CustomDomain) is var domain && domain.Rejected)
+                return Results.BadRequest(new { error = ErrorMessages.ShowcaseDomainInvalid });
+            if (domain.Host is { } host)
+            {
+                if (host.EndsWith("." + (cfg[Consts.General.TenantHostCfg] ?? Consts.URLs.TenantHost), StringComparison.OrdinalIgnoreCase)
+                    || host.Equals(cfg[Consts.General.TenantHostCfg] ?? Consts.URLs.TenantHost, StringComparison.OrdinalIgnoreCase))
+                    return Results.BadRequest(new { error = ErrorMessages.ShowcaseDomainIsOurs });
+                if (await db.Projects.AnyAsync(p => p.CustomDomain == host && p.Id != id))
+                    return Results.BadRequest(new { error = ErrorMessages.ShowcaseDomainTaken(host) });
+            }
+            project.CustomDomain = domain.Host;
+
             if (!req.Enabled)
             {
                 project.ShowcaseSlug = null;
                 await db.SaveChangesAsync();
-                return Results.Ok(new { showcaseSlug = (string?)null, url = (string?)null });
+                return Results.Ok(new { showcaseSlug = (string?)null, url = (string?)null, customDomain = project.CustomDomain });
             }
 
             var slug = SlugGenerator.Slugify(string.IsNullOrWhiteSpace(req.Slug) ? project.Name : req.Slug);
@@ -354,7 +383,47 @@ public static class ProjectEndpoints
             // Showcase slugs are per-owner like blog slugs, so the page only exists on this
             // owner's own host; an account with no host yet has a slug but no address.
             var blogHost = await BlogTenant.HostForOwnerAsync(db, cfg, project.OwnerId);
-            return Results.Ok(new { showcaseSlug = slug, url = blogHost is null ? null : $"https://{blogHost}/games/{slug}" });
+            return Results.Ok(new
+            {
+                showcaseSlug = slug,
+                url = blogHost is null ? null : $"https://{blogHost}/games/{slug}",
+                customDomain = project.CustomDomain,
+            });
+        });
+
+        // T-296/T-297 — what the public page did, for the owner who cannot see their own counters
+        // any other way. Daily rows, so the answer is "how many on which day", never "who".
+        group.MapGet("/{id:guid}/showcase/stats", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            if (!await db.Projects.AnyAsync(p => p.Id == id && p.OwnerId == uid)) return Results.NotFound();
+
+            var since = DateTime.UtcNow.Date.AddDays(-ShowcaseStatsDays);
+            var rows = await db.ShowcaseStatDailies
+                .Where(s => s.ProjectId == id && s.OwnerId == uid && s.Day >= since)
+                .ToListAsync();
+
+            var followers = await db.ShowcaseFollowers
+                .Where(f => f.ProjectId == id && f.OwnerId == uid)
+                .Select(f => f.ConfirmedAt)
+                .ToListAsync();
+
+            return Results.Ok(new
+            {
+                days = ShowcaseStatsDays,
+                views = rows.Where(r => r.Kind == ShowcaseStatKinds.View)
+                    .OrderBy(r => r.Day)
+                    .Select(r => new { day = r.Day, count = r.Count }),
+                viewTotal = rows.Where(r => r.Kind == ShowcaseStatKinds.View).Sum(r => r.Count),
+                // Grouped by the link's label rather than by day: "which store link works" is the
+                // question a store link raises, and its answer is one number per label.
+                clicks = rows.Where(r => r.Kind == ShowcaseStatKinds.LinkClick)
+                    .GroupBy(r => r.Label)
+                    .Select(g => new { label = g.Key, count = g.Sum(r => r.Count) })
+                    .OrderByDescending(c => c.count),
+                followerCount = followers.Count(c => c != null),
+                pendingFollowerCount = followers.Count(c => c == null),
+            });
         });
 
         group.MapPost("/{id:guid}/archive", async (Guid id, ArchiveProjectRequest req, ClaimsPrincipal user, CedarDbContext db) =>
@@ -389,6 +458,12 @@ public static class ProjectEndpoints
             await db.AssetEntries.Where(a => a.ProjectId == id && a.OwnerId == uid).ExecuteDeleteAsync();
             await db.GameTasks.Where(t => t.ProjectId == id && t.OwnerId == uid).ExecuteDeleteAsync();
             await db.EntityLinks.Where(l => l.ProjectId == id && l.OwnerId == uid).ExecuteDeleteAsync();
+            await db.Builds.Where(b => b.ProjectId == id && b.OwnerId == uid).ExecuteDeleteAsync();
+            await db.Sprints.Where(sp => sp.ProjectId == id && sp.OwnerId == uid).ExecuteDeleteAsync();
+            // The public page's rows go with the page. A follower kept past the project would be an
+            // address subscribed to nothing, and its counters would answer about a page that is gone.
+            await db.ShowcaseFollowers.Where(f => f.ProjectId == id && f.OwnerId == uid).ExecuteDeleteAsync();
+            await db.ShowcaseStatDailies.Where(st => st.ProjectId == id && st.OwnerId == uid).ExecuteDeleteAsync();
 
             db.Projects.Remove(project);
             await db.SaveChangesAsync();
