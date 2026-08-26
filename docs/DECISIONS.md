@@ -228,3 +228,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-213 — An account can be deleted whole, and what its rows leave behind is swept on demand](adr/ADR-213.md)
 - [ADR-214 — Icon size is corrected per glyph, in the viewBox, not in the drawing](adr/ADR-214.md)
 - [ADR-215 — The landing is drawn on the bench, and its prose is data while its numbers are code](adr/ADR-215.md)
+- [ADR-216 — The showcase becomes the game's own site](adr/ADR-216.md)

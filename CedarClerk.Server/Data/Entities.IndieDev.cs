@@ -88,6 +88,23 @@ public class Project
     /// with a label, not a mechanism (ADR-134).</summary>
     public string ShowcaseLinks { get; set; } = "";
 
+    /// <summary>Gallery images, one `/media/...` path per line, at most
+    /// <see cref="CedarClerk.Core.Consts.Showcase.GalleryMaxImages"/>. Uploaded assets, never
+    /// <see cref="AssetEntry"/> rows: an indexed file is a fingerprint of somebody's disk and has
+    /// no bytes to serve (ADR-134, narrowed by ADR-216).</summary>
+    public string ShowcaseGallery { get; set; } = "";
+
+    /// <summary>A YouTube link, rendered through the same nocookie embed the blog renderer emits.
+    /// Null = no trailer.</summary>
+    public string? ShowcaseTrailerUrl { get; set; }
+
+    /// <summary>
+    /// T-300 — a host of the owner's own that serves this showcase at its root. Null = the page
+    /// lives only under the blog subdomain. DNS and the certificate are done by hand on the
+    /// Cloudflare side; this column is how the server knows to answer for the name (ADR-216).
+    /// </summary>
+    public string? CustomDomain { get; set; }
+
     /// <summary>
     /// T-124 — the number the next sprint of this project will get, then incremented.
     ///
@@ -307,6 +324,16 @@ public class Build
     /// <summary>Null = planned but not out yet. The list shows unreleased builds first.</summary>
     public DateTime? ReleasedAt { get; set; }
 
+    /// <summary>T-299 — this build is offered for download on the project's showcase.</summary>
+    public bool IsPublic { get; set; }
+
+    /// <summary>
+    /// Where the file actually is. A link the author hosts, not bytes we take: storage is already
+    /// what registration waits on (T-172), and a download page that turned a 2 GB build into our
+    /// disk problem would make that harder to solve, not easier (ADR-216).
+    /// </summary>
+    public string? DownloadUrl { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
@@ -333,6 +360,57 @@ public class EntityLink
     public Guid FromId { get; set; }
     public string ToType { get; set; } = "";
     public Guid ToId { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// T-296 — what a showcase page did on one day, as counters rather than events.
+///
+/// One row per (project, day, kind, label): a page view carries no label, a store-link click
+/// carries the link's own label. "How many people opened the Steam link on Tuesday" is answerable
+/// and "who" deliberately is not — the page has no reader identity and gains none from being
+/// measured (ADR-216).
+/// </summary>
+public class ShowcaseStatDaily
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public Guid ProjectId { get; set; }
+
+    public DateTime Day { get; set; }
+
+    /// <summary>One of <see cref="CedarClerk.Core.ShowcaseStatKinds"/>.</summary>
+    public string Kind { get; set; } = "";
+
+    /// <summary>The store link's label; empty for a page view.</summary>
+    public string Label { get; set; } = "";
+
+    public int Count { get; set; }
+}
+
+/// <summary>
+/// T-297 — an address following one project's devlog. Not an account: a follower is an address and
+/// two tokens, which is what keeps the reader-identity question (T-004) open rather than answered
+/// by a side door (ADR-216).
+/// </summary>
+public class ShowcaseFollower
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public Guid ProjectId { get; set; }
+
+    /// <summary>Stored lowercase, so the unique index needs no collation of its own.</summary>
+    public string Email { get; set; } = "";
+
+    /// <summary>Null once confirmed. An unconfirmed row is never mailed anything but its own
+    /// confirmation, which is the whole point of holding it.</summary>
+    public string? ConfirmToken { get; set; }
+
+    public DateTime? ConfirmedAt { get; set; }
+
+    /// <summary>In every mail. Per row, so leaving needs no account and no reply.</summary>
+    public string UnsubscribeToken { get; set; } = "";
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

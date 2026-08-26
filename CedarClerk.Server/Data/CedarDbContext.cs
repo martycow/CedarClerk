@@ -63,6 +63,8 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
     public DbSet<GameTask> GameTasks => Set<GameTask>();
     public DbSet<Sprint> Sprints => Set<Sprint>();
     public DbSet<Build> Builds => Set<Build>();
+    public DbSet<ShowcaseStatDaily> ShowcaseStatDailies => Set<ShowcaseStatDaily>();
+    public DbSet<ShowcaseFollower> ShowcaseFollowers => Set<ShowcaseFollower>();
 
     // Here rather than at the AddDbContext call, so that no way of building this context can miss
     // it. Without the factory, EF caches one model per context type and the first one compiled —
@@ -226,6 +228,27 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
             .IsUnique()
             .HasFilter("\"BlogSlug\" IS NOT NULL");
         builder.Entity<Project>().Property(p => p.ShowcaseLinks).HasDefaultValue("");
+        builder.Entity<Project>().Property(p => p.ShowcaseGallery).HasDefaultValue("");
+        // T-300 — a host answers for one project across the whole installation, not per owner: two
+        // accounts claiming one domain is one of them serving the other's page.
+        builder.Entity<Project>()
+            .HasIndex(p => p.CustomDomain)
+            .IsUnique()
+            .HasFilter("\"CustomDomain\" IS NOT NULL");
+        // T-296 — the upsert key. Unique, so two views landing in the same second cannot split one
+        // day into two rows the way RecordViewGeoAsync's index stops it from doing.
+        builder.Entity<ShowcaseStatDaily>()
+            .HasIndex(s => new { s.ProjectId, s.Day, s.Kind, s.Label })
+            .IsUnique();
+        // T-297 — one address follows a project once; the endpoint stores lowercase, so no
+        // collation is needed for the index to mean that.
+        builder.Entity<ShowcaseFollower>()
+            .HasIndex(f => new { f.ProjectId, f.Email })
+            .IsUnique();
+        // Confirm and unsubscribe arrive as a token and nothing else — the reader has no account to
+        // look the row up by.
+        builder.Entity<ShowcaseFollower>().HasIndex(f => f.ConfirmToken);
+        builder.Entity<ShowcaseFollower>().HasIndex(f => f.UnsubscribeToken).IsUnique();
         // ADR-135 — one row per address; the endpoint stores lowercase, so the index can be plain.
         builder.Entity<WaitlistEntry>()
             .HasIndex(w => w.Email)
@@ -310,6 +333,8 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         builder.Entity<PublishTarget>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<ScheduledPost>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Series>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<ShowcaseFollower>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<ShowcaseStatDaily>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Sprint>().HasQueryFilter(e => e.OwnerId == TenantId);
 
         // Rows that belong to a draft or a channel rather than carrying an owner of their own.

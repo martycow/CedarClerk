@@ -209,6 +209,23 @@ public static class Consts
         public const string FromAddressCfg = "Cedar:Email:FromAddress";
     }
 
+    // The public game page (T-159, ADR-134; extended by ADR-216).
+    public static class Showcase
+    {
+        public const string MediaPrefix = "/media/";
+        public const int GalleryMaxImages = 12;
+        public const int GalleryMaxLength = 2000;
+        public const int TrailerUrlMaxLength = 300;
+        public const int CustomDomainMaxLength = 120;
+        public const int DownloadUrlMaxLength = 500;
+
+        // A public form that writes a row and sends a mail, on a page with no account behind it.
+        public const int MaxFollowsPerVisitor = 5;
+        public static readonly TimeSpan FollowWindow = TimeSpan.FromHours(24);
+
+        public const string ViewedCookiePrefix = "cedar_game_viewed_";
+    }
+
     // Registration form shown to uninvited visitors of a private post (B3).
     public static class RegistrationForm
     {
