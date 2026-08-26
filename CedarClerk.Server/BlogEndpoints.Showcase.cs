@@ -92,7 +92,7 @@ public static partial class BlogEndpoints
                 // T-296 — the click is counted by going through us. Server-side because a page with
                 // no JavaScript cannot report one; the label still says where it leads.
                 sb.Append("<a class=\"showcase-link\" rel=\"noopener\" target=\"_blank\" href=\"")
-                  .Append(ShowcasePath(project, $"/go/{i}")).Append("\">")
+                  .Append(ShowcasePath(ctx, project, $"/go/{i}")).Append("\">")
                   .Append(Html(links[i].Label)).Append("</a>");
             }
             sb.Append("</div>");
@@ -185,7 +185,7 @@ public static partial class BlogEndpoints
         }
 
         // A showcase on its own domain has no blog around it to go back to.
-        var backLink = project.CustomDomain is { Length: > 0 }
+        var backLink = ctx.RequestServices.GetService<TenantContext>()?.ShowcaseSlug is not null
             ? ""
             : $"<a class=\"back-link\" href=\"/\">&larr; {(en ? "All posts" : "Все посты")}</a>";
         var body = $"{backLink}{sb}";
@@ -198,7 +198,7 @@ public static partial class BlogEndpoints
             channel?.Title ?? "Cedar Clerk", pageLang,
             [], null, null, null, IsArticle: false), OgMetaPolicy.Full);
         // T-298 — a reader following one game should not have to take the whole blog with it.
-        meta += $"<link rel=\"alternate\" type=\"application/rss+xml\" title=\"{Html(project.Name)}\" href=\"{ShowcasePath(project, "/rss.xml")}\">";
+        meta += $"<link rel=\"alternate\" type=\"application/rss+xml\" title=\"{Html(project.Name)}\" href=\"{ShowcasePath(ctx, project, "/rss.xml")}\">";
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
         await ctx.Response.WriteAsync(PageShell(project.Name, body, pageLang, RenderHeader(channel, pageLang), meta));
@@ -228,12 +228,15 @@ public static partial class BlogEndpoints
         DateTime? BlogPublishedAt, string CedarJson, bool IsPrivate);
 
     /// <summary>
-    /// A showcase's own path: the site root when the project answers on a domain of its own (T-300),
-    /// <c>/games/{slug}</c> otherwise. Every link the page draws goes through here, so a custom
-    /// domain never bounces its reader back onto the subdomain.
+    /// A showcase's own path: the site root when *this request* came in on the project's own domain
+    /// (T-300), <c>/games/{slug}</c> otherwise. Read off the request rather than off the project,
+    /// because a project with a domain is still reachable at its subdomain address, and there a
+    /// root-relative link would point at a page the blog host does not have.
     /// </summary>
-    private static string ShowcasePath(Project project, string suffix) =>
-        project.CustomDomain is { Length: > 0 } ? suffix : $"/games/{project.ShowcaseSlug}{suffix}";
+    private static string ShowcasePath(HttpContext ctx, Project project, string suffix) =>
+        ctx.RequestServices.GetService<TenantContext>()?.ShowcaseSlug is not null
+            ? suffix.Length == 0 ? "/" : suffix
+            : $"/games/{project.ShowcaseSlug}{suffix}";
 
     private static string Html(string text) => System.Net.WebUtility.HtmlEncode(text);
 

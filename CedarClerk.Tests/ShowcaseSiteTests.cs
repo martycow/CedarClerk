@@ -380,6 +380,25 @@ public class ShowcaseSiteTests
         Assert.DoesNotContain("/games/cedar-station/go/0", body);
     }
 
+    // The subdomain address keeps working after a domain is claimed, and there a root-relative link
+    // would point at a page the blog host does not have.
+    [Fact]
+    public async Task On_the_subdomain_a_project_with_a_domain_still_links_through_games()
+    {
+        using var db = BlogTestHost.EmptyDatabase();
+        Seed(db, p =>
+        {
+            p.CustomDomain = "cedarstation.example";
+            p.ShowcaseLinks = "Wishlist|https://store.steampowered.com/app/123";
+        });
+
+        var body = BlogTestHost.Body(await Send(db, "GET", "/games/cedar-station"));
+
+        Assert.Contains("href=\"/games/cedar-station/go/0\"", body);
+        Assert.Contains("href=\"/games/cedar-station/rss.xml\"", body);
+        Assert.DoesNotContain("href=\"/go/0\"", body);
+    }
+
     [Fact]
     public async Task A_custom_domains_feed_is_the_projects_feed()
     {

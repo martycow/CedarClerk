@@ -38,7 +38,7 @@ public static partial class BlogEndpoints
 
         var sb = new StringBuilder();
         sb.Append("<h2 class=\"showcase-section\">").Append(en ? "Follow the devlog" : "Следить за девлогом").Append("</h2>");
-        sb.Append("<form class=\"follow-form\" method=\"post\" action=\"").Append(ShowcasePath(project, "/follow")).Append("\">");
+        sb.Append("<form class=\"follow-form\" method=\"post\" action=\"").Append(ShowcasePath(ctx, project, "/follow")).Append("\">");
         sb.Append("<input class=\"follow-input\" type=\"email\" name=\"email\" required maxlength=\"")
           .Append(FollowerEmailMaxLength).Append("\" placeholder=\"")
           .Append(en ? "your@email" : "ваша@почта").Append("\" aria-label=\"")
@@ -49,7 +49,7 @@ public static partial class BlogEndpoints
           .Append(en
               ? "A mail when a new devlog is out, and nothing else. Unsubscribe from any of them."
               : "Письмо, когда выходит новый девлог, и ничего кроме. Отписаться можно из любого письма.")
-          .Append(" <a href=\"").Append(ShowcasePath(project, "/rss.xml")).Append("\">RSS</a></p>");
+          .Append(" <a href=\"").Append(ShowcasePath(ctx, project, "/rss.xml")).Append("\">RSS</a></p>");
         if (notice is not null)
             sb.Append("<p class=\"follow-notice\">").Append(Html(notice)).Append("</p>");
 
@@ -106,7 +106,7 @@ public static partial class BlogEndpoints
         if (existing is null) db.ShowcaseFollowers.Add(follower);
         await db.SaveChangesAsync();
 
-        var confirmUrl = $"{site.BaseUrl}{ShowcasePath(project, $"/confirm?token={follower.ConfirmToken}")}";
+        var confirmUrl = $"{site.BaseUrl}{ShowcasePath(ctx, project, $"/confirm?token={follower.ConfirmToken}")}";
         await SendFollowMailAsync(ctx, follower.Email,
             EmailTexts.FollowConfirmSubject(project.Name),
             EmailTexts.FollowConfirmBody(project.Name, confirmUrl));
@@ -166,7 +166,7 @@ public static partial class BlogEndpoints
     private static Task RedirectToShowcaseAsync(HttpContext ctx, Project project, string outcome)
     {
         ctx.Response.StatusCode = StatusCodes.Status303SeeOther;
-        ctx.Response.Headers.Location = ShowcasePath(project, $"?follow={outcome}#follow");
+        ctx.Response.Headers.Location = ShowcasePath(ctx, project, $"?follow={outcome}#follow");
         return Task.CompletedTask;
     }
 
@@ -229,7 +229,7 @@ public static partial class BlogEndpoints
 
         foreach (var follower in followers)
         {
-            var unsubscribeUrl = $"{site.BaseUrl}{ShowcasePath(project, $"/unsubscribe?token={follower.UnsubscribeToken}")}";
+            var unsubscribeUrl = $"{site.BaseUrl}/games/{project.ShowcaseSlug}/unsubscribe?token={follower.UnsubscribeToken}";
             try
             {
                 await mailer.SendAsync(follower.Email, subject,

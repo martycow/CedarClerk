@@ -50,7 +50,11 @@ public sealed class TenantResolutionMiddleware(RequestDelegate next, string tena
             case TenantHostKind.NotTenantDomain when !IsOwnHost(ctx.Request.Host.Host):
                 var claim = await domains.GetAsync(ctx.Request.Host.Host.ToLowerInvariant(), async token =>
                 {
-                    var db = ctx.RequestServices.GetRequiredService<CedarDbContext>();
+                    // A platform scope, not the request's own context: the tenant is what this
+                    // lookup is trying to find, so under the filter it would answer "no project"
+                    // every time — and fail closed, which is the failure nobody notices.
+                    using var scope = ctx.RequestServices.CreatePlatformScope();
+                    var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
                     var project = await db.Projects
                         .Where(p => p.CustomDomain == ctx.Request.Host.Host.ToLowerInvariant()
                                     && p.ShowcaseSlug != null && p.ArchivedAt == null)

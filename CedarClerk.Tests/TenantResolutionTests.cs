@@ -32,6 +32,8 @@ public class TenantResolutionTests
         var services = new ServiceCollection();
         services.AddSingleton(db);
         services.AddSingleton(tenant);
+        // T-300's lookup opens a platform scope of its own, which needs a provider to declare on.
+        services.AddScoped<TenantProvider>();
 
         var ctx = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
         ctx.Request.Host = new HostString(host);
@@ -63,6 +65,65 @@ public class TenantResolutionTests
             TenantUsername = username,
         });
         db.SaveChanges();
+    }
+
+    private static void SeedShowcase(CedarDbContext db, string domain, string slug = "cedar-station",
+        Action<Project>? mutate = null)
+    {
+        db.Users.Add(new ApplicationUser { Id = "o1", UserName = "o1", TenantUsername = "marty" });
+        var project = new Project
+        {
+            OwnerId = "o1", Name = "Cedar Station", ShowcaseSlug = slug, CustomDomain = domain,
+        };
+        mutate?.Invoke(project);
+        db.Projects.Add(project);
+        db.SaveChanges();
+    }
+
+    // ---- T-300: a project's own domain --------------------------------------
+
+    [Fact]
+    public async Task A_projects_own_domain_resolves_to_its_owner_and_showcase()
+    {
+        var harness = await RunAsync("cedarstation.example", db => SeedShowcase(db, "cedarstation.example"));
+
+        Assert.True(harness.NextCalled);
+        Assert.True(harness.Tenant.IsTenantRequest);
+        Assert.Equal("o1", harness.Tenant.OwnerId);
+        Assert.Equal("cedar-station", harness.Tenant.ShowcaseSlug);
+        // There is no username in the host, so there is none to report.
+        Assert.Null(harness.Tenant.Username);
+    }
+
+    [Fact]
+    public async Task An_archived_projects_domain_answers_for_nobody()
+    {
+        var harness = await RunAsync("cedarstation.example",
+            db => SeedShowcase(db, "cedarstation.example", mutate: p => p.ArchivedAt = DateTime.UtcNow));
+
+        Assert.True(harness.NextCalled);
+        Assert.False(harness.Tenant.IsTenantRequest);
+    }
+
+    [Fact]
+    public async Task A_domain_with_the_page_switched_off_answers_for_nobody()
+    {
+        var harness = await RunAsync("cedarstation.example",
+            db => SeedShowcase(db, "cedarstation.example", mutate: p => p.ShowcaseSlug = null));
+
+        Assert.False(harness.Tenant.IsTenantRequest);
+    }
+
+    // A host nobody claimed is our own traffic under a name the server was not told about — a
+    // proxy, a health check, a local alias. Turning those into 404s would take the app down for them.
+    [Fact]
+    public async Task An_unclaimed_host_is_not_a_tenant_and_not_an_error()
+    {
+        var harness = await RunAsync("somewhere-else.example");
+
+        Assert.True(harness.NextCalled);
+        Assert.False(harness.Tenant.IsTenantRequest);
+        Assert.Equal(StatusCodes.Status200OK, harness.Context.Response.StatusCode);
     }
 
     [Fact]
