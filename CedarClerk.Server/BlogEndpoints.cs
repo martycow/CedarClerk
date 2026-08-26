@@ -12,7 +12,7 @@ using Telegram.Bot;
 
 namespace CedarClerk.Server;
 
-public static class BlogEndpoints
+public static partial class BlogEndpoints
 {
     private const int CommentMaxLength = 2000;
     private const int AuthorNameMaxLength = 60;
@@ -37,7 +37,8 @@ public static class BlogEndpoints
     {
         var group = app.MapGroup("/api/drafts").RequireAuthorization();
 
-        group.MapPost("/{id:guid}/publish-blog", async (Guid id, PublishBlogRequest? req, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg) =>
+        group.MapPost("/{id:guid}/publish-blog", async (Guid id, PublishBlogRequest? req, ClaimsPrincipal user,
+            CedarDbContext db, IConfiguration cfg, Email.ResendEmailProvider mailer, ILoggerFactory logger) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
@@ -72,6 +73,10 @@ public static class BlogEndpoints
             if (!draft.IsBlogPublished || draft.BlogSlug is null)
                 draft.BlogSlug = await GenerateUniqueSlugAsync(db, uid, draft.Id, draft.Title);
 
+            // T-297 — followers hear about a devlog once, when it first goes up. Republishing to fix
+            // a typo is not news, and a subscription that mails on every save would be uninstalled
+            // by its first reader.
+            var firstPublish = draft.BlogPublishedAt is null;
             draft.BlogPublishedAt ??= DateTime.UtcNow;
             draft.IsBlogPublished = true;
             await DraftRevisionService.RecordAsync(db, id, draft.PrimaryLanguage, draft.Title, draft.CedarJson, DraftRevisionService.Kinds.Blog);
@@ -83,6 +88,9 @@ public static class BlogEndpoints
             // published, the URL is simply not knowable, and inventing one would name a domain that
             // belongs to somebody else.
             var host = await BlogTenant.HostForOwnerAsync(db, cfg, uid);
+            if (firstPublish && host is not null)
+                await NotifyFollowersAsync(db, mailer, logger, draft, new BlogSite(uid, host));
+
             return Results.Ok(new { slug = draft.BlogSlug, url = host is null ? null : $"https://{host}/{draft.BlogSlug}" });
         });
 
@@ -334,7 +342,19 @@ public static class BlogEndpoints
         }
 
         var path = ctx.Request.Path.Value?.Trim('/') ?? "";
-        var segments = path.Length == 0 ? [] : path.Split('/');
+        string[] segments = path.Length == 0 ? [] : path.Split('/');
+
+        // T-300 — on a project's own domain the showcase is the site, so its paths lose the
+        // /games/{slug} prefix. Putting the prefix back here rather than duplicating every branch
+        // below keeps one set of routes: the domain decides the address, not the behaviour.
+        if (ctx.RequestServices.GetService<TenantContext>()?.ShowcaseSlug is { } domainSlug)
+            segments = segments switch
+            {
+                [] => ["games", domainSlug],
+                ["rss.xml"] or ["follow"] or ["confirm"] or ["unsubscribe"] => ["games", domainSlug, segments[0]],
+                ["go", var goIndex] => ["games", domainSlug, "go", goIndex],
+                _ => segments,
+            };
 
         if (segments is ["api", "posts", var slug, var action])
         {
@@ -350,6 +370,14 @@ public static class BlogEndpoints
                 await PostPollVoteAsync(ctx, db, site, slug);
             else
                 ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        // T-297 — the follow form posts as a plain form and answers with a redirect, so the page
+        // needs no JavaScript to collect an address. Above the GET gate for that reason.
+        if (segments is ["games", var followSlug, "follow"] && ctx.Request.Method == HttpMethods.Post)
+        {
+            await PostFollowAsync(ctx, db, site, followSlug);
             return;
         }
 
@@ -392,6 +420,32 @@ public static class BlogEndpoints
         if (segments is ["games", var gameSlug])
         {
             await RenderShowcaseAsync(ctx, db, site, gameSlug);
+            return;
+        }
+
+        // ADR-216 — the showcase's own feed (T-298), its counted store links (T-296) and the two
+        // links a follow mail carries (T-297).
+        if (segments is ["games", var feedSlug, "rss.xml"])
+        {
+            await RenderShowcaseRssAsync(ctx, db, site, feedSlug);
+            return;
+        }
+
+        if (segments is ["games", var linkSlug, "go", var linkIndex])
+        {
+            await RedirectShowcaseLinkAsync(ctx, db, site, linkSlug, linkIndex);
+            return;
+        }
+
+        if (segments is ["games", var confirmSlug, "confirm"])
+        {
+            await ConfirmFollowAsync(ctx, db, site, confirmSlug);
+            return;
+        }
+
+        if (segments is ["games", var byeSlug, "unsubscribe"])
+        {
+            await UnsubscribeFollowerAsync(ctx, db, site, byeSlug);
             return;
         }
 
@@ -1283,6 +1337,10 @@ public static class BlogEndpoints
         }
         sb.Append("</div></div></div></div>");
 
+        // T-294 — the games this blog is about, above the posts that are about them. Without it the
+        // showcase is a page only a reader who already knows its URL can reach.
+        sb.Append(await RenderGamesStripAsync(db, site, indexLang));
+
         if (pageItems.Count == 0)
         {
             sb.Append("<p class=\"empty\">").Append(posts.Count == 0 ? chrome.NothingYet : chrome.NoMatch).Append("</p>");
@@ -1464,135 +1522,6 @@ public static class BlogEndpoints
     // while ShowcaseSlug is set and the project is not archived; the feed reuses the index's exact
     // visibility filter, so this surface shows nothing the index does not; the roadmap carries only
     // ticked tasks, title and status — a task's description is working material and never leaves.
-    private static async Task RenderShowcaseAsync(HttpContext ctx, CedarDbContext db, BlogSite site, string slug)
-    {
-        var channel = await GetBlogChannelInfoAsync(db, site);
-        var project = await db.Projects.FirstOrDefaultAsync(p => p.ShowcaseSlug == slug && p.OwnerId == site.OwnerId && p.ArchivedAt == null);
-        if (project is null)
-        {
-            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
-            ctx.Response.ContentType = "text/html; charset=utf-8";
-            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Page not found.</p>", Languages.Russian, RenderHeader(channel, Languages.Russian)));
-            return;
-        }
-
-        var pageLang = ctx.Request.Query["lang"].ToString() is { Length: > 0 } requested
-                       && Languages.IsContentLanguage(requested)
-            ? requested
-            : Languages.Russian;
-        var en = pageLang != Languages.Russian;
-
-        var posts = await db.Drafts
-            .Where(d => d.OwnerId == site.OwnerId && d.ProjectId == project.Id && d.IsBlogPublished && (!d.IsPrivate || d.IsListedWhilePrivate))
-            .OrderByDescending(d => d.BlogPublishedAt)
-            .Select(d => new { d.Title, d.ArticleTitle, d.BlogSlug, d.BlogPublishedAt, d.CedarJson, d.IsPrivate })
-            .ToListAsync();
-
-        var roadmap = (await db.GameTasks
-            .Where(t => t.OwnerId == site.OwnerId && t.ProjectId == project.Id && t.IsPublicRoadmap && t.ArchivedAt == null)
-            .Select(t => new { t.Title, t.Status })
-            .ToListAsync())
-            // A reader's order, not the board's: what is moving now, then what is planned, then done.
-            .OrderBy(t => t.Status switch
-            {
-                TaskStatuses.InProgress => 0,
-                TaskStatuses.Planned => 1,
-                TaskStatuses.Backlog => 2,
-                _ => 3,
-            })
-            .ThenBy(t => t.Title)
-            .ToList();
-
-        var cfg = ctx.RequestServices.GetRequiredService<IConfiguration>();
-        var mainBase = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
-        var sb = new StringBuilder();
-
-        sb.Append("<div class=\"showcase-head\">");
-        if (project.CoverUrl is { Length: > 0 } cover)
-            sb.Append("<img class=\"showcase-cover\" src=\"").Append(cover.StartsWith('/') ? mainBase + cover : cover)
-              .Append("\" alt=\"\">");
-        sb.Append("<div class=\"showcase-head-text\"><h1>").Append(System.Net.WebUtility.HtmlEncode(project.Name)).Append("</h1>");
-        if (project.Description is { Length: > 0 } desc)
-            sb.Append("<p class=\"showcase-desc\">").Append(System.Net.WebUtility.HtmlEncode(desc)).Append("</p>");
-
-        var links = ParseShowcaseLinks(project.ShowcaseLinks);
-        if (links.Count > 0)
-        {
-            sb.Append("<div class=\"showcase-links\">");
-            foreach (var (label, url) in links)
-            {
-                sb.Append("<a class=\"showcase-link\" rel=\"noopener\" target=\"_blank\" href=\"")
-                  .Append(System.Net.WebUtility.HtmlEncode(url)).Append("\">")
-                  .Append(System.Net.WebUtility.HtmlEncode(label)).Append("</a>");
-            }
-            sb.Append("</div>");
-        }
-        sb.Append("</div></div>");
-
-        sb.Append("<h2 class=\"showcase-section\">").Append(en ? "Devlog" : "Девлог").Append("</h2>");
-        if (posts.Count == 0)
-        {
-            sb.Append(en ? "<p class=\"empty\">Nothing published yet.</p>"
-                         : "<p class=\"empty\">Пока ничего не опубликовано.</p>");
-        }
-        else
-        {
-            sb.Append("<div class=\"post-list\">");
-            foreach (var p in posts)
-            {
-                var excerpt = p.IsPrivate ? "" : Excerpt(p.CedarJson);
-                sb.Append("<a class=\"post-card\" href=\"/").Append(p.BlogSlug).Append("\">");
-                sb.Append("<div class=\"post-card-meta\"><span class=\"post-card-date\">")
-                  .Append(p.BlogPublishedAt is { } cardDate ? BlogDateFormatter.DateLocal(cardDate, pageLang) : "")
-                  .Append("</span>");
-                if (p.IsPrivate)
-                    sb.Append("<span class=\"post-card-locked\">").Append(BlogIcons.Lock).Append("</span>");
-                sb.Append("</div>");
-                sb.Append("<div class=\"post-card-title\">").Append(System.Net.WebUtility.HtmlEncode(p.ArticleTitle ?? p.Title)).Append("</div>");
-                if (excerpt.Length > 0)
-                    sb.Append("<div class=\"post-card-excerpt\">").Append(System.Net.WebUtility.HtmlEncode(excerpt)).Append("</div>");
-                sb.Append("</a>");
-            }
-            sb.Append("</div>");
-        }
-
-        if (roadmap.Count > 0)
-        {
-            sb.Append("<h2 class=\"showcase-section\">").Append(en ? "Roadmap" : "Роадмап").Append("</h2>");
-            sb.Append("<div class=\"roadmap-list\">");
-            foreach (var task in roadmap)
-            {
-                var (label, tone) = task.Status switch
-                {
-                    TaskStatuses.InProgress => (en ? "In progress" : "В работе", "now"),
-                    TaskStatuses.Planned => (en ? "Planned" : "Запланировано", "next"),
-                    TaskStatuses.Backlog => (en ? "Someday" : "Когда-нибудь", "later"),
-                    _ => (en ? "Done" : "Готово", "done"),
-                };
-                sb.Append("<div class=\"roadmap-row\"><span class=\"roadmap-status ").Append(tone).Append("\">")
-                  .Append(label).Append("</span><span class=\"roadmap-title\">")
-                  .Append(System.Net.WebUtility.HtmlEncode(task.Title)).Append("</span></div>");
-            }
-            sb.Append("</div>");
-        }
-
-        var backLinkLabel = en ? "All posts" : "Все посты";
-        var body = $"<a class=\"back-link\" href=\"/\">&larr; {backLinkLabel}</a>{sb}";
-
-        var blogBase = site.BaseUrl;
-        var ogImage = project.CoverUrl is { Length: > 0 } c
-            ? (c.StartsWith('/') ? mainBase + c : c)
-            : $"{blogBase}/og-default.png";
-        var meta = OgMetaBuilder.Build(new OgMetaInput(
-            project.Name, project.Description, $"{blogBase}/games/{project.ShowcaseSlug}",
-            ogImage, 1200, 630,
-            channel?.Title ?? "Cedar Clerk", pageLang,
-            [], null, null, null, IsArticle: false), OgMetaPolicy.Full);
-
-        ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(project.Name, body, pageLang, RenderHeader(channel, pageLang), meta));
-    }
-
     /// <summary>`Label|https://url` lines; anything not shaped like that is skipped, not rendered.</summary>
     public static List<(string Label, string Url)> ParseShowcaseLinks(string raw)
     {
@@ -2007,6 +1936,7 @@ public static class BlogEndpoints
         // post is finished, not a draft pinned up to be worked on).
         var html = $"""
             <a class="back-link" href="/">{BlogIcons.ArrowLeft} {backLinkLabel}</a>
+            {await RenderPostGameLinkAsync(db, site, draft, lang)}
             <div class="post-reader">
             <span class="post-pin left" aria-hidden="true"></span>
             <span class="post-pin right" aria-hidden="true"></span>
@@ -2481,6 +2411,29 @@ public static class BlogEndpoints
         .roadmap-status.next, .roadmap-status.later { color: var(--t2); background: none; }
         .roadmap-status.done { color: var(--ok); background: var(--ok-soft); }
         .roadmap-title { font-size: 15px; }
+        .showcase-trailer { position: relative; padding-bottom: 56.25%; height: 0; margin: 0 0 18px; border: var(--border-paper); border-radius: var(--radius-paper); box-shadow: var(--shadow-paper); overflow: hidden; }
+        .showcase-trailer iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+        .showcase-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin: 0 0 6px; }
+        .showcase-shot { display: block; border: var(--border-paper); border-radius: var(--radius-paper); box-shadow: var(--shadow-paper-sm); overflow: hidden; line-height: 0; }
+        .showcase-shot img { width: 100%; height: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+        .download-list { display: flex; flex-direction: column; gap: 8px; }
+        .download-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; background-color: var(--sheet); background-image: var(--tex-paper); border: var(--border-paper); border-radius: var(--radius-paper); box-shadow: var(--shadow-paper-sm); padding: 12px 18px; color: var(--text); }
+        .download-version { font-family: var(--font-mono); font-weight: 700; }
+        .download-date { font-family: var(--font-mono); font-size: 12px; color: var(--t2); }
+        .download-notes { font-size: 14px; color: var(--t2); }
+        .follow-form { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 8px; }
+        .follow-input { flex: 1 1 220px; min-height: 44px; padding: 0 14px; background-color: var(--sheet); background-image: var(--tex-paper); border: var(--border-paper); border-radius: var(--radius-paper); color: var(--text); font-family: var(--font-sans); font-size: 15px; }
+        .follow-button { min-height: 44px; padding: 0 20px; border: 1px solid var(--pine-deep); border-radius: var(--radius-plaque); background: var(--grad-pine); box-shadow: var(--shadow-pine-btn); color: var(--text-on-pine); font-size: 14px; font-weight: 700; cursor: pointer; }
+        .follow-button:hover { filter: brightness(1.07); }
+        .follow-hint { font-size: 13px; color: var(--t2); margin: 0; }
+        .follow-notice { font-size: 14px; color: var(--accent); margin: 8px 0 0; }
+        .games-strip { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 22px; }
+        .games-card { display: flex; align-items: center; gap: 10px; background-color: var(--sheet); background-image: var(--tex-paper); border: var(--border-paper); border-radius: var(--radius-paper); box-shadow: var(--shadow-paper-sm); padding: 8px 14px 8px 8px; color: var(--text); }
+        .games-card:hover { box-shadow: var(--shadow-paper); }
+        .games-cover { width: 44px; height: 44px; border-radius: var(--radius-stamp); object-fit: cover; flex: none; }
+        .games-name { font-family: var(--font-display); font-size: 15px; font-weight: 700; }
+        .post-game { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--t2); margin: 0 0 10px; }
+        .post-game a { color: var(--accent); }
         @media (max-width: 560px) { .showcase-head { flex-direction: column; } .showcase-cover { width: 100%; } }
 
         /* ── Floating nav — paper plaques, never discs ───────────────────────────────────────────────── */

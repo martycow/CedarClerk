@@ -412,5 +412,12 @@ public class ShowcaseFollower
     /// <summary>In every mail. Per row, so leaving needs no account and no reply.</summary>
     public string UnsubscribeToken { get; set; } = "";
 
+    /// <summary>
+    /// Who asked, in the same one-way form the blog's reactions and comments use. A public form
+    /// that writes a row and sends a mail needs a ceiling per asker, and the ceiling needs
+    /// something to count.
+    /// </summary>
+    public string VisitorHash { get; set; } = "";
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

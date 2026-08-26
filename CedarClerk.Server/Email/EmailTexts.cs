@@ -35,6 +35,40 @@ public static class EmailTexts
          <p style="color:#686257;font-size:13px">If you did not sign up for Cedar Clerk, simply ignore this message.</p>
          """);
 
+    public static string FollowConfirmSubject(string projectName) => Localized(
+        $"Подтвердите подписку на девлог — {projectName}",
+        $"Confirm your devlog subscription — {projectName}");
+
+    public static string FollowConfirmBody(string projectName, string link) => Localized(
+        $"""
+         <p>Кто-то (надеемся, вы) подписался на девлог игры «{projectName}».</p>
+         <p><a href="{link}" style="display:inline-block;padding:10px 18px;background:#566842;color:#fff;border-radius:8px;text-decoration:none">Подтвердить подписку</a></p>
+         <p style="color:#686257;font-size:13px">Если кнопка не работает, откройте ссылку:<br>{link}</p>
+         <p style="color:#686257;font-size:13px">Если это были не вы, просто не открывайте ссылку — без неё подписка не включится.</p>
+         """,
+        $"""
+         <p>Someone (we hope you) subscribed to the devlog of "{projectName}".</p>
+         <p><a href="{link}" style="display:inline-block;padding:10px 18px;background:#566842;color:#fff;border-radius:8px;text-decoration:none">Confirm subscription</a></p>
+         <p style="color:#686257;font-size:13px">If the button does not work, open this link:<br>{link}</p>
+         <p style="color:#686257;font-size:13px">If this was not you, do not open the link — without it nothing is turned on.</p>
+         """);
+
+    public static string DevlogSubject(string projectName, string postTitle) => Localized(
+        $"{projectName}: {postTitle}",
+        $"{projectName}: {postTitle}");
+
+    public static string DevlogBody(string projectName, string postTitle, string postUrl, string unsubscribeUrl) => Localized(
+        $"""
+         <p>Новый девлог игры «{projectName}»:</p>
+         <p><a href="{postUrl}" style="font-size:17px">{postTitle}</a></p>
+         <p style="color:#686257;font-size:13px"><a href="{unsubscribeUrl}" style="color:#686257">Отписаться</a></p>
+         """,
+        $"""
+         <p>A new devlog for "{projectName}":</p>
+         <p><a href="{postUrl}" style="font-size:17px">{postTitle}</a></p>
+         <p style="color:#686257;font-size:13px"><a href="{unsubscribeUrl}" style="color:#686257">Unsubscribe</a></p>
+         """);
+
     private static string Localized(string ru, string en) =>
         System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ru" ? ru : en;
 }

@@ -25,6 +25,13 @@ public class TenantOwnerCache(TimeProvider? time = null)
     /// <summary>The file → owner cache. Separate from the host one, same reason.</summary>
     public sealed class ForMedia(TimeProvider? time = null) : TenantOwnerCache(time);
 
+    /// <summary>
+    /// The custom domain → "owner|slug" cache (T-300). Its own budget again: an unknown Host header
+    /// is the cheapest thing on the internet to invent, and this one is asked about every host that
+    /// is not ours.
+    /// </summary>
+    public sealed class ForDomains(TimeProvider? time = null) : TenantOwnerCache(time);
+
     public static readonly TimeSpan HitLifetime = TimeSpan.FromSeconds(30);
 
     /// <summary>Shorter than a hit: a subdomain that has just become real should start answering.</summary>

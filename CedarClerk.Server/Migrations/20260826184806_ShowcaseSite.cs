@@ -54,6 +54,7 @@ namespace CedarClerk.Server.Migrations
                     ConfirmToken = table.Column<string>(type: "TEXT", nullable: true),
                     ConfirmedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
                     UnsubscribeToken = table.Column<string>(type: "TEXT", nullable: false),
+                    VisitorHash = table.Column<string>(type: "TEXT", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>

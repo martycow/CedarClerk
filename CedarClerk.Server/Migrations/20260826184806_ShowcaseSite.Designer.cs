@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CedarClerk.Server.Migrations
 {
     [DbContext(typeof(CedarDbContext))]
-    [Migration("20260826184222_ShowcaseSite")]
+    [Migration("20260826184806_ShowcaseSite")]
     partial class ShowcaseSite
     {
         /// <inheritdoc />
@@ -1941,6 +1941,10 @@ namespace CedarClerk.Server.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("UnsubscribeToken")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VisitorHash")
                         .IsRequired()
                         .HasColumnType("TEXT");
 

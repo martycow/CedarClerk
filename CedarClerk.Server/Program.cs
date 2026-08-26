@@ -98,6 +98,7 @@ builder.Services.AddSingleton<TelegramBotService>();
 builder.Services.AddSingleton(new MediaPaths(mediaDir));
 builder.Services.AddSingleton<TenantOwnerCache.ForHosts>();
 builder.Services.AddSingleton<TenantOwnerCache.ForMedia>();
+builder.Services.AddSingleton<TenantOwnerCache.ForDomains>();
 builder.Services.AddSingleton<MediaOwnerIndex>();
 builder.Services.AddSingleton<MediaVisibilityIndex>();
 builder.Services.AddSingleton(new ImportTmpPaths(importTmpDir));
