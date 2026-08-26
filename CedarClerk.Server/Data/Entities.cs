@@ -1043,3 +1043,56 @@ public class WaitlistEntry
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
+
+/// <summary>
+/// The landing page's editable half (ADR-215) — one row, always <c>Id == 1</c>.
+///
+/// The page's structure, its prices and its feature list are code, because they are claims the
+/// product has to keep and a hand-kept copy of them goes stale the first time a limit moves. What
+/// lives here is the half that is genuinely the maintainer's to write: the headline, the note in
+/// the margin, the roadmap and the story — the parts no test can check and no reader forgives
+/// being wrong. Every string is nullable, and null means "use what the code says", so an install
+/// that never opens the admin tab still renders a complete page.
+/// </summary>
+public class LandingSettings
+{
+    public int Id { get; set; } = 1;
+
+    public string? KickerEn { get; set; }
+    public string? KickerRu { get; set; }
+    public string? HeroTitleEn { get; set; }
+    public string? HeroTitleRu { get; set; }
+    public string? HeroSubEn { get; set; }
+    public string? HeroSubRu { get; set; }
+
+    /// <summary>
+    /// The line under the waitlist field. Empty by default on purpose: it is the one slot on the
+    /// page shaped to hold a number about other people, and an invented one is the fastest way to
+    /// make everything above it read as invented too.
+    /// </summary>
+    public string? ProofEn { get; set; }
+    public string? ProofRu { get; set; }
+
+    /// <summary>The handwritten aside beside the form, in the maintainer's own voice.</summary>
+    public string? NoteEn { get; set; }
+    public string? NoteRu { get; set; }
+
+    /// <summary>Overrides <c>Cedar:ShowcaseBlog</c> without a redeploy. Null falls back to it.</summary>
+    public string? ShowcaseBlog { get; set; }
+
+    public bool ShowShots { get; set; } = true;
+    public bool ShowFeatures { get; set; } = true;
+    public bool ShowPricing { get; set; } = true;
+    public bool ShowRoadmap { get; set; }
+    public bool ShowStory { get; set; }
+
+    /// <summary>
+    /// Three lists that are lists in the page and would be three tables here. JSON in a column,
+    /// because nothing ever queries inside them — they are read whole, once, to draw one section.
+    /// </summary>
+    public string? ShotsJson { get; set; }
+    public string? RoadmapJson { get; set; }
+    public string? StoryJson { get; set; }
+
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}

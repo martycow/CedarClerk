@@ -9,9 +9,38 @@
 // The output is committed — regenerate only when tools/icon-map.json changes.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { markupBBox } from './svg-bbox.mjs';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const WEIGHTS = ['regular', 'bold'];
+
+// Optical sizing. Phosphor draws every glyph on the same 256 canvas but fills it to whatever width
+// the shape wants — a cube reaches 224 units, a checked square 192 — so a row of icons rendered at
+// one pixel size reads as a row of different sizes. The rail is where it shows worst: nine hooks,
+// one under the next, spanning a quarter's difference in apparent size.
+//
+// The fix is a per-icon viewBox rather than a redrawn set: widening the box shrinks the glyph
+// inside it and vice versa, so every icon lands near the same painted extent while the artwork
+// stays byte-identical to the package's.
+//
+// Three guards keep it from flattening the set's own judgement:
+//  - only glyphs that fill the canvas in BOTH axes are measured against the target. A caret, an
+//    ellipsis, a `+` are deliberately small, and scaling them up to a cube's extent is wrong.
+//  - the correction is clamped, and asymmetrically: an oversized glyph may come down a tenth, an
+//    undersized one may go up a twentieth. That halves the spread without any icon changing
+//    character.
+//  - anything already within 2% of the target is left exactly as drawn.
+// Centring is deliberately not corrected: the worst offset in the set is 12 units, which is half a
+// pixel at `--icon-sm`, while the size spread is three whole pixels.
+//
+// Measured on the regular weight and applied to every weight: bold is the same drawing with a
+// fatter stroke, so its extents are larger across the board and correcting it separately would
+// only make an icon behave differently at one weight than at another.
+const FILLS_CANVAS = 140;
+const SHRINK_LIMIT = 0.90;
+const GROW_LIMIT = 1.05;
+const DEADZONE = 0.02;
+const CANVAS = 256;
 const map = JSON.parse(readFileSync(resolve(ROOT, 'tools/icon-map.json'), 'utf8'));
 
 // Phosphor names are what the app will use from here on; several Lucide names collapse onto one
@@ -29,6 +58,12 @@ out.push(names.map(n => `    | '${n}'`).join('\n') + ';');
 out.push('');
 out.push('export const ICONS: Record<IconWeight, Record<IconName, string>> = {');
 
+const glyphs = new Map();
+// The regular weight again, kept whole: the server-rendered surfaces draw from C#, not from the
+// TypeScript above, and a second hand-copied set of paths is exactly the drift this file exists
+// to prevent — the landing page carried four of them copied by hand before this.
+const regular = new Map();
+
 for (const weight of WEIGHTS) {
     out.push(`    ${weight}: {`);
     for (const name of names) {
@@ -44,11 +79,90 @@ for (const weight of WEIGHTS) {
         }
         const inner = svg.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '').trim();
         out.push(`        '${name}': ${JSON.stringify(inner)},`);
+        if (weight === 'regular') { glyphs.set(name, markupBBox(inner)); regular.set(name, inner); }
     }
     out.push('    },');
 }
 out.push('};');
 out.push('');
 
+out.push('// Per-icon viewBox, present only where the glyph needed sizing; everything else draws on the');
+out.push('// plain 0 0 256 256 canvas. See the note in tools/generate-icons.mjs for the rule.');
+out.push('export const ICON_BOXES: Partial<Record<IconName, string>> = {');
+for (const [name, box] of opticalBoxes(glyphs)) out.push(`    '${name}': '${box}',`);
+out.push('};');
+out.push('');
+
+/** Target extent, then a clamped correction toward it for each glyph that misses it. */
+function opticalBoxes(glyphs) {
+    const extent = (b) => Math.max(b.maxX - b.minX, b.maxY - b.minY);
+    const fills = [...glyphs.values()].filter(b => Math.min(b.maxX - b.minX, b.maxY - b.minY) >= FILLS_CANVAS);
+    const sorted = fills.map(extent).sort((a, b) => a - b);
+    const target = sorted[Math.floor(sorted.length / 2)];
+
+    const result = new Map();
+    for (const [name, box] of glyphs) {
+        if (Math.min(box.maxX - box.minX, box.maxY - box.minY) < FILLS_CANVAS) continue;
+        const scale = Math.min(GROW_LIMIT, Math.max(SHRINK_LIMIT, target / extent(box)));
+        if (Math.abs(scale - 1) <= DEADZONE) continue;
+        // A glyph drawn `scale` times bigger fills the same share of a canvas `scale` times wider,
+        // held on the same centre so nothing shifts sideways.
+        const side = CANVAS / scale;
+        const origin = round((CANVAS - side) / 2);
+        result.set(name, `${origin} ${origin} ${round(side)} ${round(side)}`);
+    }
+    return result;
+}
+
+function round(value) {
+    return Number(value.toFixed(2));
+}
+
 writeFileSync(resolve(ROOT, 'src/app/shared/icon-data.generated.ts'), out.join('\n'));
-console.log(`wrote ${names.length} icons x ${WEIGHTS.length} weights`);
+
+// The same glyphs for the server (ADR-215). Regular weight only: nothing rendered server-side asks
+// for bold, and a weight nobody draws is source to keep in review for no reader.
+const boxes = opticalBoxes(glyphs);
+const cs = [
+    '// GENERATED by cedarclerk-web/tools/generate-icons.mjs — do not edit by hand.',
+    '// Source: @phosphor-icons/core (MIT). Regenerate after changing tools/icon-map.json.',
+    'namespace CedarClerk.Core;',
+    '',
+    '/// <summary>',
+    '/// The icon set as a server-rendered page needs it (ADR-215) — the same markup the app draws,',
+    '/// out of the same generator, so the landing page and the product behind it cannot end up',
+    '/// showing two different pencils. The landing carried four of these copied by hand before.',
+    '/// </summary>',
+    'public static class Icons',
+    '{',
+    '    private static readonly IReadOnlyDictionary<string, string> Paths = new Dictionary<string, string>',
+    '    {',
+    ...names.map(n => '        ["' + n + '"] = ' + csString(regular.get(n)) + ','),
+    '    };',
+    '',
+    '    /// <summary>Per-icon optical viewBox, where the glyph needed one (ADR-214).</summary>',
+    '    private static readonly IReadOnlyDictionary<string, string> Boxes = new Dictionary<string, string>',
+    '    {',
+    ...[...boxes].map(([n, box]) => '        ["' + n + '"] = "' + box + '",'),
+    '    };',
+    '',
+    '    public static string Markup(string name) => Paths.GetValueOrDefault(name, "");',
+    '',
+    '    public static string ViewBox(string name) => Boxes.GetValueOrDefault(name, "0 0 256 256");',
+    '',
+    '    /// <summary>One drawn element, sized in px and taking its colour from the text around it.</summary>',
+    '    public static string Svg(string name, int size = 16) =>',
+    '        Paths.ContainsKey(name)',
+    '            ? $"""<svg viewBox="{ViewBox(name)}" width="{size}" height="{size}" fill="currentColor" aria-hidden="true" focusable="false">{Markup(name)}</svg>"""',
+    '            : "";',
+    '}',
+    '',
+];
+writeFileSync(resolve(ROOT, '../CedarClerk.Core/Icons.generated.cs'), cs.join('\n'));
+
+/** A C# literal: the markup carries double quotes, and nothing else in it needs escaping. */
+function csString(markup) {
+    return '"' + markup.split('"').join('\\' + '"') + '"';
+}
+
+console.log(`wrote ${names.length} icons x ${WEIGHTS.length} weights, and ${names.length} for the server`);

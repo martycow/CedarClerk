@@ -48,6 +48,9 @@ var importTmpDir = Path.Combine(dataDir, "import-tmp");
 var dataProtectionKeysDir = Path.Combine(dataDir, "dataprotection-keys");
 var thumbnailsDir = Path.Combine(dataDir, "thumbs");
 var downloadsDir = Path.Combine(dataDir, "downloads");
+// The landing's screenshots (ADR-215). In the data directory rather than in wwwroot,
+// because a deploy replaces wwwroot whole and would take the uploads with it.
+var landingDir = Path.Combine(dataDir, "landing");
 
 Directory.CreateDirectory(dataDir);
 Directory.CreateDirectory(mediaDir);
@@ -100,6 +103,7 @@ builder.Services.AddSingleton<MediaVisibilityIndex>();
 builder.Services.AddSingleton(new ImportTmpPaths(importTmpDir));
 builder.Services.AddSingleton<AiJobService>();
 builder.Services.AddSingleton(new ThumbnailPaths(thumbnailsDir));
+builder.Services.AddSingleton(new LandingPaths(landingDir));
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramBotService>());
 builder.Services.AddHttpClient(); // named clients used by billing (Stripe), translation providers, and email
 builder.Services.AddSingleton<ResendEmailProvider>();
@@ -174,6 +178,7 @@ app.UseLanding();
 app.UseWhen(ctx => !TenantRouting.IsTenantRequest(ctx), appHost => appHost.UseDefaultFiles());
 app.UseStaticFiles(indexNoCache);
 app.UseTenantMedia(mediaDir);
+app.UseLandingMedia(landingDir);
 
 // ADR-116 — updates for the desktop shell. Unconditional since ADR-117: the process that used to
 // need this switched off is now an agent, and an agent leaves this file before reaching here.

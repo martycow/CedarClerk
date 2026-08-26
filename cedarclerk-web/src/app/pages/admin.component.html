@@ -209,6 +209,219 @@ used to run across the top are the shelf beside it (ADR-164).-->
             <p class="field-hint-inline invite-hint">{{ t().admin.posts.readOnlyNote }}</p>
             }
 
+            <!--The landing tab (ADR-215). It edits the half of the front door that is prose: the
+            headline, the note, the screenshots, the roadmap and the story. Prices, plans and the
+            feature list are absent on purpose — they are read out of the code that enforces them,
+            and a field for one here would be a second place for a number to be wrong in.-->
+            @if (tab() === 'landing') {
+            @if (landingBusy() && !landing()) {
+            <p class="hint">{{ t().common.loading }}</p>
+            } @else if (landing(); as L) {
+            <div class="landing-bar">
+                <!--A real link to the real page, in a new tab: a preview drawn inside the panel
+                would be a second renderer of the landing, and the two would disagree.-->
+                <a class="landing-preview" href="/" target="_blank" rel="noopener">{{ t().admin.landing.preview }} &rarr;</a>
+                <span class="spacer"></span>
+                @if (landingSaved()) { <span class="chip">{{ t().admin.landing.saved }}</span> }
+                <app-button variant="pine" size="sm" [disabled]="landingBusy()" (clicked)="saveLanding()">
+                    {{ t().admin.landing.save }}
+                </app-button>
+            </div>
+            <p class="field-hint-inline">{{ t().admin.landing.intro }}</p>
+
+            <h2 class="admin-section-title landing-section-title">{{ t().admin.landing.sections }}</h2>
+            <div class="landing-toggles">
+                <label><input type="checkbox" [(ngModel)]="lf.showShots"> {{ t().admin.landing.secShots }}</label>
+                <label><input type="checkbox" [(ngModel)]="lf.showFeatures"> {{ t().admin.landing.secFeatures }}</label>
+                <label><input type="checkbox" [(ngModel)]="lf.showPricing"> {{ t().admin.landing.secPricing }}</label>
+                <label><input type="checkbox" [(ngModel)]="lf.showRoadmap"> {{ t().admin.landing.secRoadmap }}</label>
+                <label><input type="checkbox" [(ngModel)]="lf.showStory"> {{ t().admin.landing.secStory }}</label>
+            </div>
+            <p class="field-hint-inline">{{ t().admin.landing.sectionsHint }}</p>
+
+            <h2 class="admin-section-title landing-section-title">{{ t().admin.landing.copy }}</h2>
+            <p class="field-hint-inline">{{ t().admin.landing.copyHint }}</p>
+            <div class="landing-fields">
+                <div class="lf">
+                    <label>{{ t().admin.landing.kicker }}</label>
+                    <div class="lf-pair">
+                        <span class="lf-lang">EN</span>
+                        <input [(ngModel)]="lf.kickerEn" [placeholder]="L.defaults.kicker.en || ''" maxlength="60">
+                        <span class="lf-lang">RU</span>
+                        <input [(ngModel)]="lf.kickerRu" [placeholder]="L.defaults.kicker.ru || ''" maxlength="60">
+                    </div>
+                </div>
+                <div class="lf">
+                    <label>{{ t().admin.landing.heroTitle }}</label>
+                    <div class="lf-pair">
+                        <span class="lf-lang">EN</span>
+                        <input [(ngModel)]="lf.heroTitleEn" [placeholder]="L.defaults.heroTitle.en || ''" maxlength="160">
+                        <span class="lf-lang">RU</span>
+                        <input [(ngModel)]="lf.heroTitleRu" [placeholder]="L.defaults.heroTitle.ru || ''" maxlength="160">
+                    </div>
+                    <p class="field-hint-inline">{{ t().admin.landing.heroTitleHint }}</p>
+                </div>
+                <div class="lf">
+                    <label>{{ t().admin.landing.heroSub }}</label>
+                    <div class="lf-pair">
+                        <span class="lf-lang">EN</span>
+                        <textarea rows="3" [(ngModel)]="lf.heroSubEn" [placeholder]="L.defaults.heroSub.en || ''" maxlength="400"></textarea>
+                        <span class="lf-lang">RU</span>
+                        <textarea rows="3" [(ngModel)]="lf.heroSubRu" [placeholder]="L.defaults.heroSub.ru || ''" maxlength="400"></textarea>
+                    </div>
+                </div>
+                <div class="lf">
+                    <label>{{ t().admin.landing.proof }}</label>
+                    <div class="lf-pair">
+                        <span class="lf-lang">EN</span><input [(ngModel)]="lf.proofEn" maxlength="160">
+                        <span class="lf-lang">RU</span><input [(ngModel)]="lf.proofRu" maxlength="160">
+                    </div>
+                    <p class="field-hint-inline">{{ t().admin.landing.proofHint }}</p>
+                </div>
+                <div class="lf">
+                    <label>{{ t().admin.landing.note }}</label>
+                    <div class="lf-pair">
+                        <span class="lf-lang">EN</span><input [(ngModel)]="lf.noteEn" maxlength="160">
+                        <span class="lf-lang">RU</span><input [(ngModel)]="lf.noteRu" maxlength="160">
+                    </div>
+                </div>
+                <div class="lf">
+                    <label>{{ t().admin.landing.showcase }}</label>
+                    <div class="lf-pair one">
+                        <input [(ngModel)]="lf.showcaseBlog" placeholder="marty.cedarclerk.app" maxlength="120">
+                    </div>
+                    <p class="field-hint-inline">
+                        {{ L.configuredShowcaseBlog
+                            ? t().admin.landing.configuredShowcase(L.configuredShowcaseBlog)
+                            : t().admin.landing.noConfiguredShowcase }}
+                    </p>
+                </div>
+            </div>
+
+            <h2 class="admin-section-title landing-section-title">{{ t().admin.landing.shots }}</h2>
+            <p class="field-hint-inline">{{ t().admin.landing.shotsHint }}</p>
+            <label class="landing-upload">
+                <input type="file" accept="image/png,image/jpeg,image/webp" (change)="uploadShot($event)" [disabled]="landingBusy()">
+                <span>{{ t().admin.landing.upload }}</span>
+            </label>
+            <div class="shot-list">
+                @for (s of shots; track s.file; let i = $index) {
+                <div class="shot-row">
+                    <img [src]="shotUrl(s.file)" alt="" loading="lazy">
+                    <div class="shot-fields">
+                        <div class="lf-pair">
+                            <span class="lf-lang">EN</span>
+                            <input [(ngModel)]="s.capEn" [placeholder]="t().admin.landing.caption" maxlength="160">
+                            <span class="lf-lang">RU</span>
+                            <input [(ngModel)]="s.capRu" [placeholder]="t().admin.landing.caption" maxlength="160">
+                        </div>
+                    </div>
+                    <div class="shot-actions">
+                        @if (i === 0) { <span class="chip accent">{{ t().admin.landing.heroShot }}</span> }
+                        <app-button variant="paper" size="sm" [disabled]="i === 0" [title]="t().admin.landing.up"
+                                    (clicked)="moveShot(i, -1)"><app-icon name="arrow-up" size="sm" /></app-button>
+                        <app-button variant="paper" size="sm" [disabled]="i === shots.length - 1" [title]="t().admin.landing.down"
+                                    (clicked)="moveShot(i, 1)"><app-icon name="arrow-down" size="sm" /></app-button>
+                        <app-button variant="paper" size="sm" (clicked)="removeShot(i)">{{ t().admin.landing.remove }}</app-button>
+                        <app-button variant="danger" size="sm" [disabled]="busy()" (clicked)="deleteShotFile(s.file)">
+                            {{ t().admin.landing.deleteFile }}
+                        </app-button>
+                    </div>
+                </div>
+                } @empty {
+                <p class="hint invite-empty">{{ t().admin.landing.noShots }}</p>
+                }
+            </div>
+            @if (orphanFiles().length) {
+            <p class="field-hint-inline">{{ t().admin.landing.orphans(orphanFiles().length) }}</p>
+            <div class="orphan-list">
+                @for (f of orphanFiles(); track f) {
+                <span class="orphan">
+                    <img [src]="shotUrl(f)" alt="" loading="lazy">
+                    <app-button variant="danger" size="sm" [disabled]="busy()" (clicked)="deleteShotFile(f)">
+                        {{ t().admin.landing.deleteFile }}
+                    </app-button>
+                </span>
+                }
+            </div>
+            }
+
+            <h2 class="admin-section-title landing-section-title">{{ t().admin.landing.roadmap }}</h2>
+            <p class="field-hint-inline">{{ t().admin.landing.roadmapHint }}</p>
+            <div class="landing-list">
+                @for (c of roadmapCols; track $index; let i = $index) {
+                <div class="landing-card">
+                    <div class="landing-card-head">
+                        <span class="muted">{{ t().admin.landing.columnTitle }} {{ i + 1 }}</span>
+                        <select [(ngModel)]="c.mark" [title]="t().admin.landing.mark">
+                            @for (m of marks; track m) { <option [value]="m">{{ $any(t().admin.landing.marks)[m] }}</option> }
+                        </select>
+                        <span class="spacer"></span>
+                        <app-button variant="paper" size="sm" (clicked)="removeRoadmapColumn(i)">
+                            {{ t().admin.landing.removeColumn }}
+                        </app-button>
+                    </div>
+                    <div class="lf-pair">
+                        <span class="lf-lang">EN</span><input [(ngModel)]="c.titleEn" maxlength="60">
+                        <span class="lf-lang">RU</span><input [(ngModel)]="c.titleRu" maxlength="60">
+                    </div>
+                    <label class="muted">{{ t().admin.landing.items }}</label>
+                    <div class="lf-pair">
+                        <span class="lf-lang">EN</span><textarea rows="5" [(ngModel)]="c.itemsEn"></textarea>
+                        <span class="lf-lang">RU</span><textarea rows="5" [(ngModel)]="c.itemsRu"></textarea>
+                    </div>
+                </div>
+                }
+            </div>
+            <app-button variant="paper" size="sm" (clicked)="addRoadmapColumn()">{{ t().admin.landing.addColumn }}</app-button>
+
+            <h2 class="admin-section-title landing-section-title">{{ t().admin.landing.story }}</h2>
+            <p class="field-hint-inline">{{ t().admin.landing.storyHint }}</p>
+            <div class="landing-list">
+                @for (v of storySteps; track $index; let i = $index) {
+                <div class="landing-card">
+                    <div class="landing-card-head">
+                        <span class="muted">{{ i + 1 }}</span>
+                        <span class="spacer"></span>
+                        <app-button variant="paper" size="sm" (clicked)="removeStoryStep(i)">
+                            {{ t().admin.landing.removeStep }}
+                        </app-button>
+                    </div>
+                    <label class="muted">{{ t().admin.landing.when }}</label>
+                    <div class="lf-pair">
+                        <span class="lf-lang">EN</span><input [(ngModel)]="v.whenEn" maxlength="40">
+                        <span class="lf-lang">RU</span><input [(ngModel)]="v.whenRu" maxlength="40">
+                    </div>
+                    <label class="muted">{{ t().admin.landing.stepTitle }}</label>
+                    <div class="lf-pair">
+                        <span class="lf-lang">EN</span><input [(ngModel)]="v.titleEn" maxlength="80">
+                        <span class="lf-lang">RU</span><input [(ngModel)]="v.titleRu" maxlength="80">
+                    </div>
+                    <label class="muted">{{ t().admin.landing.stepText }}</label>
+                    <div class="lf-pair">
+                        <span class="lf-lang">EN</span><textarea rows="3" [(ngModel)]="v.textEn" maxlength="600"></textarea>
+                        <span class="lf-lang">RU</span><textarea rows="3" [(ngModel)]="v.textRu" maxlength="600"></textarea>
+                    </div>
+                </div>
+                }
+            </div>
+            <app-button variant="paper" size="sm" (clicked)="addStoryStep()">{{ t().admin.landing.addStep }}</app-button>
+
+            <h2 class="admin-section-title landing-section-title">{{ t().admin.landing.waitlist }}</h2>
+            <div class="user-table">
+                @for (w of waitlistEntries(); track w.id) {
+                <div class="waitlist-row">
+                    <span class="user-email">{{ w.email }}</span>
+                    <span class="muted">{{ w.language }}</span>
+                    <span class="muted">{{ w.createdAt | zonedDate:'MM/dd/yyyy' }}</span>
+                </div>
+                } @empty {
+                <p class="hint invite-empty">{{ t().admin.landing.waitlistEmpty }}</p>
+                }
+            </div>
+            }
+            }
+
             @if (tab() === 'reports') {
             @if (billing(); as b) {
             <h2 class="admin-section-title">{{ t().admin.reports.revenue }}</h2>

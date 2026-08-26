@@ -15,7 +15,7 @@ namespace CedarClerk.Server;
 // through those: one missed call site would be a cross-tenant leak. Instead every cross-owner
 // read lives here, behind one gate, so the security property is a single sentence — everything
 // under /api/admin is admin-only, everything else stays owner-scoped.
-public static class AdminEndpoints
+public static partial class AdminEndpoints
 {
     public record SetPlanRequest(string Tier, DateTime? ExpiresAt);
     public record SetLockedRequest(bool Locked);
@@ -505,5 +505,8 @@ public static class AdminEndpoints
                 HasMore = hasMore,
             });
         });
+
+        // AdminEndpoints.Landing.cs — inside this group, so the gate above covers it too (ADR-215).
+        MapLandingAdmin(group);
     }
 }

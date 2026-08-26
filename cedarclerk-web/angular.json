@@ -47,6 +47,11 @@
                 "glob": "martian-mono-@(latin|cyrillic)-@(400|600|700)-normal.woff2",
                 "input": "node_modules/@fontsource/martian-mono/files",
                 "output": "assets/fonts"
+              },
+              {
+                "glob": "caveat-@(latin|cyrillic)-500-normal.woff2",
+                "input": "node_modules/@fontsource/caveat/files",
+                "output": "assets/fonts"
               }
             ],
             "styles": [

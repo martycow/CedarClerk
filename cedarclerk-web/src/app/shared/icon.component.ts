@@ -1,6 +1,6 @@
 import { Component, Input, computed, inject, signal } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { ICONS, IconName, IconWeight } from './icon-data.generated';
+import { ICONS, ICON_BOXES, IconName, IconWeight } from './icon-data.generated';
 
 // T-079 / ADR-072 — the single icon component. Everything the app draws goes through here, so
 // "make the icons bolder" or "a size step is wrong" is one change rather than a fourth sweep
@@ -17,7 +17,7 @@ const CACHE = new Map<string, SafeHtml>();
     // element, and the generator strips that wrapper to keep only the paths — so without it here
     // every icon in the app rendered in the SVG default, black, which is nearly invisible on the
     // dark theme (reported 01.08.2026). It was never inherited from anywhere; it was simply lost.
-    template: `<svg viewBox="0 0 256 256" fill="currentColor" [style.width]="px()" [style.height]="px()"
+    template: `<svg [attr.viewBox]="box()" fill="currentColor" [style.width]="px()" [style.height]="px()"
                     [attr.aria-hidden]="label ? null : true" [attr.role]="label ? 'img' : null"
                     [attr.aria-label]="label || null"
                     [innerHTML]="body()"></svg>`,
@@ -42,6 +42,12 @@ export class IconComponent {
     private _size = signal<'xs' | 'sm' | 'md' | 'lg'>('sm');
 
     px = computed(() => `var(--icon-${this._size()})`);
+
+    // Phosphor fills its 256 canvas to whatever width each shape wants, so a glyph that reaches
+    // further than the rest reads as a bigger icon at the same pixel size. The generator measures
+    // that and hands back a canvas sized to cancel it out; most icons need no correction and draw
+    // on the plain one.
+    box = computed(() => ICON_BOXES[this._name()] ?? '0 0 256 256');
 
     // bypassSecurityTrustHtml is safe here and only here: the markup is a build-time constant
     // generated from an npm package, never anything a user typed. Angular would otherwise strip

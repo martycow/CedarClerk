@@ -4,6 +4,8 @@ using CedarClerk.Server.Tenancy;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 
@@ -28,8 +30,15 @@ public class TenantRoutingTests : IDisposable
 
     private readonly string _downloads = Path.Combine(Path.GetTempPath(), "cedar-downloads-" + Guid.NewGuid().ToString("N"));
 
+    // The landing reads its editable half out of the database (ADR-215), so the pipeline now needs
+    // one to build. Empty on purpose: what these tests assert is which host renders which page, and
+    // an empty table is what a fresh install has — the defaults path is the one worth routing to.
+    private readonly SqliteConnection _db = new("Data Source=:memory:");
+
     public TenantRoutingTests()
     {
+        _db.Open();
+        using (var db = NewDb()) db.Database.EnsureCreated();
         Directory.CreateDirectory(_downloads);
         Directory.CreateDirectory(Path.Combine(_webRoot, "assets", "fonts"));
         File.WriteAllText(Path.Combine(_webRoot, "index.html"), Shell);
@@ -37,8 +46,12 @@ public class TenantRoutingTests : IDisposable
         File.WriteAllText(Path.Combine(_webRoot, "assets", "fonts", "inter.woff2"), Font);
     }
 
+    private CedarDbContext NewDb() =>
+        new(new DbContextOptionsBuilder<CedarDbContext>().UseSqlite(_db).Options, TenantProvider.Platform());
+
     public void Dispose()
     {
+        _db.Dispose();
         Directory.Delete(_webRoot, recursive: true);
         Directory.Delete(_downloads, recursive: true);
     }
@@ -65,6 +78,7 @@ public class TenantRoutingTests : IDisposable
         services.AddLogging();
         services.AddSingleton(tenant);
         services.AddSingleton<IWebHostEnvironment>(new WebRoot(_webRoot));
+        services.AddScoped(_ => NewDb());
         var provider = services.BuildServiceProvider();
 
         var app = new ApplicationBuilder(provider);

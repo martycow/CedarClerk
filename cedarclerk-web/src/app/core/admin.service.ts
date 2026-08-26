@@ -100,6 +100,66 @@ export interface AdminAuditEntry {
     createdAt: string;
 }
 
+// The landing page's editable half (ADR-215). The page's structure, prices and feature list stay in
+// the server's code; these are the strings and lists no test can check.
+export interface LandingTextPair {
+    en: string | null;
+    ru: string | null;
+}
+
+export interface LandingShot {
+    file: string;
+    caption: LandingTextPair;
+}
+
+/** `mark` is done | doing | next — which glyph and which colour the column's items take. */
+export interface LandingRoadmapColumn {
+    title: LandingTextPair;
+    mark: string;
+    items: LandingTextPair[];
+}
+
+export interface LandingStoryStep {
+    when: LandingTextPair;
+    title: LandingTextPair;
+    text: LandingTextPair;
+}
+
+export interface AdminLanding {
+    kickerEn: string | null;
+    kickerRu: string | null;
+    heroTitleEn: string | null;
+    heroTitleRu: string | null;
+    heroSubEn: string | null;
+    heroSubRu: string | null;
+    proofEn: string | null;
+    proofRu: string | null;
+    noteEn: string | null;
+    noteRu: string | null;
+    showcaseBlog: string | null;
+    showShots: boolean;
+    showFeatures: boolean;
+    showPricing: boolean;
+    showRoadmap: boolean;
+    showStory: boolean;
+    shots: LandingShot[];
+    roadmap: LandingRoadmapColumn[];
+    story: LandingStoryStep[];
+    /** What the page falls back to when a field is left blank — shown as the field's placeholder. */
+    defaults: { kicker: LandingTextPair; heroTitle: LandingTextPair; heroSub: LandingTextPair };
+    configuredShowcaseBlog: string | null;
+    /** Every image actually on disk, including any the current list no longer points at. */
+    files: string[];
+    waitlist: number;
+}
+
+export interface AdminWaitlistEntry {
+    id: string;
+    email: string;
+    language: string;
+    createdAt: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
     private http = inject(HttpClient);
@@ -179,5 +239,32 @@ export class AdminService {
     // Manual attribution for accounts that predate invite tracking. Null clears it.
     setUserInvite(userId: string, inviteCodeId: string | null) {
         return firstValueFrom(this.http.post(`/api/admin/users/${userId}/invite`, { inviteCodeId }));
+    }
+
+    landing() {
+        return firstValueFrom(this.http.get<AdminLanding>('/api/admin/landing'));
+    }
+
+    // The whole page in one PUT, not a field at a time: the sections, the copy and the lists are
+    // read together to draw one page, and half-saving them is how a headline ends up describing a
+    // section that was switched off.
+    saveLanding(body: Omit<AdminLanding, 'defaults' | 'configuredShowcaseBlog' | 'files' | 'waitlist'>) {
+        return firstValueFrom(this.http.put('/api/admin/landing', body));
+    }
+
+    uploadLandingShot(file: File) {
+        const form = new FormData();
+        form.append('file', file);
+        return firstValueFrom(
+            this.http.post<{ file: string; url: string }>('/api/admin/landing/upload', form));
+    }
+
+    /** Removes the image from disk. Taking it out of the list is a separate, saveable edit. */
+    deleteLandingFile(file: string) {
+        return firstValueFrom(this.http.delete(`/api/admin/landing/files/${encodeURIComponent(file)}`));
+    }
+
+    waitlist() {
+        return firstValueFrom(this.http.get<AdminWaitlistEntry[]>('/api/admin/landing/waitlist'));
     }
 }

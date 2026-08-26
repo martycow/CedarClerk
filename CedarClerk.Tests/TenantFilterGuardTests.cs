@@ -24,6 +24,7 @@ public class TenantFilterGuardTests
         ["ApplicationUser"] = "Identity reads AspNetUsers on every authorized request, and sign-in happens before the tenant is known.",
         ["InviteCode"] = "One invite list for the whole platform; a code is redeemed before its holder has an account.",
         ["WaitlistEntry"] = "Signups from the landing page, taken before any account exists.",
+        ["LandingSettings"] = "One row, and it is the platform's own front door — no account owns the landing page.",
         ["AdminAuditEntry"] = "One audit log, written by admins about other accounts.",
         ["BotKnownChat"] = "One shared bot; membership is discovered from Telegram updates, not from a request.",
         ["BotKnownChatAdmin"] = "Hangs off BotKnownChat, same reason.",

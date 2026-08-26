@@ -10,7 +10,7 @@ export const CONTRACT = [
     'text', 't2', 't3', 'accent', 'danger', 'ok', 'warn',
     // The wall carries one ink and it is not --text (ADR-141), so a server-rendered surface that
     // paints the wall has nothing readable to put on it without this name.
-    'wood-ink',
+    'wood-ink', 'wood-ink-soft',
     'series-1', 'series-2', 'series-3', 'series-4', 'series-5', 'series-6',
     'shadow', 'asoft', 'abord', 'font-sans', 'font-mono', 'font-serif',
     'fs-read', 'lh-read', 'radius-sm', 'radius-md', 'radius-lg',
@@ -30,9 +30,17 @@ export const MATERIALS = [
     // The plaster wall the page stands on, and the lamp over it. The two stops travel because
     // --surface-page dereferences them.
     'wall-hi', 'wall-lo', 'surface-page', 'lamp',
+    // Bare bench wood, and the shelf board and carved sign tile cut from it. A server-rendered
+    // page that paints a bench needs the board as well as the rail — the rail is the header,
+    // the board is every panel under it (ADR-215).
+    'wood-hi', 'wood', 'wood-lo', 'wood-edge', 'shelf-frame', 'shadow-shelf',
+    'sign-tile-hi', 'sign-tile-lo', 'grad-sign-tile', 'bench-panel-hd',
     // Dark park-sign wood: the board a public header is cut from, and the buttons mounted on it.
-    'rail-hi', 'rail-mid', 'rail-lo', 'rail-edge', 'rail-ink',
+    'rail-hi', 'rail-mid', 'rail-lo', 'rail-edge', 'rail-ink', 'rail-ink-soft',
     'surface-rail', 'rail-btn-face', 'rail-btn-face-hover', 'border-rail-btn', 'shadow-rail', 'tex-wood',
+    // The rail's own height. A server-rendered header that is a rail has to stand exactly as tall
+    // as the app's, or the two halves of one product disagree at the first pixel a visitor sees.
+    'bench-rail-h',
     // Paper stock, its edge and its noise; the shadows that hold a sheet off the wall.
     'paper-bright', 'paper-edge', 'tex-paper', 'border-paper',
     'shadow-paper', 'shadow-paper-sm', 'shadow-sheet', 'shadow-field-inset',
@@ -52,7 +60,7 @@ export const MATERIALS = [
     // The state washes a stamp is painted on (ADR-145), and the brass one a version mark takes.
     'ok-soft', 'brass-soft',
     // Carved lettering, the readout face (ADR-180), and the pencil rules the wall is ruled with.
-    'font-display', 'font-readout', 'rule-ink', 'rule-ink-soft',
+    'font-display', 'font-readout', 'font-note', 'rule-ink', 'rule-ink-soft',
 ];
 
 /** Everything DesignTokens carries, which is what a server sheet may name. */

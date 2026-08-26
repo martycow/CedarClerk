@@ -149,6 +149,15 @@ public static class ErrorMessages
     public static string WaitlistEmailInvalid => Ru(
         "Это не похоже на адрес почты.",
         "That does not look like an email address.");
+    public static string LandingImageUnsupported(string contentType) => Ru(
+        $"Такой формат сюда не годится: {contentType}. Скриншот — это PNG, JPEG или WebP.",
+        $"That format does not belong here: {contentType}. A screenshot is PNG, JPEG or WebP.");
+    public static string LandingImageTooLarge(long maxMb) => Ru(
+        $"Файл слишком большой — не больше {maxMb} МБ.",
+        $"The file is too large — {maxMb}MB at most.");
+    public static string LandingBadFileName => Ru(
+        "Такого файла здесь нет.",
+        "There is no such file here.");
     public static string ShowcaseSlugEmpty => Ru(
         "Слаг получился пустым — используйте латинские буквы или цифры.",
         "The slug came out empty — use latin letters or digits.");

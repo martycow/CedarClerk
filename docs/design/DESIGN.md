@@ -156,6 +156,8 @@ The bench chrome has three roles of its own, on the same scale and outside the c
 ```
 The tokens were born as the three values `.icon` was declared with across 9 files (15/18/20 — the inconsistency is why they became tokens), then **raised one step each on 01.08.2026**; `--icon-xs` was added by the `/drafts` migration. Set: **Phosphor**, inlined SVG behind one `app-icon` component (T-079 done 31.07.2026; `@lucide/angular` is gone). What each icon *means* in this app, and where a meaning has two glyphs, is on `/dev/icons` — generated from the call sites by `npm run icons:generate`, never hand-kept (ADR-075).
 
+A token is a nominal size, not an apparent one: Phosphor fills its 256-unit canvas to whatever width each shape wants, from 192 units to 240, so the same `--icon-sm` reads three pixels bigger on a cube than on a checked square. `tools/generate-icons.mjs` measures each glyph and emits a per-icon `viewBox` that cancels the difference, bounded so that only the tails move — ADR-214 has the rule and what it deliberately leaves alone.
+
 ### Motion
 ```
 --motion-fast: 120ms;   state feedback on something already under the cursor

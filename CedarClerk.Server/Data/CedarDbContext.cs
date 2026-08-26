@@ -54,6 +54,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
     public DbSet<PublishJob> PublishJobs => Set<PublishJob>();
     public DbSet<CreditEntry> CreditEntries => Set<CreditEntry>();
     public DbSet<WaitlistEntry> WaitlistEntries => Set<WaitlistEntry>();
+    public DbSet<LandingSettings> LandingSettings => Set<LandingSettings>();
 
     // Indie-gamedev module (Phase 13, ADR-101) — same context on purpose, see Entities.IndieDev.cs.
     public DbSet<Project> Projects => Set<Project>();
