@@ -19,7 +19,7 @@ const OTHER: ProjectSummary = { ...SUMMARY, id: 'p2', name: 'Night Lanterns', as
 const DETAIL: ProjectDetail = {
     id: 'p1', name: 'Cedar Quest', description: 'A game about a bench.', projectType: 'fullgame',
     coverUrl: null, createdAt: '2026-08-01T09:00:00', archivedAt: null,
-    showcaseSlug: null, showcaseLinks: '',
+    showcaseSlug: null, showcaseLinks: '', showcaseGallery: '', showcaseTrailerUrl: null, customDomain: null,
     documents: [
         { id: 'd-old', title: 'Design bible', documentType: 'design', updatedAt: '2026-08-10T09:00:00', isArchived: false, isBlogPublished: false },
         { id: 'd-new', title: 'Devlog #12', documentType: 'post', updatedAt: '2026-08-19T11:00:00', isArchived: false, isBlogPublished: false },
@@ -42,8 +42,8 @@ const DETAIL: ProjectDetail = {
 };
 
 const BUILDS: Build[] = [
-    { id: 'b2', projectId: 'p1', version: '0.4.0', notes: '', releasedAt: null, createdAt: '', released: false, taskCount: 0, doneCount: 0, documents: [] },
-    { id: 'b1', projectId: 'p1', version: '0.3.1', notes: '', releasedAt: '2026-08-17T09:00:00', createdAt: '', released: true, taskCount: 3, doneCount: 3, documents: [] },
+    { id: 'b2', projectId: 'p1', version: '0.4.0', notes: '', releasedAt: null, createdAt: '', released: false, taskCount: 0, doneCount: 0, documents: [], isPublic: false, downloadUrl: null },
+    { id: 'b1', projectId: 'p1', version: '0.3.1', notes: '', releasedAt: '2026-08-17T09:00:00', createdAt: '', released: true, taskCount: 3, doneCount: 3, documents: [], isPublic: false, downloadUrl: null },
 ];
 
 class FakeProjects {

@@ -1,5 +1,47 @@
 # Changelog
 
+## 2026-08-26 — The game page becomes the game's site (branch `showcase_site`)
+
+**Seven gaps between ADR-134's showcase and a page an indie developer would use instead of a site,
+closed in one pass** (`T-294`…`T-300`, ADR-216). The page shipped on 18.08 had a cover, a description,
+store links, a devlog feed and a roadmap — and no entrance, nothing to look at, no counters and no
+way to follow it.
+
+**Two ways in** (`T-294`). The blog index carries a Games strip above the post list, and a devlog post
+carries a line back to the game it is about. Both use the showcase's own visibility rule, so neither
+can link to a page that 404s, and a project without a public page is named nowhere.
+
+**Something to look at** (`T-295`). A YouTube trailer through the same nocookie embed the blog
+renderer emits, and a gallery of uploaded `/media/` images — at most twelve, parsed on save so a line
+the page would skip never looks stored. ADR-134's exclusion of `AssetEntry` stands and is the reason
+for the shape: an indexed file is a fingerprint of somebody's disk, with no bytes to serve.
+
+**Counters** (`T-296`). One daily table, upserted the way `RecordViewGeoAsync` already upserts: a page
+view deduplicated by the same 30-minute cookie a post view uses, and a store-link click counted by
+routing the pill through `/games/{slug}/go/{i}` and answering 302. The owner reads both off the
+project's shelf. Daily rows, so "how many opened the Steam link" is answerable and "who" is not.
+
+**An address to follow it by** (`T-297`). Double opt-in throughout — the row is unconfirmed until the
+mailed link is opened, every mail carries a per-row unsubscribe token, and unsubscribing deletes the
+row rather than marking it. Publishing a devlog mails the confirmed followers **once**, on its first
+publication: republishing to fix a typo is not news. A follower is an address and two tokens, not an
+account, so the reader-identity question (`T-004`) stays open rather than answered by a side door.
+
+**A feed per game** (`T-298`), announced from the page — a reader following one game no longer takes
+every other project with it. **Public builds** (`T-299`): `Build.IsPublic` plus a link the author
+hosts. Not bytes we take — storage is what registration already waits on (`T-172`), and a download
+page that turned a 2 GB build into our disk problem would make that harder, not easier.
+
+**A domain of the project's own** (`T-300`). A host that is neither the tenant domain nor the
+application's resolves to a project, and the showcase answers at its root with every path losing the
+`/games/{slug}` prefix. The lookup is cached in its own budget and only runs after the two known
+hosts are ruled out; a miss is not a 404, because an unknown Host header is usually our own traffic
+under a name nobody told the server about. **The DNS record and the certificate are still set by
+hand** — the code answers, Cloudflare has to route.
+
+`dotnet test` 1220/1221 (the one red is `DocsFlowGraphTests`, red on `master` too: DOCS-FLOW names
+`docs/archive/roadmap-phases-0-13.md`, which is not on disk). Frontend 463/463.
+
 ## 2026-08-25 — Every account gets a subdomain, and the database stops answering questions nobody asked (0.15.0)
 
 **Subdomain multitenancy, built over several sessions in seven phases, then a closeout round on the

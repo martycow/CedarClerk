@@ -11,6 +11,7 @@ namespace CedarClerk.Tests;
 public class TenantResolutionTests
 {
     private const string Domain = "cedarclerk.app";
+    private const string MainHost = "cedarclerk.app";
 
     private sealed class Harness
     {
@@ -46,8 +47,8 @@ public class TenantResolutionTests
         seed?.Invoke(harness.Db);
 
         var middleware = new TenantResolutionMiddleware(
-            _ => { harness.NextCalled = true; return Task.CompletedTask; }, Domain,
-            new TenantOwnerCache.ForHosts());
+            _ => { harness.NextCalled = true; return Task.CompletedTask; }, Domain, MainHost,
+            new TenantOwnerCache.ForHosts(), new TenantOwnerCache.ForDomains());
         await middleware.InvokeAsync(harness.Context);
 
         return harness;

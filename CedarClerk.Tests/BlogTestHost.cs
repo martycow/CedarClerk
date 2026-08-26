@@ -17,7 +17,7 @@ internal static class BlogTestHost
     public static HttpContext Request(
         string method, string path, CedarDbContext db, string query = "",
         string? host = null, string? tenantOwnerId = null,
-        Dictionary<string, string?>? config = null)
+        Dictionary<string, string?>? config = null, string? showcaseDomainSlug = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton(db);
@@ -25,6 +25,11 @@ internal static class BlogTestHost
             .AddInMemoryCollection(config ?? []).Build());
         services.AddDataProtection();
         services.AddSingleton<PrivateAccess>();
+        // The follow paths reach for a mailer and a logger. Unconfigured, Resend logs and skips —
+        // which is exactly the shape a test wants: the row is written, nothing leaves the machine.
+        services.AddLogging();
+        services.AddHttpClient();
+        services.AddSingleton<CedarClerk.Server.Email.ResendEmailProvider>();
 
         // What TenantResolutionMiddleware would have written. A blog only ever renders for a
         // resolved subdomain now, so a test that names no owner gets the database's first account —
@@ -35,7 +40,11 @@ internal static class BlogTestHost
         host ??= $"{username}.{Consts.URLs.TenantHost}";
 
         var tenant = new TenantContext();
-        if (ownerId is not null)
+        // T-300 — a custom domain resolves to an owner and the showcase that answers at its root,
+        // with no username in the host to read.
+        if (showcaseDomainSlug is not null && ownerId is not null)
+            tenant.ResolveShowcaseDomain(ownerId, showcaseDomainSlug);
+        else if (ownerId is not null)
             tenant.Resolve(host.Split('.')[0], ownerId);
         services.AddSingleton(tenant);
 

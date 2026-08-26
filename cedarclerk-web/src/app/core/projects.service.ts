@@ -79,6 +79,12 @@ export interface ProjectDetail extends Omit<ProjectSummary, 'documentCount' | 'o
     showcaseSlug: string | null;
     /** One `Label|https://url` per line. */
     showcaseLinks: string;
+    /** ADR-216 — gallery images, one `/media/...` path per line, at most 12. */
+    showcaseGallery: string;
+    /** A YouTube link, or null. */
+    showcaseTrailerUrl: string | null;
+    /** T-300 — the project's own domain, serving the showcase at its root. Null = subdomain only. */
+    customDomain: string | null;
     documents: ProjectDocument[];
     /** T-123 — the dashboard's right rail, already sorted by urgency on the server. */
     upNext: GameTask[];
@@ -87,6 +93,25 @@ export interface ProjectDetail extends Omit<ProjectSummary, 'documentCount' | 'o
     /** T-124 — the sprint covering today, or null when none does. */
     currentSprint: Sprint | null;
     openTaskCount: number;
+}
+
+export interface ShowcaseInput {
+    enabled: boolean;
+    slug: string | null;
+    links: string;
+    gallery: string;
+    trailerUrl: string | null;
+    customDomain: string | null;
+}
+
+export interface ShowcaseStats {
+    days: number;
+    views: { day: string; count: number }[];
+    viewTotal: number;
+    /** One number per store-link label — "which link works", not "when". */
+    clicks: { label: string; count: number }[];
+    followerCount: number;
+    pendingFollowerCount: number;
 }
 
 export interface CreateProjectInput {
@@ -127,9 +152,14 @@ export class ProjectsService {
     }
 
     /** T-159 (ADR-134) — the public game page's switch; the server slugifies and answers the URL. */
-    setShowcase(id: string, enabled: boolean, slug: string | null, links: string) {
-        return firstValueFrom(this.http.put<{ showcaseSlug: string | null; url: string | null }>(
-            `/api/projects/${id}/showcase`, { enabled, slug, links }));
+    setShowcase(id: string, input: ShowcaseInput) {
+        return firstValueFrom(this.http.put<{ showcaseSlug: string | null; url: string | null; customDomain: string | null }>(
+            `/api/projects/${id}/showcase`, input));
+    }
+
+    /** T-296/T-297 — the public page's own counters, for the owner. */
+    showcaseStats(id: string) {
+        return firstValueFrom(this.http.get<ShowcaseStats>(`/api/projects/${id}/showcase/stats`));
     }
 
     update(id: string, name: string, description: string, coverUrl: string | null) {

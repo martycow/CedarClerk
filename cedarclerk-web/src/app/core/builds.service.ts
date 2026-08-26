@@ -23,6 +23,10 @@ export interface Build {
     releasedAt: string | null;
     createdAt: string;
     released: boolean;
+    /** T-299 — offered for download on the project's showcase. */
+    isPublic: boolean;
+    /** Where the file is; a link the author hosts, never bytes we keep. */
+    downloadUrl: string | null;
     taskCount: number;
     doneCount: number;
     /** Documents attached to this version — its changelog, a devlog about it. */
@@ -33,6 +37,8 @@ export interface SaveBuildInput {
     version: string;
     notes: string;
     releasedAt: string | null;
+    isPublic: boolean;
+    downloadUrl: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

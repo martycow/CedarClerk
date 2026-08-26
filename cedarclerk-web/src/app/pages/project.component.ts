@@ -14,6 +14,7 @@ import {
     ProjectDocument,
     ProjectSummary,
     ProjectsService,
+    ShowcaseStats,
     projectInitials,
 } from '../core/projects.service';
 import { Build, BuildsService } from '../core/builds.service';
@@ -102,6 +103,11 @@ export class ProjectComponent implements OnDestroy {
     editShowcase = signal(false);
     editShowcaseSlug = signal('');
     editShowcaseLinks = signal('');
+    editShowcaseGallery = signal('');
+    editShowcaseTrailer = signal('');
+    editShowcaseDomain = signal('');
+    /** T-296/T-297 — the public page's counters; null until they arrive, and on a page with none. */
+    showcaseStats = signal<ShowcaseStats | null>(null);
     actionError = signal<string | null>(null);
     busy = signal(false);
     // Deleting a project is two clicks on the same button rather than a second modal on top of the
@@ -241,6 +247,18 @@ export class ProjectComponent implements OnDestroy {
         } catch {
             this.builds.set(null);
         }
+
+        this.showcaseStats.set(null);
+        if (this.project()?.showcaseSlug) await this.loadShowcaseStats(id);
+    }
+
+    /** Same rule as the builds above: counters are one group of rows, not the page. */
+    private async loadShowcaseStats(id: string) {
+        try {
+            this.showcaseStats.set(await this.api.showcaseStats(id));
+        } catch {
+            this.showcaseStats.set(null);
+        }
     }
 
     /** The shelf survives a failure in silence: it is a switcher, and the page it stands on loaded. */
@@ -290,6 +308,9 @@ export class ProjectComponent implements OnDestroy {
         this.editShowcase.set(!!project.showcaseSlug);
         this.editShowcaseSlug.set(project.showcaseSlug ?? '');
         this.editShowcaseLinks.set(project.showcaseLinks ?? '');
+        this.editShowcaseGallery.set(project.showcaseGallery ?? '');
+        this.editShowcaseTrailer.set(project.showcaseTrailerUrl ?? '');
+        this.editShowcaseDomain.set(project.customDomain ?? '');
         this.actionError.set(null);
         this.confirmDelete = false;
         this.editing.set(true);
@@ -315,8 +336,14 @@ export class ProjectComponent implements OnDestroy {
             if (coverFile) coverUrl = (await this.assets.upload(coverFile)).url;
             await this.api.update(project.id, name, this.editDescription().trim(), coverUrl);
             // T-159 — the showcase saves with the same button; the server slugifies and may rename.
-            const showcase = await this.api.setShowcase(project.id,
-                this.editShowcase(), this.editShowcaseSlug().trim() || null, this.editShowcaseLinks().trim());
+            const showcase = await this.api.setShowcase(project.id, {
+                enabled: this.editShowcase(),
+                slug: this.editShowcaseSlug().trim() || null,
+                links: this.editShowcaseLinks().trim(),
+                gallery: this.editShowcaseGallery().trim(),
+                trailerUrl: this.editShowcaseTrailer().trim() || null,
+                customDomain: this.editShowcaseDomain().trim() || null,
+            });
             this.project.set({
                 ...project,
                 name,
@@ -324,7 +351,11 @@ export class ProjectComponent implements OnDestroy {
                 coverUrl,
                 showcaseSlug: showcase.showcaseSlug,
                 showcaseLinks: this.editShowcaseLinks().trim(),
+                showcaseGallery: this.editShowcaseGallery().trim(),
+                showcaseTrailerUrl: this.editShowcaseTrailer().trim() || null,
+                customDomain: showcase.customDomain,
             });
+            if (showcase.showcaseSlug) void this.loadShowcaseStats(project.id);
             this.projects.update(rows => rows.map(row => row.id === project.id
                 ? { ...row, name, description: this.editDescription().trim(), coverUrl }
                 : row));

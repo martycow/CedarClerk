@@ -13,17 +13,19 @@ const PROJECT = { id: 'p1', name: 'Cedar Quest' } as ProjectDetail;
 const BUILDS: Build[] = [
     {
         id: 'b-next', projectId: 'p1', version: '0.4.0', notes: 'Fog and lanterns.',
-        releasedAt: null, createdAt: '', released: false, taskCount: 1, doneCount: 0, documents: [],
+        releasedAt: null, createdAt: '', released: false, taskCount: 1, doneCount: 0, documents: [], isPublic: false, downloadUrl: null,
     },
     {
         id: 'b-out', projectId: 'p1', version: '0.3.1', notes: '',
         releasedAt: '2026-08-17T09:00:00', createdAt: '', released: true,
         taskCount: 1, doneCount: 1, documents: [{ id: 'doc-1', title: 'Changelog 0.3.1' }],
+        isPublic: false, downloadUrl: null,
     },
     {
         id: 'b-older', projectId: 'p1', version: '0.3.0', notes: '',
         releasedAt: '2026-07-02T09:00:00', createdAt: '', released: true,
         taskCount: 2, doneCount: 0, documents: [{ id: 'doc-2', title: 'Notes 0.3.0' }, { id: 'doc-3', title: 'Credits' }],
+        isPublic: false, downloadUrl: null,
     },
 ];
 

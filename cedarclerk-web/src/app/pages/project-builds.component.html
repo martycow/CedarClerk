@@ -144,6 +144,21 @@
                           [placeholder]="t().projects.builds.notesPlaceholder"></textarea>
             </div>
 
+            <!--T-299 (ADR-216) — a version the showcase offers for download. The link points at
+            the author's own host: this build's bytes are never ours.-->
+            <div class="field">
+                <label class="checkbox-row">
+                    <input type="checkbox" [ngModel]="draftPublic()" (ngModelChange)="draftPublic.set($event)">
+                    <span>{{ t().projects.builds.publicToggle }}</span>
+                </label>
+                @if (draftPublic()) {
+                    <input type="url" [ngModel]="draftDownloadUrl()" (ngModelChange)="draftDownloadUrl.set($event)"
+                           [placeholder]="t().projects.builds.downloadPlaceholder"
+                           [attr.aria-label]="t().projects.builds.downloadLabel">
+                    <p class="field-hint">{{ t().projects.builds.downloadHint }}</p>
+                }
+            </div>
+
             @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
         </div>
 

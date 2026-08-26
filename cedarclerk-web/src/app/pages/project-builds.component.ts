@@ -70,6 +70,8 @@ export class ProjectBuildsComponent implements OnDestroy {
     draftVersion = signal('');
     draftNotes = signal('');
     draftReleased = signal('');
+    draftPublic = signal(false);
+    draftDownloadUrl = signal('');
 
     unreleasedCount = computed(() => this.builds().filter(b => !b.released).length);
 
@@ -150,6 +152,8 @@ export class ProjectBuildsComponent implements OnDestroy {
         this.draftVersion.set('');
         this.draftNotes.set('');
         this.draftReleased.set('');
+        this.draftPublic.set(false);
+        this.draftDownloadUrl.set('');
         this.actionError.set(null);
         this.creating.set(true);
     }
@@ -158,6 +162,8 @@ export class ProjectBuildsComponent implements OnDestroy {
         this.draftVersion.set(build.version);
         this.draftNotes.set(build.notes);
         this.draftReleased.set(build.releasedAt ? build.releasedAt.slice(0, 10) : '');
+        this.draftPublic.set(build.isPublic);
+        this.draftDownloadUrl.set(build.downloadUrl ?? '');
         this.actionError.set(null);
         this.editing.set(build);
     }
@@ -172,6 +178,10 @@ export class ProjectBuildsComponent implements OnDestroy {
             // An empty date field means "not released yet", which is a real state, not a missing
             // value — the list puts those first.
             releasedAt: this.draftReleased() ? new Date(this.draftReleased()).toISOString() : null,
+            // T-299 — offering a build needs somewhere to get it; the server refuses the pair the
+            // other way round, and the field sits under the toggle so the reason is visible.
+            isPublic: this.draftPublic(),
+            downloadUrl: this.draftDownloadUrl().trim() || null,
         };
         const existing = this.editing();
         const saved = await this.run(() => existing
