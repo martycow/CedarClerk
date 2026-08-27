@@ -41,6 +41,7 @@ export const ru: Dict = {
         planner: 'План',
         builds: 'Билды',
         assets: 'Ассеты',
+        showcase: 'Витрина',
         metrics: 'Метрики',
         admin: 'Админ',
         settings: 'Настр.',
@@ -60,6 +61,7 @@ export const ru: Dict = {
         serverUnreachable: 'Сервер не ответил — сессия могла и не закончиться.',
         retry: 'Проверить снова',
         retrying: 'Проверяем…',
+        sessionEnded: 'Сессия закончилась — войдите снова, и вы вернётесь туда же.',
     },
     register: {
         title: 'Присоединяйтесь к стаду',
@@ -231,6 +233,18 @@ export const ru: Dict = {
                 assets ? `${assets} ${plural(assets, 'ассет', 'ассета', 'ассетов')}` : '',
                 tasks ? `${tasks} ${plural(tasks, 'задача', 'задачи', 'задач')}` : '',
             ].filter(Boolean).join(' · '),
+        },
+        // T-159 (ADR-134/216) — публичная страница игры на отдельном экране. Подписи полей лежат
+        // в `edit.showcase*`, где они и были написаны.
+        showcase: {
+            crumb: 'Витрина',
+            title: 'Витрина',
+            openPage: 'Открыть страницу',
+            numbers: 'Числа, 30 дней',
+            saved: 'Сохранено',
+            rulerLive: 'страница открыта',
+            rulerOff: 'публичной страницы нет',
+            loadFailed: 'Не удалось загрузить витрину.',
         },
         builds: {
             crumb: 'Версии',

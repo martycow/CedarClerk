@@ -37,6 +37,7 @@ export const en = {
         planner: 'Planner',
         builds: 'Builds',
         assets: 'Assets',
+        showcase: 'Showcase',
         metrics: 'Metrics',
         admin: 'Admin',
         settings: 'Settings',
@@ -56,6 +57,7 @@ export const en = {
         serverUnreachable: "The server didn't answer — your session may still be alive.",
         retry: 'Check again',
         retrying: 'Checking…',
+        sessionEnded: 'Your session ended — sign in again to pick up where you left off.',
     },
     register: {
         title: 'Join the herd',
@@ -244,6 +246,18 @@ export const en = {
                 assets ? `${assets} ${assets === 1 ? 'asset' : 'assets'}` : '',
                 tasks ? `${tasks} ${tasks === 1 ? 'task' : 'tasks'}` : '',
             ].filter(Boolean).join(' · '),
+        },
+        // T-159 (ADR-134/216) — the public game page, on a screen of its own since it grew into a
+        // site. The field labels live under `edit.showcase*`, where they were written.
+        showcase: {
+            crumb: 'Showcase',
+            title: 'Showcase',
+            openPage: 'Open the page',
+            numbers: 'Numbers, 30 days',
+            saved: 'Saved',
+            rulerLive: 'page is live',
+            rulerOff: 'no public page',
+            loadFailed: 'Could not load the showcase.',
         },
         // T-126 — build and version records.
         builds: {

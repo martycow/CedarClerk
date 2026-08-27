@@ -100,7 +100,6 @@
 
 .term-case-toggle input {
     margin-top: 2px;
-    accent-color: var(--accent);
 }
 
 .term-case-toggle .field-hint-inline {

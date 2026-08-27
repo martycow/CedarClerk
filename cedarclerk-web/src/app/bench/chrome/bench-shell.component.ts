@@ -26,6 +26,7 @@ const HOOK_PREFIXES: readonly (readonly [string, string])[] = [
     ['assets', '/projects/:id/assets'],
     ['planner', '/projects/:id/planner'],
     ['builds', '/projects/:id/builds'],
+    ['showcase', '/projects/:id/showcase'],
     ['documents', '/projects/:id'],
     ['hub', '/projects'],
     ['documents', '/drafts'],
@@ -325,6 +326,7 @@ export class BenchShellComponent {
             items.push({ id: 'planner', icon: 'flag', label: t.planner, link: ['/projects', open, 'planner'] });
             items.push({ id: 'builds', icon: 'cube', label: t.builds, link: ['/projects', open, 'builds'] });
             items.push({ id: 'assets', icon: 'images', label: t.assets, link: ['/projects', open, 'assets'] });
+            items.push({ id: 'showcase', icon: 'rocket-launch', label: t.showcase, link: ['/projects', open, 'showcase'] });
             items.push({
                 id: 'metrics', icon: 'chart-bar', label: t.metrics, link: '/posts',
                 badge: this.feedback.newComments() + this.feedback.newReactions(),
@@ -404,6 +406,7 @@ export class BenchShellComponent {
             case 'assets': return [t.assets.crumb];
             case 'planner': return [t.planner.crumb];
             case 'builds': return [t.builds.crumb];
+            case 'showcase': return [t.showcase.crumb];
             default: return [];
         }
     }

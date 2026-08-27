@@ -146,7 +146,7 @@ describe('bench shell', () => {
 
         await go('/projects/p1/planner');
         expect(hooks().map(a => a.textContent?.trim()))
-            .toEqual(['Hub', 'Docs', 'Board', 'Planner', 'Builds', 'Assets', 'Metrics', 'Settings']);
+            .toEqual(['Hub', 'Docs', 'Board', 'Planner', 'Builds', 'Assets', 'Showcase', 'Metrics', 'Settings']);
         expect(hooks().find(a => a.textContent?.trim() === 'Board')!.getAttribute('href'))
             .toBe('/projects/p1/tasks');
     });

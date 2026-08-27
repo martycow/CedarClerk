@@ -97,6 +97,9 @@ export class AuthService {
     // True after refresh() exhausted its retries without an answer — the session is unknown, not
     // over. The login page uses this to offer a retry instead of a "wrong password"-shaped dead end.
     readonly serverUnreachable = signal(false);
+    // The other half of that pair: the session is over and we know it, because a request the app
+    // made on its own came back 401. The login page says so rather than showing a bare form.
+    readonly sessionEnded = signal(false);
 
     /**
      * ADR-108 — the server distinguishes "wrong password" (401) from "could not ask" (503), and so
@@ -158,6 +161,7 @@ export class AuthService {
                 const me = await firstValueFrom(this.http.get<MeResponse>('/api/auth/me'));
                 this.applyMe(me);
                 this.serverUnreachable.set(false);
+                this.sessionEnded.set(false);
                 return 'ok';
             } catch (e) {
                 if (e instanceof HttpErrorResponse && e.status === 401) {
@@ -364,10 +368,27 @@ export class AuthService {
         this.uiLanguage.set(res.uiLanguage);
     }
 
+    /**
+     * The session ended under a screen that was already open (sessionExpiryInterceptor). Clears
+     * what is left of it and sends the reader to the door with the URL they were on, so signing in
+     * puts them back where they were instead of on the hub.
+     */
+    expireSession(returnUrl: string): void {
+        if (this.userEmail() === null && this.sessionEnded()) return;
+        this.clearSession();
+        this.serverUnreachable.set(false);
+        this.sessionEnded.set(true);
+        const returnTo = returnUrl.startsWith('/login') ? null : returnUrl;
+        void this.router.navigate(['/login'], { queryParams: returnTo ? { returnUrl: returnTo } : {} });
+    }
+
     async logout(): Promise<void> {
         try { await firstValueFrom(this.http.post('/api/auth/logout', {})); } catch { }
         this.clearSession();
         this.serverUnreachable.set(false);
+        // Signing out is not the session ending under you — the door must not accuse the reader of
+        // something they did on purpose.
+        this.sessionEnded.set(false);
         this.router.navigateByUrl('/login');
     }
 

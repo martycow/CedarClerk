@@ -319,8 +319,6 @@
     cursor: pointer;
 }
 
-.lang-check input { accent-color: var(--accent); }
-
 .hint { color: var(--t2); font-size: var(--fs-ui); }
 
 .channel-error { color: var(--danger); font-size: var(--fs-ui); margin: 0 0 var(--space-2); }

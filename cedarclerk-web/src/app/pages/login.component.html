@@ -14,6 +14,15 @@
             <div class="auth-tagline">{{ t().login.tagline }}</div>
         </div>
 
+        <!--Said before the form, not after it: whoever lands here from a screen they were using
+        needs to know why the screen went away, and a notice under the password field is read after
+        they have already wondered.-->
+        @if (auth.sessionEnded()) {
+        <div class="session-notice">
+            <span>{{ t().login.sessionEnded }}</span>
+        </div>
+        }
+
         @if (auth.serverUnreachable()) {
         <div class="session-notice">
             <span>{{ t().login.serverUnreachable }}</span>

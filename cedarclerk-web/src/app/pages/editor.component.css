@@ -2161,10 +2161,6 @@
     cursor: pointer;
 }
 
-.thread-toggle input {
-    accent-color: var(--accent);
-}
-
 /* The list is what makes the split checkable rather than a promise: a number, what the part opens
    with, and how heavy it is. */
 .thread-parts {

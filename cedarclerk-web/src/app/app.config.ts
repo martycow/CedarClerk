@@ -3,6 +3,7 @@ import { PreloadAllModules, provideRouter, withPreloading } from '@angular/route
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
 import { debugLogInterceptor } from './core/debug-log.interceptor';
+import { sessionExpiryInterceptor } from './core/session-expiry.interceptor';
 
 // XHR backend, not withFetch() (28.07.2026) — this app has no SSR (docs/tasks/ROADMAP.md), so fetch's
 // only advantage here didn't apply, and it cost a real one: the Fetch API has no upload-progress
@@ -17,6 +18,6 @@ export const appConfig: ApplicationConfig = {
     // pause on every navigation, which on this app would be felt most opening the editor — the
     // heaviest chunk and the one people go to. With it, the chunk is usually already there.
     provideRouter(routes, withPreloading(PreloadAllModules)),
-    provideHttpClient(withInterceptors([debugLogInterceptor])),
+    provideHttpClient(withInterceptors([debugLogInterceptor, sessionExpiryInterceptor])),
   ]
 };

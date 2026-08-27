@@ -1,0 +1,113 @@
+<div class="showcase">
+    <div class="showcase-grid">
+        <app-worktop class="top" [label]="project()?.name ?? ''"
+                     [meta]="published() ? t().projects.showcase.rulerLive : t().projects.showcase.rulerOff">
+            <div class="top-body">
+                <header class="head">
+                    <h1 class="head-title">{{ t().projects.showcase.title }}</h1>
+                    <span class="spacer"></span>
+                    <!--An anchor, not app-button: the address is off this app entirely, and a
+                    bench button speaks routerLink.-->
+                    @if (publicUrl(); as url) {
+                        <a class="open-link" [href]="url" target="_blank" rel="noopener">
+                            <app-icon name="arrow-square-out" size="sm" />
+                            {{ t().projects.showcase.openPage }}
+                        </a>
+                    }
+                </header>
+
+                <p class="hint">{{ t().projects.edit.showcaseHint }}</p>
+
+                @if (loading()) {
+                    <p class="hint">{{ t().projects.loading }}</p>
+                } @else if (loadError(); as e) {
+                    <p class="error-line">{{ e }}</p>
+                } @else {
+                    <label class="checkbox-row">
+                        <input type="checkbox" [ngModel]="enabled()" (ngModelChange)="enabled.set($event)">
+                        <span>{{ t().projects.edit.showcaseToggle }}</span>
+                    </label>
+
+                    @if (enabled()) {
+                        <div class="fields">
+                            <app-input [label]="t().projects.edit.showcaseSlugLabel"
+                                       [placeholder]="t().projects.edit.showcaseSlugPlaceholder"
+                                       inputId="showcase-slug"
+                                       [value]="slug()" (valueChange)="slug.set($any($event) ?? '')" />
+
+                            <div class="field">
+                                <label class="field-label" for="showcase-links">{{ t().projects.edit.showcaseLinksLabel }}</label>
+                                <textarea id="showcase-links" rows="3" maxlength="2000"
+                                          [ngModel]="links()" (ngModelChange)="links.set($event)"
+                                          [placeholder]="t().projects.edit.showcaseLinksPlaceholder"></textarea>
+                            </div>
+
+                            <app-input type="url" [label]="t().projects.edit.showcaseTrailerLabel"
+                                       [placeholder]="t().projects.edit.showcaseTrailerPlaceholder"
+                                       inputId="showcase-trailer"
+                                       [value]="trailer()" (valueChange)="trailer.set($any($event) ?? '')" />
+
+                            <div class="field">
+                                <label class="field-label" for="showcase-gallery">{{ t().projects.edit.showcaseGalleryLabel }}</label>
+                                <textarea id="showcase-gallery" rows="3" maxlength="2000"
+                                          [ngModel]="gallery()" (ngModelChange)="gallery.set($event)"
+                                          [placeholder]="t().projects.edit.showcaseGalleryPlaceholder"></textarea>
+                                <p class="hint">{{ t().projects.edit.showcaseGalleryHint }}</p>
+                            </div>
+
+                            <app-input [label]="t().projects.edit.showcaseDomainLabel"
+                                       [placeholder]="t().projects.edit.showcaseDomainPlaceholder"
+                                       [hint]="t().projects.edit.showcaseDomainHint"
+                                       inputId="showcase-domain"
+                                       [value]="domain()" (valueChange)="domain.set($any($event) ?? '')" />
+                        </div>
+                    }
+
+                    <div class="save-row">
+                        <app-button variant="pine" [disabled]="busy()" (clicked)="save()">
+                            {{ busy() ? t().common.saving : t().common.save }}
+                        </app-button>
+                        @if (saved()) { <span class="saved-note">{{ t().projects.showcase.saved }}</span> }
+                    </div>
+
+                    @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
+                }
+            </div>
+        </app-worktop>
+
+        <div class="dock">
+            <app-shelf-panel [title]="t().projects.hub.links">
+                <app-spec-row [label]="t().projects.hub.publicPage">
+                    @if (publicUrl(); as url) {
+                        <a class="spec-value link" [href]="url" target="_blank" rel="noopener">{{ project()?.showcaseSlug }}</a>
+                    } @else {
+                        <span class="spec-value none">{{ t().projects.hub.notPublished }}</span>
+                    }
+                </app-spec-row>
+                @if (project()?.customDomain; as host) {
+                    <app-spec-row [label]="t().projects.edit.showcaseDomainLabel">
+                        <span class="spec-value">{{ host }}</span>
+                    </app-spec-row>
+                }
+            </app-shelf-panel>
+
+            <!--Only where there are numbers to read: a counter panel over a page nobody has yet
+            published says zero about the game and something wrong about the app.-->
+            @if (stats(); as s) {
+                <app-shelf-panel [title]="t().projects.showcase.numbers">
+                    <app-spec-row [label]="t().projects.hub.publicViews">
+                        <span class="spec-value">{{ s.viewTotal }}</span>
+                    </app-spec-row>
+                    @for (click of s.clicks; track click.label) {
+                        <app-spec-row [label]="click.label">
+                            <span class="spec-value">{{ click.count }}</span>
+                        </app-spec-row>
+                    }
+                    <app-spec-row [label]="t().projects.hub.followers">
+                        <span class="spec-value">{{ s.followerCount }}</span>
+                    </app-spec-row>
+                </app-shelf-panel>
+            }
+        </div>
+    </div>
+</div>

@@ -1,0 +1,133 @@
+.showcase {
+    padding: var(--space-3);
+}
+
+/* The kit's proportions, and no width breakpoint of its own (ADR-147). */
+.showcase-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--bench-dock-w);
+    gap: var(--space-3);
+    align-items: start;
+}
+
+.top-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5) var(--space-5);
+}
+
+.head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
+.head-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--fs-34);
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+
+.spacer {
+    flex: 1;
+}
+
+.open-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--hit-surface, var(--hit-target));
+    color: var(--accent);
+    font-size: var(--fs-ui);
+    font-weight: 600;
+}
+
+.hint {
+    margin: 0;
+    color: var(--t2);
+    font-size: var(--fs-ui);
+}
+
+.error-line {
+    margin: 0;
+    color: var(--danger);
+    font-size: var(--fs-ui);
+}
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--fs-ui);
+    cursor: pointer;
+}
+
+.fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+/* app-input draws its own label; a textarea has none of its own, so this is the same face restated
+   for the two fields the bench has no component for. */
+.field-label {
+    font-family: var(--font-sans);
+    font-size: var(--fs-ui);
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--t2);
+}
+
+.field textarea {
+    width: 100%;
+    font-family: var(--font-mono);
+    font-size: var(--fs-ui);
+}
+
+.save-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.saved-note {
+    color: var(--ok);
+    font-size: var(--fs-ui);
+}
+
+.dock {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+}
+
+/* A spec row is chrome standing on the sheet, so what is projected into one takes chrome's type
+   rather than the paper the sheet would otherwise hand it. */
+[data-surface="chrome"] .spec-value {
+    font-family: var(--font-mono);
+    font-size: var(--text-chrome-sm);
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+[data-surface="chrome"] .spec-value.link {
+    color: var(--accent);
+}
+
+[data-surface="chrome"] .spec-value.none {
+    color: var(--t2);
+}

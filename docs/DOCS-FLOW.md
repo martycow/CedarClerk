@@ -129,7 +129,7 @@ flowchart TB
 
 **`docs/tasks/TASKS.md` — short horizon.** What's being worked on right now + a "not verified live" checklist, plus a **Notes** section with the current version in production and the active branch — the fastest place to see "what's happening right now." The fastest-staling file. Don't create a copy in the repo root: the Cowtext board looks for the file there first, and a root copy would shadow the real one.
 
-**`docs/tasks/CHANGELOG.md` — by date, human-readable.** Written at the end of a session. Until 24.08.2026 phase status was duplicated in a separate `ROADMAP.md` — that file was retired as an almost-duplicate of this log; the phase 0–13 history is archived in `docs/archive/roadmap-phases-0-13.md`.
+**`docs/tasks/CHANGELOG.md` — by date, human-readable.** Written at the end of a session. Until 24.08.2026 phase status was duplicated in a separate `ROADMAP.md` — that file was retired as an almost-duplicate of this log, and the phase 0–13 history it carried went with the archive clear-out.
 
 ## Rationale
 
@@ -170,7 +170,7 @@ The `docs/` root holds only high-level material: `DOCS-FLOW.md` (this map), `DEC
 | **`fleet/`** | Agent orchestration (Cowtext / FleetView) | so far only `docs/fleet/README.md` — agent definitions live in `.claude/agents/` |
 | **`knowledge_base/`** | Knowledge base: terminology, technologies and stack, localization tables, lists of shipped features | STACK; `docs/knowledge_base/TERMINOLOGY.md` (project terminology dictionary, extracted from the code on 18.08.2026) |
 | **`for_user/`** | All instructions, manuals and everything else that matters to the user | integrations-setup (provider runbook) |
-| **`archive/`** | Archive of old .md files — lives in the repo, **text isn't edited** (a record of a moment), periodically cleared out wholesale (24.08.2026: the DO-migration log, ROADMAP phases 0–10 and the docs audit — deleted as having served their purpose) | `roadmap-phases-0-13.md` (ROADMAP status for phases 0–13, archived 24.08.2026) |
+| **`archive/`** | Archive of old .md files — lives in the repo, **text isn't edited** (a record of a moment), periodically cleared out wholesale (24.08.2026: the DO-migration log, ROADMAP phases 0–10 and the docs audit — deleted as having served their purpose) | empty — the last of it went in the 25.08.2026 clear-out |
 | **`misc/`** | Everything else | the folder will appear with the first file that doesn't fit anywhere above |
 
 A new doc must get a node in the diagram above **in the same commit** — STACK/BUSINESS/MULTITENANCY were once not entered at all, and that was found only by an audit (18.08).

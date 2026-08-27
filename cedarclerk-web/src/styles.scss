@@ -396,7 +396,7 @@
        carrying 21px itself — a semantic role holding a bare number is the debt integers-only
        exists to stop. */
     --bench-rail-h: 56px;
-    --bench-tool-w: 52px;
+    --bench-tool-w: 56px;
     --bench-dock-w-narrow: 224px;
     --bench-dock-w: 300px;
     --bench-dock-w-wide: 340px;
@@ -623,6 +623,15 @@ textarea:not(:focus-visible) {
 textarea {
     resize: vertical;
     line-height: 1.5;
+}
+
+/* The platform control keeps its shape, but not the platform's blue: an unset accent-color is what
+   put an OS-blue tick in the export modal's language list while five other screens had each set it
+   by hand. One rule, so no surface can be the one that forgot. */
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"] {
+    accent-color: var(--accent);
 }
 
 /* Placeholder text stays on --t3 deliberately: at --t2 it reads as a filled-in value, which is a

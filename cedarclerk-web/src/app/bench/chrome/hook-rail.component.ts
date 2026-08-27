@@ -106,7 +106,10 @@ export interface HookRailItem {
             flex: 1;
             min-height: 0;
             flex-direction: column;
-            align-items: center;
+            /* stretch, not centre: a hook is drawn at the wall's full width, and a centred
+               cross-axis shrinks every list item to its own caption — eight tools, eight widths,
+               with the tray button below them wider than any of them. */
+            align-items: stretch;
             gap: 6px;
             margin: 0;
             padding: var(--space-3) var(--space-1);
@@ -130,7 +133,6 @@ export interface HookRailItem {
             gap: 2px;
             box-sizing: border-box;
             width: 100%;
-            max-width: calc(var(--bench-tool-w) - var(--space-1));
             min-height: var(--hit-chrome);
             padding: 5px 0 4px;
             border: 1px solid rgba(242, 232, 206, .16);
@@ -152,8 +154,8 @@ export interface HookRailItem {
         }
 
         /* Chrome type is 11px at its smallest, so the kit's 8.5px uppercase tracking does not
-           survive the port: a tracked caps caption at 11px runs past a 52px wall. Regular case,
-           and a caption too long for the wall is clipped rather than shrunk. */
+           survive the port: a tracked caps caption at 11px runs past the wall. Regular case, and
+           the wall is cut wide enough that the longest caption in either language still fits. */
         :host([data-surface="chrome"]) .cap {
             max-width: 100%;
             overflow: hidden;
@@ -218,12 +220,14 @@ export interface HookRailItem {
         /* The foot of the wall. The panel opens sideways rather than upward: the rule and the
            drawer lip are under this edge, and a menu growing over them would be a paper sheet on
            top of the chrome it belongs beside. */
+        /* Same side padding as the wall: the button below the tools has to be the width of a tool,
+           and the wall's padding is what sets that width. */
         :host([data-surface="chrome"]) .tray {
             position: relative;
             flex: none;
             display: flex;
             justify-content: center;
-            padding: var(--space-2) 0 var(--space-3);
+            padding: var(--space-2) var(--space-1) var(--space-3);
         }
 
         :host([data-surface="chrome"]) .dots {
@@ -231,7 +235,6 @@ export interface HookRailItem {
             align-items: center;
             justify-content: center;
             width: 100%;
-            max-width: calc(var(--bench-tool-w) - var(--space-1));
             min-height: var(--hit-chrome);
             border: var(--border-rail-btn);
             border-radius: var(--radius-stamp);

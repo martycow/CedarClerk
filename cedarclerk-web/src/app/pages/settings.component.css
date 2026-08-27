@@ -146,7 +146,6 @@
     border: none;
     background: none;
     padding: 0;
-    accent-color: var(--accent);
 }
 
 .field-group select:disabled {
@@ -766,7 +765,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
-    margin: 0 0 var(--space-3);
+    margin: var(--space-3) 0;
 }
 
 /* The same progress shape the editor's AI operations use (ADR-038): an asymptotic estimate, not a

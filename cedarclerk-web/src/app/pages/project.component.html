@@ -263,40 +263,6 @@
             </div>
         </div>
 
-        <!--T-159 (ADR-134) — the public game page. Off by default; the slug is the URL.-->
-        <label class="field-label spaced checkbox-row">
-            <input type="checkbox" [ngModel]="editShowcase()" (ngModelChange)="editShowcase.set($event)">
-            <span>{{ t().projects.edit.showcaseToggle }}</span>
-        </label>
-        @if (editShowcase()) {
-            <p class="hint">{{ t().projects.edit.showcaseHint }}</p>
-            <label class="field-label spaced" for="edit-showcase-slug">{{ t().projects.edit.showcaseSlugLabel }}</label>
-            <input id="edit-showcase-slug" class="text-input" type="text" maxlength="80"
-                   [ngModel]="editShowcaseSlug()" (ngModelChange)="editShowcaseSlug.set($event)"
-                   [placeholder]="t().projects.edit.showcaseSlugPlaceholder">
-            <label class="field-label spaced" for="edit-showcase-links">{{ t().projects.edit.showcaseLinksLabel }}</label>
-            <textarea id="edit-showcase-links" class="text-input" rows="3" maxlength="2000"
-                      [ngModel]="editShowcaseLinks()" (ngModelChange)="editShowcaseLinks.set($event)"
-                      [placeholder]="t().projects.edit.showcaseLinksPlaceholder"></textarea>
-            <label class="field-label spaced" for="edit-showcase-trailer">{{ t().projects.edit.showcaseTrailerLabel }}</label>
-            <input id="edit-showcase-trailer" class="text-input" type="url" maxlength="300"
-                   [ngModel]="editShowcaseTrailer()" (ngModelChange)="editShowcaseTrailer.set($event)"
-                   [placeholder]="t().projects.edit.showcaseTrailerPlaceholder">
-            <label class="field-label spaced" for="edit-showcase-gallery">{{ t().projects.edit.showcaseGalleryLabel }}</label>
-            <textarea id="edit-showcase-gallery" class="text-input" rows="3" maxlength="2000"
-                      [ngModel]="editShowcaseGallery()" (ngModelChange)="editShowcaseGallery.set($event)"
-                      [placeholder]="t().projects.edit.showcaseGalleryPlaceholder"></textarea>
-            <p class="hint">{{ t().projects.edit.showcaseGalleryHint }}</p>
-            <label class="field-label spaced" for="edit-showcase-domain">{{ t().projects.edit.showcaseDomainLabel }}</label>
-            <input id="edit-showcase-domain" class="text-input" type="text" maxlength="120"
-                   [ngModel]="editShowcaseDomain()" (ngModelChange)="editShowcaseDomain.set($event)"
-                   [placeholder]="t().projects.edit.showcaseDomainPlaceholder">
-            <p class="hint">{{ t().projects.edit.showcaseDomainHint }}</p>
-            @if (showcaseUrl(); as url) {
-                <p class="hint"><a [href]="url" target="_blank" rel="noopener">{{ url }}</a></p>
-            }
-        }
-
         <div class="danger-row">
             <button class="btn-ghost" [disabled]="busy()" (click)="toggleArchived()">
                 {{ project()?.archivedAt ? t().projects.edit.unarchive : t().projects.edit.archive }}

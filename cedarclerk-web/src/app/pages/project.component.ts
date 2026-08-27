@@ -100,12 +100,6 @@ export class ProjectComponent implements OnDestroy {
     editDescription = signal('');
     editCoverUrl = signal<string | null>(null);
     editCoverFile = signal<File | null>(null);
-    editShowcase = signal(false);
-    editShowcaseSlug = signal('');
-    editShowcaseLinks = signal('');
-    editShowcaseGallery = signal('');
-    editShowcaseTrailer = signal('');
-    editShowcaseDomain = signal('');
     /** T-296/T-297 — the public page's counters; null until they arrive, and on a page with none. */
     showcaseStats = signal<ShowcaseStats | null>(null);
     actionError = signal<string | null>(null);
@@ -305,18 +299,12 @@ export class ProjectComponent implements OnDestroy {
         this.editDescription.set(project.description);
         this.editCoverUrl.set(project.coverUrl);
         this.editCoverFile.set(null);
-        this.editShowcase.set(!!project.showcaseSlug);
-        this.editShowcaseSlug.set(project.showcaseSlug ?? '');
-        this.editShowcaseLinks.set(project.showcaseLinks ?? '');
-        this.editShowcaseGallery.set(project.showcaseGallery ?? '');
-        this.editShowcaseTrailer.set(project.showcaseTrailerUrl ?? '');
-        this.editShowcaseDomain.set(project.customDomain ?? '');
         this.actionError.set(null);
         this.confirmDelete = false;
         this.editing.set(true);
     }
 
-    /** The live public URL, shown under the toggle so the page is one click away once it exists. */
+    /** The live public URL for the Links group; the page itself is edited on /projects/:id/showcase. */
     showcaseUrl(): string | null {
         const slug = this.project()?.showcaseSlug;
         const base = this.auth.blogUrl();
@@ -335,27 +323,12 @@ export class ProjectComponent implements OnDestroy {
             const coverFile = this.editCoverFile();
             if (coverFile) coverUrl = (await this.assets.upload(coverFile)).url;
             await this.api.update(project.id, name, this.editDescription().trim(), coverUrl);
-            // T-159 — the showcase saves with the same button; the server slugifies and may rename.
-            const showcase = await this.api.setShowcase(project.id, {
-                enabled: this.editShowcase(),
-                slug: this.editShowcaseSlug().trim() || null,
-                links: this.editShowcaseLinks().trim(),
-                gallery: this.editShowcaseGallery().trim(),
-                trailerUrl: this.editShowcaseTrailer().trim() || null,
-                customDomain: this.editShowcaseDomain().trim() || null,
-            });
             this.project.set({
                 ...project,
                 name,
                 description: this.editDescription().trim(),
                 coverUrl,
-                showcaseSlug: showcase.showcaseSlug,
-                showcaseLinks: this.editShowcaseLinks().trim(),
-                showcaseGallery: this.editShowcaseGallery().trim(),
-                showcaseTrailerUrl: this.editShowcaseTrailer().trim() || null,
-                customDomain: showcase.customDomain,
             });
-            if (showcase.showcaseSlug) void this.loadShowcaseStats(project.id);
             this.projects.update(rows => rows.map(row => row.id === project.id
                 ? { ...row, name, description: this.editDescription().trim(), coverUrl }
                 : row));
