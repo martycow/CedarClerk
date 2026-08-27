@@ -101,6 +101,10 @@ builder.Services.AddSingleton<TenantOwnerCache.ForMedia>();
 builder.Services.AddSingleton<TenantOwnerCache.ForDomains>();
 builder.Services.AddSingleton<MediaOwnerIndex>();
 builder.Services.AddSingleton<MediaVisibilityIndex>();
+// Registered unconditionally, unlike the module's endpoints: the door in front of /media is one
+// middleware for every host, and a flag that changed which dependencies it takes would be a
+// different door rather than a hidden feature.
+builder.Services.AddSingleton<CanvasMediaIndex>();
 builder.Services.AddSingleton(new ImportTmpPaths(importTmpDir));
 builder.Services.AddSingleton<AiJobService>();
 builder.Services.AddSingleton(new ThumbnailPaths(thumbnailsDir));
@@ -120,6 +124,29 @@ builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<XPublishT
 builder.Services.AddScoped<DiscordPublishTarget>();
 builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<DiscordPublishTarget>());
 builder.Services.AddSingleton<PublishJobRunner>();
+
+// The canvas hub (ADR-218), registered with the module it belongs to. The tuning is about the
+// Cloudflare Tunnel in front of Kestrel: WebSockets pass through it, but an idle connection is not
+// guaranteed to survive, so the keep-alive is well inside any idle window and the client timeout
+// is short enough that a dropped tunnel becomes a reconnect rather than a board that has silently
+// stopped updating. The receive limit is above the largest legal batch (a hundred items carrying
+// four thousand characters each) and far below what a whole board would be.
+if (ProjectEndpoints.IsEnabled(builder.Configuration))
+{
+    builder.Services.AddSignalR(o =>
+    {
+        o.KeepAliveInterval = TimeSpan.FromSeconds(10);
+        o.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+        o.MaximumReceiveMessageSize = 512 * 1024;
+    }).AddJsonProtocol(o =>
+    {
+        // ADR-115 over the socket: SQLite hands back Unspecified kinds, and a timestamp without a
+        // Z is read as local time by the browser.
+        o.PayloadSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        o.PayloadSerializerOptions.Converters.Add(new UtcDateTimeConverter());
+        o.PayloadSerializerOptions.Converters.Add(new NullableUtcDateTimeConverter());
+    });
+}
 
 builder.Services.AddQuartz(q =>
 {
@@ -237,6 +264,9 @@ if (ProjectEndpoints.IsEnabled(app.Configuration))
     app.MapTaskEndpoints();
     app.MapSprintEndpoints();
     app.MapBuildEndpoints();
+    app.MapCanvasEndpoints();
+    app.MapProjectMemberEndpoints();
+    app.MapHub<CanvasHub>("/hubs/canvas");
 }
 #endregion
 

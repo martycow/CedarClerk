@@ -1,0 +1,205 @@
+<div class="boards">
+    <div class="boards-grid">
+        <app-worktop class="top" [label]="projectName()"
+                     [meta]="t().projects.canvas.sub(boards().length, itemTotal())">
+            <div class="top-body">
+                <header class="head">
+                    <h1 class="head-title">{{ t().projects.canvas.title }}</h1>
+                    <span class="spacer"></span>
+                    @if (!canWrite()) {
+                        <app-stamp-badge tone="ink">{{ t().projects.canvas.roleViewer }}</app-stamp-badge>
+                    }
+                </header>
+
+                @if (!canWrite()) {
+                    <p class="hint">{{ t().projects.canvas.readOnly }}</p>
+                }
+
+                @if (loading()) {
+                    <p class="hint">{{ t().projects.loading }}</p>
+                } @else if (loadError(); as e) {
+                    <p class="error-line">{{ e }}</p>
+                    <app-button variant="paper" size="sm" (clicked)="load()">{{ t().projects.canvas.retry }}</app-button>
+                } @else if (!boards().length) {
+                    <div class="empty">
+                        <h2 class="empty-title">{{ t().projects.canvas.empty }}</h2>
+                        <p class="hint">{{ t().projects.canvas.emptyHint }}</p>
+                        @if (canWrite()) {
+                            <app-button variant="pine" (clicked)="openCreate()">
+                                <app-icon name="plus" size="sm" />
+                                {{ t().projects.canvas.newBoard }}
+                            </app-button>
+                        }
+                    </div>
+                } @else {
+                    <ul class="board-list">
+                        @for (board of boards(); track board.id) {
+                            <li class="board-row">
+                                <a class="board" [routerLink]="['/projects', projectId(), 'canvas', board.id]">
+                                    <app-icon name="squares-four" size="md" />
+                                    <span class="board-text">
+                                        <span class="board-name">{{ board.name || t().projects.canvas.untitledBoard }}</span>
+                                        <span class="board-meta">
+                                            {{ t().projects.canvas.itemCount(board.itemCount) }}
+                                            · {{ backgroundWord(board.background) }}
+                                        </span>
+                                    </span>
+                                </a>
+                                @if (canWrite()) {
+                                    <span class="board-actions">
+                                        <app-button variant="paper" size="sm" [title]="t().projects.canvas.renameBoard"
+                                                    (clicked)="openRename(board)">
+                                            <app-icon name="pencil-simple" size="xs" />
+                                        </app-button>
+                                        <app-button variant="paper" size="sm" [title]="t().projects.canvas.deleteBoard"
+                                                    (clicked)="openDelete(board)">
+                                            <app-icon name="trash" size="xs" />
+                                        </app-button>
+                                    </span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+
+                @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
+            </div>
+        </app-worktop>
+
+        <div class="dock">
+            <app-shelf-panel [title]="t().projects.canvas.people" [count]="people().length || null">
+                <p class="hint">{{ t().projects.canvas.peopleHint }}</p>
+
+                @if (peopleError(); as e) { <p class="error-line">{{ e }}</p> }
+
+                <ul class="people">
+                    @for (member of people(); track member.email) {
+                        <li class="person">
+                            <span class="face" [style.background]="fill(member.email)">{{ initial(member.email) }}</span>
+                            <span class="person-text">
+                                <span class="person-name">
+                                    {{ member.email }}
+                                    @if (member.isYou) { <span class="you">· {{ t().projects.canvas.you }}</span> }
+                                </span>
+                                <span class="person-meta">
+                                    {{ roleWord(member.role) }}
+                                    @if (member.pending) { · {{ t().projects.canvas.invitePending }} }
+                                </span>
+                            </span>
+                            @if (isOwner() && member.id) {
+                                <span class="person-actions">
+                                    @if (member.pending) {
+                                        <app-button variant="paper" size="sm" [disabled]="busy()"
+                                                    [title]="t().projects.canvas.inviteResend"
+                                                    (clicked)="resend(member)">
+                                            <app-icon name="paper-plane-tilt" size="xs" />
+                                        </app-button>
+                                    }
+                                    <select class="role-pick" [attr.aria-label]="t().projects.canvas.inviteRole"
+                                            [ngModel]="member.role" (ngModelChange)="setRole(member, $event)">
+                                        @for (role of roles; track role) {
+                                            <option [value]="role">{{ roleWord(role) }}</option>
+                                        }
+                                    </select>
+                                    <app-button variant="paper" size="sm" [title]="t().projects.canvas.removeMember"
+                                                (clicked)="openRemove(member)">
+                                        <app-icon name="x" size="xs" />
+                                    </app-button>
+                                </span>
+                            }
+                        </li>
+                    }
+                </ul>
+
+                @if (isOwner()) {
+                    <div class="invite">
+                        <app-input type="email" [label]="t().projects.canvas.inviteEmail"
+                                   inputId="canvas-invite-email"
+                                   [value]="inviteEmail()" (valueChange)="inviteEmail.set($any($event) ?? '')" />
+                        <label class="field">
+                            <span class="field-label">{{ t().projects.canvas.inviteRole }}</span>
+                            <select [ngModel]="inviteRole()" (ngModelChange)="inviteRole.set($event)">
+                                @for (role of roles; track role) {
+                                    <option [value]="role">{{ roleWord(role) }}</option>
+                                }
+                            </select>
+                        </label>
+                        <app-button variant="pine" size="sm" [disabled]="busy() || !inviteEmail().trim()"
+                                    (clicked)="invite()">
+                            <app-icon name="paper-plane-tilt" size="xs" />
+                            {{ t().projects.canvas.invite }}
+                        </app-button>
+
+                        @if (inviteLink(); as link) {
+                            <p class="invite-link">{{ link }}</p>
+                            <app-button variant="paper" size="sm" (clicked)="copyInvite()">
+                                <app-icon name="link" size="xs" />
+                                {{ inviteCopied() ? t().projects.canvas.inviteCopied : t().projects.canvas.inviteCopy }}
+                            </app-button>
+                        }
+                    </div>
+                }
+            </app-shelf-panel>
+        </div>
+    </div>
+</div>
+
+@if (creating()) {
+    <app-modal [width]="440" (closed)="closeForm()">
+        <app-icon modal-icon name="squares-four" size="sm" />
+        <span modal-title>{{ editing() ? t().projects.canvas.renameBoard : t().projects.canvas.newBoard }}</span>
+
+        <div class="form">
+            <app-input [label]="t().projects.canvas.fieldName" inputId="canvas-board-name"
+                       [value]="formName()" (valueChange)="formName.set($any($event) ?? '')" />
+            <fieldset class="backgrounds">
+                <legend class="field-label">{{ t().projects.canvas.fieldBackground }}</legend>
+                @for (value of backgrounds; track value) {
+                    <label class="bg-choice">
+                        <input type="radio" name="canvas-background" [value]="value"
+                               [ngModel]="formBackground()" (ngModelChange)="formBackground.set($event)">
+                        <span>{{ backgroundWord(value) }}</span>
+                    </label>
+                }
+            </fieldset>
+            @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
+        </div>
+
+        <ng-container modal-actions>
+            <app-button variant="paper" size="sm" (clicked)="closeForm()">{{ t().common.cancel }}</app-button>
+            <app-button variant="pine" size="sm" [disabled]="busy()" (clicked)="submitForm()">
+                {{ busy() ? t().common.saving : t().common.save }}
+            </app-button>
+        </ng-container>
+    </app-modal>
+}
+
+@if (confirmDelete(); as board) {
+    <app-modal [width]="400" (closed)="confirmDelete.set(null)">
+        <app-icon modal-icon name="warning" size="sm" />
+        <span modal-title>{{ board.name }}</span>
+        <p class="hint">{{ t().projects.canvas.deleteConfirm }}</p>
+        @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
+        <ng-container modal-actions>
+            <app-button variant="paper" size="sm" (clicked)="confirmDelete.set(null)">{{ t().common.cancel }}</app-button>
+            <app-button variant="danger" size="sm" [disabled]="busy()" (clicked)="removeBoard()">
+                {{ t().projects.canvas.deleteBoard }}
+            </app-button>
+        </ng-container>
+    </app-modal>
+}
+
+@if (confirmRemove(); as member) {
+    <app-modal [width]="400" (closed)="confirmRemove.set(null)">
+        <app-icon modal-icon name="warning" size="sm" />
+        <span modal-title>{{ member.email }}</span>
+        <p class="hint">{{ t().projects.canvas.removeConfirm }}</p>
+        @if (peopleError(); as e) { <p class="error-line">{{ e }}</p> }
+        <ng-container modal-actions>
+            <app-button variant="paper" size="sm" (clicked)="confirmRemove.set(null)">{{ t().common.cancel }}</app-button>
+            <app-button variant="danger" size="sm" [disabled]="busy()" (clicked)="removeMember()">
+                {{ t().projects.canvas.removeMember }}
+            </app-button>
+        </ng-container>
+    </app-modal>
+}

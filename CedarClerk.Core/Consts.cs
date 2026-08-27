@@ -279,4 +279,69 @@ public static class Consts
         // rolls the DraftStatSeen baseline forward (B23).
         public static readonly TimeSpan SessionGap = TimeSpan.FromMinutes(30);
     }
+
+    // The reference board and the people who share it (T-301, ADR-217/218).
+    public static class Canvas
+    {
+        public const int BoardsPerProject = 20;
+        public const int ItemsPerBoard = 2000;
+        public const int BoardNameMax = 80;
+
+        // One item's JSON payload. The client owns the shape, the server only bounds the size — the
+        // same treatment RegistrationForm's blobs get.
+        public const int PayloadMaxChars = 4000;
+        public const int NoteTextMax = 2000;
+
+        public const int MembersPerProject = 10;
+
+        // base64url, as ShowcaseFollower's tokens are: the invitation link is the credential, so it
+        // has to be unguessable on its own.
+        public const int InviteTokenBytes = 32;
+
+        // A peer's colour is hash(userId) % this, so it is stable per person with nothing stored.
+        public const int PresenceColors = 8;
+    }
+}
+
+// What a non-owner may do on a project (T-301, ADR-217). Strings, like TaskStatuses: a new role
+// should be a constant and a UI, not a migration. The owner is not a role — they have no
+// ProjectMember row at all, because a role column that could say "owner" is one edit away from
+// handing the project over.
+public static class ProjectRoles
+{
+    public const string Editor = "editor";
+    public const string Viewer = "viewer";
+
+    public static readonly IReadOnlyList<string> All = [Editor, Viewer];
+
+    public static bool IsKnown(string? role) => role is not null && All.Contains(role);
+
+    public static bool CanWrite(string? role) => role == Editor;
+}
+
+// What can sit on a board (T-301, ADR-218). The kind decides the payload's shape and nothing else;
+// it is fixed at creation, so an item never has to be reinterpreted.
+public static class CanvasItemKinds
+{
+    public const string Image = "image";
+    public const string Note = "note";
+    public const string Frame = "frame";
+    public const string Link = "link";
+
+    public static readonly IReadOnlyList<string> All = [Frame, Image, Link, Note];
+
+    public static bool IsKnown(string? kind) => kind is not null && All.Contains(kind);
+}
+
+// What a board is drawn on. Purely cosmetic, and per board rather than per viewer — it is part of
+// what the board looks like to everyone in it.
+public static class CanvasBackgrounds
+{
+    public const string Grid = "grid";
+    public const string Dots = "dots";
+    public const string Blank = "blank";
+
+    public static readonly IReadOnlyList<string> All = [Blank, Dots, Grid];
+
+    public static bool IsKnown(string? value) => value is not null && All.Contains(value);
 }

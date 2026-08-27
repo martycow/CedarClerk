@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using CedarClerk.Core;
 using CedarClerk.Server;
+using CedarClerk.Server.Modules.IndieDev;
 using CedarClerk.Server.Tenancy;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
@@ -43,6 +45,9 @@ public class MediaOwnershipTests : IDisposable
     private readonly Guid channelPostAsset = Guid.NewGuid();
     private readonly Guid privatePost = Guid.NewGuid();
 
+    /// <summary>A's library upload, drawn on a board B collaborates on and claimed by no post.</summary>
+    private readonly Guid boardAsset = Guid.NewGuid();
+
     public MediaOwnershipTests()
     {
         Directory.CreateDirectory(Path.Combine(mediaDir, "channels"));
@@ -73,6 +78,9 @@ public class MediaOwnershipTests : IDisposable
         SeedPost(privatePost, OwnerA, isPrivate: true, privateAsset, sharedAsset);
         SeedPost(Guid.NewGuid(), OwnerA, isPrivate: true, sentToTelegram: true, channelPostAsset);
 
+        Seed(boardAsset, OwnerA);
+        SeedBoard(boardAsset, OwnerA, memberUserId: OwnerB);
+
         db.SaveChanges();
         harness = new Harness(db, mediaDir);
     }
@@ -95,6 +103,36 @@ public class MediaOwnershipTests : IDisposable
     {
         db.Channels.Add(new Channel { Id = id, OwnerId = ownerId, Title = ownerId, AvatarPath = $"channels/{id}.jpg" });
         File.WriteAllBytes(Path.Combine(mediaDir, "channels", $"{id}.jpg"), Bytes);
+    }
+
+    /// <summary>A project whose board draws one of the owner's uploads, shared with one account.</summary>
+    private void SeedBoard(Guid asset, string ownerId, string memberUserId)
+    {
+        var project = new Project { OwnerId = ownerId, Name = "Cedar Quest" };
+        var board = new CanvasBoard { OwnerId = ownerId, ProjectId = project.Id, Name = "Mood" };
+
+        db.Projects.Add(project);
+        db.CanvasBoards.Add(board);
+        db.CanvasItems.Add(new CanvasItem
+        {
+            OwnerId = ownerId,
+            ProjectId = project.Id,
+            BoardId = board.Id,
+            Kind = CanvasItemKinds.Image,
+            Width = 460,
+            Height = 460,
+            Payload = $$"""{"url":"/media/asset_{{asset}}.jpg","naturalWidth":800,"naturalHeight":800,"alt":""}""",
+        });
+        db.ProjectMembers.Add(new ProjectMember
+        {
+            OwnerId = ownerId,
+            ProjectId = project.Id,
+            Email = "b@example.test",
+            Role = ProjectRoles.Viewer,
+            MemberUserId = memberUserId,
+            AcceptedAt = DateTime.UtcNow,
+            InvitedByUserId = ownerId,
+        });
     }
 
     private void SeedPost(Guid id, string ownerId, bool isPrivate, params Guid[] assets) =>
@@ -179,6 +217,7 @@ public class MediaOwnershipTests : IDisposable
             services.AddSingleton<MediaGrant>();
             services.AddSingleton(sp => new MediaOwnerIndex(scopes ?? sp.GetRequiredService<IServiceScopeFactory>(), new TenantOwnerCache.ForMedia()));
             services.AddSingleton(sp => new MediaVisibilityIndex(scopes ?? sp.GetRequiredService<IServiceScopeFactory>()));
+            services.AddSingleton(sp => new CanvasMediaIndex(scopes ?? sp.GetRequiredService<IServiceScopeFactory>()));
 
             provider = services.BuildServiceProvider();
 
@@ -450,6 +489,33 @@ public class MediaOwnershipTests : IDisposable
 
         Assert.Equal(StatusCodes.Status200OK, owner.Response.StatusCode);
         Assert.Equal(StatusCodes.Status404NotFound, somebodyElse.Response.StatusCode);
+    }
+
+    // ADR-219. A picture on a shared board is a library upload no post claims, so the three older
+    // answers all say no and the last one — "are you the owner" — is the wrong question on a
+    // surface whose whole point is that somebody else is looking.
+    [Fact]
+    public async Task A_picture_on_a_shared_board_is_served_to_the_people_who_share_it()
+    {
+        var member = await GetAsync($"/media/asset_{boardAsset}.jpg", blogOwner: null,
+            prepare: c => c.Request.Headers[SignedInAs.Header] = OwnerB);
+        var stranger = await GetAsync($"/media/asset_{boardAsset}.jpg", blogOwner: null,
+            prepare: c => c.Request.Headers[SignedInAs.Header] = Legacy);
+        var anonymous = await GetAsync($"/media/asset_{boardAsset}.jpg", blogOwner: null);
+
+        Assert.Equal(StatusCodes.Status200OK, member.Response.StatusCode);
+        Assert.Equal(StatusCodes.Status404NotFound, stranger.Response.StatusCode);
+        Assert.Equal(StatusCodes.Status404NotFound, anonymous.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Sharing_a_board_opens_what_is_on_it_and_nothing_else_of_the_owners()
+    {
+        // The membership is not a key to the account: a file the board does not draw stays shut.
+        var elsewhere = await GetAsync($"/media/asset_{privateAsset}.jpg", blogOwner: null,
+            prepare: c => c.Request.Headers[SignedInAs.Header] = OwnerB);
+
+        Assert.Equal(StatusCodes.Status404NotFound, elsewhere.Response.StatusCode);
     }
 
     // Taking a private post down must not be what opens its pictures. The gate was derived from

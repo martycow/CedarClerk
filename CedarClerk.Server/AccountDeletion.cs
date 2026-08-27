@@ -64,6 +64,12 @@ public static class AccountDeletion
         await db.ShowcaseFollowers.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.ShowcaseStatDailies.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.Sprints.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
+        await db.CanvasItems.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
+        await db.CanvasBoards.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
+        await db.ProjectMembers.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
+        // The other direction, and the one that is easy to miss: this account's memberships of other
+        // people's projects. Left behind, they grant access to a user id nothing answers for.
+        await db.ProjectMembers.Where(x => x.MemberUserId == ownerId).ExecuteDeleteAsync();
         await db.Assets.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.Folders.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.Series.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();

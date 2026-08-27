@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Security.Claims;
 using CedarClerk.Core;
+using CedarClerk.Server.Modules.IndieDev;
 using CedarClerk.Server.Tenancy;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
@@ -249,15 +250,16 @@ public sealed class MediaVisibilityIndex(IServiceScopeFactory scopes, TimeProvid
 /// <item>a host that renders a blog serves that blog's owner's files and nothing else. The
 /// application host belongs to no blog and is the origin the server advertises to Telegram's
 /// fetcher and to OG scrapers, so it is not narrowed to one account;</item>
-/// <item>a file gated by a private post needs the same signed grant its page needs, or the owner's
-/// own session. This one holds everywhere, including the application host — otherwise the gate is
-/// a property of which name a reader typed.</item>
+/// <item>a file gated by a private post needs the same signed grant its page needs, the owner's own
+/// session, or — for a picture on a reference board — a share of the project that board belongs to.
+/// This one holds everywhere, including the application host — otherwise the gate is a property of
+/// which name a reader typed.</item>
 /// </list>
 /// </summary>
 public sealed class MediaOwnershipMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext ctx, TenantProvider blog, MediaOwnerIndex owners,
-        MediaVisibilityIndex visibility, PrivateAccess access, MediaGrant grants)
+        MediaVisibilityIndex visibility, PrivateAccess access, MediaGrant grants, CanvasMediaIndex boards)
     {
         if (!ctx.Request.Path.StartsWithSegments(MediaAccessExtensions.Prefix, out var remainder))
         {
@@ -300,10 +302,18 @@ public sealed class MediaOwnershipMiddleware(RequestDelegate next)
         // happened to ask on a host that names no tenant.
         var gate = files.Gated.TryGetValue(reference.Id, out var posts) ? posts : null;
         var signed = grants.Allows(ctx.Request.Query[MediaGrant.QueryKey], remainder.Value?.TrimStart('/') ?? "");
-        if (!signed && (gate is null || !HasGrant(ctx, access, gate)) && !await IsOwnerAsync(ctx, ownerId))
+        if (!signed && (gate is null || !HasGrant(ctx, access, gate)))
         {
-            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
-            return;
+            var caller = await CallerAsync(ctx);
+            // The last question, and the only one that costs a query: a board this caller shares
+            // draws this file. Asked here rather than folded into the visibility index so the
+            // ordinary blog path never pays for it.
+            if (caller != ownerId
+                && !await boards.MayReadAsync(ownerId, reference.Id, caller, ctx.RequestAborted))
+            {
+                ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
         }
 
         // The edge caches by URL, and this one is answered differently for two readers.
@@ -315,14 +325,14 @@ public sealed class MediaOwnershipMiddleware(RequestDelegate next)
         posts.Any(id => access.IsValid(ctx.Request.Cookies[PrivateAccess.CookieName(id)], id, out _));
 
     /// <summary>
-    /// The editor asks for these files from the application host, where authentication runs after
-    /// this middleware — so the cookie is read here, and only for a file something gates.
+    /// Who is asking, or null. The editor asks for these files from the application host, where
+    /// authentication runs after this middleware — so the cookie is read here, and only for a file
+    /// something gates.
     /// </summary>
-    private static async Task<bool> IsOwnerAsync(HttpContext ctx, string ownerId)
+    private static async Task<string?> CallerAsync(HttpContext ctx)
     {
         var result = await ctx.AuthenticateAsync(IdentityConstants.ApplicationScheme);
-        return result.Succeeded
-               && result.Principal?.FindFirstValue(ClaimTypes.NameIdentifier) == ownerId;
+        return result.Succeeded ? result.Principal?.FindFirstValue(ClaimTypes.NameIdentifier) : null;
     }
 }
 

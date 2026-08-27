@@ -1,4 +1,5 @@
 using CedarClerk.Server;
+using CedarClerk.Server.Modules.IndieDev;
 using CedarClerk.Server.Tenancy;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -98,6 +99,7 @@ public class MediaAccessCacheTests : IDisposable
 
         services.AddSingleton(new MediaOwnerIndex(scopes, new TenantOwnerCache.ForMedia()));
         services.AddSingleton(new MediaVisibilityIndex(scopes));
+        services.AddSingleton(new CanvasMediaIndex(scopes));
         provider = services.BuildServiceProvider();
     }
 

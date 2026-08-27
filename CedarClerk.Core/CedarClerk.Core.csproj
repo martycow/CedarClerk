@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\CedarClerk.Localization\CedarClerk.Localization.csproj" />
+  </ItemGroup>
+
 </Project>

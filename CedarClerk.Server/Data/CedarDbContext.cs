@@ -65,6 +65,9 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
     public DbSet<Build> Builds => Set<Build>();
     public DbSet<ShowcaseStatDaily> ShowcaseStatDailies => Set<ShowcaseStatDaily>();
     public DbSet<ShowcaseFollower> ShowcaseFollowers => Set<ShowcaseFollower>();
+    public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
+    public DbSet<CanvasBoard> CanvasBoards => Set<CanvasBoard>();
+    public DbSet<CanvasItem> CanvasItems => Set<CanvasItem>();
 
     // Here rather than at the AddDbContext call, so that no way of building this context can miss
     // it. Without the factory, EF caches one model per context type and the first one compiled —
@@ -298,6 +301,38 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         // "What is in this project" — the dashboard's only real question, and the one the drafts
         // list asks back when it shows which project a document belongs to.
         builder.Entity<Draft>().HasIndex(d => new { d.OwnerId, d.ProjectId });
+
+        // T-301 — one invitation per address per project: a second invite is a resend, not a second
+        // row.
+        builder.Entity<ProjectMember>()
+            .HasIndex(m => new { m.ProjectId, m.Email })
+            .IsUnique();
+        // And one row per person per project once accepted. Filtered because most invited rows have
+        // no user yet, and SQLite treats NULLs as distinct anyway — the filter states the intent.
+        builder.Entity<ProjectMember>()
+            .HasIndex(m => new { m.ProjectId, m.MemberUserId })
+            .IsUnique()
+            .HasFilter("\"MemberUserId\" IS NOT NULL");
+        // "Which projects am I in" — asked cross-tenant on every canvas request.
+        builder.Entity<ProjectMember>().HasIndex(m => m.MemberUserId);
+        // The invitation arrives as a token and nothing else, the way ShowcaseFollower's do.
+        builder.Entity<ProjectMember>()
+            .HasIndex(m => m.InviteToken)
+            .IsUnique()
+            .HasFilter("\"InviteToken\" IS NOT NULL");
+        // EF ignores the property initialiser, as Draft.DocumentType found out the hard way.
+        builder.Entity<ProjectMember>().Property(m => m.Role).HasDefaultValue(ProjectRoles.Editor);
+        // The board list: one project's boards, most recently touched first.
+        builder.Entity<CanvasBoard>().HasIndex(b => new { b.ProjectId, b.UpdatedAt });
+        builder.Entity<CanvasBoard>().Property(b => b.Background).HasDefaultValue(CanvasBackgrounds.Grid);
+        builder.Entity<CanvasBoard>().Property(b => b.Version).HasDefaultValue(1);
+        // The only read a board ever does: everything on it, in render order.
+        builder.Entity<CanvasItem>().HasIndex(i => new { i.BoardId, i.Z });
+        // Project deletion and the account sweep both go by project, never by board.
+        builder.Entity<CanvasItem>().HasIndex(i => i.ProjectId);
+        builder.Entity<CanvasItem>().Property(i => i.Kind).HasDefaultValue(CanvasItemKinds.Note);
+        builder.Entity<CanvasItem>().Property(i => i.Payload).HasDefaultValue("{}");
+        builder.Entity<CanvasItem>().Property(i => i.Version).HasDefaultValue(1);
     }
 
     /// <summary>
@@ -316,6 +351,11 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         builder.Entity<BlogStatSnapshot>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<BlogViewGeoDaily>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Build>().HasQueryFilter(e => e.OwnerId == TenantId);
+        // The canvas rows carry the project owner's id even when a member wrote them, so this
+        // filter is also what forces cross-owner work to open the owner's scope explicitly
+        // (ADR-217) instead of widening anything here.
+        builder.Entity<CanvasBoard>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<CanvasItem>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Channel>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<CreditEntry>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<DocumentLink>().HasQueryFilter(e => e.OwnerId == TenantId);
@@ -329,6 +369,9 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         builder.Entity<GlossaryTerm>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Payment>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Project>().HasQueryFilter(e => e.OwnerId == TenantId);
+        // OwnerId here is the project owner, not the invitee — a membership is the owner's row about
+        // somebody else, so it filters like the rest of the project.
+        builder.Entity<ProjectMember>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<PublishJob>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<PublishTarget>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<ScheduledPost>().HasQueryFilter(e => e.OwnerId == TenantId);

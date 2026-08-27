@@ -27,6 +27,7 @@ const HOOK_PREFIXES: readonly (readonly [string, string])[] = [
     ['planner', '/projects/:id/planner'],
     ['builds', '/projects/:id/builds'],
     ['showcase', '/projects/:id/showcase'],
+    ['canvas', '/projects/:id/canvas'],
     ['documents', '/projects/:id'],
     ['hub', '/projects'],
     ['documents', '/drafts'],
@@ -238,6 +239,9 @@ export class BenchShellComponent {
 
     /** Resolved once per shell, and only when a route names a project we cannot name. */
     private readonly projectNames = signal<ReadonlyMap<string, string>>(new Map());
+    /** An empty map before the answer and an empty map for an account with no projects are the
+        same value and mean opposite things. */
+    private readonly namesLoaded = signal(false);
     private namesRequested = false;
 
     protected readonly projectId = computed(() => {
@@ -326,7 +330,8 @@ export class BenchShellComponent {
             items.push({ id: 'planner', icon: 'flag', label: t.planner, link: ['/projects', open, 'planner'] });
             items.push({ id: 'builds', icon: 'cube', label: t.builds, link: ['/projects', open, 'builds'] });
             items.push({ id: 'assets', icon: 'images', label: t.assets, link: ['/projects', open, 'assets'] });
-            items.push({ id: 'showcase', icon: 'rocket-launch', label: t.showcase, link: ['/projects', open, 'showcase'] });
+            items.push({ id: 'canvas', icon: 'squares-four', label: t.canvas, link: ['/projects', open, 'canvas'] });
+            items.push({ id: 'showcase', icon: 'rocket-launch', label: t.showcase, title: this.t().projects.showcase.title, link: ['/projects', open, 'showcase'] });
             items.push({
                 id: 'metrics', icon: 'chart-bar', label: t.metrics, link: '/posts',
                 badge: this.feedback.newComments() + this.feedback.newReactions(),
@@ -381,6 +386,7 @@ export class BenchShellComponent {
             this.projects.list(true)
                 .then(list => {
                     this.projectNames.set(new Map(list.map(p => [p.id, p.name])));
+                    this.namesLoaded.set(true);
                     this.current.reconcile(list);
                 })
                 .catch(() => { this.namesRequested = false; });
@@ -391,9 +397,15 @@ export class BenchShellComponent {
             const id = this.projectId();
             const name = this.projectNames().get(id);
             if (!id) return;
+            // Once the list has answered, an id it does not hold is a project this account does not
+            // own — a board shared with them. That is not the session's project: the rail's hooks
+            // would point at routes a member gets a 404 from, and the `reconcile` behind the next
+            // list would throw the reader's own project away on the way past.
+            if (!name && this.namesLoaded()) return;
             // untracked: remember() reads the state it writes, and the service's own session effect
-            // reads it too — tracked, the two would feed each other.
-            untracked(() => this.current.remember(id, name ?? this.current.name()));
+            // reads it too — tracked, the two would feed each other. The empty name is deliberate:
+            // borrowing the remembered one put a different project's name on the tile.
+            untracked(() => this.current.remember(id, name ?? ''));
         });
     }
 
@@ -406,6 +418,7 @@ export class BenchShellComponent {
             case 'assets': return [t.assets.crumb];
             case 'planner': return [t.planner.crumb];
             case 'builds': return [t.builds.crumb];
+            case 'canvas': return [t.canvas.crumb];
             case 'showcase': return [t.showcase.crumb];
             default: return [];
         }

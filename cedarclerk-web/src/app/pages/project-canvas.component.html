@@ -1,0 +1,223 @@
+<app-worktop class="top" [grid]="false" [label]="hub.board()?.name ?? ''"
+             [meta]="t().projects.canvas.zoomLevel(zoomPercent()) + ' · ' + t().projects.canvas.itemCount(hub.items().length)">
+    <div class="c-frame">
+        <div class="c-tools" data-surface="chrome">
+            @if (hub.canWrite()) {
+                <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.addImage"
+                            (clicked)="mediaOpen.set(true)">
+                    <app-icon name="image" size="xs" />
+                    {{ t().projects.canvas.addImage }}
+                </app-button>
+                <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.addNote"
+                            (clicked)="addNote()">
+                    <app-icon name="note" size="xs" />
+                    {{ t().projects.canvas.addNote }}
+                </app-button>
+                <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.addFrame"
+                            (clicked)="addFrame()">
+                    <app-icon name="layout" size="xs" />
+                    {{ t().projects.canvas.addFrame }}
+                </app-button>
+                <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.addLink"
+                            (clicked)="openLinkForm()">
+                    <app-icon name="link" size="xs" />
+                    {{ t().projects.canvas.addLink }}
+                </app-button>
+            }
+
+            @if (selection().size) {
+                <span class="c-sep" aria-hidden="true"></span>
+                <span class="c-count">{{ t().projects.canvas.selected(selection().size) }}</span>
+                @if (hub.canWrite()) {
+                    <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.bringToFront"
+                                (clicked)="bringToFront()">
+                        <app-icon name="arrow-up" size="xs" />
+                    </app-button>
+                    <app-button variant="paper" size="sm" surface="chrome"
+                                [title]="allLocked() ? t().projects.canvas.unlock : t().projects.canvas.lock"
+                                (clicked)="toggleLock()">
+                        <app-icon name="lock" size="xs" />
+                    </app-button>
+                    <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.deleteItems"
+                                (clicked)="deleteSelected()">
+                        <app-icon name="trash" size="xs" />
+                    </app-button>
+                }
+            }
+
+            <span class="c-spacer"></span>
+
+            <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.zoomOut"
+                        (clicked)="zoomBy(1 / 1.2)">
+                <span class="visually-hidden">{{ t().projects.canvas.zoomOut }}</span>
+                <span aria-hidden="true">&minus;</span>
+            </app-button>
+            <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.zoomReset"
+                        (clicked)="zoomTo(1)">
+                {{ t().projects.canvas.zoomLevel(zoomPercent()) }}
+            </app-button>
+            <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.zoomIn"
+                        (clicked)="zoomBy(1.2)">
+                <span class="visually-hidden">{{ t().projects.canvas.zoomIn }}</span>
+                <span aria-hidden="true">+</span>
+            </app-button>
+            <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.zoomFit"
+                        (clicked)="fit()">
+                <app-icon name="arrows-out-simple" size="xs" />
+            </app-button>
+
+            <span class="c-sep" aria-hidden="true"></span>
+
+            @if (hub.peers().length) {
+                <span class="c-peers" [title]="t().projects.canvas.peers(hub.peers().length)">
+                    @for (peer of hub.peers(); track peer.connectionId) {
+                        <span class="c-peer-face" [style.background]="peerFace(peer.colorIndex)"
+                              [title]="peer.name">{{ peer.name.charAt(0).toUpperCase() }}</span>
+                    }
+                </span>
+            }
+            <app-stamp-badge [tone]="statusTone()">{{ statusWord() }}</app-stamp-badge>
+        </div>
+
+        @if (!hub.canWrite() && hub.status() === 'live') {
+            <p class="c-banner">{{ t().projects.canvas.readOnly }}</p>
+        }
+        @if (hub.lastError(); as e) { <p class="c-banner is-bad">{{ e }}</p> }
+        @if (uploadError(); as e) { <p class="c-banner is-bad">{{ e }}</p> }
+
+        <!--The one genuinely new drawing area in the app. It is a real focus target with a name and
+        a key list of its own: a canvas is not exempt from being operable without a pointer.-->
+        <div #stage class="c-stage" tabindex="0" role="application"
+             [class.is-blank]="background() === 'blank'"
+             [class.is-dots]="background() === 'dots'"
+             [class.is-grid]="background() === 'grid'"
+             [attr.aria-label]="t().projects.canvas.surface(hub.board()?.name ?? '')"
+             aria-describedby="canvas-help"
+             (pointerdown)="onStageDown($event)"
+             (keydown)="onStageKey($event)" (keyup)="onStageKeyUp($event)"
+             (dragover)="onDragOver($event)" (drop)="onDrop($event)">
+
+            <p id="canvas-help" class="visually-hidden">{{ t().projects.canvas.surfaceHelp }}</p>
+
+            <div #world class="c-world">
+                @for (item of hub.items(); track item.id) {
+                    <div [class]="'c-item is-' + item.kind"
+                         [class.is-selected]="isSelected(item.id)"
+                         [class.is-locked]="locked().has(item.id)"
+                         [class.has-peer]="!!peerRing(item.id)"
+                         [attr.data-id]="item.id"
+                         [style.transform]="itemTransform(item)"
+                         [style.width.px]="item.width"
+                         [style.height.px]="item.height"
+                         [style.zIndex]="item.z"
+                         [style.--c-peer]="peerRing(item.id)"
+                         tabindex="0" role="button"
+                         [attr.aria-pressed]="isSelected(item.id)"
+                         [attr.aria-label]="itemLabel(item)"
+                         (focus)="onItemFocus(item)"
+                         (keydown)="onItemKey($event, item)">
+
+                        @switch (item.kind) {
+                            @case ('image') {
+                                <img class="c-img" [src]="imageOf(item).url" [alt]="imageOf(item).alt"
+                                     draggable="false">
+                            }
+                            @case ('note') {
+                                @if (editing() === item.id) {
+                                    <textarea class="c-edit" [ngModel]="editText()"
+                                              [attr.aria-label]="t().projects.canvas.noteText"
+                                              (ngModelChange)="editText.set($event)"
+                                              (pointerdown)="$event.stopPropagation()"
+                                              (blur)="commitEdit()"
+                                              (keydown.escape)="commitEdit()"></textarea>
+                                } @else {
+                                    <p class="c-note" [class.is-center]="noteOf(item).align === 'center'"
+                                       (dblclick)="beginEdit(item.id, noteOf(item).text)">{{ noteOf(item).text }}</p>
+                                }
+                            }
+                            @case ('frame') {
+                                @if (editing() === item.id) {
+                                    <input class="c-edit is-line" [ngModel]="editText()"
+                                           [attr.aria-label]="t().projects.canvas.frameTitle"
+                                           (ngModelChange)="editText.set($event)"
+                                           (pointerdown)="$event.stopPropagation()"
+                                           (blur)="commitEdit()"
+                                           (keydown.escape)="commitEdit()">
+                                } @else {
+                                    <span class="c-frame-title"
+                                          (dblclick)="beginEdit(item.id, frameOf(item).title)">{{ frameOf(item).title || t().projects.canvas.addFrame }}</span>
+                                }
+                            }
+                            @case ('link') {
+                                <span class="c-link-title">{{ linkOf(item).title || linkOf(item).url }}</span>
+                                <a class="c-link-open" [href]="linkOf(item).url" target="_blank" rel="noopener"
+                                   (pointerdown)="$event.stopPropagation()">
+                                    <app-icon name="arrow-square-out" size="xs" />
+                                    <span class="visually-hidden">{{ linkOf(item).url }}</span>
+                                </a>
+                            }
+                        }
+
+                        @if (isSelected(item.id) && hub.canWrite() && selection().size === 1 && !locked().has(item.id)) {
+                            @for (corner of corners; track corner) {
+                                <span [class]="'c-handle at-' + corner"
+                                      [attr.data-corner]="corner" aria-hidden="true"></span>
+                            }
+                        }
+                    </div>
+                }
+
+                <!--Drawn in world coordinates so a pan carries them along; only the label counters
+                the zoom, which is what --c-inv is for.-->
+                @for (peer of hub.peers(); track peer.connectionId) {
+                    <div class="c-cursor" [attr.data-peer]="peer.connectionId" aria-hidden="true" hidden>
+                        <span class="c-cursor-body" [style.background]="peerFace(peer.colorIndex)">{{ peer.name }}</span>
+                    </div>
+                }
+            </div>
+
+            <div #band class="c-band" aria-hidden="true" hidden></div>
+
+            @if (loadError(); as e) {
+                <div class="c-overlay">
+                    <p class="c-overlay-line">{{ e }}</p>
+                    <app-button variant="paper" size="sm" (clicked)="open(boardId())">
+                        {{ t().projects.canvas.retry }}
+                    </app-button>
+                </div>
+            } @else if (hub.status() === 'offline') {
+                <div class="c-overlay">
+                    <p class="c-overlay-line">{{ t().projects.canvas.status.offlineHint }}</p>
+                    <app-button variant="paper" size="sm" (clicked)="open(boardId())">
+                        {{ t().projects.canvas.retry }}
+                    </app-button>
+                </div>
+            } @else if (hub.status() === 'connecting') {
+                <p class="c-hint">{{ t().projects.loading }}</p>
+            } @else if (hub.status() === 'live' && !hub.items().length) {
+                <p class="c-hint">{{ t().projects.canvas.emptyBoard }}</p>
+            }
+        </div>
+    </div>
+</app-worktop>
+
+@if (mediaOpen()) {
+    <app-media-picker (picked)="onPicked($event)" (closed)="mediaOpen.set(false)" />
+}
+
+@if (linkForm(); as form) {
+    <app-modal [width]="440" (closed)="linkForm.set(null)">
+        <app-icon modal-icon name="link" size="sm" />
+        <span modal-title>{{ t().projects.canvas.addLink }}</span>
+        <div class="c-form">
+            <app-input type="url" [label]="t().projects.canvas.linkUrl" inputId="canvas-link-url"
+                       [value]="form.url" (valueChange)="linkForm.set({ ...form, url: $any($event) ?? '' })" />
+            <app-input [label]="t().projects.canvas.linkTitle" inputId="canvas-link-title"
+                       [value]="form.title" (valueChange)="linkForm.set({ ...form, title: $any($event) ?? '' })" />
+        </div>
+        <ng-container modal-actions>
+            <app-button variant="paper" size="sm" (clicked)="linkForm.set(null)">{{ t().common.cancel }}</app-button>
+            <app-button variant="pine" size="sm" (clicked)="submitLink()">{{ t().common.save }}</app-button>
+        </ng-container>
+    </app-modal>
+}

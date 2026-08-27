@@ -134,6 +134,12 @@ describe('bench shell', () => {
         expect(lit()).toBe('Builds');
         await go('/projects/p1/assets');
         expect(lit()).toBe('Assets');
+        // The board is a child of the canvas the same way the canvas is a child of the project,
+        // so both lengths have to be tried before the project's own prefix.
+        await go('/projects/p1/canvas');
+        expect(lit()).toBe('Canvas');
+        await go('/projects/p1/canvas/b1');
+        expect(lit()).toBe('Canvas');
         // Everything behind the dots menu leaves the wall unlit rather than guessing a hook.
         await go('/glossary');
         expect(lit()).toBeUndefined();
@@ -146,7 +152,7 @@ describe('bench shell', () => {
 
         await go('/projects/p1/planner');
         expect(hooks().map(a => a.textContent?.trim()))
-            .toEqual(['Hub', 'Docs', 'Board', 'Planner', 'Builds', 'Assets', 'Showcase', 'Metrics', 'Settings']);
+            .toEqual(['Hub', 'Docs', 'Board', 'Planner', 'Builds', 'Assets', 'Canvas', 'Site', 'Metrics', 'Settings']);
         expect(hooks().find(a => a.textContent?.trim() === 'Board')!.getAttribute('href'))
             .toBe('/projects/p1/tasks');
     });

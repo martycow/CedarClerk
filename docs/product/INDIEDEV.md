@@ -62,6 +62,9 @@ Full rationale for every row — ADR-102, ADR-106, ADR-107.
 | `TaskLink` | A link from a task to anything | `TaskId`, `EntityType`, `EntityId` |
 | `Sprint` | A planning interval built on top of tasks | `OwnerId`, `ProjectId`, `Name`, `StartsAt`, `EndsAt` |
 | `AssetEntry` | A row in the local asset index — path and metadata, the file itself is not copied | `OwnerId`, `ProjectId`, `RelativePath`, `FileName`, `Extension`, `Kind`, `SizeBytes`, `ModifiedAt`, `IndexedAt`, `MissingSince?` |
+| `ProjectMember` | Who besides the owner may act on a project (ADR-217) | `OwnerId` (**the project owner**), `ProjectId`, `Email`, `MemberUserId?`, `Role`, `InviteToken?`, `InvitedByUserId`, `InvitedAt`, `AcceptedAt?`, `LastSeenAt?` |
+| `CanvasBoard` | One reference board inside a project (ADR-218) | `OwnerId`, `ProjectId`, `Name`, `Background`, `CreatedByUserId`, `UpdatedAt`, `UpdatedByUserId`, `Version` |
+| `CanvasItem` | One thing on a board — image, note, frame or link | `OwnerId`, `ProjectId`, `BoardId`, `Kind`, `X`, `Y`, `Width`, `Height`, `Rotation`, `Z`, `Color`, `Payload`, `Version` |
 
 The project's conventions are followed: GUID primary keys, a flat `string OwnerId` on every owner-scoped row, filtering by owner in every endpoint (`docs/tech/ARCHITECTURE.md`). The module's entities live in `Data/Entities.IndieDev.cs` — a second file, not thirty: the convention "everything in one flat `Entities.cs`" exists so as not to spawn a file per entity, and splitting by module does not contradict it.
 
@@ -198,7 +201,7 @@ Order — the owner's priority from 10.08.2026, adjusted by one dependency: the 
 From the brief, none is cancelled — simply none is a prerequisite for anything. Rows on the board:
 
 - **Press Kit** (`T-128`) — a self-updating generated document ("like `presskit()`, but better"). Fits neatly on the "one document, many renderers" axis with no new mechanism. A competitive analysis on 18.08 raised its value: the niche is empty.
-- **References board** (`T-129`) — a moodboard gallery. Likely absorbed by the `T-155` canvas board — to be decided at scoping time; not building two.
+- **References board** (`T-129`) — a moodboard gallery. **Absorbed by the `T-155` canvas board** (ADR-218): a moodboard is a board whose items happen to be images, so there is one screen and not two. See "Reference board and collaborators" below.
 - **Brainstorm session** (`T-130`) — organizing raw thoughts.
 - **Game Script Writer** and **Game Plot Writer** (`T-131`) — writer's tools, the second shorter than the first.
 - **Game Design Helpers** (`T-132`) — assistants for designing mechanics and systems.
@@ -206,6 +209,38 @@ From the brief, none is cancelled — simply none is a prerequisite for anything
 - **Code Documentation** (`T-134`) — browsing code documentation.
 - **Budget calculations** (`T-135`).
 - **New publish targets** (`T-127`) — see below, the risk isn't in the code.
+
+## Reference board and collaborators (T-301)
+
+The first MIGHT row to be built, and the first place in the module where a project holds more than one
+person. Decisions: ADR-218 (the board and its realtime model), ADR-217 (membership). Both live inside
+the module — endpoints behind `Cedar:Modules:IndieDev`, screens behind `indieDevGuard`.
+
+**The board.** A project holds up to 20 `CanvasBoard`s; each is an endless surface carrying up to 2000
+`CanvasItem`s of four kinds — image, note, frame, link. Position, size, rotation and z-order are
+columns, so a drag writes numbers and render order sorts in SQL; whatever is specific to a kind (a
+frame's title, an image's natural size, a link's address) is one JSON payload replaced whole. Images
+are ordinary uploaded `Asset` media served from `/media/`, not `AssetEntry` fingerprints — a board has
+to show pixels, and an index row is a path on somebody's disk.
+
+**Who can be on it.** The owner, plus accepted `ProjectMember` rows: an `editor` writes, a `viewer`
+reads the board and sees who else is there. An invitation is an address and a single-use token mailed
+to it; the token is the credential, and the invite link is handed back to the owner even when mail is
+not configured. Membership rows live in the **project owner's** tenant, and canvas work runs in the
+owner's scope after one membership lookup — the query filter is never loosened.
+
+**What sharing does not reach.** Only the boards, the people list, and a new `GET /api/projects/shared`.
+The project dashboard, tasks, sprints, builds, documents, the asset index and the glossary stay
+owner-only, and a member who opens `/projects/:id` still gets a 404. `Assignee` on a task remains free
+text: assigning work to an account is a tracker decision, and the tracker is not shared. ADR-217 carries
+the full list and the reason it is deliberately short.
+
+**Live editing.** One SignalR hub at `/hubs/canvas`, one group per board. The server is the source of
+truth and the conflict rule is last-writer-wins with a server-assigned `Version` — no rejection, no
+locking. A drag broadcasts at pointer rate and persists nothing; the pointer-up persists once. Cursors,
+selection and presence exist only in the hub's memory. A reconnect re-joins and replaces local state
+with a fresh snapshot, and `GET /api/canvas/{boardId}` plus its export return that same snapshot, so a
+board is readable without a socket.
 
 ## What needs verification before scoping
 
@@ -222,7 +257,7 @@ Precedent for why this is called out separately: the network queue in `Q-13` has
 
 - ~~**Syncing the desktop with the cloud** — ADR-105. The mode is chosen explicitly.~~ **Removed 12.08.2026 (ADR-117)**, and not by building the sync, but by removing the second copy: the desktop opens the cloud, the database is one, and all that remains local is a process reading the disk. The offline TipTap edit merge that ADR-105 feared has not been solved — it no longer needs to be.
 - **Moving `Draft`'s publishing fields into a separate table** — tech debt, filed as a line in `docs/tasks/BACKLOG.md`; accepted as the price of ADR-102.
-- **Multi-user projects** — `Assignee` on a task stays a free-text string. Co-author invitations, permissions and notifications are a separate product within the product, and neither the brief nor any user is asking for it right now.
+- **A shared tracker** — a project can hold collaborators (ADR-217), but membership reaches the reference boards and the people list and nothing else. Tasks, sprints, builds, documents and the asset index stay owner-only, `Assignee` stays a free-text string, and there are no notifications, comments or activity feed. Widening any of those is one more endpoint whenever someone asks; a widening that shipped unasked would be a data question.
 - **Renaming the product** — closed (Q-17, 18.08.2026): the name stays Cedar Clerk, the focus goes into the subtitle.
 
 ### T-122 — Asset Manager (10.08.2026)

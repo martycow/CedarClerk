@@ -1,0 +1,22 @@
+<app-worktop class="top" [label]="t().projects.canvas.acceptTitle">
+    <div class="invite-body">
+        <app-paper-card class="sheet" deckled [seed]="4">
+            <h1 class="invite-title">{{ t().projects.canvas.acceptTitle }}</h1>
+
+            @if (loading()) {
+                <p class="hint">{{ t().projects.loading }}</p>
+            } @else if (peek(); as invite) {
+                <p class="invite-line">{{ t().projects.canvas.acceptBody(invite.projectName, invite.invitedBy) }}</p>
+                <p class="hint">{{ t().projects.canvas.inviteRole }}: {{ roleWord(invite.role) }}</p>
+
+                @if (failed(); as e) { <p class="error-line">{{ e }}</p> }
+
+                <app-button variant="pine" [disabled]="busy()" (clicked)="accept()">
+                    {{ t().projects.canvas.acceptButton }}
+                </app-button>
+            } @else {
+                <p class="error-line">{{ failed() ?? t().projects.canvas.acceptFailed }}</p>
+            }
+        </app-paper-card>
+    </div>
+</app-worktop>

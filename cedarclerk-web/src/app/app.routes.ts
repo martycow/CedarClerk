@@ -93,6 +93,25 @@ export const routes: Routes = [
                 loadComponent: () => import('./pages/project-builds.component').then(m => m.ProjectBuildsComponent),
                 canActivate: [indieDevGuard],
             },
+            // T-301 — the board list, then one board. Two routes rather than a tab: a board is
+            // addressable on its own, which is what a reference someone else opens has to be.
+            {
+                path: 'projects/:id/canvas',
+                loadComponent: () => import('./pages/project-boards.component').then(m => m.ProjectBoardsComponent),
+                canActivate: [indieDevGuard],
+            },
+            {
+                path: 'projects/:id/canvas/:boardId',
+                loadComponent: () => import('./pages/project-canvas.component').then(m => m.ProjectCanvasComponent),
+                canActivate: [indieDevGuard],
+            },
+            // authGuard, not indieDevGuard: an invitation has to survive an install with the module
+            // off and still land the reader somewhere honest.
+            {
+                path: 'invite/:token',
+                loadComponent: () => import('./pages/invite-accept.component').then(m => m.InviteAcceptComponent),
+                canActivate: [authGuard],
+            },
             {
                 path: 'projects/:id/showcase',
                 loadComponent: () => import('./pages/project-showcase.component').then(m => m.ProjectShowcaseComponent),

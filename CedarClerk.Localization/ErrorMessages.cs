@@ -366,6 +366,57 @@ public static class ErrorMessages
     public static string NoDesktopBuildPublished =>
         Ru("Десктопная сборка ещё не опубликована.", "No desktop build has been published yet.");
 
+    // T-301 — project collaborators and the reference board.
+    public static string UnknownProjectRole(string role) =>
+        Ru($"Неизвестная роль в проекте «{role}».", $"Unknown project role '{role}'.");
+
+    public static string CannotInviteYourself =>
+        Ru("Вы и так участник этого проекта.", "You are already on this project.");
+
+    public static string ProjectMemberAlreadyInvited =>
+        Ru("Этот адрес уже приглашён в проект.", "That address is already invited to this project.");
+
+    public static string ProjectMemberLimitReached(int max) =>
+        Ru($"В проекте не больше {max} соавторов.", $"A project holds at most {max} collaborators.");
+
+    public static string InviteNotFound =>
+        Ru("Это приглашение больше не действует.", "That invitation is no longer valid.");
+
+    public static string InviteAlreadyAccepted =>
+        Ru("Этим приглашением уже воспользовался другой аккаунт.", "That invitation has already been used by another account.");
+
+    // The one refusal in the module that is a 403 rather than a 404: a viewer is looking at the
+    // thing they were just refused, so "no such project" would deny what is on their screen.
+    public static string NoWriteAccessToProject =>
+        Ru("Этот проект можно смотреть, но не менять.", "You can look at this project, but not change it.");
+
+    public static string BoardNameLength(int max) =>
+        Ru($"Имя доски — от 1 до {max} символов.", $"A board name must be 1-{max} characters");
+
+    public static string UnknownCanvasBackground(string value) =>
+        Ru($"Неизвестный фон доски «{value}».", $"Unknown canvas background '{value}'.");
+
+    public static string BoardLimitReached(int max) =>
+        Ru($"В проекте не больше {max} досок.", $"A project holds at most {max} boards.");
+
+    public static string CanvasItemLimitReached(int max) =>
+        Ru($"На доске не больше {max} объектов.", $"A board holds at most {max} items.");
+
+    public static string UnknownCanvasItemKind(string kind) =>
+        Ru($"Неизвестный объект доски «{kind}».", $"Unknown canvas item '{kind}'.");
+
+    public static string CanvasPayloadTooLarge(int max) =>
+        Ru($"В этом объекте больше {max} символов данных.", $"That item carries more than {max} characters of data.");
+
+    public static string CanvasPayloadInvalid =>
+        Ru("Содержимое этого объекта доска не понимает.", "That item's contents are not in a shape this board understands.");
+
+    public static string CanvasGeometryInvalid =>
+        Ru("У объекта должны быть положительные ширина и высота.", "An item needs a positive width and height.");
+
+    public static string UnknownBoard =>
+        Ru("Такой доски нет — возможно, она удалена.", "There is no such board — it may have been deleted.");
+
     // Russian is the only translated locale for now, matching the app's own UI dictionaries
     // (en.ts/ru.ts): every other UI language already falls back to English there, and shipping
     // machine-quality German error text would be a worse answer than the English original.

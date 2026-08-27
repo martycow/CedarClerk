@@ -69,6 +69,34 @@ public static class EmailTexts
          <p style="color:#686257;font-size:13px"><a href="{unsubscribeUrl}" style="color:#686257">Unsubscribe</a></p>
          """);
 
+    /// <summary>
+    /// Written in the inviter's language rather than the reader's: the invitee has no account yet,
+    /// so there is no preference to read, and the person choosing the words is the one sending it.
+    /// </summary>
+    public static string ProjectInviteSubject(string projectName) => Localized(
+        $"Приглашение в проект «{projectName}» — Cedar Clerk",
+        $"You are invited to \"{projectName}\" — Cedar Clerk");
+
+    public static string ProjectInviteBody(string projectName, string inviterName, string link)
+    {
+        var project = System.Net.WebUtility.HtmlEncode(projectName);
+        var who = System.Net.WebUtility.HtmlEncode(inviterName);
+
+        return Localized(
+            $"""
+             <p>{who} приглашает вас поработать над проектом «{project}» в Cedar Clerk.</p>
+             <p><a href="{link}" style="display:inline-block;padding:10px 18px;background:#566842;color:#fff;border-radius:8px;text-decoration:none">Принять приглашение</a></p>
+             <p style="color:#686257;font-size:13px">Если кнопка не работает, откройте ссылку:<br>{link}</p>
+             <p style="color:#686257;font-size:13px">Если вы не ждали этого письма, просто не открывайте ссылку.</p>
+             """,
+            $"""
+             <p>{who} invites you to work on "{project}" in Cedar Clerk.</p>
+             <p><a href="{link}" style="display:inline-block;padding:10px 18px;background:#566842;color:#fff;border-radius:8px;text-decoration:none">Accept the invitation</a></p>
+             <p style="color:#686257;font-size:13px">If the button does not work, open this link:<br>{link}</p>
+             <p style="color:#686257;font-size:13px">If you were not expecting this, simply do not open the link.</p>
+             """);
+    }
+
     private static string Localized(string ru, string en) =>
         System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ru" ? ru : en;
 }

@@ -464,6 +464,12 @@ public static class ProjectEndpoints
             // address subscribed to nothing, and its counters would answer about a page that is gone.
             await db.ShowcaseFollowers.Where(f => f.ProjectId == id && f.OwnerId == uid).ExecuteDeleteAsync();
             await db.ShowcaseStatDailies.Where(st => st.ProjectId == id && st.OwnerId == uid).ExecuteDeleteAsync();
+            // Items go by project rather than by board: sweeping board by board would leave the items
+            // of a board that was already gone, which is why CanvasItem carries ProjectId at all.
+            await db.CanvasItems.Where(i => i.ProjectId == id && i.OwnerId == uid).ExecuteDeleteAsync();
+            await db.CanvasBoards.Where(b => b.ProjectId == id && b.OwnerId == uid).ExecuteDeleteAsync();
+            // A membership outliving its project would keep granting access to an id nothing answers for.
+            await db.ProjectMembers.Where(m => m.ProjectId == id && m.OwnerId == uid).ExecuteDeleteAsync();
 
             db.Projects.Remove(project);
             await db.SaveChangesAsync();

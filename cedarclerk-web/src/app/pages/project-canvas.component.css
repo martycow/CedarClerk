@@ -1,0 +1,339 @@
+/* The board fills the bench top and never scrolls the page: an endless plane that also carried a
+   scrollbar would be two competing ways to reach the same place. */
+:host {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    padding: var(--space-3);
+}
+
+.top {
+    flex: 1;
+    min-height: 0;
+}
+
+.c-frame {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.c-tools {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    flex-wrap: wrap;
+    flex: none;
+    padding: var(--space-1) var(--space-2);
+    border-bottom: 1px solid var(--wood-edge);
+    background-color: var(--sign-tile-hi);
+    background-image: var(--tex-wood), var(--grad-sign-tile);
+}
+
+.c-spacer { flex: 1; }
+
+.c-sep {
+    width: 1px;
+    align-self: stretch;
+    margin: 0 var(--space-1);
+    background: var(--wood-edge);
+}
+
+.c-count {
+    color: var(--rail-ink);
+    font-family: var(--font-mono);
+    font-size: var(--text-chrome-sm);
+}
+
+.c-peers {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* A peer's colour is bound from the component, so it never passes through a stylesheet — the same
+   rule the account avatar follows. */
+.c-peer-face {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    color: var(--avatar-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-chrome-sm);
+    font-weight: 700;
+}
+
+.c-banner {
+    flex: none;
+    margin: 0;
+    padding: var(--space-1) var(--space-3);
+    background: var(--asoft);
+    color: var(--t2);
+    font-size: var(--fs-ui);
+}
+
+.c-banner.is-bad {
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+.c-stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    background-position: var(--c-ox, 0) var(--c-oy, 0);
+    background-size: var(--c-cell, 24px) var(--c-cell, 24px);
+    touch-action: none;
+    cursor: default;
+}
+
+.c-stage.is-grid {
+    background-image:
+        linear-gradient(to right, var(--rule-ink-soft) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--rule-ink-soft) 1px, transparent 1px);
+}
+
+.c-stage.is-dots {
+    background-image: radial-gradient(var(--rule-ink) 1px, transparent 1px);
+}
+
+.c-stage.is-blank { background-image: none; }
+
+/* Space is held: the whole surface says so before the drag starts, which is the only cue that the
+   next press pans instead of selecting. */
+.c-stage.is-panning { cursor: grab; }
+
+.c-world {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    transform-origin: 0 0;
+    will-change: transform;
+}
+
+.c-item {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    cursor: grab;
+}
+
+.c-item:focus-visible { outline: none; }
+
+/* Everything that must keep one size on screen multiplies the inverse zoom the surface publishes,
+   so a ring at 25% is the same ring as at 200%. */
+.c-item.is-selected {
+    box-shadow: 0 0 0 calc(2px * var(--c-inv, 1)) var(--accent);
+}
+
+.c-item.has-peer {
+    box-shadow: 0 0 0 calc(2px * var(--c-inv, 1)) var(--c-peer, var(--accent));
+}
+
+.c-item.is-locked { cursor: default; }
+
+.c-item.is-note {
+    padding: var(--space-3);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    background-color: var(--paper-bright);
+    background-image: var(--tex-paper);
+    box-shadow: var(--shadow-paper-sm);
+}
+
+.c-note {
+    margin: 0;
+    flex: 1;
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 20px;
+    line-height: 1.35;
+    white-space: pre-wrap;
+    overflow: hidden;
+}
+
+.c-note.is-center { text-align: center; }
+
+.c-edit {
+    flex: 1;
+    width: 100%;
+    box-sizing: border-box;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 20px;
+    resize: none;
+}
+
+.c-edit.is-line { flex: none; }
+
+.c-item.is-image {
+    border: var(--border-paper);
+    background: var(--surface);
+    box-shadow: var(--shadow-paper-sm);
+}
+
+.c-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+/* A frame labels a region and does not clip it: the body stays transparent so what lies inside is
+   the board's, not the frame's. */
+.c-item.is-frame {
+    border: 2px dashed var(--rule-ink);
+    border-radius: var(--radius-paper);
+    background: transparent;
+}
+
+.c-frame-title {
+    padding: var(--space-1) var(--space-2);
+    color: var(--t2);
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.c-item.is-link {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    background-color: var(--sheet);
+    box-shadow: var(--shadow-paper-sm);
+}
+
+.c-link-title {
+    flex: 1;
+    min-width: 0;
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.c-link-open {
+    flex: none;
+    color: var(--accent);
+}
+
+.c-handle {
+    position: absolute;
+    width: calc(10px * var(--c-inv, 1));
+    height: calc(10px * var(--c-inv, 1));
+    border: calc(1px * var(--c-inv, 1)) solid var(--accent);
+    background: var(--paper-bright);
+}
+
+.c-handle.at-nw { top: 0; left: 0; cursor: nwse-resize; }
+.c-handle.at-ne { top: 0; right: 0; cursor: nesw-resize; }
+.c-handle.at-sw { bottom: 0; left: 0; cursor: nesw-resize; }
+.c-handle.at-se { bottom: 0; right: 0; cursor: nwse-resize; }
+
+.c-cursor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 9000;
+}
+
+.c-cursor[hidden] { display: none; }
+
+.c-cursor-body {
+    display: inline-block;
+    transform: scale(var(--c-inv, 1));
+    transform-origin: 0 0;
+    padding: 2px var(--space-2);
+    border-radius: 2px 12px 12px 12px;
+    color: var(--avatar-ink);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.c-band {
+    position: absolute;
+    border: 1px dashed var(--accent);
+    background: var(--asoft);
+    pointer-events: none;
+}
+
+.c-band[hidden] { display: none; }
+
+.c-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    /* The surface underneath stays reachable — an overlay that swallowed the pointer would make a
+       dropped socket look like a frozen board. */
+    pointer-events: none;
+}
+
+.c-overlay app-button { pointer-events: auto; }
+
+.c-overlay-line {
+    margin: 0;
+    padding: var(--space-2) var(--space-4);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    background-color: var(--sheet);
+    color: var(--text);
+    font-size: var(--fs-ui);
+}
+
+.c-hint {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    color: var(--t2);
+    font-size: var(--fs-ui);
+    pointer-events: none;
+}
+
+.c-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+/* The keys the surface answers to, stated for a reader who cannot see the board (T-080's rule:
+   an icon or a gesture that carries meaning no adjacent text repeats gets a name). */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}

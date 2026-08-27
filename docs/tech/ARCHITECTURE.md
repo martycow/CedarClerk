@@ -62,7 +62,7 @@ Going the other direction — external format *into* Cedar JSON — `CedarClerk.
 - `Bot/` — `TelegramBotService`, `BotChatAccess` (pure permission logic), `BotKnownChatSync`, Quartz job classes
 - `Data/` — `CedarDbContext`, `Entities.cs` (all core entities in one flat file) + `Entities.IndieDev.cs` (module entities, per ADR-101's file rule)
 - `Migrations/` — EF Core migrations
-- `Modules/` — feature modules behind config flags: `IndieDev/` (projects, tasks, sprints, builds, asset index) and `Agent/` (the desktop's filesystem agent, ADR-117)
+- `Modules/` — feature modules behind config flags: `IndieDev/` (projects, tasks, sprints, builds, asset index, reference boards and their hub) and `Agent/` (the desktop's filesystem agent, ADR-117)
 - `Publishing/` — `IPublishTarget` (ADR-078) + the network implementations (`TelegramPublishTarget`, `XPublishTarget`, `BlueskyPublishTarget`) + `PublishTargetSecrets` (per-tenant credential encryption)
 - `Translation/` — `ITranslationProvider` + Anthropic/OpenAI/DeepL implementations for auto-translate
 - `Email/` — outbound mail (Resend)
@@ -70,7 +70,7 @@ Going the other direction — external format *into* Cedar JSON — `CedarClerk.
 
 `cedarclerk-web/src/app/`:
 - `core/` — one Angular service per feature area (thin RxJS→Promise), the i18n dictionaries (`i18n/en.ts`/`ru.ts`), and the guards (`auth`, `guest`, `admin`, `indiedev`)
-- `pages/` — route components; `editor` is the largest surface by far. `comments` and `stats` exist as components but their routes redirect into the Posts Manager (`/posts`) where they are tabs. The IndieDev screens (`projects`, `project`, `project-tasks/planner/assets/builds`) also live here behind `indieDevGuard` — the `modules/<name>/` folder convention from ADR-101 was **not** adopted on the frontend
+- `pages/` — route components; `editor` is the largest surface by far. `comments` and `stats` exist as components but their routes redirect into the Posts Manager (`/posts`) where they are tabs. The IndieDev screens (`projects`, `project`, `project-tasks/planner/assets/builds`, `project-canvas`/`canvas-board`) also live here behind `indieDevGuard` — the `modules/<name>/` folder convention from ADR-101 was **not** adopted on the frontend
 - `shared/` — ~15 genuinely reusable components now, including a real `app-modal`, `app-icon` (Phosphor, generated), `page-header`, `account-menu`, pickers and the appearance panel — `docs/design/UI-INVENTORY.md` §Shared lists them
 - `tiptap-extensions/` — custom TipTap nodes/marks whose HTML output is the shared contract with the backend renderers (e.g. `spoiler-mark.ts` ↔ `<tg-spoiler>` in the Telegram renderers)
 
@@ -91,11 +91,40 @@ A module **adds**; it never replaces an existing screen. That is what makes it r
 Minimal APIs only, no MVC controllers. Each feature area is `public static class XxxEndpoints` with a single `MapXxxEndpoints(this WebApplication app)` extension method, wired flatly in `Program.cs` — fourteen `MapXxx` calls for the core areas plus the module calls behind their flag; that block in `Program.cs` is the authoritative list (an enumeration copied here went stale once already).
 Blog requests are routed separately, by hostname, before the rest: `app.MapWhen(ctx => ctx.Request.Host.Host == blogHost, ...)`. All API routes live under `/api/...`. Errors are either ad-hoc `Results.Json(new { error = "..." }, statusCode: ...)` at the call site, or a small per-endpoint result record (e.g. `PostEndpoints.PublishResult`) for logic factored out of the lambda. See `CedarClerk.Localization.ErrorMessages` for the handful of error strings reused across call sites — most errors are one-off inline literals by convention.
 
+## Realtime: one hub, one group per board (ADR-218)
+
+Every request path in the app is request/response; the single exception is the reference board, where
+several people edit one surface at once. It runs over SignalR — `CanvasHub`, mapped at `/hubs/canvas`
+inside the same module block as the IndieDev endpoints, with `AddSignalR()` alongside the other service
+registrations. No new package on either side: the server half is in the shared framework and
+`@microsoft/signalr` is already a frontend dependency. A hub is an ordinary `[Authorize]` endpoint, so
+it authenticates on the Identity cookie the SPA already holds, and the dev proxy needs `/hubs` with
+`ws: true` next to `/api`.
+
+Three things about that path differ from an API call and are load-bearing:
+
+- **A hub invocation does not run the request pipeline**, so `TenantFromUserMiddleware` never fires and
+  the hub's injected scope has no tenant at all — meaning it reads nothing and refuses to stamp a new
+  row. Every hub method therefore resolves the caller's access to the project once and opens the
+  **project owner's** tenant scope for the work that follows (ADR-217). Nothing in the hub trusts a
+  client-sent owner, project or role.
+- **What is broadcast and what is persisted are different lists.** Item writes go through the hub, are
+  accepted last-writer-wins with a server-assigned `Version`, and are echoed to the whole board group
+  including the sender. Live drags, cursors and selection are broadcast to the others and never
+  written — persisting a pointer would be ~20 writes/second/user against SQLite on the droplet.
+- **Presence is process memory.** Connections, cursors and selections live in a static dictionary in
+  the hub and in no table, which is correct while production is one Kestrel behind one tunnel and is
+  the one thing here that does not survive a second instance: that would need a Redis backplane first.
+
+Boards themselves stay REST (`/api/projects/{id}/canvas`, `/api/canvas/{boardId}` and its export), and
+`GET /api/canvas/{boardId}` returns exactly the snapshot the hub's `Join` returns — so a board can be
+read, and a client reconciled after a reconnect, without the socket being the only way in.
+
 ## Data model
 
 `CedarDbContext : IdentityDbContext<ApplicationUser>` (SQLite). Every entity lives in one flat `CedarClerk.Server/Data/Entities.cs` (not one file per entity), uses a client-generated `Guid Id`, and owner-scoped rows carry a plain `string OwnerId` (+ optional `ApplicationUser? Owner` nav) rather than a strict FK-only model.
 
-The entity census is the two files themselves — `Entities.cs` (core) and `Entities.IndieDev.cs` (module) — an enumeration here lagged reality by ~17 entities when checked 18.08.2026. The load-bearing shapes: `ApplicationUser` extends `IdentityUser` with plan/trial/Telegram-link/signature/Stripe fields; `Draft` is the document (translations per language in `DraftTranslation`, revisions in `DraftRevision`, daily stats in `DraftStatSnapshot`); `Channel` + `PublishTarget` carry where things publish (`Channel` is projected into `PublishTarget`, ADR-078/T-085); `Payment`/`CreditEntry`/`AiUsage` carry money and quotas; the module adds `Project`, `GameTask`, `Sprint`, `Build`, `AssetEntry` and the generalized `EntityLink`.
+The entity census is the two files themselves — `Entities.cs` (core) and `Entities.IndieDev.cs` (module) — an enumeration here lagged reality by ~17 entities when checked 18.08.2026. The load-bearing shapes: `ApplicationUser` extends `IdentityUser` with plan/trial/Telegram-link/signature/Stripe fields; `Draft` is the document (translations per language in `DraftTranslation`, revisions in `DraftRevision`, daily stats in `DraftStatSnapshot`); `Channel` + `PublishTarget` carry where things publish (`Channel` is projected into `PublishTarget`, ADR-078/T-085); `Payment`/`CreditEntry`/`AiUsage` carry money and quotas; the module adds `Project`, `GameTask`, `Sprint`, `Build`, `AssetEntry`, the generalized `EntityLink`, and — for the reference boards — `ProjectMember`, `CanvasBoard` and `CanvasItem` (ADR-217/218), whose `OwnerId` is always the **project owner** so that a collaborator's rows stay inside the tenant that owns the project.
 
 Ownership: nearly every table has an `OwnerId` and every endpoint filters by it — see the ownership-audit table in `docs/adr/ownership-audit.md`. Public blog endpoints are the deliberate exception (filtered by `IsBlogPublished` instead, since blog visitors aren't authenticated users).
 

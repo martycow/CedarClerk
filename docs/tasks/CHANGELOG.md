@@ -1,5 +1,136 @@
 # Changelog
 
+## 2026-08-27 — A project gains other people, and the showcase gains a screen (branch `showcase_menu_and_layout`)
+
+Two pieces of work in one session, and only the second is a feature. The first tidied what yesterday's
+showcase had grown into; the second gave a project collaborators and a surface worth sharing with them.
+
+**The showcase moved out of the project-settings modal onto `/projects/:id/showcase`**, with a Showcase
+hook on the tool wall. The 26.08 session (`T-294`…`T-300`, ADR-216) turned that page into a site — slug,
+store links, trailer, gallery, counters, followers, its own domain — and every one of those fields was
+still edited behind a modal's scroll bar nobody opened. The project-settings modal now carries none of
+it.
+
+**Three layout defects, each invisible until named.** The tool wall centred its list, so every hook
+shrank to the width of its own caption: eight tools, eight widths, and the tray button below wider than
+any of them. The list stretches now, the tray takes the wall's own side padding, and the wall is cut
+wide enough for the longest caption in either language. Checkboxes carried no `accent-color`, so the
+export modal's language ticks rendered in the operating system's blue on a cream sheet — one rule in
+`styles.scss` replaces five ad-hoc ones. And Settings' language rows sat 2px under their hint and 37px
+above the section edge.
+
+**A 401 now ends the session instead of being swallowed.** Anything but `/me`, login and register
+answering 401 clears the session and sends the reader to the door carrying the URL they were on, so
+signing in puts them back where they were. Before this the guards only asked on navigation: a session
+that expired under an open screen turned every button on it into a silent failure. Drive-by:
+`DOCS-FLOW.md` still named `docs/archive/roadmap-phases-0-13.md`, deleted two commits earlier, which had
+left `DocsFlowGraphTests` red here and on `master`.
+
+**Then the rest of the session: a project can have collaborators, and a reference board is the first
+thing worth sharing with one** (ADR-217, ADR-218, ADR-219). `T-129` (a moodboard gallery) and `T-155`
+(a Miro-like whiteboard) had stood on the board with a note that they were probably one thing and that
+two must not be built. They are one thing, and this is it: a free canvas of notes, images, frames and
+links under one pan/zoom transform, live over SignalR, with the people who can see it managed on the
+screen that lists the boards. One migration, `ReferenceBoardAndMembers` — three tables (`CanvasBoards`,
+`CanvasItems`, `ProjectMembers`), seven indexes, a pure create with nothing renamed, so none of
+`ef-migrations.md`'s hand-edit rules apply.
+
+**A membership opens exactly one door** (ADR-217). `ProjectMember` carries a role — editor or viewer —
+and a single-use invitation token, and the only thing it grants is the canvas. `GET /api/projects/{id}`
+stays owner-only, so a member on the board list reads the project's name off `/api/projects/shared`
+rather than off the project. The tenancy story is untouched: `OwnerId` is still the tenant id (ADR-206),
+the three new tables are filtered like every other table, and `TenantFilterGuardTests` never had to be
+exempted for them.
+
+**The board is one server-owned surface and the last writer wins** (ADR-218). Every item carries a
+`Version`, and a client accepts an incoming item whose version is at least its own, so a refused write
+and a dropped socket repair through the same path — re-`Join`, replace the state with the snapshot.
+There are two write paths, not one: `DragItems` broadcasts at pointer speed and persists nothing,
+`UpdateItems` persists once on pointer-up. That split is what makes a 1 vCPU droplet with no swap a
+plausible host for this. The surface itself is DOM, not `<canvas>`: a `<div>` world layer under one CSS
+transform, items positioned in world coordinates. A note stays selectable text, an `<img>` gets browser
+decoding for free, and a screen reader walks the same tree as every other screen; the cost is DOM count,
+paid for by keeping Angular out of the pointer path entirely.
+
+**A picture on a shared board is readable by the board's people** (ADR-219) — and this is the thing the
+design had wrong. ADR-218 was written claiming `/media/*` needed no new rule for a shared board. It needs
+one. A canvas image is an ordinary library upload that no post claims, so the media door's three
+questions — public, gated, yours — all answered no for every collaborator, and an owner-uploaded picture
+was a 404 for everyone but the person who uploaded it. The door gained a fourth case: a cached
+`assetId → projectIds` lookup over canvas items, consulted only after every cheaper answer has said no,
+with `ProjectAccessResolver` deciding. Deliberately not folded into the visibility index (every blog page
+would pay for it) and deliberately not a `MediaGrant` (a 15-minute lifetime blanks a long board session).
+The two-browser run that should have caught it only ever added a note.
+
+**Nineteen review findings; thirteen fixed, six left on the board.** Two of the fixes deviate from what
+was prescribed, and both deviations are the interesting part. The version race in `CanvasWrites.Stamp` —
+two concurrent writes reading the same version, incrementing to the same number and broadcasting two
+different payloads that clients then settle differently — was closed with a striped per-board semaphore
+rather than a transaction: EF's SQLite transaction is deferred, so two concurrent `BeginTransactionAsync`
+calls both SELECT and the second gets `SQLITE_BUSY`, which turns the race into an error instead of
+serialising it. And the shell borrowing another project's name for a shared one could not be fixed with
+the proposed `if (!id || !name) return;` — that breaks the session memory before the project list
+resolves, which `bench-shell.component.spec.ts` pins and which went red. The distinction the code could
+not make was "name not known yet" versus "not this account's project"; it can now, and the test stayed
+as it was.
+
+Three of the thirteen were holes rather than defects: `CanvasHub.Leave` acted on the client-supplied
+board id while deleting the connection's own record, which let a client shed its presence while staying
+subscribed and made `RevokeAsync` — the only thing that evicts a removed collaborator — find nothing to
+evict; a peer's drag ghost was cleared only by a terminating message, so a refused pointer-up left the
+item painted at a position that existed nowhere, on everyone else's screen, indefinitely; and the
+arrow-key nudge persisted per keydown, producing exactly the ~30 writes a second that `DragItems` exists
+to prevent.
+
+**Integration found the build red on arrival and fixed nine things on the way through.**
+`CedarClerk.Core/CanvasPayload.cs` did not exist although `CanvasWrites.cs` referenced it — no lane owned
+it — so it was written from scratch, and `CedarClerk.Core` gained a `ProjectReference` to
+`CedarClerk.Localization` to reach `ErrorMessages` from it (a new edge in the project graph; no cycle,
+Localization references nothing). `AccountDeletion` swept none of the three new tables, including the
+easily-missed `ProjectMembers.Where(MemberUserId == ownerId)`; project delete swept none of them either.
+`/invite/:token` and its page did not exist, so the link the People panel hands out landed on the `**`
+redirect. `proxy.conf.json` had no `/hubs` entry, so `ng serve` could not reach the hub at all. And the
+feature had no tests: nine backend suites and two frontend ones were written to ADR-218 §6.
+
+**Verified, with the numbers observed.** Backend `dotnet test` **1312/1312**, up from 1226 at the start
+of the session; CLI **127/127**; `npx ng build` clean; `npx ng test` **478 tests across 48 files**;
+`npm run check:density` 0 failures over 9/9 rules; `npm run check:contrast` 0 failing pairs against the
+four accepted exceptions (ADR-140/172). `SchemaDriftGuardTests`, `TenantFilterGuardTests`,
+`UiInventoryDriftTests` and `ErrorMessageLocalizationTests` all green; no test was deleted or weakened.
+Two checks went red during the work and were fixed at the code rather than at the check.
+
+**The two-client run, asserted rather than eyeballed.** An isolated stack — its own environment, its own
+data directory, the bot confirmed off by its startup line — with two Playwright browser contexts signed
+in as two different accounts. A created a board and invited B, who opened `/invite/<token>`, read
+"e2eadmin invited you to Canvas Drive. Can: Edit", joined, and landed on the board. Both hubs reached
+`Live` and each saw the other's face on the tool strip. A added a note and typed into it; B received the
+item and its text. A dragged it; B's copy moved from x 618 to x 834, matching A's settled position
+exactly. A moved its pointer and B showed a named, coloured cursor in world coordinates. A demoted B to
+viewer, and after a reload B got the read-only line and no add buttons.
+
+**What is not done.** The shell has no notion of a shared project, so a member sees Hub, Docs, Board,
+Planner, Builds, Assets, Showcase and Metrics on the tool wall and every one of them 404s (`T-301`) —
+a real hole, and a shell change rather than a canvas one. There is no "Shared with me" screen:
+`/api/projects/shared` answers and the i18n key is carried, but nothing renders either, so losing the
+invitation mail loses the project (`T-302`). An invited address with no Cedar Clerk account cannot get
+one, because registration is still gated by an invite code that a project invitation neither carries nor
+mentions — the owner sees a 201 and a URL, the invitee sees a door they cannot pass (`T-304`). The accept
+is not idempotent (`T-305`), the batch-cap error says something false (`T-306`), and the six
+low-severity review findings are on the board as `T-310`…`T-315`. The People panel was not extracted as
+the reusable component the contract named (`T-309`), and `POST …/members/{id}/resend` exists without
+being recorded in ADR-217 (`T-316`).
+
+**What is unverified, and it is more than usual.** `@microsoft/signalr` was **not** already installed as
+the brief and the contract both stated — it was added this session, with sixteen transitive packages, and
+it is the only direct dependency added anywhere. Two code paths were written from a read of the code with
+no test behind them, because the seams to write one do not exist: `SaveAsync`'s concurrency branch and
+`CanvasHub.Leave` (`T-307`). The two canvas screens have no page-level specs at all and are covered only
+by the single browser run above (`T-308`). The invitation mail was never actually sent — Resend is
+unconfigured in the isolated stack, which is the designed fallback (the URL comes back regardless), so
+`EmailTexts.ProjectInviteBody`'s markup has never rendered. And nothing here has been near the droplet:
+no version bump, no tag, no deploy, and the realtime path has only ever run on one laptop with two
+browser contexts on it.
+
 ## 2026-08-26 — The game page becomes the game's site (branch `showcase_site`)
 
 **Seven gaps between ADR-134's showcase and a page an indie developer would use instead of a site,

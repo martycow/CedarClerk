@@ -1,0 +1,248 @@
+.boards {
+    padding: var(--space-3);
+}
+
+.boards-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--bench-dock-w);
+    gap: var(--space-3);
+    align-items: start;
+}
+
+.top-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5) var(--space-5);
+}
+
+.head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
+.head-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--fs-34);
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+
+.spacer { flex: 1; }
+
+.hint {
+    margin: 0;
+    color: var(--t2);
+    font-size: var(--fs-ui);
+}
+
+.error-line {
+    margin: 0;
+    color: var(--danger);
+    font-size: var(--fs-ui);
+}
+
+.empty {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-5) 0;
+}
+
+.empty-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--fs-22);
+}
+
+.board-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.board-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+/* A board is a sheet on the top, and the whole sheet is the link: a name that is the only target
+   makes the row's own area dead space the pointer has to avoid. */
+.board {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
+    min-height: var(--hit-target);
+    padding: var(--space-2) var(--space-3);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
+    box-shadow: var(--shadow-paper-sm);
+    color: var(--text);
+    text-decoration: none;
+}
+
+.board:hover { background-color: var(--paper-bright); }
+
+.board-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.board-name {
+    font-family: var(--font-sans);
+    font-size: var(--fs-ui);
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.board-meta {
+    color: var(--t2);
+    font-size: var(--fs-12);
+}
+
+.board-actions {
+    display: flex;
+    gap: var(--space-1);
+}
+
+.dock {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+}
+
+.people {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.person {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+/* The seeded fill is bound from the component, so the colour never passes through a stylesheet —
+   same rule as the account avatar. */
+.face {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    color: var(--avatar-ink);
+    font-family: var(--font-sans);
+    font-size: var(--fs-12);
+    font-weight: 700;
+}
+
+.person-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.person-name {
+    font-size: var(--fs-ui);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.you { color: var(--t2); }
+
+.person-meta {
+    color: var(--t2);
+    font-size: var(--fs-12);
+}
+
+.person-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.invite {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px dashed var(--rule-ink);
+}
+
+.invite app-input { width: 100%; }
+
+/* The address is on screen and selectable whether or not the clipboard answered — the copy button
+   is the shortcut, not the only way out. */
+.invite-link {
+    margin: 0;
+    width: 100%;
+    font-family: var(--font-mono);
+    font-size: var(--fs-12);
+    word-break: break-all;
+    color: var(--t2);
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.field-label {
+    font-family: var(--font-sans);
+    font-size: var(--fs-ui);
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--t2);
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.backgrounds {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.bg-choice {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--fs-ui);
+    cursor: pointer;
+}

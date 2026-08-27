@@ -229,3 +229,6 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-214 — Icon size is corrected per glyph, in the viewBox, not in the drawing](adr/ADR-214.md)
 - [ADR-215 — The landing is drawn on the bench, and its prose is data while its numbers are code](adr/ADR-215.md)
 - [ADR-216 — The showcase becomes the game's own site](adr/ADR-216.md)
+- [ADR-217 — A project can have collaborators, and a membership opens exactly one door](adr/ADR-217.md)
+- [ADR-218 — The reference board is one server-owned surface, last writer wins, and the socket is SignalR](adr/ADR-218.md)
+- [ADR-219 — A picture on a shared board is readable by the board's people](adr/ADR-219.md)
