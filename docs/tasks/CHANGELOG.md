@@ -1,5 +1,67 @@
 # Changelog
 
+## 2026-08-29 — Wave 2 "Rhythm": publishing learns to keep time (master, uncommitted, 0.17.0 — third session of the day)
+
+The second wave of the competitor-research slate, same machinery as the morning: a frozen contract,
+four lanes plus a tester, three defect-fix rounds. `Consts.CurrentVersion` still reads **0.17.0**
+and everything sits uncommitted on `master` — nothing deployed. One migration (`AddWave2Rhythm`,
+purely additive), one dependency bump (Telegram.Bot 22.10.2 → 22.10.3, Bot API 10.3 —
+`telegram-bot.md` updated by the lane), and the same said-out-loud deviation a third time: the
+contract stood in for ADRs during the work, and ADR-226, ADR-227, ADR-228 were written at session
+close.
+
+**The schedule becomes a place you can see** (closes `T-179`). `/calendar` hangs between Docs and
+Metrics on the rail — the "Content Calendar" Claude Design canvas rebuilt on bench tokens: a
+dark-wood board, paper day tickets with network dots, a brass ring on today. Dragging a pending
+ticket to another day keeps its local wall-clock time and PATCHes the recomputed UTC. **Everything
+on it renders in the browser timezone** — a deliberate divergence from ADR-115's fixed display
+zone, matching the `datetime-local` pickers, and deliberately *not* an ADR yet: the divergence is
+provisional until the per-user-timezone question is ruled on (`T-323`), and the ruling deserves one
+ADR, not an ADR now and a reversal later. Week view is deferred (`T-322`).
+
+**The queue fills itself** (ADR-228). `QueueSlot` names a weekly moment on one destination;
+`FillQueueSlotsJob` (30 min) fills upcoming occurrences from the owner's evergreen pool —
+`Draft.IsEvergreen` plus category/max-sends/until bounds, edited from the drafts page —
+least-sent-first, as ordinary `ScheduledPost` rows. Occupancy is keyed by ISO week, not timestamp,
+so a dragged ticket is never double-filled; a Failed send frees its week; `EvergreenSendCount`
+counts only what actually went Sent.
+
+**Telegram gets its 10.3 furniture.** Per-post CTA buttons — max 3, stored as `Draft.CtaButtonsJson`
+and appended wire-level to the last part, never entering the document (ADR-226); expandable
+blockquotes as a TipTap attribute with an editor toggle, collapsible natively on Telegram and plain
+on the blog. The document block is deferred (`T-326`) — no attachment node exists to map from. Also
+on the scheduled path: silent sends and pin-after-send, with auto-unpin of the previous pin
+(`Channel.LastPinnedMessageId`) and a log-and-swallow rule — a pin failure never fails a publish.
+Immediate sends don't bind the toggles yet (`T-325`). And a channel can carry its own signature trio
+overriding the owner's (`PATCH /api/channels/{id}/signature`, free tier 403, blank text clears the
+whole trio) — a client bug that would have wiped the stored translations on every save was caught
+during shape verification, before it shipped.
+
+**The export modal asks "is this ready?"** (closes `T-238`). A pre-publish checks shelf:
+`POST /api/posts/preflight` finds empty language versions and dead links (`LinkCheckService`, 5s
+cap, private-range SSRF guard — refused ranges report "blocked"; redirect-chasing and DNS-rebinding
+hardening left open by decision, `T-324`), plus the existing validator's missing-alt-text pass.
+Warnings never block, and the shelf says so.
+
+**The stats learn where members come from** (ADR-227). Named invite links per channel,
+`chat_member` ingestion into `ChannelMemberDaily` — daily aggregates only, never member identities,
+the `BlogViewGeoDaily` stance on a third surface. The tester caught the first cut counting every
+mute as churn: a restricted member with `IsMember` still set hasn't left. The shelf shows
+joins/leaves/net per link plus the organic row; per-day bars stay on the board (`T-327`). Beside
+it: tracked short links (`/l/{code}`, counters not visit logs, bots included and the UI says so)
+with a copy affordance in the export modal and clicks in the post inspector; best-time hints
+(`GET /api/channels/{id}/best-times`, only hours with ≥2 posts — no fake advice); publishing
+streaks in ISO weeks with a streak card, and publish-event markers on the growth charts (closes
+`T-244`, the streak half of `T-166`).
+
+**A draft can start from somewhere.** Four EN+RU starter templates (weekly devlog, screenshot
+Saturday, patch notes, postmortem) behind "New from template…", alongside the account's own
+`IsTemplate` drafts; nothing is seeded until a pick happens.
+
+**Verified.** Backend `dotnet test` **1619/1619** plus **127/127**; `npx ng test` **492/492**;
+production build clean with the editor CSS back under its budget; every guard green; live e2e 6/0
+on the touched specs. `UI-INVENTORY.md` rows for every new surface landed with the lanes.
+
 ## 2026-08-29 — Wave 1 "Reach": the blog learns to be found (master, uncommitted, 0.17.0 — second session of the day)
 
 The day's second session, and this one is features. A five-agent competitor deep-research phase

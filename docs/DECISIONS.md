@@ -238,3 +238,6 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-223 — Steam and itch.io are copy targets: renderers, never automation](adr/ADR-223.md)
 - [ADR-224 — Blog search rides SQLite FTS5 outside the EF model](adr/ADR-224.md)
 - [ADR-225 — Blog subscriptions notify on publish, and there is no broadcast composer](adr/ADR-225.md)
+- [ADR-226 — CTA buttons are a send setting on the post, never a node in the document](adr/ADR-226.md)
+- [ADR-227 — Invite-link analytics keeps daily tallies, never member identities](adr/ADR-227.md)
+- [ADR-228 — A queue slot's occurrence is its ISO week, and the send counter rides the slot id](adr/ADR-228.md)

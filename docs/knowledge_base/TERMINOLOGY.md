@@ -39,6 +39,12 @@ post glossary is a different thing: it's a blog feature (`GlossaryTerm`), not th
 | DraftRevision | ревизия | An immutable history broken down by language: a row for every explicit save and every publish (Kind: save\|telegram\|blog) — an edit history and a safe diff before publishing | `Entities.cs:513-525` |
 | ShrinkGuard | — | When a save requires explicit confirmation: an incident on 29.07 where autosave saved an instantaneously-empty editor; "suspicious" means there were ≥200 visible characters and ≤20% remain | `Core/ShrinkGuard.cs` |
 | .cedar (CedarPackage) | формат .cedar | Document export/import: a zip container (analogous to .docx) with document.json + assets/; translations are deliberately not included in the export | `Core/CedarPackage.cs`, ARCHITECTURE:130-132 |
+| queue slot | слот очереди | `QueueSlot` — a weekly posting moment (UTC weekday + minute) on one destination; `FillQueueSlotsJob` keeps its upcoming occurrences filled from the evergreen pool, one occurrence per ISO week — which is why a dragged ticket is never double-filled | `Entities.cs`, ADR-228 |
+| evergreen | эвергрин | `Draft.IsEvergreen` plus category/max-sends/until bounds: membership in the pool queue slots repost from, picked least-sent-first; `EvergreenSendCount` counts only sends that actually went out, never fills | `Entities.cs`, `Bot/FillQueueSlotsJob.cs` |
+| CTA buttons | CTA-кнопки | Up to 3 URL buttons under a Telegram post — `Draft.CtaButtonsJson`, a per-post send setting appended at the wire level to the publication's last part; never a document node, never on the blog or in `.cedar` | ADR-226 |
+| tracked link | трекинговая ссылка | `TrackedLink` — a `/l/{code}` short redirect with per-day click tallies; counters, not visit logs: nothing per-visitor is kept, bots count, and the UI says so | `Entities.cs`, `TrackedLinkEndpoints.cs` |
+| member flow | приток и отток подписчиков | The invite-link analytics: joins/leaves per (channel, UTC day, invite link) from `chat_member` updates — `ChannelMemberDaily`, a daily aggregate that never stores who; a mute is not churn | ADR-227 |
+| pre-publish checks | предпубликационные проверки | The export modal's checks shelf: `POST /api/posts/preflight` (empty language versions, dead links) plus the client's alt-text pass — warnings that never block a send. Not the same word's other meaning, `cedar deploy --preflight` | `PreflightEndpoints.cs`, CHANGELOG 29.08 |
 
 ## Blog and readers
 
