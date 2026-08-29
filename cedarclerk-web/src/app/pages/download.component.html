@@ -1,0 +1,27 @@
+<div class="door">
+    <app-button class="theme-toggle" variant="paper" surface="chrome" size="sm" title="Toggle theme"
+                (clicked)="theme.toggle()">
+        <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="xs" />
+    </app-button>
+
+    <app-paper-card class="download-card" [rotate]="-0.2">
+        <div class="dl-header">
+            <app-cedar-logo [size]="28" />
+            <h1 class="dl-title">{{ t().download.title }}</h1>
+            <p class="dl-tagline">{{ t().download.tagline }}</p>
+        </div>
+
+        <p class="dl-body">{{ t().download.body }}</p>
+
+        <div class="dl-cta">
+            <app-button variant="pine" href="/downloads/latest">
+                <app-icon name="download-simple" size="sm" />
+                {{ t().download.get }}
+            </app-button>
+        </div>
+
+        <p class="dl-note">{{ t().download.dataNote }}</p>
+
+        <div class="dl-footer"><a routerLink="/">{{ t().download.open }}</a></div>
+    </app-paper-card>
+</div>

@@ -142,6 +142,7 @@ export interface AdminLanding {
     showPricing: boolean;
     showRoadmap: boolean;
     showStory: boolean;
+    showDownload: boolean;
     shots: LandingShot[];
     roadmap: LandingRoadmapColumn[];
     story: LandingStoryStep[];

@@ -32,9 +32,18 @@ export interface RailProject {
         '(document:keydown.escape)': 'onEscape()',
     },
     template: `
-        <app-cedar-logo class="mark" [size]="22" fill="var(--pine-mark)" />
-        <span class="brand">{{ brand() }}</span>
+        <!-- The label repeats the visible brand so the accessible name still contains it
+             (WCAG 2.5.3); indieDevGuard turns the target into /drafts when the module is off. -->
+        <a class="home" routerLink="/projects" [attr.aria-label]="homeLabel() || null">
+            <app-cedar-logo class="mark" [size]="22" fill="var(--pine-mark)" />
+            <span class="brand">{{ brand() }}</span>
+        </a>
         @if (version()) { <span class="version">{{ version() }}</span> }
+        <!-- A plain href on purpose: the landing is served by the server middleware, and the SPA
+             router would swallow a routerLink to a path it owns nothing at. -->
+        @if (aboutHref() && aboutLabel()) {
+            <a class="about" [href]="aboutHref()">{{ aboutLabel() }}</a>
+        }
 
         @if (project()) {
             <div class="tile-anchor">
@@ -105,6 +114,20 @@ export interface RailProject {
             color: var(--rail-ink);
         }
 
+        /* A door, not a hyperlink: it keeps the rail's ink and gap, and says so only on approach.
+           No box-shadow of its own, so the ADR-140 focus ring is never out-specified. */
+        :host([data-surface="chrome"]) .home {
+            display: inline-flex;
+            flex: none;
+            align-items: center;
+            gap: var(--space-3);
+            border-radius: var(--radius-stamp);
+            color: var(--rail-ink);
+            text-decoration: none;
+        }
+
+        :host([data-surface="chrome"]) .home:hover { filter: brightness(1.12); }
+
         :host([data-surface="chrome"]) .mark { flex: none; }
 
         /* The kit paints the wordmark at 18px display. Chrome type is 11-13px (ADR-138 item 2),
@@ -124,6 +147,17 @@ export interface RailProject {
             font-size: var(--text-chrome-sm);
             white-space: nowrap;
         }
+
+        /* Full ink, not the soft cream: 11px is read, and the soft cream is below AA at that size. */
+        :host([data-surface="chrome"]) .about {
+            color: var(--rail-ink);
+            font-family: var(--font-readout);
+            font-size: var(--text-chrome-sm);
+            white-space: nowrap;
+            text-decoration: none;
+        }
+
+        :host([data-surface="chrome"]) .about:hover { text-decoration: underline; }
 
         :host([data-surface="chrome"]) .tile {
             display: inline-flex;
@@ -239,7 +273,12 @@ export interface RailProject {
 })
 export class RailHeaderComponent {
     readonly brand = input('Cedar Clerk');
+    /** Accessible name of the brand link; the consumer's to translate. It should repeat the brand. */
+    readonly homeLabel = input('');
     readonly version = input('');
+    /** A full-page href beside the version (the landing lives outside the SPA); empty renders nothing. */
+    readonly aboutHref = input('');
+    readonly aboutLabel = input('');
     /** The active project. Empty renders no tile — the switcher has nothing to switch. */
     readonly project = input('');
     /**

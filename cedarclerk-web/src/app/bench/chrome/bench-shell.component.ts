@@ -38,6 +38,10 @@ const HOOK_PREFIXES: readonly (readonly [string, string])[] = [
     ['settings', '/settings'],
 ];
 
+/** Child screens the switcher carries across a project change; deeper paths fold to the child. */
+const PROJECT_CHILDREN: ReadonlySet<string> =
+    new Set(['assets', 'tasks', 'planner', 'builds', 'canvas', 'showcase']);
+
 function matches(path: string, pattern: string): boolean {
     const p = path.split('/').filter(Boolean);
     const q = pattern.split('/').filter(Boolean);
@@ -63,7 +67,9 @@ function matches(path: string, pattern: string): boolean {
             <app-rail-header [version]="versionLabel()" [project]="projectLabel()"
                              projectLink="/projects" [projects]="switcher()" [projectId]="openProjectId()"
                              [projectHint]="t().shell.switchProject" [crumbs]="crumbs()"
-                             [crumbsLabel]="t().shell.breadcrumb">
+                             [crumbsLabel]="t().shell.breadcrumb"
+                             [homeLabel]="t().shell.logoHome"
+                             aboutHref="/welcome" [aboutLabel]="t().shell.aboutLanding">
                 <!-- The default slot RailHeader.prompt.md reserves for save state and the
                      screen's one primary action. Neither is the shell's: a page publishes them
                      and the rail renders them, as data and never as a template (ADR-159). -->
@@ -301,12 +307,22 @@ export class BenchShellComponent {
         return (id && this.projectNames().get(id)) || remembered || this.t().shell.allProjects;
     });
 
-    /** Every project, then the hub — which is where "All projects" used to send you (ADR-186). */
+    /** The screen open inside the project — canvas/:boardId folds to canvas, whose list a switch lands on. */
+    private readonly projectChild = computed(() => {
+        const seg = this.path().split('/').filter(Boolean);
+        return seg[0] === 'projects' && seg[2] && PROJECT_CHILDREN.has(seg[2]) ? seg[2] : '';
+    });
+
+    /** Every project, then the hub — which is where "All projects" used to send you (ADR-186).
+        Switching keeps the open screen: on /projects/A/assets every entry links to that project's
+        assets, and the pages refetch off paramMap themselves. */
     protected readonly switcher = computed<readonly RailProject[]>(() => {
         if (!this.auth.indieDev() || !this.projectId()) return [];
         const names = this.projectNames();
         if (!names.size) return [];
-        const items: RailProject[] = [...names].map(([id, name]) => ({ id, name, link: ['/projects', id] }));
+        const child = this.projectChild();
+        const items: RailProject[] = [...names].map(([id, name]) =>
+            ({ id, name, link: child ? ['/projects', id, child] : ['/projects', id] }));
         items.push({ id: '', name: this.t().shell.allProjects, link: '/projects' });
         return items;
     });

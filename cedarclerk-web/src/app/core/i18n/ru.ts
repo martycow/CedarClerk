@@ -49,6 +49,8 @@ export const ru: Dict = {
         editorCrumb: 'Редактор',
         styleguide: 'Стиль',
         icons: 'Иконки',
+        logoHome: 'Cedar Clerk — на главную',
+        aboutLanding: 'О проекте',
     },
     login: {
         tagline: 'Пишите здесь. Публикуйте там. Муууу.',
@@ -87,6 +89,14 @@ export const ru: Dict = {
         legalTerms: 'Условиями',
         legalAnd: 'и',
         legalPrivacy: 'Политикой конфиденциальности',
+    },
+    download: {
+        title: 'Cedar Clerk для десктопа',
+        tagline: 'Та же мастерская, установленная на вашей машине.',
+        body: 'Десктопное приложение умеет то, что браузеру не разрешено: индексирует папки с ассетами прямо там, где они лежат на диске. Всё остальное — знакомая мастерская.',
+        get: 'Скачать приложение',
+        dataNote: 'Черновики, медиа и настройки живут в аккаунте на сервере. Приложение просто входит в него — установка и удаление ничего не переносят.',
+        open: 'Открыть Cedar Clerk',
     },
     // Phase 13 — модуль для инди-геймдева (T-120).
     // The subscription tiers by name, for anywhere that prints which one an account is on.
@@ -1126,6 +1136,7 @@ export const ru: Dict = {
             notConnected: 'Не подключено',
             notSupported: 'Публикация пока недоступна',
             connectInSettings: 'Подключить в настройках →',
+            includeDestination: (name: string) => `Включить ${name} в эту публикацию`,
             noDestination: 'Отметьте хотя бы одну площадку выше.',
             destinationBlog: 'Блог',
             destinationTelegram: 'Telegram',
@@ -1582,6 +1593,7 @@ export const ru: Dict = {
             secPricing: 'Цены',
             secRoadmap: 'Roadmap',
             secStory: 'История',
+            secDownload: 'Загрузка',
             copy: 'Тексты',
             copyHint: 'Пустое поле — то, что говорит код. Недостающий язык заменяется вторым.',
             kicker: 'Кикер (штамп)',

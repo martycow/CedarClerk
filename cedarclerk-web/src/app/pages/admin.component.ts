@@ -90,6 +90,7 @@ export class AdminComponent implements OnInit {
         noteEn: '', noteRu: '',
         showcaseBlog: '',
         showShots: true, showFeatures: true, showPricing: true, showRoadmap: false, showStory: false,
+        showDownload: false,
     };
     shots: ShotVm[] = [];
     roadmapCols: RoadmapVm[] = [];
@@ -319,6 +320,7 @@ export class AdminComponent implements OnInit {
                 showcaseBlog: data.showcaseBlog ?? '',
                 showShots: data.showShots, showFeatures: data.showFeatures,
                 showPricing: data.showPricing, showRoadmap: data.showRoadmap, showStory: data.showStory,
+                showDownload: data.showDownload,
             };
             this.shots = data.shots.map(s => ({
                 file: s.file, capEn: this.pair(s.caption, 'en'), capRu: this.pair(s.caption, 'ru'),
@@ -368,6 +370,7 @@ export class AdminComponent implements OnInit {
                 showcaseBlog: this.lf.showcaseBlog.trim() || null,
                 showShots: this.lf.showShots, showFeatures: this.lf.showFeatures,
                 showPricing: this.lf.showPricing, showRoadmap: this.lf.showRoadmap, showStory: this.lf.showStory,
+                showDownload: this.lf.showDownload,
                 shots: this.shots.map(s => ({ file: s.file, caption: this.text(s.capEn, s.capRu) })),
                 roadmap: this.roadmapCols.map(c => ({
                     title: this.text(c.titleEn, c.titleRu), mark: c.mark, items: this.zip(c.itemsEn, c.itemsRu),

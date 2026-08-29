@@ -46,6 +46,9 @@ export const en = {
         editorCrumb: 'Editor',
         styleguide: 'Style guide',
         icons: 'Icons',
+        // Repeats the brand: the visible text must stay inside the accessible name (WCAG 2.5.3).
+        logoHome: 'Cedar Clerk — home',
+        aboutLanding: 'About',
     },
     login: {
         tagline: 'Write here. Publish there. Moo.',
@@ -86,6 +89,15 @@ export const en = {
         legalTerms: 'Terms',
         legalAnd: 'and',
         legalPrivacy: 'Privacy Policy',
+    },
+    // The desktop-app page (/download) — public and outside the shell, like the legal pages.
+    download: {
+        title: 'Cedar Clerk for the desktop',
+        tagline: 'The same workshop, installed on your machine.',
+        body: 'The desktop app does the one thing a browser is not allowed to: it indexes asset folders right where they live on your disk. Everything else is the workshop you already know.',
+        get: 'Download the app',
+        dataNote: 'Your drafts, media and settings live on your server account. The app signs into it — installing or removing the app moves nothing.',
+        open: 'Open Cedar Clerk',
     },
     // Phase 13 — the indie-gamedev module (T-120). Present in the dictionary whether or not the
     // module is enabled: a dictionary that changes shape by configuration would defeat the
@@ -1177,6 +1189,7 @@ export const en = {
             notConnected: 'Not connected',
             notSupported: 'Publishing is not available',
             connectInSettings: 'Connect in Settings →',
+            includeDestination: (name: string) => `Include ${name} in this publish`,
             noDestination: 'Tick at least one destination above.',
             destinationBlog: 'Blog',
             destinationTelegram: 'Telegram',
@@ -1633,6 +1646,7 @@ export const en = {
             secPricing: 'Pricing',
             secRoadmap: 'Roadmap',
             secStory: 'Story',
+            secDownload: 'Download',
             copy: 'Copy',
             copyHint: 'Leave a field blank to use what the code says. The other language fills in for a missing one.',
             kicker: 'Kicker (the stamp)',

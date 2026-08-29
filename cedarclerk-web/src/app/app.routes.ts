@@ -25,6 +25,9 @@ export const routes: Routes = [
     },
     { path: 'terms', loadComponent: () => import('./pages/terms.component').then(m => m.TermsComponent) },
     { path: 'privacy', loadComponent: () => import('./pages/privacy.component').then(m => m.PrivacyComponent) },
+    // No guard: the desktop-app page has to answer a visitor and a signed-in user alike, and the
+    // button on it points at the server's own GET /downloads/latest redirect.
+    { path: 'download', loadComponent: () => import('./pages/download.component').then(m => m.DownloadComponent) },
     // ADR-139 clause 1 — one parent route, and the pre-auth pages are outside it by the shape of
     // the tree. The four above are the workshop door: the rail carries a project switcher, save
     // state and hooks into guarded screens, and every one of them is meaningless without a session.

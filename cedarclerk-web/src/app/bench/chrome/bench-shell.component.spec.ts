@@ -190,6 +190,31 @@ describe('bench shell', () => {
             .toEqual(['/projects/p1', '/projects/p2', '/projects']);
     });
 
+    // The switch keeps the open screen: every page under /projects/:id refetches off paramMap, so
+    // the same child segment under another project id is a live screen, not a stale one.
+    it('carries the open project screen across the switcher', async () => {
+        TestBed.inject(AuthService).indieDev.set(true);
+        await go('/projects/p1/assets');
+        await flushProjects([{ id: 'p1', name: 'Cedar Quest' }, { id: 'p2', name: 'Second' }]);
+        const entries = () => [...el().querySelectorAll('app-rail-header .switcher-item')] as HTMLAnchorElement[];
+        expect(entries().map(a => a.getAttribute('href')))
+            .toEqual(['/projects/p1/assets', '/projects/p2/assets', '/projects']);
+
+        // One board folds to the canvas list — another project has no board with that id.
+        await go('/projects/p1/canvas/b1');
+        expect(entries().map(a => a.getAttribute('href')))
+            .toEqual(['/projects/p1/canvas', '/projects/p2/canvas', '/projects']);
+    });
+
+    it('hangs the brand as a door to the hub, and the landing link beside the version', () => {
+        const home = el().querySelector('app-rail-header a.home') as HTMLAnchorElement;
+        expect(home.getAttribute('href')).toBe('/projects');
+        expect(home.textContent).toContain('Cedar Clerk');
+        // A plain href on purpose — the landing is served outside the SPA.
+        const about = el().querySelector('app-rail-header a.about') as HTMLAnchorElement;
+        expect(about.getAttribute('href')).toBe('/welcome');
+    });
+
     it('puts Admin on the wall and nowhere in either account menu', () => {
         TestBed.inject(AuthService).isAdmin.set(true);
         fixture.detectChanges();

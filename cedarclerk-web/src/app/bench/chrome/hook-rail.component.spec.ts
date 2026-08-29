@@ -300,8 +300,9 @@ describe('HookRailComponent', () => {
             const INK_ON = new Map([
                 ['var(--pegboard)', 'var(--rail-ink)'],
                 ['var(--hook-face)', 'var(--rail-ink)'],
-                // The index tabs' badge pair, byte for byte — one badge across the chrome (ADR-155).
-                ['var(--tab-badge)', 'var(--rail-edge)'],
+                // The work ticket's resin, the same measured pair task-tag's P1 chip stands on —
+                // resin is derived from --tab-badge's own base, so the tabs' dialect survives.
+                ['linear-gradient(180deg, var(--resin-hi), var(--resin))', 'var(--rail-edge)'],
             ]);
             const rules = Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g));
             const inked = rules.filter(m => /(^|[^-])color:/.test(m[2]));
@@ -316,7 +317,10 @@ describe('HookRailComponent', () => {
                     onPaper++;
                     continue;
                 }
-                const ground = m[2].match(/(^|[^-])background:\s*([^;}]+)/)?.[2].trim();
+                // Collapsed to one line: jsdom's cssText serializer wraps gradient arguments
+                // across lines, and the map keys are written the way the source declares them.
+                const ground = m[2].match(/(^|[^-])background:\s*([^;}]+)/)?.[2]
+                    .trim().replace(/\s+/g, ' ').replace(/\( /g, '(');
                 expect(ink, `ink on ${ground ?? 'the wall'} in "${m[1].trim()}"`)
                     .toBe(ground ? INK_ON.get(ground) : 'var(--rail-ink)');
             }

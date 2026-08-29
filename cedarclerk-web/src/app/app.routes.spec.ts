@@ -27,4 +27,14 @@ describe('app routes', () => {
         expect(parsed.root.children['primary'].segments.map(s => s.path)).toEqual(['posts']);
         expect(parsed.queryParams['tab']).toBe('stats');
     });
+
+    // The desktop-app page answers a visitor and a signed-in user alike, so it stands beside the
+    // legal pages rather than inside the shell, whose ground demands a session.
+    it('keeps /download public and outside the shell', () => {
+        const route = routes.find(r => r.path === 'download');
+        expect(route).toBeTruthy();
+        expect(route!.canActivate).toBeUndefined();
+        const shell = routes.find(r => Array.isArray(r.children));
+        expect(shell!.children!.some(c => c.path === 'download')).toBe(false);
+    });
 });

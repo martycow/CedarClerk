@@ -23,6 +23,11 @@ export type ButtonSurface = 'paper' | 'chrome';
                [attr.title]="title() || null" [attr.aria-disabled]="disabled() || null">
                 <ng-container [ngTemplateOutlet]="face" />
             </a>
+        } @else if (href()) {
+            <a [class]="classes()" [attr.href]="disabled() ? null : href()"
+               [attr.title]="title() || null" [attr.aria-disabled]="disabled() || null">
+                <ng-container [ngTemplateOutlet]="face" />
+            </a>
         } @else {
             <button [class]="classes()" [type]="type()" [disabled]="disabled()"
                     [attr.title]="title() || null" (click)="clicked.emit($event)">
@@ -142,6 +147,9 @@ export class ButtonComponent {
     link = input<string | readonly unknown[] | null>(null);
     /** The editor addresses a document by query, so a link to one is a route plus this. */
     queryParams = input<Params | null>(null);
+    /** A destination the SPA router must not swallow — a server redirect, the landing. `link` wins
+        when both are set; the same disabled rule applies: the address goes, not the element. */
+    href = input('');
     /** The stock the control stands on when placement, not variant, decides it — a pine button on the rail. */
     surface = input<ButtonSurface | null>(null);
 

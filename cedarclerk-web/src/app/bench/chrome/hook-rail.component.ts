@@ -112,7 +112,8 @@ export interface HookRailItem {
             align-items: stretch;
             gap: 6px;
             margin: 0;
-            padding: var(--space-3) var(--space-1);
+            /* Top runs a step past --space-3: the peg overhangs 13px and would clip on the wall's edge. */
+            padding: var(--space-4) var(--space-1) var(--space-3);
             /* Clipped across, scrolled down: a hook is drawn at the wall's full width, so the
                moment the vertical bar appears it takes the width back and the wall grows a second,
                horizontal bar under the last tool. */
@@ -148,9 +149,10 @@ export interface HookRailItem {
            of its own up there — the peg is drawn outside the box. */
         :host([data-surface="chrome"]) .peg {
             position: absolute;
-            top: -11px;
+            top: -13px;
             left: 50%;
             translate: -50%;
+            filter: drop-shadow(0 1px 1px rgba(20, 12, 4, .5));
         }
 
         /* Chrome type is 11px at its smallest, so the kit's 8.5px uppercase tracking does not
@@ -194,27 +196,41 @@ export interface HookRailItem {
             background: var(--grad-brass);
         }
 
-        /* A work ticket hung on the tool's own peg and notched over its top corner — the wall says
-           a station has something waiting the way a workshop does, with a tag rather than a light.
-           It rides above the hook because a ticket hangs in front of the hardware, and it takes the
-           index tabs' ground and ink so chrome carries one badge instead of two dialects.
+        /* A work ticket hung at a slight angle over the tool's top corner, punched hole and all —
+           the wall says a station has something waiting the way a workshop does, with a tag rather
+           than a light. Same resin ground and ink as the index tabs' badge, so the two stay one
+           dialect even though the ticket hangs and the tab badge lies flat.
            No min-height: chrome's 30px floor is a control's floor, and a tally is not a control. */
         :host([data-surface="chrome"]) .tally {
             position: absolute;
-            top: calc(var(--space-2) * -1);
-            right: 0;
+            top: -11px;
+            right: -3px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 0 var(--space-1);
+            padding: 1px 5px 1px 4px;
             border: 1px solid var(--brass-edge);
-            border-radius: var(--radius-stamp);
-            background: var(--tab-badge);
+            border-radius: 2px;
+            background: linear-gradient(180deg, var(--resin-hi), var(--resin));
             color: var(--rail-edge);
             font-family: var(--font-readout);
             font-size: var(--text-chrome-sm);
             font-weight: 700;
             line-height: 1.5;
+            transform: rotate(6deg);
+            transform-origin: 20% 20%;
+            box-shadow: 0 1px 2px rgba(20, 12, 4, .4);
+        }
+
+        /* The punched hole the ticket hangs by. */
+        :host([data-surface="chrome"]) .tally::before {
+            content: '';
+            width: 3px;
+            height: 3px;
+            margin-right: 2px;
+            border-radius: 999px;
+            background: var(--rail-mid);
+            box-shadow: inset 0 1px 1px rgba(20, 12, 4, .6);
         }
 
         /* The foot of the wall. The panel opens sideways rather than upward: the rule and the

@@ -165,6 +165,23 @@ describe('bench Button', () => {
         expect(anchor().getAttribute('aria-disabled')).toBeNull();
     });
 
+    // A destination the SPA router must not swallow — a server redirect, the landing — is a plain
+    // anchor wearing the same face; the router is never asked, so a click is a full page load.
+    it('renders a plain full-page anchor for href, with the same disabled rule', () => {
+        fixture.componentRef.setInput('href', '/downloads/latest');
+        fixture.detectChanges();
+
+        expect(anchor().tagName).toBe('A');
+        expect(anchor().getAttribute('href')).toBe('/downloads/latest');
+        expect([...anchor().classList].sort()).toEqual(['btn', 'md', 'pine']);
+        expect(fixture.nativeElement.querySelector('button')).toBeNull();
+
+        fixture.componentRef.setInput('disabled', true);
+        fixture.detectChanges();
+        expect(anchor().getAttribute('href')).toBeNull();
+        expect(anchor().getAttribute('aria-disabled')).toBe('true');
+    });
+
     it('takes a title and a submit type', () => {
         fixture.componentRef.setInput('title', 'Send it');
         fixture.componentRef.setInput('type', 'submit');
