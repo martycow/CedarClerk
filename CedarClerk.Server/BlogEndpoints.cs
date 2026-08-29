@@ -2102,7 +2102,11 @@ public static partial class BlogEndpoints
             min-height: 100%;
             display: flex;
             flex-direction: column;
-            background-image: var(--lamp), var(--surface-page);
+            /* A second lamp, low and to the right of the reader: the resin glow is mixed from the
+               theme's own token, so the room warms in both palettes without a second value. */
+            background-image: var(--lamp),
+                radial-gradient(820px 560px at 86% 104%, color-mix(in srgb, var(--resin) 8%, transparent), transparent 62%),
+                var(--surface-page);
             background-attachment: fixed;
             background-color: var(--canvas);
             /* The wall carries one ink and it is not --text (ADR-141): at night the wall darkens
@@ -2265,7 +2269,7 @@ public static partial class BlogEndpoints
         }
 
         /* ── The index: paper pinned to the wall along a pencil rule ─────────────────────────────────── */
-        .post-list { display: flex; flex-direction: column; gap: 18px; }
+        .post-list { display: flex; flex-direction: column; gap: 20px; }
         .post-list.timeline { position: relative; padding-left: 26px; }
         /* The spine is drawn on the wall, which is the one ground the pencil follows into the dark:
            --rule-ink turns cream at night because the wall does. A rule on PAPER takes --border
@@ -2287,14 +2291,18 @@ public static partial class BlogEndpoints
         .timeline-dot { position: absolute; left: -26px; top: 26px; width: 11px; height: 11px; border-radius: 50%; background-image: var(--grad-brass); border: 1px solid var(--brass-edge); box-shadow: inset 0 1px 0 var(--brass-hi), 0 1px 2px rgba(30, 18, 6, .45); z-index: 1; }
         .post-card {
             display: block; position: relative;
-            background-color: var(--sheet); background-image: var(--tex-paper);
-            border: var(--border-paper); border-radius: var(--radius-paper);
-            box-shadow: var(--shadow-paper); padding: 18px 22px 16px; color: var(--text);
+            /* A breath of the lamp's resin over the stock — a few percent of the theme's own token,
+               so the paper reads warmer at night too without a second recipe. */
+            background-color: var(--sheet);
+            background-image: linear-gradient(color-mix(in srgb, var(--resin) 4%, transparent), color-mix(in srgb, var(--resin) 4%, transparent)), var(--tex-paper);
+            border: var(--border-paper); border-radius: calc(var(--radius-paper) + 3px);
+            box-shadow: var(--shadow-paper); padding: 20px 24px 18px; color: var(--text);
             /* The lift is the whole hover language of the system — 2-3px, never a glow or a scale. The
                motion tokens are not served here, so the curve the design system states is written out. */
             transition: transform 150ms cubic-bezier(.3, 1.3, .5, 1);
         }
-        .post-card:hover { transform: translateY(-3px); }
+        /* Under the hand the edge warms toward brass — the paper answering the touch, not a glow. */
+        .post-card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--brass) 45%, transparent); }
         .post-card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 6px; font-size: 12px; color: var(--t2); }
         .post-card-date { font-family: var(--font-mono); }
         .post-card-langs { font-family: var(--font-readout); font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--brass-ink); background: var(--brass-soft); border: 1px solid var(--brass-lo); border-radius: var(--radius-stamp); padding: 1px 6px; }
@@ -2304,7 +2312,7 @@ public static partial class BlogEndpoints
         /* The teaser is reading matter, so the reading controls reach it: it is the one thing on
            the index a reader actually reads, and a size control that moved nothing on the page it
            was opened from read as broken. Two steps under the body measure, so a card stays a card. */
-        .post-card-excerpt { font-family: var(--font-serif); font-size: calc(var(--fs-read) - 2px); color: var(--t2); line-height: 1.6; margin: 0 0 10px; }
+        .post-card-excerpt { font-family: var(--font-serif); font-size: calc(var(--fs-read) - 2px); color: var(--t2); line-height: 1.6; margin: 0 0 10px; max-width: 70ch; }
         .post-card-stats { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--t2); }
         .post-card-stats .num { margin-right: 9px; }
 
@@ -2337,10 +2345,17 @@ public static partial class BlogEndpoints
         .post-sheet {
             position: relative;
             background-color: var(--paper-bright); background-image: var(--tex-paper);
-            border: 1px solid var(--paper-edge); border-radius: var(--radius-paper);
+            border: 1px solid var(--paper-edge); border-radius: calc(var(--radius-paper) + 3px);
             box-shadow: var(--shadow-sheet); padding: 34px 44px 30px; color: var(--text);
             font-family: var(--font-serif); font-size: var(--fs-read); line-height: var(--lh-read);
         }
+        /* A link inside the running text keeps a quiet warm underline: reading matter says where it
+           leads without breaking the line's colour until the reader asks. */
+        .post-sheet p a, .post-sheet li a, .post-card-excerpt a {
+            text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px;
+            text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+        }
+        .post-sheet p a:hover, .post-sheet li a:hover { text-decoration-color: var(--accent); }
         /* I7 — tiled over the post, not behind it. pointer-events:none so it can't take a click,
            and user-select:none so dragging across the page doesn't select the watermark. The
            tile itself (an SVG data URI) comes from WatermarkRenderer as an inline style. */
@@ -2380,8 +2395,8 @@ public static partial class BlogEndpoints
         /* ── Blog-wide prev/next (ADR-192) — two small sheets under the reader, cut from the same
            paper as the index cards, for the post that has no series to navigate by instead. */
         .post-neighbours { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
-        .neighbour-card { display: block; background-color: var(--sheet); background-image: var(--tex-paper); border: var(--border-paper); border-radius: var(--radius-paper); box-shadow: var(--shadow-paper-sm); padding: 12px 16px 14px; color: var(--text); transition: transform 150ms cubic-bezier(.3, 1.3, .5, 1); }
-        .neighbour-card:hover { transform: translateY(-2px); }
+        .neighbour-card { display: block; background-color: var(--sheet); background-image: var(--tex-paper); border: var(--border-paper); border-radius: calc(var(--radius-paper) + 3px); box-shadow: var(--shadow-paper-sm); padding: 12px 16px 14px; color: var(--text); transition: transform 150ms cubic-bezier(.3, 1.3, .5, 1); }
+        .neighbour-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--brass) 45%, transparent); }
         .neighbour-dir { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--t2); margin-bottom: 4px; }
         .neighbour-title { font-family: var(--font-serif); font-size: 15px; line-height: 1.35; }
         .neighbour-date { font-family: var(--font-mono); font-size: 11px; color: var(--t2); margin-top: 6px; }

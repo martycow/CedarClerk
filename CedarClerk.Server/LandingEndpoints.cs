@@ -16,7 +16,8 @@ namespace CedarClerk.Server;
 ///
 /// **Shown at `/` only to visitors who are not signed in.** An author who types the address wants
 /// their drafts, not a sales page — so a request carrying an Identity cookie falls through to the
-/// SPA exactly as before.
+/// SPA exactly as before. `/welcome` is the same page for everyone, cookie or not: the stable way
+/// back to the front door once the root has been claimed by the app.
 ///
 /// **Every number comes from the code that enforces it** (<see cref="PlanLimitations"/>,
 /// <see cref="Consts.Plans"/>, <see cref="Languages.ContentLanguages"/>). A hand-written price table
@@ -39,8 +40,12 @@ public static class LandingEndpoints
         app.Use(async (ctx, next) =>
         {
             var isRoot = ctx.Request.Path == "/" || ctx.Request.Path == "";
-            if (!isRoot || TenantRouting.IsTenantRequest(ctx)
-                || ctx.Request.Method != HttpMethods.Get || ctx.Request.Cookies.ContainsKey(AuthCookie))
+            // /welcome is the landing regardless of the cookie: a signed-in author sometimes wants
+            // to see the front door too, and "/" is already spoken for by their drafts.
+            var isWelcome = ctx.Request.Path == "/welcome";
+            if (!(isRoot || isWelcome) || TenantRouting.IsTenantRequest(ctx)
+                || ctx.Request.Method != HttpMethods.Get
+                || (isRoot && ctx.Request.Cookies.ContainsKey(AuthCookie)))
             {
                 await next();
                 return;
@@ -451,6 +456,13 @@ public static class LandingEndpoints
                 font-size: 15.5px; line-height: 1.7; text-wrap: pretty; color: var(--wood-ink);
             }
 
+            /* ---- download ---------------------------------------------------------------- */
+            .download-card { display: flex; align-items: center; gap: 26px; flex-wrap: wrap; padding: 26px 30px; }
+            .download-card .lead { flex: 1; min-width: 240px; }
+            .download-card b { display: block; font-family: var(--font-display); font-size: 18px; font-weight: 700; }
+            .download-card p { margin: 8px 0 0; font-size: 14px; line-height: 1.55; color: var(--t2); text-wrap: pretty; }
+            .download-meta { margin-top: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--t3); }
+
             /* ---- close ------------------------------------------------------------------- */
             .band {
                 display: flex; align-items: center; gap: 26px; margin: 64px 0 56px; padding: 30px 34px;
@@ -615,6 +627,7 @@ public static class LandingEndpoints
         if (c.ShowPricing) nav.Add($"""<a href="#pricing">{T("Цены", "Pricing")}</a>""");
         if (c.ShowRoadmap && c.Roadmap.Count > 0) nav.Add("""<a href="#roadmap">Roadmap</a>""");
         if (c.ShowStory && c.Story.Count > 0) nav.Add($"""<a href="#story">{T("История", "Story")}</a>""");
+        if (c.ShowDownload) nav.Add($"""<a href="#download">{T("Скачать", "Download")}</a>""");
 
         var check = Icons.Svg("check", 15);
 
@@ -694,6 +707,24 @@ public static class LandingEndpoints
                     <figure class="paper tight pinned" style="--tilt:1.2deg;margin:0">
                         <img src="{E(LandingContent.ShotUrl(c.Hero.File))}" alt="" loading="lazy">
                     </figure>
+                </div>
+            </section>
+            """;
+
+        var download = !c.ShowDownload ? "" : $"""
+            <section id="download">
+                <div class="rule">
+                    <h2>{T("Приложение для рабочего стола", "The desktop app")}</h2>
+                    <span class="meta">Windows</span>
+                </div>
+                <div class="paper bright download-card" style="--tilt:.4deg">
+                    <div class="lead">
+                        <b>{T("Тот же верстак, в своём окне", "The same bench, in its own window")}</b>
+                        <p>{T("Всё лежит на вашем аккаунте на сервере — приложение только другая дверь к нему. Установите на второй машине и продолжайте с того же места.",
+                              "Everything lives in your account on the server — the app is just another door to it. Install it on a second machine and pick up where you left off.")}</p>
+                        <div class="download-meta">{T("обновляется само при каждом релизе", "keeps itself updated with every release")}</div>
+                    </div>
+                    <a class="btn btn-pine" href="/downloads/latest">{Icons.Svg("download-simple")}{T("Скачать для Windows", "Download for Windows")}</a>
                 </div>
             </section>
             """;
@@ -811,6 +842,7 @@ public static class LandingEndpoints
 
                 {roadmap}
                 {story}
+                {download}
 
                 <div class="band">
                     {Mark(56)}

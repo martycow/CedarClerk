@@ -62,6 +62,7 @@ public sealed class LandingContent
     public bool ShowPricing { get; private init; }
     public bool ShowRoadmap { get; private init; }
     public bool ShowStory { get; private init; }
+    public bool ShowDownload { get; private init; }
 
     public IReadOnlyList<LandingShot> Shots { get; private init; } = [];
     public IReadOnlyList<LandingRoadmapColumn> Roadmap { get; private init; } = [];
@@ -112,6 +113,8 @@ public sealed class LandingContent
         // and the ones the mock arrived with were placeholder prose in somebody else's voice.
         ShowRoadmap = row?.ShowRoadmap ?? false,
         ShowStory = row?.ShowStory ?? false,
+        // Off like the two above: a download section is a promise the build has to keep first.
+        ShowDownload = row?.ShowDownload ?? false,
         Shots = Parse<LandingShot>(row?.ShotsJson),
         Roadmap = Parse<LandingRoadmapColumn>(row?.RoadmapJson),
         Story = Parse<LandingStoryStep>(row?.StoryJson),

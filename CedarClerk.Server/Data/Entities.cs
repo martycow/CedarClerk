@@ -1085,6 +1085,8 @@ public class LandingSettings
     public bool ShowPricing { get; set; } = true;
     public bool ShowRoadmap { get; set; }
     public bool ShowStory { get; set; }
+    /// <summary>Off until the desktop build is something to hand a stranger, like the two above.</summary>
+    public bool ShowDownload { get; set; }
 
     /// <summary>
     /// Three lists that are lists in the page and would be three tables here. JSON in a column,

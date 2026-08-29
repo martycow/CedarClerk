@@ -33,6 +33,8 @@ public static partial class AdminEndpoints
         string? NoteEn, string? NoteRu,
         string? ShowcaseBlog,
         bool ShowShots, bool ShowFeatures, bool ShowPricing, bool ShowRoadmap, bool ShowStory,
+        // Nullable so an editor build that predates the field cannot reset it by omission.
+        bool? ShowDownload,
         List<LandingShot>? Shots,
         List<LandingRoadmapColumn>? Roadmap,
         List<LandingStoryStep>? Story);
@@ -58,6 +60,7 @@ public static partial class AdminEndpoints
                 content.ShowPricing,
                 content.ShowRoadmap,
                 content.ShowStory,
+                content.ShowDownload,
                 content.Shots,
                 content.Roadmap,
                 content.Story,
@@ -104,6 +107,7 @@ public static partial class AdminEndpoints
             row.ShowPricing = req.ShowPricing;
             row.ShowRoadmap = req.ShowRoadmap;
             row.ShowStory = req.ShowStory;
+            row.ShowDownload = req.ShowDownload ?? row.ShowDownload;
             row.ShotsJson = LandingContent.Serialize(req.Shots ?? []);
             row.RoadmapJson = LandingContent.Serialize(req.Roadmap ?? []);
             row.StoryJson = LandingContent.Serialize(req.Story ?? []);
