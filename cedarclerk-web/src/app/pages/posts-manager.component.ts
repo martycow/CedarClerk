@@ -14,6 +14,7 @@ import {
 } from '../core/form-presets.service';
 import { PostsService, ScheduledPost } from '../core/posts.service';
 import { PublishedPost, PublishService } from '../core/publish.service';
+import { LinksService, TrackedLink } from '../core/links.service';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES } from '../core/languages';
 import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -66,6 +67,7 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
     private presetsApi = inject(FormPresetsService);
     private postsApi = inject(PostsService);
     private publishApi = inject(PublishService);
+    private linksApi = inject(LinksService);
     private route = inject(ActivatedRoute);
     feedback = inject(CommentsService);
     private tagUsageApi = inject(TagUsageService);
@@ -168,6 +170,12 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
         if (requested) {
             const resolved = RETIRED_TABS[requested] ?? (MANAGER_TABS.includes(requested as ManagerTab) ? requested as ManagerTab : null);
             if (resolved) this.setTab(resolved);
+        }
+        // Wave 2 — the calendar's sent tickets deep-link here with the post to select.
+        const asked = this.route.snapshot.queryParamMap.get('draft');
+        if (asked) {
+            const draft = this.drafts().find(d => d.id === asked);
+            if (draft) this.select(draft);
         }
     }
 
@@ -408,6 +416,33 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
         this.registrations.set([]);
         this.regForm.set(null);
         if (d.isPrivate) this.loadForm();
+        this.loadTrackedLinks(d.id);
+    }
+
+    // ─── Tracked links (Wave 2 item 16) — the clicks a post's short links collected ───────────
+    draftLinks = signal<TrackedLink[]>([]);
+    draftLinksLoading = signal(false);
+
+    private async loadTrackedLinks(draftId: string) {
+        this.draftLinks.set([]);
+        this.draftLinksLoading.set(true);
+        try {
+            const links = await this.linksApi.listForDraft(draftId);
+            if (this.selectedId() === draftId) this.draftLinks.set(links);
+        } catch {
+            // 404 until the server lane lands — the row simply does not render.
+            this.draftLinks.set([]);
+        } finally {
+            this.draftLinksLoading.set(false);
+        }
+    }
+
+    totalClicks(): number {
+        return this.draftLinks().reduce((sum, l) => sum + l.clickCount, 0);
+    }
+
+    shortUrlOf(link: TrackedLink): string {
+        return this.linksApi.shortUrlOf(link);
     }
 
     blogUrl(d: DraftMeta): string | null {

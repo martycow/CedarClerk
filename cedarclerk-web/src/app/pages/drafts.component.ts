@@ -53,9 +53,10 @@ const TITLE_MIN_WIDTH = 200;
 // left to drift — so if the density tokens move, these move with them.
 const ROW_GAP = 8;
 const ROW_PADDING = 20;
-// Three controls at the paper box plus the two gaps between them. It was 80 — narrower than the
-// buttons it holds — so the group overflowed left and printed over the UPDATED column beside it.
-const ACTIONS_WIDTH = 3 * 38 + 2 * 4;
+// Four controls at the paper box plus the three gaps between them (evergreen joined template,
+// archive and delete in Wave 2). It was 80 — narrower than the buttons it holds — so the group
+// overflowed left and printed over the UPDATED column beside it.
+const ACTIONS_WIDTH = 4 * 38 + 3 * 4;
 
 // Below this the row would have to scroll sideways to show everything, so it stops showing
 // everything instead: Tags and Activity are the two columns you can lose and still recognise a
@@ -142,7 +143,8 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
 })
 export class DraftsPageComponent implements OnInit, OnDestroy {
     auth = inject(AuthService);
-    t = inject(LocaleService).t;
+    private locale = inject(LocaleService);
+    t = this.locale.t;
     private draftsApi = inject(DraftsService);
     private foldersApi = inject(FoldersService);
     private router = inject(Router);
@@ -711,6 +713,103 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
             this.error.set(httpErrorMessage(e, this.t().drafts.errors.update));
         } finally {
             this.busyId.set(null);
+        }
+    }
+
+    // ---- evergreen recycling (Wave 2 item 10) -------------------------------------------------
+    // A row action beside mark-template: the flag plus its bounds (category, max sends, until) in
+    // one small dialog, saved through the one-endpoint PATCH shape (ADR-056's /template pattern).
+    evergreenTarget = signal<DraftMeta | null>(null);
+    evIsEvergreen = false;
+    evCategory = '';
+    evMaxSends = '';
+    evUntil = '';
+    evBusy = signal(false);
+    evError = signal<string | null>(null);
+
+    openEvergreenDialog(d: DraftMeta, ev: Event) {
+        ev.stopPropagation();
+        this.evIsEvergreen = !!d.isEvergreen;
+        this.evCategory = d.evergreenCategory ?? '';
+        this.evMaxSends = d.evergreenMaxSends != null ? String(d.evergreenMaxSends) : '';
+        this.evUntil = d.evergreenUntil ? d.evergreenUntil.slice(0, 10) : '';
+        this.evError.set(null);
+        this.evergreenTarget.set(d);
+    }
+
+    async saveEvergreen() {
+        const d = this.evergreenTarget();
+        if (!d || this.evBusy()) return;
+        const maxSends = this.evMaxSends.trim() ? Math.max(1, Math.floor(Number(this.evMaxSends))) : null;
+        const until = this.evUntil ? new Date(this.evUntil + 'T23:59:59').toISOString() : null;
+        this.evBusy.set(true);
+        this.evError.set(null);
+        try {
+            const res = await this.draftsApi.setEvergreen(d.id, {
+                isEvergreen: this.evIsEvergreen,
+                category: this.evCategory.trim().toLowerCase(),
+                maxSends,
+                until,
+            });
+            this.drafts.update(list => list.map(x => x.id === d.id
+                ? { ...x, isEvergreen: res.isEvergreen, evergreenCategory: res.category, evergreenMaxSends: res.maxSends, evergreenUntil: res.until }
+                : x));
+            this.evergreenTarget.set(null);
+        } catch (e) {
+            this.evError.set(httpErrorMessage(e, this.t().drafts.errors.update));
+        } finally {
+            this.evBusy.set(false);
+        }
+    }
+
+    // ---- new from template (Wave 2 item 18) ---------------------------------------------------
+    templatePickerOpen = signal(false);
+    starterTemplates = signal<{ id: string; name: string; description: string }[]>([]);
+    starterLoading = signal(false);
+    templateError = signal<string | null>(null);
+    creatingFromTemplate = signal(false);
+
+    /** The caller's own IsTemplate drafts — the picker's second section. */
+    myTemplates(): DraftMeta[] {
+        return this.drafts().filter(d => d.isTemplate)
+            .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    }
+
+    async openTemplatePicker() {
+        this.templateError.set(null);
+        this.templatePickerOpen.set(true);
+        if (this.starterTemplates().length) return;
+        this.starterLoading.set(true);
+        try {
+            this.starterTemplates.set(await this.draftsApi.templateLibrary());
+        } catch (e) {
+            // 404 until the server lane lands — "Your templates" still works without the library.
+            this.templateError.set(httpErrorMessage(e, this.t().drafts.templates.loadFailed));
+        } finally {
+            this.starterLoading.set(false);
+        }
+    }
+
+    async createFromStarter(libraryId: string) {
+        await this.createFromTemplate({ libraryId, language: this.locale.uiLang() });
+    }
+
+    async createFromOwnTemplate(draftId: string) {
+        await this.createFromTemplate({ draftId });
+    }
+
+    private async createFromTemplate(input: { libraryId?: string; draftId?: string; language?: string }) {
+        if (this.creatingFromTemplate()) return;
+        this.creatingFromTemplate.set(true);
+        this.templateError.set(null);
+        try {
+            const created = await this.draftsApi.createFromTemplate(input);
+            this.templatePickerOpen.set(false);
+            this.router.navigate(['/editor'], { queryParams: { draft: created.id } });
+        } catch (e) {
+            this.templateError.set(httpErrorMessage(e, this.t().drafts.errors.create));
+        } finally {
+            this.creatingFromTemplate.set(false);
         }
     }
 

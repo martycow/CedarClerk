@@ -109,6 +109,12 @@ export interface DraftMeta {
     siblingOrder: number;
     isPrivate: boolean; // blog page gated behind PostInvite tokens — see ADR-041
     isTemplate: boolean; // NF1 — a template, filtered into its own /drafts tab, never published
+    // Wave 2 item 10 — the evergreen pool. Optional until the server projection lands.
+    isEvergreen?: boolean;
+    evergreenCategory?: string;
+    evergreenMaxSends?: number | null;
+    evergreenUntil?: string | null;
+    evergreenSendCount?: number;
     disableCopy: boolean; // blocks selection/copy/context menu on the blog page; private posts only
     // T-039 — an informational post nobody is invited to react to. Two flags, because a post can
     // reasonably take likes but not a discussion, and the reverse is just as reasonable.
@@ -136,6 +142,30 @@ export interface DraftFull extends DraftMeta {
     // FI4.1 — language codes this post actually has a registration form for, primary first.
     formLanguages: string[];
     watermarkText: string | null;
+    // Wave 2 item 17 — up to 3 URL buttons appended to the Telegram send; optional until the
+    // server projection lands. A JSON array of { text, url }.
+    ctaButtonsJson?: string | null;
+}
+
+/** One CTA button — text is capped at 32 chars by the server, url must be http(s). */
+export interface CtaButton { text: string; url: string; }
+
+export const CTA_BUTTON_MAX = 3;
+export const CTA_TEXT_MAX = 32;
+
+export function parseCtaButtons(json: string | null | undefined): CtaButton[] {
+    if (!json) return [];
+    try {
+        const raw = JSON.parse(json);
+        if (!Array.isArray(raw)) return [];
+        return raw
+            .filter((b): b is Record<string, unknown> => !!b && typeof b === 'object')
+            .map(b => ({ text: String(b['text'] ?? ''), url: String(b['url'] ?? '') }))
+            .filter(b => b.text || b.url)
+            .slice(0, CTA_BUTTON_MAX);
+    } catch {
+        return [];
+    }
 }
 
 // Mirrors Consts.Watermark.MaxLength (CedarClerk.Core) — the server rejects longer text, so the
@@ -355,6 +385,29 @@ export class DraftsService {
     // NF1 — post templates.
     setDraftTemplate(id: string, isTemplate: boolean) {
         return firstValueFrom(this.http.post<{ isTemplate: boolean }>(`/api/drafts/${id}/template`, { isTemplate }));
+    }
+
+    // Wave 2 item 10 — the evergreen flag and its bounds, one endpoint like /template (ADR-056).
+    setEvergreen(id: string, input: { isEvergreen: boolean; category: string; maxSends: number | null; until: string | null }) {
+        return firstValueFrom(this.http.patch<{ isEvergreen: boolean; category: string; maxSends: number | null; until: string | null }>(
+            `/api/drafts/${id}/evergreen`, input));
+    }
+
+    // Wave 2 item 17 — validated server-side (max 3, text <= 32 chars, http(s) URLs only).
+    setCtaButtons(id: string, buttons: CtaButton[]) {
+        return firstValueFrom(this.http.put<{ ctaButtonsJson: string | null }>(
+            `/api/drafts/${id}/cta-buttons`, { buttons }));
+    }
+
+    // Wave 2 item 18 — the four starter templates, names/descriptions localized server-side.
+    templateLibrary() {
+        return firstValueFrom(this.http.get<{ id: string; name: string; description: string }[]>(
+            '/api/drafts/template-library'));
+    }
+
+    /** From a library starter (libraryId + language) or the caller's own template draft (draftId). */
+    createFromTemplate(input: { libraryId?: string; draftId?: string; language?: string }) {
+        return firstValueFrom(this.http.post<{ id: string }>('/api/drafts/from-template', input));
     }
 
     // FI3.4 — the server slugifies and enforces global uniqueness, so this can send raw text.

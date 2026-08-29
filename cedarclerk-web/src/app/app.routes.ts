@@ -56,6 +56,13 @@ export const routes: Routes = [
                 loadComponent: () => import('./pages/posts-manager.component').then(m => m.PostsManagerComponent),
                 canActivate: [authGuard],
             },
+            // Wave 2 item 9 — the content calendar: scheduled sends and queue slots as a month
+            // board, between documents and posts on the rail.
+            {
+                path: 'calendar',
+                loadComponent: () => import('./pages/calendar.component').then(m => m.CalendarComponent),
+                canActivate: [authGuard],
+            },
             {
                 path: 'glossary',
                 loadComponent: () => import('./pages/glossary.component').then(m => m.GlossaryComponent),

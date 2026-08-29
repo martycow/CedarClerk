@@ -868,3 +868,14 @@
     font-size: var(--fs-meta);
     color: var(--t2);
 }
+
+/* Wave 2 item 11 — the per-channel signature disclosure under its channel row. */
+.signature-editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-5, 24px);
+    border-bottom: 1px solid var(--border);
+}
+
+.signature-editor input { width: 100%; box-sizing: border-box; }

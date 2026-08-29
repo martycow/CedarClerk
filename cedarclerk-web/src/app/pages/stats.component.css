@@ -326,3 +326,104 @@
     font-variant-numeric: tabular-nums;
     color: var(--t2);
 }
+
+/* Wave 2 item 13 — the streak card: a brass stamp and one sentence beside it. */
+:host([data-surface="paper"]) .streak-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+:host([data-surface="paper"]) .streak-note {
+    color: var(--t2);
+    font-size: var(--fs-ui);
+}
+
+/* Wave 2 item 15 — the invite-links shelf shares the audience shelf's column. */
+:host([data-surface="paper"]) .stats-side {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+    min-height: 0;
+}
+
+:host([data-surface="paper"]) .invite-shelf { padding: 0; }
+
+:host([data-surface="paper"]) .invite-pick {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-2) 0;
+    font-size: var(--fs-ui);
+    color: var(--t2);
+}
+
+:host([data-surface="paper"]) .invite-table {
+    width: 100%;
+    margin: var(--space-2) 0 0;
+    border-collapse: collapse;
+    font-size: var(--fs-ui);
+}
+
+:host([data-surface="paper"]) .invite-table th,
+:host([data-surface="paper"]) .invite-table td {
+    padding: 4px var(--space-2);
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+
+:host([data-surface="paper"]) .invite-table td { font-family: var(--font-mono); }
+
+:host([data-surface="paper"]) .invite-table tr.revoked th,
+:host([data-surface="paper"]) .invite-table tr.revoked td { opacity: .55; }
+
+:host([data-surface="paper"]) .revoked-word {
+    margin-left: var(--space-1);
+    color: var(--t3);
+    font-weight: 400;
+}
+
+:host([data-surface="paper"]) .invite-actions { white-space: nowrap; }
+
+:host([data-surface="paper"]) .invite-mini {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--hit-surface);
+    min-height: var(--hit-surface);
+    border: none;
+    background: none;
+    border-radius: var(--radius-sm);
+    color: var(--t2);
+    cursor: pointer;
+}
+
+:host([data-surface="paper"]) .invite-mini:hover { background: var(--hover); color: var(--text); }
+
+:host([data-surface="paper"]) .invite-create {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-2);
+}
+
+:host([data-surface="paper"]) .invite-create input {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--fs-ui);
+}
+
+:host([data-surface="paper"]) .invite-note {
+    margin: 0;
+    padding: 0 var(--space-2) var(--space-2);
+    color: var(--t3);
+    font-size: var(--fs-ui);
+}
+
+:host([data-surface="paper"]) .invite-error {
+    margin: 0;
+    padding: 0 var(--space-2) var(--space-2);
+    color: var(--danger);
+    font-size: var(--fs-ui);
+}

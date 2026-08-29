@@ -17,6 +17,7 @@ import {
     RegistrationForm, parseRegistrationForm, WATERMARK_MAX_LENGTH,
     DRAFT_TITLE_MAX, EMPTY_DOC, AI_OPERATION_TIMEOUT_MS, AUTO_TRANSLATE_TIMEOUT_MS,
     SaveGuards, SaveRefusal, saveRefusalOf,
+    CtaButton, parseCtaButtons, CTA_BUTTON_MAX, CTA_TEXT_MAX,
 } from '../core/drafts.service';
 import { FormPresetsService, FormPreset } from '../core/form-presets.service';
 import { CommentsService } from '../core/comments.service';
@@ -24,13 +25,14 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { GlossaryTermFormComponent } from '../shared/glossary-term-form.component';
 import { DraftGlossaryTerm, GlossaryService, GlossaryTermInput } from '../core/glossary.service';
 import { NgTemplateOutlet } from '@angular/common';
-import { PostsService, PostFormat, CompressionLevel, UpdatePreview } from '../core/posts.service';
+import { PostsService, PostFormat, CompressionLevel, UpdatePreview, PreflightLanguage } from '../core/posts.service';
 import { PublishService, PublishAccount, PublishJob, ThreadPart } from '../core/publish.service';
+import { LinksService } from '../core/links.service';
 import { BillingService } from '../core/billing.service';
 import { DraftRevision, DraftRevisionDetail, RevisionDiff } from '../core/drafts.service';
 import { plainTextOf } from '../core/cedar-text.util';
 import { DEFAULT_PRIMARY_LANGUAGE, CONTENT_LANGUAGES, endonymOf } from '../core/languages';
-import { ChannelsService, Channel } from '../core/channels.service';
+import { ChannelsService, Channel, BestTimeSlot } from '../core/channels.service';
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableHeader } from '@tiptap/extension-table-header';
@@ -55,6 +57,7 @@ import { AnnotationNode } from '../tiptap-extensions/annotation-node';
 import { TableOfContentsNode } from '../tiptap-extensions/table-of-contents-node';
 import { YoutubeNode, extractYouTubeId } from '../tiptap-extensions/youtube-node';
 import { LayoutShortcuts } from '../tiptap-extensions/layout-shortcuts';
+import { ExpandableBlockquote } from '../tiptap-extensions/expandable-blockquote';
 import { PopoverComponent } from '../shared/popover.component';
 import { ModalComponent } from '../shared/modal.component';
 import { AppearanceService, SHEET_WIDTH_PX, TYPEFACE_STACK, MAX_TABLE_SIZE } from '../core/appearance.service';
@@ -829,6 +832,177 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
+    // ─── Pre-publish content checks (Wave 2 item 14) ──────────────────────────────────────────
+    // One warnings panel for the whole modal: the Telegram capability issues above and these
+    // per-language content checks (empty version, dead links, missing alt) read as one checklist.
+    // Warnings NEVER block — canPublishAll() deliberately never reads any of this.
+    private linksApi = inject(LinksService);
+    preflightResults = signal<PreflightLanguage[]>([]);
+    preflightLoading = signal(false);
+
+    async refreshPreflight() {
+        const id = this.currentId();
+        if (!id) { this.preflightResults.set([]); return; }
+        const langs = this.exportLangs();
+        this.preflightLoading.set(true);
+        try {
+            const res = await this.posts.preflight(id, langs);
+            this.preflightResults.set(res.perLanguage ?? []);
+        } catch {
+            // Best-effort by contract — a failed check must never stand between the author and
+            // publishing. 404 until the server lane lands is the expected shape of this catch.
+            this.preflightResults.set([]);
+        } finally {
+            this.preflightLoading.set(false);
+        }
+    }
+
+    /** Languages with at least one content warning — what the checklist actually lists. */
+    preflightWarnings(): PreflightLanguage[] {
+        return this.preflightResults().filter(p => p.emptyVersion || p.deadLinks.length > 0);
+    }
+
+    hasAnyWarnings(): boolean {
+        return this.visiblePublishIssues().length > 0 || this.preflightWarnings().length > 0;
+    }
+
+    // ─── Best-time hint (Wave 2 item 12) ──────────────────────────────────────────────────────
+    bestTimes = signal<BestTimeSlot[]>([]);
+
+    /** Asked for the first ticked version's chosen channel; empty hides the hint entirely. */
+    async loadBestTimes() {
+        const channel = this.exportLangs().map(l => this.selectedChannelFor(l)).find(c => !!c);
+        if (!channel) { this.bestTimes.set([]); return; }
+        try {
+            this.bestTimes.set(await this.channelsApi.bestTimes(channel.id));
+        } catch {
+            this.bestTimes.set([]);
+        }
+    }
+
+    /** Top hours converted to the browser zone: "18:00, 21:00" — or '' when there is no data. */
+    bestTimeHint(): string {
+        const top = this.bestTimes().slice(0, 3);
+        if (!top.length) return '';
+        const offsetMinutes = -new Date().getTimezoneOffset();
+        const hours = top.map(s => {
+            const local = (((s.hour * 60 + offsetMinutes) % 1440) + 1440) % 1440;
+            return `${String(Math.floor(local / 60)).padStart(2, '0')}:${String(local % 60).padStart(2, '0')}`;
+        });
+        return this.t().editor.exportModal.bestTimeHint(hours.join(', '));
+    }
+
+    // ─── Telegram send options: silent + pin (Wave 2 item 11) ─────────────────────────────────
+    // Carried on the scheduled row (ScheduleRequest.Silent/Pin); also sent with the queue request
+    // so an immediate send picks them up once the server reads them there.
+    exportSilent = signal(false);
+    exportPin = signal(false);
+
+    // ─── CTA buttons (Wave 2 item 17) ─────────────────────────────────────────────────────────
+    // A per-post setting, not an editor node: up to 3 url buttons appended to the LAST Telegram
+    // message at the wire level. Edited here because the export modal is where the Telegram send
+    // is configured (ui-changes.md rule 1 — the modal is the home of send parameters).
+    readonly ctaButtonMax = CTA_BUTTON_MAX;
+    readonly ctaTextMax = CTA_TEXT_MAX;
+    ctaButtons = signal<CtaButton[]>([]);
+    ctaBusy = signal(false);
+    ctaError = signal('');
+    ctaSaved = signal(false);
+    private ctaSavedTimer?: ReturnType<typeof setTimeout>;
+
+    addCtaButton() {
+        if (this.ctaButtons().length >= CTA_BUTTON_MAX) return;
+        this.ctaButtons.update(list => [...list, { text: '', url: '' }]);
+    }
+
+    removeCtaButton(index: number) {
+        this.ctaButtons.update(list => list.filter((_, i) => i !== index));
+    }
+
+    setCtaText(index: number, text: string) {
+        this.ctaButtons.update(list => list.map((b, i) => i === index ? { ...b, text } : b));
+    }
+
+    setCtaUrl(index: number, url: string) {
+        this.ctaButtons.update(list => list.map((b, i) => i === index ? { ...b, url } : b));
+    }
+
+    ctaButtonValid(b: CtaButton): boolean {
+        return b.text.trim().length > 0 && b.text.trim().length <= CTA_TEXT_MAX && /^https?:\/\/\S+$/.test(b.url.trim());
+    }
+
+    /** Every row valid — an empty list is valid too (it clears the buttons). */
+    ctaAllValid(): boolean {
+        return this.ctaButtons().every(b => this.ctaButtonValid(b));
+    }
+
+    async saveCtaButtons() {
+        const id = this.currentId();
+        if (!id || this.ctaBusy() || !this.ctaAllValid()) return;
+        this.ctaBusy.set(true);
+        this.ctaError.set('');
+        try {
+            const buttons = this.ctaButtons().map(b => ({ text: b.text.trim(), url: b.url.trim() }));
+            await this.draftsApi.setCtaButtons(id, buttons);
+            this.ctaSaved.set(true);
+            clearTimeout(this.ctaSavedTimer);
+            this.ctaSavedTimer = setTimeout(() => this.ctaSaved.set(false), 2000);
+        } catch (e) {
+            this.ctaError.set(httpErrorMessage(e, this.t().editor.exportModal.ctaSaveFailed));
+        } finally {
+            this.ctaBusy.set(false);
+        }
+    }
+
+    private async loadCtaButtons(id: string) {
+        try {
+            const full = await this.draftsApi.get(id);
+            if (this.currentId() === id) this.ctaButtons.set(parseCtaButtons(full.ctaButtonsJson));
+        } catch {
+            this.ctaButtons.set([]);
+        }
+    }
+
+    // ─── Tracked short links (Wave 2 item 16) ─────────────────────────────────────────────────
+    trackedLinkBusy = signal(false);
+    trackedLinkError = signal('');
+    /** Which row just landed on the clipboard — the language code, or 'custom'. */
+    trackedLinkCopied = signal<string | null>(null);
+    private trackedCopiedTimer?: ReturnType<typeof setTimeout>;
+    trackedCustomUrl = '';
+
+    /** Creates (or reuses) the short link for one language's public blog URL and copies it. */
+    async copyTrackedBlogLink(lang: string) {
+        const base = this.blogUrl();
+        if (!base) return;
+        const url = lang === this.primaryLanguage ? base : `${base}?lang=${lang}`;
+        await this.copyTrackedLink(url, lang);
+    }
+
+    async copyTrackedCustomLink() {
+        const url = this.trackedCustomUrl.trim();
+        if (!/^https?:\/\/\S+$/.test(url)) return;
+        await this.copyTrackedLink(url, 'custom');
+    }
+
+    private async copyTrackedLink(url: string, key: string) {
+        const id = this.currentId();
+        if (!id || this.trackedLinkBusy()) return;
+        this.trackedLinkBusy.set(true);
+        this.trackedLinkError.set('');
+        try {
+            const res = await this.linksApi.create(url, id);
+            await navigator.clipboard.writeText(res.shortUrl ?? `${location.origin}/l/${res.code}`);
+            this.trackedLinkCopied.set(key);
+            clearTimeout(this.trackedCopiedTimer);
+            this.trackedCopiedTimer = setTimeout(() => this.trackedLinkCopied.set(null), 2000);
+        } catch (e) {
+            this.trackedLinkError.set(httpErrorMessage(e, this.t().editor.exportModal.trackedLinkFailed));
+        } finally {
+            this.trackedLinkBusy.set(false);
+        }
+    }
+
     // ─── Publishing as a thread (T-106) ───────────────────────────────────────────────────────
     // Never automatic: eight messages to a channel is a loud act, and the author has to ask for it
     // and see where the cuts land first.
@@ -1441,6 +1615,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private setChatId(lang: string, chatId: string) {
         this.telegramChatIds.update(map => ({ ...map, [lang]: chatId }));
         saveTelegramChannelPrefs(this.telegramChatIds());
+        // The best-time hint answers about the chosen channel, so it follows the choice.
+        void this.loadBestTimes();
     }
 
     /** Ticked versions with no channel behind them — what Publish is waiting on. */
@@ -1733,6 +1909,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 // attr this adds. Scoped to paragraph/heading, matching the two block types
                 // CedarToBlogHtmlRenderer emits with straightforward single-tag HTML.
                 TextAlign.configure({ types: ['paragraph', 'heading'] }),
+                // Wave 2 item 17 — the blockquote's `expandable` attr; Telegram-only in effect.
+                ExpandableBlockquote,
             ],
             content: '',
             onTransaction: ({ transaction }) => {
@@ -2736,6 +2914,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.cmd(c => c.setTextAlign(align));
     }
 
+    // Wave 2 item 17 — flips the caret's blockquote between plain and Telegram-expandable.
+    toggleExpandableQuote() {
+        const expandable = !this.editor?.getAttributes('blockquote')['expandable'];
+        this.cmd(c => c.updateAttributes('blockquote', { expandable }));
+    }
+
     canUndo(): boolean {
         this.tick();
         return this.editor?.can().undo() ?? false;
@@ -2770,10 +2954,19 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         // what would be sent anyway.
         this.refreshPublishIssues();
         this.loadShortPostTargets();
+        // Wave 2 — the content checklist, the best-time hint and the CTA buttons ride the same
+        // opening; each is best-effort and none of them gates the modal.
+        void this.refreshPreflight();
+        void this.loadBestTimes();
+        this.exportSilent.set(false);
+        this.exportPin.set(false);
+        this.trackedLinkError.set('');
+        this.trackedCustomUrl = '';
         // A copy target left active from the last opening re-renders — the document moved since.
         if (this.activeCopyTarget()) void this.loadCopyText();
         const id = this.currentId();
         if (!id) return;
+        void this.loadCtaButtons(id);
         this.draftAssetsLoading.set(true);
         try {
             this.draftAssets.set(await this.assets.listForDraft(id));
@@ -3007,6 +3200,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             if (this.microMode()[network] === 'thread') this.countMicroParts(network);
         }
         if (this.activeCopyTarget()) void this.loadCopyText();
+        // The content checklist and the best-time hint both answer per ticked version.
+        void this.refreshPreflight();
+        void this.loadBestTimes();
     }
 
     /** Everything a schedule can apply to — the blog is not a publish target (ADR-099). */
@@ -3267,7 +3463,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                     this.runUpdate('tg-' + lang, { status: 'failed', error: message });
                     continue;
                 }
-                const { jobs } = await this.publishApi.queue(id, [targetId], lang, this.confirmedFingerprints[lang], this.splitIntoThread());
+                const { jobs } = await this.publishApi.queue(id, [targetId], lang, this.confirmedFingerprints[lang], this.splitIntoThread(),
+                    { silent: this.exportSilent(), pin: this.exportPin() });
                 queuedByLang.set(lang, jobs);
                 // A thread unfolds into its part chips the moment it is queued (T-106).
                 const parts = jobs.length > 1
@@ -3467,7 +3664,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                     const chatId = this.chatIdFor(lang);
                     if (!chatId) { failures.push(`Telegram ${lang.toUpperCase()}: ${this.t().editor.errors.connectChannel}`); continue; }
                     await attempt(`Telegram ${lang.toUpperCase()}`,
-                        () => this.posts.schedule(id, scheduledAtUtc, lang, { chatId }, this.format));
+                        () => this.posts.schedule(id, scheduledAtUtc, lang, { chatId }, this.format,
+                            { silent: this.exportSilent(), pin: this.exportPin() }));
                 }
             }
             for (const network of this.microNetworks) {

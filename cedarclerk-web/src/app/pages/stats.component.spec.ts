@@ -75,6 +75,15 @@ class ApiStub {
         this.channelCalls.push(`${id}:${days}`);
         return Promise.resolve((id === 'c1' ? DEVLOG : QUIET) as never);
     }
+
+    // Wave 2 — the streak card and the invite-links shelf ask these on init, best-effort.
+    publishingStats() {
+        return Promise.resolve({ currentStreakWeeks: 2, longestStreakWeeks: 5, weeks: [] } as never);
+    }
+
+    listInviteLinks() {
+        return Promise.resolve({ links: [], organic: { joins: 0, leaves: 0 } } as never);
+    }
 }
 
 describe('stats screen (Posts Manager tab)', () => {

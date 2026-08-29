@@ -28,6 +28,12 @@ a popover, is the shelf beside it.-->
             {{ t().drafts.importZip }}
         </app-button>
         <input #markdownInput type="file" accept=".zip" hidden (change)="onImportMarkdownChosen($event)">
+        <!--Wave 2 item 18 — a secondary door beside New document: start from a starter template
+        or one of your own IsTemplate documents.-->
+        <app-button variant="paper" size="sm" (clicked)="openTemplatePicker()">
+            <app-icon name="layout" size="sm"></app-icon>
+            {{ t().drafts.templates.newFromTemplate }}
+        </app-button>
         <app-button variant="pine" size="sm" (clicked)="openNewDraftDialog()">
             <app-icon name="plus" weight="bold" size="sm"></app-icon>
             {{ t().drafts.newDraft }}
@@ -152,6 +158,11 @@ a popover, is the shelf beside it.-->
                     <div class="right">{{ d.updatedAt | zonedDate:'MM/dd, HH:mm' }}</div>
                     }
                     <div class="row-actions">
+                        <!--Wave 2 item 10 — the evergreen mark, beside mark-template: opens the
+                        small dialog with the flag and its bounds.-->
+                        <button class="mini" (click)="openEvergreenDialog(d, $event)" [disabled]="busyId() === d.id" [class.on]="!!d.isEvergreen" [title]="t().drafts.actions.evergreen" [attr.aria-label]="t().drafts.actions.evergreen">
+                            <app-icon name="tree-evergreen" size="sm"></app-icon>
+                        </button>
                         <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate" [attr.aria-label]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">
                             <app-icon name="layout" size="sm"></app-icon>
                         </button>
@@ -251,6 +262,9 @@ a popover, is the shelf beside it.-->
                     <div class="drafts-card-foot">
                         <span>{{ d.updatedAt | zonedDate:'MM/dd, HH:mm' }}</span>
                         <span class="row-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                            <button class="mini" (click)="openEvergreenDialog(d, $event)" [disabled]="busyId() === d.id" [class.on]="!!d.isEvergreen" [title]="t().drafts.actions.evergreen" [attr.aria-label]="t().drafts.actions.evergreen">
+                                <app-icon name="tree-evergreen" size="sm"></app-icon>
+                            </button>
                             <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate" [attr.aria-label]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">
                                 <app-icon name="layout" size="sm"></app-icon>
                             </button>
@@ -367,6 +381,90 @@ a popover, is the shelf beside it.-->
                     (clicked)="confirmNewDraft()">
             {{ creatingDraft() ? t().common.loading : t().drafts.newDraft }}
         </app-button>
+    </app-modal>
+    }
+
+    <!--Wave 2 item 10 — the evergreen dialog: the flag plus its bounds. Category matches slot
+    categories case-insensitively; empty means "any slot".-->
+    @if (evergreenTarget(); as target) {
+    <app-modal [width]="400" (closed)="evergreenTarget.set(null)">
+        <app-icon modal-icon name="tree-evergreen" size="sm"></app-icon>
+        <span modal-title>{{ t().drafts.evergreen.title }}</span>
+
+        <p class="field-hint-inline">{{ target.title || t().drafts.untitled }}</p>
+        <div class="new-draft-body">
+            <label class="field-hint">
+                <input type="checkbox" [(ngModel)]="evIsEvergreen">
+                {{ t().drafts.evergreen.flag }}
+            </label>
+            <p class="field-hint-inline">{{ t().drafts.evergreen.flagHint }}</p>
+            @if (evIsEvergreen) {
+            <label class="form-label">
+                <span class="tb-caption">{{ t().drafts.evergreen.category }}</span>
+                <input class="chat-input" [(ngModel)]="evCategory" [placeholder]="t().drafts.evergreen.categoryPlaceholder">
+            </label>
+            <label class="form-label">
+                <span class="tb-caption">{{ t().drafts.evergreen.maxSends }}</span>
+                <input class="chat-input" type="number" min="1" [(ngModel)]="evMaxSends" [placeholder]="t().drafts.evergreen.maxSendsPlaceholder">
+            </label>
+            <label class="form-label">
+                <span class="tb-caption">{{ t().drafts.evergreen.until }}</span>
+                <input class="chat-input" type="date" [(ngModel)]="evUntil">
+            </label>
+            @if (target.evergreenSendCount) {
+            <p class="field-hint-inline">{{ t().drafts.evergreen.sentSoFar(target.evergreenSendCount) }}</p>
+            }
+            }
+        </div>
+        @if (evError()) { <p class="error-box"><app-icon name="warning" size="sm"></app-icon>{{ evError() }}</p> }
+
+        <app-button modal-actions variant="paper" (clicked)="evergreenTarget.set(null)">{{ t().common.cancel }}</app-button>
+        <app-button modal-actions variant="pine" [disabled]="evBusy()" (clicked)="saveEvergreen()">
+            {{ evBusy() ? t().common.saving : t().common.save }}
+        </app-button>
+    </app-modal>
+    }
+
+    <!--Wave 2 item 18 — the template picker: the four starter templates, then your own
+    IsTemplate documents. Nothing is seeded until a starter is actually picked.-->
+    @if (templatePickerOpen()) {
+    <app-modal [width]="480" (closed)="templatePickerOpen.set(false)">
+        <app-icon modal-icon name="layout" size="sm"></app-icon>
+        <span modal-title>{{ t().drafts.templates.pickerTitle }}</span>
+
+        <span class="tb-caption">{{ t().drafts.templates.starters }}</span>
+        @if (starterLoading()) {
+        <p class="field-hint-inline">{{ t().common.loading }}</p>
+        } @else {
+        <div class="template-list">
+            @for (starter of starterTemplates(); track starter.id) {
+            <button type="button" class="template-row" [disabled]="creatingFromTemplate()"
+                    (click)="createFromStarter(starter.id)">
+                <span class="template-name">{{ starter.name }}</span>
+                <span class="template-desc">{{ starter.description }}</span>
+            </button>
+            } @empty {
+            <p class="field-hint-inline">{{ t().drafts.templates.noStarters }}</p>
+            }
+        </div>
+        }
+
+        <span class="tb-caption" style="margin-top:10px">{{ t().drafts.templates.yours }}</span>
+        <div class="template-list">
+            @for (mine of myTemplates(); track mine.id) {
+            <button type="button" class="template-row" [disabled]="creatingFromTemplate()"
+                    (click)="createFromOwnTemplate(mine.id)">
+                <span class="template-name">{{ mine.title || t().drafts.untitled }}</span>
+            </button>
+            } @empty {
+            <p class="field-hint-inline">{{ t().drafts.templates.noneOfYours }}</p>
+            }
+        </div>
+
+        @if (creatingFromTemplate()) { <p class="field-hint-inline">{{ t().common.loading }}</p> }
+        @if (templateError()) { <p class="error-box"><app-icon name="warning" size="sm"></app-icon>{{ templateError() }}</p> }
+
+        <app-button modal-actions variant="paper" (clicked)="templatePickerOpen.set(false)">{{ t().common.cancel }}</app-button>
     </app-modal>
     }
 

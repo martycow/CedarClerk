@@ -142,6 +142,11 @@ let nextId = 0;
                 <text class="gc-ev" [attr.x]="ev.x" [attr.y]="geom().y1 + 40" [attr.text-anchor]="ev.anchor">{{ ev.label }}</text>
             }
 
+            @for (m of markerMarks(); track m.i) {
+                <line class="gc-tick" [attr.x1]="m.x" [attr.y1]="geom().y1 - 4" [attr.x2]="m.x" [attr.y2]="geom().y1 + 4" />
+                <circle class="gc-mark" [attr.cx]="m.x" [attr.cy]="geom().y1" r="2.5" />
+            }
+
             @if (slip(); as s) {
                 <line class="gc-cross" [attr.x1]="s.x" [attr.y1]="geom().y0" [attr.x2]="s.x" [attr.y2]="geom().y1" />
                 @for (r of s.rows; track r.slot) {
@@ -214,6 +219,7 @@ let nextId = 0;
         /* The ring is the ground the dots lie on, so two lines crossing stay two lines. */
         .gc-dot { stroke: var(--surface); stroke-width: 2; }
         .gc-tick { stroke: var(--brass-ink, var(--brass-lo)); stroke-width: 1; }
+        .gc-mark { fill: var(--brass-ink, var(--brass-lo)); }
         .gc-cross { stroke: var(--t2); stroke-width: 1; stroke-dasharray: 3 3; }
         .gc-slip { fill: var(--paper-bright); stroke: var(--paper-edge); }
 
@@ -266,6 +272,12 @@ export class GrowthChartComponent implements OnDestroy {
     readonly xLabels = input<readonly string[]>([]);
     /** Pencil marks on the axis: a build cut, a post published. */
     readonly events = input<readonly GrowthEvent[]>([]);
+    /**
+     * Wave 2 item 13 — unlabelled publish-event markers: a brass tick and dot at these point
+     * indexes. Lighter than `events` (no caption, no reserved bottom band); an absent input
+     * renders exactly as before it existed.
+     */
+    readonly markers = input<readonly number[]>([]);
     /** A readout pinned by the page. Hover and the arrow keys override it while they are active. */
     readonly markerIndex = input<number | null>(null);
     /** Y-axis top; null rounds up from the data. */
@@ -394,6 +406,13 @@ export class GrowthChartComponent implements OnDestroy {
         return this.events()
             .filter(e => e.index >= 0 && e.index < g.n)
             .map(e => ({ x: xAt(g, e.index), label: e.label, anchor: e.anchor ?? 'middle' }));
+    });
+
+    readonly markerMarks = computed(() => {
+        const g = this.geom();
+        return [...new Set(this.markers())]
+            .filter(i => i >= 0 && i < g.n)
+            .map(i => ({ i, x: xAt(g, i) }));
     });
 
     readonly activeIndex = computed(() => {

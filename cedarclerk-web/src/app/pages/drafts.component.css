@@ -659,3 +659,42 @@
     flex-direction: column;
     gap: 2px;
 }
+
+/* Wave 2 — the evergreen dialog's labelled fields and the template picker's rows. */
+.form-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.template-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.template-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--text);
+    font-family: inherit;
+    font-size: var(--fs-ui);
+    text-align: left;
+    cursor: pointer;
+}
+
+.template-row:hover { background: var(--hover); }
+.template-row:disabled { opacity: .55; cursor: default; }
+
+.template-name { font-weight: 600; }
+
+.template-desc {
+    color: var(--t2);
+    font-size: var(--fs-meta);
+}

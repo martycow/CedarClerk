@@ -34,6 +34,17 @@ manager's business or nobody's, so this file starts at the filter strip.-->
             </label>
         </div>
 
+        <!--Wave 2 item 13 — the publishing streak: consecutive ISO weeks (UTC) with at least one
+        publish anywhere. Hidden until the endpoint answers.-->
+        @if (publishing(); as pub) {
+        <div class="streak-card">
+            <app-stamp-badge [tone]="pub.currentStreakWeeks > 0 ? 'brass' : 'ink'">
+                {{ t().stats.streak.stamp(pub.currentStreakWeeks) }}
+            </app-stamp-badge>
+            <span class="streak-note">{{ t().stats.streak.longest(pub.longestStreakWeeks) }}</span>
+        </div>
+        }
+
         <!--Per source, never their sum: a draft published to several channels counts its full view
         total against each of them, so a cross-source readout would double-count (ADR-025/ADR-149).-->
         <div class="readouts">
@@ -74,8 +85,10 @@ manager's business or nobody's, so this file starts at the filter strip.-->
             <!--A running total is complete the moment it is read, so no bucket is left unfinished
             here; a per-day delta series would answer openTail differently (ADR-161).-->
             <!--The slip rests on the latest day; hover and the arrow keys still take over (ADR-158).-->
+            <!--[markers]: a brass tick per publish day of the selected Telegram sources (item 13).-->
             <app-growth-chart class="chart" [label]="chartLabel()" [series]="series()" [openTail]="false"
                               [xLabels]="axis().labels" [markerIndex]="axis().days.length - 1"
+                              [markers]="publishMarkers()"
                               [strings]="t().stats.chart" [pending]="pending()" />
             } @else {
             <table class="series-table">
@@ -104,6 +117,7 @@ manager's business or nobody's, so this file starts at the filter strip.-->
         </div>
     </div>
 
+    <div class="stats-side">
     <!--Audience split (Marty, 08.08.2026). Blog only: Telegram reports no per-country numbers, so
     the shelf says whose readers these are rather than leaving it to be assumed (ADR-097/ADR-149).-->
     <app-shelf-panel class="audience-shelf" [title]="t().stats.audience.title" [count]="t().stats.blog">
@@ -138,5 +152,85 @@ manager's business or nobody's, so this file starts at the filter strip.-->
         <p class="stats-hint">{{ t().stats.audience.empty }}</p>
         }
     </app-shelf-panel>
+
+    <!--Wave 2 item 15 — named invite links with their daily-aggregate totals (cut #6 taken:
+    the totals table, no per-day bars). chat_member only reaches the bot where it is admin,
+    which is true of posting channels — the hint says so.-->
+    @if (showInviteLinks()) {
+    <app-shelf-panel class="invite-shelf" [title]="t().stats.inviteLinks.title" [count]="inviteLinks().length">
+        @if (channels().length > 1) {
+        <label class="invite-pick">
+            <span>{{ t().stats.inviteLinks.channel }}</span>
+            <select [ngModel]="inviteChannelId()" (ngModelChange)="pickInviteChannel($event)">
+                @for (c of channels(); track c.id) {
+                <option [value]="c.id">{{ c.title }}</option>
+                }
+            </select>
+        </label>
+        }
+        @if (inviteLoading()) {
+        <p class="stats-hint">{{ t().common.loading }}</p>
+        } @else if (inviteLinks().length) {
+        <table class="invite-table">
+            <thead>
+                <tr>
+                    <th scope="col">{{ t().stats.inviteLinks.colName }}</th>
+                    <th scope="col">{{ t().stats.inviteLinks.colJoins }}</th>
+                    <th scope="col">{{ t().stats.inviteLinks.colLeaves }}</th>
+                    <th scope="col">{{ t().stats.inviteLinks.colNet }}</th>
+                    <th scope="col"><span class="visually-hidden">{{ t().stats.inviteLinks.colActions }}</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (link of inviteLinks(); track link.id) {
+                <tr [class.revoked]="link.revokedAt">
+                    <th scope="row" [title]="link.inviteLink">
+                        {{ link.name }}
+                        @if (link.revokedAt) { <span class="revoked-word">{{ t().stats.inviteLinks.revoked }}</span> }
+                    </th>
+                    <td>{{ link.joins }}</td>
+                    <td>{{ link.leaves }}</td>
+                    <td>{{ link.net > 0 ? '+' + link.net : link.net }}</td>
+                    <td class="invite-actions">
+                        <button class="invite-mini" (click)="copyInviteLink(link)"
+                                [title]="t().stats.inviteLinks.copy" [attr.aria-label]="t().stats.inviteLinks.copy">
+                            <app-icon name="link" size="xs"></app-icon>
+                        </button>
+                        @if (!link.revokedAt) {
+                        <button class="invite-mini" (click)="revokeInviteLink(link)" [disabled]="inviteBusy()"
+                                [title]="t().stats.inviteLinks.revoke" [attr.aria-label]="t().stats.inviteLinks.revoke">
+                            <app-icon name="x" size="xs"></app-icon>
+                        </button>
+                        }
+                    </td>
+                </tr>
+                }
+                @if (inviteOrganic(); as organic) {
+                <tr>
+                    <th scope="row">{{ t().stats.inviteLinks.organic }}</th>
+                    <td>{{ organic.joins }}</td>
+                    <td>{{ organic.leaves }}</td>
+                    <td>{{ organic.joins - organic.leaves > 0 ? '+' + (organic.joins - organic.leaves) : organic.joins - organic.leaves }}</td>
+                    <td></td>
+                </tr>
+                }
+            </tbody>
+        </table>
+        } @else {
+        <p class="stats-hint">{{ t().stats.inviteLinks.empty }}</p>
+        }
+        <div class="invite-create">
+            <input [(ngModel)]="newLinkName" [placeholder]="t().stats.inviteLinks.namePlaceholder"
+                   (keydown.enter)="createInviteLink()">
+            <button class="invite-mini" (click)="createInviteLink()" [disabled]="inviteBusy() || !newLinkName.trim()"
+                    [title]="t().stats.inviteLinks.create" [attr.aria-label]="t().stats.inviteLinks.create">
+                <app-icon name="plus" weight="bold" size="xs"></app-icon>
+            </button>
+        </div>
+        <p class="invite-note">{{ t().stats.inviteLinks.adminNote }}</p>
+        @if (inviteError()) { <p class="invite-error">{{ inviteError() }}</p> }
+    </app-shelf-panel>
+    }
+    </div>
 </div>
 }

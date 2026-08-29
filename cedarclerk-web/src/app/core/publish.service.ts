@@ -133,9 +133,15 @@ export class PublishService {
      * rows exist; what the networks do afterwards is read from `jobs()`. This is what stopped a
      * heavy post from timing out at the proxy while Telegram downloaded 30MB from us (ADR-080/081).
      */
-    queue(draftId: string, targetIds: string[], language?: string, confirmedFingerprint?: string, splitIntoThread = false) {
+    queue(draftId: string, targetIds: string[], language?: string, confirmedFingerprint?: string, splitIntoThread = false,
+          options: { silent?: boolean; pin?: boolean } = {}) {
+        // silent/pin ride along for the Telegram jobs (Wave 2 item 11); a server that does not
+        // bind them yet simply ignores the extra fields.
         return firstValueFrom(this.http.post<{ jobs: PublishJob[] }>(
-            '/api/publish/jobs', { draftId, targetIds, language, confirmedFingerprint, splitIntoThread }));
+            '/api/publish/jobs', {
+                draftId, targetIds, language, confirmedFingerprint, splitIntoThread,
+                silent: options.silent ?? false, pin: options.pin ?? false,
+            }));
     }
 
     /**

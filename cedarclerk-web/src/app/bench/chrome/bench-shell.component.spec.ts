@@ -95,7 +95,7 @@ describe('bench shell', () => {
 
     it('hangs no project tool on the wall while the module is off', () => {
         const ids = hooks().map(a => a.textContent?.trim());
-        expect(ids).toEqual(['Docs', 'Assets', 'Metrics', 'Settings']);
+        expect(ids).toEqual(['Docs', 'Calendar', 'Assets', 'Metrics', 'Settings']);
         expect(el().querySelector('app-rail-header .tile')).toBeFalsy();
     });
 
@@ -119,6 +119,8 @@ describe('bench shell', () => {
         expect(lit()).toBe('Docs');
         await go('/library');
         expect(lit()).toBe('Assets');
+        await go('/calendar');
+        expect(lit()).toBe('Calendar');
         await go('/posts');
         expect(lit()).toBe('Metrics');
         await go('/settings');
@@ -152,7 +154,7 @@ describe('bench shell', () => {
 
         await go('/projects/p1/planner');
         expect(hooks().map(a => a.textContent?.trim()))
-            .toEqual(['Hub', 'Docs', 'Board', 'Planner', 'Builds', 'Assets', 'Canvas', 'Site', 'Metrics', 'Settings']);
+            .toEqual(['Hub', 'Docs', 'Board', 'Planner', 'Builds', 'Assets', 'Canvas', 'Site', 'Calendar', 'Metrics', 'Settings']);
         expect(hooks().find(a => a.textContent?.trim() === 'Board')!.getAttribute('href'))
             .toBe('/projects/p1/tasks');
     });

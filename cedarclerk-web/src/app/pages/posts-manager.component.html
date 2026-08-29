@@ -445,6 +445,19 @@ name the smoke suite binds.-->
                     <app-spec-row scope="selection" [label]="t().manager.scheduled" value="{{ pending.length }}"></app-spec-row>
                     }
                     }
+                    <!--Wave 2 item 16 — the clicks the post's tracked short links collected.
+                    Counters only, bots included; absent entirely while the post has no links.-->
+                    @if (draftLinks().length) {
+                    <app-spec-row scope="selection" [label]="t().manager.inspector.clicks"
+                                  value="{{ totalClicks() }}"></app-spec-row>
+                    @for (link of draftLinks(); track link.id) {
+                    <app-spec-row scope="selection" [label]="'/l/' + link.code">
+                        <a class="insp-link" [href]="shortUrlOf(link)" target="_blank" rel="noopener" [title]="link.url">
+                            {{ link.clickCount }}
+                        </a>
+                    </app-spec-row>
+                    }
+                    }
                 } @else {
                     <p class="insp-note">{{ t().manager.inspector.pick }}</p>
                     <app-spec-row scope="document" [label]="t().manager.inspector.posts" value="{{ drafts().length }}"></app-spec-row>

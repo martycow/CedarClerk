@@ -624,10 +624,35 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                                     }
                                     <span class="target-name">{{ c.title }}</span>
                                     @if (c.username) { <span class="target-handle">&#64;{{ c.username }}</span> }
+                                    <!--Wave 2 item 11 — the per-channel signature disclosure. The
+                                    row is where the channel lives (ui-changes.md), so the override
+                                    is edited here and nowhere else.-->
+                                    <app-button variant="paper" size="sm" (clicked)="toggleSignature(c)">
+                                        {{ t().settings.integrations.signature }}
+                                        @if (c.postSignature) { · {{ t().settings.integrations.signatureSet }} }
+                                    </app-button>
                                     <app-button variant="danger" size="sm" (clicked)="removeChannel(c.id)" [disabled]="channelBusy()">
                                         {{ t().settings.integrations.disconnect }}
                                     </app-button>
                                 </li>
+                                @if (signatureOpenId() === c.id) {
+                                <li class="signature-editor">
+                                    <p class="field-hint">{{ t().settings.integrations.signatureHint }}</p>
+                                    <input [(ngModel)]="sigText" [disabled]="sigBusy()"
+                                           [placeholder]="t().settings.profile.signaturePlaceholder">
+                                    <input [(ngModel)]="sigUrl" [disabled]="sigBusy()" type="url"
+                                           [placeholder]="t().settings.profile.signatureUrlPlaceholder">
+                                    <div class="connect-row">
+                                        <app-button variant="pine" size="sm" (clicked)="saveChannelSignature(c)" [disabled]="sigBusy()">
+                                            {{ sigSavedId() === c.id ? t().settings.saved : t().settings.integrations.signatureSave }}
+                                        </app-button>
+                                        <app-button variant="paper" size="sm" (clicked)="signatureOpenId.set(null)">
+                                            {{ t().common.close }}
+                                        </app-button>
+                                    </div>
+                                    @if (sigError()) { <p class="field-error">{{ sigError() }}</p> }
+                                </li>
+                                }
                                 }
                             </ul>
                             }

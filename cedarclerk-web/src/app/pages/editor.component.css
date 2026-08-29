@@ -2482,3 +2482,10 @@
     gap: 8px;
     width: 260px;
 }
+
+/* Wave 2 items 14 and 17 — the checks panel and the CTA editor ride the shelf's own classes
+   (.export-section-title, .invite-add-row, .publish-issues, .channel-error): restating them cost
+   real bytes against the component-style budget. .check-group, .check-group-name, .cta-row,
+   .cta-actions and .cta-invalid on the same elements are locator classes only. */
+.cta-row,
+.cta-actions { margin-top: 6px; }

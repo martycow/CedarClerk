@@ -1,10 +1,17 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { formatInZone, zoneAbbreviation } from '../core/display-time';
-import { ChannelsService, Channel, ChannelStats, BlogStats, AudienceSlice } from '../core/channels.service';
+import { FormsModule } from '@angular/forms';
+import {
+    ChannelsService, Channel, ChannelStats, BlogStats, AudienceSlice,
+    PublishingStats, ChannelInviteLink,
+} from '../core/channels.service';
 import { LocaleService } from '../core/i18n/locale.service';
+import { httpErrorMessage } from '../core/http-error.util';
 import { LeafState, LeafTagComponent } from '../bench/display/leaf-tag.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
+import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
+import { IconComponent } from '../shared/icon.component';
 import { GrowthChartComponent, GrowthSeries, SeriesSlot, seriesColor } from '../bench/worktop/growth-chart.component';
 
 type MetricKey = 'memberCount' | 'viewCount' | 'likeCount' | 'commentCount';
@@ -93,7 +100,8 @@ function normalize(snapshots: readonly unknown[], tracked: readonly MetricKey[])
 @Component({
     selector: 'app-stats',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [LeafTagComponent, IndexTabsComponent, ShelfPanelComponent, GrowthChartComponent],
+    imports: [FormsModule, LeafTagComponent, IndexTabsComponent, ShelfPanelComponent, GrowthChartComponent,
+              StampBadgeComponent, IconComponent],
     // The tab body is the reading surface the shell hands over (ADR-154); the two shelves declare
     // their own chrome from inside.
     host: { 'data-surface': 'paper' },
@@ -297,6 +305,118 @@ export class StatsComponent implements OnInit {
         } finally {
             this.loading.set(false);
         }
+        // Wave 2 — the streak card and the invite-links shelf, both best-effort: a 404 while the
+        // server lanes land leaves the board exactly as it was.
+        this.channelsApi.publishingStats()
+            .then(stats => this.publishing.set(stats))
+            .catch(() => this.publishing.set(null));
+        const first = this.channels()[0];
+        if (first) {
+            this.inviteChannelId.set(first.id);
+            void this.loadInviteLinks();
+        }
+    }
+
+    // ─── Publishing streaks (Wave 2 item 13) ──────────────────────────────────────────────────
+    publishing = signal<PublishingStats | null>(null);
+
+    /**
+     * Publish-event markers for the chart: any selected channel's publish days, mapped onto the
+     * axis. Days the axis does not carry (outside the window) simply do not mark.
+     */
+    publishMarkers = computed<number[]>(() => {
+        const { days } = this.axis();
+        if (!days.length) return [];
+        const marks = new Set<number>();
+        for (const [id, s] of this.channelStats()) {
+            if (!this.selected().has(id)) continue;
+            for (const at of s.publishDates ?? []) {
+                const index = days.indexOf(formatInZone(at, DAY_KEY));
+                if (index >= 0) marks.add(index);
+            }
+        }
+        return [...marks];
+    });
+
+    // ─── Invite links (Wave 2 item 15; cut #6 taken — totals table only) ──────────────────────
+    inviteChannelId = signal('');
+    inviteLinks = signal<ChannelInviteLink[]>([]);
+    /** Joins with no named link, plus every leave — Telegram never attributes a leave. */
+    inviteOrganic = signal<{ joins: number; leaves: number } | null>(null);
+    inviteLoading = signal(false);
+    inviteBusy = signal(false);
+    inviteError = signal('');
+    newLinkName = '';
+
+    /** The shelf renders once a Telegram source exists — chat_member only arrives where the bot is admin. */
+    showInviteLinks = computed(() => this.channels().length > 0);
+
+    async loadInviteLinks() {
+        const id = this.inviteChannelId();
+        if (!id) return;
+        this.inviteLoading.set(true);
+        this.inviteError.set('');
+        try {
+            const res = await this.channelsApi.listInviteLinks(id);
+            if (this.inviteChannelId() === id) {
+                this.inviteLinks.set(res.links);
+                this.inviteOrganic.set(res.organic);
+            }
+        } catch {
+            // A failure leaves the empty state honest either way.
+            this.inviteLinks.set([]);
+            this.inviteOrganic.set(null);
+        } finally {
+            this.inviteLoading.set(false);
+        }
+    }
+
+    pickInviteChannel(id: string) {
+        this.inviteChannelId.set(id);
+        this.inviteLinks.set([]);
+        this.inviteOrganic.set(null);
+        void this.loadInviteLinks();
+    }
+
+    async createInviteLink() {
+        const id = this.inviteChannelId();
+        const name = this.newLinkName.trim();
+        if (!id || !name || this.inviteBusy()) return;
+        this.inviteBusy.set(true);
+        this.inviteError.set('');
+        try {
+            await this.channelsApi.createInviteLink(id, name);
+            // The create answers with the bare row — the listing carries the totals.
+            await this.loadInviteLinks();
+            this.newLinkName = '';
+        } catch (e) {
+            this.inviteError.set(httpErrorMessage(e, this.t().stats.inviteLinks.createFailed));
+        } finally {
+            this.inviteBusy.set(false);
+        }
+    }
+
+    /** Revoked links stay in the table — their joins happened and the row keeps counting them. */
+    async revokeInviteLink(link: ChannelInviteLink) {
+        const id = this.inviteChannelId();
+        if (!id || this.inviteBusy()) return;
+        this.inviteBusy.set(true);
+        this.inviteError.set('');
+        try {
+            await this.channelsApi.revokeInviteLink(id, link.id);
+            this.inviteLinks.update(list => list.map(l =>
+                l.id === link.id ? { ...l, revokedAt: new Date().toISOString() } : l));
+        } catch (e) {
+            this.inviteError.set(httpErrorMessage(e, this.t().stats.inviteLinks.revokeFailed));
+        } finally {
+            this.inviteBusy.set(false);
+        }
+    }
+
+    async copyInviteLink(link: ChannelInviteLink) {
+        try {
+            await navigator.clipboard.writeText(link.inviteLink);
+        } catch { /* the URL is visible in the row's tooltip either way */ }
     }
 
     /**

@@ -267,6 +267,58 @@ export class SettingsComponent implements OnInit {
         }
     }
 
+    // ─── Per-channel signature (Wave 2 item 11) ───────────────────────────────────────────────
+    // Behind a per-row disclosure: a channel with its own signature overrides the profile-level
+    // one on every send to it; empty fields clear the override and the profile signature returns.
+    signatureOpenId = signal<string | null>(null);
+    sigText = '';
+    sigUrl = '';
+    sigBusy = signal(false);
+    sigError = signal<string | null>(null);
+    sigSavedId = signal<string | null>(null);
+    private sigSavedTimer?: ReturnType<typeof setTimeout>;
+
+    toggleSignature(c: Channel) {
+        if (this.signatureOpenId() === c.id) { this.signatureOpenId.set(null); return; }
+        this.sigText = c.postSignature ?? '';
+        this.sigUrl = c.postSignatureUrl ?? '';
+        this.sigError.set(null);
+        this.signatureOpenId.set(c.id);
+    }
+
+    async saveChannelSignature(c: Channel) {
+        if (this.sigBusy()) return;
+        this.sigBusy.set(true);
+        this.sigError.set(null);
+        try {
+            // The PATCH replaces the whole trio: the stored translations blob rides along
+            // unchanged (this editor has no translations field), or a null one would wipe it.
+            // A blank text clears everything server-side, translations and URL included.
+            const res = await this.channelsApi.setSignature(
+                c.id, this.sigText.trim(), this.sigUrl.trim(), c.postSignatureTranslationsJson ?? null);
+            this.channels.update(list => list.map(x => x.id === c.id
+                ? {
+                    ...x,
+                    postSignature: res.postSignature,
+                    postSignatureTranslationsJson: res.postSignatureTranslationsJson,
+                    postSignatureUrl: res.postSignatureUrl,
+                }
+                : x));
+            // The fields mirror what is now stored — after a clearing save the URL empties too.
+            this.sigText = res.postSignature ?? '';
+            this.sigUrl = res.postSignatureUrl ?? '';
+            this.sigSavedId.set(c.id);
+            clearTimeout(this.sigSavedTimer);
+            this.sigSavedTimer = setTimeout(() => this.sigSavedId.set(null), 2000);
+        } catch (e) {
+            // 403 (free tier setting a signature) and 400 (oversized translations) both answer
+            // { error } with the server's localized wording — surfaced verbatim.
+            this.sigError.set(httpErrorMessage(e, this.t().settings.integrations.signatureFailed));
+        } finally {
+            this.sigBusy.set(false);
+        }
+    }
+
     // Disconnecting a channel does not touch anything already published to it — the posts stay,
     // the bot simply stops being able to send new ones from here.
     async removeChannel(id: string) {

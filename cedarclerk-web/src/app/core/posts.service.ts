@@ -25,6 +25,18 @@ export interface ScheduledPost {
     targetId: string | null;
     network: string;
     targetName: string | null;
+    // Wave 2 — optional until the server projection lands, so a stale server answers with rows
+    // this client still renders.
+    slotId?: string | null;
+    silent?: boolean;
+    pinAfterSend?: boolean;
+}
+
+// Wave 2 item 14 — pre-publish checks. Warnings only, never a blocked publish.
+export interface PreflightLanguage {
+    language: string;
+    emptyVersion: boolean;
+    deadLinks: { url: string; status: string }[];
 }
 
 export interface PublishDiff {
@@ -69,9 +81,13 @@ export class PostsService {
      * `chatId` for the Telegram-shaped call. The server resolves either into a stored target.
      */
     schedule(draftId: string, scheduledAtUtc: string, language: PostLanguage,
-             dest: { chatId?: string; targetId?: string }, format: PostFormat = 'Markdown') {
+             dest: { chatId?: string; targetId?: string }, format: PostFormat = 'Markdown',
+             options: { silent?: boolean; pin?: boolean } = {}) {
         return firstValueFrom(this.http.post<{ id: string }>(
-            '/api/posts/schedule', { draftId, scheduledAtUtc, language, format, ...dest }));
+            '/api/posts/schedule', {
+                draftId, scheduledAtUtc, language, format, ...dest,
+                silent: options.silent ?? false, pin: options.pin ?? false,
+            }));
     }
 
     listScheduled() {
@@ -101,5 +117,15 @@ export class PostsService {
             network: string;
             issues: { code: string; blocking: boolean; actual: number; limit: number }[];
         }>('/api/posts/validate', { draftId, network, language }));
+    }
+
+    /**
+     * Wave 2 item 14 — per-language content checks (empty version, dead links) asked before the
+     * send. Best-effort by contract: any failure here must never stand between the author and
+     * publishing, so callers swallow errors.
+     */
+    preflight(draftId: string, languages: string[]) {
+        return firstValueFrom(this.http.post<{ perLanguage: PreflightLanguage[] }>(
+            '/api/posts/preflight', { draftId, languages }));
     }
 }

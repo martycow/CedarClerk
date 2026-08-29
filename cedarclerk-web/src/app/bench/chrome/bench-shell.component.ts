@@ -34,6 +34,7 @@ const HOOK_PREFIXES: readonly (readonly [string, string])[] = [
     ['documents', '/drafts'],
     ['documents', '/editor'],
     ['assets', '/library'],
+    ['calendar', '/calendar'],
     ['metrics', '/posts'],
     ['admin', '/admin'],
     ['settings', '/settings'],
@@ -338,6 +339,7 @@ export class BenchShellComponent {
         if (this.auth.indieDev()) items.push({ id: 'hub', icon: 'game-controller', label: t.hub, link: '/projects' });
         if (!this.auth.indieDev()) {
             items.push({ id: 'documents', icon: 'pencil-simple', label: t.documents, link: '/drafts' });
+            items.push({ id: 'calendar', icon: 'clock', label: t.calendar, link: '/calendar' });
             items.push({ id: 'assets', icon: 'images', label: t.assets, link: '/library' });
             items.push({
                 id: 'metrics', icon: 'chart-bar', label: t.metrics, link: '/posts',
@@ -352,6 +354,7 @@ export class BenchShellComponent {
             items.push({ id: 'assets', icon: 'images', label: t.assets, link: ['/projects', open, 'assets'] });
             items.push({ id: 'canvas', icon: 'squares-four', label: t.canvas, link: ['/projects', open, 'canvas'] });
             items.push({ id: 'showcase', icon: 'rocket-launch', label: t.showcase, title: this.t().projects.showcase.title, link: ['/projects', open, 'showcase'] });
+            items.push({ id: 'calendar', icon: 'clock', label: t.calendar, link: '/calendar' });
             items.push({
                 id: 'metrics', icon: 'chart-bar', label: t.metrics, link: '/posts',
                 badge: this.feedback.newComments() + this.feedback.newReactions(),
@@ -378,6 +381,7 @@ export class BenchShellComponent {
             case 'drafts': return [t.drafts.crumb];
             case 'editor': return [t.shell.editorCrumb];
             case 'posts': return [t.manager.crumb];
+            case 'calendar': return [t.calendar.crumb];
             case 'glossary': return [t.glossary.crumb];
             case 'library': return [t.media.crumb];
             case 'settings': return [t.settings.crumb];

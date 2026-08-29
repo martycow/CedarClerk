@@ -45,6 +45,50 @@
                 </div>
             </app-shelf-panel>
 
+            <!-- ============ PRE-PUBLISH CHECKS (Wave 2 item 14) ============ -->
+            <!--One modal-wide checklist: the Telegram capability warnings that used to live inside
+            the Telegram panel, plus the per-language content checks (empty version, dead links).
+            Warnings only — nothing here ever disables Publish.-->
+            @if (hasAnyWarnings() || preflightLoading()) {
+            <app-shelf-panel class="export-step export-global" [title]="t().editor.exportModal.checksPanel"
+                             [count]="visiblePublishIssues().length + preflightWarnings().length">
+                <div class="export-step-body">
+                @if (preflightLoading() && !hasAnyWarnings()) {
+                <p class="field-hint-inline">{{ t().editor.exportModal.checksRunning }}</p>
+                }
+                @if (visiblePublishIssues().length) {
+                <div class="check-group">
+                    <span class="export-section-title check-group-name"><app-brand-icon name="telegram" [size]="14"></app-brand-icon>Telegram</span>
+                    <ul class="publish-issues">
+                        @for (issue of visiblePublishIssues(); track issue.code) {
+                        <li [class.blocking]="issue.blocking">
+                            <app-icon [name]="issue.blocking ? 'warning' : 'info'" size="sm"></app-icon>
+                            {{ publishIssueText(issue) }}
+                        </li>
+                        }
+                    </ul>
+                </div>
+                }
+                @for (check of preflightWarnings(); track check.language) {
+                <div class="check-group">
+                    <span class="export-section-title check-group-name">{{ t().editor.exportModal.checksLanguage(check.language.toUpperCase()) }}</span>
+                    <ul class="publish-issues">
+                        @if (check.emptyVersion) {
+                        <li><app-icon name="warning" size="sm"></app-icon>{{ t().editor.exportModal.checkEmptyVersion }}</li>
+                        }
+                        @for (dead of check.deadLinks; track dead.url) {
+                        <li><app-icon name="warning" size="sm"></app-icon>{{ t().editor.exportModal.checkDeadLink(dead.url, dead.status) }}</li>
+                        }
+                    </ul>
+                </div>
+                }
+                @if (hasAnyWarnings()) {
+                <p class="field-hint-inline">{{ t().editor.exportModal.checksNeverBlock }}</p>
+                }
+                </div>
+            </app-shelf-panel>
+            }
+
             <!-- ============ 2 · DESTINATIONS ============ -->
             <app-shelf-panel class="export-step export-destinations" [title]="'2 · ' + t().editor.exportModal.stepWhere"
                              [count]="tickedDestinationCount()">
@@ -250,20 +294,8 @@
                     <div class="export-section-title">
                         <app-brand-icon name="telegram" [size]="15"></app-brand-icon>Telegram
                     </div>
-                    <!--T-086: what Telegram will do to this document, asked before the send instead of
-                    read off its error message afterwards. Blocking issues are what it would refuse;
-                    the rest are what it would accept and quietly change.-->
-                    @if (visiblePublishIssues().length) {
-                    <ul class="publish-issues">
-                        @for (issue of visiblePublishIssues(); track issue.code) {
-                        <li [class.blocking]="issue.blocking">
-                            <app-icon [name]="issue.blocking ? 'warning' : 'info'" size="sm"></app-icon>
-                            {{ publishIssueText(issue) }}
-                        </li>
-                        }
-                    </ul>
-                    }
-
+                    <!--T-086's capability warnings moved to the modal-wide checks panel above the
+                    destinations (Wave 2 item 14) — one checklist for every kind of warning.-->
                     <div class="panel-label">{{ t().editor.exportModal.channelLabel }}</div>
                     <!--N4 is retired (ADR-095): connecting a channel is a setting, so this only ever
                     picks between what Settings has already connected.
@@ -343,6 +375,55 @@
                         <button [class.on]="compressionLevel === 'standard'" (click)="compressionLevel = 'standard'" [title]="t().editor.exportModal.compressionStandardHint">{{ t().editor.exportModal.compressionStandard }}</button>
                         <button [class.on]="compressionLevel === 'high'" (click)="compressionLevel = 'high'" [title]="t().editor.exportModal.compressionHighHint">{{ t().editor.exportModal.compressionHigh }}</button>
                     </div>
+
+                    <!--Wave 2 item 11 — how the message arrives: no notification, and pinned after
+                    the send (pinning post B auto-unpins post A server-side).-->
+                    <div class="panel-label" style="margin-top:12px">{{ t().editor.exportModal.sendOptions }}</div>
+                    <label class="field-hint">
+                        <input type="checkbox" [checked]="exportSilent()" (change)="exportSilent.set(!exportSilent())">
+                        {{ t().editor.exportModal.silentSend }}
+                    </label>
+                    <label class="field-hint">
+                        <input type="checkbox" [checked]="exportPin()" (change)="exportPin.set(!exportPin())">
+                        {{ t().editor.exportModal.pinAfterSend }}
+                    </label>
+                    @if (exportPin()) {
+                    <p class="field-hint-inline">{{ t().editor.exportModal.pinAfterSendHint }}</p>
+                    }
+
+                    <!--Wave 2 item 17 — up to 3 URL buttons under the last Telegram message. A
+                    per-post setting saved on its own button, not with the document autosave.-->
+                    <div class="panel-label" style="margin-top:12px">
+                        {{ t().editor.exportModal.ctaButtons }}
+                        <span class="field-hint-inline">{{ t().editor.exportModal.ctaButtonsHint }}</span>
+                    </div>
+                    @for (b of ctaButtons(); track $index) {
+                    <div class="invite-add-row cta-row">
+                        <input class="chat-input cta-text" [ngModel]="b.text" (ngModelChange)="setCtaText($index, $event)"
+                               [maxlength]="ctaTextMax" [placeholder]="t().editor.exportModal.ctaTextPlaceholder">
+                        <input class="chat-input cta-url" [ngModel]="b.url" (ngModelChange)="setCtaUrl($index, $event)"
+                               [placeholder]="t().editor.exportModal.ctaUrlPlaceholder" type="url">
+                        <button class="mini-remove" (click)="removeCtaButton($index)"
+                                [title]="t().editor.exportModal.ctaRemove" [attr.aria-label]="t().editor.exportModal.ctaRemove">
+                            <app-icon name="x" size="sm"></app-icon>
+                        </button>
+                    </div>
+                    @if (!ctaButtonValid(b)) {
+                    <p class="channel-error cta-invalid">{{ t().editor.exportModal.ctaInvalid }}</p>
+                    }
+                    }
+                    <div class="invite-add-row cta-actions">
+                        @if (ctaButtons().length < ctaButtonMax) {
+                        <button class="mini" (click)="addCtaButton()" [title]="t().editor.exportModal.ctaAdd" [attr.aria-label]="t().editor.exportModal.ctaAdd">
+                            <app-icon name="plus" weight="bold" size="sm"></app-icon>
+                        </button>
+                        }
+                        <button class="export-btn" (click)="saveCtaButtons()" [disabled]="ctaBusy() || !ctaAllValid()">
+                            @if (ctaSaved()) { <app-icon name="check" size="sm"></app-icon> {{ t().common.saved }} }
+                            @else { {{ t().editor.exportModal.ctaSave }} }
+                        </button>
+                    </div>
+                    @if (ctaError()) { <p class="channel-error">{{ ctaError() }}</p> }
 
                     <!--ADR-099: the schedule block moved out of this panel into its own step —
                     a time applies to every ticked network, not to Telegram alone.-->
@@ -519,6 +600,10 @@
                 <!--ADR-190 — the sentence that used to sit beside the title lives on the paper now:
                 wood carries labels and counters, paper carries prose.-->
                 <p class="field-hint-inline">{{ t().editor.exportModal.stepWhenHint }}</p>
+                <!--Wave 2 item 12 — the channel's own history, only when it has one: no data, no hint.-->
+                @if (destTelegram() && bestTimeHint(); as hint) {
+                <p class="hint-bubble"><app-icon name="clock" size="sm"></app-icon>{{ hint }}</p>
+                }
                 <div class="quick-schedule">
                     <button (click)="quickSchedule('1m')">{{ t().editor.exportModal.in1m }}</button>
                     <button (click)="quickSchedule('5m')">{{ t().editor.exportModal.in5m }}</button>
@@ -633,6 +718,32 @@
                     @if (downloading()) { <p class="field-hint-inline">{{ t().editor.exportModal.preparing }}</p> }
                     @if (downloadError()) { <p class="channel-error">{{ downloadError() }}</p> }
                     <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.zipHint }}</p>
+
+                    <!--Wave 2 item 16 — a /l/{code} short link that counts clicks. Reuse-or-create,
+                    so pressing twice copies the same link rather than minting a second one.-->
+                    <div class="export-section-title" style="margin-top:12px">{{ t().editor.exportModal.trackedLink }}</div>
+                    @if (currentBlog()?.isPublished) {
+                    @for (l of exportLangs(); track l) {
+                    <button class="export-btn" (click)="copyTrackedBlogLink(l)" [disabled]="trackedLinkBusy()">
+                        @if (trackedLinkCopied() === l) { <app-icon name="check" size="sm"></app-icon> {{ t().editor.exportModal.copied }} }
+                        @else { <app-icon name="link" size="sm"></app-icon> {{ t().editor.exportModal.trackedLinkCopy(l.toUpperCase()) }} }
+                    </button>
+                    }
+                    } @else {
+                    <p class="field-hint-inline">{{ t().editor.exportModal.trackedLinkNeedsBlog }}</p>
+                    }
+                    <div class="invite-add-row">
+                        <input class="chat-input" [(ngModel)]="trackedCustomUrl" type="url"
+                               [placeholder]="t().editor.exportModal.trackedLinkCustomPlaceholder"
+                               (keydown.enter)="copyTrackedCustomLink()">
+                        <button class="mini" (click)="copyTrackedCustomLink()" [disabled]="trackedLinkBusy() || !trackedCustomUrl.trim()"
+                                [title]="t().editor.exportModal.trackedLinkCustomCopy" [attr.aria-label]="t().editor.exportModal.trackedLinkCustomCopy">
+                            @if (trackedLinkCopied() === 'custom') { <app-icon name="check" size="sm"></app-icon> }
+                            @else { <app-icon name="link" size="sm"></app-icon> }
+                        </button>
+                    </div>
+                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.trackedLinkHint }}</p>
+                    @if (trackedLinkError()) { <p class="channel-error">{{ trackedLinkError() }}</p> }
                 </div>
 
                 <div class="export-section">
@@ -909,7 +1020,12 @@
                 <button (click)="openFormulaModal()" [title]="t().editor.tb.formula" [attr.aria-label]="t().editor.tb.formula"><app-icon name="sigma" size="xs"></app-icon></button>
                 
 
-                 <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" [title]="tip(t().editor.tb.blockquote, 'blockquote')"><app-icon name="quotes" size="xs"></app-icon></button> 
+                 <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" [title]="tip(t().editor.tb.blockquote, 'blockquote')"><app-icon name="quotes" size="xs"></app-icon></button>
+                <!--Wave 2 item 17 — only over a quote: marks it expandable (Telegram folds it
+                natively; the blog renders a plain quote either way).-->
+                @if (isActive('blockquote')) {
+                <button (click)="toggleExpandableQuote()" [class.on]="isActive('blockquote', {expandable: true})" [title]="t().editor.tb.expandableQuote" [attr.aria-label]="t().editor.tb.expandableQuote"><app-icon name="caret-down" size="xs"></app-icon></button>
+                }
                  <button (click)="insertToggle()" [title]="t().editor.tb.toggleBlock" [attr.aria-label]="t().editor.tb.toggleBlock"><app-icon name="list-dashes" size="xs"></app-icon></button> 
                  <button (click)="insertTableOfContents()" [title]="t().editor.tb.toc" [attr.aria-label]="t().editor.tb.toc"><app-icon name="list-bullets" size="xs"></app-icon></button> 
                  <button (click)="insertDivider()" [title]="t().editor.tb.divider" [attr.aria-label]="t().editor.tb.divider"><app-icon name="rows" size="xs"></app-icon></button> 
