@@ -57,6 +57,11 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
     public DbSet<LandingSettings> LandingSettings => Set<LandingSettings>();
     public DbSet<BlogSubscriber> BlogSubscribers => Set<BlogSubscriber>();
     public DbSet<BlogNotifyJob> BlogNotifyJobs => Set<BlogNotifyJob>();
+    public DbSet<QueueSlot> QueueSlots => Set<QueueSlot>();
+    public DbSet<ChannelInviteLink> ChannelInviteLinks => Set<ChannelInviteLink>();
+    public DbSet<ChannelMemberDaily> ChannelMemberDailies => Set<ChannelMemberDaily>();
+    public DbSet<TrackedLink> TrackedLinks => Set<TrackedLink>();
+    public DbSet<TrackedLinkClickDaily> TrackedLinkClickDailies => Set<TrackedLinkClickDaily>();
 
     // Indie-gamedev module (Phase 13, ADR-101) — same context on purpose, see Entities.IndieDev.cs.
     public DbSet<Project> Projects => Set<Project>();
@@ -340,6 +345,31 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
             .HasFilter("\"InviteToken\" IS NOT NULL");
         // EF ignores the property initialiser, as Draft.DocumentType found out the hard way.
         builder.Entity<ProjectMember>().Property(m => m.Role).HasDefaultValue(ProjectRoles.Editor);
+        // Wave 2 item 10 — the fill job walks one owner's active slots; the list screen asks the same.
+        builder.Entity<QueueSlot>().HasIndex(s => new { s.OwnerId, s.TargetId });
+        // The occupancy check: is this slot occurrence already taken, whatever its status.
+        builder.Entity<ScheduledPost>().HasIndex(p => new { p.SlotId, p.ScheduledAtUtc });
+        // Wave 2 item 15 — a chat_member update names the link by its url and nothing else.
+        builder.Entity<ChannelInviteLink>()
+            .HasIndex(l => l.InviteLink)
+            .IsUnique();
+        builder.Entity<ChannelInviteLink>().HasIndex(l => new { l.OwnerId, l.ChannelId });
+        // The upsert key: a join either finds today's (channel, link) bucket or creates it. SQLite
+        // treats NULLs as distinct in a unique index, so the organic (null-link) rows are guarded
+        // by the upsert reading before writing, same as BlogViewGeoDaily's callers do.
+        builder.Entity<ChannelMemberDaily>()
+            .HasIndex(d => new { d.OwnerId, d.ChannelId, d.Day, d.InviteLinkId })
+            .IsUnique();
+        // Wave 2 item 16 — the /l/{code} redirect resolves by code alone, across owners.
+        builder.Entity<TrackedLink>()
+            .HasIndex(l => l.Code)
+            .IsUnique();
+        builder.Entity<TrackedLink>().HasIndex(l => new { l.OwnerId, l.DraftId });
+        // The click upsert key: one row per link per UTC day.
+        builder.Entity<TrackedLinkClickDaily>()
+            .HasIndex(d => new { d.TrackedLinkId, d.Day })
+            .IsUnique();
+
         // The board list: one project's boards, most recently touched first.
         builder.Entity<CanvasBoard>().HasIndex(b => new { b.ProjectId, b.UpdatedAt });
         builder.Entity<CanvasBoard>().Property(b => b.Background).HasDefaultValue(CanvasBackgrounds.Grid);
@@ -394,6 +424,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         builder.Entity<ProjectMember>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<PublishJob>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<PublishTarget>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<QueueSlot>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<ScheduledPost>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Series>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<ShowcaseFollower>().HasQueryFilter(e => e.OwnerId == TenantId);
@@ -403,8 +434,12 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         // Rows that belong to a draft or a channel rather than carrying an owner of their own.
         // Every endpoint reaches them by parent id, never through the parent's navigation, so a
         // filter on the parent would not have covered them.
+        builder.Entity<ChannelInviteLink>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<ChannelMemberDaily>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<ChannelPost>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<ChannelStatSnapshot>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<TrackedLink>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<TrackedLinkClickDaily>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Comment>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<DraftRevision>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<DraftStatSnapshot>().HasQueryFilter(e => e.OwnerId == TenantId);

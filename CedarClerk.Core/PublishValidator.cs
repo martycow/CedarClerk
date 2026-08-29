@@ -18,6 +18,7 @@ public static class PublishIssueCodes
     public const string NoLists = "no-lists";
     public const string NoRichText = "no-rich-text";
     public const string SlowMedia = "slow-media";
+    public const string MissingAltText = "missing-alt-text";
 }
 
 // Blocking separates "fix this" from "know this": refused outright, against accepted with something
@@ -81,6 +82,11 @@ public static class PublishValidator
         if (stats.HasFormatting && !capabilities.SupportsRichText)
             issues.Add(new PublishIssue(PublishIssueCodes.NoRichText, false));
 
+        // Every network, no capability gate: alt text is an accessibility property of the document
+        // itself, and the author needs the nudge wherever the image is going (T-238).
+        if (stats.ImagesMissingAlt > 0)
+            issues.Add(new PublishIssue(PublishIssueCodes.MissingAltText, false, stats.ImagesMissingAlt));
+
         if (mediaBytes is { Count: > 0 })
         {
             var referenced = CedarPackage.FindReferencedMediaPaths(cedarJson);
@@ -113,6 +119,7 @@ public static class PublishValidator
     {
         public long Characters;
         public int MediaCount;
+        public int ImagesMissingAlt;
         public bool HasVideo, HasAudio, HasTable, HasMath, HasCodeBlock, HasHeading, HasList, HasFormatting;
     }
 
@@ -143,7 +150,10 @@ public static class PublishValidator
                     case "wikilink":
                         stats.Characters += ((string?)obj["attrs"]?["label"])?.Length ?? 0;
                         break;
-                    case "image": stats.MediaCount++; break;
+                    case "image":
+                        stats.MediaCount++;
+                        if (string.IsNullOrWhiteSpace((string?)obj["attrs"]?["alt"])) stats.ImagesMissingAlt++;
+                        break;
                     case "video": stats.MediaCount++; stats.HasVideo = true; break;
                     case "audio": stats.MediaCount++; stats.HasAudio = true; break;
                     // A carousel or collage is several media in one node — counted by its children,

@@ -2,7 +2,7 @@ using System.Text.Json.Nodes;
 
 namespace CedarClerk.Core;
 
-// Telegram Bot API 10.2 structured Rich Message renderer (InputRichMessage.Blocks). Verified
+// Telegram Bot API 10.3 structured Rich Message renderer (InputRichMessage.Blocks). Verified
 // 16.07.2026 against @testingandfun: this is the ONLY mechanism that reliably embeds media (the
 // text-based Markdown/Html modes + InputRichMessage.Media/tg://{kind}?id= references silently drop
 // the media) and the only one that gives photo/video/audio a real, natively-styled caption —
@@ -95,8 +95,14 @@ public static class CedarToTelegramBlocksRenderer
 
             case "blockquote":
                 var quoteBlocks = RenderBlocks(node["content"]?.AsArray(), ctx).ToList();
-                if (quoteBlocks.Count > 0)
-                    yield return new RichQuoteBlock(quoteBlocks);
+                if (quoteBlocks.Count == 0)
+                    break;
+                // Expandable only when every child is a paragraph: Telegram's expandable quotation
+                // carries rich text, not nested blocks, so anything heavier keeps the plain quote
+                // rather than lose content to a style.
+                yield return (bool?)node["attrs"]?["expandable"] == true && quoteBlocks.All(b => b is RichParagraphBlock)
+                    ? new RichExpandableQuoteBlock(quoteBlocks)
+                    : new RichQuoteBlock(quoteBlocks);
                 break;
 
             case "horizontalRule":

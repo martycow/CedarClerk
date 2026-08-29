@@ -29,12 +29,22 @@ public class PublishDueScheduledPostsJob(CedarDbContext db, TenantProvider tenan
             // queue on purpose: nothing here is waiting on an HTTP request, and a direct call is
             // what keeps this row's Sent/Failed status the network's real answer.
             var result = post.TargetId is { } targetId
-                ? await PostEndpoints.PublishToTargetAsync(post.DraftId, targetId, post.OwnerId, db, targets, post.Language, logger)
-                : await PostEndpoints.PublishAsync(post.DraftId, post.ChatId, post.OwnerId, db, targets, post.Format, post.Language, logger);
+                ? await PostEndpoints.PublishToTargetAsync(post.DraftId, targetId, post.OwnerId, db, targets, post.Language, logger,
+                    silent: post.Silent, pin: post.PinAfterSend)
+                : await PostEndpoints.PublishAsync(post.DraftId, post.ChatId, post.OwnerId, db, targets, post.Format, post.Language, logger,
+                    silent: post.Silent, pin: post.PinAfterSend);
             if (result.Success)
             {
                 post.Status = "Sent";
                 post.MessageId = result.MessageId;
+
+                // Wave 2 item 10 — a slot-filled send is one use of the evergreen draft. Counted
+                // here, at the real send, never at fill time: a cancelled fill costs nothing.
+                if (post.SlotId is not null)
+                {
+                    var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == post.DraftId);
+                    if (draft is not null) draft.EvergreenSendCount++;
+                }
             }
             else
             {

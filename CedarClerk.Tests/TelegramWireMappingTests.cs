@@ -33,6 +33,7 @@ public class TelegramWireMappingTests
         { "checklist", new RichListBlock([new RichListItem([new RichParagraphBlock(Text("done"))], true, true, null)]) },
         { "code", new RichCodeBlock("var x = 1;", "csharp") },
         { "quote", new RichQuoteBlock([new RichParagraphBlock(Text("quoted"))]) },
+        { "expandableQuote", new RichExpandableQuoteBlock([new RichParagraphBlock(Text("quoted"))]) },
         { "divider", new RichDividerBlock() },
         { "photo", new RichPhotoBlock("https://example.com/a.jpg", Text("caption")) },
         { "video", new RichVideoBlock("https://example.com/a.mp4", Text("caption")) },
@@ -69,6 +70,31 @@ public class TelegramWireMappingTests
 
         Assert.Contains("left", json);
         Assert.Contains("middle", json);
+    }
+
+    [Fact]
+    public void Expandable_quote_flattens_paragraphs_into_newline_joined_rich_text()
+    {
+        var block = new RichExpandableQuoteBlock([
+            new RichParagraphBlock(new RichRunBold(new RichRunText("first"))),
+            new RichParagraphBlock(new RichRunText("second")),
+        ]);
+
+        var mapped = Assert.IsType<InputRichBlockExpandableBlockQuotation>(TelegramPublishTarget.ToInputRichBlock(block));
+        var array = Assert.IsType<RichTextArray>(mapped.Text);
+        Assert.Equal(3, array.Array.Length);
+        Assert.IsType<RichTextBold>(array.Array[0]);
+        Assert.Equal("\n", Assert.IsType<RichTextText>(array.Array[1]).Text);
+        Assert.Equal("second", Assert.IsType<RichTextText>(array.Array[2]).Text);
+    }
+
+    [Fact]
+    public void Expandable_quote_with_a_single_paragraph_maps_without_an_array_wrapper()
+    {
+        var block = new RichExpandableQuoteBlock([new RichParagraphBlock(new RichRunText("only"))]);
+
+        var mapped = Assert.IsType<InputRichBlockExpandableBlockQuotation>(TelegramPublishTarget.ToInputRichBlock(block));
+        Assert.Equal("only", Assert.IsType<RichTextText>(mapped.Text).Text);
     }
 
     [Fact]

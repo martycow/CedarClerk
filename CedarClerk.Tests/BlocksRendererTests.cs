@@ -192,6 +192,50 @@ public class BlocksRendererTests
     }
 
     [Fact]
+    public void Expandable_blockquote_of_paragraphs_becomes_expandable_quote()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"blockquote","attrs":{"expandable":true},"content":[
+                       {"type":"paragraph","content":[{"type":"text","text":"first"}]},
+                       {"type":"paragraph","content":[{"type":"text","text":"second"}]}
+                   ]}]}
+                   """;
+        var blocks = CedarToTelegramBlocksRenderer.Render(json);
+        var expected = new RichExpandableQuoteBlock([
+            new RichParagraphBlock(new RichRunText("first")),
+            new RichParagraphBlock(new RichRunText("second"))
+        ]);
+        Assert.Equivalent(expected, Assert.Single(blocks), strict: true);
+    }
+
+    [Fact]
+    public void Expandable_blockquote_with_non_paragraph_content_keeps_the_plain_quote()
+    {
+        // Telegram's expandable quotation carries rich text, not nested blocks — a quote holding
+        // anything heavier than paragraphs must not lose that content to the style.
+        var json = """
+                   {"type":"doc","content":[{"type":"blockquote","attrs":{"expandable":true},"content":[
+                       {"type":"paragraph","content":[{"type":"text","text":"caption"}]},
+                       {"type":"codeBlock","attrs":{"language":null},"content":[{"type":"text","text":"code"}]}
+                   ]}]}
+                   """;
+        var blocks = CedarToTelegramBlocksRenderer.Render(json);
+        Assert.IsType<RichQuoteBlock>(Assert.Single(blocks));
+    }
+
+    [Fact]
+    public void Blockquote_without_expandable_attr_stays_a_plain_quote()
+    {
+        var json = """
+                   {"type":"doc","content":[{"type":"blockquote","attrs":{"expandable":false},"content":[
+                       {"type":"paragraph","content":[{"type":"text","text":"quoted"}]}
+                   ]}]}
+                   """;
+        var blocks = CedarToTelegramBlocksRenderer.Render(json);
+        Assert.IsType<RichQuoteBlock>(Assert.Single(blocks));
+    }
+
+    [Fact]
     public void Renders_horizontal_rule_as_divider()
     {
         var json = """{"type":"doc","content":[{"type":"horizontalRule"}]}""";

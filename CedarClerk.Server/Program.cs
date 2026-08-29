@@ -133,6 +133,7 @@ builder.Services.AddSingleton<PublishJobRunner>();
 builder.Services.AddScoped<IDraftSearchIndex, DraftSearchIndex>();
 builder.Services.AddHostedService<DraftSearchBackfill>();
 builder.Services.AddSingleton<BlogSubscriberNotifier>();
+builder.Services.AddPreflightServices();
 
 // The canvas hub (ADR-218), registered with the module it belongs to. The tuning is about the
 // Cloudflare Tunnel in front of Kestrel: WebSockets pass through it, but an idle connection is not
@@ -177,6 +178,11 @@ builder.Services.AddQuartz(q =>
     var notifyJobKey = new JobKey("SendBlogNotifications");
     q.AddJob<SendBlogNotificationsJob>(opts => opts.WithIdentity(notifyJobKey));
     q.AddTrigger(t => t.ForJob(notifyJobKey).WithSimpleSchedule(s => s.WithIntervalInMinutes(1).RepeatForever()));
+
+    // Wave 2 item 10 — keeps the queue slots' upcoming occurrences filled from the evergreen pool.
+    var fillSlotsJobKey = new JobKey("FillQueueSlots");
+    q.AddJob<FillQueueSlotsJob>(opts => opts.WithIdentity(fillSlotsJobKey));
+    q.AddTrigger(t => t.ForJob(fillSlotsJobKey).WithSimpleSchedule(s => s.WithIntervalInMinutes(30).RepeatForever()));
 
     // Hourly check if the paid plan is lapsed
     var downgradeJobKey = new JobKey("DowngradeExpiredPlans");
@@ -263,7 +269,12 @@ app.MapPostEndpoints();
 app.MapPublishEndpoints();
 app.MapAssetEndpoints();
 app.MapChannelEndpoints();
+app.MapChannelInviteLinkEndpoints();
 app.MapScheduledPostEndpoints();
+app.MapQueueSlotEndpoints();
+app.MapTrackedLinkEndpoints();
+app.MapPreflightEndpoints();
+app.MapStatsInsightsEndpoints();
 app.MapBillingEndpoints();
 app.MapAdminEndpoints();
 app.MapAiJobEndpoints();
@@ -274,6 +285,10 @@ app.MapDraftPreviewEndpoints();
 // Wave 1 item 8 — the public preview page, on the app host and deliberately anonymous: the token
 // is the whole credential, and the handler answers a wrong one with a plain 404.
 app.MapGet("/preview/{token}", (HttpContext ctx) => BlogEndpoints.HandleDraftPreviewAsync(ctx));
+
+// Wave 2 item 16 — the tracked-link redirect, on the app host and anonymous like the preview page.
+// An endpoint route, so it wins over the SPA fallback below; an unknown code is a plain 404.
+app.MapGet("/l/{code}", (HttpContext ctx) => TrackedLinkEndpoints.HandleRedirectAsync(ctx));
 
 // Indie-gamedev module (Phase 13, ADR-101). A module is endpoints and screens behind a flag — its
 // entities live in the same context either way, so turning this off hides the feature without

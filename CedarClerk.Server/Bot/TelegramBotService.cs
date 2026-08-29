@@ -66,6 +66,9 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
                     UpdateType.MyChatMember,
                     UpdateType.PreCheckoutQuery,
                     UpdateType.MessageReactionCount,
+                    // Wave 2 item 15 — member joins/leaves for the invite-link analytics. Telegram
+                    // only sends chat_member where the bot is an admin, which posting channels are.
+                    UpdateType.ChatMember,
                 ],
             },
             ct);
@@ -272,8 +275,19 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
             return;
         }
 
+        // Wave 2 item 15 — somebody else's membership changed in a chat the bot administers. The
+        // tally is a daily aggregate per (channel, invite link); nothing about the person survives.
+        if (update.ChatMember is { } memberUpdate)
+        {
+            using var memberScope = scopeFactory.CreatePlatformScope();
+            var memberDb = memberScope.ServiceProvider.GetRequiredService<CedarDbContext>();
+            if (await ChannelMemberIngest.ApplyAsync(memberDb, memberUpdate))
+                await memberDb.SaveChangesAsync();
+            return;
+        }
+
         // On Bot Update (after added/removed, rights changed etc) we put in he DB the info about the chat and the bot's rights
-        if (update.MyChatMember is not { } cm) 
+        if (update.MyChatMember is not { } cm)
             return;
 
         using var scope = scopeFactory.CreatePlatformScope();

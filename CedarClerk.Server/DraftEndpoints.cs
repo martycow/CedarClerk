@@ -34,6 +34,14 @@ public static class DraftEndpoints
     public record UpdateParentRequest(Guid? ParentId, Guid? BeforeId = null);
     public record UpdatePrivateRequest(bool IsPrivate);
     public record UpdateTemplateRequest(bool IsTemplate);
+    // Wave 2 item 10 — the evergreen-pool membership and its limits, one endpoint like /template.
+    public record UpdateEvergreenRequest(bool IsEvergreen, string? Category = null, int? MaxSends = null, DateTime? Until = null);
+    // Wave 2 item 17 — the per-post Telegram CTA buttons. Null or empty clears them.
+    public record CtaButtonDto(string Text, string Url);
+    public record UpdateCtaButtonsRequest(List<CtaButtonDto>? Buttons);
+    // Wave 2 item 18 — a new draft from a starter template (LibraryId) or from one of the caller's
+    // own IsTemplate drafts (DraftId); exactly one of the two names the source.
+    public record FromTemplateRequest(string? LibraryId = null, Guid? DraftId = null, string? Language = null);
     public record UpdateListedRequest(bool IsListedWhilePrivate);
     public record UpdateDisableCopyRequest(bool DisableCopy);
     public record UpdateWatermarkRequest(string? WatermarkText);
@@ -137,6 +145,37 @@ public static class DraftEndpoints
     private static List<string> SplitTagList(string tags) =>
         tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
+    public const int CtaButtonsMax = 3;
+    public const int CtaButtonTextMax = 32; // Telegram's own cap on button text
+
+    /// <summary>
+    /// Wave 2 item 17 — validates and canonicalizes the CTA button set. Returns the JSON to store
+    /// (null for "no buttons") or the reason the set is refused. Public and static so the wire
+    /// contract — a JSON array of <c>{ "text", "url" }</c> — is pinned by a unit test.
+    /// </summary>
+    public static (string? Json, string? Error) NormalizeCtaButtons(IReadOnlyList<CtaButtonDto>? buttons)
+    {
+        if (buttons is null || buttons.Count == 0) return (null, null);
+        if (buttons.Count > CtaButtonsMax)
+            return (null, ErrorMessages.CtaTooManyButtons(CtaButtonsMax));
+
+        var normalized = new List<CtaButtonDto>();
+        foreach (var button in buttons)
+        {
+            var text = button.Text?.Trim() ?? "";
+            if (text.Length is 0 or > CtaButtonTextMax)
+                return (null, ErrorMessages.CtaButtonTextLength(CtaButtonTextMax));
+            if (!Uri.TryCreate(button.Url, UriKind.Absolute, out var url)
+                || (url.Scheme != Uri.UriSchemeHttp && url.Scheme != Uri.UriSchemeHttps))
+                return (null, ErrorMessages.CtaButtonUrlInvalid);
+            normalized.Add(new CtaButtonDto(text, button.Url));
+        }
+
+        return (JsonSerializer.Serialize(normalized, CtaJson), null);
+    }
+
+    private static readonly JsonSerializerOptions CtaJson = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
     public static void MapDraftEndpoints(this WebApplication app)
     {
         var groupBuilder = app.MapGroup("/api/drafts").RequireAuthorization();
@@ -170,7 +209,7 @@ public static class DraftEndpoints
                 {
                     d.Id, d.Title, d.PrimaryLanguage, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
                     d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.SeriesId, d.ProjectId, d.IsPrivate, d.IsTemplate,
-                    d.ParentDraftId, d.SiblingOrder,
+                    d.ParentDraftId, d.SiblingOrder, d.IsEvergreen,
                     d.DisableCopy, d.DisableReactions, d.DisableComments, d.ViewCount,
                     Translations = db.DraftTranslations.Where(t => t.DraftId == d.Id)
                         .Select(t => new { t.Language, t.UpdatedAt }).ToList(),
@@ -239,7 +278,7 @@ public static class DraftEndpoints
             {
                 d.Id, d.Title, d.PrimaryLanguage, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
                 d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.SeriesId, d.ProjectId, d.IsPrivate, d.IsTemplate,
-                d.ParentDraftId, d.SiblingOrder,
+                d.ParentDraftId, d.SiblingOrder, d.IsEvergreen,
                 d.DisableCopy, d.DisableReactions, d.DisableComments, d.ViewCount,
                 ReactionCount = reactionCounts.GetValueOrDefault(d.Id),
                 NewViewCount = deltas[d.Id].Views,
@@ -288,6 +327,8 @@ public static class DraftEndpoints
                 draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.FolderId, draft.ProjectId, draft.IsPrivate,
                 draft.WatermarkText, draft.ArticleTitle, draft.IsListedWhilePrivate, draft.DisableCopy,
                 draft.DisableReactions, draft.DisableComments,
+                draft.IsEvergreen, draft.EvergreenCategory, draft.EvergreenMaxSends, draft.EvergreenUntil, draft.EvergreenSendCount,
+                draft.CtaButtonsJson,
                 draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson,
                 // FI4.1 — which languages a reader would actually be greeted in.
                 FormLanguages = RegistrationFormSet.LanguagesWithForm(draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson),
@@ -536,6 +577,115 @@ public static class DraftEndpoints
             draft.IsTemplate = req.IsTemplate;
             await db.SaveChangesAsync();
             return Results.Ok(new { draft.IsTemplate });
+        });
+
+        // Wave 2 item 10 — the evergreen flag and its limits, the /template one-endpoint shape.
+        // SendCount is deliberately untouched: turning a draft off and on again must not reset how
+        // many times it has really gone out.
+        groupBuilder.MapPatch("/{id:guid}/evergreen", async (Guid id, UpdateEvergreenRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            if (req.MaxSends is < 1)
+                return Results.BadRequest(new { error = ErrorMessages.EvergreenMaxSendsInvalid });
+
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            draft.IsEvergreen = req.IsEvergreen;
+            draft.EvergreenCategory = req.Category?.Trim() ?? "";
+            draft.EvergreenMaxSends = req.MaxSends;
+            draft.EvergreenUntil = req.Until;
+            await db.SaveChangesAsync();
+            return Results.Ok(new
+            {
+                draft.IsEvergreen,
+                Category = draft.EvergreenCategory,
+                MaxSends = draft.EvergreenMaxSends,
+                Until = draft.EvergreenUntil,
+                SendCount = draft.EvergreenSendCount,
+            });
+        });
+
+        // Wave 2 item 17 — the Telegram CTA button row, validated here so nothing malformed ever
+        // reaches the wire mapping. Stored as canonical JSON; null means no buttons.
+        groupBuilder.MapPut("/{id:guid}/cta-buttons", async (Guid id, UpdateCtaButtonsRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var (json, error) = NormalizeCtaButtons(req.Buttons);
+            if (error is not null)
+                return Results.BadRequest(new { error });
+
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            draft.CtaButtonsJson = json;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.CtaButtonsJson });
+        });
+
+        // Wave 2 item 18 — the starter library, localized to the caller's UI culture (set by the
+        // middleware in Program.cs). Static data: nothing is seeded anywhere until a pick happens.
+        groupBuilder.MapGet("/template-library", (ClaimsPrincipal _) =>
+        {
+            var lang = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+            return Results.Ok(TemplateLibrary.All.Select(e => new
+            {
+                id = e.Id,
+                name = TemplateLibrary.Name(e, lang),
+                description = TemplateLibrary.Description(e, lang),
+            }));
+        });
+
+        // Wave 2 item 18 — a fresh draft from a starter template, or a duplicate of one of the
+        // caller's own template drafts (the duplicate-into-new-draft flow ADR-056 left open).
+        groupBuilder.MapPost("/from-template", async (FromTemplateRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            if (req.LibraryId is { Length: > 0 } libraryId)
+            {
+                var entry = TemplateLibrary.Find(libraryId);
+                if (entry is null) return Results.NotFound(new { error = ErrorMessages.UnknownTemplate });
+
+                var language = req.Language is { } asked && Languages.IsContentLanguage(asked)
+                    ? asked
+                    : System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == Languages.Russian
+                        ? Languages.Russian : Languages.English;
+
+                var draft = new Draft
+                {
+                    OwnerId = uid,
+                    Title = TemplateLibrary.Name(entry, language),
+                    CedarJson = TemplateLibrary.Body(entry, language),
+                    PrimaryLanguage = language,
+                };
+                db.Drafts.Add(draft);
+                await db.SaveChangesAsync();
+                return Results.Ok(new { draft.Id, draft.Title });
+            }
+
+            if (req.DraftId is { } sourceId)
+            {
+                var source = await db.Drafts.FirstOrDefaultAsync(d => d.Id == sourceId && d.OwnerId == uid && d.IsTemplate);
+                if (source is null) return Results.NotFound();
+
+                var copy = new Draft
+                {
+                    OwnerId = uid,
+                    Title = source.Title + " (copy)",
+                    CedarJson = source.CedarJson,
+                    PrimaryLanguage = source.PrimaryLanguage,
+                    DocumentType = source.DocumentType,
+                    Tags = source.Tags,
+                    FolderId = source.FolderId,
+                    ProjectId = source.ProjectId,
+                };
+                db.Drafts.Add(copy);
+                await db.SaveChangesAsync();
+                return Results.Ok(new { copy.Id, copy.Title });
+            }
+
+            return Results.BadRequest(new { error = ErrorMessages.FromTemplateSourceRequired });
         });
 
         // Watermark text tiled over the blog page of a private post (I7). Its own endpoint rather

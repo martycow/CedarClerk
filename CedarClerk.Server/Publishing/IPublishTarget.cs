@@ -36,6 +36,18 @@ public record PublishRequest
     /// the author makes once and every target honours in its own units.
     /// </summary>
     public string CompressionLevel { get; init; } = "standard";
+
+    /// <summary>
+    /// Wave 2 item 11 — deliver without a notification where the network distinguishes
+    /// (Telegram's disable_notification). Networks without the concept ignore it.
+    /// </summary>
+    public bool Silent { get; init; }
+
+    /// <summary>
+    /// Wave 2 item 11 — pin the created post after a successful send, best-effort unpinning the
+    /// destination's previous auto-pin first. A pin failure never fails the publish.
+    /// </summary>
+    public bool PinAfterSend { get; init; }
 }
 
 /// <summary>

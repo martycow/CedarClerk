@@ -54,6 +54,7 @@ public static class ErrorMessages
     public static string PickADestination => Ru("Выберите хотя бы одно назначение.", "Pick at least one destination");
     public static string PickALanguage => Ru("Выберите хотя бы один язык для перевода.", "Pick at least one language to translate into");
     public static string SignatureIsPro => Ru("Подпись под постом доступна на Pro — перейдите на этот план.", "Post signature is a Pro feature. Upgrade to use it.");
+    public static string SignatureTranslationsTooLarge => Ru("Переводы подписи слишком большие.", "Signature translations are too large");
     public static string PresetHasNoForm => Ru("У пресета нет формы.", "Preset has no form");
     public static string PublishToBlogFirst => Ru("Сначала опубликуйте черновик в блоге.", "Publish this draft to the blog first");
     public static string RegistrationFormTooLarge => Ru("Форма регистрации слишком большая.", "Registration form is too large");
@@ -416,6 +417,40 @@ public static class ErrorMessages
 
     public static string UnknownBoard =>
         Ru("Такой доски нет — возможно, она удалена.", "There is no such board — it may have been deleted.");
+
+    // Wave 2 "Rhythm" — the queue, calendar, tracked-link and template answers.
+    public static string QueueSlotDayInvalid =>
+        Ru("День недели — от 0 (воскресенье) до 6 (суббота).", "dayOfWeek must be 0 (Sunday) to 6 (Saturday)");
+
+    public static string QueueSlotTimeInvalid =>
+        Ru("Время — от 0 до 1439 минут от полуночи UTC.", "timeUtcMinutes must be 0 to 1439");
+
+    public static string EvergreenMaxSendsInvalid =>
+        Ru("Лимит отправок — не меньше 1.", "maxSends must be at least 1");
+
+    public static string ScheduledPostNotPending =>
+        Ru("Перенести можно только ожидающий пост.", "Only a pending post can be rescheduled");
+
+    public static string TrackedLinkUrlInvalid =>
+        Ru("Ссылка должна быть абсолютной http(s).", "URL must be absolute http(s)");
+
+    public static string UnknownTemplate =>
+        Ru("Такого шаблона нет.", "There is no such template.");
+
+    public static string FromTemplateSourceRequired =>
+        Ru("Выберите стартовый шаблон или один из своих шаблонов.", "Name a starter template or one of your own templates");
+
+    public static string CtaTooManyButtons(int max) =>
+        Ru($"Не больше {max} кнопок.", $"At most {max} buttons");
+
+    public static string CtaButtonTextLength(int max) =>
+        Ru($"Текст кнопки — от 1 до {max} символов.", $"Button text must be 1 to {max} characters");
+
+    public static string CtaButtonUrlInvalid =>
+        Ru("Ссылка кнопки должна быть абсолютной http(s).", "Button URL must be absolute http(s)");
+
+    public static string InviteLinkNameLength(int max) =>
+        Ru($"Имя ссылки — от 1 до {max} символов.", $"Link name must be 1 to {max} characters");
 
     // Russian is the only translated locale for now, matching the app's own UI dictionaries
     // (en.ts/ru.ts): every other UI language already falls back to English there, and shipping

@@ -74,7 +74,7 @@ public class PublishValidatorTests
     [Fact]
     public void Too_much_media_merely_informs_when_the_network_derives_a_short_post()
     {
-        var doc = Doc("""{"type":"image","attrs":{"src":"/media/a.jpg"}},{"type":"image","attrs":{"src":"/media/b.jpg"}}""");
+        var doc = Doc("""{"type":"image","attrs":{"src":"/media/a.jpg","alt":"a"}},{"type":"image","attrs":{"src":"/media/b.jpg","alt":"b"}}""");
 
         var issue = Assert.Single(PublishValidator.Validate(doc, Caps(maxMedia: 0, derivesShortPost: true)));
         Assert.Equal(PublishIssueCodes.TooManyMedia, issue.Code);
@@ -148,5 +148,35 @@ public class PublishValidatorTests
     public void Malformed_json_is_silent_rather_than_throwing()
     {
         Assert.Empty(PublishValidator.Validate("{not json", Caps()));
+    }
+
+    // T-238 — alt text is a property of the document, not of any network's capabilities, so the
+    // warning fires regardless of where the post is going and never blocks the send.
+    [Fact]
+    public void Images_without_alt_text_warn_with_a_count_and_never_block()
+    {
+        var doc = Doc("""{"type":"image","attrs":{"src":"/media/a.jpg"}},{"type":"image","attrs":{"src":"/media/b.jpg","alt":"  "}}""");
+
+        var issue = Assert.Single(PublishValidator.Validate(doc, Caps()), i => i.Code == PublishIssueCodes.MissingAltText);
+        Assert.False(issue.Blocking);
+        Assert.Equal(2, issue.Actual);
+    }
+
+    [Fact]
+    public void An_image_with_alt_text_raises_no_alt_warning()
+    {
+        var doc = Doc("""{"type":"image","attrs":{"src":"/media/a.jpg","alt":"A cedar desk"}}""");
+
+        Assert.DoesNotContain(PublishValidator.Validate(doc, Caps()),
+            i => i.Code == PublishIssueCodes.MissingAltText);
+    }
+
+    [Fact]
+    public void Missing_alt_warns_even_for_short_post_networks()
+    {
+        var doc = Doc("""{"type":"image","attrs":{"src":"/media/a.jpg"}}""");
+
+        Assert.Contains(PublishValidator.Validate(doc, Caps(derivesShortPost: true)),
+            i => i.Code == PublishIssueCodes.MissingAltText && !i.Blocking);
     }
 }

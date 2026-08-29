@@ -15,6 +15,11 @@ public static class ChannelEndpoints
 {
     public record ConnectChannelRequest(string ChatId);
     public record KnownChatDto(long TelegramChatId, string Title, string? Username, string Type);
+    public record SignaturePatchRequest(string? PostSignature, string? PostSignatureTranslationsJson, string? PostSignatureUrl);
+
+    // Same bound the profile's client-authored JSON blobs get (AuthEndpoints.PreferenceJsonMaxChars):
+    // generous, but a misbehaving client cannot grow Channels rows without limit.
+    public const int SignatureTranslationsMaxChars = 16_000;
 
     public static void MapChannelEndpoints(this WebApplication app)
     {
@@ -24,7 +29,12 @@ public static class ChannelEndpoints
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             return await db.Channels.Where(c => c.OwnerId == uid)
-                .Select(c => new { c.Id, c.Title, c.TelegramChatId, c.Username, AvatarUrl = c.AvatarPath == null ? null : "/media/" + c.AvatarPath })
+                .Select(c => new
+                {
+                    c.Id, c.Title, c.TelegramChatId, c.Username,
+                    AvatarUrl = c.AvatarPath == null ? null : "/media/" + c.AvatarPath,
+                    c.PostSignature, c.PostSignatureTranslationsJson, c.PostSignatureUrl,
+                })
                 .ToListAsync();
         });
 
@@ -143,6 +153,15 @@ public static class ChannelEndpoints
 
             var now = DateTime.UtcNow;
 
+            // Publish-event markers for the growth chart (T-244): when something went out, on the
+            // same time axis the snapshots draw. Dates only — the chart needs positions, not posts.
+            var since = now.AddDays(-days);
+            var publishDates = await db.ChannelPosts
+                .Where(p => p.ChannelId == id && p.OwnerId == uid && p.PublishedAt >= since)
+                .OrderBy(p => p.PublishedAt)
+                .Select(p => p.PublishedAt)
+                .ToListAsync();
+
             var current = snapshots.Count > 0 ? snapshots[^1].MemberCount : (int?)null;
             var points = snapshots.Select(s => new ChannelStatPoint(s.TakenAt, s.MemberCount)).ToList();
             var deltaWeek = ChannelStatsCalculator.DeltaOverDays(points, 7, now);
@@ -161,7 +180,46 @@ public static class ChannelEndpoints
                 currentLikes, deltaWeekLikes,
                 currentComments, deltaWeekComments,
                 snapshots,
+                publishDates,
             });
+        });
+
+        // Wave 2 item 11 — the channel's own signature trio, replacing the owner-level one at send
+        // time when PostSignature is non-null (TelegramPublishTarget.PickSignatureSource). A null
+        // PostSignature clears the whole override: the trio moves together, so no channel keeps
+        // stray translations or a URL under the owner's wording.
+        group.MapPatch("/{id:guid}/signature", async (Guid id, SignaturePatchRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var (status, error, channel) = await ApplySignatureAsync(db, uid, id, req);
+            return status switch
+            {
+                StatusCodes.Status200OK => Results.Ok(new
+                {
+                    postSignature = channel!.PostSignature,
+                    postSignatureTranslationsJson = channel.PostSignatureTranslationsJson,
+                    postSignatureUrl = channel.PostSignatureUrl,
+                }),
+                StatusCodes.Status404NotFound => Results.NotFound(),
+                _ => Results.Json(new { error }, statusCode: status),
+            };
+        });
+
+        // Best-time hints (no ML, item 12): which UTC hours this channel's posts have historically
+        // earned the most engagement in. Hours with fewer than two posts say nothing; a young
+        // channel honestly answers with an empty list and the UI shows no hint at all.
+        group.MapGet("/{id:guid}/best-times", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var owns = await db.Channels.AnyAsync(c => c.Id == id && c.OwnerId == uid);
+            if (!owns) return Results.NotFound();
+
+            var posts = await db.ChannelPosts
+                .Where(p => p.ChannelId == id && p.OwnerId == uid)
+                .Select(p => new PublishedPostSample(p.PublishedAt, p.ReactionCount, p.CommentCount))
+                .ToListAsync();
+
+            return Results.Ok(BestTimeCalculator.Compute(posts));
         });
 
         // Chats the bot is known to be in (tracked live from Telegram's my_chat_member updates —
@@ -234,4 +292,68 @@ public static class ChannelEndpoints
             return Results.Ok(new { refreshed = known.Count });
         });
     }
+
+    public static async Task<(int Status, string? Error, Channel? Channel)> ApplySignatureAsync(
+        CedarDbContext db, string uid, Guid channelId, SignaturePatchRequest req)
+    {
+        var channel = await db.Channels.FirstOrDefaultAsync(c => c.Id == channelId && c.OwnerId == uid);
+        if (channel is null) return (StatusCodes.Status404NotFound, null, null);
+
+        if (req.PostSignatureTranslationsJson is { Length: > SignatureTranslationsMaxChars })
+            return (StatusCodes.Status400BadRequest, ErrorMessages.SignatureTranslationsTooLarge, null);
+
+        var signature = string.IsNullOrWhiteSpace(req.PostSignature) ? null : req.PostSignature.Trim();
+
+        if (signature is null)
+        {
+            // Clearing the override is available on every plan — it restores the default behaviour.
+            channel.PostSignature = null;
+            channel.PostSignatureTranslationsJson = null;
+            channel.PostSignatureUrl = null;
+        }
+        else
+        {
+            // The same save-time gate the owner-level signature has (AuthEndpoints /signature);
+            // send-time gating via PlanLimitations.ResolveSignature stays unchanged on top.
+            var account = await db.Users.FirstAsync(u => u.Id == uid);
+            var plan = SubscriptionPlanHelper.CheckPlanExpiration(account.PlanTier, account.PlanExpiresAt, DateTime.UtcNow);
+            if (!PlanLimitations.HasCustomSignature(plan))
+                return (StatusCodes.Status403Forbidden, ErrorMessages.SignatureIsPro, null);
+
+            channel.PostSignature = signature;
+            channel.PostSignatureTranslationsJson = NormalizeTranslations(req.PostSignatureTranslationsJson);
+            channel.PostSignatureUrl = string.IsNullOrWhiteSpace(req.PostSignatureUrl) ? null : req.PostSignatureUrl.Trim();
+        }
+
+        await db.SaveChangesAsync();
+        return (StatusCodes.Status200OK, null, channel);
+    }
+
+    /// <summary>Rebuilds the translations blob through LocalizedTextMap, so what is stored is
+    /// exactly what sends will read: blank values dropped, malformed JSON degraded to null.</summary>
+    public static string? NormalizeTranslations(string? translationsJson)
+    {
+        string? normalized = null;
+        foreach (var (lang, text) in LocalizedTextMap.All(translationsJson))
+            normalized = LocalizedTextMap.Set(normalized, lang, text);
+        return normalized;
+    }
+}
+
+public sealed record PublishedPostSample(DateTime PublishedAtUtc, int Reactions, int Comments);
+
+public sealed record BestTimeSlot(int Hour, int Posts, double AvgReactions, double AvgComments);
+
+public static class BestTimeCalculator
+{
+    public const int MinPostsPerHour = 2;
+
+    public static IReadOnlyList<BestTimeSlot> Compute(IReadOnlyList<PublishedPostSample> posts) =>
+        posts.GroupBy(p => p.PublishedAtUtc.Hour)
+            .Where(g => g.Count() >= MinPostsPerHour)
+            .Select(g => new BestTimeSlot(g.Key, g.Count(),
+                g.Average(p => (double)p.Reactions), g.Average(p => (double)p.Comments)))
+            .OrderByDescending(s => s.AvgReactions + s.AvgComments)
+            .ThenBy(s => s.Hour)
+            .ToList();
 }

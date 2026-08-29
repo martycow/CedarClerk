@@ -15,7 +15,11 @@ public static class ScheduledPostEndpoints
     // caller still sends. Exactly one of the two identifies the destination, and either way the
     // stored row ends up carrying a TargetId.
     public record ScheduleRequest(Guid DraftId, DateTime ScheduledAtUtc, string? ChatId = null,
-        Guid? TargetId = null, string Format = Consts.ContentTypes.Markdown, string? Language = null);
+        Guid? TargetId = null, string Format = Consts.ContentTypes.Markdown, string? Language = null,
+        bool Silent = false, bool Pin = false);
+
+    // Wave 2 item 9 — drag-reschedule on the calendar. Body carries the one thing that moves.
+    public record RescheduleRequest(DateTime ScheduledAtUtc);
 
     public static void MapScheduledPostEndpoints(this WebApplication app)
     {
@@ -29,7 +33,7 @@ public static class ScheduledPostEndpoints
                 .Join(db.Drafts, p => p.DraftId, d => d.Id, (p, d) => new
                 {
                     p.Id, p.DraftId, DraftTitle = d.Title, p.ChatId, p.TargetId, p.Network, p.ScheduledAtUtc,
-                    p.Status, p.Error, p.MessageId, p.Format, p.Language,
+                    p.Status, p.Error, p.MessageId, p.Format, p.Language, p.SlotId, p.Silent, p.PinAfterSend,
                 })
                 .ToListAsync();
 
@@ -46,7 +50,7 @@ public static class ScheduledPostEndpoints
                 return new
                 {
                     p.Id, p.DraftId, p.DraftTitle, p.ChatId, p.TargetId, p.Network, p.ScheduledAtUtc,
-                    p.Status, p.Error, p.MessageId, p.Format, p.Language,
+                    p.Status, p.Error, p.MessageId, p.Format, p.Language, p.SlotId, p.Silent, p.PinAfterSend,
                     ChannelTitle = channel?.Title,
                     TargetName = channel?.Title
                         ?? (p.TargetId is { } tid && targetNames.TryGetValue(tid, out var name) ? name : null),
@@ -109,6 +113,8 @@ public static class ScheduledPostEndpoints
                 OwnerId = uid,
                 Format = req.Format,
                 Language = language,
+                Silent = req.Silent,
+                PinAfterSend = req.Pin,
             };
             db.ScheduledPosts.Add(post);
             await db.SaveChangesAsync();
@@ -123,5 +129,33 @@ public static class ScheduledPostEndpoints
                 .ExecuteDeleteAsync();
             return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });
+
+        // Wave 2 item 9 — moving a ticket on the calendar. Pending only: a Sent post already
+        // happened and a Failed one wants a retry decision, not a new date; both answer 409.
+        group.MapPatch("/{id:guid}", async (Guid id, RescheduleRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var (status, post) = await RescheduleAsync(db, uid, id, req.ScheduledAtUtc);
+            return status switch
+            {
+                StatusCodes.Status200OK => Results.Ok(new { post!.Id, post.ScheduledAtUtc }),
+                StatusCodes.Status404NotFound => Results.NotFound(),
+                _ => Results.Json(new { error = ErrorMessages.ScheduledPostNotPending }, statusCode: StatusCodes.Status409Conflict),
+            };
+        });
+    }
+
+    /// <summary>The reschedule decision on its own, so a test drives it without the endpoint
+    /// plumbing. 200 with the updated row, 404 for a missing/foreign id, 409 for a settled one.</summary>
+    public static async Task<(int Status, ScheduledPost? Post)> RescheduleAsync(
+        CedarDbContext db, string uid, Guid id, DateTime scheduledAtUtc)
+    {
+        var post = await db.ScheduledPosts.FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == uid);
+        if (post is null) return (StatusCodes.Status404NotFound, null);
+        if (post.Status != "Pending") return (StatusCodes.Status409Conflict, null);
+
+        post.ScheduledAtUtc = scheduledAtUtc;
+        await db.SaveChangesAsync();
+        return (StatusCodes.Status200OK, post);
     }
 }

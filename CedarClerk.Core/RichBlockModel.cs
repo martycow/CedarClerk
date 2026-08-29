@@ -1,6 +1,6 @@
 namespace CedarClerk.Core;
 
-// Framework-agnostic tree mirroring Telegram Bot API 10.2's structured Rich Message model
+// Framework-agnostic tree mirroring Telegram Bot API 10.3's structured Rich Message model
 // (InputRichBlock*/RichText*) without CedarClerk.Core taking a dependency on Telegram.Bot.
 // CedarClerk.Server maps this onto the real wire types (see PostEndpoints.ToInputRichBlock).
 
@@ -27,6 +27,10 @@ public sealed record RichListBlock(IReadOnlyList<RichListItem> Items) : CedarRic
 public sealed record RichListItem(IReadOnlyList<CedarRichBlock> Blocks, bool HasCheckbox, bool IsChecked, int? OrderValue);
 public sealed record RichCodeBlock(string? Language, string Code) : CedarRichBlock;
 public sealed record RichQuoteBlock(IReadOnlyList<CedarRichBlock> Blocks) : CedarRichBlock;
+// A collapsed-by-default quotation (Bot API 10.3 InputRichBlockExpandableBlockQuotation). Same
+// shape as RichQuoteBlock, but the wire type carries rich text rather than nested blocks, so the
+// renderer only emits this when every child is a paragraph — the mapping joins them with newlines.
+public sealed record RichExpandableQuoteBlock(IReadOnlyList<CedarRichBlock> Blocks) : CedarRichBlock;
 public sealed record RichDividerBlock : CedarRichBlock;
 public sealed record RichPhotoBlock(string Url, RichRun? Caption) : CedarRichBlock;
 public sealed record RichVideoBlock(string Url, RichRun? Caption) : CedarRichBlock;

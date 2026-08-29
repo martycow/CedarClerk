@@ -389,6 +389,24 @@ public class Draft
     /// it opens needs no account and no cookie.
     /// </summary>
     public string? PreviewToken { get; set; }
+
+    // Wave 2 item 10 — membership in the evergreen pool FillQueueSlotsJob picks from. A flag plus
+    // its own limits rather than a pool entity: the draft IS the content, and everything here is
+    // an answer to "may this still be picked". SendCount is incremented by the publish job when a
+    // slot-filled ScheduledPost actually goes Sent, never at fill time.
+    public bool IsEvergreen { get; set; }
+    public string EvergreenCategory { get; set; } = "";
+    public int? EvergreenMaxSends { get; set; }
+    public DateTime? EvergreenUntil { get; set; }
+    public int EvergreenSendCount { get; set; }
+
+    /// <summary>
+    /// Wave 2 item 17 — up to three URL buttons appended under the Telegram post, as a JSON array
+    /// of <c>{ "text", "url" }</c> (max 3, text ≤ 32 chars, http/https only — validated on save).
+    /// A per-post setting, not an editor node: the buttons are wire-level Telegram furniture and
+    /// never appear on the blog or in the document itself. Null means no buttons.
+    /// </summary>
+    public string? CtaButtonsJson { get; set; }
 }
 
 // One row per invited email per private Draft. Token grants access (via a long-lived cookie
@@ -632,6 +650,130 @@ public class Channel
     public string? AvatarPath { get; set; }
 
     public DateTime? AvatarFetchedAt { get; set; }
+
+    // Wave 2 item 11 — this channel's own signature trio, overriding the owner-level one on
+    // ApplicationUser when PostSignature is non-null. Same three-column shape as the profile's
+    // (primary wording + LocalizedTextMap JSON + optional link), so the existing resolution flow
+    // reads either set without a second code path. Plan gating is unchanged either way.
+    public string? PostSignature { get; set; }
+    public string? PostSignatureTranslationsJson { get; set; }
+    public string? PostSignatureUrl { get; set; }
+
+    /// <summary>
+    /// The message this channel's scheduled auto-pin currently holds pinned, so pinning the next
+    /// post can best-effort unpin the previous one instead of stacking pins forever.
+    /// </summary>
+    public int? LastPinnedMessageId { get; set; }
+}
+
+/// <summary>
+/// Wave 2 item 10 — one weekly posting slot on one destination. A slot names a moment of the week
+/// (UTC), and FillQueueSlotsJob keeps its upcoming occurrences filled from the owner's evergreen
+/// pool. One destination per slot on purpose: two channels means two slots, not a channel-set
+/// entity nothing else needs.
+/// </summary>
+public class QueueSlot
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+
+    /// <summary>The destination, as a <see cref="PublishTarget"/> — any network, like ScheduledPost.</summary>
+    public Guid TargetId { get; set; }
+
+    public string Name { get; set; } = "";
+
+    /// <summary>Which evergreen drafts may fill this slot; empty means any category.</summary>
+    public string Category { get; set; } = "";
+
+    /// <summary>.NET convention: 0 = Sunday.</summary>
+    public int DayOfWeek { get; set; }
+
+    /// <summary>Minutes after UTC midnight, 0-1439. UTC in storage; the client renders local.</summary>
+    public int TimeUtcMinutes { get; set; }
+
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// Wave 2 item 15 — one named invite link the bot created for one channel, so joins arriving via
+/// chat_member updates can be attributed to it. Revoked links keep their row: the daily tallies
+/// they attributed still point here.
+/// </summary>
+public class ChannelInviteLink
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public Guid ChannelId { get; set; }
+    public string Name { get; set; } = "";
+
+    /// <summary>The t.me/+… url exactly as Telegram returned it — the join update's match key.</summary>
+    public string InviteLink { get; set; } = "";
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? RevokedAt { get; set; }
+}
+
+/// <summary>
+/// Wave 2 item 15 — joins and leaves per (owner, channel, UTC day, invite link). A DAILY
+/// AGGREGATE, never a per-user event log — the BlogViewGeoDaily privacy shape: the page only ever
+/// asks "how many". Null InviteLinkId is the organic/unattributed row; leave updates carry no
+/// invite link from Telegram, so leaves always land there.
+/// </summary>
+public class ChannelMemberDaily
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public Guid ChannelId { get; set; }
+
+    /// <summary>UTC date (midnight).</summary>
+    public DateTime Day { get; set; }
+
+    public Guid? InviteLinkId { get; set; }
+    public int Joins { get; set; }
+    public int Leaves { get; set; }
+}
+
+/// <summary>
+/// Wave 2 item 16 — one short redirect (/l/{code}) the owner hands out instead of a raw URL.
+/// Clicks are counters, not visit logs — no per-visitor anything is kept, and every hit counts,
+/// bots included; the UI says so rather than pretending to filter them.
+/// </summary>
+public class TrackedLink
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+
+    /// <summary>8-char base62, unique across the installation — the whole address.</summary>
+    public string Code { get; set; } = "";
+
+    public string Url { get; set; } = "";
+
+    /// <summary>The draft this link promotes, when it promotes one; plain scalar, no FK.</summary>
+    public Guid? DraftId { get; set; }
+
+    /// <summary>Which network the link was made for, when the owner said (<see cref="CedarClerk.Core.PublishNetworks"/>).</summary>
+    public string? Network { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public int ClickCount { get; set; }
+    public DateTime? LastClickAt { get; set; }
+}
+
+/// <summary>
+/// Wave 2 item 16 — clicks per (link, UTC day), the series behind a per-day bar. Same
+/// aggregate-only stance as <see cref="ChannelMemberDaily"/>.
+/// </summary>
+public class TrackedLinkClickDaily
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TrackedLinkId { get; set; }
+    public string OwnerId { get; set; } = default!;
+
+    /// <summary>UTC date (midnight).</summary>
+    public DateTime Day { get; set; }
+
+    public int Clicks { get; set; }
 }
 
 public class ChannelStatSnapshot
@@ -900,6 +1042,19 @@ public class ScheduledPost
     public string OwnerId { get; set; } = default!;
     public string Format { get; set; } = Consts.ContentTypes.Markdown;
     public string Language { get; set; } = Languages.Russian;
+
+    /// <summary>
+    /// Wave 2 item 10 — which <see cref="QueueSlot"/> occurrence this row fills, or null for an
+    /// ordinary hand-scheduled post. (SlotId, ScheduledAtUtc) is how the fill job knows an
+    /// occurrence is already taken, whatever its status.
+    /// </summary>
+    public Guid? SlotId { get; set; }
+
+    /// <summary>Wave 2 item 11 — send with disable_notification.</summary>
+    public bool Silent { get; set; }
+
+    /// <summary>Wave 2 item 11 — pin after a successful send, unpinning the channel's previous auto-pin.</summary>
+    public bool PinAfterSend { get; set; }
 }
 
 /// <summary>

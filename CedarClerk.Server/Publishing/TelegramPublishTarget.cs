@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using CedarClerk.Core;
 using CedarClerk.Localization;
 using CedarClerk.Server.Bot;
@@ -31,7 +32,7 @@ public class TelegramPublishTarget(
 {
     public string Network => PublishNetworks.Telegram;
 
-    // Measured against what the app actually sends today (Bot API 10.2, Blocks), not against the
+    // Measured against what the app actually sends today (Bot API 10.3, Blocks), not against the
     // documentation's theoretical maxima: the editor's own ceiling is 32768 characters, media is
     // fetched by URL and rejected above ~10MB (ADR-031), and a Blocks photo carries a caption but
     // no alt text. Threads: a channel post is one message, and nothing chains them.
@@ -86,7 +87,7 @@ public class TelegramPublishTarget(
                 cedarJson = CedarPackage.RewriteMediaPaths(cedarJson, rewrites);
         }
 
-        // Bot API 10.2: Blocks is the only mode that reliably embeds media with a real, natively
+        // Bot API 10.3: Blocks is the only mode that reliably embeds media with a real, natively
         // styled caption (verified 16.07.2026 against @testingandfun) — see docs/DECISIONS.md.
         var blocks = CedarToTelegramBlocksRenderer.Render(cedarJson, mainHost).ToList();
 
@@ -109,6 +110,11 @@ public class TelegramPublishTarget(
         var owner = await db.Users.Where(u => u.Id == request.OwnerId)
             .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PostSignatureTranslationsJson, u.PlanTier, u.PlanExpiresAt, u.BlogLinkText, u.BlogLinkTextTranslationsJson })
             .FirstAsync(ct);
+        // The Channel row behind this target, when there is one: it can carry a per-channel
+        // signature trio and it is where the last pinned message id lives.
+        var channel = request.Target.ChannelId is { } linkedChannelId
+            ? await db.Channels.FirstOrDefaultAsync(c => c.Id == linkedChannelId && c.OwnerId == request.OwnerId, ct)
+            : null;
 
         // The signature, the cross-link and the hashtags close the *publication*, not every message
         // of it — repeated eight times they read as noise rather than as a signature (T-106).
@@ -119,8 +125,13 @@ public class TelegramPublishTarget(
         // docs/tasks/ROADMAP.md, and ADR-034 in docs/DECISIONS.md.
         var currentPlan = SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow);
         // FI5 — this Telegram send is already per-language, so the signature appended to it is too.
-        var localizedSignature = LocalizedTextMap.Pick(owner.PostSignature, owner.PostSignatureTranslationsJson, request.Language);
-        var resolvedSignature = PlanLimitations.ResolveSignature(currentPlan, localizedSignature, owner.PostSignatureUrl);
+        // A channel with its own signature replaces the owner-level trio wholesale; the plan gate
+        // below stays the same either way (free tier keeps the Cedar attribution).
+        var (signatureText, signatureTranslationsJson, signatureUrl) = PickSignatureSource(
+            channel?.PostSignature, channel?.PostSignatureTranslationsJson, channel?.PostSignatureUrl,
+            owner.PostSignature, owner.PostSignatureTranslationsJson, owner.PostSignatureUrl);
+        var localizedSignature = LocalizedTextMap.Pick(signatureText, signatureTranslationsJson, request.Language);
+        var resolvedSignature = PlanLimitations.ResolveSignature(currentPlan, localizedSignature, signatureUrl);
         if (isLastPart && resolvedSignature is { } sig)
         {
             // B17 — bold, so the signature reads as a signature in the channel rather than as one
@@ -179,7 +190,13 @@ public class TelegramPublishTarget(
             : fileIds.TryGetValue(fileName, out var fileId) ? InputFile.FromFileId(fileId)
             : new InputFileUrl(StampUrl(url, cacheStamp, grants.Issue(fileName)));
 
-        var content = new InputRichMessage { Blocks = blocks.Select(b => ToInputRichBlock(b, ResolveMedia)).ToList() };
+        var wireBlocks = blocks.Select(b => ToInputRichBlock(b, ResolveMedia)).ToList();
+        // CTA buttons close the publication the way the signature does — once, on the last part,
+        // and at the wire level only: they are a per-post send setting, not document content, so
+        // the stored draft/blog/.cedar export never see them.
+        if (isLastPart && BuildCtaButtons(draft.CtaButtonsJson) is { } ctaButtons)
+            wireBlocks.Add(ctaButtons);
+        var content = new InputRichMessage { Blocks = wireBlocks };
 
         Message msg;
         try
@@ -193,7 +210,7 @@ public class TelegramPublishTarget(
 
             msg = await bot.Client.SendRichMessage(new ChatId(chatId), content,
                 replyParameters: replyTo,
-                disableNotification: request.Part is { Index: > 0 },
+                disableNotification: ShouldSilence(request.Silent, request.Part),
                 cancellationToken: ct);
         }
         catch (Telegram.Bot.Exceptions.ApiRequestException ex)
@@ -230,6 +247,31 @@ public class TelegramPublishTarget(
         if (request.Target.ChannelId is { } channelId)
             db.ChannelPosts.Add(new ChannelPost { ChannelId = channelId, OwnerId = draft.OwnerId, DraftId = request.DraftId, TelegramMessageId = msg.MessageId });
 
+        // Pin the thread root, not every part, and never let pinning decide the publish outcome:
+        // the message is already in the channel, so a missing can_pin_messages right is a warning
+        // in the log, not a failed send. The previous pin is released first so "pin after send"
+        // reads as "keep the latest post pinned" rather than piling pins up.
+        if (channel is not null && ShouldPin(request.PinAfterSend, request.Part))
+        {
+            if (channel.LastPinnedMessageId is { } previousPinned)
+            {
+                try { await bot.Client.UnpinChatMessage(new ChatId(chatId), previousPinned, cancellationToken: ct); }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    logger.LogWarning(ex, "Could not unpin message {MessageId} in {ChatId}", previousPinned, chatId);
+                }
+            }
+            try
+            {
+                await bot.Client.PinChatMessage(new ChatId(chatId), msg.MessageId, disableNotification: true, cancellationToken: ct);
+                channel.LastPinnedMessageId = msg.MessageId;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning(ex, "Could not pin message {MessageId} in {ChatId}", msg.MessageId, chatId);
+            }
+        }
+
         // The revision is the baseline for "what would an update overwrite", so it is recorded once
         // per publication — on the last part, when the whole document has actually gone out.
         if (isLastPart)
@@ -259,6 +301,9 @@ public class TelegramPublishTarget(
         RichListBlock l => new InputRichBlockList { Items = l.Items.Select(i => ToListItem(i, media)).ToList() },
         RichCodeBlock c => new InputRichBlockPreformatted { Text = new RichTextText { Text = c.Code }, Language = c.Language },
         RichQuoteBlock q => new InputRichBlockBlockQuotation { Blocks = q.Blocks.Select(b => ToInputRichBlock(b, media)).ToList() },
+        // The expandable variant carries rich text, not nested blocks (Bot API 10.3) — the
+        // renderer only emits it for paragraph-only quotes, and the paragraphs join by newline.
+        RichExpandableQuoteBlock eq => new InputRichBlockExpandableBlockQuotation { Text = FlattenQuoteText(eq.Blocks) },
         RichDividerBlock => new InputRichBlockDivider(),
         RichPhotoBlock ph => new InputRichBlockPhoto { Photo = new InputMediaPhoto(media(ph.Url)), Caption = ToCaption(ph.Caption) },
         RichVideoBlock v => new InputRichBlockVideo { Video = new InputMediaVideo(media(v.Url)), Caption = ToCaption(v.Caption) },
@@ -404,6 +449,84 @@ public class TelegramPublishTarget(
     {
         var stamped = url.Contains('?') ? $"{url}&v={stamp}" : $"{url}?v={stamp}";
         return grant is null ? stamped : $"{stamped}&{MediaGrant.QueryKey}={Uri.EscapeDataString(grant)}";
+    }
+
+    /// <summary>
+    /// Whether this channel's own signature trio replaces the owner-level one: a non-null channel
+    /// signature is the whole switch, and the trio moves together — a channel that overrides the
+    /// text never keeps the owner's translations or URL under it.
+    /// </summary>
+    public static (string? Text, string? TranslationsJson, string? Url) PickSignatureSource(
+        string? channelText, string? channelTranslationsJson, string? channelUrl,
+        string? ownerText, string? ownerTranslationsJson, string? ownerUrl) =>
+        channelText is not null
+            ? (channelText, channelTranslationsJson, channelUrl)
+            : (ownerText, ownerTranslationsJson, ownerUrl);
+
+    /// <summary>Later thread parts never ring, whatever the author chose for the publication.</summary>
+    public static bool ShouldSilence(bool silent, ThreadPartRef? part) => silent || part is { Index: > 0 };
+
+    /// <summary>Only the thread root gets pinned — one publication, one pin.</summary>
+    public static bool ShouldPin(bool pinAfterSend, ThreadPartRef? part) =>
+        pinAfterSend && part is not { Index: > 0 };
+
+    /// <summary>
+    /// Draft.CtaButtonsJson (a JSON array of {"text","url"}) as a wire-level button row, or null
+    /// when nothing valid remains. Invalid entries — blank or over-long text, anything but an
+    /// absolute http/https URL — drop silently, and only the first three buttons ride along.
+    /// </summary>
+    public static InputRichBlockButtons? BuildCtaButtons(string? ctaButtonsJson)
+    {
+        var buttons = ParseCtaButtons(ctaButtonsJson);
+        return buttons.Count == 0 ? null : new InputRichBlockButtons
+        {
+            Buttons = buttons
+                .Select(b => new RichMessageButton { Text = new RichTextText { Text = b.Text }, Url = b.Url })
+                .ToList(),
+        };
+    }
+
+    public const int MaxCtaButtons = 3;
+    public const int MaxCtaButtonTextLength = 32;
+
+    public static IReadOnlyList<(string Text, string Url)> ParseCtaButtons(string? ctaButtonsJson)
+    {
+        if (string.IsNullOrWhiteSpace(ctaButtonsJson)) return [];
+
+        JsonNode? root;
+        try { root = JsonNode.Parse(ctaButtonsJson); }
+        catch (System.Text.Json.JsonException) { return []; }
+        if (root is not JsonArray items) return [];
+
+        var buttons = new List<(string Text, string Url)>();
+        foreach (var item in items)
+        {
+            var text = ((string?)item?["text"])?.Trim();
+            var url = ((string?)item?["url"])?.Trim();
+            if (string.IsNullOrEmpty(text) || text.Length > MaxCtaButtonTextLength) continue;
+            if (url is null
+                || !Uri.TryCreate(url, UriKind.Absolute, out var parsed)
+                || (parsed.Scheme != Uri.UriSchemeHttp && parsed.Scheme != Uri.UriSchemeHttps)) continue;
+
+            buttons.Add((text, url));
+            if (buttons.Count == MaxCtaButtons) break;
+        }
+        return buttons;
+    }
+
+    /// <summary>
+    /// An expandable quote's paragraphs as one rich text, joined by newlines. Non-paragraph
+    /// blocks contribute nothing — the renderer guarantees there are none.
+    /// </summary>
+    public static RichText FlattenQuoteText(IReadOnlyList<CedarRichBlock> blocks)
+    {
+        var texts = new List<RichText>();
+        foreach (var run in blocks.OfType<RichParagraphBlock>().Select(p => p.Text))
+        {
+            if (texts.Count > 0) texts.Add(new RichTextText { Text = "\n" });
+            texts.Add(ToRichText(run));
+        }
+        return texts.Count == 1 ? texts[0] : new RichTextArray { Array = texts.ToArray() };
     }
 
     public static RichBlockCaption? ToCaption(RichRun? caption) =>

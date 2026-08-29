@@ -178,6 +178,19 @@ public class BlogHtmlRendererTests
     }
 
     [Fact]
+    public void Expandable_blockquote_renders_as_a_plain_blockquote()
+    {
+        // The expandable attr is a Telegram affordance (Bot API 10.3); the blog shows the full
+        // quote, so the attr passes through with no visible change.
+        var json = """
+                   {"type":"doc","content":[{"type":"blockquote","attrs":{"expandable":true},"content":[
+                       {"type":"paragraph","content":[{"type":"text","text":"quoted"}]}
+                   ]}]}
+                   """;
+        Assert.Equal("<blockquote><p>quoted</p></blockquote>", CedarToBlogHtmlRenderer.Render(json, Base));
+    }
+
+    [Fact]
     public void Renders_image_with_absolute_media_base_url()
     {
         var json = """

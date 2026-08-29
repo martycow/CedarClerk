@@ -12,7 +12,7 @@ public static class PostEndpoints
 { 
     // Language is nullable rather than defaulting to a literal: which language a draft "is" became
     // a per-draft property in ADR-064, so the default has to be resolved against the draft itself.
-    public record ExportRequest(Guid DraftId, string ChatId, string Format = Consts.ContentTypes.Markdown, string? Language = null, string CompressionLevel = "standard", string? ConfirmedFingerprint = null);
+    public record ExportRequest(Guid DraftId, string ChatId, string Format = Consts.ContentTypes.Markdown, string? Language = null, string CompressionLevel = "standard", string? ConfirmedFingerprint = null, bool Silent = false, bool Pin = false);
     public record PublishTargetRequest(Guid DraftId, Guid TargetId, string? Language = null);
     public record ValidateRequest(Guid DraftId, string Network, string? Language = null);
     public record UpdatePreviewRequest(Guid DraftId, string Kind, string? ChatId = null, string? Language = null);
@@ -73,6 +73,8 @@ public static class PostEndpoints
         ILogger? logger = null,
         string compressionLevel = "standard",
         ThreadPartRef? part = null,
+        bool silent = false,
+        bool pin = false,
         CancellationToken ct = default)
     {
         var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == draftId && d.OwnerId == ownerId, ct);
@@ -89,7 +91,7 @@ public static class PostEndpoints
         // against. Ensure rather than look up, so a channel connected before this table existed —
         // or one whose backfill has not run — publishes instead of failing on a missing row.
         var target = await TelegramTargetProjection.EnsureAsync(db, targetChannel, ct);
-        return await PublishToTargetAsync(draft, target, ownerId, db, targets, language, logger, compressionLevel, part: null, ct);
+        return await PublishToTargetAsync(draft, target, ownerId, db, targets, language, logger, compressionLevel, part: null, silent, pin, ct);
     }
 
     /// <summary>
@@ -107,6 +109,8 @@ public static class PostEndpoints
         ILogger? logger = null,
         string compressionLevel = "standard",
         ThreadPartRef? part = null,
+        bool silent = false,
+        bool pin = false,
         CancellationToken ct = default)
     {
         var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == draftId && d.OwnerId == ownerId, ct);
@@ -117,7 +121,7 @@ public static class PostEndpoints
         if (target is null)
             return new PublishResult(null, "That account is not connected", StatusCodes.Status403Forbidden);
 
-        return await PublishToTargetAsync(draft, target, ownerId, db, targets, language ?? draft.PrimaryLanguage, logger, compressionLevel, part, ct);
+        return await PublishToTargetAsync(draft, target, ownerId, db, targets, language ?? draft.PrimaryLanguage, logger, compressionLevel, part, silent, pin, ct);
     }
 
     private static async Task<PublishResult> PublishToTargetAsync(
@@ -130,6 +134,8 @@ public static class PostEndpoints
         ILogger? logger,
         string compressionLevel,
         ThreadPartRef? part,
+        bool silent,
+        bool pin,
         CancellationToken ct)
     {
         // ADR-102 — a game-design document or a plot outline is working material, and sending one to
@@ -166,6 +172,8 @@ public static class PostEndpoints
             AuthorText = authorText,
             Part = part,
             CompressionLevel = compressionLevel,
+            Silent = silent,
+            PinAfterSend = pin,
         }, ct);
 
         // Recorded on the target either way: a connection that is failing should be visible before
@@ -278,7 +286,7 @@ public static class PostEndpoints
                 var fresh = await DraftRevisionService.PreviewAsync(db, guarded, language, DraftRevisionService.Kinds.Telegram, req.ChatId);
                 return Results.Json(new { error = ErrorMessages.PublishConfirmationStale, preview = fresh }, statusCode: StatusCodes.Status409Conflict);
             }
-            var result = await PublishAsync(req.DraftId, req.ChatId, uid, db, targets, req.Format, req.Language, logger, req.CompressionLevel);
+            var result = await PublishAsync(req.DraftId, req.ChatId, uid, db, targets, req.Format, req.Language, logger, req.CompressionLevel, silent: req.Silent, pin: req.Pin);
             
             return result.Success ? 
                 Results.Ok(new { messageId = result.MessageId, chatId = req.ChatId }) : 
