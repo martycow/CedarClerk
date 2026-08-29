@@ -381,6 +381,14 @@ public class Draft
     // the point is discouraging redistribution of something handed out per-invite. Null/empty =
     // no watermark. Plain text, never markup: it is HTML-escaped at render like any author text.
     public string? WatermarkText { get; set; }
+
+    /// <summary>
+    /// Wave 1 item 8 — the shareable read-only preview link's credential. One active link per
+    /// draft: creating again rotates the token, null revokes. The token IS the access — 24 random
+    /// url-safe bytes (<see cref="PrivateAccess.NewToken"/>), unguessable on its own, so the page
+    /// it opens needs no account and no cookie.
+    /// </summary>
+    public string? PreviewToken { get; set; }
 }
 
 // One row per invited email per private Draft. Token grants access (via a long-lived cookie
@@ -1042,6 +1050,66 @@ public class WaitlistEntry
     public string Language { get; set; } = "";
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// Wave 1 item 7 — an address subscribed to one owner's whole blog: <see cref="ShowcaseFollower"/>
+/// generalized to the blog root, as its own table because a follower belongs to a project and a
+/// subscriber to a tenant, and folding the two would make every query explain which it meant.
+/// Same shape on purpose: an address and two tokens, not an account, double opt-in throughout.
+/// </summary>
+public class BlogSubscriber
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+
+    /// <summary>Stored lowercase, so the unique index needs no collation of its own.</summary>
+    public string Email { get; set; } = "";
+
+    /// <summary>Null once confirmed. An unconfirmed row is never mailed anything but its own
+    /// confirmation.</summary>
+    public string? ConfirmToken { get; set; }
+
+    public DateTime? ConfirmedAt { get; set; }
+
+    /// <summary>In every mail. Per row, so leaving needs no account and no reply.</summary>
+    public string UnsubscribeToken { get; set; } = "";
+
+    /// <summary>Who asked, one-way hashed — the per-visitor ceiling needs something to count.</summary>
+    public string VisitorHash { get; set; } = "";
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// Wave 1 item 7 — one notify-on-publish run, as a durable row so a slow mail burst can never
+/// block (or outlive) the publish that caused it. Same durability argument as <see cref="PublishJob"/>:
+/// "did the subscribers hear about this post" has to stay answerable across a restart.
+/// </summary>
+public class BlogNotifyJob
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public Guid DraftId { get; set; }
+
+    /// <summary>See <see cref="BlogNotifyJobStatus"/>.</summary>
+    public string Status { get; set; } = BlogNotifyJobStatus.Pending;
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? SentAt { get; set; }
+    public string? Error { get; set; }
+}
+
+public static class BlogNotifyJobStatus
+{
+    public const string Pending = "Pending";
+
+    /// <summary>The claim: a job a runner is mailing right now, so the kick and the sweeper cannot
+    /// both send. A row stuck here past its window is swept to Failed, never re-sent blind.</summary>
+    public const string Sending = "Sending";
+
+    public const string Sent = "Sent";
+    public const string Failed = "Failed";
 }
 
 /// <summary>

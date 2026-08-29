@@ -6,6 +6,7 @@ using CedarClerk.Server.Email;
 using CedarClerk.Server.Modules.Agent;
 using CedarClerk.Server.Modules.IndieDev;
 using CedarClerk.Server.Publishing;
+using CedarClerk.Server.Search;
 using CedarClerk.Server.Tenancy;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics;
@@ -63,7 +64,12 @@ Directory.CreateDirectory(thumbnailsDir);
 // Scoped, matching the context's own lifetime: a longer-lived provider would carry one request's
 // tenant into the next, and a shorter-lived one could not outlive the queries that read it.
 builder.Services.AddScoped<TenantProvider>();
-builder.Services.AddDbContext<CedarDbContext>(dbContextBuilder => dbContextBuilder.UseSqlite($"Data Source={dbPath}"));
+// The search interceptor rides on the context registration rather than inside the context, so
+// tests that construct CedarDbContext directly stay free of the FTS table (see DraftSearchInterceptor).
+builder.Services.AddSingleton<DraftSearchInterceptor>();
+builder.Services.AddDbContext<CedarDbContext>((sp, dbContextBuilder) => dbContextBuilder
+    .UseSqlite($"Data Source={dbPath}")
+    .AddInterceptors(sp.GetRequiredService<DraftSearchInterceptor>()));
 
 // ADR-115 — every DateTime on the wire carries its Z. SQLite loses DateTimeKind, so values that are
 // UTC in fact came back Unspecified and serialized without a suffix, which a browser reads as local
@@ -124,6 +130,9 @@ builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<XPublishT
 builder.Services.AddScoped<DiscordPublishTarget>();
 builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<DiscordPublishTarget>());
 builder.Services.AddSingleton<PublishJobRunner>();
+builder.Services.AddScoped<IDraftSearchIndex, DraftSearchIndex>();
+builder.Services.AddHostedService<DraftSearchBackfill>();
+builder.Services.AddSingleton<BlogSubscriberNotifier>();
 
 // The canvas hub (ADR-218), registered with the module it belongs to. The tuning is about the
 // Cloudflare Tunnel in front of Kestrel: WebSockets pass through it, but an idle connection is not
@@ -163,6 +172,11 @@ builder.Services.AddQuartz(q =>
     var publishJobKey = new JobKey("RunPublishJobs");
     q.AddJob<RunPublishJobsJob>(opts => opts.WithIdentity(publishJobKey));
     q.AddTrigger(t => t.ForJob(publishJobKey).WithSimpleSchedule(s => s.WithIntervalInSeconds(15).RepeatForever()));
+
+    // Wave 1 item 7 — the notify-on-publish queue's backstop.
+    var notifyJobKey = new JobKey("SendBlogNotifications");
+    q.AddJob<SendBlogNotificationsJob>(opts => opts.WithIdentity(notifyJobKey));
+    q.AddTrigger(t => t.ForJob(notifyJobKey).WithSimpleSchedule(s => s.WithIntervalInMinutes(1).RepeatForever()));
 
     // Hourly check if the paid plan is lapsed
     var downgradeJobKey = new JobKey("DowngradeExpiredPlans");
@@ -253,6 +267,13 @@ app.MapScheduledPostEndpoints();
 app.MapBillingEndpoints();
 app.MapAdminEndpoints();
 app.MapAiJobEndpoints();
+app.MapSearchEndpoints();
+app.MapExportTextEndpoints();
+app.MapDraftPreviewEndpoints();
+
+// Wave 1 item 8 — the public preview page, on the app host and deliberately anonymous: the token
+// is the whole credential, and the handler answers a wrong one with a plain 404.
+app.MapGet("/preview/{token}", (HttpContext ctx) => BlogEndpoints.HandleDraftPreviewAsync(ctx));
 
 // Indie-gamedev module (Phase 13, ADR-101). A module is endpoints and screens behind a flag — its
 // entities live in the same context either way, so turning this off hides the feature without

@@ -50,8 +50,32 @@ public class BlogMetaTests
         Assert.Contains("og:description\" content=\"Первый абзац девлога.\"", body);
         Assert.Contains("rel=\"canonical\" href=\"https://tenant.cedarclerk.app/devlog-1\"", body);
         Assert.Contains("article:published_time", body);
-        Assert.Contains("og:image\" content=\"https://tenant.cedarclerk.app/og-default.png\"", body);
+        // Wave 1 item 1 — a post with no image of its own advertises the generated title card,
+        // versioned so a title edit busts caches; the static og-default stays for non-post pages.
+        Assert.Contains("og:image\" content=\"https://tenant.cedarclerk.app/og/devlog-1.png?v=", body);
         Assert.Contains("twitter:card\" content=\"summary_large_image\"", body);
+        // Wave 1 item 4 — structured data rides along wherever the meta already tells everything.
+        Assert.Contains("application/ld+json", body);
+        Assert.Contains("\"@type\":\"Article\"", body);
+    }
+
+    [Fact]
+    public async Task JsonLd_never_claims_a_modification_before_publication()
+    {
+        using var db = BlogTestHost.EmptyDatabase();
+        // The first-publish shape: the draft was last saved before the publish click, so
+        // UpdatedAt predates BlogPublishedAt.
+        Seed(db, d =>
+        {
+            d.UpdatedAt = new DateTime(2026, 5, 1, 9, 0, 0, DateTimeKind.Utc);
+            d.BlogPublishedAt = new DateTime(2026, 5, 10, 12, 0, 0, DateTimeKind.Utc);
+        });
+
+        var body = await Get(db, "/devlog-1");
+
+        Assert.Contains("\"datePublished\":\"2026-05-10T12:00:00Z\"", body);
+        Assert.Contains("\"dateModified\":\"2026-05-10T12:00:00Z\"", body);
+        Assert.DoesNotContain("\"dateModified\":\"2026-05-01", body);
     }
 
     [Fact]
@@ -96,10 +120,12 @@ public class BlogMetaTests
         var body = await Get(db, "/devlog-1");
 
         Assert.Contains("og:title\" content=\"Devlog 1\"", body);
-        Assert.Contains("og:image\" content=\"https://tenant.cedarclerk.app/og-default.png\"", body);
+        // The card draws only the title, which TitleImageOnly already puts in the meta.
+        Assert.Contains("og:image\" content=\"https://tenant.cedarclerk.app/og/devlog-1.png?v=", body);
         Assert.DoesNotContain("og:description", body);
         Assert.DoesNotContain("article:", body);
         Assert.DoesNotContain("hreflang", body);
+        Assert.DoesNotContain("application/ld+json", body);
     }
 
     [Fact]

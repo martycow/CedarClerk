@@ -69,6 +69,39 @@ public static class EmailTexts
          <p style="color:#686257;font-size:13px"><a href="{unsubscribeUrl}" style="color:#686257">Unsubscribe</a></p>
          """);
 
+    public static string BlogSubscribeConfirmSubject(string siteName) => Localized(
+        $"Подтвердите подписку на блог — {siteName}",
+        $"Confirm your blog subscription — {siteName}");
+
+    public static string BlogSubscribeConfirmBody(string siteName, string link) => Localized(
+        $"""
+         <p>Кто-то (надеемся, вы) подписался на блог «{siteName}».</p>
+         <p><a href="{link}" style="display:inline-block;padding:10px 18px;background:#566842;color:#fff;border-radius:8px;text-decoration:none">Подтвердить подписку</a></p>
+         <p style="color:#686257;font-size:13px">Если кнопка не работает, откройте ссылку:<br>{link}</p>
+         <p style="color:#686257;font-size:13px">Если это были не вы, просто не открывайте ссылку — без неё подписка не включится.</p>
+         """,
+        $"""
+         <p>Someone (we hope you) subscribed to the blog "{siteName}".</p>
+         <p><a href="{link}" style="display:inline-block;padding:10px 18px;background:#566842;color:#fff;border-radius:8px;text-decoration:none">Confirm subscription</a></p>
+         <p style="color:#686257;font-size:13px">If the button does not work, open this link:<br>{link}</p>
+         <p style="color:#686257;font-size:13px">If this was not you, do not open the link — without it nothing is turned on.</p>
+         """);
+
+    public static string BlogNewPostSubject(string siteName, string postTitle) =>
+        $"{siteName}: {postTitle}";
+
+    public static string BlogNewPostBody(string siteName, string postTitle, string postUrl, string unsubscribeUrl) => Localized(
+        $"""
+         <p>Новый пост в блоге «{siteName}»:</p>
+         <p><a href="{postUrl}" style="font-size:17px">{postTitle}</a></p>
+         <p style="color:#686257;font-size:13px"><a href="{unsubscribeUrl}" style="color:#686257">Отписаться</a></p>
+         """,
+        $"""
+         <p>A new post on "{siteName}":</p>
+         <p><a href="{postUrl}" style="font-size:17px">{postTitle}</a></p>
+         <p style="color:#686257;font-size:13px"><a href="{unsubscribeUrl}" style="color:#686257">Unsubscribe</a></p>
+         """);
+
     /// <summary>
     /// Written in the inviter's language rather than the reader's: the invitee has no account yet,
     /// so there is no preference to read, and the person choosing the words is the one sending it.

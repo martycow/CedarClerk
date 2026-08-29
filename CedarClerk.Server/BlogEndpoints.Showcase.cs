@@ -97,6 +97,10 @@ public static partial class BlogEndpoints
             }
             sb.Append("</div>");
         }
+        // The way into the press kit — a quiet line, not a store pill: it is for journalists, not
+        // players, and the pine plaques above are the page's actions.
+        sb.Append("<p class=\"post-game\"><a href=\"").Append(ShowcasePath(ctx, project, "/press")).Append("\">")
+          .Append(en ? "Press kit" : "Пресс-кит").Append("</a></p>");
         sb.Append("</div></div>");
 
         if (YouTubeLink.EmbedUrl(project.ShowcaseTrailerUrl) is { } embed)

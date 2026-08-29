@@ -55,6 +55,8 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
     public DbSet<CreditEntry> CreditEntries => Set<CreditEntry>();
     public DbSet<WaitlistEntry> WaitlistEntries => Set<WaitlistEntry>();
     public DbSet<LandingSettings> LandingSettings => Set<LandingSettings>();
+    public DbSet<BlogSubscriber> BlogSubscribers => Set<BlogSubscriber>();
+    public DbSet<BlogNotifyJob> BlogNotifyJobs => Set<BlogNotifyJob>();
 
     // Indie-gamedev module (Phase 13, ADR-101) — same context on purpose, see Entities.IndieDev.cs.
     public DbSet<Project> Projects => Set<Project>();
@@ -252,6 +254,22 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         // look the row up by.
         builder.Entity<ShowcaseFollower>().HasIndex(f => f.ConfirmToken);
         builder.Entity<ShowcaseFollower>().HasIndex(f => f.UnsubscribeToken).IsUnique();
+        // Wave 1 item 7 — one address subscribes to one blog once; the endpoint stores lowercase,
+        // so no collation is needed for the index to mean that. Same shape as ShowcaseFollower's.
+        builder.Entity<BlogSubscriber>()
+            .HasIndex(s => new { s.OwnerId, s.Email })
+            .IsUnique();
+        // Confirm and unsubscribe arrive as a token and nothing else — the reader has no account.
+        builder.Entity<BlogSubscriber>().HasIndex(s => s.ConfirmToken);
+        builder.Entity<BlogSubscriber>().HasIndex(s => s.UnsubscribeToken).IsUnique();
+        // The runner's only question: what is waiting to be sent.
+        builder.Entity<BlogNotifyJob>().HasIndex(j => new { j.Status, j.CreatedAt });
+        // Wave 1 item 8 — the public preview page resolves by token alone, across owners. Filtered:
+        // null means "no link", which is what every draft starts as.
+        builder.Entity<Draft>()
+            .HasIndex(d => d.PreviewToken)
+            .IsUnique()
+            .HasFilter("\"PreviewToken\" IS NOT NULL");
         // ADR-135 — one row per address; the endpoint stores lowercase, so the index can be plain.
         builder.Entity<WaitlistEntry>()
             .HasIndex(w => w.Email)
@@ -348,7 +366,9 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         builder.Entity<AiUsage>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Asset>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<AssetEntry>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<BlogNotifyJob>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<BlogStatSnapshot>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<BlogSubscriber>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<BlogViewGeoDaily>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Build>().HasQueryFilter(e => e.OwnerId == TenantId);
         // The canvas rows carry the project owner's id even when a member wrote them, so this

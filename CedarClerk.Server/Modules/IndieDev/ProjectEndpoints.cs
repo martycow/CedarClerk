@@ -19,7 +19,9 @@ public static class ProjectEndpoints
     public record CreateProjectRequest(string Name, string? Description, string? ProjectType, string? DocumentType, string? DocumentTitle, string? Language = null);
     public record CreateExampleRequest(string? Language);
     public record ShowcaseRequest(bool Enabled, string? Slug, string? Links, string? Gallery,
-        string? TrailerUrl, string? CustomDomain);
+        string? TrailerUrl, string? CustomDomain,
+        string? PressContactEmail = null, string? PressPrice = null, string? PressEngine = null,
+        string? PressGenre = null, string? PressFactsheetRows = null);
     public record UpdateProjectRequest(string Name, string? Description, string? CoverUrl);
     public record ArchiveProjectRequest(bool Archived);
     public record CreateDocumentRequest(string? DocumentType, string? Title);
@@ -31,6 +33,8 @@ public static class ProjectEndpoints
     private const int DescriptionMaxLength = 2000;
     private const int ShowcaseLinksMaxLength = 2000;
     private const int ShowcaseStatsDays = 30;
+    private const int PressFieldMaxLength = 200;
+    private const int PressFactsheetMaxLength = 2000;
 
     public static bool IsEnabled(IConfiguration config) => config.IsOn(EnabledKey);
 
@@ -145,6 +149,11 @@ public static class ProjectEndpoints
                 project.ShowcaseGallery,
                 project.ShowcaseTrailerUrl,
                 project.CustomDomain,
+                project.PressContactEmail,
+                project.PressPrice,
+                project.PressEngine,
+                project.PressGenre,
+                project.PressFactsheetRows,
                 documents,
                 upNext = upNext.Select(t => TaskEndpoints.Describe(t, upNextLinks, upNextLabels)),
                 // T-124 — the rail's sprint card. Null means no sprint covers today, which the
@@ -351,6 +360,20 @@ public static class ProjectEndpoints
             if (trailer.Length > 0 && YouTubeLink.VideoId(trailer) is null)
                 return Results.BadRequest(new { error = ErrorMessages.ShowcaseTrailerNotYouTube });
             project.ShowcaseTrailerUrl = trailer.Length == 0 ? null : trailer;
+
+            // Wave 1 item 6 — the press page's fields, every one optional. Bounded here, rendered
+            // there; an empty field is a section the page omits.
+            if (PressField(req.PressContactEmail, PressFieldMaxLength, out var pressContact)
+                || PressField(req.PressPrice, PressFieldMaxLength, out var pressPrice)
+                || PressField(req.PressEngine, PressFieldMaxLength, out var pressEngine)
+                || PressField(req.PressGenre, PressFieldMaxLength, out var pressGenre)
+                || PressField(req.PressFactsheetRows, PressFactsheetMaxLength, out var pressFactsheet))
+                return Results.BadRequest(new { error = $"A press field is too long ({PressFieldMaxLength} characters maximum, {PressFactsheetMaxLength} for factsheet rows)" });
+            project.PressContactEmail = pressContact;
+            project.PressPrice = pressPrice;
+            project.PressEngine = pressEngine;
+            project.PressGenre = pressGenre;
+            project.PressFactsheetRows = pressFactsheet;
 
             if (ShowcaseDomain.Normalize(req.CustomDomain) is var domain && domain.Rejected)
                 return Results.BadRequest(new { error = ErrorMessages.ShowcaseDomainInvalid });
@@ -569,6 +592,14 @@ public static class ProjectEndpoints
             await db.SaveChangesAsync();
             return Results.Ok(new { draft.Id, draft.DocumentType });
         });
+    }
+
+    /// <summary>Trims and null-blanks a press field; true means "too long" (the one refusal).</summary>
+    private static bool PressField(string? raw, int maxLength, out string? value)
+    {
+        var trimmed = (raw ?? "").Trim();
+        value = trimmed.Length == 0 ? null : trimmed;
+        return trimmed.Length > maxLength;
     }
 
     private static IResult LastDocumentRefusal() =>

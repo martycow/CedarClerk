@@ -31,14 +31,17 @@ public static partial class BlogEndpoints
     private record BlogChannelInfo(string Title, string? Username, int? MemberCount, string? AvatarUrl);
     private record MarkSeenRequest(DateTime? SeenAt);
     // ADR-065 — language → the fingerprint of the version the owner was shown before confirming.
-    public record PublishBlogRequest(Dictionary<string, string>? ConfirmedFingerprints = null);
+    // NotifySubscribers is the export modal's opt-in toggle: mailing the blog-wide list is a
+    // decision per post, never a side effect of publishing.
+    public record PublishBlogRequest(Dictionary<string, string>? ConfirmedFingerprints = null, bool NotifySubscribers = false);
 
     public static void MapBlogEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/drafts").RequireAuthorization();
 
         group.MapPost("/{id:guid}/publish-blog", async (Guid id, PublishBlogRequest? req, ClaimsPrincipal user,
-            CedarDbContext db, IConfiguration cfg, Email.ResendEmailProvider mailer, ILoggerFactory logger) =>
+            CedarDbContext db, IConfiguration cfg, Email.ResendEmailProvider mailer, ILoggerFactory logger,
+            BlogSubscriberNotifier notifier) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
@@ -90,6 +93,12 @@ public static partial class BlogEndpoints
             var host = await BlogTenant.HostForOwnerAsync(db, cfg, uid);
             if (firstPublish && host is not null)
                 await NotifyFollowersAsync(db, mailer, logger, draft, new BlogSite(uid, host));
+
+            // Item 7 — queued, never sent inline: EnqueueAsync writes a Pending row and kicks the
+            // job, so a slow mail burst can never hold this response. First publish only, and only
+            // when the owner ticked the toggle.
+            if (firstPublish && !draft.IsPrivate && host is not null && req?.NotifySubscribers == true)
+                await notifier.EnqueueAsync(db, draft);
 
             return Results.Ok(new { slug = draft.BlogSlug, url = host is null ? null : $"https://{host}/{draft.BlogSlug}" });
         });
@@ -316,12 +325,18 @@ public static partial class BlogEndpoints
         });
     }
 
+    // Paths HandleRequest answers before it ever tries the one-segment slug branch — a post whose
+    // title slugified into one of these would be published and unreachable.
+    private static readonly HashSet<string> ReservedSlugs =
+        new(StringComparer.OrdinalIgnoreCase) { "search", "subscribe", "sitemap.xml" };
+
     private static async Task<string> GenerateUniqueSlugAsync(CedarDbContext db, string ownerId, Guid draftId, string title)
     {
         var baseSlug = SlugGenerator.Slugify(title);
         var candidate = baseSlug;
         var n = 2;
-        while (await db.Drafts.AnyAsync(d => d.BlogSlug == candidate && d.OwnerId == ownerId && d.Id != draftId))
+        while (ReservedSlugs.Contains(candidate)
+               || await db.Drafts.AnyAsync(d => d.BlogSlug == candidate && d.OwnerId == ownerId && d.Id != draftId))
         {
             candidate = $"{baseSlug}-{n}";
             n++;
@@ -351,8 +366,9 @@ public static partial class BlogEndpoints
             segments = segments switch
             {
                 [] => ["games", domainSlug],
-                ["rss.xml"] or ["follow"] or ["confirm"] or ["unsubscribe"] => ["games", domainSlug, segments[0]],
+                ["rss.xml"] or ["follow"] or ["confirm"] or ["unsubscribe"] or ["press"] => ["games", domainSlug, segments[0]],
                 ["go", var goIndex] => ["games", domainSlug, "go", goIndex],
+                ["press", "pack.zip"] => ["games", domainSlug, "press", "pack.zip"],
                 _ => segments,
             };
 
@@ -381,6 +397,14 @@ public static partial class BlogEndpoints
             return;
         }
 
+        // Item 7 — the blog-wide subscribe box posts the same way the follow form does, and for the
+        // same reason: no JavaScript on the page just to collect an address.
+        if (segments is ["subscribe"] && ctx.Request.Method == HttpMethods.Post)
+        {
+            await PostSubscribeAsync(ctx, db, site);
+            return;
+        }
+
         // HEAD is a GET whose body is thrown away, and Kestrel does the throwing — so it renders the
         // same page and answers the same status. Refusing it told every uptime monitor the blog was
         // gone while a browser saw it fine (13.08.2026: UptimeRobot HEADs by default, `curl -I` 404,
@@ -400,6 +424,39 @@ public static partial class BlogEndpoints
         if (segments is ["rss.xml"])
         {
             await RenderRssAsync(ctx, db, site);
+            return;
+        }
+
+        if (segments is ["sitemap.xml"])
+        {
+            await RenderSitemapAsync(ctx, db, site);
+            return;
+        }
+
+        // Before the one-segment slug branch on purpose — "search" is a path, never a post, and
+        // GenerateUniqueSlugAsync refuses to mint it as one.
+        if (segments is ["search"])
+        {
+            await RenderSearchAsync(ctx, db, site);
+            return;
+        }
+
+        if (segments is ["subscribe", "confirm"])
+        {
+            await ConfirmSubscriberAsync(ctx, db, site);
+            return;
+        }
+
+        if (segments is ["subscribe", "leave"])
+        {
+            await RemoveSubscriberAsync(ctx, db, site);
+            return;
+        }
+
+        // Item 1 — the generated OG card, served and cached by OgImageEndpoint (lane-data).
+        if (segments is ["og", var ogFile])
+        {
+            await OgImageEndpoint.HandleAsync(ctx, db, site, ogFile);
             return;
         }
 
@@ -446,6 +503,19 @@ public static partial class BlogEndpoints
         if (segments is ["games", var byeSlug, "unsubscribe"])
         {
             await UnsubscribeFollowerAsync(ctx, db, site, byeSlug);
+            return;
+        }
+
+        // Item 6 — the press kit page and its downloadable pack (PressPackEndpoint, lane-data).
+        if (segments is ["games", var pressSlug, "press"])
+        {
+            await RenderPressAsync(ctx, db, site, pressSlug);
+            return;
+        }
+
+        if (segments is ["games", var packSlug, "press", "pack.zip"])
+        {
+            await PressPackEndpoint.HandleAsync(ctx, db, site, packSlug);
             return;
         }
 
@@ -1311,7 +1381,11 @@ public static partial class BlogEndpoints
             }
             sb.Append("</div>");
         }
-        sb.Append("<div class=\"index-toolbar\"><div class=\"sort-anchor\">");
+        sb.Append("<div class=\"index-toolbar\">");
+        // Item 2 — the way into /search from the one page every reader starts on. A plain GET
+        // form, same as every other control on this bar.
+        sb.Append(SearchFormHtml("", indexLang != Languages.Russian));
+        sb.Append("<div class=\"sort-anchor\">");
         sb.Append("<button type=\"button\" class=\"index-sort-btn\" id=\"sortBtn\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-controls=\"sortMenu\">")
           .Append(BlogIcons.Sort).Append("<span>").Append(currentSortLabel).Append("</span></button>");
         sb.Append("<div class=\"sort-menu\" id=\"sortMenu\" role=\"group\" hidden>");
@@ -1427,6 +1501,9 @@ public static partial class BlogEndpoints
                   .Append("</a></div>");
             }
         }
+
+        // Item 7 — the subscribe box on the index foot; the post page carries its twin.
+        sb.Append(RenderSubscribeBox(ctx, indexLang != Languages.Russian, "/"));
 
         var channel = await GetBlogChannelInfoAsync(db, site);
         var blogBase = site.BaseUrl;
@@ -1602,10 +1679,12 @@ public static partial class BlogEndpoints
         // ADR-124 — the gate and the private not-found page are exactly what a crawler sees: a
         // *listed* private post still advertises its title and the stock image there; an unlisted
         // one reveals nothing, same as a nonexistent slug.
+        // Item 1 — the generated card replaces the static og-default here too: TitleImageOnly
+        // already puts the title in the meta, so a card drawing that same title reveals nothing new.
         string SemiPublicMeta(string pageLang) => draft.IsListedWhilePrivate
             ? OgMetaBuilder.Build(new OgMetaInput(
                 draft.ArticleTitle ?? draft.Title, null, $"{blogBase}/{draft.BlogSlug}",
-                $"{blogBase}/og-default.png", 1200, 630,
+                OgImageEndpoint.ImageUrl(site, draft.BlogSlug!, draft.ArticleTitle ?? draft.Title, channel?.Title ?? "Cedar Clerk"), 1200, 630,
                 channel?.Title ?? "Cedar Clerk", pageLang, [], null, null, null, IsArticle: true),
                 OgMetaPolicy.TitleImageOnly)
             : "";
@@ -1803,6 +1882,8 @@ public static partial class BlogEndpoints
         // itself invisible (owner previewing an unlisted part) simply shows no series chrome.
         var seriesLine = "";
         var seriesNav = "";
+        // Item 3 — the posts the nav blocks below already offer; "read next" must not repeat them.
+        var shownNeighbourSlugs = new HashSet<string>(StringComparer.Ordinal);
         if (draft.SeriesId is { } draftSeriesId
             && await db.Series.FirstOrDefaultAsync(s => s.Id == draftSeriesId && s.OwnerId == site.OwnerId) is { } series)
         {
@@ -1823,6 +1904,8 @@ public static partial class BlogEndpoints
 
                 var prev = position > 0 ? members[position - 1] : null;
                 var next = position < members.Count - 1 ? members[position + 1] : null;
+                if (prev?.BlogSlug is { } prevSlug) shownNeighbourSlugs.Add(prevSlug);
+                if (next?.BlogSlug is { } nextSlug) shownNeighbourSlugs.Add(nextSlug);
                 if (prev is not null || next is not null)
                 {
                     var prevHtml = prev is null ? "<span></span>"
@@ -1848,6 +1931,8 @@ public static partial class BlogEndpoints
                 .ToListAsync();
             var newer = neighbourRows.Where(n => n.BlogPublishedAt > thisPublished).OrderBy(n => n.BlogPublishedAt).FirstOrDefault();
             var older = neighbourRows.Where(n => n.BlogPublishedAt < thisPublished).OrderByDescending(n => n.BlogPublishedAt).FirstOrDefault();
+            if (newer?.BlogSlug is { } newerSlug) shownNeighbourSlugs.Add(newerSlug);
+            if (older?.BlogSlug is { } olderSlug) shownNeighbourSlugs.Add(olderSlug);
             if (newer is not null || older is not null)
             {
                 var isEn = lang == Languages.English;
@@ -1863,6 +1948,45 @@ public static partial class BlogEndpoints
                 var olderCard = older is null ? ""
                     : Card(older.BlogSlug!, older.ArticleTitle ?? older.Title, older.BlogPublishedAt!.Value, isEn ? "Older post" : "Предыдущая запись");
                 neighboursHtml = $"<div class=\"post-neighbours\">{newerCard}{olderCard}</div>";
+            }
+        }
+
+        // Item 3 — up to three "read next" cards sharing at least one tag, newest first. Computed
+        // in memory over the owner's published public posts; the set is index-sized, and a tag
+        // intersection is not a query SQLite would do better. Private posts never appear here,
+        // listed or not — a teaser row is not the index, and it links without the gate's context.
+        var relatedHtml = "";
+        if (tags.Count > 0)
+        {
+            var relatedCandidates = await db.Drafts
+                .Where(d => d.OwnerId == site.OwnerId && d.IsBlogPublished && !d.IsPrivate
+                    && d.Id != draft.Id && d.BlogSlug != null && d.Tags != "")
+                .Select(d => new { d.BlogSlug, d.Title, d.ArticleTitle, d.BlogPublishedAt, d.Tags })
+                .ToListAsync();
+            var related = relatedCandidates
+                .Where(c => !shownNeighbourSlugs.Contains(c.BlogSlug!))
+                .Where(c => SplitTags(c.Tags).Intersect(tags, StringComparer.OrdinalIgnoreCase).Any())
+                .OrderByDescending(c => c.BlogPublishedAt)
+                .Take(3)
+                .ToList();
+            if (related.Count > 0)
+            {
+                var relatedSb = new StringBuilder();
+                relatedSb.Append("<div class=\"related-posts\"><div class=\"related-title\">")
+                  .Append(lang == Languages.English ? "Read next" : "Читать дальше")
+                  .Append("</div><div class=\"related-grid\">");
+                foreach (var r in related)
+                {
+                    relatedSb.Append("<a class=\"neighbour-card\" href=\"/").Append(r.BlogSlug).Append("\">");
+                    relatedSb.Append("<div class=\"neighbour-title\">")
+                      .Append(System.Net.WebUtility.HtmlEncode(r.ArticleTitle ?? r.Title)).Append("</div>");
+                    if (r.BlogPublishedAt is { } relatedDate)
+                        relatedSb.Append("<div class=\"neighbour-date\">")
+                          .Append(BlogDateFormatter.DateLocal(relatedDate, lang)).Append("</div>");
+                    relatedSb.Append("</a>");
+                }
+                relatedSb.Append("</div></div>");
+                relatedHtml = relatedSb.ToString();
             }
         }
 
@@ -1942,9 +2066,11 @@ public static partial class BlogEndpoints
             <span class="post-pin right" aria-hidden="true"></span>
             {postSheet}
             {neighboursHtml}
+            {relatedHtml}
             </div>
             {copyGuard}
             {articleBlock}
+            {RenderSubscribeBox(ctx, lang != Languages.Russian, "/" + draft.BlogSlug)}
             {floatingNav}
             """;
 
@@ -1964,11 +2090,12 @@ public static partial class BlogEndpoints
             int? imageW = null, imageH = null;
             if (metaPolicy == OgMetaPolicy.Full && CedarImageRefs.Collect(cedarJson).FirstOrDefault() is { } cover)
                 image = cover.Src.StartsWith('/') ? blogBase + cover.Src : cover.Src;
-            if (image is null && metaPolicy == OgMetaPolicy.Full && owner.AvatarUrl is { Length: > 0 } avatar)
-                image = blogBase + avatar;
+            // Item 1 — a post with no image of its own gets the generated title card instead of the
+            // static og-default (or the owner's avatar, which said nothing about the post). The URL
+            // carries ?v={hash} so a title edit busts every cache between here and the reader.
             if (image is null)
             {
-                image = $"{blogBase}/og-default.png";
+                image = OgImageEndpoint.ImageUrl(site, draft.BlogSlug!, title, channel?.Title ?? "Cedar Clerk");
                 imageW = 1200;
                 imageH = 630;
             }
@@ -1985,6 +2112,12 @@ public static partial class BlogEndpoints
                 channel?.Title ?? "Cedar Clerk", lang,
                 alternates, LangUrl(draft.PrimaryLanguage),
                 draft.BlogPublishedAt, draft.UpdatedAt, IsArticle: true), metaPolicy);
+
+            // Item 4 — JSON-LD only where the meta already tells everything (Full); a gated page
+            // keeps its silence in structured data exactly as it does in OG tags.
+            if (metaPolicy == OgMetaPolicy.Full)
+                metaHtml += ArticleJsonLd(title, draft.BlogPublishedAt, draft.UpdatedAt, lang,
+                    image, channel?.Title ?? "Cedar Clerk", LangUrl(lang));
         }
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
@@ -2450,6 +2583,60 @@ public static partial class BlogEndpoints
         .post-game { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--t2); margin: 0 0 10px; }
         .post-game a { color: var(--accent); }
         @media (max-width: 560px) { .showcase-head { flex-direction: column; } .showcase-cover { width: 100%; } }
+
+        /* ── Search: a compact paper field on the index bar, grown to full size on its own page ──────── */
+        .search-form { display: flex; gap: 6px; flex: none; }
+        .search-input { min-height: 32px; width: 150px; padding: 0 12px; background-color: var(--sheet); border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); box-shadow: var(--shadow-paper-sm); color: var(--text); font-family: var(--font-sans); font-size: 13px; }
+        .search-input::placeholder { color: var(--t3); opacity: 1; }
+        .search-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); background: var(--sheet); box-shadow: var(--shadow-paper-sm); font-family: var(--font-sans); font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; }
+        .search-btn:hover { background: var(--alt); }
+        .index-toolbar .search-form { margin-right: 8px; }
+        .search-head { margin: 0 0 22px; }
+        .search-head h1 { font-family: var(--font-display); font-size: 27px; font-weight: 700; color: var(--wood-ink); margin: 0 0 12px; }
+        .search-head .search-form { flex-wrap: wrap; }
+        .search-head .search-input { flex: 1 1 220px; min-height: 44px; font-size: 15px; }
+        .search-head .search-btn { min-height: 44px; padding: 0 16px; }
+        @media (max-width: 560px) { .index-toolbar .search-form { display: none; } }
+
+        /* ── "Read next": tag-mates under the reader, cut from the neighbour cards' paper ────────────── */
+        .related-posts { margin-top: 16px; }
+        .related-title { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--rail-ink); text-shadow: 0 1px 1px var(--rail-edge); margin: 0 0 8px; }
+        .related-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+
+        /* ── The subscribe box: the follow form's paper, offered blog-wide ───────────────────────────── */
+        .subscribe-box { background-color: var(--sheet); background-image: var(--tex-paper); border: var(--border-paper); border-radius: var(--radius-paper); box-shadow: var(--shadow-paper-sm); padding: 16px 20px; margin: 22px 0 0; color: var(--text); }
+        .subscribe-title { font-family: var(--font-display); font-size: 12px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--t2); margin: 0 0 10px; }
+        .subscribe-box .follow-form { margin: 0 0 8px; }
+
+        /* ── The press kit page — the showcase's materials, a wider column, a wood top bar ───────────── */
+        .site-main--press { max-width: 1000px; }
+        .press-bar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; margin: 0 0 22px; border: 1px solid var(--rail-edge); border-radius: 4px; background-color: var(--rail-lo); background-image: var(--tex-wood), var(--surface-rail); background-size: 420px, auto; box-shadow: var(--shadow-rail); color: var(--rail-ink); }
+        .press-bar-name { font-family: var(--font-display); font-size: 14px; font-weight: 700; text-shadow: 0 1px 1px var(--rail-edge); }
+        .press-bar-label { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; opacity: .85; white-space: nowrap; }
+        .press-pack-chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 14px; background: var(--resin); border: 1px solid var(--brass-edge); border-radius: var(--radius-plaque); color: var(--rail-edge); font-size: 13px; font-weight: 700; white-space: nowrap; }
+        .press-pack-chip:hover { background: var(--resin-hi); }
+        .press-h1 { font-family: var(--font-display); font-size: 40px; font-weight: 700; line-height: 1.15; color: var(--wood-ink); margin: 0 0 8px; }
+        .press-tagline { font-size: 15px; color: var(--wood-ink); margin: 0 0 12px; }
+        .press-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 20px; }
+        .press-chip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; background-color: var(--sheet); border: 1px solid var(--paper-edge); border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--text); }
+        .press-grid { display: grid; grid-template-columns: 280px 1fr; gap: 24px; align-items: start; }
+        .press-card { background-color: var(--paper-bright); background-image: var(--tex-paper); border: 1px solid var(--paper-edge); border-radius: var(--radius-paper); box-shadow: var(--shadow-paper-sm); padding: 16px 18px; color: var(--text); }
+        .press-card-title { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--t2); margin: 0 0 10px; }
+        .press-row { margin: 0 0 10px; }
+        .press-row-label { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--t2); }
+        .press-row-value { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+        .press-card-divider { border-top: 1px dashed var(--border-strong); margin: 12px 0; }
+        .press-main { min-width: 0; }
+        .press-main .showcase-section:first-child { margin-top: 0; }
+        .press-about { font-family: var(--font-serif); font-size: 15px; line-height: 1.65; color: var(--wood-ink); }
+        .press-about p { margin: 0 0 12px; }
+        .press-shots { grid-template-columns: repeat(3, 1fr); }
+        .press-download-all { font-family: var(--font-sans); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--accent); margin-left: 8px; }
+        .press-devlog-line { font-size: 14px; color: var(--wood-ink); margin: 0; }
+        @media (max-width: 700px) { .press-grid { grid-template-columns: 1fr; } .press-shots { grid-template-columns: repeat(2, 1fr); } .press-h1 { font-size: 30px; } }
+
+        /* ── The draft preview's banner — the not-translated notice's paper, saying what this is ─────── */
+        .preview-banner { font-family: var(--font-sans); background: var(--asoft); border-left: 3px solid var(--abord); border-radius: var(--radius-paper); padding: 10px 14px; margin: 0 0 16px; font-size: 14px; color: var(--t2); }
 
         /* ── Floating nav — paper plaques, never discs ───────────────────────────────────────────────── */
         .floating-nav { position: fixed; right: 20px; bottom: 46px; display: flex; flex-direction: column; gap: 8px; z-index: 50; opacity: 0; pointer-events: none; transition: opacity 150ms ease; }

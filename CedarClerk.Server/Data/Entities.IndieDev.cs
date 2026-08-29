@@ -105,6 +105,17 @@ public class Project
     /// </summary>
     public string? CustomDomain { get; set; }
 
+    // Wave 1 item 6 — the /games/{slug}/press page's own fields, every one optional: an empty
+    // section is omitted from the page, never rendered blank. Flat columns like the Showcase*
+    // fields above, and for the same reason — a fixed field set, not a growable bag.
+    public string? PressContactEmail { get; set; }
+    public string? PressPrice { get; set; }
+    public string? PressEngine { get; set; }
+    public string? PressGenre { get; set; }
+
+    /// <summary>Extra factsheet rows, newline-separated <c>Label: value</c> lines.</summary>
+    public string? PressFactsheetRows { get; set; }
+
     /// <summary>
     /// T-124 — the number the next sprint of this project will get, then incremented.
     ///
