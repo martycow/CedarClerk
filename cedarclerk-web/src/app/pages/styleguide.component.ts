@@ -19,6 +19,7 @@ import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { BrassPinComponent } from '../bench/scenery/brass-pin.component';
 import { BrassHookComponent } from '../bench/scenery/brass-hook.component';
+import { BrassNailComponent } from '../bench/scenery/brass-nail.component';
 
 export type SgSurface = 'paper' | 'chrome';
 
@@ -38,7 +39,7 @@ export type SgSurface = 'paper' | 'chrome';
         IconComponent, RouterLink,
         ButtonComponent, InputComponent,
         StampBadgeComponent, ResinDropComponent, LeafTagComponent, PaperCardComponent, TaskTagComponent,
-        SpecRowComponent, BrassPinComponent, BrassHookComponent,
+        SpecRowComponent, BrassPinComponent, BrassHookComponent, BrassNailComponent,
         WorktopComponent, ModuleTileComponent, LogLineComponent,
         ShelfPanelComponent, IndexTabsComponent,
     ],

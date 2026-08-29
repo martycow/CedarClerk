@@ -108,11 +108,11 @@ describe('HookRailComponent', () => {
         expect(rows[rows.length - 1].classList).toContain('is-tail');
     });
 
-    it('hangs a brass hook off every tool, and drops them all on request', () => {
-        expect(el().querySelectorAll('app-brass-hook').length).toBe(6);
+    it('drives a brass nail through every tool, and drops them all on request', () => {
+        expect(el().querySelectorAll('app-brass-nail').length).toBe(6);
         host.hooks = false;
         render();
-        expect(el().querySelectorAll('app-brass-hook').length).toBe(0);
+        expect(el().querySelectorAll('app-brass-nail').length).toBe(0);
     });
 
     // The wall is the only place the app says feedback has arrived, so the tally is a real

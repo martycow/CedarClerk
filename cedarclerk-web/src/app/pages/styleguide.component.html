@@ -462,14 +462,15 @@
 
         <h2>Hardware</h2>
         <p class="sg-note">
-            Brass is hardware, not a palette: neither piece takes a colour and neither takes a size,
+            Brass is hardware, not a palette: no piece takes a colour and none takes a size,
             because a pin stops reading as a pin much past 16px. <code>app-brass-pin</code> holds
             down anything that <em>lies</em> on a surface — a card, a leaf. <code>app-brass-hook</code>
-            carries anything that <em>hangs</em> — a task tag, a tool on the rail. Picking the wrong
+            carries anything that <em>hangs</em> — a task tag. <code>app-brass-nail</code> is driven
+            through anything <em>fixed</em> to the wall — a tool on the rail. Picking the wrong
             one breaks the physical logic of the workshop, which is why they are deliberately not
             interchangeable: different sizes, different APIs. The pin is silent by default and takes
-            a role and a name only when it is the sole thing saying a card is pinned; the hook is
-            never named, because whatever hangs from it carries the name.
+            a role and a name only when it is the sole thing saying a card is pinned; the hook and
+            the nail are never named, because whatever they carry holds the name.
         </p>
         <div class="sg-bay" [attr.data-surface]="surface()">
             <div class="sg-shelf">
@@ -484,6 +485,10 @@
                 <div class="sg-cell sg-stack">
                     <span class="sg-state">hook · always silent</span>
                     <app-brass-hook />
+                </div>
+                <div class="sg-cell sg-stack">
+                    <span class="sg-state">nail · always silent</span>
+                    <app-brass-nail />
                 </div>
             </div>
         </div>

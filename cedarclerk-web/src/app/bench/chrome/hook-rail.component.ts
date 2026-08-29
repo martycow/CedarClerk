@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, ElementRef, booleanAttribute, inject, input, output, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { BrassHookComponent } from '../scenery/brass-hook.component';
+import { BrassNailComponent } from '../scenery/brass-nail.component';
 import { IconComponent } from '../../shared/icon.component';
 import { IconName } from '../../shared/icon-data.generated';
 import { indexTabBadgeLabel } from './index-tabs.component';
@@ -25,7 +25,7 @@ export interface HookRailItem {
     badgeTitle?: string;
 }
 
-// The tool wall: a pegboard strip down the left edge where the screens hang from brass hooks.
+// The tool wall: a pegboard strip down the left edge where the screens are nailed up as tools.
 // It is how the user moves between screens, so each hook is a real link and the current one is
 // marked three ways that survive a colourblind eye — aria-current, a raised sign tile, and a
 // brass bar on the wall's inner edge.
@@ -40,7 +40,7 @@ export interface HookRailItem {
 @Component({
     selector: 'app-hook-rail',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [RouterLink, IconComponent, BrassHookComponent],
+    imports: [RouterLink, IconComponent, BrassNailComponent],
     host: {
         'data-surface': 'chrome',
         'role': 'navigation',
@@ -58,7 +58,7 @@ export interface HookRailItem {
                        [attr.title]="item.title || item.label || null"
                        [attr.aria-label]="item.label ? null : (item.title || null)"
                        (click)="picked.emit(item.id)">
-                        @if (hooks()) { <app-brass-hook class="peg" /> }
+                        @if (hooks()) { <app-brass-nail class="peg" /> }
                         <app-icon [name]="item.icon" size="sm" />
                         @if (item.label) { <span class="cap">{{ item.label }}</span> }
                         <span class="here" aria-hidden="true"></span>
@@ -112,7 +112,8 @@ export interface HookRailItem {
             align-items: stretch;
             gap: 6px;
             margin: 0;
-            /* Top runs a step past --space-3: the peg overhangs 13px and would clip on the wall's edge. */
+            /* Top runs a step past --space-3: the nail head overhangs 7px and the tally 11px, and
+               either would clip on the wall's edge. */
             padding: var(--space-4) var(--space-1) var(--space-3);
             /* Clipped across, scrolled down: a hook is drawn at the wall's full width, so the
                moment the vertical bar appears it takes the width back and the wall grows a second,
@@ -145,11 +146,11 @@ export interface HookRailItem {
 
         :host([data-surface="chrome"]) .hook:hover { background: var(--rail-lo); }
 
-        /* The hook hangs over the top edge of the tool, which is why the tool carries no margin
-           of its own up there — the peg is drawn outside the box. */
+        /* The nail is driven through the tool's top edge, which is why the tool carries no margin
+           of its own up there — the head is drawn outside the box. */
         :host([data-surface="chrome"]) .peg {
             position: absolute;
-            top: -13px;
+            top: -7px;
             left: 50%;
             translate: -50%;
             filter: drop-shadow(0 1px 1px rgba(20, 12, 4, .5));
@@ -289,7 +290,7 @@ export class HookRailComponent {
     readonly value = input('');
     /** Accessible name of the navigation landmark; the consumer's to translate. */
     readonly label = input('Screens');
-    /** False drops the brass hooks, the way the mirror's `hooks={false}` does. */
+    /** False drops the brass nails, the way the mirror's `hooks={false}` dropped its pegs. */
     readonly hooks = input(true, { transform: booleanAttribute });
     /** Accessible name of the tray control; the consumer's to translate. */
     readonly trayLabel = input('More');

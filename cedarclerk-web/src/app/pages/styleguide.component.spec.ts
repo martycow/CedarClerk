@@ -67,7 +67,7 @@ describe('styleguide page', () => {
 
     it('renders the whole kit, not a subset of it', () => {
         for (const tag of ['app-input', 'app-stamp-badge', 'app-resin-drop', 'app-leaf-tag',
-            'app-paper-card', 'app-task-tag', 'app-spec-row', 'app-brass-pin', 'app-brass-hook',
+            'app-paper-card', 'app-task-tag', 'app-spec-row', 'app-brass-pin', 'app-brass-hook', 'app-brass-nail',
             'app-worktop', 'app-module-tile', 'app-shelf-panel', 'app-index-tabs', 'app-log-line']) {
             expect(el().querySelector(tag), tag).toBeTruthy();
         }
