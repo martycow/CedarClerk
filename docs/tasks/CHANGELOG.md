@@ -1,5 +1,78 @@
 # Changelog
 
+## 2026-08-29 — Fourteen maintainer items through one frozen contract (master, uncommitted, 0.17.0)
+
+A batch session, not a feature one: fourteen of the maintainer's annotations, frozen into a contract
+with per-item acceptance criteria, run as four parallel lanes plus a tester. `Consts.CurrentVersion`
+reads **0.17.0** and every change sits uncommitted on `master` — nothing here has been deployed. One
+deviation from the gate to say out loud: the contract stood in for ADRs during the work, and the three
+decisions that deserved them — ADR-220, ADR-221, ADR-222 — were written at session close rather than
+before the code.
+
+**The nested tab-boards come apart.** The Media Library gained an `embedded` input: Assets embeds the
+list and panel with no chrome of its own — one shelf-panel, the type strip welded above it, the view
+toggle in the panel's actions — and its negative-margin hack gave way to the flex contract. Standalone,
+the bucket and type strips merged onto one row, and Stats' metric and view strips did the same. No
+screen stacks two index-tab rows over one panel any more, and the panel-in-panel throw never fires.
+
+**Pages scroll inside their sheets.** The bench page contract — `:host{flex:1;min-height:0}` down the
+chain — landed on Assets, Media Library, Projects, Boards and Settings, so a hundred rows scroll inside
+the sheet while the header and strips stay put. Settings' two channel lists are bounded at 260px, the
+drafts folder-list precedent.
+
+**The Stats "Likes" hint stops reading vertically.** `.metric-note` carried `flex: 1; min-width: 0` and,
+as the only shrinkable item on a wrapped strip line, collapsed to zero width — one character per line.
+It is `flex: 0 1 auto; max-width: 48ch` now, and the comment on the rule says why it must never go back.
+
+**The shell learns three small courtesies.** The project switcher keeps the open screen across a switch
+— `/projects/A/assets` to project B lands on B's assets, `canvas/:boardId` folds to the boards list
+(ADR-221). The logo is a link to the hub, labelled for a reader. And a signed-in author can see the
+front door again: `/welcome` serves the landing regardless of the cookie, linked from beside the version
+label with a plain href the SPA router cannot swallow (ADR-222).
+
+**The desktop build gets a page.** A public `/download` outside the shell — title, the one honest
+sentence about data living in the account, a button onto the existing `/downloads/latest` redirect —
+and a `#download` section on the landing behind the new `LandingSettings.ShowDownload` column (migration
+`AddLandingShowDownload`, admin Landing tab checkbox). The flag defaults **false** like Roadmap and
+Story before it: the section is a promise the installer has to keep first, and it has still never run
+on a clean machine (T-121). `app-button` gained an `href` input on the way.
+
+**Two boards start looking like boards.** The tasks kanban's columns took the cork tone — lanes a paper
+card reads as pinned to, plaque headers — and the project-boards row list became a paper card grid.
+Tokens only, at page level; the kit was not touched.
+
+**The blog warms up, in the one file allowed to.** ShellTemplate CSS in `BlogEndpoints.cs` only, never
+`styles.scss`: a resin lamp glow, warmer post cards with an inline paper texture, softened radii, a
+reading measure, warm link underlines — both themes in the same edit, no static asset the blog host
+could 404 on. The export modal's `.export-section` joined the paper-texture rule alongside the surfaces
+that already carried it.
+
+**The export cards stop doing two things per click** (ADR-220). The card body — a `div[role=button]`
+now, not a label — selects a destination for management and nothing else; the real checkbox toggles
+inclusion and nothing else, propagation stopped, both in the tab order with visible focus. Selecting a
+network to look at it no longer silently changes what the next send does. The Files step also gained
+`export-global`: it had been auto-placed into the 280px column and squeezed.
+
+**The wall gets forged hardware.** Per the maintainer's pick off the Claude Design canvas: the brass
+hook is one continuous forged J under its screw head — gradient and a specular glint — and the tally
+is a rotated work ticket with a punched hole, same resin ground and ink as the index-tab badge. The
+wall's top padding stepped up so the taller peg stops clipping.
+
+**Verified, with the numbers observed.** Backend `dotnet test` **1439/1439**; `npx ng test` **482/482**
+(two jsdom-quirk specs fixed at the spec, not the code); production build clean; every guard green —
+icons, contrast, density, `UiInventoryDriftTests`, `ErrorMessageLocalizationTests`,
+`SchemaDriftGuardTests`, `DocsFlowGraphTests`. `UI-INVENTORY.md` rows were updated by each lane in the
+same change. The e2e specs touching the export contract (`14-thread`, `99-audit`) were updated to the
+two-affordance cards and pass live, 3/3.
+
+**What the tester found under the harness, and what is not done.** The e2e harness had drifted from the
+code since `6cfb2be` — registration now requires a username, and blogs are tenant-hosted, so
+`blog.localhost` had to become `e2e-admin.localhost` under `Cedar:TenantHost` in `Scripts/e2e.ps1` and
+`e2e/helpers.ts`. That migration is done; the **full suite has not been rerun on it** — only the three
+touched specs ran — which is `T-317` on the board. And the export rack still draws five cards for
+networks with no connector at all (Instagram, Threads, YouTube, Steam, itch.io) — selectable, managing
+nothing; whether they survive the new card semantics is `T-318`.
+
 ## 2026-08-27 — A project gains other people, and the showcase gains a screen (branch `showcase_menu_and_layout`)
 
 Two pieces of work in one session, and only the second is a feature. The first tidied what yesterday's

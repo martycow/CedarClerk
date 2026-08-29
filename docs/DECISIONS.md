@@ -232,3 +232,6 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-217 — A project can have collaborators, and a membership opens exactly one door](adr/ADR-217.md)
 - [ADR-218 — The reference board is one server-owned surface, last writer wins, and the socket is SignalR](adr/ADR-218.md)
 - [ADR-219 — A picture on a shared board is readable by the board's people](adr/ADR-219.md)
+- [ADR-220 — An export card selects with its body and includes with its checkbox](adr/ADR-220.md)
+- [ADR-221 — The project switcher keeps the open screen](adr/ADR-221.md)
+- [ADR-222 — The landing stays reachable at /welcome, and the desktop build gets a public page](adr/ADR-222.md)

@@ -65,6 +65,6 @@ Code is written and covered by tests, but never checked by hand or on a device. 
 
 ## Notes
 
-- Production: 0.12.0 on the droplet, `LIVE` = `0.12.0`; master is ahead by the 0.12.1 session (OG tags, series, media library, tree + wiki-links, metrics dictionary) — deploying is Marty's call. `LIVE`/`LIVE-PREV` never go to origin (the local-tag rule in CLAUDE.md).
-- Active branch is `showcase_menu_and_layout`, off master. It carries the showcase screen and the layout fixes, then the reference board with collaborators (ADR-217…219). `Consts.CurrentVersion` reads 0.15.0 and nothing is tagged; the branch cannot deploy from where it is, since `cedar deploy` refuses anything but master. The `UI_V2` port is merged into master and its branch rows are closed.
+- Production: 0.12.0 on the droplet, `LIVE` = `0.12.0`; master is ahead by everything since — the `UI_V2` port and fidelity pass, multitenancy (ADR-206…213), the showcase site and screen, the reference board with collaborators (ADR-217…219), and the 0.17.0 maintainer batch — deploying is Marty's call. `LIVE`/`LIVE-PREV` never go to origin (the local-tag rule in CLAUDE.md).
+- On `master`; `showcase_menu_and_layout` is merged in and no branch is active. `Consts.CurrentVersion` reads 0.17.0, the whole 0.17.0 session (ADR-220…222, CHANGELOG 29.08) sits **uncommitted** in the working tree, and nothing is tagged. The `UI_V2` port is merged into master and its branch rows are closed.
 - The `indiedev_module` branch is merged and deleted; the module lives in master behind `Cedar:Modules:IndieDev` (reversibility: ADR-101). `dev` is a stale pointer behind master with no commits of its own.
