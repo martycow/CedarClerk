@@ -75,9 +75,11 @@
                 </div>
             </app-shelf-panel>
         } @else if (view() === 'board') {
+            <!--Cork lanes (the kit's own shelf tone): a pinboard surface under the paper tags, so
+            a column reads as a place cards are pinned rather than another paper sheet.-->
             <div class="board">
                 @for (status of statuses; track status) {
-                    <app-shelf-panel class="column" [title]="t().projects.tasks.status[status]"
+                    <app-shelf-panel class="column" tone="cork" [title]="t().projects.tasks.status[status]"
                                      [count]="columnCount(status)">
                         <app-button actions variant="rail" size="sm" [disabled]="busy()"
                                     [title]="t().projects.tasks.newTask" (clicked)="startCreating(status)">

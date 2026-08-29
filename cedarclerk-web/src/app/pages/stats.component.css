@@ -68,10 +68,11 @@
 }
 
 /* A sentence, not a readout: it wraps, it is set in the reading face, and it gives up the mono
-   the numbers beside it keep. */
+   the numbers beside it keep. Never `flex: 1` — as the only shrinkable item on a wrapped strip
+   line it collapsed to zero width and rendered one character per line. */
 :host([data-surface="paper"]) .metric-note {
-    flex: 1;
-    min-width: 0;
+    flex: 0 1 auto;
+    max-width: 48ch;
     font-family: var(--font-sans);
     white-space: normal;
 }

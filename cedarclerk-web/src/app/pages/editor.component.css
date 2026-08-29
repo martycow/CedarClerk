@@ -1094,6 +1094,8 @@
     gap: 8px;
 }
 
+/* Two orthogonal states: "active" = selected for step 3 (--abord border + --asoft wash),
+   "on" = included in the publish, told by the accent-ticked checkbox alone. */
 .dest-card {
     display: flex;
     align-items: center;
@@ -1105,25 +1107,29 @@
     font-size: var(--fs-ui);
 }
 
-.dest-card.on {
-    border-color: var(--abord);
-    background: var(--asoft);
+.dest-card:hover {
+    background: var(--hover);
 }
 
-.dest-card.active {
-    box-shadow: inset 3px 0 0 var(--accent);
-    border-color: var(--abord);
+.dest-card input[type="checkbox"] {
+    accent-color: var(--accent);
 }
 
 .dest-card.off {
     background: var(--alt);
-    cursor: default;
     flex-wrap: wrap;
 }
 
 .dest-card.unsupported {
     opacity: .72;
     border-style: dashed;
+}
+
+/* After .off so a not-connected card still shows its selection wash. */
+.dest-card.active {
+    border-color: var(--abord);
+    background: var(--asoft);
+    box-shadow: inset 3px 0 0 var(--accent);
 }
 
 @media (max-width: 760px) {
@@ -1216,6 +1222,7 @@
     border: var(--border-paper);
     border-radius: var(--radius-paper);
     background-color: var(--surface);
+    background-image: var(--tex-paper);
     box-shadow: var(--shadow-paper-sm);
     padding: 12px 14px;
     margin-bottom: 0;

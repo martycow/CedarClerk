@@ -1,3 +1,12 @@
+/* The bench page contract (UI-INVENTORY bench-shell row): the page fills the shell body and the
+   list panel's sheet scrolls internally instead of growing the page. */
+:host {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
 .hint {
     color: var(--t2);
     font-size: var(--dens-fs);
@@ -18,16 +27,23 @@
 }
 
 .index {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
     padding: var(--space-3);
 }
 
 /* ---------- The two columns ---------- */
-/* The kit's proportions, and no width breakpoint of its own (ADR-147). */
+/* The kit's proportions, and no width breakpoint of its own (ADR-147). Stretched, not started:
+   the columns are bounded by the page now, so the list sheet scrolls inside its panel. */
 .index-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) var(--bench-dock-w);
     gap: var(--space-3);
-    align-items: start;
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
 }
 
 .index-mid {
@@ -35,9 +51,12 @@
     flex-direction: column;
     gap: var(--space-3);
     min-width: 0;
+    min-height: 0;
 }
 
 /* ---------- The lit top ---------- */
+.hero { flex: none; }
+
 .hero-body {
     display: flex;
     align-items: center;
@@ -66,6 +85,13 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
+    flex: 1;
+    min-height: 0;
+}
+
+.list-panel {
+    flex: 1;
+    min-height: 0;
 }
 
 .search {

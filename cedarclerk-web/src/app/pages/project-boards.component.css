@@ -1,4 +1,17 @@
+/* The bench page contract (UI-INVENTORY bench-shell row): the page fills the shell body, the
+   worktop scrolls its own body and the dock scrolls beside it. */
+:host {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
 .boards {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
     padding: var(--space-3);
 }
 
@@ -6,8 +19,12 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) var(--bench-dock-w);
     gap: var(--space-3);
-    align-items: start;
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
 }
+
+.top { min-height: 0; }
 
 .top-body {
     display: flex;
@@ -60,30 +77,31 @@
 }
 
 .board-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: var(--space-3);
     margin: 0;
     padding: 0;
     list-style: none;
 }
 
-.board-row {
+.board-card {
+    position: relative;
     display: flex;
-    align-items: center;
-    gap: var(--space-2);
+    min-width: 0;
 }
 
 /* A board is a sheet on the top, and the whole sheet is the link: a name that is the only target
-   makes the row's own area dead space the pointer has to avoid. */
+   makes the card's own area dead space the pointer has to avoid. */
 .board {
     display: flex;
     flex: 1;
-    align-items: center;
-    gap: var(--space-3);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
     min-width: 0;
     min-height: var(--hit-target);
-    padding: var(--space-2) var(--space-3);
+    padding: var(--space-3);
     border: var(--border-paper);
     border-radius: var(--radius-paper);
     background-color: var(--sheet);
@@ -93,18 +111,18 @@
     text-decoration: none;
 }
 
-.board:hover { background-color: var(--paper-bright); }
-
-.board-text {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
+.board:hover {
+    background-color: var(--paper-bright);
+    box-shadow: var(--shadow-paper);
 }
+
+.board app-icon { color: var(--accent); }
 
 .board-name {
     font-family: var(--font-sans);
     font-size: var(--fs-ui);
     font-weight: 700;
+    max-width: 100%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -116,15 +134,32 @@
 }
 
 .board-actions {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
     display: flex;
     gap: var(--space-1);
 }
 
+/* Quiet until the pointer arrives; a touch screen has no hover to arrive, so there the buttons
+   simply stay. */
+@media (hover: hover) {
+    .board-actions {
+        opacity: 0;
+        transition: opacity var(--motion-fast) var(--ease);
+    }
+
+    .board-card:hover .board-actions,
+    .board-card:focus-within .board-actions { opacity: 1; }
+}
+
+/* Bounded with the page, so a long people list scrolls inside its panel's sheet. */
 .dock {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
     min-width: 0;
+    min-height: 0;
 }
 
 .people {

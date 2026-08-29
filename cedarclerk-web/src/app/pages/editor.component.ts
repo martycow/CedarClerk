@@ -506,6 +506,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
+    /** Keyboard select on a destination card — preventDefault keeps Space from scrolling the modal. */
+    selectDestinationKey(event: Event, destination: ExportDestination) {
+        event.preventDefault();
+        this.activeExportDestination.set(destination);
+    }
+
     activeMicroNetwork(): MicroNetwork | null {
         const active = this.activeExportDestination();
         return this.microNetworks.includes(active as MicroNetwork) ? active as MicroNetwork : null;

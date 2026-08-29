@@ -1,24 +1,35 @@
 /* ADR-127 — the media library. Compact density (ADR-164 clause 6): a screen for scanning tiles,
-   not for reading. The shell owns the ground under it, so nothing here paints a page background. */
+   not for reading. The shell owns the ground under it, so nothing here paints a page background.
+   The host takes the bench page contract (UI-INVENTORY bench-shell row) so the panel's sheet
+   scrolls internally instead of growing the page. */
+:host {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
 .media-page {
     display: flex;
     flex-direction: column;
+    flex: 1;
+    min-height: 0;
     gap: var(--space-3);
     padding: var(--space-3);
 }
 
-/* Two strips, one above the other: the bucket says whose files these are, the type says what they
-   are. Only the lower one is cut into the board, so they do not read as one row of eight tiles. */
-.bucket-strip {
+/* Inside another screen the host page owns the padding around this component. */
+.media-page.embedded { padding: 0; }
+
+/* Both strips share one row (the drafts view-row pattern): the bucket says whose files these are,
+   the type says what they are; a clear gap keeps them from reading as one run of tiles. The row
+   is cut into the board's top edge (ADR-200). */
+.strip-row {
     display: flex;
-    padding: 0 var(--space-1);
-    margin-bottom: var(--space-1);
-}
-
-/* The index tiles hang off the panel's top edge, overlapping its border by a hair. */
-.media-page > app-index-tabs.bucket-strip { margin-bottom: var(--space-1); }
-
-.media-page > app-index-tabs {
+    align-items: flex-end;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    flex: none;
     position: relative;
     z-index: 1;
     padding: 0 var(--space-1);
@@ -35,20 +46,34 @@
     font-size: var(--dens-fs);
 }
 
-/* The kit's proportions and no width breakpoint of its own (ADR-147). */
+/* The kit's proportions and no width breakpoint of its own (ADR-147). Stretched, not started:
+   the board is bounded by the page now, so the sheet scrolls inside it. */
 .media-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) var(--bench-dock-w-wide);
     gap: var(--space-3);
-    align-items: start;
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
 }
 
+/* Embedded with no file chosen the dock would be an empty column, so the board takes the row. */
+.media-grid.solo { grid-template-columns: minmax(0, 1fr); }
+.media-grid.solo .shelves { display: none; }
+
+/* The dock scrolls as its own column: a tall inspector on a short window must not be clipped by
+   the now-bounded board. */
 .shelves {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
     min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
 }
+
+/* Content height, not squeezed: the dock's own scroller is what absorbs the excess. */
+.shelves > app-shelf-panel { flex: none; }
 
 /* Projected into the panel header, which is a single non-wrapping row. */
 .search {

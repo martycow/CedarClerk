@@ -121,25 +121,30 @@
     text-align: center;
 }
 
-/* ---------- Board: one shelf per column, one tag per card ---------- */
+/* ---------- Board: one cork lane per column, one paper tag per card ---------- */
+/* The wider gap is what lets four framed lanes read as four boards on a wall rather than one
+   surface ruled into quarters. */
 .board {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--dens-gap);
+    gap: var(--space-3);
     align-items: start;
 }
 
+/* A lane holding nothing is still a lane: the cork keeps enough height to be pinned to. */
 .column-cards {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+    min-height: var(--space-8);
 }
 
+/* On cork, so it takes the ink the kit measured against cork rather than paper's --t2. */
 .column-empty {
     margin: 0;
     padding: var(--space-3) var(--space-2);
     font-size: var(--fs-meta);
-    color: var(--t2);
+    color: var(--wood-ink);
     text-align: center;
 }
 

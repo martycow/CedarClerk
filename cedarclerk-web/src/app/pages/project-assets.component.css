@@ -1,8 +1,19 @@
 /* T-122 — the asset index screen. Compact density (ADR-164 clause 6): a screen for scanning
-   thousands of rows, not for reading. The shell owns the ground under it. */
+   thousands of rows, not for reading. The shell owns the ground under it. The host takes the
+   bench page contract (UI-INVENTORY bench-shell row) so the panel's sheet scrolls internally
+   instead of growing the page. */
+:host {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
 .assets-page {
     display: flex;
     flex-direction: column;
+    flex: 1;
+    min-height: 0;
     gap: var(--space-3);
     padding: var(--space-3);
 }
@@ -26,9 +37,12 @@
     font-size: var(--fs-meta);
 }
 
-/* The library is a page in its own right and brings its own padding; inside this board it is a
-   panel among panels, so the outer one is dropped rather than doubled. */
-.uploaded { margin: calc(-1 * var(--space-3)); }
+/* The library runs embedded here (its own padding and storage shelf suppressed), so it takes the
+   room left under the strip and scrolls inside it. */
+.uploaded {
+    flex: 1;
+    min-height: 0;
+}
 
 /* The tiles are cut into the board's own edge, so the column's gap is cancelled here rather than
    left to lift them a step above it (ADR-200). */
@@ -39,20 +53,30 @@
     margin-bottom: calc(-1px - var(--space-3));
 }
 
-/* The kit's proportions and no width breakpoint of its own (ADR-147). */
+/* The kit's proportions and no width breakpoint of its own (ADR-147). Stretched, not started:
+   the board is bounded by the page now, so the sheet scrolls inside it. */
 .assets-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) var(--bench-dock-w-wide);
     gap: var(--space-3);
-    align-items: start;
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
 }
 
+/* The dock scrolls as its own column: a tall inspector on a short window must not be clipped by
+   the now-bounded board. */
 .shelves {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
     min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
 }
+
+/* Content height, not squeezed: the dock's own scroller is what absorbs the excess. */
+.shelves > app-shelf-panel { flex: none; }
 
 /* Projected into the panel header, which is a single non-wrapping row. */
 .search {

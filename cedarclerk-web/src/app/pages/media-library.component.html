@@ -1,23 +1,25 @@
 <!--ADR-164 — one index strip, one panel, and a right column that always carries something: the
 storage figures that used to hang off the page title, and the chosen file, which used to be a modal
 covering the list its 409 answer talks about.-->
-<div class="media-page" data-density="compact">
+<div class="media-page" [class.embedded]="embedded()" data-density="compact">
     @if (loadError(); as err) { <p class="load-error">{{ err }}</p> }
 
     @if (loading()) {
         <p class="hint">{{ t().common.loading }}</p>
     } @else if (page(); as p) {
-        <!--ADR-204 — which project's files these are. Absent when the component is pinned to one
-        (the project's own Assets screen renders it that way) or when there is nothing to sort.-->
-        @if (!pinnedProject() && bucketTabs().length > 1) {
-        <app-index-tabs class="bucket-strip" [items]="bucketTabs()" [value]="bucketTab()"
-                        [label]="t().media.bucketStrip" (selected)="pickBucket($event)" />
-        }
+        <!--One row: the bucket strip (ADR-204 — whose files these are) beside the type strip.
+        The bucket half is absent when the component is pinned to one project (the project's own
+        Assets screen renders it that way) or when there is nothing to sort.-->
+        <div class="strip-row">
+            @if (!pinnedProject() && bucketTabs().length > 1) {
+            <app-index-tabs class="bucket-strip" [items]="bucketTabs()" [value]="bucketTab()"
+                            [label]="t().media.bucketStrip" (selected)="pickBucket($event)" />
+            }
+            <app-index-tabs [items]="typeTabs()" [value]="typeTab()" [label]="t().media.typeStrip"
+                            (selected)="pickType($event)" />
+        </div>
 
-        <app-index-tabs [items]="typeTabs()" [value]="typeTab()" [label]="t().media.typeStrip"
-                        (selected)="pickType($event)" />
-
-        <div class="media-grid">
+        <div class="media-grid" [class.solo]="embedded() && !selected()">
             <app-shelf-panel class="library" [title]="t().media.open" [count]="rangeLabel()" flush>
                 <app-input actions class="search" [dense]="true" type="search" [value]="search()"
                            [placeholder]="t().media.searchPlaceholder"
@@ -77,12 +79,16 @@ covering the list its 409 answer talks about.-->
             </app-shelf-panel>
 
             <div class="shelves">
+                <!--Account-wide figures, so they stay on the account-wide page: embedded in a
+                project's Assets board they would read as that project's quota.-->
+                @if (!embedded()) {
                 <app-shelf-panel class="storage" [title]="t().media.storage" [count]="usagePercentLabel()">
                     <div class="usage-bar" role="progressbar" [attr.aria-valuenow]="usagePercent()">
                         <div class="usage-fill" [style.width.%]="usagePercent()"></div>
                     </div>
                     <p class="hint">{{ t().media.usage(bytes(p.usedBytes), bytes(p.limitBytes)) }}</p>
                 </app-shelf-panel>
+                }
 
                 @if (selected(); as a) {
                     <app-shelf-panel class="inspector" [title]="t().media.fileDetails" [count]="bytes(a.sizeBytes)">

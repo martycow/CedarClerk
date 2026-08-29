@@ -1,6 +1,6 @@
 <div class="boards">
     <div class="boards-grid">
-        <app-worktop class="top" [label]="projectName()"
+        <app-worktop class="top" scroll [label]="projectName()"
                      [meta]="t().projects.canvas.sub(boards().length, itemTotal())">
             <div class="top-body">
                 <header class="head">
@@ -32,17 +32,18 @@
                         }
                     </div>
                 } @else {
+                    <!--A card per board rather than a row: a board is a sheet, so it lies on the
+                    worktop as one. The whole card is the link (middle click must work); the write
+                    actions sit over its corner so the two targets never overlap.-->
                     <ul class="board-list">
                         @for (board of boards(); track board.id) {
-                            <li class="board-row">
+                            <li class="board-card">
                                 <a class="board" [routerLink]="['/projects', projectId(), 'canvas', board.id]">
-                                    <app-icon name="squares-four" size="md" />
-                                    <span class="board-text">
-                                        <span class="board-name">{{ board.name || t().projects.canvas.untitledBoard }}</span>
-                                        <span class="board-meta">
-                                            {{ t().projects.canvas.itemCount(board.itemCount) }}
-                                            · {{ backgroundWord(board.background) }}
-                                        </span>
+                                    <app-icon name="squares-four" size="lg" />
+                                    <span class="board-name">{{ board.name || t().projects.canvas.untitledBoard }}</span>
+                                    <span class="board-meta">
+                                        {{ t().projects.canvas.itemCount(board.itemCount) }}
+                                        · {{ backgroundWord(board.background) }}
                                     </span>
                                 </a>
                                 @if (canWrite()) {

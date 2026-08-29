@@ -1,4 +1,4 @@
-import { Component, OnDestroy, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, OnDestroy, booleanAttribute, computed, effect, inject, input, signal } from '@angular/core';
 import { AssetsService, LibraryAsset, LibraryKind, LibraryPage } from '../core/assets.service';
 import { ProjectsService, ProjectSummary } from '../core/projects.service';
 import { AuthService } from '../core/auth.service';
@@ -41,6 +41,13 @@ export class MediaLibraryComponent implements OnDestroy {
      * second copy of this component. Unset, the page owns the strip and opens on every bucket.
      */
     readonly pinnedProject = input<string | null>(null);
+
+    /**
+     * Rendered inside another screen (the project's Assets board sets it alongside `pinnedProject`):
+     * the page padding and the account-wide storage shelf are the host screen's business, so both
+     * are dropped and what remains is one strip welded over one panel.
+     */
+    readonly embedded = input(false, { transform: booleanAttribute });
 
     readonly bytes = formatBytes;
     readonly kinds: LibraryKind[] = ['image', 'video', 'audio'];

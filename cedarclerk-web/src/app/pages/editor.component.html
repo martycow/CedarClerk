@@ -50,43 +50,69 @@
                              [count]="tickedDestinationCount()">
                 <div class="export-step-body">
                 <!--A network with no account stays visible and stays honest: it is not hidden, not
-                silently tickable, and the way out is the one place that can fix it (ADR-095).-->
+                silently tickable, and the way out is the one place that can fix it (ADR-095).
+                Two independent affordances per card: the body selects what step 3 manages, only
+                the checkbox changes what gets published — neither ever does the other's job.-->
                 <div class="dest-cards">
-                    <label class="dest-card" [class.on]="destBlog()" [class.active]="activeExportDestination() === 'blog'"
-                           (click)="activeExportDestination.set('blog')">
-                        <input type="checkbox" [checked]="destBlog()" (change)="destBlog.set(!destBlog())">
+                    <div class="dest-card" role="button" tabindex="0"
+                         [class.on]="destBlog()" [class.active]="activeExportDestination() === 'blog'"
+                         [attr.aria-pressed]="activeExportDestination() === 'blog'"
+                         (click)="activeExportDestination.set('blog')"
+                         (keydown.enter)="selectDestinationKey($event, 'blog')"
+                         (keydown.space)="selectDestinationKey($event, 'blog')">
+                        <input type="checkbox" [checked]="destBlog()" (change)="destBlog.set(!destBlog())"
+                               (click)="$event.stopPropagation()"
+                               (keydown.enter)="$event.stopPropagation()" (keydown.space)="$event.stopPropagation()"
+                               [attr.aria-label]="t().editor.exportModal.includeDestination(t().editor.exportModal.destinationBlog)">
                         <app-icon name="newspaper" size="sm"></app-icon>
                         <span class="dest-card-name">{{ t().editor.exportModal.destinationBlog }}</span>
                         @if (currentBlog()?.isPublished) { <span class="state-chip live">LIVE</span> }
-                    </label>
+                    </div>
 
-                    <label class="dest-card" [class.on]="destTelegram()" [class.active]="activeExportDestination() === 'telegram'"
-                           (click)="activeExportDestination.set('telegram')">
-                        <input type="checkbox" [checked]="destTelegram()" (change)="destTelegram.set(!destTelegram())">
+                    <div class="dest-card" role="button" tabindex="0"
+                         [class.on]="destTelegram()" [class.active]="activeExportDestination() === 'telegram'"
+                         [attr.aria-pressed]="activeExportDestination() === 'telegram'"
+                         (click)="activeExportDestination.set('telegram')"
+                         (keydown.enter)="selectDestinationKey($event, 'telegram')"
+                         (keydown.space)="selectDestinationKey($event, 'telegram')">
+                        <input type="checkbox" [checked]="destTelegram()" (change)="destTelegram.set(!destTelegram())"
+                               (click)="$event.stopPropagation()"
+                               (keydown.enter)="$event.stopPropagation()" (keydown.space)="$event.stopPropagation()"
+                               [attr.aria-label]="t().editor.exportModal.includeDestination(t().editor.exportModal.destinationTelegram)">
                         <app-brand-icon name="telegram" [size]="15"></app-brand-icon>
                         <span class="dest-card-name">{{ t().editor.exportModal.destinationTelegram }}</span>
                         @if (telegramPostUrl()) { <span class="state-chip live">LIVE</span> }
-                    </label>
+                    </div>
 
                     @for (network of microNetworks; track network) {
                         @if (account(network); as acc) {
-                        <label class="dest-card" [class.on]="destination(network)()" [class.active]="activeExportDestination() === network"
-                               (click)="activeExportDestination.set(network)">
+                        <div class="dest-card" role="button" tabindex="0"
+                             [class.on]="destination(network)()" [class.active]="activeExportDestination() === network"
+                             [attr.aria-pressed]="activeExportDestination() === network"
+                             (click)="activeExportDestination.set(network)"
+                             (keydown.enter)="selectDestinationKey($event, network)"
+                             (keydown.space)="selectDestinationKey($event, network)">
                             <input type="checkbox" [checked]="destination(network)()"
-                                   (change)="destination(network).set(!destination(network)())">
+                                   (change)="destination(network).set(!destination(network)())"
+                                   (click)="$event.stopPropagation()"
+                                   (keydown.enter)="$event.stopPropagation()" (keydown.space)="$event.stopPropagation()"
+                                   [attr.aria-label]="t().editor.exportModal.includeDestination(microLabels[network])">
                             <app-brand-icon [name]="brandOf(network)" [size]="14"></app-brand-icon>
                             <span class="dest-card-name">{{ microLabels[network] }}</span>
                             <span class="dest-card-meta">{{ acc.displayName }}</span>
-                        </label>
+                        </div>
                         } @else {
                         <div class="dest-card off" role="button" tabindex="0"
                              [class.active]="activeExportDestination() === network"
+                             [attr.aria-pressed]="activeExportDestination() === network"
                              (click)="activeExportDestination.set(network)"
-                             (keydown.enter)="activeExportDestination.set(network)">
+                             (keydown.enter)="selectDestinationKey($event, network)"
+                             (keydown.space)="selectDestinationKey($event, network)">
                             <app-brand-icon [name]="brandOf(network)" [size]="14"></app-brand-icon>
                             <span class="dest-card-name">{{ microLabels[network] }}</span>
                             <span class="dest-card-meta">{{ t().editor.exportModal.notConnected }}</span>
-                            <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'account' }">
+                            <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'account' }"
+                               (click)="$event.stopPropagation()">
                                 {{ t().editor.exportModal.connectInSettings }}
                             </a>
                         </div>
@@ -95,8 +121,10 @@
                     @for (network of unsupportedDestinations; track network.id) {
                     <div class="dest-card off unsupported" role="button" tabindex="0"
                          [class.active]="activeExportDestination() === network.id"
+                         [attr.aria-pressed]="activeExportDestination() === network.id"
                          (click)="activeExportDestination.set(network.id)"
-                         (keydown.enter)="activeExportDestination.set(network.id)">
+                         (keydown.enter)="selectDestinationKey($event, network.id)"
+                         (keydown.space)="selectDestinationKey($event, network.id)">
                         <app-brand-icon [name]="network.icon" [size]="14"></app-brand-icon>
                         <span class="dest-card-name">{{ network.name }}</span>
                         <span class="dest-card-meta">{{ t().editor.exportModal.notSupported }}</span>
@@ -517,7 +545,7 @@
             }
 
             <!-- ============ FILES ============ -->
-            <app-shelf-panel class="export-step" [title]="t().editor.exportModal.filesPanel"
+            <app-shelf-panel class="export-step export-global" [title]="t().editor.exportModal.filesPanel"
                              [count]="draftAssets().length">
                 <div class="export-step-body">
                 <p class="field-hint-inline">{{ t().editor.exportModal.filesPanelHint }}</p>

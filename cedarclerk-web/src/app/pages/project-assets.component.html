@@ -15,7 +15,7 @@ shelf too, because linking it to a document means choosing from a list the modal
         </app-button>
         <span class="refile-note">{{ refileNote() || t().media.refileHint }}</span>
     </div>
-    <app-media-library class="uploaded" [pinnedProject]="projectId()" />
+    <app-media-library class="uploaded" [pinnedProject]="projectId()" embedded />
     } @else {
     <!-- Scanning banner. Two phases, because they cost wildly different amounts: the index is
          fast (small rows) and the preview pass is slow (every image decoded once). One bar across

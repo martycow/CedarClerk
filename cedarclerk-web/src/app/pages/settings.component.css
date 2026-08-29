@@ -1,5 +1,12 @@
+/* The bench page contract (UI-INVENTORY bench-shell row), with the host as the scroller: this
+   screen has no panel sheet to hand the overflow to, so the page scrolls inside its own box and
+   never grows the shell body. */
 :host {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 .spacer {
@@ -541,6 +548,8 @@
     background: #5865F2; /* Discord's blurple */
 }
 
+/* Bounded like the drafts folder list (260px): an account in a hundred chats must not push the
+   rest of the page below the fold. */
 .target-list {
     list-style: none;
     margin: 0;
@@ -548,6 +557,10 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
+    max-height: 260px;
+    overflow-y: auto;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* A drawn edge, not a fill one step off the sheet: --alt against --sheet is two greys apart in the
