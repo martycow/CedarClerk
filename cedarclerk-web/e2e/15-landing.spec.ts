@@ -48,7 +48,7 @@ test('a signed-in visitor is not shown the landing', async ({ context }) => {
 // The regression this suite caught on its first run: the landing matched "/" on every host, so the
 // blog's own index — its homepage — was replaced by a marketing page.
 test('the blog keeps its own homepage', async ({ page }) => {
-    await page.goto('http://blog.localhost:8080/');
+    await page.goto('http://e2e-admin.localhost:8080/');
 
     await expect(page.locator('body')).not.toContainText('What it costs');
     await expect(page.locator('body')).not.toContainText('Сколько стоит');

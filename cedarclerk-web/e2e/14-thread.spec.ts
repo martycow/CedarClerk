@@ -17,9 +17,10 @@ test('a post that does not fit offers a thread, with its parts listed', async ({
     await page.goto(`/editor?draft=${id}`);
     await expect(page.locator('.tiptap')).toBeVisible();
     await page.getByRole('button', { name: 'Export', exact: true }).click();
-    // A destination's settings panel only exists once it is ticked (ADR-096), so the checks below
-    // live behind Telegram being chosen — which is also when its limits start to matter.
+    // Two affordances per card: the checkbox ticks Telegram for publishing, and a click on the
+    // card body brings its settings panel forward — which is where the limit checks live.
     await page.locator('.dest-card input[type=checkbox]').nth(1).check();
+    await page.locator('.dest-card').nth(1).click();
 
     // The problem is stated before the remedy is offered.
     await expect(page.locator('.publish-issues li.blocking')).toHaveCount(1);
@@ -46,6 +47,9 @@ test('a post that fits is never offered a thread', async ({ page, context }) => 
     await expect(page.locator('.tiptap')).toBeVisible();
     await page.getByRole('button', { name: 'Export', exact: true }).click();
     await page.locator('.dest-card input[type=checkbox]').nth(1).check();
+    // Bring the Telegram panel forward so the absence below is the panel's, not the modal's.
+    await page.locator('.dest-card').nth(1).click();
+    await expect(page.locator('.export-section-title').filter({ hasText: 'Telegram' })).toBeVisible();
 
     await expect(page.locator('.thread-toggle')).toHaveCount(0);
 });
@@ -81,6 +85,8 @@ test('a connected short-post network offers link and thread as two modes', async
     // Blog, Telegram, then the connected network — an unconnected one renders no checkbox at all.
     const bluesky = page.locator('.dest-card input[type=checkbox]').nth(2);
     await bluesky.check();
+    // The checkbox only ticks it for publishing; the card body is what opens its panel.
+    await page.locator('.dest-card').nth(2).click();
 
     const modes = page.locator('.mode-toggle button');
     await expect(modes).toHaveCount(2);

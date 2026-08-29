@@ -36,9 +36,11 @@ $env:ASPNETCORE_ENVIRONMENT = 'E2E'
 $env:ASPNETCORE_URLS = 'http://localhost:8080'
 $env:Cedar__InviteCode = 'e2e-invite'
 $env:Cedar__AdminEmail = 'e2e-admin@local.test'
-# blog.localhost resolves to 127.0.0.1 in Chromium without a hosts entry, so the blog branch and
-# the app branch can share one Kestrel on one port, exactly as they do in production.
-$env:Cedar__BlogHost = 'blog.localhost'
+# *.localhost resolves to 127.0.0.1 in Chromium without a hosts entry, so the tenant blogs and
+# the app branch can share one Kestrel on one port, exactly as they do in production. Blogs live
+# at <username>.<TenantHost> since the multitenancy work — the seeded account's is
+# e2e-admin.localhost, which e2e/helpers.ts must agree on.
+$env:Cedar__TenantHost = 'localhost'
 $env:Cedar__MainHost = 'http://localhost:8080'
 
 $server = $null
@@ -90,6 +92,7 @@ try {
         email      = $env:Cedar__AdminEmail
         password   = 'E2e-passw0rd!'
         inviteCode = $env:Cedar__InviteCode
+        username   = 'e2e-admin'
     } | ConvertTo-Json
     try {
         Invoke-RestMethod -Uri 'http://localhost:8080/api/auth/register' -Method Post `
@@ -109,7 +112,7 @@ try {
     if ($Serve) {
         Write-Host '=== 4/4 serving ===' -ForegroundColor Cyan
         Write-Host "  app   http://localhost:8080  (run 'ng serve' separately for :4200)" -ForegroundColor Green
-        Write-Host "  blog  http://blog.localhost:8080" -ForegroundColor Green
+        Write-Host "  blog  http://e2e-admin.localhost:8080" -ForegroundColor Green
         Write-Host "  login $($env:Cedar__AdminEmail) / E2e-passw0rd!" -ForegroundColor Green
         Write-Host '  Ctrl+C to stop.' -ForegroundColor DarkGray
         Wait-Process -Id $script:server.Id

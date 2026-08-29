@@ -317,6 +317,8 @@ test('@audit thread offer', async ({ page, context }) => {
     await expect(page.locator('.tiptap')).toBeVisible();
     await page.getByRole('button', { name: 'Export', exact: true }).click();
     await page.locator('.dest-card input[type=checkbox]').nth(1).check();
+    // The checkbox only ticks the destination — the card body click brings its panel forward.
+    await page.locator('.dest-card').nth(1).click();
     await page.locator('.thread-toggle input').check();
     await expect(page.locator('.thread-parts li').first()).toBeVisible();
     await shot(page, '79-thread-offer');

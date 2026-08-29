@@ -4,7 +4,9 @@ import { Page, BrowserContext, expect } from '@playwright/test';
 // the launcher and this file must agree, so both read like the same fact.
 export const ADMIN = { email: 'e2e-admin@local.test', password: 'E2e-passw0rd!' };
 export const INVITE_CODE = 'e2e-invite';
-export const BLOG_ORIGIN = 'http://blog.localhost:8080';
+// Blogs are tenant-hosted since the multitenancy work: the seeded admin's lives on a subdomain
+// named by its username, not on a shared blog host.
+export const BLOG_ORIGIN = 'http://e2e-admin.localhost:8080';
 
 // Sign in through the API rather than the form, because the form is what several tests are *for*
 // — driving it as a setup step in the other twelve would make an unrelated failure look like a
@@ -23,8 +25,11 @@ export async function pinEnglish(context: BrowserContext) {
 }
 
 export async function registerAccount(context: BrowserContext, email: string, password = 'E2e-passw0rd!') {
+    // Registration takes a username since the tenant-blog work — it becomes the blog's address,
+    // so it obeys subdomain rules: latin letters, digits and inner hyphens only.
+    const username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '');
     const res = await context.request.post('/api/auth/register', {
-        data: { email, password, inviteCode: INVITE_CODE },
+        data: { email, password, inviteCode: INVITE_CODE, username },
     });
     expect(res.ok(), `register failed for ${email}: ${res.status()}`).toBeTruthy();
 }
@@ -90,4 +95,4 @@ export async function expectSynced(page: Page, timeout = 10_000) {
 // through `context.request` has to reach the blog branch by address and name the host in a header.
 // Page navigations are unaffected and keep using BLOG_ORIGIN.
 export const BLOG_API = 'http://127.0.0.1:8080';
-export const BLOG_HEADERS = { Host: 'blog.localhost' };
+export const BLOG_HEADERS = { Host: 'e2e-admin.localhost' };
