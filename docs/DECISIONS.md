@@ -235,3 +235,6 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-220 — An export card selects with its body and includes with its checkbox](adr/ADR-220.md)
 - [ADR-221 — The project switcher keeps the open screen](adr/ADR-221.md)
 - [ADR-222 — The landing stays reachable at /welcome, and the desktop build gets a public page](adr/ADR-222.md)
+- [ADR-223 — Steam and itch.io are copy targets: renderers, never automation](adr/ADR-223.md)
+- [ADR-224 — Blog search rides SQLite FTS5 outside the EF model](adr/ADR-224.md)
+- [ADR-225 — Blog subscriptions notify on publish, and there is no broadcast composer](adr/ADR-225.md)

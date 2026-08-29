@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-08-18
+last_verified: 2026-08-29
 source_of_truth_for: project terminology — what the words the code and docs use mean
 guard: none
 ---
@@ -21,6 +21,9 @@ post glossary is a different thing: it's a blog feature (`GlossaryTerm`), not th
 | DocumentType | тип документа | A string on Draft (ADR-102): `post/design/script/plot/changelog/note`; default `post`, only `post` and `changelog` are publishable | `Core/DocumentTypes.cs` |
 | One document, many renderers | «один документ, много рендереров» | The core of the architecture: one CedarJson is rendered into every output; no surface carries parallel hand-maintained content (the sole exception is override text) | ARCHITECTURE §Core idea |
 | Renderer | рендерер | A pure C# class in Core that turns CedarJson into a destination format; the canonical one for Telegram is `CedarToTelegramBlocksRenderer`; invariants: escaping `< > &` + a test for every node | ARCHITECTURE:29-33, rules/renderers.md |
+| copy target | копи-таргет | An export destination that renders to the clipboard instead of sending: the export card shows a rendered preview and a copy button (Steam BBCode, itch.io HTML), no connector and no credentials — automation on those storefronts is the anti-feature, not a gap | `Core/CedarToSteamBbcodeRenderer.cs`, ADR-223 |
+| DraftSearch | — | The FTS5 virtual table behind full-text search — created by raw SQL (`AddDraftSearchFts`) and deliberately invisible to the EF model; kept in sync by triggers + a SaveChanges interceptor + a startup backfill | ADR-224 |
+| preview link | превью-ссылка | A revocable read-only URL for an unpublished draft: `Draft.PreviewToken` → public `/preview/{token}`, noindex, no account needed; revoking makes the page a 404 | `Entities.cs`, CHANGELOG 29.08 |
 | PublishTarget / IPublishTarget | таргет | Entity: the owner's connected account on one network ("where a post can go"); interface: name itself, describe its limits, send — and nothing more | `Publishing/IPublishTarget.cs`, `Entities.cs:843` |
 | PublishNetworks | сеть | String keys for networks — `"telegram"`, `"bluesky"`, `"x"`; strings, not an enum: the value lives in SQLite, the API and Angular (ADR-078) | `Core/PublishCapabilities.cs:5-14` |
 | PublishCapabilities | возможности сети | A network's limits as data, not behavior: MaxCharacters, MaxMediaItems, Supports*, DerivesShortPost — the editor reads them and warns before sending | `Core/PublishCapabilities.cs` |
@@ -59,6 +62,7 @@ post glossary is a different thing: it's a blog feature (`GlossaryTerm`), not th
 | geo rollup | гео-сводка | `BlogViewGeoDaily`: a daily aggregate by (owner, day, country, language) from CF-IPCountry/Accept-Language; an aggregate, not a visit log (ADR-097) | `Entities.cs`, `Core/ReaderGeo.cs` |
 | header slots | слоты шапки | Up to 3 configurable subheading elements (byline/URL/location/date/length/read time/word count/views); the third is Pro | `Core/HeaderSlotRenderer.cs` |
 | cross-link | кросс-ссылка | Mutual links between a post's surfaces ("Watch on Telegram" ↔ "Read on the blog"), with owner-facing text that is localizable (I15) | `Consts.CrossLinks` |
+| press kit page | пресс-кит | `/games/{slug}/press` — a press page rendered from the showcase plus five optional press fields, with a downloadable press-pack zip; self-updating because it is a renderer over existing data, not a maintained document | UI-INVENTORY §Blog surfaces, CHANGELOG 29.08 |
 | user glossary | пользовательский глоссарий | `GlossaryTerm` — the owner's own terms (per-owner, per-language, with case-form aliases), highlighted in the blog with a tooltip; only on first occurrence | `Core/GlossaryScanner.cs` |
 
 ## Tenancy and hosts

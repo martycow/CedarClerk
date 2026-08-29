@@ -1,5 +1,71 @@
 # Changelog
 
+## 2026-08-29 — Wave 1 "Reach": the blog learns to be found (master, uncommitted, 0.17.0 — second session of the day)
+
+The day's second session, and this one is features. A five-agent competitor deep-research phase
+(social schedulers, blog platforms, indie-gamedev marketing, Telegram tools) produced a two-wave
+slate; Wave 1 — "Reach" — was frozen into a contract and built by four lanes plus a tester.
+`Consts.CurrentVersion` still reads **0.17.0** and everything sits uncommitted on `master` — nothing
+deployed. Two migrations (`AddWave1Reach` and the raw-SQL `AddDraftSearchFts`), one new dependency
+(`SixLabors.ImageSharp.Drawing`), and the same deviation as this morning, said out loud again: the
+contract stood in for ADRs during the work, and ADR-223, ADR-224, ADR-225 were written at session
+close. The research itself also seeded `docs/product/COMPETITORS.md`, which closes `T-192`.
+
+**The blog gets full-text search, and so does the app** (ADR-224, closes `T-176`). The `DraftSearch`
+FTS5 table lives outside the EF model on purpose — a raw-SQL migration, triggers that catch
+`ExecuteDelete`, a SaveChanges interceptor for tracked writes, a startup backfill for databases that
+predate it — so `SchemaDriftGuardTests` never has to lie about a virtual table. On top of it: a
+public `/search` page on the blog (result pages `noindex`), `GET /api/search/drafts`, and a Ctrl+K
+overlay (`app-search-overlay`) in the bench shell. ADR-193 deleted the old title-only search for
+exactly this gap; this is the other half of that decision arriving.
+
+**A coverless post stops sharing as a blank card.** `/og/{slug}.png` renders a branded 1200×630 card
+server-side — ImageSharp.Drawing, Literata and Source Sans woff2 embedded (latin + cyrillic), a disk
+cache in `CEDAR_DATA_DIR/og-cache` with ETag/304 — and becomes the `og:image` fallback for posts
+without a cover; the avatar fallback is gone. Judged below the ADR bar deliberately: a rendering
+detail with a cache, no contested alternative, no reversal cost.
+
+**A post ends with somewhere to go.** Up to three same-tag published posts as "read next" paper
+cards at the article foot — filtered by the index visibility rule, so a private unlisted post is
+never advertised there. And **the blog becomes legible to machines**: `sitemap.xml` and JSON-LD
+Article markup, with `dateModified` clamped to never precede `datePublished`; the slugs `search`,
+`subscribe` and `sitemap.xml` are reserved so no post can ever shadow the new pages.
+
+**Steam and itch.io become copy targets** (ADR-223 — the T-318 half answered, T-127's Steam/itch
+research resolved). `CedarToSteamBbcodeRenderer` and `CedarToItchHtmlRenderer` in Core, 86 tests
+between them, `[noparse]` breakout protection and a URL scheme allowlist; the export modal's two
+placeholder cards now show a rendered preview and a clipboard button off
+`GET /api/drafts/{id}/export-text`. The clipboard is the whole design: no write API exists for
+either storefront, and automation there is the researched anti-feature, not a gap.
+
+**The press kit page nobody else builds** (closes `T-128`, design off the "Press Kit Page" Claude
+Design canvas). `/games/{slug}/press` renders factsheet, description, screenshots, logos, videos and
+contact from the showcase plus five optional press fields on `Project`, with a press-pack zip — a
+zip the tester crashed once: it streamed synchronously into the response, which Kestrel refuses, and
+it is assembled in a `MemoryStream` now. Edited from the showcase settings UI. presskit() is
+abandoned and the niche is empty; this is a renderer over existing data, not a document to maintain.
+
+**The blog gains subscribers, not a newsletter** (ADR-225). `BlogSubscriber` generalizes the
+showcase follower machinery — double opt-in via `/subscribe*`, unsubscribe in every mail — and the
+only thing that ever sends is the "Notify subscribers" toggle at a post's *first* blog publish,
+through a durable `BlogNotifyJob` queue drained by a Quartz minute job. Never on re-publish, never
+for a private post, and there is no broadcast composer, on purpose: margin and deliverability both
+say notify-on-publish is the ceiling.
+
+**A draft can be shown before it is anything.** `Draft.PreviewToken` — `POST`/`DELETE
+/api/drafts/{id}/preview-link` from the editor, a public read-only `/preview/{token}` page,
+`noindex`, revocable, no account needed. Typefully's most-loved feature, built as the reader access
+token's shape applied one entity over — which is why it, too, stays below the ADR bar. What it ships
+without: a `GET` to re-read an existing link, so the UI cannot show it next session (`T-320`).
+
+**Verified, and what was deliberately not built.** Backend `dotnet test` **1460/1460** plus
+**127/127**; `npx ng test` **486/486**; production build clean; every guard green — icons, contrast,
+density, `UiInventoryDriftTests`, `ErrorMessageLocalizationTests`, `SchemaDriftGuardTests`,
+`DocsFlowGraphTests`. `UI-INVENTORY.md` rows for the new blog surfaces landed with the session. The
+anti-features held throughout: no Steam/itch auto-posting, no cross-network engagement inbox, no
+bundled AI media generation, no MTProto analytics, no mass-DM — each refused in the research with a
+reason, recorded in `docs/product/COMPETITORS.md`.
+
 ## 2026-08-29 — Fourteen maintainer items through one frozen contract (master, uncommitted, 0.17.0)
 
 A batch session, not a feature one: fourteen of the maintainer's annotations, frozen into a contract

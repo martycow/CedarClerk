@@ -39,6 +39,7 @@ flowchart TB
         UIINV["docs/design/UI-INVENTORY.md<br/>inventory of UI elements"]
         STACK["docs/knowledge_base/STACK.md<br/>stack and costs"]
         BIZ["docs/product/BUSINESS.md<br/>money: gates, metrics, rituals"]
+        COMPET["docs/product/COMPETITORS.md<br/>competitor landscape:<br/>per segment, take / refuse"]
         METRICS["docs/product/METRICS.md<br/>event dictionary, metrics derivation §4"]
         MULTI["docs/product/MULTITENANCY.md<br/>what happens once there are users"]
         LEGAL["Terms + Privacy<br/>/terms, /privacy — Angular components<br/>filled in 13.08, not reviewed by a lawyer"]
@@ -80,6 +81,7 @@ flowchart TB
     ARCH -.->|"read BEFORE<br/>any implementation"| DECISIONS
     PRD -.->|"same"| DECISIONS
     PRODUCT -->|"who for and why"| BACKLOG
+    COMPET -->|"what to take / refuse →<br/>board rows, anti-features"| BACKLOG
     DESIGN --> UIINV
     LEGAL -.->|"lawyer before opening<br/>registration — gate §1"| BIZ
     BIZ -->|"§4: which metrics matter →<br/>how they're computed (ADR-126)"| METRICS
@@ -109,7 +111,7 @@ flowchart TB
     class OWNER,INPUTP,CODE source
     class BACKLOG,TASKS,CHANGELOG plan
     class DECISIONS,RULES,PRODENV,CLAUDE why
-    class PRODUCT,PRD,ARCH,DESIGN,UIINV,STACK,BIZ,METRICS,MULTI,INTEG,LEGAL ref
+    class PRODUCT,PRD,ARCH,DESIGN,UIINV,STACK,BIZ,COMPET,METRICS,MULTI,INTEG,LEGAL ref
     class INDIE,DESKTOP,DPROMPT,UIV2,RPROMPT,BPROMPT mod
 ```
 
@@ -162,7 +164,7 @@ The `docs/` root holds only high-level material: `DOCS-FLOW.md` (this map), `DEC
 
 | Folder | What goes there | Currently there |
 |---|---|---|
-| **`product/`** | The highest-level product context: the product as a whole, the business model, requirements | PRODUCT, PRD, BUSINESS, METRICS, MULTITENANCY, INDIEDEV |
+| **`product/`** | The highest-level product context: the product as a whole, the business model, requirements | PRODUCT, PRD, BUSINESS, METRICS, MULTITENANCY, INDIEDEV, COMPETITORS |
 | **`tasks/`** | Everything related to tasks | TASKS (short horizon), BACKLOG (board), CHANGELOG (history by date) |
 | **`design/`** | Design, UI, UX | DESIGN (tokens), UI-INVENTORY, UI-V2-PLAN, indiedev-design-prompt, bench-responsive-prompt, bench-board-prompt |
 | **`tech/`** | The technical side | ARCHITECTURE, DESKTOP |
