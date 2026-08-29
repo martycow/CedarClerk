@@ -85,6 +85,13 @@ export interface ProjectDetail extends Omit<ProjectSummary, 'documentCount' | 'o
     showcaseTrailerUrl: string | null;
     /** T-300 — the project's own domain, serving the showcase at its root. Null = subdomain only. */
     customDomain: string | null;
+    // Wave 1 item 6 — the /press page's facts. All optional; an empty field is a section the
+    // page simply omits. FactsheetRows is newline-separated "Label: value" lines.
+    pressContactEmail: string | null;
+    pressPrice: string | null;
+    pressEngine: string | null;
+    pressGenre: string | null;
+    pressFactsheetRows: string | null;
     documents: ProjectDocument[];
     /** T-123 — the dashboard's right rail, already sorted by urgency on the server. */
     upNext: GameTask[];
@@ -102,6 +109,11 @@ export interface ShowcaseInput {
     gallery: string;
     trailerUrl: string | null;
     customDomain: string | null;
+    pressContactEmail: string | null;
+    pressPrice: string | null;
+    pressEngine: string | null;
+    pressGenre: string | null;
+    pressFactsheetRows: string | null;
 }
 
 export interface ShowcaseStats {

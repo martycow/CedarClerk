@@ -50,6 +50,16 @@ export const en = {
         logoHome: 'Cedar Clerk — home',
         aboutLanding: 'About',
     },
+    // Wave 1 item 2 — the Ctrl+K document search, mounted by the shell on every screen.
+    search: {
+        title: 'Search documents',
+        placeholder: 'Search documents…',
+        hint: 'Type to search titles, text and tags of every document.',
+        empty: 'Nothing matches.',
+        failed: 'Search did not answer — try again.',
+        published: 'live',
+        keys: '↑↓ move · Enter opens · Esc closes',
+    },
     login: {
         tagline: 'Write here. Publish there. Moo.',
         email: 'Email',
@@ -272,6 +282,7 @@ export const en = {
             rulerLive: 'page is live',
             rulerOff: 'no public page',
             loadFailed: 'Could not load the showcase.',
+            pressPage: 'Press kit page',
         },
         // T-301 (ADR-217/ADR-218) — the reference boards and the people who share them.
         canvas: {
@@ -567,6 +578,20 @@ export const en = {
             showcaseDomainLabel: 'Own domain',
             showcaseDomainPlaceholder: 'mygame.com',
             showcaseDomainHint: 'Point the domain at us first — the DNS record is set by hand.',
+            // Wave 1 item 6 — the public /press page's facts; an empty field is an omitted section.
+            pressGroup: 'Press kit',
+            pressHint: 'Optional facts for the public press page — a factsheet, the screenshots and a contact, in the shape journalists expect. Empty fields are simply left off the page.',
+            pressContactLabel: 'Press contact email',
+            pressContactPlaceholder: 'press@mygame.com',
+            pressPriceLabel: 'Price',
+            pressPricePlaceholder: '$14.99 / free demo',
+            pressEngineLabel: 'Engine',
+            pressEnginePlaceholder: 'Godot 4',
+            pressGenreLabel: 'Genre',
+            pressGenrePlaceholder: 'Cozy roguelike',
+            pressFactsheetLabel: 'Factsheet extras',
+            pressFactsheetPlaceholder: 'Release date: 2027\nPlatforms: Windows, Linux',
+            pressFactsheetHint: 'One "Label: value" per line — each becomes a factsheet row on the press page.',
         },
         create: {
             title: 'New project',
@@ -1221,6 +1246,17 @@ export const en = {
             scheduleFailed: 'could not be scheduled',
             creditsShort: (need: number, have: number) => `Needs ${need} credits, you have ${have}`,
             creditsTotal: (n: number) => `${n} credit${n === 1 ? '' : 's'} in total`,
+            // T-318 — Steam/itch go out through the clipboard, never as a publish.
+            copyOnly: 'Copy the text',
+            copyIntro: (name: string) => `${name} has no publishing API — the post is rendered in its own markup here, and you paste it into the store's editor.`,
+            copyFor: (name: string) => `Copy for ${name}`,
+            copied: 'Copied',
+            copyFailed: 'Could not render the text',
+            copyImagesNote: 'Images do not travel with the text — upload them on the store page by hand, in the order they appear here.',
+            // Wave 1 item 7 — subscriber mail rides the first publish only.
+            notifySubscribers: 'Notify blog subscribers',
+            notifySubscribersHint: 'Every confirmed subscriber gets one email with a link to this post, right after it goes live.',
+            notifySubscribersRepublish: 'Already live — subscribers are only notified when a post first appears.',
         },
         // The publish checklist — the modal walks a publication like a test run: step by step,
         // with checkmarks, errors pinned to the failed step and links on the successful ones.
@@ -1234,6 +1270,20 @@ export const en = {
             allDone: 'Done — everything went out.',
             withErrors: 'Not everything went out — details on the steps above.',
             working: 'Publishing…',
+        },
+        // Wave 1 item 8 — the shareable read-only draft preview link.
+        preview: {
+            share: 'Share preview',
+            shareTitle: 'A read-only link to this draft, for someone with no account',
+            hint: 'Anyone with the link reads the current draft — no account, no editing, hidden from search engines.',
+            create: 'Create link',
+            note: 'One link per draft; creating again replaces the old one.',
+            copy: 'Copy',
+            copied: 'Copied',
+            rotate: 'New link',
+            rotateTitle: 'Replace the link — the old one stops working',
+            revoke: 'Revoke',
+            failed: 'That did not work.',
         },
     },
     debug: {

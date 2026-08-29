@@ -20,6 +20,7 @@ const DETAIL: ProjectDetail = {
     id: 'p1', name: 'Cedar Quest', description: 'A game about a bench.', projectType: 'fullgame',
     coverUrl: null, createdAt: '2026-08-01T09:00:00', archivedAt: null,
     showcaseSlug: null, showcaseLinks: '', showcaseGallery: '', showcaseTrailerUrl: null, customDomain: null,
+    pressContactEmail: null, pressPrice: null, pressEngine: null, pressGenre: null, pressFactsheetRows: null,
     documents: [
         { id: 'd-old', title: 'Design bible', documentType: 'design', updatedAt: '2026-08-10T09:00:00', isArchived: false, isBlogPublished: false },
         { id: 'd-new', title: 'Devlog #12', documentType: 'post', updatedAt: '2026-08-19T11:00:00', isArchived: false, isBlogPublished: false },

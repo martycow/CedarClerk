@@ -60,6 +60,44 @@
                                        [hint]="t().projects.edit.showcaseDomainHint"
                                        inputId="showcase-domain"
                                        [value]="domain()" (valueChange)="domain.set($any($event) ?? '')" />
+
+                            <!--Wave 1 item 6 — the /press page's facts. Every field optional: an
+                            empty one is a section the page omits, never a blank line on it.-->
+                            <p class="press-group-label">{{ t().projects.edit.pressGroup }}</p>
+                            <p class="hint">
+                                {{ t().projects.edit.pressHint }}
+                                @if (pressUrl(); as url) {
+                                    <a class="press-link" [href]="url" target="_blank" rel="noopener">{{ t().projects.showcase.pressPage }}</a>
+                                }
+                            </p>
+
+                            <app-input type="email" [label]="t().projects.edit.pressContactLabel"
+                                       [placeholder]="t().projects.edit.pressContactPlaceholder"
+                                       inputId="press-contact"
+                                       [value]="pressContact()" (valueChange)="pressContact.set($any($event) ?? '')" />
+
+                            <app-input [label]="t().projects.edit.pressPriceLabel"
+                                       [placeholder]="t().projects.edit.pressPricePlaceholder"
+                                       inputId="press-price"
+                                       [value]="pressPrice()" (valueChange)="pressPrice.set($any($event) ?? '')" />
+
+                            <app-input [label]="t().projects.edit.pressEngineLabel"
+                                       [placeholder]="t().projects.edit.pressEnginePlaceholder"
+                                       inputId="press-engine"
+                                       [value]="pressEngine()" (valueChange)="pressEngine.set($any($event) ?? '')" />
+
+                            <app-input [label]="t().projects.edit.pressGenreLabel"
+                                       [placeholder]="t().projects.edit.pressGenrePlaceholder"
+                                       inputId="press-genre"
+                                       [value]="pressGenre()" (valueChange)="pressGenre.set($any($event) ?? '')" />
+
+                            <div class="field">
+                                <label class="field-label" for="press-factsheet">{{ t().projects.edit.pressFactsheetLabel }}</label>
+                                <textarea id="press-factsheet" rows="4" maxlength="2000"
+                                          [ngModel]="pressFactsheet()" (ngModelChange)="pressFactsheet.set($event)"
+                                          [placeholder]="t().projects.edit.pressFactsheetPlaceholder"></textarea>
+                                <p class="hint">{{ t().projects.edit.pressFactsheetHint }}</p>
+                            </div>
                         </div>
                     }
 
@@ -87,6 +125,11 @@
                 @if (project()?.customDomain; as host) {
                     <app-spec-row [label]="t().projects.edit.showcaseDomainLabel">
                         <span class="spec-value">{{ host }}</span>
+                    </app-spec-row>
+                }
+                @if (pressUrl(); as url) {
+                    <app-spec-row [label]="t().projects.showcase.pressPage">
+                        <a class="spec-value link" [href]="url" target="_blank" rel="noopener">/press</a>
                     </app-spec-row>
                 }
             </app-shelf-panel>

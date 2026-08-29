@@ -95,6 +95,26 @@
     font-size: var(--fs-ui);
 }
 
+/* The press-kit fields are one group of the same form; the label rules them off from the
+   page-address fields above without becoming a second panel. */
+.press-group-label {
+    margin: var(--space-2) 0 0;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border);
+    font-family: var(--font-sans);
+    font-size: var(--fs-ui);
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--t2);
+}
+
+.press-link {
+    margin-left: var(--space-2);
+    color: var(--accent);
+    font-weight: 600;
+}
+
 .save-row {
     display: flex;
     align-items: center;

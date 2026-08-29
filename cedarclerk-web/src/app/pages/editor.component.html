@@ -118,6 +118,21 @@
                         </div>
                         }
                     }
+                    <!--T-318 — Steam/itch are copy destinations: the card only selects the step-3
+                    panel that renders the text for the clipboard. No checkbox on purpose — nothing
+                    here is a publish, so nothing here can be ticked into one.-->
+                    @for (target of copyTargets; track target.id) {
+                    <div class="dest-card off copy-target" role="button" tabindex="0"
+                         [class.active]="activeExportDestination() === target.id"
+                         [attr.aria-pressed]="activeExportDestination() === target.id"
+                         (click)="selectCopyTarget(target.id)"
+                         (keydown.enter)="selectCopyTargetKey($event, target.id)"
+                         (keydown.space)="selectCopyTargetKey($event, target.id)">
+                        <app-brand-icon [name]="target.icon" [size]="14"></app-brand-icon>
+                        <span class="dest-card-name">{{ target.name }}</span>
+                        <span class="dest-card-meta">{{ t().editor.exportModal.copyOnly }}</span>
+                    </div>
+                    }
                     @for (network of unsupportedDestinations; track network.id) {
                     <div class="dest-card off unsupported" role="button" tabindex="0"
                          [class.active]="activeExportDestination() === network.id"
@@ -172,6 +187,20 @@
                     </div>
                     }
                     @if (blogError()) { <p class="channel-error">{{ blogError() }}</p> }
+
+                    <!--Wave 1 item 7 — subscriber mail rides the FIRST publish only; on a live
+                    post the server would ignore the flag, so the toggle is not offered at all.-->
+                    @if (!currentBlog()?.isPublished) {
+                    <label class="field-hint">
+                        <input type="checkbox" [checked]="notifySubscribers()" (change)="notifySubscribers.set(!notifySubscribers())">
+                        {{ t().editor.exportModal.notifySubscribers }}
+                    </label>
+                    @if (notifySubscribers()) {
+                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.notifySubscribersHint }}</p>
+                    }
+                    } @else {
+                    <p class="field-hint-inline">{{ t().editor.exportModal.notifySubscribersRepublish }}</p>
+                    }
 
                     <!--Privacy is settable before publishing too, so a post can go live already
                     gated (nobody sees it in the window between publish and flipping the switch).-->
@@ -431,6 +460,39 @@
                         <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'account' }">{{ t().editor.exportModal.connectInSettings }}</a>
                     </div>
                     }
+                }
+                <!--T-318 — the copy panel: rendered text for the store's own editor. Copying is
+                the whole action; the images note is there because a clipboard carries none.-->
+                @if (activeCopyTarget(); as target) {
+                <div class="export-section">
+                    <div class="export-section-title">
+                        <app-brand-icon [name]="target.icon" [size]="14"></app-brand-icon>
+                        {{ target.name }}
+                    </div>
+                    <p class="field-hint-inline">{{ t().editor.exportModal.copyIntro(target.name) }}</p>
+                    @if (exportLangs().length > 1) {
+                    <div class="lang-pick-row">
+                        @for (l of exportLangs(); track l) {
+                        <button class="pill" [class.on]="copyLangEffective() === l" (click)="setCopyTargetLang(l)"
+                                [title]="endonym(l)">
+                            {{ l.toUpperCase() }}
+                        </button>
+                        }
+                    </div>
+                    }
+                    @if (copyTextLoading()) {
+                    <p class="field-hint-inline">{{ t().common.loading }}</p>
+                    } @else if (copyTextError()) {
+                    <p class="channel-error">{{ copyTextError() }}</p>
+                    } @else if (copyText()) {
+                    <pre class="revision-preview copy-preview">{{ copyText() }}</pre>
+                    <button class="export-btn" (click)="copyExportText()">
+                        @if (copyCopied()) { <app-icon name="check" size="sm"></app-icon> {{ t().editor.exportModal.copied }} }
+                        @else { <app-icon name="clipboard-text" size="sm"></app-icon> {{ t().editor.exportModal.copyFor(target.name) }} }
+                    </button>
+                    }
+                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.copyImagesNote }}</p>
+                </div>
                 }
                 @if (activeUnsupportedDestination(); as unavailable) {
                 <div class="export-section destination-unavailable">
@@ -1487,6 +1549,41 @@
                     @if (discordAccount(); as a) { <span>{{ a.displayName }}</span> }
                     @else { <span class="insp-off">{{ t().manager.inspector.none }}</span> }
                 </app-spec-row>
+
+                <!--Wave 1 item 8 — a revocable read-only preview URL, for showing a draft to
+                someone with no account. Lives with the destination rows because it is about who
+                can see the document, not about editing it.-->
+                <div class="insp-actions">
+                    <app-popover>
+                        <button trigger class="insp-btn" [title]="t().editor.preview.shareTitle">
+                            <app-icon name="link" size="xs"></app-icon> {{ t().editor.preview.share }}
+                        </button>
+                        <div panel class="preview-share">
+                            <p class="field-hint-inline">{{ t().editor.preview.hint }}</p>
+                            @if (previewLinkUrl(); as url) {
+                            <p class="revision-preview preview-share-url">{{ url }}</p>
+                            <div class="insp-actions">
+                                <button class="insp-btn" (click)="copyPreviewLink()">
+                                    {{ previewLinkCopied() ? t().editor.preview.copied : t().editor.preview.copy }}
+                                </button>
+                                <button class="insp-btn" (click)="createPreviewLink()" [disabled]="previewLinkBusy()"
+                                        [title]="t().editor.preview.rotateTitle">
+                                    {{ t().editor.preview.rotate }}
+                                </button>
+                                <button class="insp-btn lang-delete" (click)="revokePreviewLink()" [disabled]="previewLinkBusy()">
+                                    {{ t().editor.preview.revoke }}
+                                </button>
+                            </div>
+                            } @else {
+                            <button class="insp-btn" (click)="createPreviewLink()" [disabled]="previewLinkBusy()">
+                                {{ previewLinkBusy() ? t().common.loading : t().editor.preview.create }}
+                            </button>
+                            <p class="field-hint-inline">{{ t().editor.preview.note }}</p>
+                            }
+                            @if (previewLinkError()) { <p class="channel-error">{{ previewLinkError() }}</p> }
+                        </div>
+                    </app-popover>
+                </div>
                 }
             }
             </div>

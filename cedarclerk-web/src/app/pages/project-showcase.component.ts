@@ -51,6 +51,18 @@ export class ProjectShowcaseComponent implements OnDestroy {
     trailer = signal('');
     gallery = signal('');
     domain = signal('');
+    // Wave 1 item 6 — the /press page's optional facts; empty means the section is omitted there.
+    pressContact = signal('');
+    pressPrice = signal('');
+    pressEngine = signal('');
+    pressGenre = signal('');
+    pressFactsheet = signal('');
+
+    /** The public press-kit page, live wherever the showcase itself is. */
+    pressUrl = computed(() => {
+        const url = this.publicUrl();
+        return url ? `${url}/press` : null;
+    });
 
     /** Live only once the server has a slug for it — an unsaved slug addresses nothing. */
     publicUrl = computed(() => {
@@ -119,6 +131,11 @@ export class ProjectShowcaseComponent implements OnDestroy {
         this.gallery.set(project.showcaseGallery ?? '');
         this.trailer.set(project.showcaseTrailerUrl ?? '');
         this.domain.set(project.customDomain ?? '');
+        this.pressContact.set(project.pressContactEmail ?? '');
+        this.pressPrice.set(project.pressPrice ?? '');
+        this.pressEngine.set(project.pressEngine ?? '');
+        this.pressGenre.set(project.pressGenre ?? '');
+        this.pressFactsheet.set(project.pressFactsheetRows ?? '');
     }
 
     async save() {
@@ -138,6 +155,11 @@ export class ProjectShowcaseComponent implements OnDestroy {
                 gallery: this.gallery().trim(),
                 trailerUrl: this.trailer().trim() || null,
                 customDomain: this.domain().trim() || null,
+                pressContactEmail: this.pressContact().trim() || null,
+                pressPrice: this.pressPrice().trim() || null,
+                pressEngine: this.pressEngine().trim() || null,
+                pressGenre: this.pressGenre().trim() || null,
+                pressFactsheetRows: this.pressFactsheet().trim() || null,
             });
             const next: ProjectDetail = {
                 ...project,
@@ -146,6 +168,11 @@ export class ProjectShowcaseComponent implements OnDestroy {
                 showcaseGallery: this.gallery().trim(),
                 showcaseTrailerUrl: this.trailer().trim() || null,
                 customDomain: result.customDomain,
+                pressContactEmail: this.pressContact().trim() || null,
+                pressPrice: this.pressPrice().trim() || null,
+                pressEngine: this.pressEngine().trim() || null,
+                pressGenre: this.pressGenre().trim() || null,
+                pressFactsheetRows: this.pressFactsheet().trim() || null,
             };
             this.project.set(next);
             this.fillFrom(next);

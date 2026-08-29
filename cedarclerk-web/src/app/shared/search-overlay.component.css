@@ -1,0 +1,141 @@
+/* Wave 1 item 2 — the Ctrl+K palette. One paper sheet over the shell's scrim, high enough on the
+   screen that a long result list grows downward instead of drifting off-centre. */
+.so-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 12vh 16px 16px;
+    background: var(--scrim);
+}
+
+.so-panel {
+    display: flex;
+    flex-direction: column;
+    width: min(560px, 100%);
+    max-height: 70vh;
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    background-color: var(--surface);
+    background-image: var(--tex-paper);
+    box-shadow: var(--shadow-paper);
+    overflow: hidden;
+}
+
+.so-input-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--border);
+    color: var(--t2);
+}
+
+.so-input {
+    flex: 1;
+    min-width: 0;
+    min-height: var(--hit-surface, var(--hit-target));
+    border: none;
+    background: none;
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+}
+
+.so-input:focus {
+    outline: none;
+}
+
+.so-kbd {
+    flex: none;
+    padding: 2px 6px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--t3);
+    font-family: var(--font-mono);
+    font-size: var(--fs-caption);
+}
+
+.so-results {
+    margin: 0;
+    padding: var(--space-1);
+    list-style: none;
+    overflow-y: auto;
+}
+
+.so-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    min-height: var(--hit-surface, var(--hit-target));
+    padding: var(--space-1) var(--space-2);
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--text);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+/* One highlight for hover and keyboard alike — index() follows the pointer, so the two states
+   cannot disagree about which row Enter would open. */
+.so-row.active {
+    background: var(--asoft);
+    color: var(--accent);
+}
+
+.so-row-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.so-row-title {
+    font-size: var(--fs-ui);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.so-row-snippet {
+    color: var(--t2);
+    font-size: var(--fs-meta);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.so-live {
+    flex: none;
+    color: var(--ok);
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.so-note {
+    margin: 0;
+    padding: var(--space-3);
+    color: var(--t2);
+    font-size: var(--fs-ui);
+}
+
+.so-failed {
+    color: var(--danger);
+}
+
+.so-keys {
+    margin: 0;
+    padding: var(--space-1) var(--space-3) var(--space-2);
+    border-top: 1px solid var(--border);
+    color: var(--t3);
+    font-size: var(--fs-caption);
+}

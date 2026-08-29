@@ -132,8 +132,11 @@ type PublishRunStatus = 'waiting' | 'running' | 'done' | 'failed';
 
 /** The networks that derive a short post rather than taking the document (ADR-077). */
 type MicroNetwork = 'bluesky' | 'x' | 'discord';
-type UnsupportedDestination = 'instagram' | 'threads' | 'youtube' | 'steam' | 'itch';
-type ExportDestination = 'blog' | 'telegram' | MicroNetwork | UnsupportedDestination;
+/** T-318 — stores with no publish API: the document renders to their own markup and goes out
+ *  through the clipboard, never through a PublishJob. */
+type CopyTarget = 'steam' | 'itch';
+type UnsupportedDestination = 'instagram' | 'threads' | 'youtube';
+type ExportDestination = 'blog' | 'telegram' | MicroNetwork | CopyTarget | UnsupportedDestination;
 /** ADR-096 — an announcement carrying a link, or the document itself as a reply chain. */
 type MicroMode = 'link' | 'thread';
 
@@ -414,12 +417,16 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private publishApi = inject(PublishService);
     private billingApi = inject(BillingService);
     readonly microNetworks: MicroNetwork[] = ['bluesky', 'x', 'discord'];
+    // T-318 — Steam and itch.io left the unsupported list: their store editors take pasted
+    // BBCode/HTML, so the window renders the text and hands it to the clipboard instead.
+    readonly copyTargets: { id: CopyTarget; name: string; icon: BrandIconName }[] = [
+        { id: 'steam', name: 'Steam', icon: 'steam' },
+        { id: 'itch', name: 'itch.io', icon: 'itch' },
+    ];
     readonly unsupportedDestinations: { id: UnsupportedDestination; name: string; icon: BrandIconName }[] = [
         { id: 'instagram', name: 'Instagram', icon: 'instagram' },
         { id: 'threads', name: 'Threads', icon: 'threads' },
         { id: 'youtube', name: 'YouTube', icon: 'youtube' },
-        { id: 'steam', name: 'Steam', icon: 'steam' },
-        { id: 'itch', name: 'itch.io', icon: 'itch' },
     ];
     activeExportDestination = signal<ExportDestination>('blog');
     readonly microLimits: Record<MicroNetwork, number> = { bluesky: 300, x: 280, discord: 2000 };
@@ -520,6 +527,76 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     activeUnsupportedDestination() {
         const active = this.activeExportDestination();
         return this.unsupportedDestinations.find(destination => destination.id === active) ?? null;
+    }
+
+    // ─── Copy destinations: Steam BBCode and itch.io HTML (T-318) ─────────────────────────────
+    // Not a publish: the server renders the document into the store's own markup and the author
+    // pastes it there. No checkbox, no PublishJob, never counted into anyDestination().
+    copyTargetLang = signal<string>(DEFAULT_PRIMARY_LANGUAGE);
+    copyText = signal('');
+    copyTextLoading = signal(false);
+    copyTextError = signal('');
+    copyCopied = signal(false);
+    private copyCopiedTimer?: ReturnType<typeof setTimeout>;
+    private copyTextRequest = 0;
+
+    activeCopyTarget() {
+        const active = this.activeExportDestination();
+        return this.copyTargets.find(target => target.id === active) ?? null;
+    }
+
+    /** The panel follows the window's ticked versions, like the short-post panels (ADR-100). */
+    copyLangEffective(): string {
+        const langs = this.exportLangs();
+        return langs.includes(this.copyTargetLang()) ? this.copyTargetLang() : langs[0] ?? this.primaryLanguage;
+    }
+
+    selectCopyTarget(target: CopyTarget) {
+        this.activeExportDestination.set(target);
+        void this.loadCopyText();
+    }
+
+    selectCopyTargetKey(event: Event, target: CopyTarget) {
+        event.preventDefault();
+        this.selectCopyTarget(target);
+    }
+
+    setCopyTargetLang(lang: string) {
+        this.copyTargetLang.set(lang);
+        void this.loadCopyText();
+    }
+
+    private async loadCopyText() {
+        const id = this.currentId();
+        const target = this.activeCopyTarget();
+        if (!id || !target) return;
+        const request = ++this.copyTextRequest;
+        this.copyTextLoading.set(true);
+        this.copyTextError.set('');
+        try {
+            const res = await this.draftsApi.exportText(id, target.id, this.copyLangEffective());
+            if (request === this.copyTextRequest) this.copyText.set(res.text);
+        } catch (e) {
+            if (request === this.copyTextRequest) {
+                this.copyText.set('');
+                this.copyTextError.set(httpErrorMessage(e, this.t().editor.exportModal.copyFailed));
+            }
+        } finally {
+            if (request === this.copyTextRequest) this.copyTextLoading.set(false);
+        }
+    }
+
+    async copyExportText() {
+        const text = this.copyText();
+        if (!text) return;
+        try {
+            await navigator.clipboard.writeText(text);
+            this.copyCopied.set(true);
+            clearTimeout(this.copyCopiedTimer);
+            this.copyCopiedTimer = setTimeout(() => this.copyCopied.set(false), 2000);
+        } catch {
+            // No clipboard permission — the rendered text is on screen and selectable.
+        }
     }
 
     /** The brand mark for a short-post network — X's is still served under the `twitter` key. */
@@ -1002,6 +1079,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // at the bottom fires every ticked one in sequence.
     destBlog = signal(false);
     destTelegram = signal(false);
+    // Blog-wide subscriber mail (Wave 1 item 7) — only the FIRST publish can notify; the server
+    // ignores the flag on a republish, and the panel hides the toggle then for the same reason.
+    notifySubscribers = signal(false);
     publishingAll = signal(false);
     exporting = signal(false);
     exportElapsed = signal(0);
@@ -1019,6 +1099,58 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     blogElapsed = signal(0);
     private blogTicker?: ReturnType<typeof setInterval>;
     blogError = signal<string | null>(null);
+
+    // Shareable draft preview link (Wave 1 item 8) — one revocable read-only URL per draft.
+    // The API never reads the token back, so this holds only what this session created; an
+    // earlier session's link stays valid but invisible until rotated or revoked.
+    previewLinkUrl = signal<string | null>(null);
+    previewLinkBusy = signal(false);
+    previewLinkError = signal<string | null>(null);
+    previewLinkCopied = signal(false);
+    private previewLinkCopiedTimer?: ReturnType<typeof setTimeout>;
+
+    async createPreviewLink() {
+        const id = this.currentId();
+        if (!id || this.previewLinkBusy()) return;
+        this.previewLinkBusy.set(true);
+        this.previewLinkError.set(null);
+        try {
+            const res = await this.draftsApi.createPreviewLink(id);
+            this.previewLinkUrl.set(res.url);
+        } catch (e) {
+            this.previewLinkError.set(httpErrorMessage(e, this.t().editor.preview.failed));
+        } finally {
+            this.previewLinkBusy.set(false);
+        }
+    }
+
+    async revokePreviewLink() {
+        const id = this.currentId();
+        if (!id || this.previewLinkBusy()) return;
+        this.previewLinkBusy.set(true);
+        this.previewLinkError.set(null);
+        try {
+            await this.draftsApi.revokePreviewLink(id);
+            this.previewLinkUrl.set(null);
+        } catch (e) {
+            this.previewLinkError.set(httpErrorMessage(e, this.t().editor.preview.failed));
+        } finally {
+            this.previewLinkBusy.set(false);
+        }
+    }
+
+    async copyPreviewLink() {
+        const url = this.previewLinkUrl();
+        if (!url) return;
+        try {
+            await navigator.clipboard.writeText(url);
+            this.previewLinkCopied.set(true);
+            clearTimeout(this.previewLinkCopiedTimer);
+            this.previewLinkCopiedTimer = setTimeout(() => this.previewLinkCopied.set(false), 2000);
+        } catch {
+            // No clipboard permission — the URL is on screen and selectable.
+        }
+    }
 
     // Private posts (see the ADR following ADR-040, docs/DECISIONS.md) — email invite list,
     // only meaningful once the draft is blog-published.
@@ -2438,6 +2570,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.watermarkInput = draft.watermarkText ?? '';
             this.watermarkError.set(null);
             this.invites.set([]);
+            this.previewLinkUrl.set(null);
+            this.previewLinkError.set(null);
+            this.notifySubscribers.set(false);
+            this.copyText.set('');
+            this.copyTextError.set('');
             this.regForm.set(parseRegistrationForm(draft.registrationFormJson));
             this.formLanguages.set(draft.formLanguages ?? []);
             this.isListedWhilePrivate.set(draft.isListedWhilePrivate ?? false);
@@ -2527,6 +2664,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.watermarkInput = '';
             this.watermarkError.set(null);
             this.invites.set([]);
+            this.previewLinkUrl.set(null);
+            this.previewLinkError.set(null);
+            this.notifySubscribers.set(false);
+            this.copyText.set('');
+            this.copyTextError.set('');
             this.regForm.set(null);
             this.editor?.setEditable(true);
             this.editor?.commands.setContent(JSON.parse(cedarJson), { emitUpdate: false });
@@ -2565,7 +2707,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.blogTicker = setInterval(() => this.blogElapsed.update(s => s + 1), 1000);
         this.blogError.set(null);
         try {
-            const res = await this.draftsApi.publishToBlog(id, this.confirmedFingerprints);
+            const notify = this.notifySubscribers() && !this.currentBlog()?.isPublished;
+            const res = await this.draftsApi.publishToBlog(id, this.confirmedFingerprints, notify);
             this.currentBlog.set({ slug: res.slug, isPublished: true });
         } catch (e) {
             const status = e instanceof HttpErrorResponse ? e.status : undefined;
@@ -2627,6 +2770,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         // what would be sent anyway.
         this.refreshPublishIssues();
         this.loadShortPostTargets();
+        // A copy target left active from the last opening re-renders — the document moved since.
+        if (this.activeCopyTarget()) void this.loadCopyText();
         const id = this.currentId();
         if (!id) return;
         this.draftAssetsLoading.set(true);
@@ -2861,6 +3006,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.syncMicroTextLang(network);
             if (this.microMode()[network] === 'thread') this.countMicroParts(network);
         }
+        if (this.activeCopyTarget()) void this.loadCopyText();
     }
 
     /** Everything a schedule can apply to — the blog is not a publish target (ADR-099). */

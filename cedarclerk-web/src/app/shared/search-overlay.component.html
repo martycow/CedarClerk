@@ -1,0 +1,44 @@
+@if (open()) {
+<div class="so-scrim" (click)="close()">
+    <div class="so-panel" data-surface="paper" role="dialog" [attr.aria-label]="t().search.title"
+         (click)="$event.stopPropagation()">
+        <div class="so-input-row">
+            <app-icon name="magnifying-glass" size="sm"></app-icon>
+            <input #queryInput class="so-input" type="search"
+                   [ngModel]="query()" (ngModelChange)="onQueryChange($event)"
+                   (keydown)="onInputKeydown($event)"
+                   [placeholder]="t().search.placeholder" [attr.aria-label]="t().search.title"
+                   autocomplete="off" spellcheck="false">
+            <span class="so-kbd" aria-hidden="true">Esc</span>
+        </div>
+
+        @if (loading()) {
+        <p class="so-note">{{ t().common.loading }}</p>
+        } @else if (failed()) {
+        <p class="so-note so-failed">{{ t().search.failed }}</p>
+        } @else if (results().length) {
+        <ul class="so-results" role="listbox" [attr.aria-label]="t().search.title">
+            @for (hit of results(); track hit.id + hit.snippet; let i = $index) {
+            <li role="presentation">
+                <button type="button" class="so-row" role="option"
+                        [class.active]="i === index()" [attr.aria-selected]="i === index()"
+                        (mouseenter)="index.set(i)" (click)="openHit(hit)">
+                    <app-icon [name]="iconOf(hit)" size="sm"></app-icon>
+                    <span class="so-row-main">
+                        <span class="so-row-title">{{ hit.title || t().drafts.untitled }}</span>
+                        @if (hit.snippet) { <span class="so-row-snippet">{{ hit.snippet }}</span> }
+                    </span>
+                    @if (hit.isBlogPublished) { <span class="so-live">{{ t().search.published }}</span> }
+                </button>
+            </li>
+            }
+        </ul>
+        <p class="so-keys">{{ t().search.keys }}</p>
+        } @else if (searched() && query().trim()) {
+        <p class="so-note">{{ t().search.empty }}</p>
+        } @else {
+        <p class="so-note">{{ t().search.hint }}</p>
+        }
+    </div>
+</div>
+}

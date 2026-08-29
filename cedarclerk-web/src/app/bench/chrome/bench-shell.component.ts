@@ -14,6 +14,7 @@ import { AccountMenuComponent } from '../../shared/account-menu.component';
 import { AppearancePanelComponent } from '../../shared/appearance-panel.component';
 import { DebugConsoleComponent } from '../../shared/debug-console.component';
 import { IconComponent } from '../../shared/icon.component';
+import { SearchOverlayComponent } from '../../shared/search-overlay.component';
 import { ButtonComponent } from '../forms/button.component';
 import { ResinDropComponent } from '../display/resin-drop.component';
 import { HookRailComponent, HookRailItem } from './hook-rail.component';
@@ -60,7 +61,7 @@ function matches(path: string, pattern: string): boolean {
     imports: [
         RouterOutlet, RouterLink, IconComponent, HookRailComponent, RailHeaderComponent,
         RulerBarComponent, AccountMenuComponent, AppearancePanelComponent, DebugConsoleComponent,
-        ResinDropComponent, ButtonComponent,
+        ResinDropComponent, ButtonComponent, SearchOverlayComponent,
     ],
     template: `
         <div class="shell">
@@ -142,6 +143,9 @@ function matches(path: string, pattern: string): boolean {
         <!-- Hoisted out of the editor (ADR-151 clause 2): a trigger in shared chrome cannot open a
              modal parented to one page. -->
         <app-appearance-panel />
+
+        <!-- Ctrl+K works on every screen in the shell; the overlay listens for the key itself. -->
+        <app-search-overlay />
     `,
     styles: [`
         :host {

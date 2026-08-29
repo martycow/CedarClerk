@@ -1307,6 +1307,10 @@
     margin-bottom: 10px;
 }
 
+/* T-318 — the rendered store markup and the share URL both ride .revision-preview's bounded box
+   (component-style budget: restating it cost real bytes); .copy-preview/.preview-share-url on the
+   same elements are locator classes only. */
+
 .blog-lang-badges {
     display: flex;
     gap: 6px;
@@ -2469,3 +2473,12 @@
 }
 
 .backlinks-item:hover { background: var(--hover); }
+
+/* Wave 1 item 8 — the share-preview popover; hints reuse .field-hint-inline, the URL box reuses
+   .revision-preview and the button row reuses .insp-actions (the popover already clamps width). */
+.preview-share {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 260px;
+}

@@ -516,9 +516,26 @@ export class DraftsService {
 
     // ADR-065 — one click republishes every language, so the confirmation names a version per
     // language; the server rejects the publish outright if any of them is no longer current.
-    publishToBlog(id: string, confirmedFingerprints?: Record<string, string>) {
+    // `notifySubscribers` only takes effect on the first publish — the server never mails on a
+    // republish, whatever the flag says.
+    publishToBlog(id: string, confirmedFingerprints?: Record<string, string>, notifySubscribers = false) {
         return firstValueFrom(this.http.post<{ slug: string; url: string }>(
-            `/api/drafts/${id}/publish-blog`, { confirmedFingerprints }));
+            `/api/drafts/${id}/publish-blog`, { confirmedFingerprints, notifySubscribers }));
+    }
+
+    // T-318 — the document rendered as Steam BBCode or itch.io HTML, for the clipboard.
+    exportText(id: string, target: 'steam' | 'itch', lang: string) {
+        return firstValueFrom(this.http.get<{ text: string }>(
+            `/api/drafts/${id}/export-text`, { params: { target, lang } }));
+    }
+
+    // Wave 1 item 8 — one revocable read-only preview URL per draft; POST rotates an existing one.
+    createPreviewLink(id: string) {
+        return firstValueFrom(this.http.post<{ url: string }>(`/api/drafts/${id}/preview-link`, {}));
+    }
+
+    revokePreviewLink(id: string) {
+        return firstValueFrom(this.http.delete<void>(`/api/drafts/${id}/preview-link`));
     }
 
     unpublishFromBlog(id: string) {
