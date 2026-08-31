@@ -242,3 +242,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-227 — Invite-link analytics keeps daily tallies, never member identities](adr/ADR-227.md)
 - [ADR-228 — A queue slot's occurrence is its ISO week, and the send counter rides the slot id](adr/ADR-228.md)
 - [ADR-229 — UI tables stay headless: hand-rolled today, CDK when volume grows](adr/ADR-229.md)
+- [ADR-230 — A dialogue is a Yarn graph: the text is the graph, and the sheet keys on stamped line ids](adr/ADR-230.md)

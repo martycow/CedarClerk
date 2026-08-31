@@ -1,0 +1,228 @@
+/* The bench page contract: the page fills the shell body; the graph scrolls nothing — it pans. */
+:host {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.d-page {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: var(--space-3);
+}
+
+.d-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--bench-dock-w);
+    gap: var(--space-3);
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
+}
+
+.top { min-height: 0; }
+
+.d-frame {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.d-tools {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    flex-wrap: wrap;
+    flex: none;
+    padding: var(--space-1) var(--space-2);
+    border-bottom: 1px solid var(--wood-edge);
+    background-color: var(--sign-tile-hi);
+}
+
+.d-spacer { flex: 1; }
+
+.d-sep {
+    width: 1px;
+    align-self: stretch;
+    margin: var(--space-1) var(--space-1);
+    background: var(--wood-edge);
+}
+
+.d-banner {
+    flex: none;
+    margin: 0;
+    padding: var(--space-1) var(--space-3);
+    background: var(--asoft);
+    color: var(--t2);
+    font-size: var(--fs-ui);
+}
+
+.d-banner.is-bad {
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+.d-stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    background-image:
+        linear-gradient(to right, var(--rule-ink-soft) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--rule-ink-soft) 1px, transparent 1px);
+    background-size: 24px 24px;
+    touch-action: none;
+    cursor: default;
+}
+
+.d-world {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    transform-origin: 0 0;
+    will-change: transform;
+}
+
+/* Overflow visible on a zero-size svg: paths live in world coordinates, the pan carries them. */
+.d-edges {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.d-edge {
+    fill: none;
+    stroke: var(--t3);
+    stroke-width: 1.5;
+}
+
+/* A node is a card of paper on the plane — the board-card material at graph scale. */
+.d-node {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-2);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
+    box-shadow: var(--shadow-paper-sm);
+    overflow: hidden;
+    cursor: grab;
+    user-select: none;
+}
+
+.d-node.is-selected {
+    box-shadow: var(--shadow-paper);
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+}
+
+.d-node-title {
+    flex: none;
+    font-family: var(--font-sans);
+    font-size: var(--fs-12);
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.d-node-body {
+    flex: 1;
+    margin: 0;
+    min-height: 0;
+    overflow: hidden;
+    color: var(--t2);
+    font-family: var(--font-mono);
+    font-size: var(--fs-11);
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.d-hint {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    color: var(--t2);
+    font-size: var(--fs-ui);
+    pointer-events: none;
+}
+
+.dock {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.d-form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+
+.d-form app-input { width: 100%; }
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    width: 100%;
+}
+
+.field-label {
+    font-family: var(--font-sans);
+    font-size: var(--fs-ui);
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--t2);
+}
+
+/* The one writing surface of the graph: Yarn syntax, so a writing font and no wrap surprises. */
+.d-body {
+    width: 100%;
+    resize: vertical;
+    padding: var(--space-2);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    background-color: var(--sheet);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: var(--fs-12);
+    line-height: 1.5;
+}
+
+.hint {
+    margin: 0;
+    color: var(--t2);
+    font-size: var(--fs-12);
+}
+
+.error-line {
+    margin: 0;
+    color: var(--danger);
+    font-size: var(--fs-ui);
+}

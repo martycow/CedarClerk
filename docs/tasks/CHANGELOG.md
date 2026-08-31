@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-08-30 — The dialogue tool: Yarn graphs, a .yarn export and an xlsx translation round trip (master, uncommitted)
+
+A new gamedev-module tool (ADR-230), grown from "I need a localization framework and a dialogue
+editor" for the Unity game: the framework answer is Unity Localization + Yarn Spinner in the
+engine, and Cedar Clerk's part is where the dialogue gets written. `/projects/:id/dialogues` lists
+a project's `DialogueScript`s; opening one lands on a node-graph editor — the canvas's div-world
+surface at a smaller scale, nodes as paper cards, edges drawn as SVG from the bodies' own
+`<<jump>>`/`[[link]]` text on every keystroke, never stored. Bodies are Yarn syntax in a mono
+textarea; autosave stamps `#line:` ids server-side (`YarnDialogue` in Core, unit-tested).
+
+Exports from the dock: a `.yarn` file with `position:` headers (Yarn Spinner's VS Code graph view
+reads them back) and an xlsx sheet — `Id | Node | Character | Text` plus a column per language,
+stored translations filled in — that imports back as an upsert per (line id, language), empty
+cells skipped, unknown ids kept. One migration (`AddDialogueTool`, two new tables), one new server
+dependency (ClosedXML 0.105.0, STACK.md updated), `dotnet test` 1640+127 green, icon usage
+regenerated, density/contrast checks clean, UI-INVENTORY carries the two new screens.
+
 ## 2026-08-29 — Wave 2 "Rhythm": publishing learns to keep time (master, uncommitted, 0.17.0 — third session of the day)
 
 The second wave of the competitor-research slate, same machinery as the morning: a frozen contract,

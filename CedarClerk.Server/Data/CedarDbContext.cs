@@ -75,6 +75,8 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
     public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
     public DbSet<CanvasBoard> CanvasBoards => Set<CanvasBoard>();
     public DbSet<CanvasItem> CanvasItems => Set<CanvasItem>();
+    public DbSet<DialogueScript> DialogueScripts => Set<DialogueScript>();
+    public DbSet<DialogueLineTranslation> DialogueLineTranslations => Set<DialogueLineTranslation>();
 
     // Here rather than at the AddDbContext call, so that no way of building this context can miss
     // it. Without the factory, EF caches one model per context type and the first one compiled —
@@ -381,6 +383,13 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         builder.Entity<CanvasItem>().Property(i => i.Kind).HasDefaultValue(CanvasItemKinds.Note);
         builder.Entity<CanvasItem>().Property(i => i.Payload).HasDefaultValue("{}");
         builder.Entity<CanvasItem>().Property(i => i.Version).HasDefaultValue(1);
+        // The dialogue tool's list screen: one project's scripts, most recently edited first.
+        builder.Entity<DialogueScript>().HasIndex(s => new { s.ProjectId, s.UpdatedAt });
+        // The xlsx import upserts by exactly this triple, and two texts for one (line, language)
+        // would mean the sheet and the app disagree about what the translation is.
+        builder.Entity<DialogueLineTranslation>()
+            .HasIndex(t => new { t.DialogueScriptId, t.LineId, t.Language })
+            .IsUnique();
     }
 
     /// <summary>
@@ -408,6 +417,8 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         builder.Entity<CanvasItem>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Channel>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<CreditEntry>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<DialogueLineTranslation>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<DialogueScript>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<DocumentLink>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Draft>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<DraftGlossaryExclusion>().HasQueryFilter(e => e.OwnerId == TenantId);

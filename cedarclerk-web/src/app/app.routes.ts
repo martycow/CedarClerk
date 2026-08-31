@@ -115,6 +115,18 @@ export const routes: Routes = [
                 loadComponent: () => import('./pages/project-canvas.component').then(m => m.ProjectCanvasComponent),
                 canActivate: [indieDevGuard],
             },
+            // The Yarn dialogue tool: the script list, then one script's node graph — the same
+            // two-route shape as canvas, and for the same addressability reason.
+            {
+                path: 'projects/:id/dialogues',
+                loadComponent: () => import('./pages/project-dialogues.component').then(m => m.ProjectDialoguesComponent),
+                canActivate: [indieDevGuard],
+            },
+            {
+                path: 'projects/:id/dialogues/:scriptId',
+                loadComponent: () => import('./pages/project-dialogue.component').then(m => m.ProjectDialogueComponent),
+                canActivate: [indieDevGuard],
+            },
             // authGuard, not indieDevGuard: an invitation has to survive an install with the module
             // off and still land the reader somewhere honest.
             {

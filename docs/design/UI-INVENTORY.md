@@ -382,6 +382,8 @@ The `Verified` column is filled in by Phase 10 Block D. `smoke` means a Playwrig
 | `/projects/:id/showcase` | `project-showcase.component` | page off, page on with an empty slug, a slug the server renamed, a save failure, counters present vs absent, an own domain | **not verified** — new screen | — |
 | `/projects/:id/canvas` | `project-boards.component` | empty, load error, a viewer with no New/rename/delete, the People panel as owner vs as member, an invitation whose mail could not be sent | hand — the list, the create modal and the People panel opened against a running server, as owner and as member, through a Playwright driver rather than a person | T-301, T-302, T-303, T-304, T-313 |
 | `/projects/:id/canvas/:boardId` | `project-canvas.component` | connecting, live, reconnecting, offline + Retry, read-only, an empty board, a `Join` refusal, two browsers on one board | hand — two browser contexts on one board: an item dragged in one moved in the other, and the peer cursor showed. Only a note was ever added, which is why the image-media hole (ADR-219) survived to the review; no page-level spec exists (T-308) | T-308, T-310, T-311, T-312, T-314, T-315 |
+| `/projects/:id/dialogues` | `project-dialogues.component` | empty, load error, create, rename, delete confirm | **not verified** — new screen | — |
+| `/projects/:id/dialogues/:scriptId` | `project-dialogue.component` | loading, a graph with jumps drawn as edges, node drag, autosave states, duplicate-title refusal, `.yarn` and xlsx downloads, xlsx import (report + unknown lines), delete node | **not verified** — new screen | — |
 | `/invite/:token` | `invite-accept.component` | loading, a live token, a spent token, an unknown token, a token for a project the reader already belongs to | hand — the preview, Join and the landing on `/projects/:id/canvas` | T-304, T-305 |
 | `/terms`, `/privacy` | `legal-page.component` | the sheet at both themes | **not verified since the port** (was hand, terms) | — |
 | `/download` | `download.component` | both themes, logged-in and out, the button resolving through `GET /downloads/latest` | **not verified** — new screen | — |
@@ -697,6 +699,36 @@ T-129 + T-155, ADR-218/219. `/projects/:id/canvas/:boardId` — one board, live 
 | Offline overlay + Retry | `.c-overlay` | panel | The socket is gone; one button re-joins | Is itself the state | A `Join` refusal (removed mid-session, board deleted) routes back to the board list instead |
 | Connecting line | `.c-hint` | — | The loading line on the surface while the socket negotiates and `Join` answers | Is itself the state | The same `projects.loading` line every sibling page uses — before it, a first open showed a bare grid under a "Reconnecting…" stamp |
 | Empty board hint | `.c-hint` | — | "Drop an image, or press N for a note." on a live, empty board | N/A | A hint on the surface, not an empty-state screen — the board is not broken, it is new |
+
+## `project-dialogues.component` (`cedarclerk-web/src/app/pages/project-dialogues.component.{ts,html,css}`)
+
+The Yarn dialogue tool's list. `/projects/:id/dialogues` — the same sheet-per-thing shape as the board list, minus the People dock: dialogues are owner-only, so there is nobody to list beside them. Opening a card lands on the node graph below.
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Worktop | `app-worktop.top` (scroll) | panel | The bench top the dialogue sheets lie on; the chalked edge carries the project name and "N dialogues" | Page-level `loading()` | The page takes the bench page contract (`app-bench-shell` row) |
+| Dialogue card | `.script-card` → `a.script`, in the `.script-list` card grid | link | One paper card per dialogue: icon, name, node count; the whole card navigates to the graph | Page-level `loading()` | An anchor, not a button — same middle-click rule as the board card |
+| Rename / Delete | `.script-actions` over the card's corner | button | Rename opens the same modal as create; Delete opens the confirm | `busy()` | Quiet until hover, always present on touch — the board-card rule |
+| New dialogue | rail primary slot, published through `RailActionsService` | button | Opens the create modal | `busy()` | Cleared in `ngOnDestroy`, same contract as the board list's |
+| Create/rename modal | `app-modal` `[width]="440"` | modal | One name field | `busy()` | The failure line renders inside the modal |
+| Delete confirm | `app-modal` `[width]="400"`, danger action | modal | "Delete this dialogue and its translations?" | `busy()` | Deleting removes the script **and** its `DialogueLineTranslation` rows — the sentence says so |
+
+## `project-dialogue.component` (`cedarclerk-web/src/app/pages/project-dialogue.component.{ts,html,css}`)
+
+The Yarn node-graph editor. `/projects/:id/dialogues/:scriptId` — the canvas's surface decision at a smaller scale (ADR-218): a `<div>` world layer under one CSS `transform`, nodes absolutely positioned in world coordinates, never `<canvas>`. Edges are an SVG derived from the bodies' own `<<jump>>`/`[[link]]` text on every change — there is no edge data to store or to drift. The server stamps `#line:` ids on save; the dock's Localization panel exports `.yarn` and the xlsx translation sheet and imports the sheet back.
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Tool strip | `.d-tools[data-surface="chrome"]` | panel | Add node, then zoom, then the save stamp | N/A | Chrome surface, buttons take `surface="chrome"` — the canvas tool-strip contract |
+| Save stamp | `app-stamp-badge` in the strip | — | Saved / Saving… / Unsaved changes | IS the save state | Pine when saved, ink otherwise; the rail save drop mirrors it (`forming`/`set`) |
+| Graph surface | `.d-stage[role="application"][tabindex="0"]` | panel | The graph: drag the ground to pan, wheel pans, ctrl+wheel zooms to the cursor, Escape clears the selection | `loading()` prints the loading line over the surface | Named by `surface(name)` and described by a visually-hidden key list, the canvas discipline |
+| Node card | `.d-node`, `role="button"` with `aria-pressed` | button | Title plus a mono preview of the body (with `#line:` tags trimmed); pointer-drag moves it, click selects, Delete asks to remove | N/A | Fixed 220×110 footprint so edge anchors need no measuring; each node is a real tab stop |
+| Edges | `svg.d-edges` under the nodes in the world layer | — | One bezier per jump the bodies name (`<<jump>>`, `<<detour>>`, `[[text\|target]]`) | N/A | Derived on every keystroke, `pointer-events: none` — the text is the graph |
+| Node panel | `app-shelf-panel` in the dock, shown when a node is selected | panel | Title field, the Yarn body textarea (mono), Delete node | Autosave `saving()` | Edits debounce into a save; the save answer lands the freshly stamped `#line:` ids back into the textarea only if nothing was typed while it flew |
+| Localization panel | `app-shelf-panel` in the dock | panel | `.yarn` download, sheet-languages field, xlsx download, xlsx import, the import report | `downloading()` / `importing()` disable the buttons | Downloads flush a dirty graph first, then fetch as a blob for the `Content-Disposition` name — the editor's export pattern |
+| Import report line | `.d-form .hint` | toast (inline) | "Imported: N new, M updated." plus the unknown-lines count when the sheet is older than the script | IS the result | Unknown ids are imported anyway, not refused — a translator's work must survive a race with editing |
+| Delete node confirm | `app-modal` `[width]="400"`, danger action | modal | "Delete this node and its lines?" | N/A | Translations keep their rows; only the lines leave the script |
+| Rail save drop + primary | published through `RailActionsService` | status + button | `forming` while dirty or in flight, `set` otherwise; primary action is Add node | The drop IS the save indicator | Same contract as the canvas's; cleared on destroy, and a dirty graph is flushed in `ngOnDestroy` |
 
 ## `invite-accept.component` (`cedarclerk-web/src/app/pages/invite-accept.component.{ts,html,css}`)
 

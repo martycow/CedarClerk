@@ -29,6 +29,7 @@ const HOOK_PREFIXES: readonly (readonly [string, string])[] = [
     ['builds', '/projects/:id/builds'],
     ['showcase', '/projects/:id/showcase'],
     ['canvas', '/projects/:id/canvas'],
+    ['dialogues', '/projects/:id/dialogues'],
     ['documents', '/projects/:id'],
     ['hub', '/projects'],
     ['documents', '/drafts'],
@@ -42,7 +43,7 @@ const HOOK_PREFIXES: readonly (readonly [string, string])[] = [
 
 /** Child screens the switcher carries across a project change; deeper paths fold to the child. */
 const PROJECT_CHILDREN: ReadonlySet<string> =
-    new Set(['assets', 'tasks', 'planner', 'builds', 'canvas', 'showcase']);
+    new Set(['assets', 'tasks', 'planner', 'builds', 'canvas', 'showcase', 'dialogues']);
 
 function matches(path: string, pattern: string): boolean {
     const p = path.split('/').filter(Boolean);
@@ -353,6 +354,7 @@ export class BenchShellComponent {
             items.push({ id: 'builds', icon: 'cube', label: t.builds, link: ['/projects', open, 'builds'] });
             items.push({ id: 'assets', icon: 'images', label: t.assets, link: ['/projects', open, 'assets'] });
             items.push({ id: 'canvas', icon: 'squares-four', label: t.canvas, link: ['/projects', open, 'canvas'] });
+            items.push({ id: 'dialogues', icon: 'tree-structure', label: t.dialogues, link: ['/projects', open, 'dialogues'] });
             items.push({ id: 'showcase', icon: 'rocket-launch', label: t.showcase, title: this.t().projects.showcase.title, link: ['/projects', open, 'showcase'] });
             items.push({ id: 'calendar', icon: 'clock', label: t.calendar, link: '/calendar' });
             items.push({
@@ -443,6 +445,7 @@ export class BenchShellComponent {
             case 'planner': return [t.planner.crumb];
             case 'builds': return [t.builds.crumb];
             case 'canvas': return [t.canvas.crumb];
+            case 'dialogues': return [t.dialogues.crumb];
             case 'showcase': return [t.showcase.crumb];
             default: return [];
         }

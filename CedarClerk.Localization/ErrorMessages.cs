@@ -452,6 +452,25 @@ public static class ErrorMessages
     public static string InviteLinkNameLength(int max) =>
         Ru($"Имя ссылки — от 1 до {max} символов.", $"Link name must be 1 to {max} characters");
 
+    // Dialogue tool (Yarn) — scripts, node graphs and the xlsx translation sheet.
+    public static string DialogueNameLength(int max) =>
+        Ru($"Имя диалога — от 1 до {max} символов.", $"Dialogue name must be 1 to {max} characters");
+
+    public static string DialogueGraphInvalid =>
+        Ru("Граф диалога не читается — это не список узлов.", "Dialogue graph is not a readable node list");
+
+    public static string DialogueGraphTooLarge(int maxKb) =>
+        Ru($"Граф диалога больше {maxKb} КБ.", $"Dialogue graph exceeds {maxKb} KB");
+
+    public static string DialogueNodeTitleDuplicate(string title) =>
+        Ru($"Два узла называются \"{title}\" — Yarn различает узлы по имени.", $"Two nodes are titled \"{title}\" — Yarn addresses nodes by title");
+
+    public static string DialogueXlsxUnreadable =>
+        Ru("Файл не читается как xlsx-таблица.", "The file is not a readable xlsx workbook");
+
+    public static string DialogueXlsxNoIdColumn =>
+        Ru("В таблице нет колонки Id — экспортируйте лист из этого же диалога.", "The sheet has no Id column — export the sheet from this dialogue first");
+
     // Russian is the only translated locale for now, matching the app's own UI dictionaries
     // (en.ts/ru.ts): every other UI language already falls back to English there, and shipping
     // machine-quality German error text would be a worse answer than the English original.

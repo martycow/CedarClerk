@@ -1,0 +1,147 @@
+/* The bench page contract (UI-INVENTORY bench-shell row): the page fills the shell body and the
+   worktop scrolls its own body. No dock — dialogues are owner-only, there is nothing to shelve. */
+:host {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.dialogues {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: var(--space-3);
+}
+
+.top { min-height: 0; flex: 1; }
+
+.top-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5) var(--space-5);
+}
+
+.head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
+.head-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--fs-34);
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+
+.hint {
+    margin: 0;
+    color: var(--t2);
+    font-size: var(--fs-ui);
+}
+
+.error-line {
+    margin: 0;
+    color: var(--danger);
+    font-size: var(--fs-ui);
+}
+
+.empty {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-5) 0;
+}
+
+.empty-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--fs-22);
+}
+
+.script-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.script-card {
+    position: relative;
+    display: flex;
+    min-width: 0;
+}
+
+/* A dialogue is a sheet on the top, and the whole sheet is the link — the board-card rule. */
+.script {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    min-width: 0;
+    min-height: var(--hit-target);
+    padding: var(--space-3);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
+    box-shadow: var(--shadow-paper-sm);
+    color: var(--text);
+    text-decoration: none;
+}
+
+.script:hover {
+    background-color: var(--paper-bright);
+    box-shadow: var(--shadow-paper);
+}
+
+.script app-icon { color: var(--accent); }
+
+.script-name {
+    font-family: var(--font-sans);
+    font-size: var(--fs-ui);
+    font-weight: 700;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.script-meta {
+    color: var(--t2);
+    font-size: var(--fs-12);
+}
+
+.script-actions {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    display: flex;
+    gap: var(--space-1);
+}
+
+/* Quiet until the pointer arrives; a touch screen has no hover, so there the buttons stay. */
+@media (hover: hover) {
+    .script-actions {
+        opacity: 0;
+        transition: opacity var(--motion-fast) var(--ease);
+    }
+
+    .script-card:hover .script-actions,
+    .script-card:focus-within .script-actions { opacity: 1; }
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}

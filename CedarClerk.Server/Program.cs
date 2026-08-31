@@ -302,6 +302,7 @@ if (ProjectEndpoints.IsEnabled(app.Configuration))
     app.MapBuildEndpoints();
     app.MapCanvasEndpoints();
     app.MapProjectMemberEndpoints();
+    app.MapDialogueEndpoints();
     app.MapHub<CanvasHub>("/hubs/canvas");
 }
 #endregion

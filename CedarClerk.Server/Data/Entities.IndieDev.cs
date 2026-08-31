@@ -432,3 +432,54 @@ public class ShowcaseFollower
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
+
+/// <summary>
+/// One Yarn dialogue script — the node editor's whole graph as JSON (nodes with title, canvas
+/// position and a Yarn-syntax body). A blob rather than a node table because the editor always
+/// loads and saves the graph whole, and no query ever asks for one node of it; the queryable unit
+/// is the localizable line, which lives in <see cref="DialogueLineTranslation"/>.
+///
+/// The server stamps a <c>#line:</c> tag onto every localizable body line at save
+/// (<see cref="CedarClerk.Core.YarnDialogue"/>) — ids are what the xlsx translation sheet keys on,
+/// so they must exist before the first export and survive every edit after it.
+/// </summary>
+public class DialogueScript
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+
+    /// <summary>Required — the dialogue screen hangs off a project's rail, the same reason
+    /// <see cref="GameTask.ProjectId"/> gives. A plain scalar with no FK.</summary>
+    public Guid ProjectId { get; set; }
+
+    public string Name { get; set; } = "";
+
+    /// <summary>JSON array of nodes: <c>{ id, title, x, y, body }</c>.</summary>
+    public string GraphJson { get; set; } = "[]";
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// One translated line of one script: (line id, language) → text. Rows, not a blob, because the
+/// xlsx import upserts per line and per language, and "which lines have no German yet" is a query.
+/// The base-language text is not here — it lives in the script body and the sheet re-reads it on
+/// every export, so the sheet can never show a stale source line.
+/// </summary>
+public class DialogueLineTranslation
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public Guid DialogueScriptId { get; set; }
+
+    /// <summary>The <c>#line:</c> id without the prefix.</summary>
+    public string LineId { get; set; } = "";
+
+    /// <summary>Lowercase two-letter code, as typed into the sheet's column header.</summary>
+    public string Language { get; set; } = "";
+
+    public string Text { get; set; } = "";
+
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}

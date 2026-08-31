@@ -141,6 +141,9 @@ post glossary is a different thing: it's a blog feature (`GlossaryTerm`), not th
 | sourceMachine | машина-источник | A stable machine GUID from `machine.json` (the name updates, the id never does), stored in `Project.AssetRootMachineId/Name` | `CedarClerk.Desktop/main.js` |
 | thumbs budget | бюджет превью | The ceiling on `thumbs/` volume in the cloud (2 GB per owner by default) — one of the numeric limits on the open write channel of the index | `Consts.cs:91`, DESKTOP |
 | working material | рабочий материал | Non-publishable types (design/script/plot/note): rejected on the shared publish path for every network at once | `Core/DocumentTypes.cs` |
+| DialogueScript | диалог | One Yarn dialogue: the whole node graph as `GraphJson` (`{id,title,x,y,body}`, bodies in Yarn syntax); edges are derived from the bodies' own jumps, never stored (ADR-230) | `Entities.IndieDev.cs` |
+| line id (метка строки) | метка строки | The `#line:` tag stamped onto every localizable body line at save (`YarnDialogue.EnsureLineIds`) — the key the xlsx translation sheet trades in; existing tags are never rewritten | `Core/YarnDialogue.cs`, ADR-230 |
+| DialogueLineTranslation | перевод строки | One translated line: (script, line id, language) → text, upserted by the xlsx import; empty cells skipped, unknown ids kept rather than refused | `Entities.IndieDev.cs`, ADR-230 |
 | Cedar:Modules:IndieDev | флаг модуля | Turns the whole module on; turning it off returns the app to its pre-module state entirely — reversibility lives in the flag, not in a branch (ADR-101) | `Program.cs`, INDIEDEV |
 
 ## Operations and process
