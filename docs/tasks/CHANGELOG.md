@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-31 — Sprint v0.2.0: credit refund when an AI job fails (T-361, most of it)
+
+`AiJobService.Start` gained an `onFailure` callback that fires on any job failure (provider error,
+cancel, timeout, throw); the two background jobs — document translate and AI-edit — pass one that
+grants the credit back through a fresh tenant scope (`SubscriptionPlan.RefundAiAsync`, ledger
+reason `ai-refund`, a fresh ref so it is a visible second movement, and the daily count stays spent
+since the attempt still hit the provider). The charge is still taken up front, correct against
+abuse; this only reverses it when the failure was ours. The cheap 1-credit sync paths (glossary /
+form / profile translate) are left as the row's remainder. Backend 1653, green.
+
 ## 2026-08-31 — Sprint v0.2.0, batch ten: the projects hub becomes cards
 
 **T-332 (closed)** — `/projects` traded its cold row table for a responsive card grid: each card

@@ -48,7 +48,11 @@ public class AiJobService(ILogger<AiJobService> logger)
     // practice. hardTimeout is a second, independent backstop via CancellationTokenSource.CancelAfter
     // — enforced by this service directly, regardless of what any given provider's HTTP client does
     // or doesn't honor internally.
-    public Guid Start(string ownerId, Func<CancellationToken, Task<AiJobOutcome>> work, TimeSpan? hardTimeout = null)
+    // T-361 — `onFailure` runs when the job ends in any failure (provider error, cancel, timeout,
+    // unexpected throw). The charge is taken up front (correct against abuse), so this is where the
+    // credit is handed back when the failure was ours, not the user's.
+    public Guid Start(string ownerId, Func<CancellationToken, Task<AiJobOutcome>> work,
+        TimeSpan? hardTimeout = null, Func<Task>? onFailure = null)
     {
         Prune();
 
@@ -56,14 +60,15 @@ public class AiJobService(ILogger<AiJobService> logger)
         if (hardTimeout is { } timeout) job.Cts.CancelAfter(timeout);
         _jobs[job.Id] = job;
 
-        _ = RunAsync(job, work);
+        _ = RunAsync(job, work, onFailure);
 
         return job.Id;
     }
 
-    private async Task RunAsync(AiJob job, Func<CancellationToken, Task<AiJobOutcome>> work)
+    private async Task RunAsync(AiJob job, Func<CancellationToken, Task<AiJobOutcome>> work, Func<Task>? onFailure)
     {
         job.Status = AiJobStatus.Running;
+        var failed = false;
         try
         {
             var outcome = await work(job.Cts.Token);
@@ -72,6 +77,7 @@ public class AiJobService(ILogger<AiJobService> logger)
                 job.Status = AiJobStatus.Failed;
                 job.Error = outcome.Error;
                 job.ErrorStatusCode = outcome.ErrorStatusCode;
+                failed = true;
                 logger.LogWarning("AI job {JobId} for {OwnerId} failed: {Error}", job.Id, job.OwnerId, outcome.Error);
             }
             else
@@ -89,6 +95,7 @@ public class AiJobService(ILogger<AiJobService> logger)
             job.Status = AiJobStatus.Failed;
             job.Error = "Cancelled";
             job.ErrorStatusCode = 499;
+            failed = true;
             logger.LogWarning("AI job {JobId} for {OwnerId} was cancelled or hit its hard timeout", job.Id, job.OwnerId);
         }
         catch (Exception ex)
@@ -96,7 +103,14 @@ public class AiJobService(ILogger<AiJobService> logger)
             job.Status = AiJobStatus.Failed;
             job.Error = $"Unexpected error: {ex.Message}";
             job.ErrorStatusCode = StatusCodes.Status500InternalServerError;
+            failed = true;
             logger.LogError(ex, "AI job {JobId} for {OwnerId} threw unexpectedly", job.Id, job.OwnerId);
+        }
+
+        if (failed && onFailure is not null)
+        {
+            try { await onFailure(); }
+            catch (Exception ex) { logger.LogError(ex, "AI job {JobId} refund on failure threw", job.Id); }
         }
     }
 

@@ -60,5 +60,6 @@ public static class CreditReasons
     public const string XPost = "x-post";
     public const string AdminGrant = "admin-grant";
     public const string Ai = "ai";
+    public const string AiRefund = "ai-refund";
     public const string ProPlusMonthly = "proplus-monthly";
 }

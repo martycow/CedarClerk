@@ -1145,7 +1145,14 @@ public static class DraftEndpoints
                 await scopedDb.SaveChangesAsync(ct);
 
                 return AiJobOutcome.Ok(new { translation.Language, translation.Title, translation.CedarJson, translation.UpdatedAt, translation.SourceSnapshotJson });
-            }, Consts.Anthropic.AutoTranslateTimeout);
+            }, Consts.Anthropic.AutoTranslateTimeout,
+            onFailure: async () =>
+            {
+                // T-361 — the charge was up front; hand it back when the translate failed on us.
+                using var refundScope = scopeFactory.CreateTenantScope(uid);
+                await SubscriptionPlan.RefundAiAsync(
+                    refundScope.ServiceProvider.GetRequiredService<CedarDbContext>(), uid, CreditPacks.AiTranslateCost);
+            });
 
             return Results.Accepted(value: new { jobId });
         });
@@ -1262,7 +1269,13 @@ public static class DraftEndpoints
                 await scopedDb.SaveChangesAsync(ct);
 
                 return AiJobOutcome.Ok(new { title = result.Title, cedarJson = result.CedarJson, updatedAt = DateTime.UtcNow });
-            }, Consts.Anthropic.RequestTimeout);
+            }, Consts.Anthropic.RequestTimeout,
+            onFailure: async () =>
+            {
+                using var refundScope = scopeFactory.CreateTenantScope(uid);
+                await SubscriptionPlan.RefundAiAsync(
+                    refundScope.ServiceProvider.GetRequiredService<CedarDbContext>(), uid, CreditPacks.AiTranslateCost);
+            });
 
             return Results.Accepted(value: new { jobId });
         });

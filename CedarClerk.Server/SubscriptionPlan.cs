@@ -55,6 +55,15 @@ public static class SubscriptionPlan
             : AiCharge.NoCredits;
     }
 
+    /// <summary>
+    /// T-361 — hands a credit back when an AI job fails for our reason (provider error, timeout).
+    /// A fresh ref, so it is a real second ledger movement the user can see, not an idempotent
+    /// reversal of the original charge. The daily-count is deliberately NOT decremented: the abuse
+    /// ceiling is about attempts, and a failed attempt still hit the provider.
+    /// </summary>
+    public static async Task RefundAiAsync(CedarDbContext db, string userId, int credits) =>
+        await CreditWallet.GrantAsync(db, userId, credits, CreditReasons.AiRefund, Guid.NewGuid().ToString("N"));
+
     /// <summary>The refusal to return, or null when the call is paid for.</summary>
     public static async Task<IResult?> ChargeAiOrRefuseAsync(CedarDbContext db, string userId, int credits) =>
         await TryChargeAiAsync(db, userId, credits) switch
