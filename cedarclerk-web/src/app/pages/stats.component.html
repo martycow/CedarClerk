@@ -78,9 +78,13 @@ manager's business or nobody's, so this file starts at the filter strip.-->
 
         <app-shelf-panel class="chart-panel" [title]="t().stats.bySource" [count]="windowLabel()" flush>
             @if (!drawable().length) {
-            <p class="stats-hint stats-hint-pad">
-                {{ anySelected() ? t().stats.sources.nothingToDraw : t().stats.sources.noneSelected }}
-            </p>
+            <!--T-338 — a real zero-state, not a bare dash: a leaf on graph paper says the board is
+            ready and waiting for the first numbers, with the one line that explains why it is empty.-->
+            <div class="stats-empty">
+                <app-icon name="tree-evergreen" size="lg" />
+                <p class="stats-empty-title">{{ anySelected() ? t().stats.sources.nothingToDrawTitle : t().stats.sources.noneSelectedTitle }}</p>
+                <p class="stats-empty-note">{{ anySelected() ? t().stats.sources.nothingToDraw : t().stats.sources.noneSelected }}</p>
+            </div>
             } @else if (view() === 'chart') {
             <!--A running total is complete the moment it is read, so no bucket is left unfinished
             here; a per-day delta series would answer openTail differently (ADR-161).-->

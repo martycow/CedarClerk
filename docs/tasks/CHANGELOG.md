@@ -10,6 +10,15 @@ since the attempt still hit the provider). The charge is still taken up front, c
 abuse; this only reverses it when the failure was ours. The cheap 1-credit sync paths (glossary /
 form / profile translate) are left as the row's remainder. Backend 1653, green.
 
+## 2026-08-31 — Sprint v0.2.0, batch thirteen: the Stats zero-state
+
+**T-338 (zero-state)** — the chart board on a fresh account read as dead: bare dashes and "nothing
+to draw". It now shows a leaf centred on the graph paper with a title and one line that says the
+numbers fill in from the first publish (or, when sources are off, to tap a leaf) — the screenshot-6
+"looks poor and uninteresting" was the empty state, and this is what a new account meets. Richer
+populated readouts (sparklines) stay on the board for when there is data to judge them against.
+Two stats specs rebound to `.stats-empty`. Checks: frontend 496, density/contrast green.
+
 ## 2026-08-31 — Sprint v0.2.0, batch twelve: the scalable language menu
 
 **T-350 (menu built)** — `app-language-menu`, a searchable popover over every content language
