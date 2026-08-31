@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-08-31 — Input sweep: the v0.2.0 open-beta sprint lands on the board
+
+The third hand-run of the input-sweeper procedure (T-189). The 31.08 INPUT_PROMPT — ten annotated
+screenshots of 0.17.0 in `docs/Cedar_Clerk_v0.2.0/` plus twenty-one thoughts — triaged against code
+and board: 33 new rows `T-328`…`T-360` under "Sprint v0.2.0 — open-beta polish", `T-003`'s provider
+list updated (Discord in, Meta out), and `Q-16` opened for the public version scheme (the sprint is
+named v0.2.0 while `Consts.CurrentVersion` reads 0.17.0). Existing rows the sprint leans on stayed
+where they were: T-152/T-153/T-165 (monetisation), T-172/T-190/T-293 (beta gates), T-191 (feedback),
+T-301/T-302/T-304 (folded into T-358 Teams). The visual plan (six milestones, SEP–DEC) was built
+with visualize-roadmap and handed to Marty; naming and pricing decisions stay his.
+
 ## 2026-08-30 — The dialogue tool: Yarn graphs, a .yarn export and an xlsx translation round trip (master, uncommitted)
 
 A new gamedev-module tool (ADR-230), grown from "I need a localization framework and a dialogue

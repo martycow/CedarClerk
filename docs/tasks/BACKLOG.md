@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-08-29
+last_verified: 2026-08-31
 source_of_truth_for: the only list of open tasks and questions (T-xxx, Q-xx)
 guard: none
 ---
@@ -15,6 +15,46 @@ The **only** home of open, not-yet-started tasks. Board rules:
 - Done rows are deleted; what shipped is recorded in `docs/tasks/CHANGELOG.md`. The live-verification checklist of already-built things lives in `docs/tasks/TASKS.md`, not here.
 - `docs/tasks/TASKS.md` deliberately does **not** follow this file's strict one-line-per-task shape — it's a short-horizon narrated status file by design (see `docs/DOCS-FLOW.md`), not a second copy of this board.
 
+## Sprint v0.2.0 — open-beta polish (INPUT_PROMPT sweep 31.08)
+
+The final polish sprint before open beta. Source: the 31.08 INPUT_PROMPT (10 annotated screenshots
++ 21 thoughts); the visual plan groups these with T-152/T-153/T-172/T-190/T-191/T-003/T-293 into
+six milestones (SEP–DEC). Naming and pricing decisions stay with Marty throughout.
+
+- [ ] T-328 Mandatory onboarding — first required action after registration: display name, main social/site URL, location; stored under Settings → Profile; shows/assigns the blog address (see T-329) #growth #ux P1
+- [ ] T-329 Blog address visible and assignable — the user cannot learn their own blog URL today; surface it in Profile/onboarding and decide whether it can be changed #growth #blog #decision P1
+- [ ] T-330 Landing entry over About — drop About from beside the logo (move to the footer), give the main page a prominent login button or form #ui #growth P2
+- [ ] T-331 Preset Manager — project types are presets in fact; one manager for user-created presets of projects, documents, export and the rest; the New-project dialog builds from it #product #ui P1
+- [ ] T-332 Projects Hub cards — cards with cover images instead of the cold list #ui P2
+- [ ] T-333 De-gamedev the copy — remove Example Project and every Cedar Quest mention; stop naming new entities "Cedar" (naming is Marty's); replace "A project is a game…" with a small scheme: a project is a container of content for a task #ux #copy P2
+- [ ] T-334 Contrast smalls — the + on the green New project button is barely visible in light theme; sweep for similar #ui P3
+- [ ] T-335 Sidebar redesign — buttons small, some labels truncate; prettier and handier, verify contextual display #ui P2
+- [ ] T-336 Topbar discipline — only the most important lives in the top panel; Glossary's New Term moves back into the screen #ui P2
+- [ ] T-337 Posts Manager as a document manager — rethink the menus with real visual design, not cold input fields #postsmanager #ux P2
+- [ ] T-338 Stats screen redesign — looks poor and uninteresting #stats #ui P2
+- [ ] T-339 Style guide gated to admins — users need not see it, and its dark theme is broken #ui P3
+- [ ] T-340 Editor toolbar usability — buttons blend into the background; bolder icon strokes, balance design against function #editor #ui P2
+- [ ] T-341 Inspector popups clamped to viewport — some fly-outs escape the screen #editor #ui P2
+- [ ] T-342 Placeholder audit — no Marty/Tbilisi/M.C. © 2026 anywhere; review placeholders for every field in the app #ux #copy P2
+- [ ] T-343 Pictograms over prose — too much hint text; cut some, replace the rest with pictograms, pictures, schemes #ux P2
+- [ ] T-344 Header Slots keeps only slots — profile info (avatar, cross-links) moves to Profile #settings #ui P2
+- [ ] T-345 Unified location picker — location is a profile's or a document's (a trip); one convenient menu instead of a bare input #ui P2
+- [ ] T-346 Profile settings screen design pass #settings #ui P2
+- [ ] T-347 Appearance covers the whole interface — display settings beyond the editor; customized things converge here #settings #ui P2
+- [ ] T-348 Settings tabs: Integrations and Billing separate — everything social/integrations in one tab, everything paid in another #settings #ui P2
+- [ ] T-349 Pro/Pro+ lock badges — every button requiring Pro or Pro+ carries a small silver/gold lock when unavailable and does not fire (today Translate into all languages clicks without Pro+); builds on T-165 #billing #ui P1
+- [ ] T-350 Language paywall + unified language menu — Free limited to EN+JA, other languages paid; one menu to display, pick, configure and preview languages that scales past 9 #billing #localization #decision P1
+- [ ] T-351 User resources and their economy — credits for posting/AI as a first-class concept, pricing built from it so everything at least breaks even; topbar indicator when finite #billing #product P1
+- [ ] T-352 AI abuse audit — verify every AI feature against user abuse and the money loss it causes; metering, refusal without credits #ai #security P1
+- [ ] T-353 Unified asset window — merge existing assets and new uploads in one dialog, reuse it everywhere (the canvas insert dialog is a dead end on an empty project) #media #ui P1
+- [ ] T-354 Task tracker drag'n'drop #phase13 #ui P3
+- [ ] T-355 Customizable Document Type — technically GDD/post/script don't differ and no functionality hangs off the type; make it customizable (pairs with T-331) or give it real meaning #product #decision P2
+- [ ] T-356 Dialogue editor verdict — unfinished and unclear why a regular blogger needs it; decide its fate #product #decision P3
+- [ ] T-357 Advanced Showcase editor — block-based structure with per-block inspector editing, live result, AI helpers; showcase of anything, not only games #showcase #editor P3
+- [ ] T-358 Teams — create a team, invite users, set permissions, restrict and ban; a team always belongs to a user; grows from canvas membership (ADR-217…219) and closes T-301/T-302/T-304 on the way #collaboration P1
+- [ ] T-359 Telegram bot multi-user audit — the bot will sit in many chats; verify it never takes the wrong thing from the wrong chat #telegram #security P2
+- [ ] T-360 Blog report button — a "Report" control so the owner can react to abuse and political flame #blog #moderation P2
+
 ## New features
 
 - [ ] T-322 Calendar week view — cut #1 of the Wave 2 calendar (T-179 shipped month view): the Week chip is drawn disabled with a "soon" title. A different grid over the same data, no new endpoint #publishing #ui P3
@@ -23,7 +63,7 @@ The **only** home of open, not-yet-started tasks. Board rules:
 - [ ] T-180 Post-publish edit sync to Telegram — PUB-03 from INPUT_PROMPT. The blog re-renders on Update while the sent Telegram message stays stale — `editMessageText`/`editMessageCaption` via the stored `LastTelegramMessageId`. Check Bot API edit limits (48h for ordinary messages; channel posts differ) before scoping #telegram #editor P2
 - [ ] T-182 Living public GDD: block visibility + snapshots — GDD-04/05 from INPUT_PROMPT, the "key combination" nobody else has. Mark a block `public/patrons/private` → one document yields different public projections without spoilers; frozen snapshots ("GDD v0.3") at a stable URL while the working copy stays live. L/XL — visibility-model ADR first (overlaps Q-8/Q-15 and the semi-public mechanics) #phase13 #blog #differentiation P2
 - [ ] T-183 AI converters: video/voice → draft — AI-04/05 from INPUT_PROMPT, the most investor-shaped item: gigabytes of process recordings → content. Transcribe video and voice notes into a post draft. **Only after T-152** (all AI operations on credits): transcription costs several times more than translation; without metering it is unbounded loss #ai #decision P2
-- [ ] T-003 OAuth sign-in: Google, Apple, Meta, Telegram — NF4. Telegram linking exists (ADR-009) but is not sign-in. The rest need provider registrations + secrets in the production drop-in + a decision on merging accounts by email #auth P2
+- [ ] T-003 OAuth sign-in: Google, Apple, Telegram, Discord — NF4, provider list updated 31.08 (Discord in, Meta out). Telegram linking exists (ADR-009) but is not sign-in. The rest need provider registrations + secrets in the production drop-in + a decision on merging accounts by email #auth P2
 - [ ] T-001 Cross-posting: remaining networks — ideas 1/15/16/17, ADR-021, the positioning axis. X and Bluesky live in production (T-089; a real X thread published 12.08, credits charged). Umbrella row for the unscoped remainder: Threads (T-091), Instagram, Mastodon; game channels (itch/Steam/IndieDB) separately in T-127 #integrations P2
 - [ ] T-004 Reader accounts on the blog — idea 21. Optional registration: comment under a name, reserve a nick, a "verified" badge (meaning undefined). Tied to T-023 — one reader-identity model for both #blog #identity P2
 - [ ] T-091 Threads connector + Tech Provider Verification — a lower-priority Phase 12 item. Free of charge but requires verification and review per scope; 250 posts per profile per day, tokens live 60 days #phase12 #integrations P3
@@ -252,3 +292,4 @@ has only ever run on one machine with two browser contexts on it.
 | Q-9 | Old FI6 (account settings): sub-items 1/3/4/5 were lost when the old inbox was overwritten — needs re-specification |
 | Q-10 | T-036 (response country/IP): raw IPs are deliberately not stored (hash only). Start storing IP/geo for form responses? The privacy policy must reflect it. Precedent (ADR-097): view country comes from `CF-IPCountry` into a daily aggregate — geography without storing IPs. Not a full answer for T-036 (it needs a country per response, not a sum), but it removes the "showing a country requires storing IPs" premise |
 | Q-15 | Public media endpoint vs private posts (T-172). Meta networks require a publicly reachable HTTPS media URL; direct upload is unsupported. Conflicts with private posts, watermark and copy protection (ADR-063). Overlaps Q-8 |
+| Q-16 | Public version scheme: the open-beta sprint is named v0.2.0 while `Consts.CurrentVersion` reads 0.17.0. Decide the numbering (a new public scheme vs continuing 0.x.y) before the beta tag |
