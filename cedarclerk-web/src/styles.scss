@@ -402,7 +402,9 @@
        carrying 21px itself — a semantic role holding a bare number is the debt integers-only
        exists to stop. */
     --bench-rail-h: 56px;
-    --bench-tool-w: 56px;
+    /* 56 → 64 (T-335, 31.08): at 56 the wall's longest caption ("Dialogues") ellipsized and every
+       tool read cramped; 64 seats all captions in both languages at the 11px chrome size. */
+    --bench-tool-w: 64px;
     --bench-dock-w-narrow: 224px;
     --bench-dock-w: 300px;
     --bench-dock-w-wide: 340px;

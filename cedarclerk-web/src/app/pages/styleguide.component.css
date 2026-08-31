@@ -9,10 +9,18 @@
 
 .sg {
     max-width: 980px;
-    margin: 0 auto;
+    margin: var(--space-5) auto;
     padding: var(--space-6) var(--space-5) 120px;
     color: var(--text);
     font-size: var(--fs-body);
+    /* T-339 — the page used to lie straight on the wall, and at night the wall is dark while
+       every ink here is paper's: the headings measured near-invisible. A sheet under the whole
+       guide is what its own tokens assume. */
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    box-shadow: var(--shadow-paper);
 }
 
 .sg-top {

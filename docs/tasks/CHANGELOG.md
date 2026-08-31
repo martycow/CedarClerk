@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-08-31 — Sprint v0.2.0, batch five: the live-render fixes
+
+The first batch made with eyes on the running app: the isolated e2e stack (`Scripts/e2e.ps1`,
+which now also seeds the admin's profile — T-328's guard would otherwise bounce the whole suite
+to `/onboarding`) plus a throwaway Playwright capture spec, screenshots in both themes.
+**T-339 (closed)** — the style guide's dark render was never a stray literal: the page lay
+straight on the wall, and at night the wall is dark while every ink on the page is paper's, so
+the headings measured near-invisible. The whole guide now lies on a paper sheet
+(`--sheet`/`--tex-paper`/`--shadow-paper`), which is what its own tokens assumed all along —
+verified fixed by re-capture. **T-340 (closed)** — the tool strip's forty icons rested in
+`--rail-ink-soft`, the crumb separator's cream, and read as part of the wood; they take the full
+rail ink now, plus one weight step for every glyph in a single rule (Phosphor draws fills, so
+`stroke: currentColor` at 8/256 thickens the shape) instead of a forty-call-site `weight="bold"`
+sweep. At 1440 the toolbar now drops its group captions — the adaptive fit (ADR-150) paying for
+the wider wall. **T-335 (closed)** — `--bench-tool-w` 56 → 64: "Dialogues" no longer ellipsizes
+and the tools stop reading cramped; the contextual hook sets were verified correct in the same
+captures. Checks after: frontend 496, density/contrast green; before/after shots handed to Marty.
+
 ## 2026-08-31 — Sprint v0.2.0, batch four: 0.20.0, four presets, AI onto credits
 
 Three rulings landed at once (Q-16: the version is **0.20.0** — reads as the wished-for "0.2.0",

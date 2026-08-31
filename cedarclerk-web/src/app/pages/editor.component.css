@@ -429,11 +429,19 @@
     border: none;
     border-radius: var(--radius-stamp);
     background: none;
-    color: var(--rail-ink-soft);
+    /* T-340 — was --rail-ink-soft, which is the crumb separator's cream: forty tools drawn in it
+       read as part of the wood. The resting tool takes the full rail ink now; soft stays for
+       captions, where fading is the point. */
+    color: var(--rail-ink);
     font-family: var(--font-sans);
     font-size: var(--text-chrome);
     cursor: pointer;
 }
+
+/* T-340 — one weight step for every glyph on the strip without a second icon sweep: Phosphor
+   draws fills, so a hairline stroke of the fill's own colour thickens the shape (8/256 ≈ .5px
+   at the drawn size). */
+.strip app-icon svg { stroke: currentColor; stroke-width: 8px; }
 
 .strip button:hover:not(:disabled) {
     background: var(--hover-strong);

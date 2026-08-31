@@ -96,8 +96,17 @@ try {
     } | ConvertTo-Json
     try {
         Invoke-RestMethod -Uri 'http://localhost:8080/api/auth/register' -Method Post `
-            -ContentType 'application/json' -Body $body | Out-Null
+            -ContentType 'application/json' -Body $body -SessionVariable seedSession | Out-Null
         Write-Host '→ account registered' -ForegroundColor DarkGray
+        # T-328 — a display name is the onboarded mark; without it every guarded route bounces
+        # to /onboarding and the suite's text selectors find the wrong screen.
+        $profileBody = @{
+            authorDisplayName = 'E2E Admin'; profileUrl = ''; profileLocation = ''
+            headerSlot1Type = $null; headerSlot2Type = $null; headerSlot3Type = $null
+        } | ConvertTo-Json
+        Invoke-RestMethod -Uri 'http://localhost:8080/api/auth/profile' -Method Post `
+            -ContentType 'application/json' -Body $profileBody -WebSession $seedSession | Out-Null
+        Write-Host '→ profile seeded (onboarding passed)' -ForegroundColor DarkGray
     }
     catch {
         # Already there when -KeepData reuses a database; anything else is a real failure.
