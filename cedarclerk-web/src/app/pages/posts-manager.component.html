@@ -522,7 +522,7 @@ name the smoke suite binds.-->
                     skeleton's fallback language; each added one gets its own text field on
                     every question below, plus an auto-translate shortcut.-->
                     <div class="form-field">
-                        <span class="form-field-label">{{ t().manager.forms.formLanguages }}</span>
+                        <span class="form-field-label">{{ t().manager.forms.formLanguages }} <app-hint-dot [text]="t().manager.forms.languageHint" /></span>
                         <div class="lang-chip-row">
                             @for (l of presetLangs(); track l; let first = $first) {
                             <span class="lang-chip-edit" [class.primary]="first">
@@ -563,7 +563,7 @@ name the smoke suite binds.-->
                         <p class="reg-error-inline">{{ presetTranslateError() }}</p>
                         }
                     </div>
-                    <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().manager.forms.languageHint }}</p>
+                    <!--T-343 — the standing paragraph folded into the (i) beside "Form languages".-->
                     @for (l of presetLangs(); track l) {
                     <label class="form-field">
                         <span class="form-field-label">{{ t().manager.forms.introLabel }}

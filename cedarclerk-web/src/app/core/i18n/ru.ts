@@ -15,6 +15,7 @@ function plural(n: number, one: string, few: string, many: string): string {
 // en.ts — a missing key fails the build.
 export const ru: Dict = {
     common: {
+        about: 'Как это работает',
         cancel: 'Отмена',
         delete: 'Удалить',
         save: 'Сохранить',
@@ -2008,6 +2009,8 @@ export const ru: Dict = {
             nav: 'Внешний вид',
             title: 'Внешний вид',
             hint: 'Влияет только на ваш аккаунт на этом устройстве. Смотрите предпросмотр свободно, затем нажмите «Применить», чтобы сохранить.',
+            groupInterface: 'Интерфейс',
+            groupEditor: 'Редактор',
             themeLabel: 'Тема',
             light: 'Светлая',
             dark: 'Тёмная',

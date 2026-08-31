@@ -9,6 +9,8 @@
 // verbatim. Plain `string` members are exactly what's wanted — the *keys* are what must match.
 export const en = {
     common: {
+        // T-343 — the (i) dot's accessible name; the hint text itself comes from the section.
+        about: 'How this works',
         cancel: 'Cancel',
         delete: 'Delete',
         save: 'Save',
@@ -2077,6 +2079,10 @@ export const en = {
             nav: 'Appearance',
             title: 'Appearance',
             hint: 'Only affects your account on this device. Preview freely, then Apply to save.',
+            // T-347 — the panel names its two halves: what the whole interface reads, what only
+            // the editor sheet does.
+            groupInterface: 'Interface',
+            groupEditor: 'Editor',
             themeLabel: 'Theme',
             light: 'Light',
             dark: 'Dark',

@@ -23,6 +23,7 @@ import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
 import { PlanLockComponent } from '../shared/plan-lock.component';
 import { LocationInputComponent } from '../shared/location-input.component';
+import { HintDotComponent } from '../shared/hint-dot.component';
 
 type PayMethod = 'stripe' | 'paypal' | 'stars';
 export type SettingsTab = 'profile' | 'account' | 'integrations' | 'billing';
@@ -32,7 +33,7 @@ export type SettingsTab = 'profile' | 'account' | 'integrations' | 'billing';
     imports: [
         IconComponent, FormsModule, ZonedDatePipe, BrandIconComponent,
         ButtonComponent, IndexTabsComponent, LeafTagComponent,
-        ShelfPanelComponent, SpecRowComponent, StampBadgeComponent, PlanLockComponent, LocationInputComponent,
+        ShelfPanelComponent, SpecRowComponent, StampBadgeComponent, PlanLockComponent, LocationInputComponent, HintDotComponent,
     ],
     templateUrl: 'settings.component.html',
     styleUrls: ['settings.component.css']

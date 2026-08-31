@@ -26,9 +26,6 @@ six milestones (SEP–DEC). Naming and pricing decisions stay with Marty through
 - [ ] T-334 Contrast smalls sweep — the + on New project is fixed (icons on pine now carry the text's relief); walk the rest of the chrome for the same class of near-invisible marks #ui P3
 - [ ] T-337 Posts Manager as a document manager — rethink the menus with real visual design, not cold input fields #postsmanager #ux P2
 - [ ] T-338 Stats screen redesign — looks poor and uninteresting #stats #ui P2
-- [ ] T-343 Pictograms over prose — too much hint text; cut some, replace the rest with pictograms, pictures, schemes #ux P2
-- [ ] T-346 Profile settings screen design pass #settings #ui P2
-- [ ] T-347 Appearance covers the whole interface — display settings beyond the editor; customized things converge here #settings #ui P2
 - [ ] T-350 Unified language menu — the paywall half shipped (Free = EN+JA confirmed 31.08; `PlanLimitations.HasContentLanguage` gates creating translations and glossary terms, locks in the add-language menu and the term form; writing a draft's own primary language is deliberately ungated). What remains is the menu: one place to display, pick, configure and preview languages that scales past 9 — today it is leaf-tag rows and selects in five places #localization #ui P2
 - [ ] T-352 AI abuse audit — verify every AI feature against user abuse and the money loss it causes; metering, refusal without credits #ai #security P1
 - [ ] T-353 Asset-window unification, remainder — the picker uploads now (the canvas/editor "Insert from library" dead end is closed); still using their own one-off upload flows: the project cover, the showcase gallery, the landing screenshots — decide which of them should open the same window #media #ui P3

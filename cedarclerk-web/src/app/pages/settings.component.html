@@ -183,8 +183,8 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
             <!-- ============ HEADER SLOTS ============ -->
             @if (tab() === 'profile') {
             <section id="sec-header-slots" class="settings-card">
-                <h2>{{ t().settings.headerSlots.title }}</h2>
-                <p class="field-hint">{{ t().settings.headerSlots.hint }}</p>
+                <!--T-343 — the section explainers fold behind the (i); the heading keeps the name.-->
+                <h2>{{ t().settings.headerSlots.title }} <app-hint-dot [text]="t().settings.headerSlots.hint" /></h2>
 
                 <div class="field-group">
                     <label for="cc-slot-1">{{ t().settings.headerSlots.slot(1) }}</label>
@@ -236,8 +236,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
             <!-- ============ CROSS-LINKS (I15) ============ -->
             @if (tab() === 'profile') {
             <section id="sec-cross-links" class="settings-card">
-                <h2>{{ t().settings.crossLinks.title }}</h2>
-                <p class="field-hint">{{ t().settings.crossLinks.hint }}</p>
+                <h2>{{ t().settings.crossLinks.title }} <app-hint-dot [text]="t().settings.crossLinks.hint" /></h2>
 
                 <!--Per language: this line is read by whoever reads that language's version of the
                 post. Switching tabs saves what is in the fields first.-->
@@ -440,8 +439,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
             <!-- ============ CREDITS (ADR-092) ============ -->
             @if (tab() === 'billing') {
             <section id="sec-credits" class="settings-card">
-                <h2>{{ t().settings.credits.title }}</h2>
-                <p class="field-hint">{{ t().settings.credits.hint }}</p>
+                <h2>{{ t().settings.credits.title }} <app-hint-dot [text]="t().settings.credits.hint" /></h2>
 
                 @if (credits(); as c) {
                 <div class="plan-banner">
@@ -555,8 +553,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
             <!-- ============ INTEGRATIONS ============ -->
             @if (tab() === 'integrations') {
             <section id="sec-integrations" class="settings-card">
-                <h2>{{ t().settings.integrations.title }}</h2>
-                <p class="field-hint">{{ t().settings.integrations.hint }}</p>
+                <h2>{{ t().settings.integrations.title }} <app-hint-dot [text]="t().settings.integrations.hint" /></h2>
 
                 <!--ADR-190 — every network is an app-shelf-panel, the same object every dock and
                 inspector on the bench is. The state stamp opens the sheet rather than riding the

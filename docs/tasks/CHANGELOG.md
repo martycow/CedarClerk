@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-08-31 — Sprint v0.2.0, batch seven: prose folds behind the (i)
+
+**T-343 (closed)** — `shared/hint-dot.component.ts`: a small (i) that opens the explainer in a
+clamped popover, accessible name "How this works". The standing paragraphs moved behind it:
+Glossary's intro bubble, the Settings section explainers (Header slots, Cross-links,
+Integrations, Credits — each heading carries its dot now), and the forms editor's language hint.
+Conditional warnings deliberately kept visible — a hint that appears because something is wrong
+is not decoration. **T-347 (closed)** — reviewed against the ask, the Appearance panel already
+carries the interface-wide settings (theme, accent) ahead of the editor ones; what it lacked was
+saying so — the panel now names its two halves, "Interface" and "Editor", with a rule between.
+**T-346 (closed by its siblings)** — the profile screen's pass accumulated across the sprint:
+T-344 moved the author fields under the avatar, T-343 folded its prose, T-349 dressed its locks,
+T-345 unified its location control, T-348 gave it a clean four-tab home; the by-eye check rides
+the existing TASKS rows. Checks: frontend 496, density/contrast green.
+
 ## 2026-08-31 — Sprint v0.2.0, batch six: the document's location, the last fly-out
 
 **T-345 (closed)** — a location belongs to a document as well as to a profile (the trip case):

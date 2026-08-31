@@ -7,6 +7,8 @@
     <div class="gl-index">
         <app-index-tabs [items]="languageTabs()" [value]="languageFilter()"
                         [label]="t().glossary.langStrip" (selected)="selectLanguage($event)" />
+        <!--T-343 — the standing intro paragraph folded behind the (i).-->
+        <app-hint-dot [text]="t().glossary.intro" />
         <span class="spacer"></span>
         @if (countFor(languageFilter())) {
         <app-button variant="paper" size="sm" (clicked)="openTranslateAll()" [disabled]="!auth.hasAiPlan()">
@@ -23,10 +25,6 @@
     <div class="gl-grid">
         <app-worktop class="sheet" scroll [label]="worktopLabel()" [meta]="worktopMeta()">
             <div class="sheet-column">
-                <p class="hint-bubble">
-                    <app-icon name="info" size="sm"></app-icon>{{ t().glossary.intro }}
-                </p>
-
                 <!--T-125 — the scope strip. A project's view deliberately includes the global terms:
                 that is the set its documents actually render with, so the screen shows what the
                 reader gets. The leaf that is lit also decides where a new term goes, which the hint
