@@ -42,38 +42,39 @@
                         </app-button>
                     </div>
                 } @else {
-                    <div class="rows">
-                        <div class="row head-row" aria-hidden="true">
-                            <span></span>
-                            <span>{{ t().projects.colName }}</span>
-                            <span class="right">{{ t().projects.colDocs }}</span>
-                            <span class="right">{{ t().projects.colTasks }}</span>
-                            <span class="right">{{ t().projects.colAssets }}</span>
-                            <span class="when-head">{{ t().projects.colActivity }}</span>
-                            <span>{{ t().projects.colState }}</span>
-                        </div>
-
-                        <!--A row is a door to that project's hub, so it is an anchor (ADR-163).-->
+                    <!--T-332 — cards, not a cold row list: the cover leads, the counts are the
+                    plate's own strip. A card is a door to the hub, so it is an anchor (ADR-163).-->
+                    <div class="cards">
                         @for (p of visible(); track p.id) {
-                            <a class="row" [routerLink]="['/projects', p.id]" [attr.aria-label]="p.name">
-                                <span class="thumb" [class.has-image]="!!p.coverUrl">
+                            <a class="card" [class.dim]="!!p.archivedAt"
+                               [routerLink]="['/projects', p.id]" [attr.aria-label]="p.name">
+                                <span class="cover" [class.has-image]="!!p.coverUrl">
                                     @if (p.coverUrl) {
                                         <img [src]="p.coverUrl" alt="" loading="lazy">
                                     } @else {
-                                        {{ initials(p.name) }}
+                                        <span class="cover-initials">{{ initials(p.name) }}</span>
                                     }
-                                </span>
-                                <span class="name" [class.dim]="!!p.archivedAt" [title]="p.name">{{ p.name }}</span>
-                                <span class="right num">{{ p.documentCount }}</span>
-                                <!--The open count, so a finished project does not show its largest
-                                number on the day it stopped having anything left to do.-->
-                                <span class="right num">{{ p.openTaskCount }}</span>
-                                <span class="right num">{{ p.assetCount }}</span>
-                                <span class="when">{{ p.lastActivityAt | zonedDate:'MM/dd/yyyy, HH:mm' }}</span>
-                                <span>
-                                    <app-stamp-badge [tone]="p.archivedAt ? 'ink' : 'pine'" [rotate]="0">
+                                    <app-stamp-badge class="card-state" [tone]="p.archivedAt ? 'ink' : 'pine'" [rotate]="-2">
                                         {{ p.archivedAt ? t().projects.stateArchived : t().projects.stateActive }}
                                     </app-stamp-badge>
+                                </span>
+                                <span class="card-body">
+                                    <span class="card-name" [title]="p.name">{{ p.name }}</span>
+                                    <span class="card-type">{{ t().projects.projectTypes[p.projectType].name }}</span>
+                                    <span class="card-stats">
+                                        <span class="card-stat" [title]="t().projects.colDocs">
+                                            <app-icon name="file-text" size="xs" /> {{ p.documentCount }}
+                                        </span>
+                                        <!--The open count, so a finished project does not show its
+                                        largest number on the day it stopped having work left.-->
+                                        <span class="card-stat" [title]="t().projects.colTasks">
+                                            <app-icon name="check-square" size="xs" /> {{ p.openTaskCount }}
+                                        </span>
+                                        <span class="card-stat" [title]="t().projects.colAssets">
+                                            <app-icon name="images" size="xs" /> {{ p.assetCount }}
+                                        </span>
+                                        <span class="card-when">{{ p.lastActivityAt | zonedDate:'MM/dd/yyyy' }}</span>
+                                    </span>
                                 </span>
                             </a>
                         } @empty {

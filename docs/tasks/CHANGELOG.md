@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-31 — Sprint v0.2.0, batch ten: the projects hub becomes cards
+
+**T-332 (closed)** — `/projects` traded its cold row table for a responsive card grid: each card
+leads with a 16:9 cover (an image when `coverUrl` is set — no screen sets one yet, T-353's
+remainder — the wood-and-initials plate otherwise), the state stamp pinned in the cover corner,
+then name, type and a mono strip of doc/open-task/asset counts and the last-activity date. A card
+is still an `<a [routerLink]>`, so middle-click and copy-link survive; an archived card dims. The
+summary shelf is unchanged. Verified by capture in both themes; the three renamed spec assertions
+follow the `.card`/`.card-name` selectors. Checks: frontend 496, density/contrast green.
+
 ## 2026-08-31 — Sprint v0.2.0, batch nine: task board drag-drop, contrast sweep, AI audit
 
 **T-354 (closed)** — the task board's four columns are one `cdkDropListGroup` and each card is a

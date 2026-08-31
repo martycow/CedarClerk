@@ -22,7 +22,6 @@ The final polish sprint before open beta. Source: the 31.08 INPUT_PROMPT (10 ann
 six milestones (SEP–DEC). Naming and pricing decisions stay with Marty throughout.
 
 - [ ] T-331 Preset Manager — the built-in set shipped 31.08 (Empty · Blog · Game · Product, Marty's pick; legacy jam/prototype/released stay recognized for old rows); what remains is the manager itself: user-created presets of projects, documents and export, and the New-project dialog building from it #product #ui P1
-- [ ] T-332 Projects Hub cards — cards with cover images instead of the cold list #ui P2
 - [ ] T-337 Posts Manager as a document manager — rethink the menus with real visual design, not cold input fields #postsmanager #ux P2
 - [ ] T-338 Stats screen redesign — looks poor and uninteresting #stats #ui P2
 - [ ] T-350 Unified language menu — the paywall half shipped (Free = EN+JA confirmed 31.08; `PlanLimitations.HasContentLanguage` gates creating translations and glossary terms, locks in the add-language menu and the term form; writing a draft's own primary language is deliberately ungated). What remains is the menu: one place to display, pick, configure and preview languages that scales past 9 — today it is leaf-tag rows and selects in five places #localization #ui P2

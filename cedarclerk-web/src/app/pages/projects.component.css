@@ -98,97 +98,110 @@
     width: 200px;
 }
 
-.rows {
+/* ---------- The card grid (T-332) ---------- */
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--space-3);
+    padding: var(--space-3);
+    align-content: start;
+}
+
+.card {
     display: flex;
     flex-direction: column;
-    /* Not overflow: hidden — fixed columns would simply be cut off on a narrow screen with no way
-       to reach them, the defect B24 recorded on /drafts. */
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-
-.row {
-    display: grid;
-    grid-template-columns: var(--space-6) minmax(220px, 1fr) 80px 80px 80px 190px 110px;
-    gap: var(--dens-gap);
-    align-items: center;
     box-sizing: border-box;
-    min-width: 800px;
-    min-height: var(--hit-target);
-    padding: var(--dens-row-y) var(--space-3);
-    border-bottom: 1px solid var(--rule-ink-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-paper);
+    background: var(--sheet);
     color: var(--text);
     text-decoration: none;
+    overflow: hidden;
+    box-shadow: var(--shadow-paper-sm);
+    transition: box-shadow var(--dur-control, 190ms) var(--ease-settle),
+                transform var(--dur-control, 190ms) var(--ease-settle);
 }
 
-.row:hover {
-    background: var(--hover);
+.card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
 }
 
-.head-row {
-    min-height: 0;
-    padding-top: var(--space-1);
-    padding-bottom: var(--space-1);
-    font-family: var(--font-mono);
-    font-size: var(--fs-meta);
-    text-transform: uppercase;
-    letter-spacing: .07em;
-    color: var(--t2);
-}
+.card.dim { opacity: .72; }
 
-/* The same wood-and-initials plate the hub's switcher uses. A cover is drawn when the project has
-   one, which no screen in the app can yet set (ADR-168 rule 8). */
-.thumb {
+/* The cover leads: an image when the project has one, the wood-and-initials plate otherwise —
+   the same plate the hub's switcher uses. No screen can set a cover yet (T-353 remainder). */
+.cover {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
+    aspect-ratio: 16 / 9;
     overflow: hidden;
-    box-sizing: border-box;
-    width: var(--space-6);
-    height: var(--space-6);
-    border: 1px solid var(--wood-edge);
-    border-radius: var(--radius-paper);
     background: linear-gradient(160deg, var(--wood-hi), var(--wood-lo));
-    color: var(--rail-ink);
-    font-family: var(--font-mono);
-    font-size: var(--fs-ui);
-    text-shadow: 0 1px 1px var(--wood-edge);
+    border-bottom: 1px solid var(--wood-edge);
 }
 
-.thumb img {
+.cover img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.name {
+.cover-initials {
+    font-family: var(--font-mono);
+    font-size: var(--fs-27);
+    font-weight: 700;
+    color: var(--rail-ink);
+    text-shadow: 0 1px 1px var(--wood-edge);
+}
+
+.card-state {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-3);
     min-width: 0;
-    font-size: var(--dens-fs);
+}
+
+.card-name {
+    font-size: var(--fs-ui);
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.name.dim {
+.card-type {
+    font-size: var(--fs-meta);
     color: var(--t2);
 }
 
-.num,
-.when {
+.card-stats {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-top: var(--space-1);
     font-family: var(--font-mono);
-    font-size: var(--dens-fs);
+    font-size: var(--fs-meta);
     color: var(--t2);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
-.when,
-.when-head {
-    box-sizing: border-box;
-    padding-left: var(--space-3);
-    border-left: 1px solid var(--rule-ink-soft);
+.card-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.card-when {
+    margin-left: auto;
+    white-space: nowrap;
 }
 
 .empty-state {
