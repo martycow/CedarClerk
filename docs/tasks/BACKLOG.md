@@ -44,7 +44,6 @@ six milestones (SEP–DEC). Naming and pricing decisions stay with Marty through
 - [ ] T-357 Advanced Showcase editor — block-based structure with per-block inspector editing, live result, AI helpers; showcase of anything, not only games #showcase #editor P3
 - [ ] T-358 Teams — create a team, invite users, set permissions, restrict and ban; a team always belongs to a user; grows from canvas membership (ADR-217…219) and closes T-301/T-302/T-304 on the way #collaboration P1
 - [ ] T-359 Telegram bot multi-user audit — the bot will sit in many chats; verify it never takes the wrong thing from the wrong chat #telegram #security P2
-- [ ] T-360 Blog report button — a "Report" control so the owner can react to abuse and political flame #blog #moderation P2
 
 ## New features
 

@@ -40,7 +40,9 @@ public class PressPageTests
         // markers, not bare class names, which also occur in the shell's stylesheet.
         Assert.DoesNotContain("<div class=\"showcase-trailer\">", body);
         Assert.DoesNotContain("<a class=\"showcase-shot\"", body);
-        Assert.DoesNotContain("mailto:", body);
+        // The footer's report link (T-360) is a mailto on every page, so the marker is the press
+        // row's label rather than the scheme.
+        Assert.DoesNotContain("Press contact", body);
     }
 
     [Fact]

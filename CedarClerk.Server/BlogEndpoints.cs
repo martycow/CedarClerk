@@ -2906,6 +2906,10 @@ public static partial class BlogEndpoints
         <!--UptimeRobot's own domain, not status.mooexe.dev: a custom domain is a paid feature there
         (13.08.2026). Swap the href when the plan changes; the DNS record already points at them.-->
         <a href="https://stats.uptimerobot.com/jKcnizZ9vU" target="_blank" rel="noopener">Status</a>
+        <!--T-360 — the moderation channel on every public page: mail, because the reader needs no
+        account here and the address is already public on Terms/Privacy. The page URL is appended
+        by the script below, since this template renders once for every page.-->
+        <a href="mailto:cedarworks@mooexe.dev?subject=Content%20report" data-report>Report</a>
         </nav>
         <!--Marty's DigitalOcean referral badge (11.08.2026). `loading=lazy` and explicit dimensions
         so a slow CDN cannot shift the page as it arrives, and rel=noopener because it leaves the
@@ -2915,6 +2919,11 @@ public static partial class BlogEndpoints
         </a>
         </div></div>
         <script>
+        /* T-360 - the report link carries the page it was pressed on. */
+        (function () {
+            var report = document.querySelector('a[data-report]');
+            if (report) report.href += '&body=' + encodeURIComponent(location.href);
+        })();
         /* Idea #11 - one popup element reused by every term, positioned under whichever term is
            active. Hover for a pointer, focus/tap for everything else; Escape and any outside
            click dismiss it. The description arrives as a data attribute already escaped by the

@@ -20,7 +20,11 @@ mirrors the server. The unified language menu stays on the board as the row's re
 **T-348** — Settings goes to four tabs: Profile, Account (UI language), Integrations, Billing
 (subscription + credits). The X OAuth callback and the editor's three connect links land on
 Integrations; the integrations-side credits note crosses tabs via `goToCredits()`. Checks:
-backend 1648 (7 new `HasContentLanguage` cases), frontend 496, all green.
+backend 1648 (7 new `HasContentLanguage` cases), frontend 496, all green. **T-360** — a Report
+link in the blog footer on every public page: `mailto:` the maintainer address already public on
+Terms/Privacy, with the page URL appended client-side; no account needed to complain, and the
+structured intake stays with T-191. One press-page test's "no contact ⇒ no `mailto:`" marker
+became the row label, since the footer now carries a mailto everywhere.
 
 ## 2026-08-31 — Sprint v0.2.0, batch two: Pro+ by name, the plan locks, the popup clamps
 
