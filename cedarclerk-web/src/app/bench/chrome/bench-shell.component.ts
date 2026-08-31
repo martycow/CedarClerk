@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inj
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { CommentsService } from '../../core/comments.service';
+import { CreditBalanceService } from '../../core/credit-balance.service';
 import { DebugLogService } from '../../core/debug-log.service';
 import { LocaleService } from '../../core/i18n/locale.service';
 import { ProjectsService } from '../../core/projects.service';
@@ -87,6 +88,16 @@ function matches(path: string, pattern: string): boolean {
                     </app-button>
                 }
 
+                <!--T-351 — the finite resource on the rail: shown once there is anything to
+                    watch (a paid plan or a non-zero balance), a door to the wallet otherwise
+                    hidden from a Free account with nothing metered.-->
+                @if (creditChip(); as credits) {
+                    <a account class="credit-chip" routerLink="/settings" [queryParams]="{ tab: 'billing' }"
+                       [title]="t().shell.credits(credits)">
+                        <app-icon name="drop" size="xs" />
+                        <span class="credit-count">{{ credits }}</span>
+                    </a>
+                }
                 <app-account-menu account />
             </app-rail-header>
 
@@ -185,6 +196,25 @@ function matches(path: string, pattern: string): boolean {
             min-height: 0;
         }
 
+        /* T-351 — the wallet's number on the rail: chrome box, rail ink, mono digits. */
+        .credit-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-1);
+            min-height: var(--hit-chrome);
+            padding: 0 var(--space-2);
+            border: var(--border-rail-btn);
+            border-radius: var(--radius-plaque);
+            background: var(--rail-btn-face, rgba(0, 0, 0, .16));
+            color: var(--rail-ink);
+            text-decoration: none;
+            font-family: var(--font-mono);
+            font-size: var(--text-chrome);
+            font-weight: 600;
+        }
+
+        .credit-chip:hover { background: var(--rail-btn-face-hover, rgba(0, 0, 0, .28)); }
+
         app-hook-rail {
             height: calc(100vh - var(--bench-rail-h) - var(--bench-bottom-h));
         }
@@ -244,6 +274,7 @@ export class BenchShellComponent {
     private readonly current = inject(CurrentProjectService);
     private readonly version = inject(VersionService);
     private readonly feedback = inject(CommentsService);
+    private readonly creditBalance = inject(CreditBalanceService);
 
     protected readonly auth = inject(AuthService);
     protected readonly theme = inject(ThemeService);
@@ -302,6 +333,14 @@ export class BenchShellComponent {
     // the rail already prints it on every screen, and the same number in two places on one screen
     // reads as two numbers that happen to agree.
     protected readonly rulerRight = computed<readonly RulerReadout[]>(() => this.ruler.right());
+
+    /** T-351 — the number the chip shows, or null while there is nothing worth watching. */
+    protected readonly creditChip = computed<number | null>(() => {
+        const balance = this.creditBalance.balance();
+        if (balance === null) return null;
+        const tier = this.auth.planTier();
+        return balance > 0 || (tier !== null && tier !== 'Free') ? balance : null;
+    });
 
     /** The project the session is in: the URL's when it names one, the remembered one otherwise. */
     protected readonly openProjectId = computed(() => this.projectId() || this.current.id());
@@ -410,6 +449,13 @@ export class BenchShellComponent {
 
         this.router.events.subscribe(e => {
             if (e instanceof NavigationEnd) this.url.set(e.urlAfterRedirects);
+        });
+
+        // T-351 — the credit chip's number, re-read per navigation: every metered action ends in
+        // a page turn, and one turn of staleness is honest enough for a chip that opens the wallet.
+        effect(() => {
+            this.url();
+            if (this.auth.userEmail()) void this.creditBalance.refresh();
         });
 
         // Fetched once a session and on every screen, not only where the URL names a project:

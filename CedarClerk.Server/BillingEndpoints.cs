@@ -59,6 +59,15 @@ public static class BillingEndpoints
             });
         }).RequireAuthorization();
 
+        // T-351 — the number alone, for the shell's chip: /credits above carries the ledger and
+        // the price list, which the top bar has no business fetching on every navigation.
+        group.MapGet("/credits/balance", async (ClaimsPrincipal principal, UserManager<ApplicationUser> users, CedarDbContext db) =>
+        {
+            var user = await users.GetUserAsync(principal);
+            if (user is null) return Results.Unauthorized();
+            return Results.Ok(new { balance = await CreditWallet.BalanceAsync(db, user.Id) });
+        }).RequireAuthorization();
+
         group.MapPost("/credits/stripe/checkout", async (CreditCheckoutRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users, IConfiguration cfg, IHttpClientFactory httpFactory) =>
         {
             var secretKey = cfg[Consts.Stripe.SecretKeyCfg];

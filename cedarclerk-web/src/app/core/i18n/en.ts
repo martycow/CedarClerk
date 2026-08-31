@@ -51,6 +51,8 @@ export const en = {
         // Repeats the brand: the visible text must stay inside the accessible name (WCAG 2.5.3).
         logoHome: 'Cedar Clerk — home',
         aboutLanding: 'About',
+        // T-351 — the credit chip's tooltip; the chip itself shows the bare number.
+        credits: (n: number) => `${n} ${n === 1 ? 'credit' : 'credits'} — X posts and AI calls spend these. Click to top up.`,
     },
     // Wave 1 item 2 — the Ctrl+K document search, mounted by the shell on every screen.
     search: {

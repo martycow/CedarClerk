@@ -53,6 +53,7 @@ export const ru: Dict = {
         icons: 'Иконки',
         logoHome: 'Cedar Clerk — на главную',
         aboutLanding: 'О проекте',
+        credits: (n: number) => `${plural(n, 'кредит', 'кредита', 'кредитов')}: ${n} — тратятся на X-посты и ИИ. Клик — пополнить.`,
     },
     search: {
         title: 'Поиск по документам',

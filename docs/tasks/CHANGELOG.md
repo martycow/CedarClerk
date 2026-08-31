@@ -19,7 +19,13 @@ every paid subscription payment** (Stripe checkout + renewal, PayPal, Stars — 
 payment id; the $1 trial deliberately gets none). The client's AI locks turned silver (`pro`), and
 the tier table lives in `docs/product/BUSINESS.md` §3 — the margin is capped from above now, 15
 worst-case translations a month against the old potential 600. Checks: backend 1650, frontend
-496, density/contrast/icons green.
+496, density/contrast/icons green. **T-351 (the surface)** — the credit chip on the rail before
+the account menu: a mono number with a resin drop, a door to Settings → Billing, shown once
+there is anything to watch (a paid plan or a non-zero balance) and refreshed per navigation
+against a new `GET /api/billing/credits/balance` (the number alone — the wallet endpoint carries
+a ledger the top bar has no business fetching). With the chip, the locks and the approved table,
+**T-165 closes**: every paid feature is visible, marked and explained where it stands — the
+HacknPlan "purple rule" the row asked for.
 
 ## 2026-08-31 — Sprint v0.2.0, batch three: the onboarding door, the language paywall, four settings tabs
 
