@@ -20,7 +20,7 @@ function draft(id: string, over: Partial<DraftMeta> = {}): DraftMeta {
         languages: [], tags: '', isArchived: false, lastTelegramMessageId: null,
         lastTelegramUsername: null, staleLanguages: [], scheduled: null, folderId: null,
         seriesId: null, projectId: null, parentDraftId: null, siblingOrder: 0, isPrivate: false, isTemplate: false,
-        disableCopy: false, disableReactions: false, disableComments: false,
+        disableCopy: false, disableReactions: false, disableComments: false, documentType: 'post',
         viewCount: 0, reactionCount: 0, newViewCount: 0, newReactionCount: 0, ...over,
     };
 }

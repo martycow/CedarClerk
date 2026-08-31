@@ -82,6 +82,9 @@ import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 import { WorktopComponent } from '../bench/worktop/worktop.component';
 import { RailActionsService } from '../core/rail-actions.service';
+import {
+    ProjectsService, DocumentType, DOCUMENT_TYPES, DOCUMENT_TYPE_ICONS, isPublishableType,
+} from '../core/projects.service';
 import { RulerService } from '../core/ruler.service';
 import { STRIP_GROUP_IDS } from '../core/toolbar-layout';
 import { ToolbarFit, fitToolbar } from '../core/toolbar-fit';
@@ -863,7 +866,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     hasAnyWarnings(): boolean {
-        return this.visiblePublishIssues().length > 0 || this.preflightWarnings().length > 0;
+        return this.isWorkingMaterial() || this.visiblePublishIssues().length > 0 || this.preflightWarnings().length > 0;
     }
 
     // ─── Best-time hint (Wave 2 item 12) ──────────────────────────────────────────────────────
@@ -1192,6 +1195,16 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // only holds which folder and tags *this* draft has.
     currentFolderId = signal<string | null>(null);
     currentSeriesId = signal<string | null>(null);
+
+    // ADR-102 — what kind of document this is. Working material (design/script/plot/note) never
+    // publishes, so the flag is surfaced here and in the export modal instead of as a server 400.
+    documentType = signal<DocumentType>('post');
+    isWorkingMaterial = computed(() => !isPublishableType(this.documentType()));
+    documentTypeError = signal<string | null>(null);
+    readonly docTypes = DOCUMENT_TYPES;
+    readonly docTypeIcons = DOCUMENT_TYPE_ICONS;
+    readonly isPublishableType = isPublishableType;
+    private projectsApi = inject(ProjectsService);
 
     aiEditBusy = signal(false);
     aiEditElapsed = signal(0);
@@ -2433,6 +2446,20 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
+    async assignDocumentType(documentType: DocumentType) {
+        const id = this.currentId();
+        if (!id || this.documentType() === documentType) return;
+        this.documentTypeError.set(null);
+        try {
+            await this.projectsApi.setDocumentType(id, documentType);
+            this.documentType.set(documentType);
+            this.drafts.update(list => list.map(d => d.id === id ? { ...d, documentType } : d));
+        } catch (e) {
+            // The one refusal with a story: a blog-published post cannot become working material.
+            this.documentTypeError.set(httpErrorMessage(e, this.t().editor.inspector.typeChangeFailed));
+        }
+    }
+
     // Machine-translates the RU version into EN and loads the result into the editor for review.
     // Replacing an existing translation goes through a confirm modal first (see confirmTranslate()).
     autoTranslate() {
@@ -2744,6 +2771,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 if (this.currentId() === id) this.backlinks.set(list);
             }).catch(() => { /* best-effort — the chip simply stays hidden */ });
             this.isPrivate.set(draft.isPrivate);
+            this.documentType.set(draft.documentType ?? 'post');
+            this.documentTypeError.set(null);
             this.watermarkText.set(draft.watermarkText);
             this.watermarkInput = draft.watermarkText ?? '';
             this.watermarkError.set(null);
@@ -2818,7 +2847,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 isArchived: false, lastTelegramMessageId: null, lastTelegramUsername: null,
                 staleLanguages: [], scheduled: null, folderId, seriesId: null, projectId: null, parentDraftId: null, siblingOrder: 0,
                 isPrivate, isTemplate: false, disableCopy: false,
-                disableReactions: false, disableComments: false,
+                disableReactions: false, disableComments: false, documentType: 'post',
                 viewCount: 0, reactionCount: 0, newViewCount: 0, newReactionCount: 0,
             };
             this.drafts.update(l => [meta, ...l]);
@@ -2836,6 +2865,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.tagList.set(tags);
             this.currentFolderId.set(folderId);
             this.currentSeriesId.set(null);
+            this.documentType.set('post');
+            this.documentTypeError.set(null);
             this.isPrivate.set(isPrivate);
             this.disableCopy.set(false);
             this.watermarkText.set(null);

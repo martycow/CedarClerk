@@ -51,10 +51,23 @@
             Warnings only — nothing here ever disables Publish.-->
             @if (hasAnyWarnings() || preflightLoading()) {
             <app-shelf-panel class="export-step export-global" [title]="t().editor.exportModal.checksPanel"
-                             [count]="visiblePublishIssues().length + preflightWarnings().length">
+                             [count]="visiblePublishIssues().length + preflightWarnings().length + (isWorkingMaterial() ? 1 : 0)">
                 <div class="export-step-body">
                 @if (preflightLoading() && !hasAnyWarnings()) {
                 <p class="field-hint-inline">{{ t().editor.exportModal.checksRunning }}</p>
+                }
+                <!--ADR-102 — the one check that DOES block publish, said before pressing the
+                button instead of coming back as a server 400. The fix is the inspector's type row.-->
+                @if (isWorkingMaterial()) {
+                <div class="check-group">
+                    <span class="export-section-title check-group-name">{{ t().editor.inspector.type }}</span>
+                    <ul class="publish-issues">
+                        <li class="blocking">
+                            <app-icon name="warning" size="sm"></app-icon>
+                            {{ t().editor.exportModal.checkWorkingMaterial(t().projects.docTypes[documentType()].name) }}
+                        </li>
+                    </ul>
+                </div>
                 }
                 @if (visiblePublishIssues().length) {
                 <div class="check-group">
@@ -82,7 +95,7 @@
                     </ul>
                 </div>
                 }
-                @if (hasAnyWarnings()) {
+                @if (visiblePublishIssues().length || preflightWarnings().length) {
                 <p class="field-hint-inline">{{ t().editor.exportModal.checksNeverBlock }}</p>
                 }
                 </div>
@@ -1524,6 +1537,26 @@
                 <app-spec-row scope="document" [label]="t().editor.inspector.tags">
                     <app-tag-picker [tags]="tagList()" (tagsChange)="setTags($event)"></app-tag-picker>
                 </app-spec-row>
+                <!--ADR-102 — the kit's «Тип» stamp, live now that documentType reaches the draft
+                DTO. Working material never publishes, so the row also carries that verdict instead
+                of leaving it to a server 400 at export time.-->
+                <app-spec-row scope="document" [label]="t().editor.inspector.type" field>
+                    <select class="insp-input" [ngModel]="documentType()"
+                            (ngModelChange)="assignDocumentType($event)"
+                            [title]="t().editor.inspector.typeTitle">
+                        @for (type of docTypes; track type) {
+                        <option [value]="type">{{ t().projects.docTypes[type].name }}</option>
+                        }
+                    </select>
+                </app-spec-row>
+                @if (isWorkingMaterial()) {
+                <app-spec-row scope="document" [label]="t().editor.inspector.publishes">
+                    <app-stamp-badge tone="ink" [rotate]="-1">{{ t().editor.inspector.workingMaterial }}</app-stamp-badge>
+                </app-spec-row>
+                }
+                @if (documentTypeError(); as err) {
+                <p class="channel-error">{{ err }}</p>
+                }
                 @if (currentBlog(); as blog) {
                 <app-spec-row scope="document" [label]="t().editor.inspector.slug" [value]="blog.slug" field></app-spec-row>
                 }

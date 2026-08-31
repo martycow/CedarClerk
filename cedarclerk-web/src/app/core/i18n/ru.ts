@@ -607,6 +607,8 @@ export const ru: Dict = {
             title: 'Новый документ',
             inProject: (project: string) => `в проекте «${project}»`,
             note: 'Тип обозначается иконкой везде, где документ показан в списке, — без цветовых меток.',
+            publishes: 'Публикуется в блог и Telegram',
+            workingMaterial: 'Рабочий материал — не публикуется',
             failed: 'Не удалось создать документ.',
         },
         projectTypes: {
@@ -638,6 +640,7 @@ export const ru: Dict = {
         },
         docTypes: {
             post: { name: 'Пост-девлог', group: 'Девлог', blurb: 'Длинный пост — уходит в блог и Telegram.' },
+            regular: { name: 'Обычный пост', group: 'Посты', blurb: 'Отдельный пост без девлог-рамки.' },
             design: { name: 'Гейм-дизайн-документ', group: 'Гейм-дизайн', blurb: 'Системы, правила, числа. Основной справочник.' },
             script: { name: 'Сценарий', group: 'Сценарий', blurb: 'Диалоги и реплики, сцена за сценой.' },
             plot: { name: 'Сюжетный план', group: 'Сюжетный план', blurb: 'Биты и арки до того, как станут сценарием.' },
@@ -995,6 +998,11 @@ export const ru: Dict = {
             folder: 'Папка',
             series: 'Серия',
             tags: 'Теги',
+            type: 'Тип',
+            typeTitle: 'Какой это документ — публикуются только посты и чейнджлоги',
+            publishes: 'Публикация',
+            workingMaterial: 'рабочий материал',
+            typeChangeFailed: 'Не удалось сменить тип.',
             slug: 'Слаг',
             location: 'Место',
             backlinks: 'Обратные ссылки',
@@ -1311,6 +1319,8 @@ export const ru: Dict = {
             checksLanguage: (lang: string) => `Версия ${lang}`,
             checkEmptyVersion: 'Эта версия пустая — уйдёт пустой пост.',
             checkDeadLink: (url: string, status: string) => `Ссылка не ответила (${status}): ${url}`,
+            checkWorkingMaterial: (typeName: string) =>
+                `«${typeName}» — рабочий материал, он не публикуется. Если публикация нужна, смените тип в строке «Тип» инспектора.`,
             checksNeverBlock: 'Только предупреждения — публикацию здесь ничто не останавливает.',
             // Wave 2 item 11 — как приходит сообщение в Telegram.
             sendOptions: 'Отправка',

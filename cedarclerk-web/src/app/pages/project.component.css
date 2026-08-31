@@ -506,6 +506,15 @@
     color: var(--t2);
 }
 
+.doc-type-publish {
+    font-size: var(--fs-meta);
+    color: var(--pine);
+}
+
+.doc-type-publish.is-working {
+    color: var(--t2);
+}
+
 .field-label {
     display: block;
     font-size: var(--fs-caption);

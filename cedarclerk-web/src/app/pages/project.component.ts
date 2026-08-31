@@ -15,6 +15,7 @@ import {
     ProjectSummary,
     ProjectsService,
     ShowcaseStats,
+    isPublishableType,
     projectInitials,
 } from '../core/projects.service';
 import { Build, BuildsService } from '../core/builds.service';
@@ -80,6 +81,7 @@ export class ProjectComponent implements OnDestroy {
 
     readonly docTypes = DOCUMENT_TYPES;
     readonly docIcons = DOCUMENT_TYPE_ICONS;
+    readonly isPublishableType = isPublishableType;
     readonly projectIcons = PROJECT_TYPE_ICONS;
     readonly initials = projectInitials;
     readonly overdue = isOverdue;

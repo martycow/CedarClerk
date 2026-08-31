@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpEvent } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, firstValueFrom, timeout } from 'rxjs';
 import { DEFAULT_PRIMARY_LANGUAGE } from './languages';
+import { DocumentType } from './projects.service';
 
 // Phase 8 Step 8, docs/tasks/ROADMAP.md — neither AI provider streams, so there's no way to signal
 // real progress; this is purely a "don't let it look stuck forever" ceiling — how long the client
@@ -97,6 +98,7 @@ export interface DraftMeta {
     blogPublishedAt: string | null;
     languages: string[]; // translation languages that exist ("en"), primary (RU) is implicit
     tags: string; // comma-separated lowercase tags, shared across language versions
+    documentType: DocumentType; // ADR-102 — what kind of document this is; decides publishability
     isArchived: boolean;
     lastTelegramMessageId: number | null;
     lastTelegramUsername: string | null;

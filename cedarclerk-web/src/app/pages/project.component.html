@@ -204,6 +204,11 @@
                     <span class="doc-type-text">
                         <span class="doc-type-name">{{ t().projects.docTypes[type].name }}</span>
                         <span class="doc-type-blurb">{{ t().projects.docTypes[type].blurb }}</span>
+                        <!--ADR-102 — say up front which types publish and which are working
+                        material, instead of letting the export button discover it later.-->
+                        <span class="doc-type-publish" [class.is-working]="!isPublishableType(type)">
+                            {{ isPublishableType(type) ? t().projects.newDoc.publishes : t().projects.newDoc.workingMaterial }}
+                        </span>
                     </span>
                 </button>
             }

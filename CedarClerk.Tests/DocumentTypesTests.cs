@@ -37,6 +37,7 @@ public class DocumentTypesTests
 
     [Theory]
     [InlineData("post")]
+    [InlineData("regular")]
     [InlineData("design")]
     [InlineData("script")]
     [InlineData("plot")]
@@ -55,6 +56,7 @@ public class DocumentTypesTests
     public void Working_material_does_not_publish_but_posts_and_changelogs_do()
     {
         Assert.True(DocumentTypes.IsPublishable(DocumentTypes.Post));
+        Assert.True(DocumentTypes.IsPublishable(DocumentTypes.Regular));
         Assert.True(DocumentTypes.IsPublishable(DocumentTypes.Changelog));
         Assert.False(DocumentTypes.IsPublishable(DocumentTypes.Design));
         Assert.False(DocumentTypes.IsPublishable(DocumentTypes.Script));

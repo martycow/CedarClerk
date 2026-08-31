@@ -208,6 +208,7 @@ public static class DraftEndpoints
                 .Select(d => new
                 {
                     d.Id, d.Title, d.PrimaryLanguage, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
+                    d.DocumentType,
                     d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.SeriesId, d.ProjectId, d.IsPrivate, d.IsTemplate,
                     d.ParentDraftId, d.SiblingOrder, d.IsEvergreen,
                     d.DisableCopy, d.DisableReactions, d.DisableComments, d.ViewCount,
@@ -277,6 +278,7 @@ public static class DraftEndpoints
             return drafts.Select(d => new
             {
                 d.Id, d.Title, d.PrimaryLanguage, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
+                d.DocumentType,
                 d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.SeriesId, d.ProjectId, d.IsPrivate, d.IsTemplate,
                 d.ParentDraftId, d.SiblingOrder, d.IsEvergreen,
                 d.DisableCopy, d.DisableReactions, d.DisableComments, d.ViewCount,
@@ -324,7 +326,7 @@ public static class DraftEndpoints
             return Results.Ok(new
             {
                 draft.Id, draft.Title, draft.PrimaryLanguage, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug,
-                draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.FolderId, draft.ProjectId, draft.IsPrivate,
+                draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.DocumentType, draft.FolderId, draft.ProjectId, draft.IsPrivate,
                 draft.WatermarkText, draft.ArticleTitle, draft.IsListedWhilePrivate, draft.DisableCopy,
                 draft.DisableReactions, draft.DisableComments,
                 draft.IsEvergreen, draft.EvergreenCategory, draft.EvergreenMaxSends, draft.EvergreenUntil, draft.EvergreenSendCount,

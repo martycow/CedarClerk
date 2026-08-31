@@ -18,13 +18,20 @@ export type ProjectType = 'fullgame' | 'jam' | 'prototype' | 'released' | 'blog'
 export const PROJECT_TYPES: ProjectType[] = ['fullgame', 'jam', 'prototype', 'released', 'blog'];
 
 /** One of CedarClerk.Core.DocumentTypes. `post` is what every draft written before the module is. */
-export type DocumentType = 'post' | 'design' | 'script' | 'plot' | 'changelog' | 'note';
-export const DOCUMENT_TYPES: DocumentType[] = ['post', 'design', 'script', 'plot', 'changelog', 'note'];
+export type DocumentType = 'post' | 'regular' | 'design' | 'script' | 'plot' | 'changelog' | 'note';
+export const DOCUMENT_TYPES: DocumentType[] = ['post', 'regular', 'design', 'script', 'plot', 'changelog', 'note'];
+
+/** Mirrors CedarClerk.Core.DocumentTypes.IsPublishable — the rest is working material. */
+export const PUBLISHABLE_DOCUMENT_TYPES: ReadonlySet<DocumentType> = new Set(['post', 'regular', 'changelog']);
+export function isPublishableType(type: DocumentType | null | undefined): boolean {
+    return type == null || PUBLISHABLE_DOCUMENT_TYPES.has(type);
+}
 
 // The type shows as an icon wherever a document is listed — never as a colour label (the design
 // handoff makes this a product rule, so the mapping lives in one place).
 export const DOCUMENT_TYPE_ICONS: Record<DocumentType, IconName> = {
     post: 'newspaper',
+    regular: 'file-text',
     design: 'book-open',
     script: 'film-slate',
     plot: 'tree-structure',

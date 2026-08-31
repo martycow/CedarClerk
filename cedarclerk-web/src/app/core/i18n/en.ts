@@ -649,6 +649,8 @@ export const en = {
             title: 'New document',
             inProject: (project: string) => `in ${project}`,
             note: 'The type shows as an icon wherever the document is listed — no colour labels.',
+            publishes: 'Publishes to the blog and Telegram',
+            workingMaterial: 'Working material — never published',
             failed: 'Could not create the document.',
         },
         projectTypes: {
@@ -681,6 +683,7 @@ export const en = {
         // `group` is the heading over a section of the dashboard; `name` is what the picker calls it.
         docTypes: {
             post: { name: 'Devlog post', group: 'Devlog', blurb: 'Long-form update — publishes to the blog and Telegram.' },
+            regular: { name: 'Regular post', group: 'Posts', blurb: 'A standalone post with no devlog framing.' },
             design: { name: 'Game design doc', group: 'Game design', blurb: 'Systems, rules, numbers. The master reference.' },
             script: { name: 'Script', group: 'Script', blurb: 'Dialogue and barks, scene by scene.' },
             plot: { name: 'Story outline', group: 'Story outline', blurb: 'Beats and arcs before they become script.' },
@@ -1047,6 +1050,11 @@ export const en = {
             folder: 'Folder',
             series: 'Series',
             tags: 'Tags',
+            type: 'Type',
+            typeTitle: 'What kind of document this is — only posts and changelogs publish',
+            publishes: 'Publishing',
+            workingMaterial: 'working material',
+            typeChangeFailed: 'Could not change the type.',
             slug: 'Slug',
             location: 'Location',
             backlinks: 'Backlinks',
@@ -1370,6 +1378,8 @@ export const en = {
             checksLanguage: (lang: string) => `Version ${lang}`,
             checkEmptyVersion: 'This version is empty — it would publish a blank post.',
             checkDeadLink: (url: string, status: string) => `Link did not answer (${status}): ${url}`,
+            checkWorkingMaterial: (typeName: string) =>
+                `“${typeName}” is working material and will not publish. Change the type in the inspector's Type row if publishing is what you mean.`,
             checksNeverBlock: 'Warnings only — nothing here stops the publish.',
             // Wave 2 item 11 — how the Telegram message arrives.
             sendOptions: 'Sending',

@@ -6,13 +6,14 @@ namespace CedarClerk.Core;
 public static class DocumentTypes
 {
     public const string Post = "post";
+    public const string Regular = "regular";
     public const string Design = "design";
     public const string Script = "script";
     public const string Plot = "plot";
     public const string Changelog = "changelog";
     public const string Note = "note";
 
-    public static readonly IReadOnlyList<string> All = [Post, Design, Script, Plot, Changelog, Note];
+    public static readonly IReadOnlyList<string> All = [Post, Regular, Design, Script, Plot, Changelog, Note];
 
     public static bool IsKnown(string? type) => type is not null && All.Contains(type);
 
@@ -23,6 +24,7 @@ public static class DocumentTypes
     {
         null => true,           // a row written before the column existed
         Post => true,
+        Regular => true,        // a post with no devlog framing — same pipeline, different shelf
         Changelog => true,
         _ => false,
     };
