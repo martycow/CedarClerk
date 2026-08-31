@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-08-31 — Sprint v0.2.0, batch nine: task board drag-drop, contrast sweep, AI audit
+
+**T-354 (closed)** — the task board's four columns are one `cdkDropListGroup` and each card is a
+`cdkDrag`; dropping a card into a different column calls `setStatus`, which reloads the board like
+every other mutation. A same-column drop is ignored on purpose — the board keeps the server's
+order (ADR-106), so reordering there would be a lie the next reload corrects. The card stays an
+anchor, so click-to-open still works (CDK cancels the click only after a real drag). **T-334
+(closed)** — the reported near-invisible-glyph class was the toolbar (fixed in batch five); a
+contrast-census pass turned up no new instances, only the already-tracked drawer-lip decision row
+and the intentional white-on-brand buttons (Telegram/X blue). **T-352 (closed, audit only)** — see
+below. Checks: frontend 496, density/contrast green.
+
+## 2026-08-31 — Sprint v0.2.0: T-352 AI-abuse audit closed (no code change)
+
+Verified every path that reaches a translation or edit provider (`AuthEndpoints`, `DraftEndpoints`
+×2, `FormPresetEndpoints`, `GlossaryEndpoints` ×2 — six sites, one per provider invocation) charges
+through `SubscriptionPlan.ChargeAiOrRefuseAsync` **before** the provider is called, so a cancelled
+or failed call cannot yield a free one; the 20/day ceiling stands on top as an abuse backstop; Free
+has no AI at all (`HasAiFeatures` opens at Pro). The money-loss-by-abuse surface is closed — a user
+can only spend credits they hold. Two notes, neither a hole: the "translate all profile texts"
+batch is 1 credit for several short provider round-trips (intentional, cheap, the UI says "one AI
+call"), and a failed background job does not refund the credit — the opposite of abuse, filed as
+the fairness follow-up **T-361**.
+
 ## 2026-08-31 — Sprint v0.2.0, batch eight: the shared-bot audit closes four cross-tenant holes (T-359)
 
 A `very thorough` read of every place the shared Telegram bot maps an update to an account

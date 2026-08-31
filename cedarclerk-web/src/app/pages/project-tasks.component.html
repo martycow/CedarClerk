@@ -76,8 +76,10 @@
             </app-shelf-panel>
         } @else if (view() === 'board') {
             <!--Cork lanes (the kit's own shelf tone): a pinboard surface under the paper tags, so
-            a column reads as a place cards are pinned rather than another paper sheet.-->
-            <div class="board">
+            a column reads as a place cards are pinned rather than another paper sheet.
+            T-354 — the columns are one cdkDropListGroup so a card drags between them; a drop into
+            a different column is a status change, which reloads the board like every other one.-->
+            <div class="board" cdkDropListGroup>
                 @for (status of statuses; track status) {
                     <app-shelf-panel class="column" tone="cork" [title]="t().projects.tasks.status[status]"
                                      [count]="columnCount(status)">
@@ -86,9 +88,11 @@
                             <app-icon name="plus" weight="bold" size="xs" [label]="t().projects.tasks.newTask"></app-icon>
                         </app-button>
 
-                        <div class="column-cards">
+                        <div class="column-cards" cdkDropList [cdkDropListData]="status"
+                             (cdkDropListDropped)="onDrop($event)">
                             @for (task of column(status); track task.id) {
-                                <app-task-tag [link]="boardLink()" [queryParams]="{ task: task.id }"
+                                <app-task-tag cdkDrag [cdkDragData]="task"
+                                              [link]="boardLink()" [queryParams]="{ task: task.id }"
                                               [prio]="task.priority" [due]="dueLabel(task)"
                                               [overdue]="overdue(task)" [done]="task.status === 'done'"
                                               [rotate]="tilt($index)" [hint]="task.title">

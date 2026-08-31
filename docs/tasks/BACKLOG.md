@@ -23,13 +23,11 @@ six milestones (SEP–DEC). Naming and pricing decisions stay with Marty through
 
 - [ ] T-331 Preset Manager — the built-in set shipped 31.08 (Empty · Blog · Game · Product, Marty's pick; legacy jam/prototype/released stay recognized for old rows); what remains is the manager itself: user-created presets of projects, documents and export, and the New-project dialog building from it #product #ui P1
 - [ ] T-332 Projects Hub cards — cards with cover images instead of the cold list #ui P2
-- [ ] T-334 Contrast smalls sweep — the + on New project is fixed (icons on pine now carry the text's relief); walk the rest of the chrome for the same class of near-invisible marks #ui P3
 - [ ] T-337 Posts Manager as a document manager — rethink the menus with real visual design, not cold input fields #postsmanager #ux P2
 - [ ] T-338 Stats screen redesign — looks poor and uninteresting #stats #ui P2
 - [ ] T-350 Unified language menu — the paywall half shipped (Free = EN+JA confirmed 31.08; `PlanLimitations.HasContentLanguage` gates creating translations and glossary terms, locks in the add-language menu and the term form; writing a draft's own primary language is deliberately ungated). What remains is the menu: one place to display, pick, configure and preview languages that scales past 9 — today it is leaf-tag rows and selects in five places #localization #ui P2
-- [ ] T-352 AI abuse audit — verify every AI feature against user abuse and the money loss it causes; metering, refusal without credits #ai #security P1
+- [ ] T-361 Refund a credit when an AI job fails — fairness follow-up split from the T-352 audit: the background translate and the sync AI-edit charge upfront (correct for abuse) but do not refund when the provider errors or returns a malformed doc, so a user loses a credit on OUR failure. Grant it back on the `AiJobOutcome.Fail` / `AiEditException` branches with a distinct ledger reason. Not abuse (the opposite), so it did not block T-352 #billing #ai P2
 - [ ] T-353 Asset-window unification, remainder — the picker uploads now (the canvas/editor "Insert from library" dead end is closed); still using their own one-off upload flows: the project cover, the showcase gallery, the landing screenshots — decide which of them should open the same window #media #ui P3
-- [ ] T-354 Task tracker drag'n'drop #phase13 #ui P3
 - [ ] T-355 Customizable Document Type — technically GDD/post/script don't differ and no functionality hangs off the type; make it customizable (pairs with T-331) or give it real meaning #product #decision P2
 - [ ] T-356 Dialogue editor verdict — unfinished and unclear why a regular blogger needs it; decide its fate #product #decision P3
 - [ ] T-357 Advanced Showcase editor — block-based structure with per-block inspector editing, live result, AI helpers; showcase of anything, not only games #showcase #editor P3
