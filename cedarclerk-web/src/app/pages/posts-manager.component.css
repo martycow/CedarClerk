@@ -173,6 +173,20 @@
     min-width: 0;
 }
 
+/* T-337 — the type plate: a small tinted square carrying the document-type icon, so a glance
+   reads the kind before the title. */
+.post-card-type {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-sm);
+    background: var(--alt);
+    color: var(--accent);
+}
+
 .post-card-title {
     display: flex;
     align-items: center;

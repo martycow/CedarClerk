@@ -32,6 +32,11 @@ name the smoke suite binds.-->
                 not: one answers "is this out?", the other "in which language?".-->
                 <button class="post-card" [class.on]="selectedId() === d.id" (click)="select(d)">
                     <span class="post-card-top">
+                        <!--T-337 — the document's type as an icon on a small plate, so the list
+                        reads by shape as well as by text.-->
+                        <span class="post-card-type" [title]="t().projects.docTypes[d.documentType].name">
+                            <app-icon [name]="docIcons[d.documentType]" size="sm"></app-icon>
+                        </span>
                         <!--The title text needs its own element: text-overflow does not apply
                         to a flex container, and .post-card-title has to be one to sit the lock
                         icon beside the text.-->

@@ -10,6 +10,14 @@ since the attempt still hit the provider). The charge is still taken up front, c
 abuse; this only reverses it when the failure was ours. The cheap 1-credit sync paths (glossary /
 form / profile translate) are left as the row's remainder. Backend 1653, green.
 
+## 2026-08-31 — Sprint v0.2.0, batch fifteen: post cards read by shape
+
+**T-337 (first pass)** — the Posts Manager list (already cards since 01.08) now carries the
+document-type icon on a small tinted plate at the head of each card, so the list reads by shape as
+well as by title. The rest of the "needs more visual" ask (a cover thumbnail, the inspector's
+density, the bench search field) stays on the board for a live-render pass with Marty's eye.
+Checks: frontend 496, density/contrast/icons green.
+
 ## 2026-08-31 — Sprint v0.2.0, batch fourteen: the Preset Manager (T-331 + T-355, ADR-233)
 
 Document presets, end to end. A `Preset` table (migration `AddPresets`, `Kind`=document today,
