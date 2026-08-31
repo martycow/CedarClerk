@@ -1464,8 +1464,11 @@ export const en = {
         images: 'Images',
         videos: 'Videos',
         audio: 'Audio',
+        // T-353 — the picker uploads too, so an empty project is not a dead end.
+        uploadNew: 'Upload',
+        uploadFailed: 'Upload failed',
         usage: (used: string, limit: string) => `${used} of ${limit} used`,
-        empty: 'No files yet — everything uploaded in the editor lands here.',
+        empty: 'No files yet — upload one right here, or in the editor.',
         loadFailed: 'Failed to load the library',
         deleteFailed: 'Failed to delete the file',
         deleteTitle: (name: string) => `Delete "${name}"?`,

@@ -40,7 +40,7 @@ six milestones (SEP–DEC). Naming and pricing decisions stay with Marty through
 - [ ] T-350 Language paywall + unified language menu — Free limited to EN+JA, other languages paid; one menu to display, pick, configure and preview languages that scales past 9 #billing #localization #decision P1
 - [ ] T-351 User resources and their economy — credits for posting/AI as a first-class concept, pricing built from it so everything at least breaks even; topbar indicator when finite #billing #product P1
 - [ ] T-352 AI abuse audit — verify every AI feature against user abuse and the money loss it causes; metering, refusal without credits #ai #security P1
-- [ ] T-353 Unified asset window — merge existing assets and new uploads in one dialog, reuse it everywhere (the canvas insert dialog is a dead end on an empty project) #media #ui P1
+- [ ] T-353 Asset-window unification, remainder — the picker uploads now (the canvas/editor "Insert from library" dead end is closed); still using their own one-off upload flows: the project cover, the showcase gallery, the landing screenshots — decide which of them should open the same window #media #ui P3
 - [ ] T-354 Task tracker drag'n'drop #phase13 #ui P3
 - [ ] T-355 Customizable Document Type — technically GDD/post/script don't differ and no functionality hangs off the type; make it customizable (pairs with T-331) or give it real meaning #product #decision P2
 - [ ] T-356 Dialogue editor verdict — unfinished and unclear why a regular blogger needs it; decide its fate #product #decision P3

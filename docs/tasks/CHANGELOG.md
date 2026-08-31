@@ -19,7 +19,11 @@ per-language translate chip — each disabled with a gold lock on a plan below P
 over the locks is on the TASKS checklist. **T-344** — the author-name, profile-URL and location
 fields moved from Header slots into the Profile card under the avatar; Header slots keeps only the
 three slot selects, exactly the split screenshot 5 asked for. The i18n keys stay under
-`settings.headerSlots.*` until T-346 renames them with the profile redesign. **T-341 (the reported cases)** — an audit found the popover clamp itself was the bug:
+`settings.headerSlots.*` until T-346 renames them with the profile redesign. **T-353 (the dead
+end)** — `app-media-picker` uploads now: a pine Upload label in the modal footer (a file input
+cannot be a button — the avatar picker's trade), multi-file, one uploaded file passes straight
+through as the pick; the empty-state line says uploading here works. Canvas and editor share the
+picker, so both get it at once; the one-off cover/gallery upload flows stay on the board. **T-341 (the reported cases)** — an audit found the popover clamp itself was the bug:
 `app-popover` clamped the left edge against a literal 252 while real panels measure 278, so
 inspector fly-outs hung off the right edge; it now re-clamps after render against the panel's
 measured width and caps height at the viewport. The two genuinely unclamped menus — the sheet's

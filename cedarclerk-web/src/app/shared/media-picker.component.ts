@@ -38,6 +38,7 @@ export class MediaPickerComponent implements OnDestroy {
     type = signal<LibraryKind | null>(null);
     search = signal('');
     skip = signal(0);
+    uploading = signal(false);
 
     private thumbFailed = signal<ReadonlySet<string>>(new Set());
     private searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -64,6 +65,34 @@ export class MediaPickerComponent implements OnDestroy {
             this.error.set(httpErrorMessage(e, this.t().media.loadFailed));
         } finally {
             this.loading.set(false);
+        }
+    }
+
+    // T-353 — the picker uploads too: an empty project offered only "pick from nothing" before.
+    // One file goes straight through as the pick; several land in the library and the grid shows
+    // them for picking.
+    async onUploadPicked(event: Event) {
+        const input = event.target as HTMLInputElement;
+        const files = [...(input.files ?? [])];
+        input.value = '';
+        if (!files.length || this.uploading()) return;
+        this.uploading.set(true);
+        this.error.set(null);
+        try {
+            const uploaded: { id: string }[] = [];
+            for (const file of files) uploaded.push(await this.api.upload(file));
+            this.search.set('');
+            this.type.set(null);
+            this.skip.set(0);
+            await this.load();
+            if (uploaded.length === 1) {
+                const asset = this.page()?.items.find(a => a.id === uploaded[0].id);
+                if (asset) this.picked.emit(asset);
+            }
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().media.uploadFailed));
+        } finally {
+            this.uploading.set(false);
         }
     }
 

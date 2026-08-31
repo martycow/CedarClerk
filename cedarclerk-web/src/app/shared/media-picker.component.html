@@ -51,5 +51,14 @@
         }
     </div>
 
+    <!--T-353 — a label wearing the pine face: a file input cannot be a button (same pattern as
+    the avatar picker), and Cancel keeps the footer's paper.-->
+    <label modal-actions class="picker-upload" [class.busy]="uploading()">
+        @if (uploading()) { <app-icon name="arrow-clockwise" size="sm" class="spin" /> }
+        @else { <app-icon name="upload-simple" size="sm" /> }
+        {{ t().media.uploadNew }}
+        <input type="file" accept="image/*,video/*,audio/*" multiple hidden
+               (change)="onUploadPicked($event)" [disabled]="uploading()">
+    </label>
     <app-button modal-actions variant="paper" (clicked)="closed.emit()">{{ t().common.cancel }}</app-button>
 </app-modal>

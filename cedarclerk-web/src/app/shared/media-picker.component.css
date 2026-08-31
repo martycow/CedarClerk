@@ -1,6 +1,31 @@
 .icon-sm { width: 14px; height: 14px; }
 .icon-lg { width: 28px; height: 28px; }
 
+/* T-353 — a file input cannot be a button, so the label wears the pine face by hand (the same
+   trade the avatar picker makes). */
+.picker-upload {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    box-sizing: border-box;
+    min-height: var(--hit-surface, var(--hit-chrome));
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid var(--pine-deep);
+    border-radius: var(--radius-plaque);
+    background: var(--grad-pine);
+    color: var(--text-on-pine);
+    font-family: var(--font-sans);
+    font-size: var(--text-chrome);
+    font-weight: 700;
+    cursor: pointer;
+    text-shadow: 0 1px 1px var(--pine-deep);
+    box-shadow: var(--shadow-pine-btn);
+}
+
+.picker-upload:hover { filter: brightness(1.07); }
+.picker-upload.busy { opacity: .6; cursor: default; }
+
 .picker-body {
     display: flex;
     flex-direction: column;
