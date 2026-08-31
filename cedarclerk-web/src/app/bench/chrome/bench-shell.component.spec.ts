@@ -208,13 +208,15 @@ describe('bench shell', () => {
             .toEqual(['/projects/p1/canvas', '/projects/p2/canvas', '/projects']);
     });
 
-    it('hangs the brand as a door to the hub, and the landing link beside the version', () => {
+    it('hangs the brand as a door to the hub, and the landing link on the drawer lip', () => {
         const home = el().querySelector('app-rail-header a.home') as HTMLAnchorElement;
         expect(home.getAttribute('href')).toBe('/projects');
         expect(home.textContent).toContain('Cedar Clerk');
+        // T-330 — the header no longer spends its prime spot on the landing.
+        expect(el().querySelector('app-rail-header a.about')).toBeNull();
         // A plain href on purpose — the landing is served outside the SPA.
-        const about = el().querySelector('app-rail-header a.about') as HTMLAnchorElement;
-        expect(about.getAttribute('href')).toBe('/welcome');
+        const lipLinks = [...el().querySelectorAll('.bench-bottom app-button a')] as HTMLAnchorElement[];
+        expect(lipLinks.map(a => a.getAttribute('href'))).toContain('/welcome');
     });
 
     it('puts Admin on the wall and nowhere in either account menu', () => {

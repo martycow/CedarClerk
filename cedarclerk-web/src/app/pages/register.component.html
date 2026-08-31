@@ -29,7 +29,7 @@
         the live preview under the field rather than a confirmation after the fact.-->
         <div class="username-field">
             <app-input inputId="cc-reg-username" [label]="t().register.username"
-                       placeholder="martycow" autocomplete="off"
+                       placeholder="alexwriter" autocomplete="off"
                        [hint]="t().register.usernameHint(blogHost())"
                        [value]="username()" (valueChange)="onUsernameInput($any($event) ?? '')"
                        (keyup.enter)="submit()" />

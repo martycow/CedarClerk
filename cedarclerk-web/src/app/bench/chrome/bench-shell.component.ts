@@ -71,8 +71,7 @@ function matches(path: string, pattern: string): boolean {
                              projectLink="/projects" [projects]="switcher()" [projectId]="openProjectId()"
                              [projectHint]="t().shell.switchProject" [crumbs]="crumbs()"
                              [crumbsLabel]="t().shell.breadcrumb"
-                             [homeLabel]="t().shell.logoHome"
-                             aboutHref="/welcome" [aboutLabel]="t().shell.aboutLanding">
+                             [homeLabel]="t().shell.logoHome">
                 <!-- The default slot RailHeader.prompt.md reserves for save state and the
                      screen's one primary action. Neither is the shell's: a page publishes them
                      and the rail renders them, as data and never as a template (ADR-159). -->
@@ -107,14 +106,17 @@ function matches(path: string, pattern: string): boolean {
                             <app-icon name="book-bookmark" size="sm" />
                             {{ t().glossary.crumb }}
                         </a>
-                        <a class="menu-item" routerLink="/dev/styleguide">
-                            <app-icon name="palette" size="sm" />
-                            {{ t().shell.styleguide }}
-                        </a>
-                        <a class="menu-item" routerLink="/dev/icons">
-                            <app-icon name="squares-four" size="sm" />
-                            {{ t().shell.icons }}
-                        </a>
+                        <!--T-339 — development surfaces; a user has no business seeing them.-->
+                        @if (auth.isAdmin()) {
+                            <a class="menu-item" routerLink="/dev/styleguide">
+                                <app-icon name="palette" size="sm" />
+                                {{ t().shell.styleguide }}
+                            </a>
+                            <a class="menu-item" routerLink="/dev/icons">
+                                <app-icon name="squares-four" size="sm" />
+                                {{ t().shell.icons }}
+                            </a>
+                        }
                     </div>
                 </app-hook-rail>
 
@@ -137,6 +139,12 @@ function matches(path: string, pattern: string): boolean {
                 <app-button lipActions class="lip-fullscreen" variant="paper" size="sm" surface="chrome"
                             [title]="fullscreenLabel()" (clicked)="toggleFullscreen()">
                     <app-icon [name]="isFullscreen() ? 'arrows-in-simple' : 'arrows-out-simple'" size="xs" />
+                </app-button>
+                <!--T-330 — the way back to the landing lives on the bottom edge, off the prime
+                    header spot it used to take. An href: the landing is a server page.-->
+                <app-button lipActions variant="paper" size="sm" surface="chrome"
+                            href="/welcome" [title]="t().shell.aboutLanding">
+                    <app-icon name="tree-evergreen" size="xs" />
                 </app-button>
             </app-debug-console>
             <app-ruler-bar [label]="ruler.label()" [left]="ruler.left()" [right]="rulerRight()" />

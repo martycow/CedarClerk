@@ -162,19 +162,21 @@ describe('glossary screen', () => {
         expect(el().querySelector('.glossary-pager')?.textContent).toContain(t.page(3, 3));
     });
 
-    // ADR-167 clause 7 and ADR-159 clause 1: the screen's one command goes to the rail as data,
-    // and the rule carries what it measures. Both are cleared when the screen goes away.
-    it('publishes its one action and its counts to the shell, and clears them on the way out', () => {
-        expect(rail.primary()?.label).toBe(t.newTerm);
+    // T-336 — the create action is a button on the screen it acts on, not a rail primary; the
+    // ruler still carries what it measures and is cleared when the screen goes away.
+    it('keeps New term on the sheet, publishes its counts, and clears them on the way out', () => {
+        expect(rail.primary()).toBeNull();
+        const newTerm = [...el().querySelectorAll('.gl-index app-button')]
+            .find(b => b.textContent?.includes(t.newTerm)) as HTMLElement;
+        expect(newTerm).toBeTruthy();
         expect(ruler.label()).toBe(t.crumb);
         expect(ruler.right().map(r => r.text)).toEqual([t.rulerTerms(2), t.rulerScopes(1)]);
 
-        rail.primary()!.run();
+        (newTerm.querySelector('button') as HTMLButtonElement).click();
         fixture.detectChanges();
         expect(page().editing()).toBe(true);
 
         fixture.destroy();
-        expect(rail.primary()).toBeNull();
         expect(ruler.right()).toEqual([]);
     });
 });

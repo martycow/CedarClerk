@@ -162,14 +162,6 @@ export class ProjectsService {
         return firstValueFrom(this.http.post<{ id: string; name: string; documentId: string }>('/api/projects', input));
     }
 
-    /**
-     * T-160 (ADR-133) — "Cedar Quest", a filled example: tasks across the board, a current sprint,
-     * a released build and a devlog written from them. On demand from the empty state, never seeded.
-     */
-    createExample(language: string) {
-        return firstValueFrom(this.http.post<{ id: string; name: string }>('/api/projects/example', { language }));
-    }
-
     /** T-159 (ADR-134) — the public game page's switch; the server slugifies and answers the URL. */
     setShowcase(id: string, input: ShowcaseInput) {
         return firstValueFrom(this.http.put<{ showcaseSlug: string | null; url: string | null; customDomain: string | null }>(

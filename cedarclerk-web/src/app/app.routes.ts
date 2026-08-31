@@ -150,18 +150,17 @@ export const routes: Routes = [
                 loadComponent: () => import('./pages/admin.component').then(m => m.AdminComponent),
                 canActivate: [adminGuard],
             },
-            // T-078 / T-080 — the design-system reference and the icon inventory (ADR-071/072). Behind
-            // authGuard rather than open: development surfaces, with no reason to be part of the public
-            // site.
+            // T-078 / T-080 — the design-system reference and the icon inventory (ADR-071/072).
+            // Behind adminGuard (T-339): development surfaces, no reason for a user to see them.
             {
                 path: 'dev/styleguide',
                 loadComponent: () => import('./pages/styleguide.component').then(m => m.StyleguideComponent),
-                canActivate: [authGuard],
+                canActivate: [adminGuard],
             },
             {
                 path: 'dev/icons',
                 loadComponent: () => import('./pages/icons.component').then(m => m.IconsComponent),
-                canActivate: [authGuard],
+                canActivate: [adminGuard],
             },
             // N7 folded both of these into the Posts Manager; the old paths stay as redirects because
             // they're what any existing bookmark points at.

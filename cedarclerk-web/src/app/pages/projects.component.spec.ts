@@ -121,12 +121,11 @@ describe('project index', () => {
         expect(ruler.left()).toEqual([]);
     });
 
-    // T-160 (ADR-133) — the example project is offered, never seeded.
-    it('offers both ways in when there is no project at all', async () => {
+    it('offers creation when there is no project at all', async () => {
         fixture.componentInstance.projects.set([]);
         fixture.detectChanges();
         const buttons = [...el().querySelectorAll('.empty-state app-button')].map(b => b.textContent?.trim());
-        expect(buttons).toEqual([t.newProject, t.exampleProject]);
+        expect(buttons).toEqual([t.newProject]);
     });
 
     it('offers Blog with a post starter and an explicit name hint', () => {

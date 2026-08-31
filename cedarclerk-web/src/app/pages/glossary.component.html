@@ -13,6 +13,10 @@
             <app-icon name="translate" size="sm"></app-icon> {{ t().glossary.translateAll }}
         </app-button>
         }
+        <!--T-336 — the create action lives on the screen it acts on, not in the app's top bar.-->
+        <app-button variant="pine" size="sm" (clicked)="startNew()">
+            <app-icon name="plus" weight="bold" size="sm" /> {{ t().glossary.newTerm }}
+        </app-button>
     </div>
 
     <div class="gl-grid">

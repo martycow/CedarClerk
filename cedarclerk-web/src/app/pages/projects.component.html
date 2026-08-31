@@ -33,19 +33,13 @@
                     <p class="hint pad">{{ t().projects.loading }}</p>
                 } @else if (projects().length === 0) {
                     <div class="empty-state">
-                        <app-icon name="game-controller" size="lg" />
+                        <app-icon name="squares-four" size="lg" />
                         <p class="empty-title">{{ t().projects.empty }}</p>
                         <p class="hint">{{ t().projects.emptyHint }}</p>
                         <app-button variant="pine" (clicked)="startCreate()">
                             <app-icon name="plus" weight="bold" size="sm" />
                             {{ t().projects.newProject }}
                         </app-button>
-                        <!--T-160 (ADR-133) — a filled example on demand, never seeded silently.-->
-                        <app-button variant="paper" [disabled]="saving()" (clicked)="createExample()">
-                            <app-icon name="sparkle" size="sm" />
-                            {{ t().projects.exampleProject }}
-                        </app-button>
-                        <p class="hint">{{ t().projects.exampleHint }}</p>
                     </div>
                 } @else {
                     <div class="rows">

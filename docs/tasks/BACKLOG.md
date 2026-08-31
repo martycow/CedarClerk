@@ -23,19 +23,15 @@ six milestones (SEP–DEC). Naming and pricing decisions stay with Marty through
 
 - [ ] T-328 Mandatory onboarding — first required action after registration: display name, main social/site URL, location; stored under Settings → Profile; shows/assigns the blog address (see T-329) #growth #ux P1
 - [ ] T-329 Blog address visible and assignable — the user cannot learn their own blog URL today; surface it in Profile/onboarding and decide whether it can be changed #growth #blog #decision P1
-- [ ] T-330 Landing entry over About — drop About from beside the logo (move to the footer), give the main page a prominent login button or form #ui #growth P2
-- [ ] T-331 Preset Manager — project types are presets in fact; one manager for user-created presets of projects, documents, export and the rest; the New-project dialog builds from it #product #ui P1
+- [ ] T-331 Preset Manager — project types are presets in fact; one manager for user-created presets of projects, documents, export and the rest; the New-project dialog builds from it (the gamedev-flavoured type blurbs left by T-333 get generalized here too) #product #ui P1
 - [ ] T-332 Projects Hub cards — cards with cover images instead of the cold list #ui P2
-- [ ] T-333 De-gamedev the copy — remove Example Project and every Cedar Quest mention; stop naming new entities "Cedar" (naming is Marty's); replace "A project is a game…" with a small scheme: a project is a container of content for a task #ux #copy P2
-- [ ] T-334 Contrast smalls — the + on the green New project button is barely visible in light theme; sweep for similar #ui P3
+- [ ] T-334 Contrast smalls sweep — the + on New project is fixed (icons on pine now carry the text's relief); walk the rest of the chrome for the same class of near-invisible marks #ui P3
 - [ ] T-335 Sidebar redesign — buttons small, some labels truncate; prettier and handier, verify contextual display #ui P2
-- [ ] T-336 Topbar discipline — only the most important lives in the top panel; Glossary's New Term moves back into the screen #ui P2
 - [ ] T-337 Posts Manager as a document manager — rethink the menus with real visual design, not cold input fields #postsmanager #ux P2
 - [ ] T-338 Stats screen redesign — looks poor and uninteresting #stats #ui P2
-- [ ] T-339 Style guide gated to admins — users need not see it, and its dark theme is broken #ui P3
+- [ ] T-339 Style guide dark theme — the gating half shipped (route and tray behind admin); the dark render still looks broken and needs a live look to diagnose (all its CSS is tokens, so the defect is not a stray literal) #ui P3
 - [ ] T-340 Editor toolbar usability — buttons blend into the background; bolder icon strokes, balance design against function #editor #ui P2
 - [ ] T-341 Inspector popups clamped to viewport — some fly-outs escape the screen #editor #ui P2
-- [ ] T-342 Placeholder audit — no Marty/Tbilisi/M.C. © 2026 anywhere; review placeholders for every field in the app #ux #copy P2
 - [ ] T-343 Pictograms over prose — too much hint text; cut some, replace the rest with pictograms, pictures, schemes #ux P2
 - [ ] T-344 Header Slots keeps only slots — profile info (avatar, cross-links) moves to Profile #settings #ui P2
 - [ ] T-345 Unified location picker — location is a profile's or a document's (a trip); one convenient menu instead of a bare input #ui P2

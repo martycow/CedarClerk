@@ -163,18 +163,4 @@ export class ProjectsComponent implements OnDestroy {
         }
     }
 
-    /** T-160 (ADR-133) — "Cedar Quest" from the empty state; deleting it later is the ordinary path. */
-    async createExample() {
-        if (this.saving()) return;
-        this.saving.set(true);
-        this.loadError.set(null);
-        try {
-            const created = await this.api.createExample(this.locale.uiLang());
-            void this.router.navigate(['/projects', created.id]);
-        } catch (e) {
-            this.loadError.set(httpErrorMessage(e, this.t().projects.create.failed));
-        } finally {
-            this.saving.set(false);
-        }
-    }
 }

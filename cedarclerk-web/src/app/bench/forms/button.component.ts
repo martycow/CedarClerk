@@ -90,6 +90,10 @@ export type ButtonSurface = 'paper' | 'chrome';
             text-shadow: 0 1px 1px rgba(18, 26, 20, .45);
         }
 
+        /* text-shadow never reaches an svg, so an icon on pine gets its relief here or reads
+           washed out against the gradient's light stop (the + on "New project" by day). */
+        .btn.pine ::ng-deep app-icon { color: var(--text-on-pine); filter: drop-shadow(0 1px 1px rgba(18, 26, 20, .45)); }
+
         .btn.pine:not(:focus-visible) { box-shadow: var(--shadow-pine-btn); }
         .btn.pine:hover:not(:disabled) { filter: brightness(1.07); }
         .btn.pine:active:not(:disabled) { transform: translateY(2px); }

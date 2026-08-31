@@ -766,6 +766,7 @@ public static class LandingEndpoints
                     <a href="?lang=ru"{(ru ? """ aria-current="true" """ : "")}>RU</a>
                     <a href="?lang=en"{(ru ? "" : """ aria-current="true" """)}>EN</a>
                 </div>
+                <a class="btn btn-paper btn-sm" href="/login">{T("Войти", "Log in")}</a>
                 <a class="btn btn-pine btn-sm" href="#waitlist">{T("В лист ожидания", "Join the waitlist")}</a>
             </header>
 

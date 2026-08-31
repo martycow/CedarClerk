@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-08-31 — Sprint v0.2.0, batch one: the quick screenshot fixes
+
+Six of the sprint's decision-free rows, straight off the annotated screenshots. **T-333** — the
+example project is gone whole (the `/projects/example` endpoint, `createExample` on service and
+component, the empty-state button and both i18n keys), "A project is a game" became the container
+sentence in both languages, the hub's "one per game" note and the empty-state game-controller icon
+went with it; test fixtures keep the name "Cedar Quest" — internal data, never shown. The
+gamedev-flavoured new-project type blurbs stay until `T-331` rebuilds that dialog from presets.
+**T-336** — Glossary's New term left the rail primary for a pine button on the `.gl-index` strip
+beside Translate-all; the rail publishes nothing on that screen now. **T-339** (half) —
+`/dev/styleguide` and `/dev/icons` moved from `authGuard` to `adminGuard` and the tray hides both
+from non-admins; the dark-theme render stays open on the board. **T-330** — the About link left the
+rail header; the way back to `/welcome` is a tree-evergreen button on the drawer lip, and the
+landing header gained a paper "Log in" button beside the waitlist one. **T-334** (the reported
+case) — icons on pine buttons now carry the same relief the label's text-shadow gives
+(`drop-shadow` on `app-icon`), which is what made the + on New project fade by day; the sweep for
+similar marks stays on the board. **T-342** — the personal placeholders are gone: signature,
+author-name and location placeholders in both dictionaries, the register username `martycow`, the
+admin landing field, and the register tagline no longer names Marty. Checks: backend 1641,
+frontend 496, contrast/density/icons all green. UI-INVENTORY updated in the same commit.
+
 ## 2026-08-31 — Input sweep: the v0.2.0 open-beta sprint lands on the board
 
 The third hand-run of the input-sweeper procedure (T-189). The 31.08 INPUT_PROMPT — ten annotated

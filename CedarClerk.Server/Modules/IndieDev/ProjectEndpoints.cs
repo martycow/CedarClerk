@@ -17,7 +17,6 @@ public static class ProjectEndpoints
     // DocumentType is optional because ProjectType already implies one (ProjectTypes
     // .StarterDocumentType); it stays overridable so the rule never becomes a wall.
     public record CreateProjectRequest(string Name, string? Description, string? ProjectType, string? DocumentType, string? DocumentTitle, string? Language = null);
-    public record CreateExampleRequest(string? Language);
     public record ShowcaseRequest(bool Enabled, string? Slug, string? Links, string? Gallery,
         string? TrailerUrl, string? CustomDomain,
         string? PressContactEmail = null, string? PressPrice = null, string? PressEngine = null,
@@ -198,126 +197,6 @@ public static class ProjectEndpoints
             await db.SaveChangesAsync();
 
             return Results.Created($"/api/projects/{project.Id}", new { project.Id, project.Name, documentId = draft.Id });
-        });
-
-        // T-160 (ADR-133) — the example project, on demand from the empty state rather than seeded
-        // silently at registration: an account that starts its life cleaning up data it never asked
-        // for is worse than an empty screen with two honest buttons. The material demonstrates the
-        // loop that sells the product: tasks → sprint → build → a devlog written from them (T-158).
-        group.MapPost("/example", async (CreateExampleRequest? req, ClaimsPrincipal user, CedarDbContext db) =>
-        {
-            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var language = !string.IsNullOrWhiteSpace(req?.Language) && Languages.IsContentLanguage(req.Language)
-                ? req.Language
-                : Languages.English;
-            var ru = language == Languages.Russian;
-            var now = DateTime.UtcNow;
-
-            var project = new Project
-            {
-                OwnerId = uid,
-                Name = "Cedar Quest",
-                Description = ru
-                    ? "Пример проекта — потыкайте и удалите, когда надоест."
-                    : "An example project — poke around, then delete it when you're done.",
-                ProjectType = ProjectTypes.FullGame,
-                NextSprintNumber = 2,
-            };
-
-            var gdd = new Draft
-            {
-                OwnerId = uid,
-                ProjectId = project.Id,
-                DocumentType = DocumentTypes.Design,
-                Title = ru ? "Cedar Quest — дизайн-документ" : "Cedar Quest — design doc",
-                PrimaryLanguage = language,
-            };
-            gdd.CedarJson = StarterTemplates.For(DocumentTypes.Design, ProjectTypes.FullGame, language);
-
-            var sprint = new Sprint
-            {
-                OwnerId = uid,
-                ProjectId = project.Id,
-                Number = 1,
-                Name = ru ? "Первый плейабл" : "First playable",
-                StartsAt = now.Date.AddDays(-7),
-                EndsAt = now.Date.AddDays(6),
-            };
-
-            var build = new Build
-            {
-                OwnerId = uid,
-                ProjectId = project.Id,
-                Version = "0.1.0",
-                Notes = ru ? "Первый играбельный билд" : "First playable build",
-                ReleasedAt = now.AddDays(-2),
-            };
-
-            GameTask Task(string en, string ruTitle, string status, int priority,
-                DateTime? completedAt = null, DateTime? dueAt = null, bool inSprint = true, bool inBuild = false) => new()
-            {
-                OwnerId = uid,
-                ProjectId = project.Id,
-                Title = ru ? ruTitle : en,
-                Status = status,
-                Priority = priority,
-                SprintId = inSprint ? sprint.Id : null,
-                BuildId = inBuild ? build.Id : null,
-                CompletedAt = completedAt,
-                DueAt = dueAt,
-            };
-
-            var tasks = new List<GameTask>
-            {
-                Task("Player movement & camera", "Движение игрока и камера", TaskStatuses.Done, TaskPriorities.Highest,
-                    completedAt: now.AddDays(-5), inBuild: true),
-                Task("Pixel-art tileset for the forest", "Пиксель-арт тайлсет леса", TaskStatuses.Done, TaskPriorities.Normal,
-                    completedAt: now.AddDays(-3), inBuild: true),
-                Task("Main menu music sketch", "Набросок музыки главного меню", TaskStatuses.Done, TaskPriorities.Lowest,
-                    completedAt: now.AddDays(-1)),
-                Task("Enemy AI: patrol and chase", "ИИ врагов: патруль и погоня", TaskStatuses.InProgress, TaskPriorities.Highest,
-                    dueAt: now.Date.AddDays(3)),
-                Task("Sound effects for jumps and hits", "Звуки прыжков и ударов", TaskStatuses.Planned, TaskPriorities.Normal),
-                Task("Steam page draft", "Черновик страницы в Steam", TaskStatuses.Backlog, TaskPriorities.Lowest, inSprint: false),
-            };
-
-            var done = tasks.Where(t => t.Status == TaskStatuses.Done)
-                .OrderBy(t => t.CompletedAt).Select(t => t.Title).ToList();
-            var open = tasks.Where(t => t.Status != TaskStatuses.Done && t.SprintId != null)
-                .Select(t => t.Title).ToList();
-
-            var devlogBody = new System.Text.Json.Nodes.JsonArray
-            {
-                DocJson.Paragraph(ru
-                    ? "Семь дней от пустой сцены до билда, по которому можно ходить. Вот что произошло."
-                    : "Seven days from an empty scene to a build you can actually walk around in. Here's what happened."),
-                DocJson.Heading(ru ? "Что сделано" : "What got done"),
-                DocJson.BulletList(done),
-                DocJson.Heading(ru ? "Релизы" : "Released"),
-                DocJson.Paragraph($"0.1.0 — {build.Notes}"),
-                DocJson.Heading(ru ? "Что дальше" : "What's next"),
-                DocJson.BulletList(open),
-            };
-            var devlog = new Draft
-            {
-                OwnerId = uid,
-                ProjectId = project.Id,
-                DocumentType = DocumentTypes.Post,
-                Title = ru ? "Девлог #1 — первый плейабл" : "Devlog #1 — first playable",
-                PrimaryLanguage = language,
-                CedarJson = DocJson.Doc(devlogBody),
-            };
-
-            db.Projects.Add(project);
-            db.Drafts.AddRange(gdd, devlog);
-            db.Sprints.Add(sprint);
-            db.Builds.Add(build);
-            db.GameTasks.AddRange(tasks);
-            await DraftRevisionService.RecordAsync(db, gdd.Id, gdd.PrimaryLanguage, gdd.Title, gdd.CedarJson);
-            await DraftRevisionService.RecordAsync(db, devlog.Id, devlog.PrimaryLanguage, devlog.Title, devlog.CedarJson);
-            await db.SaveChangesAsync();
-
-            return Results.Created($"/api/projects/{project.Id}", new { project.Id, project.Name });
         });
 
         group.MapPut("/{id:guid}", async (Guid id, UpdateProjectRequest req, ClaimsPrincipal user, CedarDbContext db) =>

@@ -79,7 +79,7 @@ export const en = {
     register: {
         title: 'Join the herd',
         tagline: 'Cedar Clerk is invite-only for now.',
-        taglineAsk: 'Ask Marty for a code.',
+        taglineAsk: 'Ask the maintainers for a code.',
         // Shown instead when this installation asks for no invite — i.e. the desktop app, whose
         // account and data live on this machine and nowhere else.
         taglineLocal: 'This account lives on this computer, in this app.',
@@ -140,9 +140,7 @@ export const en = {
         stateArchived: 'Archived',
         loading: 'Loading…',
         empty: 'No projects yet',
-        emptyHint: 'A project is a game. Documents, tasks and assets live inside it.',
-        exampleProject: 'Create an example project',
-        exampleHint: 'A filled one to look around — tasks, a sprint, a build and a devlog written from them. Delete it whenever.',
+        emptyHint: 'A project is a container: everything made for one goal — documents, tasks, assets — lives inside it.',
         emptyFiltered: 'No project matches this filter.',
         notFound: 'This project does not exist, or it is not yours.',
         loadFailed: 'Could not load projects.',
@@ -188,7 +186,7 @@ export const en = {
             rulerAssets: (n: number) => `assets ${n}`,
             rulerDocs: (n: number) => `documents ${n}`,
             rulerTasks: (n: number) => `open tasks ${n}`,
-            benchNote: (n: number) => `${n} ${n === 1 ? 'bench' : 'benches'} — one per game`,
+            benchNote: (n: number) => `${n} ${n === 1 ? 'bench' : 'benches'} — one per project`,
         },
         // T-123 — the task tracker.
         tasks: {
@@ -2016,7 +2014,7 @@ export const en = {
             signatureHintPro: 'Appended to the end of every published post (Telegram & blog). Leave empty to publish with no signature at all.',
             signatureHintFree: (attribution: string) =>
                 `Free posts are attributed with "${attribution}" — upgrade to Pro to replace it with your own (optionally a clickable link) or remove it entirely.`,
-            signaturePlaceholder: 'e.g. — M.C. © 2026',
+            signaturePlaceholder: 'e.g. — yours truly',
             signatureUpgrade: 'Upgrade to Pro to customize your signature',
             signatureUrlPlaceholder: 'Optional link — makes the signature clickable, e.g. https://example.com',
             saveSignature: 'Save signature',
@@ -2078,10 +2076,10 @@ export const en = {
             title: 'Header slots',
             hint: 'Shown as a subtitle under the title on every blog post: up to three auto-filled values, separated by •.',
             authorName: 'Author display name',
-            authorNamePlaceholder: 'e.g. Marty',
+            authorNamePlaceholder: 'e.g. Alex Writer',
             profileUrl: 'Profile URL',
             location: 'Location',
-            locationPlaceholder: 'e.g. Tbilisi, Georgia',
+            locationPlaceholder: 'e.g. Lisbon, Portugal',
             slot: (n: number) => `Slot ${n}`,
             slotUpgrade: 'Upgrade to Pro to use a third header slot',
             none: 'None',

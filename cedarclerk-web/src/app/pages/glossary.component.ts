@@ -16,7 +16,6 @@ import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { SpecRowComponent, SpecScope } from '../bench/worktop/spec-row.component';
 import { WorktopComponent } from '../bench/worktop/worktop.component';
-import { RailActionsService } from '../core/rail-actions.service';
 import { RulerService } from '../core/ruler.service';
 
 // Idea #11 — the glossary page. A term is defined once here and explained wherever it turns up on
@@ -37,7 +36,6 @@ export class GlossaryComponent implements OnInit, OnDestroy {
     private projectsApi = inject(ProjectsService);
     auth = inject(AuthService);
     private ruler = inject(RulerService);
-    private rail = inject(RailActionsService);
 
     readonly contentLanguages = CONTENT_LANGUAGES;
     readonly primaryLanguage = DEFAULT_PRIMARY_LANGUAGE;
@@ -448,17 +446,7 @@ export class GlossaryComponent implements OnInit, OnDestroy {
         });
     });
 
-    // The screen's one primary action (ADR-159 clause 1): creating a term is the only command here
-    // that belongs to the glossary rather than to one row of it.
-    private readonly railFeed = effect(() => {
-        const t = this.t().glossary;
-        this.rail.publish({
-            primary: { label: t.newTerm, icon: 'plus', hint: t.newTerm, run: () => this.startNew() },
-        });
-    });
-
     ngOnDestroy() {
         this.ruler.clear();
-        this.rail.clear();
     }
 }
