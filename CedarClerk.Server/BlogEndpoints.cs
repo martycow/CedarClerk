@@ -1040,12 +1040,6 @@ public static partial class BlogEndpoints
                 "Показать ещё {0} из {1}", "Пока ничего не опубликовано.", "Ничего не найдено.", "Читать на"),
         };
 
-    private static string TagFilterUrl(IEnumerable<string> tags)
-    {
-        var list = tags.Distinct().ToList();
-        return list.Count == 0 ? "/" : "/?tags=" + string.Join(",", list.Select(Uri.EscapeDataString));
-    }
-
     // ADR-192/193 — the index toolbar (sort dropdown, language filter, tag chips, "show more") all
     // link back into the same parameters, so any one of them can change without the others resetting.
     // Changing a filter drops `shown` on purpose — a narrower list should start from its own top.
@@ -1173,9 +1167,9 @@ public static partial class BlogEndpoints
             if (channel.Username is not null)
             {
                 openInTelegram = $"""
-                    <a class="tg-open-btn" href="https://t.me/{System.Net.WebUtility.HtmlEncode(channel.Username)}" target="_blank" rel="noopener">
+                    <a class="tg-open-btn" href="https://t.me/{System.Net.WebUtility.HtmlEncode(channel.Username)}" target="_blank" rel="noopener" aria-label="{(lang == Languages.Russian ? "Открыть в Telegram" : "Open in Telegram")}">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg>
-                    <span class="tg-open-label">Open in Telegram</span>
+                    <span class="tg-open-label">Telegram</span>
                     </a>
                     """;
             }
@@ -1185,7 +1179,7 @@ public static partial class BlogEndpoints
         // in <head> — i.e. by a reader that already knew to look. A visible button is the whole
         // difference between "there is a feed" and "you can subscribe".
         const string rssButton = """
-            <a class="tg-open-btn rss-btn" href="/rss.xml" title="RSS feed">
+            <a class="tg-open-btn rss-btn" href="/rss.xml" title="RSS feed" aria-label="RSS">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="6.2" cy="17.8" r="2.2"></circle><path d="M4 10.2v3.1a6.7 6.7 0 0 1 6.7 6.7h3.1A9.8 9.8 0 0 0 4 10.2Z"></path><path d="M4 4v3.1A12.9 12.9 0 0 1 16.9 20H20A16 16 0 0 0 4 4Z"></path></svg>
             <span class="tg-open-label">RSS</span>
             </a>
@@ -1195,7 +1189,7 @@ public static partial class BlogEndpoints
 
         return $"""
             <div class="site-header"><div class="site-header-inner">
-            {identity}
+            <a class="site-identity" href="/{(lang == Languages.Russian ? "?lang=ru" : "")}">{identity}</a>
             <div class="spacer"></div>
             {rssButton}
             {openInTelegram}
@@ -1345,46 +1339,19 @@ public static partial class BlogEndpoints
         var remaining = filtered.Count - pageItems.Count;
 
         var sb = new StringBuilder();
+        var isEnglish = indexLang != Languages.Russian;
+        sb.Append("<div class=\"index-heading\"><div><h1>")
+          .Append(isEnglish ? "All posts" : "Все записи").Append("</h1><p>")
+          .Append(isEnglish ? "Browse the archive or find something to read." : "Листайте архив или найдите интересную тему.")
+          .Append("</p></div><a class=\"subscribe-link\" href=\"#subscribe\">")
+          .Append(isEnglish ? "Follow by email" : "Подписаться на почту").Append("</a></div>");
 
-        // ADR-193 — the sort/filter control: a paper popover off one button, the same open/close
-        // mechanism the reading menu already uses, extended to cover order and language-availability
-        // together rather than as two separate controls.
         var currentSortLabel = sortOptions.First(o => o.Key == sort).Label;
-        // The order control and the tag leaves are one row: they are the two things a reader may
-        // change about this list, and stacking them put a lone button on a line of its own above a
-        // block of chips that answered the same question.
         sb.Append("<div class=\"index-bar\">");
-        // The pick lives here and only here: on a post page the language is the post's own, and a
-        // second control saying the same thing differently is how the site-wide one went wrong.
-        if (offeredLangs.Count > 1)
-        {
-            sb.Append("<div class=\"index-lang\" role=\"group\" aria-label=\"").Append(chrome.ReadIn).Append("\">");
-            foreach (var l in offeredLangs)
-            {
-                sb.Append("<a class=\"lang-chip").Append(l == indexLang ? " current" : "").Append("\"")
-                  .Append(l == indexLang ? " aria-current=\"true\"" : "")
-                  .Append(" href=\"").Append(IndexFilterUrl(selectedTags, sort, avail, null, l)).Append("\">")
-                  .Append(l.ToUpperInvariant()).Append("</a>");
-            }
-            sb.Append("</div>");
-        }
-        if (allTags.Count > 0)
-        {
-            sb.Append("<div class=\"tag-bar\">");
-            foreach (var tag in allTags)
-            {
-                var chipSelected = selectedTags.Contains(tag);
-                var chipToggled = chipSelected ? selectedTags.Where(t => t != tag) : selectedTags.Append(tag);
-                sb.Append("<a class=\"tag-chip").Append(chipSelected ? " selected" : "").Append("\" href=\"")
-                  .Append(IndexFilterUrl(chipToggled, sort, avail, null, indexLang)).Append("\">#")
-                  .Append(System.Net.WebUtility.HtmlEncode(tag)).Append(chipSelected ? " &times;" : "").Append("</a>");
-            }
-            sb.Append("</div>");
-        }
         sb.Append("<div class=\"index-toolbar\">");
         // Item 2 — the way into /search from the one page every reader starts on. A plain GET
         // form, same as every other control on this bar.
-        sb.Append(SearchFormHtml("", indexLang != Languages.Russian));
+        sb.Append(SearchFormHtml("", indexLang != Languages.Russian, indexLang));
         sb.Append("<div class=\"sort-anchor\">");
         sb.Append("<button type=\"button\" class=\"index-sort-btn\" id=\"sortBtn\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-controls=\"sortMenu\">")
           .Append(BlogIcons.Sort).Append("<span>").Append(currentSortLabel).Append("</span></button>");
@@ -1409,7 +1376,57 @@ public static partial class BlogEndpoints
             }
             sb.Append("</div>");
         }
-        sb.Append("</div></div></div></div>");
+        sb.Append("</div></div></div>");
+        // The pick lives here and only here: on a post page the language is the post's own, and a
+        // second control saying the same thing differently is how the site-wide one went wrong.
+        if (offeredLangs.Count > 1)
+        {
+            sb.Append("<div class=\"index-lang\" role=\"group\" aria-label=\"").Append(chrome.ReadIn).Append("\">");
+            foreach (var l in offeredLangs)
+            {
+                sb.Append("<a class=\"lang-chip").Append(l == indexLang ? " current" : "").Append("\"")
+                  .Append(l == indexLang ? " aria-current=\"true\"" : "")
+                  .Append(" href=\"").Append(IndexFilterUrl(selectedTags, sort, avail, null, l)).Append("\">")
+                  .Append(l.ToUpperInvariant()).Append("</a>");
+            }
+            sb.Append("</div>");
+        }
+        if (allTags.Count > 0)
+        {
+            sb.Append("<details class=\"topic-filter\"><summary>")
+              .Append(isEnglish ? "Topics" : "Темы").Append(" <span class=\"num\">")
+              .Append(allTags.Count).Append("</span></summary><div class=\"topic-panel\"><p>")
+              .Append(isEnglish ? "Choose topics to narrow the list. Posts must match every selected topic."
+                  : "Выберите темы. В списке останутся записи со всеми выбранными тегами.")
+              .Append("</p><div class=\"tag-bar\">");
+            foreach (var tag in allTags)
+            {
+                var chipSelected = selectedTags.Contains(tag);
+                var chipToggled = chipSelected ? selectedTags.Where(t => t != tag) : selectedTags.Append(tag);
+                sb.Append("<a class=\"tag-chip").Append(chipSelected ? " selected" : "").Append("\"")
+                  .Append(chipSelected ? " aria-current=\"true\"" : "").Append(" href=\"")
+                  .Append(IndexFilterUrl(chipToggled, sort, avail, null, indexLang)).Append("\">#")
+                  .Append(System.Net.WebUtility.HtmlEncode(tag)).Append(chipSelected ? " &times;" : "").Append("</a>");
+            }
+            sb.Append("</div></div></details>");
+        }
+        sb.Append("</div>");
+        sb.Append("<div class=\"index-results\"><span>")
+          .Append(isEnglish ? "Posts: " : "Записей: ").Append("<strong class=\"num\">")
+          .Append(filtered.Count).Append("</strong></span>");
+        foreach (var tag in selectedTags)
+            sb.Append("<a class=\"tag-chip selected\" href=\"")
+              .Append(IndexFilterUrl(selectedTags.Where(t => t != tag), sort, avail, null, indexLang))
+              .Append("\">#").Append(System.Net.WebUtility.HtmlEncode(tag)).Append(" &times;</a>");
+        if (avail is not null)
+            sb.Append("<a class=\"tag-chip selected\" href=\"")
+              .Append(IndexFilterUrl(selectedTags, sort, null, null, indexLang)).Append("\">")
+              .Append(avail.ToUpperInvariant()).Append(" &times;</a>");
+        if (selectedTags.Count > 0 || avail is not null || sort != "new")
+            sb.Append("<a class=\"filter-reset\" href=\"")
+              .Append(IndexFilterUrl([], "new", null, null, indexLang)).Append("\">")
+              .Append(isEnglish ? "Reset filters" : "Сбросить фильтры").Append("</a>");
+        sb.Append("</div>");
 
         // T-294 — the games this blog is about, above the posts that are about them. Without it the
         // showcase is a page only a reader who already knows its URL can reach.
@@ -1456,9 +1473,16 @@ public static partial class BlogEndpoints
                 // and the excerpt is the one part of it that would be actual content. Deliberate,
                 // and the easy thing to reverse if the teaser turns out to be the point.
                 var excerpt = p.IsPrivate ? "" : Excerpt(cardCedarJson);
+                var cover = p.IsPrivate ? null : CedarImageRefs.Collect(cardCedarJson)
+                    .FirstOrDefault(i => CedarImageRefs.LocalFileName(i.Src) is not null);
 
                 sb.Append("<div class=\"timeline-item\"><span class=\"timeline-dot\"></span>");
-                sb.Append("<a class=\"post-card\" href=\"/").Append(p.BlogSlug).Append("\">");
+                sb.Append("<a class=\"post-card index-card").Append(cover is null ? "" : " has-cover")
+                  .Append("\" href=\"/").Append(p.BlogSlug).Append("?lang=").Append(indexLang).Append("\">");
+                if (cover is not null)
+                    sb.Append("<img class=\"post-card-cover\" src=\"").Append(System.Net.WebUtility.HtmlEncode(cover.Src))
+                      .Append("\" alt=\"\" width=\"208\" height=\"156\" loading=\"lazy\" decoding=\"async\">");
+                sb.Append("<div class=\"post-card-content\">");
                 sb.Append("<div class=\"post-card-meta\">");
                 sb.Append("<span class=\"post-card-date\">")
                   .Append(p.BlogPublishedAt is { } cardDate ? BlogDateFormatter.DateLocal(cardDate, indexLang) : "")
@@ -1472,23 +1496,20 @@ public static partial class BlogEndpoints
                     sb.Append(" · ").Append(lang.ToUpperInvariant());
                 sb.Append("</span>");
 
-                // Idea #8 — every tag, not just the first. The single-post page's own tag row
-                // has always shown them all; the card silently truncated to tags[0], so a post
-                // filed under three tags looked like it had one.
-                foreach (var tag in tags)
-                    sb.Append("<span class=\"post-card-tag\">· ").Append(System.Net.WebUtility.HtmlEncode(tag)).Append("</span>");
-
                 if (p.IsPrivate)
                     sb.Append("<span class=\"post-card-locked\">").Append(BlogIcons.Lock).Append("</span>");
 
                 sb.Append("</div>");
-                sb.Append("<div class=\"post-card-title\">").Append(System.Net.WebUtility.HtmlEncode(cardTitle)).Append("</div>");
+                sb.Append("<h2 class=\"post-card-title\">").Append(System.Net.WebUtility.HtmlEncode(cardTitle)).Append("</h2>");
                 if (excerpt.Length > 0)
                     sb.Append("<div class=\"post-card-excerpt\">").Append(System.Net.WebUtility.HtmlEncode(excerpt)).Append("</div>");
-                sb.Append("<div class=\"post-card-stats\">").Append(BlogIcons.Eye).Append("<span class=\"num\">").Append(p.ViewCount)
+                sb.Append("<div class=\"post-card-footer\"><div class=\"post-card-stats\">").Append(BlogIcons.Eye).Append("<span class=\"num\">").Append(p.ViewCount)
                   .Append("</span>").Append(BlogIcons.ThumbUp).Append("<span class=\"num\">").Append(likes)
                   .Append("</span>").Append(BlogIcons.Chat).Append("<span class=\"num\">").Append(comments).Append("</span></div>");
-                sb.Append("</a></div>");
+                sb.Append("<div class=\"post-card-topics\">");
+                foreach (var tag in tags)
+                    sb.Append("<span>#").Append(System.Net.WebUtility.HtmlEncode(tag)).Append("</span>");
+                sb.Append("</div></div></div></a></div>");
             }
             sb.Append("</div>");
 
@@ -1503,7 +1524,7 @@ public static partial class BlogEndpoints
         }
 
         // Item 7 — the subscribe box on the index foot; the post page carries its twin.
-        sb.Append(RenderSubscribeBox(ctx, indexLang != Languages.Russian, "/"));
+        sb.Append(RenderSubscribeBox(ctx, indexLang != Languages.Russian, "/?lang=" + indexLang));
 
         var channel = await GetBlogChannelInfoAsync(db, site);
         var blogBase = site.BaseUrl;
@@ -1814,7 +1835,7 @@ public static partial class BlogEndpoints
         var tags = SplitTags(draft.Tags);
         var tagsRow = tags.Count == 0 ? "" :
             "<div class=\"post-tags-row\">" + string.Join("", tags.Select(t =>
-                $"<a class=\"post-tag-chip\" href=\"{TagFilterUrl([t])}\">#{System.Net.WebUtility.HtmlEncode(t)}</a>")) + "</div>";
+                $"<a class=\"post-tag-chip\" href=\"{IndexFilterUrl([t], "new", null, lang: lang)}\">#{System.Net.WebUtility.HtmlEncode(t)}</a>")) + "</div>";
 
         var owner = await db.Users.Where(u => u.Id == draft.OwnerId)
             .Select(u => new
@@ -1910,10 +1931,10 @@ public static partial class BlogEndpoints
                 if (prev is not null || next is not null)
                 {
                     var prevHtml = prev is null ? "<span></span>"
-                        : $"<a href=\"/{prev.BlogSlug}\"><span class=\"nav-label\">&larr; {(isEn ? "Previous" : "Предыдущая")}</span>"
+                        : $"<a href=\"/{prev.BlogSlug}?lang={lang}\"><span class=\"nav-label\">&larr; {(isEn ? "Previous" : "Предыдущая")}</span>"
                           + System.Net.WebUtility.HtmlEncode(prev.ArticleTitle ?? prev.Title) + "</a>";
                     var nextHtml = next is null ? ""
-                        : $"<a class=\"nav-next\" href=\"/{next.BlogSlug}\"><span class=\"nav-label\">{(isEn ? "Next" : "Следующая")} &rarr;</span>"
+                        : $"<a class=\"nav-next\" href=\"/{next.BlogSlug}?lang={lang}\"><span class=\"nav-label\">{(isEn ? "Next" : "Следующая")} &rarr;</span>"
                           + System.Net.WebUtility.HtmlEncode(next.ArticleTitle ?? next.Title) + "</a>";
                     seriesNav = $"<div class=\"series-nav\">{prevHtml}{nextHtml}</div>";
                 }
@@ -1938,7 +1959,7 @@ public static partial class BlogEndpoints
             {
                 var isEn = lang == Languages.English;
                 string Card(string blogSlug, string title2, DateTime publishedUtc, string dirLabel) => $"""
-                    <a class="neighbour-card" href="/{blogSlug}">
+                    <a class="neighbour-card" href="/{blogSlug}?lang={lang}">
                     <div class="neighbour-dir">{dirLabel}</div>
                     <div class="neighbour-title">{System.Net.WebUtility.HtmlEncode(title2)}</div>
                     <div class="neighbour-date">{BlogDateFormatter.DateLocal(publishedUtc, lang)}</div>
@@ -1978,7 +1999,7 @@ public static partial class BlogEndpoints
                   .Append("</div><div class=\"related-grid\">");
                 foreach (var r in related)
                 {
-                    relatedSb.Append("<a class=\"neighbour-card\" href=\"/").Append(r.BlogSlug).Append("\">");
+                    relatedSb.Append("<a class=\"neighbour-card\" href=\"/").Append(r.BlogSlug).Append("?lang=").Append(lang).Append("\">");
                     relatedSb.Append("<div class=\"neighbour-title\">")
                       .Append(System.Net.WebUtility.HtmlEncode(r.ArticleTitle ?? r.Title)).Append("</div>");
                     if (r.BlogPublishedAt is { } relatedDate)
@@ -1995,12 +2016,7 @@ public static partial class BlogEndpoints
             ? ""
             : $"<h1>{System.Net.WebUtility.HtmlEncode(title)}</h1>";
 
-        // Only draw the book-style divider when there's an actual title block above it to
-        // separate from the body — the doc's-own-first-heading case (titleHeading == "") with
-        // no header slots either has nothing here worth underlining.
-        var titleBlock = titleHeading.Length == 0 && headerSlotsLine.Length == 0
-            ? ""
-            : $"{titleHeading}{headerSlotsLine}<div class=\"post-title-divider\"><span class=\"tdl\"></span><i></i><span class=\"tdl\"></span></div>";
+        var titleBlock = $"{titleHeading}{headerSlotsLine}";
 
         // I7 — private posts only: the watermark exists to discourage redistribution of something
         // handed out per invite, so it has no job on a public page. Drawn over the content (the
@@ -2026,17 +2042,17 @@ public static partial class BlogEndpoints
             : "";
 
         var postSheet = $"""
-            <div class="post-sheet">
-            {metaRow}
+            <article class="post-sheet">
             {tagsRow}
             {notTranslatedNotice}
             {seriesLine}
             {titleBlock}
+            {metaRow}
             {body}
             {seriesNav}
             {footerRow}
             {watermark}
-            </div>
+            </article>
             """;
 
         // T-039 — an informational post shows nothing to react with. Both off means the block
@@ -2052,26 +2068,23 @@ public static partial class BlogEndpoints
         var backToTopLabel = lang == Languages.English ? "Back to top" : "Наверх";
         var floatingNav = $"""
             <div class="floating-nav">
-            <a class="floating-nav-btn" href="/" title="{backLinkLabel}" aria-label="{backLinkLabel}">{BlogIcons.List}</a>
+            <a class="floating-nav-btn" href="/?lang={lang}" title="{backLinkLabel}" aria-label="{backLinkLabel}">{BlogIcons.List}</a>
             <button type="button" class="floating-nav-btn back-to-top-btn" title="{backToTopLabel}" aria-label="{backToTopLabel}">{BlogIcons.ArrowUp}</button>
             </div>
             """;
-        // ADR-192 — the reader sits on the wood board, the one material the header and footer
-        // already stood on; the sheet itself keeps ADR-179's flat, unrotated paper (a published
-        // post is finished, not a draft pinned up to be worked on).
         var html = $"""
-            <a class="back-link" href="/">{BlogIcons.ArrowLeft} {backLinkLabel}</a>
+            <a class="back-link" href="/?lang={lang}">{BlogIcons.ArrowLeft} {backLinkLabel}</a>
             {await RenderPostGameLinkAsync(db, site, draft, lang)}
             <div class="post-reader">
-            <span class="post-pin left" aria-hidden="true"></span>
-            <span class="post-pin right" aria-hidden="true"></span>
             {postSheet}
-            {neighboursHtml}
-            {relatedHtml}
             </div>
             {copyGuard}
             {articleBlock}
-            {RenderSubscribeBox(ctx, lang != Languages.Russian, "/" + draft.BlogSlug)}
+            <div class="post-discovery">
+            {neighboursHtml}
+            {relatedHtml}
+            </div>
+            {RenderSubscribeBox(ctx, lang != Languages.Russian, "/" + draft.BlogSlug + "?lang=" + lang)}
             {floatingNav}
             """;
 
@@ -2279,9 +2292,7 @@ public static partial class BlogEndpoints
         .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
         .gl { flex: none; vertical-align: -2px; }
 
-        /* ── The rail: the one piece of wood in the blog's chrome (ADR-179 clause 2) ─────────────────
-           Chrome may be dense — 30px boxes, 11-13px type (ADR-138) — and its lettering is painted cream
-           like a national-park sign, never an ink-on-paper colour. */
+        /* The rail uses cream lettering in both themes; paper ink disappears on its dark wood. */
         .site-header {
             position: sticky;
             top: 0;
@@ -2293,24 +2304,20 @@ public static partial class BlogEndpoints
             box-shadow: var(--shadow-rail);
             color: var(--rail-ink);
         }
-        .site-header-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 20px; }
-        /* A brass plate with the channel's initial struck into it — hardware, and so 3px rather than a
-           circle: the rulebook's roundest object is an 8px plaque. */
+        .site-header-inner { max-width: 960px; margin: 0 auto; display: flex; align-items: center; gap: var(--space-3); min-height: 72px; padding: var(--space-3) var(--space-5); }
         .channel-avatar { width: 30px; height: 30px; border-radius: var(--radius-stamp); background-image: var(--grad-brass); border: 1px solid var(--brass-edge); color: var(--brass-ink); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 13px; font-weight: 700; flex: none; }
         /* With no channel the mark is the mark, carved into the board rather than mounted on a plate. */
         .channel-avatar.brand { background-image: none; border: none; color: var(--rail-ink); }
         .channel-photo { background-image: none; object-fit: cover; }
         .channel-id { min-width: 0; }
-        .channel-name { font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 1px var(--rail-edge); }
+        .channel-name { font-family: var(--font-display); font-size: var(--fs-17); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         /* --rail-ink-soft composites to 4.37:1 on the board and is spent on separators; anything read
            takes the .8 cream (ADR-138). */
-        .channel-meta { font-size: 11px; color: var(--rail-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .channel-meta { font-size: var(--fs-12); color: var(--rail-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .tg-open-btn { display: flex; align-items: center; gap: 6px; min-height: 30px; border: var(--border-rail-btn); background: var(--rail-btn-face); border-radius: var(--radius-plaque); padding: 0 11px; font-size: 12px; font-weight: 600; color: var(--rail-ink); white-space: nowrap; flex: none; }
         .tg-open-btn:hover { background: var(--rail-btn-face-hover); }
-        /* The feed's own colour, which is orange everywhere a feed is offered: the mark is what a
-           reader recognises, so it is painted rather than set back into the wood. */
-        .rss-btn { background: var(--resin); border-color: var(--brass-edge); color: var(--rail-edge); }
-        .rss-btn:hover { background: var(--resin-hi); }
+        .rss-btn { background: var(--rail-btn-face); border-color: var(--rail-ink-soft); color: var(--rail-ink); }
+        .rss-btn:hover { background: var(--rail-btn-face-hover); }
         /* ── The reading menu (ADR-181) ──────────────────────────────────────────────────────────
            One control for the two things a reader may change. ADR-175 settled its face: a tinted
            button on the rail needs wood under it to read as anything, and at the chrome box the
@@ -2341,11 +2348,8 @@ public static partial class BlogEndpoints
             .reading-menu { right: -8px; width: calc(100vw - 32px); max-width: 260px; }
         }
 
-        .site-main { max-width: 760px; margin: 0 auto; padding: 26px 20px 60px; width: 100%; }
-        /* Feedback: the post reader read as mobile-width on a desktop screen. A little wider than
-           the rest of the blog, not a second column width — 760px is still the index's measured
-           line length (ADR-179), this is only the reader's own frame. */
-        .site-main--post { max-width: 820px; }
+        .site-main { max-width: 960px; margin: 0 auto; padding: var(--space-6) var(--space-5) var(--space-8); width: 100%; }
+        .site-main--post { max-width: 880px; }
         .empty { color: var(--wood-ink); }
 
         /* ── Leaves: tags and filters (ADR-179 clause 5, ADR-176's day/night pair) ───────────────────
@@ -2353,20 +2357,16 @@ public static partial class BlogEndpoints
            stock with its own edge, because border alpha alone does not tell two leaves apart. */
         /* ── The index toolbar: one sort/filter button off a paper popover, the reading menu's own
            open/close mechanism ─────────────────────────────────────────────────────────────────── */
-        /* Leaves on the reading edge, the order control on the far one, both on one baseline. */
-        /* One height for everything on this bar — the two controls and the leaves between them.
-           A 44px order button beside a 28px leaf on one line reads as two rows that failed to
-           separate; 32px clears the 24px minimum target and is what the row is drawn at. */
-        .index-bar { display: flex; align-items: flex-start; gap: 12px; margin: 0 0 20px; }
+        .index-bar { display: grid; grid-template-columns: auto 1fr; align-items: start; gap: var(--space-4); margin: 0 0 var(--space-4); }
         .index-bar .tag-chip, .index-bar .lang-chip, .index-bar .index-sort-btn { min-height: 32px; }
         /* Two or three letters, one lit: the index reads in one language at a time, so this is a
            segmented pick and not a set of filters that combine the way the leaves beside it do. */
-        .index-lang { display: inline-flex; flex: none; border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); background: var(--sheet); box-shadow: var(--shadow-paper-sm); overflow: hidden; }
+        .index-lang { display: inline-flex; flex-wrap: wrap; justify-self: start; border: 1px solid var(--paper-edge); border-radius: var(--radius-md); background: var(--sheet); overflow: hidden; }
         .lang-chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 11px; font-family: var(--font-readout); font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--t2); }
         .lang-chip + .lang-chip { border-left: 1px solid var(--paper-edge); }
         .lang-chip:hover { background: var(--alt); color: var(--text); }
         .lang-chip.current { background-image: var(--grad-pine); color: var(--text-on-pine); box-shadow: var(--shadow-pine-btn); }
-        .index-toolbar { display: flex; justify-content: flex-end; margin: 0; margin-left: auto; flex: none; }
+        .index-toolbar { display: flex; gap: var(--space-3); width: 100%; min-width: 0; grid-column: 1 / -1; grid-row: 1; }
         .sort-anchor { position: relative; flex: none; }
         .index-sort-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 14px; border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); background: var(--sheet); box-shadow: var(--shadow-paper-sm); font-family: var(--font-sans); font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; cursor: pointer; }
         .index-sort-btn:hover { background: var(--alt); }
@@ -2377,7 +2377,7 @@ public static partial class BlogEndpoints
         .sort-menu-item:hover { background: var(--alt); }
         .sort-menu-item.current { background: var(--grad-pine); color: var(--text-on-pine); box-shadow: var(--shadow-pine-btn); }
         @media (max-width: 420px) { .sort-menu { right: -8px; width: calc(100vw - 32px); max-width: 260px; } }
-        @media (max-width: 560px) { .index-bar { flex-direction: column; } .index-toolbar { margin-left: 0; } }
+
 
         /* ── "Show N more" — a plain link, the same paper-button family as the sort control ──────────── */
         .show-more-row { display: flex; justify-content: center; margin-top: 8px; }
@@ -2402,87 +2402,35 @@ public static partial class BlogEndpoints
             border-color: var(--leaf-ink); color: var(--leaf-ink); box-shadow: var(--shadow-paper-sm);
         }
 
-        /* ── The index: paper pinned to the wall along a pencil rule ─────────────────────────────────── */
         .post-list { display: flex; flex-direction: column; gap: 20px; }
-        .post-list.timeline { position: relative; padding-left: 26px; }
-        /* The spine is drawn on the wall, which is the one ground the pencil follows into the dark:
-           --rule-ink turns cream at night because the wall does. A rule on PAPER takes --border
-           instead — cream on cream is not a line. */
-        /* Starts at the first dot, not at the top of the list: a spine that begins level with the
-           month rule reads as one line turning a corner into the other. */
-        .post-list.timeline::before { content: ""; position: absolute; left: 4px; top: 32px; bottom: 6px; width: 1px; background: var(--rule-ink); }
-        /* Kept inside the padded column rather than pulled out to the page edge: at -26px its rule
-           ran straight through the spine and the two lines crossed in a corner that read as a
-           mistake. The spine passes behind the gap between the rule and the plate instead. */
-        .timeline-month-sep { display: flex; align-items: center; gap: 10px; margin: 6px 0 -4px; }
+        .post-list.timeline { position: relative; padding-left: 0; }
+        .post-list.timeline::before { content: none; }
+        .timeline-month-sep { display: flex; align-items: center; gap: var(--space-4); margin: var(--space-4) 0 0; }
         .timeline-month-sep:first-child { margin-top: 0; }
         .timeline-month-sep .sep-line { flex: 1; height: 1px; background: var(--rule-ink-soft); }
-        /* A rubber stamp: display face, wide tracking, its own ink for a border. The neutral tone carries
-           a word, so it takes --t2 rather than the third tier (ADR-137 rule 5). */
-        .timeline-month-sep .sep-label { flex: none; font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--wood-ink); background: none; border: 1.6px solid currentColor; border-radius: var(--radius-stamp); padding: 2px 9px; white-space: nowrap; opacity: .92; }
+        .timeline-month-sep .sep-label { order: -1; flex: none; font-family: var(--font-sans); font-size: var(--fs-13); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--wood-ink); }
         .timeline-item { position: relative; }
-        /* A brass pin, not a dot: what holds paper to a board in this system is hardware. */
-        .timeline-dot { position: absolute; left: -26px; top: 26px; width: 11px; height: 11px; border-radius: 50%; background-image: var(--grad-brass); border: 1px solid var(--brass-edge); box-shadow: inset 0 1px 0 var(--brass-hi), 0 1px 2px rgba(30, 18, 6, .45); z-index: 1; }
-        .post-card {
-            display: block; position: relative;
-            /* A breath of the lamp's resin over the stock — a few percent of the theme's own token,
-               so the paper reads warmer at night too without a second recipe. */
-            background-color: var(--sheet);
-            background-image: linear-gradient(color-mix(in srgb, var(--resin) 4%, transparent), color-mix(in srgb, var(--resin) 4%, transparent)), var(--tex-paper);
-            border: var(--border-paper); border-radius: calc(var(--radius-paper) + 3px);
-            box-shadow: var(--shadow-paper); padding: 20px 24px 18px; color: var(--text);
-            /* The lift is the whole hover language of the system — 2-3px, never a glow or a scale. The
-               motion tokens are not served here, so the curve the design system states is written out. */
-            transition: transform 150ms cubic-bezier(.3, 1.3, .5, 1);
-        }
-        /* Under the hand the edge warms toward brass — the paper answering the touch, not a glow. */
-        .post-card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--brass) 45%, transparent); }
-        .post-card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 6px; font-size: 12px; color: var(--t2); }
-        .post-card-date { font-family: var(--font-mono); }
-        .post-card-langs { font-family: var(--font-readout); font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--brass-ink); background: var(--brass-soft); border: 1px solid var(--brass-lo); border-radius: var(--radius-stamp); padding: 1px 6px; }
+        .timeline-dot { display: none; }
+        .post-card { display: block; position: relative; background-color: var(--sheet); border: 1px solid var(--paper-edge); border-radius: var(--radius-lg); box-shadow: var(--shadow-paper-sm); padding: var(--space-5); color: var(--text); transition: border-color 150ms, box-shadow 150ms; }
+        .post-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-paper); }
+        .post-card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-2); font-size: var(--fs-12); color: var(--t2); }
+        .post-card-date { font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
+        .post-card-langs { font-family: var(--font-sans); font-size: var(--fs-12); font-weight: 600; color: var(--t2); overflow-wrap: anywhere; }
         .post-card-tag { color: var(--t2); }
         .post-card-locked { display: inline-flex; color: var(--t2); }
-        .post-card-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; line-height: 1.24; margin: 0 0 6px; }
-        /* The teaser is reading matter, so the reading controls reach it: it is the one thing on
-           the index a reader actually reads, and a size control that moved nothing on the page it
-           was opened from read as broken. Two steps under the body measure, so a card stays a card. */
-        .post-card-excerpt { font-family: var(--font-serif); font-size: calc(var(--fs-read) - 2px); color: var(--t2); line-height: 1.6; margin: 0 0 10px; max-width: 70ch; }
+        .post-card-title { font-family: var(--font-display); font-size: var(--fs-27); font-weight: 600; line-height: 1.22; margin: 0 0 var(--space-3); overflow-wrap: anywhere; }
+        /* Reader preferences also reach excerpts so the index's reading control has a visible effect. */
+        .post-card-excerpt { font-family: var(--font-serif); font-size: var(--fs-read); color: var(--t2); line-height: 1.65; margin: 0 0 var(--space-4); max-width: 65ch; overflow-wrap: anywhere; }
         .post-card-stats { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--t2); }
         .post-card-stats .num { margin-right: 9px; }
 
         .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--wood-ink); padding: 4px 0; margin: 0 0 14px; }
         .back-link:hover { color: var(--accent); }
 
-        /* ── The reader (ADR-192) — the sheet on the wood board the header and footer already stand
-           on; the same material, not a lighter plank invented for the occasion. */
-        .post-reader {
-            position: relative;
-            padding: 22px;
-            border: 1px solid var(--rail-edge);
-            border-radius: 4px;
-            background-color: var(--rail-lo);
-            background-image: var(--tex-wood), var(--surface-rail);
-            background-size: 420px, auto;
-            box-shadow: var(--shadow-rail);
-            margin: 0 0 20px;
-        }
-        .post-pin {
-            position: absolute; top: -7px; width: 14px; height: 14px; border-radius: 50%; z-index: 3;
-            background-image: var(--grad-brass); border: 1px solid var(--brass-edge);
-            box-shadow: inset 0 1px 0 var(--brass-hi), 0 1px 3px rgba(20, 12, 4, .5);
-        }
-        .post-pin.left { left: 20%; }
-        .post-pin.right { left: 80%; margin-left: -14px; }
-        @media (max-width: 480px) { .post-reader { padding: 12px; } }
+        .post-reader { position: relative; margin: 0 0 var(--space-5); }
 
         /* ── The sheet (ADR-179 clause 4) — writer.html's paper at the reading numbers ──────────────── */
-        .post-sheet {
-            position: relative;
-            background-color: var(--paper-bright); background-image: var(--tex-paper);
-            border: 1px solid var(--paper-edge); border-radius: calc(var(--radius-paper) + 3px);
-            box-shadow: var(--shadow-sheet); padding: 34px 44px 30px; color: var(--text);
-            font-family: var(--font-serif); font-size: var(--fs-read); line-height: var(--lh-read);
-        }
+        .post-sheet { position: relative; background-color: var(--paper-bright); border: 1px solid var(--paper-edge); border-radius: var(--radius-lg); box-shadow: var(--shadow-paper-sm); padding: var(--space-8); color: var(--text); font-family: var(--font-serif); font-size: var(--fs-read); line-height: var(--lh-read); overflow-wrap: anywhere; }
         /* A link inside the running text keeps a quiet warm underline: reading matter says where it
            leads without breaking the line's colour until the reader asks. */
         .post-sheet p a, .post-sheet li a, .post-card-excerpt a {
@@ -2494,17 +2442,13 @@ public static partial class BlogEndpoints
            and user-select:none so dragging across the page doesn't select the watermark. The
            tile itself (an SVG data URI) comes from WatermarkRenderer as an inline style. */
         .watermark-overlay { position: absolute; inset: 0; z-index: 2; pointer-events: none; user-select: none; border-radius: var(--radius-paper); background-repeat: repeat; }
-        .post-sheet h1 { font-family: var(--font-display); font-size: 27px; font-weight: 700; line-height: 1.22; margin: 0 0 12px; text-align: center; }
+        .post-sheet h1 { font-family: var(--font-display); font-size: var(--fs-34); font-weight: 600; line-height: 1.18; margin: 0 0 var(--space-4); text-align: left; text-wrap: balance; }
         .post-sheet h2 { font-family: var(--font-display); font-size: 21px; font-weight: 700; line-height: 1.3; margin: 28px 0 8px; }
         .post-sheet h3 { font-family: var(--font-display); font-size: 18px; font-weight: 600; margin: 22px 0 6px; }
         .post-sheet p { margin: 0 0 16px; }
-        .post-header-slots { font-family: var(--font-sans); font-size: 13px; color: var(--t2); margin: 0 0 18px; text-align: center; }
+        .post-header-slots { font-family: var(--font-sans); font-size: var(--fs-14); color: var(--t2); margin: 0 0 var(--space-5); text-align: left; }
         .post-header-slots a { color: var(--accent); }
         .post-header-slots a:hover { text-decoration: underline; }
-        /* The book divider, in brass: the one bit of hardware the reading column carries. */
-        .post-title-divider { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 0 26px; }
-        .post-title-divider .tdl { height: 1px; width: 70px; background: var(--border); }
-        .post-title-divider i { width: 6px; height: 6px; flex: none; display: block; background: var(--brass); border: 1px solid var(--brass-edge); transform: rotate(45deg); }
         .post-tags-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px; }
         .toc { background-color: var(--surface); background-image: var(--tex-paper); border: var(--border-paper); border-radius: var(--radius-paper); padding: 14px 18px; margin: 0 0 20px; font-family: var(--font-sans); color: var(--text); }
         .toc-title { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--t2); margin: 0 0 8px; }
@@ -2586,27 +2530,27 @@ public static partial class BlogEndpoints
         @media (max-width: 560px) { .showcase-head { flex-direction: column; } .showcase-cover { width: 100%; } }
 
         /* ── Search: a compact paper field on the index bar, grown to full size on its own page ──────── */
-        .search-form { display: flex; gap: 6px; flex: none; }
-        .search-input { min-height: 32px; width: 150px; padding: 0 12px; background-color: var(--sheet); border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); box-shadow: var(--shadow-paper-sm); color: var(--text); font-family: var(--font-sans); font-size: 13px; }
+        .search-form { display: flex; gap: var(--space-2); min-width: 0; }
+        .search-input { min-height: 44px; width: 100%; min-width: 0; padding: 0 var(--space-4); background-color: var(--sheet); border: 1px solid var(--border-strong); border-radius: var(--radius-md); color: var(--text); font-family: var(--font-sans); font-size: var(--fs-15); }
         .search-input::placeholder { color: var(--t3); opacity: 1; }
-        .search-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border: 1px solid var(--paper-edge); border-radius: var(--radius-plaque); background: var(--sheet); box-shadow: var(--shadow-paper-sm); font-family: var(--font-sans); font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; }
+        .search-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 44px; padding: 0 var(--space-4); border: 1px solid var(--paper-edge); border-radius: var(--radius-md); background: var(--sheet); font-family: var(--font-sans); font-size: var(--fs-14); font-weight: 600; color: var(--text); cursor: pointer; }
         .search-btn:hover { background: var(--alt); }
-        .index-toolbar .search-form { margin-right: 8px; }
+        .index-toolbar .search-form { display: flex; flex: 1; min-width: 0; margin: 0; }
         .search-head { margin: 0 0 22px; }
         .search-head h1 { font-family: var(--font-display); font-size: 27px; font-weight: 700; color: var(--wood-ink); margin: 0 0 12px; }
         .search-head .search-form { flex-wrap: wrap; }
         .search-head .search-input { flex: 1 1 220px; min-height: 44px; font-size: 15px; }
         .search-head .search-btn { min-height: 44px; padding: 0 16px; }
-        @media (max-width: 560px) { .index-toolbar .search-form { display: none; } }
+
 
         /* ── "Read next": tag-mates under the reader, cut from the neighbour cards' paper ────────────── */
         .related-posts { margin-top: 16px; }
-        .related-title { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--rail-ink); text-shadow: 0 1px 1px var(--rail-edge); margin: 0 0 8px; }
+        .related-title { font-family: var(--font-sans); font-size: var(--fs-14); font-weight: 600; color: var(--wood-ink); margin: 0 0 var(--space-3); }
         .related-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 
         /* ── The subscribe box: the follow form's paper, offered blog-wide ───────────────────────────── */
-        .subscribe-box { background-color: var(--sheet); background-image: var(--tex-paper); border: var(--border-paper); border-radius: var(--radius-paper); box-shadow: var(--shadow-paper-sm); padding: 16px 20px; margin: 22px 0 0; color: var(--text); }
-        .subscribe-title { font-family: var(--font-display); font-size: 12px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--t2); margin: 0 0 10px; }
+        .subscribe-box { background-color: var(--sheet); border: 1px solid var(--paper-edge); border-top: 3px solid var(--accent); border-radius: var(--radius-lg); padding: var(--space-6); margin: var(--space-6) 0 0; color: var(--text); scroll-margin-top: 100px; }
+        .subscribe-title { font-family: var(--font-display); font-size: var(--fs-27); font-weight: 600; color: var(--text); margin: 0 0 var(--space-4); }
         .subscribe-box .follow-form { margin: 0 0 8px; }
 
         /* ── The press kit page — the showcase's materials, a wider column, a wood top bar ───────────── */
@@ -2852,9 +2796,7 @@ public static partial class BlogEndpoints
         /* Three groups on one line — brand, links, badge — and the badge is the one that must not be
            centred: a hosted SVG of fixed size in the middle of a footer reads as an advert placed there,
            while the same badge at the edge reads as a credit. */
-        .site-footer-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: center;
-            justify-content: space-between; gap: 8px 20px; flex-wrap: wrap; min-height: 30px; padding: 6px 20px;
-            font-family: var(--font-readout); font-size: 11px; }
+        .site-footer-inner { max-width: 960px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: var(--space-4) var(--space-5); flex-wrap: wrap; padding: var(--space-5); font-family: var(--font-sans); font-size: var(--fs-12); }
         .footer-brand { display: flex; align-items: center; gap: 8px; }
         .footer-brand a { color: var(--rail-ink); font-weight: 700; }
         .footer-links { display: flex; align-items: center; gap: 14px; }
@@ -2879,6 +2821,103 @@ public static partial class BlogEndpoints
             .post-sheet h1 { font-size: 23px; }
             .comment-box { padding: 16px; }
             .tg-open-btn span.tg-open-label { display: none; }
+        }
+
+
+        .site-identity { display: flex; align-items: center; gap: var(--space-3); color: var(--rail-ink); min-width: 0; }
+        .site-identity:hover .channel-name { text-decoration: underline; text-underline-offset: 4px; }
+        .site-header .tg-open-btn, .reading-btn { min-height: 44px; min-width: 44px; }
+        .reading-btn { width: 44px; height: 44px; font-size: var(--fs-17); }
+        .seg button { min-height: 44px; }
+        .sort-menu-item { display: flex; align-items: center; min-height: 44px; }
+        .channel-avatar { width: 40px; height: 40px; border-radius: var(--radius-md); }
+        .index-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-5); margin-bottom: var(--space-5); }
+        .index-heading h1 { font-family: var(--font-display); font-size: var(--fs-34); font-weight: 600; line-height: 1.2; margin: 0 0 var(--space-2); }
+        .index-heading p { margin: 0; font-size: var(--fs-15); }
+        .subscribe-link, .filter-reset { color: var(--wood-ink); text-decoration: underline; text-underline-offset: 4px; font-size: var(--fs-14); padding-block: var(--space-3); }
+        .subscribe-link { flex: none; }
+        .index-bar .index-sort-btn, .index-bar .lang-chip { min-height: 44px; font-family: var(--font-sans); font-size: var(--fs-14); }
+        .topic-filter { position: relative; justify-self: start; }
+        .topic-filter summary { cursor: pointer; min-height: 44px; padding: var(--space-2) var(--space-4); border: 1px solid var(--paper-edge); border-radius: var(--radius-md); background: var(--sheet); color: var(--text); font-weight: 600; }
+        .topic-filter summary .num { margin-left: var(--space-2); color: var(--t2); font-size: var(--fs-12); }
+        .topic-filter[open] summary { border-color: var(--border-strong); }
+        .topic-panel { position: absolute; top: calc(100% + var(--space-2)); left: 0; width: min(540px, calc(100vw - 64px)); max-height: min(400px, 55vh); overflow-y: auto; z-index: 8; padding: var(--space-5); background: var(--sheet); color: var(--text); border: 1px solid var(--border-strong); border-radius: var(--radius-md); box-shadow: var(--shadow-sheet); }
+        .topic-panel p { font-size: var(--fs-14); margin: 0 0 var(--space-4); color: var(--t2); }
+        .topic-panel .tag-chip { min-height: 44px; white-space: normal; overflow-wrap: anywhere; }
+        .index-results { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-3); min-height: 32px; margin-bottom: var(--space-2); font-size: var(--fs-13); }
+        .index-results .filter-reset { margin-left: auto; }
+        .index-results .tag-chip { white-space: normal; overflow-wrap: anywhere; }
+        .timeline-month-sep .sep-line:first-child { display: none; }
+        .index-card { display: grid; gap: var(--space-5); align-items: center; }
+        .index-card.has-cover { grid-template-columns: minmax(0, 1fr) 208px; }
+        .post-card-content { min-width: 0; grid-column: 1; grid-row: 1; }
+        .post-card-cover { grid-column: 2; grid-row: 1; width: 208px; height: 156px; object-fit: cover; border-radius: var(--radius-md); background: var(--alt); }
+        .index-card .post-card-langs { margin-left: auto; }
+        .post-card-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
+        .post-card-topics { display: flex; flex-wrap: wrap; gap: var(--space-2); color: var(--t2); font-size: var(--fs-12); overflow-wrap: anywhere; }
+        .index-card .post-card-excerpt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .post-meta-row { font-family: var(--font-sans); padding-bottom: var(--space-5); margin-bottom: var(--space-6); border-bottom: 1px solid var(--border); }
+        .post-sheet > img, .post-sheet figure img { border-radius: var(--radius-md); }
+        .post-sheet .post-tags-row { margin-bottom: var(--space-5); }
+        .post-sheet .post-tag-chip { font-family: var(--font-sans); font-size: var(--fs-13); }
+        .post-sheet .post-meta-row .spacer { display: none; }
+        .post-sheet .lang-switch-track { margin-left: 0; flex-wrap: wrap; }
+        .post-sheet .lang-switch-btn { min-height: 44px; font-family: var(--font-sans); font-size: var(--fs-14); }
+        .post-sheet .copy-link-btn { margin-left: auto; }
+        .post-discovery { margin-top: var(--space-6); }
+        .post-discovery:empty { display: none; }
+        .article-annotation .comment-box { border-radius: var(--radius-lg); box-shadow: none; padding: var(--space-6); }
+        .article-annotation .comment-form textarea { min-height: 110px; }
+        .article-annotation .comment-box-label { font-family: var(--font-display); font-size: var(--fs-21); text-transform: none; letter-spacing: 0; }
+        .article-annotation .comment-published-line { display: none; }
+        .comment-form button:disabled { cursor: wait; opacity: .7; }
+        .post-sheet .copy-link-btn { min-height: 44px; }
+        .follow-input, .follow-button { min-height: 44px; }
+        .follow-hint { font-size: var(--fs-14); }
+        .footer-badge img { max-width: 132px; }
+        @media (max-width: 700px) {
+            .site-main { padding: var(--space-5) var(--space-4) var(--space-6); }
+            .site-header-inner { padding: var(--space-2) var(--space-4); gap: var(--space-2); }
+            .site-header .spacer { display: none; }
+            .site-identity { margin-right: auto; }
+            .site-header .tg-open-label { display: none; }
+            .index-heading { align-items: flex-start; gap: var(--space-3); flex-direction: column; margin-bottom: var(--space-5); }
+            .index-heading .subscribe-link { padding-block: 0; }
+            .index-toolbar { flex-wrap: wrap; }
+            .index-toolbar .search-form { flex-basis: 100%; }
+            .sort-menu { left: 0; right: auto; width: min(260px, calc(100vw - 32px)); }
+            .index-bar { grid-template-columns: 1fr auto; }
+            .topic-panel { left: auto; right: 0; }
+            .index-card.has-cover { grid-template-columns: minmax(0, 1fr) 112px; gap: var(--space-4); }
+            .post-card-cover { width: 112px; height: 112px; align-self: start; }
+            .post-card { padding: var(--space-5); }
+            .post-card-title { font-size: var(--fs-21); }
+            .index-card .post-card-langs { margin-left: 0; }
+            .post-sheet { padding: var(--space-6); }
+            .post-sheet h1 { font-size: var(--fs-27); }
+            .site-footer-inner { text-align: left; align-items: flex-start; }
+            .footer-links { flex-wrap: wrap; }
+        }
+        @media (max-width: 480px) {
+            .channel-avatar { width: 32px; height: 32px; }
+            .site-header-inner { gap: var(--space-1); }
+            .channel-name { font-size: var(--fs-15); }
+            .channel-meta { max-width: 140px; }
+            .site-identity { gap: var(--space-2); }
+            .index-card.has-cover { grid-template-columns: 1fr; }
+            .post-card-cover { grid-column: 1; grid-row: 1; width: 100%; height: auto; aspect-ratio: 16 / 9; }
+            .has-cover .post-card-content { grid-row: 2; }
+            .post-card { padding: var(--space-4); }
+            .post-sheet { padding: var(--space-5) var(--space-4); }
+            .post-reader { padding: 0; }
+            .post-sheet .copy-link-btn { margin-left: 0; }
+            .post-meta-row { gap: var(--space-2); }
+            .subscribe-box, .article-annotation .comment-box { padding: var(--space-5) var(--space-4); }
+            .subscribe-title { font-size: var(--fs-21); }
+            .follow-form, .comment-form-row { flex-direction: column; }
+            .follow-input { width: 100%; }
+            .follow-button, .comment-form-row button { width: 100%; }
+            .related-grid { grid-template-columns: 1fr; }
         }
 
         /* The design system's motion is a settle, and the OS setting turns it off entirely. */
@@ -2920,6 +2959,19 @@ public static partial class BlogEndpoints
         </a>
         </div></div>
         <script>
+        (function () {
+            var topics = document.querySelector('.topic-filter');
+            if (!topics) return;
+            document.addEventListener('click', function (e) {
+                if (!topics.contains(e.target)) topics.open = false;
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && topics.open) {
+                    topics.open = false;
+                    topics.querySelector('summary').focus();
+                }
+            });
+        })();
         /* T-360 - the report link carries the page it was pressed on. */
         (function () {
             var report = document.querySelector('a[data-report]');
@@ -3402,6 +3454,7 @@ public static partial class BlogEndpoints
                     var countEl = btn.querySelector('.count');
                     if (countEl) countEl.textContent = counts[kind] || 0;
                     btn.classList.toggle('active', info.myVote === kind);
+                    btn.setAttribute('aria-pressed', String(info.myVote === kind));
                     btn.addEventListener('click', function () {
                         fetch('/api/posts/' + encodeURIComponent(slug) + '/react', {
                             method: 'POST',
@@ -3415,6 +3468,7 @@ public static partial class BlogEndpoints
                                     var c = b.querySelector('.count');
                                     if (c) c.textContent = (res.counts && res.counts[k]) || 0;
                                     b.classList.toggle('active', res.myVote === k);
+                                    b.setAttribute('aria-pressed', String(res.myVote === k));
                                 });
                             })
                             .catch(function () {});
@@ -3470,6 +3524,10 @@ public static partial class BlogEndpoints
                         var textInput = form.querySelector('textarea.comment-text');
                         var text = textInput.value.trim();
                         if (!text) return;
+                        var submitButton = form.querySelector('button[type="submit"]');
+                        if (submitButton.disabled) return;
+                        submitButton.disabled = true;
+                        form.setAttribute('aria-busy', 'true');
                         var parentCommentId = parentIdInput && parentIdInput.value ? parentIdInput.value : null;
                         fetch('/api/posts/' + encodeURIComponent(slug) + '/comments', {
                             method: 'POST',
@@ -3485,7 +3543,8 @@ public static partial class BlogEndpoints
                                 authorInput.value = '';
                                 cancelReply();
                             })
-                            .catch(function (err) { alert(err.message || 'Failed to post comment'); });
+                            .catch(function (err) { alert(err.message || 'Failed to post comment'); })
+                            .finally(function () { submitButton.disabled = false; form.removeAttribute('aria-busy'); });
                     });
                 }
             }

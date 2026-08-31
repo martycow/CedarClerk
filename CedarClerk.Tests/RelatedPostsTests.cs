@@ -52,9 +52,9 @@ public class RelatedPostsTests
         // The stranger shares no tag; the neighbour is already the "older post" card and must not
         // repeat — and it shares no tag anyway.
         var related = body[body.IndexOf(SectionMarker, StringComparison.Ordinal)..];
-        Assert.Contains("href=\"/mate\"", related);
-        Assert.DoesNotContain("href=\"/stranger\"", related);
-        Assert.DoesNotContain("href=\"/neighbour\"", related);
+        Assert.Contains("href=\"/mate?lang=ru\"", related);
+        Assert.DoesNotContain("href=\"/stranger?lang=ru\"", related);
+        Assert.DoesNotContain("href=\"/neighbour?lang=ru\"", related);
     }
 
     [Fact]
@@ -71,11 +71,11 @@ public class RelatedPostsTests
         var related = body[body.IndexOf(SectionMarker, StringComparison.Ordinal)..];
 
         // buffer is the older-neighbour card, so the three newest mates fill the row.
-        Assert.Contains("href=\"/mate-5\"", related);
-        Assert.Contains("href=\"/mate-4\"", related);
-        Assert.Contains("href=\"/mate-3\"", related);
-        Assert.DoesNotContain("href=\"/mate-2\"", related);
-        Assert.DoesNotContain("href=\"/mate-1\"", related);
+        Assert.Contains("href=\"/mate-5?lang=ru\"", related);
+        Assert.Contains("href=\"/mate-4?lang=ru\"", related);
+        Assert.Contains("href=\"/mate-3?lang=ru\"", related);
+        Assert.DoesNotContain("href=\"/mate-2?lang=ru\"", related);
+        Assert.DoesNotContain("href=\"/mate-1?lang=ru\"", related);
     }
 
     [Fact]
@@ -92,9 +92,9 @@ public class RelatedPostsTests
         var body = await Get(db, "/target");
         var related = body[body.IndexOf(SectionMarker, StringComparison.Ordinal)..];
 
-        Assert.Contains("href=\"/open\"", related);
-        Assert.DoesNotContain("href=\"/hidden\"", related);
-        Assert.DoesNotContain("href=\"/listed\"", related);
+        Assert.Contains("href=\"/open?lang=ru\"", related);
+        Assert.DoesNotContain("href=\"/hidden?lang=ru\"", related);
+        Assert.DoesNotContain("href=\"/listed?lang=ru\"", related);
     }
 
     [Fact]

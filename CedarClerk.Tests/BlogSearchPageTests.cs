@@ -97,7 +97,7 @@ public class BlogSearchPageTests
         var body = BlogTestHost.Body(ctx);
         Assert.Equal("o1", index.AskedOwner);
         Assert.Equal("words", index.AskedQuery);
-        Assert.Contains("href=\"/my-post\"", body);
+        Assert.Contains("href=\"/my-post?lang=ru\"", body);
         Assert.Contains("My post", body);
         Assert.Contains("the words around the match", body);
     }
@@ -131,5 +131,20 @@ public class BlogSearchPageTests
 
         var body = BlogTestHost.Body(ctx);
         Assert.Contains("Nothing found.", body);
+    }
+
+    [Fact]
+    public async Task Russian_search_retains_its_language_when_refined()
+    {
+        using var db = BlogTestHost.EmptyDatabase().WithOwner();
+        var index = new StubIndex();
+        var ctx = Request(db, index, "?q=words&lang=ru");
+
+        await BlogEndpoints.HandleRequest(ctx);
+
+        Assert.Equal("ru", index.AskedLang);
+        var html = BlogTestHost.Body(ctx);
+        Assert.Contains("name=\"lang\" value=\"ru\"", html);
+        Assert.Contains("href=\"/?lang=ru\"", html);
     }
 }

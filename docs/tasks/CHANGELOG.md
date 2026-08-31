@@ -1,5 +1,37 @@
 # Changelog
 
+## 2026-08-31 — Public blog reading and discovery redesign
+
+ADR-231 simplifies the public blog while retaining Cedar Bench materials and both
+themes. The index has a wider reading area, persistent mobile search, separate
+language/topic controls, a collapsible topic panel, visible selected filters and
+an explicit reset. Public cards can preview a local image; private cards expose
+neither an image nor an excerpt. Card and search links retain the preview language.
+
+The article uses an unframed paper sheet with a left-aligned title and quieter
+metadata. Discussion follows the article before further reading and subscription.
+Reading and ordering controls have 44px targets. The topic panel closes on Escape
+or an outside click, and forms stack on phones. Comment submission prevents repeat
+clicks, preserves text on failure and exposes its busy state. Reaction buttons and
+comment inputs have accessible names. Navigation and subscription return paths
+retain the reader's language. The shared token export includes existing type and
+spacing scales; no new palette or application theme is introduced.
+
+Validation: the CLI `TestPipeline` runs against this isolated worktree through a
+per-run `CliConfig.RepoRoot`, leaving the installed CLI's repository setting alone.
+Backend tests: 1659; CLI tests: 127; frontend tests: 496. Icon, contrast and density
+contracts pass; contrast retains four previously accepted exceptions. New endpoint
+coverage checks private previews, external thumbnail exclusion, translated cards
+and Russian search navigation. Existing related/series privacy assertions retain
+their exclusions while checking language-bearing links.
+
+Visual evidence is partial: earlier local browser inspection covered the index,
+article and a 390px phone layout with demo data. The Browser then returned
+`ERR_BLOCKED_BY_CLIENT`, so the final layout, both-theme pass and full interaction
+pass remain unverified. The local fixture uses a supplied screenshot to exercise
+image layout; it is not a copy of production content. No mail, Telegram publication,
+deployment, merge or PR was performed.
+
 ## 2026-08-31 — Sprint v0.2.0, batch eight: the shared-bot audit closes four cross-tenant holes (T-359)
 
 A `very thorough` read of every place the shared Telegram bot maps an update to an account

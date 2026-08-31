@@ -350,8 +350,8 @@ public static class CedarToBlogHtmlRenderer
 
         return $"""
             <div class="annotation-controls">
-            <button type="button" class="react-btn" data-kind="like">{BlogIcons.ThumbUp} <span class="count" data-kind-count="like">0</span></button>
-            <button type="button" class="react-btn" data-kind="dislike">{BlogIcons.ThumbDown} <span class="count" data-kind-count="dislike">0</span></button>
+            <button type="button" class="react-btn" data-kind="like" aria-label="{(lang == "en" ? "Like" : "Нравится")}" aria-pressed="false">{BlogIcons.ThumbUp} <span class="count" data-kind-count="like">0</span></button>
+            <button type="button" class="react-btn" data-kind="dislike" aria-label="{(lang == "en" ? "Dislike" : "Не нравится")}" aria-pressed="false">{BlogIcons.ThumbDown} <span class="count" data-kind-count="dislike">0</span></button>
             <span class="comment-count-label">{BlogIcons.Chat} <span class="comment-count">0</span></span>
             </div>
             <div class="comment-box"{ownerAttr}>
@@ -362,9 +362,9 @@ public static class CedarToBlogHtmlRenderer
             <div class="comment-reply-indicator" hidden>{replyingTo} <span class="reply-target-name"></span> <button type="button" class="cancel-reply">{cancelReply}</button></div>
             <form class="comment-form">
             <input type="hidden" class="comment-parent-id" value="">
-            <textarea class="comment-text" placeholder="{commentPlaceholder}" maxlength="2000" required></textarea>
+            <textarea class="comment-text" placeholder="{commentPlaceholder}" aria-label="{commentPlaceholder}" maxlength="2000" required></textarea>
             <div class="comment-form-row">
-            <input type="text" class="comment-author" placeholder="{namePlaceholder}" maxlength="60">
+            <input type="text" class="comment-author" placeholder="{namePlaceholder}" aria-label="{namePlaceholder}" autocomplete="nickname" maxlength="60">
             <button type="submit">{send}</button>
             </div>
             </form>

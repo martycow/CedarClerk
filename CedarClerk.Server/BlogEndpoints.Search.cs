@@ -22,9 +22,10 @@ public static partial class BlogEndpoints
         + "stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\">"
         + "<circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m20 20-3.8-3.8\"/></svg>";
 
-    private static string SearchFormHtml(string query, bool en) =>
+    private static string SearchFormHtml(string query, bool en, string? lang = null) =>
         $"""
         <form class="search-form" method="get" action="/search" role="search">
+        {(lang is null ? "" : $"<input type=\"hidden\" name=\"lang\" value=\"{System.Net.WebUtility.HtmlEncode(lang)}\">")}
         <input class="search-input" type="search" name="q" value="{System.Net.WebUtility.HtmlEncode(query)}"
                maxlength="{BlogSearchQueryMaxLength}" placeholder="{(en ? "Search posts" : "Поиск по постам")}"
                aria-label="{(en ? "Search posts" : "Поиск по постам")}">
@@ -48,10 +49,10 @@ public static partial class BlogEndpoints
             query = query[..BlogSearchQueryMaxLength];
 
         var sb = new StringBuilder();
-        sb.Append("<a class=\"back-link\" href=\"/\">").Append(BlogIcons.ArrowLeft).Append(' ')
+        sb.Append("<a class=\"back-link\" href=\"/?lang=").Append(Uri.EscapeDataString(lang)).Append("\">").Append(BlogIcons.ArrowLeft).Append(' ')
           .Append(en ? "All posts" : "Все посты").Append("</a>");
         sb.Append("<div class=\"search-head\"><h1>").Append(en ? "Search" : "Поиск").Append("</h1>");
-        sb.Append(SearchFormHtml(query, en));
+        sb.Append(SearchFormHtml(query, en, ctx.Request.Query.ContainsKey("lang") ? lang : null));
         sb.Append("</div>");
 
         if (query.Length > 0)
@@ -71,7 +72,7 @@ public static partial class BlogEndpoints
                 foreach (var hit in hits)
                 {
                     sb.Append("<a class=\"post-card\" href=\"/").Append(hit.Slug);
-                    if (hit.Language != Languages.Russian && hit.Language.Length > 0)
+                    if (hit.Language.Length > 0)
                         sb.Append("?lang=").Append(Uri.EscapeDataString(hit.Language));
                     sb.Append("\">");
                     sb.Append("<div class=\"post-card-meta\">");

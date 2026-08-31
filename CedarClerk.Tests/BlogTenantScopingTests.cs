@@ -113,9 +113,13 @@ public class BlogTenantScopingTests
         var (_, hers) = await Get(db, "/", B, "b.cedarclerk.app");
 
         // The stats row renders eye/thumb/chat counts in that order; A's post has no engagement.
-        Assert.Contains("""<span class="num">0</span>""", mine);
-        Assert.DoesNotContain("""<span class="num">1</span>""", mine);
-        Assert.Contains("""<span class="num">1</span>""", hers);
+        var mineStats = System.Text.RegularExpressions.Regex.Match(mine, "<div class=\"post-card-stats\">(.*?)</div>").Value;
+        var herStats = System.Text.RegularExpressions.Regex.Match(hers, "<div class=\"post-card-stats\">(.*?)</div>").Value;
+        Assert.NotEmpty(mineStats);
+        Assert.NotEmpty(herStats);
+        Assert.Contains("""<span class="num">0</span>""", mineStats);
+        Assert.DoesNotContain("""<span class="num">1</span>""", mineStats);
+        Assert.Contains("""<span class="num">1</span>""", herStats);
     }
 
     [Fact]

@@ -77,8 +77,8 @@ public class BlogSeriesTests
 
         Assert.Contains("Часть 2 из 3", body);
         Assert.Contains("href=\"/series/devlog\"", body);
-        Assert.Contains("href=\"/devlog-1\"", body);
-        Assert.Contains("href=\"/devlog-3\"", body);
+        Assert.Contains("href=\"/devlog-1?lang=ru\"", body);
+        Assert.Contains("href=\"/devlog-3?lang=ru\"", body);
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class BlogSeriesTests
         Assert.DoesNotContain("devlog-2", seriesBody);
         Assert.Contains("2 частей", seriesBody);
         Assert.Contains("Часть 2 из 2", thirdBody);
-        Assert.Contains("href=\"/devlog-1\"", thirdBody);
-        Assert.DoesNotContain("href=\"/devlog-2\"", thirdBody);
+        Assert.Contains("href=\"/devlog-1?lang=ru\"", thirdBody);
+        Assert.DoesNotContain("href=\"/devlog-2?lang=ru\"", thirdBody);
     }
 }

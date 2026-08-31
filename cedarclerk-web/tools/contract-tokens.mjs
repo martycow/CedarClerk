@@ -14,6 +14,8 @@ export const CONTRACT = [
     'series-1', 'series-2', 'series-3', 'series-4', 'series-5', 'series-6',
     'shadow', 'asoft', 'abord', 'font-sans', 'font-mono', 'font-serif',
     'fs-read', 'lh-read', 'radius-sm', 'radius-md', 'radius-lg',
+    'fs-12', 'fs-13', 'fs-14', 'fs-15', 'fs-16', 'fs-17', 'fs-19', 'fs-21', 'fs-27', 'fs-34',
+    'space-1', 'space-2', 'space-3', 'space-4', 'space-5', 'space-6', 'space-7', 'space-8',
 ];
 
 // The bench materials a server-rendered surface paints with (ADR-177).
