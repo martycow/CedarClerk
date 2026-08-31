@@ -10,6 +10,18 @@ since the attempt still hit the provider). The charge is still taken up front, c
 abuse; this only reverses it when the failure was ours. The cheap 1-credit sync paths (glossary /
 form / profile translate) are left as the row's remainder. Backend 1653, green.
 
+## 2026-08-31 — Sprint v0.2.0, batch eleven: the feedback channel (T-191, ADR-232)
+
+**T-191 (closed)** — feedback is a stored owner-scoped entity, not email: `FeedbackEntry`
+(migration `AddFeedbackEntry`), `POST /api/feedback` (kind bug/idea/other + message + the path it
+was sent from), an `app-feedback-panel` modal hoisted in the shell and opened from the tray so it
+is reachable everywhere, and an admin Feedback tab that lists every account's entries with the
+sender's email and a Mark-handled / Reopen toggle plus an "Unhandled only" filter (the tab badge
+counts the unhandled). Deliberately not email — the maintainer can triage a list; the public blog
+Report stays `mailto:` (T-360) since there is no account there to scope a row to. The i18n lives
+under `feedbackForm` (the `feedback` key was already the comments/reactions feature's). ADR-232.
+Checks: backend 1653, frontend 496, density/contrast/icons green.
+
 ## 2026-08-31 — Sprint v0.2.0, batch ten: the projects hub becomes cards
 
 **T-332 (closed)** — `/projects` traded its cold row table for a responsive card grid: each card

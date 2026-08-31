@@ -1,11 +1,12 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
-    AdminService, AdminAuditEntry, AdminBilling, AdminInviteCode, AdminLanding, AdminPost,
+    AdminService, AdminAuditEntry, AdminBilling, AdminFeedbackEntry, AdminInviteCode, AdminLanding, AdminPost,
     AdminSummary, AdminUsage, AdminUser, AdminWaitlistEntry, LandingTextPair,
 } from '../core/admin.service';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { ButtonComponent } from '../bench/forms/button.component';
+import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
 import { ModalComponent } from '../shared/modal.component';
 import { IconComponent } from '../shared/icon.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
@@ -18,7 +19,7 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { avatarFill, avatarInitial as initialOf } from '../core/avatar-color.util';
 
-export type AdminTab = 'users' | 'invites' | 'posts' | 'landing' | 'reports';
+export type AdminTab = 'users' | 'invites' | 'posts' | 'landing' | 'reports' | 'feedback';
 
 // The landing editor's own shapes (ADR-215). A roadmap column carries a list of
 // bilingual items, and a list of pairs is a miserable thing to edit field by field —
@@ -34,6 +35,7 @@ export interface ShotVm { file: string; capEn: string; capRu: string; }
     imports: [
         ZonedDatePipe, FormsModule, IndexTabsComponent, ShelfPanelComponent, SpecRowComponent,
         LogLineComponent, PaperCardComponent, ButtonComponent, ModalComponent, IconComponent,
+        StampBadgeComponent,
     ],
     templateUrl: 'admin.component.html',
     styleUrls: ['admin.component.css'],
@@ -54,6 +56,8 @@ export class AdminComponent implements OnInit {
     posts = signal<AdminPost[]>([]);
     billing = signal<AdminBilling | null>(null);
     usage = signal<AdminUsage[]>([]);
+    feedback = signal<AdminFeedbackEntry[]>([]);
+    feedbackOnlyOpen = signal(false);
 
     // The panel outgrew one scroll once steps 4-5 landed — same tab pattern as the Posts Manager
     // and Settings, so the app's three secondary pages behave alike.
@@ -137,6 +141,7 @@ export class AdminComponent implements OnInit {
     setTab(tab: AdminTab) {
         this.tab.set(tab);
         if (tab === 'landing' && !this.landing()) void this.loadLanding();
+        if (tab === 'feedback' && this.feedback().length === 0) void this.loadFeedback();
     }
 
     sectionTabs(): IndexTabItem[] {
@@ -149,7 +154,29 @@ export class AdminComponent implements OnInit {
             { id: 'landing', label: labels.landing.title, badge: this.landing()?.waitlist },
             // Reports is three tables and a journal, not a countable set of things.
             { id: 'reports', label: labels.reports.title },
+            { id: 'feedback', label: this.t().feedbackForm.inbox, badge: this.feedback().filter(f => !f.handledAt).length },
         ];
+    }
+
+    // T-191 — loaded when the tab is first opened, like the landing tab.
+    async loadFeedback() {
+        try { this.feedback.set(await this.api.feedback(this.feedbackOnlyOpen())); }
+        catch { /* the empty list stands */ }
+    }
+
+    async toggleFeedbackFilter() {
+        this.feedbackOnlyOpen.update(v => !v);
+        await this.loadFeedback();
+    }
+
+    feedbackKindLabel(kind: string): string {
+        const kinds = this.t().feedbackForm.kinds;
+        return kind === 'bug' ? kinds.bug : kind === 'idea' ? kinds.idea : kinds.other;
+    }
+
+    async markFeedback(entry: AdminFeedbackEntry, handled: boolean) {
+        const res = await this.api.setFeedbackHandled(entry.id, handled);
+        this.feedback.update(list => list.map(f => f.id === entry.id ? { ...f, handledAt: res.handledAt } : f));
     }
 
     sectionTitle(): string {

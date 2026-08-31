@@ -54,6 +54,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
     public DbSet<PublishJob> PublishJobs => Set<PublishJob>();
     public DbSet<CreditEntry> CreditEntries => Set<CreditEntry>();
     public DbSet<WaitlistEntry> WaitlistEntries => Set<WaitlistEntry>();
+    public DbSet<FeedbackEntry> FeedbackEntries => Set<FeedbackEntry>();
     public DbSet<LandingSettings> LandingSettings => Set<LandingSettings>();
     public DbSet<BlogSubscriber> BlogSubscribers => Set<BlogSubscriber>();
     public DbSet<BlogNotifyJob> BlogNotifyJobs => Set<BlogNotifyJob>();
@@ -421,6 +422,9 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         builder.Entity<DialogueScript>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<DocumentLink>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Draft>().HasQueryFilter(e => e.OwnerId == TenantId);
+        // T-191 — a user writes their own feedback under the tenant filter; admin reads every
+        // entry under the platform scope, the same shape as every other owner-scoped table.
+        builder.Entity<FeedbackEntry>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<DraftGlossaryExclusion>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<DraftStatSeen>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<EntityLink>().HasQueryFilter(e => e.OwnerId == TenantId);

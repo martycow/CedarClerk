@@ -1211,6 +1211,30 @@ public class WaitlistEntry
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+// T-191 — the feedback channel. An authenticated user's bug report / feature request / churn
+// reason, so triage has a name attached; read in the admin panel. Deliberately its own table
+// rather than email so it can be listed and marked handled (ADR-232).
+public class FeedbackEntry
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public string OwnerId { get; set; } = "";
+    public ApplicationUser? Owner { get; set; }
+
+    /// <summary>bug | idea | other — a coarse bucket the reporter picks; validated server-side.</summary>
+    public string Kind { get; set; } = "other";
+
+    public string Message { get; set; } = "";
+
+    /// <summary>The screen the reporter was on, so a bug report carries its own context.</summary>
+    public string? Path { get; set; }
+
+    /// <summary>Set when the maintainer has dealt with it — the admin list's one action.</summary>
+    public DateTime? HandledAt { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 /// <summary>
 /// Wave 1 item 7 — an address subscribed to one owner's whole blog: <see cref="ShowcaseFollower"/>
 /// generalized to the blog root, as its own table because a follower belongs to a project and a

@@ -56,6 +56,24 @@ export const en = {
         // T-351 — the credit chip's tooltip; the chip itself shows the bare number.
         credits: (n: number) => `${n} ${n === 1 ? 'credit' : 'credits'} — X posts and AI calls spend these. Click to top up.`,
     },
+    // T-191 — the feedback channel's modal, opened from the tray.
+    feedbackForm: {
+        title: 'Send feedback',
+        hint: 'A bug, an idea, or anything else — it reaches the maintainers with your account attached.',
+        kindLabel: 'What kind',
+        kinds: { bug: 'Bug', idea: 'Idea', other: 'Other' },
+        placeholder: 'What happened, or what you would like…',
+        send: 'Send',
+        thanks: 'Thanks — got it.',
+        failed: 'Could not send — try again.',
+        // The admin inbox (admin.component).
+        inbox: 'Feedback',
+        onlyOpen: 'Unhandled only',
+        markHandled: 'Mark handled',
+        reopen: 'Reopen',
+        handledAt: 'Handled',
+        emptyInbox: 'No feedback yet.',
+    },
     // Wave 1 item 2 — the Ctrl+K document search, mounted by the shell on every screen.
     search: {
         title: 'Search documents',

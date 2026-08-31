@@ -506,7 +506,32 @@ public static partial class AdminEndpoints
             });
         });
 
+        // T-191 (ADR-232) — the feedback inbox. Under the platform-scoped admin context, so it
+        // reads every account's entries; the reporter's email rides along for a reply.
+        group.MapGet("/feedback", async (bool? handled, CedarDbContext db) =>
+        {
+            var query = db.FeedbackEntries.AsQueryable();
+            if (handled is false) query = query.Where(f => f.HandledAt == null);
+            var entries = await query
+                .OrderByDescending(f => f.CreatedAt)
+                .Select(f => new { f.Id, f.Kind, f.Message, f.Path, f.HandledAt, f.CreatedAt, Email = f.Owner!.Email })
+                .Take(200)
+                .ToListAsync();
+            return Results.Ok(entries);
+        });
+
+        group.MapPost("/feedback/{id:guid}/handled", async (Guid id, HandledRequest req, CedarDbContext db) =>
+        {
+            var entry = await db.FeedbackEntries.FirstOrDefaultAsync(f => f.Id == id);
+            if (entry is null) return Results.NotFound();
+            entry.HandledAt = req.Handled ? DateTime.UtcNow : null;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { entry.HandledAt });
+        });
+
         // AdminEndpoints.Landing.cs — inside this group, so the gate above covers it too (ADR-215).
         MapLandingAdmin(group);
     }
+
+    public record HandledRequest(bool Handled);
 }
