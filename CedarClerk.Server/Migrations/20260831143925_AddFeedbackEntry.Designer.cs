@@ -3,6 +3,7 @@ using System;
 using CedarClerk.Server;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CedarClerk.Server.Migrations
 {
     [DbContext(typeof(CedarDbContext))]
-    partial class CedarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260831143925_AddFeedbackEntry")]
+    partial class AddFeedbackEntry
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.30");
@@ -2013,41 +2016,6 @@ namespace CedarClerk.Server.Migrations
                     b.ToTable("PostRegistrations");
                 });
 
-            modelBuilder.Entity("CedarClerk.Server.Preset", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ConfigJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("OwnerId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OwnerId");
-
-                    b.ToTable("Presets");
-                });
-
             modelBuilder.Entity("CedarClerk.Server.Project", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2894,17 +2862,6 @@ namespace CedarClerk.Server.Migrations
                 });
 
             modelBuilder.Entity("CedarClerk.Server.FeedbackEntry", b =>
-                {
-                    b.HasOne("CedarClerk.Server.ApplicationUser", "Owner")
-                        .WithMany()
-                        .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Owner");
-                });
-
-            modelBuilder.Entity("CedarClerk.Server.Preset", b =>
                 {
                     b.HasOne("CedarClerk.Server.ApplicationUser", "Owner")
                         .WithMany()

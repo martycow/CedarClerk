@@ -1211,6 +1211,54 @@ public class WaitlistEntry
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+// T-331/T-355 — a Preset: a user-owned, named, reusable starting point. `Kind` is "document"
+// today (project/export presets are the same table later); `ConfigJson` carries the kind's own
+// shape (for a document preset: base type, icon, and the heading skeleton). This is what gives a
+// Document Type real meaning (T-355): a type is no longer a bare label — a preset bundles the
+// skeleton it starts with and the built-in type it publishes as, and the user can name their own.
+public class Preset
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public string OwnerId { get; set; } = "";
+    public ApplicationUser? Owner { get; set; }
+
+    public string Kind { get; set; } = "document";
+
+    public string Name { get; set; } = "";
+
+    /// <summary>Kind-specific config; for a document preset, a DocumentPresetConfig JSON.</summary>
+    public string ConfigJson { get; set; } = "{}";
+
+    public int SortOrder { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+// T-191 — the feedback channel. An authenticated user's bug report / feature request / churn
+// reason, so triage has a name attached; read in the admin panel. Deliberately its own table
+// rather than email so it can be listed and marked handled (ADR-232).
+public class FeedbackEntry
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public string OwnerId { get; set; } = "";
+    public ApplicationUser? Owner { get; set; }
+
+    /// <summary>bug | idea | other — a coarse bucket the reporter picks; validated server-side.</summary>
+    public string Kind { get; set; } = "other";
+
+    public string Message { get; set; } = "";
+
+    /// <summary>The screen the reporter was on, so a bug report carries its own context.</summary>
+    public string? Path { get; set; }
+
+    /// <summary>Set when the maintainer has dealt with it — the admin list's one action.</summary>
+    public DateTime? HandledAt { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 /// <summary>
 /// Wave 1 item 7 — an address subscribed to one owner's whole blog: <see cref="ShowcaseFollower"/>
 /// generalized to the blog root, as its own table because a follower belongs to a project and a

@@ -259,6 +259,8 @@ app.MapWhen(TenantRouting.IsTenantRequest,
 
 app.MapAuthEndpoints();
 app.MapWaitlistEndpoint();
+app.MapFeedbackEndpoints();
+app.MapPresetEndpoints();
 app.MapDraftEndpoints();
 app.MapFolderEndpoints();
 app.MapSeriesEndpoints();

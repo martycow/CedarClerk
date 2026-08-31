@@ -1,6 +1,7 @@
 import { Component, OnDestroy, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { CdkDropList, CdkDrag, CdkDropListGroup, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { formatInZone } from '../core/display-time';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -51,6 +52,7 @@ type SortKey = 'title' | 'status' | 'priority' | 'dueAt';
         IconComponent, ZonedDatePipe, FormsModule, ModalComponent, RouterLink,
         ButtonComponent, InputComponent, IndexTabsComponent, ShelfPanelComponent,
         LeafTagComponent, StampBadgeComponent, TaskTagComponent,
+        CdkDropListGroup, CdkDropList, CdkDrag,
     ],
     templateUrl: 'project-tasks.component.html',
     styleUrls: ['project-tasks.component.css'],
@@ -210,6 +212,18 @@ export class ProjectTasksComponent implements OnDestroy {
 
     column(status: TaskStatus) {
         return this.matching().filter(t => t.status === status);
+    }
+
+    /**
+     * T-354 — a card dropped into another column becomes that column's status. A drop inside the
+     * same column is left alone: the board keeps the server's order (ADR-106), so reordering here
+     * would be a lie the next reload corrects. `run` reloads the board, same as every mutation.
+     */
+    onDrop(event: CdkDragDrop<TaskStatus>) {
+        const task = event.item.data as GameTask;
+        const target = event.container.data;
+        if (event.previousContainer === event.container || task.status === target) return;
+        void this.setStatus(task, target);
     }
 
     columnCount(status: TaskStatus) {

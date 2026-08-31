@@ -62,7 +62,7 @@
                         </div>
 
                         <div class="hero-actions">
-                            <app-button variant="pine" (clicked)="addingDocument.set(true)">
+                            <app-button variant="pine" (clicked)="openAddDocument()">
                                 <app-icon name="plus" weight="bold" size="sm" />
                                 {{ t().projects.newDocument }}
                             </app-button>
@@ -209,6 +209,17 @@
                         <span class="doc-type-publish" [class.is-working]="!isPublishableType(type)">
                             {{ isPublishableType(type) ? t().projects.newDoc.publishes : t().projects.newDoc.workingMaterial }}
                         </span>
+                    </span>
+                </button>
+            }
+            <!--T-331 — the user's own document presets sit alongside the built-in types.-->
+            @for (preset of documentPresets(); track preset.id) {
+                <button class="doc-type-card is-preset" [disabled]="busy()" (click)="createFromPreset(preset)">
+                    <app-icon [name]="$any(presetConfig(preset).icon)" size="md"></app-icon>
+                    <span class="doc-type-text">
+                        <span class="doc-type-name">{{ preset.name }}</span>
+                        <span class="doc-type-blurb">{{ presetConfig(preset).headings.length ? presetConfig(preset).headings.join(' · ') : t().presets.noSkeleton }}</span>
+                        <span class="doc-type-publish">{{ t().presets.documentPresets }}</span>
                     </span>
                 </button>
             }

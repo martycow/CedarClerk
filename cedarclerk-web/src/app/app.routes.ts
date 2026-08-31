@@ -74,6 +74,12 @@ export const routes: Routes = [
                 loadComponent: () => import('./pages/glossary.component').then(m => m.GlossaryComponent),
                 canActivate: [authGuard],
             },
+            // T-331 — the Preset Manager, an account-wide screen reached from the tray like Glossary.
+            {
+                path: 'presets',
+                loadComponent: () => import('./pages/presets.component').then(m => m.PresetsComponent),
+                canActivate: [authGuard],
+            },
             {
                 // 'library', not 'media' — /media/* is the uploaded files' own URL space (server static
                 // route + dev proxy), and the dev proxy forwards the whole prefix to the backend.

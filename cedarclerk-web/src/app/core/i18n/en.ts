@@ -56,6 +56,24 @@ export const en = {
         // T-351 — the credit chip's tooltip; the chip itself shows the bare number.
         credits: (n: number) => `${n} ${n === 1 ? 'credit' : 'credits'} — X posts and AI calls spend these. Click to top up.`,
     },
+    // T-191 — the feedback channel's modal, opened from the tray.
+    feedbackForm: {
+        title: 'Send feedback',
+        hint: 'A bug, an idea, or anything else — it reaches the maintainers with your account attached.',
+        kindLabel: 'What kind',
+        kinds: { bug: 'Bug', idea: 'Idea', other: 'Other' },
+        placeholder: 'What happened, or what you would like…',
+        send: 'Send',
+        thanks: 'Thanks — got it.',
+        failed: 'Could not send — try again.',
+        // The admin inbox (admin.component).
+        inbox: 'Feedback',
+        onlyOpen: 'Unhandled only',
+        markHandled: 'Mark handled',
+        reopen: 'Reopen',
+        handledAt: 'Handled',
+        emptyInbox: 'No feedback yet.',
+    },
     // Wave 1 item 2 — the Ctrl+K document search, mounted by the shell on every screen.
     search: {
         title: 'Search documents',
@@ -140,6 +158,32 @@ export const en = {
     plans: { Free: 'Free', Pro: 'Pro', ProPlus: 'Pro+', Forever: 'Forever' },
     // T-349 — the tooltip a plan lock carries; the lock itself is app-plan-lock.
     planLock: { pro: 'Available on Pro', proPlus: 'Available on Pro+' },
+    // T-331/T-355 — the Preset Manager.
+    presets: {
+        crumb: 'Presets',
+        count: (n: number) => `${n} ${n === 1 ? 'preset' : 'presets'}`,
+        documentPresets: 'Document presets',
+        intro: 'A preset is a named starting point for a document: the type it publishes as, and the headings it begins with. Pick one when you make a new document.',
+        newPreset: 'New preset',
+        empty: 'No presets yet',
+        emptyHint: 'Make one and it becomes a choice when you create a document.',
+        noSkeleton: 'Starts blank — no headings.',
+        loadFailed: 'Could not load presets.',
+        saveFailed: 'Could not save the preset.',
+        nameLabel: 'Name',
+        namePlaceholder: 'e.g. Postmortem',
+        baseTypeLabel: 'Publishes as',
+        headingsLabel: 'Starter headings (one per line)',
+        headingsPlaceholder: 'What went well\nWhat went wrong\nWhat we’ll change',
+        deleteConfirm: (name: string) => `Delete the preset “${name}”?`,
+    },
+    // T-350 — the shared, scalable language menu.
+    languageMenu: {
+        pick: 'Choose a language',
+        search: 'Search languages…',
+        hasContent: 'Has content',
+        stale: 'Out of date with the primary',
+    },
     // T-345 — the shared location control (profile and per-document).
     location: {
         placeholder: 'e.g. Lisbon, Portugal',
@@ -1985,8 +2029,10 @@ export const en = {
             notTracked: 'not tracked',
             notTrackedWhy: 'Telegram does not report a post’s view count to a bot — only the blog counts views.',
             telegramSince: 'Reactions and comments are counted from the moment Telegram tells the bot about them; nothing before that can be recovered.',
-            noneSelected: 'Every source is switched off — pick one to draw.',
-            nothingToDraw: 'None of the picked sources has this metric yet.',
+            noneSelectedTitle: 'Pick a source to draw',
+            noneSelected: 'Every source is switched off — tap a leaf above to draw its line.',
+            nothingToDrawTitle: 'Nothing to chart yet',
+            nothingToDraw: 'The numbers fill in from the day you publish — come back once a post is live.',
         },
         window: (points: number, from: string, to: string) => `${points} points · ${from} — ${to}`,
         perWeek: '/ 7d',

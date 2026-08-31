@@ -91,6 +91,16 @@ export interface AdminUsage {
     aiToday: number;
 }
 
+export interface AdminFeedbackEntry {
+    id: string;
+    kind: string;
+    message: string;
+    path: string | null;
+    handledAt: string | null;
+    createdAt: string;
+    email: string;
+}
+
 export interface AdminAuditEntry {
     id: string;
     actorEmail: string;
@@ -178,6 +188,17 @@ export class AdminService {
     audit(skip = 0) {
         return firstValueFrom(this.http.get<{ entries: AdminAuditEntry[]; hasMore: boolean }>(
             `/api/admin/audit?skip=${skip}`));
+    }
+
+    // T-191 — the feedback inbox.
+    feedback(onlyOpen = false) {
+        return firstValueFrom(this.http.get<AdminFeedbackEntry[]>(
+            `/api/admin/feedback${onlyOpen ? '?handled=false' : ''}`));
+    }
+
+    setFeedbackHandled(id: string, handled: boolean) {
+        return firstValueFrom(this.http.post<{ handledAt: string | null }>(
+            `/api/admin/feedback/${id}/handled`, { handled }));
     }
 
     // expiresAt null on a paid tier is a manual grant that never expires — the same meaning the

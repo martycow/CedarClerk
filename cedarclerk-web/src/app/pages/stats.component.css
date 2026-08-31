@@ -41,6 +41,33 @@
 
 :host([data-surface="paper"]) .stats-hint-pad { padding: var(--space-5) var(--space-4); }
 
+/* T-338 — the chart board's zero-state: a leaf centred on the graph paper, a title and one line. */
+:host([data-surface="paper"]) .stats-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-7) var(--space-4);
+    text-align: center;
+}
+
+:host([data-surface="paper"]) .stats-empty app-icon { color: var(--abord); }
+
+:host([data-surface="paper"]) .stats-empty-title {
+    margin: 0;
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--text);
+}
+
+:host([data-surface="paper"]) .stats-empty-note {
+    margin: 0;
+    max-width: 42ch;
+    font-size: var(--fs-ui);
+    color: var(--t2);
+    line-height: 1.45;
+}
+
 /* ---------- Filter strip: the legend and the filter are one control (ADR-149) ---------- */
 :host([data-surface="paper"]) .filter-strip {
     display: flex;

@@ -23,7 +23,7 @@ public static class ProjectEndpoints
         string? PressGenre = null, string? PressFactsheetRows = null);
     public record UpdateProjectRequest(string Name, string? Description, string? CoverUrl);
     public record ArchiveProjectRequest(bool Archived);
-    public record CreateDocumentRequest(string? DocumentType, string? Title);
+    public record CreateDocumentRequest(string? DocumentType, string? Title, Guid? PresetId);
     public record UpdateDocumentTypeRequest(string DocumentType);
 
     public const string EnabledKey = "Cedar:Modules:IndieDev";
@@ -380,12 +380,24 @@ public static class ProjectEndpoints
 
         group.MapPost("/{id:guid}/documents", async (Guid id, CreateDocumentRequest req, ClaimsPrincipal user, CedarDbContext db) =>
         {
-            var type = req.DocumentType ?? DocumentTypes.Post;
-            if (!DocumentTypes.IsKnown(type))
-                return Results.Json(new { error = ErrorMessages.UnknownDocumentType(type) }, statusCode: StatusCodes.Status400BadRequest);
-
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             if (!await db.Projects.AnyAsync(p => p.Id == id && p.OwnerId == uid)) return Results.NotFound();
+
+            // T-331/T-355 — a preset decides the type AND the starter skeleton: its base type is what
+            // publishability keys on (never a new stored string), and its headings are the body the
+            // document is born with. Without a preset it is a bare document of the given type.
+            var type = req.DocumentType ?? DocumentTypes.Post;
+            string? cedarJson = null;
+            if (req.PresetId is { } presetId)
+            {
+                var preset = await db.Presets.FirstOrDefaultAsync(p => p.Id == presetId && p.OwnerId == uid && p.Kind == "document");
+                if (preset is null) return Results.NotFound();
+                var cfg = DocumentPresetConfig.Parse(preset.ConfigJson);
+                type = cfg.BaseType;
+                cedarJson = cfg.ToCedarJson();
+            }
+            if (!DocumentTypes.IsKnown(type))
+                return Results.Json(new { error = ErrorMessages.UnknownDocumentType(type) }, statusCode: StatusCodes.Status400BadRequest);
 
             var draft = new Draft
             {
@@ -394,6 +406,7 @@ public static class ProjectEndpoints
                 DocumentType = type,
                 ProjectId = id,
             };
+            if (cedarJson is not null) draft.CedarJson = cedarJson;
             db.Drafts.Add(draft);
             await DraftRevisionService.RecordAsync(db, draft.Id, draft.PrimaryLanguage, draft.Title, draft.CedarJson);
             await db.SaveChangesAsync();

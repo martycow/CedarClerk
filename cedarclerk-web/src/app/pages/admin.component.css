@@ -255,6 +255,62 @@
     gap: var(--space-1);
 }
 
+/* ---------- T-191: the feedback inbox ---------- */
+.fb-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: var(--space-3);
+}
+
+.fb-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--fs-ui);
+    color: var(--t2);
+}
+
+.fb-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.fb-entry {
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--sheet);
+}
+
+.fb-entry.handled { opacity: .6; }
+
+.fb-entry-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.fb-from { font-size: var(--fs-ui); font-weight: 600; }
+.fb-when { font-size: var(--fs-meta); }
+.fb-entry-head .spacer { flex: 1; }
+
+.fb-body {
+    margin: 0;
+    font-size: var(--fs-ui);
+    color: var(--text);
+    white-space: pre-wrap;
+    line-height: 1.5;
+}
+
+.fb-path {
+    display: block;
+    margin-top: var(--space-1);
+    font-family: var(--font-mono);
+    font-size: var(--fs-meta);
+}
+
 /* ---------- Step 3: invite codes ---------- */
 .invite-new {
     display: flex;

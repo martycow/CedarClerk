@@ -1601,20 +1601,11 @@
                         @if (isStale(l)) { <span class="stale-dot"></span> }
                     </app-leaf-tag>
                     }
+                    <!--T-350 — the scalable language menu: searchable, all languages, locks and
+                    has-content dots in one place, so the flat leaf-tag row stays short.-->
                     @if (missingLanguages().length) {
-                    <app-popover>
-                        <button trigger class="insp-btn" [title]="t().editor.lang.addTranslation">+</button>
-                        <div panel class="block-menu">
-                            <!--T-350 — a locked language is offered and refused in one look, not
-                            discovered at the server.-->
-                            @for (l of missingLanguages(); track l) {
-                            <button (click)="switchLang(l)" [disabled]="!auth.hasContentLanguage(l)">
-                                {{ l.toUpperCase() }} · {{ endonym(l) }}
-                                @if (!auth.hasContentLanguage(l)) { <app-plan-lock tier="pro" /> }
-                            </button>
-                            }
-                        </div>
-                    </app-popover>
+                    <app-language-menu [active]="lang()" [items]="langMenuItems()"
+                                       (picked)="switchLang($event)" />
                     }
                 </div>
 

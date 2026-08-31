@@ -515,6 +515,10 @@
     color: var(--t2);
 }
 
+/* T-331 — a preset card is marked so it reads as the user's own, not a built-in type. */
+.doc-type-card.is-preset { border-style: dashed; }
+.doc-type-card.is-preset .doc-type-publish { color: var(--accent); }
+
 .field-label {
     display: block;
     font-size: var(--fs-caption);

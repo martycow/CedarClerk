@@ -32,6 +32,102 @@ pass remain unverified. The local fixture uses a supplied screenshot to exercise
 image layout; it is not a copy of production content. No mail, Telegram publication,
 deployment, merge or PR was performed.
 
+## 2026-08-31 — Sprint v0.2.0: credit refund when an AI job fails (T-361, most of it)
+
+`AiJobService.Start` gained an `onFailure` callback that fires on any job failure (provider error,
+cancel, timeout, throw); the two background jobs — document translate and AI-edit — pass one that
+grants the credit back through a fresh tenant scope (`SubscriptionPlan.RefundAiAsync`, ledger
+reason `ai-refund`, a fresh ref so it is a visible second movement, and the daily count stays spent
+since the attempt still hit the provider). The charge is still taken up front, correct against
+abuse; this only reverses it when the failure was ours. The cheap 1-credit sync paths (glossary /
+form / profile translate) are left as the row's remainder. Backend 1653, green.
+
+## 2026-08-31 — Sprint v0.2.0, batch fifteen: post cards read by shape
+
+**T-337 (first pass)** — the Posts Manager list (already cards since 01.08) now carries the
+document-type icon on a small tinted plate at the head of each card, so the list reads by shape as
+well as by title. The rest of the "needs more visual" ask (a cover thumbnail, the inspector's
+density, the bench search field) stays on the board for a live-render pass with Marty's eye.
+Checks: frontend 496, density/contrast/icons green.
+
+## 2026-08-31 — Sprint v0.2.0, batch fourteen: the Preset Manager (T-331 + T-355, ADR-233)
+
+Document presets, end to end. A `Preset` table (migration `AddPresets`, `Kind`=document today,
+project/export the same table later), CRUD at `/api/presets`, and a Preset Manager screen
+`/presets` off the tray: each document preset bundles a base type (which built-in `DocumentTypes`
+value it publishes as — never a new stored string, so publishability stays the contract) and a
+heading skeleton. `POST /api/projects/:id/documents` takes an optional `presetId` and applies the
+skeleton server-side once; the New-document dialog offers presets as dashed cards beside the
+built-in types. This is what gives a Document Type real meaning (**T-355**, Marty's ruling): the
+type is a nameable, editable starting point now, not a bare label. `DocumentPresetConfig` in Core
+(shared by validation and skeleton generation) is unit-tested. Verified by capture in both themes.
+Project and export presets stay on the board as the next slices of the same table. Backend 1657
+(4 new), frontend 496, density/contrast/icons green.
+
+## 2026-08-31 — Sprint v0.2.0, batch thirteen: the Stats zero-state
+
+**T-338 (zero-state)** — the chart board on a fresh account read as dead: bare dashes and "nothing
+to draw". It now shows a leaf centred on the graph paper with a title and one line that says the
+numbers fill in from the first publish (or, when sources are off, to tap a leaf) — the screenshot-6
+"looks poor and uninteresting" was the empty state, and this is what a new account meets. Richer
+populated readouts (sparklines) stay on the board for when there is data to judge them against.
+Two stats specs rebound to `.stats-empty`. Checks: frontend 496, density/contrast green.
+
+## 2026-08-31 — Sprint v0.2.0, batch twelve: the scalable language menu
+
+**T-350 (menu built)** — `app-language-menu`, a searchable popover over every content language
+with its endonym, a Pro lock on the ones Free cannot reach and the caller-supplied has-content /
+stale marks; it replaces the flat leaf-tag row that ran off the edge as languages piled up (the
+screenshot-4 concern). The editor's add-translation control uses it now; the other call sites
+(glossary tabs, settings signature pick, cross-links, form chips) stay a per-site swap on the
+board. Checks: frontend 496, density/contrast/icons green.
+
+## 2026-08-31 — Sprint v0.2.0, batch eleven: the feedback channel (T-191, ADR-232)
+
+**T-191 (closed)** — feedback is a stored owner-scoped entity, not email: `FeedbackEntry`
+(migration `AddFeedbackEntry`), `POST /api/feedback` (kind bug/idea/other + message + the path it
+was sent from), an `app-feedback-panel` modal hoisted in the shell and opened from the tray so it
+is reachable everywhere, and an admin Feedback tab that lists every account's entries with the
+sender's email and a Mark-handled / Reopen toggle plus an "Unhandled only" filter (the tab badge
+counts the unhandled). Deliberately not email — the maintainer can triage a list; the public blog
+Report stays `mailto:` (T-360) since there is no account there to scope a row to. The i18n lives
+under `feedbackForm` (the `feedback` key was already the comments/reactions feature's). ADR-232.
+Checks: backend 1653, frontend 496, density/contrast/icons green.
+
+## 2026-08-31 — Sprint v0.2.0, batch ten: the projects hub becomes cards
+
+**T-332 (closed)** — `/projects` traded its cold row table for a responsive card grid: each card
+leads with a 16:9 cover (an image when `coverUrl` is set — no screen sets one yet, T-353's
+remainder — the wood-and-initials plate otherwise), the state stamp pinned in the cover corner,
+then name, type and a mono strip of doc/open-task/asset counts and the last-activity date. A card
+is still an `<a [routerLink]>`, so middle-click and copy-link survive; an archived card dims. The
+summary shelf is unchanged. Verified by capture in both themes; the three renamed spec assertions
+follow the `.card`/`.card-name` selectors. Checks: frontend 496, density/contrast green.
+
+## 2026-08-31 — Sprint v0.2.0, batch nine: task board drag-drop, contrast sweep, AI audit
+
+**T-354 (closed)** — the task board's four columns are one `cdkDropListGroup` and each card is a
+`cdkDrag`; dropping a card into a different column calls `setStatus`, which reloads the board like
+every other mutation. A same-column drop is ignored on purpose — the board keeps the server's
+order (ADR-106), so reordering there would be a lie the next reload corrects. The card stays an
+anchor, so click-to-open still works (CDK cancels the click only after a real drag). **T-334
+(closed)** — the reported near-invisible-glyph class was the toolbar (fixed in batch five); a
+contrast-census pass turned up no new instances, only the already-tracked drawer-lip decision row
+and the intentional white-on-brand buttons (Telegram/X blue). **T-352 (closed, audit only)** — see
+below. Checks: frontend 496, density/contrast green.
+
+## 2026-08-31 — Sprint v0.2.0: T-352 AI-abuse audit closed (no code change)
+
+Verified every path that reaches a translation or edit provider (`AuthEndpoints`, `DraftEndpoints`
+×2, `FormPresetEndpoints`, `GlossaryEndpoints` ×2 — six sites, one per provider invocation) charges
+through `SubscriptionPlan.ChargeAiOrRefuseAsync` **before** the provider is called, so a cancelled
+or failed call cannot yield a free one; the 20/day ceiling stands on top as an abuse backstop; Free
+has no AI at all (`HasAiFeatures` opens at Pro). The money-loss-by-abuse surface is closed — a user
+can only spend credits they hold. Two notes, neither a hole: the "translate all profile texts"
+batch is 1 credit for several short provider round-trips (intentional, cheap, the UI says "one AI
+call"), and a failed background job does not refund the credit — the opposite of abuse, filed as
+the fairness follow-up **T-361**.
+
 ## 2026-08-31 — Sprint v0.2.0, batch eight: the shared-bot audit closes four cross-tenant holes (T-359)
 
 A `very thorough` read of every place the shared Telegram bot maps an update to an account

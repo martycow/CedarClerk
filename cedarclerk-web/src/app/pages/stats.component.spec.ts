@@ -226,7 +226,7 @@ describe('stats screen (Posts Manager tab)', () => {
 
         expect(page().anySelected()).toBe(false);
         expect(fixture.debugElement.query(By.directive(GrowthChartComponent))).toBeNull();
-        expect(el().querySelector('.stats-hint')!.textContent).toContain('switched off');
+        expect(el().querySelector('.stats-empty')!.textContent).toContain('switched off');
     });
 
     it('distinguishes "all off" from "on, but nothing to draw"', async () => {
@@ -237,7 +237,7 @@ describe('stats screen (Posts Manager tab)', () => {
         await settle();
 
         expect(page().anySelected()).toBe(true);
-        expect(el().querySelector('.stats-hint')!.textContent).toContain('has this metric');
+        expect(el().querySelector('.stats-empty')!.textContent).toContain('from the day you publish');
     });
 
     it('offers Subscribers only when a source can answer it', async () => {

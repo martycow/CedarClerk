@@ -19,6 +19,7 @@ import {
     projectInitials,
 } from '../core/projects.service';
 import { Build, BuildsService } from '../core/builds.service';
+import { Preset, PresetsService, parseDocumentConfig } from '../core/presets.service';
 import { isOverdue } from '../core/tasks.service';
 import { sprintProgress } from '../core/sprints.service';
 import { RulerReadout } from '../bench/chrome/ruler-bar.component';
@@ -71,6 +72,7 @@ const MS_PER_DAY = 86_400_000;
 })
 export class ProjectComponent implements OnDestroy {
     private api = inject(ProjectsService);
+    private presetsApi = inject(PresetsService);
     private assets = inject(AssetsService);
     private buildsApi = inject(BuildsService);
     private route = inject(ActivatedRoute);
@@ -97,6 +99,9 @@ export class ProjectComponent implements OnDestroy {
     loadError = signal<string | null>(null);
 
     addingDocument = signal(false);
+    // T-331 — the user's document presets, offered alongside the built-in types in the New-document
+    // dialog; loaded once the dialog first opens.
+    documentPresets = signal<Preset[]>([]);
     editing = signal(false);
     editName = signal('');
     editDescription = signal('');
@@ -277,6 +282,12 @@ export class ProjectComponent implements OnDestroy {
         return doc.isBlogPublished ? t.published : t.draft;
     }
 
+    openAddDocument() {
+        this.addingDocument.set(true);
+        // Best-effort: the built-in types are always there, presets are a bonus row.
+        this.presetsApi.list('document').then(p => this.documentPresets.set(p)).catch(() => { /* ignore */ });
+    }
+
     async createDocument(type: DocumentType) {
         const project = this.project();
         if (!project || this.busy()) return;
@@ -293,6 +304,25 @@ export class ProjectComponent implements OnDestroy {
             this.busy.set(false);
         }
     }
+
+    /** T-331 — a preset applies its base type and skeleton server-side; the title is the preset's name. */
+    async createFromPreset(preset: Preset) {
+        const project = this.project();
+        if (!project || this.busy()) return;
+        this.busy.set(true);
+        this.actionError.set(null);
+        try {
+            const created = await this.api.createDocument(project.id, 'post', preset.name, preset.id);
+            this.addingDocument.set(false);
+            void this.router.navigate(['/editor'], { queryParams: { draft: created.id } });
+        } catch (e) {
+            this.actionError.set(httpErrorMessage(e, this.t().projects.newDoc.failed));
+        } finally {
+            this.busy.set(false);
+        }
+    }
+
+    presetConfig = (p: Preset) => parseDocumentConfig(p.configJson);
 
     startEdit() {
         const project = this.project();

@@ -498,6 +498,39 @@ used to run across the top are the shelf beside it (ADR-164).-->
                 }
             </div>
             }
+
+            <!--T-191 — the feedback inbox.-->
+            @if (tab() === 'feedback') {
+            <div class="fb-toolbar">
+                <label class="fb-filter">
+                    <input type="checkbox" [checked]="feedbackOnlyOpen()" (change)="toggleFeedbackFilter()">
+                    {{ t().feedbackForm.onlyOpen }}
+                </label>
+            </div>
+            <div class="fb-list">
+                @for (f of feedback(); track f.id) {
+                <div class="fb-entry" [class.handled]="!!f.handledAt">
+                    <div class="fb-entry-head">
+                        <app-stamp-badge [tone]="f.kind === 'bug' ? 'ink' : 'brass'" [rotate]="-1">
+                            {{ feedbackKindLabel(f.kind) }}
+                        </app-stamp-badge>
+                        <span class="fb-from">{{ f.email }}</span>
+                        <span class="fb-when muted">{{ f.createdAt | zonedDate:'MM/dd, HH:mm' }}</span>
+                        <span class="spacer"></span>
+                        @if (f.handledAt) {
+                        <app-button variant="paper" size="sm" (clicked)="markFeedback(f, false)">{{ t().feedbackForm.reopen }}</app-button>
+                        } @else {
+                        <app-button variant="pine" size="sm" (clicked)="markFeedback(f, true)">{{ t().feedbackForm.markHandled }}</app-button>
+                        }
+                    </div>
+                    <p class="fb-body">{{ f.message }}</p>
+                    @if (f.path) { <span class="fb-path muted">{{ f.path }}</span> }
+                </div>
+                } @empty {
+                <p class="hint">{{ t().feedbackForm.emptyInbox }}</p>
+                }
+            </div>
+            }
         </app-shelf-panel>
 
         <app-shelf-panel class="summary" [title]="t().admin.summary.title">

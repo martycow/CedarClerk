@@ -26,7 +26,7 @@ import { FolderPickerComponent } from '../shared/folder-picker.component';
 import { FormRefComponent } from '../shared/form-ref.component';
 import { TagUsageService } from '../core/tag-usage.service';
 import { FoldersService } from '../core/folders.service';
-import { ProjectsService, ProjectSummary } from '../core/projects.service';
+import { ProjectsService, ProjectSummary, DOCUMENT_TYPE_ICONS } from '../core/projects.service';
 import { StatsComponent } from './stats.component';
 import { IconComponent } from '../shared/icon.component';
 import { ButtonComponent } from '../bench/forms/button.component';
@@ -78,6 +78,7 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
     private projectsApi = inject(ProjectsService);
     private ruler = inject(RulerService);
     private locale = inject(LocaleService);
+    readonly docIcons = DOCUMENT_TYPE_ICONS;
     t = this.locale.t;
 
     tab = signal<ManagerTab>('posts');

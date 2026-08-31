@@ -13,6 +13,8 @@ import { ThemeService } from '../../core/theme.service';
 import { VersionService } from '../../core/version.service';
 import { AccountMenuComponent } from '../../shared/account-menu.component';
 import { AppearancePanelComponent } from '../../shared/appearance-panel.component';
+import { FeedbackPanelComponent } from '../../shared/feedback-panel.component';
+import { FeedbackFormService } from '../../core/feedback-form.service';
 import { DebugConsoleComponent } from '../../shared/debug-console.component';
 import { IconComponent } from '../../shared/icon.component';
 import { SearchOverlayComponent } from '../../shared/search-overlay.component';
@@ -64,7 +66,7 @@ function matches(path: string, pattern: string): boolean {
     imports: [
         RouterOutlet, RouterLink, IconComponent, HookRailComponent, RailHeaderComponent,
         RulerBarComponent, AccountMenuComponent, AppearancePanelComponent, DebugConsoleComponent,
-        ResinDropComponent, ButtonComponent, SearchOverlayComponent,
+        ResinDropComponent, ButtonComponent, SearchOverlayComponent, FeedbackPanelComponent,
     ],
     template: `
         <div class="shell">
@@ -117,6 +119,16 @@ function matches(path: string, pattern: string): boolean {
                             <app-icon name="book-bookmark" size="sm" />
                             {{ t().glossary.crumb }}
                         </a>
+                        <!--T-331 — the Preset Manager, account-wide.-->
+                        <a class="menu-item" routerLink="/presets">
+                            <app-icon name="squares-four" size="sm" />
+                            {{ t().presets.crumb }}
+                        </a>
+                        <!--T-191 — the feedback channel is reachable from every screen.-->
+                        <button type="button" class="menu-item" (click)="feedbackForm.open.set(true)">
+                            <app-icon name="chat-teardrop-dots" size="sm" />
+                            {{ t().feedbackForm.title }}
+                        </button>
                         <!--T-339 — development surfaces; a user has no business seeing them.-->
                         @if (auth.isAdmin()) {
                             <a class="menu-item" routerLink="/dev/styleguide">
@@ -164,6 +176,7 @@ function matches(path: string, pattern: string): boolean {
         <!-- Hoisted out of the editor (ADR-151 clause 2): a trigger in shared chrome cannot open a
              modal parented to one page. -->
         <app-appearance-panel />
+        <app-feedback-panel />
 
         <!-- Ctrl+K works on every screen in the shell; the overlay listens for the key itself. -->
         <app-search-overlay />
@@ -275,6 +288,7 @@ export class BenchShellComponent {
     private readonly version = inject(VersionService);
     private readonly feedback = inject(CommentsService);
     private readonly creditBalance = inject(CreditBalanceService);
+    protected readonly feedbackForm = inject(FeedbackFormService);
 
     protected readonly auth = inject(AuthService);
     protected readonly theme = inject(ThemeService);
@@ -432,6 +446,7 @@ export class BenchShellComponent {
             case 'posts': return [t.manager.crumb];
             case 'calendar': return [t.calendar.crumb];
             case 'glossary': return [t.glossary.crumb];
+            case 'presets': return [t.presets.crumb];
             case 'library': return [t.media.crumb];
             case 'settings': return [t.settings.crumb];
             case 'admin': return [t.admin.crumb];

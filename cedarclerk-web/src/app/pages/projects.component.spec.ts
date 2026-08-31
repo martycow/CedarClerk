@@ -34,8 +34,8 @@ describe('project index', () => {
     const t = en.projects;
 
     const el = () => fixture.nativeElement as HTMLElement;
-    const rows = () => [...el().querySelectorAll('a.row')] as HTMLAnchorElement[];
-    const names = () => rows().map(r => r.querySelector('.name')?.textContent?.trim());
+    const rows = () => [...el().querySelectorAll('a.card')] as HTMLAnchorElement[];
+    const names = () => rows().map(r => r.querySelector('.card-name')?.textContent?.trim());
     const tabs = () => [...el().querySelectorAll('app-index-tabs .it-tile')] as HTMLElement[];
     const badges = () => tabs().map(x => x.querySelector('.it-badge')?.textContent?.trim() ?? null);
     const shelf = () => el().querySelector('app-shelf-panel.shelf-right') as HTMLElement;
@@ -59,15 +59,15 @@ describe('project index', () => {
 
     // ADR-163/ADR-168 rule 3. router.navigate had no URL to hand the browser, so middle click,
     // copy link address and the hover preview all died with it.
-    it('makes every row a door with a real address', () => {
+    it('makes every card a door with a real address', () => {
         expect(rows().map(r => r.getAttribute('href'))).toEqual(['/projects/p1', '/projects/p2', '/projects/p3']);
-        expect(el().querySelectorAll('.rows button').length).toBe(0);
+        expect(el().querySelectorAll('.cards button').length).toBe(0);
     });
 
     // ADR-168 rule 2 — the hub's dock is the switcher; this screen is the list, and it marks no
     // project as the open one because none is open from here.
-    it('marks no row as current, and keeps the search the dock does not have', () => {
-        expect(el().querySelectorAll('.rows [aria-current]').length).toBe(0);
+    it('marks no card as current, and keeps the search the dock does not have', () => {
+        expect(el().querySelectorAll('.cards [aria-current]').length).toBe(0);
         expect(el().querySelector('app-input.search')).toBeTruthy();
     });
 

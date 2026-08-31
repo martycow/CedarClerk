@@ -194,10 +194,11 @@ export class ProjectsService {
         return firstValueFrom(this.http.delete<void>(`/api/projects/${id}`));
     }
 
-    createDocument(projectId: string, documentType: DocumentType, title: string) {
+    /** T-331 — `presetId` set applies a preset's base type and heading skeleton at the server. */
+    createDocument(projectId: string, documentType: DocumentType, title: string, presetId?: string) {
         return firstValueFrom(
             this.http.post<{ id: string; title: string; documentType: DocumentType }>(
-                `/api/projects/${projectId}/documents`, { documentType, title }));
+                `/api/projects/${projectId}/documents`, { documentType, title, presetId }));
     }
 
     /** Refused with 409 when it would leave the project with no documents at all (ADR-103). */

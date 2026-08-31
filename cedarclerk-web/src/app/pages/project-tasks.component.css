@@ -139,6 +139,23 @@
     min-height: var(--space-8);
 }
 
+/* T-354 — the drag feedback. The card lifts with a shadow; the column it can drop into shows a
+   dashed inset so the target reads before the release. */
+.column-cards.cdk-drop-list-dragging app-task-tag:not(.cdk-drag-placeholder) {
+    transition: transform var(--dur-control, 190ms) var(--ease-settle);
+}
+
+app-task-tag.cdk-drag-preview { box-shadow: var(--shadow-lg); }
+
+app-task-tag.cdk-drag-placeholder { opacity: .4; }
+
+.column-cards.cdk-drop-list-receiving,
+.column-cards.cdk-drop-list-dragging {
+    outline: 1px dashed var(--abord);
+    outline-offset: 3px;
+    border-radius: var(--radius-sm);
+}
+
 /* On cork, so it takes the ink the kit measured against cork rather than paper's --t2. */
 .column-empty {
     margin: 0;
