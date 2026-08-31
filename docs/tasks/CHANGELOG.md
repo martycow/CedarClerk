@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-08-31 — Sprint v0.2.0, batch four: 0.20.0, four presets, AI onto credits
+
+Three rulings landed at once (Q-16: the version is **0.20.0** — reads as the wished-for "0.2.0",
+still sorts after 0.17.x; presets: **Empty · Blog · Game · Product**; the pricing table approved
+whole) and the batch encodes them. `Consts.CurrentVersion` → 0.20.0. **Presets** — the New-project
+offer is the four; "fullgame" stays the stored key of Game (renaming a stored value is a data
+migration for nothing visible), jam/prototype/released left the offer but stay recognized so old
+rows still name themselves; Empty starts with a blank note (no skeleton — an Empty project
+promises nothing), Product with the changelog skeleton; client type/icon/starter maps and both
+dictionaries follow. **T-152 (the core)** — AI is paid in credits: `CreditPacks.AiTranslateCost`
+(2, document translate/edit) and `AiSmallCost` (1, glossary/forms/profile),
+`SubscriptionPlan.TryChargeAiAsync` = the 20/day ceiling kept as the abuse guard + a wallet charge
+(upfront, a fresh guid per call — a reused ref would make later calls free), all six AI endpoints
+switched via one `ChargeAiOrRefuseAsync` (403→429/402 with `NotEnoughCreditsForAi`);
+`HasAiFeatures` opens at **Pro** now, Free has no AI at all, and **Pro+ receives 30 credits with
+every paid subscription payment** (Stripe checkout + renewal, PayPal, Stars — idempotent by the
+payment id; the $1 trial deliberately gets none). The client's AI locks turned silver (`pro`), and
+the tier table lives in `docs/product/BUSINESS.md` §3 — the margin is capped from above now, 15
+worst-case translations a month against the old potential 600. Checks: backend 1650, frontend
+496, density/contrast/icons green.
+
 ## 2026-08-31 — Sprint v0.2.0, batch three: the onboarding door, the language paywall, four settings tabs
 
 Marty ruled T-329 (the blog address is shown, never assignable) and confirmed T-350's Free set, so

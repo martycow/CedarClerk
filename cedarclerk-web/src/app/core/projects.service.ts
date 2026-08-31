@@ -13,9 +13,13 @@ import { Sprint } from './sprints.service';
 // is behind a flag: `auth.modules().indieDev` decides whether any of this is reachable, and the
 // endpoints simply are not mapped when it is off.
 
-/** One of CedarClerk.Core.ProjectTypes — decides the project's starter document and nothing else. */
-export type ProjectType = 'fullgame' | 'jam' | 'prototype' | 'released' | 'blog';
-export const PROJECT_TYPES: ProjectType[] = ['fullgame', 'jam', 'prototype', 'released', 'blog'];
+/**
+ * One of CedarClerk.Core.ProjectTypes — decides the project's starter document and nothing else.
+ * The offer was cut to four (31.08.2026): Empty, Blog, Game ("fullgame" stays as the stored key),
+ * Product. The legacy values remain in the type so an old project's rows still parse.
+ */
+export type ProjectType = 'empty' | 'blog' | 'fullgame' | 'product' | 'jam' | 'prototype' | 'released';
+export const PROJECT_TYPES: ProjectType[] = ['empty', 'blog', 'fullgame', 'product'];
 
 /** One of CedarClerk.Core.DocumentTypes. `post` is what every draft written before the module is. */
 export type DocumentType = 'post' | 'regular' | 'design' | 'script' | 'plot' | 'changelog' | 'note';
@@ -40,20 +44,24 @@ export const DOCUMENT_TYPE_ICONS: Record<DocumentType, IconName> = {
 };
 
 export const PROJECT_TYPE_ICONS: Record<ProjectType, IconName> = {
+    empty: 'cube',
+    blog: 'newspaper',
     fullgame: 'game-controller',
+    product: 'rocket-launch',
     jam: 'timer',
     prototype: 'flask',
     released: 'rocket-launch',
-    blog: 'newspaper',
 };
 
 /** Which document type a project of each type starts with — mirrors ProjectTypes.StarterDocumentType. */
 export const STARTER_DOCUMENT_TYPE: Record<ProjectType, DocumentType> = {
+    empty: 'note',
+    blog: 'post',
     fullgame: 'design',
+    product: 'changelog',
     jam: 'design',
     prototype: 'note',
     released: 'changelog',
-    blog: 'post',
 };
 
 export interface ProjectSummary {

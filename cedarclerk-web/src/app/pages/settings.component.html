@@ -123,14 +123,14 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                                 [disabled]="translatingTexts() || !hasAiPlan()">
                             <app-icon name="translate" size="sm"></app-icon>
                             {{ t().settings.profile.translateTexts }}
-                            @if (!hasAiPlan()) { <app-plan-lock tier="proplus" /> }
+                            @if (!hasAiPlan()) { <app-plan-lock tier="pro" /> }
                         </app-button>
                         @if (canTranslateCurrent()) {
                         <app-button variant="paper" (clicked)="translateCurrentLanguage()"
                                 [disabled]="translatingTexts() || !hasAiPlan()">
                             <app-icon name="translate" size="sm"></app-icon>
                             {{ t().settings.profile.translateInto(signatureLanguage().toUpperCase()) }}
-                            @if (!hasAiPlan()) { <app-plan-lock tier="proplus" /> }
+                            @if (!hasAiPlan()) { <app-plan-lock tier="pro" /> }
                         </app-button>
                         }
                         @if (signatureSaved()) {

@@ -329,6 +329,10 @@ public static class BillingEndpoints
                         Currency = obj.TryGetProperty("currency", out var cur) ? cur.GetString() ?? "" : "",
                     });
                     await db.SaveChangesAsync();
+                    // T-152 — every paid Pro+ month carries its credit allowance; the trial does
+                    // not, or $1 would buy the $12-list allowance. Idempotent by the session id.
+                    if (plan == Consts.Plans.ProPlus && sessionId is not null)
+                        await CreditWallet.GrantAsync(db, user.Id, CreditPacks.ProPlusMonthlyCredits, CreditReasons.ProPlusMonthly, sessionId);
                     logger.LogInformation("Stripe checkout completed — user {UserId} on plan {Plan}", userId, plan);
                     break;
                 }
@@ -359,6 +363,8 @@ public static class BillingEndpoints
                         Currency = obj.TryGetProperty("currency", out var cur2) ? cur2.GetString() ?? "" : "",
                     });
                     await db.SaveChangesAsync();
+                    if (plan == Consts.Plans.ProPlus && invoiceId is not null)
+                        await CreditWallet.GrantAsync(db, user.Id, CreditPacks.ProPlusMonthlyCredits, CreditReasons.ProPlusMonthly, invoiceId);
                     logger.LogInformation("Stripe renewal — user {UserId} extended on plan {Plan}", user.Id, plan);
                     break;
                 }
@@ -606,6 +612,8 @@ public static class BillingEndpoints
                 Currency = "usd",
             });
             await db.SaveChangesAsync();
+            if (plan == Consts.Plans.ProPlus && captureId is not null)
+                await CreditWallet.GrantAsync(db, user.Id, CreditPacks.ProPlusMonthlyCredits, CreditReasons.ProPlusMonthly, captureId);
             logger.LogInformation("PayPal capture {CaptureId} — user {UserId} on plan {Plan}", captureId, userId, plan);
             return Results.Redirect("/?billing=success");
         });

@@ -530,9 +530,9 @@ name the smoke suite binds.-->
                                 @if (!first) {
                                 <button class="lang-chip-act" (click)="translatePresetLanguage(l)"
                                         [disabled]="presetTranslating() !== null || !auth.hasAiPlan()"
-                                        [title]="auth.hasAiPlan() ? t().manager.forms.translateLang : t().planLock.proPlus">
+                                        [title]="auth.hasAiPlan() ? t().manager.forms.translateLang : t().planLock.pro">
                                     @if (presetTranslating() === l) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                                    @else if (!auth.hasAiPlan()) { <app-plan-lock tier="proplus" /> }
+                                    @else if (!auth.hasAiPlan()) { <app-plan-lock tier="pro" /> }
                                     @else { <app-icon name="arrow-clockwise" size="sm"></app-icon> }
                                 </button>
                                 <button class="lang-chip-act" (click)="removePresetLanguage(l)" [title]="t().manager.forms.removeLang" [attr.aria-label]="t().manager.forms.removeLang">

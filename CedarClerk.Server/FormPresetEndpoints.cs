@@ -119,8 +119,8 @@ public static class FormPresetEndpoints
             if (texts.All(string.IsNullOrWhiteSpace))
                 return Results.BadRequest(new { error = ErrorMessages.FormHasNoText });
 
-            if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
-                return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);
+            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, uid, CreditPacks.AiSmallCost) is { } refusal)
+                return refusal;
 
             IReadOnlyList<string> translated;
             try

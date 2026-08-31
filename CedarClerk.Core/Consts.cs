@@ -2,7 +2,10 @@ namespace CedarClerk.Core;
 
 public static class Consts
 {
-    public const string CurrentVersion = "0.17.0";
+    // 0.18/0.19 were skipped by decision (31.08.2026): the open-beta sprint is publicly "v0.2.0"
+    // and 0.20.0 is the number that both reads as it and still sorts after 0.17.x everywhere
+    // versions are compared (deploy, tags, self-update).
+    public const string CurrentVersion = "0.20.0";
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
 

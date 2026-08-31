@@ -1,4 +1,5 @@
 using CedarClerk.Core;
+using CedarClerk.Localization;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
@@ -37,6 +38,35 @@ public static class SubscriptionPlan
         user.PlanTier = tier;
         return null;
     }
+
+    public enum AiCharge { Ok, DailyLimit, NoCredits }
+
+    /// <summary>
+    /// T-152 — one gate for every AI call: the abuse ceiling first, then the wallet. Charged up
+    /// front, the way the daily quota always was — the provider bills for a started call either
+    /// way. The ledger ref is a fresh guid: an interactive call has no retry to be idempotent for,
+    /// and a reused ref would make every later call free.
+    /// </summary>
+    public static async Task<AiCharge> TryChargeAiAsync(CedarDbContext db, string userId, int credits)
+    {
+        if (!await TryConsumeAiCallAsync(db, userId)) return AiCharge.DailyLimit;
+        return await CreditWallet.TryChargeAsync(db, userId, credits, CreditReasons.Ai, Guid.NewGuid().ToString("N"))
+            ? AiCharge.Ok
+            : AiCharge.NoCredits;
+    }
+
+    /// <summary>The refusal to return, or null when the call is paid for.</summary>
+    public static async Task<IResult?> ChargeAiOrRefuseAsync(CedarDbContext db, string userId, int credits) =>
+        await TryChargeAiAsync(db, userId, credits) switch
+        {
+            AiCharge.DailyLimit => Results.Json(
+                new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) },
+                statusCode: StatusCodes.Status429TooManyRequests),
+            AiCharge.NoCredits => Results.Json(
+                new { error = ErrorMessages.NotEnoughCreditsForAi },
+                statusCode: StatusCodes.Status402PaymentRequired),
+            _ => null,
+        };
 
     public static async Task<bool> TryConsumeAiCallAsync(CedarDbContext db, string userId)
     {

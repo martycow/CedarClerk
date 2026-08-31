@@ -1409,7 +1409,7 @@
                             <button class="export-btn" (click)="autoTranslate()"
                                     [disabled]="autoTranslating() || !auth.hasAiPlan()">
                                 {{ autoTranslating() ? 'Translating…' : '✦ Auto-translate' }}
-                                @if (!auth.hasAiPlan()) { <app-plan-lock tier="proplus" /> }
+                                @if (!auth.hasAiPlan()) { <app-plan-lock tier="pro" /> }
                             </button>
                             <button class="export-btn" (click)="startVersion(true)" [disabled]="autoTranslating()">{{ t().editor.lang.copyFromPrimary }}</button>
                             <button class="export-btn" (click)="startVersion(false)" [disabled]="autoTranslating()">{{ t().editor.lang.startEmpty }}</button>
@@ -1635,7 +1635,7 @@
                             [disabled]="autoTranslating() || !auth.hasAiPlan()"
                             [title]="isStale(lang()) ? t().editor.lang.retranslateStaleTitle(primaryLanguage.toUpperCase()) : t().editor.lang.retranslateTitle(primaryLanguage.toUpperCase())">
                         {{ t().editor.lang.retranslate }}
-                        @if (!auth.hasAiPlan()) { <app-plan-lock tier="proplus" /> }
+                        @if (!auth.hasAiPlan()) { <app-plan-lock tier="pro" /> }
                     </button>
                     <button class="insp-btn lang-delete" (click)="deleteVersion()" [disabled]="autoTranslating()"
                             [title]="t().editor.lang.deleteTranslation" [attr.aria-label]="t().editor.lang.deleteTranslation">
@@ -1659,7 +1659,7 @@
                     <button class="insp-btn" (click)="openTranslateAll()"
                             [disabled]="autoTranslating() || !auth.hasAiPlan()"
                             [title]="t().editor.lang.translateAllTitle">✦ {{ t().editor.lang.translateAll }}
-                        @if (!auth.hasAiPlan()) { <app-plan-lock tier="proplus" /> }</button>
+                        @if (!auth.hasAiPlan()) { <app-plan-lock tier="pro" /> }</button>
                     }
                     <button class="insp-btn" (click)="openRevisions()"
                             [title]="t().editor.versions.historyTitle(lang().toUpperCase())">◷ {{ t().editor.inspector.history }}</button>
@@ -1898,12 +1898,12 @@
         <button (click)="termMenu.set(null); askAiEdit('fix-errors')" [disabled]="!auth.hasAiPlan()">
             <app-icon name="sparkle" size="sm"></app-icon>
             {{ t().editor.ai.fixDocument }}
-            @if (!auth.hasAiPlan()) { <app-plan-lock tier="proplus" /> }
+            @if (!auth.hasAiPlan()) { <app-plan-lock tier="pro" /> }
         </button>
         <button (click)="termMenu.set(null); askAiEdit('schizo')" [disabled]="!auth.hasAiPlan()">
             <app-icon name="sparkle" size="sm"></app-icon>
             {{ t().editor.ai.schizoDocument }}
-            @if (!auth.hasAiPlan()) { <app-plan-lock tier="proplus" /> }
+            @if (!auth.hasAiPlan()) { <app-plan-lock tier="pro" /> }
         </button>
         }
     </div>

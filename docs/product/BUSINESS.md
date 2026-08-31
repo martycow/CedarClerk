@@ -84,18 +84,32 @@ Fixed costs (check against the actual bills, not from memory):
 | Cloudflare R2 | $0 up to 10 GB — **not enabled yet**, the upload is waiting on keys (`T-147`) | Cloudflare dashboard |
 | Domain `mooexe.dev` | once a year | registrar |
 | Stripe/PayPal fees | ~2.9% + $0.30 per payment | Stripe dashboard |
-| Anthropic (Pro Plus AI features) | **variable** | console.anthropic.com |
+| Anthropic (AI features, paid in credits) | **variable** | console.anthropic.com |
 
-**The only line item that can make the plan unprofitable is the last one.** Pro Plus costs $6/mo and
-includes auto-translation and AI editing, and `PlanLimitations.AiDailyLimit` allows 20 calls a day —
-that's up to 600 calls a month for $6, out of which Stripe takes ~$0.50 in fees.
+**T-152 closed in substance on 31.08.2026 — AI moved onto credits** (prices unchanged: $3 / $6 /
+$1 trial; the table below was approved by Marty whole). The live tier composition, mirroring
+`PlanLimitations` + `CreditPacks`:
 
-This needs to be calculated once, against the actual bill: **average cost per call × 600 must be
-noticeably less than $5.50**. Auto-translation is the most expensive call in the app (the whole
-document, up to 64 000 output tokens), so the calculation should be based on it, not on "fix
-errors." If it doesn't add up, there are three options: lower the daily limit, raise the Pro Plus
-price, or move all AI operations onto credits (`T-152`, on top of the already-working wallet
-`T-109`), where the user pays for usage separately.
+| | Free | Pro $3 | Pro+ $6 |
+|---|---|---|---|
+| Publishing channels | 1 | 3 | 10 |
+| Storage | 100 MB | 1 GB | 3 GB |
+| Content languages (creating versions) | EN + JA | all | all |
+| Custom signature | — | ✓ | ✓ |
+| Header slots | 2 | 3 | 3 |
+| Channel switch | once per 7 days | free | free |
+| X posts | credits (1) | credits (1) | credits (1) |
+| AI: document translate / edit | — | credits (2) | credits (2), **30/mo included** |
+| AI: small calls (glossary, forms, profile) | — | credits (1) | credits (1), from the same 30 |
+
+Mechanics: `SubscriptionPlan.TryChargeAiAsync` = the 20/day ceiling (kept as an abuse guard,
+T-352) + a wallet charge; Pro+ receives `CreditPacks.ProPlusMonthlyCredits` (30) with every
+successful subscription payment (Stripe checkout/renewal, PayPal, Stars; the trial does not — $1
+would otherwise buy an allowance with a $12 list value). The margin is now capped from above: the
+worst Pro+ case is 30 credits spent on translations = 15 calls a month, against the previous
+potential 600. The §5 ritual still verifies against the actual bill: the average cost of one
+translation must sit well under $0.40 (the list price of two credits), or `AiTranslateCost` goes
+up.
 
 ---
 

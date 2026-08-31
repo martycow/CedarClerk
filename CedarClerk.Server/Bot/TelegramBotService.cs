@@ -194,6 +194,9 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
             });
             
             await db.SaveChangesAsync();
+            // T-152 — the Pro+ monthly credit allowance rides every paid Pro+ payment, trial excluded.
+            if (plan == Consts.Plans.ProPlus && payment.TelegramPaymentChargeId is not null)
+                await CreditWallet.GrantAsync(db, user.Id, CreditPacks.ProPlusMonthlyCredits, CreditReasons.ProPlusMonthly, payment.TelegramPaymentChargeId);
             logger.LogInformation("Telegram Stars payment — user {UserId} on plan {Plan} until {ExpiresAt}", user.Id, plan, user.PlanExpiresAt);
             await Client.SendMessage(message.Chat, $"Payment received — your plan is active until {user.PlanExpiresAt:d MMM yyyy} (auto-renews for subscriptions). Enjoy Cedar Clerk!");
             return;

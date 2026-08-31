@@ -437,8 +437,8 @@ public static class AuthEndpoints
                 return Results.Json(new { error = ErrorMessages.LanguageNotSupportedByProvider(unsupported[0], provider.Name) },
                     statusCode: StatusCodes.Status501NotImplemented);
 
-            if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, user.Id))
-                return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);
+            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, user.Id, CreditPacks.AiSmallCost) is { } refusal)
+                return refusal;
 
             foreach (var target in targets)
             {

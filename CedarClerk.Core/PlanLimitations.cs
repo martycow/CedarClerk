@@ -54,9 +54,12 @@ public static class PlanLimitations
 
     public static int MaxHeaderSlots(PlanTiers tier) => tier >= PlanTiers.Pro ? 3 : 2;
 
+    // T-152/T-351 — since the 31.08.2026 pricing table AI is paid in credits and opens at Pro
+    // (Pro tops up, Pro+ gets a monthly allowance); Free has no AI at all. The daily limit above
+    // stays as an abuse ceiling on top of the wallet, not as the price.
     public static bool HasAiFeatures(PlanTiers tier)
     {
-        return tier >= PlanTiers.ProPlus;
+        return tier >= PlanTiers.Pro;
     }
 
     // T-350 — Free keeps English and Japanese; every other content language is a Pro feature.

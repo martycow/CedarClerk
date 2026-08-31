@@ -62,7 +62,7 @@ export class ProjectsComponent implements OnDestroy {
     search = signal('');
 
     creating = signal(false);
-    createType = signal<ProjectType>('fullgame');
+    createType = signal<ProjectType>('empty');
     createName = signal('');
     createError = signal<string | null>(null);
     saving = signal(false);
@@ -132,7 +132,7 @@ export class ProjectsComponent implements OnDestroy {
     }
 
     startCreate() {
-        this.createType.set('fullgame');
+        this.createType.set('empty');
         this.createName.set('');
         this.createError.set(null);
         this.creating.set(true);

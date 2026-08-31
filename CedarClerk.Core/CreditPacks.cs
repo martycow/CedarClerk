@@ -13,6 +13,16 @@ public static class CreditPacks
     /// <summary>Credits charged for one successful X post (cost basis ~$0.20 with a link).</summary>
     public const int XPostCost = 1;
 
+    // T-152/T-351 (31.08.2026, table approved whole) — AI moved off the flat daily quota onto
+    // credits: a document translation is the priciest call in the app, the small calls (an AI
+    // edit, a glossary/form/profile translate) cost a fraction of it. The daily cap stays as an
+    // abuse ceiling, not as the price.
+    public const int AiTranslateCost = 2;
+    public const int AiSmallCost = 1;
+
+    /// <summary>Credits granted with every successful Pro+ subscription payment.</summary>
+    public const int ProPlusMonthlyCredits = 30;
+
     public static readonly IReadOnlyList<CreditPack> All =
     [
         new("10", 10, 400, 200),
@@ -49,4 +59,6 @@ public static class CreditReasons
     public const string Purchase = "purchase";
     public const string XPost = "x-post";
     public const string AdminGrant = "admin-grant";
+    public const string Ai = "ai";
+    public const string ProPlusMonthly = "proplus-monthly";
 }

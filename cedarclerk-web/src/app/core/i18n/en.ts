@@ -671,11 +671,28 @@ export const en = {
             workingMaterial: 'Working material — never published',
             failed: 'Could not create the document.',
         },
+        // The four presets on offer (31.08.2026); the legacy entries stay so an old project's
+        // dashboard can still name its own type.
         projectTypes: {
+            empty: {
+                name: 'Empty',
+                blurb: 'A bare container — fill it your way.',
+                starter: 'First note',
+            },
+            blog: {
+                name: 'Blog',
+                blurb: 'Editorial publishing: posts, series, subscribers.',
+                starter: 'First post',
+            },
             fullgame: {
-                name: 'Full game',
+                name: 'Game',
                 blurb: 'The whole toolkit: documents, sprints, asset index, press kit.',
                 starter: 'GDD (master)',
+            },
+            product: {
+                name: 'Product',
+                blurb: 'Something shipped: releases, changelogs, press.',
+                starter: 'Changelog',
             },
             jam: {
                 name: 'Game jam entry',
@@ -691,11 +708,6 @@ export const en = {
                 name: 'Released game',
                 blurb: 'Post-launch: patches, changelogs, press.',
                 starter: 'Changelog',
-            },
-            blog: {
-                name: 'Blog',
-                blurb: 'Editorial publishing without game-production modules.',
-                starter: 'First post',
             },
         },
         // `group` is the heading over a section of the dashboard; `name` is what the picker calls it.

@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using CedarClerk.Core;
 using CedarClerk.Localization;
 using CedarClerk.Server.Translation;
@@ -203,8 +203,8 @@ public static class GlossaryEndpoints
                 return Results.Json(new { error = ErrorMessages.LanguageNotSupportedByProvider(req.TargetLanguage, provider.Name) },
                     statusCode: StatusCodes.Status501NotImplemented);
 
-            if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
-                return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);
+            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, uid, CreditPacks.AiSmallCost) is { } refusal)
+                return refusal;
 
             IReadOnlyList<string> translated;
             try
@@ -295,8 +295,8 @@ public static class GlossaryEndpoints
                 return Results.Json(new { error = ErrorMessages.LanguageNotSupportedByProvider(req.TargetLanguage, provider.Name) },
                     statusCode: StatusCodes.Status501NotImplemented);
 
-            if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
-                return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);
+            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, uid, CreditPacks.AiSmallCost) is { } refusal)
+                return refusal;
 
             IReadOnlyList<string> translated;
             try

@@ -63,7 +63,7 @@
 
     .blog-label {
         display: block;
-        font-size: var(--fs-meta);
+        font-size: var(--fs-ui);
         color: var(--t2);
         margin-bottom: var(--space-1);
     }
@@ -80,7 +80,7 @@
 
     .blog-hint {
         margin: var(--space-1) 0 0;
-        font-size: var(--fs-meta);
+        font-size: var(--fs-ui);
         color: var(--t2);
         line-height: 1.4;
     }

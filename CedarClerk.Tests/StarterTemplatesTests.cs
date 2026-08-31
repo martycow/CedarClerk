@@ -11,6 +11,7 @@ public class StarterTemplatesTests
     [InlineData(DocumentTypes.Design, ProjectTypes.Jam, "en", "Submission checklist")]
     [InlineData(DocumentTypes.Note, ProjectTypes.Prototype, "en", "The question this prototype answers")]
     [InlineData(DocumentTypes.Changelog, ProjectTypes.Released, "en", "Unreleased")]
+    [InlineData(DocumentTypes.Changelog, ProjectTypes.Product, "en", "Unreleased")]
     [InlineData(DocumentTypes.Design, ProjectTypes.FullGame, "ru", "Концепт")]
     [InlineData(DocumentTypes.Note, ProjectTypes.Prototype, "ru", "Вопрос, на который отвечает прототип")]
     public void Each_starter_gets_its_skeleton_in_the_right_language(string doc, string project, string lang, string expected)
@@ -34,6 +35,15 @@ public class StarterTemplatesTests
             .Where(n => n.GetProperty("type").GetString() == "heading")
             .Select(n => n.GetProperty("content")[0].GetProperty("text").GetString() ?? "")
             .ToList();
+    }
+
+    [Fact]
+    public void Empty_project_starter_carries_no_skeleton()
+    {
+        using var doc = JsonDocument.Parse(StarterTemplates.For(DocumentTypes.Note, ProjectTypes.Empty, "en"));
+        var content = doc.RootElement.GetProperty("content");
+        Assert.Equal(1, content.GetArrayLength());
+        Assert.Equal("paragraph", content[0].GetProperty("type").GetString());
     }
 
     [Fact]

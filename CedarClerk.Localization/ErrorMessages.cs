@@ -28,7 +28,7 @@ public static class ErrorMessages
     public static string DescriptionRequired => Ru("Нужно описание.", "A description is required");
     public static string HandleAndAppPasswordRequired => Ru("Нужны хэндл и app-пароль.", "A handle and an app password are required");
     public static string TermRequired => Ru("Нужен термин.", "A term is required");
-    public static string AiEditProPlus => Ru("Правка через ИИ доступна на Pro+ — перейдите на этот план.", "AI editing is a Pro+ feature. Upgrade to use it.");
+    public static string AiEditProPlus => Ru("Правка через ИИ доступна с тарифа Pro и оплачивается кредитами.", "AI editing needs Pro and is paid in credits.");
     public static string AiEditNotConfigured => Ru("Правка через ИИ не настроена.", "AI editing is not configured");
     public static string AppearancePrefsTooLarge => Ru("Настройки оформления слишком большие.", "Appearance preferences are too large");
     public static string AutoTranslateNotConfigured => Ru("Авто-перевод не настроен.", "Auto-translate is not configured");
@@ -203,7 +203,11 @@ public static class ErrorMessages
         Ru("Оплата через Telegram Stars не настроена!", "Telegram Stars billing is not configured!");
     public static string PaypalNotConfigured => Ru("PayPal ещё не подключён.", "PayPal is not wired up yet.");
     public static string AutoTranslateProPlus =>
-        Ru("Автоперевод доступен на тарифе Pro+.", "Auto-translate is a Pro+ feature. Upgrade to use it.");
+        Ru("Автоперевод доступен с тарифа Pro и оплачивается кредитами.",
+           "Auto-translate needs Pro and is paid in credits.");
+    public static string NotEnoughCreditsForAi =>
+        Ru("Не хватает кредитов для ИИ-вызова — пополните баланс в Настройках → Оплата.",
+           "Not enough credits for this AI call — top up in Settings → Billing.");
     public static string LanguageRequiresPro =>
         Ru("Этот язык доступен на Pro — Free ограничен английским и японским.",
            "This language is a Pro feature — Free is limited to English and Japanese.");

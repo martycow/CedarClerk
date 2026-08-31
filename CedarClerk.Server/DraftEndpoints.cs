@@ -1043,8 +1043,8 @@ public static class DraftEndpoints
                 return Results.Json(new { error = ErrorMessages.LanguageNotSupportedByProvider(lang, provider.Name) },
                     statusCode: StatusCodes.Status501NotImplemented);
 
-            if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
-                return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);
+            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, uid, CreditPacks.AiTranslateCost) is { } refusal)
+                return refusal;
 
             var sourceTitle = draft.Title;
             var sourceCedarJson = draft.CedarJson;
@@ -1177,8 +1177,8 @@ public static class DraftEndpoints
 
             // Charged only once there is something to edit — the quota used to be spent before the
             // 404 above, so a doomed request still cost the user one of the day's AI calls.
-            if (!await SubscriptionPlan.TryConsumeAiCallAsync(db, uid))
-                return Results.Json(new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) }, statusCode: StatusCodes.Status429TooManyRequests);
+            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, uid, CreditPacks.AiTranslateCost) is { } aiRefusal)
+                return aiRefusal;
 
             IAiEditProvider? provider;
             try

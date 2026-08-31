@@ -11,7 +11,7 @@
         @if (countFor(languageFilter())) {
         <app-button variant="paper" size="sm" (clicked)="openTranslateAll()" [disabled]="!auth.hasAiPlan()">
             <app-icon name="translate" size="sm"></app-icon> {{ t().glossary.translateAll }}
-            @if (!auth.hasAiPlan()) { <app-plan-lock tier="proplus" /> }
+            @if (!auth.hasAiPlan()) { <app-plan-lock tier="pro" /> }
         </app-button>
         }
         <!--T-336 — the create action lives on the screen it acts on, not in the app's top bar.-->
@@ -115,10 +115,10 @@
                                 </button>
                                 <button class="mini" (click)="openTranslate(term); $event.stopPropagation()"
                                         [disabled]="!auth.hasAiPlan()"
-                                        [title]="auth.hasAiPlan() ? t().glossary.translate : t().planLock.proPlus"
+                                        [title]="auth.hasAiPlan() ? t().glossary.translate : t().planLock.pro"
                                         [attr.aria-label]="t().glossary.translate">
                                     @if (auth.hasAiPlan()) { <app-icon name="translate" size="sm"></app-icon> }
-                                    @else { <app-plan-lock tier="proplus" /> }
+                                    @else { <app-plan-lock tier="pro" /> }
                                 </button>
                                 <button class="mini-remove" (click)="deleteConfirmId.set(term.id); $event.stopPropagation()" [title]="t().common.delete" [attr.aria-label]="t().common.delete">
                                     <app-icon name="trash" size="sm"></app-icon>

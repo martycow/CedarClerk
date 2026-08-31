@@ -53,10 +53,11 @@ export class AuthService {
     readonly indieDev = signal(false);
     readonly planTier = signal<string | null>(null);
     // T-349 — the client half of PlanLimitations.HasAiFeatures: hides nothing, but a gated button
-    // is disabled and wears app-plan-lock instead of clicking into the server's refusal.
+    // is disabled and wears app-plan-lock instead of clicking into the server's refusal. Since the
+    // 31.08 pricing table AI opens at Pro and is paid in credits (Pro+ gets a monthly allowance).
     readonly hasAiPlan = computed(() => {
         const t = this.planTier();
-        return t === 'ProPlus' || t === 'Forever';
+        return t === 'Pro' || t === 'ProPlus' || t === 'Forever';
     });
     // T-350 — the client half of PlanLimitations.HasContentLanguage: Free keeps en and ja.
     hasContentLanguage(language: string): boolean {

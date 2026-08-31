@@ -20,6 +20,8 @@ public static class StarterTemplates
             (DocumentTypes.Design, _) => Sections(ru
                 ? ["Концепт", "Core loop", "Системы", "Контент", "Открытые вопросы"]
                 : ["Concept", "Core loop", "Systems", "Content", "Open questions"]),
+            // An Empty project promises nothing, so its first note carries no skeleton either.
+            (DocumentTypes.Note, ProjectTypes.Empty) => DocJson.Doc([DocJson.Paragraph("")]),
             (DocumentTypes.Note, _) => Sections(ru
                 ? ["Вопрос, на который отвечает прототип", "Как поймём, что ответ «да»"]
                 : ["The question this prototype answers", "How we'll know the answer is yes"]),

@@ -86,12 +86,13 @@ public class PlanLimitationsTests
         Assert.Equal("https://example.com", resolved.Href);
     }
 
+    // Since the 31.08.2026 pricing table AI opens at Pro and is paid in credits; Free has none.
     [Theory]
     [InlineData(PlanTiers.Free, false)]
-    [InlineData(PlanTiers.Pro, false)]
+    [InlineData(PlanTiers.Pro, true)]
     [InlineData(PlanTiers.ProPlus, true)]
     [InlineData(PlanTiers.Forever, true)]
-    public void Ai_features_are_pro_plus_and_above(PlanTiers tier, bool expected)
+    public void Ai_features_are_pro_and_above(PlanTiers tier, bool expected)
     {
         Assert.Equal(expected, PlanLimitations.HasAiFeatures(tier));
     }

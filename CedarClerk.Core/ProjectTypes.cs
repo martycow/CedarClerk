@@ -1,32 +1,44 @@
 namespace CedarClerk.Core;
 
-// What kind of work a Project is. Its one job is answering which document the project starts with —
-// ADR-103 requires a project to hold one from the moment it exists. The taxonomy is a product
-// decision rather than an inference from the stored documents.
+// The values live in SQLite (Project.ProjectType) and the API — byte-exact zone. The offered set
+// was cut to four on 31.08.2026 (sprint v0.2.0, Marty's pick): Empty, Blog, Game, Product. "jam"
+// and "prototype" left the offer but stay recognized — projects created with them keep working.
 public static class ProjectTypes
 {
+    public const string Empty = "empty";
+    public const string Blog = "blog";
+    // "fullgame" is the stored key of what the UI now calls just "Game": renaming a stored value
+    // means a data migration for nothing a user can see.
     public const string FullGame = "fullgame";
+    public const string Product = "product";
+
     public const string Jam = "jam";
     public const string Prototype = "prototype";
     public const string Released = "released";
-    public const string Blog = "blog";
 
-    public static readonly IReadOnlyList<string> All = [FullGame, Jam, Prototype, Released, Blog];
+    /// <summary>What the New-project dialog offers, in its display order.</summary>
+    public static readonly IReadOnlyList<string> All = [Empty, Blog, FullGame, Product];
 
-    public static bool IsKnown(string? type) => type is not null && All.Contains(type);
+    private static readonly IReadOnlyList<string> Legacy = [Jam, Prototype, Released];
+
+    public static bool IsKnown(string? type) =>
+        type is not null && (All.Contains(type) || Legacy.Contains(type));
 
     // The title is the client's to write: it is user-facing text and the client has both languages,
     // where the server would manage only one.
     public static string StarterDocumentType(string? projectType) => projectType switch
     {
+        // A bare container still has to produce something (ADR-103) — the lightest document there is.
+        Empty => DocumentTypes.Note,
         // The master reference the whole project hangs off.
         FullGame => DocumentTypes.Design,
-        // A jam plan is the same master document at jam scale — scope, schedule, what ships.
+        // Post-launch support of anything: patches, releases, press.
+        Product => DocumentTypes.Changelog,
+        Blog => DocumentTypes.Post,
+        // Legacy types keep the starter they always had.
         Jam => DocumentTypes.Design,
-        // "Hypothesis note": the question being answered, before it deserves a design document.
         Prototype => DocumentTypes.Note,
         Released => DocumentTypes.Changelog,
-        Blog => DocumentTypes.Post,
         // An unknown or absent type still has to produce something — a project without a document
         // cannot exist (ADR-103), so the fallback is the type every draft already is.
         _ => DocumentTypes.Post,

@@ -132,9 +132,9 @@ describe('project index', () => {
         fixture.componentInstance.startCreate();
         fixture.detectChanges();
         const types = [...el().querySelectorAll('.type-name')].map(x => x.textContent?.trim());
-        expect(types).toEqual(['Full game', 'Game jam entry', 'Prototype', 'Released game', 'Blog']);
+        expect(types).toEqual(['Empty', 'Blog', 'Game', 'Product']);
         expect(el().querySelector('.type-row:last-child .type-starter')?.textContent)
-            .toContain(t.create.startsWith(t.projectTypes.blog.starter));
+            .toContain(t.create.startsWith(t.projectTypes.product.starter));
         expect((el().querySelector('#project-name') as HTMLInputElement).placeholder)
             .toBe('Enter project name here');
     });
