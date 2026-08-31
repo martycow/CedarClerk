@@ -244,3 +244,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-229 — UI tables stay headless: hand-rolled today, CDK when volume grows](adr/ADR-229.md)
 - [ADR-230 — A dialogue is a Yarn graph: the text is the graph, and the sheet keys on stamped line ids](adr/ADR-230.md)
 - [ADR-232 — Feedback is a stored, owner-scoped entity, not an email](adr/ADR-232.md)
+- [ADR-233 — A preset is a named starting point; a document type's meaning is the preset that carries it](adr/ADR-233.md)

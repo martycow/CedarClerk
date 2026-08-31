@@ -158,6 +158,25 @@ export const en = {
     plans: { Free: 'Free', Pro: 'Pro', ProPlus: 'Pro+', Forever: 'Forever' },
     // T-349 — the tooltip a plan lock carries; the lock itself is app-plan-lock.
     planLock: { pro: 'Available on Pro', proPlus: 'Available on Pro+' },
+    // T-331/T-355 — the Preset Manager.
+    presets: {
+        crumb: 'Presets',
+        count: (n: number) => `${n} ${n === 1 ? 'preset' : 'presets'}`,
+        documentPresets: 'Document presets',
+        intro: 'A preset is a named starting point for a document: the type it publishes as, and the headings it begins with. Pick one when you make a new document.',
+        newPreset: 'New preset',
+        empty: 'No presets yet',
+        emptyHint: 'Make one and it becomes a choice when you create a document.',
+        noSkeleton: 'Starts blank — no headings.',
+        loadFailed: 'Could not load presets.',
+        saveFailed: 'Could not save the preset.',
+        nameLabel: 'Name',
+        namePlaceholder: 'e.g. Postmortem',
+        baseTypeLabel: 'Publishes as',
+        headingsLabel: 'Starter headings (one per line)',
+        headingsPlaceholder: 'What went well\nWhat went wrong\nWhat we’ll change',
+        deleteConfirm: (name: string) => `Delete the preset “${name}”?`,
+    },
     // T-350 — the shared, scalable language menu.
     languageMenu: {
         pick: 'Choose a language',

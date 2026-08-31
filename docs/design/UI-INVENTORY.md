@@ -336,6 +336,16 @@ The desktop-app page at `/download` — public, outside the shell beside the leg
 
 ---
 
+## `presets.component` (`cedarclerk-web/src/app/pages/presets.component.{ts,html,css}`)
+
+T-331/T-355 — the Preset Manager, an account-wide screen reached from the hook rail's tray (`/presets`), like Glossary. Document presets today: each is a named starting point that bundles a base type (what it publishes as — never a new stored type string) and a heading skeleton the new document is born with, which is what gives a Document Type real meaning (T-355). A preset is offered as a dashed card alongside the built-in types in the project's New-document dialog; picking it applies its skeleton server-side (`POST /api/projects/:id/documents` with `presetId`).
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| New-preset button | `.pr-index`, pine | button | Opens the inline edit form | N/A | The screen's one primary action; the ruler carries the count |
+| Preset card | `.pr-card` | row | Icon, name, base-type chip, the heading skeleton as a dotted line, edit/delete | N/A | Edit swaps the card for the inline form in place |
+| Edit form | `.pr-form` (create at top, edit in place) | panel | Name, base type (a row of type buttons that also sets the icon), starter headings (one per line) | `busy()` on Save | Base type is the DocumentTypes contract — publishability keys on it; the icon follows the type |
+
 ## `glossary.component` (`cedarclerk-web/src/app/pages/glossary.component.{ts,html,css}`)
 
 Idea #11. Terms the owner defines once, found and explained on the published blog. Reached from the hook rail's tray (ADR-183) — it was the nav row on the shared header until that header was retired with `app-page-header`.

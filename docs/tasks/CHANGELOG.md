@@ -10,6 +10,20 @@ since the attempt still hit the provider). The charge is still taken up front, c
 abuse; this only reverses it when the failure was ours. The cheap 1-credit sync paths (glossary /
 form / profile translate) are left as the row's remainder. Backend 1653, green.
 
+## 2026-08-31 — Sprint v0.2.0, batch fourteen: the Preset Manager (T-331 + T-355, ADR-233)
+
+Document presets, end to end. A `Preset` table (migration `AddPresets`, `Kind`=document today,
+project/export the same table later), CRUD at `/api/presets`, and a Preset Manager screen
+`/presets` off the tray: each document preset bundles a base type (which built-in `DocumentTypes`
+value it publishes as — never a new stored string, so publishability stays the contract) and a
+heading skeleton. `POST /api/projects/:id/documents` takes an optional `presetId` and applies the
+skeleton server-side once; the New-document dialog offers presets as dashed cards beside the
+built-in types. This is what gives a Document Type real meaning (**T-355**, Marty's ruling): the
+type is a nameable, editable starting point now, not a bare label. `DocumentPresetConfig` in Core
+(shared by validation and skeleton generation) is unit-tested. Verified by capture in both themes.
+Project and export presets stay on the board as the next slices of the same table. Backend 1657
+(4 new), frontend 496, density/contrast/icons green.
+
 ## 2026-08-31 — Sprint v0.2.0, batch thirteen: the Stats zero-state
 
 **T-338 (zero-state)** — the chart board on a fresh account read as dead: bare dashes and "nothing

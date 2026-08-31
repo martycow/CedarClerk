@@ -1,0 +1,98 @@
+<div class="presets">
+    @if (error()) { <p class="channel-error">{{ error() }}</p> }
+
+    <div class="pr-index">
+        <span class="pr-kind">{{ t().presets.documentPresets }}</span>
+        <app-hint-dot [text]="t().presets.intro" />
+        <span class="spacer"></span>
+        <app-button variant="pine" size="sm" (clicked)="startNew()">
+            <app-icon name="plus" weight="bold" size="sm" /> {{ t().presets.newPreset }}
+        </app-button>
+    </div>
+
+    <app-worktop class="sheet" scroll [label]="t().presets.crumb" [meta]="t().presets.count(presets().length)">
+        <div class="sheet-column">
+            @if (loading()) {
+            <p class="hint">{{ t().common.loading }}</p>
+            } @else {
+
+            @if (editingId() === 'new') {
+            <ng-container [ngTemplateOutlet]="editForm"></ng-container>
+            }
+
+            <div class="pr-list">
+                @for (p of presets(); track p.id) {
+                @if (editingId() === p.id) {
+                <ng-container [ngTemplateOutlet]="editForm"></ng-container>
+                } @else {
+                <div class="pr-card">
+                    <app-icon [name]="$any(parsed(p).icon)" size="md" />
+                    <div class="pr-body">
+                        <div class="pr-head">
+                            <span class="pr-name">{{ p.name }}</span>
+                            <span class="pr-type">{{ baseTypeName(parsed(p).baseType) }}</span>
+                            <span class="spacer"></span>
+                            <button class="mini" (click)="startEdit(p)" [title]="t().common.edit" [attr.aria-label]="t().common.edit">
+                                <app-icon name="pencil-simple" size="sm" />
+                            </button>
+                            <button class="mini-remove" (click)="remove(p)" [title]="t().common.delete" [attr.aria-label]="t().common.delete">
+                                <app-icon name="trash" size="sm" />
+                            </button>
+                        </div>
+                        @if (parsed(p).headings.length) {
+                        <p class="pr-skeleton">{{ parsed(p).headings.join(' · ') }}</p>
+                        } @else {
+                        <p class="pr-skeleton muted">{{ t().presets.noSkeleton }}</p>
+                        }
+                    </div>
+                </div>
+                }
+                } @empty {
+                @if (editingId() !== 'new') {
+                <div class="pr-empty">
+                    <app-icon name="squares-four" size="lg" />
+                    <p class="pr-empty-title">{{ t().presets.empty }}</p>
+                    <p class="hint">{{ t().presets.emptyHint }}</p>
+                </div>
+                }
+                }
+            </div>
+            }
+        </div>
+    </app-worktop>
+</div>
+
+<ng-template #editForm>
+    <div class="pr-form">
+        <label class="pr-field">
+            <span class="pr-label">{{ t().presets.nameLabel }}</span>
+            <input class="pr-input" [ngModel]="form().name"
+                   (ngModelChange)="form.set({ ...form(), name: $event })" maxlength="60"
+                   [placeholder]="t().presets.namePlaceholder">
+        </label>
+
+        <span class="pr-label">{{ t().presets.baseTypeLabel }}</span>
+        <div class="pr-types">
+            @for (type of baseTypes; track type) {
+            <button type="button" class="pr-type-btn" [class.on]="form().baseType === type"
+                    (click)="pickBaseType(type)">
+                <app-icon [name]="typeIcons[type]" size="sm" /> {{ baseTypeName(type) }}
+            </button>
+            }
+        </div>
+
+        <label class="pr-field">
+            <span class="pr-label">{{ t().presets.headingsLabel }}</span>
+            <textarea class="pr-input" rows="4" [ngModel]="form().headings"
+                      (ngModelChange)="form.set({ ...form(), headings: $event })"
+                      [placeholder]="t().presets.headingsPlaceholder"></textarea>
+        </label>
+
+        <div class="pr-form-actions">
+            <app-button variant="paper" size="sm" (clicked)="cancel()">{{ t().common.cancel }}</app-button>
+            <app-button variant="pine" size="sm" [disabled]="busy() || !canSave()" (clicked)="save()">
+                {{ busy() ? '…' : t().common.save }}
+            </app-button>
+        </div>
+    </div>
+</ng-template>

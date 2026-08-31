@@ -119,6 +119,11 @@ function matches(path: string, pattern: string): boolean {
                             <app-icon name="book-bookmark" size="sm" />
                             {{ t().glossary.crumb }}
                         </a>
+                        <!--T-331 — the Preset Manager, account-wide.-->
+                        <a class="menu-item" routerLink="/presets">
+                            <app-icon name="squares-four" size="sm" />
+                            {{ t().presets.crumb }}
+                        </a>
                         <!--T-191 — the feedback channel is reachable from every screen.-->
                         <button type="button" class="menu-item" (click)="feedbackForm.open.set(true)">
                             <app-icon name="chat-teardrop-dots" size="sm" />
@@ -441,6 +446,7 @@ export class BenchShellComponent {
             case 'posts': return [t.manager.crumb];
             case 'calendar': return [t.calendar.crumb];
             case 'glossary': return [t.glossary.crumb];
+            case 'presets': return [t.presets.crumb];
             case 'library': return [t.media.crumb];
             case 'settings': return [t.settings.crumb];
             case 'admin': return [t.admin.crumb];
