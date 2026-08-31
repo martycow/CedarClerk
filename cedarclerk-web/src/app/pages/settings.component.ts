@@ -452,8 +452,7 @@ export class SettingsComponent implements OnInit {
     // The AI gate (PlanLimitations.HasAiFeatures server-side) — narrower than the Pro one: the
     // translate buttons used to take hasProSignature() and let a Pro click into a server refusal.
     hasAiPlan(): boolean {
-        const t = this.auth.planTier();
-        return t === 'ProPlus' || t === 'Forever';
+        return this.auth.hasAiPlan();
     }
 
     avatarInitial(): string {

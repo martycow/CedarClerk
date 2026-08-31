@@ -1406,8 +1406,10 @@
                     <div class="sheet en-empty">
                         <p class="en-empty-title">{{ t().editor.lang.noVersionYet(lang().toUpperCase()) }}</p>
                         <div class="en-empty-actions">
-                            <button class="export-btn" (click)="autoTranslate()" [disabled]="autoTranslating()">
+                            <button class="export-btn" (click)="autoTranslate()"
+                                    [disabled]="autoTranslating() || !auth.hasAiPlan()">
                                 {{ autoTranslating() ? 'Translating…' : '✦ Auto-translate' }}
+                                @if (!auth.hasAiPlan()) { <app-plan-lock tier="proplus" /> }
                             </button>
                             <button class="export-btn" (click)="startVersion(true)" [disabled]="autoTranslating()">{{ t().editor.lang.copyFromPrimary }}</button>
                             <button class="export-btn" (click)="startVersion(false)" [disabled]="autoTranslating()">{{ t().editor.lang.startEmpty }}</button>
@@ -1624,9 +1626,11 @@
                     <!--Always offered, not only while the stale dot is lit (B14): the dot clears
                     itself as soon as the translation is touched, which used to leave delete as the
                     only action even when a re-translate was exactly what was wanted.-->
-                    <button class="insp-btn retranslate-btn" (click)="autoTranslate()" [disabled]="autoTranslating()"
+                    <button class="insp-btn retranslate-btn" (click)="autoTranslate()"
+                            [disabled]="autoTranslating() || !auth.hasAiPlan()"
                             [title]="isStale(lang()) ? t().editor.lang.retranslateStaleTitle(primaryLanguage.toUpperCase()) : t().editor.lang.retranslateTitle(primaryLanguage.toUpperCase())">
                         {{ t().editor.lang.retranslate }}
+                        @if (!auth.hasAiPlan()) { <app-plan-lock tier="proplus" /> }
                     </button>
                     <button class="insp-btn lang-delete" (click)="deleteVersion()" [disabled]="autoTranslating()"
                             [title]="t().editor.lang.deleteTranslation" [attr.aria-label]="t().editor.lang.deleteTranslation">
@@ -1647,8 +1651,10 @@
                     only — it translates the primary version, and standing on a translation while
                     asking for "all languages" reads as translating that one.-->
                     @if (lang() === primaryLanguage && missingLanguages().length + existingLanguages().length) {
-                    <button class="insp-btn" (click)="openTranslateAll()" [disabled]="autoTranslating()"
-                            [title]="t().editor.lang.translateAllTitle">✦ {{ t().editor.lang.translateAll }}</button>
+                    <button class="insp-btn" (click)="openTranslateAll()"
+                            [disabled]="autoTranslating() || !auth.hasAiPlan()"
+                            [title]="t().editor.lang.translateAllTitle">✦ {{ t().editor.lang.translateAll }}
+                        @if (!auth.hasAiPlan()) { <app-plan-lock tier="proplus" /> }</button>
                     }
                     <button class="insp-btn" (click)="openRevisions()"
                             [title]="t().editor.versions.historyTitle(lang().toUpperCase())">◷ {{ t().editor.inspector.history }}</button>
@@ -1884,13 +1890,15 @@
             {{ t().common.cancel }} · {{ aiEditProgress() }}%
         </button>
         } @else {
-        <button (click)="termMenu.set(null); askAiEdit('fix-errors')">
+        <button (click)="termMenu.set(null); askAiEdit('fix-errors')" [disabled]="!auth.hasAiPlan()">
             <app-icon name="sparkle" size="sm"></app-icon>
             {{ t().editor.ai.fixDocument }}
+            @if (!auth.hasAiPlan()) { <app-plan-lock tier="proplus" /> }
         </button>
-        <button (click)="termMenu.set(null); askAiEdit('schizo')">
+        <button (click)="termMenu.set(null); askAiEdit('schizo')" [disabled]="!auth.hasAiPlan()">
             <app-icon name="sparkle" size="sm"></app-icon>
             {{ t().editor.ai.schizoDocument }}
+            @if (!auth.hasAiPlan()) { <app-plan-lock tier="proplus" /> }
         </button>
         }
     </div>

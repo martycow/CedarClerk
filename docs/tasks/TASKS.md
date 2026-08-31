@@ -34,6 +34,8 @@ Current status: this file's §Notes below; open tasks: the board in `docs/tasks/
 
 ## Live verification
 
+- [ ] Plan locks by eye (T-349, 31.08) — on a Free account: silver locks on the signature field/Save and slot 3, gold locks on every AI control (settings translate buttons, editor retranslate/translate-all/auto-translate, right-click AI entries, glossary translate×2, form preset language chip); every locked button inert; on Pro the signature unlocks while AI stays gold; on Pro+ nothing wears a lock #billing P1
+
 Code is written and covered by tests, but never checked by hand or on a device. The UI V2 rows below stay Marty's after the fidelity pass: the audit looked through a capture script, not a person, and its before/after shots live in the session scratchpad only — untracked, so `cedar run` is the way to see them.
 
 - [ ] The reference board with two real people — the two-client run that exists was a Playwright driver on one machine, and it only ever added a **note**, which is exactly how the image hole (ADR-219) survived to the review. Wanted: two browsers on two machines, an image dropped and a library image picked, a frame around them, a link, a resize, fit-to-content on a board holding one item; then the failure half — kill the server under an open board and watch the offline overlay and Retry, demote a live editor to viewer, delete the board someone else is drawing on #canvas P1

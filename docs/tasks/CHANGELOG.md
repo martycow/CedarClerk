@@ -11,8 +11,12 @@ two new one-set-for-both-themes tokens beside the avatars. Settings wears it on 
 field and Save, both translate buttons and header slot 3, replacing the hand-drawn
 `.pro-lock-badge`; the translate buttons' gate was also wrong — `hasProSignature()` (Pro), so a
 Pro account clicked into the server's Pro+ refusal, which is the defect screenshot 3 reported —
-they now gate on `hasAiPlan()`. The sweep of the editor/export/manager call sites stays on the
-board. **T-341 (the reported cases)** — an audit found the popover clamp itself was the bug:
+they now gate on `hasAiPlan()` — the client half of `PlanLimitations.HasAiFeatures`, now a
+computed on `AuthService`. The sweep then covered every AI surface the client draws (closes
+T-349): the editor's retranslate, translate-all, empty-state auto-translate and both right-click
+AI entries, the glossary's translate-all and per-term translate, and the form preset's
+per-language translate chip — each disabled with a gold lock on a plan below Pro+. A by-eye pass
+over the locks is on the TASKS checklist. **T-341 (the reported cases)** — an audit found the popover clamp itself was the bug:
 `app-popover` clamped the left edge against a literal 252 while real panels measure 278, so
 inspector fly-outs hung off the right edge; it now re-clamps after render against the panel's
 measured width and caps height at the viewport. The two genuinely unclamped menus — the sheet's

@@ -30,6 +30,7 @@ import { ProjectsService, ProjectSummary } from '../core/projects.service';
 import { StatsComponent } from './stats.component';
 import { IconComponent } from '../shared/icon.component';
 import { ButtonComponent } from '../bench/forms/button.component';
+import { PlanLockComponent } from '../shared/plan-lock.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
@@ -54,7 +55,7 @@ const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, ModalComponent, CommentsComponent, StatsComponent,
         TagPickerComponent, FolderPickerComponent, FormRefComponent, ButtonComponent, IndexTabsComponent,
-        RouterLink,
+        RouterLink, PlanLockComponent,
         LeafTagComponent, ShelfPanelComponent, StampBadgeComponent, SpecRowComponent, WorktopComponent,
         GrowthChartComponent,
     ],

@@ -23,6 +23,7 @@ import { FormPresetsService, FormPreset } from '../core/form-presets.service';
 import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { GlossaryTermFormComponent } from '../shared/glossary-term-form.component';
+import { PlanLockComponent } from '../shared/plan-lock.component';
 import { DraftGlossaryTerm, GlossaryService, GlossaryTermInput } from '../core/glossary.service';
 import { NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, CompressionLevel, UpdatePreview, PreflightLanguage } from '../core/posts.service';
@@ -228,7 +229,7 @@ interface UploadItem {
     selector: 'app-editor',
     imports: [IconComponent, BrandIconComponent, FormsModule, ZonedDatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, ModalComponent, TagPickerComponent, FolderPickerComponent, SeriesPickerComponent, MediaPickerComponent, FormRefComponent, GlossaryTermFormComponent,
         WorktopComponent, ShelfPanelComponent, SpecRowComponent, LeafTagComponent, StampBadgeComponent,
-        DocumentOutlineComponent],
+        DocumentOutlineComponent, PlanLockComponent],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
 })

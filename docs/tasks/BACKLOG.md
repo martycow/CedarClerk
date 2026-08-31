@@ -38,7 +38,6 @@ six milestones (SEP–DEC). Naming and pricing decisions stay with Marty through
 - [ ] T-346 Profile settings screen design pass #settings #ui P2
 - [ ] T-347 Appearance covers the whole interface — display settings beyond the editor; customized things converge here #settings #ui P2
 - [ ] T-348 Settings tabs: Integrations and Billing separate — everything social/integrations in one tab, everything paid in another #settings #ui P2
-- [ ] T-349 Pro/Pro+ lock badges, remaining call sites — `app-plan-lock` (silver Pro / gold Pro+) exists and Settings wears it (signature, translate buttons — whose gate was also wrong: Pro clicked into a Pro+ server refusal — and slot 3); still to sweep: the editor's AI/auto-translate controls, the export modal, posts-manager and glossary translate actions; builds on T-165 #billing #ui P1
 - [ ] T-350 Language paywall + unified language menu — Free limited to EN+JA, other languages paid; one menu to display, pick, configure and preview languages that scales past 9 #billing #localization #decision P1
 - [ ] T-351 User resources and their economy — credits for posting/AI as a first-class concept, pricing built from it so everything at least breaks even; topbar indicator when finite #billing #product P1
 - [ ] T-352 AI abuse audit — verify every AI feature against user abuse and the money loss it causes; metering, refusal without credits #ai #security P1

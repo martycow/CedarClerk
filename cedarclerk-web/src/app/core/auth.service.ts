@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { httpErrorMessage } from './http-error.util';
@@ -51,6 +51,12 @@ export class AuthService {
     // the routes, while the real answer is that the server never maps those endpoints when it is off.
     readonly indieDev = signal(false);
     readonly planTier = signal<string | null>(null);
+    // T-349 — the client half of PlanLimitations.HasAiFeatures: hides nothing, but a gated button
+    // is disabled and wears app-plan-lock instead of clicking into the server's refusal.
+    readonly hasAiPlan = computed(() => {
+        const t = this.planTier();
+        return t === 'ProPlus' || t === 'Forever';
+    });
     readonly planExpiresAt = signal<string | null>(null);
     readonly trialUsed = signal(false);
     readonly telegramLinked = signal(false);

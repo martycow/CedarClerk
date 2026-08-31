@@ -17,6 +17,7 @@ import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { SpecRowComponent, SpecScope } from '../bench/worktop/spec-row.component';
 import { WorktopComponent } from '../bench/worktop/worktop.component';
 import { RulerService } from '../core/ruler.service';
+import { PlanLockComponent } from '../shared/plan-lock.component';
 
 // Idea #11 — the glossary page. A term is defined once here and explained wherever it turns up on
 // the blog; nothing is scanned or marked in the editor, since the ask was for the published page.
@@ -24,7 +25,7 @@ import { RulerService } from '../core/ruler.service';
     selector: 'app-glossary',
     imports: [
         IconComponent, FormsModule, ModalComponent, NgTemplateOutlet, GlossaryTermFormComponent,
-        ButtonComponent, IndexTabsComponent, LeafTagComponent, ShelfPanelComponent, SpecRowComponent,
+        ButtonComponent, IndexTabsComponent, LeafTagComponent, ShelfPanelComponent, SpecRowComponent, PlanLockComponent,
         WorktopComponent,
     ],
     templateUrl: 'glossary.component.html',
