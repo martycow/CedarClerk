@@ -82,6 +82,7 @@ public static class ErrorMessages
     public static string UnsupportedChatType => Ru("Неподдерживаемый тип чата.", "Unsupported chat type");
     public static string UnsupportedUiLanguage => Ru("Неподдерживаемый язык интерфейса.", "Unsupported interface language");
     public static string WatermarkTooLong => Ru("Текст водяного знака слишком длинный.", "Watermark text is too long");
+    public static string LocationTooLong => Ru("Название локации слишком длинное.", "Location is too long");
     public static string CannotChangeOwnAdmin => Ru("Нельзя менять собственные права администратора.", "You cannot change your own admin rights");
     public static string CannotLockOwnAccount => Ru("Нельзя заблокировать собственный аккаунт.", "You cannot lock your own account");
     public static string CannotDeleteOwnAccount => Ru("Нельзя удалить собственный аккаунт.", "You cannot delete your own account");

@@ -138,6 +138,11 @@ export const en = {
     plans: { Free: 'Free', Pro: 'Pro', ProPlus: 'Pro+', Forever: 'Forever' },
     // T-349 — the tooltip a plan lock carries; the lock itself is app-plan-lock.
     planLock: { pro: 'Available on Pro', proPlus: 'Available on Pro+' },
+    // T-345 — the shared location control (profile and per-document).
+    location: {
+        placeholder: 'e.g. Lisbon, Portugal',
+        useProfile: (home: string) => `Use your profile location: ${home}`,
+    },
 
     projects: {
         crumb: 'Projects Hub',

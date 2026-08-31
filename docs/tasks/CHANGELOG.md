@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-08-31 — Sprint v0.2.0, batch six: the document's location, the last fly-out
+
+**T-345 (closed)** — a location belongs to a document as well as to a profile (the trip case):
+`Draft.LocationText` (migration `AddDraftLocation`), a `POST /{id}/location` endpoint on the
+watermark's pattern, and the blog's MapLocation header slot reads the document's location first,
+falling back to the profile — which is exactly what it always showed before, so nothing published
+changes until someone types a trip. The control is one component now, `app-location-input`: a text
+input with the profile's own location one press away (a flag chip, hidden while the field already
+says it), commits on blur/Enter; Settings → Profile and the editor inspector's new Location row
+both use it. **T-341 (closed)** — the last unclamped fly-out, the posts-manager forms shelf's
+`.lang-add-menu`, moved onto `app-popover` (fixed + clamped, and no longer clipped by the shelf's
+own overflow); its entries also wear the T-350 language locks now. The rail-header switcher and
+the hook-rail tray stay as they are on purpose: both are anchored to fixed chrome corners and
+cannot reach a screen edge until narrow layouts land (T-237). Checks: backend 1650 (drift guard
+green with the migration), frontend 496.
+
 ## 2026-08-31 — Sprint v0.2.0, batch five: the live-render fixes
 
 The first batch made with eyes on the running app: the isolated e2e stack (`Scripts/e2e.ps1`,

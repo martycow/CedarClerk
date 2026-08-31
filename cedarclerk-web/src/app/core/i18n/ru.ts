@@ -129,6 +129,10 @@ export const ru: Dict = {
     // The subscription tiers by name, for anywhere that prints which one an account is on.
     plans: { Free: 'Free', Pro: 'Pro', ProPlus: 'Pro+', Forever: 'Forever' },
     planLock: { pro: 'Доступно на Pro', proPlus: 'Доступно на Pro+' },
+    location: {
+        placeholder: 'например, Лиссабон, Португалия',
+        useProfile: (home: string) => `Подставить локацию профиля: ${home}`,
+    },
 
     projects: {
         crumb: 'Хаб проектов',

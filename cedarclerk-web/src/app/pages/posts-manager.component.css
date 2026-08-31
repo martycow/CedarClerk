@@ -701,26 +701,18 @@
 .lang-chip-act:hover { opacity: 1; }
 .lang-chip-act:disabled { opacity: .4; cursor: default; }
 
-.lang-add {
-    position: relative;
-    display: inline-flex;
-}
+.lang-add { display: inline-flex; }
 
+/* T-341 — the panel rides app-popover now (fixed + clamped); only the list's own shape stays. */
 .lang-add-menu {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    z-index: 10;
     display: flex;
     flex-direction: column;
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow);
-    overflow: hidden;
 }
 
 .lang-add-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
     border: none;
     background: none;
     color: var(--text);
@@ -729,6 +721,8 @@
     text-align: left;
     cursor: pointer;
 }
+
+.lang-add-item:disabled { opacity: .55; cursor: default; }
 
 .lang-add-item:hover { background: var(--alt); }
 

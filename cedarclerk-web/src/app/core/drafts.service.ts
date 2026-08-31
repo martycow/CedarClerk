@@ -144,6 +144,9 @@ export interface DraftFull extends DraftMeta {
     // FI4.1 — language codes this post actually has a registration form for, primary first.
     formLanguages: string[];
     watermarkText: string | null;
+    // T-345 — where this document was written, when that differs from the profile (a trip);
+    // the MapLocation header slot reads it first.
+    locationText?: string | null;
     // Wave 2 item 17 — up to 3 URL buttons appended to the Telegram send; optional until the
     // server projection lands. A JSON array of { text, url }.
     ctaButtonsJson?: string | null;
@@ -421,6 +424,11 @@ export class DraftsService {
 
     setBlogSlug(id: string, slug: string) {
         return firstValueFrom(this.http.post<{ blogSlug: string }>(`/api/drafts/${id}/slug`, { slug }));
+    }
+
+    /** T-345 — blank clears it and the header slot falls back to the profile's location. */
+    setDraftLocation(id: string, locationText: string) {
+        return firstValueFrom(this.http.post<{ locationText: string | null }>(`/api/drafts/${id}/location`, { locationText }));
     }
 
     // Blank clears the watermark; the server trims and returns null for an empty value (I7).

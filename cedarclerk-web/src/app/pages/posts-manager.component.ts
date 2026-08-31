@@ -31,6 +31,7 @@ import { StatsComponent } from './stats.component';
 import { IconComponent } from '../shared/icon.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { PlanLockComponent } from '../shared/plan-lock.component';
+import { PopoverComponent } from '../shared/popover.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
@@ -55,7 +56,7 @@ const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, ModalComponent, CommentsComponent, StatsComponent,
         TagPickerComponent, FolderPickerComponent, FormRefComponent, ButtonComponent, IndexTabsComponent,
-        RouterLink, PlanLockComponent,
+        RouterLink, PlanLockComponent, PopoverComponent,
         LeafTagComponent, ShelfPanelComponent, StampBadgeComponent, SpecRowComponent, WorktopComponent,
         GrowthChartComponent,
     ],
@@ -140,7 +141,6 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
     presetForm = signal<RegistrationFormEdit | null>(null);
     presetState = signal<'saved' | 'dirty' | 'saving' | 'error'>('saved');
     deletePresetId = signal<string | null>(null);
-    addLangOpen = signal(false);
     // The language a machine translation is currently running for, or null.
     presetTranslating = signal<string | null>(null);
     presetTranslateError = signal('');
@@ -774,7 +774,6 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
         this.presetForm.set(normalizeFormForEdit(p.formJson, p.language || DEFAULT_PRIMARY_LANGUAGE));
         this.presetState.set('saved');
         this.presetTranslateError.set('');
-        this.addLangOpen.set(false);
     }
 
     // Created immediately rather than held as a local draft: a preset with no id has nowhere to
@@ -835,7 +834,6 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
     addPresetLanguage(lang: string) {
         const form = this.presetForm();
         if (!form || form.languages.includes(lang)) return;
-        this.addLangOpen.set(false);
         this.editPreset({ ...form, languages: [...form.languages, lang] });
     }
 

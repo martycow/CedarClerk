@@ -382,6 +382,10 @@ public class Draft
     // no watermark. Plain text, never markup: it is HTML-escaped at render like any author text.
     public string? WatermarkText { get; set; }
 
+    // T-345 — where this document was written, when that differs from the profile's location
+    // (a trip). The MapLocation header slot reads this first and falls back to the profile.
+    public string? LocationText { get; set; }
+
     /// <summary>
     /// Wave 1 item 8 — the shareable read-only preview link's credential. One active link per
     /// draft: creating again rotates the token, null revokes. The token IS the access — 24 random

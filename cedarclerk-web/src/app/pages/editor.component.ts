@@ -24,6 +24,7 @@ import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { GlossaryTermFormComponent } from '../shared/glossary-term-form.component';
 import { PlanLockComponent } from '../shared/plan-lock.component';
+import { LocationInputComponent } from '../shared/location-input.component';
 import { DraftGlossaryTerm, GlossaryService, GlossaryTermInput } from '../core/glossary.service';
 import { NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, CompressionLevel, UpdatePreview, PreflightLanguage } from '../core/posts.service';
@@ -229,7 +230,7 @@ interface UploadItem {
     selector: 'app-editor',
     imports: [IconComponent, BrandIconComponent, FormsModule, ZonedDatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, ModalComponent, TagPickerComponent, FolderPickerComponent, SeriesPickerComponent, MediaPickerComponent, FormRefComponent, GlossaryTermFormComponent,
         WorktopComponent, ShelfPanelComponent, SpecRowComponent, LeafTagComponent, StampBadgeComponent,
-        DocumentOutlineComponent, PlanLockComponent],
+        DocumentOutlineComponent, PlanLockComponent, LocationInputComponent],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
 })
@@ -1371,6 +1372,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // Watermark (I7) — drawn on the blog page only, never in the editor. watermarkText() is the
     // saved value (what the state strip reports); watermarkInput is the unsaved field content.
     watermarkText = signal<string | null>(null);
+    // T-345 — the document's own location; blank falls back to the profile at render.
+    locationText = signal<string>('');
     watermarkInput = '';
     watermarkBusy = signal(false);
     watermarkError = signal<string | null>(null);
@@ -2782,6 +2785,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.documentTypeError.set(null);
             this.watermarkText.set(draft.watermarkText);
             this.watermarkInput = draft.watermarkText ?? '';
+            this.locationText.set(draft.locationText ?? '');
             this.watermarkError.set(null);
             this.invites.set([]);
             this.previewLinkUrl.set(null);
@@ -2877,6 +2881,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.isPrivate.set(isPrivate);
             this.disableCopy.set(false);
             this.watermarkText.set(null);
+            this.locationText.set('');
             this.watermarkInput = '';
             this.watermarkError.set(null);
             this.invites.set([]);
@@ -3081,6 +3086,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         } finally {
             this.watermarkBusy.set(false);
         }
+    }
+
+    /** T-345 — committed straight from the inspector row; blank clears back to the profile's. */
+    async setLocation(value: string) {
+        const id = this.currentId();
+        this.locationText.set(value);
+        if (!id) return;
+        try {
+            const res = await this.draftsApi.setDraftLocation(id, value.trim());
+            this.locationText.set(res.locationText ?? '');
+        } catch { /* the next save retries; the field keeps what was typed */ }
     }
 
     async addInvite() {

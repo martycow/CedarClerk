@@ -1831,8 +1831,9 @@ public static partial class BlogEndpoints
         var localizedSignature = LocalizedTextMap.Pick(owner.PostSignature, owner.PostSignatureTranslationsJson, lang);
         var signatureBlock = SignatureHtml(PlanLimitations.ResolveSignature(ownerPlan, localizedSignature, owner.PostSignatureUrl), "span");
 
+        // T-345 — the document's own location wins over the profile's when set (a trip).
         var headerSlotsLine = RenderHeaderSlotsLine(owner.HeaderSlot1Type, owner.HeaderSlot2Type, owner.HeaderSlot3Type,
-            owner.AuthorDisplayName, owner.ProfileUrl, owner.ProfileLocation,
+            owner.AuthorDisplayName, owner.ProfileUrl, draft.LocationText ?? owner.ProfileLocation,
             ownerPlan, draft.BlogPublishedAt, cedarJson, viewCount);
 
         // Idea #11 - the owner's glossary for the language being shown. Empty for an owner who

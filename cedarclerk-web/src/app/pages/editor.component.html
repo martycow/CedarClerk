@@ -1551,6 +1551,11 @@
                         }
                     </select>
                 </app-spec-row>
+                <!--T-345 — the document's own location (a trip); blank falls back to the
+                profile's at render, which is what the MapLocation slot showed before.-->
+                <app-spec-row scope="document" [label]="t().editor.inspector.location" field>
+                    <app-location-input [value]="locationText()" (valueChange)="setLocation($event)" />
+                </app-spec-row>
                 @if (isWorkingMaterial()) {
                 <app-spec-row scope="document" [label]="t().editor.inspector.publishes">
                     <app-stamp-badge tone="ink" [rotate]="-1">{{ t().editor.inspector.workingMaterial }}</app-stamp-badge>

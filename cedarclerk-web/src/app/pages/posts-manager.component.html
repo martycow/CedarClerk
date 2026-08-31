@@ -542,16 +542,21 @@ name the smoke suite binds.-->
                             </span>
                             }
                             @if (addableLanguages().length) {
-                            <span class="lang-add">
-                                <button class="btn-ghost lang-add-btn" (click)="addLangOpen.set(!addLangOpen())">+ {{ t().manager.forms.addLanguage }}</button>
-                                @if (addLangOpen()) {
-                                <span class="lang-add-menu">
+                            <!--T-341 — was an absolute .lang-add-menu clipped by the shelf's own
+                            overflow and unclamped at the screen edge; app-popover is fixed and
+                            clamps itself. T-350 locks the languages Free does not have.-->
+                            <app-popover #langPop class="lang-add">
+                                <button trigger class="btn-ghost lang-add-btn">+ {{ t().manager.forms.addLanguage }}</button>
+                                <span panel class="lang-add-menu">
                                     @for (l of addableLanguages(); track l) {
-                                    <button class="lang-add-item" (click)="addPresetLanguage(l)">{{ l.toUpperCase() }}</button>
+                                    <button class="lang-add-item" (click)="addPresetLanguage(l); langPop.close()"
+                                            [disabled]="!auth.hasContentLanguage(l)">
+                                        {{ l.toUpperCase() }}
+                                        @if (!auth.hasContentLanguage(l)) { <app-plan-lock tier="pro" /> }
+                                    </button>
                                     }
                                 </span>
-                                }
-                            </span>
+                            </app-popover>
                             }
                         </div>
                         @if (presetTranslateError()) {

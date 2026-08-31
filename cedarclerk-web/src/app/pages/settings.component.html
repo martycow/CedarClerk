@@ -86,7 +86,10 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                 </div>
                 <div class="field-group">
                     <label for="cc-profile-location">{{ t().settings.headerSlots.location }}</label>
-                    <input id="cc-profile-location" [(ngModel)]="profileLocationText" [placeholder]="t().settings.headerSlots.locationPlaceholder">
+                    <!--T-345 — the same control the editor's inspector uses for a document's location.-->
+                    <app-location-input [value]="profileLocationText"
+                                        [placeholder]="t().settings.headerSlots.locationPlaceholder"
+                                        (valueChange)="profileLocationText = $event" />
                 </div>
 
                 <div class="field-group">

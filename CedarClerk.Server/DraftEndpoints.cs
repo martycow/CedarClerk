@@ -45,6 +45,7 @@ public static class DraftEndpoints
     public record UpdateListedRequest(bool IsListedWhilePrivate);
     public record UpdateDisableCopyRequest(bool DisableCopy);
     public record UpdateWatermarkRequest(string? WatermarkText);
+    public record UpdateLocationRequest(string? LocationText);
     public record UpdateSlugRequest(string? Slug);
     public record UpdateArticleTitleRequest(string? ArticleTitle);
     public record UpdateEngagementRequest(bool DisableReactions, bool DisableComments);
@@ -327,7 +328,7 @@ public static class DraftEndpoints
             {
                 draft.Id, draft.Title, draft.PrimaryLanguage, draft.CedarJson, draft.CreatedAt, draft.UpdatedAt, draft.BlogSlug,
                 draft.IsBlogPublished, draft.BlogPublishedAt, draft.Tags, draft.DocumentType, draft.FolderId, draft.ProjectId, draft.IsPrivate,
-                draft.WatermarkText, draft.ArticleTitle, draft.IsListedWhilePrivate, draft.DisableCopy,
+                draft.WatermarkText, draft.LocationText, draft.ArticleTitle, draft.IsListedWhilePrivate, draft.DisableCopy,
                 draft.DisableReactions, draft.DisableComments,
                 draft.IsEvergreen, draft.EvergreenCategory, draft.EvergreenMaxSends, draft.EvergreenUntil, draft.EvergreenSendCount,
                 draft.CtaButtonsJson,
@@ -733,6 +734,23 @@ public static class DraftEndpoints
             draft.WatermarkText = string.IsNullOrEmpty(text) ? null : text;
             await db.SaveChangesAsync();
             return Results.Ok(new { draft.WatermarkText });
+        });
+
+        // T-345 — the document's own location, when it differs from the profile's (a trip). The
+        // MapLocation header slot reads it first; null falls back to the profile at render.
+        groupBuilder.MapPost("/{id:guid}/location", async (Guid id, UpdateLocationRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var text = req.LocationText?.Trim();
+            if (text is { Length: > 120 })
+                return Results.BadRequest(new { error = ErrorMessages.LocationTooLong });
+
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var draft = await db.Drafts.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
+            if (draft is null) return Results.NotFound();
+
+            draft.LocationText = string.IsNullOrEmpty(text) ? null : text;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { draft.LocationText });
         });
 
         // Registration form (B3) — shown to uninvited visitors of a private post. Length-checked
