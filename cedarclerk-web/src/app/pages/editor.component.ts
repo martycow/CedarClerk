@@ -1075,7 +1075,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // bail without a selection, because its one entry needed one.
     onSheetContextMenu(event: MouseEvent) {
         event.preventDefault();
-        this.termMenu.set({ x: event.clientX, y: event.clientY, hasSelection: !!this.selectedText() });
+        // T-341 — raw pointer coordinates near an edge push the fixed menu off-screen; the
+        // clamp reserves the menu's own box (min-width 220 plus its tallest entry set).
+        this.termMenu.set({
+            x: Math.max(8, Math.min(event.clientX, window.innerWidth - 240)),
+            y: Math.max(8, Math.min(event.clientY, window.innerHeight - 260)),
+            hasSelection: !!this.selectedText(),
+        });
     }
 
     private selectedText(): string {
@@ -3836,9 +3842,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (!rect) { this.wikiSuggest.set(null); return; }
         this.wikiSuggestCommand = attrs => props.command(attrs);
         const prev = this.wikiSuggest();
+        // T-341 — the caret can sit within the suggester's own box of the screen edges; the panel
+        // is max-width 320 / max-height 240, so the clamp reserves that plus a margin.
         this.wikiSuggest.set({
-            x: rect.left,
-            y: rect.bottom + 4,
+            x: Math.max(8, Math.min(rect.left, window.innerWidth - 332)),
+            y: Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - 252)),
             items: props.items,
             index: Math.min(prev?.index ?? 0, Math.max(0, props.items.length - 1)),
         });

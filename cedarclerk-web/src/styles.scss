@@ -147,6 +147,12 @@
     --avatar-6: #8168B3;
     --avatar-ink: #FFFFFF;
 
+    /* T-349 — the two metals of the plan locks: silver marks a Pro gate, gold a Pro+ one. One set
+       for both themes, same reasoning as the avatars: paper stays cream at night, and a badge that
+       changed metal after dark would stop naming the same tier. */
+    --lock-silver: #6E7683;
+    --lock-gold: #8A6A1C;
+
     /* Paper is cut square and wood is eased: 4px is a field, 8px a plaque. Nothing in the design
        system is rounder than a plaque, so the contract's card/modal step is held at it. */
     --radius-sm: 4px;

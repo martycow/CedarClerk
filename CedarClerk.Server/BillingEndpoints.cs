@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using CedarClerk.Core;
@@ -217,7 +217,7 @@ public static class BillingEndpoints
                 
                 form["line_items[0][price_data][currency]"] = "usd";
                 form["line_items[0][price_data][unit_amount]"] = (unitsAmount).ToString();
-                form["line_items[0][price_data][product_data][name]"] = "Cedar Clerk Pro Plus ( 7-day trial)";
+                form["line_items[0][price_data][product_data][name]"] = "Cedar Clerk Pro+ ( 7-day trial)";
             }
             if (!string.IsNullOrEmpty(user.Email))
                 form["customer_email"] = user.Email;
@@ -448,12 +448,12 @@ public static class BillingEndpoints
             var (title, stars) = req.Plan switch
             {
                 Consts.Plans.Pro => ("Cedar Clerk Pro", cfg.GetValue(Consts.Telegram.ProStarsPriceCfg, Consts.Telegram.DefaultProStarsPrice)),
-                Consts.Plans.ProPlus => ("Cedar Clerk Pro Plus", cfg.GetValue(Consts.Telegram.ProPlusStarsPriceCfg, Consts.Telegram.DefaultProPlusStarsPrice)),
-                _ => ("Cedar Clerk Pro Plus (7-day trial)", cfg.GetValue(Consts.Telegram.TrialStarsPriceCfg, Consts.Telegram.DefaultTrialStarsPrice)),
+                Consts.Plans.ProPlus => ("Cedar Clerk Pro+", cfg.GetValue(Consts.Telegram.ProPlusStarsPriceCfg, Consts.Telegram.DefaultProPlusStarsPrice)),
+                _ => ("Cedar Clerk Pro+ (7-day trial)", cfg.GetValue(Consts.Telegram.TrialStarsPriceCfg, Consts.Telegram.DefaultTrialStarsPrice)),
             };
 
             var description = req.Plan == Consts.Plans.Trial
-                ? "7 days of Cedar Clerk Pro Plus — one-time trial."
+                ? "7 days of Cedar Clerk Pro+ — one-time trial."
                 : "30-day auto-renewing subscription paid in Telegram Stars.";
 
             int? period = req.Plan == Consts.Plans.Trial ? null : 2592000;
@@ -507,8 +507,8 @@ public static class BillingEndpoints
                     {
                         custom_id = $"{req.Plan}:{user.Id}",
                         description = req.Plan == Consts.Plans.Trial ? 
-                            "Cedar Clerk Pro Plus (7-day trial)" : 
-                            $"Cedar Clerk {(req.Plan == Consts.Plans.Pro ? "Pro" : "Pro Plus")} (30 days)",
+                            "Cedar Clerk Pro+ (7-day trial)" : 
+                            $"Cedar Clerk {(req.Plan == Consts.Plans.Pro ? "Pro" : "Pro+")} (30 days)",
                         amount = new { currency_code = "USD", value = $"{SubscriptionPlanHelper.PriceUsd(req.Plan)}.00" },
                     },
                 },

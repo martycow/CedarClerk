@@ -31,14 +31,14 @@ six milestones (SEP–DEC). Naming and pricing decisions stay with Marty through
 - [ ] T-338 Stats screen redesign — looks poor and uninteresting #stats #ui P2
 - [ ] T-339 Style guide dark theme — the gating half shipped (route and tray behind admin); the dark render still looks broken and needs a live look to diagnose (all its CSS is tokens, so the defect is not a stray literal) #ui P3
 - [ ] T-340 Editor toolbar usability — buttons blend into the background; bolder icon strokes, balance design against function #editor #ui P2
-- [ ] T-341 Inspector popups clamped to viewport — some fly-outs escape the screen #editor #ui P2
+- [ ] T-341 Remaining unclamped fly-outs — the inspector's popovers, the right-click term menu and the `[[` suggester are clamped now; still open by the same audit: `.lang-add-menu` (posts-manager forms shelf — absolute, also clipped by the shelf's own overflow), the rail-header project switcher and the hook-rail tray panel near screen edges #ui P3
 - [ ] T-343 Pictograms over prose — too much hint text; cut some, replace the rest with pictograms, pictures, schemes #ux P2
 - [ ] T-344 Header Slots keeps only slots — profile info (avatar, cross-links) moves to Profile #settings #ui P2
 - [ ] T-345 Unified location picker — location is a profile's or a document's (a trip); one convenient menu instead of a bare input #ui P2
 - [ ] T-346 Profile settings screen design pass #settings #ui P2
 - [ ] T-347 Appearance covers the whole interface — display settings beyond the editor; customized things converge here #settings #ui P2
 - [ ] T-348 Settings tabs: Integrations and Billing separate — everything social/integrations in one tab, everything paid in another #settings #ui P2
-- [ ] T-349 Pro/Pro+ lock badges — every button requiring Pro or Pro+ carries a small silver/gold lock when unavailable and does not fire (today Translate into all languages clicks without Pro+); builds on T-165 #billing #ui P1
+- [ ] T-349 Pro/Pro+ lock badges, remaining call sites — `app-plan-lock` (silver Pro / gold Pro+) exists and Settings wears it (signature, translate buttons — whose gate was also wrong: Pro clicked into a Pro+ server refusal — and slot 3); still to sweep: the editor's AI/auto-translate controls, the export modal, posts-manager and glossary translate actions; builds on T-165 #billing #ui P1
 - [ ] T-350 Language paywall + unified language menu — Free limited to EN+JA, other languages paid; one menu to display, pick, configure and preview languages that scales past 9 #billing #localization #decision P1
 - [ ] T-351 User resources and their economy — credits for posting/AI as a first-class concept, pricing built from it so everything at least breaks even; topbar indicator when finite #billing #product P1
 - [ ] T-352 AI abuse audit — verify every AI feature against user abuse and the money loss it causes; metering, refusal without credits #ai #security P1

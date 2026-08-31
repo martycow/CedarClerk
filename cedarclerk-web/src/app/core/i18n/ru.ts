@@ -111,7 +111,8 @@ export const ru: Dict = {
     },
     // Phase 13 — модуль для инди-геймдева (T-120).
     // The subscription tiers by name, for anywhere that prints which one an account is on.
-    plans: { Free: 'Free', Pro: 'Pro', ProPlus: 'Pro Plus', Forever: 'Forever' },
+    plans: { Free: 'Free', Pro: 'Pro', ProPlus: 'Pro+', Forever: 'Forever' },
+    planLock: { pro: 'Доступно на Pro', proPlus: 'Доступно на Pro+' },
 
     projects: {
         crumb: 'Хаб проектов',
@@ -1960,7 +1961,7 @@ export const ru: Dict = {
             saveSignature: 'Сохранить подпись',
             translateTexts: 'Перевести на все языки',
             translateInto: (lang: string) => `Перевести на ${lang}`,
-            translateTextsHint: 'Заполнит подпись и оба текста кросс-ссылок на всех остальных языках контента из выбранного выше. Pro Plus, один AI-вызов.',
+            translateTextsHint: 'Заполнит подпись и оба текста кросс-ссылок на всех остальных языках контента из выбранного выше. Pro+, один AI-вызов.',
             translateFailed: 'Не удалось выполнить авто-перевод',
         },
         confirmEmail: {
@@ -2050,12 +2051,12 @@ export const ru: Dict = {
             proDesc: 'Каналы без ограничений · расписание · переводы · блог',
             proPlusDesc: 'Всё из Pro · ИИ-исправление ошибок · ИИ-шизофикатор',
             choosePro: 'Выбрать Pro',
-            chooseProPlus: 'Выбрать Pro Plus',
+            chooseProPlus: 'Выбрать Pro+',
             perMonth: '/мес',
-            tryTrial: (price: number) => `Попробовать Pro Plus за $${price} на 7 дней →`,
+            tryTrial: (price: number) => `Попробовать Pro+ за $${price} на 7 дней →`,
             payFor: (plan: string) => `Оплатить ${plan} через`,
             planPro: 'Pro',
-            planProPlus: 'Pro Plus',
+            planProPlus: 'Pro+',
             planTrial: 'пробный период',
             stripeLabel: 'Карта (Stripe)',
             stripeDesc: 'Visa, Mastercard, Apple Pay',

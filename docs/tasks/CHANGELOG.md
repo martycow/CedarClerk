@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-08-31 — Sprint v0.2.0, batch two: Pro+ by name, the plan locks, the popup clamps
+
+**The tier is called Pro+ now** — every user-facing "Pro Plus" renamed across both dictionaries,
+the settings plan card, the terms page, `ErrorMessages`, the Stripe/Stars product names and the
+landing; the stored tier key `ProPlus` and `Consts.Plans` names are untouched, so nothing about
+billing state changed shape. **T-349 (first half)** — `shared/plan-lock.component.ts`: the plan
+lock every gated control wears, silver (`--lock-silver`) for Pro, gold (`--lock-gold`) for Pro+ —
+two new one-set-for-both-themes tokens beside the avatars. Settings wears it on the signature
+field and Save, both translate buttons and header slot 3, replacing the hand-drawn
+`.pro-lock-badge`; the translate buttons' gate was also wrong — `hasProSignature()` (Pro), so a
+Pro account clicked into the server's Pro+ refusal, which is the defect screenshot 3 reported —
+they now gate on `hasAiPlan()`. The sweep of the editor/export/manager call sites stays on the
+board. **T-341 (the reported cases)** — an audit found the popover clamp itself was the bug:
+`app-popover` clamped the left edge against a literal 252 while real panels measure 278, so
+inspector fly-outs hung off the right edge; it now re-clamps after render against the panel's
+measured width and caps height at the viewport. The two genuinely unclamped menus — the sheet's
+right-click term menu (raw pointer coords) and the `[[` wiki suggester (raw caret rect) — clamp
+to the viewport now. Three lower-risk absolute panels stay on the board row. Checks: backend
+1641, frontend 496, contrast/density green.
+
 ## 2026-08-31 — Sprint v0.2.0, batch one: the quick screenshot fixes
 
 Six of the sprint's decision-free rows, straight off the annotated screenshots. **T-333** — the

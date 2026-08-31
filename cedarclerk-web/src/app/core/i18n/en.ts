@@ -115,7 +115,9 @@ export const en = {
     // module is enabled: a dictionary that changes shape by configuration would defeat the
     // `ru.ts is typeof en` check that keeps the two in step.
     // The subscription tiers by name, for anywhere that prints which one an account is on.
-    plans: { Free: 'Free', Pro: 'Pro', ProPlus: 'Pro Plus', Forever: 'Forever' },
+    plans: { Free: 'Free', Pro: 'Pro', ProPlus: 'Pro+', Forever: 'Forever' },
+    // T-349 — the tooltip a plan lock carries; the lock itself is app-plan-lock.
+    planLock: { pro: 'Available on Pro', proPlus: 'Available on Pro+' },
 
     projects: {
         crumb: 'Projects Hub',
@@ -2020,7 +2022,7 @@ export const en = {
             saveSignature: 'Save signature',
             translateTexts: 'Translate into all languages',
             translateInto: (lang: string) => `Translate into ${lang}`,
-            translateTextsHint: 'Fills the signature and both cross-link texts in every other content language from the one selected above. Pro Plus, one AI call.',
+            translateTextsHint: 'Fills the signature and both cross-link texts in every other content language from the one selected above. Pro+, one AI call.',
             translateFailed: 'Auto-translation failed',
         },
         confirmEmail: {
@@ -2110,12 +2112,12 @@ export const en = {
             proDesc: 'Unlimited channels · scheduling · translations · blog',
             proPlusDesc: 'Everything in Pro · AI Fix errors · AI Schizo-izer',
             choosePro: 'Choose Pro',
-            chooseProPlus: 'Choose Pro Plus',
+            chooseProPlus: 'Choose Pro+',
             perMonth: '/mo',
-            tryTrial: (price: number) => `Try Pro Plus for $${price}/7 days →`,
+            tryTrial: (price: number) => `Try Pro+ for $${price}/7 days →`,
             payFor: (plan: string) => `Pay for ${plan} with`,
             planPro: 'Pro',
-            planProPlus: 'Pro Plus',
+            planProPlus: 'Pro+',
             planTrial: 'the trial',
             stripeLabel: 'Card (Stripe)',
             stripeDesc: 'Visa, Mastercard, Apple Pay',

@@ -18,6 +18,7 @@ export class PopoverComponent implements OnDestroy {
     panelMaxHeight = signal(0);
 
     @ViewChild('triggerEl') triggerRef!: ElementRef<HTMLElement>;
+    @ViewChild('panelEl') panelRef?: ElementRef<HTMLElement>;
 
     // Bound so it can be added/removed as the same reference; scroll doesn't bubble, so this
     // must be registered in the capture phase to catch scrolling of the toolbar (or any other
@@ -36,6 +37,10 @@ export class PopoverComponent implements OnDestroy {
         this.updatePosition();
         this.isOpen.set(true);
         document.addEventListener('scroll', this.onAncestorScroll, { capture: true, passive: true });
+        // T-341 — the first pass clamps with a guessed width (the panel is not in the DOM yet);
+        // this one re-clamps with the real box, which is what keeps a 260px panel opened from the
+        // inspector shelf on the screen.
+        requestAnimationFrame(() => { if (this.isOpen()) this.updatePosition(); });
     }
 
     close() {
@@ -60,12 +65,17 @@ export class PopoverComponent implements OnDestroy {
         const opensAbove = below < 240 && above > below;
         this.panelTop.set(opensAbove ? 0 : rect.bottom + gap);
         this.panelBottom.set(opensAbove ? window.innerHeight - rect.top + gap : null);
-        this.panelMaxHeight.set(Math.max(120, opensAbove ? above : below));
+        // The available side wins; the cap keeps a panel from hanging past the fold on a short
+        // viewport, and the 120 floor only matters when the whole viewport is shorter than that.
+        this.panelMaxHeight.set(Math.min(Math.max(120, opensAbove ? above : below), window.innerHeight - edge * 2));
         if (this.align() === 'right') {
             this.panelLeft.set(null);
             this.panelRight.set(Math.max(edge, window.innerWidth - rect.right));
         } else {
-            this.panelLeft.set(Math.max(edge, Math.min(rect.left, window.innerWidth - 252)));
+            // Before the panel exists its width is a guess; the second pass from open() reads the
+            // real one (a share panel is 278px outside — the old literal 252 lost that difference).
+            const width = this.panelRef?.nativeElement.offsetWidth ?? 240;
+            this.panelLeft.set(Math.max(edge, Math.min(rect.left, window.innerWidth - width - edge)));
             this.panelRight.set(null);
         }
     }

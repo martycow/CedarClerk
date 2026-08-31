@@ -609,7 +609,7 @@ public static class LandingEndpoints
                     T("Своя подпись со ссылкой", "Your own signature, with a link"),
                     T($"{PlanLimitations.MaxHeaderSlots(PlanTiers.Pro)} слота в шапке поста", $"{PlanLimitations.MaxHeaderSlots(PlanTiers.Pro)} slots in the post header"),
                 ]),
-            ("Pro Plus", $"${Consts.Plans.ProPlusPrice}", T("/ мес", "/ mo"),
+            ("Pro+", $"${Consts.Plans.ProPlusPrice}", T("/ мес", "/ mo"),
                 T("С переводом и правкой через ИИ", "With AI translation and editing"),
                 "ai", "brass", false,
                 [
@@ -836,8 +836,8 @@ public static class LandingEndpoints
                     </div>
                     <div class="plans">{planCards}</div>
                     <div class="plan-foot">{T(
-                        $"Пробный доступ — ${Consts.Plans.TrialPrice} за семь дней Pro Plus, один раз на аккаунт. Регистрация пока по инвайтам.",
-                        $"A trial is ${Consts.Plans.TrialPrice} for seven days of Pro Plus, once per account. Registration is invite-only for now.")}</div>
+                        $"Пробный доступ — ${Consts.Plans.TrialPrice} за семь дней Pro+, один раз на аккаунт. Регистрация пока по инвайтам.",
+                        $"A trial is ${Consts.Plans.TrialPrice} for seven days of Pro+, once per account. Registration is invite-only for now.")}</div>
                 </section>
                 """ : "")}
 

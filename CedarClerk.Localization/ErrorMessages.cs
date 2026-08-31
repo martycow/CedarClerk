@@ -28,7 +28,7 @@ public static class ErrorMessages
     public static string DescriptionRequired => Ru("Нужно описание.", "A description is required");
     public static string HandleAndAppPasswordRequired => Ru("Нужны хэндл и app-пароль.", "A handle and an app password are required");
     public static string TermRequired => Ru("Нужен термин.", "A term is required");
-    public static string AiEditProPlus => Ru("Правка через ИИ доступна на Pro Plus — перейдите на этот план.", "AI editing is a Pro Plus feature. Upgrade to use it.");
+    public static string AiEditProPlus => Ru("Правка через ИИ доступна на Pro+ — перейдите на этот план.", "AI editing is a Pro+ feature. Upgrade to use it.");
     public static string AiEditNotConfigured => Ru("Правка через ИИ не настроена.", "AI editing is not configured");
     public static string AppearancePrefsTooLarge => Ru("Настройки оформления слишком большие.", "Appearance preferences are too large");
     public static string AutoTranslateNotConfigured => Ru("Авто-перевод не настроен.", "Auto-translate is not configured");
@@ -203,7 +203,7 @@ public static class ErrorMessages
         Ru("Оплата через Telegram Stars не настроена!", "Telegram Stars billing is not configured!");
     public static string PaypalNotConfigured => Ru("PayPal ещё не подключён.", "PayPal is not wired up yet.");
     public static string AutoTranslateProPlus =>
-        Ru("Автоперевод доступен на тарифе Pro Plus.", "Auto-translate is a Pro Plus feature. Upgrade to use it.");
+        Ru("Автоперевод доступен на тарифе Pro+.", "Auto-translate is a Pro+ feature. Upgrade to use it.");
     public static string AutoTranslateNoProvider =>
         Ru("Настроенный провайдер не умеет автоперевод.", "Auto-translate is not available with the configured provider");
 

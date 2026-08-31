@@ -291,23 +291,6 @@
     margin-left: var(--space-1);
 }
 
-/* Priority Fixes 05 (Claude Design): .pro-lock-badge marks "this field is gated
-   behind a paid plan" — a different idea from .ai-badge's "this is an AI feature", so it gets a
-   different shape: outlined/neutral with a lock glyph instead of an accent-filled pill. */
-.pro-lock-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    font-size: var(--fs-10);
-    font-weight: 600;
-    letter-spacing: .05em;
-    color: var(--t2);
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 2px var(--space-2);
-    margin-left: var(--space-1);
-}
 
 .plan-card-price {
     font-size: var(--fs-16);

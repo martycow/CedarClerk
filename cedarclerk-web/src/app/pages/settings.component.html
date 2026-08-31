@@ -77,7 +77,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                 </div>
 
                 <div class="field-group">
-                    <label for="cc-sig">{{ t().settings.profile.signature }} @if (!hasProSignature()) { <span class="pro-lock-badge"><app-icon name="lock" size="xs"></app-icon>PRO</span> }</label>
+                    <label for="cc-sig">{{ t().settings.profile.signature }} @if (!hasProSignature()) { <app-plan-lock tier="pro" /> }</label>
                     @if (hasProSignature()) {
                     <p class="field-hint">{{ t().settings.profile.signatureHintPro }}</p>
                     } @else {
@@ -99,21 +99,25 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                     <div class="field-actions">
                         <app-button variant="pine" (clicked)="saveSignature()" [disabled]="signatureBusy() || !hasProSignature()">
                             {{ signatureBusy() ? '…' : t().settings.profile.saveSignature }}
+                            @if (!hasProSignature()) { <app-plan-lock tier="pro" /> }
                         </app-button>
                         <!--One press fills the signature AND both cross-link texts — they are written
                         together and read together, so translating them apart would be three presses for
                         one thought. Two buttons because there are two real cases: fill everything, or
-                        redo the one language that came back wrong.-->
+                        redo the one language that came back wrong. Both are AI calls, so the gate is
+                        the AI tier — hasProSignature() here let a Pro click into a server refusal.-->
                         <app-button variant="paper" (clicked)="translateProfileTexts()"
-                                [disabled]="translatingTexts() || !hasProSignature()">
+                                [disabled]="translatingTexts() || !hasAiPlan()">
                             <app-icon name="translate" size="sm"></app-icon>
                             {{ t().settings.profile.translateTexts }}
+                            @if (!hasAiPlan()) { <app-plan-lock tier="proplus" /> }
                         </app-button>
                         @if (canTranslateCurrent()) {
                         <app-button variant="paper" (clicked)="translateCurrentLanguage()"
-                                [disabled]="translatingTexts() || !hasProSignature()">
+                                [disabled]="translatingTexts() || !hasAiPlan()">
                             <app-icon name="translate" size="sm"></app-icon>
                             {{ t().settings.profile.translateInto(signatureLanguage().toUpperCase()) }}
+                            @if (!hasAiPlan()) { <app-plan-lock tier="proplus" /> }
                         </app-button>
                         }
                         @if (signatureSaved()) {
@@ -208,7 +212,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                     </select>
                 </div>
                 <div class="field-group">
-                    <label for="cc-slot-3">{{ t().settings.headerSlots.slot(3) }} @if (!hasProHeaderSlot()) { <span class="pro-lock-badge"><app-icon name="lock" size="xs"></app-icon>PRO</span> }</label>
+                    <label for="cc-slot-3">{{ t().settings.headerSlots.slot(3) }} @if (!hasProHeaderSlot()) { <app-plan-lock tier="pro" /> }</label>
                     <select id="cc-slot-3" [(ngModel)]="headerSlot3" [disabled]="!hasProHeaderSlot()"
                             [title]="hasProHeaderSlot() ? '' : t().settings.headerSlots.slotUpgrade">
                         <option [ngValue]="null">{{ t().settings.headerSlots.none }}</option>
@@ -374,7 +378,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                         }
                     </div>
                     <div class="plan-card" [class.current]="b.planTier === 'ProPlus' || b.planTier === 'Forever'">
-                        <div class="plan-card-name">Pro Plus <span class="ai-badge">AI</span></div>
+                        <div class="plan-card-name">Pro+ <span class="ai-badge">AI</span></div>
                         <div class="plan-card-price">${{ b.prices.proPlusUsd }}<span>{{ t().settings.subscription.perMonth }}</span></div>
                         <p class="plan-card-desc">{{ t().settings.subscription.proPlusDesc }}</p>
                         @if (b.planTier === 'ProPlus' || b.planTier === 'Forever') {

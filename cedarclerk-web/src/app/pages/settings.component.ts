@@ -21,6 +21,7 @@ import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
+import { PlanLockComponent } from '../shared/plan-lock.component';
 
 type PayMethod = 'stripe' | 'paypal' | 'stars';
 export type SettingsTab = 'profile' | 'account';
@@ -30,7 +31,7 @@ export type SettingsTab = 'profile' | 'account';
     imports: [
         IconComponent, FormsModule, ZonedDatePipe, BrandIconComponent,
         ButtonComponent, IndexTabsComponent, LeafTagComponent,
-        ShelfPanelComponent, SpecRowComponent, StampBadgeComponent,
+        ShelfPanelComponent, SpecRowComponent, StampBadgeComponent, PlanLockComponent,
     ],
     templateUrl: 'settings.component.html',
     styleUrls: ['settings.component.css']
@@ -441,11 +442,18 @@ export class SettingsComponent implements OnInit {
         return t === 'Pro' || t === 'ProPlus' || t === 'Forever';
     }
 
-    // Same Pro+ gate as hasProHeaderSlot() (PlanLimitations.HasCustomSignature server-side) — kept
+    // Same Pro gate as hasProHeaderSlot() (PlanLimitations.HasCustomSignature server-side) — kept
     // as its own method since it reads as "can this user customize their signature", not slots.
     hasProSignature(): boolean {
         const t = this.auth.planTier();
         return t === 'Pro' || t === 'ProPlus' || t === 'Forever';
+    }
+
+    // The AI gate (PlanLimitations.HasAiFeatures server-side) — narrower than the Pro one: the
+    // translate buttons used to take hasProSignature() and let a Pro click into a server refusal.
+    hasAiPlan(): boolean {
+        const t = this.auth.planTier();
+        return t === 'ProPlus' || t === 'Forever';
     }
 
     avatarInitial(): string {

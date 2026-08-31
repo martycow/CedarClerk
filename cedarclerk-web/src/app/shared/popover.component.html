@@ -3,7 +3,7 @@
         <ng-content select="[trigger]"></ng-content>
     </div>
     @if (isOpen()) {
-    <div class="popover-panel" [style.top.px]="panelBottom() === null ? panelTop() : null"
+    <div class="popover-panel" #panelEl [style.top.px]="panelBottom() === null ? panelTop() : null"
          [style.bottom.px]="panelBottom()" [style.left.px]="panelLeft()"
          [style.right.px]="panelRight()" [style.max-height.px]="panelMaxHeight()">
         <ng-content select="[panel]"></ng-content>
