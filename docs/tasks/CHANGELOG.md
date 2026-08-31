@@ -10,6 +10,15 @@ since the attempt still hit the provider). The charge is still taken up front, c
 abuse; this only reverses it when the failure was ours. The cheap 1-credit sync paths (glossary /
 form / profile translate) are left as the row's remainder. Backend 1653, green.
 
+## 2026-08-31 — Sprint v0.2.0, batch twelve: the scalable language menu
+
+**T-350 (menu built)** — `app-language-menu`, a searchable popover over every content language
+with its endonym, a Pro lock on the ones Free cannot reach and the caller-supplied has-content /
+stale marks; it replaces the flat leaf-tag row that ran off the edge as languages piled up (the
+screenshot-4 concern). The editor's add-translation control uses it now; the other call sites
+(glossary tabs, settings signature pick, cross-links, form chips) stay a per-site swap on the
+board. Checks: frontend 496, density/contrast/icons green.
+
 ## 2026-08-31 — Sprint v0.2.0, batch eleven: the feedback channel (T-191, ADR-232)
 
 **T-191 (closed)** — feedback is a stored owner-scoped entity, not email: `FeedbackEntry`

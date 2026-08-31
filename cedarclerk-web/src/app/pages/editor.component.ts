@@ -25,6 +25,7 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { GlossaryTermFormComponent } from '../shared/glossary-term-form.component';
 import { PlanLockComponent } from '../shared/plan-lock.component';
 import { LocationInputComponent } from '../shared/location-input.component';
+import { LanguageMenuComponent } from '../shared/language-menu.component';
 import { DraftGlossaryTerm, GlossaryService, GlossaryTermInput } from '../core/glossary.service';
 import { NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, CompressionLevel, UpdatePreview, PreflightLanguage } from '../core/posts.service';
@@ -230,7 +231,7 @@ interface UploadItem {
     selector: 'app-editor',
     imports: [IconComponent, BrandIconComponent, FormsModule, ZonedDatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, ModalComponent, TagPickerComponent, FolderPickerComponent, SeriesPickerComponent, MediaPickerComponent, FormRefComponent, GlossaryTermFormComponent,
         WorktopComponent, ShelfPanelComponent, SpecRowComponent, LeafTagComponent, StampBadgeComponent,
-        DocumentOutlineComponent, PlanLockComponent, LocationInputComponent],
+        DocumentOutlineComponent, PlanLockComponent, LocationInputComponent, LanguageMenuComponent],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
 })
@@ -2203,6 +2204,16 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     /** For the export window's one-line note — nine of these as chips drowned the two real ones. */
     missingLanguagesLabel(): string {
         return this.missingLanguages().map(l => l.toUpperCase()).join(', ');
+    }
+
+    /** T-350 — every content language for the scalable menu: which have a version, which are stale. */
+    langMenuItems(): { code: string; hasContent: boolean; stale: boolean }[] {
+        const have = this.translations();
+        return CONTENT_LANGUAGES.map(code => ({
+            code,
+            hasContent: code === this.primaryLanguage || !!have[code],
+            stale: code !== this.primaryLanguage && !!have[code] && this.isStale(code),
+        }));
     }
 
     // The primary version was edited after this translation was last touched - probably needs
