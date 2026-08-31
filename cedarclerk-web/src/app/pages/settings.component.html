@@ -76,6 +76,21 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                     </div>
                 </div>
 
+                <!--T-344 — who the author is lives here; Header slots below keeps only which
+                values a post's subtitle shows. These three used to sit among the slots.-->
+                <div class="field-group">
+                    <label for="cc-author-name">{{ t().settings.headerSlots.authorName }}</label>
+                    <input id="cc-author-name" [(ngModel)]="authorDisplayNameText" [placeholder]="t().settings.headerSlots.authorNamePlaceholder">
+                </div>
+                <div class="field-group">
+                    <label for="cc-profile-url">{{ t().settings.headerSlots.profileUrl }}</label>
+                    <input id="cc-profile-url" [(ngModel)]="profileUrlText" placeholder="https://example.com">
+                </div>
+                <div class="field-group">
+                    <label for="cc-profile-location">{{ t().settings.headerSlots.location }}</label>
+                    <input id="cc-profile-location" [(ngModel)]="profileLocationText" [placeholder]="t().settings.headerSlots.locationPlaceholder">
+                </div>
+
                 <div class="field-group">
                     <label for="cc-sig">{{ t().settings.profile.signature }} @if (!hasProSignature()) { <app-plan-lock tier="pro" /> }</label>
                     @if (hasProSignature()) {
@@ -169,19 +184,6 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
             <section id="sec-header-slots" class="settings-card">
                 <h2>{{ t().settings.headerSlots.title }}</h2>
                 <p class="field-hint">{{ t().settings.headerSlots.hint }}</p>
-
-                <div class="field-group">
-                    <label for="cc-author-name">{{ t().settings.headerSlots.authorName }}</label>
-                    <input id="cc-author-name" [(ngModel)]="authorDisplayNameText" [placeholder]="t().settings.headerSlots.authorNamePlaceholder">
-                </div>
-                <div class="field-group">
-                    <label for="cc-profile-url">{{ t().settings.headerSlots.profileUrl }}</label>
-                    <input id="cc-profile-url" [(ngModel)]="profileUrlText" placeholder="https://example.com">
-                </div>
-                <div class="field-group">
-                    <label for="cc-profile-location">{{ t().settings.headerSlots.location }}</label>
-                    <input id="cc-profile-location" [(ngModel)]="profileLocationText" [placeholder]="t().settings.headerSlots.locationPlaceholder">
-                </div>
 
                 <div class="field-group">
                     <label for="cc-slot-1">{{ t().settings.headerSlots.slot(1) }}</label>

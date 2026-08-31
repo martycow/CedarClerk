@@ -33,7 +33,6 @@ six milestones (SEP–DEC). Naming and pricing decisions stay with Marty through
 - [ ] T-340 Editor toolbar usability — buttons blend into the background; bolder icon strokes, balance design against function #editor #ui P2
 - [ ] T-341 Remaining unclamped fly-outs — the inspector's popovers, the right-click term menu and the `[[` suggester are clamped now; still open by the same audit: `.lang-add-menu` (posts-manager forms shelf — absolute, also clipped by the shelf's own overflow), the rail-header project switcher and the hook-rail tray panel near screen edges #ui P3
 - [ ] T-343 Pictograms over prose — too much hint text; cut some, replace the rest with pictograms, pictures, schemes #ux P2
-- [ ] T-344 Header Slots keeps only slots — profile info (avatar, cross-links) moves to Profile #settings #ui P2
 - [ ] T-345 Unified location picker — location is a profile's or a document's (a trip); one convenient menu instead of a bare input #ui P2
 - [ ] T-346 Profile settings screen design pass #settings #ui P2
 - [ ] T-347 Appearance covers the whole interface — display settings beyond the editor; customized things converge here #settings #ui P2

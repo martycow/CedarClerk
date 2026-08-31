@@ -16,7 +16,10 @@ computed on `AuthService`. The sweep then covered every AI surface the client dr
 T-349): the editor's retranslate, translate-all, empty-state auto-translate and both right-click
 AI entries, the glossary's translate-all and per-term translate, and the form preset's
 per-language translate chip — each disabled with a gold lock on a plan below Pro+. A by-eye pass
-over the locks is on the TASKS checklist. **T-341 (the reported cases)** — an audit found the popover clamp itself was the bug:
+over the locks is on the TASKS checklist. **T-344** — the author-name, profile-URL and location
+fields moved from Header slots into the Profile card under the avatar; Header slots keeps only the
+three slot selects, exactly the split screenshot 5 asked for. The i18n keys stay under
+`settings.headerSlots.*` until T-346 renames them with the profile redesign. **T-341 (the reported cases)** — an audit found the popover clamp itself was the bug:
 `app-popover` clamped the left edge against a literal 252 while real panels measure 278, so
 inspector fly-outs hung off the right edge; it now re-clamps after render against the panel's
 measured width and caps height at the viewport. The two genuinely unclamped menus — the sheet's
