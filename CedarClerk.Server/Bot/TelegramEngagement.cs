@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 namespace CedarClerk.Server.Bot;
 
@@ -33,8 +34,18 @@ public static class TelegramEngagement
     /// </summary>
     public static async Task<bool> ApplyCommentAsync(CedarDbContext db, Message message)
     {
+        // T-359 (audit finding 2) — a real comment lives in the channel's linked discussion
+        // group, which is a supergroup. Without this, any stranger could forward a connected
+        // channel's post into their OWN private chat with the bot, reply to it, and inflate the
+        // owner's comment count. A private chat (and a channel) is never a discussion group.
+        if (message.Chat.Type != ChatType.Supergroup) return false;
+
         // The bot's own replies are not comments, and neither is the automatic forward itself.
         if (message.ReplyToMessage is not { } repliedTo || message.IsAutomaticForward) return false;
+
+        // The reply must be to the automatic forward Telegram itself posts at the top of every
+        // comment thread — not to an arbitrary forward a user pasted in to fake a thread root.
+        if (!repliedTo.IsAutomaticForward) return false;
 
         // Bot API 7 replaced forward_from_message_id with forward_origin; a channel post forwarded
         // into the discussion group is the one origin kind that names a message id.

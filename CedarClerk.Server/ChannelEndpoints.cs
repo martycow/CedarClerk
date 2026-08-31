@@ -65,6 +65,19 @@ public static class ChannelEndpoints
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var account = await db.Users.FirstAsync(u => u.Id == uid);
+
+            // T-359 (audit finding 1) — the bot being an admin is not enough: the *caller* must
+            // be an admin/creator of this chat too, or any account could claim a channel the
+            // shared bot was added to by its real owner. Telegram's membership is the authority,
+            // and the caller has to have linked their Telegram for us to ask.
+            if (account.TelegramUserId is not { } callerTgId)
+                return Results.BadRequest(new { error = ErrorMessages.LinkTelegramBeforeChannel });
+            ChatMember callerMember;
+            try { callerMember = await bot.Client.GetChatMember(chat.Id, callerTgId); }
+            catch (Exception) { return Results.BadRequest(new { error = ErrorMessages.NotChannelAdmin }); }
+            if (!BotChatAccess.IsAdminOrCreator(callerMember))
+                return Results.BadRequest(new { error = ErrorMessages.NotChannelAdmin });
+
             var tier = SubscriptionPlanHelper.CheckPlanExpiration(account.PlanTier, account.PlanExpiresAt, DateTime.UtcNow);
             var channelCount = await db.Channels.CountAsync(c => c.OwnerId == uid);
             if (!PlanLimitations.CanConnectAnotherChannel(tier, channelCount))
@@ -249,20 +262,32 @@ public static class ChannelEndpoints
         // discover chats the bot was already in before this feature started tracking
         // my_chat_member updates — for those, connecting still works the old way (type
         // @username/chat id manually).
-        group.MapPost("/refresh-known-chats", async (CedarDbContext db, TelegramBotService bot, MediaPaths media, ILogger<Channel> logger) =>
+        group.MapPost("/refresh-known-chats", async (ClaimsPrincipal user, CedarDbContext db, TelegramBotService bot, MediaPaths media, ILogger<Channel> logger) =>
         {
             if (!bot.IsRunning)
                 return Results.Json(new { error = ErrorMessages.BotNotRunningNoToken }, statusCode: StatusCodes.Status503ServiceUnavailable);
 
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var telegramUserId = await db.Users.Where(u => u.Id == uid).Select(u => u.TelegramUserId).FirstAsync();
+
             // The connected channels' pictures ride along: this is the button a reader presses
             // when the list looks stale, and a stale picture is one of the ways it looks stale.
+            // db.Channels is tenant-filtered, so this is already only the caller's own channels.
             foreach (var channel in await db.Channels.ToListAsync())
             {
                 channel.AvatarFetchedAt = null;
                 await ChannelAvatar.RefreshAsync(bot.Client, channel, media.Dir, logger);
             }
 
-            var known = await db.BotKnownChats.ToListAsync();
+            // T-359 (audit finding 4) — was a walk of every BotKnownChat by any authenticated
+            // account, making 2-3 shared-token Bot API calls per row (a flood-limit lever) and
+            // latching other owners' rows to BotCanPost=false on a transient failure. Bounded to
+            // the chats where the caller's own linked Telegram is an admin; unlinked → nothing.
+            var known = telegramUserId is null
+                ? new List<BotKnownChat>()
+                : await db.BotKnownChats
+                    .Where(k => db.BotKnownChatAdmins.Any(a => a.BotKnownChatId == k.Id && a.TelegramUserId == telegramUserId))
+                    .ToListAsync();
             foreach (var chat in known)
             {
                 try

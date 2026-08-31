@@ -46,6 +46,12 @@ public static class ErrorMessages
     public static string NoMarkdownInZip => Ru("Внутри архива нет ни одного .md-файла.", "No .md file found inside the zip.");
     public static string NoStripeSubscription => Ru("На этом аккаунте нет подписки Stripe.", "No Stripe subscription on this account");
     public static string ChannelNotFoundOrNoAccess => Ru("Канал не найден или нет доступа к нему.", "No TG-channel was found or no access to that channel");
+    public static string LinkTelegramBeforeChannel =>
+        Ru("Сначала привяжите свой Telegram в Настройках → Интеграции — так мы проверим, что канал ваш.",
+           "Link your Telegram in Settings → Integrations first — that is how we confirm the channel is yours.");
+    public static string NotChannelAdmin =>
+        Ru("Вы не администратор этого канала — подключить можно только свой.",
+           "You are not an administrator of this channel — you can only connect your own.");
     public static string NoAccountWithEmail => Ru("Аккаунта с такой почтой нет.", "No account with that email.");
     public static string NoSuchInviteCode => Ru("Такого инвайт-кода нет.", "No such invite code");
     public static string NoTermsInLanguage => Ru("На этом языке терминов нет.", "No terms in this language");

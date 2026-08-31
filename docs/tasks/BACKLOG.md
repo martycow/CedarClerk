@@ -34,7 +34,7 @@ six milestones (SEP–DEC). Naming and pricing decisions stay with Marty through
 - [ ] T-356 Dialogue editor verdict — unfinished and unclear why a regular blogger needs it; decide its fate #product #decision P3
 - [ ] T-357 Advanced Showcase editor — block-based structure with per-block inspector editing, live result, AI helpers; showcase of anything, not only games #showcase #editor P3
 - [ ] T-358 Teams — create a team, invite users, set permissions, restrict and ban; a team always belongs to a user; grows from canvas membership (ADR-217…219) and closes T-301/T-302/T-304 on the way #collaboration P1
-- [ ] T-359 Telegram bot multi-user audit — the bot will sit in many chats; verify it never takes the wrong thing from the wrong chat #telegram #security P2
+- [ ] T-359 remainder — bot audit's lower-risk items — the four confirmed cross-tenant holes are fixed (channel-connect caller check, comment discussion-group guard, owner-scoped media, bounded refresh; `.claude/rules/telegram-bot.md`). Left open by the same audit as low-risk: a transferable Stars invoice link lets a third party gift a plan and leaks the payload account's expiry date in the reply (finding 7); a demoted admin keeps seeing a chat in `/known` until the next `my_chat_member` (finding 6b). Both need a decision, neither is theft #telegram #security P3
 
 ## New features
 

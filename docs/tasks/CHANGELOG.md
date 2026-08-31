@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-08-31 — Sprint v0.2.0, batch eight: the shared-bot audit closes four cross-tenant holes (T-359)
+
+A `very thorough` read of every place the shared Telegram bot maps an update to an account
+(TelegramBotService, ChannelEndpoints, TelegramEngagement, TelegramPublishTarget, the discovery
+cache, Stars payments) found four *confirmed broken* boundaries — the bot sits in every user's
+chats, so each is a security bug before open beta — plus verified-clean flows. Fixed:
+- **Channel connect checked only the bot, not the caller** (worst): `POST /api/channels` now
+  verifies the caller's linked Telegram is an admin/creator of the chat
+  (`BotChatAccess.IsAdminOrCreator`); unlinked accounts cannot connect. Without it any signed-up
+  stranger could claim any channel the bot was added to, then publish/pin/mint-invite/read stats.
+- **Comment counting was forgeable from a private chat**: `TelegramEngagement.ApplyCommentAsync`
+  now requires a `Supergroup` chat and that the replied-to message is Telegram's own automatic
+  forward — three new unit tests (`TelegramEngagementTests`, the module had none).
+- **Media resolved by filename with the tenant filter off in the queue**: both Asset queries in
+  `TelegramPublishTarget` carry `OwnerId == request.OwnerId` now, so a draft can neither read
+  another account's file bytes nor mutate its `TelegramFileId` row.
+- **`refresh-known-chats` walked the global cache for any user**: bounded to the caller's own
+  admin chats (a shared-token flood lever, and it latched others' rows on transient failure).
+Two collisions confirmed settled (one Telegram id per account; one channel claimable by two, which
+the caller-admin check stops a stranger from doing). The bot's shared-boundary rules are now in
+`.claude/rules/telegram-bot.md`; low-risk remainders (transferable Stars invoice, stale-admin
+discovery) stay on the board as T-359's tail. Checks: backend 1654 (4 new), suite green.
+
 ## 2026-08-31 — Sprint v0.2.0, batch seven: prose folds behind the (i)
 
 **T-343 (closed)** — `shared/hint-dot.component.ts`: a small (i) that opens the explainer in a

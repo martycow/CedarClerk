@@ -77,7 +77,12 @@ public class TelegramPublishTarget(
         var referencedNames = CedarPackage.FindReferencedMediaPaths(cedarJson);
         if (referencedNames.Count > 0)
         {
-            var referencedAssets = await db.Assets.Where(a => referencedNames.Contains(a.LocalPath)).ToListAsync(ct);
+            // T-359 (audit finding 3) — owner-scoped: the queue runs under a platform context with
+            // the tenant filter off, so without this predicate a draft could name another account's
+            // asset by file name (blog-published guids are public) and have its bytes uploaded and
+            // its Telegram file_id row mutated.
+            var referencedAssets = await db.Assets
+                .Where(a => a.OwnerId == request.OwnerId && referencedNames.Contains(a.LocalPath)).ToListAsync(ct);
             foreach (var asset in referencedAssets)
                 await AssetEndpoints.EnsureTelegramSafeAsync(asset, media, db, logger, compressionTargetBytes);
 
@@ -343,8 +348,10 @@ public class TelegramPublishTarget(
         var storageChat = await db.Users.Where(u => u.Id == ownerId)
             .Select(u => u.TelegramUserId).FirstOrDefaultAsync(ct);
         var names = refs.Select(r => r.Name).ToList();
+        // Owner-scoped for the same reason as PublishAsync's referenced-asset query (finding 3):
+        // the file_id cache must never be read from or written to another account's Asset row.
         var assets = await db.Assets
-            .Where(a => names.Contains(a.LocalPath) || names.Contains(a.TelegramLocalPath!))
+            .Where(a => a.OwnerId == ownerId && (names.Contains(a.LocalPath) || names.Contains(a.TelegramLocalPath!)))
             .ToListAsync(ct);
         var dirty = false;
 

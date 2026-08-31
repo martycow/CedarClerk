@@ -15,11 +15,20 @@ public static class BotChatAccess
         {
             ChatType.Group or ChatType.Supergroup => member is ChatMemberAdministrator ||
                                                      member.Status == ChatMemberStatus.Creator,
-            
+
             ChatType.Channel => member is ChatMemberAdministrator { CanPostMessages: true } ||
                                 member.Status == ChatMemberStatus.Creator,
-            
+
             _ => false,
         };
     }
+
+    /// <summary>
+    /// T-359 — the *caller* must be an admin or creator of the chat, not merely the bot. Without
+    /// this a signed-up stranger could connect any channel the shared bot was already added to
+    /// (audit finding 1). "Admin or creator" — the same bar the caller needs to have added the
+    /// bot in the first place, and Telegram's own membership is the authority.
+    /// </summary>
+    public static bool IsAdminOrCreator(ChatMember member) =>
+        member is ChatMemberAdministrator || member.Status == ChatMemberStatus.Creator;
 }
