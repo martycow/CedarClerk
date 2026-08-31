@@ -39,6 +39,19 @@ public class PlanLimitationsTests
         Assert.Equal(expected, PlanLimitations.HasCustomSignature(tier));
     }
 
+    [Theory]
+    [InlineData(PlanTiers.Free, "en", true)]
+    [InlineData(PlanTiers.Free, "ja", true)]
+    [InlineData(PlanTiers.Free, "ru", false)]
+    [InlineData(PlanTiers.Free, "de", false)]
+    [InlineData(PlanTiers.Pro, "ru", true)]
+    [InlineData(PlanTiers.ProPlus, "ka", true)]
+    [InlineData(PlanTiers.Forever, "be", true)]
+    public void Content_languages_beyond_en_and_ja_are_pro(PlanTiers tier, string language, bool expected)
+    {
+        Assert.Equal(expected, PlanLimitations.HasContentLanguage(tier, language));
+    }
+
     [Fact]
     public void Free_tier_always_gets_the_fixed_attribution_regardless_of_stored_signature()
     {

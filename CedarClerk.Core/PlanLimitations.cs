@@ -58,4 +58,15 @@ public static class PlanLimitations
     {
         return tier >= PlanTiers.ProPlus;
     }
+
+    // T-350 — Free keeps English and Japanese; every other content language is a Pro feature.
+    // Gates the *creation* of language versions (translations, glossary terms), never the reading
+    // of what already exists. Literals rather than Languages.* — Core does not reference
+    // Localization, and these two codes are part of the pricing contract now.
+    public static readonly IReadOnlyList<string> FreeContentLanguages = ["en", "ja"];
+
+    public static bool HasContentLanguage(PlanTiers tier, string language)
+    {
+        return tier >= PlanTiers.Pro || FreeContentLanguages.Contains(language);
+    }
 }

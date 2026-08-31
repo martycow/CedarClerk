@@ -114,6 +114,12 @@ public static class GlossaryEndpoints
             if (Validate(req) is { } error) return error;
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            // T-350 — same creation gate as draft translations: a new term in a locked language
+            // needs Pro, an existing one stays editable.
+            var language = ResolveLanguage(req.Language);
+            var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
+            if (!PlanLimitations.HasContentLanguage(tier, language))
+                return Results.Json(new { error = ErrorMessages.LanguageRequiresPro }, statusCode: StatusCodes.Status403Forbidden);
             var term = new GlossaryTerm
             {
                 OwnerId = uid,
@@ -122,7 +128,7 @@ public static class GlossaryEndpoints
                 Aliases = NormalizeAliases(req.Aliases),
                 IsCaseSensitive = req.IsCaseSensitive,
                 ImageUrl = NormalizeImage(req.ImageUrl),
-                Language = ResolveLanguage(req.Language),
+                Language = language,
                 ProjectId = req.ProjectId,
             };
             db.GlossaryTerms.Add(term);

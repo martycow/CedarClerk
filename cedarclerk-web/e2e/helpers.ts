@@ -32,6 +32,15 @@ export async function registerAccount(context: BrowserContext, email: string, pa
         data: { email, password, inviteCode: INVITE_CODE, username },
     });
     expect(res.ok(), `register failed for ${email}: ${res.status()}`).toBeTruthy();
+    // T-328 — a display name is what marks the account as onboarded; without it every guarded
+    // route bounces to /onboarding and no text-based selector below finds its screen.
+    const profile = await context.request.post('/api/auth/profile', {
+        data: {
+            authorDisplayName: 'Smoke Tester', profileUrl: '', profileLocation: '',
+            headerSlot1Type: null, headerSlot2Type: null, headerSlot3Type: null,
+        },
+    });
+    expect(profile.ok(), `onboarding profile save failed for ${email}: ${profile.status()}`).toBeTruthy();
 }
 
 // A draft created through the API, for tests whose subject is not the creation dialog.

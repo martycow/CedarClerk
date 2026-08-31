@@ -24,7 +24,7 @@ import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
 import { PlanLockComponent } from '../shared/plan-lock.component';
 
 type PayMethod = 'stripe' | 'paypal' | 'stars';
-export type SettingsTab = 'profile' | 'account';
+export type SettingsTab = 'profile' | 'account' | 'integrations' | 'billing';
 
 @Component({
     selector: 'app-settings',
@@ -95,14 +95,15 @@ export class SettingsComponent implements OnInit {
 
     languageError = signal<string | null>(null);
 
-    // I12 — two groups rather than one long scroll: "profile" is the author and what publishes
-    // under their name, "account" is the machinery (language, plan, connected services). The
-    // account menu deep-links to the profile half, which is what "opened by clicking the user"
-    // meant; the topbar's Settings button still lands on the general page.
+    // I12 split profile from the machinery; T-348 splits the machinery again: everything about
+    // integrations and social networks is one tab, everything paid is another, and "account"
+    // keeps what is neither (the UI language). The account menu still deep-links to profile.
     tab = signal<SettingsTab>('profile');
     tabItems = computed<IndexTabItem[]>(() => [
         { id: 'profile', label: this.t().settings.tabs.profile },
         { id: 'account', label: this.t().settings.tabs.account },
+        { id: 'integrations', label: this.t().settings.tabs.integrations },
+        { id: 'billing', label: this.t().settings.tabs.billing },
     ]);
 
     billing = signal<BillingStatus | null>(null);
@@ -189,7 +190,7 @@ export class SettingsComponent implements OnInit {
     async ngOnInit() {
         // The account menu links to /settings?tab=profile (I12).
         const requested = this.route.snapshot.queryParamMap.get('tab');
-        if (requested === 'profile' || requested === 'account') this.tab.set(requested);
+        if (requested === 'profile' || requested === 'account' || requested === 'integrations' || requested === 'billing') this.tab.set(requested);
 
         // Coming back from the confirmation link: refresh so the banner disappears rather than
         // waiting for the next full load to notice.
@@ -232,7 +233,7 @@ export class SettingsComponent implements OnInit {
         // previous round trip look like it had done nothing at all.
         const x = this.route.snapshot.queryParamMap.get('x');
         if (x === 'connected' || x === 'error') {
-            this.tab.set('account');
+            this.tab.set('integrations');
             this.xNotice.set(x);
             setTimeout(() => this.jump('sec-integrations'));
         }
@@ -502,6 +503,12 @@ export class SettingsComponent implements OnInit {
 
     jump(id: string) {
         document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    /** T-348 — the X credits note lives on the Integrations tab; the wallet lives on Billing. */
+    goToCredits() {
+        this.tab.set('billing');
+        setTimeout(() => this.jump('sec-credits'));
     }
 
     // Interface language (B26, ADR-044). Switches the UI immediately, then persists to the

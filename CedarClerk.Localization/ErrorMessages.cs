@@ -204,6 +204,9 @@ public static class ErrorMessages
     public static string PaypalNotConfigured => Ru("PayPal ещё не подключён.", "PayPal is not wired up yet.");
     public static string AutoTranslateProPlus =>
         Ru("Автоперевод доступен на тарифе Pro+.", "Auto-translate is a Pro+ feature. Upgrade to use it.");
+    public static string LanguageRequiresPro =>
+        Ru("Этот язык доступен на Pro — Free ограничен английским и японским.",
+           "This language is a Pro feature — Free is limited to English and Japanese.");
     public static string AutoTranslateNoProvider =>
         Ru("Настроенный провайдер не умеет автоперевод.", "Auto-translate is not available with the configured provider");
 

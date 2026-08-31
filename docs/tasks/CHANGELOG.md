@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-08-31 — Sprint v0.2.0, batch three: the onboarding door, the language paywall, four settings tabs
+
+Marty ruled T-329 (the blog address is shown, never assignable) and confirmed T-350's Free set, so
+the batch had no open decisions. **T-328/T-329** — `/onboarding`, a fifth door outside the shell:
+display name (required — it doubles as the "went through onboarding" mark, no separate flag),
+main social/site URL, location, and the blog address as a read-only linked block. `authGuard`
+bounces any named-less account there with `returnUrl`; `onboardingGuard` keeps named accounts out;
+register's existing navigate-to-editor now lands on the door via the guard, and the e2e
+`registerAccount` helper saves a profile right after registering so the suite never meets it.
+**T-350 (the paywall half)** — `PlanLimitations.FreeContentLanguages = [en, ja]` and
+`HasContentLanguage` (≥Pro passes everything): enforced where language versions are *created* —
+a new `DraftTranslation` (existing rows stay editable whatever the plan) and a new glossary term —
+each answering 403 `ErrorMessages.LanguageRequiresPro`. Deliberately ungated: a draft's own
+primary language, so a Free author still writes in their language; the gate is on the
+multi-language machinery. Client: the editor's add-language menu disables locked entries with a
+silver lock, the glossary term form labels locked options; `AuthService.hasContentLanguage`
+mirrors the server. The unified language menu stays on the board as the row's remainder.
+**T-348** — Settings goes to four tabs: Profile, Account (UI language), Integrations, Billing
+(subscription + credits). The X OAuth callback and the editor's three connect links land on
+Integrations; the integrations-side credits note crosses tabs via `goToCredits()`. Checks:
+backend 1648 (7 new `HasContentLanguage` cases), frontend 496, all green.
+
 ## 2026-08-31 — Sprint v0.2.0, batch two: Pro+ by name, the plan locks, the popup clamps
 
 **The tier is called Pro+ now** — every user-facing "Pro Plus" renamed across both dictionaries,

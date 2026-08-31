@@ -18,11 +18,9 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
             <app-button variant="paper" size="sm" (clicked)="jump('sec-header-slots')">{{ t().settings.headerSlots.nav }}</app-button>
             <app-button variant="paper" size="sm" (clicked)="jump('sec-cross-links')">{{ t().settings.crossLinks.nav }}</app-button>
             <app-button variant="paper" size="sm" (clicked)="jump('sec-social-links')">{{ t().settings.social.nav }}</app-button>
-            } @else {
-            <app-button variant="paper" size="sm" (clicked)="jump('sec-language')">{{ t().settings.language.nav }}</app-button>
+            } @else if (tab() === 'billing') {
             <app-button variant="paper" size="sm" (clicked)="jump('sec-subscription')">{{ t().settings.subscription.nav }}</app-button>
             <app-button variant="paper" size="sm" (clicked)="jump('sec-credits')">{{ t().settings.credits.nav }}</app-button>
-            <app-button variant="paper" size="sm" (clicked)="jump('sec-integrations')">{{ t().settings.integrations.nav }}</app-button>
             }
         </nav>
 
@@ -332,7 +330,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
             }
 
             <!-- ============ SUBSCRIPTION ============ -->
-            @if (tab() === 'account') {
+            @if (tab() === 'billing') {
             <section id="sec-subscription" class="settings-card">
                 <h2>{{ t().settings.subscription.title }}</h2>
 
@@ -437,7 +435,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
             }
 
             <!-- ============ CREDITS (ADR-092) ============ -->
-            @if (tab() === 'account') {
+            @if (tab() === 'billing') {
             <section id="sec-credits" class="settings-card">
                 <h2>{{ t().settings.credits.title }}</h2>
                 <p class="field-hint">{{ t().settings.credits.hint }}</p>
@@ -552,7 +550,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
             }
 
             <!-- ============ INTEGRATIONS ============ -->
-            @if (tab() === 'account') {
+            @if (tab() === 'integrations') {
             <section id="sec-integrations" class="settings-card">
                 <h2>{{ t().settings.integrations.title }}</h2>
                 <p class="field-hint">{{ t().settings.integrations.hint }}</p>
@@ -771,7 +769,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                             @if (credits(); as c) {
                             <p class="field-hint">
                                 {{ t().settings.integrations.xCreditNote(c.balance) }}
-                                <app-button variant="paper" size="sm" (clicked)="jump('sec-credits')">{{ t().settings.integrations.xCreditsLink }}</app-button>
+                                <app-button variant="paper" size="sm" (clicked)="goToCredits()">{{ t().settings.integrations.xCreditsLink }}</app-button>
                             </p>
                             }
                             @if (xError()) { <p class="field-error">{{ xError() }}</p> }

@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { LocaleService } from '../core/i18n/locale.service';
 import { AssetsService } from '../core/assets.service';
 import { GlossaryService, GlossaryTermInput } from '../core/glossary.service';
+import { AuthService } from '../core/auth.service';
 import { CONTENT_LANGUAGES, DEFAULT_PRIMARY_LANGUAGE } from '../core/languages';
 import { IconComponent } from './icon.component';
 import { ButtonComponent } from '../bench/forms/button.component';
@@ -27,8 +28,13 @@ import { ButtonComponent } from '../bench/forms/button.component';
             </label>
             <label class="form-field">
                 <span class="form-field-label">{{ t().glossary.language }}</span>
+                <!--T-350 — a locked language is visible and marked, never silently absent.-->
                 <select class="chat-input" [value]="language()" (change)="language.set($any($event.target).value)">
-                    @for (l of contentLanguages; track l) { <option [value]="l">{{ l.toUpperCase() }}</option> }
+                    @for (l of contentLanguages; track l) {
+                    <option [value]="l" [disabled]="!auth.hasContentLanguage(l)">
+                        {{ l.toUpperCase() }}{{ auth.hasContentLanguage(l) ? '' : ' · ' + t().planLock.pro }}
+                    </option>
+                    }
                 </select>
             </label>
         </div>
@@ -91,6 +97,7 @@ export class GlossaryTermFormComponent implements OnInit {
     private locale = inject(LocaleService);
     private assets = inject(AssetsService);
     private glossary = inject(GlossaryService);
+    auth = inject(AuthService);
     t = this.locale.t;
     readonly contentLanguages = CONTENT_LANGUAGES;
 

@@ -102,6 +102,24 @@ export const en = {
         legalAnd: 'and',
         legalPrivacy: 'Privacy Policy',
     },
+    // T-328 — the mandatory first stop after registration; the guard sends every account here
+    // until a display name is saved.
+    onboarding: {
+        title: 'Introduce yourself',
+        tagline: 'One minute of setup — readers see this under every post.',
+        displayName: 'Display name',
+        displayNamePlaceholder: 'e.g. Alex Writer',
+        profileUrl: 'Main social network or website',
+        profileUrlPlaceholder: 'https://…',
+        location: 'Location',
+        locationPlaceholder: 'e.g. Lisbon, Portugal',
+        blogLabel: 'Your blog',
+        // T-329 — shown, not assignable: the address was fixed by the account name at registration.
+        blogHint: 'This address is already yours — every post you publish to the blog appears there.',
+        submit: 'Save and start',
+        nameRequired: 'A display name is required.',
+        failed: 'Could not save — try again.',
+    },
     // The desktop-app page (/download) — public and outside the shell, like the legal pages.
     download: {
         title: 'Cedar Clerk for the desktop',
@@ -1999,6 +2017,8 @@ export const en = {
         tabs: {
             profile: 'Profile',
             account: 'Account',
+            integrations: 'Integrations',
+            billing: 'Billing',
         },
         saved: 'Saved',
         saveProfile: 'Save profile',

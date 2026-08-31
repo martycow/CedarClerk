@@ -187,7 +187,7 @@ A wooden board with paper laid on it (ADR-185): the two tabs stand on the board'
 
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|
-| Profile / Account tabs | `app-index-tabs.settings-tabs` | tab | The page's two halves (I12): what gets published under the author's name, and the machinery | N/A | Was `.settings-tabs` buttons; `?tab=` is unchanged, and so are all 17 `sec-*` ids the nav jumps to |
+| Profile / Account / Integrations / Billing tabs | `app-index-tabs.settings-tabs` | tab | The page's four groups: what publishes under the author's name (I12), the machinery (UI language), everything connected (T-348), everything paid (T-348) | N/A | `?tab=` accepts all four; the X OAuth callback and the editor's connect links land on `integrations`, the account menu still deep-links `account`; all `sec-*` ids survive, `sec-credits` reached across tabs via `goToCredits()` |
 | Section index | `nav.anchor-rail`, one `app-button variant="paper"` per section | chip-row | Jumps to each section | N/A | A sticky left column beside the sheet rather than a row above it. Profile order follows the sheet: Profile, Header slots, Cross-links, Social links. `jump()` is a `scrollIntoView` that changes no URL, so these remain buttons rather than links |
 | Avatar "change" control | `sec-profile`, a `<label>` wrapping a hidden `<input type="file">` | button | Picks a new avatar image | Needed & present — `avatarBusy()` | **The one deliberate duplicate of the pine button face in page CSS**, and commented as such at the rule: a `<button>` cannot open a file dialog, so the control has to be a `<label>` and cannot be an `app-button` |
 | UI / signature / cross-link language pickers | three `app-leaf-tag` groups | tag / filter | Which language each of the three settings applies to | N/A | Leaf tags rather than pressed buttons for the same reason as the anchor chips |
@@ -299,6 +299,17 @@ The tab body is paper (ADR-154) and every rule in the sheet is scoped to that, s
 | Error message | login `.error`; register `.error` | toast (inline) | Login: generic "Invalid email or password" (doesn't distinguish network vs auth failure). Register: server-provided, more specific | N/A | |
 | Register/Log in cross-link | both, `.auth-footer a[routerLink]` | link | Nav between the two | N/A | Login page notes "invite required" |
 | Terms/Privacy links | register, `.auth-footer` | link | Nav to `/terms`/`/privacy` | N/A | Required by consent copy but not gated by a checkbox |
+
+## `onboarding.component` (`cedarclerk-web/src/app/pages/onboarding.component.{ts,html,css}`)
+
+The mandatory first stop after registration (T-328), a fifth door outside the shell in the login/register family: the guard in `auth.guard.ts` sends any authenticated account without a display name here, and `returnUrl` rides along the way it does on `/login`. The display name doubles as the "went through onboarding" mark — no separate flag.
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Theme toggle / language switch / auth card | same three pieces as login/register (ADR-166) | — | The door's own chrome | N/A | Same classes, same reasoning |
+| Display name / URL / location inputs | `app-input` ×3 (`#cc-onb-name`, `#cc-onb-url`, `#cc-onb-location`) | input | Who the author is; name is required, the other two optional | N/A | Saved through the same whole-profile POST Settings uses; slot values pass through unchanged |
+| Blog address block | `.blog-address` | readout | T-329 — the blog URL the account already owns, shown and linked, never assignable | N/A | Fixed by the account name at registration; the hint says so |
+| Save and start | `app-button.primary-btn variant="pine"` | button | Saves and navigates to `returnUrl` or `/` | Needed & present — `busy()` | Refuses an empty name with an inline error |
 
 ## `privacy.component` / `terms.component`
 

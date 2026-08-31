@@ -1,6 +1,6 @@
 import { Router, Routes } from '@angular/router';
 import { inject } from '@angular/core';
-import { authGuard } from './core/auth.guard';
+import { authGuard, onboardingGuard } from './core/auth.guard';
 import { adminGuard } from './core/admin.guard';
 import { guestGuard } from './core/guest.guard';
 import { indieDevGuard } from './core/indiedev.guard';
@@ -22,6 +22,12 @@ export const routes: Routes = [
         path: 'register',
         loadComponent: () => import('./pages/register.component').then(m => m.RegisterComponent),
         canActivate: [guestGuard],
+    },
+    // T-328 — the mandatory first stop after registration, outside the shell like the other doors.
+    {
+        path: 'onboarding',
+        loadComponent: () => import('./pages/onboarding.component').then(m => m.OnboardingComponent),
+        canActivate: [onboardingGuard],
     },
     { path: 'terms', loadComponent: () => import('./pages/terms.component').then(m => m.TermsComponent) },
     { path: 'privacy', loadComponent: () => import('./pages/privacy.component').then(m => m.PrivacyComponent) },

@@ -9,6 +9,10 @@ export const CONTENT_LANGUAGES = ['ru', 'en', 'de', 'fr', 'es', 'ja', 'uk', 'be'
 // is a translation depends on the draft (ADR-065).
 export const DEFAULT_PRIMARY_LANGUAGE = 'ru';
 
+// T-350 — the languages Free keeps; the rest need Pro. Mirrors
+// PlanLimitations.FreeContentLanguages, and the server is the authority.
+export const FREE_CONTENT_LANGUAGES = ['en', 'ja'];
+
 // Endonyms — a language name is only useful to someone who reads it, so these are never
 // translated. Shown next to the two-letter tab codes (DB3.1: flag emoji don't render on Windows).
 export const LANGUAGE_ENDONYMS: Record<string, string> = {

@@ -21,8 +21,6 @@ The final polish sprint before open beta. Source: the 31.08 INPUT_PROMPT (10 ann
 + 21 thoughts); the visual plan groups these with T-152/T-153/T-172/T-190/T-191/T-003/T-293 into
 six milestones (SEP–DEC). Naming and pricing decisions stay with Marty throughout.
 
-- [ ] T-328 Mandatory onboarding — first required action after registration: display name, main social/site URL, location; stored under Settings → Profile; shows/assigns the blog address (see T-329) #growth #ux P1
-- [ ] T-329 Blog address visible and assignable — the user cannot learn their own blog URL today; surface it in Profile/onboarding and decide whether it can be changed #growth #blog #decision P1
 - [ ] T-331 Preset Manager — project types are presets in fact; one manager for user-created presets of projects, documents, export and the rest; the New-project dialog builds from it (the gamedev-flavoured type blurbs left by T-333 get generalized here too) #product #ui P1
 - [ ] T-332 Projects Hub cards — cards with cover images instead of the cold list #ui P2
 - [ ] T-334 Contrast smalls sweep — the + on New project is fixed (icons on pine now carry the text's relief); walk the rest of the chrome for the same class of near-invisible marks #ui P3
@@ -36,8 +34,7 @@ six milestones (SEP–DEC). Naming and pricing decisions stay with Marty through
 - [ ] T-345 Unified location picker — location is a profile's or a document's (a trip); one convenient menu instead of a bare input #ui P2
 - [ ] T-346 Profile settings screen design pass #settings #ui P2
 - [ ] T-347 Appearance covers the whole interface — display settings beyond the editor; customized things converge here #settings #ui P2
-- [ ] T-348 Settings tabs: Integrations and Billing separate — everything social/integrations in one tab, everything paid in another #settings #ui P2
-- [ ] T-350 Language paywall + unified language menu — Free limited to EN+JA, other languages paid; one menu to display, pick, configure and preview languages that scales past 9 #billing #localization #decision P1
+- [ ] T-350 Unified language menu — the paywall half shipped (Free = EN+JA confirmed 31.08; `PlanLimitations.HasContentLanguage` gates creating translations and glossary terms, locks in the add-language menu and the term form; writing a draft's own primary language is deliberately ungated). What remains is the menu: one place to display, pick, configure and preview languages that scales past 9 — today it is leaf-tag rows and selects in five places #localization #ui P2
 - [ ] T-351 User resources and their economy — credits for posting/AI as a first-class concept, pricing built from it so everything at least breaks even; topbar indicator when finite #billing #product P1
 - [ ] T-352 AI abuse audit — verify every AI feature against user abuse and the money loss it causes; metering, refusal without credits #ai #security P1
 - [ ] T-353 Asset-window unification, remainder — the picker uploads now (the canvas/editor "Insert from library" dead end is closed); still using their own one-off upload flows: the project cover, the showcase gallery, the landing screenshots — decide which of them should open the same window #media #ui P3

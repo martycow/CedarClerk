@@ -34,6 +34,9 @@ Current status: this file's §Notes below; open tasks: the board in `docs/tasks/
 
 ## Live verification
 
+- [ ] Onboarding door (T-328, 31.08) — on a fresh account: register lands on /onboarding, guarded routes bounce there until a display name is saved, the blog address shows read-only (T-329: shown, never assigned), returnUrl survives the detour; an existing account without a display name goes through it once #growth P1
+- [ ] Language paywall (T-350, 31.08) — on Free: the editor's + menu locks everything but EN/JA (silver), the glossary form's locked options are disabled and labeled, and a direct API PUT of a new RU translation answers 403; an existing RU translation stays editable; on Pro everything unlocks #billing P1
+- [ ] Settings tabs (T-348, 31.08) — four tabs; X OAuth callback lands on Integrations, the X credits note crosses to Billing → credits, the account menu still opens Account #settings P2
 - [ ] Plan locks by eye (T-349, 31.08) — on a Free account: silver locks on the signature field/Save and slot 3, gold locks on every AI control (settings translate buttons, editor retranslate/translate-all/auto-translate, right-click AI entries, glossary translate×2, form preset language chip); every locked button inert; on Pro the signature unlocks while AI stays gold; on Pro+ nothing wears a lock #billing P1
 
 Code is written and covered by tests, but never checked by hand or on a device. The UI V2 rows below stay Marty's after the fidelity pass: the audit looked through a capture script, not a person, and its before/after shots live in the session scratchpad only — untracked, so `cedar run` is the way to see them.

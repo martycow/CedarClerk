@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { httpErrorMessage } from './http-error.util';
 import { LocaleService, UiLang } from './i18n/locale.service';
+import { FREE_CONTENT_LANGUAGES } from './languages';
 
 interface MeResponse {
     // Phase 13 — which optional modules this installation runs (ADR-101). Optional in the type
@@ -57,6 +58,11 @@ export class AuthService {
         const t = this.planTier();
         return t === 'ProPlus' || t === 'Forever';
     });
+    // T-350 — the client half of PlanLimitations.HasContentLanguage: Free keeps en and ja.
+    hasContentLanguage(language: string): boolean {
+        const t = this.planTier();
+        return t === 'Pro' || t === 'ProPlus' || t === 'Forever' || FREE_CONTENT_LANGUAGES.includes(language);
+    }
     readonly planExpiresAt = signal<string | null>(null);
     readonly trialUsed = signal(false);
     readonly telegramLinked = signal(false);

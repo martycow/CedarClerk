@@ -168,7 +168,7 @@
                             <app-brand-icon [name]="brandOf(network)" [size]="14"></app-brand-icon>
                             <span class="dest-card-name">{{ microLabels[network] }}</span>
                             <span class="dest-card-meta">{{ t().editor.exportModal.notConnected }}</span>
-                            <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'account' }"
+                            <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'integrations' }"
                                (click)="$event.stopPropagation()">
                                 {{ t().editor.exportModal.connectInSettings }}
                             </a>
@@ -343,7 +343,7 @@
                     }
                     } @else {
                     <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.telegramNoChannel }}</p>
-                    <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'account' }">{{ t().editor.exportModal.openSettings }}</a>
+                    <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'integrations' }">{{ t().editor.exportModal.openSettings }}</a>
                     }
 
                     <!--T-106 — the remedy sits with the problem. Off by default and never automatic:
@@ -551,7 +551,7 @@
                             {{ microLabels[activeNetwork] }}
                         </div>
                         <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.notConnected }}</p>
-                        <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'account' }">{{ t().editor.exportModal.connectInSettings }}</a>
+                        <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'integrations' }">{{ t().editor.exportModal.connectInSettings }}</a>
                     </div>
                     }
                 }
@@ -1600,8 +1600,13 @@
                     <app-popover>
                         <button trigger class="insp-btn" [title]="t().editor.lang.addTranslation">+</button>
                         <div panel class="block-menu">
+                            <!--T-350 — a locked language is offered and refused in one look, not
+                            discovered at the server.-->
                             @for (l of missingLanguages(); track l) {
-                            <button (click)="switchLang(l)">{{ l.toUpperCase() }} · {{ endonym(l) }}</button>
+                            <button (click)="switchLang(l)" [disabled]="!auth.hasContentLanguage(l)">
+                                {{ l.toUpperCase() }} · {{ endonym(l) }}
+                                @if (!auth.hasContentLanguage(l)) { <app-plan-lock tier="pro" /> }
+                            </button>
                             }
                         </div>
                     </app-popover>

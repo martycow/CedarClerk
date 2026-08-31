@@ -1,0 +1,45 @@
+<div class="door">
+    <app-button class="theme-toggle" variant="paper" surface="chrome" size="sm" [title]="t().common.toggleTheme"
+                (clicked)="theme.toggle()">
+        <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="xs" />
+    </app-button>
+
+    <app-paper-card class="auth-card" bright [rotate]="0.4">
+        <div class="auth-header">
+            <app-cedar-logo [size]="28"></app-cedar-logo>
+            <div class="auth-title">{{ t().onboarding.title }}</div>
+            <div class="auth-tagline">{{ t().onboarding.tagline }}</div>
+        </div>
+
+        <app-input inputId="cc-onb-name" [label]="t().onboarding.displayName"
+                   [placeholder]="t().onboarding.displayNamePlaceholder" autocomplete="name"
+                   [value]="displayName" (valueChange)="displayName = $any($event) ?? ''"
+                   (keyup.enter)="submit()" />
+        <app-input inputId="cc-onb-url" type="url" [label]="t().onboarding.profileUrl"
+                   [placeholder]="t().onboarding.profileUrlPlaceholder" autocomplete="url"
+                   [value]="profileUrl" (valueChange)="profileUrl = $any($event) ?? ''"
+                   (keyup.enter)="submit()" />
+        <app-input inputId="cc-onb-location" [label]="t().onboarding.location"
+                   [placeholder]="t().onboarding.locationPlaceholder" autocomplete="off"
+                   [value]="location" (valueChange)="location = $any($event) ?? ''"
+                   (keyup.enter)="submit()" />
+
+        @if (auth.blogUrl(); as blog) {
+        <div class="blog-address">
+            <span class="blog-label">{{ t().onboarding.blogLabel }}</span>
+            <a class="blog-url" [href]="blog" target="_blank" rel="noopener">{{ blog }}</a>
+            <p class="blog-hint">{{ t().onboarding.blogHint }}</p>
+        </div>
+        }
+
+        @if (error()) {
+        <p class="field-error"><app-icon name="warning" size="xs" />{{ error() }}</p>
+        }
+
+        <app-button class="primary-btn" variant="pine" [disabled]="busy()" (clicked)="submit()">
+            {{ busy() ? '…' : t().onboarding.submit }}
+        </app-button>
+
+        <app-lang-switch></app-lang-switch>
+    </app-paper-card>
+</div>

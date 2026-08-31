@@ -982,6 +982,11 @@ public static class DraftEndpoints
 
             if (translation is null)
             {
+                // T-350 — a new language version is where the paywall stands; an existing row
+                // stays editable whatever the plan says today.
+                var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
+                if (!PlanLimitations.HasContentLanguage(tier, lang))
+                    return Results.Json(new { error = ErrorMessages.LanguageRequiresPro }, statusCode: StatusCodes.Status403Forbidden);
                 translation = new DraftTranslation { DraftId = id, Language = lang };
                 db.DraftTranslations.Add(translation);
             }
