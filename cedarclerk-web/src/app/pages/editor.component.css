@@ -2497,3 +2497,11 @@
    .cta-actions and .cta-invalid on the same elements are locator classes only. */
 .cta-row,
 .cta-actions { margin-top: 6px; }
+
+/* T-331 - the export-preset pick in step 2's header. Sized to the chrome band it sits in, not to
+   the body's form fields. */
+.export-destinations .dest-preset {
+    max-width: 190px;
+    padding: 2px var(--space-2);
+    font-size: var(--text-chrome);
+}

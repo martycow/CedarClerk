@@ -154,6 +154,14 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
                 return;
             }
 
+            // T-359 (audit finding 7) — an invoice link is transferable, so the payer is not
+            // necessarily the account named in the payload. Paying for somebody else is a gift and
+            // is honoured; what the stranger must not get back is the account's state, so the
+            // confirmation drops the expiry date and the balance when the two do not match.
+            var paidByOwner = message.From is { } payer && user.TelegramUserId == payer.Id;
+            if (!paidByOwner)
+                logger.LogInformation("Stars payment for user {UserId} paid from Telegram {PayerId}", user.Id, message.From?.Id);
+
             // ADR-092 — a credit purchase, not a plan. A pack by id, or ADR-189's custom amount,
             // which carries the count in the payload because there is no pack to look up.
             if (plan.StartsWith(Consts.Plans.CreditPackPrefix, StringComparison.Ordinal)
@@ -171,7 +179,9 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
                 });
                 await db.SaveChangesAsync();
                 logger.LogInformation("Telegram Stars credits purchase — user {UserId}, {Credits} credits", user.Id, purchasedCredits);
-                await Client.SendMessage(message.Chat, $"Payment received — {purchasedCredits} credits added to your Cedar Clerk balance.");
+                await Client.SendMessage(message.Chat, paidByOwner
+                    ? $"Payment received — {purchasedCredits} credits added to your Cedar Clerk balance."
+                    : $"Payment received — {purchasedCredits} credits added to the Cedar Clerk account this invoice was issued for.");
                 return;
             }
 
@@ -198,7 +208,9 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
             if (plan == Consts.Plans.ProPlus && payment.TelegramPaymentChargeId is not null)
                 await CreditWallet.GrantAsync(db, user.Id, CreditPacks.ProPlusMonthlyCredits, CreditReasons.ProPlusMonthly, payment.TelegramPaymentChargeId);
             logger.LogInformation("Telegram Stars payment — user {UserId} on plan {Plan} until {ExpiresAt}", user.Id, plan, user.PlanExpiresAt);
-            await Client.SendMessage(message.Chat, $"Payment received — your plan is active until {user.PlanExpiresAt:d MMM yyyy} (auto-renews for subscriptions). Enjoy Cedar Clerk!");
+            await Client.SendMessage(message.Chat, paidByOwner
+                ? $"Payment received — your plan is active until {user.PlanExpiresAt:d MMM yyyy} (auto-renews for subscriptions). Enjoy Cedar Clerk!"
+                : "Payment received — the plan was applied to the Cedar Clerk account this invoice was issued for.");
             return;
         }
 

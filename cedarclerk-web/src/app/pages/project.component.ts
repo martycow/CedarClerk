@@ -35,7 +35,8 @@ import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { ModuleTileComponent } from '../bench/worktop/module-tile.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 import { WorktopComponent } from '../bench/worktop/worktop.component';
-import { AssetsService } from '../core/assets.service';
+import { AssetsService, LibraryAsset } from '../core/assets.service';
+import { MediaPickerComponent } from '../shared/media-picker.component';
 
 /** One plate on the wall. `link` is the screen it opens — ADR-160 rule 1: no door, no plate. */
 interface ModulePlate {
@@ -65,7 +66,7 @@ const MS_PER_DAY = 86_400_000;
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, RouterLink, ModalComponent,
         WorktopComponent, ShelfPanelComponent, ModuleTileComponent, SpecRowComponent,
-        StampBadgeComponent, TaskTagComponent, ButtonComponent,
+        StampBadgeComponent, TaskTagComponent, ButtonComponent, MediaPickerComponent,
     ],
     templateUrl: 'project.component.html',
     styleUrls: ['project.component.css'],
@@ -106,7 +107,7 @@ export class ProjectComponent implements OnDestroy {
     editName = signal('');
     editDescription = signal('');
     editCoverUrl = signal<string | null>(null);
-    editCoverFile = signal<File | null>(null);
+    coverPickerOpen = signal(false);
     /** T-296/T-297 — the public page's counters; null until they arrive, and on a page with none. */
     showcaseStats = signal<ShowcaseStats | null>(null);
     actionError = signal<string | null>(null);
@@ -330,7 +331,6 @@ export class ProjectComponent implements OnDestroy {
         this.editName.set(project.name);
         this.editDescription.set(project.description);
         this.editCoverUrl.set(project.coverUrl);
-        this.editCoverFile.set(null);
         this.actionError.set(null);
         this.confirmDelete = false;
         this.editing.set(true);
@@ -351,9 +351,7 @@ export class ProjectComponent implements OnDestroy {
         this.busy.set(true);
         this.actionError.set(null);
         try {
-            let coverUrl = this.editCoverUrl();
-            const coverFile = this.editCoverFile();
-            if (coverFile) coverUrl = (await this.assets.upload(coverFile)).url;
+            const coverUrl = this.editCoverUrl();
             await this.api.update(project.id, name, this.editDescription().trim(), coverUrl);
             this.project.set({
                 ...project,
@@ -372,14 +370,15 @@ export class ProjectComponent implements OnDestroy {
         }
     }
 
-    chooseCover(event: Event) {
-        const input = event.target as HTMLInputElement;
-        this.editCoverFile.set(input.files?.[0] ?? null);
-        input.value = '';
+    // T-353 — the cover opens the one asset window instead of a bare file input. The picker
+    // uploads as well as picks, so nothing is lost by dropping the private flow: a file chosen
+    // there lands in the library, which is where a project's logo belongs anyway.
+    pickedCover(asset: LibraryAsset) {
+        this.editCoverUrl.set(`/media/${asset.localPath}`);
+        this.coverPickerOpen.set(false);
     }
 
     removeCover() {
-        this.editCoverFile.set(null);
         this.editCoverUrl.set(null);
     }
 

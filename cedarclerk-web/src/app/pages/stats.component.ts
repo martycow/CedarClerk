@@ -77,6 +77,40 @@ interface Normalized {
     values: Map<string, Partial<Record<MetricKey, number>>>;
 }
 
+/**
+ * T-338 — a readout tile's sparkline: the metric's readings across the window, as one polyline in a
+ * fixed 64x18 box. Returns null below three readings, where a line would say more than the data
+ * does — two points always draw a confident straight run whichever way they fell.
+ *
+ * A flat series is drawn on the middle line rather than at the bottom: the tile answers "which way
+ * is this going", and zero movement is a horizon, not a floor.
+ */
+const SPARK_W = 64;
+const SPARK_H = 18;
+const SPARK_MIN_POINTS = 3;
+
+function sparkPath(source: Source, metric: MetricKey): string | null {
+    const points: number[] = [];
+    for (const day of source.days) {
+        const value = source.values.get(day)?.[metric];
+        if (value !== undefined) points.push(value);
+    }
+    if (points.length < SPARK_MIN_POINTS) return null;
+
+    const min = Math.min(...points);
+    const max = Math.max(...points);
+    const span = max - min;
+    const stepX = SPARK_W / (points.length - 1);
+
+    return points
+        .map((value, i) => {
+            const x = i * stepX;
+            const y = span === 0 ? SPARK_H / 2 : SPARK_H - ((value - min) / span) * SPARK_H;
+            return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
+        })
+        .join(' ');
+}
+
 // Snapshots are one reading per day, but the blog takes today's on demand while the nightly job
 // takes the rest, so two readings can land on one display-zone day; the later one wins.
 function normalize(snapshots: readonly unknown[], tracked: readonly MetricKey[]): Normalized {
@@ -233,6 +267,9 @@ export class StatsComponent implements OnInit {
             color: seriesColor(source.slot),
             value: source.current[metric] ?? null,
             delta: source.delta[metric] ?? null,
+            // T-338 — the tile's own shape of the window it reports. Drawn from the series the
+            // chart already holds, so it costs no request and cannot disagree with the chart.
+            spark: sparkPath(source, metric),
         }));
     });
 

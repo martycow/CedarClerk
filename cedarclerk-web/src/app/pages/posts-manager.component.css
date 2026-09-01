@@ -185,7 +185,12 @@
     border-radius: var(--radius-sm);
     background: var(--alt);
     color: var(--accent);
+    overflow: hidden;
 }
+
+/* The same plate, carrying the document's first picture instead of its type icon. */
+.post-card-type.has-thumb { background: var(--alt); }
+.post-card-type.has-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .post-card-title {
     display: flex;
@@ -238,15 +243,6 @@
 
 .action-row + .btn-ghost { margin-top: var(--space-3); }
 
-/* A filter over the list it sits on, drawn at the compact box the tiles above it take rather than
-   at a paper field's — a full-height field was the tallest thing in the column. */
-.post-search {
-    min-height: var(--hit-surface, var(--hit-chrome));
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-stamp);
-    font-family: var(--font-mono);
-    font-size: var(--text-chrome-sm);
-}
 
 .post-list {
     display: flex;
@@ -255,18 +251,17 @@
     padding: var(--space-2);
 }
 
-/* The search field stays pinned at the top of the shelf's scroller. */
+/* T-337 — the bench search field, pinned at the top of the shelf's scroller. The field's own face
+   (box, stock, mono type) is the component's under `dense`; what stays here is where it sits and
+   the rule that separates it from the list below. */
 .post-search {
     position: sticky;
     top: calc(var(--space-2) * -1);
     z-index: 1;
     margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) var(--space-1);
     padding: var(--space-2) var(--space-3);
-    border: none;
     border-bottom: 1px solid var(--border);
-    border-radius: 0;
     background: var(--sheet);
-    width: auto;
 }
 
 .detail-field {

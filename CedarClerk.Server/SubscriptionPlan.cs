@@ -64,6 +64,19 @@ public static class SubscriptionPlan
     public static async Task RefundAiAsync(CedarDbContext db, string userId, int credits) =>
         await CreditWallet.GrantAsync(db, userId, credits, CreditReasons.AiRefund, Guid.NewGuid().ToString("N"));
 
+    /// <summary>
+    /// The synchronous counterpart of the jobs' onFailure hook: hand the credit back and answer
+    /// the failure in one step, so a call site cannot refund without failing or fail without
+    /// refunding. Used by the 1-credit paths, which have no job to hang a callback on.
+    /// </summary>
+    public static async Task<IResult> RefundAiAndFailAsync(
+        CedarDbContext db, string userId, int credits, string error,
+        int statusCode = StatusCodes.Status502BadGateway)
+    {
+        await RefundAiAsync(db, userId, credits);
+        return Results.Json(new { error }, statusCode: statusCode);
+    }
+
     /// <summary>The refusal to return, or null when the call is paid for.</summary>
     public static async Task<IResult?> ChargeAiOrRefuseAsync(CedarDbContext db, string userId, int credits) =>
         await TryChargeAiAsync(db, userId, credits) switch

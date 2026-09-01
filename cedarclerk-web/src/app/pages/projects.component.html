@@ -106,13 +106,28 @@
 
         <div class="type-list">
             @for (type of projectTypes; track type) {
-                <button class="type-row" [class.selected]="createType() === type" (click)="createType.set(type)"
-                        [attr.aria-pressed]="createType() === type">
+                <button class="type-row" [class.selected]="createPresetId() === null && createType() === type"
+                        (click)="pickType(type)"
+                        [attr.aria-pressed]="createPresetId() === null && createType() === type">
                     <app-icon [name]="typeIcons[type]" size="md"></app-icon>
                     <span class="type-text">
                         <span class="type-name">{{ t().projects.projectTypes[type].name }}</span>
                         <span class="type-blurb">{{ t().projects.projectTypes[type].blurb }}</span>
                         <span class="type-starter">{{ t().projects.create.startsWith(t().projects.projectTypes[type].starter) }}</span>
+                    </span>
+                </button>
+            }
+            <!--T-331 — the user's own project presets sit alongside the built-in types, exactly as
+            document presets do in the New-document dialog.-->
+            @for (preset of projectPresets(); track preset.id) {
+                <button class="type-row is-preset" [class.selected]="createPresetId() === preset.id"
+                        (click)="pickPreset(preset)"
+                        [attr.aria-pressed]="createPresetId() === preset.id">
+                    <app-icon name="squares-four" size="md"></app-icon>
+                    <span class="type-text">
+                        <span class="type-name">{{ preset.name }}</span>
+                        <span class="type-blurb">{{ t().presets.kinds.project.name }}</span>
+                        <span class="type-starter">{{ t().projects.create.startsWith(presetStarter(preset)) }}</span>
                     </span>
                 </button>
             }

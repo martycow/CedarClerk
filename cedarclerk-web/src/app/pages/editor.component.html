@@ -105,6 +105,16 @@
             <!-- ============ 2 · DESTINATIONS ============ -->
             <app-shelf-panel class="export-step export-destinations" [title]="'2 · ' + t().editor.exportModal.stepWhere"
                              [count]="tickedDestinationCount()">
+                <!--T-331 — a saved set of destinations fills the ticks below in one pick. A panel
+                command, so it rides the header's actions slot rather than the body.-->
+                @if (exportPresets().length) {
+                <select actions class="chat-input dest-preset" [value]="''"
+                        [attr.aria-label]="t().editor.exportModal.applyPreset"
+                        (change)="applyExportPreset($any($event.target).value)">
+                    <option value="">{{ t().editor.exportModal.applyPreset }}</option>
+                    @for (p of exportPresets(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+                </select>
+                }
                 <div class="export-step-body">
                 <!--A network with no account stays visible and stays honest: it is not hidden, not
                 silently tickable, and the way out is the one place that can fix it (ADR-095).

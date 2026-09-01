@@ -454,3 +454,15 @@
     color: var(--danger);
     font-size: var(--fs-ui);
 }
+
+/* T-338 — the readout tile's sparkline. Sized in the line it sits on rather than by the viewBox, so
+   a tile that grows keeps the line one height; non-uniform scaling is deliberate, since the shape
+   is what is read here and not the slope's angle. */
+.ro-spark {
+    width: 64px;
+    height: 18px;
+    flex: none;
+    margin-left: auto;
+    align-self: center;
+    opacity: .85;
+}

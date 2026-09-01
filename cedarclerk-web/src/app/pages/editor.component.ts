@@ -72,6 +72,7 @@ import { SeriesPickerComponent } from '../shared/series-picker.component';
 import { MediaPickerComponent } from '../shared/media-picker.component';
 import { LibraryAsset } from '../core/assets.service';
 import { FormRefComponent } from '../shared/form-ref.component';
+import { Preset, PresetsService, parseExportConfig } from '../core/presets.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { pseudoProgress } from '../core/pseudo-progress.util';
 import { BrandIconComponent, BrandIconName } from '../shared/brand-icon.component';
@@ -240,6 +241,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     appearance = inject(AppearanceService);
     private draftsApi = inject(DraftsService);
     private presetsApi = inject(FormPresetsService);
+    // T-331 — the three-kind preset store; this screen reads only its export kind.
+    private docPresetsApi = inject(PresetsService);
     feedback = inject(CommentsService);
     t = inject(LocaleService).t;
     private route = inject(ActivatedRoute);
@@ -512,6 +515,30 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             case 'discord': return this.discordAccount();
             default: return this.blueskyAccount();
         }
+    }
+
+    // T-331 — one pick fills step 2. Languages the post does not have are ignored rather than
+    // added: a preset saved when the post had three translations must not tick a fourth that was
+    // never written. An empty language list in the preset means "leave the ticks alone".
+    applyExportPreset(presetId: string) {
+        const preset = this.exportPresets().find(p => p.id === presetId);
+        if (!preset) return;
+        const config = parseExportConfig(preset.configJson);
+
+        this.destBlog.set(config.destinations.includes('blog'));
+        this.destTelegram.set(config.destinations.includes('telegram'));
+        for (const network of this.microNetworks) {
+            this.destination(network).set(config.destinations.includes(network));
+        }
+
+        const available = [this.primaryLanguage, ...this.existingLanguages()];
+        const langs = config.languages.filter(l => available.includes(l));
+        if (langs.length) this.exportLangs.set(langs);
+    }
+
+    private async loadExportPresets() {
+        try { this.exportPresets.set(await this.docPresetsApi.list('export')); }
+        catch { this.exportPresets.set([]); }
     }
 
     destination(network: MicroNetwork) {
@@ -1171,6 +1198,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // FI2.2 — languages are ticked, not picked: a post can go to Telegram in several at once,
     // one message per language. Never empty, since publishing to no language is not a request.
     exportLangs = signal<string[]>([DEFAULT_PRIMARY_LANGUAGE]);
+
+    // T-331 — saved sets of destinations, offered at the top of step 2. Loaded when the modal
+    // opens rather than with the editor: most sessions never export.
+    exportPresets = signal<Preset[]>([]);
     compressionLevel: CompressionLevel = 'standard';
 
     // Active content language in the editor. 'ru' edits the draft itself (primary version),
@@ -2871,6 +2902,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 isPrivate, isTemplate: false, disableCopy: false,
                 disableReactions: false, disableComments: false, documentType: 'post',
                 viewCount: 0, reactionCount: 0, newViewCount: 0, newReactionCount: 0,
+                coverImagePath: null,
             };
             this.drafts.update(l => [meta, ...l]);
             this.currentId.set(created.id);
@@ -3012,6 +3044,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         // opening; each is best-effort and none of them gates the modal.
         void this.refreshPreflight();
         void this.loadBestTimes();
+        void this.loadExportPresets();
         this.exportSilent.set(false);
         this.exportPin.set(false);
         this.trackedLinkError.set('');

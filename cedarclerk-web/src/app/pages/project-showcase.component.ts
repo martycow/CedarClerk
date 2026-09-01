@@ -12,6 +12,8 @@ import { InputComponent } from '../bench/forms/input.component';
 import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 import { WorktopComponent } from '../bench/worktop/worktop.component';
+import { LibraryAsset } from '../core/assets.service';
+import { MediaPickerComponent } from '../shared/media-picker.component';
 
 // The public game page, edited on a screen of its own (T-159/ADR-134, grown into a site by
 // ADR-216). It used to be a block at the bottom of the project-settings modal, which is where a
@@ -24,7 +26,7 @@ import { WorktopComponent } from '../bench/worktop/worktop.component';
     selector: 'app-project-showcase',
     imports: [
         FormsModule, IconComponent, WorktopComponent, ShelfPanelComponent, SpecRowComponent,
-        ButtonComponent, InputComponent,
+        ButtonComponent, InputComponent, MediaPickerComponent,
     ],
     templateUrl: 'project-showcase.component.html',
     styleUrls: ['project-showcase.component.css'],
@@ -50,6 +52,7 @@ export class ProjectShowcaseComponent implements OnDestroy {
     links = signal('');
     trailer = signal('');
     gallery = signal('');
+    galleryPickerOpen = signal(false);
     domain = signal('');
     // Wave 1 item 6 — the /press page's optional facts; empty means the section is omitted there.
     pressContact = signal('');
@@ -57,6 +60,18 @@ export class ProjectShowcaseComponent implements OnDestroy {
     pressEngine = signal('');
     pressGenre = signal('');
     pressFactsheet = signal('');
+
+    // T-353 — the gallery is a list of URLs, one per line, and it stays that way: an author can
+    // still paste a link to something hosted elsewhere. What the picker adds is the case that had
+    // no answer before — a picture already in the library, or one being uploaded now — appended
+    // rather than replacing what is typed.
+    appendGalleryImage(asset: LibraryAsset) {
+        const url = `/media/${asset.localPath}`;
+        const lines = this.gallery().split('\n').map(l => l.trim()).filter(Boolean);
+        if (!lines.includes(url)) lines.push(url);
+        this.gallery.set(lines.join('\n'));
+        this.galleryPickerOpen.set(false);
+    }
 
     /** The public press-kit page, live wherever the showcase itself is. */
     pressUrl = computed(() => {

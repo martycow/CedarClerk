@@ -93,6 +93,9 @@ public static class ErrorMessages
     public static string FeedbackTooLong => Ru("Сообщение слишком длинное.", "The message is too long.");
     public static string UnknownPresetKind => Ru("Неизвестный тип пресета.", "Unknown preset kind.");
     public static string PresetNameInvalid => Ru("Нужно название пресета (до 60 символов).", "A preset needs a name (up to 60 characters).");
+    public static string PresetKindImmutable => Ru("Тип пресета менять нельзя.", "A preset's kind cannot be changed.");
+    public static string PresetLimitReached(int limit) =>
+        Ru($"Больше {limit} пресетов одного типа хранить нельзя.", $"No more than {limit} presets of one kind.");
     public static string CannotChangeOwnAdmin => Ru("Нельзя менять собственные права администратора.", "You cannot change your own admin rights");
     public static string CannotLockOwnAccount => Ru("Нельзя заблокировать собственный аккаунт.", "You cannot lock your own account");
     public static string CannotDeleteOwnAccount => Ru("Нельзя удалить собственный аккаунт.", "You cannot delete your own account");

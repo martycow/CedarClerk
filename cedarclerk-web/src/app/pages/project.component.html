@@ -218,8 +218,8 @@
                     <app-icon [name]="$any(presetConfig(preset).icon)" size="md"></app-icon>
                     <span class="doc-type-text">
                         <span class="doc-type-name">{{ preset.name }}</span>
-                        <span class="doc-type-blurb">{{ presetConfig(preset).headings.length ? presetConfig(preset).headings.join(' · ') : t().presets.noSkeleton }}</span>
-                        <span class="doc-type-publish">{{ t().presets.documentPresets }}</span>
+                        <span class="doc-type-blurb">{{ presetConfig(preset).headings.length ? presetConfig(preset).headings.join(' · ') : t().presets.kinds.document.emptyConfig }}</span>
+                        <span class="doc-type-publish">{{ t().presets.kinds.document.name }}</span>
                     </span>
                 </button>
             }
@@ -249,8 +249,6 @@
 
         <div class="cover-field">
             <span class="field-label">{{ t().projects.edit.logoLabel }}</span>
-            <input #coverInput type="file" accept="image/jpeg,image/png,image/gif,image/webp" hidden
-                   (change)="chooseCover($event)">
             <div class="cover-row">
                 <span class="cover-preview" [class.has-image]="!!editCoverUrl()">
                     @if (editCoverUrl(); as coverUrl) {
@@ -260,16 +258,14 @@
                     }
                 </span>
                 <div class="cover-controls">
-                    @if (editCoverFile(); as file) {
-                        <span class="cover-file" [title]="file.name">{{ file.name }}</span>
-                    }
                     <span class="hint">{{ t().projects.edit.logoHint }}</span>
                     <div class="cover-actions">
-                        <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="coverInput.click()">
+                        <!--T-353 — the one asset window, which uploads as well as picks.-->
+                        <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="coverPickerOpen.set(true)">
                             <app-icon name="image" size="sm"></app-icon>
                             {{ t().projects.edit.chooseLogo }}
                         </app-button>
-                        @if (editCoverUrl() || editCoverFile()) {
+                        @if (editCoverUrl()) {
                             <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="removeCover()">
                                 {{ t().projects.edit.removeLogo }}
                             </app-button>
@@ -299,4 +295,8 @@
             </button>
         </ng-container>
     </app-modal>
+}
+
+@if (coverPickerOpen()) {
+    <app-media-picker (picked)="pickedCover($event)" (closed)="coverPickerOpen.set(false)" />
 }

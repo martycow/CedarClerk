@@ -102,10 +102,8 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                     <!--FI5: the text (not the URL, which reads the same in every language) can differ
                     per content language — same per-language-drafts pattern as the cross-links below.-->
                     <div class="lang-pick-row">
-                        @for (l of contentLanguages; track l) {
-                        <app-leaf-tag interactive [state]="signatureLanguage() === l ? 'active' : 'idle'"
-                                      (activated)="setSignatureLanguage(l)">{{ l.toUpperCase() }}</app-leaf-tag>
-                        }
+                        <app-language-menu [active]="signatureLanguage()" [items]="signatureLanguageItems()"
+                                           (picked)="setSignatureLanguage($event)" />
                     </div>
                     <textarea id="cc-sig" [(ngModel)]="signatureText" rows="2" [placeholder]="t().settings.profile.signaturePlaceholder"
                         [disabled]="!hasProSignature()" [title]="hasProSignature() ? '' : t().settings.profile.signatureUpgrade"></textarea>
@@ -241,10 +239,8 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                 <!--Per language: this line is read by whoever reads that language's version of the
                 post. Switching tabs saves what is in the fields first.-->
                 <div class="lang-pick-row">
-                    @for (l of contentLanguages; track l) {
-                    <app-leaf-tag interactive [state]="linkTextLanguage() === l ? 'active' : 'idle'"
-                                  (activated)="setLinkTextLanguage(l)">{{ l.toUpperCase() }}</app-leaf-tag>
-                    }
+                    <app-language-menu [active]="linkTextLanguage()" [items]="linkTextLanguageItems()"
+                                       (picked)="setLinkTextLanguage($event)" />
                 </div>
 
                 <div class="field-group">

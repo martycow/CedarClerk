@@ -340,6 +340,15 @@ public class Draft
     // Marty's own framing in docs/tasks/BACKLOG.md, a flag rather than a parallel entity.
     public bool IsTemplate { get; set; }
 
+    /// <summary>
+    /// T-337 — the first picture in the document, as a /media/ local path, for the thumbnail on a
+    /// post card. Null means the document has none. <see cref="CoverImageScanned"/> tells "no
+    /// picture" apart from "not looked yet", so a document written before this column fills itself
+    /// in the first time it is listed rather than needing a migration that parses JSON in SQL.
+    /// </summary>
+    public string? CoverImagePath { get; set; }
+    public bool CoverImageScanned { get; set; }
+
     // Registration form shown to uninvited visitors of a private post (B3). Null = no form
     // configured, so an uninvited visitor still gets the original indistinguishable-from-404
     // response. A JSON blob rather than columns because the question list is variable-shape —
@@ -1002,6 +1011,12 @@ public class BotKnownChat
     
     public bool BotCanPost { get; set; }
     public DateTime LastSeenAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// When the admin list below was last read from Telegram (T-359, audit finding 6b). Null means
+    /// never — a row discovered before this column, trusted until a refresh stamps it.
+    /// </summary>
+    public DateTime? AdminsSyncedAt { get; set; }
 }
 
 public class BotKnownChatAdmin

@@ -16,7 +16,10 @@ public static class ProjectEndpoints
 {
     // DocumentType is optional because ProjectType already implies one (ProjectTypes
     // .StarterDocumentType); it stays overridable so the rule never becomes a wall.
-    public record CreateProjectRequest(string Name, string? Description, string? ProjectType, string? DocumentType, string? DocumentTitle, string? Language = null);
+    // PresetId names a project preset (T-331): it supplies the type, the starter document and its
+    // title in one pick, and anything the caller states outright still wins over it — the dialog
+    // lets a preset be chosen and then edited before Create.
+    public record CreateProjectRequest(string Name, string? Description, string? ProjectType, string? DocumentType, string? DocumentTitle, string? Language = null, Guid? PresetId = null);
     public record ShowcaseRequest(bool Enabled, string? Slug, string? Links, string? Gallery,
         string? TrailerUrl, string? CustomDomain,
         string? PressContactEmail = null, string? PressPrice = null, string? PressEngine = null,
@@ -170,20 +173,36 @@ public static class ProjectEndpoints
         {
             if (Invalid(req.Name, req.Description) is { } badRequest) return badRequest;
 
-            var projectType = req.ProjectType ?? ProjectTypes.FullGame;
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            // T-331 — a project preset is a named default for the three fields below. It is read
+            // first so an explicit value in the request still overrides it.
+            ProjectPresetConfig? preset = null;
+            if (req.PresetId is { } presetId)
+            {
+                var row = await db.Presets.FirstOrDefaultAsync(p =>
+                    p.Id == presetId && p.OwnerId == uid && p.Kind == PresetKinds.Project);
+                if (row is null) return Results.NotFound();
+                preset = ProjectPresetConfig.Parse(row.ConfigJson);
+            }
+
+            var projectType = req.ProjectType ?? preset?.ProjectType ?? ProjectTypes.FullGame;
             if (!ProjectTypes.IsKnown(projectType))
                 return Results.Json(new { error = ErrorMessages.UnknownProjectType(projectType) }, statusCode: StatusCodes.Status400BadRequest);
 
-            // The project type decides the starter document unless the caller names one outright.
-            var type = req.DocumentType ?? ProjectTypes.StarterDocumentType(projectType);
+            // The project type decides the starter document unless the caller or the preset names one.
+            var type = req.DocumentType ?? preset?.DocumentType ?? ProjectTypes.StarterDocumentType(projectType);
             if (!DocumentTypes.IsKnown(type))
                 return Results.Json(new { error = ErrorMessages.UnknownDocumentType(type) }, statusCode: StatusCodes.Status400BadRequest);
 
-            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var name = req.Name.Trim();
-            var project = new Project { OwnerId = uid, Name = name, Description = req.Description?.Trim() ?? "", ProjectType = projectType };
+            var description = req.Description?.Trim();
+            if (string.IsNullOrEmpty(description)) description = preset?.Description ?? "";
+            var project = new Project { OwnerId = uid, Name = name, Description = description, ProjectType = projectType };
 
-            var title = string.IsNullOrWhiteSpace(req.DocumentTitle) ? name : req.DocumentTitle.Trim();
+            var title = string.IsNullOrWhiteSpace(req.DocumentTitle)
+                ? preset?.DocumentTitle ?? name
+                : req.DocumentTitle.Trim();
             var draft = new Draft { OwnerId = uid, Title = title, DocumentType = type, ProjectId = project.Id };
             // T-160 (ADR-133) — the starter document is born with a skeleton, not blank, in the
             // language the client asked for (the interface language, most usefully).
@@ -390,7 +409,7 @@ public static class ProjectEndpoints
             string? cedarJson = null;
             if (req.PresetId is { } presetId)
             {
-                var preset = await db.Presets.FirstOrDefaultAsync(p => p.Id == presetId && p.OwnerId == uid && p.Kind == "document");
+                var preset = await db.Presets.FirstOrDefaultAsync(p => p.Id == presetId && p.OwnerId == uid && p.Kind == PresetKinds.Document);
                 if (preset is null) return Results.NotFound();
                 var cfg = DocumentPresetConfig.Parse(preset.ConfigJson);
                 type = cfg.BaseType;

@@ -1,36 +1,39 @@
 <div class="presets">
     @if (error()) { <p class="channel-error">{{ error() }}</p> }
 
+    <!--Index tiles on the top edge of the sheet: the three kinds are three lists of the same
+    object, so they switch a panel rather than a screen (ADR-167 clause 7).-->
     <div class="pr-index">
-        <span class="pr-kind">{{ t().presets.documentPresets }}</span>
-        <app-hint-dot [text]="t().presets.intro" />
+        <app-index-tabs [items]="kindTabs()" [value]="kind()"
+                        [label]="t().presets.kindStrip" (selected)="selectKind($event)" />
+        <app-hint-dot [text]="kindIntro(kind())" />
         <span class="spacer"></span>
         <app-button variant="pine" size="sm" (clicked)="startNew()">
             <app-icon name="plus" weight="bold" size="sm" /> {{ t().presets.newPreset }}
         </app-button>
     </div>
 
-    <app-worktop class="sheet" scroll [label]="t().presets.crumb" [meta]="t().presets.count(presets().length)">
+    <app-worktop class="sheet" scroll [label]="kindLabel(kind())" [meta]="t().presets.count(presets().length)">
         <div class="sheet-column">
             @if (loading()) {
             <p class="hint">{{ t().common.loading }}</p>
             } @else {
 
             @if (editingId() === 'new') {
-            <ng-container [ngTemplateOutlet]="editForm"></ng-container>
+            <div class="pr-form"><ng-container [ngTemplateOutlet]="editFields"></ng-container></div>
             }
 
             <div class="pr-list">
                 @for (p of presets(); track p.id) {
                 @if (editingId() === p.id) {
-                <ng-container [ngTemplateOutlet]="editForm"></ng-container>
+                <div class="pr-form"><ng-container [ngTemplateOutlet]="editFields"></ng-container></div>
                 } @else {
                 <div class="pr-card">
-                    <app-icon [name]="$any(parsed(p).icon)" size="md" />
+                    <app-icon [name]="iconOf(p)" size="md" />
                     <div class="pr-body">
                         <div class="pr-head">
                             <span class="pr-name">{{ p.name }}</span>
-                            <span class="pr-type">{{ baseTypeName(parsed(p).baseType) }}</span>
+                            <span class="pr-type">{{ labelOf(p) }}</span>
                             <span class="spacer"></span>
                             <button class="mini" (click)="startEdit(p)" [title]="t().common.edit" [attr.aria-label]="t().common.edit">
                                 <app-icon name="pencil-simple" size="sm" />
@@ -39,10 +42,10 @@
                                 <app-icon name="trash" size="sm" />
                             </button>
                         </div>
-                        @if (parsed(p).headings.length) {
-                        <p class="pr-skeleton">{{ parsed(p).headings.join(' · ') }}</p>
+                        @if (summaryOf(p); as summary) {
+                        <p class="pr-skeleton">{{ summary }}</p>
                         } @else {
-                        <p class="pr-skeleton muted">{{ t().presets.noSkeleton }}</p>
+                        <p class="pr-skeleton muted">{{ t().presets.kinds[kind()].emptyConfig }}</p>
                         }
                     </div>
                 </div>
@@ -52,7 +55,7 @@
                 <div class="pr-empty">
                     <app-icon name="squares-four" size="lg" />
                     <p class="pr-empty-title">{{ t().presets.empty }}</p>
-                    <p class="hint">{{ t().presets.emptyHint }}</p>
+                    <p class="hint">{{ t().presets.kinds[kind()].emptyHint }}</p>
                 </div>
                 }
                 }
@@ -62,37 +65,113 @@
     </app-worktop>
 </div>
 
-<ng-template #editForm>
-    <div class="pr-form">
-        <label class="pr-field">
-            <span class="pr-label">{{ t().presets.nameLabel }}</span>
-            <input class="pr-input" [ngModel]="form().name"
-                   (ngModelChange)="form.set({ ...form(), name: $event })" maxlength="60"
-                   [placeholder]="t().presets.namePlaceholder">
-        </label>
+<ng-template #editFields>
+    <label class="pr-field">
+        <span class="pr-label">{{ t().presets.nameLabel }}</span>
+        <input class="pr-input" [ngModel]="form().name"
+               (ngModelChange)="form.set({ ...form(), name: $event })" maxlength="60"
+               [placeholder]="t().presets.kinds[kind()].namePlaceholder">
+    </label>
 
-        <span class="pr-label">{{ t().presets.baseTypeLabel }}</span>
-        <div class="pr-types">
-            @for (type of baseTypes; track type) {
-            <button type="button" class="pr-type-btn" [class.on]="form().baseType === type"
-                    (click)="pickBaseType(type)">
-                <app-icon [name]="typeIcons[type]" size="sm" /> {{ baseTypeName(type) }}
-            </button>
+    @switch (kind()) {
+
+    @case ('document') {
+    <span class="pr-label">{{ t().presets.baseTypeLabel }}</span>
+    <div class="pr-types">
+        @for (type of baseTypes; track type) {
+        <button type="button" class="pr-type-btn" [class.on]="form().baseType === type"
+                (click)="pickBaseType(type)">
+            <app-icon [name]="typeIcons[type]" size="sm" /> {{ baseTypeName(type) }}
+        </button>
+        }
+    </div>
+
+    <label class="pr-field">
+        <span class="pr-label">{{ t().presets.headingsLabel }}</span>
+        <textarea class="pr-input" rows="4" [ngModel]="form().headings"
+                  (ngModelChange)="form.set({ ...form(), headings: $event })"
+                  [placeholder]="t().presets.headingsPlaceholder"></textarea>
+    </label>
+    }
+
+    @case ('project') {
+    <span class="pr-label">{{ t().presets.project.typeLabel }}</span>
+    <div class="pr-types">
+        @for (type of projectTypes; track type) {
+        <button type="button" class="pr-type-btn" [class.on]="form().projectType === type"
+                (click)="pickProjectType(type)">
+            <app-icon [name]="projectTypeIcons[type]" size="sm" /> {{ projectTypeName(type) }}
+        </button>
+        }
+    </div>
+
+    <!--Null is the honest default and is offered as a choice: the project type already implies a
+    starter document, and overriding it is the exception, not the blank a form leaves behind.-->
+    <span class="pr-label">{{ t().presets.project.documentTypeLabel }}</span>
+    <div class="pr-types">
+        <button type="button" class="pr-type-btn" [class.on]="form().projectDocumentType === null"
+                (click)="pickProjectDocumentType(null)">
+            {{ t().presets.project.documentTypeDefault }}
+        </button>
+        @for (type of baseTypes; track type) {
+        <button type="button" class="pr-type-btn" [class.on]="form().projectDocumentType === type"
+                (click)="pickProjectDocumentType(type)">
+            <app-icon [name]="typeIcons[type]" size="sm" /> {{ baseTypeName(type) }}
+        </button>
+        }
+    </div>
+
+    <label class="pr-field">
+        <span class="pr-label">{{ t().presets.project.documentTitleLabel }}</span>
+        <input class="pr-input" [ngModel]="form().documentTitle"
+               (ngModelChange)="form.set({ ...form(), documentTitle: $event })" maxlength="80"
+               [placeholder]="t().presets.project.documentTitlePlaceholder">
+    </label>
+
+    <label class="pr-field">
+        <span class="pr-label">{{ t().presets.project.descriptionLabel }}</span>
+        <textarea class="pr-input" rows="3" [ngModel]="form().description"
+                  (ngModelChange)="form.set({ ...form(), description: $event })" maxlength="2000"
+                  [placeholder]="t().presets.project.descriptionPlaceholder"></textarea>
+    </label>
+    }
+
+    @case ('export') {
+    <span class="pr-label">{{ t().presets.export.destinationsLabel }}</span>
+    <div class="pr-types">
+        @for (d of destinations; track d) {
+        <button type="button" class="pr-type-btn" [class.on]="form().destinations.includes(d)"
+                [attr.aria-pressed]="form().destinations.includes(d)" (click)="toggleDestination(d)">
+            @if (destinationBrands[d]; as brand) {
+            <app-brand-icon [name]="brand" [size]="14" />
+            } @else {
+            <app-icon name="newspaper" size="sm" />
             }
-        </div>
+            {{ destinationName(d) }}
+        </button>
+        }
+    </div>
 
-        <label class="pr-field">
-            <span class="pr-label">{{ t().presets.headingsLabel }}</span>
-            <textarea class="pr-input" rows="4" [ngModel]="form().headings"
-                      (ngModelChange)="form.set({ ...form(), headings: $event })"
-                      [placeholder]="t().presets.headingsPlaceholder"></textarea>
-        </label>
+    <!--Empty means "whatever the post already has" rather than "nothing": a preset that pinned a
+    language would silently drop a translation the author wrote after saving it.-->
+    <span class="pr-label">{{ t().presets.export.languagesLabel }}</span>
+    <div class="pr-types">
+        @for (l of contentLanguages; track l) {
+        <button type="button" class="pr-type-btn" [class.on]="form().languages.includes(l)"
+                [attr.aria-pressed]="form().languages.includes(l)" (click)="toggleLanguage(l)">
+            {{ l.toUpperCase() }}
+        </button>
+        }
+    </div>
+    <p class="hint">{{ t().presets.export.languagesHint }}</p>
+    }
 
-        <div class="pr-form-actions">
-            <app-button variant="paper" size="sm" (clicked)="cancel()">{{ t().common.cancel }}</app-button>
-            <app-button variant="pine" size="sm" [disabled]="busy() || !canSave()" (clicked)="save()">
-                {{ busy() ? '…' : t().common.save }}
-            </app-button>
-        </div>
+    }
+
+    <div class="pr-form-actions">
+        <app-button variant="paper" size="sm" (clicked)="cancel()">{{ t().common.cancel }}</app-button>
+        <app-button variant="pine" size="sm" [disabled]="busy() || !canSave()" (clicked)="save()">
+            {{ busy() ? '…' : t().common.save }}
+        </app-button>
     </div>
 </ng-template>

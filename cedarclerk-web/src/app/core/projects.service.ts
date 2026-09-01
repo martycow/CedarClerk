@@ -151,6 +151,11 @@ export interface CreateProjectInput {
     language?: string;
     /** The starter document's title. Sent by the client because the server has no second language. */
     documentTitle?: string;
+    /**
+     * T-331 — a project preset supplies the type, the first document and its title in one pick.
+     * Anything named above still wins over it, so a preset can be chosen and then edited.
+     */
+    presetId?: string;
 }
 
 @Injectable({ providedIn: 'root' })

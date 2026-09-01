@@ -128,6 +128,9 @@ export interface DraftMeta {
     reactionCount: number; // likes + dislikes — the split stays on the blog post page
     newViewCount: number;
     newReactionCount: number;
+    // T-337 — the first picture in the document, as a /media/ local path; null = none. Filled by
+    // the server the first time a draft is listed after the column landed.
+    coverImagePath: string | null;
 }
 export interface TranslationMeta { language: string; title: string; updatedAt: string; }
 export interface TranslationFull extends TranslationMeta { cedarJson: string; sourceSnapshotJson: string | null; }

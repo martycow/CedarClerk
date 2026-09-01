@@ -248,9 +248,15 @@ public static class ChannelEndpoints
             var telegramUserId = await db.Users.Where(u => u.Id == uid).Select(u => u.TelegramUserId).FirstAsync();
             if (telegramUserId is null) return new List<KnownChatDto>();
 
+            // T-359 (audit finding 6b) — the admin cache is only rewritten when the BOT's own
+            // membership changes, so a person demoted in between keeps a grant nothing revokes.
+            // The listing trusts a cached row for KnownChatAdminTtl and no longer; Refresh below
+            // re-reads the admin list live and re-stamps, which is how a real admin gets it back.
+            var adminCutoff = DateTime.UtcNow - Consts.Telegram.KnownChatAdminTtl;
             var connectedIds = db.Channels.Select(c => c.TelegramChatId);
             return await db.BotKnownChats
                 .Where(k => k.BotCanPost && !connectedIds.Contains(k.TelegramChatId)
+                    && k.AdminsSyncedAt != null && k.AdminsSyncedAt > adminCutoff
                     && db.BotKnownChatAdmins.Any(a => a.BotKnownChatId == k.Id && a.TelegramUserId == telegramUserId))
                 .OrderByDescending(k => k.LastSeenAt)
                 .Select(k => new KnownChatDto(k.TelegramChatId, k.Title, k.Username, k.Type))
@@ -283,6 +289,9 @@ public static class ChannelEndpoints
             // account, making 2-3 shared-token Bot API calls per row (a flood-limit lever) and
             // latching other owners' rows to BotCanPost=false on a transient failure. Bounded to
             // the chats where the caller's own linked Telegram is an admin; unlinked → nothing.
+            // No TTL here, unlike the listing above: this walk re-reads the admin list from
+            // Telegram, so an expired row is exactly what it exists to re-verify. Gating it by the
+            // same TTL would make an expired chat unrecoverable.
             var known = telegramUserId is null
                 ? new List<BotKnownChat>()
                 : await db.BotKnownChats

@@ -449,7 +449,10 @@ public static class AuthEndpoints
                 }
                 catch (TranslationException ex)
                 {
-                    return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status502BadGateway);
+                    // T-361 — one charge covers every target language, so the first failing target
+                    // ends the run and returns it. What earlier targets already wrote stays: the
+                    // user keeps the work and the credit both, which is the generous side to err on.
+                    return await SubscriptionPlan.RefundAiAndFailAsync(db, user.Id, CreditPacks.AiSmallCost, ex.Message);
                 }
 
                 for (var i = 0; i < filled.Count && i < translated.Count; i++)

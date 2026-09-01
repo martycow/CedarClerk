@@ -7,6 +7,14 @@
     <div class="gl-index">
         <app-index-tabs [items]="languageTabs()" [value]="languageFilter()"
                         [label]="t().glossary.langStrip" (selected)="selectLanguage($event)" />
+        <!--T-350 — the tail of the language list, which the strip stops drawing once it would run
+        off the edge. Picking one here puts it on the strip, because it is then the selected one.-->
+        @if (offStripLanguages().length) {
+        <app-language-menu [active]="languageFilter()" [items]="languageMenuItems()"
+                           [only]="offStripLanguages()"
+                           [triggerLabel]="t().glossary.moreLanguages"
+                           (picked)="selectLanguage($event)" />
+        }
         <!--T-343 — the standing intro paragraph folded behind the (i).-->
         <app-hint-dot [text]="t().glossary.intro" />
         <span class="spacer"></span>

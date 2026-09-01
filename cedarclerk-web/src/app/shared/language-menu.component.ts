@@ -21,8 +21,12 @@ export interface LanguageMenuItem { code: string; hasContent?: boolean; stale?: 
         <app-popover #pop>
             <button trigger type="button" class="lm-trigger" [title]="triggerTitle()">
                 <app-icon name="translate" size="xs" />
+                @if (triggerLabel(); as label) {
+                <span class="lm-endonym">{{ label }}</span>
+                } @else {
                 <span class="lm-current">{{ active().toUpperCase() }}</span>
                 <span class="lm-endonym">{{ endonym(active()) }}</span>
+                }
                 <app-icon name="caret-down" size="xs" />
             </button>
             <div panel class="lm-panel">
@@ -95,6 +99,11 @@ export class LanguageMenuComponent {
     items = input<LanguageMenuItem[]>([]);
     /** When set, only these codes are offered (e.g. the editor's missing languages). */
     only = input<string[] | null>(null);
+    /**
+     * What the trigger says instead of the current language. A menu that ADDS a language is not
+     * showing one, and a trigger reading "RU Русский" on an "add" control names the wrong thing.
+     */
+    triggerLabel = input<string | null>(null);
     picked = output<string>();
 
     protected readonly endonym = endonymOf;
@@ -114,7 +123,7 @@ export class LanguageMenuComponent {
     });
 
     protected triggerTitle(): string {
-        return this.t().languageMenu.pick;
+        return this.triggerLabel() ?? this.t().languageMenu.pick;
     }
 
     protected pick(code: string, pop: PopoverComponent) {

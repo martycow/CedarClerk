@@ -138,6 +138,17 @@ public static class CedarPackage
         }
     }
 
+    private static readonly string[] ImageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+
+    /// <summary>
+    /// T-337 — the first picture a document shows, for the thumbnail on a post card. Extension
+    /// rather than a lookup against Assets: this answers "which of these paths is an image", and a
+    /// path that names no asset row draws nothing either way.
+    /// </summary>
+    public static string? FindFirstImagePathSafe(string tiptapJson) =>
+        FindReferencedMediaPathsSafe(tiptapJson)
+            .FirstOrDefault(path => ImageExtensions.Contains(Path.GetExtension(path).ToLowerInvariant()));
+
     public static string RewriteMediaPaths(string tiptapJson, IReadOnlyDictionary<string, string> oldToNewNames)
     {
         var node = JsonNode.Parse(tiptapJson) ?? throw new CedarPackageException("Document JSON is empty.");

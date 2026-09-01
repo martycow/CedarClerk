@@ -11,6 +11,7 @@ import {
     ProjectsService,
     projectInitials,
 } from '../core/projects.service';
+import { Preset, PresetsService, parseProjectConfig } from '../core/presets.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { RulerService } from '../core/ruler.service';
 import { IconComponent } from '../shared/icon.component';
@@ -44,6 +45,7 @@ type Filter = 'all' | 'active' | 'archived';
 })
 export class ProjectsComponent implements OnDestroy {
     private api = inject(ProjectsService);
+    private presetsApi = inject(PresetsService);
     private router = inject(Router);
     private locale = inject(LocaleService);
     private ruler = inject(RulerService);
@@ -63,6 +65,9 @@ export class ProjectsComponent implements OnDestroy {
 
     creating = signal(false);
     createType = signal<ProjectType>('empty');
+    // T-331 — set when the pick came from a saved project preset rather than a built-in type.
+    createPresetId = signal<string | null>(null);
+    projectPresets = signal<Preset[]>([]);
     createName = signal('');
     createError = signal<string | null>(null);
     saving = signal(false);
@@ -133,9 +138,34 @@ export class ProjectsComponent implements OnDestroy {
 
     startCreate() {
         this.createType.set('empty');
+        this.createPresetId.set(null);
         this.createName.set('');
         this.createError.set(null);
         this.creating.set(true);
+        void this.loadPresets();
+    }
+
+    // T-331 — the user's own project presets stand beside the four built-in types. Failing to
+    // load them is not an error the dialog reports: the built-ins are still a complete offer.
+    private async loadPresets() {
+        try { this.projectPresets.set(await this.presetsApi.list('project')); }
+        catch { this.projectPresets.set([]); }
+    }
+
+    pickPreset(preset: Preset) {
+        this.createPresetId.set(preset.id);
+        this.createType.set(parseProjectConfig(preset.configJson).projectType as ProjectType);
+    }
+
+    pickType(type: ProjectType) {
+        this.createPresetId.set(null);
+        this.createType.set(type);
+    }
+
+    presetStarter(preset: Preset): string {
+        const config = parseProjectConfig(preset.configJson);
+        return config.documentTitle
+            || this.t().projects.projectTypes[config.projectType as ProjectType].starter;
     }
 
     async create() {
@@ -148,11 +178,20 @@ export class ProjectsComponent implements OnDestroy {
             // The starter document's title comes from the client because the server has no second
             // language — see ADR-103's implementation note.
             const type = this.createType();
+            const presetId = this.createPresetId();
+            const preset = presetId
+                ? this.projectPresets().find(p => p.id === presetId) ?? null
+                : null;
             const created = await this.api.create({
                 name,
                 projectType: type,
-                documentTitle: this.t().projects.projectTypes[type].starter,
+                // A preset carries its own starter title; without one the client supplies it,
+                // because the server has no second language (ADR-103's implementation note).
+                documentTitle: preset
+                    ? this.presetStarter(preset)
+                    : this.t().projects.projectTypes[type].starter,
                 language: this.locale.uiLang(),
+                presetId: presetId ?? undefined,
             });
             this.creating.set(false);
             void this.router.navigate(['/projects', created.id]);

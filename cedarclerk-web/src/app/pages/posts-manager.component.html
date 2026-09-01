@@ -22,8 +22,10 @@ name the smoke suite binds.-->
                 <div class="post-list">
                 <!--FI3.10: the list is publish-date ordered, so finding a specific post meant
                 scrolling. Search covers title and tags.-->
-                <input class="chat-input post-search" [(ngModel)]="search"
-                       [placeholder]="t().manager.searchPlaceholder">
+                <!--T-337 — the bench's own search field, dense because it sits inside a shelf
+                panel's chrome rather than on paper (ADR-138).-->
+                <app-input class="post-search" type="search" dense [(ngModel)]="search"
+                           [placeholder]="t().manager.searchPlaceholder" />
                 @for (d of visiblePosts(); track d.id) {
                 <!--A card, not a row (Marty, 01.08.2026): one line for what the post IS —
                 indicators and title on the left, where it stands on the right — and one line
@@ -32,11 +34,18 @@ name the smoke suite binds.-->
                 not: one answers "is this out?", the other "in which language?".-->
                 <button class="post-card" [class.on]="selectedId() === d.id" (click)="select(d)">
                     <span class="post-card-top">
-                        <!--T-337 — the document's type as an icon on a small plate, so the list
-                        reads by shape as well as by text.-->
+                        <!--T-337 — the document's first picture where it has one, its type as an
+                        icon where it does not: the plate is the same size either way, so a list of
+                        mixed posts keeps one left edge.-->
+                        @if (d.coverImagePath; as cover) {
+                        <span class="post-card-type has-thumb">
+                            <img [src]="'/media/' + cover" alt="" loading="lazy">
+                        </span>
+                        } @else {
                         <span class="post-card-type" [title]="t().projects.docTypes[d.documentType].name">
                             <app-icon [name]="docIcons[d.documentType]" size="sm"></app-icon>
                         </span>
+                        }
                         <!--The title text needs its own element: text-overflow does not apply
                         to a flex container, and .post-card-title has to be one to sit the lock
                         icon beside the text.-->
@@ -547,21 +556,14 @@ name the smoke suite binds.-->
                             </span>
                             }
                             @if (addableLanguages().length) {
-                            <!--T-341 — was an absolute .lang-add-menu clipped by the shelf's own
-                            overflow and unclamped at the screen edge; app-popover is fixed and
-                            clamps itself. T-350 locks the languages Free does not have.-->
-                            <app-popover #langPop class="lang-add">
-                                <button trigger class="btn-ghost lang-add-btn">+ {{ t().manager.forms.addLanguage }}</button>
-                                <span panel class="lang-add-menu">
-                                    @for (l of addableLanguages(); track l) {
-                                    <button class="lang-add-item" (click)="addPresetLanguage(l); langPop.close()"
-                                            [disabled]="!auth.hasContentLanguage(l)">
-                                        {{ l.toUpperCase() }}
-                                        @if (!auth.hasContentLanguage(l)) { <app-plan-lock tier="pro" /> }
-                                    </button>
-                                    }
-                                </span>
-                            </app-popover>
+                            <!--T-341 replaced an absolute menu clipped by the shelf's own overflow
+                            with a popover that clamps itself; T-350 finished the job by making it
+                            the one shared language menu, so the search, the endonyms and the plan
+                            locks are the same here as everywhere else.-->
+                            <app-language-menu class="lang-add" [active]="presetLangs()[0]"
+                                               [only]="addableLanguages()"
+                                               [triggerLabel]="'+ ' + t().manager.forms.addLanguage"
+                                               (picked)="addPresetLanguage($event)" />
                             }
                         </div>
                         @if (presetTranslateError()) {

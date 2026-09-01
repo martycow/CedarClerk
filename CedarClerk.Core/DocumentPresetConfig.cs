@@ -33,6 +33,13 @@ public sealed record DocumentPresetConfig(string BaseType, string Icon, IReadOnl
 
     public static readonly DocumentPresetConfig Default = new(DocumentTypes.Post, "file-text", []);
 
+    public string ToJson() => new JsonObject
+    {
+        ["baseType"] = BaseType,
+        ["icon"] = Icon,
+        ["headings"] = new JsonArray(Headings.Select(h => JsonValue.Create(h)).ToArray()),
+    }.ToJsonString();
+
     /// <summary>
     /// The starter document a preset produces — its headings, each with an empty paragraph. The
     /// TipTap shape is built inline (DocJson lives in the server); an empty paragraph carries no

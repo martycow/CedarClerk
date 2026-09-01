@@ -257,16 +257,19 @@ describe('project hub', () => {
         expect(el().querySelector('.hero-sub')?.textContent).toContain(t.projectTypes.fullgame.name);
     });
 
-    it('uploads and saves a project logo through the existing cover field', async () => {
+    // T-353 — the logo comes out of the one asset window now, so the picked asset IS the answer
+    // and there is no deferred upload left on save. The picker uploads too, which is what makes
+    // dropping the private file input lossless.
+    it('saves the project logo picked in the asset window', async () => {
         const component = fixture.componentInstance;
         component.startEdit();
-        component.editCoverFile.set(new File(['cover'], 'cover.png', { type: 'image/png' }));
+        component.pickedCover({ id: 'a1', localPath: 'project-cover.png' } as never);
         fixture.detectChanges();
 
+        expect(component.coverPickerOpen()).toBe(false);
         expect(el().querySelector('.cover-field')?.textContent).toContain(t.edit.logoLabel);
         await component.saveEdit();
 
-        expect(assets.uploaded.map(file => file.name)).toEqual(['cover.png']);
         expect(projects.updates).toEqual([expect.objectContaining({ coverUrl: '/media/project-cover.png' })]);
         expect(component.project()?.coverUrl).toBe('/media/project-cover.png');
         expect(component.summary()?.coverUrl).toBe('/media/project-cover.png');

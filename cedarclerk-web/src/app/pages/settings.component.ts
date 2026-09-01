@@ -22,6 +22,7 @@ import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
 import { PlanLockComponent } from '../shared/plan-lock.component';
+import { LanguageMenuComponent, LanguageMenuItem } from '../shared/language-menu.component';
 import { LocationInputComponent } from '../shared/location-input.component';
 import { HintDotComponent } from '../shared/hint-dot.component';
 
@@ -34,6 +35,7 @@ export type SettingsTab = 'profile' | 'account' | 'integrations' | 'billing';
         IconComponent, FormsModule, ZonedDatePipe, BrandIconComponent,
         ButtonComponent, IndexTabsComponent, LeafTagComponent,
         ShelfPanelComponent, SpecRowComponent, StampBadgeComponent, PlanLockComponent, LocationInputComponent, HintDotComponent,
+        LanguageMenuComponent,
     ],
     templateUrl: 'settings.component.html',
     styleUrls: ['settings.component.css']
@@ -635,6 +637,26 @@ export class SettingsComponent implements OnInit {
         this.stashSignatureText();
         this.signatureLanguage.set(lang);
         this.signatureText = this.signatureDrafts[lang] ?? '';
+    }
+
+    // T-350 — the language menu draws a dot on the languages that already carry text, which is
+    // read off the local drafts rather than the server: a language typed into but not yet saved
+    // is one the author expects to see marked.
+    signatureLanguageItems(): LanguageMenuItem[] {
+        return CONTENT_LANGUAGES.map(code => ({
+            code,
+            hasContent: (this.signatureDrafts[code] ?? '').trim().length > 0,
+        }));
+    }
+
+    linkTextLanguageItems(): LanguageMenuItem[] {
+        return CONTENT_LANGUAGES.map(code => {
+            const draft = this.linkTextDrafts[code];
+            return {
+                code,
+                hasContent: !!(draft?.blog.trim() || draft?.telegram.trim()),
+            };
+        });
     }
 
     private signatureTextMap(): Record<string, string> {

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using CedarClerk.Core;
 using CedarClerk.Localization;
@@ -6,15 +7,20 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
 
-// T-331/T-355 — the Preset Manager's API. Owner-scoped CRUD over the Presets table. Document
-// presets are the only kind wired today; the endpoint validates the config per kind so a project
-// or export preset can join without reshaping this.
+// T-331/T-355 — the Preset Manager's API. Owner-scoped CRUD over the Presets table, three kinds
+// over one row shape: a document preset (a starting point for a new document), a project preset
+// (the New-project dialog's built-ins made editable) and an export preset (a saved set of
+// destinations). The kind decides which config record reads and rewrites ConfigJson, so nothing
+// stored can be read through the wrong shape.
 public static class PresetEndpoints
 {
-    public record SavePresetRequest(string Kind, string Name, string? BaseType, string? Icon, string[]? Headings);
+    // Config arrives as free-form JSON and leaves normalised: every kind's record drops what it
+    // does not know, so an unvalidated value cannot reach the database through a field this
+    // record forgot to name.
+    public record SavePresetRequest(string Kind, string Name, JsonElement? Config);
 
     private const int MaxName = 60;
-    private static readonly HashSet<string> Kinds = ["document"];
+    private const int MaxPerKind = 50;
 
     public static void MapPresetEndpoints(this WebApplication app)
     {
@@ -37,6 +43,9 @@ public static class PresetEndpoints
             if (Validate(req) is { } error) return error;
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var count = await db.Presets.CountAsync(p => p.OwnerId == uid && p.Kind == req.Kind);
+            if (count >= MaxPerKind)
+                return Results.BadRequest(new { error = ErrorMessages.PresetLimitReached(MaxPerKind) });
+
             var preset = new Preset
             {
                 OwnerId = uid,
@@ -56,6 +65,11 @@ public static class PresetEndpoints
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var preset = await db.Presets.FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == uid);
             if (preset is null) return Results.NotFound();
+            // The kind is fixed at creation: it decides how ConfigJson is read, and a row whose
+            // kind moved under a config written for the old one is a row nothing can read.
+            if (preset.Kind != req.Kind)
+                return Results.BadRequest(new { error = ErrorMessages.PresetKindImmutable });
+
             preset.Name = req.Name.Trim();
             preset.ConfigJson = BuildConfig(req);
             await db.SaveChangesAsync();
@@ -72,28 +86,26 @@ public static class PresetEndpoints
 
     private static IResult? Validate(SavePresetRequest req)
     {
-        if (!Kinds.Contains(req.Kind))
+        if (!PresetKinds.IsKnown(req.Kind))
             return Results.BadRequest(new { error = ErrorMessages.UnknownPresetKind });
         if (string.IsNullOrWhiteSpace(req.Name) || req.Name.Trim().Length > MaxName)
             return Results.BadRequest(new { error = ErrorMessages.PresetNameInvalid });
         return null;
     }
 
-    // For a document preset, the config is validated and normalised through DocumentPresetConfig,
-    // so a bad base type or an overlong heading list cannot reach the database.
+    /// <summary>
+    /// The config as its kind's record understands it, re-serialised from that record rather than
+    /// from the request — so a bad base type, an unknown destination or an overlong heading list
+    /// is dropped on the way in, not tolerated on the way out.
+    /// </summary>
     private static string BuildConfig(SavePresetRequest req)
     {
-        var cfg = DocumentPresetConfig.Parse(new JsonObject
+        var raw = req.Config?.ValueKind is JsonValueKind.Object ? req.Config.Value.GetRawText() : null;
+        return req.Kind switch
         {
-            ["baseType"] = req.BaseType,
-            ["icon"] = req.Icon,
-            ["headings"] = new JsonArray((req.Headings ?? []).Select(h => JsonValue.Create(h)).ToArray()),
-        }.ToJsonString());
-        return new JsonObject
-        {
-            ["baseType"] = cfg.BaseType,
-            ["icon"] = cfg.Icon,
-            ["headings"] = new JsonArray(cfg.Headings.Select(h => JsonValue.Create(h)).ToArray()),
-        }.ToJsonString();
+            PresetKinds.Project => ProjectPresetConfig.Parse(raw).ToJson(),
+            PresetKinds.Export => ExportPresetConfig.Parse(raw).ToJson(),
+            _ => DocumentPresetConfig.Parse(raw).ToJson(),
+        };
     }
 }

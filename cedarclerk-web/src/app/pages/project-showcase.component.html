@@ -52,6 +52,14 @@
                                 <textarea id="showcase-gallery" rows="3" maxlength="2000"
                                           [ngModel]="gallery()" (ngModelChange)="gallery.set($event)"
                                           [placeholder]="t().projects.edit.showcaseGalleryPlaceholder"></textarea>
+                                <div class="field-actions">
+                                    <!--T-353 — the one asset window, appending rather than replacing.-->
+                                    <app-button variant="paper" size="sm" [disabled]="busy()"
+                                                (clicked)="galleryPickerOpen.set(true)">
+                                        <app-icon name="image" size="sm"></app-icon>
+                                        {{ t().projects.edit.showcaseGalleryPick }}
+                                    </app-button>
+                                </div>
                                 <p class="hint">{{ t().projects.edit.showcaseGalleryHint }}</p>
                             </div>
 
@@ -154,3 +162,7 @@
         </div>
     </div>
 </div>
+
+@if (galleryPickerOpen()) {
+    <app-media-picker (picked)="appendGalleryImage($event)" (closed)="galleryPickerOpen.set(false)" />
+}

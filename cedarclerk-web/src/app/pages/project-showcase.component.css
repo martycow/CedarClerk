@@ -151,3 +151,10 @@
 [data-surface="chrome"] .spec-value.none {
     color: var(--t2);
 }
+
+/* T-353 - the gallery field's own command, under the textarea it fills. */
+.field-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--space-1);
+}

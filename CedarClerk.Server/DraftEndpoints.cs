@@ -212,7 +212,7 @@ public static class DraftEndpoints
                     d.DocumentType,
                     d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.SeriesId, d.ProjectId, d.IsPrivate, d.IsTemplate,
                     d.ParentDraftId, d.SiblingOrder, d.IsEvergreen,
-                    d.DisableCopy, d.DisableReactions, d.DisableComments, d.ViewCount,
+                    d.DisableCopy, d.DisableReactions, d.DisableComments, d.ViewCount, d.CoverImagePath,
                     Translations = db.DraftTranslations.Where(t => t.DraftId == d.Id)
                         .Select(t => new { t.Language, t.UpdatedAt }).ToList(),
                 })
@@ -274,6 +274,24 @@ public static class DraftEndpoints
                 deltas[d.Id] = (Math.Max(0, views - row.BaselineViewCount), Math.Max(0, reactions - row.BaselineReactionCount));
             }
 
+            // T-337 — the post card's thumbnail, filled in here rather than by a migration, which
+            // cannot parse a document's JSON. Its own query on purpose: the listing projection above
+            // deliberately never loads CedarJson, and joining every document body in permanently to
+            // serve a thumbnail would be a bad trade. Bounded per call, so an account with hundreds
+            // of documents fills in over a few listings instead of paying for all of them at once;
+            // the save path clears the flag, so an edit is picked up on the next listing.
+            var covers = new Dictionary<Guid, string?>();
+            foreach (var d in await db.Drafts
+                         .Where(d => d.OwnerId == uid && !d.CoverImageScanned)
+                         .OrderByDescending(d => d.UpdatedAt)
+                         .Take(Consts.DraftActivity.CoverScanBatch)
+                         .ToListAsync())
+            {
+                d.CoverImagePath = CedarPackage.FindFirstImagePathSafe(d.CedarJson);
+                d.CoverImageScanned = true;
+                covers[d.Id] = d.CoverImagePath;
+            }
+
             await db.SaveChangesAsync();
 
             return drafts.Select(d => new
@@ -283,6 +301,8 @@ public static class DraftEndpoints
                 d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.SeriesId, d.ProjectId, d.IsPrivate, d.IsTemplate,
                 d.ParentDraftId, d.SiblingOrder, d.IsEvergreen,
                 d.DisableCopy, d.DisableReactions, d.DisableComments, d.ViewCount,
+                // T-337 — the value this listing just computed, or the cached one from the query.
+                CoverImagePath = covers.TryGetValue(d.Id, out var cover) ? cover : d.CoverImagePath,
                 ReactionCount = reactionCounts.GetValueOrDefault(d.Id),
                 NewViewCount = deltas[d.Id].Views,
                 NewReactionCount = deltas[d.Id].Reactions,
@@ -1328,6 +1348,8 @@ public static class DraftEndpoints
             draft.Title = req.Title;
             draft.CedarJson = req.CedarJson;
             draft.UpdatedAt = DateTime.UtcNow;
+            // T-337 — the body moved, so the cached first picture is re-read on the next listing.
+            draft.CoverImageScanned = false;
             await DraftRevisionService.RecordAsync(db, id, draft.PrimaryLanguage, req.Title, req.CedarJson);
             await SyncDocumentLinksAsync(db, uid, id, req.CedarJson);
             await db.SaveChangesAsync();

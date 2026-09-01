@@ -30,8 +30,9 @@ import { ProjectsService, ProjectSummary, DOCUMENT_TYPE_ICONS } from '../core/pr
 import { StatsComponent } from './stats.component';
 import { IconComponent } from '../shared/icon.component';
 import { ButtonComponent } from '../bench/forms/button.component';
+import { InputComponent } from '../bench/forms/input.component';
 import { PlanLockComponent } from '../shared/plan-lock.component';
-import { PopoverComponent } from '../shared/popover.component';
+import { LanguageMenuComponent } from '../shared/language-menu.component';
 import { HintDotComponent } from '../shared/hint-dot.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { LeafTagComponent } from '../bench/display/leaf-tag.component';
@@ -57,9 +58,9 @@ const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, ModalComponent, CommentsComponent, StatsComponent,
         TagPickerComponent, FolderPickerComponent, FormRefComponent, ButtonComponent, IndexTabsComponent,
-        RouterLink, PlanLockComponent, PopoverComponent, HintDotComponent,
+        RouterLink, PlanLockComponent, HintDotComponent,
         LeafTagComponent, ShelfPanelComponent, StampBadgeComponent, SpecRowComponent, WorktopComponent,
-        GrowthChartComponent,
+        GrowthChartComponent, LanguageMenuComponent, InputComponent,
     ],
     templateUrl: 'posts-manager.component.html',
     styleUrls: ['posts-manager.component.css'],

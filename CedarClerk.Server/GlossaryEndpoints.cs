@@ -214,13 +214,14 @@ public static class GlossaryEndpoints
             }
             catch (TranslationException ex)
             {
-                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status502BadGateway);
+                // T-361 — charged up front, so a failure on our side hands the credit back.
+                return await SubscriptionPlan.RefundAiAndFailAsync(db, uid, CreditPacks.AiSmallCost, ex.Message);
             }
 
             var newTerm = translated[0].Trim();
             var newDescription = translated[1].Trim();
             if (newTerm.Length == 0 || newTerm.Length > TermMaxLength || newDescription.Length == 0)
-                return Results.Json(new { error = ErrorMessages.TranslationUnusable }, statusCode: StatusCodes.Status502BadGateway);
+                return await SubscriptionPlan.RefundAiAndFailAsync(db, uid, CreditPacks.AiSmallCost, ErrorMessages.TranslationUnusable);
             if (newDescription.Length > DescriptionMaxLength)
                 newDescription = newDescription[..DescriptionMaxLength];
 
@@ -306,7 +307,9 @@ public static class GlossaryEndpoints
             }
             catch (TranslationException ex)
             {
-                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status502BadGateway);
+                // T-361 — nothing was written, so the credit goes back. A run that translates some
+                // terms and skips others is a partial success and keeps its charge.
+                return await SubscriptionPlan.RefundAiAndFailAsync(db, uid, CreditPacks.AiSmallCost, ex.Message);
             }
 
             // One query for the whole target language; terms created below join the map so two

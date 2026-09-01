@@ -60,6 +60,15 @@ manager's business or nobody's, so this file starts at the filter strip.-->
                         {{ r.delta! > 0 ? '+' : '' }}{{ r.delta }} {{ t().stats.perWeek }}
                     </span>
                     }
+                    <!--T-338 — the window's shape beside its number. Decorative to a reader of the
+                    text, so it is hidden from assistive tech: the value and the delta already say
+                    everything the line carries.-->
+                    @if (r.spark; as path) {
+                    <svg class="ro-spark" viewBox="0 0 64 18" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                        <path [attr.d]="path" [attr.stroke]="r.color" fill="none" stroke-width="1.5"
+                              stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    }
                 </span>
             </div>
             }

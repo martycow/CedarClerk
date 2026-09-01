@@ -129,7 +129,8 @@ public static class FormPresetEndpoints
             }
             catch (TranslationException ex)
             {
-                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status502BadGateway);
+                // T-361 — charged up front, so a failure on our side hands the credit back.
+                return await SubscriptionPlan.RefundAiAndFailAsync(db, uid, CreditPacks.AiSmallCost, ex.Message);
             }
 
             preset.FormJson = RegistrationFormTexts.ReplaceTexts(upgraded, req.TargetLanguage, translated);

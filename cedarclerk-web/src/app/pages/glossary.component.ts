@@ -12,6 +12,7 @@ import { IconComponent } from '../shared/icon.component';
 import { GlossaryTermFormComponent } from '../shared/glossary-term-form.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
+import { LanguageMenuComponent, LanguageMenuItem } from '../shared/language-menu.component';
 import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { SpecRowComponent, SpecScope } from '../bench/worktop/spec-row.component';
@@ -28,6 +29,7 @@ import { HintDotComponent } from '../shared/hint-dot.component';
         IconComponent, FormsModule, ModalComponent, NgTemplateOutlet, GlossaryTermFormComponent,
         ButtonComponent, IndexTabsComponent, LeafTagComponent, ShelfPanelComponent, SpecRowComponent, PlanLockComponent, HintDotComponent,
         WorktopComponent,
+        LanguageMenuComponent,
     ],
     templateUrl: 'glossary.component.html',
     styleUrls: ['glossary.component.css'],
@@ -390,8 +392,28 @@ export class GlossaryComponent implements OnInit, OnDestroy {
     // ─── The bench's own chrome (ADR-167 clauses 7 and 8) ─────────────────────────────────────
     // The language strip is an index: it picks which set of terms the sheet lists, and the tally on
     // a tile is that set's size, so an empty language is visibly empty before it is opened.
+    // T-350 — the strip lists the languages that actually hold terms, plus the primary and the one
+    // currently selected; the menu beside it reaches the rest. A tile carries a count and a menu
+    // row cannot, so the tabs stay where they earn their place — a flat row of every content
+    // language did not, and ran off the edge as the list grew.
+    private stripLanguages(): string[] {
+        const shown = new Set<string>([DEFAULT_PRIMARY_LANGUAGE, this.languageFilter()]);
+        for (const l of this.contentLanguages) if (this.countFor(l) > 0) shown.add(l);
+        return this.contentLanguages.filter(l => shown.has(l));
+    }
+
+    /** What the menu offers: everything the strip does not already show. */
+    offStripLanguages(): string[] {
+        const shown = new Set(this.stripLanguages());
+        return this.contentLanguages.filter(l => !shown.has(l));
+    }
+
+    languageMenuItems(): LanguageMenuItem[] {
+        return this.contentLanguages.map(code => ({ code, hasContent: this.countFor(code) > 0 }));
+    }
+
     languageTabs(): IndexTabItem[] {
-        return this.contentLanguages.map(l => ({
+        return this.stripLanguages().map(l => ({
             id: l,
             label: l.toUpperCase(),
             badge: this.countFor(l),

@@ -174,6 +174,12 @@ public static class Consts
         // bytes. Server config only, never author-facing.
         public const string MediaDeliveryCfg = "Cedar:Telegram:MediaDelivery";
         public const string MediaDeliveryUrl = "url";
+
+        // T-359 (audit finding 6b) — how long a cached "this Telegram user administers this chat"
+        // row is trusted for. The cache only refreshes when the BOT's own membership changes, so a
+        // person demoted in between keeps a grant nothing revokes; the TTL turns that into a
+        // bounded one. Refresh re-verifies live and re-stamps, which is the way back in.
+        public static readonly TimeSpan KnownChatAdminTtl = TimeSpan.FromDays(7);
     }
 
     public static class Anthropic
@@ -278,6 +284,11 @@ public static class Consts
 
     public static class DraftActivity
     {
+        // T-337 - how many un-scanned documents one listing reads a cover out of. A bound, not a
+        // budget: after a few listings there is nothing left to scan, and this only keeps the first
+        // one after deploy from loading every document body an account owns.
+        public const int CoverScanBatch = 50;
+
         // How long the owner has to be away before the next /drafts load counts as a new session and
         // rolls the DraftStatSeen baseline forward (B23).
         public static readonly TimeSpan SessionGap = TimeSpan.FromMinutes(30);
