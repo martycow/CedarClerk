@@ -93,6 +93,20 @@ public static class ErrorMessages
     public static string FeedbackTooLong => Ru("Сообщение слишком длинное.", "The message is too long.");
     public static string UnknownPresetKind => Ru("Неизвестный тип пресета.", "Unknown preset kind.");
     public static string PresetNameInvalid => Ru("Нужно название пресета (до 60 символов).", "A preset needs a name (up to 60 characters).");
+    public static string TeamNameInvalid(int max) =>
+        Ru($"Нужно название команды (до {max} символов).", $"A team needs a name (up to {max} characters).");
+    public static string TeamLimitReached(int limit) =>
+        Ru($"Больше {limit} команд создать нельзя.", $"No more than {limit} teams.");
+    public static string TeamMemberLimitReached(int limit) =>
+        Ru($"В команде не может быть больше {limit} участников.", $"A team holds at most {limit} people.");
+    public static string TeamMemberAlreadyInvited =>
+        Ru("Этот адрес уже приглашён в команду.", "That address is already invited to this team.");
+    public static string TeamMemberBanned =>
+        Ru("Этот адрес заблокирован в команде — снимите блокировку, чтобы пригласить снова.",
+            "That address is banned from this team — lift the ban to invite it again.");
+    public static string UnknownTeamMemberStatus(string status) =>
+        Ru($"Неизвестный статус участника: {status}.", $"Unknown member status: {status}.");
+
     public static string PresetKindImmutable => Ru("Тип пресета менять нельзя.", "A preset's kind cannot be changed.");
     public static string PresetLimitReached(int limit) =>
         Ru($"Больше {limit} пресетов одного типа хранить нельзя.", $"No more than {limit} presets of one kind.");

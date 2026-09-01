@@ -144,6 +144,7 @@ public static class ProjectEndpoints
                 project.Description,
                 project.ProjectType,
                 project.CoverUrl,
+                project.TeamId,
                 project.CreatedAt,
                 project.ArchivedAt,
                 project.ShowcaseSlug,

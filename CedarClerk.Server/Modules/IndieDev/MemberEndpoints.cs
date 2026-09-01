@@ -188,6 +188,21 @@ public static class ProjectMemberEndpoints
             return Results.NoContent();
         });
 
+        // T-301 — what THIS caller is to this project, in one word. The shell draws a wall of
+        // tools for whatever project is open, and until it could ask this it drew the owner's wall
+        // for everyone: a member saw seven hooks and every one of them answered 404. Deliberately
+        // its own tiny route rather than a field on GET /api/projects/{id}, which is owner-only and
+        // 404s for the very callers that need the answer.
+        app.MapGet("/api/projects/{projectId:guid}/access", async (Guid projectId, ClaimsPrincipal user,
+            IServiceScopeFactory scopes, CancellationToken ct) =>
+        {
+            var uid = CanvasEndpoints.UserId(user);
+            var access = await ProjectAccessResolver.ResolveAsync(scopes, projectId, uid, ct);
+            return access is null
+                ? Results.NotFound()
+                : Results.Ok(new { role = access.WireRole, canWrite = access.CanWrite, access.Archived });
+        }).RequireAuthorization();
+
         var invites = app.MapGroup("/api/project-invites").RequireAuthorization();
 
         invites.MapGet("/{token}", async (string token, ClaimsPrincipal user, IServiceScopeFactory scopes, CancellationToken ct) =>
@@ -265,6 +280,32 @@ public static class ProjectMemberEndpoints
                 .Where(m => m.MemberUserId == uid && m.AcceptedAt != null)
                 .Select(m => new { m.ProjectId, m.Role })
                 .ToListAsync(ct);
+
+            // T-358 — a project reached through a team is shared with this account just as surely
+            // as one invited to directly, and the screen that lists "what am I in" has to say so or
+            // the team's whole point is invisible. A per-project invitation wins where both exist,
+            // which is the same precedence ProjectAccessResolver applies.
+            var teamRoles = await db.TeamMembers
+                .Where(m => m.MemberUserId == uid && m.AcceptedAt != null && m.Status != TeamMemberStatuses.Banned)
+                .Select(m => new { m.TeamId, m.Role, m.Status })
+                .ToListAsync(ct);
+            if (teamRoles.Count > 0)
+            {
+                var teamIds = teamRoles.Select(t => t.TeamId).ToList();
+                var teamProjects = await db.Projects
+                    .Where(p => p.TeamId != null && teamIds.Contains(p.TeamId!.Value))
+                    .Select(p => new { p.Id, TeamId = p.TeamId!.Value })
+                    .ToListAsync(ct);
+
+                var direct = memberships.Select(m => m.ProjectId).ToHashSet();
+                memberships = memberships.Concat(teamProjects
+                        .Where(p => !direct.Contains(p.Id))
+                        .Select(p => teamRoles.First(t => t.TeamId == p.TeamId) is var t
+                            ? new { ProjectId = p.Id, Role = TeamMemberStatuses.EffectiveRole(t.Status, t.Role) }
+                            : null!))
+                    .ToList();
+            }
+
             if (memberships.Count == 0) return Results.Ok(Array.Empty<object>());
 
             var ids = memberships.Select(m => m.ProjectId).ToList();

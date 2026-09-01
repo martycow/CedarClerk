@@ -61,7 +61,7 @@ public static class AuthEndpoints
         #region Register
         groupBuilder.MapPost("/register", async (RegisterRequest req, UserManager<ApplicationUser> users,
             SignInManager<ApplicationUser> signIn, IConfiguration cfg, CedarDbContext db,
-            ResendEmailProvider email, ILogger<Program> logger) =>
+            IServiceScopeFactory scopes, ResendEmailProvider email, ILogger<Program> logger) =>
         {
             var submitted = req.InviteCode?.Trim() ?? "";
 
@@ -85,7 +85,20 @@ public static class AuthEndpoints
             // answer for a self-hosted single-user install, which is a real thing somebody may do.
             var openRegistration = cfg.IsOn(Consts.General.OpenRegistrationCfg);
 
+            // T-304 — a live team or project invitation stands in for the code. Somebody who was
+            // invited by name has already been let in by a person; sending them to a login page
+            // they cannot get past, while the owner's screen says the invitation was sent, was the
+            // whole failure. Read in a platform scope: registration has no tenant yet, so the
+            // ordinary filter would hide every membership row there is.
+            var invitedByToken = false;
             if (!openRegistration && !codeUsable && !configMatches)
+            {
+                using var inviteScope = scopes.CreatePlatformScope();
+                invitedByToken = await TeamEndpoints.IsLiveInviteTokenAsync(
+                    inviteScope.ServiceProvider.GetRequiredService<CedarDbContext>(), submitted);
+            }
+
+            if (!openRegistration && !codeUsable && !configMatches && !invitedByToken)
                 return Results.BadRequest(new { error = ErrorMessages.InvalidInviteCode });
 
             var username = Usernames.Normalize(req.Username);

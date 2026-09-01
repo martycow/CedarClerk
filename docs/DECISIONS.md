@@ -246,3 +246,5 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-231 — The public blog puts discovery and reading before its frame](adr/ADR-231.md)
 - [ADR-232 — Feedback is a stored, owner-scoped entity, not an email](adr/ADR-232.md)
 - [ADR-233 — A preset is a named starting point; a document type's meaning is the preset that carries it](adr/ADR-233.md)
+- [ADR-234 — A preset's kind decides which record reads it, and nothing else about it differs](adr/ADR-234.md)
+- [ADR-235 — A team is a second way in, resolved after the first, and a status is not a role](adr/ADR-235.md)

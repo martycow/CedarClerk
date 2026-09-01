@@ -46,7 +46,7 @@ public static class ProjectAccessResolver
     {
         var project = await platformDb.Projects
             .Where(p => p.Id == projectId)
-            .Select(p => new { p.OwnerId, p.ArchivedAt })
+            .Select(p => new { p.OwnerId, p.ArchivedAt, p.TeamId })
             .FirstOrDefaultAsync(ct);
         if (project is null) return null;
 
@@ -59,8 +59,24 @@ public static class ProjectAccessResolver
             .Where(m => m.ProjectId == projectId && m.MemberUserId == userId && m.AcceptedAt != null)
             .Select(m => m.Role)
             .FirstOrDefaultAsync(ct);
+        if (role is not null) return new ProjectAccess(projectId, project.OwnerId, role, false, archived);
 
-        return role is null ? null : new ProjectAccess(projectId, project.OwnerId, role, false, archived);
+        // T-358 — a project handed to a team is reachable by that team's people. Asked second, so a
+        // per-project invitation always decides on its own: somebody may be invited to one project
+        // as an editor while the team only views, and the narrower grant must not be overwritten by
+        // the broader one. A banned member resolves to nothing at all; a restricted one to a viewer,
+        // which is what makes restriction reversible without remembering what the role used to be.
+        if (project.TeamId is not { } teamId) return null;
+
+        var membership = await platformDb.TeamMembers
+            .Where(m => m.TeamId == teamId && m.MemberUserId == userId && m.AcceptedAt != null)
+            .Select(m => new { m.Role, m.Status })
+            .FirstOrDefaultAsync(ct);
+        if (membership is null || !TeamMemberStatuses.GrantsAccess(membership.Status)) return null;
+
+        return new ProjectAccess(
+            projectId, project.OwnerId,
+            TeamMemberStatuses.EffectiveRole(membership.Status, membership.Role), false, archived);
     }
 
     /// <summary>

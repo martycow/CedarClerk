@@ -84,12 +84,59 @@ internal sealed class CanvasFixture : IDisposable
         return member.Id;
     }
 
+    // T-358 — the team half. A team is the owner's; a project points at one; a person is on it with
+    // a role and a status.
+    public Guid Team(string ownerId, string name = "Crew")
+    {
+        using var db = Platform();
+        var team = new Team { OwnerId = ownerId, Name = name };
+        db.Teams.Add(team);
+        db.SaveChanges();
+        return team.Id;
+    }
+
+    public void HandProjectToTeam(Guid projectId, Guid? teamId)
+    {
+        using var db = Platform();
+        var project = db.Projects.Single(p => p.Id == projectId);
+        project.TeamId = teamId;
+        db.SaveChanges();
+    }
+
+    public Guid TeamMember(string ownerId, Guid teamId, string email, string role, string? memberUserId,
+        string status = TeamMemberStatuses.Active, string? token = null)
+    {
+        using var db = Platform();
+        var member = new TeamMember
+        {
+            OwnerId = ownerId,
+            TeamId = teamId,
+            Email = email,
+            Role = role,
+            Status = status,
+            MemberUserId = memberUserId,
+            AcceptedAt = memberUserId is null ? null : DateTime.UtcNow,
+            InviteToken = token,
+            InvitedByUserId = ownerId,
+        };
+        db.TeamMembers.Add(member);
+        db.SaveChanges();
+        return member.Id;
+    }
+
     public async Task<ProjectAccess> AccessAsync(Guid projectId, string userId)
     {
         await using var db = Platform();
         var access = await ProjectAccessResolver.ResolveAsync(db, projectId, userId);
         Assert.NotNull(access);
         return access!;
+    }
+
+    /// <summary>The same resolution, but for the cases whose answer is "nothing at all".</summary>
+    public async Task<ProjectAccess?> TryAccessAsync(Guid projectId, string userId)
+    {
+        await using var db = Platform();
+        return await ProjectAccessResolver.ResolveAsync(db, projectId, userId);
     }
 
     public static CanvasItemInput Note(Guid id, double x = 0, double y = 0, string text = "hello") =>

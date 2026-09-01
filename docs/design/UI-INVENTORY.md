@@ -338,13 +338,32 @@ The desktop-app page at `/download` — public, outside the shell beside the leg
 
 ## `presets.component` (`cedarclerk-web/src/app/pages/presets.component.{ts,html,css}`)
 
-T-331/T-355 — the Preset Manager, an account-wide screen reached from the hook rail's tray (`/presets`), like Glossary. Document presets today: each is a named starting point that bundles a base type (what it publishes as — never a new stored type string) and a heading skeleton the new document is born with, which is what gives a Document Type real meaning (T-355). A preset is offered as a dashed card alongside the built-in types in the project's New-document dialog; picking it applies its skeleton server-side (`POST /api/projects/:id/documents` with `presetId`).
+T-331/T-355 — the Preset Manager, an account-wide screen reached from the hook rail's tray (`/presets`), like Glossary. **Three kinds over one stored row since T-331's remainder**, switched by an index strip at the top of the sheet: a **document** preset (a base type — what it publishes as, never a new stored type string — plus the heading skeleton the new document is born with), a **project** preset (the project type, the first document's type and title, and a description), and an **export** preset (a set of destinations and languages). A document preset is offered as a dashed card alongside the built-in types in the New-document dialog (`POST /api/projects/:id/documents` with `presetId`); a project preset stands beside the four built-in types in the New-project dialog (`POST /api/projects` with `presetId`); an export preset fills step 2 of the Export modal from its header.
 
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|
-| New-preset button | `.pr-index`, pine | button | Opens the inline edit form | N/A | The screen's one primary action; the ruler carries the count |
-| Preset card | `.pr-card` | row | Icon, name, base-type chip, the heading skeleton as a dotted line, edit/delete | N/A | Edit swaps the card for the inline form in place |
-| Edit form | `.pr-form` (create at top, edit in place) | panel | Name, base type (a row of type buttons that also sets the icon), starter headings (one per line) | `busy()` on Save | Base type is the DocumentTypes contract — publishability keys on it; the icon follows the type |
+| Kind strip | `app-index-tabs` in `.pr-index` | tab | Switches which kind of preset is being managed — documents / projects / export | N/A | An index strip, not navigation: three lists of the same object (ADR-167 clause 7) |
+| New-preset button | `.pr-index`, pine | button | Opens the inline edit form for the current kind | N/A | The screen's one primary action; the ruler carries the count |
+| Preset card | `.pr-card` | row | Icon, name, a badge naming what it makes, a one-line summary of its config, edit/delete | N/A | Edit swaps the card for the inline form in place |
+| Edit form — document | `.pr-form` (create at top, edit in place) | panel | Name, base type (a row of type buttons that also sets the icon), starter headings (one per line) | `busy()` on Save | Base type is the DocumentTypes contract — publishability keys on it; the icon follows the type |
+| Edit form — project | same `.pr-form` | panel | Name, project type, first document's type ("what the type implies" is offered as an explicit choice, not a blank), first document's title, description | `busy()` on Save | Project type is the ProjectTypes contract; anything the New-project dialog states outright still overrides the preset |
+| Edit form — export | same `.pr-form` | panel | Name, destinations (blog + each publish network, brand marks as in the Export modal), languages | `busy()` on Save | No channel ids by design — which Telegram channel receives the post stays step 3's question, asked against what is connected now. Empty languages means "whatever the post already has" |
+
+## `teams.component` (`cedarclerk-web/src/app/pages/teams.component.{ts,html,css}`)
+
+T-358 — teams, an account-wide screen reached from the hook rail's tray (`/teams`), like Glossary and Presets. A team is a named group the owner invites people into once; handing it to a project (the project's own edit dialog) gives every active member that project. It grows out of per-project membership (ADR-217) and does not replace it: inviting one person to one board must not require standing a team up first, and a per-project invitation still wins where both exist.
+
+What a team adds over a project's member list is a **status** — active / restricted / banned — kept in its own column beside the role, because restoring a restricted member has to give back the role they had and one column would have forgotten it. Restricted resolves to a viewer everywhere the team reaches; banned resolves to nothing and kills the pending invitation, so the address cannot be invited back until the ban is lifted.
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Teams shelf | `app-shelf-panel.shelf-list` | panel | The caller's own teams, then the ones they were invited into under a `.tm-group` heading | `loading()` | A joined team is shown, not offered: there is nothing on this screen to pick it for |
+| New-team action | shelf header, `variant="rail"` | button | Opens the inline create form on the sheet | N/A | The shared compact rail button, as on the Forms tab |
+| Team head | `.tm-head` | row | Name, the (i) that carries what a team is for, rename and delete | `busy()` on delete | Delete takes the team away from its projects and never deletes one — the confirm says so and names the count |
+| Invite row | `.tm-invite` | field + select + button | Invite by email at a role | `busy()` | Owner-only, like a project's. The invitation link is shown afterwards because mail may not be configured |
+| Invitation link | `.tm-invite-url` | readout + copy | The last invitation's URL, copyable | N/A | Same reason as the canvas's: an owner who can copy it is not blocked by a missing provider key |
+| Member row | `.tm-member` | row | Name/address, a state stamp, a role select, a status select, resend (pending only) and remove | `busy()` on every write | Status is its own control, never a third entry in the role list: "what may they do" and "may they do anything" are different decisions. A banned row stays on the list — that is what stops the address being re-invited |
+| Inspector | `app-shelf-panel.inspector` | panel | People / active / projects for the selection, and the two account-wide totals | N/A | The same selection-then-document shape as the Posts Manager's |
 
 ## `glossary.component` (`cedarclerk-web/src/app/pages/glossary.component.{ts,html,css}`)
 

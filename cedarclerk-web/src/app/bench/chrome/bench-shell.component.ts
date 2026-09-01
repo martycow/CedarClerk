@@ -20,6 +20,7 @@ import { IconComponent } from '../../shared/icon.component';
 import { SearchOverlayComponent } from '../../shared/search-overlay.component';
 import { ButtonComponent } from '../forms/button.component';
 import { ResinDropComponent } from '../display/resin-drop.component';
+import { ProjectAccessService } from '../../core/project-access.service';
 import { HookRailComponent, HookRailItem } from './hook-rail.component';
 import { RailHeaderComponent, RailProject } from './rail-header.component';
 import { RulerBarComponent, RulerReadout } from './ruler-bar.component';
@@ -124,6 +125,14 @@ function matches(path: string, pattern: string): boolean {
                             <app-icon name="squares-four" size="sm" />
                             {{ t().presets.crumb }}
                         </a>
+                        <!--T-358 — teams are account-wide and reach every project, so they hang
+                        beside the other account-wide screens rather than inside one project.-->
+                        @if (auth.indieDev()) {
+                        <a class="menu-item" routerLink="/teams">
+                            <app-icon name="user" size="sm" />
+                            {{ t().teams.crumb }}
+                        </a>
+                        }
                         <!--T-191 — the feedback channel is reachable from every screen.-->
                         <button type="button" class="menu-item" (click)="feedbackForm.open.set(true)">
                             <app-icon name="chat-teardrop-dots" size="sm" />
@@ -287,6 +296,7 @@ export class BenchShellComponent {
     private readonly current = inject(CurrentProjectService);
     private readonly version = inject(VersionService);
     private readonly feedback = inject(CommentsService);
+    private readonly access = inject(ProjectAccessService);
     private readonly creditBalance = inject(CreditBalanceService);
     protected readonly feedbackForm = inject(FeedbackFormService);
 
@@ -394,15 +404,42 @@ export class BenchShellComponent {
         return items;
     });
 
+    /**
+     * T-301 — the caller's relationship to the project the wall is being drawn for. A shared
+     * project shares the canvas and nothing else (ADR-217, unchanged by T-358's teams), so a
+     * member's wall is the canvas plus the account-wide tools; drawing the owner's eight was what
+     * gave a member seven hooks that answered 404.
+     *
+     * Null while the answer is still in flight, and the wall waits rather than guessing: guessing
+     * owner draws doors that are not there, and guessing member hides doors from the owner.
+     */
+    protected readonly projectRole = computed(() => {
+        const open = this.openProjectId();
+        if (!open) return null;
+        this.access.ensure(open);
+        return this.access.accessFor(open)?.role ?? null;
+    });
+
     protected readonly hooks = computed<readonly HookRailItem[]>(() => {
         const t = this.t().shell;
         const open = this.openProjectId();
+        const role = this.projectRole();
         const items: HookRailItem[] = [];
         if (this.auth.indieDev()) items.push({ id: 'hub', icon: 'game-controller', label: t.hub, link: '/projects' });
         if (!this.auth.indieDev()) {
             items.push({ id: 'documents', icon: 'pencil-simple', label: t.documents, link: '/drafts' });
             items.push({ id: 'calendar', icon: 'clock', label: t.calendar, link: '/calendar' });
             items.push({ id: 'assets', icon: 'images', label: t.assets, link: '/library' });
+            items.push({
+                id: 'metrics', icon: 'chart-bar', label: t.metrics, link: '/posts',
+                badge: this.feedback.newComments() + this.feedback.newReactions(),
+                badgeTitle: this.t().editor.newBadge,
+            });
+        } else if (open && !this.onHub() && role !== null && role !== 'owner') {
+            // A member's wall. Canvas is the whole of it, because it is the whole of what a
+            // membership grants — see ADR-217's frozen contract.
+            items.push({ id: 'canvas', icon: 'squares-four', label: t.canvas, link: ['/projects', open, 'canvas'] });
+            items.push({ id: 'calendar', icon: 'clock', label: t.calendar, link: '/calendar' });
             items.push({
                 id: 'metrics', icon: 'chart-bar', label: t.metrics, link: '/posts',
                 badge: this.feedback.newComments() + this.feedback.newReactions(),
@@ -447,6 +484,7 @@ export class BenchShellComponent {
             case 'calendar': return [t.calendar.crumb];
             case 'glossary': return [t.glossary.crumb];
             case 'presets': return [t.presets.crumb];
+            case 'teams': return [t.teams.crumb];
             case 'library': return [t.media.crumb];
             case 'settings': return [t.settings.crumb];
             case 'admin': return [t.admin.crumb];

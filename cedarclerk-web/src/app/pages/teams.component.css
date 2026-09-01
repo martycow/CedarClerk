@@ -1,0 +1,244 @@
+:host {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.teams {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: var(--space-3);
+    gap: var(--space-3);
+}
+
+/* The three-part shape the Posts Manager and the Glossary already use: a list you pick from, the
+   sheet you edit on, and an inspector that says what the selection amounts to. */
+.tm-grid {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    gap: var(--space-3);
+}
+
+.shelf-list {
+    flex: none;
+    width: var(--bench-dock-w);
+}
+
+.sheet {
+    flex: 1;
+    min-width: 0;
+}
+
+.inspector {
+    flex: none;
+    width: var(--bench-dock-w-wide);
+}
+
+.sheet-column {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 820px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+/* ---------- the list ---------- */
+.tm-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-2);
+}
+
+.tm-group {
+    margin: var(--space-3) 0 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-chrome-sm);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--t2);
+}
+
+.tm-card {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    padding: var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--sheet);
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+}
+
+.tm-card.on { border-color: var(--accent); }
+/* A team somebody else owns is shown, not offered: there is nothing here to pick it for. */
+.tm-card.is-joined { cursor: default; opacity: .85; }
+
+.tm-card-top {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+.tm-card-name {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-card-meta {
+    font-size: var(--fs-meta);
+    color: var(--t2);
+}
+
+/* ---------- the sheet ---------- */
+.tm-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.tm-head .spacer { flex: 1; }
+
+.tm-title {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: var(--fs-title);
+}
+
+.tm-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    border: 1px solid var(--abord);
+    border-radius: var(--radius-md);
+    background: var(--asoft);
+}
+
+.tm-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+}
+
+.tm-invite {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-2);
+}
+
+.tm-invite-email { flex: 1; min-width: 0; }
+
+.tm-invite-role {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.tm-label {
+    font-family: var(--font-sans);
+    font-size: var(--fs-caption);
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--t2);
+}
+
+.tm-invite-url {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    border: 1px solid var(--abord);
+    border-radius: var(--radius-sm);
+    background: var(--asoft);
+}
+
+.tm-invite-url code {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: var(--fs-meta);
+}
+
+/* ---------- the people ---------- */
+.tm-members {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.tm-member {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--sheet);
+}
+
+/* A banned row stays on the list on purpose — that is what stops the address being invited back. */
+.tm-member.is-banned { opacity: .7; }
+
+.tm-member-who {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tm-member-name {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-member-mail {
+    font-size: var(--fs-meta);
+    color: var(--t2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-pick { max-width: 130px; }
+
+.mini, .mini-remove {
+    display: inline-flex;
+    padding: var(--space-1);
+    border: none;
+    background: none;
+    color: var(--t2);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+}
+.mini:hover { color: var(--text); background: var(--hover); }
+.mini-remove:hover { color: var(--danger); background: var(--hover-danger); }
+
+.tm-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-7) var(--space-4);
+    text-align: center;
+}
+.tm-empty app-icon { color: var(--t2); }
+.tm-empty-title { margin: 0; font-size: var(--fs-body); font-weight: 600; color: var(--text); }

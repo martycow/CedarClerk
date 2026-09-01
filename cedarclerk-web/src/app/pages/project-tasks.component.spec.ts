@@ -11,7 +11,7 @@ import { en } from '../core/i18n/en';
 import { AssetsService } from '../core/assets.service';
 
 const DETAIL: ProjectDetail = {
-    id: 'p1', name: 'Cedar Quest', description: '', projectType: 'fullgame', coverUrl: null,
+    id: 'p1', name: 'Cedar Quest', description: '', projectType: 'fullgame', coverUrl: null, teamId: null,
     createdAt: '2026-08-01T09:00:00', archivedAt: null, showcaseSlug: null, showcaseLinks: '', showcaseGallery: '', showcaseTrailerUrl: null, customDomain: null,
     pressContactEmail: null, pressPrice: null, pressEngine: null, pressGenre: null, pressFactsheetRows: null,
     documents: [], upNext: [], taskCounts: {}, currentSprint: null, openTaskCount: 2,

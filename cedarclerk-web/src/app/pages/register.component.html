@@ -40,12 +40,18 @@
         </div>
 
         @if (!version.openRegistration()) {
+        @if (invitedToken) {
+        <!--T-304 — the invitation IS the code, so there is nothing to ask for. The line says why
+        the field is gone rather than leaving a stranger wondering where to get one.-->
+        <p class="invite-note">{{ t().register.invitedNote }}</p>
+        } @else {
         <!--Enter submits, as it did on the field this replaces: the event bubbles from the field
         to this host.-->
         <app-input class="invite" inputId="cc-reg-invite" [label]="t().register.inviteCode"
                    placeholder="CEDAR-MOO-0" autocomplete="off"
                    [value]="inviteCode" (valueChange)="inviteCode = $any($event) ?? ''"
                    (keyup.enter)="submit()" />
+        }
         }
 
         @if (error()) {

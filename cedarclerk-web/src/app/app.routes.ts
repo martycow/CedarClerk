@@ -139,12 +139,27 @@ export const routes: Routes = [
                 loadComponent: () => import('./pages/project-dialogue.component').then(m => m.ProjectDialogueComponent),
                 canActivate: [indieDevGuard],
             },
+            // T-358 — teams. Behind indieDevGuard because a team's only power is over projects,
+            // and with the module off there are none for it to reach.
+            {
+                path: 'teams',
+                loadComponent: () => import('./pages/teams.component').then(m => m.TeamsComponent),
+                canActivate: [indieDevGuard],
+            },
             // authGuard, not indieDevGuard: an invitation has to survive an install with the module
             // off and still land the reader somewhere honest.
             {
                 path: 'invite/:token',
                 loadComponent: () => import('./pages/invite-accept.component').then(m => m.InviteAcceptComponent),
                 canActivate: [authGuard],
+            },
+            // The same screen, reading a team invitation instead of a project one — the two are the
+            // same page with a different noun, and a second component would be a copy of it.
+            {
+                path: 'team-invite/:token',
+                loadComponent: () => import('./pages/invite-accept.component').then(m => m.InviteAcceptComponent),
+                canActivate: [authGuard],
+                data: { invite: 'team' },
             },
             {
                 path: 'projects/:id/showcase',

@@ -275,6 +275,20 @@
             </div>
         </div>
 
+        <!--T-358 — handing the project to a team. One row, because that is the whole decision:
+        which group of people reaches this, or nobody but its owner. Who is IN a team is the Teams
+        screen's business, and a second place to edit that is exactly what ui-changes.md warns
+        against.-->
+        <div class="field-group team-field">
+            <label class="field-label" for="edit-team">{{ t().projects.edit.teamLabel }}</label>
+            <select id="edit-team" class="text-input" [value]="editTeamId()"
+                    (change)="editTeamId.set($any($event.target).value)">
+                <option value="">{{ t().projects.edit.teamNone }}</option>
+                @for (team of teams(); track team.id) { <option [value]="team.id">{{ team.name }}</option> }
+            </select>
+            <p class="hint">{{ teams().length ? t().projects.edit.teamHint : t().projects.edit.teamEmptyHint }}</p>
+        </div>
+
         <div class="danger-row">
             <button class="btn-ghost" [disabled]="busy()" (click)="toggleArchived()">
                 {{ project()?.archivedAt ? t().projects.edit.unarchive : t().projects.edit.archive }}

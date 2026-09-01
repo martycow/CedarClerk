@@ -295,6 +295,17 @@ public static class Consts
     }
 
     // The reference board and the people who share it (T-301, ADR-217/218).
+    // T-358 — teams. The invitation half reuses Canvas.InviteTokenBytes: one token shape for every
+    // invitation the product sends, so there is one thing to reason about when it is a credential.
+    public static class Teams
+    {
+        public const int NameMax = 60;
+        public const int StatusNoteMax = 200;
+
+        public const int TeamsPerOwner = 10;
+        public const int MembersPerTeam = 50;
+    }
+
     public static class Canvas
     {
         public const int BoardsPerProject = 20;

@@ -12,6 +12,7 @@ import {
     projectInitials,
 } from '../core/projects.service';
 import { Preset, PresetsService, parseProjectConfig } from '../core/presets.service';
+import { MembersService, SharedProject } from '../core/members.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { RulerService } from '../core/ruler.service';
 import { IconComponent } from '../shared/icon.component';
@@ -24,7 +25,11 @@ import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 import { WorktopComponent } from '../bench/worktop/worktop.component';
 
-type Filter = 'all' | 'active' | 'archived';
+// T-302 — 'shared' is a fourth tile on the same strip rather than a screen of its own: a project
+// somebody shared is still a project, and the place a reader looks for "my projects" is this one.
+// Until it existed, a member's only route back was the invitation mail, so losing the mail lost the
+// project.
+type Filter = 'all' | 'active' | 'archived' | 'shared';
 
 // T-226 (ADR-168) — the project index: where a project is found, made and compared. The hub's left
 // dock absorbed the *switch* between projects, not this list, so nothing here moved onto it and
@@ -46,6 +51,7 @@ type Filter = 'all' | 'active' | 'archived';
 export class ProjectsComponent implements OnDestroy {
     private api = inject(ProjectsService);
     private presetsApi = inject(PresetsService);
+    private membersApi = inject(MembersService);
     private router = inject(Router);
     private locale = inject(LocaleService);
     private ruler = inject(RulerService);
@@ -72,6 +78,9 @@ export class ProjectsComponent implements OnDestroy {
     createError = signal<string | null>(null);
     saving = signal(false);
 
+    /** Projects other people share with this account — never mixed into the owned list. */
+    shared = signal<SharedProject[]>([]);
+
     activeCount = computed(() => this.projects().filter(p => !p.archivedAt).length);
     archivedCount = computed(() => this.projects().filter(p => p.archivedAt).length);
 
@@ -91,12 +100,20 @@ export class ProjectsComponent implements OnDestroy {
             { id: 'all', label: t.filterAll, badge: this.projects().length },
             { id: 'active', label: t.filterActive, badge: this.activeCount() },
             { id: 'archived', label: t.filterArchived, badge: this.archivedCount() },
+            { id: 'shared', label: t.filterShared, badge: this.shared().length },
         ];
+    });
+
+    /** The shared list under its own search, since the two lists never merge. */
+    visibleShared = computed(() => {
+        const needle = this.search().trim().toLowerCase();
+        return this.shared().filter(p => !needle || p.name.toLowerCase().includes(needle));
     });
 
     visible = computed(() => {
         const needle = this.search().trim().toLowerCase();
         const filter = this.filter();
+        if (filter === 'shared') return [];
         return this.projects().filter(p => {
             if (filter === 'active' && p.archivedAt) return false;
             if (filter === 'archived' && !p.archivedAt) return false;
@@ -106,6 +123,7 @@ export class ProjectsComponent implements OnDestroy {
 
     constructor() {
         void this.load();
+        void this.loadShared();
 
         effect(() => {
             const t = this.t().projects;
@@ -118,6 +136,19 @@ export class ProjectsComponent implements OnDestroy {
 
     ngOnDestroy(): void {
         this.ruler.clear();
+    }
+
+    /** What the badge on a shared card says — the same three words the canvas already uses. */
+    roleWord(role: string): string {
+        const c = this.t().projects.canvas;
+        return role === 'owner' ? c.roleOwner : role === 'viewer' ? c.roleViewer : c.roleEditor;
+    }
+
+    // Best-effort and silent: a failure here must not turn the reader's own project list into an
+    // error screen. An empty shared tile is the same thing an empty shared list looks like.
+    private async loadShared() {
+        try { this.shared.set(await this.membersApi.shared()); }
+        catch { this.shared.set([]); }
     }
 
     async load() {

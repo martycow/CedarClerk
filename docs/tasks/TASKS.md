@@ -34,6 +34,14 @@ Current status: this file's §Notes below; open tasks: the board in `docs/tasks/
 
 ## Live verification
 
+- [ ] Teams end to end (T-358, 01.09) — make a team, invite a real address, accept from a second account, hand a project to the team and confirm the second account reaches its canvas and nothing else; then restrict them (the board goes read-only), ban them (the project disappears from their hub and the address cannot be re-invited), lift the ban and confirm the role they had comes back. Also: a per-project viewer on a project whose team makes them an editor stays a viewer #collaboration P1
+- [ ] The invited stranger's way in (T-304, 01.09) — invite an address with no account, open the mailed link in a private window, follow Register from the login bounce: the invite-code field is gone, the account is created, and the invitation opens straight after. Needs Resend configured — this is the same run as the never-rendered `EmailTexts.ProjectInviteBody`, and now `TeamInviteBody` too #collaboration #email P1
+- [ ] Shared with me (T-302, 01.09) — as a member: the hub's fourth tile lists the project, its card opens the canvas, and the count is right after a second invitation. As an owner: the tile is empty and says so #canvas #ui P1
+- [ ] Project and export presets (T-331, 01.09) — a project preset appears in New project and builds what it describes (type, first document, its title, the description); editing the fields after picking it still wins. An export preset fills step 2 of the Export modal in one pick, and a language the post does not have is ignored rather than ticked #ui P2
+- [ ] Post card thumbnails (T-337, 01.09) — on an account with existing posts: the first listing fills covers in (50 at a time), a post with no picture keeps its type icon, and adding or removing the first image changes the plate on the next listing #postsmanager #ui P2
+- [ ] Stats sparklines (T-338, 01.09) — on a source with a real series: the line matches the chart's shape; under three readings there is no line; a flat series draws on the middle, not the floor #stats #ui P3
+- [ ] The asset window on cover and gallery (T-353, 01.09) — the project logo and the showcase gallery both open the picker, uploading through it works, and the gallery appends without eating a hand-typed URL #media #ui P2
+- [ ] Stars payment by a third party (T-359 finding 7, 01.09) — pay a credits invoice from a Telegram account that is not the payload account's: the credits land on the right account and the reply says nothing about its balance or expiry. Marty only — it costs real Stars #telegram #billing P3
 - [ ] Onboarding door (T-328, 31.08) — on a fresh account: register lands on /onboarding, guarded routes bounce there until a display name is saved, the blog address shows read-only (T-329: shown, never assigned), returnUrl survives the detour; an existing account without a display name goes through it once #growth P1
 - [ ] Language paywall (T-350, 31.08) — on Free: the editor's + menu locks everything but EN/JA (silver), the glossary form's locked options are disabled and labeled, and a direct API PUT of a new RU translation answers 403; an existing RU translation stays editable; on Pro everything unlocks #billing P1
 - [ ] Settings tabs (T-348, 31.08) — four tabs; X OAuth callback lands on Integrations, the X credits note crosses to Billing → credits, the account menu still opens Account #settings P2
@@ -73,5 +81,9 @@ Code is written and covered by tests, but never checked by hand or on a device. 
 ## Notes
 
 - Production: 0.12.0 on the droplet, `LIVE` = `0.12.0`; master is ahead by everything since — the `UI_V2` port and fidelity pass, multitenancy (ADR-206…213), the showcase site and screen, the reference board with collaborators (ADR-217…219), and the 0.17.0 maintainer batch — deploying is Marty's call. `LIVE`/`LIVE-PREV` never go to origin (the local-tag rule in CLAUDE.md).
+- Sprint v0.2.0 is **closed on master (01.09.2026)**: T-331/T-337/T-338/T-350/T-353/T-358/T-359/T-361
+  are done, and T-358 closed T-301/T-302/T-304 with them (CHANGELOG 01.09, ADR-234/235). Three
+  migrations rode along — `BotKnownChatAdminsSyncedAt`, `DraftCoverImage`, `AddTeams`. Every eye-check
+  the sprint earned is in §Live verification above and **none of it has been done**.
 - On `master`; `showcase_menu_and_layout` is merged in and no branch is active. `Consts.CurrentVersion` reads 0.17.0, the whole 0.17.0 session (ADR-220…222, CHANGELOG 29.08) sits **uncommitted** in the working tree, and nothing is tagged. The `UI_V2` port is merged into master and its branch rows are closed.
 - The `indiedev_module` branch is merged and deleted; the module lives in master behind `Cedar:Modules:IndieDev` (reversibility: ADR-101). `dev` is a stale pointer behind master with no commits of its own.

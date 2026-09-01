@@ -34,6 +34,15 @@ export class LoginComponent {
         return url && url.startsWith('/') && !url.startsWith('//') ? url : '/projects';
     }
 
+    /**
+     * T-304 — the Register link keeps where we were heading, so somebody who followed an invitation
+     * with no account yet is still holding it after signing up. Public because the template reads it.
+     */
+    get registerParams(): Record<string, string> {
+        const url = this.returnUrl;
+        return url === '/projects' ? {} : { returnUrl: url };
+    }
+
     email = '';
     password = '';
     busy = signal(false);

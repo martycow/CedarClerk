@@ -1,0 +1,192 @@
+<div class="teams">
+    @if (error()) { <p class="channel-error">{{ error() }}</p> }
+
+    @if (loading()) {
+    <p class="hint">{{ t().common.loading }}</p>
+    } @else {
+    <div class="tm-grid">
+
+        <!--The teams themselves, and under them the ones this account was invited into: two lists
+        of the same object, but only the first is the caller's to edit.-->
+        <app-shelf-panel class="shelf-list" [title]="t().teams.yours" [count]="teams().length" flush>
+            <app-button actions variant="rail" size="sm" (clicked)="startCreate()" [title]="t().teams.newTeam">
+                <app-icon name="plus" weight="bold" size="sm" />
+            </app-button>
+            <div class="tm-list">
+                @for (team of teams(); track team.id) {
+                <button class="tm-card" [class.on]="selectedId() === team.id" (click)="select(team)">
+                    <span class="tm-card-top">
+                        <app-icon name="user" size="sm" />
+                        <span class="tm-card-name">{{ team.name }}</span>
+                    </span>
+                    <span class="tm-card-meta">
+                        {{ t().teams.memberCount(team.activeCount, team.memberCount) }}
+                        · {{ t().teams.projectCount(team.projectCount) }}
+                    </span>
+                </button>
+                } @empty {
+                <p class="hint">{{ t().teams.noneYet }}</p>
+                }
+
+                @if (joined().length) {
+                <p class="tm-group">{{ t().teams.joined }}</p>
+                @for (team of joined(); track team.id) {
+                <div class="tm-card is-joined">
+                    <span class="tm-card-top">
+                        <app-icon name="user" size="sm" />
+                        <span class="tm-card-name">{{ team.name }}</span>
+                    </span>
+                    <span class="tm-card-meta">
+                        {{ t().teams.ownedBy(team.ownerName) }} · {{ roleWord(team.role) }}
+                        @if (team.status !== 'active') { · {{ statusWord(team.status) }} }
+                    </span>
+                </div>
+                }
+                }
+            </div>
+        </app-shelf-panel>
+
+        <app-worktop class="sheet" scroll
+                     [label]="selected()?.name || t().teams.crumb"
+                     [meta]="selected() ? t().teams.memberCount(selected()!.activeCount, selected()!.memberCount) : ''">
+            <div class="sheet-column">
+
+            @if (creating()) {
+            <div class="tm-form">
+                <app-input [label]="t().teams.nameLabel" [placeholder]="t().teams.namePlaceholder"
+                           [value]="newName()" (valueChange)="newName.set($any($event) ?? '')"
+                           (keyup.enter)="create()" />
+                <div class="tm-form-actions">
+                    <app-button variant="paper" size="sm" (clicked)="creating.set(false)">{{ t().common.cancel }}</app-button>
+                    <app-button variant="pine" size="sm" [disabled]="busy() || !newName().trim()" (clicked)="create()">
+                        {{ t().common.save }}
+                    </app-button>
+                </div>
+            </div>
+            }
+
+            @if (selected(); as team) {
+
+            @if (renaming()) {
+            <div class="tm-form">
+                <app-input [label]="t().teams.nameLabel" [value]="renameName()"
+                           (valueChange)="renameName.set($any($event) ?? '')" (keyup.enter)="rename()" />
+                <div class="tm-form-actions">
+                    <app-button variant="paper" size="sm" (clicked)="renaming.set(false)">{{ t().common.cancel }}</app-button>
+                    <app-button variant="pine" size="sm" [disabled]="busy() || !renameName().trim()" (clicked)="rename()">
+                        {{ t().common.save }}
+                    </app-button>
+                </div>
+            </div>
+            } @else {
+            <div class="tm-head">
+                <h1 class="tm-title">{{ team.name }}</h1>
+                <app-hint-dot [text]="t().teams.intro" />
+                <span class="spacer"></span>
+                <app-button variant="paper" size="sm" (clicked)="startRename()">{{ t().common.edit }}</app-button>
+                <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="remove()">{{ t().common.delete }}</app-button>
+            </div>
+            }
+
+            <!--Inviting is the owner's alone, and it is the first thing on the sheet because it is
+            what an empty team is for.-->
+            <div class="tm-invite">
+                <app-input class="tm-invite-email" type="email" [label]="t().teams.inviteLabel"
+                           placeholder="name@example.com" autocomplete="off"
+                           [value]="inviteEmail()" (valueChange)="inviteEmail.set($any($event) ?? '')"
+                           (keyup.enter)="invite()" />
+                <label class="tm-invite-role">
+                    <span class="tm-label">{{ t().teams.roleLabel }}</span>
+                    <select class="chat-input" [value]="inviteRole()"
+                            (change)="inviteRole.set($any($event.target).value)">
+                        @for (role of roles; track role) { <option [value]="role">{{ roleWord(role) }}</option> }
+                    </select>
+                </label>
+                <app-button variant="pine" size="sm" [disabled]="busy() || !canInvite()" (clicked)="invite()">
+                    {{ t().teams.invite }}
+                </app-button>
+            </div>
+
+            <!--The link is shown whether or not mail is configured: an owner who can copy it is not
+            blocked by a missing provider key.-->
+            @if (lastInviteUrl(); as url) {
+            <div class="tm-invite-url">
+                <span class="tm-label">{{ t().teams.inviteLink }}</span>
+                <code>{{ url }}</code>
+                <app-button variant="paper" size="sm" (clicked)="copyInvite()">{{ t().teams.copyLink }}</app-button>
+            </div>
+            }
+
+            @if (membersLoading()) {
+            <p class="hint">{{ t().common.loading }}</p>
+            } @else {
+            <div class="tm-members">
+                @for (m of members(); track m.id) {
+                <div class="tm-member" [class.is-banned]="m.status === 'banned'">
+                    <div class="tm-member-who">
+                        <span class="tm-member-name">{{ m.name || m.email }}</span>
+                        @if (m.name && m.name !== m.email) { <span class="tm-member-mail">{{ m.email }}</span> }
+                    </div>
+                    <app-stamp-badge [tone]="stateTone(m)" [rotate]="-1">{{ stateWord(m) }}</app-stamp-badge>
+
+                    <select class="chat-input tm-pick" [value]="m.role" [disabled]="busy()"
+                            [attr.aria-label]="t().teams.roleLabel"
+                            (change)="setRole(m, $any($event.target).value)">
+                        @for (role of roles; track role) { <option [value]="role">{{ roleWord(role) }}</option> }
+                    </select>
+
+                    <!--Status is its own control, never a third entry in the role list: "what may
+                    they do" and "may they do anything" are different decisions.-->
+                    <select class="chat-input tm-pick" [value]="m.status" [disabled]="busy() || m.pending"
+                            [attr.aria-label]="t().teams.statusLabel"
+                            (change)="setStatus(m, $any($event.target).value)">
+                        @for (s of statuses; track s) { <option [value]="s">{{ statusWord(s) }}</option> }
+                    </select>
+
+                    @if (m.pending) {
+                    <button class="mini" [disabled]="busy()" (click)="resend(m)"
+                            [title]="t().teams.resend" [attr.aria-label]="t().teams.resend">
+                        <app-icon name="paper-plane-tilt" size="sm" />
+                    </button>
+                    }
+                    <button class="mini-remove" [disabled]="busy()" (click)="removeMember(m)"
+                            [title]="t().common.delete" [attr.aria-label]="t().common.delete">
+                        <app-icon name="trash" size="sm" />
+                    </button>
+                </div>
+                } @empty {
+                <div class="tm-empty">
+                    <app-icon name="user" size="lg" />
+                    <p class="tm-empty-title">{{ t().teams.noMembers }}</p>
+                    <p class="hint">{{ t().teams.noMembersHint }}</p>
+                </div>
+                }
+            </div>
+            }
+
+            } @else {
+            <div class="tm-empty">
+                <app-icon name="user" size="lg" />
+                <p class="tm-empty-title">{{ t().teams.noneYet }}</p>
+                <p class="hint">{{ t().teams.noneYetHint }}</p>
+            </div>
+            }
+            </div>
+        </app-worktop>
+
+        <app-shelf-panel class="inspector" [title]="t().teams.inspector.title"
+                         [count]="selected() ? t().teams.inspector.team : t().teams.inspector.none">
+            @if (selected(); as team) {
+            <app-spec-row scope="selection" [label]="t().teams.inspector.people" [value]="'' + team.memberCount" />
+            <app-spec-row scope="selection" [label]="t().teams.inspector.active" [value]="'' + team.activeCount" />
+            <app-spec-row scope="selection" [label]="t().teams.inspector.projects" [value]="'' + team.projectCount" />
+            <p class="insp-note">{{ t().teams.inspector.reach }}</p>
+            } @else {
+            <p class="insp-note">{{ t().teams.inspector.pick }}</p>
+            }
+            <app-spec-row scope="document" [label]="t().teams.inspector.teams" [value]="'' + teams().length" />
+            <app-spec-row scope="document" [label]="t().teams.inspector.joined" [value]="'' + joined().length" />
+        </app-shelf-panel>
+    </div>
+    }
+</div>

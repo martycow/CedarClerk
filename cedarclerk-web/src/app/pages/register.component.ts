@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
 import { VersionService } from '../core/version.service';
@@ -27,6 +27,7 @@ export class RegisterComponent {
 
     private auth = inject(AuthService);
     private router = inject(Router);
+    private route = inject(ActivatedRoute);
     theme = inject(ThemeService);
     // T-121 follow-up — the desktop shell has no invite codes and nowhere to get one, so the field
     // would be asking for something that does not exist. See Consts.General.OpenRegistrationCfg.
@@ -39,6 +40,27 @@ export class RegisterComponent {
     inviteCode = '';
     busy = signal(false);
     error = signal('');
+
+    /**
+     * T-304 — an invitation is its own way in. Registration is gated by an invite code, and a
+     * project or team invitation carries none, so a stranger who was invited by name used to reach
+     * the login page and stop there while the owner's screen said the invitation had been sent.
+     * The token in the returnUrl is that code: the server accepts a live, unspent one, and the
+     * field is filled and locked so nobody has to be told to paste a URL fragment into it.
+     */
+    readonly invitedToken = this.readInviteToken();
+
+    private readInviteToken(): string | null {
+        const url = this.returnUrl();
+        const match = /^\/(?:invite|team-invite)\/([^/?#]+)$/.exec(url);
+        return match ? decodeURIComponent(match[1]) : null;
+    }
+
+    /** Same-origin paths only, exactly as the login screen reads it. */
+    private returnUrl(): string {
+        const url = this.route.snapshot.queryParamMap.get('returnUrl');
+        return url && url.startsWith('/') && !url.startsWith('//') ? url : '';
+    }
 
     username = signal('');
     usernameState = signal<'idle' | 'checking' | 'free' | 'invalid' | 'reserved' | 'taken'>('idle');
@@ -80,7 +102,7 @@ export class RegisterComponent {
     async submit() {
         this.busy.set(true);
         this.error.set('');
-        const result = await this.auth.register(this.email, this.password, this.inviteCode, this.username());
+        const result = await this.auth.register(this.email, this.password, this.invitedToken ?? this.inviteCode, this.username());
         this.busy.set(false);
         if (result.ok) {
             // I1: the language picked on this screen becomes the account's own setting, so
@@ -88,7 +110,8 @@ export class RegisterComponent {
             // is visibly in that language. Best-effort — a failure here must not block signup,
             // and localStorage already carries the choice regardless.
             try { await this.auth.saveUiLanguage(this.locale.uiLang()); } catch { /* ignore */ }
-            this.router.navigateByUrl('/editor');
+            // Somebody who arrived holding an invitation goes back to it, not to a blank editor.
+            this.router.navigateByUrl(this.returnUrl() || '/editor');
         } else {
             this.error.set(result.error);
         }

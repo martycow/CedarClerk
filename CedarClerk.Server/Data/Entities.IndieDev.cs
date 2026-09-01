@@ -17,6 +17,13 @@ namespace CedarClerk.Server;
 /// </summary>
 public class Project
 {
+    /// <summary>
+    /// T-358 — the team whose members may act on this project, or null for a project only its owner
+    /// and its per-project invitees reach. A team is the owner's own, so this never crosses tenants:
+    /// the project and the team have the same <c>OwnerId</c> by construction.
+    /// </summary>
+    public Guid? TeamId { get; set; }
+
     public Guid Id { get; set; } = Guid.NewGuid();
     public string OwnerId { get; set; } = default!;
     public ApplicationUser? Owner { get; set; }

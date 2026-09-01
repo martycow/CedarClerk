@@ -1,5 +1,87 @@
 # Changelog
 
+## 2026-09-01 — Sprint v0.2.0 closed: teams, three preset kinds, and the sprint's remainders
+
+**Teams (T-358, ADR-235).** `Team` and `TeamMember` beside the per-project membership ADR-217 built,
+with `Project.TeamId` pointing a project at one. A team always belongs to a user and there is no
+transfer; there is no team admin, so inviting, roles, statuses and deletion are the owner's alone.
+`ProjectAccessResolver` asks `ProjectMembers` first and falls through to `TeamMembers` only when
+that misses, so a narrower per-project grant is never widened by a broader team one. A status is a
+second column rather than two more roles: `restricted` resolves to a viewer everywhere the team
+reaches, `banned` resolves to nothing and clears the pending token so the address cannot walk back
+in through its own mail. Deleting a team takes it away from its projects and never deletes one. A
+`/teams` screen off the tray (list, sheet, inspector — the Posts Manager's shape), a one-row team
+picker in the project's own edit dialog, `/team-invite/:token` reading through the same accept
+screen as a project invitation, and migration `AddTeams`.
+
+Three sprint items closed on the way. **T-301**: the shell asks `GET /api/projects/:id/access`
+before drawing its wall, so a member sees the canvas — what a membership actually opens — instead of
+seven hooks that answered 404. **T-302**: "Shared" is a fourth tile on the project hub's own state
+strip, listing `/api/projects/shared` (which now also answers the projects a team reaches); losing
+the invitation mail no longer loses the project. **T-304**: a live, unspent invite token stands in
+for the registration invite code, read out of the `returnUrl` by the register screen, which says the
+field is unnecessary rather than leaving an invited stranger hunting for a code.
+
+**Three preset kinds (T-331 remainder, ADR-234).** The preset API moved from named document fields
+to a free-form `Config` the kind's own record parses — `ProjectPresetConfig` and `ExportPresetConfig`
+join `DocumentPresetConfig` in Core, and the endpoint re-serialises from the record so nothing
+unvalidated reaches the database. The kind is fixed at creation. A project preset supplies the type,
+the first document and its title, and anything the New-project dialog states outright still wins over
+it; an export preset names destinations and languages and deliberately no channel ids, because a
+channel can be reconnected as a new row. The Preset Manager switches the three with an index strip;
+project presets stand beside the four built-in types in the New-project dialog; an export preset
+fills step 2 of the Export modal from its header. No migration — the table already had the columns.
+
+**T-353 remainder — the asset window.** The project cover and the showcase gallery open the shared
+`app-media-picker` (which uploads as well as picks, so the private file inputs are gone with nothing
+lost); the gallery appends rather than replaces, so a URL typed by hand still stands. The landing
+screenshots deliberately stay as they are: `/landing-media/` is an admin-level store outside any
+owner's asset library, and routing it through a library the admin does not own would be the wrong
+kind of unification.
+
+**T-350 remainder — the language menu at the other call sites.** Settings' signature-language and
+cross-links pickers, and the form-preset "add language" popover, are the one shared
+`app-language-menu`; the menu gained a `triggerLabel` so an "add" control can say what it is for
+instead of naming the current language. The Glossary keeps its index strip and gains the menu beside
+it: the strip lists the languages that hold terms plus the primary and the selected one, the menu
+reaches the rest — a tile carries a count and a menu row cannot, so the tabs stay where they earn
+their place.
+
+**T-337 remainder — Posts Manager.** The search field is the bench's own (`app-input` `dense`,
+sticky at the top of the shelf's scroller), and a post card draws the document's first picture on the
+same plate its type icon used, so a list of mixed posts keeps one left edge. The cover is cached on
+the draft (`CoverImagePath`/`CoverImageScanned`, migration `DraftCoverImage`) and filled in by the
+listing 50 documents at a time — a migration cannot parse a document's JSON, and permanently joining
+every body into a projection that deliberately avoids them would be a bad trade for a thumbnail. The
+inspector's density is deliberately unchanged: density is a property of a page, never of a component
+(ADR-164 rule 6), and this page is a list beside reading matter.
+
+**T-338 remainder — Stats.** Each readout tile carries a sparkline of the window it reports, drawn
+from the series the chart already holds, so it costs no request and cannot disagree with the chart.
+Below three readings it is omitted; a flat series draws on the middle line, because the tile answers
+"which way is this going" and zero movement is a horizon, not a floor.
+
+**T-361 remainder — the 1-credit sync paths.** Glossary translate and translate-all, the form-preset
+translate and the profile translate hand the credit back when the provider fails on us, through
+`SubscriptionPlan.RefundAiAndFailAsync` — one call that refunds and answers, so a site cannot refund
+without failing or fail without refunding. A partial success (some glossary terms skipped) keeps its
+charge, and the daily count stays spent, as with the background jobs.
+
+**T-359 remainder — the bot audit's two low-risk findings.** *Finding 7*: an invoice link is
+transferable, so the payer is not necessarily the payload's account. Paying for somebody else is a
+gift and is honoured; the confirmation now drops the expiry date and the balance when the payer's
+Telegram id does not match the account's. *Finding 6b*: the `BotKnownChatAdmin` cache is only
+rewritten when the *bot's* membership changes, so a demoted admin kept a grant nothing revoked.
+`BotKnownChat.AdminsSyncedAt` (migration `BotKnownChatAdminsSyncedAt`, backfilled from `LastSeenAt`,
+which is exactly when the admin list last synced) bounds that to seven days for the `/known`
+listing; the Refresh button ignores the TTL, because it re-reads the admin list from Telegram and is
+the way an expired chat comes back.
+
+Tests: 1688 backend (26 new — team access resolution and the two new preset configs), 496 frontend.
+`UiInventoryDriftTests` and `SchemaDriftGuardTests` pass; `docs/design/UI-INVENTORY.md` carries the
+Teams screen and the Preset Manager's three kinds. Nothing was deployed, merged or published.
+
+
 ## 2026-08-31 — Public blog reading and discovery redesign
 
 ADR-231 simplifies the public blog while retaining Cedar Bench materials and both

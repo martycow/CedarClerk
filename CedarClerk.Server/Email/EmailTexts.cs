@@ -130,6 +130,33 @@ public static class EmailTexts
              """);
     }
 
+    // T-358 — a team invitation. Its own subject and body rather than the project one's with a
+    // different noun: what the reader is agreeing to is different, and "a project" where a team is
+    // meant is the kind of wrong that only shows up after somebody accepts.
+    public static string TeamInviteSubject(string teamName) => Localized(
+        $"Приглашение в команду «{teamName}» — Cedar Clerk",
+        $"You are invited to the team \"{teamName}\" — Cedar Clerk");
+
+    public static string TeamInviteBody(string teamName, string inviterName, string link)
+    {
+        var team = System.Net.WebUtility.HtmlEncode(teamName);
+        var who = System.Net.WebUtility.HtmlEncode(inviterName);
+
+        return Localized(
+            $"""
+             <p>{who} приглашает вас в команду «{team}» в Cedar Clerk — вы получите доступ ко всем проектам этой команды.</p>
+             <p><a href="{link}" style="display:inline-block;padding:10px 18px;background:#566842;color:#fff;border-radius:8px;text-decoration:none">Принять приглашение</a></p>
+             <p style="color:#686257;font-size:13px">Если кнопка не работает, откройте ссылку:<br>{link}</p>
+             <p style="color:#686257;font-size:13px">Если вы не ждали этого письма, просто не открывайте ссылку.</p>
+             """,
+            $"""
+             <p>{who} invites you to the team "{team}" in Cedar Clerk — you will reach every project the team holds.</p>
+             <p><a href="{link}" style="display:inline-block;padding:10px 18px;background:#566842;color:#fff;border-radius:8px;text-decoration:none">Accept the invitation</a></p>
+             <p style="color:#686257;font-size:13px">If the button does not work, open this link:<br>{link}</p>
+             <p style="color:#686257;font-size:13px">If you were not expecting this, simply do not open the link.</p>
+             """);
+    }
+
     private static string Localized(string ru, string en) =>
         System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ru" ? ru : en;
 }

@@ -31,6 +31,39 @@
                     <p class="load-error pad">{{ err }}</p>
                 } @else if (loading()) {
                     <p class="hint pad">{{ t().projects.loading }}</p>
+                } @else if (filter() === 'shared') {
+                    <!--T-302 — projects other people share. Their own cards: there is no cover, no
+                    counts and no archive state to draw, and inventing them would say things about
+                    somebody else's project that this account cannot actually see.-->
+                    <div class="cards">
+                        @for (p of visibleShared(); track p.id) {
+                            <a class="card is-shared" [routerLink]="['/projects', p.id, 'canvas']"
+                               [attr.aria-label]="p.name">
+                                <span class="cover">
+                                    <span class="cover-initials">{{ initials(p.name) }}</span>
+                                    <app-stamp-badge class="card-state" tone="brass" [rotate]="-2">
+                                        {{ roleWord(p.role) }}
+                                    </app-stamp-badge>
+                                </span>
+                                <span class="card-body">
+                                    <span class="card-name" [title]="p.name">{{ p.name }}</span>
+                                    <span class="card-type">{{ t().projects.sharedBy(p.ownerName) }}</span>
+                                    <span class="card-stats">
+                                        <span class="card-stat" [title]="t().projects.canvas.crumb">
+                                            <app-icon name="squares-four" size="xs" /> {{ p.boardCount }}
+                                        </span>
+                                        <span class="card-when">{{ p.lastActivityAt | zonedDate:'MM/dd/yyyy' }}</span>
+                                    </span>
+                                </span>
+                            </a>
+                        } @empty {
+                            <div class="empty-state">
+                                <app-icon name="squares-four" size="lg" />
+                                <p class="empty-title">{{ t().projects.sharedEmpty }}</p>
+                                <p class="hint">{{ t().projects.sharedEmptyHint }}</p>
+                            </div>
+                        }
+                    </div>
                 } @else if (projects().length === 0) {
                     <div class="empty-state">
                         <app-icon name="squares-four" size="lg" />

@@ -75,6 +75,8 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
     public DbSet<ShowcaseStatDaily> ShowcaseStatDailies => Set<ShowcaseStatDaily>();
     public DbSet<ShowcaseFollower> ShowcaseFollowers => Set<ShowcaseFollower>();
     public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
+    public DbSet<Team> Teams => Set<Team>();
+    public DbSet<TeamMember> TeamMembers => Set<TeamMember>();
     public DbSet<CanvasBoard> CanvasBoards => Set<CanvasBoard>();
     public DbSet<CanvasItem> CanvasItems => Set<CanvasItem>();
     public DbSet<DialogueScript> DialogueScripts => Set<DialogueScript>();
@@ -349,6 +351,28 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
             .HasFilter("\"InviteToken\" IS NOT NULL");
         // EF ignores the property initialiser, as Draft.DocumentType found out the hard way.
         builder.Entity<ProjectMember>().Property(m => m.Role).HasDefaultValue(ProjectRoles.Editor);
+        // T-358 — the same three indexes a ProjectMember carries, for the same three questions:
+        // one invitation per address per team, one row per person per team, and "which teams am I
+        // in", which is asked cross-tenant on every project request a non-owner makes.
+        builder.Entity<TeamMember>()
+            .HasIndex(m => new { m.TeamId, m.Email })
+            .IsUnique();
+        builder.Entity<TeamMember>()
+            .HasIndex(m => new { m.TeamId, m.MemberUserId })
+            .IsUnique()
+            .HasFilter("\"MemberUserId\" IS NOT NULL");
+        builder.Entity<TeamMember>().HasIndex(m => m.MemberUserId);
+        builder.Entity<TeamMember>()
+            .HasIndex(m => m.InviteToken)
+            .IsUnique()
+            .HasFilter("\"InviteToken\" IS NOT NULL");
+        // EF ignores the property initialisers, as Draft.DocumentType found out the hard way.
+        builder.Entity<TeamMember>().Property(m => m.Role).HasDefaultValue(ProjectRoles.Editor);
+        builder.Entity<TeamMember>().Property(m => m.Status).HasDefaultValue(TeamMemberStatuses.Active);
+        builder.Entity<Team>().HasIndex(t => t.OwnerId);
+        // "Which projects does this team reach" — asked whenever a team's people are resolved.
+        builder.Entity<Project>().HasIndex(p => p.TeamId);
+
         // Wave 2 item 10 — the fill job walks one owner's active slots; the list screen asks the same.
         builder.Entity<QueueSlot>().HasIndex(s => new { s.OwnerId, s.TargetId });
         // The occupancy check: is this slot occurrence already taken, whatever its status.
@@ -439,6 +463,8 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         // OwnerId here is the project owner, not the invitee — a membership is the owner's row about
         // somebody else, so it filters like the rest of the project.
         builder.Entity<ProjectMember>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<Team>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<TeamMember>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<PublishJob>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<PublishTarget>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<QueueSlot>().HasQueryFilter(e => e.OwnerId == TenantId);

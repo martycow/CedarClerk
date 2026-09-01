@@ -304,6 +304,9 @@ if (ProjectEndpoints.IsEnabled(app.Configuration))
     app.MapBuildEndpoints();
     app.MapCanvasEndpoints();
     app.MapProjectMemberEndpoints();
+    // T-358 — teams grant access to projects and mean nothing without them, so they live behind the
+    // same flag as the projects they reach.
+    app.MapTeamEndpoints();
     app.MapDialogueEndpoints();
     app.MapHub<CanvasHub>("/hubs/canvas");
 }

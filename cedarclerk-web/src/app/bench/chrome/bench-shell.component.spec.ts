@@ -25,11 +25,23 @@ describe('bench shell', () => {
     async function go(url: string) {
         await router.navigateByUrl(url);
         fixture.detectChanges();
+        // T-301 — with a project open the shell asks what this account is to it before drawing the
+        // wall. These tests are all about the owner's wall, so that is the answer.
+        for (const probe of TestBed.inject(HttpTestingController)
+                 .match(r => /^\/api\/projects\/[^/]+\/access$/.test(r.url))) {
+            probe.flush({ role: 'owner', canWrite: true, archived: false });
+        }
+        await fixture.whenStable();
+        fixture.detectChanges();
     }
 
-    /** Answers the one project list the shell asks for per session (ADR-186). */
+    /** Answers the one project list the shell asks for per session (ADR-186). Matched exactly
+        rather than by prefix: T-301 added a per-project access probe under the same prefix, and a
+        `startsWith` match would take whichever of the two arrived first. */
     async function flushProjects(list: { id: string; name: string }[]) {
-        TestBed.inject(HttpTestingController).expectOne(r => r.url.startsWith('/api/projects')).flush(list);
+        TestBed.inject(HttpTestingController)
+            .expectOne(r => r.url.startsWith('/api/projects') && !r.url.includes('/access'))
+            .flush(list);
         // The service hands the list back through a promise; without settling it the names signal
         // is still empty when the view is checked.
         await fixture.whenStable();

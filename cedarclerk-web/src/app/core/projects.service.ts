@@ -90,6 +90,8 @@ export interface ProjectDocument {
 }
 
 export interface ProjectDetail extends Omit<ProjectSummary, 'documentCount' | 'openTaskCount' | 'assetCount' | 'lastActivityAt'> {
+    /** T-358 — the team whose people reach this project, or null for the owner's alone. */
+    teamId: string | null;
     /** T-159 (ADR-134) — null means no public page. */
     showcaseSlug: string | null;
     /** One `Label|https://url` per line. */

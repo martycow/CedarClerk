@@ -89,8 +89,10 @@ describe('project index', () => {
 
     it('counts every state on its own tile', () => {
         const labels = tabs().map(x => x.querySelector('.it-label')?.textContent?.trim());
-        expect(labels).toEqual([t.filterAll, t.filterActive, t.filterArchived]);
-        expect(badges()).toEqual(['3', '2', '1']);
+        expect(labels).toEqual([t.filterAll, t.filterActive, t.filterArchived, t.filterShared]);
+        // T-302 — the fourth tile counts projects other people share; nothing is shared here, so it
+        // is the one tile with no badge (ADR-164 rule 1).
+        expect(badges()).toEqual(['3', '2', '1', null]);
     });
 
     // ADR-164 rule 1 — the badge rules arrive with the component: nothing is drawn at zero. The
@@ -99,7 +101,7 @@ describe('project index', () => {
     it('drops the badge of a state nothing is in, and still prints its zero on the shelf', () => {
         fixture.componentInstance.projects.set([ONE, TWO]);
         fixture.detectChanges();
-        expect(badges()).toEqual(['2', '2', null]);
+        expect(badges()).toEqual(['2', '2', null, null]);
         expect(specValue(t.filterArchived)).toBe('0');
     });
 

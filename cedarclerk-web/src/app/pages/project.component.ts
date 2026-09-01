@@ -36,6 +36,7 @@ import { ModuleTileComponent } from '../bench/worktop/module-tile.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 import { WorktopComponent } from '../bench/worktop/worktop.component';
 import { AssetsService, LibraryAsset } from '../core/assets.service';
+import { Team, TeamsService } from '../core/teams.service';
 import { MediaPickerComponent } from '../shared/media-picker.component';
 
 /** One plate on the wall. `link` is the screen it opens — ADR-160 rule 1: no door, no plate. */
@@ -74,6 +75,7 @@ const MS_PER_DAY = 86_400_000;
 export class ProjectComponent implements OnDestroy {
     private api = inject(ProjectsService);
     private presetsApi = inject(PresetsService);
+    private teamsApi = inject(TeamsService);
     private assets = inject(AssetsService);
     private buildsApi = inject(BuildsService);
     private route = inject(ActivatedRoute);
@@ -108,6 +110,10 @@ export class ProjectComponent implements OnDestroy {
     editDescription = signal('');
     editCoverUrl = signal<string | null>(null);
     coverPickerOpen = signal(false);
+    // T-358 — which team reaches this project. '' is "nobody but me", which is a real answer and
+    // therefore an option in the list rather than an empty select.
+    teams = signal<Team[]>([]);
+    editTeamId = signal<string>('');
     /** T-296/T-297 — the public page's counters; null until they arrive, and on a page with none. */
     showcaseStats = signal<ShowcaseStats | null>(null);
     actionError = signal<string | null>(null);
@@ -331,6 +337,9 @@ export class ProjectComponent implements OnDestroy {
         this.editName.set(project.name);
         this.editDescription.set(project.description);
         this.editCoverUrl.set(project.coverUrl);
+        this.editTeamId.set(project.teamId ?? '');
+        // Loaded when the dialog opens rather than with the screen: most visits never edit.
+        void this.loadTeams();
         this.actionError.set(null);
         this.confirmDelete = false;
         this.editing.set(true);
@@ -352,12 +361,20 @@ export class ProjectComponent implements OnDestroy {
         this.actionError.set(null);
         try {
             const coverUrl = this.editCoverUrl();
+            // The team is its own endpoint, and is only written when it actually moved: it is a
+            // different permission from renaming a project and must not ride along with one.
+            const teamId = this.editTeamId() || null;
+            if (teamId !== (project.teamId ?? null)) {
+                await this.teamsApi.setProjectTeam(project.id, teamId);
+                this.project.set({ ...project, teamId });
+            }
             await this.api.update(project.id, name, this.editDescription().trim(), coverUrl);
             this.project.set({
                 ...project,
                 name,
                 description: this.editDescription().trim(),
                 coverUrl,
+                teamId,
             });
             this.projects.update(rows => rows.map(row => row.id === project.id
                 ? { ...row, name, description: this.editDescription().trim(), coverUrl }
@@ -373,6 +390,12 @@ export class ProjectComponent implements OnDestroy {
     // T-353 — the cover opens the one asset window instead of a bare file input. The picker
     // uploads as well as picks, so nothing is lost by dropping the private flow: a file chosen
     // there lands in the library, which is where a project's logo belongs anyway.
+    // Best-effort: with no teams the row simply offers "nobody but me", which is the truth.
+    private async loadTeams() {
+        try { this.teams.set(await this.teamsApi.list()); }
+        catch { this.teams.set([]); }
+    }
+
     pickedCover(asset: LibraryAsset) {
         this.editCoverUrl.set(`/media/${asset.localPath}`);
         this.coverPickerOpen.set(false);
